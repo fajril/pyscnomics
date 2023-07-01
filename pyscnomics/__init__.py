@@ -1,0 +1,1 @@
+from .econ.depreciation import *

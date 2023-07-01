@@ -202,7 +202,7 @@ def declining_balance_depreciation_rate(
     )
 
     # Handle the condition when depreciation charge reaches the salvage value
-    if sum(depreciation_charge) > (cost - salvage_value):
+    if depreciation_charge.sum() > (cost - salvage_value):
         remaining_depreciation = cost - salvage_value - np.cumsum(depreciation_charge)
         remaining_depreciation = np.where(
             remaining_depreciation > 0, remaining_depreciation, 0
@@ -220,3 +220,41 @@ def declining_balance_depreciation_rate(
         extension = np.zeros(depreciation_len - useful_life)
         depreciation_charge = np.concatenate((depreciation_charge, extension))
     return depreciation_charge
+
+def unit_of_production_book_value(
+        cost: float,
+        salvage_value: float,
+        resources: float,
+        yearly_production: np.ndarray,
+        decline_factor: float = 2,
+        amortization_len: int=0
+) -> np.ndarray:
+    """
+    """
+    resources_over_time = resources - np.cumsum(yearly_production)
+    amortization_charge = decline_factor * cost * yearly_production / resources_over_time
+
+    if amortization_charge.sum() > (cost - salvage_value):
+        remaining_amortization = cost - salvage_value - np.cumsum(amortization_charge)
+        remaining_amortization = np.where(
+            remaining_amortization > 0, remaining_amortization, 0
+        )
+        idx = np.argmin(remaining_amortization)
+        amortization_charge[idx] = (
+            cost - salvage_value - np.cumsum(amortization_charge)[idx - 1]
+        )
+        amortization_charge[idx + 1 :] = 0
+
+    if amortization_charge.size < amortization_len:
+        extension = np.zeros(amortization_len - amortization_charge.size)
+        amortization_charge = np.concatenate(amortization_charge, extension)
+    return amortization_charge
+
+def unit_of_production_rate(
+        cost: float,
+        salvage_value: float,
+        resources: float,
+        decline_factor: float = 2,
+        depreciation_len: int=0
+) -> np.ndarray:
+    raise NotImplementedError()
