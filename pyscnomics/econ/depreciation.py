@@ -1,0 +1,222 @@
+import numpy as np
+
+
+def straight_line_book_value(
+    cost: float, salvage_value: float, useful_life: int, depreciation_len: int = 0
+) -> np.ndarray:
+    """
+    Calculate the book value of an asset over time using the straight-line depreciation method.
+
+    Parameters
+    ----------
+    cost : float
+        Cost of the asset.
+    salvage_value : float
+        Remaining value after depreciation.
+    useful_life : int
+        Duration for depreciation.
+    depreciation_len : int, optional
+        Length of the book value array beyond the useful life.
+        The extended values will be calculated based on the depreciation charge. (default: 0)
+
+    Returns
+    -------
+    book_value : numpy.ndarray
+        The book value of the asset for each period.
+
+    Notes
+    -----
+    The straight-line depreciation method allocates an equal amount of depreciation charge
+    for each period over the useful life of an asset. The depreciation charge is calculated
+    using the `straight_line_depreciation_rate` function.
+
+    The book value of the asset is calculated as the initial cost minus the cumulative sum of
+    the depreciation charge for each period.
+
+    If the `depreciation_len` is greater than the `useful_life`, the book value array is extended
+    by calculating the remaining book values based on the depreciation charge.
+
+    Examples
+    --------
+    >>> book_value = straight_line_book_value(cost=1000, salvage_value=100, useful_life=5)
+    >>> print(book_value)
+    [ 820.  640.  460.  280.  100.]
+    """
+    depreciation_charge = straight_line_depreciation_rate(
+        cost=cost,
+        salvage_value=salvage_value,
+        useful_life=useful_life,
+        depreciation_len=depreciation_len,
+    )
+    book_value = cost - np.cumsum(depreciation_charge)
+    return book_value
+
+
+def straight_line_depreciation_rate(
+    cost: float, salvage_value: float, useful_life: int, depreciation_len: int = 0
+) -> np.ndarray:
+    """
+    Calculate the straight-line depreciation charge for each period.
+
+    Parameters
+    ----------
+    cost : float
+        Cost of the asset.
+    salvage_value : float
+        Remaining value after depreciation.
+    useful_life : int
+        Duration for depreciation.
+    depreciation_len : int, optional
+        Length of the depreciation charge array beyond the useful life.
+        The extended values will be set to zero. (default: 0)
+
+    Returns
+    -------
+    depreciation_charge : numpy.ndarray
+        The straight-line depreciation charge for each period.
+
+    Notes
+    -----
+    The straight-line depreciation method allocates an equal amount of depreciation charge
+    for each period over the useful life of an asset. The depreciation rate is calculated as:
+
+    depreciation_rate = (cost - salvage_value) / useful_life
+
+    The depreciation charge is then repeated for each period.
+
+    If the `depreciation_len` is greater than the `useful_life`, the depreciation charge array
+    is extended with zero values for the additional periods.
+
+    Examples
+    --------
+    >>> depreciation_charge = straight_line_depreciation_rate(cost=1000, salvage_value=100, useful_life=5)
+    >>> print(depreciation_charge)
+    [180. 180. 180. 180. 180.]
+    """
+    depreciation_rate = (cost - salvage_value) / useful_life
+    depreciation_charge = np.repeat(depreciation_rate, useful_life)
+
+    # Extend the depreciation charge array beyond useful life if needed
+    if depreciation_len > useful_life:
+        extension = np.zeros(depreciation_len - useful_life)
+        depreciation_charge = np.concatenate((depreciation_charge, extension))
+    return depreciation_charge
+
+
+def declining_balance_book_value(
+    cost: float,
+    salvage_value: float,
+    useful_life: int,
+    decline_factor: int = 1,
+    depreciation_len: int = 0,
+) -> np.ndarray:
+    """
+      Calculate the net book value of a depreciated asset using the Decline Balance Method.
+
+      Parameters
+      ----------
+      cost : float
+          Cost of the asset.
+      salvage_value : float
+          Remaining value after depreciation.
+      useful_life : int
+          Duration for depreciation.
+      decline_factor : int, optional
+          Depreciation factor. Set to 1 for Decline Balance or 2 for Double Decline Balance.
+          (default: 1)
+      depreciation_len : int, optional
+          Length of the net book value array beyond its useful life.
+          The extended values will be set using the salvage value. (default: 0)
+
+      Returns
+      -------
+      book_value : numpy.ndarray
+          The book value of the depreciated asset.
+
+      Notes
+      -----
+      The book value (V_t) at time t is calculated using the formula:
+
+      .. math::
+
+          V_t = (1 - d)^t \times V_0
+
+      where:
+      - V_t is the net book value at time t,
+      - d is the depreciation factor per year,
+      - t is the time in years, and
+      - V_0 is the initial cost of the asset.
+
+      Examples
+      --------
+      >>> book_value = declining_balance_book_value(cost=200_000, salvage_value=25_000, useful_life=5, decline_factor=2, net_book_len=10)
+      >>> print(book_value)
+      [120000.  72000.  43200.  25920.  25000.  25000.  25000.  25000.  25000.
+    25000.]
+    """
+    depreciation_charge = declining_balance_depreciation_rate(
+        cost=cost,
+        salvage_value=salvage_value,
+        useful_life=useful_life,
+        decline_factor=decline_factor,
+        depreciation_len=depreciation_len,
+    )
+    book_value = cost - np.cumsum(depreciation_charge)
+    return book_value
+
+
+def declining_balance_depreciation_rate(
+    cost: float,
+    salvage_value: float,
+    useful_life: int,
+    decline_factor: float = 1,
+    depreciation_len: int = 0,
+) -> np.ndarray:
+    """
+    Calculate the declining balance depreciation charge for each period.
+
+    Parameters
+    ----------
+    cost : float
+        Cost of the asset.
+    salvage_value : float
+        Remaining value after depreciation.
+    useful_life : int
+        Duration for depreciation.
+    decline_factor : float, optional
+        Depreciation factor. Usually the value is between 1 and 2.
+        When the value is set as 2, it is called DDB (default: 1)
+    depreciation_len : int, optional
+        Length of the net book value array beyond its useful life.
+        The extended values will be set as zero. (default: 0)
+
+    Returns
+    -------
+    depreciation_charge : numpy.ndarray
+        The depreciation charge for each period.
+    """
+    periods = np.arange(useful_life)
+    depreciation_rate = decline_factor / useful_life
+    depreciation_charge = (
+        depreciation_rate * cost * np.power(1 - depreciation_rate, periods)
+    )
+
+    # Handle the condition when depreciation charge reaches the salvage value
+    if sum(depreciation_charge) > (cost - salvage_value):
+        remaining_depreciation = cost - salvage_value - np.cumsum(depreciation_charge)
+        remaining_depreciation = np.where(
+            remaining_depreciation > 0, remaining_depreciation, 0
+        )
+        idx = np.argmin(remaining_depreciation)
+
+        # Adjust the depreciation charge to take only the remainder when it reaches the salvage value
+        depreciation_charge[idx] = (
+            cost - salvage_value - np.cumsum(depreciation_charge)[idx - 1]
+        )
+        depreciation_charge[idx + 1 :] = 0
+
+    # Extend the depreciation charge array beyond useful life if needed
+    if depreciation_len > useful_life:
+        extension = np.zeros(depreciation_len - useful_life)
+        depreciation_charge = np.concatenate((depreciation_charge, extension))
+    return depreciation_charge
