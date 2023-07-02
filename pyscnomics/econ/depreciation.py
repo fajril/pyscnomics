@@ -111,47 +111,47 @@ def declining_balance_book_value(
     depreciation_len: int = 0,
 ) -> np.ndarray:
     """
-      Calculate the net book value of a depreciated asset using the Decline Balance Method.
+    Calculate the net book value of a depreciated asset using the Decline Balance Method.
 
-      Parameters
-      ----------
-      cost : float
-          Cost of the asset.
-      salvage_value : float
-          Remaining value after depreciation.
-      useful_life : int
-          Duration for depreciation.
-      decline_factor : int, optional
-          Depreciation factor. Set to 1 for Decline Balance or 2 for Double Decline Balance.
-          (default: 1)
-      depreciation_len : int, optional
-          Length of the net book value array beyond its useful life.
-          The extended values will be set using the salvage value. (default: 0)
+    Parameters
+    ----------
+    cost : float
+        Cost of the asset.
+    salvage_value : float
+        Remaining value after depreciation.
+    useful_life : int
+        Duration for depreciation.
+    decline_factor : int, optional
+        Depreciation factor. Set to 1 for Decline Balance or 2 for Double Decline Balance.
+        (default: 1)
+    depreciation_len : int, optional
+        Length of the net book value array beyond its useful life.
+        The extended values will be set using the salvage value. (default: 0)
 
-      Returns
-      -------
-      book_value : numpy.ndarray
-          The book value of the depreciated asset.
+    Returns
+    -------
+    book_value : numpy.ndarray
+        The book value of the depreciated asset.
 
-      Notes
-      -----
-      The book value (V_t) at time t is calculated using the formula:
+    Notes
+    -----
+    The book value (V_t) at time t is calculated using the formula:
 
-      .. math::
+    .. math::
 
-          V_t = (1 - d)^t \times V_0
+        V_t = (1 - d)^t \times V_0
 
-      where:
-      - V_t is the net book value at time t,
-      - d is the depreciation factor per year,
-      - t is the time in years, and
-      - V_0 is the initial cost of the asset.
+    where:
+    - V_t is the net book value at time t,
+    - d is the depreciation factor per year,
+    - t is the time in years, and
+    - V_0 is the initial cost of the asset.
 
-      Examples
-      --------
-      >>> book_value = declining_balance_book_value(cost=200_000, salvage_value=25_000, useful_life=5, decline_factor=2, net_book_len=10)
-      >>> print(book_value)
-      [120000.  72000.  43200.  25920.  25000.  25000.  25000.  25000.  25000.
+    Examples
+    --------
+    >>> book_value = declining_balance_book_value(cost=200_000, salvage_value=25_000, useful_life=5, decline_factor=2, net_book_len=10)
+    >>> print(book_value)
+    [120000.  72000.  43200.  25920.  25000.  25000.  25000.  25000.  25000.
     25000.]
     """
     depreciation_charge = declining_balance_depreciation_rate(
@@ -221,18 +221,66 @@ def declining_balance_depreciation_rate(
         depreciation_charge = np.concatenate((depreciation_charge, extension))
     return depreciation_charge
 
-def unit_of_production_book_value(
-        cost: float,
-        salvage_value: float,
-        resources: float,
-        yearly_production: np.ndarray,
-        decline_factor: float = 2,
-        amortization_len: int=0
+
+def unit_of_production_rate(
+    cost: float,
+    salvage_value: float,
+    resources: float,
+    yearly_production: np.ndarray,
+    decline_factor: float = 2,
+    amortization_len: int = 0,
 ) -> np.ndarray:
     """
+    Calculates the amortization charge for each unit of production based on the unit of production method.
+
+    Parameters
+    ----------
+    cost : float
+        Cost of the resource or asset.
+    salvage_value : float
+        Estimated value of the resource or asset at the end of its useful life.
+    resources : float
+        Total amount of resources available.
+    yearly_production : numpy.ndarray
+        Array containing yearly production quantities.
+    decline_factor : float, optional
+        Factor determining the rate of decline in production. Default is 2.
+    amortization_len : int, optional
+        Length of the amortization charge array. Default is 0.
+
+    Returns
+    -------
+    amortization_charge : numpy.ndarray
+        Array of amortization charges corresponding to each unit of production.
+
+    Notes
+    -----
+    The amortization charge for each unit of production is calculated using the following steps:
+    1. Calculate the resources remaining over time 
+       based on the cumulative sum of yearly production quantities.
+    2. Compute the amortization charge using the formula: 
+       amortization_charge = decline_factor * cost * yearly_production / resources_over_time.
+    3. Adjust the amortization charges if the sum exceeds the cost minus salvage value 
+       to ensure the total amortization matches the cost minus salvage value.
+    4. If the amortization charge array is shorter than the specified amortization length, 
+       extend the array with zeros.
+
+    Examples
+    --------
+    >>> cost = 10000
+    >>> salvage_value = 2000
+    >>> resources = 5000
+    >>> yearly_production = np.array([1000, 800, 700, 600, 500])
+    >>> amortization_charge = unit_of_production_book_value(cost, salvage_value, resources, yearly_production)
+    >>> print(amortization_charge)
+    [40.  40.  80. 120. 200.]
     """
+    # TODO: fix the doctest with real result
+
     resources_over_time = resources - np.cumsum(yearly_production)
-    amortization_charge = decline_factor * cost * yearly_production / resources_over_time
+    amortization_charge = (
+        decline_factor * cost * yearly_production / resources_over_time
+    )
 
     if amortization_charge.sum() > (cost - salvage_value):
         remaining_amortization = cost - salvage_value - np.cumsum(amortization_charge)
@@ -250,11 +298,63 @@ def unit_of_production_book_value(
         amortization_charge = np.concatenate(amortization_charge, extension)
     return amortization_charge
 
-def unit_of_production_rate(
-        cost: float,
-        salvage_value: float,
-        resources: float,
-        decline_factor: float = 2,
-        depreciation_len: int=0
+
+def unit_of_production_book_value(
+    cost: float,
+    salvage_value: float,
+    resources: float,
+    yearly_production: np.ndarray,
+    decline_factor: float = 2,
+    amortization_len: int = 0,
 ) -> np.ndarray:
-    raise NotImplementedError()
+    """
+    Calculates the net book value of a resource or asset based on the unit of production method.
+
+    Parameters
+    ----------
+    cost : float
+        Cost of the resource or asset.
+    salvage_value : float
+        Estimated value of the resource or asset at the end of its useful life.
+    resources : float
+        Total amount of resources available.
+    yearly_production : numpy.ndarray
+        Array containing yearly production quantities.
+    decline_factor : float, optional
+        Factor determining the rate of decline in production. Default is 2.
+    amortization_len : int, optional
+        Length of the amortization charge array. Default is 0.
+
+    Returns
+    -------
+    book_value : numpy.ndarray
+        Array of net book values corresponding to each unit of production.
+
+    Notes
+    -----
+    The net book value for each unit of production is calculated using the following steps:
+    1. Calculate the amortization charge for each unit of production 
+       using the unit_of_production_rate function.
+    2. Subtract the cumulative sum of amortization charges from the cost to get the net book value.
+
+    Examples
+    --------
+    >>> cost = 10000
+    >>> salvage_value = 2000
+    >>> resources = 5000
+    >>> yearly_production = np.array([1000, 800, 700, 600, 500])
+    >>> book_value = unit_of_production_book_value(cost, salvage_value, resources, yearly_production)
+    >>> print(book_value)
+    [ 9600.  8760.  7680.  6480.   4980.]
+    """
+    # TODO: fix the doctest with real result
+    amortization_charge = unit_of_production_rate(
+        cost=cost,
+        salvage_value=salvage_value,
+        resources=resources,
+        yearly_production=yearly_production,
+        decline_factor=decline_factor,
+        amortization_len=amortization_len,
+    )
+    book_value = cost - np.cumsum(amortization_charge)
+    return book_value
