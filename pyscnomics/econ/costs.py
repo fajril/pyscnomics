@@ -364,10 +364,6 @@ class Intangible:
         )
         zeros = np.zeros(self.project_length - len(expenditures))
         expenditures = np.concatenate((expenditures, zeros))
-<<<<<<< Updated upstream
-
-        return expenditures
-=======
         return expenditures
 
 @dataclass
@@ -376,4 +372,3 @@ class OPEX:
     end_year: int
     fixed_cost: np.ndarray
     variable_cost: np.ndarray
->>>>>>> Stashed changes
