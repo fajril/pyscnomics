@@ -364,4 +364,5 @@ class Intangible:
         )
         zeros = np.zeros(self.project_length - len(expenditures))
         expenditures = np.concatenate((expenditures, zeros))
+
         return expenditures
