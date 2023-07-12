@@ -349,15 +349,15 @@ class Intangible:
             
     def intangible_expenditures(self):
         """
-        Calculate tangible expenditures per year.
+        Calculate intangible expenditures per year.
 
-        This method calculates the tangible expenditures per year 
+        This method calculates the intangible expenditures per year 
         based on the expense year and cost data provided.
 
         Returns
         -------
         numpy.ndarray
-            An array representing the tangible expenditures for each year.
+            An array representing the intangible expenditures for each year.
         """
         expenditures = np.bincount(
             self.expense_year - self.start_year, weights=self.cost
