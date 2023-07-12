@@ -47,8 +47,6 @@ class Tangible:
 
     Parameters
     ----------
-    project_name : str
-        The name of the project.
     start_year : int
         The start year of the project.
     end_year : int
@@ -133,13 +131,13 @@ class Tangible:
         return np.sum(self.cost) >= np.sum(other.cost)
 
     def __add__(self, other):
-        start_year = np.min(self.start_year, other.start_year)
-        end_year = np.max(self.end_year, other.end_year)
-        cost = np.concatenate(self.cost, other.cost)
-        expense_year = np.concatenate(self.expense_year, other.expense_year)
-        pis_year = np.concatenate(self.pis_year, other.pis_year)
-        salvage_value = np.concatenate(self.salvage_value, other.salvage_value)
-        useful_life = np.concatenate(self.useful_life, other.useful_life)
+        start_year = min(self.start_year, other.start_year)
+        end_year = max(self.end_year, other.end_year)
+        cost = np.concatenate((self.cost, other.cost))
+        expense_year = np.concatenate((self.expense_year, other.expense_year))
+        pis_year = np.concatenate((self.pis_year, other.pis_year))
+        salvage_value = np.concatenate((self.salvage_value, other.salvage_value))
+        useful_life = np.concatenate((self.useful_life, other.useful_life))
         cost_allocation = self.cost_allocation + other.cost_allocation
         new_tangible = Tangible(
             start_year=start_year,
@@ -166,7 +164,7 @@ class Tangible:
         )
         return new_tangible
 
-    def __div__(self, other):
+    def __truediv__(self, other):
         if isinstance(other, Tangible):
             return np.sum(self.cost) / np.sum(other.cost)
         else:
@@ -229,8 +227,11 @@ class Tangible:
 
         Notes
         -----
-        - The function uses the `total_depreciation_rate` method to calculate the depreciation charge.
-        - The book value of depreciation is calculated by subtracting the cumulative depreciation charge from the cumulative tangible expenditures.
+        - The function uses the `total_depreciation_rate` method 
+          to calculate the depreciation charge.
+        - The book value of depreciation is calculated 
+          by subtracting the cumulative depreciation charge 
+          from the cumulative tangible expenditures.
 
         Examples
         --------
@@ -339,4 +340,28 @@ class Intangible:
             self.pis_year = self.expense_year.copy()
         if self.cost_allocation is None:
             self.cost_allocation = [FluidType.ALL for _ in self.cost]
+        if self.end_year > self.start_year:
+            self.project_length = self.end_year - self.start_year + 1
+        else:
+            raise ValueError(
+                f"start year {self.start_year} is after the end year: {self.end_year}"
+            )
             
+    def intangible_expenditures(self):
+        """
+        Calculate tangible expenditures per year.
+
+        This method calculates the tangible expenditures per year 
+        based on the expense year and cost data provided.
+
+        Returns
+        -------
+        numpy.ndarray
+            An array representing the tangible expenditures for each year.
+        """
+        expenditures = np.bincount(
+            self.expense_year - self.start_year, weights=self.cost
+        )
+        zeros = np.zeros(self.project_length - len(expenditures))
+        expenditures = np.concatenate((expenditures, zeros))
+        return expenditures
