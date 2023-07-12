@@ -66,21 +66,10 @@ class Tangible:
         An array representing the salvage value of the tangible asset.
     useful_life : numpy.ndarray, optional
         An array representing the useful life of the tangible asset.
-
-    Methods
-    -------
-    __post_init__()
-        Initializes the Tangible object after creation.
-    tangible_expenditures()
-        Calculate tangible expenditures per year.
-    total_depreciation_rate(fluid_type=FluidType.ALL, depr_method=DeprMethod.DB, decline_factor=2)
-        Calculate the total depreciation rate.
-
     """
-    project_name: str
     start_year: int
     end_year: int
-    cost: np.ndarray = field(repr=False)
+    cost: np.ndarray
     expense_year: np.ndarray = field(repr=False)
     pis_year: np.ndarray = field(default=None, repr=False)
     cost_allocation: list[FluidType] = field(default=None, repr=False)
@@ -123,6 +112,76 @@ class Tangible:
                 f"Expense year ({np.max(self.expense_year)}) is beyond the end project year: {self.end_year}"
             )
 
+    def __eq__(self, other):
+        return all((
+            all(s == o for s, o in zip(self.cost_allocation, other.cost_allocation)),
+            np.allclose(self.expense_year, other.expense_year),
+            np.allclose(self.pis_year, other.pis_year),
+            np.allclose(self.cost, other.cost),
+        ))
+
+    def __lt__(self, other):
+        return np.sum(self.cost) < np.sum(other.cost)
+
+    def __le__(self, other):
+        return np.sum(self.cost) <= np.sum(other.cost)
+
+    def __gt__(self, other):
+        return np.sum(self.cost) > np.sum(other.cost)
+
+    def __ge__(self, other):
+        return np.sum(self.cost) >= np.sum(other.cost)
+
+    def __add__(self, other):
+        start_year = np.min(self.start_year, other.start_year)
+        end_year = np.max(self.end_year, other.end_year)
+        cost = np.concatenate(self.cost, other.cost)
+        expense_year = np.concatenate(self.expense_year, other.expense_year)
+        pis_year = np.concatenate(self.pis_year, other.pis_year)
+        salvage_value = np.concatenate(self.salvage_value, other.salvage_value)
+        useful_life = np.concatenate(self.useful_life, other.useful_life)
+        cost_allocation = self.cost_allocation + other.cost_allocation
+        new_tangible = Tangible(
+            start_year=start_year,
+            end_year=end_year,
+            cost=cost,
+            expense_year=expense_year,
+            pis_year=pis_year,
+            salvage_value=salvage_value,
+            useful_life=useful_life,
+            cost_allocation=cost_allocation,
+        )
+        return new_tangible
+
+    def __mul__(self, other):
+        new_tangible = Tangible(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            cost=self.cost * other,
+            expense_year=self.expense_year.copy(),
+            pis_year=self.pis_year.copy(),
+            salvage_value=self.salvage_value.copy(),
+            useful_life=self.useful_life.copy(),
+            cost_allocation=self.cost_allocation.copy(),
+        )
+        return new_tangible
+
+    def __div__(self, other):
+        if isinstance(other, Tangible):
+            return np.sum(self.cost) / np.sum(other.cost)
+        else:
+            new_tangible = Tangible(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            cost=self.cost / other,
+            expense_year=self.expense_year.copy(),
+            pis_year=self.pis_year.copy(),
+            salvage_value=self.salvage_value.copy(),
+            useful_life=self.useful_life.copy(),
+            cost_allocation=self.cost_allocation.copy(),
+        )
+            return new_tangible
+
     def tangible_expenditures(self):
         """
         Calculate tangible expenditures per year.
@@ -141,6 +200,49 @@ class Tangible:
         zeros = np.zeros(self.project_length - len(expenditures))
         expenditures = np.concatenate((expenditures, zeros))
         return expenditures
+
+    def total_depreciation_book_value(
+        self,
+        fluid_type: FluidType = FluidType.ALL,
+        depr_method: DeprMethod = DeprMethod.DB,
+        decline_factor: float = 2,
+    ):
+        """
+        Calculate the total book value of depreciation for the asset.
+
+        Parameters
+        ----------
+        fluid_type : FluidType, optional
+            The type of fluid for which depreciation is calculated. 
+            Defaults to FluidType.ALL.
+        depr_method : DeprMethod, optional
+            The depreciation method to use. Defaults to DeprMethod.DB.
+        decline_factor : float, optional
+            The decline factor used in the declining balance method. 
+            Defaults to 2.
+
+        Returns
+        -------
+        numpy.ndarray
+            An array representing the total depreciation book value 
+            for each year.
+
+        Notes
+        -----
+        - The function uses the `total_depreciation_rate` method to calculate the depreciation charge.
+        - The book value of depreciation is calculated by subtracting the cumulative depreciation charge from the cumulative tangible expenditures.
+
+        Examples
+        --------
+        # Calculate the total book value of depreciation using the default parameters
+        result = total_depreciation_book_value()
+        """
+        depreciation_charge = self.total_depreciation_rate(
+            fluid_type=fluid_type,
+            depr_method=depr_method,
+            decline_factor=decline_factor
+        )
+        return np.sumcum(self.tangible_expenditures()) - np.sumcum(depreciation_charge)
 
     def total_depreciation_rate(
         self,
@@ -222,3 +324,19 @@ class Tangible:
             ]
         )
         return depreciation_charge.sum(axis=0)
+
+@dataclass
+class Intangible:
+    start_year: int
+    end_year: int
+    cost: np.ndarray = field(repr=False)
+    expense_year: np.ndarray = field(repr=False)
+    pis_year: np.ndarray = field(default=None, repr=False)
+    cost_allocation: list[FluidType] = field(default=None, repr=False)
+
+    def __post_init__(self):
+        if self.pis_year is None:
+            self.pis_year = self.expense_year.copy()
+        if self.cost_allocation is None:
+            self.cost_allocation = [FluidType.ALL for _ in self.cost]
+            
