@@ -20,31 +20,68 @@ Developed by:
 """
 
 import numpy as np
+from pyscnomics.econ.costs import FluidType
 from dataclasses import dataclass, field
-
-############################################################################################################
 
 
 @dataclass
-class Oil:
-
+class Lifting:
     start_year: int
     end_year: int
-    oil_prod: np.ndarray
-    oil_price: np.ndarray
-    conversion_unit: float = field(default=1.0, repr=False)
+    lifting_rate: np.ndarray
+    price: np.ndarray
+    fluid_type: FluidType
+    ghv: np.ndarray = field(default=None, repr=False)
+    prod_rate: np.ndarray = field(default=None, repr=False)
 
-    def revenue(self):
-        if len(self.oil_prod) != len(self.oil_price):
+    def __post_init__(self):
+
+        if self.prod_rate is None:
+            self.prod_rate = self.lifting_rate.copy()
+
+        if self.ghv is None:
+            self.ghv = np.ones(len(self.prod_rate))
+
+        arr_length = self.lifting_rate.shape[0]
+
+        if not all(
+                len(arr) == arr_length
+                for arr in [
+                    self.price,
+                    self.ghv,
+                    self.prod_rate
+                ]
+        ):
             raise ValueError(
-                f'Inequal length of array: oil production: {len(self.oil_prod)}, \
-                oil price: {len(self.oil_price)}'
+                f'Inequal length of array: lifting_rate: {len(self.lifting_rate)},'
+                f' ghv: {len(self.ghv)},'
+                f' production: {len(self.prod_rate)}'
             )
 
+        # Define an attribute depicting the project duration
+        if self.end_year > self.start_year:
+            self.project_duration = self.end_year - self.start_year + 1
+
         else:
-            return self.oil_prod * self.oil_price * self.conversion_unit
+            raise ValueError(
+                f"start year {self.start_year} is after the end year: {self.end_year}"
+            )
 
+        # Specify an error condition when project duration is less than the length of production data
+        if self.project_duration < len(self.prod_rate):
+            raise ValueError(
+                f'Length of project duration: ({self.project_duration})'
+                f' is less than the length of production data: ({len(self.prod_rate)})'
+            )
+        
+    def revenue(self):
 
-############################################################################################################
+        rev = self.lifting_rate * self.price * self.ghv
 
+        # When project duration is longer than the length of production data,
+        # assign the revenue of the suplementary years with zeros
+        if self.project_duration > len(self.prod_rate):
+            add_zeros = np.zeros(int(self.project_duration - len(self.prod_rate)))
+            rev = np.concatenate((rev, add_zeros))
 
+        return rev

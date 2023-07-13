@@ -1,6 +1,7 @@
 import numpy as np
 import pyscnomics as psc
 
+
 def test_tangible_comparison():
     mangga_tangible = psc.Tangible(
         start_year=2023,
@@ -8,14 +9,18 @@ def test_tangible_comparison():
         cost=np.array([200_000, 200_000]),
         expense_year=np.array([2023, 2024]),
         salvage_value=np.array([25_000, 25_000]),
+        useful_life=np.array([5, 5]),
+        cost_allocation=[psc.FluidType.OIL, psc.FluidType.OIL],
     )
 
     jeruk_tangible = psc.Tangible(
         start_year=2023,
         end_year=2033,
-        cost=np.array([200_000, 200_000]),
+        cost=np.array([205_001, 200_000]),
         expense_year=np.array([2023, 2024]),
         salvage_value=np.array([25_000, 25_000]),
+        useful_life=np.array([5, 5]),
+        cost_allocation=[psc.FluidType.OIL, psc.FluidType.OIL],
     )
 
     hiu_tangible = psc.Tangible(
@@ -24,6 +29,8 @@ def test_tangible_comparison():
         cost=np.array([200_000, 250_000]),
         expense_year=np.array([2023, 2024]),
         salvage_value=np.array([25_000, 25_000]),
+        useful_life=np.array([5, 5]),
+        cost_allocation=[psc.FluidType.OIL, psc.FluidType.OIL],
     )
 
     assert mangga_tangible == jeruk_tangible
@@ -33,6 +40,7 @@ def test_tangible_comparison():
     assert hiu_tangible > jeruk_tangible
     assert jeruk_tangible >= mangga_tangible
 
+
 def test_tangible_arithmetics():
     mangga_tangible = psc.Tangible(
         start_year=2023,
@@ -40,6 +48,8 @@ def test_tangible_arithmetics():
         cost=np.array([200_000, 200_000]),
         expense_year=np.array([2023, 2024]),
         salvage_value=np.array([25_000, 25_000]),
+        useful_life=np.array([5, 5]),
+        cost_allocation=[psc.FluidType.OIL, psc.FluidType.OIL],
     )
 
     cost_mul_by_two = np.array([400_000, 400_000])
@@ -56,7 +66,7 @@ def test_tangible_arithmetics():
     np.testing.assert_array_almost_equal(mangga_tangible.cost, mangga_tangible_div_by_scalar.cost)
 
 
-def test_tangible_total_depreciation_rate():
+def test_tangible():
     """ Test Tangible class
     """
     depreciation_charge = [
@@ -79,8 +89,10 @@ def test_tangible_total_depreciation_rate():
         cost=np.array([200_000, 200_000]),
         expense_year=np.array([2023, 2024]),
         salvage_value=np.array([25_000, 25_000]),
+        useful_life=np.array([5, 5]),
+        cost_allocation=[psc.FluidType.OIL, psc.FluidType.OIL],
     )
     depreciation_charge_calc = mangga_tangible.total_depreciation_rate(
-        depr_method=psc.DeprMethod.DB
+        depr_method=psc.DeprMethod.DB, fluid_type=psc.FluidType.OIL
     )
     np.testing.assert_array_almost_equal(depreciation_charge, depreciation_charge_calc)
