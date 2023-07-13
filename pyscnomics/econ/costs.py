@@ -40,14 +40,21 @@ class Tangible:
     useful_life: np.ndarray = field(default=None, repr=False)
 
     def __post_init__(self):
+        self.expense_year = np.asarray(self.expense_year)
         if self.pis_year is None:
             self.pis_year = self.expense_year.copy()
+        else:
+            self.pis_year = np.asarray(self.pis_year)
         if self.salvage_value is None:
-            self.salvage_value = np.zeros(self.cost.shape)
+            self.salvage_value = np.zeros(len(self.cost))
+        else:
+            self.salvage_value = np.asarray(self.salvage_value)
         if self.useful_life is None:
-            self.useful_life = np.repeat(5, self.cost.shape)
+            self.useful_life = np.repeat(5, len(self.cost))
+        else:
+            self.useful_life = np.asarray(self.useful_life)
 
-        arr_length = self.cost.shape[0]
+        arr_length = len(self.cost)
         if not all(
             len(arr) == arr_length
             for arr in [
@@ -212,7 +219,7 @@ class Tangible:
             depr_method=depr_method,
             decline_factor=decline_factor,
         )
-        return np.sumcum(self.tangible_expenditures()) - np.sumcum(depreciation_charge)
+        return np.cumsum(self.tangible_expenditures()) - np.cumsum(depreciation_charge)
 
     def total_depreciation_rate(
         self,
