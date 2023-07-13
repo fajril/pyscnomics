@@ -333,7 +333,7 @@ class OPEX:
     end_year: int
     fixed_cost: np.ndarray
     variable_cost: np.ndarray = field(init=None, repr=False)
-    cost_allocation = field(init=FluidType.OIL)
+    cost_allocation: FluidType = field(init=FluidType.OIL)
 
     def __post_init__(self):
         if self.end_year > self.start_year:
@@ -343,8 +343,8 @@ class OPEX:
                 f"start year {self.start_year} "
                 f" is after the end year: {self.end_year}"
             )
-        if variable_cost is None:
-            variable_cost = np.zeros(self.project_length)
+        if self.variable_cost is None:
+            self.variable_cost = np.zeros(self.project_length)
 
     def total_opex(
         self,
