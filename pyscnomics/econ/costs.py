@@ -1,43 +1,8 @@
-from enum import Enum
 from dataclasses import dataclass, field
 
 import numpy as np
 import pyscnomics.econ.depreciation as depr
-
-class DeprMethod(Enum):
-    """
-    Enumeration of depreciation methods.
-
-    Attributes
-    ----------
-    SL : str
-        Represents the straight-line depreciation method.
-    DB : str
-        Represents the declining balance depreciation method.
-    UOP : str
-        Represents the units of production depreciation method.
-    """
-    SL = "sl"
-    DB = "db"
-    UOP = "uop"
-
-
-class FluidType(Enum):
-    """
-    Enumeration of fluid types for depreciation calculation.
-
-    Attributes
-    ----------
-    ALL : str
-        Represents all fluid types.
-    OIL : str
-        Represents oil as the fluid type.
-    GAS : str
-        Represents gas as the fluid type.
-    """
-    ALL = "all"
-    OIL = "oil"
-    GAS = "gas"
+from pyscnomics.econ.selection import FluidType, DeprMethod
 
 
 @dataclass
@@ -70,15 +35,13 @@ class Tangible:
     cost: np.ndarray
     expense_year: np.ndarray = field(repr=False)
     pis_year: np.ndarray = field(default=None, repr=False)
-    cost_allocation: list[FluidType] = field(default=None, repr=False)
+    cost_allocation: FluidType = field(default=FluidType.OIL)
     salvage_value: np.ndarray = field(default=None, repr=False)
     useful_life: np.ndarray = field(default=None, repr=False)
 
     def __post_init__(self):
         if self.pis_year is None:
             self.pis_year = self.expense_year.copy()
-        if self.cost_allocation is None:
-            self.cost_allocation = [FluidType.ALL for _ in self.cost]
         if self.salvage_value is None:
             self.salvage_value = np.zeros(self.cost.shape)
         if self.useful_life is None:
@@ -90,29 +53,32 @@ class Tangible:
             for arr in [
                 self.expense_year,
                 self.pis_year,
-                self.cost_allocation,
                 self.salvage_value,
                 self.useful_life,
             ]
         ):
             raise ValueError(
-                f"Inequal length of array: cost: {len(self.cost)}, salvage_value: {len(self.salvage_value)} \
-                    expense_year: {len(self.expense_year)}, pis_year: {len(self.cost_allocation)}"
+                f"Inequal length of array: cost: {len(self.cost)}, "
+                f"salvage_value: {len(self.salvage_value)}, "
+                f"expense_year: {len(self.expense_year)}, "
+                f"pis_year: {len(self.pis_year)}"
             )
         if self.end_year > self.start_year:
             self.project_length = self.end_year - self.start_year + 1
         else:
             raise ValueError(
-                f"start year {self.start_year} is after the end year: {self.end_year}"
+                f"start year {self.start_year} "
+                f"is after the end year: {self.end_year}"
             )
         if np.max(self.expense_year) > self.end_year:
             raise ValueError(
-                f"Expense year ({np.max(self.expense_year)}) is beyond the end project year: {self.end_year}"
+                f"Expense year ({np.max(self.expense_year)}) " 
+                f"is beyond the end project year: {self.end_year}"
             )
 
     def __eq__(self, other):
         return all((
-            all(s == o for s, o in zip(self.cost_allocation, other.cost_allocation)),
+            self.cost_allocation == other.cost_allocation,
             np.allclose(self.expense_year, other.expense_year),
             np.allclose(self.pis_year, other.pis_year),
             np.allclose(self.cost, other.cost),
@@ -138,7 +104,12 @@ class Tangible:
         pis_year = np.concatenate((self.pis_year, other.pis_year))
         salvage_value = np.concatenate((self.salvage_value, other.salvage_value))
         useful_life = np.concatenate((self.useful_life, other.useful_life))
-        cost_allocation = self.cost_allocation + other.cost_allocation
+        if self.cost_allocation != other.cost_allocation:
+            raise ValueError(
+                "Cost allocation is not equal. "
+                f"Left is {self.cost_allocation.value}, "
+                f"right is {other.cost_allocation.value} "
+            )
         new_tangible = Tangible(
             start_year=start_year,
             end_year=end_year,
@@ -147,7 +118,7 @@ class Tangible:
             pis_year=pis_year,
             salvage_value=salvage_value,
             useful_life=useful_life,
-            cost_allocation=cost_allocation,
+            cost_allocation=self.cost_allocation,
         )
         return new_tangible
 
@@ -160,7 +131,7 @@ class Tangible:
             pis_year=self.pis_year.copy(),
             salvage_value=self.salvage_value.copy(),
             useful_life=self.useful_life.copy(),
-            cost_allocation=self.cost_allocation.copy(),
+            cost_allocation=self.cost_allocation,
         )
         return new_tangible
 
@@ -176,7 +147,7 @@ class Tangible:
             pis_year=self.pis_year.copy(),
             salvage_value=self.salvage_value.copy(),
             useful_life=self.useful_life.copy(),
-            cost_allocation=self.cost_allocation.copy(),
+            cost_allocation=self.cost_allocation,
         )
             return new_tangible
 
@@ -201,7 +172,6 @@ class Tangible:
 
     def total_depreciation_book_value(
         self,
-        fluid_type: FluidType = FluidType.ALL,
         depr_method: DeprMethod = DeprMethod.DB,
         decline_factor: float = 2,
     ):
@@ -239,15 +209,13 @@ class Tangible:
         result = total_depreciation_book_value()
         """
         depreciation_charge = self.total_depreciation_rate(
-            fluid_type=fluid_type,
             depr_method=depr_method,
-            decline_factor=decline_factor
+            decline_factor=decline_factor,
         )
         return np.sumcum(self.tangible_expenditures()) - np.sumcum(depreciation_charge)
 
     def total_depreciation_rate(
         self,
-        fluid_type: FluidType = FluidType.ALL,
         depr_method: DeprMethod = DeprMethod.DB,
         decline_factor: float = 2,
     ):
@@ -287,13 +255,10 @@ class Tangible:
                         decline_factor=decline_factor,
                         depreciation_len=self.project_length,
                     )
-                    if ca is fluid_type or fluid_type is FluidType.ALL
-                    else np.zeros(self.project_length)
-                    for c, sv, ul, ca in zip(
+                    for c, sv, ul in zip(
                         self.cost,
                         self.salvage_value,
                         self.useful_life,
-                        self.cost_allocation,
                     )
                 ]
             )
@@ -306,13 +271,10 @@ class Tangible:
                         useful_life=ul,
                         depreciation_len=self.project_length,
                     )
-                    if ca is fluid_type or fluid_type is FluidType.ALL
-                    else np.zeros(self.project_length)
-                    for c, sv, ul, ca in zip(
+                    for c, sv, ul in zip(
                         self.cost,
                         self.salvage_value,
                         self.useful_life,
-                        self.cost_allocation,
                     )
                 ]
             )
@@ -338,13 +300,12 @@ class Intangible:
     def __post_init__(self):
         if self.pis_year is None:
             self.pis_year = self.expense_year.copy()
-        if self.cost_allocation is None:
-            self.cost_allocation = [FluidType.ALL for _ in self.cost]
         if self.end_year > self.start_year:
             self.project_length = self.end_year - self.start_year + 1
         else:
             raise ValueError(
-                f"start year {self.start_year} is after the end year: {self.end_year}"
+                f"start year {self.start_year} "
+                f" is after the end year: {self.end_year}"
             )
             
     def intangible_expenditures(self):
@@ -371,4 +332,27 @@ class OPEX:
     start_year: int
     end_year: int
     fixed_cost: np.ndarray
-    variable_cost: np.ndarray
+    variable_cost: np.ndarray = field(init=None, repr=False)
+    cost_allocation = field(init=FluidType.OIL)
+
+    def __post_init__(self):
+        if self.end_year > self.start_year:
+            self.project_length = self.end_year - self.start_year + 1
+        else:
+            raise ValueError(
+                f"start year {self.start_year} "
+                f" is after the end year: {self.end_year}"
+            )
+        if variable_cost is None:
+            variable_cost = np.zeros(self.project_length)
+
+    def total_opex(
+        self,
+        prod_rate: np.ndarray=None,
+        cost_per_volume: np.ndarray=None
+    ):
+        if None not in [prod_rate, cost_per_volume]:
+            self.variable_cost = prod_rate * cost_per_volume
+
+        return self.fixed_cost + self.variable_cost
+
