@@ -295,6 +295,7 @@ class Tangible:
         )
         return depreciation_charge.sum(axis=0)
 
+
 @dataclass
 class Intangible:
     start_year: int
@@ -333,6 +334,7 @@ class Intangible:
         zeros = np.zeros(self.project_length - len(expenditures))
         expenditures = np.concatenate((expenditures, zeros))
         return expenditures
+
 
 @dataclass
 class OPEX:
