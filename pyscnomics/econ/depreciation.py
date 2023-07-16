@@ -256,13 +256,13 @@ def unit_of_production_rate(
     Notes
     -----
     The amortization charge for each unit of production is calculated using the following steps:
-    1. Calculate the resources remaining over time 
+    1. Calculate the resources remaining over time
        based on the cumulative sum of yearly production quantities.
-    2. Compute the amortization charge using the formula: 
+    2. Compute the amortization charge using the formula:
        amortization_charge = decline_factor * cost * yearly_production / resources_over_time.
-    3. Adjust the amortization charges if the sum exceeds the cost minus salvage value 
+    3. Adjust the amortization charges if the sum exceeds the cost minus salvage value
        to ensure the total amortization matches the cost minus salvage value.
-    4. If the amortization charge array is shorter than the specified amortization length, 
+    4. If the amortization charge array is shorter than the specified amortization length,
        extend the array with zeros.
 
     Examples
@@ -333,7 +333,7 @@ def unit_of_production_book_value(
     Notes
     -----
     The net book value for each unit of production is calculated using the following steps:
-    1. Calculate the amortization charge for each unit of production 
+    1. Calculate the amortization charge for each unit of production
        using the unit_of_production_rate function.
     2. Subtract the cumulative sum of amortization charges from the cost to get the net book value.
 
