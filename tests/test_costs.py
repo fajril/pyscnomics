@@ -93,6 +93,6 @@ def test_tangible():
         cost_allocation=[psc.FluidType.OIL, psc.FluidType.OIL],
     )
     depreciation_charge_calc = mangga_tangible.total_depreciation_rate(
-        depr_method=psc.DeprMethod.DB, fluid_type=psc.FluidType.OIL
+        depr_method=psc.DeprMethod.DB
     )
     np.testing.assert_array_almost_equal(depreciation_charge, depreciation_charge_calc)
