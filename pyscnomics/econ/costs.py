@@ -84,18 +84,28 @@ class Tangible:
             )
 
     def __eq__(self, other):
-        return all((
-            self.cost_allocation == other.cost_allocation,
-            np.allclose(self.expense_year, other.expense_year),
-            np.allclose(self.pis_year, other.pis_year),
-            np.allclose(self.cost, other.cost),
-        ))
+        if isinstance(other, Tangible):
+            return all((
+                self.cost_allocation == other.cost_allocation,
+                np.allclose(self.expense_year, other.expense_year),
+                np.allclose(self.pis_year, other.pis_year),
+                np.allclose(self.cost, other.cost),
+            ))
+        if isinstance(other, (int, float)):
+            return np.allclose(sum(self.cost), other)
 
     def __lt__(self, other):
-        return np.sum(self.cost) < np.sum(other.cost)
+        if isinstance(other, Tangible):
+            return np.sum(self.cost) < np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) < other
+
 
     def __le__(self, other):
-        return np.sum(self.cost) <= np.sum(other.cost)
+        if isinstance(other, Tangible):
+            return np.sum(self.cost) <= np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) <= other
 
     def __gt__(self, other):
         return np.sum(self.cost) > np.sum(other.cost)
@@ -301,12 +311,9 @@ class Intangible:
     end_year: int
     cost: np.ndarray = field(repr=False)
     expense_year: np.ndarray = field(repr=False)
-    pis_year: np.ndarray = field(default=None, repr=False)
-    cost_allocation: list[FluidType] = field(default=None, repr=False)
+    cost_allocation: FluidType = field(default=FluidType.OIL, repr=False)
 
     def __post_init__(self):
-        if self.pis_year is None:
-            self.pis_year = self.expense_year.copy()
         if self.end_year > self.start_year:
             self.project_length = self.end_year - self.start_year + 1
         else:
@@ -314,7 +321,15 @@ class Intangible:
                 f"start year {self.start_year} "
                 f" is after the end year: {self.end_year}"
             )
-            
+    
+    def __eq__(self, other):
+        return all((
+            self.cost_allocation == other.cost_allocation,
+            np.allclose(self.expense_year, other.expense_year),
+            np.allclose(self.cost, other.cost),
+        ))
+
+
     def intangible_expenditures(self):
         """
         Calculate intangible expenditures per year.
@@ -363,3 +378,40 @@ class OPEX:
 
         return self.fixed_cost + self.variable_cost
 
+@dataclass
+class ASR:
+    start_year: int
+    end_year: int
+    cost: np.ndarray = field(repr=False)
+    expense_year: np.ndarray = field(repr=False)
+    cost_allocation: FluidType = field(default=FluidType.OIL)
+    rate: float = field(default=.02)
+
+    def __post_init__(self):
+        if self.end_year > self.start_year:
+            self.project_length = self.end_year - self.start_year + 1
+        else:
+            raise ValueError(
+                f"start year {self.start_year} "
+                f" is after the end year: {self.end_year}"
+            )
+            
+
+    def future_cost(self):
+        return self.cost * np.power(
+            (1 + self.rate), self.end_year - self.expense_year
+        )
+
+    def asr_expenditures(self):
+        cost_duration = self.end_year - self.expense_year
+        cost_alloc = self.future_cost() / cost_duration
+        shift_indices = self.expense_year - self.start_year
+
+        asr_alloc = np.asarray([
+            np.concatenate((np.zeros(i), np.repeat(ca, cd)))
+            for i, ca, cd in zip(
+                shift_indices, cost_alloc, cost_duration
+            )
+        ])
+
+        return asr_alloc.sum(axis=0)
