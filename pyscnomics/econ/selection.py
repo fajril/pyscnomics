@@ -1,6 +1,8 @@
 from enum import Enum
 
+
 class DeprMethod(Enum):
+
     """
     Enumeration of depreciation methods.
 
@@ -13,12 +15,14 @@ class DeprMethod(Enum):
     UOP : str
         Represents the units of production depreciation method.
     """
+
     SL = "sl"
     DB = "db"
     UOP = "uop"
 
 
 class FluidType(Enum):
+
     """
     Enumeration of fluid types for depreciation calculation.
 
@@ -30,7 +34,12 @@ class FluidType(Enum):
         Represents oil as the fluid type.
     GAS : str
         Represents gas as the fluid type.
+
     """
+
     ALL = "all"
     OIL = "oil"
     GAS = "gas"
+    SULFUR = "sulfur"
+    ELECTRICITY = "electricity"
+    CO2 = 'co2'
