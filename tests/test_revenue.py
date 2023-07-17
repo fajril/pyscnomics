@@ -1,3 +1,7 @@
+"""
+A unit testing for revenue module.
+"""
+
 import numpy as np
 import pytest
 from pyscnomics.econ.revenue import Lifting
@@ -5,7 +9,6 @@ from pyscnomics.econ.costs import FluidType
 
 
 def test_oil_revenue_for_exception_value_error():
-
     """
     Initial check on inappropriate data input.
 
@@ -20,7 +23,7 @@ def test_oil_revenue_for_exception_value_error():
     with pytest.raises(ValueError):
 
         # Create an instance of revenue with project duration < the length of lifting data
-        oil_rev_calc = Lifting(
+        Lifting(
             start_year=2023,
             end_year=2027,
             lifting_rate=np.array([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100]),
@@ -30,7 +33,6 @@ def test_oil_revenue_for_exception_value_error():
 
 
 def test_oil_revenue_normal_condition():
-
     """
     Check revenue calculation for OIL under normal condition (project_duration = length of lifting data)
 
@@ -59,7 +61,6 @@ def test_oil_revenue_normal_condition():
 
 
 def test_gas_revenue_normal_condition():
-
     """
     Check revenue calculation for GAS under normal condition (project_duration = length of lifting data)
 
@@ -79,7 +80,7 @@ def test_gas_revenue_normal_condition():
         start_year=2023,
         end_year=2032,
         lifting_rate=np.linspace(100, 10, 10),
-        price=np.array([10 for i in range(10)]),
+        price=np.array([10 for _ in range(10)]),
         fluid_type=FluidType.GAS,
         ghv=np.array([5 for _ in range(10)])
     ).revenue()
@@ -89,7 +90,6 @@ def test_gas_revenue_normal_condition():
 
 
 def test_oil_revenue_project_duration_longer_than_production_data():
-
     """
     Check revenue calculation for OIL when project duration is longer than the length of
     production data.
@@ -120,7 +120,6 @@ def test_oil_revenue_project_duration_longer_than_production_data():
 
 
 def test_gas_revenue_project_duration_longer_than_production_data():
-
     """
     Check revenue calculation for GAS when project duration is longer than the length of
     production data.
@@ -142,7 +141,7 @@ def test_gas_revenue_project_duration_longer_than_production_data():
         start_year=2023,
         end_year=2038,
         lifting_rate=np.linspace(100, 10, 10),
-        price=np.array([10 for i in range(10)]),
+        price=np.array([10 for _ in range(10)]),
         fluid_type=FluidType.GAS,
         ghv=np.array([5 for _ in range(10)])
     ).revenue()
@@ -152,18 +151,14 @@ def test_gas_revenue_project_duration_longer_than_production_data():
 
 
 def test_lifting_comparison():
-
     """
     Test comparison between two instances of lifting.
 
     Returns
     -------
-    equality
-    unequality
-    less_than
-    less_than_equal_to
-    greater_than
-    greater_than_equal_to
+    test_result: bool
+        True (if all testing conditions are correct) or
+        False (if at least one testing condition is incorrect).
     """
 
     # Create the first instance of OIL revenue
@@ -202,7 +197,7 @@ def test_lifting_comparison():
         fluid_type=FluidType.OIL
     )
 
-    # Execute testing
+    # Execute testing conditions
     assert mangga_lifting == anggur_lifting
     assert mangga_lifting != jeruk_lifting
     assert hiu_lifting < mangga_lifting
@@ -212,21 +207,54 @@ def test_lifting_comparison():
 
 
 def test_arithmetic():
+    """
+    Test arithmetic operations between two instances of Lifting class.
 
-    total_rev = np.array(
-        [50, 90, 70, 50, 30, 10]
+    Returns
+    -------
+    test_result: bool
+        True (if all testing conditions are correct) or
+        False (if at least one testing condition is incorrect).
+
+    """
+
+    # Specify the expected result of addition between two Lifting instances
+    add_rev = np.array(
+        [50, 90, 70, 50, 30, 10, 0, 0]
     )
 
-    total_rev_mult_by_two = np.array(
-        [100, 80, 60, 40, 20]
+    # Specify the expected result of subtraction between two Lifting instances
+    sub_rev = np.array(
+        [-50, 10, 10, 10, 10, 10, 0, 0]
     )
 
-    total_rev_sub = np.zeros(5)
+    # Specify the expected result of multiplication operation involving
+    # a Lifting instance with a positive constant
+    mult_rev_pos = np.array(
+        [25, 20, 15, 10, 5, 0, 0]
+    )
+
+    # Specify the expected result of multiplication operation involving
+    # a Lifting instance with a negative constant
+    mult_rev_neg = np.array(
+        [-25, -20, -15, -10, -5, 0, 0]
+    )
+
+    # Specify the expected result of division operation involving two Lifting instances
+    div_rev = 0.5
+
+    # Specify the expected result of division operation involving
+    # a Lifting instance with a positive constant
+    div_rev_pos = [5, 5, 5, 5, 5, 0, 0]
+
+    # Specify the expected result of division operation involving
+    # a Lifting instance with a negative constant
+    div_rev_neg = [-10, -10, -10, -10, -10, 0, 0, 0]
 
     # Create the first instance of OIL revenue
     mangga_lifting = Lifting(
         start_year=2024,
-        end_year=2028,
+        end_year=2030,
         lifting_rate=np.array([50, 40, 30, 20, 10]),
         price=np.ones(5),
         fluid_type=FluidType.OIL
@@ -235,20 +263,44 @@ def test_arithmetic():
     # Create the second instance of OIL revenue
     jeruk_lifting = Lifting(
         start_year=2023,
-        end_year=2027,
+        end_year=2030,
         lifting_rate=np.array([50, 40, 30, 20, 10]),
         price=np.ones(5),
         fluid_type=FluidType.OIL
     )
 
-    calc_total_rev = mangga_lifting + jeruk_lifting
-    calc_mult_rev_by_two = mangga_lifting * -2
-    calc_sub = mangga_lifting - mangga_lifting
+    # Create the third instance of OIL revenue
+    apel_lifting = Lifting(
+        start_year=2025,
+        end_year=2031,
+        lifting_rate=np.array([10 for _ in range(5)]),
+        price=np.ones(5),
+        fluid_type=FluidType.OIL
+    )
 
-    np.testing.assert_array_almost_equal(total_rev, calc_total_rev)
-    np.testing.assert_array_almost_equal(total_rev_mult_by_two, calc_mult_rev_by_two)
-    np.testing.assert_array_almost_equal(total_rev_sub, calc_sub)
+    # Create the fourth instance of OIL revenue
+    sawo_lifting = Lifting(
+        start_year=2023,
+        end_year=2030,
+        lifting_rate=np.array([20 for _ in range(5)]),
+        price=np.ones(5),
+        fluid_type=FluidType.OIL
+    )
 
+    # Carry out mathematical operations involving two instances
+    calc_add_rev = mangga_lifting + jeruk_lifting
+    calc_sub_rev = mangga_lifting - jeruk_lifting
+    calc_mult_rev_pos = 0.5 * mangga_lifting
+    calc_mult_rev_neg = -0.5 * mangga_lifting
+    calc_div_rev = apel_lifting / sawo_lifting
+    calc_div_rev_pos = apel_lifting / 2
+    calc_div_rev_neg = sawo_lifting / -2
 
-
-
+    # Execute testing conditions
+    np.testing.assert_array_almost_equal(add_rev, calc_add_rev)
+    np.testing.assert_array_almost_equal(sub_rev, calc_sub_rev)
+    np.testing.assert_array_almost_equal(mult_rev_pos, calc_mult_rev_pos)
+    np.testing.assert_array_almost_equal(mult_rev_neg, calc_mult_rev_neg)
+    np.testing.assert_array_almost_equal(div_rev, calc_div_rev)
+    np.testing.assert_array_almost_equal(div_rev_pos, calc_div_rev_pos)
+    np.testing.assert_array_almost_equal(div_rev_neg, calc_div_rev_neg)
