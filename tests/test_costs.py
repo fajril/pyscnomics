@@ -16,7 +16,7 @@ def test_tangible_comparison():
     jeruk_tangible = psc.Tangible(
         start_year=2023,
         end_year=2033,
-        cost=np.array([205_001, 200_000]),
+        cost=np.array([200_000, 200_000]),
         expense_year=np.array([2023, 2024]),
         salvage_value=np.array([25_000, 25_000]),
         useful_life=np.array([5, 5]),
@@ -117,3 +117,4 @@ def test_asr():
 
     np.testing.assert_allclose(fcost_calc, fcost)
     np.testing.assert_allclose(asr_alloc_calc, asr_alloc)
+    
