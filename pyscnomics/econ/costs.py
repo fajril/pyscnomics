@@ -83,6 +83,9 @@ class Tangible:
                 f"is beyond the end project year: {self.end_year}"
             )
 
+    def __len__(self):
+        return self.project_length
+
     def __eq__(self, other):
         if isinstance(other, Tangible):
             return all((
@@ -93,18 +96,14 @@ class Tangible:
             ))
         if isinstance(other, (int, float)):
             return np.allclose(sum(self.cost), other)
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
     def __lt__(self, other):
         if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
             return np.sum(self.cost) < np.sum(other.cost)
         if isinstance(other, (int, float)):
             return np.sum(self.cost) < other
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
 
     def __le__(self, other):
@@ -112,27 +111,21 @@ class Tangible:
             return np.sum(self.cost) <= np.sum(other.cost)
         if isinstance(other, (int, float)):
             return np.sum(self.cost) <= other
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
     def __gt__(self, other):
         if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
             return np.sum(self.cost) > np.sum(other.cost)
         if isinstance(other, (int, float)):
             return np.sum(self.cost) > other
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
     def __ge__(self, other):
         if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
             return np.sum(self.cost) >= np.sum(other.cost)
         if isinstance(other, (int, float)):
             return np.sum(self.cost) >= other
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
     def __add__(self, other):
         start_year = min(self.start_year, other.start_year)
@@ -174,10 +167,8 @@ class Tangible:
             )
             return new_tangible
         else:
-            raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
-
+            return False
+    
     def __truediv__(self, other):
         if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
             return np.sum(self.cost) / np.sum(other.cost)
@@ -194,7 +185,7 @@ class Tangible:
         )
         return new_tangible
 
-    def tangible_expenditures(self):
+    def expenditures(self):
         """
         Calculate tangible expenditures per year.
 
@@ -255,7 +246,7 @@ class Tangible:
             depr_method=depr_method,
             decline_factor=decline_factor,
         )
-        return np.cumsum(self.tangible_expenditures()) - np.cumsum(depreciation_charge)
+        return np.cumsum(self.expenditures()) - np.cumsum(depreciation_charge)
 
     def total_depreciation_rate(
         self,
@@ -348,6 +339,9 @@ class Intangible:
                 f" is after the end year: {self.end_year}"
             )
 
+    def __len__(self):
+        return self.project_length
+
     def __eq__(self, other):
         if isinstance(other, Intangible):
             return all((
@@ -357,18 +351,14 @@ class Intangible:
             ))
         if isinstance(other, (int, float)):
             return np.allclose(sum(self.cost), other)
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
     def __lt__(self, other):
         if isinstance(other, Tangible, Intangible, OPEX, ASR):
             return np.sum(self.cost) < np.sum(other.cost)
         if isinstance(other, (int, float)):
             return np.sum(self.cost) < other
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
 
     def __le__(self, other):
@@ -376,29 +366,23 @@ class Intangible:
             return np.sum(self.cost) <= np.sum(other.cost)
         if isinstance(other, (int, float)):
             return np.sum(self.cost) <= other
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
     def __gt__(self, other):
         if isinstance(other, Tangible, Intangible, OPEX, ASR):
             return np.sum(self.cost) > np.sum(other.cost)
         if isinstance(other, (int, float)):
             return np.sum(self.cost) > other
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
     def __ge__(self, other):
         if isinstance(other, Tangible, Intangible, OPEX, ASR):
             return np.sum(self.cost) >= np.sum(other.cost)
         if isinstance(other, (int, float)):
             return np.sum(self.cost) >= other
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
-    def intangible_expenditures(self):
+    def expenditures(self):
         """
         Calculate intangible expenditures per year.
 
@@ -438,6 +422,9 @@ class OPEX:
 
         self.cost = self.fixed_cost + self.variable_cost
 
+    def __len__(self):
+        return self.project_length
+
     def __eq__(self, other):
         if isinstance(other, OPEX):
             return all((
@@ -447,9 +434,7 @@ class OPEX:
             ))
         if isinstance(other, (int, float)):
             return np.allclose(sum(self.fixed_cost, self.variable_cost), other)
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
     def __lt__(self, other):
         if isinstance(other, Tangible, Intangible, OPEX, ASR):
@@ -463,29 +448,23 @@ class OPEX:
             return np.sum(self.cost) <= np.sum(other.cost)
         if isinstance(other, (int, float)):
             return np.sum(self.cost) <= other
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
     def __gt__(self, other):
         if isinstance(other, Tangible, Intangible, OPEX, ASR):
             return np.sum(self.cost) > np.sum(other.cost)
         if isinstance(other, (int, float)):
             return np.sum(self.cost) > other
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
     def __ge__(self, other):
         if isinstance(other, Tangible, Intangible, OPEX, ASR):
             return np.sum(self.cost) >= np.sum(other.cost)
         if isinstance(other, (int, float)):
             return np.sum(self.cost) >= other
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
-    def total_opex(
+    def expenditures(
         self,
         prod_rate: np.ndarray=None,
         cost_per_volume: np.ndarray=None
@@ -513,23 +492,26 @@ class ASR:
                 f" is after the end year: {self.end_year}"
             )
 
+    def __len__(self):
+        return self.project_length
+
     def __eq__(self, other):
         if isinstance(other, ASR):
             return all((
-                self.cost_allocation == other.cost_allocation,
                 np.allclose(self.cost, other.cost),
+                np.allclose(self.expense_year, other.expense_year),
+                self.cost_allocation == other.cost_allocation,
             ))
         if isinstance(other, (int, float)):
             return np.allclose(sum(self.cost), other)
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
     def __lt__(self, other):
         if isinstance(other, Tangible, Intangible, OPEX, ASR):
             return np.sum(self.cost) < np.sum(other.cost)
         if isinstance(other, (int, float)):
             return np.sum(self.cost) < other
+        return False
 
 
     def __le__(self, other):
@@ -537,27 +519,21 @@ class ASR:
             return np.sum(self.cost) <= np.sum(other.cost)
         if isinstance(other, (int, float)):
             return np.sum(self.cost) <= other
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
     def __gt__(self, other):
         if isinstance(other, Tangible, Intangible, OPEX, ASR):
             return np.sum(self.cost) > np.sum(other.cost)
         if isinstance(other, (int, float)):
             return np.sum(self.cost) > other
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
 
     def __ge__(self, other):
         if isinstance(other, Tangible, Intangible, OPEX, ASR):
             return np.sum(self.cost) >= np.sum(other.cost)
         if isinstance(other, (int, float)):
             return np.sum(self.cost) >= other
-        raise TypeError(
-            f"Object {type(self)} and {type(other)} cannot be compared"
-        )
+        return False
             
 
     def future_cost(self):
@@ -565,7 +541,7 @@ class ASR:
             (1 + self.rate), self.end_year - self.expense_year
         )
 
-    def asr_expenditures(self):
+    def expenditures(self):
         cost_duration = self.end_year - self.expense_year
         cost_alloc = self.future_cost() / cost_duration
         shift_indices = self.expense_year - self.start_year
