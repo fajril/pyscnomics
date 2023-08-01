@@ -84,27 +84,47 @@ class Tangible:
                 f"is beyond the end project year: {self.end_year}"
             )
 
+    def __len__(self):
+        return self.project_length
+
     def __eq__(self, other):
-        return all(
-            (
+        if isinstance(other, Tangible):
+            return all((
                 self.cost_allocation == other.cost_allocation,
                 np.allclose(self.expense_year, other.expense_year),
                 np.allclose(self.pis_year, other.pis_year),
-                np.allclose(self.cost, other.cost),
-            )
-        )
+        if isinstance(other, (int, float)):
+            return np.allclose(sum(self.cost), other)
+        return False
 
     def __lt__(self, other):
-        return np.sum(self.cost) < np.sum(other.cost)
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) < np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) < other
+        return False
+
 
     def __le__(self, other):
-        return np.sum(self.cost) <= np.sum(other.cost)
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) <= np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) <= other
+        return False
 
     def __gt__(self, other):
-        return np.sum(self.cost) > np.sum(other.cost)
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) > np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) > other
+        return False
 
     def __ge__(self, other):
-        return np.sum(self.cost) >= np.sum(other.cost)
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) >= np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) >= other
+        return False
 
     def __add__(self, other):
         start_year = min(self.start_year, other.start_year)
@@ -133,20 +153,23 @@ class Tangible:
         return new_tangible
 
     def __mul__(self, other):
-        new_tangible = Tangible(
-            start_year=self.start_year,
-            end_year=self.end_year,
-            cost=self.cost * other,
-            expense_year=self.expense_year.copy(),
-            pis_year=self.pis_year.copy(),
-            salvage_value=self.salvage_value.copy(),
-            useful_life=self.useful_life.copy(),
-            cost_allocation=self.cost_allocation,
-        )
-        return new_tangible
-
+        if isinstance(other, (int, float)):
+            new_tangible = Tangible(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                cost=self.cost * other,
+                expense_year=self.expense_year.copy(),
+                pis_year=self.pis_year.copy(),
+                salvage_value=self.salvage_value.copy(),
+                useful_life=self.useful_life.copy(),
+                cost_allocation=self.cost_allocation,
+            )
+            return new_tangible
+        else:
+            return False
+    
     def __truediv__(self, other):
-        if isinstance(other, Tangible):
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
             return np.sum(self.cost) / np.sum(other.cost)
         else:
             new_tangible = Tangible(
@@ -161,7 +184,7 @@ class Tangible:
             )
             return new_tangible
 
-    def tangible_expenditures(self):
+    def expenditures(self):
         """
         Calculate tangible expenditures per year.
 
@@ -222,7 +245,7 @@ class Tangible:
             depr_method=depr_method,
             decline_factor=decline_factor,
         )
-        return np.cumsum(self.tangible_expenditures()) - np.cumsum(depreciation_charge)
+        return np.cumsum(self.expenditures()) - np.cumsum(depreciation_charge)
 
     def total_depreciation_rate(
         self,
@@ -305,12 +328,9 @@ class Intangible:
     end_year: int
     cost: np.ndarray = field(repr=False)
     expense_year: np.ndarray = field(repr=False)
-    pis_year: np.ndarray = field(default=None, repr=False)
-    cost_allocation: list[FluidType] = field(default=None, repr=False)
+    cost_allocation: FluidType = field(default=FluidType.OIL, repr=False)
 
     def __post_init__(self):
-        if self.pis_year is None:
-            self.pis_year = self.expense_year.copy()
         if self.end_year > self.start_year:
             self.project_length = self.end_year - self.start_year + 1
         else:
@@ -318,8 +338,51 @@ class Intangible:
                 f"start year {self.start_year} "
                 f" is after the end year: {self.end_year}"
             )
+              
+    def __len__(self):
+        return self.project_length
 
-    def intangible_expenditures(self):
+    def __eq__(self, other):
+        if isinstance(other, Intangible):
+            return all((
+                self.cost_allocation == other.cost_allocation,
+                np.allclose(self.expense_year, other.expense_year),
+                np.allclose(self.cost, other.cost),
+            ))
+        if isinstance(other, (int, float)):
+            return np.allclose(sum(self.cost), other)
+        return False
+
+    def __lt__(self, other):
+        if isinstance(other, Tangible, Intangible, OPEX, ASR):
+            return np.sum(self.cost) < np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) < other
+        return False
+
+
+    def __le__(self, other):
+        if isinstance(other, Tangible, Intangible, OPEX, ASR):
+            return np.sum(self.cost) <= np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) <= other
+        return False
+
+    def __gt__(self, other):
+        if isinstance(other, Tangible, Intangible, OPEX, ASR):
+            return np.sum(self.cost) > np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) > other
+        return False
+
+    def __ge__(self, other):
+        if isinstance(other, Tangible, Intangible, OPEX, ASR):
+            return np.sum(self.cost) >= np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) >= other
+        return False
+
+    def expenditures(self):
         """
         Calculate intangible expenditures per year.
 
@@ -357,11 +420,137 @@ class OPEX:
             )
         if self.variable_cost is None:
             self.variable_cost = np.zeros(self.project_length)
+        self.cost = self.fixed_cost + self.variable_cost
+
+    def __len__(self):
+        return self.project_length
+
+    def __eq__(self, other):
+        if isinstance(other, OPEX):
+            return all((
+                self.cost_allocation == other.cost_allocation,
+                np.allclose(self.fixed_cost, other.fixed_cost),
+                np.allclose(self.variable_cost, other.variable_cost),
+            ))
+        if isinstance(other, (int, float)):
+            return np.allclose(sum(self.fixed_cost, self.variable_cost), other)
+        return False
+
+    def __lt__(self, other):
+        if isinstance(other, Tangible, Intangible, OPEX, ASR):
+            return np.sum(self.cost) < np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) < other
+
+
+    def __le__(self, other):
+        if isinstance(other, Tangible, Intangible, OPEX, ASR):
+            return np.sum(self.cost) <= np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) <= other
+        return False
+
+    def __gt__(self, other):
+        if isinstance(other, Tangible, Intangible, OPEX, ASR):
+            return np.sum(self.cost) > np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) > other
+        return False
+
+    def __ge__(self, other):
+        if isinstance(other, Tangible, Intangible, OPEX, ASR):
+            return np.sum(self.cost) >= np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) >= other
+        return False
+
+    def expenditures(
+        self,
+        prod_rate: np.ndarray=None,
+        cost_per_volume: np.ndarray=None
 
     def total_opex(
         self, prod_rate: np.ndarray = None, cost_per_volume: np.ndarray = None
     ):
         if None not in [prod_rate, cost_per_volume]:
             self.variable_cost = prod_rate * cost_per_volume
+            self.cost = self.fixed_cost + self.variable_cost
+        return self.cost
 
-        return self.fixed_cost + self.variable_cost
+@dataclass
+class ASR:
+    start_year: int
+    end_year: int
+    cost: np.ndarray = field(repr=False)
+    expense_year: np.ndarray = field(repr=False)
+    cost_allocation: FluidType = field(default=FluidType.OIL)
+    rate: float = field(default=.02)
+
+    def __post_init__(self):
+        if self.end_year > self.start_year:
+            self.project_length = self.end_year - self.start_year + 1
+        else:
+            raise ValueError(
+                f"start year {self.start_year} "
+                f" is after the end year: {self.end_year}"
+            )
+
+    def __len__(self):
+        return self.project_length
+
+    def __eq__(self, other):
+        if isinstance(other, ASR):
+            return all((
+                np.allclose(self.cost, other.cost),
+                np.allclose(self.expense_year, other.expense_year),
+                self.cost_allocation == other.cost_allocation,
+            ))
+        if isinstance(other, (int, float)):
+            return np.allclose(sum(self.cost), other)
+        return False
+
+    def __lt__(self, other):
+        if isinstance(other, Tangible, Intangible, OPEX, ASR):
+            return np.sum(self.cost) < np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) < other
+        return False
+
+    def __le__(self, other):
+        if isinstance(other, Tangible, Intangible, OPEX, ASR):
+            return np.sum(self.cost) <= np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) <= other
+        return False
+
+    def __gt__(self, other):
+        if isinstance(other, Tangible, Intangible, OPEX, ASR):
+            return np.sum(self.cost) > np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) > other
+        return False
+
+    def __ge__(self, other):
+        if isinstance(other, Tangible, Intangible, OPEX, ASR):
+            return np.sum(self.cost) >= np.sum(other.cost)
+        if isinstance(other, (int, float)):
+            return np.sum(self.cost) >= other
+        return False
+
+    def future_cost(self):
+        return self.cost * np.power(
+            (1 + self.rate), self.end_year - self.expense_year
+        )
+
+    def expenditures(self):
+        cost_duration = self.end_year - self.expense_year
+        cost_alloc = self.future_cost() / cost_duration
+        shift_indices = self.expense_year - self.start_year
+
+        asr_alloc = np.asarray([
+            np.concatenate((np.zeros(i), np.repeat(ca, cd)))
+            for i, ca, cd in zip(
+                shift_indices, cost_alloc, cost_duration
+            )
+        ])
+        return asr_alloc.sum(axis=0)

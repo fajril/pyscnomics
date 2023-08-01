@@ -16,7 +16,7 @@ def test_tangible_comparison():
     jeruk_tangible = psc.Tangible(
         start_year=2023,
         end_year=2033,
-        cost=np.array([205_001, 200_000]),
+        cost=np.array([200_000, 200_000]),
         expense_year=np.array([2023, 2024]),
         salvage_value=np.array([25_000, 25_000]),
         useful_life=np.array([5, 5]),
@@ -95,4 +95,26 @@ def test_tangible():
     depreciation_charge_calc = mangga_tangible.total_depreciation_rate(
         depr_method=psc.DeprMethod.DB
     )
-    np.testing.assert_array_almost_equal(depreciation_charge, depreciation_charge_calc)
+    np.testing.assert_allclose(depreciation_charge, depreciation_charge_calc)
+
+def test_asr():
+    
+    mangga_asr = psc.ASR(
+        start_year=2023,
+        end_year=2028,
+        cost=np.array([200_000, 200_000]),
+        expense_year=np.array([2023, 2024]),
+    )
+
+    fcost = np.array([220816.160640, 216486.432000])
+    fcost_calc = mangga_asr.future_cost()
+
+    asr_alloc = np.array([
+        44163.2321, 98284.84013, 98284.84013, 98284.84013, 98284.84013
+
+    ])
+    asr_alloc_calc = mangga_asr.asr_expenditures()
+
+    np.testing.assert_allclose(fcost_calc, fcost)
+    np.testing.assert_allclose(asr_alloc_calc, asr_alloc)
+    
