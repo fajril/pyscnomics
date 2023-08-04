@@ -57,7 +57,7 @@ def test_oil_revenue_normal_condition():
     ).revenue()
 
     # Test whether the instance is equal to the expected result
-    np.testing.assert_array_almost_equal(oil_rev, oil_rev_calc)
+    np.testing.assert_allclose(oil_rev, oil_rev_calc)
 
 
 def test_gas_revenue_normal_condition():
@@ -86,7 +86,7 @@ def test_gas_revenue_normal_condition():
     ).revenue()
 
     # Test whether the instance is equal to the expected result
-    np.testing.assert_array_almost_equal(gas_rev, gas_rev_calc)
+    np.testing.assert_allclose(gas_rev, gas_rev_calc)
 
 
 def test_oil_revenue_project_duration_longer_than_production_data():
@@ -116,7 +116,7 @@ def test_oil_revenue_project_duration_longer_than_production_data():
     ).revenue()
 
     # Test whether the instance is equal to the expected result
-    np.testing.assert_array_almost_equal(oil_rev, oil_rev_calc)
+    np.testing.assert_allclose(oil_rev, oil_rev_calc)
 
 
 def test_gas_revenue_project_duration_longer_than_production_data():
@@ -147,7 +147,7 @@ def test_gas_revenue_project_duration_longer_than_production_data():
     ).revenue()
 
     # Test whether the instance is equal to the expected result
-    np.testing.assert_array_almost_equal(gas_rev, gas_rev_calc)
+    np.testing.assert_allclose(gas_rev, gas_rev_calc)
 
 
 def test_lifting_comparison():
@@ -297,10 +297,10 @@ def test_arithmetic():
     calc_div_rev_neg = sawo_lifting / -2
 
     # Execute testing conditions
-    np.testing.assert_array_almost_equal(add_rev, calc_add_rev)
-    np.testing.assert_array_almost_equal(sub_rev, calc_sub_rev)
-    np.testing.assert_array_almost_equal(mult_rev_pos, calc_mult_rev_pos)
-    np.testing.assert_array_almost_equal(mult_rev_neg, calc_mult_rev_neg)
-    np.testing.assert_array_almost_equal(div_rev, calc_div_rev)
-    np.testing.assert_array_almost_equal(div_rev_pos, calc_div_rev_pos)
-    np.testing.assert_array_almost_equal(div_rev_neg, calc_div_rev_neg)
+    np.testing.assert_allclose(add_rev, calc_add_rev)
+    np.testing.assert_allclose(sub_rev, calc_sub_rev)
+    np.testing.assert_allclose(mult_rev_pos, calc_mult_rev_pos)
+    np.testing.assert_allclose(mult_rev_neg, calc_mult_rev_neg)
+    np.testing.assert_allclose(div_rev, calc_div_rev)
+    np.testing.assert_allclose(div_rev_pos, calc_div_rev_pos)
+    np.testing.assert_allclose(div_rev_neg, calc_div_rev_neg)
