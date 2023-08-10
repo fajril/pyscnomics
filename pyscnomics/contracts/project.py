@@ -30,14 +30,14 @@ class BaseProject:
                 f"start date {self.start_date} "
                 f"is after the end date: {self.end_date}"
             )
-        #TODO: write validation for costs date 
-        
+        #TODO: write validation for costs date
+
 
 
     def run(self):
         revenues = np.zeros(self.duration)
         for lift in self.lifting:
-            revenue = revenue + lift.revenue()
+            revenues = revenues + lift.revenue()
 
         expenditures = np.zeros(self.duration)
 
@@ -53,8 +53,6 @@ class BaseProject:
         for cost in self.asr_cost:
             expenditures = expenditures + cost.expenditures()
 
-        return CashFlow(
-            start_date=self.start_date,
-            end_date=self.end_date,
-            cash=revenues - expenditures,
-        )
+        return CashFlow(start_date=self.start_date,
+                        end_date=self.end_date,
+                        cash=revenues - expenditures)

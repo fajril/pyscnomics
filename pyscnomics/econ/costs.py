@@ -21,7 +21,7 @@ class Tangible:
     expense_year : numpy.ndarray, optional
         An array representing the expense year of the tangible asset.
     pis_year : numpy.ndarray, optional
-        An array representing the PIS (Placed-in-Service) year 
+        An array representing the PIS (Placed-in-Service) year
         of the tangible asset.
     cost_allocation : list[FluidType], optional
         A list representing the cost allocation of the tangible asset.
@@ -79,7 +79,7 @@ class Tangible:
             )
         if np.max(self.expense_year) > self.end_year:
             raise ValueError(
-                f"Expense year ({np.max(self.expense_year)}) " 
+                f"Expense year ({np.max(self.expense_year)}) "
                 f"is beyond the end project year: {self.end_year}"
             )
 
@@ -168,7 +168,7 @@ class Tangible:
             return new_tangible
         else:
             return False
-    
+
     def __truediv__(self, other):
         if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
             return np.sum(self.cost) / np.sum(other.cost)
@@ -189,7 +189,7 @@ class Tangible:
         """
         Calculate tangible expenditures per year.
 
-        This method calculates the tangible expenditures per year 
+        This method calculates the tangible expenditures per year
         based on the expense year and cost data provided.
 
         Returns
@@ -215,26 +215,26 @@ class Tangible:
         Parameters
         ----------
         fluid_type : FluidType, optional
-            The type of fluid for which depreciation is calculated. 
+            The type of fluid for which depreciation is calculated.
             Defaults to FluidType.ALL.
         depr_method : DeprMethod, optional
             The depreciation method to use. Defaults to DeprMethod.DB.
         decline_factor : float, optional
-            The decline factor used in the declining balance method. 
+            The decline factor used in the declining balance method.
             Defaults to 2.
 
         Returns
         -------
         numpy.ndarray
-            An array representing the total depreciation book value 
+            An array representing the total depreciation book value
             for each year.
 
         Notes
         -----
-        - The function uses the `total_depreciation_rate` method 
+        - The function uses the `total_depreciation_rate` method
           to calculate the depreciation charge.
-        - The book value of depreciation is calculated 
-          by subtracting the cumulative depreciation charge 
+        - The book value of depreciation is calculated
+          by subtracting the cumulative depreciation charge
           from the cumulative tangible expenditures.
 
         Examples
@@ -259,12 +259,12 @@ class Tangible:
         Parameters
         ----------
         fluid_type : FluidType, optional
-            The type of fluid for which depreciation is calculated. 
+            The type of fluid for which depreciation is calculated.
             Defaults to FluidType.ALL.
         depr_method : DeprMethod, optional
             The depreciation method to use. Defaults to DeprMethod.DB.
         decline_factor : float, optional
-            The decline factor used in the declining balance method. 
+            The decline factor used in the declining balance method.
             Defaults to 2.
 
         Returns
@@ -274,9 +274,9 @@ class Tangible:
 
         Notes
         -----
-        - The `fluid_type` argument should be an instance 
+        - The `fluid_type` argument should be an instance
           of the `FluidType` enum.
-        - The `depr_method` argument should be an instance 
+        - The `depr_method` argument should be an instance
           of the `DeprMethod` enum.
         """
         if depr_method == DeprMethod.DB:
@@ -386,7 +386,7 @@ class Intangible:
         """
         Calculate intangible expenditures per year.
 
-        This method calculates the intangible expenditures per year 
+        This method calculates the intangible expenditures per year
         based on the expense year and cost data provided.
 
         Returns
@@ -406,8 +406,8 @@ class OPEX:
     start_year: int
     end_year: int
     fixed_cost: np.ndarray
-    variable_cost: np.ndarray = field(init=None, repr=False)
-    cost_allocation: FluidType = field(init=FluidType.OIL)
+    variable_cost: np.ndarray = field(default=None, repr=False)
+    cost_allocation: FluidType = field(default=FluidType.OIL)
 
     def __post_init__(self):
         if self.end_year > self.start_year:
@@ -464,11 +464,8 @@ class OPEX:
             return np.sum(self.cost) >= other
         return False
 
-    def expenditures(
-        self,
-        prod_rate: np.ndarray=None,
-        cost_per_volume: np.ndarray=None
-    ):
+    def expenditures(self, prod_rate: np.ndarray=None,
+                     cost_per_volume: np.ndarray=None):
         if None not in [prod_rate, cost_per_volume]:
             self.variable_cost = prod_rate * cost_per_volume
             self.cost = self.fixed_cost + self.variable_cost
@@ -534,7 +531,7 @@ class ASR:
         if isinstance(other, (int, float)):
             return np.sum(self.cost) >= other
         return False
-            
+
 
     def future_cost(self):
         return self.cost * np.power(
