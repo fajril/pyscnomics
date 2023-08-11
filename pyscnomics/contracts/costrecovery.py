@@ -14,11 +14,12 @@ from datetime import datetime
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.econ.revenue import Lifting
 
+@dataclass
 class CostRecovery(BaseProject):
     ftp_is_available: bool = field(default=True, repr=False)
     ftp_is_shared: bool = field(default=True, repr=False)
     ftp_portion: float = field(default=None, repr=False)
-    pretax: tuple[float, float] = field(default=(None, None), repr=False)
+    pretax: float = field(default=None, repr=False)         # Depend on phase
 
     # def __init__(self,
     #              start_discount_year: int = None,
@@ -102,11 +103,6 @@ class CostRecovery(BaseProject):
 
     #     # Pre-Tax Split (Depend on phase)
     #     self.pretax = pretax
-
-    #     # FTP Data
-    #     self.ftp_is_available = ftp_is_available
-    #     self.ftp_is_shared = ftp_is_shared
-    #     self.ftp_portion = ftp_portion
 
     #     # CR Capped Rate Data
     #     self.cr_cap_rate = cr_cap_rate
@@ -1158,4 +1154,4 @@ class CostRecovery(BaseProject):
 if __name__ == "__main__":
     from pyscnomics.datasets import load_data
 
-    data_CR = load_data("test")
+    data_CR = load_data("CR_Gas")
