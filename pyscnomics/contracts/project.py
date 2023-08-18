@@ -12,6 +12,7 @@ from pyscnomics.econ.costs import (
 )
 from pyscnomics.econ.results import CashFlow
 
+
 @dataclass
 class BaseProject:
     start_date: date
@@ -30,9 +31,7 @@ class BaseProject:
                 f"start date {self.start_date} "
                 f"is after the end date: {self.end_date}"
             )
-        #TODO: write validation for costs date 
-        
-
+        # TODO: write validation for costs date
 
     def run(self):
         revenues = np.zeros(self.duration)

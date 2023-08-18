@@ -26,9 +26,11 @@ def test_oil_revenue_for_exception_value_error():
         Lifting(
             start_year=2023,
             end_year=2027,
-            lifting_rate=np.array([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100]),
+            lifting_rate=np.array(
+                [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100]
+            ),
             price=np.array([10 for _ in range(11)]),
-            fluid_type=FluidType.OIL
+            fluid_type=FluidType.OIL,
         ).revenue()
 
 
@@ -43,9 +45,7 @@ def test_oil_revenue_normal_condition():
     """
 
     # Specify the expected result
-    oil_rev = np.array(
-        [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10_000]
-    )
+    oil_rev = np.array([1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10_000])
 
     # Create an instance for OIL revenue
     oil_rev_calc = Lifting(
@@ -53,11 +53,11 @@ def test_oil_revenue_normal_condition():
         end_year=2032,
         lifting_rate=np.array([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]),
         price=np.array([10 for _ in range(10)]),
-        fluid_type=FluidType.OIL
+        fluid_type=FluidType.OIL,
     ).revenue()
 
     # Test whether the instance is equal to the expected result
-    np.testing.assert_allclose(oil_rev, oil_rev_calc)
+    np.testing.assert_array_almost_equal(oil_rev, oil_rev_calc)
 
 
 def test_gas_revenue_normal_condition():
@@ -71,9 +71,7 @@ def test_gas_revenue_normal_condition():
     """
 
     # Specify the expected result
-    gas_rev = np.array(
-        [5000, 4500, 4000, 3500, 3000, 2500, 2000, 1500, 1000, 500]
-    )
+    gas_rev = np.array([5000, 4500, 4000, 3500, 3000, 2500, 2000, 1500, 1000, 500])
 
     # Create an instance for GAS revenue
     gas_rev_calc = Lifting(
@@ -82,11 +80,11 @@ def test_gas_revenue_normal_condition():
         lifting_rate=np.linspace(100, 10, 10),
         price=np.array([10 for _ in range(10)]),
         fluid_type=FluidType.GAS,
-        ghv=np.array([5 for _ in range(10)])
+        ghv=np.array([5 for _ in range(10)]),
     ).revenue()
 
     # Test whether the instance is equal to the expected result
-    np.testing.assert_allclose(gas_rev, gas_rev_calc)
+    np.testing.assert_array_almost_equal(gas_rev, gas_rev_calc)
 
 
 def test_oil_revenue_project_duration_longer_than_production_data():
@@ -112,11 +110,11 @@ def test_oil_revenue_project_duration_longer_than_production_data():
         end_year=2037,
         lifting_rate=np.array([1000, 900, 800, 700, 600, 500, 400, 300, 200, 100]),
         price=np.array([5 for _ in range(10)]),
-        fluid_type=FluidType.OIL
+        fluid_type=FluidType.OIL,
     ).revenue()
 
     # Test whether the instance is equal to the expected result
-    np.testing.assert_allclose(oil_rev, oil_rev_calc)
+    np.testing.assert_array_almost_equal(oil_rev, oil_rev_calc)
 
 
 def test_gas_revenue_project_duration_longer_than_production_data():
@@ -143,11 +141,11 @@ def test_gas_revenue_project_duration_longer_than_production_data():
         lifting_rate=np.linspace(100, 10, 10),
         price=np.array([10 for _ in range(10)]),
         fluid_type=FluidType.GAS,
-        ghv=np.array([5 for _ in range(10)])
+        ghv=np.array([5 for _ in range(10)]),
     ).revenue()
 
     # Test whether the instance is equal to the expected result
-    np.testing.assert_allclose(gas_rev, gas_rev_calc)
+    np.testing.assert_array_almost_equal(gas_rev, gas_rev_calc)
 
 
 def test_lifting_comparison():
@@ -167,7 +165,7 @@ def test_lifting_comparison():
         end_year=2032,
         lifting_rate=np.array([100, 90, 80, 70, 60, 50, 40, 30, 20, 10]),
         price=np.array([10 for _ in range(10)]),
-        fluid_type=FluidType.OIL
+        fluid_type=FluidType.OIL,
     )
 
     # Create the second instance of OIL revenue
@@ -176,7 +174,7 @@ def test_lifting_comparison():
         end_year=2037,
         lifting_rate=np.array([100, 90, 80, 70, 60, 50, 40, 30, 20, 5]),
         price=np.array([10 for _ in range(10)]),
-        fluid_type=FluidType.OIL
+        fluid_type=FluidType.OIL,
     )
 
     # Create the third instance of OIL revenue
@@ -185,7 +183,7 @@ def test_lifting_comparison():
         end_year=2032,
         lifting_rate=np.array([100, 90, 80, 70, 60, 50, 40, 30, 20, 5]),
         price=np.array([10 for _ in range(10)]),
-        fluid_type=FluidType.OIL
+        fluid_type=FluidType.OIL,
     )
 
     # Create the fourth instance of OIL revenue
@@ -194,7 +192,7 @@ def test_lifting_comparison():
         end_year=2032,
         lifting_rate=np.array([100, 90, 80, 70, 60, 50, 40, 30, 20, 10]),
         price=np.array([10 for _ in range(10)]),
-        fluid_type=FluidType.OIL
+        fluid_type=FluidType.OIL,
     )
 
     # Execute testing conditions
@@ -219,26 +217,18 @@ def test_arithmetic():
     """
 
     # Specify the expected result of addition between two Lifting instances
-    add_rev = np.array(
-        [50, 90, 70, 50, 30, 10, 0, 0]
-    )
+    add_rev = np.array([50, 90, 70, 50, 30, 10, 0, 0])
 
     # Specify the expected result of subtraction between two Lifting instances
-    sub_rev = np.array(
-        [-50, 10, 10, 10, 10, 10, 0, 0]
-    )
+    sub_rev = np.array([-50, 10, 10, 10, 10, 10, 0, 0])
 
     # Specify the expected result of multiplication operation involving
     # a Lifting instance with a positive constant
-    mult_rev_pos = np.array(
-        [25, 20, 15, 10, 5, 0, 0]
-    )
+    mult_rev_pos = np.array([25, 20, 15, 10, 5, 0, 0])
 
     # Specify the expected result of multiplication operation involving
     # a Lifting instance with a negative constant
-    mult_rev_neg = np.array(
-        [-25, -20, -15, -10, -5, 0, 0]
-    )
+    mult_rev_neg = np.array([-25, -20, -15, -10, -5, 0, 0])
 
     # Specify the expected result of division operation involving two Lifting instances
     div_rev = 0.5
@@ -249,7 +239,7 @@ def test_arithmetic():
 
     # Specify the expected result of division operation involving
     # a Lifting instance with a negative constant
-    div_rev_neg = [-10, -10, -10, -10, -10, 0, 0, 0]
+    div_rev_neg = [-10, -10, -10, -10, -10, 0]
 
     # Create the first instance of OIL revenue
     mangga_lifting = Lifting(
@@ -257,7 +247,7 @@ def test_arithmetic():
         end_year=2030,
         lifting_rate=np.array([50, 40, 30, 20, 10]),
         price=np.ones(5),
-        fluid_type=FluidType.OIL
+        fluid_type=FluidType.OIL,
     )
 
     # Create the second instance of OIL revenue
@@ -266,7 +256,7 @@ def test_arithmetic():
         end_year=2030,
         lifting_rate=np.array([50, 40, 30, 20, 10]),
         price=np.ones(5),
-        fluid_type=FluidType.OIL
+        fluid_type=FluidType.OIL,
     )
 
     # Create the third instance of OIL revenue
@@ -275,16 +265,16 @@ def test_arithmetic():
         end_year=2031,
         lifting_rate=np.array([10 for _ in range(5)]),
         price=np.ones(5),
-        fluid_type=FluidType.OIL
+        fluid_type=FluidType.OIL,
     )
 
     # Create the fourth instance of OIL revenue
     sawo_lifting = Lifting(
         start_year=2023,
-        end_year=2030,
+        end_year=2028,
         lifting_rate=np.array([20 for _ in range(5)]),
         price=np.ones(5),
-        fluid_type=FluidType.OIL
+        fluid_type=FluidType.OIL,
     )
 
     # Carry out mathematical operations involving two instances
@@ -297,10 +287,10 @@ def test_arithmetic():
     calc_div_rev_neg = sawo_lifting / -2
 
     # Execute testing conditions
-    np.testing.assert_allclose(add_rev, calc_add_rev)
-    np.testing.assert_allclose(sub_rev, calc_sub_rev)
-    np.testing.assert_allclose(mult_rev_pos, calc_mult_rev_pos)
-    np.testing.assert_allclose(mult_rev_neg, calc_mult_rev_neg)
-    np.testing.assert_allclose(div_rev, calc_div_rev)
-    np.testing.assert_allclose(div_rev_pos, calc_div_rev_pos)
-    np.testing.assert_allclose(div_rev_neg, calc_div_rev_neg)
+    np.testing.assert_array_almost_equal(add_rev, calc_add_rev)
+    np.testing.assert_array_almost_equal(sub_rev, calc_sub_rev)
+    np.testing.assert_array_almost_equal(mult_rev_pos, calc_mult_rev_pos)
+    np.testing.assert_array_almost_equal(mult_rev_neg, calc_mult_rev_neg)
+    np.testing.assert_array_almost_equal(div_rev, calc_div_rev)
+    np.testing.assert_array_almost_equal(div_rev_pos, calc_div_rev_pos)
+    np.testing.assert_array_almost_equal(div_rev_neg, calc_div_rev_neg)
