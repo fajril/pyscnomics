@@ -6,6 +6,7 @@ import numpy as np
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ import indicator
 
+
 @dataclass
 class CashFlow:
     """A class representing a cash flow with various financial indicators.
@@ -25,10 +26,11 @@ class CashFlow:
         The cash allocation type for cash flows.
         Default is FluidType.ALL.
     """
+
     start_date: date
     end_date: date
     cash: np.ndarray
-    disc_rate: float = field(default=.1)
+    disc_rate: float = field(default=0.1)
     cash_allocation: FluidType = field(default=FluidType.ALL)
 
     def __post_init__(self):
@@ -45,12 +47,14 @@ class CashFlow:
 
     def __eq__(self, other):
         if isinstance(other, CashFlow):
-            return all((
-                self.start_date == other.start_date,
-                self.end_date == other.end_date,
-                self.cash_allocation == other.cash_allocation,
-                np.allclose(self.cash, other.cash),
-            ))
+            return all(
+                (
+                    self.start_date == other.start_date,
+                    self.end_date == other.end_date,
+                    self.cash_allocation == other.cash_allocation,
+                    np.allclose(self.cash, other.cash),
+                )
+            )
         if isinstance(other, (int, float)):
             return np.allclose(sum(self.cash), other)
         return False

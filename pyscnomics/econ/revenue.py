@@ -1,11 +1,17 @@
 """
-Prepares lifting data and calculate the associated revenue.
+Prepares lifting data and calculate the revenue.
 """
 
 import numpy as np
 from dataclasses import dataclass, field
 from pyscnomics.econ.selection import FluidType
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX
+from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+
+
+class LiftingException(Exception):
+    """Exception to be raised if class Lifting is misused"""
+
+    pass
 
 
 @dataclass
@@ -55,7 +61,7 @@ class Lifting:
         if not all(
             len(arr) == arr_length for arr in [self.price, self.ghv, self.prod_rate]
         ):
-            raise ValueError(
+            raise LiftingException(
                 f"Inequal length of array: lifting_rate: {len(self.lifting_rate)},"
                 f" ghv: {len(self.ghv)},"
                 f" production: {len(self.prod_rate)}"
@@ -67,13 +73,13 @@ class Lifting:
             self.project_duration = self.end_year - self.start_year + 1
 
         else:
-            raise ValueError(
+            raise LiftingException(
                 f"start year {self.start_year} is after the end year: {self.end_year}"
             )
 
         # Specify an error condition when project duration is less than the length of production data
         if self.project_duration < len(self.prod_rate):
-            raise ValueError(
+            raise LiftingException(
                 f"Length of project duration: ({self.project_duration})"
                 f" is less than the length of production data: ({len(self.prod_rate)})"
             )
@@ -100,6 +106,7 @@ class Lifting:
         return rev
 
     def __eq__(self, other):
+
         # Check the equality of all attributes of two Lifting instances
         return all(
             (
@@ -146,9 +153,7 @@ class Lifting:
                 # If self.start_year > other.start_year, roll the array n steps to the right;
                 # n = self.start_year - start_year
                 if self.start_year > other.start_year:
-                    self_revenue = np.roll(
-                        self_revenue, (self.start_year - start_year)
-                    )
+                    self_revenue = np.roll(self_revenue, (self.start_year - start_year))
 
             # If the length of other_revenue data is less than project duration
             if len(other_revenue) < end_year - start_year + 1:
@@ -190,9 +195,7 @@ class Lifting:
                 # If self.start_year > other.start_year, roll the array n steps to the right;
                 # n = self.start_year - start_year
                 if self.start_year > other.start_year:
-                    self_revenue = np.roll(
-                        self_revenue, (self.start_year - start_year)
-                    )
+                    self_revenue = np.roll(self_revenue, (self.start_year - start_year))
 
             # If the length of other_revenue data is less than project duration
             if len(other_revenue) < end_year - start_year + 1:
@@ -226,8 +229,8 @@ class Lifting:
             raise NotImplementedError
 
         # If "other" is an instance of ASR object
-        # elif isinstance(other, ASR):
-        #     raise NotImplementedError
+        elif isinstance(other, ASR):
+            raise NotImplementedError
 
     def __mul__(self, other):
         if isinstance(other, (int, float)):
