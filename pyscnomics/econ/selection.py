@@ -43,3 +43,9 @@ class FluidType(Enum):
     SULFUR = "sulfur"
     ELECTRICITY = "electricity"
     CO2 = 'co2'
+
+
+class TaxSplitTypeCR(Enum):
+    CONVENTIONAL = "conventional"
+    SLIDING_SCALE = "ICP sliding scale"
+    R2C = "R/C"

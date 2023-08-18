@@ -81,5 +81,7 @@ def load_data(data_name):
         raise FileNotFoundError(f"File not found: {json_path}")
 
 if __name__ == "__main__":
+    from pyscnomics.datasets import load_data
+
     data_dict = load_data("CR_Gas")
     total_OPEX = data_dict["Oil OPEX"].cost + data_dict["Gas OPEX"].cost
