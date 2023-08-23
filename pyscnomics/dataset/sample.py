@@ -52,66 +52,112 @@ def read_fluid_type(fluid: str) -> FluidType:
         return FluidType.CO2
 
 
-def assign_to_dataclass(data: any) -> tuple:
+def assign_lifting(lifting_data: dict) -> list:
     """
-    Function to assigning the data to each corresponding dataclass.
+    lifting_data: dict
     Parameters
     ----------
-    data: any
-        The data that read from json file.
+    lifting_data: dict
+        The dictionary containing lifting data.
 
     Returns
     -------
-    out: tuple
-        start_date: datetime
-            The start date of the project.
-        end_date:
-            The end date of the project.
-        data_lifting:
-            Lifting dataclass.
-        data_tangible:
-            Tangible dataclass.
-        data_intangible:
-            Intangible dataclass.
-        data_opex:
-            OPEX dataclass.
-        data_asr:
-            ASR dataclass.
+    lifting_list: list
+        The List containing Lifting dataclasses.
+
     """
-    start_date = datetime.strptime(data["start_date"], '%d/%m/%Y').date()
-    end_date = datetime.strptime(data["end_date"], '%d/%m/%Y').date()
+    # Defining container list for Lifting
+    lifting_list = []
 
-    data_lifting = tuple([Lifting(start_year=data["lifting"]["start_year"],
-                                  end_year=data["lifting"]["end_year"],
-                                  lifting_rate=np.array(data["lifting"]["lifting_rate"]),
-                                  price=np.array(data["lifting"]["price"]),
-                                  fluid_type=read_fluid_type(data["lifting"]["fluid_type"]))])
+    # Iterating lifting data to assign them based on their fluid type
+    for key in dict(lifting_data):
+        # Since the Lifting data for gas has different arguments input, conditional formatting is applied
+        if key == 'gas':
+            lifting = Lifting(start_year=lifting_data[key]["start_year"],
+                              end_year=lifting_data[key]["end_year"],
+                              lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
+                              price=np.array(lifting_data[key]["price"]),
+                              fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
+                              ghv=np.array(lifting_data[key]["ghv"]),
+                              prod_rate=np.array(lifting_data[key]["prod_rate"])
+                              )
+            lifting_list.append(lifting)
 
-    data_tangible = tuple([Tangible(start_year=data["tangible"]["start_year"],
-                                    end_year=data["tangible"]["end_year"],
-                                    cost=np.array(data["tangible"]["cost"]),
-                                    expense_year=np.array(data["tangible"]["expense_year"]),
-                                    pis_year=np.array(data["tangible"]["pis_year"]),
-                                    cost_allocation=read_fluid_type(data["tangible"]["cost_allocation"]))])
+        else:
+            lifting = Lifting(start_year=lifting_data[key]["start_year"],
+                              end_year=lifting_data[key]["end_year"],
+                              lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
+                              price=np.array(lifting_data[key]["price"]),
+                              fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
+                              )
+            lifting_list.append(lifting)
+    return lifting_list
 
-    data_intangible = tuple([Intangible(start_year=data["intangible"]["start_year"],
-                                        end_year=data["intangible"]["end_year"],
-                                        cost=np.array(data["intangible"]["cost"]),
-                                        expense_year=np.array(data["intangible"]["expense_year"]),
-                                        cost_allocation=read_fluid_type(data["intangible"]["cost_allocation"]))])
 
-    data_opex = tuple([OPEX(start_year=data["opex"]["start_year"],
-                            end_year=data["opex"]["end_year"],
-                            fixed_cost=np.array(data["opex"]["fixed_cost"]),
-                            cost_allocation=read_fluid_type(data["opex"]["cost_allocation"]))])
+def assign_cost(tangible_data, intangible_data, opex_data, asr_data) -> tuple:
+    # Defining the tangible container and assigning the data to the corresponding dataclass
+    tangible_list = []
+    for key in dict(tangible_data):
+        tangible = Tangible(start_year=tangible_data[key]['start_year'],
+                            end_year=tangible_data[key]['end_year'],
+                            cost=np.array(tangible_data[key]['cost']),
+                            expense_year=np.array(tangible_data[key]['expense_year']),
+                            pis_year=np.array(tangible_data[key]['pis_year']),
+                            cost_allocation=read_fluid_type(tangible_data[key]['cost_allocation']), )
+        tangible_list.append(tangible)
 
-    data_asr = tuple([ASR(start_year=data["asr"]["start_year"],
-                          end_year=data["asr"]["end_year"],
-                          cost=np.array(data["asr"]["cost"]),
-                          expense_year=np.array(data["asr"]["expense_year"]),
-                          cost_allocation=read_fluid_type(data["asr"]["cost_allocation"]))])
+    # Defining the intangible container and assigning the data to the corresponding dataclass
+    intangible_list = []
+    for key in dict(intangible_data):
+        intangible = Intangible(start_year=intangible_data[key]['start_year'],
+                                end_year=intangible_data[key]['end_year'],
+                                cost=np.array(intangible_data[key]['cost']),
+                                expense_year=np.array(intangible_data[key]['expense_year']),
+                                cost_allocation=read_fluid_type(intangible_data[key]['cost_allocation']))
+        intangible_list.append(intangible)
 
-    return start_date, end_date, data_lifting, data_tangible, data_intangible, data_opex, data_asr
+    # Defining the opex container and assigning the data to the corresponding dataclass
+    opex_list = []
+    for key in dict(opex_data):
+        opex = OPEX(start_year=opex_data[key]['start_year'],
+                    end_year=opex_data[key]['end_year'],
+                    fixed_cost=np.array(opex_data[key]['fixed_cost']),
+                    cost_allocation=read_fluid_type(opex_data[key]['cost_allocation']))
+        opex_list.append(opex)
+
+    # Defining the asr container and assigning the data to the corresponding dataclass
+    asr_list = []
+    for key in dict(asr_data):
+        asr = ASR(start_year=asr_data[key]['start_year'],
+                  end_year=asr_data[key]['end_year'],
+                  cost=np.array(asr_data[key]['cost']),
+                  expense_year=np.array(asr_data[key]['expense_year']),
+                  cost_allocation=read_fluid_type(asr_data[key]['cost_allocation']))
+        asr_list.append(asr)
+
+    return tangible_list, intangible_list, opex_list, asr_list
+
+
+def get_data(data: dict) -> tuple:
+    # Reading the start_date, end_date, lifting and cost data
+    data_source = list(data.values())
+    start_date = datetime.strptime(data_source[0], '%d/%m/%Y').date()
+    end_date = datetime.strptime(data_source[1], '%d/%m/%Y').date()
+    lifting_data = data_source[2]
+    tangible_data = data_source[3]
+    intangible_data = data_source[4]
+    opex_data = data_source[5]
+    asr_data = data_source[6]
+
+    # Assigning lifting data and cost data to each corresponding dataclass
+    lifting_list = assign_lifting(lifting_data=lifting_data)
+    tangible_list, intangible_list, opex_list, asr_list = assign_cost(tangible_data=tangible_data,
+                                                                      intangible_data=intangible_data,
+                                                                      opex_data=opex_data,
+                                                                      asr_data=asr_data)
+
+    return (start_date, end_date, tuple(lifting_list), tuple(tangible_list), tuple(intangible_list),
+            tuple(opex_list), tuple(asr_list))
 
 
 def load_data(dataset: str, contract: str = 'project') -> BaseProject:
@@ -121,7 +167,7 @@ def load_data(dataset: str, contract: str = 'project') -> BaseProject:
     ----------
     dataset: str
         The category of the dataset.
-        The available dataset is ['small_oil', 'medium_oil', 'large_oil', 'small_gas', 'medium_gas', 'large_gas'].
+        The available dataset are ['small_oil', 'medium_oil', 'large_oil', 'small_gas', 'medium_gas', 'large_gas'].
     contract: str
         The type of the contract.
 
@@ -130,13 +176,15 @@ def load_data(dataset: str, contract: str = 'project') -> BaseProject:
     BaseProject
     """
     # Checking the input data, is it exist in the provided dataset
-    dataset_list = ['small_oil', 'medium_oil', 'large_oil', 'small_oil', 'medium_oil', 'large_oil']
+    dataset_list = ['small_oil', 'medium_oil', 'large_oil', 'small_oil', 'medium_oil', 'large_oil',
+                    'small_gas', 'medium_gas', 'large_gas', 'small_gas', 'medium_gas', 'large_gas',
+                    'small_oil_gas']
     if dataset not in dataset_list:
         raise ValueError('Unknown dataset: "{0}", please check the Dataset Type that available.'.format(dataset))
 
     # Read the jason file
     data = read_json(filename=dataset + '.json')
-    start_date, end_date, lifting, tangible, intangible, opex, asr = assign_to_dataclass(data)
+    start_date, end_date, lifting, tangible, intangible, opex, asr = get_data(data)
 
     # Returning BaseProject dataclass for contract type: project
     if contract == 'project':
@@ -162,17 +210,17 @@ def load_data(dataset: str, contract: str = 'project') -> BaseProject:
     # Todo: Add the output dataclass for Cost Recovery and Gross Split after both of these dataclasses are finished.
 
 
-def load_testing(dataset: str, data_type: str) -> dict:
+def load_testing(dataset: str, class_type: str) -> dict | ValueError:
     """
     Function to load the testing data for each dataclass that project has.
     Parameters
     ----------
     dataset: str
         The category of the dataset.
-        The available dataset is ['small_oil', 'medium_oil', 'large_oil', 'small_gas', 'medium_gas', 'large_gas'].
-    data_type: str
-        The dataclass type.
-        The available datatype is ['lifting', 'tangible', 'intangible', 'opex', 'asr']
+        The available dataset are ['small_oil', 'medium_oil', 'large_oil', 'small_gas', 'medium_gas', 'large_gas'].
+    class_type: str
+        The class_type type dataset.
+        The available class_type category are ['lifting', 'tangible', 'intangible', 'opex', 'asr']
 
     Returns
     -------
@@ -180,25 +228,36 @@ def load_testing(dataset: str, data_type: str) -> dict:
         The testing data based on the chosen dataset and data_type.
 
     """
-    dataset_list = ['small_oil', 'medium_oil', 'large_oil', 'small_oil', 'medium_oil', 'large_oil']
-    dataclass_list = ['lifting', 'tangible', 'intangible', 'opex', 'asr']
-    if dataset not in dataset_list or data_type not in dataclass_list:
+    dataset_list = ['small_oil', 'medium_oil', 'large_oil', 'small_oil', 'medium_oil', 'large_oil',
+                    'small_gas', 'medium_gas', 'large_gas', 'small_gas', 'medium_gas', 'large_gas',
+                    'small_oil_gas']
+    if dataset not in dataset_list:
         raise ValueError(
-            'Unknown dataset: "{0}" or "{1}", please check the dataset or data_type that available.'
-            .format(dataset, data_type))
+            'Unknown dataset: "{0}", please check the dataset or data_type that available.'
+            .format(dataset))
 
+    # Reading the json file
     data = read_json(filename=dataset + '.json')
-    data_testing = dict(data["testing"][data_type])
-    return data_testing
+    data_dict = dict(data)
+
+    # Condition where the testing data is not available within the chosen dataset
+    if data_dict.get("testing") is None:
+        return ValueError("The testing data for this dataset is still in development.")
+    else:
+        return dict(data["testing"][class_type])
 
 
 if __name__ == "__main__":
-    psc = load_data(dataset='medium_oil', contract='project')
+    # Choosing the Dataset and contract type
+    data_type = 'small_gas'
+    project_type = 'project'
+
+    # Testing the load_data function
+    psc = load_data(dataset=data_type, contract=project_type)
     print('# Output of the load_data function:')
     print(psc, '\n')
-
     print('# PSC attribute:')
-    print('Start Date: ', psc.start_date, '\n')
+    print('Start Date: ', psc.start_date)
     print('End Date: ', psc.end_date, '\n')
     print('Lifting Data: \n', psc.lifting, '\n')
     print('Tangible Cost Data: \n', psc.tangible_cost, '\n')
@@ -206,6 +265,7 @@ if __name__ == "__main__":
     print('Opex Data: ', psc.opex, '\n')
     print('Abandon and Site Restoration (ASR) Data: \n', psc.asr_cost, '\n')
 
-    data_test = load_testing(dataset='medium_oil', data_type='lifting')
-    print('# Output of the load_testing function:')
-    print(data_test)
+    # Testing the load_test function
+    test = load_testing(dataset=data_type, class_type='lifting')
+    print('# Output of the load_test function:')
+    print(test)
