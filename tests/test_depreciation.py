@@ -1,5 +1,5 @@
 """
-A unit testing for depreciation.
+A unit testing for depreciation module.
 """
 
 import numpy as np
@@ -12,73 +12,121 @@ from pyscnomics.econ.depreciation import (
 
 
 def test_straight_line_depreciation():
-    """
-    Test for straight line depreciation.
-    """
+    """A unit testing for straight line depreciation"""
 
-    # Specify the expected results
-    depreciation_charge1 = [35.0, 35.0, 35.0, 35.0, 35.0]
-    depreciation_charge2 = [35.0, 35.0, 35.0, 35.0, 35.0, 0, 0, 0, 0, 0]
-    depreciation_charge3 = [33.33333333, 33.33333333, 33.33333333]
+    # Expected results
+    depreciationCharge1 = [35.0, 35.0, 35.0, 35.0, 35.0]
+    depreciationCharge2 = [35.0, 35.0, 35.0, 35.0, 35.0, 0, 0, 0, 0, 0]
+    depreciationCharge3 = [33.33333333, 33.33333333, 33.33333333]
 
-    book_value1 = [165.0, 130.0, 95.0, 60.0, 25.0]
-    book_value2 = [165.0, 130.0, 95.0, 60.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0]
-    book_value3 = [66.66666666, 33.33333333, 0.0]
+    bookValue1 = [165.0, 130.0, 95.0, 60.0, 25.0]
+    bookValue2 = [165.0, 130.0, 95.0, 60.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0]
+    bookValue3 = [66.66666666, 33.33333333, 0.0]
 
-    # Execute calculations
-    calc_depreciation_charge1 = straight_line_depreciation_rate(
+    # Calculated results
+    calcDepreciationCharge1 = straight_line_depreciation_rate(
         cost=200, salvage_value=25, useful_life=5
     )
-    calc_depreciation_charge2 = straight_line_depreciation_rate(
+
+    calcDepreciationCharge2 = straight_line_depreciation_rate(
         cost=200, salvage_value=25, useful_life=5, depreciation_len=10
     )
-    calc_depreciation_charge3 = straight_line_depreciation_rate(
+
+    calcDepreciationCharge3 = straight_line_depreciation_rate(
         cost=100, salvage_value=0, useful_life=3
     )
-    calc_book_value1 = straight_line_book_value(
-        cost=200, salvage_value=25, useful_life=5
-    )
-    calc_book_value2 = straight_line_book_value(
+
+    calcBookValue1 = straight_line_book_value(cost=200, salvage_value=25, useful_life=5)
+
+    calcBookValue2 = straight_line_book_value(
         cost=200, salvage_value=25, useful_life=5, depreciation_len=10
     )
-    calc_book_value3 = straight_line_book_value(
-        cost=100, salvage_value=0, useful_life=3
-    )
+
+    calcBookValue3 = straight_line_book_value(cost=100, salvage_value=0, useful_life=3)
 
     # Execute testing (expected = calculated)
-    np.testing.assert_allclose(depreciation_charge1, calc_depreciation_charge1)
-    np.testing.assert_allclose(depreciation_charge2, calc_depreciation_charge2)
-    np.testing.assert_allclose(depreciation_charge3, calc_depreciation_charge3)
-    np.testing.assert_allclose(book_value1, calc_book_value1)
-    np.testing.assert_allclose(book_value2, calc_book_value2)
-    np.testing.assert_allclose(book_value3, calc_book_value3)
+    np.testing.assert_allclose(depreciationCharge1, calcDepreciationCharge1)
+    np.testing.assert_allclose(depreciationCharge2, calcDepreciationCharge2)
+    np.testing.assert_allclose(depreciationCharge3, calcDepreciationCharge3)
+    np.testing.assert_allclose(bookValue1, calcBookValue1)
+    np.testing.assert_allclose(bookValue2, calcBookValue2)
+    np.testing.assert_allclose(bookValue3, calcBookValue3)
 
 
 def test_decline_balance_depreciation():
-    """
-    Test for declining balance depreciation.
-    """
+    """A unit testing for declining balance depreciation"""
 
-    item_cost = 200_000
-    salvage_value = 25_000
-    useful_life = 5
+    # Expected results
+    depreciationCharge1 = [20.0, 16.0, 12.8, 10.24, 8.192]
+    depreciationCharge2 = [20.0, 16.0, 12.8, 10.24, 8.192, 0, 0, 0, 0, 0]
 
-    depreciation_charge = [80000.0, 48000.0, 28800.0, 17280.0, 920.0]
-    book_value = [120000.0, 72000.0, 43200.0, 25920.0, 25000.0]
+    bookValue1 = [80.0, 64.0, 51.2, 40.96, 32.768]
+    bookValue2 = [
+        80.0,
+        64.0,
+        51.2,
+        40.96,
+        32.768,
+        32.768,
+        32.768,
+        32.768,
+        32.768,
+        32.768,
+    ]
 
-    depreciation_charge_calc = declining_balance_depreciation_rate(
-        cost=item_cost,
-        salvage_value=salvage_value,
-        useful_life=useful_life,
-        decline_factor=2,
+    # Calculated results
+    calcDepreciationCharge1 = declining_balance_depreciation_rate(
+        cost=100, salvage_value=20, useful_life=5, decline_factor=1
     )
 
-    book_value_calc = declining_balance_book_value(
-        cost=item_cost,
-        salvage_value=salvage_value,
-        useful_life=useful_life,
-        decline_factor=2,
+    calcDepreciationCharge2 = declining_balance_depreciation_rate(
+        cost=100, salvage_value=20, useful_life=5, decline_factor=1, depreciation_len=10
     )
 
-    np.testing.assert_array_almost_equal(depreciation_charge, depreciation_charge_calc)
-    np.testing.assert_array_almost_equal(book_value, book_value_calc)
+    calcBookValue1 = declining_balance_book_value(
+        cost=100, salvage_value=20, useful_life=5, decline_factor=1
+    )
+
+    calcBookValue2 = declining_balance_book_value(
+        cost=100, salvage_value=20, useful_life=5, decline_factor=1, depreciation_len=10
+    )
+
+    # Execute testing
+    np.testing.assert_allclose(depreciationCharge1, calcDepreciationCharge1)
+    np.testing.assert_allclose(depreciationCharge2, calcDepreciationCharge2)
+    np.testing.assert_allclose(bookValue1, calcBookValue1)
+    np.testing.assert_allclose(bookValue2, calcBookValue2)
+
+
+def test_double_decline_balance_depreciation():
+    """A unit testing for double declining balance depreciation"""
+
+    # Expected results
+    depreciationCharge1 = [40.0, 24.0, 14.4, 1.6, 0]
+    depreciationCharge2 = [40.0, 24.0, 14.4, 1.6, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+    bookValue1 = [60.0, 36.0, 21.6, 20.0, 20.0]
+    bookValue2 = [60.0, 36.0, 21.6, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0]
+
+    # Calculated results
+    calcDepreciationCharge1 = declining_balance_depreciation_rate(
+        cost=100, salvage_value=20, useful_life=5, decline_factor=2
+    )
+
+    calcDepreciationCharge2 = declining_balance_depreciation_rate(
+        cost=100, salvage_value=20, useful_life=5, decline_factor=2, depreciation_len=10
+    )
+
+    calcBookValue1 = declining_balance_book_value(
+        cost=100, salvage_value=20, useful_life=5, decline_factor=2
+    )
+
+    calcBookValue2 = declining_balance_book_value(
+        cost=100, salvage_value=20, useful_life=5, decline_factor=2, depreciation_len=10
+    )
+
+    # Execute testing
+    np.testing.assert_allclose(depreciationCharge1, calcDepreciationCharge1)
+    np.testing.assert_allclose(depreciationCharge2, calcDepreciationCharge2)
+    np.testing.assert_allclose(bookValue1, calcBookValue1)
+    np.testing.assert_allclose(bookValue2, calcBookValue2)
