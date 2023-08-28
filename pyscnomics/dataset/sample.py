@@ -3,13 +3,17 @@ import numpy as np
 from datetime import datetime
 
 from pyscnomics.contracts.project import BaseProject
+from pyscnomics.contracts.grosssplit import GrossSplit
+from pyscnomics.contracts.grosssplit import VariableSplit, SplitConfig, Tax, DMO, InvestmentCredit, Incentive
+
 from pyscnomics.econ.revenue import Lifting, FluidType
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 
 
-def read_json(filename: str) -> any:
+def read_json(filename: str) -> dict:
     """
     Function to read json file.
+
     Parameters
     ----------
     filename: str
@@ -29,6 +33,7 @@ def read_json(filename: str) -> any:
 def read_fluid_type(fluid: str) -> FluidType:
     """
     Function to return the str input to FluidType dataclass.
+
     Parameters
     ----------
     fluid: str
@@ -54,7 +59,8 @@ def read_fluid_type(fluid: str) -> FluidType:
 
 def assign_lifting(lifting_data: dict) -> list:
     """
-    lifting_data: dict
+    Function to assign lifting data to the corresponding dataclass.
+
     Parameters
     ----------
     lifting_data: dict
@@ -95,6 +101,20 @@ def assign_lifting(lifting_data: dict) -> list:
 
 
 def assign_cost(tangible_data, intangible_data, opex_data, asr_data) -> tuple:
+    """
+    Assigning the cost data to each corresponding dataclasses.
+
+    Parameters
+    ----------
+    tangible_data
+    intangible_data
+    opex_data
+    asr_data
+
+    Returns
+    -------
+
+    """
     # Defining the tangible container and assigning the data to the corresponding dataclass
     tangible_list = []
     for key in dict(tangible_data):
@@ -139,6 +159,33 @@ def assign_cost(tangible_data, intangible_data, opex_data, asr_data) -> tuple:
 
 
 def get_data(data: dict) -> tuple:
+    """
+    Function to retrieve data from lifting and cost json file.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary containing the information from json file.
+
+    Returns
+    -------
+    out: tuple
+        start_date: tuple
+            The starting date of the project.
+        end_date: tuple
+            The ending date of the project.
+        lifting_list: tuple
+            The list containing Lifting data.
+        tangible_list: tuple
+            The list containing Tangible data.
+        intangible_list: tuple
+            The list containing Intangible data.
+        opex_list: tuple
+            The list containing Opex data.
+        asr_list: tuple
+            The list containing ASR data.
+
+    """
     # Reading the start_date, end_date, lifting and cost data
     data_source = list(data.values())
     start_date = datetime.strptime(data_source[0], '%d/%m/%Y').date()
@@ -160,9 +207,72 @@ def get_data(data: dict) -> tuple:
             tuple(opex_list), tuple(asr_list))
 
 
-def load_data(dataset: str, contract: str = 'project') -> BaseProject:
+def assign_gs(data_contract):
+    config = list(data_contract.values())
+    data_variable_split = config[0]
+    data_split_config = config[1]
+    data_tax = config[2]
+    data_dmo_oil = config[3]['oil']
+    data_dmo_gas = config[3]['gas']
+    data_investment_credit = config[4]
+    data_incentive = config[5]
+
+    variable_split = VariableSplit(field_status=data_variable_split['field_status'],
+                                   field_loc=data_variable_split['field_loc'],
+                                   res_depth=data_variable_split['res_depth'],
+                                   infra_avail=data_variable_split['infra_avail'],
+                                   res_type=data_variable_split['res_type'],
+                                   api_oil=data_variable_split['api_oil'],
+                                   domestic_use=data_variable_split['domestic_use'],
+                                   prod_stage=data_variable_split['prod_stage'],
+                                   co2_content=data_variable_split['co2_content'],
+                                   h2s_content=data_variable_split['h2s_content'],
+                                   )
+
+    split_config = SplitConfig(ctr_oil=data_split_config['ctr_oil'],
+                               ctr_gas=data_split_config['ctr_gas'],
+                               ministry_discr=data_split_config['ministry_discr'])
+
+    tax = Tax(corporate_income=data_tax['corporate_income'],
+              branch_profit=data_tax['branch_profit'], )
+
+    dmo_oil = DMO(holiday=data_dmo_oil['holiday'],
+                  period=data_dmo_oil['period'],
+                  start_production=data_dmo_oil['start_production'],
+                  volume=data_dmo_oil['volume'],
+                  fee=data_dmo_oil['fee'])
+
+    dmo_gas = DMO(holiday=data_dmo_gas['holiday'],
+                  period=data_dmo_gas['period'],
+                  start_production=data_dmo_gas['start_production'],
+                  volume=data_dmo_gas['volume'],
+                  fee=data_dmo_gas['fee'])
+
+    investment_credit = InvestmentCredit(oil_is_available=data_investment_credit['oil_is_available'],
+                                         oil_ic=data_investment_credit['oil_ic'],
+                                         gas_is_available=data_investment_credit['gas_is_available'],
+                                         gas_ic=data_investment_credit['gas_ic'], )
+
+    incentive = Incentive(vat_category=data_incentive['vat_categ'],
+                          vat_percent=data_incentive['vat_percent'],
+                          vat_discount=data_incentive['vat_discount'],
+                          lbt_discount=data_incentive['lbt_discount'],
+                          pdrd=data_incentive['pdrd'],
+                          pdrd_discount=data_incentive['pdrd_discount'],
+                          pdri_discount=data_incentive['pdri_discount'],
+                          import_duty=data_incentive['import_duty'],
+                          vat_import=data_incentive['vat_import'],
+                          pph_import=data_incentive['pph_import'],
+                          depre_accel=data_incentive['depre_accel'],
+                          depre_method=data_incentive['depre_method'])
+
+    return variable_split, split_config, tax, dmo_oil, dmo_gas, investment_credit, incentive
+
+
+def load_data(dataset: str, contract: str = 'project') -> BaseProject | GrossSplit | ValueError:
     """
     Function to load the provided dataset.
+
     Parameters
     ----------
     dataset: str
@@ -173,12 +283,12 @@ def load_data(dataset: str, contract: str = 'project') -> BaseProject:
 
     Returns
     -------
-    BaseProject
+    BaseProject | GrossSplit
     """
     # Checking the input data, is it exist in the provided dataset
     dataset_list = ['small_oil', 'medium_oil', 'large_oil', 'small_oil', 'medium_oil', 'large_oil',
                     'small_gas', 'medium_gas', 'large_gas', 'small_gas', 'medium_gas', 'large_gas',
-                    'small_oil_gas']
+                    'small_oil_gas', 'gs_real', 'gas_real']
     if dataset not in dataset_list:
         raise ValueError('Unknown dataset: "{0}", please check the Dataset Type that available.'.format(dataset))
 
@@ -188,31 +298,48 @@ def load_data(dataset: str, contract: str = 'project') -> BaseProject:
 
     # Returning BaseProject dataclass for contract type: project
     if contract == 'project':
-        return BaseProject(start_date=start_date,
-                           end_date=end_date,
-                           lifting=lifting,
-                           tangible_cost=tangible,
-                           intangible_cost=intangible,
-                           opex=opex,
-                           asr_cost=asr)
+        result = BaseProject(start_date=start_date,
+                             end_date=end_date,
+                             lifting=lifting,
+                             tangible_cost=tangible,
+                             intangible_cost=intangible,
+                             opex=opex,
+                             asr_cost=asr)
 
-    # Returning CostRecovery dataclass for contract type: cr
-    elif contract == 'cr':
-        return NotImplemented
+    # Returning GrossSplit dataclass for contract type: gross_split
+    elif contract == 'gross_split':
+        # Read the jason file for the project config
+        data_config = read_json(filename=contract + '.json')
+        variable_split, split_config, tax, dmo_oil, dmo_gas, investment_credit, incentive = assign_gs(data_config)
+        result = GrossSplit(
+            start_date=start_date,
+            end_date=end_date,
+            lifting=lifting,
+            tangible_cost=tangible,
+            intangible_cost=intangible,
+            opex=opex,
+            asr_cost=asr,
+            variable_split=variable_split,
+            split_config=split_config,
+            tax=tax,
+            dmo_oil=dmo_oil,
+            dmo_gas=dmo_gas,
+            incentive=incentive)
 
-    # Returning GrossSplit dataclass for contract type: cr
-    elif contract == 'gs':
-        return NotImplemented
+    # Returning CostRecovery dataclass for contract type: cost_recovery
+    elif contract == 'cost_recovery':
+        result = NotImplemented
 
     else:
-        raise ValueError('Unknown contract: "{0}", please check the Contract type that available.'.format(contract))
+        result = ValueError('Unknown contract: "{0}", please check the Contract type that available.'.format(contract))
 
-    # Todo: Add the output dataclass for Cost Recovery and Gross Split after both of these dataclasses are finished.
+    return result
 
 
 def load_testing(dataset: str, class_type: str) -> dict | ValueError:
     """
-    Function to load the testing data for each dataclass that project has.
+    Function to load the testing data for each dataclass that the project has.
+
     Parameters
     ----------
     dataset: str
@@ -249,23 +376,10 @@ def load_testing(dataset: str, class_type: str) -> dict | ValueError:
 
 if __name__ == "__main__":
     # Choosing the Dataset and contract type
-    data_type = 'small_gas'
+    data_type = 'gas_real'
     project_type = 'project'
 
     # Testing the load_data function
     psc = load_data(dataset=data_type, contract=project_type)
-    print('# Output of the load_data function:')
-    print(psc, '\n')
-    print('# PSC attribute:')
-    print('Start Date: ', psc.start_date)
-    print('End Date: ', psc.end_date, '\n')
-    print('Lifting Data: \n', psc.lifting, '\n')
-    print('Tangible Cost Data: \n', psc.tangible_cost, '\n')
-    print('Intangible Cost Data: \n', psc.intangible_cost, '\n')
-    print('Opex Data: ', psc.opex, '\n')
-    print('Abandon and Site Restoration (ASR) Data: \n', psc.asr_cost, '\n')
-
-    # Testing the load_test function
-    test = load_testing(dataset=data_type, class_type='lifting')
-    print('# Output of the load_test function:')
-    print(test)
+    print(psc)
+    print(psc)
