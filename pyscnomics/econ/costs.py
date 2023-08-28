@@ -6,11 +6,11 @@ Prepare and classify cost data based on its components. The associated cost comp
 (4) ASR
 """
 
-from dataclasses import dataclass, field
-
 import numpy as np
+from dataclasses import dataclass, field
 import pyscnomics.econ.depreciation as depr
 from pyscnomics.econ.selection import FluidType, DeprMethod
+from pyscnomics.tools.funcTools import summarizer
 
 
 class TangibleException(Exception):
@@ -808,9 +808,11 @@ class OPEX:
     fixed_cost: np.ndarray
     expense_year: np.ndarray
     cost_allocation: FluidType = field(default=FluidType.OIL)
-    variable_cost: np.ndarray = field(default=None)
+    prod_rate: np.ndarray = field(default=None, repr=False)
+    cost_per_volume: np.ndarray = field(default=None, repr=False)
 
     # Attribute to be defined later on
+    variable_cost: np.ndarray = field(default=None, init=False, repr=False)
     cost: np.ndarray = field(default=None, init=False, repr=False)
     project_duration: int = field(default=None, init=False, repr=False)
     project_years: np.ndarray = field(default=None, init=False, repr=False)
@@ -835,44 +837,53 @@ class OPEX:
                 f"is beyond the end project year {self.end_year}"
             )
 
-        # Check input data for unequal length
-        if len(self.fixed_cost) != len(self.expense_year):
-            raise OPEXException(
-                f"Unequal length of array: "
-                f"fixed_cost: {len(self.fixed_cost)}, "
-                f"expense_year: {len(self.expense_year)}"
-            )
-
-        # User does not provide variable cost
-        if self.variable_cost is None:
-            self.variable_cost = np.zeros(len(self.fixed_cost))
-
-        else:
+        # User provides both prod_rate and cost_per_volume data
+        if self.prod_rate is not None and self.cost_per_volume is not None:
 
             # Check input data for unequal length
-            if len(self.variable_cost) != len(self.expense_year):
+            if not all(
+                    len(i) == len(self.fixed_cost) for i in [
+                        self.expense_year,
+                        self.prod_rate,
+                        self.cost_per_volume
+                    ]
+            ):
                 raise OPEXException(
                     f"Unequal length of array: "
-                    f"variable_cost: {len(self.variable_cost)}, "
-                    f"expense_year: {len(self.expense_year)}"
+                    f"fixed_cost: {len(self.fixed_cost)}, "
+                    f"expense_year: {len(self.expense_year)}, "
+                    f"prod_rate: {len(self.prod_rate)}, "
+                    f"cost_per_volume: {len(self.cost_per_volume)}"
                 )
+
+            # Specify attribute variable_cost
+            self.variable_cost = self.prod_rate * self.cost_per_volume
+
+        # User only provides prod_rate data
+        elif self.prod_rate is not None and self.cost_per_volume is None:
+            raise OPEXException(
+                f"cost_per_volume data is missing"
+            )
+
+        # User only provides cost_per_volume data
+        elif self.prod_rate is None and self.cost_per_volume is not None:
+            raise OPEXException(
+                f"prod_rate data is missing"
+            )
+
+        # User does not provide both prod_rate and cost_per_volume data
+        elif self.prod_rate is None and self.cost_per_volume is None:
+            self.prod_rate = np.zeros_like(self.fixed_cost)
+            self.cost_per_volume = np.zeros_like(self.fixed_cost)
+            self.variable_cost = np.zeros_like(self.fixed_cost)
 
         # Define cost
         self.cost = self.fixed_cost + self.variable_cost
 
-    def expenditures(
-        self, prod_rate: np.ndarray = None, cost_per_volume: np.ndarray = None
-    ):
+    def expenditures(self):
         """
         Calculate OPEX expenditures per year.
         Allocate OPEX expenditures following the associated expense year.
-
-        Parameters
-        ----------
-        prod_rate: np.ndarray
-            An array depicting hydrocarbon production.
-        cost_per_volume: np.ndarray
-            An array depicting cost associated with hydrocarbon production.
 
         Returns
         -------
@@ -880,63 +891,14 @@ class OPEX:
             An array of OPEX expenses aligned with the expense year.
         """
 
-        def _allocateExpenses(cost) -> np.ndarray:
-            """
-            Set OPEX expenses aligned with the corresponding expense year.
+        # Alignment of expensitures with expense year
+        expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
 
-            Parameters
-            ----------
-            cost: np.ndarray
-                Total OPEX cost = fixed_cost + variable_cost
+        # Modify expenses by taking into account the project duration
+        zeros = np.zeros(self.project_duration - len(expenses))
+        expenses = np.concatenate((expenses, zeros))
 
-            Returns
-            -------
-            expenses: np.ndarray
-                An array of OPEX expenses aligned with the expense year.
-            """
-
-            # Alignment of expensitures with expense year
-            expenses = np.bincount(self.expense_year - self.start_year, weights=cost)
-
-            # Modify expenses by taking into account the project duration
-            zeros = np.zeros(self.project_duration - len(expenses))
-            expenses = np.concatenate((expenses, zeros))
-
-            return expenses
-
-        # Error: user provides prod_rate data, but does not provide cost_per_volume data
-        if prod_rate is not None and cost_per_volume is None:
-            raise OPEXException(
-                f"prod_rate data is provided, but cost_per_volume data is missing"
-            )
-
-        # Error: user provides cost_per_volume data, but does not provide prod_rate data
-        elif prod_rate is None and cost_per_volume is not None:
-            raise OPEXException(
-                f"cost_per_volume data is provided, but prod_rate data is missing"
-            )
-
-        # Allowed: user provides both prod_rate and cost_per_volume data
-        elif prod_rate is not None and cost_per_volume is not None:
-
-            if not all(
-                (len(i) == len(self.expense_year) for i in [prod_rate, cost_per_volume])
-            ):
-                raise OPEXException(
-                    f"Unequal length of array: "
-                    f"expense_year: {len(self.expense_year)}, "
-                    f"prod_rate: {len(prod_rate)}, "
-                    f"cost_per_volume: {len(cost_per_volume)}"
-                )
-
-            else:
-                self.variable_cost = prod_rate * cost_per_volume
-                self.cost = self.fixed_cost + self.variable_cost
-                return _allocateExpenses(cost=self.cost)
-
-        # Allowed: user does not provide both prod_rate and cost_per_volume data
-        elif prod_rate is None and cost_per_volume is None:
-            return _allocateExpenses(cost=self.cost)
+        return expenses
 
     def __len__(self):
         return self.project_duration
@@ -959,6 +921,7 @@ class OPEX:
             return np.sum(self.fixed_cost, self.variable_cost) == other
 
         else:
+            # TODO: Must return Bool (False)
             raise OPEXException(
                 f"Must compare an instance of OPEX with another instance of "
                 f"OPEX, an integer, or a float. "
@@ -1032,8 +995,86 @@ class OPEX:
 
     def __add__(self, other):
 
-        # Between an instance of OPEX with an intance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+        # Between an instance of Tangible with another instance of Tangible
+        if isinstance(other, OPEX):
+
+            # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
+            if self.cost_allocation != other.cost_allocation:
+                raise TangibleException(
+                    "Cost allocation is not equal. "
+                    f"First instance is {self.cost_allocation}, "
+                    f"second instance is {other.cost_allocation} "
+                )
+
+            else:
+
+                start_year = min(self.start_year, other.start_year)
+                end_year = max(self.end_year, other.end_year)
+                fixed_cost = np.concatenate((self.fixed_cost, other.fixed_cost))
+                expense_year = np.concatenate((self.expense_year, other.expense_year))
+                prod_rate = np.concatenate((self.prod_rate, other.prod_rate))
+                cost_per_volume = np.concatenate((self.cost_per_volume, other.cost_per_volume))
+
+                return OPEX(
+                    start_year=start_year,
+                    end_year=end_year,
+                    fixed_cost=fixed_cost,
+                    expense_year=expense_year,
+                    cost_allocation=self.cost_allocation,
+                    prod_rate=prod_rate,
+                    cost_per_volume=cost_per_volume
+                )
+
+        # Between an instance of Tangible with an instance of Intangible/OPEX/ASR
+        elif isinstance(other, (Tangible, Intangible, ASR)):
+            return self.expenditures() + other.expenditures()
+
+        else:
+            raise OPEXException(
+                f"Must add an instance of OPEX with another instance "
+                f"of Tangible/Intangible/OPEX/ASR. "
+                f"{other}({other.__class__.__qualname__}) is not an instance of "
+                f"Tangible/Intangible/OPEX/ASR."
+            )
+
+    def __sub__(self, other):
+
+        # Between an instance of OPEX with another instance of OPEX
+        if isinstance(other, OPEX):
+
+            combine_fixed_cost, start_year, end_year = summarizer(
+                array1=self.fixed_cost,
+                array2=-1 * other.fixed_cost,
+                startYear1=self.start_year,
+                startYear2=other.start_year
+            )
+
+            combine_prod_rate, _, _ = summarizer(
+                array1=self.prod_rate,
+                array2=-1 * other.prod_rate,
+                startYear1=self.prod_rate,
+                startYear2=other.prod_rate
+            )
+
+            combine_cost_per_volume, _, _ = summarizer(
+                array1=self.cost_per_volume,
+                array2=-1 * other.cost_per_volume,
+                startYear1=self.cost_per_volume,
+                startYear2=other.cost_per_volume
+            )
+
+            return OPEX(
+                start_year=start_year,
+                end_year=end_year,
+                fixed_cost=combine_fixed_cost,
+                expense_year=self.expense_year,
+                cost_allocation=self.cost_allocation,
+                prod_rate=combine_prod_rate,
+                cost_per_volume=combine_cost_per_volume
+            )
+
+        # Between an instance of OPEX with an intance of Tangible/Intangible/ASR
+        elif isinstance(other, (Tangible, Intangible, ASR)):
             return self.expenditures() + other.expenditures()
 
         else:
@@ -1044,20 +1085,6 @@ class OPEX:
                 f"of Tangible/Intangible/OPEX/ASR."
             )
 
-    def __sub__(self, other):
-
-        # Between an instance of OPEX with another intance of OPEX
-        if isinstance(other, OPEX):
-            return self.expenditures() - other.expenditures()
-
-        else:
-            raise OPEXException(
-                f"Must subtract between an instance of OPEX "
-                f"with another instance of OPEX. "
-                f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of OPEX."
-            )
-
     def __rsub__(self, other):
         return self.__sub__(other)
 
@@ -1065,15 +1092,15 @@ class OPEX:
 
         # Multiplication is allowed only with an integer/a float
         if isinstance(other, (int, float)):
-
-            # Cannot multiply with zero or with a negative integer/float
-            if other <= 0:
-                raise OPEXException(f"Cannot multiply with zero or negative number")
-
-            else:
-                new_cost = self.cost * other
-
-                return new_cost
+            return OPEX(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                fixed_cost=self.fixed_cost * other,
+                expense_year=self.expense_year,
+                cost_allocation=self.cost_allocation,
+                prod_rate=self.prod_rate * other,
+                cost_per_volume=self.cost_per_volume
+            )
 
         else:
             raise OPEXException(
@@ -1092,15 +1119,21 @@ class OPEX:
 
         # Between an instance of OPEX and an integer/float
         elif isinstance(other, (int, float)):
-            if other <= 0:
+            if other == 0:
                 raise OPEXException(
-                    f"Cannot divide with zero or with a negative integer/float"
+                    f"Cannot divide with zero"
                 )
 
             else:
-                new_cost = self.cost / other
-
-                return new_cost
+                return OPEX(
+                    start_year=self.start_year,
+                    end_year=self.end_year,
+                    fixed_cost=self.fixed_cost / other,
+                    expense_year=self.expense_year,
+                    cost_allocation=self.cost_allocation,
+                    prod_rate=self.prod_rate / other,
+                    cost_per_volume=self.cost_per_volume
+                )
 
         else:
             raise OPEXException(
@@ -1341,6 +1374,7 @@ class ASR:
         if isinstance(other, (int, float)):
 
             # Cannot multiply with zero or with a negative integer/float
+            # TODO: Allow multiplication by zero and negative number
             if other <= 0:
                 raise ASRException(
                     f"Cannot multiply with zero or a negative integer/float"
@@ -1376,14 +1410,14 @@ class ASR:
 
         # Between an instance of ASR and an integer/float
         elif isinstance(other, (int, float)):
-            if other <= 0:
+            if other == 0:
                 raise ASRException(
-                    f"Cannot divide with zero or with a negative integer/float"
+                    f"Cannot divide with a negative integer/float"
                 )
 
             else:
 
-                new_asr = ASR(
+                return ASR(
                     start_year=self.start_year,
                     end_year=self.end_year,
                     cost=self.cost / other,
@@ -1391,8 +1425,6 @@ class ASR:
                     cost_allocation=self.cost_allocation,
                     rate=self.rate,
                 )
-
-                return new_asr
 
         else:
             raise ASRException(
