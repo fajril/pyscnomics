@@ -595,7 +595,7 @@ def test_opex_unequal_length_of_data_input():
             expense_year=np.array([2028, 2029]),
             cost_allocation=FluidType.OIL,
             prod_rate=np.array([100, 50]),
-            cost_per_volume=np.array([0.1, 0.1])
+            cost_per_volume=np.array([0.1, 0.1]),
         )
 
     # Case 2
@@ -607,7 +607,7 @@ def test_opex_unequal_length_of_data_input():
             fixed_cost=np.array([100, 50]),
             expense_year=np.array([2028, 2029]),
             cost_allocation=FluidType.OIL,
-            prod_rate=np.array([100, 100])
+            prod_rate=np.array([100, 100]),
         )
 
     # Case 3
@@ -619,7 +619,7 @@ def test_opex_unequal_length_of_data_input():
             fixed_cost=np.array([100, 50]),
             expense_year=np.array([2028, 2029]),
             cost_allocation=FluidType.OIL,
-            cost_per_volume=np.array([0.1, 0.1])
+            cost_per_volume=np.array([0.1, 0.1]),
         )
 
     # Case 4
@@ -632,7 +632,7 @@ def test_opex_unequal_length_of_data_input():
             expense_year=np.array([2028, 2029]),
             cost_allocation=FluidType.OIL,
             prod_rate=np.array([100, 50]),
-            cost_per_volume=np.array([0.1, 0.1, 0.1])
+            cost_per_volume=np.array([0.1, 0.1, 0.1]),
         )
 
 
@@ -673,7 +673,7 @@ def test_opex_enpenditures():
         expense_year=np.array([2028, 2029]),
         cost_allocation=FluidType.OIL,
         prod_rate=np.array([100, 100]),
-        cost_per_volume=np.array([0.1, 0.1])
+        cost_per_volume=np.array([0.1, 0.1]),
     )
 
     calc_expense1 = mangga_opex.expenditures()
@@ -742,7 +742,7 @@ def test_opex_comparison():
         expense_year=np.array([2028, 2029]),
         cost_allocation=FluidType.OIL,
         prod_rate=np.array([100, 100]),
-        cost_per_volume=np.array([0.1, 0.1])
+        cost_per_volume=np.array([0.1, 0.1]),
     )
 
     # Execute comparison testing
@@ -802,7 +802,7 @@ def test_opex_arithmetics():
         expense_year=np.array([2023, 2024, 2025, 2026]),
         cost_allocation=FluidType.OIL,
         prod_rate=np.array([100, 100, 100, 100]),
-        cost_per_volume=np.array([0.1, 0.1, 0.1, 0.1])
+        cost_per_volume=np.array([0.1, 0.1, 0.1, 0.1]),
     )
 
     apel_opex = OPEX(
@@ -812,7 +812,7 @@ def test_opex_arithmetics():
         expense_year=np.array([2025, 2026, 2027, 2028]),
         cost_allocation=FluidType.OIL,
         prod_rate=np.array([100, 100, 100, 100]),
-        cost_per_volume=np.array([0.1, 0.1, 0.1, 0.1])
+        cost_per_volume=np.array([0.1, 0.1, 0.1, 0.1]),
     )
 
     nanas_opex = OPEX(
@@ -822,7 +822,7 @@ def test_opex_arithmetics():
         expense_year=np.array([2030, 2029]),
         cost_allocation=FluidType.OIL,
         prod_rate=np.array([100, 100]),
-        cost_per_volume=np.array([0.1, 0.1])
+        cost_per_volume=np.array([0.1, 0.1]),
     )
 
     jeruk_opex = OPEX(
@@ -832,7 +832,7 @@ def test_opex_arithmetics():
         expense_year=np.array([2024, 2023]),
         cost_allocation=FluidType.OIL,
         prod_rate=np.array([100, 100]),
-        cost_per_volume=np.array([0.1, 0.1])
+        cost_per_volume=np.array([0.1, 0.1]),
     )
 
     calc_add1 = mangga_opex + apel_opex
