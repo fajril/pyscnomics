@@ -64,7 +64,8 @@ class Lifting:
         arr_length = self.lifting_rate.shape[0]
 
         if not all(
-            len(arr) == arr_length for arr in [self.price, self.ghv, self.prod_rate, self.prod_year]
+            len(arr) == arr_length
+            for arr in [self.price, self.ghv, self.prod_rate, self.prod_year]
         ):
             raise LiftingException(
                 f"Inequal length of array: lifting_rate: {len(self.lifting_rate)},"
@@ -128,7 +129,7 @@ class Lifting:
                     np.allclose(self.price, other.price),
                     np.allclose(self.ghv, other.ghv),
                     np.allclose(self.prod_rate, other.prod_rate),
-                    np.allclose(self.prod_year, other.prod_year)
+                    np.allclose(self.prod_year, other.prod_year),
                 )
             )
 
@@ -237,7 +238,7 @@ class Lifting:
                     prod_year=prod_year,
                     fluid_type=self.fluid_type,
                     ghv=ghv,
-                    prod_rate=prod_rate
+                    prod_rate=prod_rate,
                 )
 
         # Between an instance of Lifting with an integer/float
@@ -357,9 +358,7 @@ class Lifting:
 
             # Cannot multiply with zero or with a negative integer/float
             if other < 0:
-                raise LiftingException(
-                    f"Cannot multiply a negative integer/float"
-                )
+                raise LiftingException(f"Cannot multiply a negative integer/float")
 
             else:
                 return self.revenue() * other
@@ -384,9 +383,7 @@ class Lifting:
 
             # Cannot divide with zero or a negative value
             if other == 0:
-                raise LiftingException(
-                    f"Cannot divide with zero"
-                )
+                raise LiftingException(f"Cannot divide with zero")
 
             else:
                 return self.revenue() / other

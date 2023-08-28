@@ -28,9 +28,9 @@ def test_lifting_incorrect_data_input():
             ),
             price=np.array([10 for _ in range(11)]),
             fluid_type=FluidType.OIL,
-            prod_year=np.array([
-                2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2031, 2032
-            ])
+            prod_year=np.array(
+                [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2031, 2032]
+            ),
         ).revenue()
 
 
@@ -126,6 +126,3 @@ def test_lifting_arithmetics():
     np.testing.assert_allclose(add2, calc_add2)
     np.testing.assert_allclose(mul1, calc_mul1)
     np.testing.assert_allclose(div1, calc_div1)
-
-
-

@@ -1,21 +1,17 @@
-import unittest
+"""
+A unit test for module functools.py
+"""
+
 import numpy as np
-from pyscnomics.tools import funcTools
 
-
-class MyTestCase(unittest.TestCase):
-    def test_something(self):
-        self.assertEqual(True, False)  # add assertion here
+from pyscnomics.tools import functools
 
 
 def test_sumarizer():
     """
     A unit test for summarizer test.
-
-    Returns
-    -------
-
     """
+
     # Case 1: First array is earlier than second array
     array1 = np.array([100, 100, 100, 100, 100])
     array2 = np.array([50, 50, 50])
@@ -24,11 +20,9 @@ def test_sumarizer():
 
     expected_result_1 = [100, 100, 150, 150, 150]
 
-    result_1 = funcTools.summarizer(
-        array1=array1,
-        array2=array2,
-        startYear1=startYear1,
-        startYear2=startYear2)
+    result_1 = functools.summarizer(
+        array1=array1, array2=array2, startYear1=startYear1, startYear2=startYear2
+    )
 
     # Case 2: Second array is earlier than fisrt array
     array1 = np.array([50, 50, 50, 50, 50])
@@ -38,11 +32,9 @@ def test_sumarizer():
 
     expected_result_2 = [100, 100, 150, 150, 150, 50, 50]
 
-    result_2 = funcTools.summarizer(
-        array1=array1,
-        array2=array2,
-        startYear1=startYear1,
-        startYear2=startYear2)
+    result_2 = functools.summarizer(
+        array1=array1, array2=array2, startYear1=startYear1, startYear2=startYear2
+    )
 
     # Case 3: Second array is later and shorter than first array
     array1 = np.array([100, 100, 100, 100, 100])
@@ -52,11 +44,9 @@ def test_sumarizer():
 
     expected_result_3 = [100, 200, 200, 200, 100]
 
-    result_3 = funcTools.summarizer(
-        array1=array1,
-        array2=array2,
-        startYear1=startYear1,
-        startYear2=startYear2)
+    result_3 = functools.summarizer(
+        array1=array1, array2=array2, startYear1=startYear1, startYear2=startYear2
+    )
 
     # Case 4: first array is later and shorter than second array
     array1 = np.array([100, 100, 100])
@@ -66,15 +56,11 @@ def test_sumarizer():
 
     expected_result_4 = [100, 200, 200, 200, 100]
 
-    result_4 = funcTools.summarizer(
-        array1=array1,
-        array2=array2,
-        startYear1=startYear1,
-        startYear2=startYear2)
+    result_4 = functools.summarizer(
+        array1=array1, array2=array2, startYear1=startYear1, startYear2=startYear2
+    )
 
-    np.testing.assert_allclose(expected_result_1, result_1)
-    np.testing.assert_allclose(expected_result_2, result_2)
-    np.testing.assert_allclose(expected_result_3, result_3)
-    np.testing.assert_allclose(expected_result_4, result_4)
-
-
+    np.testing.assert_allclose(expected_result_1, result_1[0])
+    np.testing.assert_allclose(expected_result_2, result_2[0])
+    np.testing.assert_allclose(expected_result_3, result_3[0])
+    np.testing.assert_allclose(expected_result_4, result_4[0])
