@@ -41,9 +41,14 @@ class Lifting:
     end_year: int
     lifting_rate: np.ndarray
     price: np.ndarray
+    prod_year: np.ndarray
     fluid_type: FluidType = field(default=FluidType.OIL)
     ghv: np.ndarray = field(default=None, repr=False)
     prod_rate: np.ndarray = field(default=None, repr=False)
+
+    # Attribute to be defined later on
+    project_duration: int = field(default=None, init=False)
+    project_years: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
 
@@ -59,7 +64,7 @@ class Lifting:
         arr_length = self.lifting_rate.shape[0]
 
         if not all(
-            len(arr) == arr_length for arr in [self.price, self.ghv, self.prod_rate]
+            len(arr) == arr_length for arr in [self.price, self.ghv, self.prod_rate, self.prod_year]
         ):
             raise LiftingException(
                 f"Inequal length of array: lifting_rate: {len(self.lifting_rate)},"
@@ -69,8 +74,9 @@ class Lifting:
 
         # Define an attribute depicting project duration;
         # Raise a "ValueError" if start_year is after then end_year
-        if self.end_year > self.start_year:
+        if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
+            self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
 
         else:
             raise LiftingException(
@@ -97,82 +103,194 @@ class Lifting:
         # Calculate revenue = lifting rate * price * ghv
         rev = self.lifting_rate * self.price * self.ghv
 
-        # When project duration is longer than the length of production data,
-        # assign the revenue of the suplementary years with zeros
-        if self.project_duration > len(self.prod_rate):
-            add_zeros = np.zeros(int(self.project_duration - len(self.prod_rate)))
-            rev = np.concatenate((rev, add_zeros))
+        # Revenues must be aligned with the corresponding prod_year
+        rev_update = np.bincount(self.prod_year - self.start_year, weights=rev)
 
-        return rev
+        # Modify revenues, acoounting for project duration
+        zeros = np.zeros(self.project_duration - len(rev_update))
+        rev_update = np.concatenate((rev_update, zeros))
+
+        return rev_update
+
+    def __len__(self):
+        return self.project_duration
 
     def __eq__(self, other):
 
-        # Check the equality of all attributes of two Lifting instances
-        return all(
-            (
-                self.fluid_type == other.fluid_type,
-                self.start_year == other.start_year,
-                self.end_year == other.end_year,
-                np.allclose(self.lifting_rate, other.lifting_rate),
-                np.allclose(self.price, other.price),
-                np.allclose(self.ghv, other.ghv),
-                np.allclose(self.prod_rate, other.prod_rate),
+        # Between two instances of Lifting
+        if isinstance(other, Lifting):
+            return all(
+                (
+                    self.fluid_type == other.fluid_type,
+                    self.start_year == other.start_year,
+                    self.end_year == other.end_year,
+                    np.allclose(self.lifting_rate, other.lifting_rate),
+                    np.allclose(self.price, other.price),
+                    np.allclose(self.ghv, other.ghv),
+                    np.allclose(self.prod_rate, other.prod_rate),
+                    np.allclose(self.prod_year, other.prod_year)
+                )
             )
-        )
+
+        # Between an instance of Lifting and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.allclose(np.sum(self.revenue()), other)
+
+        else:
+            raise LiftingException(
+                f"Must compare an instance of Lifting with another instance of Lifting, "
+                f"an integer, or a float"
+            )
 
     def __lt__(self, other):
-        return np.sum(self.revenue()) < np.sum(other.revenue())
+
+        # Between two instances of Lifting
+        if isinstance(other, Lifting):
+            return np.sum(self.revenue()) < np.sum(other.revenue())
+
+        # Between an instance of Lifting and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.revenue()) < other
+
+        else:
+            raise LiftingException(
+                f"Must compare an instance of Lifting with another instance of Lifting, "
+                f"an integer, or a float"
+            )
 
     def __le__(self, other):
-        return np.sum(self.revenue()) <= np.sum(other.revenue())
+
+        # Between two instances of Lifting
+        if isinstance(other, Lifting):
+            return np.sum(self.revenue()) <= np.sum(other.revenue())
+
+        # Between an instance of Lifting and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.revenue()) <= other
+
+        else:
+            raise LiftingException(
+                f"Must compare an instance of Lifting with another instance of Lifting, "
+                f"an integer, or a float"
+            )
 
     def __gt__(self, other):
-        return np.sum(self.revenue()) > np.sum(other.revenue())
+
+        # Between two instances of Lifting
+        if isinstance(other, Lifting):
+            return np.sum(self.revenue()) > np.sum(other.revenue())
+
+        # Between an instance of Lifting and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.revenue()) > other
+
+        else:
+            raise LiftingException(
+                f"Must compare an instance of Lifting with another instance of Lifting, "
+                f"an integer, or a float"
+            )
 
     def __ge__(self, other):
-        return np.sum(self.revenue()) >= np.sum(other.revenue())
+
+        # Between two instances of Lifting
+        if isinstance(other, Lifting):
+            return np.sum(self.revenue()) >= np.sum(other.revenue())
+
+        # Between an instance of Lifting and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.revenue()) >= other
+
+        else:
+            raise LiftingException(
+                f"Must compare an instance of Lifting with another instance of Lifting, "
+                f"an integer, or a float"
+            )
 
     def __add__(self, other):
 
-        # If "other" is an instance of Lifting object
+        # Between an instance of Lifting with another instance of Lifintg
         if isinstance(other, Lifting):
 
-            # Configure the minimum and maximum values of the start and end year, respectively
-            start_year = min(self.start_year, other.start_year)
-            end_year = max(self.end_year, other.end_year)
+            # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
+            if self.fluid_type != other.fluid_type:
+                raise LiftingException(
+                    "Cost allocation is not equal. "
+                    f"First instance is {self.fluid_type}, "
+                    f"second instance is {other.fluid_type} "
+                )
 
-            self_revenue = self.revenue().copy()
-            other_revenue = other.revenue().copy()
+            else:
 
-            # If the length of self_revenue data is less than project duration
-            if len(self_revenue) < end_year - start_year + 1:
+                start_year = min(self.start_year, other.start_year)
+                end_year = max(self.end_year, other.end_year)
+                lifting_rate = np.concatenate((self.lifting_rate, other.lifting_rate))
+                price = np.concatenate((self.price, other.price))
+                prod_year = np.concatenate((self.prod_year, other.prod_year))
+                ghv = np.concatenate((self.ghv, other.ghv))
+                prod_rate = np.concatenate((self.prod_rate, other.prod_rate))
 
-                # Modify the size of self_revenue data
-                self_revenue.resize(end_year - start_year + 1, refcheck=False)
+                return Lifting(
+                    start_year=start_year,
+                    end_year=end_year,
+                    lifting_rate=lifting_rate,
+                    price=price,
+                    prod_year=prod_year,
+                    fluid_type=self.fluid_type,
+                    ghv=ghv,
+                    prod_rate=prod_rate
+                )
 
-                # If self.start_year > other.start_year, roll the array n steps to the right;
-                # n = self.start_year - start_year
-                if self.start_year > other.start_year:
-                    self_revenue = np.roll(self_revenue, (self.start_year - start_year))
-
-            # If the length of other_revenue data is less than project duration
-            if len(other_revenue) < end_year - start_year + 1:
-
-                # Modify the size of other_revenue data
-                other_revenue.resize(end_year - start_year + 1, refcheck=False)
-
-                # If other.start_year > self.start_year, roll the array n steps to the right;
-                # n = other.start_year - start_year
-                if other.start_year > self.start_year:
-                    other_revenue = np.roll(
-                        other_revenue, (other.start_year - start_year)
-                    )
-
-            return self_revenue + other_revenue
-
-        # If "other" is int, float, or numpy array
-        elif isinstance(other, (int, float, np.ndarray)):
+        # Between an instance of Lifting with an integer/float
+        elif isinstance(other, (int, float)):
             return self.revenue() + other
+
+        else:
+            raise LiftingException(
+                f"Must add an instance of Lifting with another instance "
+                f"of Lifting or int/float "
+                f"{other}({other.__class__.__qualname__}) is not an instance of "
+                f"Lifting or int/float"
+            )
+
+        # # If "other" is an instance of Lifting object
+        # if isinstance(other, Lifting):
+        #
+        #     # Configure the minimum and maximum values of the start and end year, respectively
+        #     start_year = min(self.start_year, other.start_year)
+        #     end_year = max(self.end_year, other.end_year)
+        #
+        #     self_revenue = self.revenue().copy()
+        #     other_revenue = other.revenue().copy()
+        #
+        #     # If the length of self_revenue data is less than project duration
+        #     if len(self_revenue) < end_year - start_year + 1:
+        #
+        #         # Modify the size of self_revenue data
+        #         self_revenue.resize(end_year - start_year + 1, refcheck=False)
+        #
+        #         # If self.start_year > other.start_year, roll the array n steps to the right;
+        #         # n = self.start_year - start_year
+        #         if self.start_year > other.start_year:
+        #             self_revenue = np.roll(self_revenue, (self.start_year - start_year))
+        #
+        #     # If the length of other_revenue data is less than project duration
+        #     if len(other_revenue) < end_year - start_year + 1:
+        #
+        #         # Modify the size of other_revenue data
+        #         other_revenue.resize(end_year - start_year + 1, refcheck=False)
+        #
+        #         # If other.start_year > self.start_year, roll the array n steps to the right;
+        #         # n = other.start_year - start_year
+        #         if other.start_year > self.start_year:
+        #             other_revenue = np.roll(
+        #                 other_revenue, (other.start_year - start_year)
+        #             )
+        #
+        #     return self_revenue + other_revenue
+        #
+        # # If "other" is int, float, or numpy array
+        # elif isinstance(other, (int, float, np.ndarray)):
+        #     return self.revenue() + other
 
     def __sub__(self, other):
 
@@ -233,19 +351,42 @@ class Lifting:
             raise NotImplementedError
 
     def __mul__(self, other):
+
+        # Multiplication is allowed only with an integer/a float
         if isinstance(other, (int, float)):
-            return self.revenue() * other
+
+            # Cannot multiply with zero or with a negative integer/float
+            if other < 0:
+                raise LiftingException(
+                    f"Cannot multiply a negative integer/float"
+                )
+
+            else:
+                return self.revenue() * other
+
+        else:
+            raise LiftingException(
+                f"Must multiply with an integer or a float; "
+                f"{other} is not an integer nor a float"
+            )
 
     def __rmul__(self, other):
-        if isinstance(other, (int, float)):
-            return other * self.revenue()
+        return self.__mul__(other)
 
     def __truediv__(self, other):
 
-        # If "other" is an instance of Lifting object, then divide the sum of revenues of instance A and B
+        # Between two instances of Lifting
         if isinstance(other, Lifting):
             return np.sum(self.revenue()) / np.sum(other.revenue())
 
-        # If "other" is int or float, then division operation is carried out per individual element
+        # Between an instance of Lifting and an integer/float
         elif isinstance(other, (int, float)):
-            return self.revenue() / other
+
+            # Cannot divide with zero or a negative value
+            if other == 0:
+                raise LiftingException(
+                    f"Cannot divide with zero"
+                )
+
+            else:
+                return self.revenue() / other
