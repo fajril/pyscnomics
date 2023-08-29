@@ -70,6 +70,7 @@ class Tangible:
     pis_year: np.ndarray = field(default=None, repr=False)
     salvage_value: np.ndarray = field(default=None, repr=False)
     useful_life: np.ndarray = field(default=None, repr=False)
+    depreciation_factor: np.ndarray = field(default=None, repr=False)
 
     # Attribute to be defined later on
     project_duration: int = field(default=None, init=False, repr=False)
@@ -98,6 +99,9 @@ class Tangible:
         else:
             self.useful_life = np.asarray(self.useful_life)
 
+        if self.depreciation_factor is None:
+            self.depreciation_factor = np.repeat(0.5, len(self.cost))
+
         # Check input data for unequal length
         arr_length = len(self.cost)
 
@@ -108,6 +112,7 @@ class Tangible:
                 self.pis_year,
                 self.salvage_value,
                 self.useful_life,
+                self.depreciation_factor,
             ]
         ):
             raise TangibleException(
@@ -116,7 +121,8 @@ class Tangible:
                 f"expense_year: {len(self.expense_year)}, "
                 f"pis_year: {len(self.pis_year)}, "
                 f"salvage_value: {len(self.salvage_value)}, "
-                f"useful_life: {len(self.useful_life)}"
+                f"useful_life: {len(self.useful_life)}, "
+                f"depreciation_factor: {len(self.depreciation_factor)}"
             )
 
         # Check for inappropriate start and end year project
@@ -225,6 +231,38 @@ class Tangible:
                     )
                 ]
             )
+
+        # The relative difference of pis_year and start_year
+        shift_indices = self.pis_year - self.start_year
+
+        # Modify depreciation_charge so that expenditures are aligned with
+        # the corresponding pis_year (or expense_year)
+        depreciation_charge = np.asarray(
+            [
+                np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
+                for row, i in zip(depreciation_charge, shift_indices)
+            ]
+        )
+
+        return depreciation_charge.sum(axis=0)
+
+    def psc_depreciation_rate(self):
+
+        depreciation_charge = np.asarray(
+            [
+                depr.psc_declining_balance_depreciation_rate(
+                    cost=c,
+                    depreciation_factor=dr,
+                    useful_life=ul,
+                    depreciation_len=self.project_duration,
+                )
+                for c, dr, ul in zip(
+                    self.cost,
+                    self.depreciation_factor,
+                    self.useful_life,
+                )
+            ]
+        )
 
         # The relative difference of pis_year and start_year
         shift_indices = self.pis_year - self.start_year

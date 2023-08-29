@@ -179,6 +179,27 @@ def declining_balance_depreciation_rate(
     return depreciation_charge
 
 
+# TODO: Add a unit test
+def psc_declining_balance_depreciation_rate(
+    cost: float, useful_life: float, depreciation_factor: float, depreciation_len: int
+) -> np.ndarray:
+
+    periods = np.arange(1, useful_life, 1, dtype=np.int_)
+    depreciation_charge = (
+        depreciation_factor * cost * np.power(1 - depreciation_factor, periods)
+    )
+
+    depreciation_charge = np.concatenate(
+        (depreciation_charge, cost - np.sum(depreciation_charge))
+    )
+
+    if depreciation_len > len(depreciation_charge):
+        extension = np.zeros(depreciation_len - len(depreciation_charge))
+        depreciation_charge = np.concatenate((depreciation_charge, extension))
+
+    return depreciation_charge
+
+
 def declining_balance_book_value(
     cost: float,
     salvage_value: float,

@@ -22,6 +22,7 @@ class DeprMethod(Enum):
 
     SL = "sl"
     DB = "db"
+    PSC = "psc db"
     UOP = "uop"
 
 
