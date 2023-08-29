@@ -47,3 +47,23 @@ class FluidType(Enum):
     SULFUR = "sulfur"
     ELECTRICITY = "electricity"
     CO2 = "co2"
+
+
+class TaxSplitTypeCR(Enum):
+    """
+    Enumeration of split type for cost recovery.
+
+    Attributes
+    ----------
+    CONVENTIONAL : str
+        Represents conventional split type.
+    SLIDING_SCALE : str
+        Represents sliding scale split type.
+    R2C : str
+        Represents revenue to cost split type.
+
+    """
+
+    CONVENTIONAL = "conventional"
+    SLIDING_SCALE = "ICP sliding scale"
+    R2C = "R/C"
