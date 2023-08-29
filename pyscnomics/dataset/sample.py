@@ -3,8 +3,8 @@ import numpy as np
 from datetime import datetime
 
 from pyscnomics.contracts.project import BaseProject
-from pyscnomics.contracts.grosssplit import GrossSplit
-from pyscnomics.contracts.grosssplit import VariableSplit, SplitConfig, Tax, DMO, InvestmentCredit, Incentive
+# from pyscnomics.contracts.grosssplit import GrossSplit
+# from pyscnomics.contracts.grosssplit import VariableSplit, SplitConfig, Tax, DMO, InvestmentCredit, Incentive
 
 from pyscnomics.econ.revenue import Lifting, FluidType
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
@@ -269,7 +269,7 @@ def assign_gs(data_contract):
     return variable_split, split_config, tax, dmo_oil, dmo_gas, investment_credit, incentive
 
 
-def load_data(dataset: str, contract: str = 'project') -> BaseProject | GrossSplit | ValueError:
+def load_data(dataset: str, contract: str = 'project') -> BaseProject:
     """
     Function to load the provided dataset.
 
