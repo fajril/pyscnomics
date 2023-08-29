@@ -112,7 +112,7 @@ class CostRecovery(BaseProject):
 
     @staticmethod
     def _get_unrecovered_cost(
-            depreciation, non_capital, revenue, ftp_ctr, ftp_gov, invest_credit
+        depreciation, non_capital, revenue, ftp_ctr, ftp_gov, invest_credit
     ):
 
         unrecovered_cost = np.cumsum(depreciation + non_capital) - np.cumsum(
@@ -123,17 +123,17 @@ class CostRecovery(BaseProject):
 
     @staticmethod
     def _get_cost_to_be_recovered(
-            depreciation,
-            non_capital,
-            revenue,
-            ftp_ctr,
-            ftp_gov,
-            invest_credit,
-            unrecovered_cost,
+        depreciation,
+        non_capital,
+        revenue,
+        ftp_ctr,
+        ftp_gov,
+        invest_credit,
+        unrecovered_cost,
     ):
 
         cost_to_be_recovered = (
-                revenue - (ftp_ctr + ftp_gov) - invest_credit - depreciation - non_capital
+            revenue - (ftp_ctr + ftp_gov) - invest_credit - depreciation - non_capital
         )
 
         return np.where(
@@ -143,7 +143,9 @@ class CostRecovery(BaseProject):
         )
 
     @staticmethod
-    def _get_cost_recovery(depreciation, non_capital, cost_to_be_recovered, cr_cap_rate):
+    def _get_cost_recovery(
+        depreciation, non_capital, cost_to_be_recovered, cr_cap_rate
+    ):
         return (depreciation + non_capital + cost_to_be_recovered) * cr_cap_rate
 
     @staticmethod
@@ -151,7 +153,9 @@ class CostRecovery(BaseProject):
         return revenue - (ftp_ctr + ftp_gov) - invest_credit - cost_recovery
 
     @staticmethod
-    def _get_transfer(gas_unrecovered, oil_unrecovered, gas_ets_pretransfer, oil_ets_pretransfer):
+    def _get_transfer(
+        gas_unrecovered, oil_unrecovered, gas_ets_pretransfer, oil_ets_pretransfer
+    ):
 
         Trf2oil = np.zeros_like(oil_unrecovered)
         Trf2gas = np.zeros_like(gas_unrecovered)
@@ -196,15 +200,15 @@ class CostRecovery(BaseProject):
         gas_depreciation = self._gas_tangible.psc_depreciation_rate()
 
         oil_non_capital = (
-                self._oil_intangible.expenditures() +
-                self._oil_opex.expenditures() +
-                self._oil_asr.expenditures()
+            self._oil_intangible.expenditures()
+            + self._oil_opex.expenditures()
+            + self._oil_asr.expenditures()
         )
 
         gas_non_capital = (
-                self._gas_intangible.expenditures() +
-                self._gas_opex.expenditures() +
-                self._gas_asr.expenditures()
+            self._gas_intangible.expenditures()
+            + self._gas_opex.expenditures()
+            + self._gas_asr.expenditures()
         )
 
         oil_unrecovered_before_transfer = self._get_unrecovered_cost(
@@ -213,7 +217,7 @@ class CostRecovery(BaseProject):
             revenue=self._oil_revenue,
             ftp_ctr=self._oil_ftp_ctr,
             ftp_gov=self._oil_ftp_gov,
-            invest_credit=self._oil_ic
+            invest_credit=self._oil_ic,
         )
 
         gas_unrecovered_before_transfer = self._get_unrecovered_cost(
@@ -222,7 +226,7 @@ class CostRecovery(BaseProject):
             revenue=self._gas_revenue,
             ftp_ctr=self._gas_ftp_ctr,
             ftp_gov=self._gas_ftp_gov,
-            invest_credit=self._gas_ic
+            invest_credit=self._gas_ic,
         )
 
         oil_cost_to_be_recovered = self._get_cost_to_be_recovered(
@@ -232,7 +236,7 @@ class CostRecovery(BaseProject):
             ftp_ctr=self._oil_ftp_ctr,
             ftp_gov=self._oil_ftp_gov,
             invest_credit=self._oil_ic,
-            unrecovered_cost=oil_unrecovered_before_transfer
+            unrecovered_cost=oil_unrecovered_before_transfer,
         )
 
         gas_cost_to_be_recovered = self._get_cost_to_be_recovered(
@@ -242,21 +246,21 @@ class CostRecovery(BaseProject):
             ftp_ctr=self._gas_ftp_ctr,
             ftp_gov=self._gas_ftp_gov,
             invest_credit=self._gas_ic,
-            unrecovered_cost=gas_unrecovered_before_transfer
+            unrecovered_cost=gas_unrecovered_before_transfer,
         )
 
         oil_cost_recovery = self._get_cost_recovery(
             depreciation=oil_depreciation,
             non_capital=oil_non_capital,
             cost_to_be_recovered=oil_cost_to_be_recovered,
-            cr_cap_rate=self.oil_cr_cap_rate
+            cr_cap_rate=self.oil_cr_cap_rate,
         )
 
         gas_cost_recovery = self._get_cost_recovery(
             depreciation=gas_depreciation,
             non_capital=gas_non_capital,
             cost_to_be_recovered=gas_cost_to_be_recovered,
-            cr_cap_rate=self.gas_cr_cap_rate
+            cr_cap_rate=self.gas_cr_cap_rate,
         )
 
         oil_ets_pre_transfer = self._get_ETS(
@@ -264,7 +268,7 @@ class CostRecovery(BaseProject):
             ftp_ctr=self._oil_ftp_ctr,
             ftp_gov=self._oil_ftp_gov,
             invest_credit=self._oil_ic,
-            cost_recovery=oil_cost_recovery
+            cost_recovery=oil_cost_recovery,
         )
 
         gas_ets_pre_transfer = self._get_ETS(
@@ -272,27 +276,31 @@ class CostRecovery(BaseProject):
             ftp_ctr=self._gas_ftp_ctr,
             ftp_gov=self._gas_ftp_gov,
             invest_credit=self._gas_ic,
-            cost_recovery=gas_cost_recovery
+            cost_recovery=gas_cost_recovery,
         )
 
         Trf2oil, Trf2gas = self._get_transfer(
             gas_unrecovered=gas_unrecovered_before_transfer,
             oil_unrecovered=oil_unrecovered_before_transfer,
             gas_ets_pretransfer=gas_ets_pre_transfer,
-            oil_ets_pretransfer=oil_ets_pre_transfer
+            oil_ets_pretransfer=oil_ets_pre_transfer,
         )
 
         # Changed Writer from this line
         oil_ur_after_transfer = oil_unrecovered_before_transfer - Trf2oil
         gas_ur_after_transfer = gas_unrecovered_before_transfer - Trf2gas
 
-        oil_ets_after_tf = self._get_ets_after_transfer(ets_pre_transfer=oil_ets_pre_transfer,
-                                                        trfto=Trf2oil,
-                                                        ur_after_transfer=oil_ur_after_transfer)
+        oil_ets_after_tf = self._get_ets_after_transfer(
+            ets_pre_transfer=oil_ets_pre_transfer,
+            trfto=Trf2oil,
+            ur_after_transfer=oil_ur_after_transfer,
+        )
 
-        gas_ets_after_tf = self._get_ets_after_transfer(ets_pre_transfer=gas_ets_pre_transfer,
-                                                        trfto=Trf2gas,
-                                                        ur_after_transfer=gas_ur_after_transfer)
+        gas_ets_after_tf = self._get_ets_after_transfer(
+            ets_pre_transfer=gas_ets_pre_transfer,
+            trfto=Trf2gas,
+            ur_after_transfer=gas_ur_after_transfer,
+        )
 
         oil_es_ctr, oil_es_gov = self._get_ES(ETS=oil_ets_after_tf)
         gas_es_ctr, gas_es_gov = self._get_ES(ETS=gas_ets_after_tf)
@@ -303,7 +311,6 @@ class CostRecovery(BaseProject):
 
         oil_gs = self._oil_ftp_gov + oil_es_gov
         gas_gs = self._gas_ftp_gov + gas_es_gov
-
 
     # def _get_REV_after_FTP(self):
     #     r"""
@@ -439,7 +446,6 @@ class CostRecovery(BaseProject):
             goverment share
         """
         return ftp_gov + ets_gov
-
 
     def _get_DMO(self, revenue, ES_con, year_arr):
         r"""
