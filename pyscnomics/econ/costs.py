@@ -9,7 +9,7 @@ Prepare and classify cost data based on its components. The associated cost comp
 import numpy as np
 from dataclasses import dataclass, field
 import pyscnomics.econ.depreciation as depr
-from pyscnomics.econ.selection import FluidType, DeprMethod
+from pyscnomics.econ.selection import FluidType, DeprMethod, YearReference
 from pyscnomics.tools.functools import summarizer
 
 
@@ -71,6 +71,7 @@ class Tangible:
     salvage_value: np.ndarray = field(default=None, repr=False)
     useful_life: np.ndarray = field(default=None, repr=False)
     depreciation_factor: np.ndarray = field(default=None, repr=False)
+    is_ic_applied: bool = field(default=False)
 
     # Attribute to be defined later on
     project_duration: int = field(default=None, init=False, repr=False)
@@ -143,7 +144,7 @@ class Tangible:
                 f"is beyond the end project year {self.end_year}"
             )
 
-    def expenditures(self) -> np.ndarray:
+    def expenditures(self, year_ref: YearReference = YearReference.EXPENSE_YEAR) -> np.ndarray:
         """
         Calculate tangible expenditures per year.
 
@@ -156,8 +157,13 @@ class Tangible:
             An array representing the tangible expenditures each year.
         """
 
-        # Expenditures must be aligned with the corresponding pis_year (or expense_year)
-        expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
+        if year_ref == YearReference.EXPENSE_YEAR:
+
+            # Expenditures must be aligned with the corresponding pis_year (or expense_year)
+            expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
+
+        else:
+            expenses = np.bincount(self.pis_year - self.start_year, weights=self.cost)
 
         # Modify expenses
         zeros = np.zeros(self.project_duration - len(expenses))

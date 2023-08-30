@@ -342,6 +342,10 @@ class Lifting:
         if isinstance(other, Lifting):
             return np.sum(self.revenue()) / np.sum(other.revenue())
 
+        # Between an instance of Lifting and an instance of Tangible/Intangible/OPEX/ASR
+        elif isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.revenue()) / np.sum(other.expenditures())
+
         # Between an instance of Lifting and an integer/float
         elif isinstance(other, (int, float)):
 
@@ -351,3 +355,12 @@ class Lifting:
 
             else:
                 return self.revenue() / other
+
+        elif isinstance(other, np.ndarray):
+            return np.sum(self.revenue()) / np.sum(other)
+
+        else:
+            raise LiftingException(
+                f"Does not allow division operation of an instance of Lifting "
+                f"and {other.__class__.__qualname__}"
+            )

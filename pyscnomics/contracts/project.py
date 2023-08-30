@@ -1,5 +1,5 @@
 """
-
+Configure base project as a foundational framework for contract.
 """
 
 from dataclasses import dataclass, field
@@ -52,6 +52,7 @@ class BaseProject:
 
     start_date: date
     end_date: date
+    onstream_date: date
     lifting: tuple
     tangible_cost: tuple = field(default=None, repr=False)
     intangible_cost: tuple = field(default=None, repr=False)
