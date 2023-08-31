@@ -1,3 +1,7 @@
+"""
+Specify fluid type and depreciation method.
+"""
+
 from enum import Enum
 
 
@@ -42,10 +46,4 @@ class FluidType(Enum):
     GAS = "gas"
     SULFUR = "sulfur"
     ELECTRICITY = "electricity"
-    CO2 = 'co2'
-
-
-class TaxSplitTypeCR(Enum):
-    CONVENTIONAL = "conventional"
-    SLIDING_SCALE = "ICP sliding scale"
-    R2C = "R/C"
+    CO2 = "co2"
