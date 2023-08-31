@@ -8,9 +8,10 @@ Prepare and classify cost data based on its components. The associated cost comp
 
 import numpy as np
 from dataclasses import dataclass, field
+
 import pyscnomics.econ.depreciation as depr
 from pyscnomics.econ.selection import FluidType, DeprMethod, YearReference
-from pyscnomics.tools.functools import summarizer
+from pyscnomics.tools.helper import summarizer, sum_remainder
 
 
 class TangibleException(Exception):
@@ -144,7 +145,9 @@ class Tangible:
                 f"is beyond the end project year {self.end_year}"
             )
 
-    def expenditures(self, year_ref: YearReference = YearReference.EXPENSE_YEAR) -> np.ndarray:
+    def expenditures(
+        self, year_ref: YearReference = YearReference.EXPENSE_YEAR
+    ) -> np.ndarray:
         """
         Calculate tangible expenditures per year.
 
@@ -160,7 +163,9 @@ class Tangible:
         if year_ref == YearReference.EXPENSE_YEAR:
 
             # Expenditures must be aligned with the corresponding pis_year (or expense_year)
-            expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
+            expenses = np.bincount(
+                self.expense_year - self.start_year, weights=self.cost
+            )
 
         else:
             expenses = np.bincount(self.pis_year - self.start_year, weights=self.cost)
@@ -254,6 +259,29 @@ class Tangible:
 
     def psc_depreciation_rate(self):
 
+        """
+        Calculate the total depreciation charge over the project duration for a set of assets
+        based on Production Sharing Contract (PSC) parameters.
+
+        Returns:
+        -------
+        numpy.ndarray
+            Array containing the total depreciation charge for each time period in the project duration.
+
+        Notes:
+        ------
+        This function calculates the depreciation charge for a set of assets based on the PSC
+        parameters, considering the declining balance depreciation method. It aligns the expenditures
+        with the corresponding Placed Into Service (PIS) years or expense years.
+
+        The function takes into account the asset cost, depreciation factor, useful life, project duration,
+        PIS year, and start year. The resulting total depreciation charge is calculated as the sum of
+        depreciation charges for all assets over the project duration.
+
+        If the total number of depreciation charge periods is greater than the project duration, the
+        function truncates the array to match the project duration.
+        """
+
         depreciation_charge = np.asarray(
             [
                 depr.psc_declining_balance_depreciation_rate(
@@ -282,7 +310,19 @@ class Tangible:
             ]
         )
 
-        return depreciation_charge.sum(axis=0)
+        total_depreciation_charge = depreciation_charge.sum(axis=0)
+        undepreciated_asset = sum_remainder(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            arr=total_depreciation_charge,
+        )
+
+        if len(total_depreciation_charge) > self.project_duration:
+            total_depreciation_charge = total_depreciation_charge[
+                : self.project_duration
+            ]
+
+        return total_depreciation_charge, undepreciated_asset
 
     def total_depreciation_book_value(
         self,

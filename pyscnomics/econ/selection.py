@@ -93,3 +93,11 @@ class YearReference(Enum):
 
     PIS_YEAR = "pis_year"
     EXPENSE_YEAR = "expense_year"
+
+
+class TaxRegime(Enum):
+    UU_36_2008 = "UU No.36 Tahun 2008"
+    UU_02_2020 = "UU No.02 Tahun 2020"
+    UU_07_2021 = "UU No.07 Tahun 2021"
+    NAILED_DOWN = "nailed down"
+    PREVAILING = "prevailing"

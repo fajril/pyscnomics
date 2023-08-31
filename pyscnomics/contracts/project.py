@@ -46,7 +46,7 @@ class BaseProject:
     opex : tuple[OPEX], optional
         A tuple of operational expense objects. Defaults to None.
     asr_cost : tuple[ASR], optional
-        A tuple of ASR (Annualized System Replacement) cost objects.
+        A tuple of ASR (Abandonment and Site Restoration) cost objects.
         Defaults to None.
     """
 

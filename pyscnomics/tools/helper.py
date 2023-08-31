@@ -82,3 +82,32 @@ def summarizer(
     res_arr2[indices2] = array2
 
     return res_arr1 + res_arr2, start_year, end_year
+
+
+def sum_remainder(start_year: int, end_year: int, arr: np.ndarray) -> float:
+    """
+    Calculate the sum of elements in the 'arr' numpy array that occur after a specified duration.
+
+    Parameters
+    ----------
+    start_year : int
+        The starting year for the duration; usually pis_year.
+    end_year : int
+        The ending year for the duration; usually end of contract.
+    arr : np.ndarray
+        The numpy array containing the elements to be summed.
+
+    Returns
+    -------
+    float
+        The sum of elements in 'arr' that occur after the specified duration from
+        'start_year' to 'end_year' (inclusive).
+
+    Notes
+    -----
+    This function calculates the duration between 'start_year' and 'end_year' (inclusive),
+    and then returns the sum of elements in 'arr' that are positioned after this duration.
+    """
+    duration = end_year - start_year + 1
+
+    return np.sum(arr[duration:])

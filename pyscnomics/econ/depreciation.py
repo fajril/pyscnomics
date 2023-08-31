@@ -156,57 +156,43 @@ def declining_balance_depreciation_rate(
         depreciation_rate * cost * np.power(1 - depreciation_rate, periods - 1)
     )
 
-    print('\t')
-    print(f'Length: {len(depreciation_charge)}')
-    print('depreciation charge = ', depreciation_charge)
+    # When depreciation charge reaches the salvage value
+    if depreciation_charge.sum() > (cost - salvage_value):
+        remaining_depreciation = cost - salvage_value - np.cumsum(depreciation_charge)
+        remaining_depreciation = np.where(
+            remaining_depreciation > 0, remaining_depreciation, 0
+        )
+        idx = np.argmin(remaining_depreciation)
 
-    # When depreciation charge does not reach the salvage value
-    if depreciation_charge.sum() < (cost - salvage_value):
-        depreciation_charge = np.concatenate(
-            (depreciation_charge, cost - np.sum(depreciation_charge, keepdims=True))
+        # Adjust the depreciation charge to take only the remainder when it reaches the salvage value
+        depreciation_charge[idx] = (
+            cost - salvage_value - np.cumsum(depreciation_charge)[idx - 1]
         )
 
-        print('\t')
-        print(f'Length: {len(depreciation_charge)}')
-        print('depreciation charge = ', depreciation_charge)
+        depreciation_charge[idx + 1 :] = 0
 
+    # Add an element to array depreciation_charge, accounting the remaining unpaid cost
+    depreciation_charge = np.concatenate(
+        (
+            depreciation_charge,
+            cost - salvage_value - np.sum(depreciation_charge, keepdims=True),
+        )
+    )
 
-    # # Handle the condition when depreciation charge reaches the salvage value
-    # if depreciation_charge.sum() > (cost - salvage_value):
-    #     remaining_depreciation = cost - salvage_value - np.cumsum(depreciation_charge)
-    #     remaining_depreciation = np.where(
-    #         remaining_depreciation > 0, remaining_depreciation, 0
-    #     )
-    #     idx = np.argmin(remaining_depreciation)
-    #
-    #     # Adjust the depreciation charge to take only the remainder when it reaches the salvage value
-    #     depreciation_charge[idx] = (
-    #         cost - salvage_value - np.cumsum(depreciation_charge)[idx - 1]
-    #     )
-    #
-    #     depreciation_charge[idx + 1:] = 0
+    # Extend the depreciation charge array beyond useful life if project duration is longer than useful life
+    if depreciation_len > useful_life:
+        extension = np.zeros(depreciation_len - useful_life)
+        depreciation_charge = np.concatenate((depreciation_charge, extension))
 
-    # # Handle the condition when depreciation charge does not reach the salvage value
-    # elif depreciation_charge.sum() < (cost - salvage_value):
-    #     depreciation_charge[-1] = depreciation_charge[-1] + (cost - np.sum(depreciation_charge))
-    #
-    # else:
-    #     depreciation_charge = depreciation_charge
-
-    # # Extend the depreciation charge array beyond useful life if needed
-    # if depreciation_len > useful_life:
-    #     extension = np.zeros(depreciation_len - useful_life)
-    #     depreciation_charge = np.concatenate((depreciation_charge, extension))
-    #
-    # return depreciation_charge
+    return depreciation_charge
 
 
 def declining_balance_book_value(
-        cost: float,
-        salvage_value: float,
-        useful_life: int,
-        decline_factor: int = 1,
-        depreciation_len: int = 0,
+    cost: float,
+    salvage_value: float,
+    useful_life: int,
+    decline_factor: int = 1,
+    depreciation_len: int = 0,
 ) -> np.ndarray:
     """
     Calculate the net book value of a depreciated asset using the Decline Balance Method.
@@ -353,7 +339,7 @@ def psc_declining_balance_book_value(
         cost=cost,
         useful_life=useful_life,
         depreciation_factor=depreciation_factor,
-        depreciation_len=depreciation_len
+        depreciation_len=depreciation_len,
     )
 
     book_value = cost - np.cumsum(depreciation_charge)
@@ -420,7 +406,7 @@ def unit_of_production_rate(
         amortization_charge[idx] = (
             cost - salvage_value - np.cumsum(amortization_charge)[idx - 1]
         )
-        amortization_charge[idx + 1:] = 0
+        amortization_charge[idx + 1 :] = 0
 
     if amortization_charge.size < amortization_len:
         extension = np.zeros(amortization_len - amortization_charge.size)

@@ -5,6 +5,7 @@ Handles calculations associated with PSC Cost Recovery.
 from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
+import dateutils
 from datetime import datetime
 from functools import reduce
 
@@ -32,13 +33,26 @@ class CostRecovery(BaseProject):
 
     oil_dmo_volume_portion: float = field(default=0.25)
     oil_dmo_fee_portion: float = field(default=0.25)
-    oil_dmo_start_production: datetime = field(default=None)
-    oil_dmo_holiday: float = field(default=60)
+    oil_dmo_holiday_duration: int = field(default=60)
 
     gas_dmo_volume_portion: float = field(default=1.)
     gas_dmo_fee_portion: float = field(default=1.)
-    gas_dmo_start_production: datetime = field(default=None)
-    gas_dmo_holiday: int = field(default=60)
+    gas_dmo_holiday_duration: int = field(default=60)
+
+    # Fields/attributes to be defined later
+    _oil_lifting: Lifting = field(default=None, init=False, repr=False)
+    _gas_lifting: Lifting = field(default=None, init=False, repr=False)
+    _oil_tangible: Tangible = field(default=None, init=False, repr=False)
+    _gas_tangible: Tangible = field(default=None, init=False, repr=False)
+    _oil_intangible: Intangible = field(default=None, init=False, repr=False)
+    _gas_intangible: Intangible = field(default=None, init=False, repr=False)
+    _oil_opex: OPEX = field(default=None, init=False, repr=False)
+    _gas_opex: OPEX = field(default=None, init=False, repr=False)
+    _oil_asr: ASR = field(default=None, init=False, repr=False)
+    _gas_asr: ASR = field(default=None, init=False, repr=False)
+
+    _oil_revenue: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_revenue: np.ndarray = field(default=None, init=False, repr=False)
 
     def _get_aggregate(self):
         self._oil_lifting = self._get_oil_lifting()
@@ -217,29 +231,28 @@ class CostRecovery(BaseProject):
 
         return ES_ctr, ES_gov
 
+    # @staticmethod
     def _get_dmo(
             self,
+            dmo_holiday_duration: int,
             dmo_volume_portion: float,
             dmo_fee_portion: float,
-            dmo_start_production: datetime,
-            dmo_holiday: int,
             lifting: Lifting,
             ctr_pretax_share: float,
-            ES_ctr: np.ndarray
+            ES_ctr: np.ndarray,
+            unrecovered_cost: np.ndarray,
     ) -> np.ndarray:
 
-        # Instantiate dmo_volume array
+        # Instantiate dmo arrays as zeros
         dmo_volume = np.zeros_like(lifting.revenue())
         dmo_fee = np.zeros_like(lifting.revenue())
         ddmo = np.zeros_like(lifting.revenue())
 
-        start_prod_year = dmo_start_production.year
-        start_dmo_year = start_prod_year + int(dmo_holiday / 12)
+        # DMO end date
+        dmo_end_date = self.onstream_date + dateutils.relativedelta(months=dmo_holiday_duration)
 
-        # start_prod_year = datetime.strptime(dmo_start_production, "%Y-%m-%d").year
-        # start_dmo_year = self.onstream_date.year - start_prod_year
-        # start_dmo_year = start_prod_year + int(dmo_holiday / 12)
-        indices = np.argwhere(lifting.project_years == start_dmo_year).ravel()
+        # Identify position of dmo start year in project years array
+        indices = np.argwhere(lifting.project_years == self.onstream_date.year).ravel()
 
         if len(indices) > 0:
 
@@ -250,12 +263,128 @@ class CostRecovery(BaseProject):
             )
 
             # Calculate DMO fee
-            dmo_fee = dmo_fee_portion * lifting.price * dmo_volume
+            dmo_discounted_price = np.where(
+                unrecovered_cost > 0, dmo_fee_portion * lifting.price, lifting.price
+            )
+            dmo_fee = dmo_discounted_price * dmo_volume
+
+            # DMO fee correction
+            dmo_fee_offset = self.onstream_date.year - self.start_date.year + int(dmo_holiday_duration / 12)
+
+            if unrecovered_cost[dmo_fee_offset] == 0:
+                dmo_fee[dmo_fee_offset] = \
+                    (dmo_end_date.month / 12.) * dmo_fee + ((12. - dmo_end_date) / 12.) * dmo_fee
 
             # Calculate Net DMO
             ddmo = (dmo_volume * lifting.price) - dmo_fee
 
         return dmo_volume, dmo_fee, ddmo
+
+    @staticmethod
+    def _get_taxable_income(self, contractor_share, ddmo):
+        r"""
+        Use to calculate taxable income (TI).
+
+        .. math::
+
+            TI_{(t)} = CS_{(t)} - DDMO_{(t)}
+
+        Parameters
+        ----------
+        CS : np.ndarray
+            contractor share
+        DDMO : np.ndarray
+            differential domestic market obligation
+
+        Return
+        ------
+        TI : np.ndarray
+            taxable income
+        """
+        return CS - DDMO
+
+    def _get_tax1(self, TI, FTP_con, UR):
+        r"""
+        Use to calculate tax (tax).
+
+        .. math::
+
+            Tax_{(t)} = \left\{\begin{matrix}
+                0, & \sum_{i=0}^{t} FTP_{con} > UR_{(t)} \\
+                \text{tax rate} \times TI_{(t)}, & \sum_{i=0}^{t} FTP_{con} \leq UR_{(t)}
+                \end{matrix}\right.
+
+        Parameters
+        ----------
+        TI: np.ndarray
+            taxable income
+        FTP_con : np.ndarray
+            contractor FTP
+        UR : np.ndarray
+            unrecovered
+
+        Return
+        ------
+        tax: float
+            contractor tax
+        """
+        tax = np.zeros_like(TI)
+
+        # Calculate cumulative FTP Contractor
+        cum_FTP_con = np.cumsum(FTP_con)
+
+        # Calculate tax where Cum FTP_con <= UR
+        indices = np.argwhere(cum_FTP_con <= UR)
+        tax[indices] = self.tax_ef * TI[indices]
+
+        return tax
+
+    def _get_tax2(self, TI, ES_con):
+        r"""
+        Use to calculate tax (tax).
+
+        .. math::
+
+
+
+        Parameters
+        ----------
+        TI: np.ndarray
+            taxable income
+        ES_con : np.ndarray
+            equity to be share contractor FTP
+
+        Returns
+        -------
+        out: tup
+            * tax_paid: float
+                paid contractor tax
+            * tax_carryforward: float
+                carryforward contractor tax
+        """
+        TI_cumsum = np.cumsum(TI)
+
+        calc_tax = np.zeros_like(ES_con)
+        tax_paid = np.zeros_like(ES_con)
+        tax_carryforward = np.zeros_like(ES_con)
+
+        for idx, ES_val in enumerate(ES_con):
+            if idx > 0:
+                if ES_con[idx - 1] == 0 and ES_val > 0:
+                    calc_tax[idx] = self.tax_ef * TI_cumsum[idx]
+                elif ES_con[idx - 1] > 0 and ES_val > 0:
+                    calc_tax[idx] = self.tax_ef * TI[idx]
+
+                # Calculate tax total
+                tax_total = calc_tax[idx] + tax_carryforward[idx - 1]
+
+                # Calculate tax paid
+                tax_paid[idx] = min(tax_total, ES_con[idx])
+
+                # Calculate tax payable
+                tax_carryforward[idx] = tax_total - tax_paid[idx]
+
+        return tax_paid, tax_carryforward
 
     def run(self):
 
@@ -264,8 +393,8 @@ class CostRecovery(BaseProject):
         self._get_FTP()
 
         # Depreciation (tangible cost)
-        oil_depreciation = self._oil_tangible.psc_depreciation_rate()
-        gas_depreciation = self._gas_tangible.psc_depreciation_rate()
+        oil_depreciation, self._oil_undepreciated_asset = self._oil_tangible.psc_depreciation_rate()
+        gas_depreciation, self._gas_undepreciated_asset = self._gas_tangible.psc_depreciation_rate()
 
         # Non-capital costs (intangible + opex + asr)
         oil_non_capital = (
@@ -407,208 +536,28 @@ class CostRecovery(BaseProject):
         oil_gov_share = self._oil_ftp_gov + oil_es_gov
         gas_gov_share = self._gas_ftp_gov + gas_es_gov
 
-    # def _get_DMO(self, revenue, ES_con, year_arr):
-    #     r"""
-    #     Use to calculate domestic market obligation (DMO)
-    #
-    #     Parameters
-    #     ----------
-    #     fluid : str
-    #         fluid type (exp. "Gas" or "Oil")
-    #     ES_con : np.ndarray
-    #         equity to split contractor
-    #     prod_date : str
-    #         production date (DD-MM-YYYY)
-    #     year_arr : np.ndarray
-    #         year value
-    #
-    #     Raise
-    #     -----
-    #     Exception
-    #         if the fluid type is not valid.
-    #
-    #     Return
-    #     ------
-    #     DMO : np.ndarray
-    #         domestic market obligation
-    #
-    #     Reference
-    #     ---------
-    #     [1] PTK 59 Rev 1/2021 p3.5.2
-    #     """
-    #     if self.phase == "Gas":
-    #         return np.zeros_like(self.revenue)
-    #     elif self.phase == "Oil":
-    #         DMO_arr = np.zeros_like(self.revenue)
-    #
-    #         # Convert the date string to a datetime object
-    #         start_prod_year = datetime.strptime(self.dmo_start, "%Y-%m-%d").year
-    #
-    #         # Get after holiday periode
-    #         start_dmo_year = start_prod_year + (self.dmoh_month / 12)
-    #
-    #         # Calculate DMO
-    #         indices = np.argwhere(year_arr == start_dmo_year)
-    #
-    #         if np.size(indices) > 0:
-    #             DMO_arr = min(
-    #                 self.dmo_portion * self.pretax * self.revenue[indices],
-    #                 ES_con[indices],
-    #             )
-    #
-    #         return DMO_arr
-    #     else:
-    #         raise Exception("Error in get_DMO_Holiday (Unknown fluid type)")
+        # DMO
+        dmo_oil = self._get_dmo(
+            dmo_holiday_duration=self.oil_dmo_holiday_duration,
+            dmo_volume_portion=self.oil_dmo_volume_portion,
+            dmo_fee_portion=self.oil_dmo_fee_portion,
+            lifting=self._oil_lifting,
+            ctr_pretax_share=self.oil_ctr_pretax_share,
+            ES_ctr=oil_es_ctr,
+            unrecovered_cost=oil_unrecovered_after_transfer
+        )
 
-    # def _get_DMO_Fee(self, DMO):
-    #     r"""
-    #     Use to calculate domestic market obligation fee (DMO Fee).
-    #
-    #     .. math::
-    #
-    #         DMO_{fee \, (t)} = DMO_{fee \, rate} \times DMO_{(t)}
-    #
-    #     Parameters
-    #     ----------
-    #     DMO : np.ndarray
-    #         domestic obligation market
-    #     self :
-    #         * dmo_fee_rate : float
-    #             DMO fee rate
-    #
-    #     Return
-    #     ------
-    #     DMO_Fee : np.ndarray
-    #         domestic market obligation fee
-    #     """
-    #     return self.dmo_fee_rate * DMO
-    #
-    # def _get_DDMO(self, DMO, DMO_Fee):
-    #     r"""
-    #     Use to calculate differential domestic market obligation (DDMO).
-    #
-    #     .. math::
-    #
-    #         DDMO_{(t)} = DMO_{(t)} - DMO_{fee \, (t)}
-    #
-    #     Parameters
-    #     ----------
-    #     DMO : np.ndarray
-    #         domestic market obligation
-    #     DMO_Fee : np.ndarray
-    #         domestic market obligation fee
-    #
-    #     Return
-    #     ------
-    #     DDMO : np.ndarray
-    #         differential domestic market obligation
-    #     """
-    #     return DMO - DMO_Fee
-
-    def _get_TI(self, CS, DDMO):
-        r"""
-        Use to calculate taxable income (TI).
-
-        .. math::
-
-            TI_{(t)} = CS_{(t)} - DDMO_{(t)}
-
-        Parameters
-        ----------
-        CS : np.ndarray
-            contractor share
-        DDMO : np.ndarray
-            differential domestic market obligation
-
-        Return
-        ------
-        TI : np.ndarray
-            taxable income
-        """
-        return CS - DDMO
-
-    def _get_tax1(self, TI, FTP_con, UR):
-        r"""
-        Use to calculate tax (tax).
-
-        .. math::
-
-            Tax_{(t)} = \left\{\begin{matrix}
-                0, & \sum_{i=0}^{t} FTP_{con} > UR_{(t)} \\
-                \text{tax rate} \times TI_{(t)}, & \sum_{i=0}^{t} FTP_{con} \leq UR_{(t)}
-                \end{matrix}\right.
-
-        Parameters
-        ----------
-        TI: np.ndarray
-            taxable income
-        FTP_con : np.ndarray
-            contractor FTP
-        UR : np.ndarray
-            unrecovered
-
-        Return
-        ------
-        tax: float
-            contractor tax
-        """
-        tax = np.zeros_like(TI)
-
-        # Calculate cumulative FTP Contractor
-        cum_FTP_con = np.cumsum(FTP_con)
-
-        # Calculate tax where Cum FTP_con <= UR
-        indices = np.argwhere(cum_FTP_con <= UR)
-        tax[indices] = self.tax_ef * TI[indices]
-
-        return tax
-
-    def _get_tax2(self, TI, ES_con):
-        r"""
-        Use to calculate tax (tax).
-
-        .. math::
+        dmo_gas = self._get_dmo(
+            dmo_holiday_duration=self.gas_dmo_holiday_duration,
+            dmo_volume_portion=self.gas_dmo_volume_portion,
+            dmo_fee_portion=self.gas_dmo_fee_portion,
+            lifting=self._gas_lifting,
+            ctr_pretax_share=self.gas_ctr_pretax_share,
+            ES_ctr=gas_es_ctr,
+            unrecovered_cost=gas_unrecovered_after_transfer
+        )
 
 
-
-        Parameters
-        ----------
-        TI: np.ndarray
-            taxable income
-        ES_con : np.ndarray
-            equity to be share contractor FTP
-
-        Returns
-        -------
-        out: tup
-            * tax_paid: float
-                paid contractor tax
-            * tax_carryforward: float
-                carryforward contractor tax
-        """
-        TI_cumsum = np.cumsum(TI)
-
-        calc_tax = np.zeros_like(ES_con)
-        tax_paid = np.zeros_like(ES_con)
-        tax_carryforward = np.zeros_like(ES_con)
-
-        for idx, ES_val in enumerate(ES_con):
-            if idx > 0:
-                if ES_con[idx - 1] == 0 and ES_val > 0:
-                    calc_tax[idx] = self.tax_ef * TI_cumsum[idx]
-                elif ES_con[idx - 1] > 0 and ES_val > 0:
-                    calc_tax[idx] = self.tax_ef * TI[idx]
-
-                # Calculate tax total
-                tax_total = calc_tax[idx] + tax_carryforward[idx - 1]
-
-                # Calculate tax paid
-                tax_paid[idx] = min(tax_total, ES_con[idx])
-
-                # Calculate tax payable
-                tax_carryforward[idx] = tax_total - tax_paid[idx]
-
-        return tax_paid, tax_carryforward
 
     def _get_NCS(self, TI, Tax):
         r"""

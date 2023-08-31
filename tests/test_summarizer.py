@@ -1,10 +1,10 @@
 """
-A unit test for module functools.py
+A unit test for module helper.py
 """
 
 import numpy as np
 
-from pyscnomics.tools import functools
+from pyscnomics.tools import helper
 
 
 def test_sumarizer():
@@ -20,7 +20,7 @@ def test_sumarizer():
 
     expected_result_1 = [100, 100, 150, 150, 150]
 
-    result_1 = functools.summarizer(
+    result_1 = helper.summarizer(
         array1=array1, array2=array2, startYear1=startYear1, startYear2=startYear2
     )
 

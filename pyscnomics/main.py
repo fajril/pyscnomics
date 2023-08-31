@@ -1,7 +1,8 @@
 import numpy as np
 import datetime as dt
+import dateutils
 
-# import pyscnomics.econ.depreciation as depr
+import pyscnomics.econ.depreciation as depr
 # from pyscnomics.contracts.project import BaseProject
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import FluidType
@@ -26,30 +27,63 @@ start_dmo_year = start_prod_year + int(dmo_holiday / 12)
 indices = np.argwhere(project_years == start_dmo_year).ravel()
 
 
-print('\t')
-print('project years = ', project_years)
-print('start prod year = ', start_prod_year)
-print('start dmo year = ', start_dmo_year)
-
-print('\t')
-print(f'Shape: {indices.shape}')
-print('indices = ', indices)
-
-# a = np.datetime64('2023-08-30')
-# year = a.astype('datetime64[Y]').tolist().year
+# print('\t')
+# print('project years = ', project_years)
+# print('start prod year = ', start_prod_year)
+# print('start dmo year = ', start_dmo_year)
 #
 # print('\t')
-# print(a('Y'))
+# print(f'Shape: {indices.shape}')
+# print('indices = ', indices)
 
-# lifting = Lifting(
-#     start_year=2023,
-#     end_year=2030,
-#     lifting_rate=np.array([100, 100, 100, 100]),
-#     price=np.array([1, 1, 1, 1]),
-#     prod_year=np.array([2027, 2028, 2029, 2030]),
+
+# depr_db = depr.declining_balance_depreciation_rate(
+#     cost=100,
+#     salvage_value=50,
+#     useful_life=10,
+#     decline_factor=2,
+#     depreciation_len=5
 # )
 #
 # print('\t')
-# print(lifting)
+# print('depr_db = ', depr_db)
+
+lifting = Lifting(
+    start_year=2023,
+    end_year=2030,
+
+)
+
+def get_dmo(
+        # dmo_volume_portion: float,
+        # dmo_fee_portion: float,
+        dmo_start_production: dt,
+        # dmo_holiday: int,
+        # lifting: Lifting,
+        # ctr_pretax_share: float,
+        # ES_ctr: np.ndarray
+) -> np.ndarray:
+
+    # # Instantiate dmo_volume array
+    # dmo_volume = np.zeros_like(lifting.revenue())
+    # dmo_fee = np.zeros_like(lifting.revenue())
+    # ddmo = np.zeros_like(lifting.revenue())
+
+    dmo_end_date = dmo_start_production + dateutils.relativedelta(months=60)
+
+    print('\t')
+    print('dmo end date = ', dmo_end_date)
+
+    for i in [dmo_end_date.year, dmo_end_date.month, dmo_end_date.day]:
+        print(i)
+
+
+dmo = get_dmo(dmo_start_production=dt.date(year=2023, month=5, day=14))
+
+
+
+
+
+
 
 
