@@ -207,66 +207,66 @@ def get_data(data: dict) -> tuple:
             tuple(opex_list), tuple(asr_list))
 
 
-def assign_gs(data_contract):
-    config = list(data_contract.values())
-    data_variable_split = config[0]
-    data_split_config = config[1]
-    data_tax = config[2]
-    data_dmo_oil = config[3]['oil']
-    data_dmo_gas = config[3]['gas']
-    data_investment_credit = config[4]
-    data_incentive = config[5]
-
-    variable_split = VariableSplit(field_status=data_variable_split['field_status'],
-                                   field_loc=data_variable_split['field_loc'],
-                                   res_depth=data_variable_split['res_depth'],
-                                   infra_avail=data_variable_split['infra_avail'],
-                                   res_type=data_variable_split['res_type'],
-                                   api_oil=data_variable_split['api_oil'],
-                                   domestic_use=data_variable_split['domestic_use'],
-                                   prod_stage=data_variable_split['prod_stage'],
-                                   co2_content=data_variable_split['co2_content'],
-                                   h2s_content=data_variable_split['h2s_content'],
-                                   )
-
-    split_config = SplitConfig(ctr_oil=data_split_config['ctr_oil'],
-                               ctr_gas=data_split_config['ctr_gas'],
-                               ministry_discr=data_split_config['ministry_discr'])
-
-    tax = Tax(corporate_income=data_tax['corporate_income'],
-              branch_profit=data_tax['branch_profit'], )
-
-    dmo_oil = DMO(holiday=data_dmo_oil['holiday'],
-                  period=data_dmo_oil['period'],
-                  start_production=data_dmo_oil['start_production'],
-                  volume=data_dmo_oil['volume'],
-                  fee=data_dmo_oil['fee'])
-
-    dmo_gas = DMO(holiday=data_dmo_gas['holiday'],
-                  period=data_dmo_gas['period'],
-                  start_production=data_dmo_gas['start_production'],
-                  volume=data_dmo_gas['volume'],
-                  fee=data_dmo_gas['fee'])
-
-    investment_credit = InvestmentCredit(oil_is_available=data_investment_credit['oil_is_available'],
-                                         oil_ic=data_investment_credit['oil_ic'],
-                                         gas_is_available=data_investment_credit['gas_is_available'],
-                                         gas_ic=data_investment_credit['gas_ic'], )
-
-    incentive = Incentive(vat_category=data_incentive['vat_categ'],
-                          vat_percent=data_incentive['vat_percent'],
-                          vat_discount=data_incentive['vat_discount'],
-                          lbt_discount=data_incentive['lbt_discount'],
-                          pdrd=data_incentive['pdrd'],
-                          pdrd_discount=data_incentive['pdrd_discount'],
-                          pdri_discount=data_incentive['pdri_discount'],
-                          import_duty=data_incentive['import_duty'],
-                          vat_import=data_incentive['vat_import'],
-                          pph_import=data_incentive['pph_import'],
-                          depre_accel=data_incentive['depre_accel'],
-                          depre_method=data_incentive['depre_method'])
-
-    return variable_split, split_config, tax, dmo_oil, dmo_gas, investment_credit, incentive
+# def assign_gs(data_contract):
+#     config = list(data_contract.values())
+#     data_variable_split = config[0]
+#     data_split_config = config[1]
+#     data_tax = config[2]
+#     data_dmo_oil = config[3]['oil']
+#     data_dmo_gas = config[3]['gas']
+#     data_investment_credit = config[4]
+#     data_incentive = config[5]
+#
+#     variable_split = VariableSplit(field_status=data_variable_split['field_status'],
+#                                    field_loc=data_variable_split['field_loc'],
+#                                    res_depth=data_variable_split['res_depth'],
+#                                    infra_avail=data_variable_split['infra_avail'],
+#                                    res_type=data_variable_split['res_type'],
+#                                    api_oil=data_variable_split['api_oil'],
+#                                    domestic_use=data_variable_split['domestic_use'],
+#                                    prod_stage=data_variable_split['prod_stage'],
+#                                    co2_content=data_variable_split['co2_content'],
+#                                    h2s_content=data_variable_split['h2s_content'],
+#                                    )
+#
+#     split_config = SplitConfig(ctr_oil=data_split_config['ctr_oil'],
+#                                ctr_gas=data_split_config['ctr_gas'],
+#                                ministry_discr=data_split_config['ministry_discr'])
+#
+#     tax = Tax(corporate_income=data_tax['corporate_income'],
+#               branch_profit=data_tax['branch_profit'], )
+#
+#     dmo_oil = DMO(holiday=data_dmo_oil['holiday'],
+#                   period=data_dmo_oil['period'],
+#                   start_production=data_dmo_oil['start_production'],
+#                   volume=data_dmo_oil['volume'],
+#                   fee=data_dmo_oil['fee'])
+#
+#     dmo_gas = DMO(holiday=data_dmo_gas['holiday'],
+#                   period=data_dmo_gas['period'],
+#                   start_production=data_dmo_gas['start_production'],
+#                   volume=data_dmo_gas['volume'],
+#                   fee=data_dmo_gas['fee'])
+#
+#     investment_credit = InvestmentCredit(oil_is_available=data_investment_credit['oil_is_available'],
+#                                          oil_ic=data_investment_credit['oil_ic'],
+#                                          gas_is_available=data_investment_credit['gas_is_available'],
+#                                          gas_ic=data_investment_credit['gas_ic'], )
+#
+#     incentive = Incentive(vat_category=data_incentive['vat_categ'],
+#                           vat_percent=data_incentive['vat_percent'],
+#                           vat_discount=data_incentive['vat_discount'],
+#                           lbt_discount=data_incentive['lbt_discount'],
+#                           pdrd=data_incentive['pdrd'],
+#                           pdrd_discount=data_incentive['pdrd_discount'],
+#                           pdri_discount=data_incentive['pdri_discount'],
+#                           import_duty=data_incentive['import_duty'],
+#                           vat_import=data_incentive['vat_import'],
+#                           pph_import=data_incentive['pph_import'],
+#                           depre_accel=data_incentive['depre_accel'],
+#                           depre_method=data_incentive['depre_method'])
+#
+#     return variable_split, split_config, tax, dmo_oil, dmo_gas, investment_credit, incentive
 
 
 def load_data(dataset: str, contract: str = 'project') -> BaseProject:
@@ -307,24 +307,24 @@ def load_data(dataset: str, contract: str = 'project') -> BaseProject:
                              asr_cost=asr)
 
     # Returning GrossSplit dataclass for contract type: gross_split
-    elif contract == 'gross_split':
-        # Read the jason file for the project config
-        data_config = read_json(filename=contract + '.json')
-        variable_split, split_config, tax, dmo_oil, dmo_gas, investment_credit, incentive = assign_gs(data_config)
-        result = GrossSplit(
-            start_date=start_date,
-            end_date=end_date,
-            lifting=lifting,
-            tangible_cost=tangible,
-            intangible_cost=intangible,
-            opex=opex,
-            asr_cost=asr,
-            variable_split=variable_split,
-            split_config=split_config,
-            tax=tax,
-            dmo_oil=dmo_oil,
-            dmo_gas=dmo_gas,
-            incentive=incentive)
+    # elif contract == 'gross_split':
+    #     # Read the jason file for the project config
+    #     data_config = read_json(filename=contract + '.json')
+    #     variable_split, split_config, tax, dmo_oil, dmo_gas, investment_credit, incentive = assign_gs(data_config)
+    #     result = GrossSplit(
+    #         start_date=start_date,
+    #         end_date=end_date,
+    #         lifting=lifting,
+    #         tangible_cost=tangible,
+    #         intangible_cost=intangible,
+    #         opex=opex,
+    #         asr_cost=asr,
+    #         variable_split=variable_split,
+    #         split_config=split_config,
+    #         tax=tax,
+    #         dmo_oil=dmo_oil,
+    #         dmo_gas=dmo_gas,
+    #         incentive=incentive)
 
     # Returning CostRecovery dataclass for contract type: cost_recovery
     elif contract == 'cost_recovery':
@@ -336,7 +336,7 @@ def load_data(dataset: str, contract: str = 'project') -> BaseProject:
     return result
 
 
-def load_testing(dataset: str, class_type: str) -> dict | ValueError:
+def load_testing(dataset: str, key: str) -> dict | ValueError:
     """
     Function to load the testing data for each dataclass that the project has.
 
@@ -345,9 +345,8 @@ def load_testing(dataset: str, class_type: str) -> dict | ValueError:
     dataset: str
         The category of the dataset.
         The available dataset are ['small_oil', 'medium_oil', 'large_oil', 'small_gas', 'medium_gas', 'large_gas'].
-    class_type: str
-        The class_type type dataset.
-        The available class_type category are ['lifting', 'tangible', 'intangible', 'opex', 'asr']
+    key: str
+        The key type dataset.
 
     Returns
     -------
@@ -355,23 +354,16 @@ def load_testing(dataset: str, class_type: str) -> dict | ValueError:
         The testing data based on the chosen dataset and data_type.
 
     """
-    dataset_list = ['small_oil', 'medium_oil', 'large_oil', 'small_oil', 'medium_oil', 'large_oil',
-                    'small_gas', 'medium_gas', 'large_gas', 'small_gas', 'medium_gas', 'large_gas',
-                    'small_oil_gas']
-    if dataset not in dataset_list:
-        raise ValueError(
-            'Unknown dataset: "{0}", please check the dataset or data_type that available.'
-            .format(dataset))
-
     # Reading the json file
     data = read_json(filename=dataset + '.json')
-    data_dict = dict(data)
 
     # Condition where the testing data is not available within the chosen dataset
-    if data_dict.get("testing") is None:
+    if data.get("testing") is None:
         return ValueError("The testing data for this dataset is still in development.")
+
     else:
-        return dict(data["testing"][class_type])
+        data_test = dict(data)['testing'][key]
+        return data_test
 
 
 if __name__ == "__main__":
@@ -381,5 +373,9 @@ if __name__ == "__main__":
 
     # Testing the load_data function
     psc = load_data(dataset=data_type, contract=project_type)
-    print(psc)
-    print(psc)
+    print('Output of the load_data module:')
+    print(psc, '\n')
+
+    psc_test = load_testing(dataset=data_type, key='FTP Gas')
+    print('Output of the test:')
+    print(psc_test, '\n')
