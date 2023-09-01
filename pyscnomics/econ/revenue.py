@@ -58,7 +58,7 @@ class Lifting:
 
         # Condition when user does not insert GHV data; the default value of GHV is set to unity
         if self.ghv is None:
-            self.ghv = np.ones(len(self.prod_rate))
+            self.ghv = np.ones(len(self.lifting_rate))
 
         # Initial check for inappropriate input data; raise a "ValueError" for any inappropriate data
         arr_length = self.lifting_rate.shape[0]
@@ -70,7 +70,8 @@ class Lifting:
             raise LiftingException(
                 f"Inequal length of array: lifting_rate: {len(self.lifting_rate)},"
                 f" ghv: {len(self.ghv)},"
-                f" production: {len(self.prod_rate)}"
+                f" production: {len(self.prod_rate)},"
+                f" prod_year: {len(self.prod_year)}"
             )
 
         # Define an attribute depicting project duration;
@@ -85,10 +86,10 @@ class Lifting:
             )
 
         # Specify an error condition when project duration is less than the length of production data
-        if self.project_duration < len(self.prod_rate):
+        if self.project_duration < len(self.lifting_rate):
             raise LiftingException(
                 f"Length of project duration: ({self.project_duration})"
-                f" is less than the length of production data: ({len(self.prod_rate)})"
+                f" is less than the length of lifting data: ({len(self.lifting_rate)})"
             )
 
     def revenue(self) -> np.ndarray:
@@ -253,45 +254,8 @@ class Lifting:
                 f"Lifting or int/float"
             )
 
-        # # If "other" is an instance of Lifting object
-        # if isinstance(other, Lifting):
-        #
-        #     # Configure the minimum and maximum values of the start and end year, respectively
-        #     start_year = min(self.start_year, other.start_year)
-        #     end_year = max(self.end_year, other.end_year)
-        #
-        #     self_revenue = self.revenue().copy()
-        #     other_revenue = other.revenue().copy()
-        #
-        #     # If the length of self_revenue data is less than project duration
-        #     if len(self_revenue) < end_year - start_year + 1:
-        #
-        #         # Modify the size of self_revenue data
-        #         self_revenue.resize(end_year - start_year + 1, refcheck=False)
-        #
-        #         # If self.start_year > other.start_year, roll the array n steps to the right;
-        #         # n = self.start_year - start_year
-        #         if self.start_year > other.start_year:
-        #             self_revenue = np.roll(self_revenue, (self.start_year - start_year))
-        #
-        #     # If the length of other_revenue data is less than project duration
-        #     if len(other_revenue) < end_year - start_year + 1:
-        #
-        #         # Modify the size of other_revenue data
-        #         other_revenue.resize(end_year - start_year + 1, refcheck=False)
-        #
-        #         # If other.start_year > self.start_year, roll the array n steps to the right;
-        #         # n = other.start_year - start_year
-        #         if other.start_year > self.start_year:
-        #             other_revenue = np.roll(
-        #                 other_revenue, (other.start_year - start_year)
-        #             )
-        #
-        #     return self_revenue + other_revenue
-        #
-        # # If "other" is int, float, or numpy array
-        # elif isinstance(other, (int, float, np.ndarray)):
-        #     return self.revenue() + other
+    def __iadd__(self, other):
+        return self.__add__(other)
 
     def __sub__(self, other):
 
@@ -378,6 +342,10 @@ class Lifting:
         if isinstance(other, Lifting):
             return np.sum(self.revenue()) / np.sum(other.revenue())
 
+        # Between an instance of Lifting and an instance of Tangible/Intangible/OPEX/ASR
+        elif isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.revenue()) / np.sum(other.expenditures())
+
         # Between an instance of Lifting and an integer/float
         elif isinstance(other, (int, float)):
 
@@ -387,3 +355,12 @@ class Lifting:
 
             else:
                 return self.revenue() / other
+
+        elif isinstance(other, np.ndarray):
+            return np.sum(self.revenue()) / np.sum(other)
+
+        else:
+            raise LiftingException(
+                f"Does not allow division operation of an instance of Lifting "
+                f"and {other.__class__.__qualname__}"
+            )

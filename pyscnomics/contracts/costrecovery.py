@@ -1,1097 +1,527 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Aug  8 08:16:58 2023
+Handles calculations associated with PSC Cost Recovery.
 """
+
 from dataclasses import dataclass, field
 import numpy as np
-import pandas as pd
-from datetime import datetime
+import dateutils
+from functools import reduce
 
 from pyscnomics.contracts.project import BaseProject
-from pyscnomics.econ.selection import FluidType, TaxSplitTypeCR
+from pyscnomics.econ.selection import FluidType, YearReference
+from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.revenue import Lifting
 
-
-@dataclass
-class FiscalTermGeneralCR:
-    ftp_is_available: bool = field(default=True, repr=False)
-    ftp_is_shared: bool = field(default=True, repr=False)
-    ftp_portion: float = field(default=None, repr=False)
-    tax_ef: float = field(default=None, repr=False)
-
-@dataclass
-class FiscalTermPhaseCR:
-    tax_split_type: TaxSplitTypeCR = field(default=TaxSplitTypeCR.CONVENTIONAL)
-    pretax: float = field(default=None, repr=False)
-    ic_rate: float = field(default=None, repr=False)
-    dmo_start: datetime = field(default=None, repr=False)
-    dmoh_month: int = field(default=None, repr=False)
-    dmo_portion: float = field(default=None, repr=False)
-    dmo_fee_rate: float = field(default=None, repr=False)
-    cr_cap_rate: float = field(default=None, repr=False)
-    fluid_type: FluidType = field(default=FluidType.OIL)
 
 @dataclass
 class CostRecovery(BaseProject):
-    fiscaltermgeneral: FiscalTermGeneralCR = field(default=None, repr=False)
-    fiscaltermphase: tuple[FiscalTermPhaseCR] = field(default=None, repr=False)
+    ftp_is_available: bool = field(default=True)
+    ftp_is_shared: bool = field(default=True)
+    ftp_portion: float = field(default=0.2)
 
-    # is_depreciation_accelerated: bool = False,
-    # depreciation_method: str = None,
-    # start_discount_year=start_discount_year,
+    # TODO: accommodate pretax value according to ICP sliding scale and R/C ratio
+    # TODO: raise exception to accommodate division by zero when C = 0
+    oil_ctr_pretax_share: float = field(default=0.25)
+    gas_ctr_pretax_share: float = field(default=0.5)
 
-    def _get_FTP(self, revenue):
-        r"""
-        Use to calculate First Trench Petroleum (FTP).
+    oil_ic_rate: float = field(default=0.0)
+    gas_ic_rate: float = field(default=0.0)
+    ic_is_available: bool = field(default=False)
+    oil_cr_cap_rate: float = field(default=1.0)
+    gas_cr_cap_rate: float = field(default=1.0)
 
-        * :math:`FTP_{available} = False`
+    oil_dmo_volume_portion: float = field(default=0.25)
+    oil_dmo_fee_portion: float = field(default=0.25)
+    oil_dmo_holiday_duration: int = field(default=60)
 
-            .. math::
+    gas_dmo_volume_portion: float = field(default=1.0)
+    gas_dmo_fee_portion: float = field(default=1.0)
+    gas_dmo_holiday_duration: int = field(default=60)
 
-                FTP_{con \, (t)} &= 0 \\
-                FTP_{gov \, (t)} &= 0 \\
-                FTP_{total \, (t)} &= 0
+    contractor_tax: np.ndarray = field(default=None)
 
-        * :math:`FTP_{available} = True`
+    # Fields/attributes to be defined later
+    _oil_lifting: Lifting = field(default=None, init=False, repr=False)
+    _gas_lifting: Lifting = field(default=None, init=False, repr=False)
+    _oil_tangible: Tangible = field(default=None, init=False, repr=False)
+    _gas_tangible: Tangible = field(default=None, init=False, repr=False)
+    _oil_intangible: Intangible = field(default=None, init=False, repr=False)
+    _gas_intangible: Intangible = field(default=None, init=False, repr=False)
+    _oil_opex: OPEX = field(default=None, init=False, repr=False)
+    _gas_opex: OPEX = field(default=None, init=False, repr=False)
+    _oil_asr: ASR = field(default=None, init=False, repr=False)
+    _gas_asr: ASR = field(default=None, init=False, repr=False)
 
-            .. math::
+    _oil_revenue: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_revenue: np.ndarray = field(default=None, init=False, repr=False)
+    #
+    # def __post_init__(self):
+    #     self.contractor_tax = np.ones(self.project_duration) * 0.4
 
-                FTP_{total \, (t)} = FTP_{percent} \times Revenue_{(t)}
+    def _get_aggregate(self):
+        self._oil_lifting = self._get_oil_lifting()
+        self._gas_lifting = self._get_gas_lifting()
+        self._oil_tangible = self._get_oil_tangible()
+        self._gas_tangible = self._get_gas_tangible()
+        self._oil_intangible = self._get_oil_intangible()
+        self._gas_intangible = self._get_gas_intangible()
+        self._oil_opex = self._get_oil_opex()
+        self._gas_opex = self._get_gas_opex()
+        self._oil_asr = self._get_oil_asr()
+        self._gas_asr = self._get_gas_asr()
 
-            * :math:`FTP_{shared} = False`
 
-                .. math::
+    def _get_revenue(self):
+        self._oil_revenue = self._oil_lifting.revenue()
+        self._gas_revenue = self._gas_lifting.revenue()
 
-                    FTP_{con \, (t)} &= 0 \\
-                    FTP_{gov \, (t)} &= FTP_{total \, (t)}
+    def _get_FTP(self):
+        self._oil_ftp_ctr = np.zeros_like(self._oil_revenue)
+        self._gas_ftp_ctr = np.zeros_like(self._gas_revenue)
+        self._oil_ftp_gov = np.zeros_like(self._oil_revenue)
+        self._gas_ftp_gov = np.zeros_like(self._gas_revenue)
 
-            * :math:`FTP_{shared} = True`
+        if self.ftp_is_available:
+            self._oil_ftp = self.ftp_portion * self._oil_revenue
+            self._gas_ftp = self.ftp_portion * self._gas_revenue
+            if self.ftp_is_shared:
+                self._oil_ftp_ctr = self.oil_ctr_pretax_share * self._oil_ftp
+                self._gas_ftp_ctr = self.gas_ctr_pretax_share * self._gas_ftp
 
-                .. math::
+            self._oil_ftp_gov = self._oil_ftp - self._oil_ftp_ctr
+            self._gas_ftp_gov = self._gas_ftp - self._gas_ftp_ctr
 
-                    FTP_{con \, (t)} &= pretax \times FTP_{total \, (t)} \\
-                    FTP_{gov \, (t)} &= (1 - pretax) \times FTP_{total \, (t)}
+    def _get_IC(
+        self, revenue: np.ndarray, ftp: np.ndarray, cost_alloc: FluidType, ic_rate: float
+    ) -> tuple:
+        # FIXME: Fix how to calculate IC. IC is based on the depreciated cost.
 
-        Parameters
-        ----------
-        self :
-            * ftp_is_available : bool
-                FTP is available (exp. True or False)
+        if any(i for i in self.tangible_cost if i.is_ic_applied):
+            tangible_ic_applied = reduce(
+                lambda x, y: x + y,
+                (
+                    i
+                    for i in self.tangible_cost
+                    if i.cost_allocation == cost_alloc and i.is_ic_applied
+                ),
+            )
 
-            * ftp_portion : float
-                FTP portion
+            ic = ic_rate * tangible_ic_applied.expenditures(year_ref=YearReference.PIS_YEAR)
 
-            * pretax : float
-                pre-tax
+            ic_unrecovered = np.cumsum(ic) - np.cumsum(revenue - ftp)
+            ic_unrecovered = np.where(ic_unrecovered > 0, ic_unrecovered, 0)
 
-        Returns
-        -------
-        out : tup
-            A tuple of Contractor FTP, Government FTP, Total FTP, and
-            Cumulative FTP values
-        """
-        if not self.fiscaltermgeneral.ftp_is_available:
-            return np.squeeze(np.hsplit(np.zeros(revenue.size, 4), 4))
+            # FIXME: Find an alternative to np.roll()
+            ic_unrec_next = np.roll(ic_unrecovered, 1)
+            ic_unrec_next[0] = 0
+            ic_paid = np.minimum(revenue - ftp, ic + ic_unrec_next)
+            return ic, ic_unrecovered, ic_paid
+
         else:
-            ftp_arr = self.fiscaltermgeneral.ftp_portion * revenue
 
-            if self.fiscaltermgeneral.ftp_is_shared:
-                ftp_con_arr = self.pretax * ftp_arr
-                ftp_gov_arr = (1 - self.pretax) * ftp_arr
-            else:
-                ftp_con_arr = np.zeros_like(revenue)
-                ftp_gov_arr = np.copy(ftp_arr)
-
-            return ftp_con_arr, ftp_gov_arr, ftp_arr
-
-
-    def _get_REV_after_FTP(self, revenue, FTP):
-        r"""
-        Use to calculate Revenue after FTP.
-
-        .. math::
-
-            \text{REV after FTP}_{(t)} = REV_{(t)} - FTP_{(t)}
-
-        Parameters
-        ----------
-        FTP : np.ndarray
-            first trench petroleum
-        self :
-            * revenue : np.ndarray
-                revenue
-
-        Return
-        ------
-        rev_after_ftp : np.ndarray
-            Revenue after FTP values
-        """
-        return revenue - FTP
-
-    #FIXME: perbaikan untuk perhitungan nilai depreciable
-    def _get_IC(self):
-        r"""
-        Use to calculate Investment Credit (IC).
-
-        .. math::
-
-            IC_{(t)} = IC_{rate} \times Investment_{depr \, (t)}
-
-        Parameters
-        ----------
-        self :
-            * ic_rate : float
-                investment credit rate
-            * depreciable : np.ndarray
-                depreciable values
-
-        Return
-        ------
-        ic : np.ndarray
-            investment credit values
-        """
-        return self.ic_rate * self.depreciable
-
-
-    def _get_ICpaid_ICunrec(self, ic, rev_after_ftp):
-        r"""
-        Use to calculate Investment Credit Paid (IC Paid) and Unrecovered (IC Unrec).
-
-        * IC Paid
-
-        .. math::
-
-            IC_{paid \, (t)} = \left\{\begin{matrix}
-                            \min \left( \text{REV After FTP}_{(t)}, IC_{paid \, (t)}\right), & t = 0 \\
-                            \min \left( \text{REV After FTP}_{(t)}, IC_{paid \, (t)} + IC_{unrec \, (t-1)}\right), & t > 0
-                            \end{matrix}\right.
-
-        * IC Unrec
-
-        .. math::
-            IC_{unrec \, (t)} =\left\{\begin{matrix}
-                IC_{(t)} - IC_{paid \, (t)}, & t = 0 \\
-                IC_{(t)} - IC_{paid \, (t)} + IC_{unrec \, (t - 1)}, & t>0
-                \end{matrix}\right.
-
-        Parameters
-        ----------
-        ic : np.ndarray
-            investment credit
-        rev_after_ftp : np.ndarray
-            revenue after first trench petroleum
-
-        Returns
-        -------
-        out: tup
-            * ic_paid : np.ndarray
-                paid investment credit
-            * ic_unrec : np.ndarray
-                unrecovered investment credit
-        """
-        # Prepare storage for IC Paid and IC UnRec
-        ic_paid = np.zeros_like(ic)
-        ic_unrec = np.zeros_like(ic)
-
-        # Calculate the IC Paid and IC UnRec values.
-        ic_paid[0] = min(rev_after_ftp[0], ic[0])
-        ic_unrec[0] = ic[0] - ic_paid[0]
-
-        for idx in range(1, len(ic)):
-            ic_paid[idx] = min(rev_after_ftp[idx], ic[idx] + ic_unrec[idx - 1])
-            ic_unrec[idx] = ic[idx] - ic_paid[idx] + ic_unrec[idx - 1]
-
-        return ic_paid, ic_unrec
-
-
-    def _get_REV_after_IC(self, rev_after_ftp, ic_paid):
-        r"""
-        Use to calculate revenue after investment credit (rev_after_IC).
-
-        .. math::
-
-            \text{REV after IC}_{(t)} = \text{REV after FTP}_{(t)} - IC_{paid \, (t)}
-
-        Parameters
-        ----------
-        rev_after_ftp : np.ndarray
-            revenue after ftp
-        ic_paid : np.ndarray
-            paid investment credit
-
-        Return
-        ------
-        rev_after_ic : np.ndarray
-            revenue after ftp and ic
-        """
-        return rev_after_ftp - ic_paid
-
-
-    def _get_CR_allocation(self, rev_after_ic):
-        r"""
-        Use to calculate cost recovery allocation (CR allocation).
-
-        .. math::
-
-            CR_{allocation \, (t)} = CR_{cap \, rate} \times \text{REV after IC}_{(t)}
-
-        Parameters
-        ----------
-        rev_after_ic : np.ndarray
-            revenue after ftp and ic
-
-        Returns
-        -------
-        cr_allocation: np.ndarray
-            cost recovery allocation
-
-        Notes
-        -----
-        * :math:`CR_{cap \, rate} = 1 \rightarrow` Uncapped
-        * :math:`CR_{cap \, rate} < 1 \rightarrow` Capped
-        """
-        return self.cr_cap_rate * rev_after_ic
-
-
-    #FIXME: Update mengikuti struktur yang baru
-    def _get_CR(self, depr_capex, undepr_capex, opex, intangible, sunk_cost):
-        r"""
-        Use to calculate cost recovery (CR).
-
-        .. math::
-
-            CR_{(t)} = \text{Depr. Capex}_{(t)} + \text{Undepr. Capex}_{(t)}
-                + OPEX_{(t)} + Intangible_{(t)} + \text{Sunk Cost}_{(t)}
-
-        Parameters
-        ----------
-        depr_capex : np.ndarray
-            depreciation in capital expenditure
-        undepr_capex : np.ndarray
-            undepreciation in capital expenditure
-        opex : np.ndarray
-            operating expenditure
-        intangible : np.ndarray
-            intangible cost
-        sunk_cost : np.ndarray
-            sunk cost
-
-        Returns
-        -------
-        CR : np.ndarray
-            cost recovery
-        """
-        return depr_capex + undepr_capex + opex + intangible + sunk_cost
-
-
-    def _get_CTR_UR(self, CR, CR_allocation):
-        r"""
-        Use to calculate cost to be recovered (CTR) and unrecovered (UR).
-
-        * Cost to be Recovered (CTR)
-
-            * :math:`\text{REV after IC}_{(t)} \leq CR_{(t)}`
-
-            * :math:`\text{REV after IC}_{(t)} > CR_{(t)}`
-
-
-        * Unrecovered (UR)
-
-            .. math::
-
-                UR_{(t)} = UR_{(t - 1)} + CR_{(t)} - CTR_{(t)}
-
-        Parameters
-        ----------
-        CR : np.ndarray
-            cost recovery
-        CR_allocation: np.ndarray
-            cost recovery allocation
-
-        Returns
-        -------
-        out : tup
-            * ctr_arr : np.ndarray
-                cost to be recovered (CTR)
-            * ur_arr : np.ndarray
-                unrecovered (UR)
-        """
-        ctr_arr = np.zeros_like(CR)
-        ur_arr = np.zeros_like(CR)
-
-        for idx, val in enumerate(CR):
-            if idx > 0:
-                if CR_allocation[idx] <= CR[idx]:
-                    ctr_arr[idx] = min(CR_allocation[idx], CR[idx])
-                else:
-                    if ur_arr[idx - 1] == 0:
-                        ctr_arr[idx] = CR[idx]
-                    else:
-                        ctr_arr[idx] = CR[idx] \
-                            + min(CR_allocation[idx] - CR[idx], ur_arr[idx - 1])
-
-                ur_arr[idx] = ur_arr[idx - 1] + CR[idx] - ctr_arr[idx]
-
-        return ctr_arr, ur_arr
-
-
-    def _get_ETS(self, REV_after_IC, CR):
-        r"""
-        Use to calculate equity to be share (ETS) before Transfer.
-
-        .. math::
-
-            \text{ETS PreTransfer}_{(t)} = \text{REV after IC}_{(t)} - CR_{(t)}
-
-        Parameters
-        ----------
-        REV_after_IC : np.ndarray
-            revenue after ftp and ic
-        CR : np.ndarray
-            cost recovery
-
-        Return
-        ------
-        ETS_PreTransfer : np.ndarray
-            ETS PreTransfer
-        """
-        return REV_after_IC - CR
-
-
-    def _get_Transfer(self, UR_gas, UR_oil, ETS_PreTransfer_gas,
-                      ETS_PreTransfer_oil):
-        r"""
-        Use to calculate Transfer between oil to gas or vice versa.
-
-        Parameters
-        ----------
-        UR_gas : np.ndarray
-            unrecovered gas
-        UR_oil : np.ndarray
-            unrecovered oil
-        ETS_PreTransfer_gas : np.ndarray
-            equity to be split pre-transfer gas
-        ETS_PreTransfer_oil : np.ndarray
-            equity to be split pre-transfer oil
-
-        Returns
-        -------
-        Trf2oil : np.ndarray
-            transfer to oil from gas
-        Trf2gas : np.ndarray
-            transfer to gas from oil
-        """
-        Trf2oil = np.zeros_like(UR_oil)
-        Trf2gas = np.zeros_like(UR_gas)
+            return tuple(np.squeeze(np.hsplit(np.zeros((revenue.size, 3)), 3)))
+
+    @staticmethod
+    def _get_unrecovered_cost(
+        depreciation: np.ndarray,
+        non_capital: np.ndarray,
+        revenue,
+        ftp_ctr,
+        ftp_gov,
+        invest_credit,
+    ) -> np.ndarray:
+
+        # unrecovered_cost = np.cumsum(non_capital) - np.cumsum(
+        #     revenue - (ftp_ctr + ftp_gov) - invest_credit
+        # )
+
+
+        unrecovered_cost = np.cumsum(depreciation + non_capital) - np.cumsum(
+            revenue - (ftp_ctr + ftp_gov) - invest_credit
+        )
+
+        return np.where(unrecovered_cost >= 0, unrecovered_cost, 0)
+
+    @staticmethod
+    def _get_cost_to_be_recovered(
+        depreciation,
+        non_capital,
+        revenue,
+        ftp_ctr,
+        ftp_gov,
+        invest_credit,
+        unrecovered_cost,
+    ):
+
+        cost_to_be_recovered = (
+            revenue - (ftp_ctr + ftp_gov) - invest_credit - depreciation - non_capital
+        )
+
+        return np.where(
+            np.logical_and(unrecovered_cost > 0, cost_to_be_recovered > 0),
+            cost_to_be_recovered,
+            0,
+        )
+
+    @staticmethod
+    def _get_cost_recovery(
+        depreciation, non_capital, cost_to_be_recovered, cr_cap_rate
+    ):
+        return (depreciation + non_capital + cost_to_be_recovered) * cr_cap_rate
+
+    @staticmethod
+    def _get_ets_before_transfer(
+        revenue, ftp_ctr, ftp_gov, invest_credit, cost_recovery
+    ):
+        return revenue - (ftp_ctr + ftp_gov) - invest_credit - cost_recovery
+
+    @staticmethod
+    def _get_transfer(
+        gas_unrecovered, oil_unrecovered, gas_ets_pretransfer, oil_ets_pretransfer
+    ):
+
+        Trf2oil = np.zeros_like(oil_unrecovered)
+        Trf2gas = np.zeros_like(gas_unrecovered)
 
         # Transfer to oil
-        combined_condition_oil = np.greater(UR_oil, 0) & np.equal(UR_gas, 0)
-        indices_oil = np.argwhere(combined_condition_oil)
+        combined_condition_oil = np.logical_and(
+            np.greater(oil_unrecovered, 0), np.equal(gas_unrecovered, 0)
+        )
 
-        if np.size(indices_oil) > 0:
-            Trf2oil[indices_oil] = \
-                np.minimum(ETS_PreTransfer_gas[indices_oil],
-                            UR_oil[indices_oil])
+        oil_indices = np.argwhere(combined_condition_oil)
+
+        if np.size(oil_indices) > 0:
+            Trf2oil[oil_indices] = np.minimum(
+                gas_ets_pretransfer[oil_indices], oil_unrecovered[oil_indices]
+            )
 
         # Transfer to gas
-        combined_condition_gas = np.equal(UR_oil, 0) & np.greater(UR_gas, 0)
+        combined_condition_gas = np.logical_and(
+            np.equal(oil_unrecovered, 0), np.greater(gas_unrecovered, 0)
+        )
+
         indices_gas = np.argwhere(combined_condition_gas)
 
         if np.size(indices_gas) > 0:
-            Trf2gas[indices_gas] = \
-                np.minimum(ETS_PreTransfer_oil[indices_gas],
-                            UR_gas[indices_gas])
+            Trf2gas[indices_gas] = np.minimum(
+                oil_ets_pretransfer[indices_gas], gas_unrecovered[indices_gas]
+            )
 
         return Trf2oil, Trf2gas
 
+    @staticmethod
+    def _get_ets_after_transfer(ets_before_transfer, trfto, unrecovered_after_transfer):
 
-    def _get_UR_After_Transfer(self, UR_PreTransfer, Trfto):
-        r"""
-        Use to calculate Unrecovered after transfer.
+        ets_after_transfer = np.zeros_like(ets_before_transfer)
 
-        .. math::
-
-            \text{UR After Transfer}_{(t)} = \text{UR PreTransfer}_{(t)} -
-                \text{Transfer To}_{(t)}
-
-        Parameters
-        ----------
-        UR_PreTransfer : np.ndarray
-            unrecovered before transfer
-        Trfto : np.ndarray
-            transfer to value
-
-        Return
-        ------
-        UR_After_Transfer : np.ndarray
-            unrecovered after transfer
-        """
-        return UR_PreTransfer - Trfto
-
-
-    def _get_ETS_After_Transfer(self, ETS_PreTransfer, Trfto,
-                                UR_After_Transfer):
-        r"""
-        Use to calculate Equity to be Split after transfer.
-
-        .. math::
-
-            \text{ETS After Transfer}_{(t)} = \text{ETS PreTransfer}_{(t)} +
-                \text{Transfer To}_{(t)}
-
-        Parameters
-        ----------
-        ETS_PreTransfer : np.ndarray
-            equity to be split before transfer
-        Trfto : np.ndarray
-            transfer to value
-        UR_After_Transfer : np.ndarray
-            unrecovered after transfer
-
-        Return
-        ------
-        ETS_After_Transfer : np.ndarray
-            equity to be split after transfer
-        """
-        ETS_After_Transfer = np.zeros_like(ETS_PreTransfer)
-
-        indices = np.equal(UR_After_Transfer, 0)
+        indices = np.equal(unrecovered_after_transfer, 0)
 
         if np.size(indices) > 0:
-            ETS_After_Transfer[indices] = ETS_PreTransfer[indices] \
-                                          + Trfto[indices]
+            ets_after_transfer[indices] = ets_before_transfer[indices] + trfto[indices]
 
-        return ETS_After_Transfer
+        return ets_after_transfer
 
-
-    def _get_ES(self, ETS):
+    @staticmethod
+    def _get_equity_share(ETS, pretax_ctr):
         r"""
         Use to calculate equity share (ES).
 
         .. math::
 
-            ES_{con \, (t)} &= pretax \times ETS_{(t)} \\
-            ES_{gov \, (t)} &= (1 - pretax) \times ETS_{(t)}
+            ES_{ctr \, (t)} &= pretax_ctr \times ETS_{(t)} \\
+            ES_{gov \, (t)} &= (1 - pretax_ctr) \times ETS_{(t)}
 
         Parameters
         ----------
-        fluid : str
-            fluid type (exp. "Gas" or "Oil")
         ETS : np.ndarray
             equity to be shared
-
-        Raise
-        -----
-        Exception
-            if the fluid type is not valid.
+        pretax_ctr: float
+            pretax contractor
 
         Returns
         -------
         out: tup
-            * ES_con : np.ndarray
+            * ES_ctr : np.ndarray
                 Equity share contractor
             * ES_gov : np.ndarray
                 Equity share goverment
         """
-        ES_con = self.pretax * ETS
-        ES_gov = (1 - self.pretax) * ETS
-
-        return ES_con, ES_gov
-
-
-    def _get_CS(self, ftp_con, ets_con, ic_paid):
-        r"""
-        Use to calculate Contractor Share (CS).
-
-        .. math::
-
-            CS_{(t)} = FTP_{con \, (t)} + ETS_{con \, (t)} + IC_{paid \, (t)}
-
-        Parameters
-        ----------
-        ftp_con : np.ndarray
-            contractor FTP
-        ets_con : np.ndarray
-            contractor ETS
-        ic_paid : np.ndarray
-            paid investment credit
-
-        Return
-        ------
-        CS : np.ndarray
-            contractor share
-        """
-        return ftp_con + ets_con + ic_paid
-
-
-    def _get_GS(self, ftp_gov, ets_gov):
-        r"""
-        Use to calculate Goverment Share (GS).
-
-        .. math::
-
-            GS_{(t)} = FTP_{gov \, (t)} + ETS_{gov \, (t)}
-
-        Parameters
-        ----------
-        ftp_gov : np.ndarray
-            goverment FTP
-        ets_gov : np.ndarray
-            goverment ETS
-
-        Return
-        ------
-        GS : np.ndarray
-            goverment share
-        """
-        return ftp_gov + ets_gov
-
-
-    def _get_DMO(self, revenue, ES_con, year_arr):
-        r"""
-        Use to calculate domestic market obligation (DMO)
-
-        Parameters
-        ----------
-        fluid : str
-            fluid type (exp. "Gas" or "Oil")
-        ES_con : np.ndarray
-            equity to split contractor
-        prod_date : str
-            production date (DD-MM-YYYY)
-        year_arr : np.ndarray
-            year value
-
-        Raise
-        -----
-        Exception
-            if the fluid type is not valid.
-
-        Return
-        ------
-        DMO : np.ndarray
-            domestic market obligation
-
-        Reference
-        ---------
-        [1] PTK 59 Rev 1/2021 p3.5.2
-        """
-        if self.phase == "Gas":
-            return np.zeros_like(self.revenue)
-        elif self.phase == "Oil":
-            DMO_arr = np.zeros_like(self.revenue)
-
-            # Convert the date string to a datetime object
-            start_prod_year = datetime.strptime(self.dmo_start, \
-                                                '%Y-%m-%d').year
-
-            # Get after holiday periode
-            start_dmo_year = start_prod_year + (self.dmoh_month / 12)
-
-            # Calculate DMO
-            indices = np.argwhere(year_arr == start_dmo_year)
-
-            if np.size(indices) > 0:
-                DMO_arr = min(self.dmo_portion * self.pretax \
-                              * self.revenue[indices], ES_con[indices])
-
-            return DMO_arr
-        else:
-            raise Exception('Error in get_DMO_Holiday (Unknown fluid type)')
-
-
-    def _get_DMO_Fee(self, DMO):
-        r"""
-        Use to calculate domestic market obligation fee (DMO Fee).
-
-        .. math::
-
-            DMO_{fee \, (t)} = DMO_{fee \, rate} \times DMO_{(t)}
-
-        Parameters
-        ----------
-        DMO : np.ndarray
-            domestic obligation market
-        self :
-            * dmo_fee_rate : float
-                DMO fee rate
-
-        Return
-        ------
-        DMO_Fee : np.ndarray
-            domestic market obligation fee
-        """
-        return self.dmo_fee_rate * DMO
-
-
-    def _get_DDMO(self, DMO, DMO_Fee):
-        r"""
-        Use to calculate differential domestic market obligation (DDMO).
-
-        .. math::
-
-            DDMO_{(t)} = DMO_{(t)} - DMO_{fee \, (t)}
-
-        Parameters
-        ----------
-        DMO : np.ndarray
-            domestic market obligation
-        DMO_Fee : np.ndarray
-            domestic market obligation fee
-
-        Return
-        ------
-        DDMO : np.ndarray
-            differential domestic market obligation
-        """
-        return DMO - DMO_Fee
-
-
-    def _get_TI(self, CS, DDMO):
-        r"""
-        Use to calculate taxable income (TI).
-
-        .. math::
-
-            TI_{(t)} = CS_{(t)} - DDMO_{(t)}
-
-        Parameters
-        ----------
-        CS : np.ndarray
-            contractor share
-        DDMO : np.ndarray
-            differential domestic market obligation
-
-        Return
-        ------
-        TI : np.ndarray
-            taxable income
-        """
-        return CS - DDMO
-
-
-    def _get_tax1(self, TI, FTP_con, UR):
-        r"""
-        Use to calculate tax (tax).
-
-        .. math::
-
-            Tax_{(t)} = \left\{\begin{matrix}
-                0, & \sum_{i=0}^{t} FTP_{con} > UR_{(t)} \\
-                \text{tax rate} \times TI_{(t)}, & \sum_{i=0}^{t} FTP_{con} \leq UR_{(t)}
-                \end{matrix}\right.
-
-        Parameters
-        ----------
-        TI: np.ndarray
-            taxable income
-        FTP_con : np.ndarray
-            contractor FTP
-        UR : np.ndarray
-            unrecovered
-
-        Return
-        ------
-        tax: float
-            contractor tax
-        """
-        tax = np.zeros_like(TI)
-
-        # Calculate cumulative FTP Contractor
-        cum_FTP_con = np.cumsum(FTP_con)
-
-        # Calculate tax where Cum FTP_con <= UR
-        indices = np.argwhere(cum_FTP_con <= UR)
-        tax[indices] = self.tax_ef * TI[indices]
-
-        return tax
-
-
-    def _get_tax2(self, TI, ES_con):
-        r"""
-        Use to calculate tax (tax).
-
-        .. math::
-
-
-
-        Parameters
-        ----------
-        TI: np.ndarray
-            taxable income
-        ES_con : np.ndarray
-            equity to be share contractor FTP
-
-        Returns
-        -------
-        out: tup
-            * tax_paid: float
-                paid contractor tax
-            * tax_carryforward: float
-                carryforward contractor tax
-        """
-        TI_cumsum = np.cumsum(TI)
-
-        calc_tax = np.zeros_like(ES_con)
-        tax_paid = np.zeros_like(ES_con)
-        tax_carryforward = np.zeros_like(ES_con)
-
-        for idx, ES_val in enumerate(ES_con):
-            if idx > 0:
-                if ES_con[idx-1] == 0 and ES_val > 0:
-                    calc_tax[idx] = self.tax_ef * TI_cumsum[idx]
-                elif ES_con[idx-1] > 0 and ES_val > 0:
-                    calc_tax[idx] = self.tax_ef * TI[idx]
-
-                # Calculate tax total
-                tax_total = calc_tax[idx] + tax_carryforward[idx - 1]
-
-                # Calculate tax paid
-                tax_paid[idx] = min(tax_total, ES_con[idx])
-
-                # Calculate tax payable
-                tax_carryforward[idx] = tax_total - tax_paid[idx]
-
-        return tax_paid, tax_carryforward
-
-
-    def _get_NCS(self, TI, Tax):
-        r"""
-        Use to calculate net contractor share (NCS).
-
-        .. math::
-
-            NCS_{(t)} = TI_{(t)} - Tax_{(t)}
-
-        Parameters
-        ----------
-        TI : np.ndarray
-            taxable income
-        Tax : np.ndarray
-            tax
-
-        Return
-        ------
-        NCS : np.ndarray
-            net contractor share
-        """
-        return TI - Tax
-
-
-    def _get_CT(self, NCS, CR):
-        r"""
-        Use to calculate contractor take (CT).
-
-        .. math::
-
-            CT_{(t)} = NCS_{(t)} + CR_{(t)}
-
-        Parameters
-        ----------
-        NCS : np.ndarray
-            net contractor share
-        CR : np.ndarray
-            cost recovery
-
-        Return
-        ------
-        CT : np.ndarray
-            contractor take
-        """
-        return NCS + CR
-
-    #FIXME: Update mengikuti struktur data terbaru
-    def _get_Expenditure(self, capex_tangible, capex_intangible, opex):
-        r"""
-        Use to calculate Expenditure or Cash Out.
-
-        .. math::
-            Expenditure_{(t)} = \text{CAPEX}_{tangible \, (t)} +
-                                \text{CAPEX}_{intangible \, (t)} +
-                                \text{OPEX}_{(t)}
-
-        Parameters
-        ----------
-        capex_tangible : np.ndarray
-            capex tangible
-        capex_intangible : np.ndarray
-            capex intangible
-        opex : np.ndarray
-            operating expenditure
-
-        Returns
-        -------
-        expenditure : np.ndarray
-            expenditure
-        """
-        return capex_tangible + capex_intangible + opex
-
-
-    def _get_CF(self, CT, Expenditure):
-        r"""
-        Use to calculate Cashflow (CF).
-
-        .. math::
-
-            CF_{(t)} = CT_{(t)} - Expenditure_{(t)}
-
-        Parameters
-        ----------
-        CT : np.ndarray
-            Contractor Take
-        Expenditure : np.ndarray
-            expenditure or cash out
-
-        Return
-        ------
-        CF : np.ndarray
-            cashflow
-        """
-        return CT - Expenditure
-
-
-    def _get_GOI_Take(self, GS, DDMO, Tax):
-        r"""
-        Use to calculate Goverment of Indonesia Take (GOI Take).
-
-        .. math::
-
-            GOI_{take \, (t)} = GS_{(t)} + DDMO_{(t)} + Tax_{(t)}
-
-        Parameters
-        ----------
-        GS : np.ndarray
-            goverment share
-        DDMO : np.ndarray
-            differential domestic market obligation
-        Tax : np.ndarray
-            tax
-
-        Return
-        ------
-        GOI_take: np.ndarray
-            goverment of indonesia Take
-        """
-        return GS + DDMO + Tax
-
-
-    # def run_BeforeTransfer(self, depr_capex, undepr_capex, intangible, sunk_cost):
-    def run_BeforeTransfer(self):
-        """
-
-        Parameters
-        ----------
-        depr_capex : TYPE
-            DESCRIPTION.
-        undepr_capex : TYPE
-            DESCRIPTION.
-        intangible : TYPE
-            DESCRIPTION.
-        sunk_cost : TYPE
-            DESCRIPTION.
-        capex_tangible : TYPE
-            DESCRIPTION.
-        capex_intangible : TYPE
-            DESCRIPTION.
-        year_arr : TYPE
-            DESCRIPTION.
-
-        Raise
-        -----
-        Exception
-            if the fluid type is not valid.
-
-        Returns
-        -------
-        result : TYPE
-            DESCRIPTION.
-
-        """
-        # Calculate Revenue
-        revenue = self.lifting.revenue()
-
-        # Calculate FTP (Depend on Phase)
-        self.FTP_con, self.FTP_gov, FTP = self._get_FTP(revenue)
-
-        # Calculate Revenue after FTP (Depend on Phase)
-        REV_after_FTP = self._get_REV_after_FTP(revenue, FTP)
-
-        # Calculate IC (Depend on Phase)
-        IC = self._get_IC()
-
-        # Calculate IC Paid and IC UnRec
-        self.IC_paid, IC_unrec = self._get_ICpaid_ICunrec(IC, REV_after_FTP)
-
-        # Calculate Revenue after FTP & IC
-        REV_after_IC = self._get_REV_after_IC(REV_after_FTP, self.IC_paid)
-
-        # Calculate Cost Recovery Allocation (Depend on Phase)
-        CR_allocation = self._get_CR_allocation(REV_after_IC)
-
-        # Calculate OPEX (Depend on Phase)
-        self.OPEX = self.cost_obj.get_opex()
-
-        # Calculate CR
-        CR = self._get_CR(depr_capex, undepr_capex, self.OPEX, intangible,
-                          sunk_cost)
-
-        # Calculate CTR
-        self.CTR, self.UR_BeforeTransfer = self._get_CTR_UR(CR, CR_allocation)
-
-        # Calculate ETS PreTransfer
-        self.ETS_BeforeTransfer = self._get_ETS_PreTransfer(REV_after_IC,
-                                                            self.CTR)
-
-        # Generate dataframe
-        col_lst = ["FTP Con", "FTP Gov", "FTP", "REV After FTP", "IC",
-                    "IC paid", "IC Unrec", "REV After IC", "CR Allocation",
-                    "OPEX", "CR", "CTR", "UR BeforeTransfer",
-                    "ETS BeforeTransfer"]
-
-        res_arr = np.column_stack((self.FTP_con, self.FTP_gov, FTP,
-                                    REV_after_FTP, IC, self.IC_paid, IC_unrec,
-                                    REV_after_IC, CR_allocation, self.OPEX, CR,
-                                    self.CTR, self.UR_BeforeTransfer,
-                                    self.ETS_BeforeTransfer))
-
-        res_df = pd.DataFrame(data=res_arr, columns=col_lst)
-
-        return res_df
-
-
-    def run_Transfer(self, gas_result_df, oil_result_df):
-        # Calculate Transfer
-        UR_oil = oil_result_df["UR BeforeTransfer"].to_numpy()
-        UR_gas = gas_result_df["UR BeforeTransfer"].to_numpy()
-        ETS_oil = oil_result_df["ETS BeforeTransfer"].to_numpy()
-        ETS_gas = gas_result_df["ETS BeforeTransfer"].to_numpy()
-
-        oil_result_df["Transfer To"], gas_result_df["Transfer To"] = \
-            self._get_Transfer(UR_gas, UR_oil, ETS_gas, ETS_oil)
-
-        return gas_result_df, oil_result_df
-
-
-    def run_AfterTransfer(self, capex_tangible, capex_intangible, year_arr,
-                          result_df):
-
-        TransferTo = result_df["Transfer To"]
-
-        # Calculate UR After Transfer
-        UR_AfterTransfer = \
-            self._get_UR_After_Transfer(self.UR_BeforeTransfer, TransferTo)
-
-        # Calculate ETS After Transfer
-        ETS_AfterTransfer = \
-            self._get_ETS_After_Transfer(self.ETS_BeforeTransfer, TransferTo,
-                                          UR_AfterTransfer)
-
-        # Calculate ES
-        ES_con, ES_gov = self._get_ES(ETS_AfterTransfer)
-
-        # Calculate CS
-        CS = self._get_CS(self.FTP_con, ES_con, self.IC_paid)
-
-        # Calculate GS
-        GS = self._get_GS(self.FTP_gov, ES_gov)
-
-        # Calculate DMO
-        DMO = self._get_DMO(ES_con, year_arr)
-
-        # Calculate DMO Fee
-        DMO_Fee = self._get_DMO_Fee(DMO)
-
-        # Calculate DDMO
-        DDMO = self._get_DDMO(DMO, DMO_Fee)
-
-        # Calculate TI
-        TI = self._get_TI(CS, DDMO)
-
-        # Calculate Tax
-        Tax_paid, Tax_carryforward = self._get_tax2(TI, ES_con)
-
-        # Calculate NCS
-        NCS = self._get_NCS(TI, Tax_paid)
-
-        # Calculate CT
-        CT = self._get_CT(NCS, self.CTR)
-
-        # Calculate Expenditure
-        Expenditure = \
-            self._get_Expenditure(capex_tangible, capex_intangible, self.OPEX)
-
-        # Calculate CF
-        CF = self._get_CF(CT, Expenditure)
-
-        # Calculate GOI Take
-        GOI_take = self._get_GOI_Take(GS, DDMO, Tax_paid)
-
-        # Generate dataframe
-        col_lst = ["UR AfterTransfer", "ETS AfterTransfer", "ES Con",
-                    "ES Gov", "CS", "GS", "DMO", "DMO Fee", "DDMO", "TI",
-                    "Tax Paid", "Tax Carryforward", "NCS", "CT",
-                    "Expenditure", "CF", "GOI Take"]
-
-        res_arr = np.column_stack((UR_AfterTransfer, ETS_AfterTransfer,
-                                    ES_con, ES_gov, CS, GS, DMO, DMO_Fee,
-                                    DDMO, TI, Tax_paid, Tax_carryforward,
-                                    NCS, CT, Expenditure, CF, GOI_take))
-
-        res_df = pd.DataFrame(data=res_arr, columns=col_lst)
-
-        result_df = result_df.join(res_df)
-
-        return result_df
-
+        contractor_share = pretax_ctr * ETS
+        government_share = (1 - pretax_ctr) * ETS
+
+        return contractor_share, government_share
+
+    # @staticmethod
+    def _get_dmo(
+        self,
+        dmo_holiday_duration: int,
+        dmo_volume_portion: float,
+        dmo_fee_portion: float,
+        lifting: Lifting,
+        ctr_pretax_share: float,
+        ES_ctr: np.ndarray,
+        unrecovered_cost: np.ndarray,
+    ) -> np.ndarray:
+
+        # Instantiate dmo arrays as zeros
+        dmo_volume = np.zeros_like(lifting.revenue())
+        dmo_fee = np.zeros_like(lifting.revenue())
+        ddmo = np.zeros_like(lifting.revenue())
+
+        # DMO end date
+        dmo_end_date = self.onstream_date + dateutils.relativedelta(
+            months=dmo_holiday_duration
+        )
+
+        # Identify position of dmo start year in project years array
+        indices = np.argwhere(lifting.project_years == self.onstream_date.year).ravel()
+
+        if len(indices) > 0:
+
+            # Calculate DMO volume
+            dmo_volume = min(
+                dmo_volume_portion * ctr_pretax_share * lifting.lifting_rate[indices],
+                ES_ctr[indices],
+            )
+
+            # Calculate DMO fee
+            dmo_discounted_price = np.where(
+                unrecovered_cost > 0, dmo_fee_portion * lifting.price, lifting.price
+            )
+            dmo_fee = dmo_discounted_price * dmo_volume
+
+            # DMO fee correction
+            dmo_fee_offset = (
+                self.onstream_date.year
+                - self.start_date.year
+                + int(dmo_holiday_duration / 12)
+            )
+
+            if unrecovered_cost[dmo_fee_offset] == 0:
+                dmo_fee[dmo_fee_offset] = (dmo_end_date.month / 12.0) * dmo_fee[dmo_fee_offset] + (
+                    (12.0 - dmo_end_date.month) / 12.0
+                ) * dmo_fee[dmo_fee_offset]
+
+            # Calculate Net DMO
+            ddmo = (dmo_volume * lifting.price) - dmo_fee
+
+        return dmo_volume, dmo_fee, ddmo
 
     def run(self):
-        return
 
+        self._get_aggregate()
+        self._get_revenue()
+        self._get_FTP()
 
-    def get_result(self):
-        return
+        # Depreciation (tangible cost)
+        (
+            self._oil_depreciation,
+            self._oil_undepreciated_asset,
+        ) = self._oil_tangible.psc_depreciation_rate()
+        (
+            self._gas_depreciation,
+            self._gas_undepreciated_asset,
+        ) = self._gas_tangible.psc_depreciation_rate()
 
+        # Non-capital costs (intangible + opex + asr)
+        self._oil_non_capital = (
+            self._oil_intangible.expenditures()
+            + self._oil_opex.expenditures()
+            + self._oil_asr.expenditures()
+        )
 
-# class CostRecoveryCombine(object):
-#     def __init__(self, cr_gas, cr_oil):
-#         self.cr_gas = cr_gas
-#         self.cr_oil = cr_oil
+        self._gas_non_capital = (
+            self._gas_intangible.expenditures()
+            + self._gas_opex.expenditures()
+            + self._gas_asr.expenditures()
+        )
 
-#     def run(self):
-#         cr_phase_lst = [self.cr_gas, self.cr_oil]
+        # Investment credit
+        # FIXME: Reassigned the get_IC module
+        self._oil_ic, self._oil_ic_unrecovered, self._oil_ic_paid = self._get_IC(
+            revenue=self._oil_revenue,
+            ftp=self._oil_ftp,
+            cost_alloc=FluidType.OIL,
+            ic_rate=self.oil_ic_rate,
+        )
 
+        self._gas_ic, self._gas_ic_unrecovered, self._gas_ic_paid = self._get_IC(
+            revenue=self._gas_revenue,
+            ftp=self._gas_ftp,
+            cost_alloc=FluidType.GAS,
+            ic_rate=self.gas_ic_rate,
+        )
 
-#         result = {}
+        # Unrecovered cost before transfer/consolidation
+        self._oil_unrecovered_before_transfer = self._get_unrecovered_cost(
+            depreciation=self._oil_depreciation,
+            non_capital=self._oil_non_capital,
+            revenue=self._oil_revenue,
+            ftp_ctr=self._oil_ftp_ctr,
+            ftp_gov=self._oil_ftp_gov,
+            invest_credit=self._oil_ic_paid,
+        )
 
-#         # Calculate CR Before Transfer
-#         for cr_obj in cr_phase_lst:
-#             result[cr_obj.phase] = \
-#                 cr_obj.run_BeforeTransfer(depr_capex, undepr_capex, intangible,
-#                                           sunk_cost)
+        self._gas_unrecovered_before_transfer = self._get_unrecovered_cost(
+            depreciation=self._gas_depreciation,
+            non_capital=self._gas_non_capital,
+            revenue=self._gas_revenue,
+            ftp_ctr=self._gas_ftp_ctr,
+            ftp_gov=self._gas_ftp_gov,
+            invest_credit=self._gas_ic_paid,
+        )
 
-#         # Calculate CR Transfer
-#         result[self.cr_gas.phase], result[self.cr_oil.phase] = \
-#             self.cr_gas.run_Transfer(result[self.cr_gas.phase],
-#                                      result[self.cr_oil.phase])
+        # Cost to be recovered
+        self._oil_cost_to_be_recovered = self._get_cost_to_be_recovered(
+            depreciation=self._oil_depreciation,
+            non_capital=self._oil_non_capital,
+            revenue=self._oil_revenue,
+            ftp_ctr=self._oil_ftp_ctr,
+            ftp_gov=self._oil_ftp_gov,
+            invest_credit=self._oil_ic_paid,
+            unrecovered_cost=self._oil_unrecovered_before_transfer,
+        )
 
-#         # Calculate CR After Transfer
-#         for cr_obj in cr_phase_lst:
-#             result[cr_obj.phase] = \
-#                 cr_obj.run_AfterTransfer(capex_tangible, capex_intangible,
-#                                          year_arr, result[cr_obj.phase])
+        self._gas_cost_to_be_recovered = self._get_cost_to_be_recovered(
+            depreciation=self._gas_depreciation,
+            non_capital=self._gas_non_capital,
+            revenue=self._gas_revenue,
+            ftp_ctr=self._gas_ftp_ctr,
+            ftp_gov=self._gas_ftp_gov,
+            invest_credit=self._gas_ic_paid,
+            unrecovered_cost=self._gas_unrecovered_before_transfer,
+        )
 
-#         # Calculate CR Combined
-#         combined_df = pd.DataFrame()
+        # Cost recovery
+        self._oil_cost_recovery = self._get_cost_recovery(
+            depreciation=self._oil_depreciation,
+            non_capital=self._oil_non_capital,
+            cost_to_be_recovered=self._oil_cost_to_be_recovered,
+            cr_cap_rate=self.oil_cr_cap_rate,
+        )
 
-#         for col_name in result[self.cr_gas.phase].columns:
-#                 combined_df[col_name] = result[self.cr_gas.phase][col_name] \
-#                                         + result[self.cr_oil.phase][col_name]
+        self._gas_cost_recovery = self._get_cost_recovery(
+            depreciation=self._gas_depreciation,
+            non_capital=self._gas_non_capital,
+            cost_to_be_recovered=self._gas_cost_to_be_recovered,
+            cr_cap_rate=self.gas_cr_cap_rate,
+        )
 
-#         result["Combined"] = combined_df
+        # ETS (Equity to be Split) before transfer/consolidation
+        self._oil_ets_before_transfer = self._get_ets_before_transfer(
+            revenue=self._oil_revenue,
+            ftp_ctr=self._oil_ftp_ctr,
+            ftp_gov=self._oil_ftp_gov,
+            invest_credit=self._oil_ic_paid,
+            cost_recovery=self._oil_cost_recovery,
+        )
 
-#         return result
+        self._gas_ets_before_transfer = self._get_ets_before_transfer(
+            revenue=self._gas_revenue,
+            ftp_ctr=self._gas_ftp_ctr,
+            ftp_gov=self._gas_ftp_gov,
+            invest_credit=self._gas_ic_paid,
+            cost_recovery=self._gas_cost_recovery,
+        )
 
+        self._transfer_to_oil, self._transfer_to_gas = self._get_transfer(
+            gas_unrecovered=self._gas_unrecovered_before_transfer,
+            oil_unrecovered=self._oil_unrecovered_before_transfer,
+            gas_ets_pretransfer=self._gas_ets_before_transfer,
+            oil_ets_pretransfer=self._oil_ets_before_transfer,
+        )
 
-if __name__ == "__main__":
-    from pyscnomics.datasets import load_data
+        # Unrecovered cost after transfer/consolidation
+        self._oil_unrecovered_after_transfer = (
+            self._oil_unrecovered_before_transfer - self._transfer_to_oil
+        )
+        self._gas_unrecovered_after_transfer = (
+            self._gas_unrecovered_before_transfer - self._transfer_to_gas
+        )
 
-    data_CR = load_data("CR_Gas")
+        # ETS (Equity to be Split) after transfer/consolidation
+        self._oil_ets_after_transfer = self._get_ets_after_transfer(
+            ets_before_transfer=self._oil_ets_before_transfer,
+            trfto=self._transfer_to_oil,
+            unrecovered_after_transfer=self._oil_unrecovered_after_transfer,
+        )
+
+        self._gas_ets_after_transfer = self._get_ets_after_transfer(
+            ets_before_transfer=self._gas_ets_before_transfer,
+            trfto=self._transfer_to_gas,
+            unrecovered_after_transfer=self._gas_unrecovered_after_transfer,
+        )
+
+        # ES (Equity Share)
+        self._oil_contractor_share, self._oil_government_share = self._get_equity_share(
+            ETS=self._oil_ets_after_transfer, pretax_ctr=self.oil_ctr_pretax_share
+        )
+
+        self._gas_contractor_share, self._gas_government_share = self._get_equity_share(
+            ETS=self._gas_ets_after_transfer, pretax_ctr=self.gas_ctr_pretax_share
+        )
+
+        # DMO
+        self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = self._get_dmo(
+            dmo_holiday_duration=self.oil_dmo_holiday_duration,
+            dmo_volume_portion=self.oil_dmo_volume_portion,
+            dmo_fee_portion=self.oil_dmo_fee_portion,
+            lifting=self._oil_lifting,
+            ctr_pretax_share=self.oil_ctr_pretax_share,
+            ES_ctr=self._oil_contractor_share,
+            unrecovered_cost=self._oil_unrecovered_after_transfer,
+        )
+
+        self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = self._get_dmo(
+            dmo_holiday_duration=self.gas_dmo_holiday_duration,
+            dmo_volume_portion=self.gas_dmo_volume_portion,
+            dmo_fee_portion=self.gas_dmo_fee_portion,
+            lifting=self._gas_lifting,
+            ctr_pretax_share=self.gas_ctr_pretax_share,
+            ES_ctr=self._gas_contractor_share,
+            unrecovered_cost=self._gas_unrecovered_after_transfer,
+        )
+
+        # Taxable income (also known as Net Contractor Share - NCS)
+        self._oil_taxable_income = (
+            self._oil_ftp_ctr
+            + self._oil_contractor_share
+            + self._oil_ic_paid
+            - self._oil_ddmo
+        )
+        self._gas_taxable_income = (
+            self._gas_ftp_ctr
+            + self._gas_contractor_share
+            + self._gas_ic_paid
+            - self._gas_ddmo
+        )
+
+        # Tax payment
+        # FIXME: re-check the value of array contractor_tax
+        self.contractor_tax = np.ones(self.project_duration) * 0.4
+        self._oil_tax_payment = self.contractor_tax * self._oil_taxable_income
+        self._gas_tax_payment = self.contractor_tax * self._gas_taxable_income
+
+        # Contractor Take
+        self._oil_contractor_take = (
+            self._oil_taxable_income - self._oil_tax_payment + self._oil_cost_recovery
+        )
+
+        self._gas_contractor_take = (
+            self._gas_taxable_income - self._gas_tax_payment + self._gas_cost_recovery
+        )
+
+        # Government Take
+        self._oil_government_take = (
+            self._oil_ftp_gov
+            + self._oil_government_share
+            + self._oil_tax_payment
+            + self._oil_ddmo
+        )
+
+        self._gas_government_take = (
+            self._gas_ftp_gov
+            + self._gas_government_share
+            + self._gas_tax_payment
+            + self._gas_ddmo
+        )
