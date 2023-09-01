@@ -164,4 +164,4 @@ cython_debug/
 *.ipynb
 
 # Local folder
-sandbox/
+pyscnomics/sandbox/

@@ -3,6 +3,7 @@ import datetime as dt
 import dateutils
 
 import pyscnomics.econ.depreciation as depr
+
 # from pyscnomics.contracts.project import BaseProject
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import FluidType
@@ -51,17 +52,17 @@ indices = np.argwhere(project_years == start_dmo_year).ravel()
 lifting = Lifting(
     start_year=2023,
     end_year=2030,
-
 )
 
+
 def get_dmo(
-        # dmo_volume_portion: float,
-        # dmo_fee_portion: float,
-        dmo_start_production: dt,
-        # dmo_holiday: int,
-        # lifting: Lifting,
-        # ctr_pretax_share: float,
-        # ES_ctr: np.ndarray
+    # dmo_volume_portion: float,
+    # dmo_fee_portion: float,
+    dmo_start_production: dt,
+    # dmo_holiday: int,
+    # lifting: Lifting,
+    # ctr_pretax_share: float,
+    # ES_ctr: np.ndarray
 ) -> np.ndarray:
 
     # # Instantiate dmo_volume array
@@ -71,19 +72,11 @@ def get_dmo(
 
     dmo_end_date = dmo_start_production + dateutils.relativedelta(months=60)
 
-    print('\t')
-    print('dmo end date = ', dmo_end_date)
+    print("\t")
+    print("dmo end date = ", dmo_end_date)
 
     for i in [dmo_end_date.year, dmo_end_date.month, dmo_end_date.day]:
         print(i)
 
 
 dmo = get_dmo(dmo_start_production=dt.date(year=2023, month=5, day=14))
-
-
-
-
-
-
-
-

@@ -13,11 +13,11 @@ class DeprMethod(Enum):
     Attributes
     ----------
     SL : str
-        Represents the straight-line depreciation method.
+        Represents the straight-line depreciation method
     DB : str
-        Represents the declining balance depreciation method.
+        Represents the declining balance depreciation method
     UOP : str
-        Represents the units of production depreciation method.
+        Represents the units of production depreciation method
     """
 
     SL = "sl"
@@ -34,12 +34,11 @@ class FluidType(Enum):
     Attributes
     ----------
     ALL : str
-        Represents all fluid types.
+        Represents all fluid types
     OIL : str
-        Represents oil as the fluid type.
+        Represents oil as the fluid type
     GAS : str
-        Represents gas as the fluid type.
-
+        Represents gas as the fluid type
     """
 
     ALL = "all"
@@ -57,11 +56,11 @@ class TaxSplitTypeCR(Enum):
     Attributes
     ----------
     CONVENTIONAL : str
-        Represents conventional split type.
+        Represents conventional split type
     SLIDING_SCALE : str
-        Represents sliding scale split type.
+        Represents sliding scale split type
     R2C : str
-        Represents revenue to cost split type.
+        Represents revenue to cost split type
 
     """
 
@@ -80,10 +79,10 @@ class YearReference(Enum):
     Attributes:
     -----------
     PIS_YEAR : str
-        Symbolic name for the Payment in Service (PIS) year reference.
+        Symbolic name for the Payment in Service (PIS) year reference
 
     EXPENSE_YEAR : str
-        Symbolic name for the expense year reference.
+        Symbolic name for the expense year reference
 
     Notes:
     ------
@@ -96,6 +95,18 @@ class YearReference(Enum):
 
 
 class TaxRegime(Enum):
+    """
+    Enumeration class representing different tax regimes for oil and gas economic analysis.
+
+    Attributes:
+    ----------
+    UU_36_2008 (str): Tax regime under "UU No.36 Tahun 2008"
+    UU_02_2020 (str): Tax regime under "UU No.02 Tahun 2020"
+    UU_07_2021 (str): Tax regime under "UU No.07 Tahun 2021"
+    NAILED_DOWN (str): Special tax regime designated as "nailed down"
+    PREVAILING (str): General tax regime referred to as "prevailing"
+    """
+
     UU_36_2008 = "UU No.36 Tahun 2008"
     UU_02_2020 = "UU No.02 Tahun 2020"
     UU_07_2021 = "UU No.07 Tahun 2021"
