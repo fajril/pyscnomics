@@ -3,7 +3,7 @@
   "ftp_is_shared": true,
   "ftp_portion": 0.2,
   "oil_ctr_pretax_share": 0.4464,
-  "gas_ctr_pretax_share":0.7143 ,
+  "gas_ctr_pretax_share":0.71428571 ,
   "oil_ic_rate": 0,
   "gas_ic_rate": 0,
   "ic_is_available": false,

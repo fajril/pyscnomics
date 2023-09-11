@@ -92,8 +92,12 @@ def test_lifting_arithmetics():
     # Specify the expected result
     add1 = np.array([0, 0, 0, 0, 1000, 1000, 1000, 0])
     add2 = np.array([500, 500, 0, 0, 1000, 1000, 1500, 500])
+
     mul1 = np.array([0, 0, 0, 0, 2000, 2000, 2000, 0])
+    mul2 = np.array([0., 0., 0., 0., -1000., -1000., -1000., 0.])
+
     div1 = np.array([250, 250, 0, 0, 0, 0, 250, 250])
+    div2 = np.array([-50, -50, 0, 0, 0, 0, -50, -50])
 
     # Create an instance for OIL revenue
     mangga_lifting = Lifting(
@@ -119,10 +123,16 @@ def test_lifting_arithmetics():
     calc_add1 = mangga_lifting.revenue()
     calc_add2 = total_lifting.revenue()
     calc_mul1 = mangga_lifting * 2
+    calc_mul2 = -1 * mangga_lifting
     calc_div1 = nanas_lifting / 2
+    calc_div2 = nanas_lifting / -10
 
     # Test whether the instance is equal to the expected result
     np.testing.assert_allclose(add1, calc_add1)
     np.testing.assert_allclose(add2, calc_add2)
+
     np.testing.assert_allclose(mul1, calc_mul1)
+    np.testing.assert_allclose(mul2, calc_mul2)
+
     np.testing.assert_allclose(div1, calc_div1)
+    np.testing.assert_allclose(div2, calc_div2)

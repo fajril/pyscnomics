@@ -1,5 +1,5 @@
 """
-Specify fluid type and depreciation method.
+Specify constants for several processes using Enum class.
 """
 
 from enum import Enum
@@ -16,6 +16,8 @@ class DeprMethod(Enum):
         Represents the straight-line depreciation method
     DB : str
         Represents the declining balance depreciation method
+    PSC : str
+        Represents the PSC double declining balance method
     UOP : str
         Represents the units of production depreciation method
     """
@@ -39,6 +41,12 @@ class FluidType(Enum):
         Represents oil as the fluid type
     GAS : str
         Represents gas as the fluid type
+    SULFUR: str
+        Represents sulfur as the fluid type
+    ELECTRICITY: str
+        Represent electricity as the fluid type
+    CO2: str
+        Represents CO2 as the fluid type
     """
 
     ALL = "all"
@@ -71,23 +79,15 @@ class TaxSplitTypeCR(Enum):
 
 class YearReference(Enum):
     """
-    Enumeration of different year references used for financial calculations.
-
-    This enumeration defines symbolic names for various year references that are commonly used
-    in financial calculations, such as PIS (Payment in Service) year and expense year.
+    Enumeration of different year references used for depreciation calculations.
 
     Attributes:
     -----------
     PIS_YEAR : str
-        Symbolic name for the Payment in Service (PIS) year reference
+        Symbolic name for the Placed in Service (PIS) year reference
 
     EXPENSE_YEAR : str
         Symbolic name for the expense year reference
-
-    Notes:
-    ------
-    The `YearReference` enumeration provides a convenient way to reference specific years when
-    performing financial calculations or representing different types of fiscal year references.
     """
 
     PIS_YEAR = "pis_year"
@@ -106,9 +106,15 @@ class TaxRegime(Enum):
     NAILED_DOWN (str): Special tax regime designated as "nailed down"
     PREVAILING (str): General tax regime referred to as "prevailing"
     """
-
+    NAILED_DOWN = "nailed down"
+    PREVAILING = "prevailing"
     UU_36_2008 = "UU No.36 Tahun 2008"
     UU_02_2020 = "UU No.02 Tahun 2020"
     UU_07_2021 = "UU No.07 Tahun 2021"
-    NAILED_DOWN = "nailed down"
-    PREVAILING = "prevailing"
+
+
+
+
+class FTPTaxRegime(Enum):
+    PDJP_20_2017 = "Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
+    PRE_2017 = "Pre Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
