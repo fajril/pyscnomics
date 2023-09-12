@@ -5,11 +5,10 @@ import numpy as np
 from datetime import datetime
 import timeit
 
+import pandas as pd
+
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
-# from pyscnomics.contracts.grosssplit import GrossSplit
-# from pyscnomics.contracts.grosssplit import VariableSplit, SplitConfig, Tax, DMO, InvestmentCredit, Incentive
-
 from pyscnomics.econ.revenue import Lifting, FluidType
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 
@@ -78,8 +77,6 @@ def assign_lifting(lifting_data: dict) -> list:
     """
     # Defining container list for Lifting
     lifting_list = []
-    # print(type())
-    # test_lifting = np.array(lifting_data['gas']["lifting_rate"], dtype=float)
 
     # Iterating lifting data to assign them based on their fluid type
     for key in dict(lifting_data):
@@ -325,6 +322,109 @@ def load_testing(dataset: str, key: str) -> dict | ValueError:
         return data_test
 
 
+def load_cost(filename: str,
+              start_year: int,
+              end_year: int,
+              cost_allocation: FluidType = FluidType.OIL,
+              template: str = "pyscnomics") -> tuple[Tangible, Intangible, OPEX, ASR] | ValueError:
+    """
+    Function to load the cost data from Excel file.
+
+    Parameters
+    ----------
+    filename: str
+        The name of the Excel file.
+    start_year: int
+        The start year of the cost data.
+    end_year: int
+        The end year of the cost data
+    cost_allocation: FluidType
+        The fluid type of that the cost will be allocated to.
+    template: str
+        The type of Excel source that will be read. The available types are: ['pyscnomics', 'questor']
+
+    Returns
+    -------
+    out: tuple
+        Tangible
+            The Tangible dataclass.
+        Intangible
+            The Intangible dataclass
+        OPEX
+            The OPEX dataclass
+        ASR
+            The ASR dataclass
+    """
+
+    # Defining the available template list and making the condition if not satisfied
+    template_list = ['pyscnomics', 'questor']
+    if template not in template_list:
+        raise ValueError('Unknown Template: "{0}", please check the Template Type in Docstring.'.format(template))
+
+    # Reading the Questor Excels file from column B to W and replacing the value of NaN with 0
+    df = pd.read_excel(filename, skiprows=18, header=None, na_values=0).fillna(value=0)
+    years_arr = np.arange(start_year, start_year + df.shape[0], 1)
+    df.set_index(years_arr, inplace=True)
+
+    # Assigning the Tangible data
+    tangible_arr = np.array(df[[5, 7, 8, 9, 10, 11, 12]].sum(axis=1).to_numpy(dtype=float))
+    tangible = Tangible(start_year=start_year,
+                        end_year=end_year,
+                        cost=tangible_arr,
+                        expense_year=years_arr,
+                        cost_allocation=cost_allocation)
+
+    # Assigning the Intangible data
+    intangible_arr = df[6].to_numpy(dtype=float)
+    intangible = Intangible(start_year=start_year,
+                            end_year=end_year,
+                            cost=intangible_arr,
+                            expense_year=years_arr,
+                            cost_allocation=cost_allocation)
+
+    # Assigning the ASR data
+    asr_arr = df[18].to_numpy(dtype=float)
+    asr = ASR(start_year=start_year,
+              end_year=end_year,
+              cost=asr_arr,
+              expense_year=years_arr,
+              cost_allocation=cost_allocation)
+
+    # Assigning the OPEX data
+    fixed_cost_arr = df[[13, 14, 15, 16, 17]].sum(axis=1).to_numpy(dtype=float)
+    opex = OPEX(start_year=start_year,
+                end_year=end_year,
+                fixed_cost=fixed_cost_arr,
+                expense_year=years_arr,
+                cost_allocation=cost_allocation)
+
+    # Assigning the OPEX data
+    # fixed_cost_arr = df[[13, 16, 17]].sum(axis=1).to_numpy(dtype=float)
+    # variable_cost_arr = df[14].to_numpy(dtype=float)
+    # cost_per_volume_arr = df[15].to_numpy(dtype=float)
+
+    # Reading the produced fluid for determining the prod_rate attributes of the OPEX dataclass
+    # if cost_allocation == FluidType.OIL:
+    #     prod_arr = df[20].to_numpy(dtype=float)
+    #
+    # elif cost_allocation == FluidType.GAS:
+    #     prod_arr = df[22].to_numpy(dtype=float)
+    #
+    # else:
+    #     prod_arr = df[21].to_numpy(dtype=float)
+    #
+    # opex = OPEX(start_year=start_year,
+    #             end_year=end_year,
+    #             fixed_cost=fixed_cost_arr,
+    #             expense_year=years_arr,
+    #             cost_allocation=cost_allocation,
+    #             prod_rate=prod_arr,
+    #             cost_per_volume=cost_per_volume_arr,
+    #             )
+
+    return tangible, intangible, opex, asr
+
+
 if __name__ == "__main__":
     # Choosing the Dataset and contract type
     data_type = 'gas_real'
@@ -332,6 +432,19 @@ if __name__ == "__main__":
 
     # Testing the load_data function
     psc = load_data(dataset=data_type, contract=project_type)
-    print('Output of the load_data module:')
-    print(timeit.timeit(psc.run, number=1))
+    print('Output of the load_data')
+    print(psc, '\n')
 
+    print('Time of reading the dataset and running the PSC :')
+    print(timeit.timeit(psc.run, number=1))
+    print('\n')
+
+    # Reading Questor Template
+    questor_result = load_cost(filename='questor_template.xls',
+                               cost_allocation=FluidType.OIL,
+                               template='questor',
+                               start_year=2023,
+                               end_year=2042)
+    print('Output of the load_cost')
+    for cost in questor_result:
+        print(cost, '\n')
