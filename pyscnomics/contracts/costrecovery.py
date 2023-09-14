@@ -119,6 +119,12 @@ class CostRecovery(BaseProject):
     _oil_pot: float = field(default=None, init=False, repr=False)
     _gas_pot: float = field(default=None, init=False, repr=False)
 
+    _oil_npv: float = field(default=None, init=False, repr=False)
+    _gas_npv: float = field(default=None, init=False, repr=False)
+
+    _oil_irr: float = field(default=None, init=False, repr=False)
+    _gas_irr: float = field(default=None, init=False, repr=False)
+
     _ctr_take: np.ndarray = field(default=None, init=False, repr=False)
     _ctr_share: np.ndarray = field(default=None, init=False, repr=False)
     _gov_take: np.ndarray = field(default=None, init=False, repr=False)
@@ -538,7 +544,8 @@ class CostRecovery(BaseProject):
                                                               ftp=self._gas_ftp_ctr,
                                                               tax_rate=tax_rate,
                                                               ftp_tax_regime=ftp_tax_regime)
-        # TODO: Make the Tax Routine
+
+        # TODO: Make the Tax Routine, _oil_tax and _gas_tax below will be replaced with return from tax module
         self._oil_tax = np.zeros_like(self.project_years)
         self._gas_tax = np.zeros_like(self.project_years)
 
@@ -567,30 +574,38 @@ class CostRecovery(BaseProject):
         )
 
         # Contractor CashFlow
-        self._oil_cashflow = self._oil_contractor_take - self._oil_depreciation - self._oil_non_capital
-        self._gas_cashflow = self._gas_contractor_take - self._gas_depreciation - self._gas_non_capital
+        self._oil_cashflow = self._oil_contractor_take - self._oil_tangible.expenditures() - self._oil_non_capital
+        self._gas_cashflow = self._gas_contractor_take - self._gas_tangible.expenditures() - self._gas_non_capital
 
-        # Pay Out Time (POT)
+        # Pay Out Time (POT) and Internal Rate Return (IRR)
         # Condition where there is no revenue from one of Oil and Gas
         if np.sum(self._oil_cashflow) == 0:
             self._oil_pot = 0
+            self._oil_irr = 0
         else:
             self._oil_pot = indicator.pot(cashflow=self._oil_cashflow)
+            self._oil_irr = indicator.irr(cashflow=self._oil_cashflow)
 
         if np.sum(self._gas_cashflow) == 0:
             self._gas_pot = 0
+            self._gas_irr = 0
         else:
             self._gas_pot = indicator.pot(cashflow=self._gas_cashflow)
+            self._gas_irr = indicator.irr(cashflow=self._gas_cashflow)
 
-        # Combined Contractor Take and Contractor Share
+        # NPV
+        self._oil_npv = indicator.npv(cashflow=self._oil_cashflow)
+        self._gas_npv = indicator.npv(cashflow=self._gas_cashflow)
+
+        # Combined Contractor Take and Contractor Share, used for testing the consistency
         self._ctr_take = self._oil_contractor_take + self._gas_contractor_take
         self._ctr_share = self._oil_contractor_share + self._gas_contractor_share
 
-        # Combined Government Take and Contractor Share
+        # Combined Government Take and Contractor Share, used for testing the consistency
         self._gov_take = self._oil_government_take + self._gas_government_take
         self._gov_share = self._oil_government_share + self._gas_government_share
 
-        # Combined FTP, IC, Cost_Recovery
+        # Combined FTP, IC, Cost_Recovery, used for testing the consistency
         self._ftp = self._oil_ftp + self._gas_ftp
         self._ic = self._oil_ic + self._gas_ic
         self._cost_recovery = self._oil_cost_recovery + self._gas_cost_recovery

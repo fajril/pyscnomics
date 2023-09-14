@@ -39,9 +39,9 @@ psc_table['Cum Cashflow'] = np.cumsum(psc._gas_cashflow)
 psc_table.drop([i for i in range(12)], inplace=True)
 print(psc_table, '\n')
 
-print('The POT: ', np.sum(psc._gas_pot))
-
-
+print('The Projects POT: ', np.sum(psc._gas_pot))
+print('The Projects NPV: ', np.sum(psc._gas_npv))
+print('The Projects IRR: ', np.sum(psc._gas_irr))
 
 
 
