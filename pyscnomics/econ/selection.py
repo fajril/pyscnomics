@@ -113,8 +113,13 @@ class TaxRegime(Enum):
     UU_07_2021 = "UU No.07 Tahun 2021"
 
 
-
-
 class FTPTaxRegime(Enum):
     PDJP_20_2017 = "Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
     PRE_2017 = "Pre Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
+
+
+class GrossSplitRegime(Enum):
+    PERMEN_ESDM_8_2017 = 'Peraturan Menteri ESDM No. 8 Tahun 2017'
+    PERMEN_ESDM_52_2017 = 'Peraturan Menteri ESDM No. 52 Tahun 2017'
+    PERMEN_ESDM_20_2019 = 'Peraturan Menteri ESDM No. 20 Tahun 2019'
+    PERMEN_ESDM_12_2020 = 'Peraturan Menteri ESDM No. 12 Tahun 2020'

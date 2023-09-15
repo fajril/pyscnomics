@@ -6,6 +6,7 @@ import numpy as np
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
+from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.econ.revenue import Lifting, FluidType
 
@@ -231,7 +232,7 @@ def load_testing(dataset_type: str, key: str) -> dict | ValueError:
         return data_test
 
 
-def load_dataset(dataset_type: str, contract_type: str = 'project') -> BaseProject | CostRecovery:
+def load_dataset(dataset_type: str, contract_type: str = 'project') -> BaseProject | CostRecovery | GrossSplit:
     """
     A function to load the available dataset.
 
@@ -302,15 +303,26 @@ def load_dataset(dataset_type: str, contract_type: str = 'project') -> BaseProje
                             gas_dmo_fee_portion=config['gas_dmo_fee_portion'],
                             gas_dmo_holiday_duration=config['gas_dmo_holiday_duration'])
 
+    elif contract_type == 'gross_split':
+        config = read_json_file(file_name=contract_type)
+        return GrossSplit(start_date=project_start_date,
+                          end_date=project_end_date,
+                          onstream_date=project_onstream_date,
+                          lifting=lifting_list,
+                          tangible_cost=tangible_list,
+                          intangible_cost=intangible_list,
+                          opex=opex_list,
+                          asr_cost=asr_list)
+
 
 if __name__ == "__main__":
     # Choosing the Dataset and contract type
-    dataset = 'small_gas'
-    contract = 'cost_recovery'
+    dataset = 'medium_oil_2'
+    contract = 'gross_split'
 
     # Returning the load_data function
     psc = load_dataset(dataset_type=dataset, contract_type=contract)
-    print('PSC load_data function \n', psc.lifting, '\n')
+    print('PSC load_data function \n', psc, '\n')
 
     # Returning the testing function
     psc_load = load_testing(dataset_type=dataset, key='FTP Gas')
