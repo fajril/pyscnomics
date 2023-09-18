@@ -18,20 +18,34 @@ def test_lifting_incorrect_data_input():
     """
 
     with pytest.raises(LiftingException):
-
-        # Create an instance of revenue with project duration < the length of lifting data
         Lifting(
             start_year=2023,
             end_year=2027,
-            lifting_rate=np.array(
-                [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100]
-            ),
-            price=np.array([10 for _ in range(11)]),
+            lifting_rate=np.array([50, 50, 50, 50, 50, 50, 50, 50]),
+            price=np.array([10, 10, 10, 10, 10, 10, 10, 10]),
             fluid_type=FluidType.OIL,
-            prod_year=np.array(
-                [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2031, 2032]
-            ),
-        ).revenue()
+            prod_year=np.array([2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]),
+        )
+
+    with pytest.raises(LiftingException):
+        Lifting(
+            start_year=2023,
+            end_year=2030,
+            lifting_rate=np.array([50, 50, 50, 50, 50, 50, 50, 50]),
+            price=np.array([10, 10, 10, 10, 10, 10, 10, 10]),
+            fluid_type=FluidType.OIL,
+            prod_year=np.array([2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028]),
+        )
+
+    with pytest.raises(LiftingException):
+        Lifting(
+            start_year=2023,
+            end_year=2030,
+            lifting_rate=np.array([50, 50, 50, 50, 50, 50, 50, 50]),
+            price=np.array([10, 10, 10, 10, 10, 10, 10, 10]),
+            fluid_type=FluidType.OIL,
+            prod_year=np.array([2023, 2024, 2025, 2026, 2027, 2028, 2029, 2031]),
+        )
 
 
 def test_lifting_comparison():
@@ -94,7 +108,7 @@ def test_lifting_arithmetics():
     add2 = np.array([500, 500, 0, 0, 1000, 1000, 1500, 500])
 
     mul1 = np.array([0, 0, 0, 0, 2000, 2000, 2000, 0])
-    mul2 = np.array([0., 0., 0., 0., -1000., -1000., -1000., 0.])
+    mul2 = np.array([0.0, 0.0, 0.0, 0.0, -1000.0, -1000.0, -1000.0, 0.0])
 
     div1 = np.array([250, 250, 0, 0, 0, 0, 250, 250])
     div2 = np.array([-50, -50, 0, 0, 0, 0, -50, -50])
