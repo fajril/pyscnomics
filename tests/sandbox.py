@@ -1,6 +1,6 @@
 import numpy as np
 
-from pyscnomics.dataset.sample_refactored import load_dataset, load_testing
+from pyscnomics.dataset.sample import load_dataset, load_testing
 
 
 def test_revenue():
@@ -49,6 +49,7 @@ def test_ftp():
 
     np.testing.assert_allclose(gas_ftp, gas_ftp_base)
 
+
 def test_ftp_ctr():
     data = load_dataset(dataset_type='small_gas', contract_type='cost_recovery')
     psc_result = data.run()
@@ -58,6 +59,7 @@ def test_ftp_ctr():
 
     np.testing.assert_allclose(gas_ftp_ctr, gas_ftp_ctr_base)
 
+
 def test_ftp_gov():
     data = load_dataset(dataset_type='small_gas', contract_type='cost_recovery')
     psc_result = data.run()
@@ -66,6 +68,7 @@ def test_ftp_gov():
     gas_ftp_gov_base = load_testing(dataset_type='small_gas', key='FTP GOV')
 
     np.testing.assert_allclose(gas_ftp_gov, gas_ftp_gov_base)
+
 
 def test_ic():
     """

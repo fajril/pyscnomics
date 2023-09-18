@@ -4,6 +4,7 @@ Prepares lifting data and calculate the revenue.
 
 import numpy as np
 from dataclasses import dataclass, field
+
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 
@@ -56,7 +57,7 @@ class Lifting:
         if self.prod_rate is None:
             self.prod_rate = self.lifting_rate.copy()
 
-        # When user does not insert GHV data; the default value of GHV is set to unity
+        # When user does not insert GHV data
         if self.ghv is None:
             self.ghv = np.ones(len(self.lifting_rate))
 
@@ -75,7 +76,7 @@ class Lifting:
                 f"prod_year: {len(self.prod_year)}, "
             )
 
-        # Raise an exception error if start_year is after then end_year
+        # Raise an error message: start_year is after end_year
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
             self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
@@ -85,11 +86,25 @@ class Lifting:
                 f"start year {self.start_year} is after the end year: {self.end_year}"
             )
 
-        # Raise an exception if project duration is less than the length of production data
+        # Raise an error message: project duration is less than the length of production data
         if self.project_duration < len(self.lifting_rate):
             raise LiftingException(
                 f"Length of project duration: ({self.project_duration})"
                 f" is less than the length of lifting data: ({len(self.lifting_rate)})"
+            )
+
+        # Raise an error message: prod_year is before the start year of the project
+        if np.min(self.prod_year) < self.start_year:
+            raise LiftingException(
+                f"The production year ({np.min(self.prod_year)}) "
+                f"is before the start year of the project ({self.start_year})"
+            )
+
+        # Raise an error message: prod_year is after the end year of the project
+        if np.max(self.prod_year) > self.end_year:
+            raise LiftingException(
+                f"The production year ({np.max(self.prod_year)}) "
+                f"is after the end year of the project ({self.end_year})"
             )
 
     def revenue(self) -> np.ndarray:

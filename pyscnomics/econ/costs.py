@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 import pyscnomics.econ.depreciation as depr
 from pyscnomics.econ.selection import FluidType, DeprMethod, YearReference
-from pyscnomics.tools.helper import summarizer, sum_remainder
+from pyscnomics.tools.helper import summarizer
 
 
 class TangibleException(Exception):
@@ -80,27 +80,19 @@ class Tangible:
 
     def __post_init__(self):
 
-        # Configure attribute expense_year
-        self.expense_year = np.asarray(self.expense_year)
-
-        # Configure attribute pis_year
+        # When user does not provide pis_year data
         if self.pis_year is None:
             self.pis_year = self.expense_year.copy()
-        else:
-            self.pis_year = np.asarray(self.pis_year)
 
-        # Configure attribute salvage_value
+        # When user does not provide salvage_value data
         if self.salvage_value is None:
             self.salvage_value = np.zeros(len(self.cost))
-        else:
-            self.salvage_value = np.asarray(self.salvage_value)
 
-        # Configure attribute useful_life
+        # When user does not provide useful_life data
         if self.useful_life is None:
             self.useful_life = np.repeat(5, len(self.cost))
-        else:
-            self.useful_life = np.asarray(self.useful_life)
 
+        # When user does not provide depreciation_factor data
         if self.depreciation_factor is None:
             self.depreciation_factor = np.repeat(0.5, len(self.cost))
 
@@ -138,11 +130,18 @@ class Tangible:
                 f"is after the end year: {self.end_year}"
             )
 
-        # Raise error message when expense year if after the end year of the project
+        # Raise an error message: expense year is after the end year of the project
         if np.max(self.expense_year) > self.end_year:
             raise TangibleException(
                 f"Expense year ({np.max(self.expense_year)}) "
-                f"is beyond the end project year {self.end_year}"
+                f"is after the end year of the project ({self.end_year})"
+            )
+
+        # Raise an error message: expense year is before the start year of the project
+        if np.min(self.expense_year) < self.start_year:
+            raise TangibleException(
+                f"Expense year ({np.min(self.expense_year)}) "
+                f"is before the start year of the project ({self.start_year})"
             )
 
     def expenditures(
@@ -177,17 +176,15 @@ class Tangible:
         return expenses
 
     def total_depreciation_rate(
-        self,
-        depr_method: DeprMethod = DeprMethod.DB,
-        decline_factor: float = 2,
-    ) -> np.ndarray:
+        self, depr_method: DeprMethod = DeprMethod.PSC, decline_factor: float = 2
+    ) -> tuple:
         """
         Calculate total depreciation rate.
 
         Parameters
         ----------
         depr_method : DeprMethod
-            Depreciation method to use. Defaults to DeprMethod.DB.
+            Depreciation method to use. Defaults to DeprMethod.PSC.
         decline_factor : float
             Decline factor used in the declining balance method. Defaults to 2 (double decline).
 
@@ -204,8 +201,25 @@ class Tangible:
           of the `DeprMethod` enum.
         """
 
-        # Declining balance;
-        # Iterate over the number of elements in self.cost
+        # Straight line
+        if depr_method == DeprMethod.SL:
+            depreciation_charge = np.asarray(
+                [
+                    depr.straight_line_depreciation_rate(
+                        cost=c,
+                        salvage_value=sv,
+                        useful_life=ul,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, sv, ul in zip(
+                        self.cost,
+                        self.salvage_value,
+                        self.useful_life,
+                    )
+                ]
+            )
+
+        # Declining balance/double declining balance
         if depr_method == DeprMethod.DB:
             depreciation_charge = np.asarray(
                 [
@@ -224,20 +238,19 @@ class Tangible:
                 ]
             )
 
-        # Straight line;
-        # Iterate over the number of elements in self.cost
-        if depr_method == DeprMethod.SL:
+        # PSC
+        if depr_method == DeprMethod.PSC:
             depreciation_charge = np.asarray(
                 [
-                    depr.straight_line_depreciation_rate(
+                    depr.psc_declining_balance_depreciation_rate(
                         cost=c,
-                        salvage_value=sv,
+                        depreciation_factor=dr,
                         useful_life=ul,
                         depreciation_len=self.project_duration,
                     )
-                    for c, sv, ul in zip(
+                    for c, dr, ul in zip(
                         self.cost,
-                        self.salvage_value,
+                        self.depreciation_factor,
                         self.useful_life,
                     )
                 ]
@@ -255,78 +268,14 @@ class Tangible:
             ]
         )
 
-        return depreciation_charge.sum(axis=0)
-
-    def psc_depreciation_rate(self):
-
-        """
-        Calculate the total depreciation charge over the project duration for a set of assets
-        based on Production Sharing Contract (PSC) parameters.
-
-        Returns:
-        -------
-        numpy.ndarray
-            Array containing the total depreciation charge for each time period in the project duration.
-
-        Notes:
-        ------
-        This function calculates the depreciation charge for a set of assets based on the PSC
-        parameters, considering the declining balance depreciation method. It aligns the expenditures
-        with the corresponding Placed Into Service (PIS) years or expense years.
-
-        The function takes into account the asset cost, depreciation factor, useful life, project duration,
-        PIS year, and start year. The resulting total depreciation charge is calculated as the sum of
-        depreciation charges for all assets over the project duration.
-
-        If the total number of depreciation charge periods is greater than the project duration, the
-        function truncates the array to match the project duration.
-        """
-
-        depreciation_charge = np.asarray(
-            [
-                depr.psc_declining_balance_depreciation_rate(
-                    cost=c,
-                    depreciation_factor=dr,
-                    useful_life=ul,
-                    depreciation_len=self.project_duration,
-                )
-                for c, dr, ul in zip(
-                    self.cost,
-                    self.depreciation_factor,
-                    self.useful_life,
-                )
-            ]
-        )
-
-        # The relative difference of pis_year and start_year
-        shift_indices = self.pis_year - self.start_year
-
-        # Modify depreciation_charge so that expenditures are aligned with
-        # the corresponding pis_year (or expense_year)
-        depreciation_charge = np.asarray(
-            [
-                np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
-                for row, i in zip(depreciation_charge, shift_indices)
-            ]
-        )
-
         total_depreciation_charge = depreciation_charge.sum(axis=0)
-        undepreciated_asset = sum_remainder(
-            start_year=self.start_year,
-            end_year=self.end_year,
-            arr=total_depreciation_charge,
-        )
-
-        if len(total_depreciation_charge) > self.project_duration:
-            total_depreciation_charge = total_depreciation_charge[
-                : self.project_duration
-            ]
+        undepreciated_asset = np.sum(self.cost) - np.sum(total_depreciation_charge)
 
         return total_depreciation_charge, undepreciated_asset
 
     def total_depreciation_book_value(
         self,
-        depr_method: DeprMethod = DeprMethod.DB,
+        depr_method: DeprMethod = DeprMethod.PSC,
         decline_factor: float = 2,
     ) -> np.ndarray:
         """
@@ -364,7 +313,7 @@ class Tangible:
         depreciation_charge = self.total_depreciation_rate(
             depr_method=depr_method,
             decline_factor=decline_factor,
-        )
+        )[0]
 
         return np.cumsum(self.expenditures()) - np.cumsum(depreciation_charge)
 
@@ -377,24 +326,23 @@ class Tangible:
         if isinstance(other, Tangible):
             return all(
                 (
-                    self.cost_allocation == other.cost_allocation,
+                    np.allclose(self.cost, other.cost),
                     np.allclose(self.expense_year, other.expense_year),
                     np.allclose(self.pis_year, other.pis_year),
-                    np.allclose(self.cost, other.cost),
+                    np.allclose(self.salvage_value, other.salvage_value),
+                    np.allclose(self.useful_life, other.useful_life),
+                    np.allclose(self.depreciation_factor, other.depreciation_factor),
+                    self.cost_allocation == other.cost_allocation,
+                    self.is_ic_applied == other.is_ic_applied,
                 )
             )
 
         # Between an instance of Tangible and an integer/float
         elif isinstance(other, (int, float)):
-            return np.allclose(sum(self.cost), other)
+            return np.sum(self.cost) == other
 
         else:
-            raise TangibleException(
-                f"Must compare an instance of Tangible with another instance of "
-                f"Tangible, an integer, or a float. "
-                f"{other.__class__.__qualname__} is not an instance of Tangible, "
-                f"nor an integer/float."
-            )
+            return False
 
     def __lt__(self, other):
 
@@ -510,11 +458,24 @@ class Tangible:
                 f"Tangible/Intangible/OPEX/ASR."
             )
 
+    def __iadd__(self, other):
+        return self.__add__(other)
+
     def __sub__(self, other):
 
         # Between an instance of Tangible with another instance of Tangible
         if isinstance(other, Tangible):
-            return self.expenditures() - other.expenditures()
+
+            # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
+            if self.cost_allocation != other.cost_allocation:
+                raise TangibleException(
+                    "Cost allocation is not equal. "
+                    f"First instance is {self.cost_allocation}, "
+                    f"second instance is {other.cost_allocation}"
+                )
+
+            else:
+                return self.expenditures() - other.expenditures()
 
         else:
             raise TangibleException(
@@ -531,32 +492,25 @@ class Tangible:
 
         # Multiplication is allowed only with an integer/a float
         if isinstance(other, (int, float)):
+            new_tangible = Tangible(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                cost=self.cost * other,
+                expense_year=self.expense_year.copy(),
+                pis_year=self.pis_year.copy(),
+                salvage_value=self.salvage_value.copy(),
+                useful_life=self.useful_life.copy(),
+                depreciation_factor=self.depreciation_factor.copy(),
+                cost_allocation=self.cost_allocation,
+                is_ic_applied=self.is_ic_applied,
+            )
 
-            # Cannot multiply with zero or with a negative integer/float
-            if other <= 0:
-                raise TangibleException(
-                    f"Cannot multiply with zero or a negative integer/float"
-                )
-
-            else:
-
-                new_tangible = Tangible(
-                    start_year=self.start_year,
-                    end_year=self.end_year,
-                    cost=self.cost * other,
-                    expense_year=self.expense_year.copy(),
-                    pis_year=self.pis_year.copy(),
-                    salvage_value=self.salvage_value.copy(),
-                    useful_life=self.useful_life.copy(),
-                    cost_allocation=self.cost_allocation,
-                )
-
-                return new_tangible
+            return new_tangible
 
         else:
             raise TangibleException(
                 f"Must multiply with an integer or a float; "
-                f"{other} is not an integer nor a float."
+                f"{other} is of {other.__class__.__qualname__} datatype."
             )
 
     def __rmul__(self, other):
@@ -571,14 +525,11 @@ class Tangible:
         # Between an instance of Tangible and an integer/float
         elif isinstance(other, (int, float)):
 
-            # Cannot divide with zero or a negative value
-            if other <= 0:
-                raise TangibleException(
-                    f"Cannot divide with zero or with a negative integer/float"
-                )
+            # Cannot divide with zero
+            if other == 0:
+                raise TangibleException(f"Cannot divide with zero")
 
             else:
-
                 new_tangible = Tangible(
                     start_year=self.start_year,
                     end_year=self.end_year,
@@ -650,11 +601,18 @@ class Intangible:
                 f"is after the end year {self.end_year}"
             )
 
-        # Raise error if expense_year is after the end year of the project
+        # Raise an error message: expense year is after the end year of the project
         if np.max(self.expense_year) > self.end_year:
             raise IntangibleException(
                 f"Expense year ({np.max(self.expense_year)}) "
-                f"is beyond the end project year: {self.end_year}"
+                f"is after the end year of the project ({self.end_year})"
+            )
+
+        # Raise an error message: expense year is before the start year of the project
+        if np.min(self.expense_year) < self.start_year:
+            raise IntangibleException(
+                f"Expense year ({np.min(self.expense_year)}) "
+                f"is before the start year of the project ({self.start_year})"
             )
 
     def expenditures(self) -> np.ndarray:
@@ -699,12 +657,7 @@ class Intangible:
             return np.sum(self.cost) == other
 
         else:
-            raise IntangibleException(
-                f"Must compare an instance of Intangible with another instance of "
-                f"Intangible, an integer, or a float. "
-                f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of Intangible nor an integer/float."
-            )
+            return False
 
     def __lt__(self, other):
 
@@ -774,7 +727,17 @@ class Intangible:
 
         # Between an instance of Intangible with an intance of Tangible/Intangible/OPEX/ASR
         if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return self.expenditures() + other.expenditures()
+
+            # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
+            if self.cost_allocation != other.cost_allocation:
+                raise IntangibleException(
+                    "Cost allocation is not equal. "
+                    f"First instance is {self.cost_allocation}, "
+                    f"second instance is {other.cost_allocation}"
+                )
+
+            else:
+                return self.expenditures() + other.expenditures()
 
         else:
             raise IntangibleException(
@@ -784,11 +747,24 @@ class Intangible:
                 f"of Tangible/Intangible/OPEX/ASR."
             )
 
+    def __iadd__(self, other):
+        return self.__add__(other)
+
     def __sub__(self, other):
 
         # Between an instance of Intangible with another instance of Intangible
         if isinstance(other, Intangible):
-            return self.expenditures() - other.expenditures()
+
+            # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
+            if self.cost_allocation != other.cost_allocation:
+                raise IntangibleException(
+                    "Cost allocation is not equal. "
+                    f"First instance is {self.cost_allocation}, "
+                    f"second instance is {other.cost_allocation}"
+                )
+
+            else:
+                return self.expenditures() - other.expenditures()
 
         else:
             raise IntangibleException(
@@ -805,24 +781,15 @@ class Intangible:
 
         # Multiplication is allowed only with an integer/a float
         if isinstance(other, (int, float)):
+            new_intangible = Intangible(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                cost=self.cost * other,
+                expense_year=self.expense_year.copy(),
+                cost_allocation=self.cost_allocation,
+            )
 
-            # Cannot multiply with zero or with a negative integer/float
-            if other <= 0:
-                raise IntangibleException(
-                    f"Cannot multiply with zero or a negative integer/float"
-                )
-
-            else:
-
-                new_intangible = Intangible(
-                    start_year=self.start_year,
-                    end_year=self.end_year,
-                    cost=self.cost * other,
-                    expense_year=self.expense_year.copy(),
-                    cost_allocation=self.cost_allocation,
-                )
-
-                return new_intangible
+            return new_intangible
 
         else:
             raise IntangibleException(
@@ -841,13 +808,12 @@ class Intangible:
 
         # Between an instance of Intangible and an integer/float
         elif isinstance(other, (int, float)):
-            if other <= 0:
-                raise IntangibleException(
-                    f"Cannot divide with zero or with a negative integer/float"
-                )
+
+            # Cannot divide with zero
+            if other == 0:
+                raise IntangibleException(f"Cannot divide with zero")
 
             else:
-
                 new_intangible = Intangible(
                     start_year=self.start_year,
                     end_year=self.end_year,
@@ -914,11 +880,18 @@ class OPEX:
                 f"is after the end year {self.end_year}"
             )
 
-        # Raise error message when expense year if after the end year of the project
+        # Raise an error message: expense year is after the end year of the project
         if np.max(self.expense_year) > self.end_year:
             raise OPEXException(
                 f"Expense year ({np.max(self.expense_year)}) "
-                f"is beyond the end project year {self.end_year}"
+                f"is after the end year of the project ({self.end_year})"
+            )
+
+        # Raise an error message: expense year is before the start year of the project
+        if np.min(self.expense_year) < self.start_year:
+            raise OPEXException(
+                f"Expense year ({np.min(self.expense_year)}) "
+                f"is before the start year of the project ({self.start_year})"
             )
 
         # User provides both prod_rate and cost_per_volume data
@@ -998,13 +971,7 @@ class OPEX:
             return np.sum(self.fixed_cost, self.variable_cost) == other
 
         else:
-            # TODO: Must return Bool (False)
-            raise OPEXException(
-                f"Must compare an instance of OPEX with another instance of "
-                f"OPEX, an integer, or a float. "
-                f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of OPEX nor an integer/float."
-            )
+            return False
 
     def __lt__(self, other):
 
@@ -1072,7 +1039,7 @@ class OPEX:
 
     def __add__(self, other):
 
-        # Between an instance of Tangible with another instance of Tangible
+        # Between an instance of OPEX with another instance of OPEX
         if isinstance(other, OPEX):
 
             # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
@@ -1104,9 +1071,19 @@ class OPEX:
                     cost_per_volume=cost_per_volume,
                 )
 
-        # Between an instance of Tangible with an instance of Intangible/OPEX/ASR
+        # Between an instance of OPEX with an instance of Tangible/Intangible/ASR
         elif isinstance(other, (Tangible, Intangible, ASR)):
-            return self.expenditures() + other.expenditures()
+
+            # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
+            if self.cost_allocation != other.cost_allocation:
+                raise OPEXException(
+                    "Cost allocation is not equal. "
+                    f"First instance is {self.cost_allocation}, "
+                    f"second instance is {other.cost_allocation} "
+                )
+
+            else:
+                return self.expenditures() + other.expenditures()
 
         else:
             raise OPEXException(
@@ -1116,45 +1093,67 @@ class OPEX:
                 f"Tangible/Intangible/OPEX/ASR."
             )
 
+    def __iadd__(self, other):
+        return self.__add__(other)
+
     def __sub__(self, other):
 
         # Between an instance of OPEX with another instance of OPEX
         if isinstance(other, OPEX):
 
-            combine_fixed_cost, start_year, end_year = summarizer(
-                array1=self.fixed_cost,
-                array2=-1 * other.fixed_cost,
-                startYear1=self.start_year,
-                startYear2=other.start_year,
-            )
+            # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
+            if self.cost_allocation != other.cost_allocation:
+                raise OPEXException(
+                    "Cost allocation is not equal. "
+                    f"First instance is {self.cost_allocation}, "
+                    f"second instance is {other.cost_allocation}"
+                )
 
-            combine_prod_rate, _, _ = summarizer(
-                array1=self.prod_rate,
-                array2=-1 * other.prod_rate,
-                startYear1=self.prod_rate,
-                startYear2=other.prod_rate,
-            )
+            else:
+                combine_fixed_cost, start_year, end_year = summarizer(
+                    array1=self.fixed_cost,
+                    array2=-1 * other.fixed_cost,
+                    startYear1=self.start_year,
+                    startYear2=other.start_year,
+                )
 
-            combine_cost_per_volume, _, _ = summarizer(
-                array1=self.cost_per_volume,
-                array2=-1 * other.cost_per_volume,
-                startYear1=self.cost_per_volume,
-                startYear2=other.cost_per_volume,
-            )
+                combine_prod_rate, _, _ = summarizer(
+                    array1=self.prod_rate,
+                    array2=-1 * other.prod_rate,
+                    startYear1=self.prod_rate,
+                    startYear2=other.prod_rate,
+                )
 
-            return OPEX(
-                start_year=start_year,
-                end_year=end_year,
-                fixed_cost=combine_fixed_cost,
-                expense_year=self.expense_year,
-                cost_allocation=self.cost_allocation,
-                prod_rate=combine_prod_rate,
-                cost_per_volume=combine_cost_per_volume,
-            )
+                combine_cost_per_volume, _, _ = summarizer(
+                    array1=self.cost_per_volume,
+                    array2=-1 * other.cost_per_volume,
+                    startYear1=self.cost_per_volume,
+                    startYear2=other.cost_per_volume,
+                )
+
+                return OPEX(
+                    start_year=start_year,
+                    end_year=end_year,
+                    fixed_cost=combine_fixed_cost,
+                    expense_year=self.expense_year,
+                    cost_allocation=self.cost_allocation,
+                    prod_rate=combine_prod_rate,
+                    cost_per_volume=combine_cost_per_volume,
+                )
 
         # Between an instance of OPEX with an intance of Tangible/Intangible/ASR
         elif isinstance(other, (Tangible, Intangible, ASR)):
-            return self.expenditures() + other.expenditures()
+
+            # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
+            if self.cost_allocation != other.cost_allocation:
+                raise OPEXException(
+                    "Cost allocation is not equal. "
+                    f"First instance is {self.cost_allocation}, "
+                    f"second instance is {other.cost_allocation} "
+                )
+
+            else:
+                return self.expenditures() - other.expenditures()
 
         else:
             raise OPEXException(
@@ -1198,6 +1197,8 @@ class OPEX:
 
         # Between an instance of OPEX and an integer/float
         elif isinstance(other, (int, float)):
+
+            # Cannot divide with zero
             if other == 0:
                 raise OPEXException(f"Cannot divide with zero")
 
@@ -1273,11 +1274,18 @@ class ASR:
                 f"is after the end year {self.end_year}"
             )
 
-        # Raise error if expense_year is after the end year of the project
+        # Raise an error message: expense year is after the end year of the project
         if np.max(self.expense_year) > self.end_year:
             raise ASRException(
                 f"Expense year ({np.max(self.expense_year)}) "
-                f"is beyond the end project year: {self.end_year}"
+                f"is after the end year of the project ({self.end_year})"
+            )
+
+        # Raise an error message: expense year is before the start year of the project
+        if np.min(self.expense_year) < self.start_year:
+            raise ASRException(
+                f"Expense year ({np.min(self.expense_year)}) "
+                f"is before the start year of the project ({self.start_year})"
             )
 
     def future_cost(self):
@@ -1333,6 +1341,7 @@ class ASR:
             return all(
                 (
                     self.cost_allocation == other.cost_allocation,
+                    self.rate == other.rate,
                     np.allclose(self.cost, other.cost),
                     np.allclose(self.expense_year, other.expense_year),
                 )
@@ -1343,12 +1352,7 @@ class ASR:
             return np.sum(self.cost) == other
 
         else:
-            raise ASRException(
-                f"Must compare an instance of ASR with another instance of "
-                f"ASR, an integer, or a float. "
-                f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of ASR nor an integer/float."
-            )
+            return False
 
     def __lt__(self, other):
 
@@ -1418,7 +1422,17 @@ class ASR:
 
         # Between an instance of ASR with an intance of Tangible/Intangible/OPEX/ASR
         if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return self.expenditures() + other.expenditures()
+
+            # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
+            if self.cost_allocation != other.cost_allocation:
+                raise ASRException(
+                    "Cost allocation is not equal. "
+                    f"First instance is {self.cost_allocation}, "
+                    f"second instance is {other.cost_allocation}"
+                )
+
+            else:
+                return self.expenditures() + other.expenditures()
 
         else:
             raise ASRException(
@@ -1428,11 +1442,24 @@ class ASR:
                 f"of Tangible/Intangible/OPEX/ASR."
             )
 
+    def __iadd__(self, other):
+        return self.__add__(other)
+
     def __sub__(self, other):
 
         # Between an instance of ASR with an intance of Tangible/Intangible/OPEX/ASR
         if isinstance(other, ASR):
-            return self.expenditures() - other.expenditures()
+
+            # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
+            if self.cost_allocation != other.cost_allocation:
+                raise ASRException(
+                    "Cost allocation is not equal. "
+                    f"First instance is {self.cost_allocation}, "
+                    f"second instance is {other.cost_allocation}"
+                )
+
+            else:
+                return self.expenditures() - other.expenditures()
 
         else:
             raise ASRException(
@@ -1449,26 +1476,16 @@ class ASR:
 
         # Multiplication is allowed only with an integer/a float
         if isinstance(other, (int, float)):
+            new_asr = ASR(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                cost=self.cost * other,
+                expense_year=self.expense_year,
+                cost_allocation=self.cost_allocation,
+                rate=self.rate,
+            )
 
-            # Cannot multiply with zero or with a negative integer/float
-            # TODO: Allow multiplication by zero and negative number
-            if other <= 0:
-                raise ASRException(
-                    f"Cannot multiply with zero or a negative integer/float"
-                )
-
-            else:
-
-                new_asr = ASR(
-                    start_year=self.start_year,
-                    end_year=self.end_year,
-                    cost=self.cost * other,
-                    expense_year=self.expense_year,
-                    cost_allocation=self.cost_allocation,
-                    rate=self.rate,
-                )
-
-                return new_asr
+            return new_asr
 
         else:
             raise ASRException(
@@ -1477,7 +1494,7 @@ class ASR:
             )
 
     def __rmul__(self, other):
-        return self.__rmul__(other)
+        return self.__mul__(other)
 
     def __truediv__(self, other):
 
@@ -1487,11 +1504,12 @@ class ASR:
 
         # Between an instance of ASR and an integer/float
         elif isinstance(other, (int, float)):
+
+            # Cannot divide with zero
             if other == 0:
-                raise ASRException(f"Cannot divide with a negative integer/float")
+                raise ASRException(f"Cannot divide with zero")
 
             else:
-
                 return ASR(
                     start_year=self.start_year,
                     end_year=self.end_year,

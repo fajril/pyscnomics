@@ -239,35 +239,42 @@ def test_psc_decline_balance_depreciation():
 
     # Calculated results
     calc_depre1 = psc_declining_balance_depreciation_rate(
-        cost=cost, useful_life=useful_life1, depreciation_factor=0.5, depreciation_len=10
+        cost=cost,
+        useful_life=useful_life1,
+        depreciation_factor=0.5,
+        depreciation_len=10,
     )
 
     calc_book1 = psc_declining_balance_book_value(
         cost=cost,
         useful_life=useful_life1,
         depreciation_factor=0.5,
-        depreciation_len=10
+        depreciation_len=10,
     )
 
     calc_depre2 = psc_declining_balance_depreciation_rate(
         cost=cost,
         useful_life=useful_life2,
         depreciation_factor=0.5,
-        depreciation_len=10
+        depreciation_len=10,
     )
 
     calc_book2 = psc_declining_balance_book_value(
         cost=cost,
         useful_life=useful_life2,
         depreciation_factor=0.5,
-        depreciation_len=10
+        depreciation_len=10,
     )
 
     # Execute testing (expected == calculated)
     np.testing.assert_allclose(depre1, calc_depre1)
-    np.testing.assert_allclose(cost - np.sum(calc_depre1), np.array([0]), atol=tolerance)
+    np.testing.assert_allclose(
+        cost - np.sum(calc_depre1), np.array([0]), atol=tolerance
+    )
     np.testing.assert_allclose(book1, calc_book1)
 
     np.testing.assert_allclose(depre2, calc_depre2)
-    np.testing.assert_allclose(cost - np.sum(calc_depre2), np.array([0]), atol=tolerance)
+    np.testing.assert_allclose(
+        cost - np.sum(calc_depre2), np.array([0]), atol=tolerance
+    )
     np.testing.assert_allclose(book2, calc_book2)

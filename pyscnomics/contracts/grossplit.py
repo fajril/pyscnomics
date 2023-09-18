@@ -8,8 +8,6 @@ import numpy as np
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
 from pyscnomics.econ.selection import FluidType, GrossSplitRegime
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
-from pyscnomics.econ.revenue import Lifting
 
 
 @dataclass
@@ -38,21 +36,6 @@ class GrossSplit(BaseProject):
     gas_dmo_holiday_duration: int = field(default=60)
 
     conversion_bboe2bscf: float = field(default=5.6)
-
-    # Fields/attributes to be defined later
-    _oil_lifting: Lifting = field(default=None, init=False, repr=False)
-    _gas_lifting: Lifting = field(default=None, init=False, repr=False)
-    _oil_tangible: Tangible = field(default=None, init=False, repr=False)
-    _gas_tangible: Tangible = field(default=None, init=False, repr=False)
-    _oil_intangible: Intangible = field(default=None, init=False, repr=False)
-    _gas_intangible: Intangible = field(default=None, init=False, repr=False)
-    _oil_opex: OPEX = field(default=None, init=False, repr=False)
-    _gas_opex: OPEX = field(default=None, init=False, repr=False)
-    _oil_asr: ASR = field(default=None, init=False, repr=False)
-    _gas_asr: ASR = field(default=None, init=False, repr=False)
-
-    _oil_revenue: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_revenue: np.ndarray = field(default=None, init=False, repr=False)
 
     _oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
@@ -127,7 +110,92 @@ class GrossSplit(BaseProject):
         self._oil_revenue = self._oil_lifting.revenue()
         self._gas_revenue = self._gas_lifting.revenue()
 
-    def _get_var_split(self):
+    def _wrapper_variable_split(self,
+                                regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
+
+        if regime == GrossSplitRegime.PERMEN_ESDM_8_2017:
+            variable_split_func = self._get_var_split_08_2017()
+
+        elif (regime == GrossSplitRegime.PERMEN_ESDM_52_2017 or
+              GrossSplitRegime.PERMEN_ESDM_20_2019 or
+              GrossSplitRegime.PERMEN_ESDM_12_2020):
+            variable_split_func = self._get_var_split_52_2017()
+
+        else:
+            variable_split_func = ValueError('Not Recognized Gross Split Regime')
+
+        return variable_split_func
+
+    def _get_var_split_08_2017(self):
+        """
+        A function to get the value of Variable Split based on the given parameters.
+
+        Returns
+        -------
+        _variable_split: float
+            The value of variable split.
+        """
+        params = {
+            'field_status': {
+                'POD I': 0.05,
+                'POD II': 0,
+                'POFD': 0,
+                'No POD': -0.05,
+            },
+            'field_loc': {
+                'Onshore': 0,
+                'Offshore (0<h<=20)': 0.08,
+                'Offshore (20<h<=50)': 0.1,
+                'Offshore (50<h<=150)': 0.12,
+                'Offshore (150<h<=1000)': 0.14,
+                'Offshore (h>1000)': 0.16,
+            },
+            'res_depth': {
+                '<=2500': 0,
+                '>2500': 0.01,
+            },
+            'infra_avail': {
+                'Well Developed': 0,
+                'New Frontier': 0.02,
+            },
+            'res_type': {
+                'Conventional': 0,
+                'Non Conventional': 0.16,
+            },
+            'co2_content': {
+                '<5': 0,
+                '5<=x<10': 0.005,
+                '10<=x<20': 0.01,
+                '20<=x<40': 0.015,
+                '40<=x<60': 0.02,
+                'x>=60': 0.04,
+            },
+            'h2s_content': {
+                '<100': 0,
+                '100<=x<300': 0.005,
+                '300<=x<500': 0.0075,
+                'x>=500': 0.01,
+            },
+            'api_oil': {
+                '<25': 0.01,
+                '>=25': 0,
+            },
+            'domestic_use': {
+                '<30': 0,
+                '30<=x<50': 0.02,
+                '50<=x<70': 0.03,
+                '70<=x<100': 0.04,
+            },
+            'prod_stage': {
+                'Primer': 0,
+                'Secondary': 0.03,
+                'Tertiary': 0.05,
+            }
+        }
+
+        self._variable_split = sum(params[param][getattr(self, param)] for param in params)
+
+    def _get_var_split_52_2017(self):
         """
         A function to get the value of Variable Split based on the given parameters.
 
@@ -163,6 +231,22 @@ class GrossSplit(BaseProject):
                 'Conventional': 0,
                 'Non Conventional': 0.16,
             },
+            'co2_content': {
+                '<5': 0,
+                '5<=x<10': 0.005,
+                '10<=x<20': 0.01,
+                '20<=x<40': 0.015,
+                '40<=x<60': 0.02,
+                'x>=60': 0.04,
+            },
+            'h2s_content': {
+                '<100': 0,
+                '100<=x<1000': 0.01,
+                '1000<=x<2000': 0.02,
+                '2000<=x<3000': 0.03,
+                '3000<=x<4000': 0.04,
+                'x>=4000': 0.05,
+            },
             'api_oil': {
                 '<25': 0.01,
                 '>=25': 0,
@@ -176,23 +260,7 @@ class GrossSplit(BaseProject):
                 'Primer': 0,
                 'Secondary': 0.06,
                 'Tertiary': 0.1,
-            },
-            'co2_content': {
-                '<5': 0,
-                '5<=x<10': 0.005,
-                '10<=x<20': 0.01,
-                '20<=x<40': 0.015,
-                '40<=x<60': 0.02,
-                'x>=60': 0.04,
-            },
-            'h2s_content': {
-                '<100': 0,
-                '100<=x<1000': 0.01,
-                '1000<=x<2000': 0.02,
-                '2000<=x<3000': 0.04,
-                '3000<=x<4000': 0.04,
-                'x>=4000': 0.05,
-            },
+            }
         }
 
         self._variable_split = sum(params[param][getattr(self, param)] for param in params)
@@ -202,17 +270,20 @@ class GrossSplit(BaseProject):
                                    price: float,
                                    cum: float,
                                    regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
-        prog_split = GrossSplitRegime.PERMEN_ESDM_20_2019
+
         if regime == GrossSplitRegime.PERMEN_ESDM_20_2019:
-            prog_split = self._calc_prog_split_52_2017(fluid, price, cum)
+            prog_split = self._get_prog_split_52_2017(fluid, price, cum)
 
         elif regime == GrossSplitRegime.PERMEN_ESDM_8_2017:
-            prog_split = self._calc_prog_split_08_2017(fluid, price, cum)
+            prog_split = self._get_prog_split_08_2017(fluid, price, cum)
+
+        else:
+            prog_split = ValueError('Not Recognized Gross Split Regime')
 
         return prog_split
 
     @staticmethod
-    def _calc_prog_split_08_2017(fluid: FluidType, price: float, cum: float):
+    def _get_prog_split_08_2017(fluid: FluidType, price: float, cum: float):
         # Indonesia's Ministry Regulations No.08 The Year of 2017. At Appendix B Progressive Component
         if fluid == FluidType.OIL:
             if price < 40:
@@ -254,7 +325,7 @@ class GrossSplit(BaseProject):
         return ps
 
     @staticmethod
-    def _calc_prog_split_52_2017(fluid: FluidType, price: float, cum: float):
+    def _get_prog_split_52_2017(fluid: FluidType, price: float, cum: float):
         # Indonesia's Ministry Regulations No.52 The Year of 2017. At Appendix B Progressive Component
         if fluid == FluidType.OIL:
             ps = (85 - price) * 0.25 / 100
@@ -306,8 +377,8 @@ class GrossSplit(BaseProject):
         self._get_revenue()
 
         # Depreciation (Tangible cost)
-        self._oil_depreciation, self._oil_undepreciated_asset = self._oil_tangible.psc_depreciation_rate()
-        self._gas_depreciation, self._gas_undepreciated_asset = self._gas_tangible.psc_depreciation_rate()
+        self._oil_depreciation, self._oil_undepreciated_asset = self._oil_tangible.total_depreciation_rate()
+        self._gas_depreciation, self._gas_undepreciated_asset = self._gas_tangible.total_depreciation_rate()
 
         # Non Capital Cost
         self._oil_non_capital = (
@@ -323,8 +394,7 @@ class GrossSplit(BaseProject):
         )
 
         # Variable Split. -> Will set the value of _variable_split
-        self._get_var_split()
-        # Iterating through Oil Lifting and Gas Lifting
+        self._wrapper_variable_split(regime=regime)
 
         # Base Split
         self._oil_base_split = np.full_like(self.project_years, fill_value=self.base_split_ctr_oil, dtype=float)
@@ -338,17 +408,16 @@ class GrossSplit(BaseProject):
                                           (self._gas_lifting.lifting_rate / self.conversion_bboe2bscf))
 
         # Progressive Split
+        vectorized_get_prog_split = np.vectorize(self._wrapper_progressive_split)
 
-        vectorized_calc_prog_split = np.vectorize(self._wrapper_progressive_split)
-
-        self._oil_prog_split = vectorized_calc_prog_split(
+        self._oil_prog_split = vectorized_get_prog_split(
             fluid=self._oil_lifting.fluid_type,
             price=self._oil_lifting.price,
             cum=self._cumulative_prod,
             regime=regime
         )
 
-        self._gas_prog_split = vectorized_calc_prog_split(
+        self._gas_prog_split = vectorized_get_prog_split(
             fluid=self._gas_lifting.fluid_type,
             price=self._gas_lifting.price,
             cum=self._cumulative_prod,
@@ -414,7 +483,7 @@ class GrossSplit(BaseProject):
 
         # DMO
         self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo(
-            onstream_date=self.onstream_date,
+            onstream_date=self.oil_onstream_date,
             start_date=self.start_date,
             project_years=self.project_years,
             dmo_holiday_duration=self.oil_dmo_holiday_duration,
@@ -426,7 +495,7 @@ class GrossSplit(BaseProject):
             is_dmo_end_weighted=is_dmo_end_weighted)
 
         self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo(
-            onstream_date=self.onstream_date,
+            onstream_date=self.gas_onstream_date,
             start_date=self.start_date,
             project_years=self.project_years,
             dmo_holiday_duration=self.gas_dmo_holiday_duration,
@@ -459,6 +528,3 @@ class GrossSplit(BaseProject):
         self._gas_gov_take = self._gas_gov_share + self._gas_ddmo + self._gas_tax
 
         return NotImplementedError
-
-    # ToDo: Variable SPlit Regime
-    # ToDo: Find the alternative of pack of if

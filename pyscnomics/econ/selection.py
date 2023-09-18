@@ -113,6 +113,8 @@ class TaxRegime(Enum):
     UU_07_2021 = "UU No.07 Tahun 2021"
 
 
+
+
 class FTPTaxRegime(Enum):
     PDJP_20_2017 = "Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
     PRE_2017 = "Pre Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"

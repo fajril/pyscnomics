@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-from pyscnomics.dataset.sample_refactored import load_dataset
+from pyscnomics.dataset.sample import load_dataset
 # pd.options.display.float_format = '{:,.2f}'.format
 
 pd.set_option('display.max_columns', None)

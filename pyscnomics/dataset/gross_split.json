@@ -1,7 +1,7 @@
 {
   "field_status":"No POD",
   "field_loc":"Onshore",
-  "res_depth":"<:2500",
+  "res_depth":"<=2500",
   "infra_avail":"Well Developed",
   "res_type":"Conventional",
   "api_oil":"<25",
