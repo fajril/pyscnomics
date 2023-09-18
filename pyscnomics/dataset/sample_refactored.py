@@ -19,9 +19,15 @@ def get_json_file_names() -> list:
     list_json_file
         The of available dataset.
     """
-    list_json_file = []
 
-    for filenames in os.listdir(os.getcwd()):
+    list_json_file = []
+    if 'pyscnomics\\pyscnomics' in os.path.dirname(os.getcwd()):
+        directory = (os.path.dirname(os.getcwd())) + '/dataset'
+
+    else:
+        directory = (os.path.dirname(os.getcwd())) + '/pyscnomics/dataset'
+
+    for filenames in os.listdir(os.path.abspath(directory)):
         if filenames.endswith(".json"):
             full_file_name = filenames
             file_name = os.path.splitext(full_file_name)[0]
@@ -45,7 +51,14 @@ def read_json_file(file_name: str) -> dict:
         The dictionary of the json file.
 
     """
-    with open(file_name + '.json') as user_file:
+    if 'pyscnomics\\pyscnomics' in os.path.dirname(os.getcwd()):
+        directory = (os.path.dirname(os.getcwd())) + '/dataset/' + file_name + '.json'
+
+    else:
+        directory = (os.path.dirname(os.getcwd())) + '/pyscnomics/dataset/' + file_name + '.json'
+
+    final_dir = os.path.abspath(directory)
+    with open(final_dir) as user_file:
         file_contents = user_file.read()
 
     return json.loads(file_contents)
@@ -195,7 +208,7 @@ def assign_cost(data_raw: dict) -> tuple:
     return tangible_list, intangible_list, opex_list, asr_list
 
 
-def load_testing(dataset_type: str, key: str):
+def load_testing(dataset_type: str, key: str) -> dict | ValueError:
     """
     A function to load the available test dataset.
 
@@ -292,12 +305,12 @@ def load_dataset(dataset_type: str, contract_type: str = 'project') -> BaseProje
 
 if __name__ == "__main__":
     # Choosing the Dataset and contract type
-    dataset = 'small_oil'
+    dataset = 'small_gas'
     contract = 'cost_recovery'
 
     # Returning the load_data function
     psc = load_dataset(dataset_type=dataset, contract_type=contract)
-    print('PSC load_data function \n', psc, '\n')
+    print('PSC load_data function \n', psc.lifting, '\n')
 
     # Returning the testing function
     psc_load = load_testing(dataset_type=dataset, key='FTP Gas')
