@@ -6,7 +6,8 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from pyscnomics.contracts.project import BaseProject
-from pyscnomics.econ.selection import FluidType
+from pyscnomics.contracts import psc_tools
+from pyscnomics.econ.selection import FluidType, GrossSplitRegime
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.econ.revenue import Lifting
 
@@ -57,6 +58,8 @@ class GrossSplit(BaseProject):
     _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _oil_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
     _gas_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _oil_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
     _gas_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -75,6 +78,39 @@ class GrossSplit(BaseProject):
     _oil_gov_share: np.ndarray = field(default=None, init=False, repr=False)
     _gas_gov_share: np.ndarray = field(default=None, init=False, repr=False)
 
+    _oil_cost_tobe_deducted: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_cost_tobe_deducted: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_carward_deduct_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_carward_deduct_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_deductible_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_deductible_cost: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_net_operating_profit: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_net_operating_profit: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_dmo_volume: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_ddmo: np.ndarray = field(default=None, init=False, repr=False)
+
+    _gas_dmo_volume: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ddmo: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_tax: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_ctr_cashflow: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ctr_cashflow: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_gov_take: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_gov_take: np.ndarray = field(default=None, init=False, repr=False)
+
     def _get_aggregate(self):
         self._oil_lifting = self._get_oil_lifting()
         self._gas_lifting = self._get_gas_lifting()
@@ -91,125 +127,89 @@ class GrossSplit(BaseProject):
         self._oil_revenue = self._oil_lifting.revenue()
         self._gas_revenue = self._gas_lifting.revenue()
 
-    @staticmethod
-    def _get_base_split(fluid: str) -> float:
+    def _get_var_split(self):
         """
-        Use to calculate base split of the given fluid type.
-        Parameters
-        ----------
-        fluid: str
-            The fluid type.
+        A function to get the value of Variable Split based on the given parameters.
 
         Returns
         -------
-        Value or the base split.
+        _variable_split: float
+            The value of variable split.
         """
-        if fluid == 'oil':
-            return 0.43
-        elif fluid == 'gas':
-            return 0.48
-        else:
-            raise ValueError('Unknown fluid type')
-
-    def _get_var_split(self):
-        statuses = {
-            'POD I': 0.05,
-            'POD II': 0.03,
-            'No POD': 0,
-        }
-        locations = {
-            'Onshore': 0,
-            'Offshore (0<h<=20)': 0.08,
-            'Offshore (20<h<=50)': 0.1,
-            'Offshore (50<h<=150)': 0.12,
-            'Offshore (150<h<=1000)': 0.14,
-            'Offshore (h>1000)': 0.16,
-        }
-        depths = {
-            '<=2500': 0,
-            '>2500': 0.01,
-        }
-        infrastructures = {
-            'Well Developed': 0,
-            'New Frontier Offshore': 0.02,
-            'New Frontier Onshore': 0.04,
-        }
-        reservoir_types = {
-            'Conventional': 0,
-            'Non Conventional': 0.16,
-        }
-        apis = {
-            '<25': 0.01,
-            '>=25': 0
-        }
-        tkdns = {
-            '30<=x<50': 0.02,
-            '50<=x<70': 0.03,
-            '70<=x<100': 0.04,
-        }
-        stages = {
-            'Primer': 0,
-            'Secondary': 0.06,
-            'Tertiary': 0.1,
-        }
-        co2s = {
-            '<5': 0,
-            '5<=x<10': 0.005,
-            '10<=x<20': 0.01,
-            '20<=x<40': 0.015,
-            '40<=x<60': 0.02,
-            'x>=60': 0.04,
-        }
-        h2ses = {
-            '<100': 0,
-            '100<=x<1000': 0.01,
-            '1000<=x<2000': 0.02,
-            '2000<=x<3000': 0.04,
-            '3000<=x<4000': 0.04,
-            'x>=4000': 0.05,
+        params = {
+            'field_status': {
+                'POD I': 0.05,
+                'POD II': 0.03,
+                'No POD': 0,
+            },
+            'field_loc': {
+                'Onshore': 0,
+                'Offshore (0<h<=20)': 0.08,
+                'Offshore (20<h<=50)': 0.1,
+                'Offshore (50<h<=150)': 0.12,
+                'Offshore (150<h<=1000)': 0.14,
+                'Offshore (h>1000)': 0.16,
+            },
+            'res_depth': {
+                '<=2500': 0,
+                '>2500': 0.01,
+            },
+            'infra_avail': {
+                'Well Developed': 0,
+                'New Frontier Offshore': 0.02,
+                'New Frontier Onshore': 0.04,
+            },
+            'res_type': {
+                'Conventional': 0,
+                'Non Conventional': 0.16,
+            },
+            'api_oil': {
+                '<25': 0.01,
+                '>=25': 0,
+            },
+            'domestic_use': {
+                '30<=x<50': 0.02,
+                '50<=x<70': 0.03,
+                '70<=x<100': 0.04,
+            },
+            'prod_stage': {
+                'Primer': 0,
+                'Secondary': 0.06,
+                'Tertiary': 0.1,
+            },
+            'co2_content': {
+                '<5': 0,
+                '5<=x<10': 0.005,
+                '10<=x<20': 0.01,
+                '20<=x<40': 0.015,
+                '40<=x<60': 0.02,
+                'x>=60': 0.04,
+            },
+            'h2s_content': {
+                '<100': 0,
+                '100<=x<1000': 0.01,
+                '1000<=x<2000': 0.02,
+                '2000<=x<3000': 0.04,
+                '3000<=x<4000': 0.04,
+                'x>=4000': 0.05,
+            },
         }
 
-        if self.field_status not in statuses:
-            raise ValueError('unknown status for calculating var split')
-        if self.field_loc not in locations:
-            raise ValueError('unknown location for calculating var split')
-        if self.res_depth not in depths:
-            raise ValueError('unknown depth for calculating var split')
-        if self.infra_avail not in infrastructures:
-            raise ValueError('unknown infrastructure for calculating var split')
-        if self.res_type not in reservoir_types:
-            raise ValueError('unknown reservoir_type for calculating var split')
-        if self.api_oil not in apis:
-            raise ValueError('unknown api for calculating var split')
-        if self.domestic_use not in tkdns:
-            raise ValueError('unknown TKDN for calculating var split')
-        if self.prod_stage not in stages:
-            raise ValueError('unknown stage for calculating var split')
-        if self.co2_content not in co2s:
-            raise ValueError('unknown co2 for calculating var split')
-        if self.h2s_content not in h2ses:
-            raise ValueError('unknown h2s for calculating var split')
+        self._variable_split = sum(params[param][getattr(self, param)] for param in params)
 
-        # POD
-        self._variable_split += statuses[self.field_status]
-        # Location
-        self._variable_split += locations[self.field_loc]
-        # Depth
-        self._variable_split += depths[self.res_depth]
-        # Infrastructure
-        self._variable_split += infrastructures[self.infra_avail]
-        # Reservoir
-        self._variable_split += reservoir_types[self.res_type]
-        # Density
-        self._variable_split += apis[self.api_oil]
-        # TKDN
-        self._variable_split += tkdns[self.domestic_use]
-        # Stage
-        self._variable_split += stages[self.prod_stage]
-        # CO2
-        self._variable_split += co2s[self.co2_content]
-        # H2S
-        self._variable_split += h2ses[self.h2s_content]
+    def _wrapper_progressive_split(self,
+                                   fluid: FluidType,
+                                   price: float,
+                                   cum: float,
+                                   regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
+        prog_split = GrossSplitRegime.PERMEN_ESDM_20_2019
+        if regime == GrossSplitRegime.PERMEN_ESDM_20_2019:
+            prog_split = self._calc_prog_split_52_2017(fluid, price, cum)
+
+        elif regime == GrossSplitRegime.PERMEN_ESDM_8_2017:
+            prog_split = self._calc_prog_split_08_2017(fluid, price, cum)
+
+        return prog_split
 
     @staticmethod
     def _calc_prog_split_08_2017(fluid: FluidType, price: float, cum: float):
@@ -257,10 +257,7 @@ class GrossSplit(BaseProject):
     def _calc_prog_split_52_2017(fluid: FluidType, price: float, cum: float):
         # Indonesia's Ministry Regulations No.52 The Year of 2017. At Appendix B Progressive Component
         if fluid == FluidType.OIL:
-            if price < 85:
-                ps = (85 - price) * 0.25 / 100
-            else:
-                ps = 0
+            ps = (85 - price) * 0.25 / 100
 
         elif fluid == FluidType.GAS:
             if price < 7:
@@ -291,14 +288,39 @@ class GrossSplit(BaseProject):
         # ps = ps + px
         return ps
 
-    def run(self):
+    @staticmethod
+    def _get_deductible_cost(ctr_gross_share, cost_tobe_deducted, carward_deduct_cost):
+
+        carward_deduct_cost = np.concatenate((np.zeros(1), carward_deduct_cost[:-1]))
+
+        return np.where(ctr_gross_share > (cost_tobe_deducted + carward_deduct_cost),
+                        cost_tobe_deducted + carward_deduct_cost,
+                        ctr_gross_share)
+
+    def run(self,
+            is_dmo_end_weighted=False,
+            regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
+
         # Compiling the aggregate and revenue
         self._get_aggregate()
         self._get_revenue()
 
-        # Depreciation (tangible cost)
+        # Depreciation (Tangible cost)
         self._oil_depreciation, self._oil_undepreciated_asset = self._oil_tangible.psc_depreciation_rate()
         self._gas_depreciation, self._gas_undepreciated_asset = self._gas_tangible.psc_depreciation_rate()
+
+        # Non Capital Cost
+        self._oil_non_capital = (
+                self._oil_intangible.expenditures()
+                + self._oil_opex.expenditures()
+                + self._oil_asr.expenditures()
+        )
+
+        self._gas_non_capital = (
+                self._gas_intangible.expenditures()
+                + self._gas_opex.expenditures()
+                + self._gas_asr.expenditures()
+        )
 
         # Variable Split. -> Will set the value of _variable_split
         self._get_var_split()
@@ -306,7 +328,7 @@ class GrossSplit(BaseProject):
 
         # Base Split
         self._oil_base_split = np.full_like(self.project_years, fill_value=self.base_split_ctr_oil, dtype=float)
-        self._gas_base_split = np.full_like(self.project_years, fill_value=self.base_split_ctr_oil, dtype=float)
+        self._gas_base_split = np.full_like(self.project_years, fill_value=self.base_split_ctr_gas, dtype=float)
 
         # Variable Split
         self._var_split_array = np.full_like(self.project_years, fill_value=self._variable_split, dtype=float)
@@ -316,18 +338,21 @@ class GrossSplit(BaseProject):
                                           (self._gas_lifting.lifting_rate / self.conversion_bboe2bscf))
 
         # Progressive Split
-        vectorized_calc_prog_split = np.vectorize(self._calc_prog_split_52_2017)
+
+        vectorized_calc_prog_split = np.vectorize(self._wrapper_progressive_split)
 
         self._oil_prog_split = vectorized_calc_prog_split(
             fluid=self._oil_lifting.fluid_type,
             price=self._oil_lifting.price,
-            cum=self._cumulative_prod
+            cum=self._cumulative_prod,
+            regime=regime
         )
 
         self._gas_prog_split = vectorized_calc_prog_split(
             fluid=self._gas_lifting.fluid_type,
             price=self._gas_lifting.price,
-            cum=self._cumulative_prod
+            cum=self._cumulative_prod,
+            regime=regime
         )
 
         # Ministerial Discretion
@@ -353,24 +378,87 @@ class GrossSplit(BaseProject):
         self._gas_total_expenses = (self._gas_tangible.expenditures() + self._gas_intangible.expenditures() +
                                     self._gas_opex.expenditures() + self._gas_asr.expenditures())
 
-        # 4. Calculate Transfer
+        # Cost to be Deducted
+        self._oil_cost_tobe_deducted = (self._oil_depreciation + self._oil_intangible.expenditures() +
+                                        self._oil_opex.expenditures() + self._oil_asr.expenditures())
+        self._gas_cost_tobe_deducted = (self._gas_depreciation + self._gas_intangible.expenditures() +
+                                        self._gas_opex.expenditures() + self._gas_asr.expenditures())
 
-        # 5. Calculate DMO Volume
+        # Carry Forward Deductible Cost (In PSC Cost Recovery called Unrecovered Cost)
+        self._oil_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._oil_depreciation,
+                                                                       non_capital=self._oil_non_capital,
+                                                                       revenue=self._oil_ctr_share,
+                                                                       ftp_ctr=np.zeros_like(self.project_years),
+                                                                       ftp_gov=np.zeros_like(self.project_years),
+                                                                       ic=np.zeros_like(self.project_years))
 
-        # 6. Calculate DMO Fee
+        self._gas_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._gas_depreciation,
+                                                                       non_capital=self._gas_non_capital,
+                                                                       revenue=self._gas_ctr_share,
+                                                                       ftp_ctr=np.zeros_like(self.project_years),
+                                                                       ftp_gov=np.zeros_like(self.project_years),
+                                                                       ic=np.zeros_like(self.project_years))
 
-        # 7. Calculate Net DMO
+        # Deductible Cost
+        self._oil_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._oil_ctr_share,
+                                                              cost_tobe_deducted=self._oil_cost_tobe_deducted,
+                                                              carward_deduct_cost=self._oil_carward_deduct_cost)
 
-        # 8. Parsing the DMO Holiday
+        self._gas_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._gas_ctr_share,
+                                                              cost_tobe_deducted=self._gas_cost_tobe_deducted,
+                                                              carward_deduct_cost=self._gas_carward_deduct_cost)
 
-        # 9. Calculate Taxable Income
+        # Contractor Net Operating Profit
+        self._oil_net_operating_profit = self._oil_ctr_share - self._oil_deductible_cost
+        self._gas_net_operating_profit = self._gas_ctr_share - self._gas_deductible_cost
 
-        # 10. Calculate Net Entitlement
+        # DMO
+        self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo(
+            onstream_date=self.onstream_date,
+            start_date=self.start_date,
+            project_years=self.project_years,
+            dmo_holiday_duration=self.oil_dmo_holiday_duration,
+            dmo_volume_portion=self.oil_dmo_volume_portion,
+            dmo_fee_portion=self.oil_dmo_fee_portion,
+            lifting=self._oil_lifting,
+            ctr_pretax_share=1,
+            unrecovered_cost=self._oil_net_operating_profit,
+            is_dmo_end_weighted=is_dmo_end_weighted)
 
-        # 11. Calculate Contractor Cashflow
+        self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo(
+            onstream_date=self.onstream_date,
+            start_date=self.start_date,
+            project_years=self.project_years,
+            dmo_holiday_duration=self.gas_dmo_holiday_duration,
+            dmo_volume_portion=self.gas_dmo_volume_portion,
+            dmo_fee_portion=self.gas_dmo_fee_portion,
+            lifting=self._gas_lifting,
+            ctr_pretax_share=1,
+            unrecovered_cost=self._gas_net_operating_profit,
+            is_dmo_end_weighted=is_dmo_end_weighted)
 
-        # 12. Calculate Government Take
+        # Taxable Income
+        self._oil_taxable_income = self._oil_net_operating_profit - self._oil_ddmo
+        self._gas_taxable_income = self._gas_net_operating_profit - self._gas_ddmo
 
-        # 13. Calculate Discounted Cash Flow
+        # Tax
+        # Todo: Wait for the Tax finished.
+        self._oil_tax = np.zeros_like(self.project_years)
+        self._gas_tax = np.zeros_like(self.project_years)
+
+        # Contractor Net Share
+        self._oil_ctr_net_share = self._oil_taxable_income - self._oil_tax
+        self._gas_ctr_net_share = self._gas_taxable_income - self._gas_tax
+
+        # Contractor Cash Flow
+        self._oil_ctr_cashflow = self._oil_ctr_share - self._oil_total_expenses - self._oil_ddmo - self._oil_tax
+        self._gas_ctr_cashflow = self._gas_ctr_share - self._gas_total_expenses - self._gas_ddmo - self._gas_tax
+
+        # Government Take
+        self._oil_gov_take = self._oil_gov_share + self._oil_ddmo + self._oil_tax
+        self._gas_gov_take = self._gas_gov_share + self._gas_ddmo + self._gas_tax
 
         return NotImplementedError
+
+    # ToDo: Variable SPlit Regime
+    # ToDo: Find the alternative of pack of if
