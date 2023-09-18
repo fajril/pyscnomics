@@ -5,6 +5,12 @@ Calculate depreciation.
 import numpy as np
 
 
+class DepreciationException(Exception):
+    """Raise an exception error for a misuse of depreciation method"""
+
+    pass
+
+
 def straight_line_depreciation_rate(
     cost: float, salvage_value: float, useful_life: int, depreciation_len: int = 0
 ) -> np.ndarray:
@@ -39,12 +45,6 @@ def straight_line_depreciation_rate(
 
     If the `depreciation_len` is greater than the `useful_life`, the depreciation charge array
     is extended with zero values for the additional periods.
-
-    Examples
-    --------
-    >>> depreciation_charge = straight_line_depreciation_rate(cost=1000, salvage_value=100, useful_life=5)
-    >>> print(depreciation_charge)
-    [180. 180. 180. 180. 180.]
     """
 
     depreciation_rate = (cost - salvage_value) / useful_life
@@ -92,12 +92,6 @@ def straight_line_book_value(
 
     If the `depreciation_len` is greater than the `useful_life`, the book value array is extended
     by calculating the remaining book values based on the depreciation charge.
-
-    Examples
-    --------
-    >>> book_value = straight_line_book_value(cost=1000, salvage_value=100, useful_life=5)
-    >>> print(book_value)
-    [ 820.  640.  460.  280.  100.]
     """
 
     # Calculate depreciation charge from function straight_line_depreciation_rate()
@@ -149,16 +143,17 @@ def declining_balance_depreciation_rate(
     periods = np.arange(1, useful_life, 1, dtype=np.int_)
 
     # Depreciation factor
-    depreciation_rate = decline_factor / useful_life
+    depreciation_factor = decline_factor / useful_life
 
     # Depreciation charge
     depreciation_charge = (
-        depreciation_rate * cost * np.power(1 - depreciation_rate, periods - 1)
+        depreciation_factor * cost * np.power(1 - depreciation_factor, periods - 1)
     )
 
     # When depreciation charge reaches the salvage value
     if depreciation_charge.sum() > (cost - salvage_value):
         remaining_depreciation = cost - salvage_value - np.cumsum(depreciation_charge)
+
         remaining_depreciation = np.where(
             remaining_depreciation > 0, remaining_depreciation, 0
         )
@@ -252,7 +247,7 @@ def psc_declining_balance_depreciation_rate(
 
     """
     Calculate the declining balance depreciation charges following
-    declining balance method.
+    psc declining balance method.
 
     Parameters:
     -----------
@@ -273,27 +268,49 @@ def psc_declining_balance_depreciation_rate(
     --------
     depreciation_charge: np.ndarray
         An array containing the calculated depreciation charges for each period.
+
+    Notes:
+    ------
+    The value of depreciation_factor must fall within the following interval:
+    0 <= depreciation_factor <= 1.
+
+    A value that falls outside the prescribed interval is in contrast with the logical
+    concept of psc declining balance.
     """
 
-    # Create an array of exponents
-    periods = np.arange(1, useful_life, 1, dtype=np.int_)
+    if depreciation_factor > 1:
+        raise DepreciationException(
+            f"The value of depreciation_factor must fall within the following interval: "
+            f"0 <= depreciation_factor <= 1 "
+        )
 
-    # Calculate depreciation charge
-    depreciation_charge = (
-        depreciation_factor * cost * np.power(1 - depreciation_factor, periods - 1)
-    )
+    elif depreciation_factor < 0:
+        raise DepreciationException(
+            f"The value of depreciation_factor must fall within the following interval: "
+            f"0 <= depreciation_factor <= 1 "
+        )
 
-    # Modify depreciation charge; specify the last element as the remaining (unpaid) cost
-    depreciation_charge = np.concatenate(
-        (depreciation_charge, cost - np.sum(depreciation_charge, keepdims=True))
-    )
+    else:
 
-    # Modify depreciation charge; accounting for project duration
-    if depreciation_len > len(depreciation_charge):
-        extension = np.zeros(depreciation_len - len(depreciation_charge))
-        depreciation_charge = np.concatenate((depreciation_charge, extension))
+        # Create an array of exponents
+        periods = np.arange(1, useful_life, 1, dtype=np.int_)
 
-    return depreciation_charge
+        # Calculate depreciation charge
+        depreciation_charge = (
+            depreciation_factor * cost * np.power(1 - depreciation_factor, periods - 1)
+        )
+
+        # Modify depreciation charge; specify the last element as the remaining (unpaid) cost
+        depreciation_charge = np.concatenate(
+            (depreciation_charge, cost - np.sum(depreciation_charge, keepdims=True))
+        )
+
+        # Modify depreciation charge; accounting for project duration
+        if depreciation_len > len(depreciation_charge):
+            extension = np.zeros(depreciation_len - len(depreciation_charge))
+            depreciation_charge = np.concatenate((depreciation_charge, extension))
+
+        return depreciation_charge
 
 
 def psc_declining_balance_book_value(

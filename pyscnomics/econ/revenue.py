@@ -4,6 +4,7 @@ Prepares lifting data and calculate the revenue.
 
 import numpy as np
 from dataclasses import dataclass, field
+
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 
@@ -52,15 +53,15 @@ class Lifting:
 
     def __post_init__(self):
 
-        # Condition when user does not insert production rate data
+        # When user does not insert production rate data
         if self.prod_rate is None:
             self.prod_rate = self.lifting_rate.copy()
 
-        # Condition when user does not insert GHV data; the default value of GHV is set to unity
+        # When user does not insert GHV data
         if self.ghv is None:
             self.ghv = np.ones(len(self.lifting_rate))
 
-        # Initial check for inappropriate input data; raise a "ValueError" for any inappropriate data
+        # Check for inappropriate input data
         arr_length = self.lifting_rate.shape[0]
 
         if not all(
@@ -68,14 +69,14 @@ class Lifting:
             for arr in [self.price, self.ghv, self.prod_rate, self.prod_year]
         ):
             raise LiftingException(
-                f"Inequal length of array: lifting_rate: {len(self.lifting_rate)},"
-                f" ghv: {len(self.ghv)},"
-                f" production: {len(self.prod_rate)},"
-                f" prod_year: {len(self.prod_year)}"
+                f"Inequal length of array: lifting_rate: {len(self.lifting_rate)}, "
+                f"price: {len(self.price)}, "
+                f"ghv: {len(self.ghv)}, "
+                f"production: {len(self.prod_rate)}, "
+                f"prod_year: {len(self.prod_year)}, "
             )
 
-        # Define an attribute depicting project duration;
-        # Raise a "ValueError" if start_year is after then end_year
+        # Raise an error message: start_year is after end_year
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
             self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
@@ -85,11 +86,25 @@ class Lifting:
                 f"start year {self.start_year} is after the end year: {self.end_year}"
             )
 
-        # Specify an error condition when project duration is less than the length of production data
+        # Raise an error message: project duration is less than the length of production data
         if self.project_duration < len(self.lifting_rate):
             raise LiftingException(
                 f"Length of project duration: ({self.project_duration})"
                 f" is less than the length of lifting data: ({len(self.lifting_rate)})"
+            )
+
+        # Raise an error message: prod_year is before the start year of the project
+        if np.min(self.prod_year) < self.start_year:
+            raise LiftingException(
+                f"The production year ({np.min(self.prod_year)}) "
+                f"is before the start year of the project ({self.start_year})"
+            )
+
+        # Raise an error message: prod_year is after the end year of the project
+        if np.max(self.prod_year) > self.end_year:
+            raise LiftingException(
+                f"The production year ({np.max(self.prod_year)}) "
+                f"is after the end year of the project ({self.end_year})"
             )
 
     def revenue(self) -> np.ndarray:
@@ -100,12 +115,15 @@ class Lifting:
         -------
         rev: np.ndarray
             The revenue of a particular fluid type.
+
+        Notes
+        -----
+        The revenue is calculated as follows: revenue = lifting rate * price * ghv.
+        The function np.bincount() is used to align the revenue elements with its
+        correponding year.
         """
 
-        # Calculate revenue = lifting rate * price * ghv
         rev = self.lifting_rate * self.price * self.ghv
-
-        # Revenues must be aligned with the corresponding prod_year
         rev_update = np.bincount(self.prod_year - self.start_year, weights=rev)
 
         # Modify revenues, acoounting for project duration
@@ -139,10 +157,7 @@ class Lifting:
             return np.allclose(np.sum(self.revenue()), other)
 
         else:
-            raise LiftingException(
-                f"Must compare an instance of Lifting with another instance of Lifting, "
-                f"an integer, or a float"
-            )
+            return False
 
     def __lt__(self, other):
 
@@ -210,7 +225,7 @@ class Lifting:
 
     def __add__(self, other):
 
-        # Between an instance of Lifting with another instance of Lifintg
+        # Between an instance of Lifting with another instance of Lifting
         if isinstance(other, Lifting):
 
             # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
@@ -299,33 +314,19 @@ class Lifting:
         elif isinstance(other, (int, float, np.ndarray)):
             return self.revenue() - other
 
-        # If "other" is an instance of Tangible Cost object
-        elif isinstance(other, Tangible):
-            return self.revenue() - other.total_depreciation_rate()
-
-        # If "other" is an instance of Intangible Cost object
-        elif isinstance(other, Intangible):
-            raise NotImplementedError
-
-        # If "other" is an instance of OPEX object
-        elif isinstance(other, OPEX):
-            raise NotImplementedError
-
-        # If "other" is an instance of ASR object
-        elif isinstance(other, ASR):
-            raise NotImplementedError
+        else:
+            raise LiftingException(
+                f"Must subtract an instance of Lifting with another instance "
+                f"of Lifting or int/float "
+                f"{other}({other.__class__.__qualname__}) is not an instance of "
+                f"Lifting or int/float"
+            )
 
     def __mul__(self, other):
 
         # Multiplication is allowed only with an integer/a float
         if isinstance(other, (int, float)):
-
-            # Cannot multiply with zero or with a negative integer/float
-            if other < 0:
-                raise LiftingException(f"Cannot multiply a negative integer/float")
-
-            else:
-                return self.revenue() * other
+            return self.revenue() * other
 
         else:
             raise LiftingException(
@@ -349,7 +350,7 @@ class Lifting:
         # Between an instance of Lifting and an integer/float
         elif isinstance(other, (int, float)):
 
-            # Cannot divide with zero or a negative value
+            # Cannot divide with zero
             if other == 0:
                 raise LiftingException(f"Cannot divide with zero")
 

@@ -7,7 +7,7 @@ import numpy as np
 from pyscnomics.tools import helper
 
 
-def test_sumarizer():
+def test_summarizer():
     """
     A unit test for summarizer test.
     """
@@ -32,7 +32,7 @@ def test_sumarizer():
 
     expected_result_2 = [100, 100, 150, 150, 150, 50, 50]
 
-    result_2 = functools.summarizer(
+    result_2 = helper.summarizer(
         array1=array1, array2=array2, startYear1=startYear1, startYear2=startYear2
     )
 
@@ -44,7 +44,7 @@ def test_sumarizer():
 
     expected_result_3 = [100, 200, 200, 200, 100]
 
-    result_3 = functools.summarizer(
+    result_3 = helper.summarizer(
         array1=array1, array2=array2, startYear1=startYear1, startYear2=startYear2
     )
 
@@ -56,7 +56,7 @@ def test_sumarizer():
 
     expected_result_4 = [100, 200, 200, 200, 100]
 
-    result_4 = functools.summarizer(
+    result_4 = helper.summarizer(
         array1=array1, array2=array2, startYear1=startYear1, startYear2=startYear2
     )
 
