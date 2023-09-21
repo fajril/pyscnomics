@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 
@@ -29,9 +30,13 @@ psc_table['DDMO'] = psc._oil_ddmo
 psc_table['Taxable Income'] = psc._oil_taxable_income
 psc_table['Net CTR Share'] = psc._oil_ctr_net_share
 psc_table['CTR CashFlow'] = psc._oil_ctr_cashflow
+psc_table['Government Take'] = psc._oil_gov_take
+psc_table['Cumulative CTR CashFlow'] = np.cumsum(psc._oil_ctr_cashflow)
 
+print('Calculation Table: Gross Split \n', psc_table, '\n')
 
-print(psc_table, '\n')
+print()
+
 
 
 

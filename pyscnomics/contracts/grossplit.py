@@ -8,6 +8,7 @@ import numpy as np
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
 from pyscnomics.econ.selection import FluidType, GrossSplitRegime
+from pyscnomics.econ.results import CashFlow
 
 
 @dataclass
@@ -93,6 +94,9 @@ class GrossSplit(BaseProject):
 
     _oil_gov_take: np.ndarray = field(default=None, init=False, repr=False)
     _gas_gov_take: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_cashflow: CashFlow = field(default=None, init=False, repr=False)
+    _gas_cashflow: CashFlow = field(default=None, init=False, repr=False)
 
     def _get_aggregate(self):
         self._oil_lifting = self._get_oil_lifting()
@@ -370,7 +374,8 @@ class GrossSplit(BaseProject):
 
     def run(self,
             is_dmo_end_weighted=False,
-            regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
+            regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
+            disc_rate: float = 0.1):
 
         # Compiling the aggregate and revenue
         self._get_aggregate()
@@ -468,7 +473,7 @@ class GrossSplit(BaseProject):
                                                                        ftp_gov=np.zeros_like(self.project_years),
                                                                        ic=np.zeros_like(self.project_years))
 
-        # Deductible Cost
+        # Deductible Cost (In PSC Cost Recovery called Cost Recovery)
         self._oil_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._oil_ctr_share,
                                                               cost_tobe_deducted=self._oil_cost_tobe_deducted,
                                                               carward_deduct_cost=self._oil_carward_deduct_cost)
@@ -482,28 +487,30 @@ class GrossSplit(BaseProject):
         self._gas_net_operating_profit = self._gas_ctr_share - self._gas_deductible_cost
 
         # DMO
-        self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo(
+        self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo_2(
             onstream_date=self.oil_onstream_date,
             start_date=self.start_date,
             project_years=self.project_years,
             dmo_holiday_duration=self.oil_dmo_holiday_duration,
             dmo_volume_portion=self.oil_dmo_volume_portion,
             dmo_fee_portion=self.oil_dmo_fee_portion,
-            lifting=self._oil_lifting,
+            share=self._oil_ctr_share,
+            ets_ctr=self._oil_net_operating_profit,
             ctr_pretax_share=1,
-            unrecovered_cost=self._oil_net_operating_profit,
+            unrecovered_cost=self._oil_carward_deduct_cost,
             is_dmo_end_weighted=is_dmo_end_weighted)
 
-        self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo(
+        self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo_2(
             onstream_date=self.gas_onstream_date,
             start_date=self.start_date,
             project_years=self.project_years,
             dmo_holiday_duration=self.gas_dmo_holiday_duration,
             dmo_volume_portion=self.gas_dmo_volume_portion,
             dmo_fee_portion=self.gas_dmo_fee_portion,
-            lifting=self._gas_lifting,
+            share=self._gas_ctr_share,
+            ets_ctr=self._gas_net_operating_profit,
             ctr_pretax_share=1,
-            unrecovered_cost=self._gas_net_operating_profit,
+            unrecovered_cost=self._gas_carward_deduct_cost,
             is_dmo_end_weighted=is_dmo_end_weighted)
 
         # Taxable Income
@@ -527,4 +534,15 @@ class GrossSplit(BaseProject):
         self._oil_gov_take = self._oil_gov_share + self._oil_ddmo + self._oil_tax
         self._gas_gov_take = self._gas_gov_share + self._gas_ddmo + self._gas_tax
 
-        return NotImplementedError
+        # FixMe: How to apply the year of discount factor as the given Gross Split sample
+        self._oil_cashflow = CashFlow(start_date=self.start_date,
+                                      end_date=self.end_date,
+                                      cash=self._oil_ctr_cashflow,
+                                      disc_rate=disc_rate,
+                                      cash_allocation=FluidType.OIL)
+
+        self._gas_cashflow = CashFlow(start_date=self.start_date,
+                                      end_date=self.end_date,
+                                      cash=self._gas_ctr_cashflow,
+                                      disc_rate=disc_rate,
+                                      cash_allocation=FluidType.GAS)

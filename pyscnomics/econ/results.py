@@ -35,7 +35,7 @@ class CashFlow:
 
     def __post_init__(self):
         if self.start_date < self.end_date:
-            self.year_duration = self.end_date.year() - self.start_date.year() + 1
+            self.year_duration = self.end_date.year - self.start_date.year + 1
         else:
             raise ValueError(
                 f"start date {self.start_date} "

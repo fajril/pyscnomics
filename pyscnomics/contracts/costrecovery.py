@@ -362,11 +362,11 @@ class CostRecovery(BaseProject):
         (
             self._oil_depreciation,
             self._oil_undepreciated_asset,
-        ) = self._oil_tangible.psc_depreciation_rate()
+        ) = self._oil_tangible.total_depreciation_rate()
         (
             self._gas_depreciation,
             self._gas_undepreciated_asset,
-        ) = self._gas_tangible.psc_depreciation_rate()
+        ) = self._gas_tangible.total_depreciation_rate()
 
         # Non-capital costs (intangible + opex + asr)
         self._oil_non_capital = (
@@ -497,26 +497,28 @@ class CostRecovery(BaseProject):
             ets=self._gas_ets_after_transfer, pretax_ctr=self.gas_ctr_pretax_share
         )
 
-        self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo(
-            onstream_date=self.onstream_date,
+        self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo_2(
+            onstream_date=self.oil_onstream_date,
             start_date=self.start_date,
             project_years=self.project_years,
             dmo_holiday_duration=self.oil_dmo_holiday_duration,
             dmo_volume_portion=self.oil_dmo_volume_portion,
             dmo_fee_portion=self.oil_dmo_fee_portion,
-            lifting=self._oil_lifting,
+            share=self._oil_revenue,
+            ets_ctr=self._oil_contractor_share,
             ctr_pretax_share=self.oil_ctr_pretax_share,
             unrecovered_cost=self._oil_unrecovered_after_transfer,
             is_dmo_end_weighted=is_dmo_end_weighted)
 
-        self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo(
-            onstream_date=self.onstream_date,
+        self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo_2(
+            onstream_date=self.gas_onstream_date,
             start_date=self.start_date,
             project_years=self.project_years,
             dmo_holiday_duration=self.gas_dmo_holiday_duration,
             dmo_volume_portion=self.gas_dmo_volume_portion,
             dmo_fee_portion=self.gas_dmo_fee_portion,
-            lifting=self._gas_lifting,
+            share=self._gas_revenue,
+            ets_ctr=self._gas_contractor_share,
             ctr_pretax_share=self.gas_ctr_pretax_share,
             unrecovered_cost=self._gas_unrecovered_after_transfer,
             is_dmo_end_weighted=is_dmo_end_weighted)

@@ -221,3 +221,42 @@ def get_dmo(onstream_date: date,
     ddmo = (dmo_volume * lifting.price) - dmo_fee
 
     return dmo_volume, dmo_fee, ddmo
+
+
+def get_dmo_2(onstream_date: date,
+              start_date: date,
+              project_years: np.ndarray,
+              dmo_holiday_duration: int,
+              dmo_volume_portion: float,
+              dmo_fee_portion: float,
+              share: np.ndarray,
+              ets_ctr: np.ndarray,
+              ctr_pretax_share: float,
+              unrecovered_cost: np.ndarray,
+              is_dmo_end_weighted) -> tuple:
+
+    # DMO end date
+    dmo_end_date = onstream_date + dateutils.relativedelta(
+        months=dmo_holiday_duration
+    )
+
+    # Calculate DMO volume
+    dmo_holiday = np.where(project_years >= dmo_end_date.year, False, True)
+    dmo = np.minimum((dmo_volume_portion * share * ctr_pretax_share), ets_ctr)
+    dmo_fee = np.where(np.logical_or(unrecovered_cost > 0, ~dmo_holiday),
+                       dmo_fee_portion * dmo,
+                       dmo)
+
+    # Identify position of dmo start year in project years array
+    dmo_indices = onstream_date.year - start_date.year
+
+    # Weighted dmo fee condition if the period of dmo is ended in the middle of the year
+    if unrecovered_cost[dmo_indices] > 0 and is_dmo_end_weighted:
+        dmo_fee[dmo_indices] = (dmo_end_date.month / 12 * dmo[dmo_indices] +
+                                (1 - dmo_end_date.month / 12) * dmo[dmo_indices] *
+                                dmo_fee_portion)
+
+    # Calculate Net DMO
+    ddmo = dmo - dmo_fee
+
+    return dmo, dmo_fee, ddmo
