@@ -5,12 +5,14 @@ from datetime import date
 from pyscnomics.econ.revenue import Lifting
 
 
-def get_unrecovered_cost(depreciation: np.ndarray,
-                         non_capital: np.ndarray,
-                         revenue: np.ndarray,
-                         ftp_ctr: np.ndarray,
-                         ftp_gov: np.ndarray,
-                         ic: np.ndarray) -> np.ndarray:
+def get_unrecovered_cost(
+    depreciation: np.ndarray,
+    non_capital: np.ndarray,
+    revenue: np.ndarray,
+    ftp_ctr: np.ndarray,
+    ftp_gov: np.ndarray,
+    ic: np.ndarray,
+) -> np.ndarray:
     """
     A function to get the array of unrecovered cost.
 
@@ -61,10 +63,12 @@ def get_cost_to_be_recovered(unrecovered_cost: np.ndarray) -> np.ndarray:
     return np.where(ctr > 0, ctr, 0)
 
 
-def get_transfer(gas_unrecovered: np.ndarray,
-                 oil_unrecovered: np.ndarray,
-                 gas_ets_pretransfer: np.ndarray,
-                 oil_ets_pretransfer: np.ndarray) -> tuple:
+def get_transfer(
+    gas_unrecovered: np.ndarray,
+    oil_unrecovered: np.ndarray,
+    gas_ets_pretransfer: np.ndarray,
+    oil_ets_pretransfer: np.ndarray,
+) -> tuple:
     """
     A function to get the transferred cost between oil and gas.
 
@@ -118,9 +122,11 @@ def get_transfer(gas_unrecovered: np.ndarray,
     return trf2oil, trf2gas
 
 
-def get_ets_after_transfer(ets_before_transfer: np.ndarray,
-                           trfto: np.ndarray,
-                           unrecovered_after_transfer: np.ndarray):
+def get_ets_after_transfer(
+    ets_before_transfer: np.ndarray,
+    trfto: np.ndarray,
+    unrecovered_after_transfer: np.ndarray,
+):
     """
     A function to get the Equity To be Split (ETS) after transfer.
 
@@ -149,16 +155,18 @@ def get_ets_after_transfer(ets_before_transfer: np.ndarray,
     return ets_after_transfer
 
 
-def get_dmo(onstream_date: date,
-            start_date: date,
-            project_years: np.ndarray,
-            dmo_holiday_duration: int,
-            dmo_volume_portion: float,
-            dmo_fee_portion: float,
-            lifting: Lifting,
-            ctr_pretax_share: float,
-            unrecovered_cost: np.ndarray,
-            is_dmo_end_weighted) -> tuple:
+def get_dmo(
+    onstream_date: date,
+    start_date: date,
+    project_years: np.ndarray,
+    dmo_holiday_duration: int,
+    dmo_volume_portion: float,
+    dmo_fee_portion: float,
+    lifting: Lifting,
+    ctr_pretax_share: float,
+    unrecovered_cost: np.ndarray,
+    is_dmo_end_weighted,
+) -> tuple:
     """
     A function to get the array of Domestic Market Obligation (DMO).
 
@@ -197,9 +205,7 @@ def get_dmo(onstream_date: date,
     """
 
     # DMO end date
-    dmo_end_date = onstream_date + dateutils.relativedelta(
-        months=dmo_holiday_duration
-    )
+    dmo_end_date = onstream_date + dateutils.relativedelta(months=dmo_holiday_duration)
 
     # Identify position of dmo start year in project years array
     dmo_indices = onstream_date.year - start_date.year
@@ -207,15 +213,24 @@ def get_dmo(onstream_date: date,
     # Calculate DMO volume
     dmo_holiday = np.where(project_years >= dmo_end_date.year, False, True)
     dmo_volume = dmo_volume_portion * lifting.lifting_rate * ctr_pretax_share
-    dmo_fee = np.where(np.logical_or(unrecovered_cost > 0, ~dmo_holiday),
-                       dmo_fee_portion * lifting.price * dmo_volume,
-                       lifting.price * dmo_volume)
+    dmo_fee = np.where(
+        np.logical_or(unrecovered_cost > 0, ~dmo_holiday),
+        dmo_fee_portion * lifting.price * dmo_volume,
+        lifting.price * dmo_volume,
+    )
 
     # Weighted dmo fee condition if the period of dmo is ended in the middle of the year
     if unrecovered_cost[dmo_indices] > 0 and is_dmo_end_weighted:
-        dmo_fee[dmo_indices] = (dmo_end_date.month / 12 * lifting.price[dmo_indices] * dmo_volume[dmo_indices] +
-                                (1 - dmo_end_date.month / 12) * dmo_volume[dmo_indices] *
-                                dmo_fee_portion * lifting.price[dmo_indices])
+        dmo_fee[dmo_indices] = (
+            dmo_end_date.month
+            / 12
+            * lifting.price[dmo_indices]
+            * dmo_volume[dmo_indices]
+            + (1 - dmo_end_date.month / 12)
+            * dmo_volume[dmo_indices]
+            * dmo_fee_portion
+            * lifting.price[dmo_indices]
+        )
 
     # Calculate Net DMO
     ddmo = (dmo_volume * lifting.price) - dmo_fee

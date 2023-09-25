@@ -60,7 +60,7 @@ def summarizer(
         endYear2 = startYear2 + len(array2) - 1
 
     else:
-        array2.resize(endYear1 - start_year + 1, refcheck=False)
+        array2.resize(endYear2 - start_year + 1, refcheck=False)
 
     end_year = max(endYear1, endYear2)
 

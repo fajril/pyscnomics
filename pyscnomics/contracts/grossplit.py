@@ -568,11 +568,11 @@ class GrossSplit(BaseProject):
         self._oil_cashflow = CashFlow(start_date=self.start_date,
                                       end_date=self.end_date,
                                       cash=self._oil_ctr_cashflow,
-                                      disc_rate=disc_rate,
+                                      cashed_year=self.project_years,
                                       cash_allocation=FluidType.OIL)
 
         self._gas_cashflow = CashFlow(start_date=self.start_date,
                                       end_date=self.end_date,
                                       cash=self._gas_ctr_cashflow,
-                                      disc_rate=disc_rate,
+                                      cashed_year=self.project_years,
                                       cash_allocation=FluidType.GAS)

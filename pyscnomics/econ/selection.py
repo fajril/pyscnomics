@@ -106,13 +106,12 @@ class TaxRegime(Enum):
     NAILED_DOWN (str): Special tax regime designated as "nailed down"
     PREVAILING (str): General tax regime referred to as "prevailing"
     """
+
     NAILED_DOWN = "nailed down"
     PREVAILING = "prevailing"
     UU_36_2008 = "UU No.36 Tahun 2008"
     UU_02_2020 = "UU No.02 Tahun 2020"
     UU_07_2021 = "UU No.07 Tahun 2021"
-
-
 
 
 class FTPTaxRegime(Enum):

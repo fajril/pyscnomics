@@ -86,13 +86,6 @@ class Lifting:
                 f"start year {self.start_year} is after the end year: {self.end_year}"
             )
 
-        # Raise an error message: project duration is less than the length of production data
-        if self.project_duration < len(self.lifting_rate):
-            raise LiftingException(
-                f"Length of project duration: ({self.project_duration})"
-                f" is less than the length of lifting data: ({len(self.lifting_rate)})"
-            )
-
         # Raise an error message: prod_year is before the start year of the project
         if np.min(self.prod_year) < self.start_year:
             raise LiftingException(
