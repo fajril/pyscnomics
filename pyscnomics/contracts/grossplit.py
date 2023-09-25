@@ -69,6 +69,14 @@ class GrossSplit(BaseProject):
     _oil_deductible_cost: np.ndarray = field(default=None, init=False, repr=False)
     _gas_deductible_cost: np.ndarray = field(default=None, init=False, repr=False)
 
+    _transfer_to_oil: np.ndarray = field(default=None, init=False, repr=False)
+    _transfer_to_gas: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_carward_cost_aftertf: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_carward_cost_aftertf: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_ctr_share_after_transfer: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ctr_share_after_transfer: np.ndarray = field(default=None, init=False, repr=False)
+
     _oil_net_operating_profit: np.ndarray = field(default=None, init=False, repr=False)
     _gas_net_operating_profit: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -482,9 +490,31 @@ class GrossSplit(BaseProject):
                                                               cost_tobe_deducted=self._gas_cost_tobe_deducted,
                                                               carward_deduct_cost=self._gas_carward_deduct_cost)
 
+        # Transfer
+        self._transfer_to_oil, self._transfer_to_gas = psc_tools.get_transfer(
+            oil_unrecovered=self._oil_carward_deduct_cost,
+            gas_unrecovered=self._gas_carward_deduct_cost,
+            oil_ets_pretransfer=self._oil_ctr_share,
+            gas_ets_pretransfer=self._gas_ctr_share)
+
+        # Carry Forward Deductible Cost After Transfer
+        self._oil_carward_cost_aftertf = self._oil_carward_deduct_cost - self._transfer_to_gas
+        self._gas_carward_cost_aftertf = self._gas_carward_deduct_cost - self._transfer_to_oil
+
+        # Contractor Share After Transfer
+        self._oil_ctr_share_after_transfer = psc_tools.get_ets_after_transfer(
+            ets_before_transfer=self._oil_ctr_share,
+            trfto=self._transfer_to_oil,
+            unrecovered_after_transfer=self._oil_carward_cost_aftertf)
+
+        self._gas_ctr_share_after_transfer = psc_tools.get_ets_after_transfer(
+            ets_before_transfer=self._gas_ctr_share,
+            trfto=self._transfer_to_gas,
+            unrecovered_after_transfer=self._gas_carward_cost_aftertf)
+
         # Contractor Net Operating Profit
-        self._oil_net_operating_profit = self._oil_ctr_share - self._oil_deductible_cost
-        self._gas_net_operating_profit = self._gas_ctr_share - self._gas_deductible_cost
+        self._oil_net_operating_profit = self._oil_ctr_share_after_transfer - self._oil_deductible_cost
+        self._gas_net_operating_profit = self._gas_ctr_share_after_transfer - self._gas_deductible_cost
 
         # DMO
         self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo_2(
