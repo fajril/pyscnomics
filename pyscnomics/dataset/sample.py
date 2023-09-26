@@ -3,10 +3,10 @@ import os
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
-from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.econ.revenue import Lifting, FluidType
 
@@ -93,12 +93,25 @@ def read_fluid_type(fluid: str) -> FluidType:
 
 
 def assign_onstream_date(date_data: None | str) -> datetime | None:
-    if date_data is not None:
-        result = datetime.strptime(date_data, '%d/%m/%Y').date()
-    else:
-        result = None
+    """
+    A funtion to assign onstream date into datetime format.
+    Parameters
+    ----------
+    date_data: None | str
+        date data read from the json file or Ms. Excel file.
 
-    return result
+    Returns
+    -------
+    result_date: datetime
+        The date in the datetime format
+
+    """
+    if date_data is not None:
+        result_date = datetime.strptime(date_data, '%d/%m/%Y').date()
+    else:
+        result_date = None
+
+    return result_date
 
 
 def assign_lifting(data_raw: dict) -> tuple:
@@ -211,8 +224,7 @@ def assign_cost(data_raw: dict) -> tuple:
                   end_year=asr_data[key]['end_year'],
                   cost=np.array(asr_data[key]['cost']),
                   expense_year=np.array(asr_data[key]['expense_year']),
-                  cost_allocation=read_fluid_type(asr_data[key]['cost_allocation']),
-                  rate=asr_data[key]['rate'])
+                  cost_allocation=read_fluid_type(asr_data[key]['cost_allocation']))
         asr_list.append(asr)
 
     return tangible_list, intangible_list, opex_list, asr_list
@@ -241,7 +253,7 @@ def load_testing(dataset_type: str, key: str) -> dict | ValueError:
         return data_test
 
 
-def load_dataset(dataset_type: str, contract_type: str = 'project') -> BaseProject | CostRecovery | GrossSplit:
+def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject | CostRecovery:
     """
     A function to load the available dataset.
 
@@ -316,44 +328,122 @@ def load_dataset(dataset_type: str, contract_type: str = 'project') -> BaseProje
                             gas_dmo_fee_portion=config['gas_dmo_fee_portion'],
                             gas_dmo_holiday_duration=config['gas_dmo_holiday_duration'])
 
-    elif contract_type == 'gross_split':
-        config = read_json_file(file_name=contract_type)
-        return GrossSplit(start_date=project_start_date,
-                          end_date=project_end_date,
-                          oil_onstream_date=oil_onstream_date,
-                          gas_onstream_date=gas_onstream_date,
-                          lifting=lifting_list,
-                          tangible_cost=tangible_list,
-                          intangible_cost=intangible_list,
-                          opex=opex_list,
-                          asr_cost=asr_list,
-                          field_status=config['field_status'],
-                          field_loc=config['field_loc'],
-                          res_depth=config['res_depth'],
-                          infra_avail=config['infra_avail'],
-                          res_type=config['res_type'],
-                          api_oil=config['api_oil'],
-                          domestic_use=config['domestic_use'],
-                          prod_stage=config['prod_stage'],
-                          co2_content=config['co2_content'],
-                          h2s_content=config['h2s_content'],
-                          base_split_ctr_oil=config['base_split_ctr_oil'],
-                          base_split_ctr_gas=config['base_split_ctr_gas'],
-                          split_ministry_disc=config['split_ministry_disc'],
-                          oil_dmo_volume_portion=config['oil_dmo_volume_portion'],
-                          oil_dmo_fee_portion=config['oil_dmo_fee_portion'],
-                          oil_dmo_holiday_duration=config['oil_dmo_holiday_duration'],
-                          gas_dmo_volume_portion=config['gas_dmo_volume_portion'],
-                          gas_dmo_fee_portion=config['gas_dmo_fee_portion'],
-                          gas_dmo_holiday_duration=config['gas_dmo_holiday_duration'],
-                          )
+
+def load_cost(filename: str,
+              start_year: int = 2023,
+              end_year: int = 2043,
+              cost_allocation: FluidType = FluidType.OIL,
+              template: str = "pyscnomics") -> tuple[Tangible, Intangible, OPEX, ASR] | ValueError:
+    """
+    Function to load the cost data from Excel file.
+
+    Parameters
+    ----------
+    filename: str
+        The name of the Excel file.
+    start_year: int
+        The start year of the cost data.
+    end_year: int
+        The end year of the cost data
+    cost_allocation: FluidType
+        The fluid type of that the cost will be allocated to.
+    template: str
+        The type of Excel source that will be read. The available types are: ['pyscnomics', 'questor']
+
+    Returns
+    -------
+    out: tuple
+        Tangible
+            The Tangible dataclass.
+        Intangible
+            The Intangible dataclass
+        OPEX
+            The OPEX dataclass
+        ASR
+            The ASR dataclass
+    """
+
+    # Defining the available template list and making the condition if not satisfied
+    template_list = ['pyscnomics', 'questor']
+    if template not in template_list:
+        raise ValueError('Unknown Template: "{0}", please check the Template Type in Docstring.'.format(template))
+
+    # Reading the Questor Excels file from column B to W and replacing the value of NaN with 0
+    df = pd.read_excel(filename, skiprows=18, header=None, na_values=0).fillna(value=0)
+    years_arr = np.arange(start_year, start_year + df.shape[0], 1)
+    df.set_index(years_arr, inplace=True)
+
+    # Assigning the Tangible data
+    tangible_arr = np.array(df[[5, 7, 8, 9, 10, 11, 12]].sum(axis=1).to_numpy(dtype=float))
+    tangible = Tangible(start_year=start_year,
+                        end_year=end_year,
+                        cost=tangible_arr,
+                        expense_year=years_arr,
+                        cost_allocation=cost_allocation)
+
+    # Assigning the Intangible data
+    intangible_arr = df[6].to_numpy(dtype=float)
+    intangible = Intangible(start_year=start_year,
+                            end_year=end_year,
+                            cost=intangible_arr,
+                            expense_year=years_arr,
+                            cost_allocation=cost_allocation)
+
+    # Assigning the ASR data
+    asr_arr = df[18].to_numpy(dtype=float)
+    asr = ASR(start_year=start_year,
+              end_year=end_year,
+              cost=asr_arr,
+              expense_year=years_arr,
+              cost_allocation=cost_allocation)
+
+    # Assigning the OPEX data
+    fixed_cost_arr = df[[13, 14, 15, 16, 17]].sum(axis=1).to_numpy(dtype=float)
+    opex = OPEX(start_year=start_year,
+                end_year=end_year,
+                fixed_cost=fixed_cost_arr,
+                expense_year=years_arr,
+                cost_allocation=cost_allocation)
+
+    # Assigning the OPEX data
+    # fixed_cost_arr = df[[13, 16, 17]].sum(axis=1).to_numpy(dtype=float)
+    # variable_cost_arr = df[14].to_numpy(dtype=float)
+    # cost_per_volume_arr = df[15].to_numpy(dtype=float)
+
+    # Reading the produced fluid for determining the prod_rate attributes of the OPEX dataclass
+    # if cost_allocation == FluidType.OIL:
+    #     prod_arr = df[20].to_numpy(dtype=float)
+    #
+    # elif cost_allocation == FluidType.GAS:
+    #     prod_arr = df[22].to_numpy(dtype=float)
+    #
+    # else:
+    #     prod_arr = df[21].to_numpy(dtype=float)
+    #
+    # opex = OPEX(start_year=start_year,
+    #             end_year=end_year,
+    #             fixed_cost=fixed_cost_arr,
+    #             expense_year=years_arr,
+    #             cost_allocation=cost_allocation,
+    #             prod_rate=prod_arr,
+    #             cost_per_volume=cost_per_volume_arr)
+
+    return tangible, intangible, opex, asr
 
 
 if __name__ == "__main__":
     # Choosing the Dataset and contract type
-    dataset = 'medium_oil'
+    dataset = 'small_oil'
     contract = 'project'
 
     # Returning the load_data function
-    psc = load_dataset(dataset_type=dataset, contract_type=contract)
-    print('PSC load_data function \n', psc, '\n')
+    psc = load_data(dataset_type=dataset, contract_type=contract)
+    print('Output of the load_data function \n', psc, '\n')
+
+    # Reading Questor Template
+    questor_result = load_cost(filename='questor_template.xls',
+                               cost_allocation=FluidType.OIL,
+                               template='questor')
+    print('Output of the load_cost function')
+    for cost in questor_result:
+        print(cost, '\n')
