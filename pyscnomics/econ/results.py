@@ -47,7 +47,6 @@ class CashFlow:
     project_years: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
-
         # Specify project duration and project years, raise error for inappropriate start date
         if self.start_date <= self.end_date:
             self.project_duration = self.end_date.year - self.start_date.year + 1
@@ -87,7 +86,6 @@ class CashFlow:
         return self.project_duration
 
     def __eq__(self, other):
-
         # Between two instances of CashFlow
         if isinstance(other, CashFlow):
             return all(
@@ -96,7 +94,7 @@ class CashFlow:
                     self.end_date == other.end_date,
                     self.cash_allocation == other.cash_allocation,
                     np.allclose(self.cash, other.cash),
-                    np.allclose(self.cashed_year, other.cashed_year)
+                    np.allclose(self.cashed_year, other.cashed_year),
                 )
             )
 
@@ -108,7 +106,6 @@ class CashFlow:
             return False
 
     def __lt__(self, other):
-
         # Between two instances of CashFlow
         if isinstance(other, CashFlow):
             return np.sum(self.cash) < np.sum(other.cash)
@@ -124,7 +121,6 @@ class CashFlow:
             )
 
     def __le__(self, other):
-
         # Between two instances of CashFlow
         if isinstance(other, CashFlow):
             return np.sum(self.cash) <= np.sum(other.cash)
@@ -140,7 +136,6 @@ class CashFlow:
             )
 
     def __gt__(self, other):
-
         # Between two instances of CashFlow
         if isinstance(other, CashFlow):
             return np.sum(self.cash) > np.sum(other.cash)
@@ -156,7 +151,6 @@ class CashFlow:
             )
 
     def __ge__(self, other):
-
         # Between two instances of CashFlow
         if isinstance(other, CashFlow):
             return np.sum(self.cash) >= np.sum(other.cash)
@@ -172,10 +166,8 @@ class CashFlow:
             )
 
     def __add__(self, other):
-
         # Between an instance of CashFlow and another instance of CashFlow
         if isinstance(other, CashFlow):
-
             start_year = min(self.start_date.year, other.start_date.year)
             start_month = min(self.start_date.month, other.start_date.month)
             start_day = min(self.start_date.day, other.start_date.day)
@@ -204,10 +196,8 @@ class CashFlow:
             )
 
     def __sub__(self, other):
-
         # Between an instance of CashFlow and another instance of CashFlow
         if isinstance(other, CashFlow):
-
             start_year = min(self.start_date.year, other.start_date.year)
             start_month = min(self.start_date.month, other.start_date.month)
             start_day = min(self.start_date.day, other.start_date.day)
@@ -239,7 +229,6 @@ class CashFlow:
         return self.__sub__(other)
 
     def __mul__(self, other):
-
         # Multiplication is allowed only with an integer/float
         if isinstance(other, (int, float)):
             return CashFlow(
@@ -247,7 +236,7 @@ class CashFlow:
                 end_date=self.end_date,
                 cash=self.cash * other,
                 cashed_year=self.cashed_year,
-                cash_allocation=self.cash_allocation
+                cash_allocation=self.cash_allocation,
             )
 
         else:
@@ -260,14 +249,12 @@ class CashFlow:
         return self.__mul__(other)
 
     def __truediv__(self, other):
-
         # Between an instance of CashFlow and another instance of CashFlow
         if isinstance(other, CashFlow):
             return np.sum(self.cash) / np.sum(other.cash)
 
         # Between an instance of CashFlow and an integer/float
         elif isinstance(other, (int, float)):
-
             # Cannot divide by zero
             if other == 0:
                 raise CashFlowException(f"Cannot divide by zero")
@@ -278,7 +265,7 @@ class CashFlow:
                     end_date=self.end_date,
                     cash=self.cash / other,
                     cashed_year=self.cashed_year,
-                    cash_allocation=self.cash_allocation
+                    cash_allocation=self.cash_allocation,
                 )
 
         else:

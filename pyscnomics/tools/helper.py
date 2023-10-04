@@ -3,6 +3,60 @@ Handles summation operation on two arrays, accounting for different starting yea
 """
 
 import numpy as np
+from functools import wraps
+
+from pyscnomics.econ.selection import TaxRegime
+
+
+def apply_inflation(inflation_rate: float):
+    """
+    Apply escalation/inflation to a particular function.
+
+    Parameters
+    ----------
+    inflation_rate: float
+        A constant depicting the escalation/inflation rate.
+
+    Returns
+    -------
+    decorated: function
+        A decorated function that modifies the target function.
+    """
+    def _decorated(f):
+        @wraps(f)
+        def _wrapper(*args, **kwargs):
+            exponents = np.arange(0, len(f(*args, **kwargs)), 1)
+            inflation_arr = (1 + inflation_rate) ** exponents
+            modified_arr = f(*args, **kwargs) * inflation_arr
+            return modified_arr
+        return _wrapper
+    return _decorated
+
+
+def apply_vat(tax_regime: str, vat_rate: float):
+    """
+    Apply Value Added Tax (VAT/PPN) to a particular function.
+
+    Parameters
+    ----------
+    tax_regime: str
+        The administered tax regime.
+    vat_rate: float
+        The rate of VAT/PPN.
+
+    Returns
+    -------
+    decorated: function
+        A decorated function that modifies the target function.
+    """
+    def _decorated(f):
+        @wraps(f)
+        def _wrapper(*args, **kwargs):
+            if tax_regime == TaxRegime.NAILED_DOWN:
+                modified_arr = f(*args, **kwargs) * (1 + vat_rate)
+            return modified_arr
+        return _wrapper
+    return _decorated
 
 
 def summarizer(

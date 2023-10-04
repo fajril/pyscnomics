@@ -111,22 +111,6 @@ class GrossSplit(BaseProject):
     _oil_cashflow: CashFlow = field(default=None, init=False, repr=False)
     _gas_cashflow: CashFlow = field(default=None, init=False, repr=False)
 
-    def _get_aggregate(self):
-        self._oil_lifting = self._get_oil_lifting()
-        self._gas_lifting = self._get_gas_lifting()
-        self._oil_tangible = self._get_oil_tangible()
-        self._gas_tangible = self._get_gas_tangible()
-        self._oil_intangible = self._get_oil_intangible()
-        self._gas_intangible = self._get_gas_intangible()
-        self._oil_opex = self._get_oil_opex()
-        self._gas_opex = self._get_gas_opex()
-        self._oil_asr = self._get_oil_asr()
-        self._gas_asr = self._get_gas_asr()
-
-    def _get_revenue(self):
-        self._oil_revenue = self._oil_lifting.revenue()
-        self._gas_revenue = self._gas_lifting.revenue()
-
     def _wrapper_variable_split(self,
                                 regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
 
@@ -390,10 +374,6 @@ class GrossSplit(BaseProject):
             regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
             disc_rate: float = 0.1):
 
-        # Compiling the aggregate and revenue
-        self._get_aggregate()
-        self._get_revenue()
-
         # Depreciation (Tangible cost)
         self._oil_depreciation, self._oil_undepreciated_asset = self._oil_tangible.total_depreciation_rate()
         self._gas_depreciation, self._gas_undepreciated_asset = self._gas_tangible.total_depreciation_rate()
@@ -558,8 +538,10 @@ class GrossSplit(BaseProject):
         self._gas_ctr_net_share = self._gas_taxable_income - self._gas_tax
 
         # Contractor Cash Flow
-        self._oil_ctr_cashflow = self._oil_ctr_share_before_transfer - self._oil_total_expenses - self._oil_ddmo - self._oil_tax
-        self._gas_ctr_cashflow = self._gas_ctr_share_before_transfer - self._gas_total_expenses - self._gas_ddmo - self._gas_tax
+        self._oil_ctr_cashflow = (self._oil_ctr_share_before_transfer - self._oil_total_expenses - self._oil_ddmo -
+                                  self._oil_tax)
+        self._gas_ctr_cashflow = (self._gas_ctr_share_before_transfer - self._gas_total_expenses - self._gas_ddmo -
+                                  self._gas_tax)
 
         # Government Take
         self._oil_gov_take = self._oil_gov_share + self._oil_ddmo + self._oil_tax

@@ -809,6 +809,7 @@ class BaseProject:
 
     def __lt__(self, other):
 
+        # Between an instance of BaseProject and another instance of BaseProject
         if isinstance(other, BaseProject):
 
             self.run()
@@ -817,10 +818,14 @@ class BaseProject:
             self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
             other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
 
-            return self_total_base_cashflow.irr() < other_total_base_cashflow.irr()
+            return self_total_base_cashflow.npv() < other_total_base_cashflow.npv()
 
         else:
-            raise BaseProjectException
+            raise BaseProjectException(
+                f"Must compare an instance of BaseProject and another instance "
+                f"of BaseProject. {other}({other.__class__.__qualname__}) is "
+                f"not an instance of BaseProject."
+            )
 
     def __le__(self, other):
 
@@ -832,7 +837,7 @@ class BaseProject:
             self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
             other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
 
-            return self_total_base_cashflow.irr() <= other_total_base_cashflow.irr()
+            return self_total_base_cashflow.npv() <= other_total_base_cashflow.npv()
 
         else:
             raise BaseProjectException
@@ -847,7 +852,7 @@ class BaseProject:
             self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
             other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
 
-            return self_total_base_cashflow.irr() > other_total_base_cashflow.irr()
+            return self_total_base_cashflow.npv() > other_total_base_cashflow.npv()
 
         else:
             raise BaseProjectException
@@ -862,12 +867,13 @@ class BaseProject:
             self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
             other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
 
-            return self_total_base_cashflow.irr() >= other_total_base_cashflow.irr()
+            return self_total_base_cashflow.npv() >= other_total_base_cashflow.npv()
 
         else:
             raise BaseProjectException
 
     def __add__(self, other):
+
         # Between an instance of BaseProject and another instance of BaseProject
         if isinstance(other, BaseProject):
 
