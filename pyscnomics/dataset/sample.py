@@ -7,6 +7,7 @@ import pandas as pd
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
+from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.econ.revenue import Lifting, FluidType
 
@@ -253,7 +254,7 @@ def load_testing(dataset_type: str, key: str) -> dict | ValueError:
         return data_test
 
 
-def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject | CostRecovery:
+def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject | CostRecovery | GrossSplit:
     """
     A function to load the available dataset.
 
@@ -265,7 +266,7 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
         The type of the contract.
     Returns
     -------
-    BaseProject | CostRecovery
+    BaseProject | CostRecovery | GrossSplit
 
     """
     # Checking the availability of the dataset, if not available raise a Value Error
@@ -327,6 +328,37 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
                             gas_dmo_volume_portion=config['gas_dmo_volume_portion'],
                             gas_dmo_fee_portion=config['gas_dmo_fee_portion'],
                             gas_dmo_holiday_duration=config['gas_dmo_holiday_duration'])
+
+    elif contract_type == 'gross_split':
+        config = read_json_file(file_name=contract_type)
+        return GrossSplit(start_date=project_start_date,
+                          end_date=project_end_date,
+                          oil_onstream_date=oil_onstream_date,
+                          gas_onstream_date=gas_onstream_date,
+                          lifting=lifting_list,
+                          tangible_cost=tangible_list,
+                          intangible_cost=intangible_list,
+                          opex=opex_list,
+                          asr_cost=asr_list,
+                          field_status=config['field_status'],
+                          field_loc=config['field_loc'],
+                          res_depth=config['res_depth'],
+                          infra_avail=config['infra_avail'],
+                          res_type=config['res_type'],
+                          api_oil=config['api_oil'],
+                          domestic_use=config['domestic_use'],
+                          prod_stage=config['prod_stage'],
+                          co2_content=config['co2_content'],
+                          h2s_content=config['h2s_content'],
+                          base_split_ctr_oil=config['base_split_ctr_oil'],
+                          base_split_ctr_gas=config['base_split_ctr_gas'],
+                          split_ministry_disc=config['split_ministry_disc'],
+                          oil_dmo_volume_portion=config['oil_dmo_volume_portion'],
+                          oil_dmo_fee_portion=config['oil_dmo_fee_portion'],
+                          oil_dmo_holiday_duration=config['oil_dmo_holiday_duration'],
+                          gas_dmo_volume_portion=config['gas_dmo_volume_portion'],
+                          gas_dmo_fee_portion=config['gas_dmo_fee_portion'],
+                          gas_dmo_holiday_duration=config['gas_dmo_holiday_duration'])
 
 
 def load_cost(filename: str,

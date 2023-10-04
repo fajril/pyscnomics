@@ -1,7 +1,6 @@
 """
 Handles calculations associated with PSC Gross Split.
 """
-
 from dataclasses import dataclass, field
 import numpy as np
 
@@ -9,6 +8,12 @@ from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
 from pyscnomics.econ.selection import FluidType, GrossSplitRegime
 from pyscnomics.econ.results import CashFlow
+
+
+class GrossSplitException(Exception):
+    """Exception to raise for a misuse of GrossSplit class"""
+
+    pass
 
 
 @dataclass
@@ -57,8 +62,8 @@ class GrossSplit(BaseProject):
     _gas_prog_split: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ctr_split: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ctr_split: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_ctr_share: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_ctr_share: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_ctr_share_before_transfer: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ctr_share_before_transfer: np.ndarray = field(default=None, init=False, repr=False)
     _oil_gov_share: np.ndarray = field(default=None, init=False, repr=False)
     _gas_gov_share: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -447,12 +452,12 @@ class GrossSplit(BaseProject):
                                minis_disc_array)
 
         # Contractor Share
-        self._oil_ctr_share = self._oil_revenue * self._oil_ctr_split
-        self._gas_ctr_share = self._gas_revenue * self._gas_ctr_split
+        self._oil_ctr_share_before_transfer = self._oil_revenue * self._oil_ctr_split
+        self._gas_ctr_share_before_transfer = self._gas_revenue * self._gas_ctr_split
 
         # Government Share
-        self._oil_gov_share = self._oil_revenue - self._oil_ctr_share
-        self._gas_gov_share = self._gas_revenue - self._gas_ctr_share
+        self._oil_gov_share = self._oil_revenue - self._oil_ctr_share_before_transfer
+        self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
 
         # Total Investment
         self._oil_total_expenses = (self._oil_tangible.expenditures() + self._oil_intangible.expenditures() +
@@ -469,24 +474,24 @@ class GrossSplit(BaseProject):
         # Carry Forward Deductible Cost (In PSC Cost Recovery called Unrecovered Cost)
         self._oil_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._oil_depreciation,
                                                                        non_capital=self._oil_non_capital,
-                                                                       revenue=self._oil_ctr_share,
+                                                                       revenue=self._oil_ctr_share_before_transfer,
                                                                        ftp_ctr=np.zeros_like(self.project_years),
                                                                        ftp_gov=np.zeros_like(self.project_years),
                                                                        ic=np.zeros_like(self.project_years))
 
         self._gas_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._gas_depreciation,
                                                                        non_capital=self._gas_non_capital,
-                                                                       revenue=self._gas_ctr_share,
+                                                                       revenue=self._gas_ctr_share_before_transfer,
                                                                        ftp_ctr=np.zeros_like(self.project_years),
                                                                        ftp_gov=np.zeros_like(self.project_years),
                                                                        ic=np.zeros_like(self.project_years))
 
         # Deductible Cost (In PSC Cost Recovery called Cost Recovery)
-        self._oil_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._oil_ctr_share,
+        self._oil_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._oil_ctr_share_before_transfer,
                                                               cost_tobe_deducted=self._oil_cost_tobe_deducted,
                                                               carward_deduct_cost=self._oil_carward_deduct_cost)
 
-        self._gas_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._gas_ctr_share,
+        self._gas_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._gas_ctr_share_before_transfer,
                                                               cost_tobe_deducted=self._gas_cost_tobe_deducted,
                                                               carward_deduct_cost=self._gas_carward_deduct_cost)
 
@@ -494,53 +499,49 @@ class GrossSplit(BaseProject):
         self._transfer_to_oil, self._transfer_to_gas = psc_tools.get_transfer(
             oil_unrecovered=self._oil_carward_deduct_cost,
             gas_unrecovered=self._gas_carward_deduct_cost,
-            oil_ets_pretransfer=self._oil_ctr_share,
-            gas_ets_pretransfer=self._gas_ctr_share)
+            oil_ets_pretransfer=self._oil_ctr_share_before_transfer,
+            gas_ets_pretransfer=self._gas_ctr_share_before_transfer)
 
         # Carry Forward Deductible Cost After Transfer
         self._oil_carward_cost_aftertf = self._oil_carward_deduct_cost - self._transfer_to_gas
         self._gas_carward_cost_aftertf = self._gas_carward_deduct_cost - self._transfer_to_oil
 
         # Contractor Share After Transfer
-        self._oil_ctr_share_after_transfer = psc_tools.get_ets_after_transfer(
-            ets_before_transfer=self._oil_ctr_share,
-            trfto=self._transfer_to_oil,
-            unrecovered_after_transfer=self._oil_carward_cost_aftertf)
+        self._oil_ctr_share_after_transfer = (self._oil_ctr_share_before_transfer +
+                                              self._transfer_to_oil -
+                                              self._transfer_to_gas)
 
-        self._gas_ctr_share_after_transfer = psc_tools.get_ets_after_transfer(
-            ets_before_transfer=self._gas_ctr_share,
-            trfto=self._transfer_to_gas,
-            unrecovered_after_transfer=self._gas_carward_cost_aftertf)
+        self._gas_ctr_share_after_transfer = (self._gas_ctr_share_before_transfer +
+                                              self._transfer_to_gas -
+                                              self._transfer_to_oil)
 
         # Contractor Net Operating Profit
         self._oil_net_operating_profit = self._oil_ctr_share_after_transfer - self._oil_deductible_cost
         self._gas_net_operating_profit = self._gas_ctr_share_after_transfer - self._gas_deductible_cost
 
         # DMO
-        self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo_2(
+        self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo(
             onstream_date=self.oil_onstream_date,
             start_date=self.start_date,
             project_years=self.project_years,
             dmo_holiday_duration=self.oil_dmo_holiday_duration,
             dmo_volume_portion=self.oil_dmo_volume_portion,
             dmo_fee_portion=self.oil_dmo_fee_portion,
-            share=self._oil_ctr_share,
-            ets_ctr=self._oil_net_operating_profit,
-            ctr_pretax_share=1,
-            unrecovered_cost=self._oil_carward_deduct_cost,
+            lifting=self._oil_lifting,
+            ctr_pretax_share=1.0,
+            unrecovered_cost=self._oil_carward_cost_aftertf,
             is_dmo_end_weighted=is_dmo_end_weighted)
 
-        self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo_2(
+        self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo(
             onstream_date=self.gas_onstream_date,
             start_date=self.start_date,
             project_years=self.project_years,
             dmo_holiday_duration=self.gas_dmo_holiday_duration,
             dmo_volume_portion=self.gas_dmo_volume_portion,
             dmo_fee_portion=self.gas_dmo_fee_portion,
-            share=self._gas_ctr_share,
-            ets_ctr=self._gas_net_operating_profit,
-            ctr_pretax_share=1,
-            unrecovered_cost=self._gas_carward_deduct_cost,
+            lifting=self._gas_lifting,
+            ctr_pretax_share=1.0,
+            unrecovered_cost=self._gas_carward_cost_aftertf,
             is_dmo_end_weighted=is_dmo_end_weighted)
 
         # Taxable Income
@@ -557,8 +558,8 @@ class GrossSplit(BaseProject):
         self._gas_ctr_net_share = self._gas_taxable_income - self._gas_tax
 
         # Contractor Cash Flow
-        self._oil_ctr_cashflow = self._oil_ctr_share - self._oil_total_expenses - self._oil_ddmo - self._oil_tax
-        self._gas_ctr_cashflow = self._gas_ctr_share - self._gas_total_expenses - self._gas_ddmo - self._gas_tax
+        self._oil_ctr_cashflow = self._oil_ctr_share_before_transfer - self._oil_total_expenses - self._oil_ddmo - self._oil_tax
+        self._gas_ctr_cashflow = self._gas_ctr_share_before_transfer - self._gas_total_expenses - self._gas_ddmo - self._gas_tax
 
         # Government Take
         self._oil_gov_take = self._oil_gov_share + self._oil_ddmo + self._oil_tax
@@ -576,3 +577,84 @@ class GrossSplit(BaseProject):
                                       cash=self._gas_ctr_cashflow,
                                       cashed_year=self.project_years,
                                       cash_allocation=FluidType.GAS)
+
+    def __len__(self):
+        return self.project_duration
+
+    def __eq__(self, other):
+        # Between two instances of Gross Split
+        if isinstance(other, GrossSplit):
+            return all(
+                (
+                    np.allclose(self._oil_lifting.lifting_rate, other._oil_lifting.lifting_rate),
+                    np.allclose(self._gas_lifting.lifting_rate, other._gas_lifting.lifting_rate),
+                    np.allclose(self._oil_revenue, other._oil_revenue),
+                    np.allclose(self._gas_revenue, other._gas_revenue),
+                    np.allclose(self._oil_tangible.expenditures(), other._oil_tangible.expenditures()),
+                    np.allclose(self._gas_tangible.expenditures(), other._gas_tangible.expenditures()),
+                    np.allclose(self._oil_intangible.expenditures(), other._oil_intangible.expenditures()),
+                    np.allclose(self._gas_intangible.expenditures(), other._gas_intangible.expenditures()),
+                    np.allclose(self._oil_opex.expenditures(), other._oil_opex.expenditures()),
+                    np.allclose(self._gas_opex.expenditures(), other._gas_opex.expenditures()),
+                    np.allclose(self._oil_asr.expenditures(), other._oil_asr.expenditures()),
+                    np.allclose(self._gas_asr.expenditures(), other._gas_asr.expenditures()),
+                )
+            )
+
+        else:
+            return False
+
+    def __lt__(self, other):
+        if isinstance(other, GrossSplit):
+
+            self.run()
+            other.run()
+
+            self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
+            other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
+
+            return self_total_base_cashflow.irr() < other_total_base_cashflow.irr()
+
+        else:
+            raise GrossSplitException
+
+    def __le__(self, other):
+        if isinstance(other, GrossSplit):
+            self.run()
+            other.run()
+
+            self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
+            other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
+
+            return self_total_base_cashflow.irr() <= other_total_base_cashflow.irr()
+
+        else:
+            raise GrossSplitException
+
+    def __gt__(self, other):
+        if isinstance(other, GrossSplit):
+
+            self.run()
+            other.run()
+
+            self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
+            other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
+
+            return self_total_base_cashflow.irr() > other_total_base_cashflow.irr()
+
+        else:
+            raise GrossSplitException
+
+    def __ge__(self, other):
+        if isinstance(other, GrossSplit):
+
+            self.run()
+            other.run()
+
+            self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
+            other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
+
+            return self_total_base_cashflow.irr() >= other_total_base_cashflow.irr()
+
+        else:
+            raise GrossSplitException
