@@ -9,8 +9,6 @@ from functools import reduce
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
 from pyscnomics.econ.selection import FluidType, YearReference, TaxRegime, FTPTaxRegime, TaxSplitTypeCR
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
-from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ import indicator
 
 
@@ -39,21 +37,6 @@ class CostRecovery(BaseProject):
     gas_dmo_volume_portion: float = field(default=1.0)
     gas_dmo_fee_portion: float = field(default=1.0)
     gas_dmo_holiday_duration: int = field(default=60)
-
-    # Fields/attributes to be defined later
-    _oil_lifting: Lifting = field(default=None, init=False, repr=False)
-    _gas_lifting: Lifting = field(default=None, init=False, repr=False)
-    _oil_tangible: Tangible = field(default=None, init=False, repr=False)
-    _gas_tangible: Tangible = field(default=None, init=False, repr=False)
-    _oil_intangible: Intangible = field(default=None, init=False, repr=False)
-    _gas_intangible: Intangible = field(default=None, init=False, repr=False)
-    _oil_opex: OPEX = field(default=None, init=False, repr=False)
-    _gas_opex: OPEX = field(default=None, init=False, repr=False)
-    _oil_asr: ASR = field(default=None, init=False, repr=False)
-    _gas_asr: ASR = field(default=None, init=False, repr=False)
-
-    _oil_revenue: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_revenue: np.ndarray = field(default=None, init=False, repr=False)
 
     _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
