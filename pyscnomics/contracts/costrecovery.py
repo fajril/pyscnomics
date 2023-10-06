@@ -88,8 +88,6 @@ class CostRecovery(BaseProject):
     _gas_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ftp_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ftp_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_tax: np.ndarray = field(default=None, init=False, repr=False)
 
     _oil_contractor_take: np.ndarray = field(default=None, init=False, repr=False)
     _gas_contractor_take: np.ndarray = field(default=None, init=False, repr=False)
@@ -528,31 +526,27 @@ class CostRecovery(BaseProject):
                                                               tax_rate=tax_rate,
                                                               ftp_tax_regime=ftp_tax_regime)
 
-        # TODO: Make the Tax Routine, _oil_tax and _gas_tax below will be replaced with return from tax module
-        self._oil_tax = np.zeros_like(self.project_years)
-        self._gas_tax = np.zeros_like(self.project_years)
-
         # Contractor Take by Fluid
         self._oil_contractor_take = (
-                self._oil_taxable_income - self._oil_ftp_tax_payment - self._oil_tax + self._oil_cost_recovery
+                self._oil_taxable_income - self._oil_ftp_tax_payment + self._oil_cost_recovery
         )
 
         self._gas_contractor_take = (
-                self._gas_taxable_income - self._gas_ftp_tax_payment - self._gas_tax + self._gas_cost_recovery
+                self._gas_taxable_income - self._gas_ftp_tax_payment + self._gas_cost_recovery
         )
 
         # Government Take by Fluid
         self._oil_government_take = (
                 self._oil_ftp_gov
                 + self._oil_government_share
-                + self._oil_ftp_tax_payment + self._oil_tax
+                + self._oil_ftp_tax_payment
                 + self._oil_ddmo
         )
 
         self._gas_government_take = (
                 self._gas_ftp_gov
                 + self._gas_government_share
-                + self._gas_ftp_tax_payment + self._gas_tax
+                + self._gas_ftp_tax_payment
                 + self._gas_ddmo
         )
 
