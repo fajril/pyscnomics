@@ -1,9 +1,9 @@
 import numpy as np
 
-from pyscnomics.dataset.sample import load_dataset, load_testing
+from pyscnomics.dataset.sample import load_data, load_testing
 
 
-psc = load_dataset(dataset_type='small_gas', contract_type='cost_recovery')
+psc = load_data(dataset_type='small_gas', contract_type='cost_recovery')
 psc.run()
 
 

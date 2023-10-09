@@ -325,11 +325,29 @@ class CostRecovery(BaseProject):
 
         return ftp_tax_payment
 
+    @staticmethod
+    def _get_ftp_tax_payment2(ctr_share,
+                              taxable_income,
+                              tax_rate,
+                              ftp_tax_regime: FTPTaxRegime = FTPTaxRegime.PDJP_20_2017):
+        if ftp_tax_regime == FTPTaxRegime.PDJP_20_2017:
+            cum_ftp = np.cumsum(taxable_income)
+            applied_tax = np.where(ctr_share > 0, 1, 0)
+            applied_tax_prior = np.concatenate((np.zeros(1), applied_tax))[0:-1]
+
+            ctr_tax = np.where(np.logical_and(applied_tax == 1, applied_tax_prior == 0),
+                               cum_ftp * tax_rate,
+                               np.where(np.logical_and(applied_tax == 1, applied_tax_prior == 1),
+                                        taxable_income * tax_rate,
+                                        0))
+
+            return ctr_tax
+
     def run(self,
             is_dmo_end_weighted=False,
             ctr_tax: float | np.ndarray = None,
             tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
-            tax_rate=0.44,   # TODO: Replace with NaN as default value after implementing TaxRegime.
+            tax_rate=0.44,  # TODO: Replace with NaN as default value after implementing TaxRegime.
             ftp_tax_regime=FTPTaxRegime.PDJP_20_2017
             ):
         # TODO: Tax rate argument will be deleted then replaced with the value in tax_regime.
@@ -525,6 +543,11 @@ class CostRecovery(BaseProject):
                                                               ftp=self._gas_ftp_ctr,
                                                               tax_rate=tax_rate,
                                                               ftp_tax_regime=ftp_tax_regime)
+
+        # self._gas_ftp_tax_payment = self._get_ftp_tax_payment2(ctr_share=self._gas_contractor_share,
+        #                                                        taxable_income=self._gas_taxable_income,
+        #                                                        tax_rate=tax_rate,
+        #                                                        ftp_tax_regime=ftp_tax_regime)
 
         # Contractor Take by Fluid
         self._oil_contractor_take = (

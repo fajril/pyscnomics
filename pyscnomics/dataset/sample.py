@@ -92,12 +92,25 @@ def read_fluid_type(fluid: str) -> FluidType:
 
 
 def assign_onstream_date(date_data: None | str) -> datetime | None:
-    if date_data is not None:
-        result = datetime.strptime(date_data, '%d/%m/%Y').date()
-    else:
-        result = None
+    """
+    A funtion to assign onstream date into datetime format.
+    Parameters
+    ----------
+    date_data: None | str
+        date data read from the json file or Ms. Excel file.
 
-    return result
+    Returns
+    -------
+    result_date: datetime
+        The date in the datetime format
+
+    """
+    if date_data is not None:
+        result_date = datetime.strptime(date_data, '%d/%m/%Y').date()
+    else:
+        result_date = None
+
+    return result_date
 
 
 def assign_lifting(data_raw: dict) -> tuple:
@@ -210,8 +223,7 @@ def assign_cost(data_raw: dict) -> tuple:
                   end_year=asr_data[key]['end_year'],
                   cost=np.array(asr_data[key]['cost']),
                   expense_year=np.array(asr_data[key]['expense_year']),
-                  cost_allocation=read_fluid_type(asr_data[key]['cost_allocation']),
-                  rate=asr_data[key]['rate'])
+                  cost_allocation=read_fluid_type(asr_data[key]['cost_allocation']))
         asr_list.append(asr)
 
     return tangible_list, intangible_list, opex_list, asr_list
@@ -240,7 +252,7 @@ def load_testing(dataset_type: str, key: str) -> dict | ValueError:
         return data_test
 
 
-def load_dataset(dataset_type: str, contract_type: str = 'project') -> BaseProject | CostRecovery:
+def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject | CostRecovery:
     """
     A function to load the available dataset.
 
@@ -318,9 +330,13 @@ def load_dataset(dataset_type: str, contract_type: str = 'project') -> BaseProje
 
 if __name__ == "__main__":
     # Choosing the Dataset and contract type
-    dataset = 'medium_oil'
+    import timeit
+    start_time = timeit.default_timer()
+    dataset = 'small_gas'
     contract = 'project'
 
     # Returning the load_data function
-    psc = load_dataset(dataset_type=dataset, contract_type=contract)
-    print('PSC load_data function \n', psc, '\n')
+    psc = load_data(dataset_type=dataset, contract_type=contract)
+    print('Output of the load_data function \n', psc, '\n')
+    end_time = timeit.default_timer()
+    print("The Execution Time:", end_time - start_time)

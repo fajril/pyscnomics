@@ -2,13 +2,13 @@ import numpy as np
 import pandas as pd
 
 
-from pyscnomics.dataset.sample import load_dataset
+from pyscnomics.dataset.sample import load_data
 # pd.options.display.float_format = '{:,.2f}'.format
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.expand_frame_repr', False)
 
-psc = load_dataset(dataset_type='small_gas', contract_type='cost_recovery')
+psc = load_data(dataset_type='small_gas', contract_type='cost_recovery')
 psc.run()
 
 psc_table = pd.DataFrame()
