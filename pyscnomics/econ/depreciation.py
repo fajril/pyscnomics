@@ -164,7 +164,7 @@ def declining_balance_depreciation_rate(
             cost - salvage_value - np.cumsum(depreciation_charge)[idx - 1]
         )
 
-        depreciation_charge[idx + 1:] = 0
+        depreciation_charge[idx + 1 :] = 0
 
     # Add an element to array depreciation_charge, accounting the remaining unpaid cost
     depreciation_charge = np.concatenate(

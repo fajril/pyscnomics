@@ -145,8 +145,8 @@ def test_lifting_arithmetics():
     np.testing.assert_allclose(add1, calc_add1)
     np.testing.assert_allclose(add2, calc_add2)
 
-    np.testing.assert_allclose(mul1, calc_mul1.revenue())
-    np.testing.assert_allclose(mul2, calc_mul2.revenue())
+    np.testing.assert_allclose(mul1, calc_mul1)
+    np.testing.assert_allclose(mul2, calc_mul2)
 
-    np.testing.assert_allclose(div1, calc_div1.revenue())
-    np.testing.assert_allclose(div2, calc_div2.revenue())
+    np.testing.assert_allclose(div1, calc_div1)
+    np.testing.assert_allclose(div2, calc_div2)

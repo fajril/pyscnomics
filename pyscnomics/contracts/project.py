@@ -755,6 +755,8 @@ class BaseProject:
             + self._oil_asr.expenditures()
         )
 
+
+
         # Calculate total expenses for GAS;
         # Here, for Tangible cost, we only take the regular expenditures, not the depreciated value
         self._gas_total_expenses = (
