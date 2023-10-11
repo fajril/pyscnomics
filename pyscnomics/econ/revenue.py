@@ -52,7 +52,6 @@ class Lifting:
     project_years: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
-
         # When user does not insert production rate data
         if self.prod_rate is None:
             self.prod_rate = self.lifting_rate.copy()
@@ -129,7 +128,6 @@ class Lifting:
         return self.project_duration
 
     def __eq__(self, other):
-
         # Between two instances of Lifting
         if isinstance(other, Lifting):
             return all(

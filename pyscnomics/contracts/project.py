@@ -749,11 +749,13 @@ class BaseProject:
         # Calculate total expenses for OIL;
         # Here, for Tangible cost, we only take the regular expenditures, not the depreciated value
         self._oil_total_expenses = (
-            self._oil_tangible.expenditures()
+            self._oil_tangible.expenditures(year_ref=,inflation_rate=,vat_rate=,vat_discount=,pdri_rate=,pdri_discount=,lbt_discount=,pdrd_discount)
             + self._oil_intangible.expenditures()
             + self._oil_opex.expenditures()
             + self._oil_asr.expenditures()
         )
+
+
 
         # Calculate total expenses for GAS;
         # Here, for Tangible cost, we only take the regular expenditures, not the depreciated value
