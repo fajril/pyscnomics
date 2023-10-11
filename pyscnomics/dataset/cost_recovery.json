@@ -1,7 +1,10 @@
 {
-  "ftp_is_available": true,
-  "ftp_is_shared": true,
-  "ftp_portion": 0.2,
+  "oil_ftp_is_available": true,
+  "oil_ftp_is_shared": true,
+  "oil_ftp_portion": 0.2,
+  "gas_ftp_is_available": true,
+  "gas_ftp_is_shared": true,
+  "gas_ftp_portion": 0.2,
   "oil_ctr_pretax_share": 0.4464,
   "gas_ctr_pretax_share":0.71428571 ,
   "oil_ic_rate": 0,

@@ -312,9 +312,12 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
                             intangible_cost=intangible_list,
                             opex=opex_list,
                             asr_cost=asr_list,
-                            ftp_is_available=config['ftp_is_available'],
-                            ftp_is_shared=config['ftp_is_shared'],
-                            ftp_portion=config['ftp_portion'],
+                            oil_ftp_is_available=config['oil_ftp_is_available'],
+                            oil_ftp_is_shared=config['oil_ftp_is_shared'],
+                            oil_ftp_portion=config['oil_ftp_portion'],
+                            gas_ftp_is_available=config['gas_ftp_is_available'],
+                            gas_ftp_is_shared=config['gas_ftp_is_shared'],
+                            gas_ftp_portion=config['gas_ftp_portion'],
                             oil_ctr_pretax_share=config['oil_ctr_pretax_share'],
                             gas_ctr_pretax_share=config['gas_ctr_pretax_share'],
                             oil_ic_rate=config['oil_ic_rate'],
@@ -465,17 +468,13 @@ def load_cost(filename: str,
 
 if __name__ == "__main__":
     # Choosing the Dataset and contract type
-    dataset = 'small_oil'
+    import timeit
+    start_time = timeit.default_timer()
+    dataset = 'small_gas'
     contract = 'project'
 
     # Returning the load_data function
     psc = load_data(dataset_type=dataset, contract_type=contract)
     print('Output of the load_data function \n', psc, '\n')
-
-    # Reading Questor Template
-    questor_result = load_cost(filename='questor_template.xls',
-                               cost_allocation=FluidType.OIL,
-                               template='questor')
-    print('Output of the load_cost function')
-    for cost in questor_result:
-        print(cost, '\n')
+    end_time = timeit.default_timer()
+    print("The Execution Time:", end_time - start_time)
