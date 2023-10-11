@@ -13,10 +13,10 @@ psc = load_data(dataset_type='case3', contract_type='cost_recovery')
 # FTP
 psc.oil_ftp_is_available = True
 psc.oil_ftp_is_shared = True
-psc.oil_ftp_portion = 20
+psc.oil_ftp_portion = 0.2
 psc.gas_ftp_is_available = True
 psc.gas_ftp_is_shared = True
-psc.gas_ftp_portion = 20
+psc.gas_ftp_portion = 0.2
 
 # Split Pre Tax
 psc.oil_ctr_pretax_share = 0.34722220

@@ -7,20 +7,20 @@ pd.set_option('display.max_columns', None)
 pd.set_option('display.expand_frame_repr', False)
 
 # Initiating the psc object
-psc = load_data(dataset_type='case1', contract_type='cost_recovery')
+psc = load_data(dataset_type='case4', contract_type='cost_recovery')
 
 # Editing the CostRecovery attribute as the corresponding case 1
 # FTP
 psc.oil_ftp_is_available = True
 psc.oil_ftp_is_shared = True
-psc.oil_ftp_portion = 0.2
+psc.oil_ftp_portion = 0.05
 psc.gas_ftp_is_available = True
 psc.gas_ftp_is_shared = True
-psc.gas_ftp_portion = 0.2
+psc.gas_ftp_portion = 0.05
 
 # Split Pre Tax
-psc.oil_ctr_pretax_share = 0.34722220
-psc.gas_ctr_pretax_share = 0.5208330
+psc.oil_ctr_pretax_share = 0.672268907563025
+psc.gas_ctr_pretax_share = 0.672268907563025
 
 # DMO
 psc.oil_dmo_volume_portion = 0.25
