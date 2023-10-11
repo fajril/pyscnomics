@@ -1,5 +1,5 @@
 """
-Configure base project as a foundational framework for contract.
+Configure base project as a base framework for contract.
 """
 
 from dataclasses import dataclass, field
@@ -53,15 +53,14 @@ class BaseProject:
     oil_onstream_date: date = field(default=None)
     gas_onstream_date: date = field(default=None)
     lifting: tuple[Lifting] = field(default=None)
-    tangible_cost: tuple[Tangible] = field(default=None, repr=False)
-    intangible_cost: tuple[Intangible] = field(default=None, repr=False)
-    opex: tuple[OPEX] = field(default=None, repr=False)
-    asr_cost: tuple[ASR] = field(default=None, repr=False)
+    tangible_cost: tuple[Tangible] = field(default=None)
+    intangible_cost: tuple[Intangible] = field(default=None)
+    opex: tuple[OPEX] = field(default=None)
+    asr_cost: tuple[ASR] = field(default=None)
 
-    # Attribute to be defined later
+    # Attributes to be defined later
     project_duration: int = field(default=None, init=False, repr=False)
     project_years: np.ndarray = field(default=None, init=False, repr=False)
-    summary_base_project: dict = field(default=None, init=False, repr=False)
 
     _oil_lifting: Lifting = field(default=None, init=False, repr=False)
     _gas_lifting: Lifting = field(default=None, init=False, repr=False)
@@ -75,6 +74,10 @@ class BaseProject:
     _gas_opex: OPEX = field(default=None, init=False, repr=False)
     _oil_asr: ASR = field(default=None, init=False, repr=False)
     _gas_asr: ASR = field(default=None, init=False, repr=False)
+    _oil_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_base_cashflow: CashFlow = field(default=None, init=False, repr=False)
+    _gas_base_cashflow: CashFlow = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
 
@@ -188,8 +191,46 @@ class BaseProject:
                 ),
             )
 
+        # Fill the values of private attributes
+        self._oil_lifting = self._get_oil_lifting()
+        self._gas_lifting = self._get_gas_lifting()
+        self._oil_revenue = self._get_oil_lifting().revenue()
+        self._gas_revenue = self._get_gas_lifting().revenue()
+        self._oil_tangible = self._get_oil_tangible()
+        self._gas_tangible = self._get_gas_tangible()
+        self._oil_intangible = self._get_oil_intangible()
+        self._gas_intangible = self._get_gas_intangible()
+        self._oil_opex = self._get_oil_opex()
+        self._gas_opex = self._get_gas_opex()
+        self._oil_asr = self._get_oil_asr()
+        self._gas_asr = self._get_gas_asr()
+
+        # Raise an exception error if the start year of the project is inconsistent
+        if not all(
+                i == self.start_date.year
+                for i in [self._oil_lifting.start_year, self._gas_lifting.start_year]
+        ):
+            raise BaseProjectException(
+                f"Inconsistent start project data: "
+                f"Base project ({self.start_date.year}), "
+                f"Oil lifting ({self._oil_lifting.start_year}), "
+                f"Gas lifting ({self._gas_lifting.start_year}), "
+            )
+
+        # Raise an exception error if the end year of the project is inconsistent
+        if not all(
+                i == self.end_date.year
+                for i in [self._oil_lifting.end_year, self._gas_lifting.end_year]
+        ):
+            raise BaseProjectException(
+                f"Inconsistent end project data: "
+                f"Base project ({self.end_date.year}), "
+                f"Oil lifting ({self._oil_lifting.end_year}), "
+                f"Gas lifting ({self._gas_lifting.end_year}), "
+            )
+
         # Configure oil_onstream_date: set default value and error message
-        oil_revenue_index = np.argwhere(self._get_oil_lifting().revenue() > 0).ravel()
+        oil_revenue_index = np.argwhere(self._oil_revenue > 0).ravel()
 
         if len(oil_revenue_index) > 0:
             if self.oil_onstream_date is not None:
@@ -206,7 +247,9 @@ class BaseProject:
                     )
 
                 oil_onstream_index = int(
-                    np.argwhere(self.oil_onstream_date.year == self.project_years).ravel()
+                    np.argwhere(
+                        self.oil_onstream_date.year == self.project_years
+                    ).ravel()
                 )
 
                 if oil_onstream_index != oil_revenue_index[0]:
@@ -217,9 +260,7 @@ class BaseProject:
 
             else:
                 self.oil_onstream_date = date(
-                    year=self.project_years[oil_revenue_index[0]],
-                    month=1,
-                    day=1
+                    year=self.project_years[oil_revenue_index[0]], month=1, day=1
                 )
 
         else:
@@ -233,7 +274,7 @@ class BaseProject:
                 self.oil_onstream_date = self.end_date
 
         # Configure gas_onstream_date: set default value and error message
-        gas_revenue_index = np.argwhere(self._get_gas_lifting().revenue() > 0).ravel()
+        gas_revenue_index = np.argwhere(self._gas_revenue > 0).ravel()
 
         if len(gas_revenue_index) > 0:
             if self.gas_onstream_date is not None:
@@ -250,7 +291,9 @@ class BaseProject:
                     )
 
                 gas_onstream_index = int(
-                    np.argwhere(self.gas_onstream_date.year == self.project_years).ravel()
+                    np.argwhere(
+                        self.gas_onstream_date.year == self.project_years
+                    ).ravel()
                 )
 
                 if gas_onstream_index != gas_revenue_index[0]:
@@ -261,9 +304,7 @@ class BaseProject:
 
             else:
                 self.gas_onstream_date = date(
-                    year=self.project_years[gas_revenue_index[0]],
-                    month=1,
-                    day=1
+                    year=self.project_years[gas_revenue_index[0]], month=1, day=1
                 )
 
         else:
@@ -275,13 +316,6 @@ class BaseProject:
 
             else:
                 self.gas_onstream_date = self.end_date
-
-        # Initiate attribute summary base project
-        self.summary_base_project = {}
-
-        # Fill the values of private attributes
-        self._oil_lifting = self._get_oil_lifting()
-        self._gas_lifting = self._get_gas_lifting()
 
     def _get_oil_lifting(self):
         """
@@ -712,35 +746,222 @@ class BaseProject:
           includes the start and end dates of the project and the calculated cash values.
         """
 
-        self._oil_lifting = self._get_oil_lifting()
-        self._gas_lifting = self._get_gas_lifting()
-        self._oil_revenue = self._get_oil_lifting().revenue()
-        self._gas_revenue = self._get_gas_lifting().revenue()
-        self._oil_tangible = self._get_oil_tangible()
-        self._gas_tangible = self._get_gas_tangible()
+        # Calculate total expenses for OIL;
+        # Here, for Tangible cost, we only take the regular expenditures, not the depreciated value
+        self._oil_total_expenses = (
+            self._oil_tangible.expenditures()
+            + self._oil_intangible.expenditures()
+            + self._oil_opex.expenditures()
+            + self._oil_asr.expenditures()
+        )
 
-        # Calculate Base CashFlow
-        # revenues = np.zeros(self.project_duration)
-        #
-        # for lft in self.lifting:
-        #     revenue = revenue + lft.revenue()
-        #
-        # expenditures = np.zeros(self.project_duration)
-        #
-        # for cost in self.tangible_cost:
-        #     expenditures = expenditures + cost.expenditures()
-        #
-        # for cost in self.intangible_cost:
-        #     expenditures = expenditures + cost.expenditures()
-        #
-        # for cost in self.opex:
-        #     expenditures = expenditures + cost.expenditures()
-        #
-        # for cost in self.asr_cost:
-        #     expenditures = expenditures + cost.expenditures()
+        # Calculate total expenses for GAS;
+        # Here, for Tangible cost, we only take the regular expenditures, not the depreciated value
+        self._gas_total_expenses = (
+            self._gas_tangible.expenditures()
+            + self._gas_intangible.expenditures()
+            + self._gas_opex.expenditures()
+            + self._gas_asr.expenditures()
+        )
 
-        # return CashFlow(
-        #     start_date=self.start_date,
-        #     end_date=self.end_date,
-        #     cash=revenues - expenditures,
-        # )
+        self._oil_base_cashflow = CashFlow(
+            start_date=self.start_date,
+            end_date=self.end_date,
+            cash=self._oil_revenue - self._oil_total_expenses,
+            cashed_year=self.project_years,
+            cash_allocation=FluidType.OIL
+        )
+
+        self._gas_base_cashflow = CashFlow(
+            start_date=self.start_date,
+            end_date=self.end_date,
+            cash=self._gas_revenue - self._gas_total_expenses,
+            cashed_year=self.project_years,
+            cash_allocation=FluidType.GAS
+        )
+
+    def __len__(self):
+        return self.project_duration
+
+    def __eq__(self, other):
+
+        # Between two instances of BaseProject
+        if isinstance(other, BaseProject):
+            return all(
+                (
+                    np.allclose(self._oil_lifting.lifting_rate, other._oil_lifting.lifting_rate),
+                    np.allclose(self._gas_lifting.lifting_rate, other._gas_lifting.lifting_rate),
+                    np.allclose(self._oil_revenue, other._oil_revenue),
+                    np.allclose(self._gas_revenue, other._gas_revenue),
+                    np.allclose(self._oil_tangible.expenditures(), other._oil_tangible.expenditures()),
+                    np.allclose(self._gas_tangible.expenditures(), other._gas_tangible.expenditures()),
+                    np.allclose(self._oil_intangible.expenditures(), other._oil_intangible.expenditures()),
+                    np.allclose(self._gas_intangible.expenditures(), other._gas_intangible.expenditures()),
+                    np.allclose(self._oil_opex.expenditures(), other._oil_opex.expenditures()),
+                    np.allclose(self._gas_opex.expenditures(), other._gas_opex.expenditures()),
+                    np.allclose(self._oil_asr.expenditures(), other._oil_asr.expenditures()),
+                    np.allclose(self._gas_asr.expenditures(), other._gas_asr.expenditures()),
+                )
+            )
+
+        else:
+            return False
+
+    def __lt__(self, other):
+
+        # Between an instance of BaseProject and another instance of BaseProject
+        if isinstance(other, BaseProject):
+
+            self.run()
+            other.run()
+
+            self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
+            other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
+
+            return self_total_base_cashflow.npv() < other_total_base_cashflow.npv()
+
+        else:
+            raise BaseProjectException(
+                f"Must compare an instance of BaseProject and another instance "
+                f"of BaseProject. {other}({other.__class__.__qualname__}) is "
+                f"not an instance of BaseProject."
+            )
+
+    def __le__(self, other):
+
+        if isinstance(other, BaseProject):
+
+            self.run()
+            other.run()
+
+            self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
+            other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
+
+            return self_total_base_cashflow.npv() <= other_total_base_cashflow.npv()
+
+        else:
+            raise BaseProjectException
+
+    def __gt__(self, other):
+
+        if isinstance(other, BaseProject):
+
+            self.run()
+            other.run()
+
+            self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
+            other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
+
+            return self_total_base_cashflow.npv() > other_total_base_cashflow.npv()
+
+        else:
+            raise BaseProjectException
+
+    def __ge__(self, other):
+
+        if isinstance(other, BaseProject):
+
+            self.run()
+            other.run()
+
+            self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
+            other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
+
+            return self_total_base_cashflow.npv() >= other_total_base_cashflow.npv()
+
+        else:
+            raise BaseProjectException
+
+    def __add__(self, other):
+
+        # Between an instance of BaseProject and another instance of BaseProject
+        if isinstance(other, BaseProject):
+
+            start_year = min(self.start_date.year, other.start_date.year)
+            start_month = min(self.start_date.month, other.start_date.month)
+            start_day = min(self.start_date.day, other.start_date.day)
+
+            end_year = max(self.end_date.year, other.end_date.year)
+            end_month = max(self.end_date.month, other.end_date.month)
+            end_day = max(self.end_date.day, other.end_date.day)
+
+            # Specify the start_date and end_date of the combined instances
+            start_date_combined = date(year=start_year, month=start_month, day=start_day)
+            end_date_combined = date(year=end_year, month=end_month, day=end_day)
+
+            return BaseProject(
+                start_date=start_date_combined,
+                end_date=end_date_combined,
+                lifting=self.lifting + other.lifting,
+                tangible_cost=self.tangible_cost + other.tangible_cost,
+                intangible_cost=self.intangible_cost + other.intangible_cost,
+                opex=self.opex + other.opex,
+                asr_cost=self.asr_cost + other.asr_cost
+            )
+
+        else:
+            raise BaseProjectException(
+                f"Must add between an instance of BaseProject with "
+                f"another instance of BaseProject. "
+                f"{other}({other.__class__.__qualname__}) is not an instance "
+                f"of BaseProject."
+            )
+
+    def __sub__(self, other):
+
+        # Between an instance of BaseProject and another instance of BaseProject
+        if isinstance(other, BaseProject):
+
+            start_year = min(self.start_date.year, other.start_date.year)
+            start_month = min(self.start_date.month, other.start_date.month)
+            start_day = min(self.start_date.day, other.start_date.day)
+
+            end_year = max(self.end_date.year, other.end_date.year)
+            end_month = max(self.end_date.month, other.end_date.month)
+            end_day = max(self.end_date.day, other.end_date.day)
+
+            # Specify the start_date and end_date of the combined instances
+            start_date_combined = date(year=start_year, month=start_month, day=start_day)
+            end_date_combined = date(year=end_year, month=end_month, day=end_day)
+
+            # Invoke a negative value to lifting_rate attribute of Lifting class (subtraction)
+            for lft in other.lifting:
+                lft.lifting_rate = (-1 * lft.lifting_rate).copy()
+
+            # Invoke a negative value to cost attribute of Tangible class (subtraction)
+            for tan in other.tangible_cost:
+                tan.cost = (-1 * tan.cost).copy()
+
+            # Invoke a negative value to cost attribute of Intangible class (subtraction)
+            for intan in other.intangible_cost:
+                intan.cost = (-1 * intan.cost).copy()
+
+            # Invoke a negative value to fixed_cost and prod_rate attributes of OPEX class (subtraction)
+            for op in other.opex:
+                op.fixed_cost = (-1 * op.fixed_cost).copy()
+                op.prod_rate = (-1 * op.prod_rate).copy()
+
+            # Invoke a negative value to cost attribute of ASR class (subtraction)
+            for asr in other.asr_cost:
+                asr.cost = (-1 * asr.cost).copy()
+
+            return BaseProject(
+                start_date=start_date_combined,
+                end_date=end_date_combined,
+                lifting=self.lifting + other.lifting,
+                tangible_cost=self.tangible_cost + other.tangible_cost,
+                intangible_cost=self.intangible_cost + other.intangible_cost,
+                opex=self.opex + other.opex,
+                asr_cost=self.asr_cost + other.asr_cost
+            )
+
+        else:
+            raise BaseProjectException(
+                f"Must subtract between an instance of BaseProject with "
+                f"another instance of BaseProject. "
+                f"{other}({other.__class__.__qualname__}) is not an instance "
+                f"of BaseProject."
+            )
+
+    def __rsub__(self, other):
+        return self.__sub__(other)

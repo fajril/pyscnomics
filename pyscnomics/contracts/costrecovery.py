@@ -14,9 +14,13 @@ from pyscnomics.econ import indicator
 
 @dataclass
 class CostRecovery(BaseProject):
-    ftp_is_available: bool = field(default=True)
-    ftp_is_shared: bool = field(default=True)
-    ftp_portion: float = field(default=0.2)
+    oil_ftp_is_available: bool = field(default=True)
+    oil_ftp_is_shared: bool = field(default=True)
+    oil_ftp_portion: float = field(default=0.2)
+
+    gas_ftp_is_available: bool = field(default=True)
+    gas_ftp_is_shared: bool = field(default=True)
+    gas_ftp_portion: float = field(default=0.2)
 
     tax_split_type: TaxSplitTypeCR = field(default=TaxSplitTypeCR.CONVENTIONAL)
     condition_dict: dict = field(default_factory=dict)
@@ -151,15 +155,18 @@ class CostRecovery(BaseProject):
         self._oil_ftp_gov = np.zeros_like(self._oil_revenue)
         self._gas_ftp_gov = np.zeros_like(self._gas_revenue)
 
-        if self.ftp_is_available:
-            self._oil_ftp = self.ftp_portion * self._oil_revenue
-            self._gas_ftp = self.ftp_portion * self._gas_revenue
-            if self.ftp_is_shared:
+        if self.oil_ftp_is_available:
+            self._oil_ftp = self.oil_ftp_portion * self._oil_revenue
+            if self.oil_ftp_is_shared:
                 self._oil_ftp_ctr = self.oil_ctr_pretax_share * self._oil_ftp
-                self._gas_ftp_ctr = self.gas_ctr_pretax_share * self._gas_ftp
-
             self._oil_ftp_gov = self._oil_ftp - self._oil_ftp_ctr
+
+        if self.gas_ftp_is_available:
+            self._gas_ftp = self.gas_ftp_portion * self._gas_revenue
+            if self.gas_ftp_is_shared:
+                self._gas_ftp_ctr = self.gas_ctr_pretax_share * self._gas_ftp
             self._gas_ftp_gov = self._gas_ftp - self._gas_ftp_ctr
+
 
     def _get_ic(
             self, revenue: np.ndarray, ftp: np.ndarray, cost_alloc: FluidType, ic_rate: float

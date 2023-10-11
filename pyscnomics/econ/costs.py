@@ -10,8 +10,13 @@ import numpy as np
 from dataclasses import dataclass, field
 
 import pyscnomics.econ.depreciation as depr
-from pyscnomics.econ.selection import FluidType, DeprMethod, YearReference
-from pyscnomics.tools.helper import summarizer
+from pyscnomics.tools.helper import apply_inflation, apply_vat
+from pyscnomics.econ.selection import (
+        FluidType,
+        DeprMethod,
+        YearReference,
+        TaxRegime,
+)
 
 
 class TangibleException(Exception):
@@ -61,6 +66,11 @@ class Tangible:
         An array representing the salvage value of a tangible asset.
     useful_life : numpy.ndarray, optional
         An array representing the useful life of a tangible asset.
+    depreciation_factor: np.ndarray, optional
+        The value of depreciation factor to be used in PSC DB depreciation method.
+        Default value is 0.5 for the entire project duration.
+    is_ic_applied: bool, optional
+        Whether investment credit is applied or not. Default value is False.
     """
 
     start_year: int
@@ -145,61 +155,110 @@ class Tangible:
             )
 
     def expenditures(
-        self, year_ref: YearReference = YearReference.EXPENSE_YEAR
-    ) -> np.ndarray:
+        self,
+        year_ref: YearReference = YearReference.EXPENSE_YEAR,
+        tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
+        vat_rate: float | int = 0,
+        inflation_rate: float | int = 0
+    ):
         """
         Calculate tangible expenditures per year.
 
         This method calculates the tangible expenditures per year
         based on the expense year and cost data provided.
 
+        Parameters
+        ----------
+        year_ref: YearReference
+            A point of reference to calculate expenses.
+        tax_regime: TaxRegime
+            The adopted regime/fiscal regulation to determine the
+            configuration of VAT calculations.
+        vat_rate: float | int
+            Rate of Value Added Tax (VAT).
+        inflation_rate: float | int
+            Rate of inflation.
+
         Returns
         -------
         expenses: np.ndarray
-            An array representing the tangible expenditures each year.
-        """
-
-        if year_ref == YearReference.EXPENSE_YEAR:
-
-            # Expenditures must be aligned with the corresponding pis_year (or expense_year)
-            expenses = np.bincount(
-                self.expense_year - self.start_year, weights=self.cost
-            )
-
-        else:
-            expenses = np.bincount(self.pis_year - self.start_year, weights=self.cost)
-
-        # Modify expenses
-        zeros = np.zeros(self.project_duration - len(expenses))
-        expenses = np.concatenate((expenses, zeros))
-
-        return expenses
-
-    def total_depreciation_rate(
-        self, depr_method: DeprMethod = DeprMethod.PSC, decline_factor: float = 2
-    ) -> tuple:
-        """
-        Calculate total depreciation rate.
-
-        Parameters
-        ----------
-        depr_method : DeprMethod
-            Depreciation method to use. Defaults to DeprMethod.PSC.
-        decline_factor : float
-            Decline factor used in the declining balance method. Defaults to 2 (double decline).
-
-        Returns
-        -------
-        total_depreciation_charge
-            An array representing the total depreciation rate for each year.
+                An array representing the tangible expenditures each year, taking
+                into account the inflation and Value Added Tax (VAT/PPN).
 
         Notes
         -----
-        - The `fluid_type` argument should be an instance
-          of the `FluidType` enum.
-        - The `depr_method` argument should be an instance
-          of the `DeprMethod` enum.
+        (1) Function np.bincount() is used to align the cost elements according
+            to its corresponding expense year,
+        (2) If len(expenses) < project_duration, then add the remaining elements
+            with zeros,
+        (3) The return value is modified by taking into account the inflation,
+            using the custom decorator @apply_inflation,
+        (4) The return value is modified further by taking into account the Value
+            Added Tax (VAT/PPN), using the custom decorator @apply_vat.
         """
+        @apply_vat(tax_regime=tax_regime, vat_rate=vat_rate)
+        @apply_inflation(inflation_rate=inflation_rate)
+        def _expenditures() -> np.ndarray:
+            if year_ref == YearReference.EXPENSE_YEAR:
+                expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
+
+            else:
+                expenses = np.bincount(self.pis_year - self.start_year, weights=self.cost)
+
+            zeros = np.zeros(self.project_duration - len(expenses))
+            expenses = np.concatenate((expenses, zeros))
+            return expenses
+        return _expenditures()
+
+    def total_depreciation_rate(
+        self,
+        depr_method: DeprMethod = DeprMethod.PSC_DB,
+        decline_factor: float | int = 2,
+        tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
+        vat_rate: float | int = 0,
+        inflation_rate: float | int = 0
+    ) -> tuple:
+        """
+        Calculate total depreciation charge and undepreciated asset for a set of assets.
+
+        Parameters
+        ----------
+        depr_method : DeprMethod, optional
+            The depreciation method to use (default is DeprMethod.PSC_DB).
+        decline_factor : float or int, optional
+            The decline factor for declining balance depreciation (default is 2).
+        tax_regime : TaxRegime, optional
+            The tax regime to apply to cost calculations (default is TaxRegime.NAILED_DOWN).
+        vat_rate : float or int, optional
+            The Value Added Tax (VAT) rate as a decimal or integer (default is 0).
+        inflation_rate : float or int, optional
+            The annual inflation rate as a decimal or integer (default is 0).
+
+        Returns
+        -------
+        tuple
+            A tuple containing two numpy arrays:
+            - total_depreciation_charge: An array of total depreciation charges for each year.
+            - undepreciated_asset: The undepreciated asset value at the end of the analysis.
+
+        Notes
+        -----
+        - If tax_regime is TaxRegime.NAILED_DOWN, VAT/PPN is applied to the cost.
+        - Inflation is applied to the cost based on the pis_year and start_year.
+        - Depreciation charges are calculated based on the selected depreciation method.
+        - The relative difference of pis_year and start_year is used to align expenditures.
+        - Total depreciation charges and undepreciated asset are returned as numpy arrays.
+
+        """
+
+        # Apply VAT/PPN to cost
+        if tax_regime == TaxRegime.NAILED_DOWN:
+            modified_cost = np.float_(self.cost * (1 + vat_rate))
+
+        # Apply Inflation to cost
+        exponents = self.pis_year - self.start_year
+        inflation_arr = (1. + inflation_rate) ** exponents
+        modified_cost *= inflation_arr
 
         # Straight line
         if depr_method == DeprMethod.SL:
@@ -212,7 +271,7 @@ class Tangible:
                         depreciation_len=self.project_duration,
                     )
                     for c, sv, ul in zip(
-                        self.cost,
+                        modified_cost,
                         self.salvage_value,
                         self.useful_life,
                     )
@@ -231,15 +290,15 @@ class Tangible:
                         depreciation_len=self.project_duration,
                     )
                     for c, sv, ul in zip(
-                        self.cost,
+                        modified_cost,
                         self.salvage_value,
                         self.useful_life,
                     )
                 ]
             )
 
-        # PSC
-        if depr_method == DeprMethod.PSC:
+        # PSC_DB
+        if depr_method == DeprMethod.PSC_DB:
             depreciation_charge = np.asarray(
                 [
                     depr.psc_declining_balance_depreciation_rate(
@@ -249,7 +308,7 @@ class Tangible:
                         depreciation_len=self.project_duration,
                     )
                     for c, dr, ul in zip(
-                        self.cost,
+                        modified_cost,
                         self.depreciation_factor,
                         self.useful_life,
                     )
@@ -269,14 +328,17 @@ class Tangible:
         )
 
         total_depreciation_charge = depreciation_charge.sum(axis=0)
-        undepreciated_asset = np.sum(self.cost) - np.sum(total_depreciation_charge)
+        undepreciated_asset = np.sum(modified_cost) - np.sum(total_depreciation_charge)
 
         return total_depreciation_charge, undepreciated_asset
 
     def total_depreciation_book_value(
         self,
-        depr_method: DeprMethod = DeprMethod.PSC,
+        depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float = 2,
+        tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
+        vat_rate: float | int = 0,
+        inflation_rate: float | int = 0
     ) -> np.ndarray:
         """
         Calculate the total book value of depreciation for the asset.
@@ -288,6 +350,9 @@ class Tangible:
         decline_factor : float
             The decline factor used in the declining balance method.
             Defaults to 2.
+        tax_regime
+        vat_rate
+        inflation_rate
 
         Returns
         -------
@@ -313,6 +378,9 @@ class Tangible:
         depreciation_charge = self.total_depreciation_rate(
             depr_method=depr_method,
             decline_factor=decline_factor,
+            tax_regime=tax_regime,
+            vat_rate=vat_rate,
+            inflation_rate=inflation_rate
         )[0]
 
         return np.cumsum(self.expenditures()) - np.cumsum(depreciation_charge)
@@ -422,40 +490,46 @@ class Tangible:
                 )
 
             else:
+                combined_start_year = min(self.start_year, other.start_year)
+                combined_end_year = max(self.end_year, other.end_year)
 
-                start_year = min(self.start_year, other.start_year)
-                end_year = max(self.end_year, other.end_year)
-                cost = np.concatenate((self.cost, other.cost))
-                expense_year = np.concatenate((self.expense_year, other.expense_year))
-                pis_year = np.concatenate((self.pis_year, other.pis_year))
-                salvage_value = np.concatenate(
-                    (self.salvage_value, other.salvage_value)
-                )
-                useful_life = np.concatenate((self.useful_life, other.useful_life))
-
-                new_tangible = Tangible(
-                    start_year=start_year,
-                    end_year=end_year,
-                    cost=cost,
-                    expense_year=expense_year,
-                    pis_year=pis_year,
-                    salvage_value=salvage_value,
-                    useful_life=useful_life,
+                return Tangible(
+                    start_year=combined_start_year,
+                    end_year=combined_end_year,
+                    cost=np.concatenate((self.cost, other.cost)),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
+                    pis_year=np.concatenate((self.pis_year, other.pis_year)),
+                    salvage_value=np.concatenate((self.salvage_value, other.salvage_value)),
+                    useful_life=np.concatenate((self.useful_life, other.useful_life)),
+                    depreciation_factor=np.concatenate(
+                        (self.depreciation_factor, other.depreciation_factor)
+                    ),
                     cost_allocation=self.cost_allocation,
                 )
 
-                return new_tangible
-
         # Between an instance of Tangible with an instance of Intangible/OPEX/ASR
         elif isinstance(other, (Intangible, OPEX, ASR)):
-            return self.expenditures() + other.expenditures()
+            # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
+            if self.cost_allocation != other.cost_allocation:
+                raise TangibleException(
+                    "Cost allocation is not equal. "
+                    f"First instance is {self.cost_allocation}, "
+                    f"second instance is {other.cost_allocation} "
+                )
+
+            else:
+                return self.expenditures() + other.expenditures()
+
+        # Between an instance of Tangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return self.expenditures() + other
 
         else:
             raise TangibleException(
                 f"Must add an instance of Tangible with another instance "
-                f"of Tangible/Intangible/OPEX/ASR. "
+                f"of Tangible/Intangible/OPEX/ASR/int/float. "
                 f"{other}({other.__class__.__qualname__}) is not an instance of "
-                f"Tangible/Intangible/OPEX/ASR."
+                f"Tangible/Intangible/OPEX/ASR/int/float."
             )
 
     def __iadd__(self, other):
@@ -463,7 +537,7 @@ class Tangible:
 
     def __sub__(self, other):
 
-        # Between an instance of Tangible with another instance of Tangible
+        # Between an instance of Tangible and another instance of Tangible
         if isinstance(other, Tangible):
 
             # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
@@ -475,14 +549,49 @@ class Tangible:
                 )
 
             else:
+                start_year = min(self.start_year, other.start_year)
+                end_year = max(self.end_year, other.end_year)
+
+                return Tangible(
+                    start_year=start_year,
+                    end_year=end_year,
+                    cost=np.concatenate((self.cost, -other.cost)),
+                    expense_year=np.concatenate(
+                        (self.expense_year, other.expense_year)
+                    ),
+                    pis_year=np.concatenate((self.pis_year, other.pis_year)),
+                    salvage_value=np.concatenate(
+                        (self.salvage_value, other.salvage_value)
+                    ),
+                    useful_life=np.concatenate((self.useful_life, other.useful_life)),
+                    depreciation_factor=np.concatenate(
+                        (self.depreciation_factor, other.depreciation_factor)
+                    ),
+                    cost_allocation=self.cost_allocation,
+                )
+
+        # Between an instance of Tangible and an instance of Intangible/OPEX/ASR
+        elif isinstance(other, (Intangible, OPEX, ASR)):
+            if self.cost_allocation != other.cost_allocation:
+                raise TangibleException(
+                    "Cost allocation is not equal. "
+                    f"First instance is {self.cost_allocation}, "
+                    f"second instance is {other.cost_allocation}"
+                )
+
+            else:
                 return self.expenditures() - other.expenditures()
+
+        # Between an instance of Tangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return self.expenditures() - other
 
         else:
             raise TangibleException(
                 f"Must subtract between an instance of Tangible "
-                f"with another instance of Tangible. "
+                f"with another instance of Tangible/Intangible/OPEX/ASR/int/float. "
                 f"{other}({other.__class__.__qualname__}) is not "
-                f"an instance of Tangible."
+                f"an instance of Tangible/Intangible/OPEX/ASR/int/float."
             )
 
     def __rsub__(self, other):
@@ -492,7 +601,7 @@ class Tangible:
 
         # Multiplication is allowed only with an integer/a float
         if isinstance(other, (int, float)):
-            new_tangible = Tangible(
+            return Tangible(
                 start_year=self.start_year,
                 end_year=self.end_year,
                 cost=self.cost * other,
@@ -504,8 +613,6 @@ class Tangible:
                 cost_allocation=self.cost_allocation,
                 is_ic_applied=self.is_ic_applied,
             )
-
-            return new_tangible
 
         else:
             raise TangibleException(
@@ -530,7 +637,7 @@ class Tangible:
                 raise TangibleException(f"Cannot divide with zero")
 
             else:
-                new_tangible = Tangible(
+                return Tangible(
                     start_year=self.start_year,
                     end_year=self.end_year,
                     cost=self.cost / other,
@@ -540,8 +647,6 @@ class Tangible:
                     useful_life=self.useful_life.copy(),
                     cost_allocation=self.cost_allocation,
                 )
-
-                return new_tangible
 
         else:
             raise TangibleException(
@@ -615,27 +720,53 @@ class Intangible:
                 f"is before the start year of the project ({self.start_year})"
             )
 
-    def expenditures(self) -> np.ndarray:
+    def expenditures(
+        self,
+        tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
+        vat_rate: float | int = 0,
+        inflation_rate: float | int = 0
+    ) -> np.ndarray:
         """
         Calculate intangible expenditures per year.
 
         This method calculates the intangible expenditures per year
         based on the expense year and cost data provided.
 
+        Parameters
+        ----------
+        tax_regime: TaxRegime
+            The adopted regime/fiscal regulation to determine the
+            configuration of VAT calculations.
+        vat_rate: float | int
+            Rate of Value Added Tax (VAT).
+        inflation_rate: float | int
+            Rate of inflation.
+
         Returns
         -------
         expenses: np.ndarray
-            An array depicting the intangible expenditures each year.
+            An array depicting the intangible expenditures each year, taking
+            into account the inflation and Value Added Tax (VAT/PPN).
+
+        Notes
+        -----
+        (1) Function np.bincount() is used to align the cost elements according
+            to its corresponding expense year,
+        (2) If len(expenses) < project_duration, then add the remaining elements
+            with zeros,
+        (3) The return value is modified by taking into account the inflation,
+            using the custom decorator @apply_inflation,
+        (4) The return value is modified further by taking into account the Value
+            Added Tax (VAT/PPN), using the custom decorator @apply_vat.
         """
-
-        # Expenditures must be aligned with the corresponding expense_year
-        expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
-
-        # Modify expenses by taking into account the project duration
-        zeros = np.zeros(self.project_duration - len(expenses))
-        expenses = np.concatenate((expenses, zeros))
-
-        return expenses
+        @apply_vat(tax_regime=tax_regime, vat_rate=vat_rate)
+        @apply_inflation(inflation_rate=inflation_rate)
+        def _expenditures() -> np.ndarray:
+            expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
+            zeros = np.zeros(self.project_duration - len(expenses))
+            expenses = np.concatenate((expenses, zeros))
+            return expenses
+        return _expenditures()
 
     def __len__(self):
         return self.project_duration
@@ -725,26 +856,35 @@ class Intangible:
 
     def __add__(self, other):
 
-        # Between an instance of Intangible with an intance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+        # Between an instance of Intangible and another instance of Intangible
+        if isinstance(other, Intangible):
 
-            # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
+            # Raise an expection error is self.cost_allocation is not equal to other.cost_allocation
             if self.cost_allocation != other.cost_allocation:
                 raise IntangibleException(
                     "Cost allocation is not equal. "
                     f"First instance is {self.cost_allocation}, "
-                    f"second instance is {other.cost_allocation}"
+                    f"second instance is {other.cost_allocation} "
                 )
 
             else:
-                return self.expenditures() + other.expenditures()
+                combined_start_year = min(self.start_year, other.start_year)
+                combined_end_year = max(self.end_year, other.end_year)
+
+                return Intangible(
+                    start_year=combined_start_year,
+                    end_year=combined_end_year,
+                    cost=np.concatenate((self.cost, other.cost)),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
+                    cost_allocation=self.cost_allocation,
+                )
 
         else:
             raise IntangibleException(
-                f"Must add between an instance of Intangible with another "
-                f"instance of Tangible/Intangible/OPEX/ASR. "
-                f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of Tangible/Intangible/OPEX/ASR."
+                f"Must add between an instance of Intangible "
+                f"with another instance of Intangible. "
+                f"{other}({other.__class__.__qualname__}) is not "
+                f"an instance of Intangible."
             )
 
     def __iadd__(self, other):
@@ -752,7 +892,7 @@ class Intangible:
 
     def __sub__(self, other):
 
-        # Between an instance of Intangible with another instance of Intangible
+        # Between an instance of Intangible and another instance of Intangible
         if isinstance(other, Intangible):
 
             # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
@@ -764,7 +904,16 @@ class Intangible:
                 )
 
             else:
-                return self.expenditures() - other.expenditures()
+                combined_start_year = min(self.start_year, other.start_year)
+                combined_end_year = max(self.end_year, other.end_year)
+
+                return Intangible(
+                    start_year=combined_start_year,
+                    end_year=combined_end_year,
+                    cost=np.concatenate((self.cost, -other.cost)),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
+                    cost_allocation=self.cost_allocation,
+                )
 
         else:
             raise IntangibleException(
@@ -781,15 +930,13 @@ class Intangible:
 
         # Multiplication is allowed only with an integer/a float
         if isinstance(other, (int, float)):
-            new_intangible = Intangible(
+            return Intangible(
                 start_year=self.start_year,
                 end_year=self.end_year,
                 cost=self.cost * other,
                 expense_year=self.expense_year.copy(),
                 cost_allocation=self.cost_allocation,
             )
-
-            return new_intangible
 
         else:
             raise IntangibleException(
@@ -814,15 +961,13 @@ class Intangible:
                 raise IntangibleException(f"Cannot divide with zero")
 
             else:
-                new_intangible = Intangible(
+                return Intangible(
                     start_year=self.start_year,
                     end_year=self.end_year,
                     cost=self.cost / other,
                     expense_year=self.expense_year.copy(),
                     cost_allocation=self.cost_allocation,
                 )
-
-                return new_intangible
 
         else:
             raise IntangibleException(
@@ -845,12 +990,14 @@ class OPEX:
         The end year of the project.
     fixed_cost : np.ndarray
         An array representing the fixed cost of an OPEX asset.
-    variable_cost: np.ndarray
-        An array depicting variable cost of an OPEX asset.
-    expense_year : numpy.ndarray
+    expense_year : np.ndarray
         An array representing the expense year of an intangible asset.
     cost_allocation : FluidType
         A string depicting the cost allocation of an OPEX asset.
+    prod_rate: np.ndarray
+        The production rate of a particular fluid type.
+    cost_per_volume: np.ndarray
+        Cost associated with production of a particular fluid type.
     """
 
     start_year: int
@@ -930,25 +1077,50 @@ class OPEX:
         # Define cost
         self.cost = self.fixed_cost + self.variable_cost
 
-    def expenditures(self):
+    def expenditures(
+        self,
+        tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
+        vat_rate: float | int = 0,
+        inflation_rate: float | int = 0
+    ) -> np.ndarray:
         """
         Calculate OPEX expenditures per year.
         Allocate OPEX expenditures following the associated expense year.
+
+        Parameters
+        ----------
+        tax_regime: TaxRegime
+            The adopted regime/fiscal regulation to determine the
+            configuration of VAT calculations.
+        vat_rate: float | int
+            Rate of Value Added Tax (VAT).
+        inflation_rate: float | int
+            Rate of inflation.
 
         Returns
         -------
         expenses: np.ndarray
             An array of OPEX expenses aligned with the expense year.
+
+        Notes
+        -----
+        (1) Function np.bincount() is used to align the cost elements according
+            to its corresponding expense year,
+        (2) If len(expenses) < project_duration, then add the remaining elements
+            with zeros,
+        (3) The return value is modified by taking into account the inflation,
+            using the custom decorator @apply_inflation,
+        (4) The return value is modified further by taking into account the Value
+            Added Tax (VAT/PPN), using the custom decorator @apply_vat.
         """
-
-        # Alignment of expensitures with expense year
-        expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
-
-        # Modify expenses by taking into account the project duration
-        zeros = np.zeros(self.project_duration - len(expenses))
-        expenses = np.concatenate((expenses, zeros))
-
-        return expenses
+        @apply_vat(tax_regime=tax_regime, vat_rate=vat_rate)
+        @apply_inflation(inflation_rate=inflation_rate)
+        def _expenditures() -> np.ndarray:
+            expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
+            zeros = np.zeros(self.project_duration - len(expenses))
+            expenses = np.concatenate((expenses, zeros))
+            return expenses
+        return _expenditures()
 
     def __len__(self):
         return self.project_duration
@@ -1051,46 +1223,25 @@ class OPEX:
                 )
 
             else:
-
-                start_year = min(self.start_year, other.start_year)
-                end_year = max(self.end_year, other.end_year)
-                fixed_cost = np.concatenate((self.fixed_cost, other.fixed_cost))
-                expense_year = np.concatenate((self.expense_year, other.expense_year))
-                prod_rate = np.concatenate((self.prod_rate, other.prod_rate))
-                cost_per_volume = np.concatenate(
-                    (self.cost_per_volume, other.cost_per_volume)
-                )
+                combined_start_year = min(self.start_year, other.start_year)
+                combined_end_year = max(self.end_year, other.end_year)
 
                 return OPEX(
-                    start_year=start_year,
-                    end_year=end_year,
-                    fixed_cost=fixed_cost,
-                    expense_year=expense_year,
+                    start_year=combined_start_year,
+                    end_year=combined_end_year,
+                    fixed_cost=np.concatenate((self.fixed_cost, other.fixed_cost)),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
                     cost_allocation=self.cost_allocation,
-                    prod_rate=prod_rate,
-                    cost_per_volume=cost_per_volume,
+                    prod_rate=np.concatenate((self.prod_rate, other.prod_rate)),
+                    cost_per_volume=np.concatenate((self.cost_per_volume, other.cost_per_volume)),
                 )
-
-        # Between an instance of OPEX with an instance of Tangible/Intangible/ASR
-        elif isinstance(other, (Tangible, Intangible, ASR)):
-
-            # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
-            if self.cost_allocation != other.cost_allocation:
-                raise OPEXException(
-                    "Cost allocation is not equal. "
-                    f"First instance is {self.cost_allocation}, "
-                    f"second instance is {other.cost_allocation} "
-                )
-
-            else:
-                return self.expenditures() + other.expenditures()
 
         else:
             raise OPEXException(
-                f"Must add an instance of OPEX with another instance "
-                f"of Tangible/Intangible/OPEX/ASR. "
-                f"{other}({other.__class__.__qualname__}) is not an instance of "
-                f"Tangible/Intangible/OPEX/ASR."
+                f"Must add an instance of OPEX with another "
+                f"instance of OPEX. "
+                f"{other}({other.__class__.__qualname__}) is not "
+                f"an instance of OPEX."
             )
 
     def __iadd__(self, other):
@@ -1110,57 +1261,25 @@ class OPEX:
                 )
 
             else:
-                combine_fixed_cost, start_year, end_year = summarizer(
-                    array1=self.fixed_cost,
-                    array2=-1 * other.fixed_cost,
-                    startYear1=self.start_year,
-                    startYear2=other.start_year,
-                )
-
-                combine_prod_rate, _, _ = summarizer(
-                    array1=self.prod_rate,
-                    array2=-1 * other.prod_rate,
-                    startYear1=self.prod_rate,
-                    startYear2=other.prod_rate,
-                )
-
-                combine_cost_per_volume, _, _ = summarizer(
-                    array1=self.cost_per_volume,
-                    array2=-1 * other.cost_per_volume,
-                    startYear1=self.cost_per_volume,
-                    startYear2=other.cost_per_volume,
-                )
+                combined_start_year = min(self.start_year, other.start_year)
+                combined_end_year = max(self.end_year, other.end_year)
 
                 return OPEX(
-                    start_year=start_year,
-                    end_year=end_year,
-                    fixed_cost=combine_fixed_cost,
-                    expense_year=self.expense_year,
+                    start_year=combined_start_year,
+                    end_year=combined_end_year,
+                    fixed_cost=np.concatenate((self.fixed_cost, -other.fixed_cost)),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
                     cost_allocation=self.cost_allocation,
-                    prod_rate=combine_prod_rate,
-                    cost_per_volume=combine_cost_per_volume,
+                    prod_rate=np.concatenate((self.prod_rate, -other.prod_rate)),
+                    cost_per_volume=np.concatenate((self.cost_per_volume, other.cost_per_volume)),
                 )
-
-        # Between an instance of OPEX with an intance of Tangible/Intangible/ASR
-        elif isinstance(other, (Tangible, Intangible, ASR)):
-
-            # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
-            if self.cost_allocation != other.cost_allocation:
-                raise OPEXException(
-                    "Cost allocation is not equal. "
-                    f"First instance is {self.cost_allocation}, "
-                    f"second instance is {other.cost_allocation} "
-                )
-
-            else:
-                return self.expenditures() - other.expenditures()
 
         else:
             raise OPEXException(
-                f"Must add between an instance of OPEX with another "
-                f"instance of Tangible/Intangible/OPEX/ASR. "
-                f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of Tangible/Intangible/OPEX/ASR."
+                f"Must add between an instance of OPEX "
+                f"with another instance of OPEX. "
+                f"{other}({other.__class__.__qualname__}) is "
+                f"not an instance of OPEX"
             )
 
     def __rsub__(self, other):
@@ -1238,8 +1357,6 @@ class ASR:
         An array representing the expense year of an intangible asset.
     cost_allocation : FluidType
         A string depicting the cost allocation of an intangible asset.
-    rate: float
-        An exponent rate for future value of the asset.
     """
 
     start_year: int
@@ -1247,7 +1364,6 @@ class ASR:
     cost: np.ndarray
     expense_year: np.ndarray
     cost_allocation: FluidType = field(default=FluidType.OIL)
-    rate: float = field(default=0.02)
 
     # Attribute to de defined later on
     project_duration: int = field(default=None, init=False, repr=False)
@@ -1288,35 +1404,94 @@ class ASR:
                 f"is before the start year of the project ({self.start_year})"
             )
 
-    def future_cost(self):
+    def future_cost(
+        self,
+        rate: float = 0.02,
+        tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
+        vat_rate: float | int = 0,
+        inflation_rate: float | int = 0
+    ) -> np.ndarray:
         """
         Calculate the future cost of an asset.
+
+        Parameters
+        ----------
+        rate: float
+            An exponent value in the equation to determine future value of an asset.
+        tax_regime : TaxRegime, optional
+            The adopted regime/fiscal regulation to determine the configuration
+            of VAT calculations (default is TaxRegime.NAILED_DOWN).
+        vat_rate : float or int, optional
+            The Value Added Tax (VAT) rate as a decimal or integer (default is 0).
+        inflation_rate : float or int, optional
+            The annual inflation rate as a decimal or integer (default is 0).
 
         Returns
         -------
         future_cost: np.ndarray
             An array depicting the future cost of an asset.
+
+        Notes
+        -----
+        (1) The value of cost is modified by taking into account VAT/PPN
+            and inflation,
+        (2) Future cost is determined based on the modified cost.
         """
 
-        return self.cost * np.power((1 + self.rate), self.end_year - self.expense_year)
+        # Apply VAT/PPN to cost
+        if tax_regime == TaxRegime.NAILED_DOWN:
+            modified_cost = np.float_(self.cost * (1 + vat_rate))
 
-    def expenditures(self):
+        # Apply inflation to cost
+        exponents = self.expense_year - self.start_year
+        inflation_arr = (1. + inflation_rate) ** exponents
+        modified_cost *= inflation_arr
+
+        return modified_cost * np.power((1 + rate), self.end_year - self.expense_year + 1)
+
+    def expenditures(
+        self,
+        rate: float = 0.02,
+        tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
+        vat_rate: float | int = 0,
+        inflation_rate: float | int = 0
+    ) -> np.ndarray:
         """
         Calculate ASR expenditures per year.
 
         This method calculates the ASR expenditures per year
         based on the expense year and cost data provided.
 
+        Parameters
+        ----------
+        rate: float
+            An exponent value in the equation to determine future value of an asset.
+        tax_regime : TaxRegime, optional
+            The adopted regime/fiscal regulation to determine the configuration
+            of VAT calculations (default is TaxRegime.NAILED_DOWN).
+        vat_rate : float or int, optional
+            The Value Added Tax (VAT) rate as a decimal or integer (default is 0).
+        inflation_rate : float or int, optional
+            The annual inflation rate as a decimal or integer (default is 0).
+
         Returns
         -------
+        expenses: np.ndarray
+            An array of ASR expenses aligned with the expense year.
 
+        Notes
+        -----
+        The value of cost is modified by taking into account VAT/PPN
+        and inflation.
         """
 
         # Distance of expense year from the end year of the project
         cost_duration = self.end_year - self.expense_year + 1
 
         # Cost allocation: cost distribution per year
-        cost_alloc = self.future_cost() / cost_duration
+        cost_alloc = self.future_cost(
+            rate=rate, tax_regime=tax_regime, vat_rate=vat_rate, inflation_rate=inflation_rate
+        ) / cost_duration
 
         # Distance of expense year from the start year of the project
         shift_indices = self.expense_year - self.start_year
@@ -1341,7 +1516,6 @@ class ASR:
             return all(
                 (
                     self.cost_allocation == other.cost_allocation,
-                    self.rate == other.rate,
                     np.allclose(self.cost, other.cost),
                     np.allclose(self.expense_year, other.expense_year),
                 )
@@ -1420,10 +1594,8 @@ class ASR:
 
     def __add__(self, other):
 
-        # Between an instance of ASR with an intance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-
-            # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
+        # Between an instance of ASR with an instance of ASR
+        if isinstance(other, ASR):
             if self.cost_allocation != other.cost_allocation:
                 raise ASRException(
                     "Cost allocation is not equal. "
@@ -1432,14 +1604,23 @@ class ASR:
                 )
 
             else:
-                return self.expenditures() + other.expenditures()
+                combined_start_year = min(self.start_year, other.start_year)
+                combined_end_year = max(self.end_year, other.end_year)
+
+                return ASR(
+                    start_year=combined_start_year,
+                    end_year=combined_end_year,
+                    cost=np.concatenate((self.cost, other.cost)),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
+                    cost_allocation=self.cost_allocation,
+                )
 
         else:
             raise ASRException(
-                f"Must add between an instance of ASR with another "
-                f"instance of Tangible/Intangible/OPEX/ASR. "
-                f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of Tangible/Intangible/OPEX/ASR."
+                f"Must add between an instance of ASR "
+                f"with another instance of ASR. "
+                f"{other}({other.__class__.__qualname__}) is "
+                f"not an instance of ASR."
             )
 
     def __iadd__(self, other):
@@ -1459,7 +1640,16 @@ class ASR:
                 )
 
             else:
-                return self.expenditures() - other.expenditures()
+                combined_start_year = min(self.start_year, other.start_year)
+                combined_end_year = max(self.end_year, other.end_year)
+
+                return ASR(
+                    start_year=combined_start_year,
+                    end_year=combined_end_year,
+                    cost=np.concatenate((self.cost, -other.cost)),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
+                    cost_allocation=self.cost_allocation,
+                )
 
         else:
             raise ASRException(
@@ -1476,16 +1666,13 @@ class ASR:
 
         # Multiplication is allowed only with an integer/a float
         if isinstance(other, (int, float)):
-            new_asr = ASR(
+            return ASR(
                 start_year=self.start_year,
                 end_year=self.end_year,
                 cost=self.cost * other,
                 expense_year=self.expense_year,
                 cost_allocation=self.cost_allocation,
-                rate=self.rate,
             )
-
-            return new_asr
 
         else:
             raise ASRException(
@@ -1516,7 +1703,6 @@ class ASR:
                     cost=self.cost / other,
                     expense_year=self.expense_year,
                     cost_allocation=self.cost_allocation,
-                    rate=self.rate,
                 )
 
         else:

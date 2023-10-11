@@ -86,13 +86,6 @@ class Lifting:
                 f"start year {self.start_year} is after the end year: {self.end_year}"
             )
 
-        # Raise an error message: project duration is less than the length of production data
-        if self.project_duration < len(self.lifting_rate):
-            raise LiftingException(
-                f"Length of project duration: ({self.project_duration})"
-                f" is less than the length of lifting data: ({len(self.lifting_rate)})"
-            )
-
         # Raise an error message: prod_year is before the start year of the project
         if np.min(self.prod_year) < self.start_year:
             raise LiftingException(
@@ -160,7 +153,6 @@ class Lifting:
             return False
 
     def __lt__(self, other):
-
         # Between two instances of Lifting
         if isinstance(other, Lifting):
             return np.sum(self.revenue()) < np.sum(other.revenue())
@@ -176,7 +168,6 @@ class Lifting:
             )
 
     def __le__(self, other):
-
         # Between two instances of Lifting
         if isinstance(other, Lifting):
             return np.sum(self.revenue()) <= np.sum(other.revenue())
@@ -192,7 +183,6 @@ class Lifting:
             )
 
     def __gt__(self, other):
-
         # Between two instances of Lifting
         if isinstance(other, Lifting):
             return np.sum(self.revenue()) > np.sum(other.revenue())
@@ -208,7 +198,6 @@ class Lifting:
             )
 
     def __ge__(self, other):
-
         # Between two instances of Lifting
         if isinstance(other, Lifting):
             return np.sum(self.revenue()) >= np.sum(other.revenue())
@@ -224,10 +213,8 @@ class Lifting:
             )
 
     def __add__(self, other):
-
         # Between an instance of Lifting with another instance of Lifting
         if isinstance(other, Lifting):
-
             # Raise exception error if self.cost_allocation is not equal to other.cost_allocation
             if self.fluid_type != other.fluid_type:
                 raise LiftingException(
@@ -237,7 +224,6 @@ class Lifting:
                 )
 
             else:
-
                 start_year = min(self.start_year, other.start_year)
                 end_year = max(self.end_year, other.end_year)
                 lifting_rate = np.concatenate((self.lifting_rate, other.lifting_rate))
@@ -273,10 +259,8 @@ class Lifting:
         return self.__add__(other)
 
     def __sub__(self, other):
-
         # If "other" is an instance of Lifting object
         if isinstance(other, Lifting):
-
             # Configure the minimum and maximum values of the start and end year, respectively
             start_year = min(self.start_year, other.start_year)
             end_year = max(self.end_year, other.end_year)
@@ -286,7 +270,6 @@ class Lifting:
 
             # If the length of self_revenue data is less than project duration
             if len(self_revenue) < end_year - start_year + 1:
-
                 # Modify the size of self_revenue data
                 self_revenue.resize(end_year - start_year + 1, refcheck=False)
 
@@ -297,7 +280,6 @@ class Lifting:
 
             # If the length of other_revenue data is less than project duration
             if len(other_revenue) < end_year - start_year + 1:
-
                 # Modify the size of other_revenue data
                 other_revenue.resize(end_year - start_year + 1, refcheck=False)
 
@@ -323,10 +305,17 @@ class Lifting:
             )
 
     def __mul__(self, other):
-
         # Multiplication is allowed only with an integer/a float
         if isinstance(other, (int, float)):
-            return self.revenue() * other
+            return Lifting(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                lifting_rate=self.lifting_rate * other,
+                price=self.price,
+                prod_year=self.prod_year,
+                ghv=self.ghv,
+                prod_rate=self.prod_rate,
+            )
 
         else:
             raise LiftingException(
@@ -338,7 +327,6 @@ class Lifting:
         return self.__mul__(other)
 
     def __truediv__(self, other):
-
         # Between two instances of Lifting
         if isinstance(other, Lifting):
             return np.sum(self.revenue()) / np.sum(other.revenue())
@@ -349,13 +337,20 @@ class Lifting:
 
         # Between an instance of Lifting and an integer/float
         elif isinstance(other, (int, float)):
-
             # Cannot divide with zero
             if other == 0:
                 raise LiftingException(f"Cannot divide with zero")
 
             else:
-                return self.revenue() / other
+                return Lifting(
+                    start_year=self.start_year,
+                    end_year=self.end_year,
+                    lifting_rate=self.lifting_rate / other,
+                    price=self.price,
+                    prod_year=self.prod_year,
+                    ghv=self.ghv,
+                    prod_rate=self.prod_rate,
+                )
 
         elif isinstance(other, np.ndarray):
             return np.sum(self.revenue()) / np.sum(other)
