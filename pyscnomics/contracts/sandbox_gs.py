@@ -3,13 +3,15 @@ import pandas as pd
 
 
 from pyscnomics.dataset.sample import load_data, load_testing
+from pyscnomics.tools.summary import Summary
 # pd.options.display.float_format = '{:,.2f}'.format
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.expand_frame_repr', False)
 
 psc = load_data(dataset_type='small_oil', contract_type='gross_split')
-psc.run()
+psc.run(discount_rate=0.1,
+        discounted_year=2023)
 
 
 psc_table = pd.DataFrame()
@@ -37,14 +39,23 @@ psc_table['DMO Volume'] = psc._oil_dmo_volume
 psc_table['DMO Fee'] = psc._oil_dmo_fee
 psc_table['DDMO'] = psc._oil_ddmo
 psc_table['Taxable Income'] = psc._oil_taxable_income
+psc_table['Tax'] = psc._oil_tax
 psc_table['Net CTR Share'] = psc._oil_ctr_net_share
 psc_table['CTR CashFlow'] = psc._oil_ctr_cashflow
 psc_table['Government Take'] = psc._oil_gov_take
 psc_table['Cumulative CTR CashFlow'] = np.cumsum(psc._oil_ctr_cashflow)
+psc_table['CTR CashFlow Discounted'] = psc._oil_ctr_cashflow_disc
+psc_table['GOV CashFlow Discounted'] = psc._oil_gov_cashflow_disc
 
 print('Calculation Table: Gross Split \n', psc_table, '\n')
 
-print()
+print('The Projects POT: ', np.sum(psc._oil_pot))
+print('The Projects NPV: ', np.sum(psc._oil_npv))
+print('The Projects IRR: ', np.sum(psc._oil_irr))
+
+
+summary_psc = Summary(contract=psc)
+print(summary_psc.oil_production)
 
 
 

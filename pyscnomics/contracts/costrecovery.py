@@ -484,13 +484,13 @@ class CostRecovery(BaseProject):
         # ETS (Equity to be Split) after transfer/consolidation
         self._oil_ets_after_transfer = psc_tools.get_ets_after_transfer(
             ets_before_transfer=self._oil_ets_before_transfer,
-            trfto=self._transfer_to_oil,
+            trfto=self._transfer_to_gas,
             unrecovered_after_transfer=self._oil_unrecovered_after_transfer,
         )
 
         self._gas_ets_after_transfer = psc_tools.get_ets_after_transfer(
             ets_before_transfer=self._gas_ets_before_transfer,
-            trfto=self._transfer_to_gas,
+            trfto=self._transfer_to_oil,
             unrecovered_after_transfer=self._gas_unrecovered_after_transfer,
         )
 

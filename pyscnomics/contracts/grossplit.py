@@ -6,7 +6,8 @@ import numpy as np
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
-from pyscnomics.econ.selection import FluidType, GrossSplitRegime
+from pyscnomics.econ.selection import FluidType, GrossSplitRegime, DiscountingMode
+from pyscnomics.econ import indicator
 from pyscnomics.econ.results import CashFlow
 
 
@@ -29,6 +30,8 @@ class GrossSplit(BaseProject):
     co2_content: str = field(default='<5')
     h2s_content: str = field(default='<100')
 
+    ctr_effective_tax_rate: float = field(default=0.22)
+
     base_split_ctr_oil: float = field(default=0.43)
     base_split_ctr_gas: float = field(default=0.48)
     split_ministry_disc: float = field(default=0.08)
@@ -49,8 +52,6 @@ class GrossSplit(BaseProject):
     _gas_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
     _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
 
     _cumulative_prod: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -110,6 +111,18 @@ class GrossSplit(BaseProject):
 
     _oil_cashflow: CashFlow = field(default=None, init=False, repr=False)
     _gas_cashflow: CashFlow = field(default=None, init=False, repr=False)
+
+    _oil_pot: float = field(default=None, init=False, repr=False)
+    _oil_irr: float = field(default=None, init=False, repr=False)
+    _gas_pot: float = field(default=None, init=False, repr=False)
+    _gas_irr: float = field(default=None, init=False, repr=False)
+    _oil_npv: float = field(default=None, init=False, repr=False)
+    _gas_npv: float = field(default=None, init=False, repr=False)
+
+    _oil_ctr_cashflow_disc: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ctr_cashflow_disc: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_gov_cashflow_disc: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_gov_cashflow_disc: np.ndarray = field(default=None, init=False, repr=False)
 
     def _wrapper_variable_split(self,
                                 regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
@@ -372,7 +385,10 @@ class GrossSplit(BaseProject):
     def run(self,
             is_dmo_end_weighted=False,
             regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
-            disc_rate: float = 0.1):
+            discount_rate: float = 0.1,
+            discounted_year: int | None = None,
+            discounting_mode: DiscountingMode = DiscountingMode.HALF_YEAR
+            ):
 
         # Depreciation (Tangible cost)
         self._oil_depreciation, self._oil_undepreciated_asset = self._oil_tangible.total_depreciation_rate()
@@ -529,9 +545,10 @@ class GrossSplit(BaseProject):
         self._gas_taxable_income = self._gas_net_operating_profit - self._gas_ddmo
 
         # Tax
-        # Todo: Wait for the Tax finished.
-        self._oil_tax = np.zeros_like(self.project_years)
-        self._gas_tax = np.zeros_like(self.project_years)
+        self._oil_tax = self._oil_taxable_income * np.full_like(self.project_years, self.ctr_effective_tax_rate,
+                                                                dtype=float)
+        self._gas_tax = self._gas_taxable_income * np.full_like(self.project_years, self.ctr_effective_tax_rate,
+                                                                dtype=float)
 
         # Contractor Net Share
         self._oil_ctr_net_share = self._oil_taxable_income - self._oil_tax
@@ -547,7 +564,45 @@ class GrossSplit(BaseProject):
         self._oil_gov_take = self._oil_gov_share + self._oil_ddmo + self._oil_tax
         self._gas_gov_take = self._gas_gov_share + self._gas_ddmo + self._gas_tax
 
-        # FixMe: How to apply the year of discount factor as the given Gross Split sample
+        # Pay Out Time (POT) and Internal Rate Return (IRR)
+        # Condition where there is no revenue from one of Oil and Gas
+        if np.sum(self._oil_ctr_cashflow) == 0:
+            self._oil_pot = 0
+            self._oil_irr = 0
+        else:
+            self._oil_pot = indicator.pot(cashflow=self._oil_ctr_cashflow)
+            self._oil_irr = indicator.irr(cashflow=self._oil_ctr_cashflow)
+
+        if np.sum(self._gas_ctr_cashflow) == 0:
+            self._gas_pot = 0
+            self._gas_irr = 0
+        else:
+            self._gas_pot = indicator.pot(cashflow=self._oil_ctr_cashflow)
+            self._gas_irr = indicator.irr(cashflow=self._oil_ctr_cashflow)
+
+        # NPV
+        self._oil_npv = indicator.npv(cashflow=self._oil_ctr_cashflow)
+        self._gas_npv = indicator.npv(cashflow=self._oil_ctr_cashflow)
+
+        # Condition if discounted_year is None:
+        if discounted_year is None:
+            discounted_year = self.start_date.year
+
+        if discounting_mode == DiscountingMode.FULL_YEAR:
+            dcf = 0
+        else:
+            dcf = 0.5
+
+        discount_factor = 1 / np.power(1 + discount_rate, self.project_years - discounted_year + dcf)
+
+        # Discounted Contractor Cashflow
+        self._oil_ctr_cashflow_disc = self._oil_ctr_cashflow * discount_factor
+        self._gas_ctr_cashflow_disc = self._gas_ctr_cashflow * discount_factor
+
+        self._oil_gov_cashflow_disc = self._oil_gov_take * discount_factor
+        self._gas_gov_cashflow_disc = self._gas_gov_take * discount_factor
+
+        # Cashflow Object
         self._oil_cashflow = CashFlow(start_date=self.start_date,
                                       end_date=self.end_date,
                                       cash=self._oil_ctr_cashflow,

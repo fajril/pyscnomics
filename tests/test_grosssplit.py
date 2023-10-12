@@ -141,6 +141,12 @@ def test_oil_taxable_income():
     np.testing.assert_allclose(base, calc)
 
 
+def test_oil_tax():
+    base = np.asarray(load_testing(dataset_type='small_oil', key='oil_tax'))
+    calc = np.array(psc._oil_tax)
+    np.testing.assert_allclose(base, calc)
+
+
 def test_oil_ctr_net_share():
     base = np.asarray(load_testing(dataset_type='small_oil', key='oil_ctr_net_share'))
     calc = np.array(psc._oil_ctr_net_share)

@@ -191,7 +191,9 @@ def assign_cost(data_raw: dict) -> tuple:
                             pis_year=np.array(tangible_data[key]['pis_year']),
                             cost_allocation=read_fluid_type(tangible_data[key]['cost_allocation']),
                             useful_life=np.array(tangible_data[key]['useful_life']),
-                            depreciation_factor=np.array(tangible_data[key]['depreciation_factor']))
+                            depreciation_factor=np.array(tangible_data[key]['depreciation_factor']),
+                            vat_portion=tangible_data[key]['vat_portion'],
+                            pdri_portion=tangible_data[key]['pdri_portion'])
         tangible_list.append(tangible)
 
     # Defining the data source and the list container for Intangible. Then, assign them based on their fluid type
@@ -202,6 +204,8 @@ def assign_cost(data_raw: dict) -> tuple:
                                 end_year=intangible_data[key]['end_year'],
                                 cost=np.array(intangible_data[key]['cost']),
                                 expense_year=np.array(intangible_data[key]['expense_year']),
+                                vat_portion=intangible_data[key]['vat_portion'],
+                                pdri_portion=intangible_data[key]['pdri_portion'],
                                 cost_allocation=read_fluid_type(intangible_data[key]['cost_allocation']),
                                 )
         intangible_list.append(intangible)
@@ -214,6 +218,8 @@ def assign_cost(data_raw: dict) -> tuple:
                     end_year=opex_data[key]['end_year'],
                     fixed_cost=np.array(opex_data[key]['fixed_cost']),
                     expense_year=np.array(opex_data[key]['expense_year']),
+                    vat_portion=opex_data[key]['vat_portion'],
+                    pdri_portion=opex_data[key]['pdri_portion'],
                     cost_allocation=read_fluid_type(opex_data[key]['cost_allocation']))
         opex_list.append(opex)
 
@@ -225,6 +231,8 @@ def assign_cost(data_raw: dict) -> tuple:
                   end_year=asr_data[key]['end_year'],
                   cost=np.array(asr_data[key]['cost']),
                   expense_year=np.array(asr_data[key]['expense_year']),
+                  vat_portion=asr_data[key]['vat_portion'],
+                  pdri_portion=asr_data[key]['pdri_portion'],
                   cost_allocation=read_fluid_type(asr_data[key]['cost_allocation']))
         asr_list.append(asr)
 
@@ -353,6 +361,7 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
                           prod_stage=config['prod_stage'],
                           co2_content=config['co2_content'],
                           h2s_content=config['h2s_content'],
+                          ctr_effective_tax_rate=config['ctr_effective_tax_rate'],
                           base_split_ctr_oil=config['base_split_ctr_oil'],
                           base_split_ctr_gas=config['base_split_ctr_gas'],
                           split_ministry_disc=config['split_ministry_disc'],

@@ -383,3 +383,15 @@ class CashFlow:
             The calculated potential investment return value.
         """
         return indicator.pot(cashflow=self.cash)
+
+
+
+
+
+
+
+
+
+
+
+

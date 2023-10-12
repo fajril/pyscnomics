@@ -6,7 +6,6 @@ from enum import Enum
 
 
 class DeprMethod(Enum):
-
     """
     Enumeration of depreciation methods.
 
@@ -29,7 +28,6 @@ class DeprMethod(Enum):
 
 
 class FluidType(Enum):
-
     """
     Enumeration of fluid types for depreciation calculation.
 
@@ -124,3 +122,17 @@ class GrossSplitRegime(Enum):
     PERMEN_ESDM_52_2017 = 'Peraturan Menteri ESDM No. 52 Tahun 2017'
     PERMEN_ESDM_20_2019 = 'Peraturan Menteri ESDM No. 20 Tahun 2019'
     PERMEN_ESDM_12_2020 = 'Peraturan Menteri ESDM No. 12 Tahun 2020'
+
+
+class DiscountingMode(Enum):
+    FULL_YEAR = "Full Year Discounting"
+    HALF_YEAR = "Half Year Discounting"
+
+
+class ContractType(Enum):
+    COST_RECOVERY = 'Cost Recovery (CR)'
+    GROSS_SPLIT = 'Gross Split (GS)'
+    TRANSITION_CR_CR = 'Transition CR - CR'
+    TRANSITION_CR_GS = 'Transition CR - GS'
+    TRANSITION_GS_GS = 'Transition GS - GS'
+    TRANSITION_GS_CR = 'Transition GS - CR'

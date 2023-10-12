@@ -124,6 +124,22 @@ class Lifting:
 
         return rev_update
 
+    def lifting_rate_arr(self):
+
+        lifting_rate_arr = np.bincount(self.prod_year - self.start_year, weights=self.lifting_rate)
+        zeros = np.zeros(self.project_duration - len(lifting_rate_arr))
+        lifting_rate_arr = np.concatenate((lifting_rate_arr, zeros))
+
+        return lifting_rate_arr
+
+    def lifting_price_arr(self):
+
+        lifting_price_arr = np.bincount(self.prod_year - self.start_year, weights=self.price)
+        zeros = np.zeros(self.project_duration - len(lifting_price_arr))
+        lifting_price_arr = np.concatenate((lifting_price_arr, zeros))
+
+        return lifting_price_arr
+
     def __len__(self):
         return self.project_duration
 
