@@ -546,15 +546,15 @@ class CostRecovery(BaseProject):
                                                               tax_rate=tax_rate,
                                                               ftp_tax_regime=ftp_tax_regime)
 
-        self._gas_ftp_tax_payment = self._get_ftp_tax_payment(unrec=self._gas_unrecovered_after_transfer,
-                                                              ftp=self._gas_ftp_ctr,
-                                                              tax_rate=tax_rate,
-                                                              ftp_tax_regime=ftp_tax_regime)
+        # self._gas_ftp_tax_payment = self._get_ftp_tax_payment(unrec=self._gas_unrecovered_after_transfer,
+        #                                                       ftp=self._gas_ftp_ctr,
+        #                                                       tax_rate=tax_rate,
+        #                                                       ftp_tax_regime=ftp_tax_regime)
 
-        # self._gas_ftp_tax_payment = self._get_ftp_tax_payment2(ctr_share=self._gas_contractor_share,
-        #                                                        taxable_income=self._gas_taxable_income,
-        #                                                        tax_rate=tax_rate,
-        #                                                        ftp_tax_regime=ftp_tax_regime)
+        self._gas_ftp_tax_payment = self._get_ftp_tax_payment2(ctr_share=self._gas_contractor_share,
+                                                               taxable_income=self._gas_taxable_income,
+                                                               tax_rate=tax_rate,
+                                                               ftp_tax_regime=ftp_tax_regime)
 
         # Contractor Take by Fluid
         self._oil_contractor_take = (
