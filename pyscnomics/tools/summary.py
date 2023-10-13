@@ -46,7 +46,6 @@ class Summary:
         if is_dataclass(self.contract) and isinstance(self.contract, GrossSplit):
             self.oil_production = float(np.sum(self.contract._oil_lifting.lifting_rate))
             self.oil_wap = float(np.sum(self.contract._oil_revenue))/self.oil_production
-            self.gross_revenue = float(np.sum(self.contract._))
             self.gross_share = float()
             self.ctr_gross_share = float()
             self.investment = float()

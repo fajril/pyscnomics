@@ -1697,86 +1697,9 @@ class ASR:
             (1 + future_rate), self.end_year - self.expense_year + 1
         )
 
-    # def expenditures(
-    #     self,
-    #     future_rate: float = 0.02,
-    #     inflation_rate: float | int = 0.0,
-    #     vat_rate: np.ndarray | float | int = 0.0,
-    #     vat_discount: np.ndarray | float | int = 0.0,
-    #     pdri_rate: np.ndarray | float | int = 0.0,
-    #     pdri_discount: np.ndarray | float | int = 0.0,
-    #     lbt_discount: np.ndarray | float | int = 0.0,
-    #     pdrd_discount: np.ndarray | float | int = 0.0,
-    # ) -> np.ndarray:
-    #     """
-    #     Calculate ASR expenditures per year.
-    #
-    #     This method calculates the ASR expenditures per year
-    #     based on the expense year and cost data provided.
-    #
-    #     Parameters
-    #     ----------
-    #     future_rate : float, optional
-    #         The future rate used in cost calculation (default is 0.02).
-    #     inflation_rate : float or int, optional
-    #         The inflation rate to apply (default is 0).
-    #     vat_rate : np.ndarray, float, or int, optional
-    #         The VAT/PPN rate(s) to apply. Can be a single value or an array (default is 0).
-    #     vat_discount : np.ndarray, float, or int, optional
-    #         The VAT discount(s) to apply. Can be a single value or an array (default is 0).
-    #     pdri_rate : np.ndarray, float, or int, optional
-    #         The PDRI rate(s) to apply. Can be a single value or an array (default is 0).
-    #     pdri_discount : np.ndarray, float, or int, optional
-    #         The PDRI discount(s) to apply. Can be a single value or an array (default is 0).
-    #     lbt_discount : np.ndarray, float, or int, optional
-    #         The LBT discount(s) to apply. Can be a single value or an array (default is 0).
-    #     pdrd_discount : np.ndarray, float, or int, optional
-    #         The PDRD discount(s) to apply. Can be a single value or an array (default is 0).
-    #
-    #     Returns
-    #     -------
-    #     expenses: np.ndarray
-    #         An array depicting the ASR expenditures each year, taking into
-    #         account the inflation, VAT/PPN, PDRI, LBT/PBB, and PDRD.
-    #
-    #     Notes
-    #     -----
-    #     This method calculates ASR expenditures while considering various economic factors
-    #     such as inflation, VAT, PDRI, LBT, and PDRD.
-    #     """
-    #     # Distance of expense year from the end year of the project
-    #     cost_duration = self.end_year - self.expense_year + 1
-    #
-    #     # Cost allocation: cost distribution per year
-    #     cost_alloc = (
-    #         self.future_cost(
-    #             future_rate=future_rate,
-    #             inflation_rate=inflation_rate,
-    #             vat_rate=vat_rate,
-    #             vat_discount=vat_discount,
-    #             pdri_rate=pdri_rate,
-    #             pdri_discount=pdri_discount,
-    #             lbt_discount=lbt_discount,
-    #             pdrd_discount=pdrd_discount,
-    #         )
-    #         / cost_duration
-    #     )
-    #
-    #     # Distance of expense year from the start year of the project
-    #     shift_indices = self.expense_year - self.start_year
-    #
-    #     # ASR allocation per element per distributed year
-    #     asr_alloc = np.asarray(
-    #         [
-    #             np.concatenate((np.zeros(i), np.repeat(ca, cd)))
-    #             for i, ca, cd in zip(shift_indices, cost_alloc, cost_duration)
-    #         ]
-    #     )
-    #
-    #     return asr_alloc.sum(axis=0)
-
     def expenditures(
         self,
+        future_rate: float = 0.02,
         inflation_rate: float | int = 0.0,
         vat_rate: np.ndarray | float | int = 0.0,
         vat_discount: np.ndarray | float | int = 0.0,
@@ -1786,63 +1709,71 @@ class ASR:
         pdrd_discount: np.ndarray | float | int = 0.0,
     ) -> np.ndarray:
         """
-        Calculate OPEX expenditures per year.
-        Allocate OPEX expenditures following the associated expense year.
+        Calculate ASR expenditures per year.
 
-        Parameters:
-        -----------
+        This method calculates the ASR expenditures per year
+        based on the expense year and cost data provided.
+
+        Parameters
+        ----------
+        future_rate : float, optional
+            The future rate used in cost calculation (default is 0.02).
         inflation_rate : float or int, optional
-            The annual inflation rate as a decimal (default is 0).
-        vat_rate : numpy.ndarray or float or int, optional
-            The VAT (Value Added Tax) rate(s) as a multiplier (default is 0).
-        vat_discount : numpy.ndarray or float or int, optional
-            The VAT discount(s) as a multiplier (default is 0).
-        pdri_rate : numpy.ndarray or float or int, optional
-            The PDRI rate(s) as a multiplier (default is 0).
-        pdri_discount : numpy.ndarray or float or int, optional
-            PDRI discount(s) as a multiplier (default is 0).
-        lbt_discount : numpy.ndarray or float or int, optional
-            Land and Building Tax (LBT) discount(s) as a multiplier (default is 0).
-        pdrd_discount : numpy.ndarray or float or int, optional
-            PDRD discount as a multiplier (default is 0).
+            The inflation rate to apply (default is 0).
+        vat_rate : np.ndarray, float, or int, optional
+            The VAT/PPN rate(s) to apply. Can be a single value or an array (default is 0).
+        vat_discount : np.ndarray, float, or int, optional
+            The VAT discount(s) to apply. Can be a single value or an array (default is 0).
+        pdri_rate : np.ndarray, float, or int, optional
+            The PDRI rate(s) to apply. Can be a single value or an array (default is 0).
+        pdri_discount : np.ndarray, float, or int, optional
+            The PDRI discount(s) to apply. Can be a single value or an array (default is 0).
+        lbt_discount : np.ndarray, float, or int, optional
+            The LBT discount(s) to apply. Can be a single value or an array (default is 0).
+        pdrd_discount : np.ndarray, float, or int, optional
+            The PDRD discount(s) to apply. Can be a single value or an array (default is 0).
 
         Returns
         -------
         expenses: np.ndarray
-            An array depicting the OPEX expenditures each year, taking into
+            An array depicting the ASR expenditures each year, taking into
             account the inflation, VAT/PPN, PDRI, LBT/PBB, and PDRD.
 
         Notes
         -----
-        This method calculates OPEX expenditures while considering various economic factors
-        such as inflation, VAT, PDRI, LBT, and PDRD. It uses decorators to apply these factors
-        to the core calculation. In the core calculations:
-        (1) Function np.bincount() is used to align the cost elements according
-            to its corresponding expense year,
-        (2) If len(expenses) < project_duration, then add the remaining elements
-            with zeros.
+        This method calculates ASR expenditures while considering various economic factors
+        such as inflation, VAT, PDRI, LBT, and PDRD.
         """
+        # Distance of expense year from the end year of the project
+        cost_duration = self.end_year - self.expense_year + 1
 
-        @apply_pdrd(pdrd_discount=pdrd_discount)
-        @apply_lbt(lbt_discount=lbt_discount)
-        @apply_vat_pdri(
-            vat_portion=self.vat_portion,
-            vat_rate=vat_rate,
-            vat_discount=vat_discount,
-            pdri_portion=self.pdri_portion,
-            pdri_rate=pdri_rate,
-            pdri_discount=pdri_discount,
-        )
-        @apply_inflation(inflation_rate=inflation_rate)
-        def _expenditures() -> np.ndarray:
-            expenses = np.bincount(
-                self.expense_year - self.start_year, weights=self.cost
+        # Cost allocation: cost distribution per year
+        cost_alloc = (
+            self.future_cost(
+                future_rate=future_rate,
+                inflation_rate=inflation_rate,
+                vat_rate=vat_rate,
+                vat_discount=vat_discount,
+                pdri_rate=pdri_rate,
+                pdri_discount=pdri_discount,
+                lbt_discount=lbt_discount,
+                pdrd_discount=pdrd_discount,
             )
-            zeros = np.zeros(self.project_duration - len(expenses))
-            expenses = np.concatenate((expenses, zeros))
-            return expenses
+            / cost_duration
+        )
 
-        return _expenditures()
+        # Distance of expense year from the start year of the project
+        shift_indices = self.expense_year - self.start_year
+
+        # ASR allocation per element per distributed year
+        asr_alloc = np.asarray(
+            [
+                np.concatenate((np.zeros(i), np.repeat(ca, cd)))
+                for i, ca, cd in zip(shift_indices, cost_alloc, cost_duration)
+            ]
+        )
+
+        return asr_alloc.sum(axis=0)
 
     def __len__(self):
         return self.project_duration

@@ -5,6 +5,10 @@ import pandas as pd
 from pyscnomics.dataset.sample import load_data
 # pd.options.display.float_format = '{:,.2f}'.format
 
+'''
+B
+'''
+
 pd.set_option('display.max_columns', None)
 pd.set_option('display.expand_frame_repr', False)
 
@@ -40,9 +44,8 @@ psc_table['Cum Cashflow'] = np.cumsum(psc._gas_cashflow)
 psc_table.drop([i for i in range(12)], inplace=True)
 print(psc_table, '\n')
 
-print('The Projects POT: ', np.sum(psc._gas_pot))
-print('The Projects NPV: ', np.sum(psc._gas_npv))
-print('The Projects IRR: ', np.sum(psc._gas_irr))
+psc_table.to_excel('Cost Recovery B Table from Pyscnomics.xlsx')
+
 
 
 

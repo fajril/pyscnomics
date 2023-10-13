@@ -57,7 +57,7 @@ print('The Projects IRR: ', np.sum(psc._oil_irr))
 summary_psc = Summary(contract=psc)
 print(summary_psc.oil_production)
 
-
+psc_table.to_excel('Gross Split Table from Pyscnomics.xlsx')
 
 
 
