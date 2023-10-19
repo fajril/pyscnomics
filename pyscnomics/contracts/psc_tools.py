@@ -40,7 +40,14 @@ def get_unrecovered_cost(depreciation: np.ndarray,
         revenue - (ftp_ctr + ftp_gov) - ic
     )
 
-    return np.where(unrecovered_cost >= 0, unrecovered_cost, 0)
+    unrecovered_cost = np.where(unrecovered_cost >= 0, unrecovered_cost, 0)
+
+    # Condition where there is no revenue but still there is depreciation + non-capital
+    left_cost = np.where(np.logical_and((revenue - ftp_ctr - ftp_gov - ic) < depreciation + non_capital,
+                                        unrecovered_cost == 0),
+                         (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic), 0)
+    unrecovered_cost_final = unrecovered_cost + np.cumsum(left_cost)
+    return unrecovered_cost_final
 
 
 def get_cost_to_be_recovered(unrecovered_cost: np.ndarray) -> np.ndarray:
@@ -59,6 +66,28 @@ def get_cost_to_be_recovered(unrecovered_cost: np.ndarray) -> np.ndarray:
     """
     ctr = np.concatenate((np.zeros(1), -np.diff(unrecovered_cost)))
     return np.where(ctr > 0, ctr, 0)
+
+
+def get_cost_to_be_recovered_after_tf(unrecovered_cost: np.ndarray,
+                                      transferred_cost) -> np.ndarray:
+    """
+    A function to get the array of cost to be recovered.
+
+    Parameters
+    ----------
+    unrecovered_cost: np.ndarray
+        The array containing the unrecovered cost.
+    transferred_cost
+
+    Returns
+    -------
+    out: np.ndarray
+        The array of cost to be recovered.
+    """
+    ctr = np.concatenate((np.zeros(1), -np.diff(unrecovered_cost - transferred_cost)))
+    result = np.where(ctr > 0, ctr, 0)
+
+    return result
 
 
 def get_transfer(gas_unrecovered: np.ndarray,
@@ -118,6 +147,27 @@ def get_transfer(gas_unrecovered: np.ndarray,
     return trf2oil, trf2gas
 
 
+def get_unrec_cost_after_tf(depreciation,
+                            non_capital,
+                            revenue,
+                            ftp_ctr,
+                            ftp_gov,
+                            ic,
+                            transferred_cost):
+    unrecovered_cost = np.cumsum(depreciation + non_capital) - np.cumsum(
+        revenue - (ftp_ctr + ftp_gov) - ic
+    )
+
+    unrecovered_cost = np.where(unrecovered_cost >= 0, unrecovered_cost - transferred_cost, 0)
+
+    # Condition where there is no revenue but still there is depreciation + non-capital
+    left_cost = np.where(np.logical_and((revenue - ftp_ctr - ftp_gov - ic) < depreciation + non_capital,
+                                        unrecovered_cost == 0),
+                         (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic) - transferred_cost, 0)
+    unrecovered_cost_final = unrecovered_cost + np.cumsum(left_cost)
+    return unrecovered_cost_final
+
+
 def get_ets_after_transfer(ets_before_transfer: np.ndarray,
                            trfto: np.ndarray,
                            unrecovered_after_transfer: np.ndarray):
@@ -147,6 +197,38 @@ def get_ets_after_transfer(ets_before_transfer: np.ndarray,
         ets_after_transfer[indices] = ets_before_transfer[indices] + trfto[indices]
 
     return ets_after_transfer
+
+
+# def get_ets_after_transfer(ets_before_transfer: np.ndarray,
+#                            trfto: np.ndarray,
+#                            trffrom: np.ndarray,
+#                            unrecovered_after_transfer: np.ndarray):
+#     """
+#     A function to get the Equity To be Split (ETS) after transfer.
+#
+#     Parameters
+#     ----------
+#     ets_before_transfer: np.ndarray
+#         The array containing the ETS before transfer.
+#     trfto
+#         The array containing the transferred cost.
+#     unrecovered_after_transfer
+#         The array containing the unrecovered cost after transfer.
+#
+#     Returns
+#     -------
+#     ets_after_transfer: np.ndarray
+#         The array of ETS after transfer.
+#     """
+#
+#     ets_after_transfer = np.zeros_like(ets_before_transfer)
+#
+#     indices = np.equal(unrecovered_after_transfer, 0)
+#
+#     if np.size(indices) > 0:
+#         ets_after_transfer[indices] = ets_before_transfer[indices] - trfto[indices] + trffrom[indices]
+#
+#     return ets_after_transfer
 
 
 def get_dmo(onstream_date: date,
@@ -213,9 +295,10 @@ def get_dmo(onstream_date: date,
 
     # Weighted dmo fee condition if the period of dmo is ended in the middle of the year
     if unrecovered_cost[dmo_indices] > 0 and is_dmo_end_weighted:
-        dmo_fee[dmo_indices] = (dmo_end_date.month / 12 * lifting.lifting_price_arr()[dmo_indices] * dmo_volume[dmo_indices] +
-                                (1 - dmo_end_date.month / 12) * dmo_volume[dmo_indices] *
-                                dmo_fee_portion * lifting.lifting_price_arr()[dmo_indices])
+        dmo_fee[dmo_indices] = (
+                    dmo_end_date.month / 12 * lifting.lifting_price_arr()[dmo_indices] * dmo_volume[dmo_indices] +
+                    (1 - dmo_end_date.month / 12) * dmo_volume[dmo_indices] *
+                    dmo_fee_portion * lifting.lifting_price_arr()[dmo_indices])
 
     # Calculate Net DMO
     ddmo = (dmo_volume * lifting.lifting_price_arr()) - dmo_fee

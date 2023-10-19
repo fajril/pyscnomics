@@ -167,7 +167,6 @@ class CostRecovery(BaseProject):
                 self._gas_ftp_ctr = self.gas_ctr_pretax_share * self._gas_ftp
             self._gas_ftp_gov = self._gas_ftp - self._gas_ftp_ctr
 
-
     def _get_ic(
             self, revenue: np.ndarray, ftp: np.ndarray, cost_alloc: FluidType, ic_rate: float
     ) -> tuple:
@@ -474,25 +473,87 @@ class CostRecovery(BaseProject):
         )
 
         # Unrecovered cost after transfer/consolidation
-        self._oil_unrecovered_after_transfer = (
-                self._oil_unrecovered_before_transfer - self._transfer_to_oil
+        # self._oil_unrecovered_after_transfer = (
+        #         self._oil_unrecovered_before_transfer - self._transfer_to_oil
+        # )
+        # self._gas_unrecovered_after_transfer = (
+        #         self._gas_unrecovered_before_transfer - self._transfer_to_gas
+        # )
+
+        self._oil_unrecovered_after_transfer = psc_tools.get_unrec_cost_after_tf(
+            depreciation=self._oil_depreciation,
+            non_capital=self._oil_non_capital,
+            revenue=self._oil_revenue,
+            ftp_ctr=self._oil_ftp_ctr,
+            ftp_gov=self._oil_ftp_gov,
+            ic=self._oil_ic_paid,
+            transferred_cost=self._transfer_to_oil)
+
+        self._gas_unrecovered_after_transfer = psc_tools.get_unrec_cost_after_tf(
+            depreciation=self._gas_depreciation,
+            non_capital=self._gas_non_capital,
+            revenue=self._gas_revenue,
+            ftp_ctr=self._gas_ftp_ctr,
+            ftp_gov=self._gas_ftp_gov,
+            ic=self._gas_ic_paid,
+            transferred_cost=self._transfer_to_gas)
+
+        # Cost to be recovered after transfer
+        self._oil_cost_to_be_recovered_after_tf = psc_tools.get_cost_to_be_recovered_after_tf(
+            unrecovered_cost=self._oil_unrecovered_before_transfer,
+            transferred_cost=self._transfer_to_oil
         )
-        self._gas_unrecovered_after_transfer = (
-                self._gas_unrecovered_before_transfer - self._transfer_to_gas
+
+        self._gas_cost_to_be_recovered_after_tf = psc_tools.get_cost_to_be_recovered_after_tf(
+            unrecovered_cost=self._gas_unrecovered_before_transfer,
+            transferred_cost=self._transfer_to_gas
         )
+
+        # Cost recovery after transfer
+        self._oil_cost_recovery_after_tf = self._get_cost_recovery(revenue=self._oil_revenue,
+                                                                   ftp=self._oil_ftp,
+                                                                   ic=self._oil_ic_paid,
+                                                                   depreciation=self._oil_depreciation,
+                                                                   non_capital=self._oil_non_capital,
+                                                                   cost_to_be_recovered=self._oil_cost_to_be_recovered_after_tf,
+                                                                   cr_cap_rate=self.oil_cr_cap_rate,
+                                                                   )
+
+        self._gas_cost_recovery_after_tf = self._get_cost_recovery(revenue=self._gas_revenue,
+                                                                   ftp=self._gas_ftp,
+                                                                   ic=self._gas_ic_paid,
+                                                                   depreciation=self._gas_depreciation,
+                                                                   non_capital=self._gas_non_capital,
+                                                                   cost_to_be_recovered=self._gas_cost_to_be_recovered_after_tf,
+                                                                   cr_cap_rate=self.gas_cr_cap_rate
+                                                                   )
 
         # ETS (Equity to be Split) after transfer/consolidation
         self._oil_ets_after_transfer = psc_tools.get_ets_after_transfer(
             ets_before_transfer=self._oil_ets_before_transfer,
-            trfto=self._transfer_to_gas,
+            trfto=self._transfer_to_oil,
             unrecovered_after_transfer=self._oil_unrecovered_after_transfer,
         )
 
         self._gas_ets_after_transfer = psc_tools.get_ets_after_transfer(
             ets_before_transfer=self._gas_ets_before_transfer,
-            trfto=self._transfer_to_oil,
+            trfto=self._transfer_to_gas,
             unrecovered_after_transfer=self._gas_unrecovered_after_transfer,
         )
+
+        # self._oil_ets_after_transfer = psc_tools.get_ets_after_transfer(
+        #     ets_before_transfer=self._oil_ets_before_transfer,
+        #     trfto=self._transfer_to_gas,
+        #     trffrom=self._transfer_to_oil,
+        #     unrecovered_after_transfer=self._oil_unrecovered_after_transfer,
+        # )
+        #
+        # self._gas_ets_after_transfer = psc_tools.get_ets_after_transfer(
+        #     ets_before_transfer=self._gas_ets_before_transfer,
+        #     trfto=self._transfer_to_oil,
+        #     trffrom=self._transfer_to_gas,
+        #     unrecovered_after_transfer=self._gas_unrecovered_after_transfer,
+        # )
 
         # ES (Equity Share)
         self._oil_contractor_share, self._oil_government_share = self._get_equity_share(
