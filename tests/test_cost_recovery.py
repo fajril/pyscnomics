@@ -44,6 +44,7 @@ def test_ftp():
 
     np.testing.assert_allclose(gas_ftp, gas_ftp_base)
 
+
 def test_ftp_ctr():
 
     gas_ftp_ctr = psc._gas_ftp_ctr
@@ -51,12 +52,14 @@ def test_ftp_ctr():
 
     np.testing.assert_allclose(gas_ftp_ctr, gas_ftp_ctr_base)
 
+
 def test_ftp_gov():
 
     gas_ftp_gov = psc._gas_ftp_gov
     gas_ftp_gov_base = load_testing(dataset_type='small_gas', key='FTP GOV')
 
     np.testing.assert_allclose(gas_ftp_gov, gas_ftp_gov_base)
+
 
 def test_ic():
     """

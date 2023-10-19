@@ -235,6 +235,7 @@ def apply_cost_modification(
     start_year: int,
     cost: np.ndarray,
     expense_year: np.ndarray,
+    project_duration: int,
     inflation_rate: float | int,
     vat_portion: float | int,
     vat_rate: np.ndarray | float | int,
@@ -285,31 +286,46 @@ def apply_cost_modification(
     # Apply inflation
     exponents = expense_year - start_year
     inflation_arr = (1.0 + inflation_rate) ** exponents
-    cost_modified = cost * inflation_arr
+    cost_modified_by_inflation = cost * inflation_arr
+
+    # Align cost according to project duration
+    cost_modified = np.bincount(expense_year - start_year, weights=cost_modified_by_inflation)
+    zeros = np.zeros(project_duration - len(cost_modified))
+    cost_modified = np.concatenate((cost_modified, zeros))
+
+    print('\t')
+    print(f'Filetype: {type(cost_modified)}')
+    print(f'Length: {len(cost_modified)}')
+    print('cost_modified = ', cost_modified)
 
     # Apply VAT/PPN and PDRI
-    vat_portion_arr = np.repeat(vat_portion, len(cost))
-    vat_rate_arr = check_input(target_func=cost, param=vat_rate)
-    vat_discount_arr = check_input(target_func=cost, param=vat_discount)
+    vat_portion_arr = np.repeat(vat_portion, len(cost_modified))
+    vat_rate_arr = check_input(target_func=cost_modified, param=vat_rate)
+    vat_discount_arr = check_input(target_func=cost_modified, param=vat_discount)
     vat_multiplier = vat_portion_arr * vat_rate_arr * (1.0 - vat_discount_arr)
 
-    pdri_portion_arr = np.repeat(pdri_portion, len(cost))
-    pdri_rate_arr = check_input(target_func=cost, param=pdri_rate)
-    pdri_discount_arr = check_input(target_func=cost, param=pdri_discount)
-    pdri_multiplier = pdri_portion_arr * pdri_rate_arr * (1.0 - pdri_discount_arr)
+    print('\t')
+    print(f'Filetype: {type(vat_multiplier)}')
+    print(f'Length: {len(vat_multiplier)}')
+    print('vat_multiplier = ', vat_multiplier)
 
-    add_multiplier = vat_multiplier + pdri_multiplier
-    cost_modified *= 1.0 + add_multiplier
-
-    # Apply LBT/PPN
-    lbt_discount_arr = check_input(target_func=cost, param=lbt_discount)
-    cost_modified *= 1.0 - lbt_discount_arr
-
-    # Apply PDRD
-    pdrd_discount_arr = check_input(target_func=cost, param=pdrd_discount)
-    cost_modified *= 1.0 - pdrd_discount_arr
-
-    return cost_modified
+    # pdri_portion_arr = np.repeat(pdri_portion, len(cost))
+    # pdri_rate_arr = check_input(target_func=cost, param=pdri_rate)
+    # pdri_discount_arr = check_input(target_func=cost, param=pdri_discount)
+    # pdri_multiplier = pdri_portion_arr * pdri_rate_arr * (1.0 - pdri_discount_arr)
+    #
+    # add_multiplier = vat_multiplier + pdri_multiplier
+    # cost_modified *= 1.0 + add_multiplier
+    #
+    # # Apply LBT/PPN
+    # lbt_discount_arr = check_input(target_func=cost, param=lbt_discount)
+    # cost_modified *= 1.0 - lbt_discount_arr
+    #
+    # # Apply PDRD
+    # pdrd_discount_arr = check_input(target_func=cost, param=pdrd_discount)
+    # cost_modified *= 1.0 - pdrd_discount_arr
+    #
+    # return cost_modified
 
 
 def get_identifier(target_instances: tuple, cost_alloc: FluidType) -> list:

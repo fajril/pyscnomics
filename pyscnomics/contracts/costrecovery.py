@@ -43,9 +43,6 @@ class CostRecovery(BaseProject):
     gas_dmo_fee_portion: float = field(default=1.0)
     gas_dmo_holiday_duration: int = field(default=60)
 
-    _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
-
     _split_ctr_oil: np.ndarray = field(default=None, init=False, repr=False)
     _split_ctr_gas: np.ndarray = field(default=None, init=False, repr=False)
 
