@@ -6,7 +6,7 @@ import numpy as np
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
-from pyscnomics.econ.selection import FluidType, GrossSplitRegime, DiscountingMode
+from pyscnomics.econ.selection import FluidType, GrossSplitRegime, DiscountingMode, YearReference, DeprMethod
 from pyscnomics.econ import indicator
 from pyscnomics.econ.results import CashFlow
 
@@ -387,24 +387,56 @@ class GrossSplit(BaseProject):
             regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
             discount_rate: float = 0.1,
             discounted_year: int | None = None,
-            discounting_mode: DiscountingMode = DiscountingMode.HALF_YEAR
-            ):
+            discounting_mode: DiscountingMode = DiscountingMode.HALF_YEAR,
+            **kwargs):
 
-        # Depreciation (Tangible cost)
-        self._oil_depreciation, self._oil_undepreciated_asset = self._oil_tangible.total_depreciation_rate()
-        self._gas_depreciation, self._gas_undepreciated_asset = self._gas_tangible.total_depreciation_rate()
+        # Specify default values for optional arguments
+        if "inflation_rate" not in kwargs.keys():
+            kwargs["inflation_rate"]: float | int = 0.0
 
-        # Non Capital Cost
-        self._oil_non_capital = (
-                self._oil_intangible.expenditures()
-                + self._oil_opex.expenditures()
-                + self._oil_asr.expenditures()
-        )
+        if "vat_rate" not in kwargs.keys():
+            kwargs["vat_rate"]: float | int = 0.0
 
-        self._gas_non_capital = (
-                self._gas_intangible.expenditures()
-                + self._gas_opex.expenditures()
-                + self._gas_asr.expenditures()
+        if "vat_discount" not in kwargs.keys():
+            kwargs["vat_discount"]: float | int = 0.0
+
+        if "pdri_rate" not in kwargs.keys():
+            kwargs["pdri_rate"]: float | int = 0.0
+
+        if "pdri_discount" not in kwargs.keys():
+            kwargs["pdri_discount"]: float | int = 0.0
+
+        if "lbt_discount" not in kwargs.keys():
+            kwargs["lbt_discount"]: float | int = 0.0
+
+        if "pdrd_discount" not in kwargs.keys():
+            kwargs["pdrd_discount"]: float | int = 0.0
+
+        if "year_ref" not in kwargs.keys():
+            kwargs["year_ref"]: YearReference = YearReference.EXPENSE_YEAR
+
+        if "depr_method" not in kwargs.keys():
+            kwargs["depr_method"]: DeprMethod = DeprMethod.PSC_DB
+
+        if "decline_factor" not in kwargs.keys():
+            kwargs["decline_factor"]: float | int = 2
+
+        if "future_rate" not in kwargs.keys():
+            kwargs["future_rate"]: float = 0.02
+
+        # Prepare the data
+        self._get_costpool(
+            inflation_rate=kwargs["inflation_rate"],
+            vat_rate=kwargs["vat_rate"],
+            vat_discount=kwargs["vat_discount"],
+            pdri_rate=kwargs["pdri_rate"],
+            pdri_discount=kwargs["pdri_discount"],
+            lbt_discount=kwargs["lbt_discount"],
+            pdrd_discount=kwargs["pdrd_discount"],
+            year_ref=kwargs["year_ref"],
+            depr_method=kwargs["depr_method"],
+            decline_factor=kwargs["decline_factor"],
+            future_rate=kwargs["future_rate"],
         )
 
         # Variable Split. -> Will set the value of _variable_split
@@ -456,16 +488,19 @@ class GrossSplit(BaseProject):
         self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
 
         # Total Investment
-        self._oil_total_expenses = (self._oil_tangible.expenditures() + self._oil_intangible.expenditures() +
-                                    self._oil_opex.expenditures() + self._oil_asr.expenditures())
-        self._gas_total_expenses = (self._gas_tangible.expenditures() + self._gas_intangible.expenditures() +
-                                    self._gas_opex.expenditures() + self._gas_asr.expenditures())
+        # self._oil_total_expenses = (self._oil_tangible.expenditures() + self._oil_intangible.expenditures() +
+        #                             self._oil_opex.expenditures() + self._oil_asr.expenditures())
+        # self._gas_total_expenses = (self._gas_tangible.expenditures() + self._gas_intangible.expenditures() +
+        #                             self._gas_opex.expenditures() + self._gas_asr.expenditures())
+
+        self._oil_total_expenses = self._oil_total_expenditures
+        self._gas_total_expenses = self._gas_total_expenditures
 
         # Cost to be Deducted
-        self._oil_cost_tobe_deducted = (self._oil_depreciation + self._oil_intangible.expenditures() +
-                                        self._oil_opex.expenditures() + self._oil_asr.expenditures())
-        self._gas_cost_tobe_deducted = (self._gas_depreciation + self._gas_intangible.expenditures() +
-                                        self._gas_opex.expenditures() + self._gas_asr.expenditures())
+        self._oil_cost_tobe_deducted = (self._oil_depreciation + self._oil_intangible_expenditures +
+                                        self._oil_opex_expenditures + self._oil_asr_expenditures)
+        self._gas_cost_tobe_deducted = (self._gas_depreciation + self._gas_intangible_expenditures +
+                                        self._gas_opex_expenditures + self._gas_asr_expenditures)
 
         # Carry Forward Deductible Cost (In PSC Cost Recovery called Unrecovered Cost)
         self._oil_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._oil_depreciation,
@@ -627,14 +662,14 @@ class GrossSplit(BaseProject):
                     np.allclose(self._gas_lifting.lifting_rate, other._gas_lifting.lifting_rate),
                     np.allclose(self._oil_revenue, other._oil_revenue),
                     np.allclose(self._gas_revenue, other._gas_revenue),
-                    np.allclose(self._oil_tangible.expenditures(), other._oil_tangible.expenditures()),
-                    np.allclose(self._gas_tangible.expenditures(), other._gas_tangible.expenditures()),
-                    np.allclose(self._oil_intangible.expenditures(), other._oil_intangible.expenditures()),
-                    np.allclose(self._gas_intangible.expenditures(), other._gas_intangible.expenditures()),
-                    np.allclose(self._oil_opex.expenditures(), other._oil_opex.expenditures()),
-                    np.allclose(self._gas_opex.expenditures(), other._gas_opex.expenditures()),
-                    np.allclose(self._oil_asr.expenditures(), other._oil_asr.expenditures()),
-                    np.allclose(self._gas_asr.expenditures(), other._gas_asr.expenditures()),
+                    np.allclose(self._oil_tangible_expenditures, other._oil_tangible_expenditures),
+                    np.allclose(self._gas_tangible_expenditures, other._gas_tangible_expenditures),
+                    np.allclose(self._oil_intangible_expenditures, other._oil_intangible_expenditures),
+                    np.allclose(self._gas_intangible_expenditures, other._gas_intangible_expenditures),
+                    np.allclose(self._oil_opex_expenditures, other._oil_opex_expenditures),
+                    np.allclose(self._gas_opex_expenditures, other._gas_opex_expenditures),
+                    np.allclose(self._oil_asr_expenditures, other._oil_asr_expenditures),
+                    np.allclose(self._gas_asr_expenditures, other._gas_asr_expenditures),
                 )
             )
 

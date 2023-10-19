@@ -11,19 +11,19 @@ psc.run()
 
 def test_tangible():
     base = np.asarray(load_testing(dataset_type='small_oil', key='oil_tangible'))
-    calc = psc._oil_tangible.expenditures()
+    calc = psc._oil_tangible_expenditures
     np.testing.assert_allclose(base, calc)
 
 
 def test_intangible():
     base = np.asarray(load_testing(dataset_type='small_oil', key='oil_intangible'))
-    calc = psc._oil_intangible.expenditures()
+    calc = psc._oil_intangible_expenditures
     np.testing.assert_allclose(base, calc)
 
 
 def test_opex():
     base = np.asarray(load_testing(dataset_type='small_oil', key='oil_opex'))
-    calc = psc._oil_opex.expenditures()
+    calc = psc._oil_opex_expenditures
     np.testing.assert_allclose(base, calc)
 
 

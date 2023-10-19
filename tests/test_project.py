@@ -6,9 +6,9 @@ import pytest
 import numpy as np
 from datetime import date
 
-from pyscnomics.econ.selection import FluidType, DeprMethod
+from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import Tangible
 from pyscnomics.contracts.project import BaseProject, BaseProjectException
 
 
@@ -28,6 +28,15 @@ oil_apel_lifting = Lifting(
     lifting_rate=np.array([50, 50, 50]),
     price=np.array([10, 10, 10]),
     prod_year=np.array([2027, 2028, 2029]),
+    fluid_type=FluidType.OIL,
+)
+
+oil_nanas_lifting = Lifting(
+    start_year=2023,
+    end_year=2030,
+    lifting_rate=np.array([100, 100, 100]),
+    price=np.array([10, 10, 10]),
+    prod_year=np.array([2025, 2026, 2027]),
     fluid_type=FluidType.OIL,
 )
 
@@ -68,7 +77,7 @@ def test_incorrect_data_input():
             start_date=date(2023, 1, 1),
             end_date=date(2030, 12, 31),
             oil_onstream_date=date(2031, 1, 1),
-        )
+        ).run()
 
     # Oil onstream year is before the start year of the project
     with pytest.raises(BaseProjectException):
@@ -76,7 +85,7 @@ def test_incorrect_data_input():
             start_date=date(2023, 1, 1),
             end_date=date(2030, 12, 31),
             oil_onstream_date=date(2020, 1, 1),
-        )
+        ).run()
 
     # Oil onstream year is inconsistent with prod_year
     with pytest.raises(BaseProjectException):
@@ -85,7 +94,7 @@ def test_incorrect_data_input():
             end_date=date(2030, 1, 1),
             oil_onstream_date=date(2026, 1, 1),
             lifting=(oil_mangga_lifting, oil_apel_lifting)
-        )
+        ).run()
 
 
 def test_base_project_lifting():
@@ -179,19 +188,16 @@ def test_base_project_tangible():
         tangible_cost=(oil_mangga_tangible, oil_apel_tangible, gas_mangga_tangible, gas_apel_tangible)
     )
 
-    base_case.run()
+    base_case._get_costpool()
+
     summary = vars(base_case)
 
-    calc_oil_tangible = summary["_oil_tangible"]
-    calc_gas_tangible = summary["_gas_tangible"]
-
-    calc_oil_tangible_expenditures = calc_oil_tangible.expenditures()
-    calc_oil_tangible_depreciation, calc_oil_tangible_undepreciated = \
-        calc_oil_tangible.total_depreciation_rate(depr_method=DeprMethod.PSC)
-
-    calc_gas_tangible_expenditures = calc_gas_tangible.expenditures()
-    calc_gas_tangible_depreciation, calc_gas_tangible_undepreciated = \
-        calc_gas_tangible.total_depreciation_rate(depr_method=DeprMethod.PSC)
+    calc_oil_tangible_expenditures = summary["_oil_tangible_expenditures"]
+    calc_oil_tangible_depreciation = summary["_oil_depreciation"]
+    calc_oil_tangible_undepreciated = summary["_oil_undepreciated_asset"]
+    calc_gas_tangible_expenditures = summary["_gas_tangible_expenditures"]
+    calc_gas_tangible_depreciation = summary["_gas_depreciation"]
+    calc_gas_tangible_undepreciated = summary["_gas_undepreciated_asset"]
 
     # Execute testing (expected == calculated)
     np.testing.assert_allclose(oil_tangible_expenditures, calc_oil_tangible_expenditures)
@@ -200,3 +206,56 @@ def test_base_project_tangible():
     np.testing.assert_allclose(gas_tangible_expenditures, calc_gas_tangible_expenditures)
     np.testing.assert_allclose(gas_tangible_depreciation, calc_gas_tangible_depreciation)
     np.testing.assert_allclose(gas_tangible_undepreciated, calc_gas_tangible_undepreciated)
+
+
+def test_base_project_comparison():
+    """ A unit test for comparison involving instances of BaseProject """
+
+    oil_mangga_tangible = Tangible(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([25, 25, 25, 25]),
+        expense_year=np.array([2023, 2024, 2025, 2026]),
+        cost_allocation=FluidType.OIL,
+        depreciation_factor=np.array([0.5, 0.5, 0.5, 0.5]),
+        vat_portion=0.8,
+    )
+
+    oil_apel_tangible = Tangible(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([25, 25, 25]),
+        expense_year=np.array([2025, 2026, 2027]),
+        cost_allocation=FluidType.OIL,
+        depreciation_factor=np.array([0.5, 0.5, 0.5]),
+        vat_portion=0.5,
+    )
+
+    case1 = BaseProject(
+        start_date=date(2023, 1, 1),
+        end_date=date(2030, 12, 31),
+        lifting=(oil_mangga_lifting, oil_apel_lifting),
+        tangible_cost=(oil_mangga_tangible, oil_apel_tangible),
+    )
+
+    case2 = BaseProject(
+        start_date=date(2023, 1, 1),
+        end_date=date(2030, 12, 31),
+        lifting=(oil_mangga_lifting, oil_apel_lifting),
+        tangible_cost=(oil_mangga_tangible, oil_apel_tangible),
+    )
+
+    case3 = BaseProject(
+        start_date=date(2023, 1, 1),
+        end_date=date(2030, 12, 31),
+        lifting=([oil_apel_lifting]),
+        tangible_cost=([oil_apel_tangible]),
+    )
+
+    assert case1 == case2
+    assert case3 < case1
+    assert case3 <= case1
+    assert case2 > case3
+    assert case2 >= case3
+    assert case1 != case3
+

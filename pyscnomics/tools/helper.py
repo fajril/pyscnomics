@@ -3,7 +3,8 @@ Handles summation operation on two arrays, accounting for different starting yea
 """
 
 import numpy as np
-from functools import wraps
+from functools import wraps, reduce
+from pyscnomics.econ.selection import FluidType
 
 
 class TaxesException(Exception):
@@ -12,7 +13,7 @@ class TaxesException(Exception):
     pass
 
 
-def check_input(target_func, param: np.ndarray | float | int):
+def check_input(target_func, param: np.ndarray | float | int) -> np.ndarray:
     """
     Check and prepare input parameters for subsequent analysis.
 
@@ -53,7 +54,7 @@ def check_input(target_func, param: np.ndarray | float | int):
     return param_arr
 
 
-def apply_inflation(inflation_rate: float | int):
+def apply_inflation(inflation_rate: float | int) -> callable:
     """
     Decorator function to apply escalation/inflation to a target function's result.
 
@@ -92,7 +93,7 @@ def apply_vat_pdri(
     pdri_portion: float | int,
     pdri_rate: np.ndarray | float | int,
     pdri_discount: np.ndarray | float | int,
-):
+) -> callable:
     """
     Decorator for applying VAT and PDRI multipliers to a target function's result.
 
@@ -165,7 +166,7 @@ def apply_vat_pdri(
     return _decorated
 
 
-def apply_lbt(lbt_discount: np.ndarray | float | int):
+def apply_lbt(lbt_discount: np.ndarray | float | int) -> callable:
     """
     Decorator for applying Land and Building Tax (LBT/PBB) discount to a target function's result.
 
@@ -198,7 +199,7 @@ def apply_lbt(lbt_discount: np.ndarray | float | int):
     return _decorated
 
 
-def apply_pdrd(pdrd_discount: np.ndarray | float | int):
+def apply_pdrd(pdrd_discount: np.ndarray | float | int) -> callable:
     """
     Decorator for applying PDRD to a target function's result.
 
@@ -243,7 +244,7 @@ def apply_cost_modification(
     pdri_discount: np.ndarray | float | int,
     lbt_discount: np.ndarray | float | int,
     pdrd_discount: np.ndarray | float | int,
-):
+) -> np.ndarray:
     """
     Apply cost modifications to the given cost array based on various parameters.
 
@@ -309,6 +310,109 @@ def apply_cost_modification(
     cost_modified *= 1.0 - pdrd_discount_arr
 
     return cost_modified
+
+
+def get_identifier(target_instances: tuple, cost_alloc: FluidType) -> list:
+    """
+    Identify the element of instances to add in target data.
+
+    Parameter
+    ---------
+    target_instances: tuple
+        A tuple of target data to be configured.
+    cost_alloc: FluidType
+        The cost allocation of the target instances.
+
+    Return
+    ------
+    identifier: list
+        An array of indices (as a list) depicting the elements of target array to be added.
+
+    Notes
+    -----
+    The core calculations are as follows:
+    (1) Check each elements of target array; whether it has any identical element(s).
+        The determining characteristics were (i) vat_portion, and (ii) pdri_portion,
+    (2) Identify the index location where two (or more) elements are similar.
+        Each collection of elements constitute a group,
+    (3) Carry out multiplication of elements in a group,
+    (4) Configure the unique elements in (3),
+    (5) Specify the elements of target data to be added.
+    """
+    # Operations associated with Notes #1 (see the above docstring)
+    id_arr = [[0 for _ in range(len(target_instances))] for _ in range(len(target_instances))]
+    for i in range(len(target_instances)):
+        if target_instances[i].cost_allocation == cost_alloc:
+            for j in range(len(target_instances)):
+                id_arr[i][j] = 1 * (
+                    target_instances[i].vat_portion == target_instances[j].vat_portion
+                    and target_instances[i].pdri_portion == target_instances[j].pdri_portion
+                )
+
+    id_arr = np.array(id_arr)
+
+    # Operations associated with Notes #2 (see the above docstring)
+    group_arr = [np.argwhere(id_arr[i, :] == 1).ravel() for i in range(len(target_instances))]
+
+    # Operations associated with Notes #3 (see the above docstring)
+    group_id = [0 for _ in range(len(group_arr))]
+    for i in range(len(group_arr)):
+        if len(group_arr[i]) == 0:
+            group_id[i] = -1
+        if len(group_arr[i]) > 0:
+            group_id[i] = np.prod(group_arr[i])
+
+    group_id = np.array(group_id)
+
+    # Operations associated with Notes #4 (see the above docstring)
+    loc_id = np.unique(group_id)
+
+    # Operations associated with Notes #5 (see the above docstring)
+    identifier = [np.argwhere(group_id == loc_id[i]).ravel() for i in range(len(loc_id)) if loc_id[i] >= 0]
+
+    return identifier
+
+
+def get_instances(target_instances: tuple, identifier: list) -> tuple:
+    """
+    Retrieve instances from a target_instances tuple based on an identifier list.
+
+    Parameters
+    ----------
+    target_instances: tuple
+        A tuple containing instances.
+    identifier: list
+        A list of lists, where each inner list contains indices for target_instances.
+
+    Return
+    ------
+    tuple
+        A tuple of instances retrieved based on the identifier.
+
+    The function processes the identifier list and returns a tuple of instances from
+    target_instances. If an inner list in the identifier contains a single index, the
+    corresponding instance is added directly. If an inner list contains multiple indices,
+    the instances at those indices are summed, and the result is added to the output tuple.
+
+    Example:
+    >>> instances = ('A', 'B', 'C', 'D', 'E')
+    >>> ids = [[0, 2], [3], [1, 4]]
+    >>> get_instances(instances, ids)
+    ('AC', 'D', 'BE')
+    """
+
+    result = []
+    for i in range(len(identifier)):
+        if len(identifier[i]) == 1:
+            result.append(target_instances[identifier[i][0]])
+
+        elif len(identifier[i]) > 1:
+            add = target_instances[identifier[i][0]]
+            for j in range(1, len(identifier[i])):
+                add += target_instances[identifier[i][j]]
+                result.append(add)
+
+    return tuple(result)
 
 
 def summarizer(

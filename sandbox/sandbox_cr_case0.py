@@ -44,7 +44,7 @@ psc_table['Cum Cashflow'] = np.cumsum(psc._gas_cashflow)
 psc_table.drop([i for i in range(12)], inplace=True)
 print(psc_table, '\n')
 
-psc_table.to_excel('Cost Recovery B Table from Pyscnomics.xlsx')
+# psc_table.to_excel('Cost Recovery B Table from Pyscnomics.xlsx')
 
 
 

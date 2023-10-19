@@ -8,8 +8,9 @@ from functools import reduce
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
-from pyscnomics.econ.selection import FluidType, YearReference, TaxRegime, FTPTaxRegime, TaxSplitTypeCR
+from pyscnomics.econ.selection import FluidType, YearReference, TaxRegime, FTPTaxRegime, TaxSplitTypeCR, DeprMethod
 from pyscnomics.econ import indicator
+
 
 
 @dataclass
@@ -354,37 +355,61 @@ class CostRecovery(BaseProject):
             ctr_tax: float | np.ndarray = None,
             tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
             tax_rate=0.44,  # TODO: Replace with NaN as default value after implementing TaxRegime.
-            ftp_tax_regime=FTPTaxRegime.PDJP_20_2017
-            ):
+            ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
+            **kwargs):
         # TODO: Tax rate argument will be deleted then replaced with the value in tax_regime.
         #  Currently, it is used for testing
 
-        self._get_aggregate()
-        self._get_revenue()
+        # Specify default values for optional arguments
+        if "inflation_rate" not in kwargs.keys():
+            kwargs["inflation_rate"]: float | int = 0.0
+
+        if "vat_rate" not in kwargs.keys():
+            kwargs["vat_rate"]: float | int = 0.0
+
+        if "vat_discount" not in kwargs.keys():
+            kwargs["vat_discount"]: float | int = 0.0
+
+        if "pdri_rate" not in kwargs.keys():
+            kwargs["pdri_rate"]: float | int = 0.0
+
+        if "pdri_discount" not in kwargs.keys():
+            kwargs["pdri_discount"]: float | int = 0.0
+
+        if "lbt_discount" not in kwargs.keys():
+            kwargs["lbt_discount"]: float | int = 0.0
+
+        if "pdrd_discount" not in kwargs.keys():
+            kwargs["pdrd_discount"]: float | int = 0.0
+
+        if "year_ref" not in kwargs.keys():
+            kwargs["year_ref"]: YearReference = YearReference.EXPENSE_YEAR
+
+        if "depr_method" not in kwargs.keys():
+            kwargs["depr_method"]: DeprMethod = DeprMethod.PSC_DB
+
+        if "decline_factor" not in kwargs.keys():
+            kwargs["decline_factor"]: float | int = 2
+
+        if "future_rate" not in kwargs.keys():
+            kwargs["future_rate"]: float = 0.02
+
+        # Prepare the data
+        self._get_costpool(
+            inflation_rate=kwargs["inflation_rate"],
+            vat_rate=kwargs["vat_rate"],
+            vat_discount=kwargs["vat_discount"],
+            pdri_rate=kwargs["pdri_rate"],
+            pdri_discount=kwargs["pdri_discount"],
+            lbt_discount=kwargs["lbt_discount"],
+            pdrd_discount=kwargs["pdrd_discount"],
+            year_ref=kwargs["year_ref"],
+            depr_method=kwargs["depr_method"],
+            decline_factor=kwargs["decline_factor"],
+            future_rate=kwargs["future_rate"],
+        )
+
         self._get_ftp()
-
-        # Depreciation (tangible cost)
-        (
-            self._oil_depreciation,
-            self._oil_undepreciated_asset,
-        ) = self._oil_tangible.total_depreciation_rate()
-        (
-            self._gas_depreciation,
-            self._gas_undepreciated_asset,
-        ) = self._gas_tangible.total_depreciation_rate()
-
-        # Non-capital costs (intangible + opex + asr)
-        self._oil_non_capital = (
-                self._oil_intangible.expenditures()
-                + self._oil_opex.expenditures()
-                + self._oil_asr.expenditures()
-        )
-
-        self._gas_non_capital = (
-                self._gas_intangible.expenditures()
-                + self._gas_opex.expenditures()
-                + self._gas_asr.expenditures()
-        )
 
         # Investment credit
         self._oil_ic, self._oil_ic_unrecovered, self._oil_ic_paid = self._get_ic(
@@ -642,8 +667,8 @@ class CostRecovery(BaseProject):
         )
 
         # Contractor CashFlow
-        self._oil_cashflow = self._oil_contractor_take - self._oil_tangible.expenditures() - self._oil_non_capital
-        self._gas_cashflow = self._gas_contractor_take - self._gas_tangible.expenditures() - self._gas_non_capital
+        self._oil_cashflow = self._oil_contractor_take - self._oil_tangible_expenditures - self._oil_non_capital
+        self._gas_cashflow = self._gas_contractor_take - self._gas_tangible_expenditures - self._gas_non_capital
 
         # Pay Out Time (POT) and Internal Rate Return (IRR)
         # Condition where there is no revenue from one of Oil and Gas

@@ -19,7 +19,6 @@ def test_asr_incorrect_year_input():
             cost=np.array([100, 50]),
             expense_year=np.array([2029, 2030]),
             cost_allocation=FluidType.OIL,
-            rate=0.02,
         )
 
 
@@ -34,7 +33,6 @@ def test_asr_unequal_length_of_data_input():
             cost=np.array([100, 50]),
             expense_year=np.array([2029]),
             cost_allocation=FluidType.OIL,
-            rate=0.02,
         )
 
 
@@ -48,7 +46,6 @@ def test_asr_incorrect_expense_year_input():
             cost=np.array([100, 50]),
             expense_year=np.array([2029, 2031]),
             cost_allocation=FluidType.OIL,
-            rate=0.02,
         )
 
     with pytest.raises(ASRException):
@@ -58,7 +55,6 @@ def test_asr_incorrect_expense_year_input():
             cost=np.array([100, 50]),
             expense_year=np.array([2020, 2025]),
             cost_allocation=FluidType.OIL,
-            rate=0.02,
         )
 
 
@@ -84,7 +80,6 @@ def test_asr_expenditures():
         cost=np.array([100, 50]),
         expense_year=np.array([2025, 2026]),
         cost_allocation=FluidType.OIL,
-        rate=0.02,
     )
 
     calc_expense = mangga_asr.expenditures()
@@ -102,7 +97,6 @@ def test_comparison():
         cost=np.array([100, 50]),
         expense_year=np.array([2025, 2026]),
         cost_allocation=FluidType.OIL,
-        rate=0.02,
     )
 
     apel_asr = ASR(
@@ -111,7 +105,6 @@ def test_comparison():
         cost=np.array([100, 50]),
         expense_year=np.array([2025, 2026]),
         cost_allocation=FluidType.OIL,
-        rate=0.02,
     )
 
     nanas_asr = ASR(
@@ -120,7 +113,6 @@ def test_comparison():
         cost=np.array([25, 25]),
         expense_year=np.array([2025, 2026]),
         cost_allocation=FluidType.OIL,
-        rate=0.05,
     )
 
     assert mangga_asr == apel_asr
@@ -136,12 +128,12 @@ def test_arithmetics():
     add = [
         0,
         0,
-        36.80269344,
-        58.45133664,
-        58.45133664,
-        58.45133664,
-        58.45133664,
-        58.45133664,
+        37.53874731,
+        59.62036337,
+        59.62036337,
+        59.62036337,
+        59.62036337,
+        59.62036337,
     ]
     sub = [0, 0, 0, 0, 0, 0, 0, 0]
     mul = [1000, 500]
@@ -154,7 +146,6 @@ def test_arithmetics():
         cost=np.array([100, 50]),
         expense_year=np.array([2025, 2026]),
         cost_allocation=FluidType.OIL,
-        rate=0.02,
     )
 
     apel_asr = ASR(
@@ -163,7 +154,6 @@ def test_arithmetics():
         cost=np.array([100, 50]),
         expense_year=np.array([2025, 2026]),
         cost_allocation=FluidType.OIL,
-        rate=0.02,
     )
 
     calc_add = mangga_asr + apel_asr
@@ -172,7 +162,7 @@ def test_arithmetics():
     calc_div = mangga_asr / 10
 
     # Execute testing (expected == calculated)
-    np.testing.assert_allclose(add, calc_add)
-    np.testing.assert_allclose(sub, calc_sub)
+    np.testing.assert_allclose(add, calc_add.expenditures())
+    np.testing.assert_allclose(sub, calc_sub.expenditures(), atol=1E-12)
     np.testing.assert_allclose(mul, calc_mul.cost)
     np.testing.assert_allclose(div, calc_div.cost)

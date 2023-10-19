@@ -124,21 +124,33 @@ class Lifting:
 
         return rev_update
 
-    def lifting_rate_arr(self):
+    def get_lifting_rate_arr(self) -> np.ndarray:
+        """
+        Create an array of lifting rate according to the corresponding production year.
 
+        Returns
+        -------
+        lifting_rate_arr: np.ndarray
+            The array of lifting rate with length equals to project duration.
+
+        Notes
+        -----
+        (1) Function np.bincount() is used to align the lifting rate data
+            according to its corresponding prod year,
+        (2) If len(expenses) < project_duration, then add the remaining elements
+            with zeros.
+        """
         lifting_rate_arr = np.bincount(self.prod_year - self.start_year, weights=self.lifting_rate)
         zeros = np.zeros(self.project_duration - len(lifting_rate_arr))
         lifting_rate_arr = np.concatenate((lifting_rate_arr, zeros))
 
         return lifting_rate_arr
 
-    def lifting_price_arr(self):
-
-        lifting_price_arr = np.bincount(self.prod_year - self.start_year, weights=self.price)
-        zeros = np.zeros(self.project_duration - len(lifting_price_arr))
-        lifting_price_arr = np.concatenate((lifting_price_arr, zeros))
-
-        return lifting_price_arr
+    def get_price_arr(self) -> np.ndarray:
+        price_arr = np.bincount(self.prod_year - self.start_year, weights=self.price)
+        zeros = np.zeros(self.project_duration - len(price_arr))
+        price_arr = np.concatenate((price_arr, zeros))
+        return price_arr
 
     def __len__(self):
         return self.project_duration

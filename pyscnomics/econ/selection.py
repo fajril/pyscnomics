@@ -6,6 +6,7 @@ from enum import Enum
 
 
 class DeprMethod(Enum):
+
     """
     Enumeration of depreciation methods.
 
@@ -15,7 +16,7 @@ class DeprMethod(Enum):
         Represents the straight-line depreciation method
     DB : str
         Represents the declining balance depreciation method
-    PSC : str
+    PSC_DB : str
         Represents the PSC double declining balance method
     UOP : str
         Represents the units of production depreciation method
@@ -28,6 +29,7 @@ class DeprMethod(Enum):
 
 
 class FluidType(Enum):
+
     """
     Enumeration of fluid types for depreciation calculation.
 
@@ -113,11 +115,38 @@ class TaxRegime(Enum):
 
 
 class FTPTaxRegime(Enum):
+    """
+    An enumeration depicting the FTP Tax Regime associated with oil and gas
+    Production Sharing Contract in Indonesia.
+
+    Attributes
+    ----------
+    PDJP_20_2017: str
+        Manifests Peraturan DIRJEN PAJAK No. PER-20/PJ/2017
+    PRE_2017: str
+        Manifests Pre Peraturan DIRJEN PAJAK No. PER-20/PJ/2017
+    """
     PDJP_20_2017 = "Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
     PRE_2017 = "Pre Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
 
 
 class GrossSplitRegime(Enum):
+    """
+    An enumeration representing different Gross Split Regimes in the context of
+    oil and gas economic analysis, specifically related to Production Sharing Contracts
+    in Indonesia.
+
+    Attributes
+    ----------
+    PERMEN_ESDM_8_2017: str
+        Represents the Gross Split Regime according to Peraturan Menteri ESDM No. 8 Tahun 2017.
+    PERMEN_ESDM_52_2017: str
+        Represents the Gross Split Regime according to Peraturan Menteri ESDM No. 52 Tahun 2017.
+    PERMEN_ESDM_20_2019: str
+        Represents the Gross Split Regime according to Peraturan Menteri ESDM No. 20 Tahun 2019.
+    PERMEN_ESDM_12_2020: str
+        Represents the Gross Split Regime according to Peraturan Menteri ESDM No. 12 Tahun 2020.
+    """
     PERMEN_ESDM_8_2017 = 'Peraturan Menteri ESDM No. 8 Tahun 2017'
     PERMEN_ESDM_52_2017 = 'Peraturan Menteri ESDM No. 52 Tahun 2017'
     PERMEN_ESDM_20_2019 = 'Peraturan Menteri ESDM No. 20 Tahun 2019'

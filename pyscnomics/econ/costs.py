@@ -94,8 +94,8 @@ class Tangible:
     useful_life: np.ndarray = field(default=None, repr=False)
     depreciation_factor: np.ndarray = field(default=None, repr=False)
     is_ic_applied: bool = field(default=False)
-    vat_portion: float | int = field(default=1.0, repr=False)
-    pdri_portion: float | int = field(default=1.0, repr=False)
+    vat_portion: float | int = field(default=1.0)
+    pdri_portion: float | int = field(default=1.0)
     description: list[str] = field(default=None)
 
     # Attribute to be defined later on
@@ -189,7 +189,7 @@ class Tangible:
         pdri_discount: np.ndarray | float | int = 0.0,
         lbt_discount: np.ndarray | float | int = 0.0,
         pdrd_discount: np.ndarray | float | int = 0.0,
-    ):
+    ) -> np.ndarray:
         """
         Calculate tangible expenditures per year.
 

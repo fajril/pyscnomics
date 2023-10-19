@@ -289,7 +289,7 @@ def test_tangible_total_depreciation_rate():
     )
 
     calc_deprePSC, calc_undeprePSC = nanas_tangible.total_depreciation_rate(
-        depr_method=DeprMethod.PSC
+        depr_method=DeprMethod.PSC_DB
     )
 
     # Execute testing (expected == calculated)
@@ -354,7 +354,7 @@ def test_tangible_total_depreciation_book_value():
     )
 
     calc_bookPSC = nanas_tangible.total_depreciation_book_value(
-        depr_method=DeprMethod.PSC
+        depr_method=DeprMethod.PSC_DB
     )
 
     # Execute testing
