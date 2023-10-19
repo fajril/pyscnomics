@@ -529,16 +529,32 @@ class CostRecovery(BaseProject):
                                                                    )
 
         # ETS (Equity to be Split) after transfer/consolidation
-        self._oil_ets_after_transfer = psc_tools.get_ets_after_transfer(
-            ets_before_transfer=self._oil_ets_before_transfer,
-            trfto=self._transfer_to_oil,
-            unrecovered_after_transfer=self._oil_unrecovered_after_transfer,
+        # self._oil_ets_after_transfer = psc_tools.get_ets_after_transfer(
+        #     ets_before_transfer=self._oil_ets_before_transfer,
+        #     trfto=self._transfer_to_oil,
+        #     unrecovered_after_transfer=self._oil_unrecovered_after_transfer,
+        # )
+        #
+        # self._gas_ets_after_transfer = psc_tools.get_ets_after_transfer(
+        #     ets_before_transfer=self._gas_ets_before_transfer,
+        #     trfto=self._transfer_to_gas,
+        #     unrecovered_after_transfer=self._gas_unrecovered_after_transfer,
+        # )
+
+        self._oil_ets_after_transfer = self._get_ets_before_transfer(
+            revenue=self._oil_revenue,
+            ftp_ctr=self._oil_ftp_ctr,
+            ftp_gov=self._oil_ftp_gov,
+            ic=self._oil_ic_paid,
+            cost_recovery=self._oil_cost_recovery_after_tf,
         )
 
-        self._gas_ets_after_transfer = psc_tools.get_ets_after_transfer(
-            ets_before_transfer=self._gas_ets_before_transfer,
-            trfto=self._transfer_to_gas,
-            unrecovered_after_transfer=self._gas_unrecovered_after_transfer,
+        self._gas_ets_after_transfer = self._get_ets_before_transfer(
+            revenue=self._gas_revenue,
+            ftp_ctr=self._gas_ftp_ctr,
+            ftp_gov=self._gas_ftp_gov,
+            ic=self._gas_ic_paid,
+            cost_recovery=self._gas_cost_recovery_after_tf,
         )
 
         # self._oil_ets_after_transfer = psc_tools.get_ets_after_transfer(
