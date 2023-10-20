@@ -79,6 +79,12 @@ class BaseProject:
     _oil_base_cashflow: CashFlow = field(default=None, init=False, repr=False)
     _gas_base_cashflow: CashFlow = field(default=None, init=False, repr=False)
 
+    _oil_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+    _sulfur_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+    _electricity_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+    _co2_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+
     def __post_init__(self):
 
         # Specify project duration and project years, raise error for inappropriate start date
@@ -316,6 +322,68 @@ class BaseProject:
 
             else:
                 self.gas_onstream_date = self.end_date
+
+    def _get_wap_price(self):
+        self._get_oil_wap_price()
+        self._get_gas_wap_price()
+        self._get_sulfur_wap_price()
+        self._get_electricity_wap_price()
+        self._get_co2_wap_price()
+
+    def _get_oil_wap_price(self):
+        vol_x_price = np.zeros_like(self.project_years, dtype=float)
+        total_vol = np.zeros_like(self.project_years, dtype=float)
+
+        for lift in self.lifting:
+            if lift.fluid_type == FluidType.OIL:
+                vol_x_price = vol_x_price + lift.lifting_rate * lift.price
+                total_vol = total_vol + lift.lifting_rate
+
+        self._oil_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
+
+    def _get_gas_wap_price(self):
+        vol_x_price = np.zeros_like(self.project_years, dtype=float)
+        total_vol = np.zeros_like(self.project_years, dtype=float)
+
+        for lift in self.lifting:
+            if lift.fluid_type == FluidType.GAS:
+                vol_x_price = vol_x_price + lift.lifting_rate * lift.price
+                total_vol = total_vol + lift.lifting_rate
+
+        self._gas_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
+
+    def _get_sulfur_wap_price(self):
+        vol_x_price = np.zeros_like(self.project_years, dtype=float)
+        total_vol = np.zeros_like(self.project_years, dtype=float)
+
+        for lift in self.lifting:
+            if lift.fluid_type == FluidType.SULFUR:
+                vol_x_price = vol_x_price + lift.lifting_rate * lift.price
+                total_vol = total_vol + lift.lifting_rate
+
+        self._sulfur_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
+
+    def _get_electricity_wap_price(self):
+        vol_x_price = np.zeros_like(self.project_years, dtype=float)
+        total_vol = np.zeros_like(self.project_years, dtype=float)
+
+        for lift in self.lifting:
+            if lift.fluid_type == FluidType.ELECTRICITY:
+                vol_x_price = vol_x_price + lift.lifting_rate * lift.price
+                total_vol = total_vol + lift.lifting_rate
+
+        self._electricity_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
+
+    def _get_co2_wap_price(self):
+        vol_x_price = np.zeros_like(self.project_years, dtype=float)
+        total_vol = np.zeros_like(self.project_years, dtype=float)
+
+        for lift in self.lifting:
+            if lift.fluid_type == FluidType.CO2:
+                vol_x_price = vol_x_price + lift.lifting_rate * lift.price
+                total_vol = total_vol + lift.lifting_rate
+
+        self._co2_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
     def _get_oil_lifting(self):
         """
@@ -749,21 +817,19 @@ class BaseProject:
         # Calculate total expenses for OIL;
         # Here, for Tangible cost, we only take the regular expenditures, not the depreciated value
         self._oil_total_expenses = (
-            self._oil_tangible.expenditures()
-            + self._oil_intangible.expenditures()
-            + self._oil_opex.expenditures()
-            + self._oil_asr.expenditures()
+                self._oil_tangible.expenditures()
+                + self._oil_intangible.expenditures()
+                + self._oil_opex.expenditures()
+                + self._oil_asr.expenditures()
         )
-
-
 
         # Calculate total expenses for GAS;
         # Here, for Tangible cost, we only take the regular expenditures, not the depreciated value
         self._gas_total_expenses = (
-            self._gas_tangible.expenditures()
-            + self._gas_intangible.expenditures()
-            + self._gas_opex.expenditures()
-            + self._gas_asr.expenditures()
+                self._gas_tangible.expenditures()
+                + self._gas_intangible.expenditures()
+                + self._gas_opex.expenditures()
+                + self._gas_asr.expenditures()
         )
 
         self._oil_base_cashflow = CashFlow(

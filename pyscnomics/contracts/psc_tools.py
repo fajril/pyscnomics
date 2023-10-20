@@ -238,6 +238,7 @@ def get_dmo(onstream_date: date,
             dmo_volume_portion: float,
             dmo_fee_portion: float,
             lifting: Lifting,
+            price: np.ndarray,
             ctr_pretax_share: float,
             unrecovered_cost: np.ndarray,
             is_dmo_end_weighted) -> tuple:
@@ -290,17 +291,17 @@ def get_dmo(onstream_date: date,
     dmo_holiday = np.where(project_years >= dmo_end_date.year, False, True)
     dmo_volume = dmo_volume_portion * lifting.lifting_rate_arr() * ctr_pretax_share
     dmo_fee = np.where(np.logical_and(unrecovered_cost == 0, ~dmo_holiday),
-                       dmo_fee_portion * lifting.lifting_price_arr() * dmo_volume,
-                       dmo_volume * lifting.lifting_price_arr())
+                       dmo_fee_portion * price * dmo_volume,
+                       dmo_volume * price)
 
     # Weighted dmo fee condition if the period of dmo is ended in the middle of the year
     if unrecovered_cost[dmo_indices] > 0 and is_dmo_end_weighted:
         dmo_fee[dmo_indices] = (
-                    dmo_end_date.month / 12 * lifting.lifting_price_arr()[dmo_indices] * dmo_volume[dmo_indices] +
+                    dmo_end_date.month / 12 * price[dmo_indices] * dmo_volume[dmo_indices] +
                     (1 - dmo_end_date.month / 12) * dmo_volume[dmo_indices] *
-                    dmo_fee_portion * lifting.lifting_price_arr()[dmo_indices])
+                    dmo_fee_portion * price[dmo_indices])
 
     # Calculate Net DMO
-    ddmo = (dmo_volume * lifting.lifting_price_arr()) - dmo_fee
+    ddmo = (dmo_volume * price) - dmo_fee
 
     return dmo_volume, dmo_fee, ddmo

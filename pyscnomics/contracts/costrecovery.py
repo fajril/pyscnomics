@@ -369,6 +369,8 @@ class CostRecovery(BaseProject):
         self._get_revenue()
         self._get_ftp()
 
+        self._get_wap_price()
+
         # Depreciation (tangible cost)
         (
             self._oil_depreciation,
@@ -596,6 +598,7 @@ class CostRecovery(BaseProject):
             dmo_volume_portion=self.oil_dmo_volume_portion,
             dmo_fee_portion=self.oil_dmo_fee_portion,
             lifting=self._oil_lifting,
+            price=self._oil_wap_price,
             ctr_pretax_share=self.oil_ctr_pretax_share,
             unrecovered_cost=self._oil_unrecovered_after_transfer,
             is_dmo_end_weighted=is_dmo_end_weighted)
@@ -608,6 +611,7 @@ class CostRecovery(BaseProject):
             dmo_volume_portion=self.gas_dmo_volume_portion,
             dmo_fee_portion=self.gas_dmo_fee_portion,
             lifting=self._gas_lifting,
+            price=self._gas_wap_price,
             ctr_pretax_share=self.gas_ctr_pretax_share,
             unrecovered_cost=self._gas_unrecovered_after_transfer,
             is_dmo_end_weighted=is_dmo_end_weighted)
@@ -626,15 +630,20 @@ class CostRecovery(BaseProject):
                 - self._gas_ddmo
         )
 
-        self._oil_ftp_tax_payment = self._get_ftp_tax_payment(unrec=self._oil_unrecovered_after_transfer,
-                                                              ftp=self._oil_ftp_ctr,
-                                                              tax_rate=tax_rate,
-                                                              ftp_tax_regime=ftp_tax_regime)
+        # self._oil_ftp_tax_payment = self._get_ftp_tax_payment(unrec=self._oil_unrecovered_after_transfer,
+        #                                                       ftp=self._oil_ftp_ctr,
+        #                                                       tax_rate=tax_rate,
+        #                                                       ftp_tax_regime=ftp_tax_regime)
 
         # self._gas_ftp_tax_payment = self._get_ftp_tax_payment(unrec=self._gas_unrecovered_after_transfer,
         #                                                       ftp=self._gas_ftp_ctr,
         #                                                       tax_rate=tax_rate,
         #                                                       ftp_tax_regime=ftp_tax_regime)
+
+        self._oil_ftp_tax_payment = self._get_ftp_tax_payment2(ctr_share=self._oil_contractor_share,
+                                                               taxable_income=self._oil_taxable_income,
+                                                               tax_rate=tax_rate,
+                                                               ftp_tax_regime=ftp_tax_regime)
 
         self._gas_ftp_tax_payment = self._get_ftp_tax_payment2(ctr_share=self._gas_contractor_share,
                                                                taxable_income=self._gas_taxable_income,
