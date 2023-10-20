@@ -219,7 +219,7 @@ def test_ets_after_transfer():
     gas_ets_after_transfer_base = load_testing(dataset_type='case1', key='gas_ets_after_transfer')
 
     # Execute testing
-    # np.testing.assert_allclose(oil_ets_after_transfer, oil_ets_after_transfer_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_ets_after_transfer, oil_ets_after_transfer_base, rtol=1e-6)
     np.testing.assert_allclose(gas_ets_after_transfer, gas_ets_after_transfer_base, rtol=1e-6)
 
 
@@ -228,13 +228,20 @@ def test_equity_share():
     oil_contractor_share = psc._oil_contractor_share
     oil_government_share = psc._oil_government_share
 
+    gas_contractor_share = psc._gas_contractor_share
+    gas_government_share = psc._gas_government_share
+
     # Expected result
-    oil_contractor_share_base = load_testing(dataset_type='case1', key='Contractor Share')
-    oil_government_share_base = load_testing(dataset_type='case1', key='Government Share')
+    oil_contractor_share_base = load_testing(dataset_type='case1', key='oil_ctr_share')
+    oil_government_share_base = load_testing(dataset_type='case1', key='oil_gov_share')
+    gas_contractor_share_base = load_testing(dataset_type='case1', key='gas_ctr_share')
+    gas_government_share_base = load_testing(dataset_type='case1', key='gas_gov_share')
 
     # Execute testing
-    np.testing.assert_allclose(oil_contractor_share_base, oil_contractor_share, rtol=1e-6)
+    np.testing.assert_allclose(oil_contractor_share, oil_contractor_share_base, rtol=1e-6)
     np.testing.assert_allclose(oil_government_share, oil_government_share_base, rtol=1e-6)
+    np.testing.assert_allclose(gas_contractor_share, gas_contractor_share_base, rtol=1e-6)
+    np.testing.assert_allclose(gas_government_share, gas_government_share_base, rtol=1e-6)
 
 
 def test_dmo():
@@ -243,15 +250,27 @@ def test_dmo():
     oil_dmo_fee = psc._oil_dmo_fee
     oil_ddmo = psc._oil_ddmo
 
+    gas_dmo_volume = psc._gas_dmo_volume
+    gas_dmo_fee = psc._gas_dmo_fee
+    gas_ddmo = psc._gas_ddmo
+
     # Expected result
-    oil_dmo_volume_base = load_testing(dataset_type='case1', key='DMO')
-    oil_dmo_fee_base = load_testing(dataset_type='case1', key='DMO Fee')
-    oil_ddmo_base = load_testing(dataset_type='case1', key='Net DMO')
+    oil_dmo_volume_base = load_testing(dataset_type='case1', key='oil_dmo_volume')
+    oil_dmo_fee_base = load_testing(dataset_type='case1', key='oil_dmo_fee')
+    oil_ddmo_base = load_testing(dataset_type='case1', key='oil_ddmo')
+
+    gas_dmo_volume_base = load_testing(dataset_type='case1', key='gas_dmo_volume')
+    gas_dmo_fee_base = load_testing(dataset_type='case1', key='gas_dmo_fee')
+    gas_ddmo_base = load_testing(dataset_type='case1', key='gas_ddmo')
 
     # Execute testing
     np.testing.assert_allclose(oil_dmo_volume, oil_dmo_volume_base, rtol=1e-6)
     np.testing.assert_allclose(oil_dmo_fee, oil_dmo_fee_base, rtol=1e-6)
     np.testing.assert_allclose(oil_ddmo, oil_ddmo_base, rtol=1e-6)
+
+    np.testing.assert_allclose(gas_dmo_volume, gas_dmo_volume_base, rtol=1e-6)
+    np.testing.assert_allclose(gas_dmo_fee, gas_dmo_fee_base, rtol=1e-6)
+    np.testing.assert_allclose(gas_ddmo, gas_ddmo_base, rtol=1e-6)
 
 
 def test_taxable_income():
