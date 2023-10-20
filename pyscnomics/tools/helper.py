@@ -4,7 +4,7 @@ Handles summation operation on two arrays, accounting for different starting yea
 
 import numpy as np
 from functools import wraps, reduce
-from pyscnomics.econ.selection import FluidType
+from pyscnomics.econ.selection import FluidType, YearReference
 
 
 class TaxesException(Exception):
@@ -86,7 +86,7 @@ def apply_inflation(inflation_rate: float | int) -> callable:
     return _decorated
 
 
-def apply_vat_pdri(
+def apply_vat_and_pdri(
     vat_portion: float | int,
     vat_rate: np.ndarray | float | int,
     vat_discount: np.ndarray | float | int,
@@ -166,7 +166,17 @@ def apply_vat_pdri(
     return _decorated
 
 
-def apply_lbt(lbt_discount: np.ndarray | float | int) -> callable:
+def apply_lbt_or_pdrd(
+    lbt_discount: np.ndarray | float | int,
+    pdrd_discount: np.ndarray | float | int,
+    inflation_rate: float | int,
+    cost: np.ndarray,
+    year_ref: YearReference,
+    start_year: int,
+    project_duration: int,
+    expense_year: int,
+    pis_year: int,
+) -> callable:
     """
     Decorator for applying Land and Building Tax (LBT/PBB) discount to a target function's result.
 
@@ -175,6 +185,8 @@ def apply_lbt(lbt_discount: np.ndarray | float | int) -> callable:
     lbt_discount : numpy.ndarray or float or int
         The LBT discount(s) to be applied as a multiplier.
         Can be a single value or an array.
+    expenses: np.ndarray
+        An array of expenditures.
 
     Returns:
     --------
@@ -193,8 +205,58 @@ def apply_lbt(lbt_discount: np.ndarray | float | int) -> callable:
     def _decorated(f):
         @wraps(f)
         def _wrapper(*args, **kwargs):
-            lbt_discount_arr = check_input(target_func=f(*args, **kwargs), param=lbt_discount)
-            return f(*args, **kwargs) * (1.0 - lbt_discount_arr)
+            if lbt_discount == 0.0 and pdrd_discount == 0.0:
+                cost_modified = f(*args, **kwargs)
+
+            if lbt_discount > 0.0 and pdrd_discount == 0.0:
+                # Apply inflation
+                exponents = expense_year - start_year
+                inflation_arr = (1.0 + inflation_rate) ** exponents
+                cost_modified_by_inflation = cost * inflation_arr
+
+                # Align cost according to project duration
+                if year_ref == YearReference.EXPENSE_YEAR:
+                    cost_modified = np.bincount(
+                        expense_year - start_year, weights=cost_modified_by_inflation
+                    )
+
+                else:
+                    cost_modified = np.bincount(
+                        pis_year - start_year, weights=cost_modified_by_inflation
+                    )
+                zeros = np.zeros(project_duration - len(cost_modified))
+                cost_modified = np.concatenate((cost_modified, zeros))
+                lbt_discount_arr = check_input(target_func=cost_modified, param=lbt_discount)
+                cost_modified *= 1.0 - lbt_discount_arr
+
+            if lbt_discount == 0.0 and pdrd_discount > 0.0:
+                # Apply inflation
+                exponents = expense_year - start_year
+                inflation_arr = (1.0 + inflation_rate) ** exponents
+                cost_modified_by_inflation = cost * inflation_arr
+
+                # Align cost according to project duration
+                if year_ref == YearReference.EXPENSE_YEAR:
+                    cost_modified = np.bincount(
+                        expense_year - start_year, weights=cost_modified_by_inflation
+                    )
+
+                else:
+                    cost_modified = np.bincount(
+                        pis_year - start_year, weights=cost_modified_by_inflation
+                    )
+                zeros = np.zeros(project_duration - len(cost_modified))
+                cost_modified = np.concatenate((cost_modified, zeros))
+                pdrd_discount_arr = check_input(target_func=cost_modified, param=pdrd_discount)
+                cost_modified *= 1.0 - pdrd_discount_arr
+
+            if lbt_discount > 0.0 and pdrd_discount > 0.0:
+                raise TaxesException(
+                    f"Caution! "
+                    f"LBT discount and PDRD discount cannot be applied simultaneously."
+                )
+
+            return cost_modified
         return _wrapper
     return _decorated
 
@@ -239,12 +301,12 @@ def apply_cost_modification(
     inflation_rate: float | int,
     vat_portion: float | int,
     vat_rate: np.ndarray | float | int,
-    vat_discount: np.ndarray | float | int,
+    vat_discount: float | int,
     pdri_portion: float | int,
     pdri_rate: np.ndarray | float | int,
-    pdri_discount: np.ndarray | float | int,
-    lbt_discount: np.ndarray | float | int,
-    pdrd_discount: np.ndarray | float | int,
+    pdri_discount: float | int,
+    lbt_discount: float | int,
+    pdrd_discount: float | int,
 ) -> np.ndarray:
     """
     Apply cost modifications to the given cost array based on various parameters.
@@ -257,25 +319,26 @@ def apply_cost_modification(
         An array containing the original cost data.
     expense_year : np.ndarray
         An array specifying the expense years for each cost element.
+    project_duration: int
+        Duration of the project.
     inflation_rate : float | int
         The annual inflation rate as a decimal or integer.
     vat_portion : float | int
         The portion of cost subject to Value Added Tax (VAT) as a decimal or integer.
     vat_rate : np.ndarray | float | int
         An array or single value representing the VAT rate(s) as a decimal or integer.
-    vat_discount : np.ndarray | float | int
-        An array or single value representing the VAT discount(s) as a decimal or integer.
+    vat_discount : float | int
+        A single value representing the VAT discount(s) as a decimal or integer.
     pdri_portion : float | int
         The portion of cost subject to PDRI as a decimal or integer.
     pdri_rate : np.ndarray | float | int
         An array or single value representing the PDRI rate(s) as a decimal or integer.
-    pdri_discount : np.ndarray | float | int
-        An array or single value representing the PDRI discount(s) as a decimal or integer.
-    lbt_discount : np.ndarray | float | int
-        An array or single value representing the Land and Building Tax discount(s)
-        as a decimal or integer.
-    pdrd_discount : np.ndarray | float | int
-        An array or single value representing the PDRD discount(s) as a decimal or integer.
+    pdri_discount : float | int
+        A single value representing the PDRI discount(s) as a decimal or integer.
+    lbt_discount : float | int
+        A single value representing the Land and Building Tax discount(s) as a decimal or integer.
+    pdrd_discount : float | int
+        A single value representing the PDRD discount(s) as a decimal or integer.
 
     Returns:
     --------
@@ -293,39 +356,46 @@ def apply_cost_modification(
     zeros = np.zeros(project_duration - len(cost_modified))
     cost_modified = np.concatenate((cost_modified, zeros))
 
-    print('\t')
-    print(f'Filetype: {type(cost_modified)}')
-    print(f'Length: {len(cost_modified)}')
-    print('cost_modified = ', cost_modified)
-
     # Apply VAT/PPN and PDRI
     vat_portion_arr = np.repeat(vat_portion, len(cost_modified))
     vat_rate_arr = check_input(target_func=cost_modified, param=vat_rate)
     vat_discount_arr = check_input(target_func=cost_modified, param=vat_discount)
     vat_multiplier = vat_portion_arr * vat_rate_arr * (1.0 - vat_discount_arr)
 
-    print('\t')
-    print(f'Filetype: {type(vat_multiplier)}')
-    print(f'Length: {len(vat_multiplier)}')
-    print('vat_multiplier = ', vat_multiplier)
+    pdri_portion_arr = np.repeat(pdri_portion, len(cost_modified))
+    pdri_rate_arr = check_input(target_func=cost_modified, param=pdri_rate)
+    pdri_discount_arr = check_input(target_func=cost_modified, param=pdri_discount)
+    pdri_multiplier = pdri_portion_arr * pdri_rate_arr * (1.0 - pdri_discount_arr)
 
-    # pdri_portion_arr = np.repeat(pdri_portion, len(cost))
-    # pdri_rate_arr = check_input(target_func=cost, param=pdri_rate)
-    # pdri_discount_arr = check_input(target_func=cost, param=pdri_discount)
-    # pdri_multiplier = pdri_portion_arr * pdri_rate_arr * (1.0 - pdri_discount_arr)
-    #
-    # add_multiplier = vat_multiplier + pdri_multiplier
-    # cost_modified *= 1.0 + add_multiplier
-    #
-    # # Apply LBT/PPN
-    # lbt_discount_arr = check_input(target_func=cost, param=lbt_discount)
-    # cost_modified *= 1.0 - lbt_discount_arr
-    #
-    # # Apply PDRD
-    # pdrd_discount_arr = check_input(target_func=cost, param=pdrd_discount)
-    # cost_modified *= 1.0 - pdrd_discount_arr
-    #
-    # return cost_modified
+    add_multiplier = vat_multiplier + pdri_multiplier
+    cost_modified *= 1.0 + add_multiplier
+
+    # Apply LBT/PBB or PDRD
+    if lbt_discount == 0.0 and pdrd_discount == 0.0:
+        cost_modified = cost_modified
+        return cost_modified
+
+    if lbt_discount > 0.0 and pdrd_discount == 0.0:
+        cost_modified = np.bincount(expense_year - start_year, weights=cost_modified_by_inflation)
+        zeros = np.zeros(project_duration - len(cost_modified))
+        cost_modified = np.concatenate((cost_modified, zeros))
+        lbt_discount_arr = check_input(target_func=cost_modified, param=lbt_discount)
+        cost_modified *= 1.0 - lbt_discount_arr
+        return cost_modified
+
+    if lbt_discount == 0.0 and pdrd_discount > 0.0:
+        cost_modified = np.bincount(expense_year - start_year, weights=cost_modified_by_inflation)
+        zeros = np.zeros(project_duration - len(cost_modified))
+        cost_modified = np.concatenate((cost_modified, zeros))
+        pdrd_discount_arr = check_input(target_func=cost_modified, param=pdrd_discount)
+        cost_modified *= 1.0 - pdrd_discount_arr
+        return cost_modified
+
+    if lbt_discount > 0.0 and pdrd_discount > 0.0:
+        raise TaxesException(
+            f"Caution! "
+            f"LBT discount and PDRD discount cannot be applied simultaneously."
+        )
 
 
 def get_identifier(target_instances: tuple, cost_alloc: FluidType) -> list:

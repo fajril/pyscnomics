@@ -12,9 +12,8 @@ from dataclasses import dataclass, field
 import pyscnomics.econ.depreciation as depr
 from pyscnomics.tools.helper import (
     apply_inflation,
-    apply_vat_pdri,
-    apply_lbt,
-    apply_pdrd,
+    apply_vat_and_pdri,
+    apply_lbt_or_pdrd,
     apply_cost_modification,
 )
 from pyscnomics.econ.selection import (
@@ -90,9 +89,9 @@ class Tangible:
     expense_year: np.ndarray
     cost_allocation: FluidType = field(default=FluidType.OIL)
     pis_year: np.ndarray = field(default=None, repr=False)
-    salvage_value: np.ndarray = field(default=None, repr=False)
-    useful_life: np.ndarray = field(default=None, repr=False)
-    depreciation_factor: np.ndarray = field(default=None, repr=False)
+    salvage_value: np.ndarray = field(default=None)
+    useful_life: np.ndarray = field(default=None)
+    depreciation_factor: np.ndarray = field(default=None)
     is_ic_applied: bool = field(default=False)
     vat_portion: float | int = field(default=1.0)
     pdri_portion: float | int = field(default=1.0)
@@ -136,7 +135,7 @@ class Tangible:
 
         # User does not provide useful_life data
         if self.useful_life is None:
-            self.useful_life = np.repeat(5, len(self.cost))
+            self.useful_life = np.repeat(5.0, len(self.cost))
 
         # User does not provide depreciation_factor data
         if self.depreciation_factor is None:
@@ -231,10 +230,18 @@ class Tangible:
         (2) If len(expenses) < project_duration, then add the remaining elements
             with zeros.
         """
-
-        @apply_pdrd(pdrd_discount=pdrd_discount)
-        @apply_lbt(lbt_discount=lbt_discount)
-        @apply_vat_pdri(
+        @apply_lbt_or_pdrd(
+            lbt_discount=lbt_discount,
+            pdrd_discount=pdrd_discount,
+            inflation_rate=inflation_rate,
+            cost=self.cost,
+            year_ref=year_ref,
+            start_year=self.start_year,
+            project_duration=self.project_duration,
+            expense_year=self.expense_year,
+            pis_year=self.pis_year,
+        )
+        @apply_vat_and_pdri(
             vat_portion=self.vat_portion,
             vat_rate=vat_rate,
             vat_discount=vat_discount,
@@ -337,82 +344,105 @@ class Tangible:
             pdrd_discount=pdrd_discount,
         )
 
-        # print('\t')
-        # print(f'Filetype: {type(cost_modified)}')
-        # print(f'Length: {len(cost_modified)}')
-        # print('cost_modified = \n', cost_modified)
+        # Create a new instance of Tangible
+        salvage_value_modified = self.salvage_value
+        useful_life_modified = self.useful_life
+        depreciation_factor_modified = self.depreciation_factor
 
-        # # Straight line
-        # if depr_method == DeprMethod.SL:
-        #     depreciation_charge = np.asarray(
-        #         [
-        #             depr.straight_line_depreciation_rate(
-        #                 cost=c,
-        #                 salvage_value=sv,
-        #                 useful_life=ul,
-        #                 depreciation_len=self.project_duration,
-        #             )
-        #             for c, sv, ul in zip(
-        #                 cost_modified,
-        #                 self.salvage_value,
-        #                 self.useful_life,
-        #             )
-        #         ]
-        #     )
-        #
-        # # Declining balance/double declining balance
-        # if depr_method == DeprMethod.DB:
-        #     depreciation_charge = np.asarray(
-        #         [
-        #             depr.declining_balance_depreciation_rate(
-        #                 cost=c,
-        #                 salvage_value=sv,
-        #                 useful_life=ul,
-        #                 decline_factor=decline_factor,
-        #                 depreciation_len=self.project_duration,
-        #             )
-        #             for c, sv, ul in zip(
-        #                 cost_modified,
-        #                 self.salvage_value,
-        #                 self.useful_life,
-        #             )
-        #         ]
-        #     )
-        #
-        # # PSC_DB
-        # if depr_method == DeprMethod.PSC_DB:
-        #     depreciation_charge = np.asarray(
-        #         [
-        #             depr.psc_declining_balance_depreciation_rate(
-        #                 cost=c,
-        #                 depreciation_factor=dr,
-        #                 useful_life=ul,
-        #                 depreciation_len=self.project_duration,
-        #             )
-        #             for c, dr, ul in zip(
-        #                 cost_modified,
-        #                 self.depreciation_factor,
-        #                 self.useful_life,
-        #             )
-        #         ]
-        #     )
-        #
-        # # The relative difference of pis_year and start_year
-        # shift_indices = self.pis_year - self.start_year
-        #
-        # # Modify depreciation_charge so that expenditures are aligned with
-        # # the corresponding pis_year (or expense_year)
-        # depreciation_charge = np.asarray(
-        #     [
-        #         np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
-        #         for row, i in zip(depreciation_charge, shift_indices)
-        #     ]
-        # )
-        #
-        # total_depreciation_charge = depreciation_charge.sum(axis=0)
-        # undepreciated_asset = np.sum(cost_modified) - np.sum(total_depreciation_charge)
-        #
-        # return total_depreciation_charge, undepreciated_asset
+        if len(salvage_value_modified) < len(cost_modified):
+            salvage_value_modified = np.repeat(self.salvage_value[0], len(cost_modified))
+
+        if len(self.useful_life) < len(cost_modified):
+            useful_life_modified = np.repeat(self.useful_life[0], len(cost_modified))
+
+        if len(self.depreciation_factor) < len(cost_modified):
+            depreciation_factor_modified = np.repeat(self.depreciation_factor[0], len(cost_modified))
+
+        new_Tangible = Tangible(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            cost=cost_modified,
+            expense_year=self.project_years,
+            cost_allocation=self.cost_allocation,
+            pis_year=self.project_years,
+            salvage_value=salvage_value_modified,
+            useful_life=useful_life_modified,
+            depreciation_factor=depreciation_factor_modified,
+            vat_portion=self.vat_portion,
+            pdri_portion=self.pdri_portion,
+        )
+
+        # Straight line
+        if depr_method == DeprMethod.SL:
+            depreciation_charge = np.asarray(
+                [
+                    depr.straight_line_depreciation_rate(
+                        cost=c,
+                        salvage_value=sv,
+                        useful_life=ul,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, sv, ul in zip(
+                        new_Tangible.cost,
+                        new_Tangible.salvage_value,
+                        new_Tangible.useful_life,
+                    )
+                ]
+            )
+
+        # Declining balance/double declining balance
+        if depr_method == DeprMethod.DB:
+            depreciation_charge = np.asarray(
+                [
+                    depr.declining_balance_depreciation_rate(
+                        cost=c,
+                        salvage_value=sv,
+                        useful_life=ul,
+                        decline_factor=decline_factor,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, sv, ul in zip(
+                        new_Tangible.cost,
+                        new_Tangible.salvage_value,
+                        new_Tangible.useful_life,
+                    )
+                ]
+            )
+
+        # PSC_DB
+        if depr_method == DeprMethod.PSC_DB:
+            depreciation_charge = np.asarray(
+                [
+                    depr.psc_declining_balance_depreciation_rate(
+                        cost=c,
+                        depreciation_factor=dr,
+                        useful_life=ul,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, dr, ul in zip(
+                        new_Tangible.cost,
+                        new_Tangible.depreciation_factor,
+                        new_Tangible.useful_life,
+                    )
+                ]
+            )
+
+        # The relative difference of pis_year and start_year
+        shift_indices = new_Tangible.pis_year - new_Tangible.start_year
+
+        # Modify depreciation_charge so that expenditures are aligned with
+        # the corresponding pis_year (or expense_year)
+        depreciation_charge = np.asarray(
+            [
+                np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
+                for row, i in zip(depreciation_charge, shift_indices)
+            ]
+        )
+
+        total_depreciation_charge = depreciation_charge.sum(axis=0)
+        undepreciated_asset = np.sum(new_Tangible.cost) - np.sum(total_depreciation_charge)
+
+        return total_depreciation_charge, undepreciated_asset
 
     def total_depreciation_book_value(
         self,
@@ -1580,8 +1610,8 @@ class ASR:
     cost: np.ndarray
     expense_year: np.ndarray
     cost_allocation: FluidType = field(default=FluidType.OIL)
-    vat_portion: float | int = field(default=1.0, repr=False)
-    pdri_portion: float | int = field(default=1.0, repr=False)
+    vat_portion: float | int = field(default=1.0)
+    pdri_portion: float | int = field(default=1.0)
     description: list[str] = field(default=None)
 
     # Attribute to de defined later on
@@ -1688,6 +1718,7 @@ class ASR:
             start_year=self.start_year,
             cost=self.cost,
             expense_year=self.expense_year,
+            project_duration=self.project_duration,
             inflation_rate=inflation_rate,
             vat_portion=self.vat_portion,
             vat_rate=vat_rate,
@@ -1699,8 +1730,19 @@ class ASR:
             pdrd_discount=pdrd_discount,
         )
 
-        return cost_modified * np.power(
-            (1 + future_rate), self.end_year - self.expense_year + 1
+        # Create a new instance of ASR
+        new_ASR = ASR(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            cost=cost_modified,
+            expense_year=self.project_years,
+            cost_allocation=self.cost_allocation,
+            vat_portion=self.vat_portion,
+            pdri_portion=self.pdri_portion,
+        )
+
+        return new_ASR.cost * np.power(
+            (1 + future_rate), new_ASR.end_year - new_ASR.expense_year + 1
         )
 
     def expenditures(
@@ -1750,8 +1792,36 @@ class ASR:
         This method calculates ASR expenditures while considering various economic factors
         such as inflation, VAT, PDRI, LBT, and PDRD.
         """
+        # Configure the modified cost
+        cost_modified = apply_cost_modification(
+            start_year=self.start_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_duration=self.project_duration,
+            inflation_rate=inflation_rate,
+            vat_portion=self.vat_portion,
+            vat_rate=vat_rate,
+            vat_discount=vat_discount,
+            pdri_portion=self.pdri_portion,
+            pdri_rate=pdri_rate,
+            pdri_discount=pdri_discount,
+            lbt_discount=lbt_discount,
+            pdrd_discount=pdrd_discount,
+        )
+
+        # Create a new instance of ASR
+        new_ASR = ASR(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            cost=cost_modified,
+            expense_year=self.project_years,
+            cost_allocation=self.cost_allocation,
+            vat_portion=self.vat_portion,
+            pdri_portion=self.pdri_portion,
+        )
+
         # Distance of expense year from the end year of the project
-        cost_duration = self.end_year - self.expense_year + 1
+        cost_duration = new_ASR.end_year - new_ASR.expense_year + 1
 
         # Cost allocation: cost distribution per year
         cost_alloc = (
@@ -1769,7 +1839,7 @@ class ASR:
         )
 
         # Distance of expense year from the start year of the project
-        shift_indices = self.expense_year - self.start_year
+        shift_indices = new_ASR.expense_year - new_ASR.start_year
 
         # ASR allocation per element per distributed year
         asr_alloc = np.asarray(
@@ -2004,3 +2074,11 @@ class ASR:
                 f"{other}({other.__class__.__qualname__}) is not an instance "
                 f"of Tangible/Intangible/OPEX/ASR nor an integer nor a float."
             )
+
+@dataclass
+class PDRD:
+    pass
+
+@dataclass
+class LBT:
+    pass

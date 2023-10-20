@@ -99,31 +99,6 @@ class Lifting:
                 f"is after the end year of the project ({self.end_year})"
             )
 
-    def revenue(self) -> np.ndarray:
-        """
-        Calculate the revenue of a particular fluid type.
-
-        Returns
-        -------
-        rev: np.ndarray
-            The revenue of a particular fluid type.
-
-        Notes
-        -----
-        The revenue is calculated as follows: revenue = lifting rate * price * ghv.
-        The function np.bincount() is used to align the revenue elements with its
-        correponding year.
-        """
-
-        rev = self.lifting_rate * self.price * self.ghv
-        rev_update = np.bincount(self.prod_year - self.start_year, weights=rev)
-
-        # Modify revenues, acoounting for project duration
-        zeros = np.zeros(self.project_duration - len(rev_update))
-        rev_update = np.concatenate((rev_update, zeros))
-
-        return rev_update
-
     def _get_array(self, target_param) -> np.ndarray:
         """
         Create an array of target_param.
@@ -150,6 +125,31 @@ class Lifting:
         param_arr = np.concatenate((param_arr, zeros))
 
         return param_arr
+
+    def revenue(self) -> np.ndarray:
+        """
+        Calculate the revenue of a particular fluid type.
+
+        Returns
+        -------
+        rev: np.ndarray
+            The revenue of a particular fluid type.
+
+        Notes
+        -----
+        The revenue is calculated as follows: revenue = lifting rate * price * ghv.
+        The function np.bincount() is used to align the revenue elements with its
+        correponding year.
+        """
+
+        rev = self.lifting_rate * self.price * self.ghv
+        rev_update = np.bincount(self.prod_year - self.start_year, weights=rev)
+
+        # Modify revenues, acoounting for project duration
+        zeros = np.zeros(self.project_duration - len(rev_update))
+        rev_update = np.concatenate((rev_update, zeros))
+
+        return rev_update
 
     def get_lifting_rate_arr(self) -> np.ndarray:
         """
