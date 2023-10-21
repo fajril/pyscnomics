@@ -54,35 +54,35 @@ def check_input(target_func, param: np.ndarray | float | int) -> np.ndarray:
     return param_arr
 
 
-def apply_inflation(inflation_rate: float | int) -> callable:
+def apply_inflation(inflation_rate: np.ndarray | float | int) -> callable:
     """
-    Decorator function to apply escalation/inflation to a target function's result.
+    Decorator function to apply inflation/escalation to a target function's result.
 
     Parameters
     ----------
-    inflation_rate: float or int
-        A constant depicting the escalation/inflation rate.
+    inflation_rate: np.ndarray or float or int
+        A constant depicting the escalation/inflation rate;
+        could be an array or a single-value.
 
     Returns
     -------
     Callable
-        A decorated function that applies inflation multipliers to a target function's result.
+        A decorated function that applies inflation multiplier to a target function's result.
 
     Notes
     -----
-    This decorator is used to apply inflation multipliers to the result of a target function.
+    This decorator is used to apply inflation multiplier to the result of a target function.
     It takes inflation rate as an input argument and returns a decorated function.
     """
     def _decorated(f):
         @wraps(f)
         def _wrapper(*args, **kwargs):
             exponents = np.arange(0, len(f(*args, **kwargs)), 1)
-            inflation_arr = (1.0 + inflation_rate) ** exponents
-            modified_arr = f(*args, **kwargs) * inflation_arr
+            inflation_rate_arr = check_input(target_func=f(*args, **kwargs), param=inflation_rate)
+            inflation_mult = (1.0 + inflation_rate_arr) ** exponents
+            modified_arr = f(*args, **kwargs) * inflation_mult
             return modified_arr
-
         return _wrapper
-
     return _decorated
 
 
@@ -143,152 +143,19 @@ def apply_vat_and_pdri(
             def _get_vat():
                 vat_portion_arr = np.repeat(vat_portion, len(f(*args, **kwargs)))
                 vat_rate_arr = check_input(target_func=f(*args, **kwargs), param=vat_rate)
-                vat_discount_arr = check_input(
-                    target_func=f(*args, **kwargs), param=vat_discount
-                )
+                vat_discount_arr = check_input(target_func=f(*args, **kwargs), param=vat_discount)
                 vat_multiplier = vat_portion_arr * vat_rate_arr * (1.0 - vat_discount_arr)
                 return vat_multiplier
 
             def _get_pdri():
                 pdri_portion_arr = np.repeat(pdri_portion, len(f(*args, **kwargs)))
                 pdri_rate_arr = check_input(target_func=f(*args, **kwargs), param=pdri_rate)
-                pdri_discount_arr = check_input(
-                    target_func=f(*args, **kwargs), param=pdri_discount
-                )
+                pdri_discount_arr = check_input(target_func=f(*args, **kwargs), param=pdri_discount)
                 pdri_multiplier = pdri_portion_arr * pdri_rate_arr * (1.0 - pdri_discount_arr)
                 return pdri_multiplier
 
             total_multiplier = _get_vat() + _get_pdri()
             return f(*args, **kwargs) * (1.0 + total_multiplier)
-
-        return _wrapper
-
-    return _decorated
-
-
-def apply_lbt_or_pdrd(
-    lbt_discount: np.ndarray | float | int,
-    pdrd_discount: np.ndarray | float | int,
-    inflation_rate: float | int,
-    cost: np.ndarray,
-    year_ref: YearReference,
-    start_year: int,
-    project_duration: int,
-    expense_year: int,
-    pis_year: int,
-) -> callable:
-    """
-    Decorator for applying Land and Building Tax (LBT/PBB) discount to a target function's result.
-
-    Parameters:
-    -----------
-    lbt_discount : numpy.ndarray or float or int
-        The LBT discount(s) to be applied as a multiplier.
-        Can be a single value or an array.
-    expenses: np.ndarray
-        An array of expenditures.
-
-    Returns:
-    --------
-    Callable
-        A decorated function that applies LBT discount to a target function's result.
-
-    Notes:
-    ------
-    This decorator is used to apply LBT/PBB discount to the result of a target function.
-    It takes the LBT discount as a parameter and returns a decorated function.
-
-    The decorated function first calculates the LBT discount multiplier based on the
-    input parameter and then applies this multiplier to the result of the target
-    function. The final result is adjusted by subtracting the discount.
-    """
-    def _decorated(f):
-        @wraps(f)
-        def _wrapper(*args, **kwargs):
-            if lbt_discount == 0.0 and pdrd_discount == 0.0:
-                cost_modified = f(*args, **kwargs)
-
-            if lbt_discount > 0.0 and pdrd_discount == 0.0:
-                # Apply inflation
-                exponents = expense_year - start_year
-                inflation_arr = (1.0 + inflation_rate) ** exponents
-                cost_modified_by_inflation = cost * inflation_arr
-
-                # Align cost according to project duration
-                if year_ref == YearReference.EXPENSE_YEAR:
-                    cost_modified = np.bincount(
-                        expense_year - start_year, weights=cost_modified_by_inflation
-                    )
-
-                else:
-                    cost_modified = np.bincount(
-                        pis_year - start_year, weights=cost_modified_by_inflation
-                    )
-                zeros = np.zeros(project_duration - len(cost_modified))
-                cost_modified = np.concatenate((cost_modified, zeros))
-                lbt_discount_arr = check_input(target_func=cost_modified, param=lbt_discount)
-                cost_modified *= 1.0 - lbt_discount_arr
-
-            if lbt_discount == 0.0 and pdrd_discount > 0.0:
-                # Apply inflation
-                exponents = expense_year - start_year
-                inflation_arr = (1.0 + inflation_rate) ** exponents
-                cost_modified_by_inflation = cost * inflation_arr
-
-                # Align cost according to project duration
-                if year_ref == YearReference.EXPENSE_YEAR:
-                    cost_modified = np.bincount(
-                        expense_year - start_year, weights=cost_modified_by_inflation
-                    )
-
-                else:
-                    cost_modified = np.bincount(
-                        pis_year - start_year, weights=cost_modified_by_inflation
-                    )
-                zeros = np.zeros(project_duration - len(cost_modified))
-                cost_modified = np.concatenate((cost_modified, zeros))
-                pdrd_discount_arr = check_input(target_func=cost_modified, param=pdrd_discount)
-                cost_modified *= 1.0 - pdrd_discount_arr
-
-            if lbt_discount > 0.0 and pdrd_discount > 0.0:
-                raise TaxesException(
-                    f"Caution! "
-                    f"LBT discount and PDRD discount cannot be applied simultaneously."
-                )
-
-            return cost_modified
-        return _wrapper
-    return _decorated
-
-
-def apply_pdrd(pdrd_discount: np.ndarray | float | int) -> callable:
-    """
-    Decorator for applying PDRD to a target function's result.
-
-    Parameters:
-    -----------
-    pdrd_discount : numpy.ndarray or float or int
-        The PDRD discount(s) to be applied as a multiplier. Can be a single value or an array.
-
-    Returns:
-    --------
-    Callable
-        A decorated function that applies PDRD discount to its result.
-
-    Notes:
-    ------
-    This decorator is used to apply PDRD discount to the result of a target function.
-    It takes the PDRD discount as a parameter and returns a decorated function.
-
-    The decorated function first calculates the PDRD discount multiplier based on the
-    input parameter and then applies this multiplier to the result of the target function.
-    The final result is adjusted by subtracting the discount.
-    """
-    def _decorated(f):
-        @wraps(f)
-        def _wrapper(*args, **kwargs):
-            pdrd_discount_arr = check_input(target_func=f(*args, **kwargs), param=pdrd_discount)
-            return f(*args, **kwargs) * (1.0 - pdrd_discount_arr)
         return _wrapper
     return _decorated
 
@@ -298,15 +165,15 @@ def apply_cost_modification(
     cost: np.ndarray,
     expense_year: np.ndarray,
     project_duration: int,
-    inflation_rate: float | int,
+    inflation_rate: np.ndarray | float | int,
     vat_portion: float | int,
     vat_rate: np.ndarray | float | int,
-    vat_discount: float | int,
+    vat_discount: np.ndarray | float | int,
     pdri_portion: float | int,
     pdri_rate: np.ndarray | float | int,
-    pdri_discount: float | int,
-    lbt_discount: float | int,
-    pdrd_discount: float | int,
+    pdri_discount: np.ndarray | float | int,
+    pis_year: np.ndarray = None,
+    year_ref: YearReference = None,
 ) -> np.ndarray:
     """
     Apply cost modifications to the given cost array based on various parameters.
@@ -321,24 +188,21 @@ def apply_cost_modification(
         An array specifying the expense years for each cost element.
     project_duration: int
         Duration of the project.
-    inflation_rate : float | int
-        The annual inflation rate as a decimal or integer.
+    inflation_rate : np.ndarray | float | int
+        The annual inflation rate as a decimal or integer;
+        could be an array or a single-value.
     vat_portion : float | int
         The portion of cost subject to Value Added Tax (VAT) as a decimal or integer.
     vat_rate : np.ndarray | float | int
         An array or single value representing the VAT rate(s) as a decimal or integer.
-    vat_discount : float | int
-        A single value representing the VAT discount(s) as a decimal or integer.
+    vat_discount : np.ndarray | float | int
+        An array or single value representing the VAT discount(s) as a decimal or integer.
     pdri_portion : float | int
         The portion of cost subject to PDRI as a decimal or integer.
     pdri_rate : np.ndarray | float | int
         An array or single value representing the PDRI rate(s) as a decimal or integer.
-    pdri_discount : float | int
-        A single value representing the PDRI discount(s) as a decimal or integer.
-    lbt_discount : float | int
-        A single value representing the Land and Building Tax discount(s) as a decimal or integer.
-    pdrd_discount : float | int
-        A single value representing the PDRD discount(s) as a decimal or integer.
+    pdri_discount : np.ndarray | float | int
+        An array or single value representing the PDRI discount(s) as a decimal or integer.
 
     Returns:
     --------
@@ -346,56 +210,67 @@ def apply_cost_modification(
         An array containing the modified cost data after applying various adjustments.
     """
 
+    if year_ref is None:
+        year_ref = YearReference.EXPENSE_YEAR
+
+    if pis_year is None:
+        pis_year = expense_year
+
     # Apply inflation
-    exponents = expense_year - start_year
-    inflation_arr = (1.0 + inflation_rate) ** exponents
-    cost_modified_by_inflation = cost * inflation_arr
+    if isinstance(inflation_rate, np.ndarray):
+        if len(inflation_rate) != project_duration:
+            raise TaxesException(
+                f"Unequal length of array: "
+                f"Inflation rate: {len(inflation_rate)}, "
+                f"Project duration: {project_duration}."
+            )
+        else:
 
-    # Align cost according to project duration
-    cost_modified = np.bincount(expense_year - start_year, weights=cost_modified_by_inflation)
-    zeros = np.zeros(project_duration - len(cost_modified))
-    cost_modified = np.concatenate((cost_modified, zeros))
+            if year_ref == YearReference.EXPENSE_YEAR:
+                cost_modified_by_duration = np.bincount(expense_year - start_year, weights=cost)
+            else:
+                cost_modified_by_duration = np.bincount(pis_year - start_year, weights=cost)
+            zeros = np.zeros(project_duration - len(cost_modified_by_duration))
+            cost_modified_by_duration = np.concatenate((cost_modified_by_duration, zeros))
 
-    # Apply VAT/PPN and PDRI
+        exponents = np.arange(0, len(cost_modified_by_duration), 1)
+        inflation_rate_arr = check_input(target_func=cost_modified_by_duration, param=inflation_rate)
+        inflation_mult = (1.0 + inflation_rate_arr) ** exponents
+        cost_modified = cost_modified_by_duration * inflation_mult
+
+    if isinstance(inflation_rate, (float, int)):
+        exponents = expense_year - start_year
+        inflation_mult = (1.0 + inflation_rate) ** exponents
+        cost_modified_by_inflation = cost * inflation_mult
+
+        if year_ref == YearReference.EXPENSE_YEAR:
+            cost_modified = np.bincount(
+                expense_year - start_year, weights=cost_modified_by_inflation
+            )
+        else:
+            cost_modified = np.bincount(
+                pis_year - start_year, weights=cost_modified_by_inflation
+            )
+
+        zeros = np.zeros(project_duration - len(cost_modified))
+        cost_modified = np.concatenate((cost_modified, zeros))
+
+    # Apply VAT/PPN
     vat_portion_arr = np.repeat(vat_portion, len(cost_modified))
     vat_rate_arr = check_input(target_func=cost_modified, param=vat_rate)
     vat_discount_arr = check_input(target_func=cost_modified, param=vat_discount)
     vat_multiplier = vat_portion_arr * vat_rate_arr * (1.0 - vat_discount_arr)
 
+    # Apply PDRI
     pdri_portion_arr = np.repeat(pdri_portion, len(cost_modified))
     pdri_rate_arr = check_input(target_func=cost_modified, param=pdri_rate)
     pdri_discount_arr = check_input(target_func=cost_modified, param=pdri_discount)
     pdri_multiplier = pdri_portion_arr * pdri_rate_arr * (1.0 - pdri_discount_arr)
 
-    add_multiplier = vat_multiplier + pdri_multiplier
-    cost_modified *= 1.0 + add_multiplier
+    total_multiplier = vat_multiplier + pdri_multiplier
+    cost_modified *= 1.0 + total_multiplier
 
-    # Apply LBT/PBB or PDRD
-    if lbt_discount == 0.0 and pdrd_discount == 0.0:
-        cost_modified = cost_modified
-        return cost_modified
-
-    if lbt_discount > 0.0 and pdrd_discount == 0.0:
-        cost_modified = np.bincount(expense_year - start_year, weights=cost_modified_by_inflation)
-        zeros = np.zeros(project_duration - len(cost_modified))
-        cost_modified = np.concatenate((cost_modified, zeros))
-        lbt_discount_arr = check_input(target_func=cost_modified, param=lbt_discount)
-        cost_modified *= 1.0 - lbt_discount_arr
-        return cost_modified
-
-    if lbt_discount == 0.0 and pdrd_discount > 0.0:
-        cost_modified = np.bincount(expense_year - start_year, weights=cost_modified_by_inflation)
-        zeros = np.zeros(project_duration - len(cost_modified))
-        cost_modified = np.concatenate((cost_modified, zeros))
-        pdrd_discount_arr = check_input(target_func=cost_modified, param=pdrd_discount)
-        cost_modified *= 1.0 - pdrd_discount_arr
-        return cost_modified
-
-    if lbt_discount > 0.0 and pdrd_discount > 0.0:
-        raise TaxesException(
-            f"Caution! "
-            f"LBT discount and PDRD discount cannot be applied simultaneously."
-        )
+    return cost_modified
 
 
 def get_identifier(target_instances: tuple, cost_alloc: FluidType) -> list:

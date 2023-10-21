@@ -13,7 +13,6 @@ import pyscnomics.econ.depreciation as depr
 from pyscnomics.tools.helper import (
     apply_inflation,
     apply_vat_and_pdri,
-    apply_lbt_or_pdrd,
     apply_cost_modification,
 )
 from pyscnomics.econ.selection import (
@@ -102,6 +101,7 @@ class Tangible:
     project_years: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
+
         # Check for inappropriate start and end year project
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -181,13 +181,11 @@ class Tangible:
     def expenditures(
         self,
         year_ref: YearReference = YearReference.EXPENSE_YEAR,
-        inflation_rate: float | int = 0.0,
+        inflation_rate: np.ndarray | float | int = 0.0,
         vat_rate: np.ndarray | float | int = 0.0,
         vat_discount: np.ndarray | float | int = 0.0,
         pdri_rate: np.ndarray | float | int = 0.0,
         pdri_discount: np.ndarray | float | int = 0.0,
-        lbt_discount: np.ndarray | float | int = 0.0,
-        pdrd_discount: np.ndarray | float | int = 0.0,
     ) -> np.ndarray:
         """
         Calculate tangible expenditures per year.
@@ -199,8 +197,9 @@ class Tangible:
         ----------
         year_ref : YearReference, optional
             Reference year for expenses (default is YearReference.EXPENSE_YEAR).
-        inflation_rate : float or int, optional
-            A constant depicting the escalation/inflation rate (default is 0).
+        inflation_rate : np.ndarray or float or int, optional
+            A constant depicting the escalation/inflation rate;
+            could be an array or a singlw-value (default is 0).
         vat_rate : np.ndarray, float, or int, optional
             Value Added Tax (VAT) rate(s) as a multiplier (default is 0).
         vat_discount : np.ndarray, float, or int, optional
@@ -209,38 +208,24 @@ class Tangible:
             The PDRI rate(s) as a multiplier (default is 0).
         pdri_discount : np.ndarray, float, or int, optional
             Discount applied to PDRI (default is 0).
-        lbt_discount : np.ndarray, float, or int, optional
-            Land and Building Tax (LBT) discount(s) as a multiplier (default is 0).
-        pdrd_discount : np.ndarray, float, or int, optional
-            PDRD discount as a multiplier (default is 0).
 
         Returns
         -------
         expenses: np.ndarray
             An array depicting the tangible expenditures each year, taking into
-            account the inflation, VAT/PPN, PDRI, LBT/PBB, and PDRD.
+            account various economic factors, such as inflation, VAT/PPN, and PDRI.
 
         Notes
         -----
         This method calculates tangible expenditures while considering various economic factors
-        such as inflation, VAT, PDRI, LBT, and PDRD. It uses decorators to apply these factors
-        to the core calculation. In the core calculations:
+        such as inflation, VAT, and PDRI. It uses decorators to apply these factors to the
+        core calculation. Within the the core calculations:
         (1) Function np.bincount() is used to align the cost elements according
             to its corresponding expense year,
         (2) If len(expenses) < project_duration, then add the remaining elements
             with zeros.
         """
-        @apply_lbt_or_pdrd(
-            lbt_discount=lbt_discount,
-            pdrd_discount=pdrd_discount,
-            inflation_rate=inflation_rate,
-            cost=self.cost,
-            year_ref=year_ref,
-            start_year=self.start_year,
-            project_duration=self.project_duration,
-            expense_year=self.expense_year,
-            pis_year=self.pis_year,
-        )
+
         @apply_vat_and_pdri(
             vat_portion=self.vat_portion,
             vat_rate=vat_rate,
@@ -252,43 +237,38 @@ class Tangible:
         @apply_inflation(inflation_rate=inflation_rate)
         def _expenditures() -> np.ndarray:
             if year_ref == YearReference.EXPENSE_YEAR:
-                expenses = np.bincount(
-                    self.expense_year - self.start_year, weights=self.cost
-                )
+                expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
 
             else:
-                expenses = np.bincount(
-                    self.pis_year - self.start_year, weights=self.cost
-                )
-
+                expenses = np.bincount(self.pis_year - self.start_year, weights=self.cost)
             zeros = np.zeros(self.project_duration - len(expenses))
             expenses = np.concatenate((expenses, zeros))
             return expenses
-
         return _expenditures()
 
     def total_depreciation_rate(
         self,
+        year_ref: YearReference = YearReference.EXPENSE_YEAR,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
-        inflation_rate: float | int = 0.0,
+        inflation_rate: np.ndarray | float | int = 0.0,
         vat_rate: np.ndarray | float | int = 0.0,
         vat_discount: np.ndarray | float | int = 0.0,
         pdri_rate: np.ndarray | float | int = 0.0,
         pdri_discount: np.ndarray | float | int = 0.0,
-        lbt_discount: np.ndarray | float | int = 0.0,
-        pdrd_discount: np.ndarray | float | int = 0.0,
     ) -> tuple:
         """
         Calculate total depreciation charge and undepreciated asset value based on various parameters.
 
         Parameters
         -----------
+        year_ref : YearReference, optional
+            Reference year for expenses (default is YearReference.EXPENSE_YEAR).
         depr_method : DeprMethod, optional
             The depreciation method to use (default is DeprMethod.PSC_DB).
         decline_factor : float | int, optional
             The decline factor used for declining balance depreciation (default is 2).
-        inflation_rate : float | int, optional
+        inflation_rate : np.ndarray | float | int, optional
             The annual inflation rate as a decimal or integer (default is 0.0).
         vat_rate : np.ndarray | float | int, optional
             An array or single value representing the VAT rate(s)
@@ -301,12 +281,6 @@ class Tangible:
             as a decimal or integer (default is 0.0).
         pdri_discount : np.ndarray | float | int, optional
             An array or single value representing the PDRI discount(s)
-            as a decimal or integer (default is 0.0).
-        lbt_discount : np.ndarray | float | int, optional
-            An array or single value representing the Land and Building Tax (LBT) discount(s)
-            as a decimal or integer (default is 0.0).
-        pdrd_discount : np.ndarray | float | int, optional
-            An array or single value representing PDRD discount(s)
             as a decimal or integer (default is 0.0).
 
         Returns
@@ -322,7 +296,7 @@ class Tangible:
             depreciation method.
         (2) Prior to the core calculations, attribute 'cost' is modified by
             taking into account various economic factors such as inflation,
-            VAT/PPN, PDRI, LBT discount, and PDRD discount.
+            VAT/PPN, and PDRI.
         (3) The depreciation charges are aligned with the corresponding periods
             based on the pis_year (or expense_year).
         """
@@ -340,8 +314,8 @@ class Tangible:
             pdri_portion=self.pdri_portion,
             pdri_rate=pdri_rate,
             pdri_discount=pdri_discount,
-            lbt_discount=lbt_discount,
-            pdrd_discount=pdrd_discount,
+            year_ref=year_ref,
+            pis_year=self.pis_year,
         )
 
         # Create a new instance of Tangible
@@ -368,6 +342,7 @@ class Tangible:
             salvage_value=salvage_value_modified,
             useful_life=useful_life_modified,
             depreciation_factor=depreciation_factor_modified,
+            is_ic_applied=self.is_ic_applied,
             vat_portion=self.vat_portion,
             pdri_portion=self.pdri_portion,
         )
@@ -446,6 +421,7 @@ class Tangible:
 
     def total_depreciation_book_value(
         self,
+        year_ref: YearReference = YearReference.EXPENSE_YEAR,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float = 2,
         inflation_rate: float | int = 0.0,
@@ -453,14 +429,14 @@ class Tangible:
         vat_discount: np.ndarray | float | int = 0.0,
         pdri_rate: np.ndarray | float | int = 0.0,
         pdri_discount: np.ndarray | float | int = 0.0,
-        lbt_discount: np.ndarray | float | int = 0.0,
-        pdrd_discount: np.ndarray | float | int = 0.0,
     ) -> np.ndarray:
         """
         Calculate the total book value of depreciation for the asset.
 
         Parameters
         ----------
+        year_ref : YearReference, optional
+            Reference year for expenses (default is YearReference.EXPENSE_YEAR).
         depr_method : DeprMethod, optional
             The depreciation method to use (default is DeprMethod.PSC_DB).
         decline_factor : float, optional
@@ -479,12 +455,6 @@ class Tangible:
         pdri_discount : np.ndarray | float | int, optional
             An array or single value representing the PDRI discount(s)
             as a decimal or integer (default is 0.0).
-        lbt_discount : np.ndarray | float | int, optional
-            An array or single value representing the Land and Building Tax (LBT/PBB)
-            discount(s) as a decimal or integer (default is 0.0).
-        pdrd_discount : np.ndarray | float | int, optional
-            An array or single value representing the PDRD discount(s)
-            as a decimal or integer (default is 0.0).
 
         Returns
         -------
@@ -501,6 +471,7 @@ class Tangible:
 
         # Calculate total depreciation charge from method total_depreciation_rate
         depreciation_charge = self.total_depreciation_rate(
+            year_ref=year_ref,
             depr_method=depr_method,
             decline_factor=decline_factor,
             inflation_rate=inflation_rate,
@@ -508,11 +479,19 @@ class Tangible:
             vat_discount=vat_discount,
             pdri_rate=pdri_rate,
             pdri_discount=pdri_discount,
-            lbt_discount=lbt_discount,
-            pdrd_discount=pdrd_discount,
         )[0]
 
-        return np.cumsum(self.expenditures()) - np.cumsum(depreciation_charge)
+        return (
+            np.cumsum(self.expenditures(
+                year_ref=year_ref,
+                inflation_rate=inflation_rate,
+                vat_rate=vat_rate,
+                vat_discount=vat_discount,
+                pdri_rate=pdri_rate,
+                pdri_discount=pdri_discount,
+            ))
+            - np.cumsum(depreciation_charge)
+        )
 
     def __len__(self):
         return self.project_duration
@@ -2074,11 +2053,3 @@ class ASR:
                 f"{other}({other.__class__.__qualname__}) is not an instance "
                 f"of Tangible/Intangible/OPEX/ASR nor an integer nor a float."
             )
-
-@dataclass
-class PDRD:
-    pass
-
-@dataclass
-class LBT:
-    pass

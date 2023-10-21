@@ -2,6 +2,7 @@
 A module to execute preliminary evaluations
 """
 
+import time as tm
 import numpy as np
 from datetime import date
 from dataclasses import asdict
@@ -285,23 +286,32 @@ tangible_cost = (
     sulfur_mangga2_tangible
 )
 
-t1 = oil_mangga1_tangible.expenditures(
-    inflation_rate=0.0,
-    vat_rate=0.05,
-    pdri_rate=0.05,
-    lbt_discount=0.5,
-    pdrd_discount=0.0,
+start_timer = tm.time()
+
+t1 = oil_mangga1_tangible.total_depreciation_rate(
+    inflation_rate=0.05,
+    # inflation_rate=np.array([0, 0, 0, 0, 0, 0, 0, 0]),
 )
+
+t2 = oil_mangga1_tangible.total_depreciation_book_value(
+    inflation_rate=0.05
+    # inflation_rate=np.array([0, 0, 0, 0, 0, 0, 0, 0]),
+)
+
+end_timer = tm.time() - start_timer
 
 print('\t')
 print(f'Filetype: {type(t1)}')
 print(f'Length: {len(t1)}')
 print('t1 = ', t1)
 
-# print('\t')
-# print(f'Filetype: {type(t2)}')
-# print(f'Length: {len(t2)}')
-# print('t2 = ', t2)
+print('\t')
+print(f'Filetype: {type(t2)}')
+print(f'Length: {len(t2)}')
+print('t2 = ', t2)
+
+print('\t')
+print('calculation time: {0:.8f} seconds'.format(end_timer))
 
 # get_gas_tangible = case._get_gas_tangible()
 #
