@@ -208,7 +208,7 @@ def test_taxable_income():
 
 def test_consistency_revenue_ct_gt():
 
-    gross_revenue_calc = psc._ctr_take + psc._gov_take
+    gross_revenue_calc = psc._oil_contractor_take + psc._oil_government_take
     gross_revenue_engine = psc._oil_revenue + psc._gas_revenue
 
     np.testing.assert_allclose(gross_revenue_calc, gross_revenue_engine)

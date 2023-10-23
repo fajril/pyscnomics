@@ -659,17 +659,16 @@ class CostRecovery(BaseProject):
 
         # Contractor Take by Fluid
         self._oil_contractor_take = (
-                self._oil_taxable_income - self._oil_tax_payment + self._oil_cost_recovery + self._transfer_to_oil
+                self._oil_taxable_income - self._oil_tax_payment + self._oil_cost_recovery_after_tf + self._transfer_to_oil
         )
 
         self._gas_contractor_take = (
-                self._gas_taxable_income - self._gas_tax_payment + self._gas_cost_recovery + self._transfer_to_gas
+                self._gas_taxable_income - self._gas_tax_payment + self._gas_cost_recovery_after_tf + self._transfer_to_gas
         )
 
         # Contractor CashFlow
         self._oil_cashflow = self._oil_contractor_take - (self._oil_tangible.expenditures() + self._oil_non_capital)
         self._gas_cashflow = self._gas_contractor_take - (self._gas_tangible.expenditures() + self._gas_non_capital)
-
 
         # Government Take by Fluid
         self._oil_government_take = (

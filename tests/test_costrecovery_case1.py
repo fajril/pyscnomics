@@ -320,26 +320,18 @@ def test_ctr_share_after_tax():
 def test_ctr_cashflow():
     # Calculated result
     oil_ctr_cashflow = psc._oil_cashflow
-    # gas_ctr_cashflow = psc._gas_cashflow
+    gas_ctr_cashflow = psc._gas_cashflow
 
     # Expected result
     oil_ctr_cashflow_base = load_testing(dataset_type='case1', key='oil_ctr_cashflow')
-    # gas_ctr_cashflow_base = load_testing(dataset_type='case1', key='gas_ctr_cashflow')
+    gas_ctr_cashflow_base = load_testing(dataset_type='case1', key='gas_ctr_cashflow')
 
     # Execute testing
     np.testing.assert_allclose(oil_ctr_cashflow, oil_ctr_cashflow_base, rtol=1e-6)
-    # np.testing.assert_allclose(gas_ctr_cashflow, gas_ctr_cashflow_base, rtol=1e-6)
+    np.testing.assert_allclose(gas_ctr_cashflow, gas_ctr_cashflow_base, rtol=1e-6)
 
 
-# def test_consistency_revenue_ct_gt():
-#     gross_revenue_calc = psc._ctr_take + psc._gov_take
-#     gross_revenue_engine = psc._oil_revenue + psc._gas_revenue
-
-#     np.testing.assert_allclose(gross_revenue_calc, gross_revenue_engine, rtol=1e-6)
-#
-#
-# def test_consistency_ets():
-#     revenue = psc._ftp + psc._oil_ic + psc._cost_recovery + psc._ctr_share + psc._gov_share
-#     revenue_base = psc._oil_revenue + psc._gas_revenue
-#
-#     np.testing.assert_allclose(revenue, revenue_base, rtol=1e-6)
+# def test_consistency():
+# Calculated result
+# Expected Result
+# Execute testing
