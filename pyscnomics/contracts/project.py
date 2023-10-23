@@ -85,6 +85,9 @@ class BaseProject:
     _electricity_wap_price: np.ndarray = field(default=None, init=False, repr=False)
     _co2_wap_price: np.ndarray = field(default=None, init=False, repr=False)
 
+    _oil_total_prod: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_total_prod: np.ndarray = field(default=None, init=False, repr=False)
+
     def __post_init__(self):
 
         # Specify project duration and project years, raise error for inappropriate start date
@@ -329,6 +332,22 @@ class BaseProject:
         self._get_sulfur_wap_price()
         self._get_electricity_wap_price()
         self._get_co2_wap_price()
+
+    def _get_oil_total_prod(self):
+        total_vol = np.zeros_like(self.project_years, dtype=float)
+        for lift in self.lifting:
+            if lift.fluid_type == FluidType.OIL:
+                total_vol = total_vol + lift.lifting_rate
+
+        self._oil_total_prod = total_vol
+
+    def _get_gas_total_prod(self):
+        total_vol = np.zeros_like(self.project_years, dtype=float)
+        for lift in self.lifting:
+            if lift.fluid_type == FluidType.GAS:
+                total_vol = total_vol + lift.lifting_rate
+
+        self._gas_total_prod = total_vol
 
     def _get_oil_wap_price(self):
         vol_x_price = np.zeros_like(self.project_years, dtype=float)

@@ -18,10 +18,10 @@ psc = load_data(dataset_type='case1', contract_type='cost_recovery')
 # FTP
 psc.oil_ftp_is_available = True
 psc.oil_ftp_is_shared = True
-psc.oil_ftp_portion = 0.2
+psc.oil_ftp_portion = 0.20
 psc.gas_ftp_is_available = True
 psc.gas_ftp_is_shared = True
-psc.gas_ftp_portion = 0.2
+psc.gas_ftp_portion = 0.20
 
 # Split Pre Tax
 psc.oil_ctr_pretax_share = 0.34722220
@@ -82,12 +82,9 @@ psc_table_oil['Contractor Share'] = psc._oil_ctr_net_share
 psc_table_oil['Contractor Take'] = psc._gas_ctr_net_share
 psc_table_oil['Cashflow'] = psc._oil_cashflow
 psc_table_oil['Government Take'] = psc._oil_government_take
+psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
 print(psc_table_oil, '\n')
 
-print('Tax Payment: ', np.sum(psc._oil_tax_payment), '\n')
-
-
-# psc_table.to_excel('Cost Recovery Case 1 Table from Pyscnomics.xlsx')
 
 psc_table_gas = pd.DataFrame()
 psc_table_gas['Year'] = psc.project_years
@@ -124,54 +121,50 @@ psc_table_gas['Contractor Share'] = psc._gas_ctr_net_share
 psc_table_gas['Contractor Take'] = psc._gas_ctr_net_share
 psc_table_gas['Cashflow'] = psc._gas_cashflow
 psc_table_gas['Government Take'] = psc._gas_government_take
+psc_table_gas.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
 print(psc_table_gas, '\n')
-print('Tax Payment: ', np.sum(psc._gas_tax_payment), '\n')
-#
+
 
 psc_table_consolidated = pd.DataFrame()
 psc_table_consolidated['Year'] = psc.project_years
-psc_table_consolidated['consolidated_non_capital'] = psc._consolidated_non_capital
-psc_table_consolidated['consolidated_ic'] = psc._consolidated_ic
-psc_table_consolidated['consolidated_ic_unrecovered'] = psc._consolidated_ic_unrecovered
-psc_table_consolidated['consolidated_ic_paid'] = psc._consolidated_ic_paid
-psc_table_consolidated['consolidated_unrecovered_before_transfer'] = psc._consolidated_unrecovered_before_transfer
-psc_table_consolidated['consolidated_cost_to_be_recovered'] = psc._consolidated_cost_to_be_recovered
-psc_table_consolidated['consolidated_cost_recovery'] = psc._consolidated_cost_recovery
-psc_table_consolidated['consolidated_ets_before_transfer'] = psc._consolidated_ets_before_transfer
-psc_table_consolidated['consolidated_unrecovered_after_transfer'] = psc._consolidated_unrecovered_after_transfer
-psc_table_consolidated['consolidated_cost_to_be_recovered_after_tf'] = psc._consolidated_cost_to_be_recovered_after_tf
-psc_table_consolidated['consolidated_cost_recovery_after_tf'] = psc._consolidated_cost_recovery_after_tf
-psc_table_consolidated['consolidated_ets_after_transfer'] = psc._consolidated_ets_after_transfer
-psc_table_consolidated['consolidated_contractor_share'] = psc._consolidated_contractor_share
-psc_table_consolidated['consolidated_government_share'] = psc._consolidated_government_share
-psc_table_consolidated['consolidated_dmo_volume'] = psc._consolidated_dmo_volume
-psc_table_consolidated['consolidated_dmo_fee'] = psc._consolidated_dmo_fee
-psc_table_consolidated['consolidated_ddmo'] = psc._consolidated_ddmo
-psc_table_consolidated['consolidated_taxable_income'] = psc._consolidated_taxable_income
-psc_table_consolidated['consolidated_tax_payment'] = psc._consolidated_tax_payment
-psc_table_consolidated['consolidated_ctr_net_share'] = psc._consolidated_ctr_net_share
-psc_table_consolidated['consolidated_contractor_take'] = psc._consolidated_contractor_take
-psc_table_consolidated['consolidated_government_take'] = psc._consolidated_government_take
-psc_table_consolidated['consolidated_cashflow'] = psc._consolidated_cashflow
+psc_table_consolidated['cnsltd_non_capital'] = psc._consolidated_non_capital
+psc_table_consolidated['cnsltd_ic'] = psc._consolidated_ic
+psc_table_consolidated['cnsltd_ic_unrecovered'] = psc._consolidated_ic_unrecovered
+psc_table_consolidated['cnsltd_ic_paid'] = psc._consolidated_ic_paid
+psc_table_consolidated['cnsltd_unrecovered_before_transfer'] = psc._consolidated_unrecovered_before_transfer
+psc_table_consolidated['cnsltd_cost_to_be_recovered'] = psc._consolidated_cost_to_be_recovered
+psc_table_consolidated['cnsltd_cost_recovery'] = psc._consolidated_cost_recovery
+psc_table_consolidated['cnsltd_ets_before_transfer'] = psc._consolidated_ets_before_transfer
+psc_table_consolidated['cnsltd_unrecovered_after_transfer'] = psc._consolidated_unrecovered_after_transfer
+psc_table_consolidated['cnsltd_cost_to_be_recovered_after_tf'] = psc._consolidated_cost_to_be_recovered_after_tf
+psc_table_consolidated['cnsltd_cost_recovery_after_tf'] = psc._consolidated_cost_recovery_after_tf
+psc_table_consolidated['cnsltd_ets_after_transfer'] = psc._consolidated_ets_after_transfer
+psc_table_consolidated['cnsltd_contractor_share'] = psc._consolidated_contractor_share
+psc_table_consolidated['cnsltd_government_share'] = psc._consolidated_government_share
+psc_table_consolidated['cnsltd_dmo_volume'] = psc._consolidated_dmo_volume
+psc_table_consolidated['cnsltd_dmo_fee'] = psc._consolidated_dmo_fee
+psc_table_consolidated['cnsltd_ddmo'] = psc._consolidated_ddmo
+psc_table_consolidated['cnsltd_taxable_income'] = psc._consolidated_taxable_income
+psc_table_consolidated['cnsltd_tax_payment'] = psc._consolidated_tax_payment
+psc_table_consolidated['cnsltd_ctr_net_share'] = psc._consolidated_ctr_net_share
+psc_table_consolidated['cnsltd_contractor_take'] = psc._consolidated_contractor_take
+psc_table_consolidated['cnsltd_government_take'] = psc._consolidated_government_take
+psc_table_consolidated['cnsltd_cashflow'] = psc._consolidated_cashflow
+psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
 print(psc_table_consolidated, '\n')
-print('Tax Payment: ', np.sum(psc._consolidated_taxable_income), '\n')
 
-# df_comparison = pd.DataFrame()
-# # Calculated result
-# engine = (psc._oil_ftp +
-#           psc._oil_ic +
-#           psc._oil_cost_recovery +
-#           psc._oil_contractor_share +
-#           psc._oil_government_share)
-#
-# # Expected result
-# base = psc._oil_revenue
-#
-# df_comparison['Year'] = psc.project_years
-# df_comparison['Base'] = base
-# df_comparison['Engine'] = engine
-# df_comparison['Diff'] = base - engine
-# print(df_comparison)
+
+df_comparison = pd.DataFrame()
+# Calculated result
+engine = psc._gas_cashflow
+# Expected result
+base = load_testing(dataset_type='case1', key='gas_ctr_cashflow')
+
+df_comparison['Year'] = psc.project_years
+df_comparison['Base'] = base
+df_comparison['Engine'] = engine
+df_comparison['Diff'] = base - engine
+print(df_comparison)
 
 # gross_revenue_calc = psc._oil_contractor_take + psc._oil_government_take
 # gross_revenue_engine = psc._oil_revenue + psc._gas_revenue

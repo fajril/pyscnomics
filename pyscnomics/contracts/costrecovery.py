@@ -148,8 +148,10 @@ class CostRecovery(BaseProject):
         self._gas_asr = self._get_gas_asr()
 
     def _get_revenue(self):
-        self._oil_revenue = self._oil_lifting.revenue()
-        self._gas_revenue = self._gas_lifting.revenue()
+        # self._oil_revenue = self._oil_lifting.revenue()
+        # self._gas_revenue = self._gas_lifting.revenue()
+        self._oil_revenue = self._oil_total_prod * self._oil_wap_price
+        self._gas_revenue = self._gas_total_prod * self._gas_wap_price
 
     def _get_rc_icp_pretax(self):
         # Extract relevant values from the condition_dict dictionary
@@ -351,13 +353,14 @@ class CostRecovery(BaseProject):
                           taxable_income,
                           tax_rate,
                           ftp_tax_regime: FTPTaxRegime = FTPTaxRegime.PDJP_20_2017):
+        applied_tax = np.where(ctr_share > 0, 1, 0)
         if ftp_tax_regime == FTPTaxRegime.PDJP_20_2017:
-            cum_ftp = np.cumsum(taxable_income)
-            applied_tax = np.where(ctr_share > 0, 1, 0)
+            cum_ti = np.cumsum(taxable_income)
+
             applied_tax_prior = np.concatenate((np.zeros(1), applied_tax))[0:-1]
 
             ctr_tax = np.where(np.logical_and(applied_tax == 1, applied_tax_prior == 0),
-                               cum_ftp * tax_rate,
+                               cum_ti * tax_rate,
                                np.where(np.logical_and(applied_tax == 1, applied_tax_prior == 1),
                                         taxable_income * tax_rate,
                                         0))
@@ -375,10 +378,15 @@ class CostRecovery(BaseProject):
             ):
 
         self._get_aggregate()
+
+        self._get_wap_price()
+        self._get_oil_total_prod()
+        self._get_gas_total_prod()
+
         self._get_revenue()
         self._get_ftp()
 
-        self._get_wap_price()
+
 
         # Depreciation (tangible cost)
         (
@@ -535,7 +543,7 @@ class CostRecovery(BaseProject):
             non_capital=self._oil_non_capital,
             cost_to_be_recovered=self._oil_cost_to_be_recovered_after_tf,
             cr_cap_rate=self.oil_cr_cap_rate,
-        )
+        ) + self._transfer_to_oil
 
         self._gas_cost_recovery_after_tf = self._get_cost_recovery(
             revenue=self._gas_revenue,
@@ -545,7 +553,7 @@ class CostRecovery(BaseProject):
             non_capital=self._gas_non_capital,
             cost_to_be_recovered=self._gas_cost_to_be_recovered_after_tf,
             cr_cap_rate=self.gas_cr_cap_rate
-        )
+        ) + self._transfer_to_gas
 
         # ETS (Equity to be Split) after transfer/consolidation
         # self._oil_ets_after_transfer = psc_tools.get_ets_after_transfer(
@@ -566,7 +574,7 @@ class CostRecovery(BaseProject):
             ftp_gov=self._oil_ftp_gov,
             ic=self._oil_ic_paid,
             cost_recovery=self._oil_cost_recovery_after_tf,
-        ) - self._transfer_to_gas
+        ) - self._transfer_to_gas + self._transfer_to_oil
 
         self._gas_ets_after_transfer = self._get_ets_before_transfer(
             revenue=self._gas_revenue,
@@ -574,7 +582,7 @@ class CostRecovery(BaseProject):
             ftp_gov=self._gas_ftp_gov,
             ic=self._gas_ic_paid,
             cost_recovery=self._gas_cost_recovery_after_tf,
-        ) - self._transfer_to_oil
+        ) - self._transfer_to_oil + self._transfer_to_gas
 
         # self._oil_ets_after_transfer = psc_tools.get_ets_after_transfer(
         #     ets_before_transfer=self._oil_ets_before_transfer,
@@ -665,11 +673,11 @@ class CostRecovery(BaseProject):
 
         # Contractor Take by Fluid
         self._oil_contractor_take = (
-                self._oil_taxable_income - self._oil_tax_payment + self._oil_cost_recovery_after_tf + self._transfer_to_oil
+                self._oil_taxable_income - self._oil_tax_payment + self._oil_cost_recovery_after_tf
         )
 
         self._gas_contractor_take = (
-                self._gas_taxable_income - self._gas_tax_payment + self._gas_cost_recovery_after_tf + self._transfer_to_gas
+                self._gas_taxable_income - self._gas_tax_payment + self._gas_cost_recovery_after_tf
         )
 
         # Contractor CashFlow

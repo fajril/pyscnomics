@@ -41,8 +41,8 @@ def test_revenue():
     gas_revenue = psc._gas_revenue
     gas_revenue_base = np.asarray(load_testing(dataset_type='case1', key='gas_revenue'))
 
-    np.testing.assert_allclose(oil_revenue, oil_revenue_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_revenue, gas_revenue_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_revenue, oil_revenue_base, atol=1e-6)
+    np.testing.assert_allclose(gas_revenue, gas_revenue_base, atol=1e-6)
 
 
 def test_depreciation():
@@ -55,8 +55,8 @@ def test_depreciation():
     gas_depreciation = psc._gas_depreciation
     gas_depreciation_base = load_testing(dataset_type='case1', key='gas_depreciation')
 
-    np.testing.assert_allclose(oil_depreciation, oil_depreciation_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_depreciation, gas_depreciation_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_depreciation, oil_depreciation_base, atol=1e-6)
+    np.testing.assert_allclose(gas_depreciation, gas_depreciation_base, atol=1e-6)
 
 
 def test_non_capital():
@@ -65,8 +65,8 @@ def test_non_capital():
     gas_non_capital = psc._gas_non_capital
     gas_non_capital_base = load_testing(dataset_type='case1', key='gas_non_capital')
 
-    np.testing.assert_allclose(oil_non_capital, oil_non_capital_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_non_capital, gas_non_capital_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_non_capital, oil_non_capital_base, atol=1e-6)
+    np.testing.assert_allclose(gas_non_capital, gas_non_capital_base, atol=1e-6)
 
 
 def test_ftp():
@@ -75,8 +75,8 @@ def test_ftp():
     gas_ftp = psc._gas_ftp
     gas_ftp_base = load_testing(dataset_type='case1', key='gas_ftp')
 
-    np.testing.assert_allclose(oil_ftp, oil_ftp_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_ftp, gas_ftp_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_ftp, oil_ftp_base, atol=1e-6)
+    np.testing.assert_allclose(gas_ftp, gas_ftp_base, atol=1e-6)
 
 
 def test_ftp_ctr():
@@ -85,8 +85,8 @@ def test_ftp_ctr():
     gas_ftp_ctr = psc._gas_ftp_ctr
     gas_ftp_ctr_base = load_testing(dataset_type='case1', key='gas_ftp_ctr')
 
-    np.testing.assert_allclose(oil_ftp_ctr, oil_ftp_ctr_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_ftp_ctr, gas_ftp_ctr_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_ftp_ctr, oil_ftp_ctr_base, atol=1e-6)
+    np.testing.assert_allclose(gas_ftp_ctr, gas_ftp_ctr_base, atol=1e-6)
 
 
 def test_ftp_gov():
@@ -95,8 +95,8 @@ def test_ftp_gov():
     gas_ftp_gov = psc._gas_ftp_gov
     gas_ftp_gov_base = load_testing(dataset_type='case1', key='gas_ftp_gov')
 
-    np.testing.assert_allclose(oil_ftp_gov, oil_ftp_gov_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_ftp_gov, gas_ftp_gov_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_ftp_gov, oil_ftp_gov_base, atol=1e-6)
+    np.testing.assert_allclose(gas_ftp_gov, gas_ftp_gov_base, atol=1e-6)
 
 
 def test_ic():
@@ -118,12 +118,12 @@ def test_ic():
     gas_ic_unrecovered_base = load_testing(dataset_type='case1', key='gas_ic_unrec')
     gas_ic_paid_base = load_testing(dataset_type='case1', key='gas_ic_paid')
 
-    np.testing.assert_allclose(oil_ic, oil_ic_base, rtol=1e-6)
-    np.testing.assert_allclose(oil_ic_unrecovered, oil_ic_unrecovered_base, rtol=1e-6)
-    np.testing.assert_allclose(oil_ic_paid, oil_ic_paid_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_ic, gas_ic_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_ic_unrecovered, gas_ic_unrecovered_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_ic_paid, gas_ic_paid_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_ic, oil_ic_base, atol=1e-6)
+    np.testing.assert_allclose(oil_ic_unrecovered, oil_ic_unrecovered_base, atol=1e-6)
+    np.testing.assert_allclose(oil_ic_paid, oil_ic_paid_base, atol=1e-6)
+    np.testing.assert_allclose(gas_ic, gas_ic_base, atol=1e-6)
+    np.testing.assert_allclose(gas_ic_unrecovered, gas_ic_unrecovered_base, atol=1e-6)
+    np.testing.assert_allclose(gas_ic_paid, gas_ic_paid_base, atol=1e-6)
 
 
 def test_unrec_before_transfer():
@@ -136,8 +136,8 @@ def test_unrec_before_transfer():
     gas_unrec_before_transfer = psc._gas_unrecovered_before_transfer
     gas_unrec_before_transfer_base = load_testing(dataset_type='case1', key='gas_unrec_cost')
 
-    np.testing.assert_allclose(oil_unrec_before_transfer, oil_unrec_before_transfer_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_unrec_before_transfer, gas_unrec_before_transfer_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_unrec_before_transfer, oil_unrec_before_transfer_base, atol=1e-6)
+    np.testing.assert_allclose(gas_unrec_before_transfer, gas_unrec_before_transfer_base, atol=1e-6)
 
 
 def test_cost_tobe_recovered():
@@ -151,8 +151,8 @@ def test_cost_tobe_recovered():
     oil_cost_to_be_recovered_base = load_testing(dataset_type='case1', key='oil_cost_to_be_recovered')
     gas_cost_to_be_recovered_base = load_testing(dataset_type='case1', key='gas_cost_to_be_recovered')
 
-    np.testing.assert_allclose(oil_cost_to_be_recovered, oil_cost_to_be_recovered_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_cost_to_be_recovered, gas_cost_to_be_recovered_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_cost_to_be_recovered, oil_cost_to_be_recovered_base, atol=1e-6)
+    np.testing.assert_allclose(gas_cost_to_be_recovered, gas_cost_to_be_recovered_base, atol=1e-6)
 
 
 def test_cost_recovery():
@@ -165,8 +165,8 @@ def test_cost_recovery():
     gas_cost_recovery_base = load_testing(dataset_type='case1', key='gas_cost_recovery')
 
     # Execute testing
-    np.testing.assert_allclose(oil_cost_recovery, oil_cost_recovery_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_cost_recovery, gas_cost_recovery_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_cost_recovery, oil_cost_recovery_base, atol=1e-6)
+    np.testing.assert_allclose(gas_cost_recovery, gas_cost_recovery_base, atol=1e-6)
 
 
 def test_ets_before_transfer():
@@ -179,8 +179,8 @@ def test_ets_before_transfer():
     gas_ets_before_transfer_base = load_testing(dataset_type='case1', key='gas_ets_before_transfer')
 
     # Execute testing
-    np.testing.assert_allclose(oil_ets_before_transfer, oil_ets_before_transfer_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_ets_before_transfer, gas_ets_before_transfer_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_ets_before_transfer, oil_ets_before_transfer_base, atol=1e-6)
+    np.testing.assert_allclose(gas_ets_before_transfer, gas_ets_before_transfer_base, atol=1e-6)
 
 
 def test_transfer():
@@ -193,8 +193,8 @@ def test_transfer():
     transfer_to_oil_base = load_testing(dataset_type='case1', key='gas_transfer_to_oil')
 
     # Execute testing
-    np.testing.assert_allclose(transfer_to_gas, transfer_to_gas_base, rtol=1e-6)
-    np.testing.assert_allclose(transfer_to_oil, transfer_to_oil_base, rtol=1e-6)
+    np.testing.assert_allclose(transfer_to_gas, transfer_to_gas_base, atol=1e-6)
+    np.testing.assert_allclose(transfer_to_oil, transfer_to_oil_base, atol=1e-6)
 
 
 def test_unrecovered_after_transfer():
@@ -207,8 +207,8 @@ def test_unrecovered_after_transfer():
     gas_unrecovered_after_transfer_base = load_testing(dataset_type='case1', key='gas_unrec_after_transfer')
 
     # Execute testing
-    np.testing.assert_allclose(oil_unrecovered_after_transfer, oil_unrecovered_after_transfer_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_unrecovered_after_transfer, gas_unrecovered_after_transfer_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_unrecovered_after_transfer, oil_unrecovered_after_transfer_base, atol=1e-6)
+    np.testing.assert_allclose(gas_unrecovered_after_transfer, gas_unrecovered_after_transfer_base, atol=1e-6)
 
 
 def test_ets_after_transfer():
@@ -221,8 +221,8 @@ def test_ets_after_transfer():
     gas_ets_after_transfer_base = load_testing(dataset_type='case1', key='gas_ets_after_transfer')
 
     # Execute testing
-    np.testing.assert_allclose(oil_ets_after_transfer, oil_ets_after_transfer_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_ets_after_transfer, gas_ets_after_transfer_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_ets_after_transfer, oil_ets_after_transfer_base, atol=1e-6)
+    np.testing.assert_allclose(gas_ets_after_transfer, gas_ets_after_transfer_base, atol=1e-6)
 
 
 def test_equity_share():
@@ -240,10 +240,10 @@ def test_equity_share():
     gas_government_share_base = load_testing(dataset_type='case1', key='gas_gov_share')
 
     # Execute testing
-    np.testing.assert_allclose(oil_contractor_share, oil_contractor_share_base, rtol=1e-6)
-    np.testing.assert_allclose(oil_government_share, oil_government_share_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_contractor_share, gas_contractor_share_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_government_share, gas_government_share_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_contractor_share, oil_contractor_share_base, atol=1e-6)
+    np.testing.assert_allclose(oil_government_share, oil_government_share_base, atol=1e-6)
+    np.testing.assert_allclose(gas_contractor_share, gas_contractor_share_base, atol=1e-6)
+    np.testing.assert_allclose(gas_government_share, gas_government_share_base, atol=1e-6)
 
 
 def test_dmo():
@@ -266,13 +266,13 @@ def test_dmo():
     gas_ddmo_base = load_testing(dataset_type='case1', key='gas_ddmo')
 
     # Execute testing
-    np.testing.assert_allclose(oil_dmo_volume, oil_dmo_volume_base, rtol=1e-6)
-    np.testing.assert_allclose(oil_dmo_fee, oil_dmo_fee_base, rtol=1e-6)
-    np.testing.assert_allclose(oil_ddmo, oil_ddmo_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_dmo_volume, oil_dmo_volume_base, atol=1e-6)
+    np.testing.assert_allclose(oil_dmo_fee, oil_dmo_fee_base, atol=1e-6)
+    np.testing.assert_allclose(oil_ddmo, oil_ddmo_base, atol=1e-6)
 
-    np.testing.assert_allclose(gas_dmo_volume, gas_dmo_volume_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_dmo_fee, gas_dmo_fee_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_ddmo, gas_ddmo_base, rtol=1e-6)
+    np.testing.assert_allclose(gas_dmo_volume, gas_dmo_volume_base, atol=1e-6)
+    np.testing.assert_allclose(gas_dmo_fee, gas_dmo_fee_base, atol=1e-6)
+    np.testing.assert_allclose(gas_ddmo, gas_ddmo_base, atol=1e-6)
 
 
 def test_taxable_income():
@@ -285,8 +285,8 @@ def test_taxable_income():
     gas_taxable_income_base = load_testing(dataset_type='case1', key='gas_taxable_income')
 
     # Execute testing
-    np.testing.assert_allclose(oil_taxable_income, oil_taxable_income_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_taxable_income, gas_taxable_income_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_taxable_income, oil_taxable_income_base, atol=1e-6)
+    np.testing.assert_allclose(gas_taxable_income, gas_taxable_income_base, atol=1e-6)
 
 
 def test_tax():
@@ -299,11 +299,11 @@ def test_tax():
     gas_tax_base = load_testing(dataset_type='case1', key='gas_tax')
 
     # Execute testing
-    np.testing.assert_allclose(oil_tax, oil_tax_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_tax, gas_tax_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_tax, oil_tax_base, atol=1e-6)
+    np.testing.assert_allclose(gas_tax, gas_tax_base, atol=1e-6)
 
 
-def test_ctr_share_after_tax():
+def test_ctr_net_share():
     # Calculated result
     oil_ctr_share_after_tax = psc._oil_ctr_net_share
     gas_ctr_share_after_tax = psc._gas_ctr_net_share
@@ -313,8 +313,22 @@ def test_ctr_share_after_tax():
     gas_ctr_share_after_tax_base = load_testing(dataset_type='case1', key='gas_ctr_net_share')
 
     # Execute testing
-    np.testing.assert_allclose(oil_ctr_share_after_tax, oil_ctr_share_after_tax_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_ctr_share_after_tax, gas_ctr_share_after_tax_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_ctr_share_after_tax, oil_ctr_share_after_tax_base, atol=1e-6)
+    np.testing.assert_allclose(gas_ctr_share_after_tax, gas_ctr_share_after_tax_base, atol=1e-6)
+
+
+# def test_ctr_take():
+#     # Calculated result
+#     oil_ctr_share_after_tax = psc._oil_ctr_net_share
+#     gas_ctr_share_after_tax = psc._gas_ctr_net_share
+#
+#     # Expected result
+#     oil_ctr_share_after_tax_base = load_testing(dataset_type='case1', key='oil_ctr_net_share')
+#     gas_ctr_share_after_tax_base = load_testing(dataset_type='case1', key='gas_ctr_net_share')
+#
+#     # Execute testing
+#     np.testing.assert_allclose(oil_ctr_share_after_tax, oil_ctr_share_after_tax_base, atol=1e-6)
+#     np.testing.assert_allclose(gas_ctr_share_after_tax, gas_ctr_share_after_tax_base, atol=1e-6)
 
 
 def test_ctr_cashflow():
@@ -327,8 +341,8 @@ def test_ctr_cashflow():
     gas_ctr_cashflow_base = load_testing(dataset_type='case1', key='gas_ctr_cashflow')
 
     # Execute testing
-    np.testing.assert_allclose(oil_ctr_cashflow, oil_ctr_cashflow_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_ctr_cashflow, gas_ctr_cashflow_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_ctr_cashflow, oil_ctr_cashflow_base, atol=1e-6)
+    np.testing.assert_allclose(gas_ctr_cashflow, gas_ctr_cashflow_base, atol=1e-6)
 
 
 def test_goi_take():
@@ -341,8 +355,8 @@ def test_goi_take():
     gas_goi_take_base = load_testing(dataset_type='case1', key='gas_goi_take')
 
     # Execute testing
-    np.testing.assert_allclose(oil_goi_take, oil_goi_take_base, rtol=1e-6)
-    np.testing.assert_allclose(gas_goi_take, gas_goi_take_base, rtol=1e-6)
+    np.testing.assert_allclose(oil_goi_take, oil_goi_take_base, atol=1e-6)
+    np.testing.assert_allclose(gas_goi_take, gas_goi_take_base, atol=1e-6)
 
 
 def test_consistency():
@@ -353,7 +367,7 @@ def test_consistency():
     gross_revenue_botside = psc._oil_contractor_take + psc._gas_contractor_take + psc._oil_government_take + psc._gas_government_take
 
     # Execute testing
-    np.testing.assert_allclose(gross_revenue_topside, gross_revenue_botside, rtol=1e-6)
+    np.testing.assert_allclose(gross_revenue_topside, gross_revenue_botside, atol=1e-6)
 
 
 def test_consistency_ets():
