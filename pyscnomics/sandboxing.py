@@ -9,7 +9,7 @@ from dataclasses import asdict
 
 from pyscnomics.econ.selection import DeprMethod, FluidType
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR, LBT
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.econ.results import CashFlow
@@ -78,16 +78,16 @@ sulfur_apel_lifting = Lifting(
 
 '------------------------------------------- TANGIBLE COST DATA --------------------------------------------'
 
-# oil_mangga1_tangible = Tangible(
-#     start_year=2023,
-#     end_year=2030,
-#     cost=np.array([100, 100, 100]),
-#     expense_year=np.array([2023, 2024, 2025]),
-#     cost_allocation=FluidType.OIL,
-#     depreciation_factor=np.array([0.5, 0.5, 0.5]),
-#     vat_portion=1.0,
-#     pdri_portion=1.0,
-# )
+oil_mangga1_tangible = Tangible(
+    start_year=2023,
+    end_year=2030,
+    cost=np.array([100, 100, 100]),
+    expense_year=np.array([2023, 2024, 2025]),
+    cost_allocation=FluidType.OIL,
+    depreciation_factor=np.array([0.5, 0.5, 0.5]),
+    vat_portion=1.0,
+    pdri_portion=1.0,
+)
 
 oil_mangga2_tangible = Tangible(
     start_year=2023,
@@ -225,6 +225,23 @@ oil_apel_asr = ASR(
     expense_year=np.array([2025, 2026]),
     cost_allocation=FluidType.OIL
 )
+'-------------------------------------------- LBT/PBB COST DATA --------------------------------------------'
+
+# oil_mangga_lbt = LBT(
+#     start_year=2023,
+#     end_year=2030,
+#     cost=np.array([50, 50, 50, 50]),
+#     expense_year=np.array([2024, 2025, 2026, 2027]),
+#     cost_allocation=FluidType.OIL
+# )
+
+oil_apel_lbt = LBT(
+    start_year=2023,
+    end_year=2030,
+    cost=np.array([50, 50, 50]),
+    expense_year=np.array([2027, 2028, 2029]),
+    cost_allocation=FluidType.OIL
+)
 
 '------------------------------------------------- CASHFLOW ------------------------------------------------'
 
@@ -263,17 +280,6 @@ lifting = (
     sulfur_apel_lifting,
 )
 
-oil_mangga1_tangible = Tangible(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([100, 100, 100]),
-    expense_year=np.array([2023, 2024, 2025]),
-    cost_allocation=FluidType.OIL,
-    depreciation_factor=np.array([0.5, 0.5, 0.5]),
-    vat_portion=1.0,
-    pdri_portion=1.0,
-)
-
 tangible_cost = (
     oil_mangga1_tangible,
     oil_apel1_tangible,
@@ -286,16 +292,20 @@ tangible_cost = (
     sulfur_mangga2_tangible
 )
 
-start_timer = tm.time()
-
-t1 = oil_mangga1_tangible.total_depreciation_rate(
-    inflation_rate=0.05,
-    # inflation_rate=np.array([0, 0, 0, 0, 0, 0, 0, 0]),
+oil_mangga_lbt = LBT(
+    start_year=2023,
+    end_year=2030,
+    cost=np.array([100, 100, 100, 100]),
+    expense_year=np.array([2024, 2025, 2026, 2027]),
+    cost_allocation=FluidType.OIL
 )
 
-t2 = oil_mangga1_tangible.total_depreciation_book_value(
-    inflation_rate=0.05
-    # inflation_rate=np.array([0, 0, 0, 0, 0, 0, 0, 0]),
+start_timer = tm.time()
+
+t1 = oil_mangga_lbt.expenditures(
+    # inflation_rate=0.05,
+    lbt_rate=np.array([0.05 for _ in range(8)]),
+    inflation_rate=np.array([0.0 for _ in range(8)]),
 )
 
 end_timer = tm.time() - start_timer
@@ -303,12 +313,12 @@ end_timer = tm.time() - start_timer
 print('\t')
 print(f'Filetype: {type(t1)}')
 print(f'Length: {len(t1)}')
-print('t1 = ', t1)
+print('t1 = \n', t1)
 
-print('\t')
-print(f'Filetype: {type(t2)}')
-print(f'Length: {len(t2)}')
-print('t2 = ', t2)
+# print('\t')
+# print(f'Filetype: {type(t2)}')
+# print(f'Length: {len(t2)}')
+# print('t2 = ', t2)
 
 print('\t')
 print('calculation time: {0:.8f} seconds'.format(end_timer))

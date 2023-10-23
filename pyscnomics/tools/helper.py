@@ -3,7 +3,7 @@ Handles summation operation on two arrays, accounting for different starting yea
 """
 
 import numpy as np
-from functools import wraps, reduce
+from functools import wraps
 from pyscnomics.econ.selection import FluidType, YearReference
 
 
@@ -61,8 +61,7 @@ def apply_inflation(inflation_rate: np.ndarray | float | int) -> callable:
     Parameters
     ----------
     inflation_rate: np.ndarray or float or int
-        A constant depicting the escalation/inflation rate;
-        could be an array or a single-value.
+        The inflation rate to apply. Can be a single value or an array
 
     Returns
     -------
@@ -97,37 +96,28 @@ def apply_vat_and_pdri(
     """
     Decorator for applying VAT and PDRI multipliers to a target function's result.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     vat_portion : float or int
         The portion of VAT (Value Added Tax) to be applied.
-
     vat_rate : numpy.ndarray or float or int
-        The VAT rate(s) to be applied as a multiplier.
-        Can be a single value or an array.
-
+        The VAT/PPN rate(s) to apply. Can be a single value or an array.
     vat_discount : numpy.ndarray or float or int
-        The VAT discount(s) to be applied as a multiplier.
-        Can be a single value or an array.
-
+        The VAT discount(s) to apply. Can be a single value or an array.
     pdri_portion : float or int
         The portion of PDRI to be applied.
-
     pdri_rate : numpy.ndarray or float or int
-        The PDRI rate(s) to be applied as a multiplier.
-        Can be a single value or an array.
-
+        The PDRI rate(s) to apply. Can be a single value or an array.
     pdri_discount : numpy.ndarray or float or int
-        The PDRI discount(s) to be applied as a multiplier.
-        Can be a single value or an array.
+        The PDRI discount(s) to apply. Can be a single value or an array.
 
-    Returns:
-    --------
+    Returns
+    -------
     Callable
         A decorated function that applies VAT and PDRI multipliers to a target function's result.
 
-    Notes:
-    ------
+    Notes
+    -----
     This decorator is used to apply VAT and PDRI multipliers to the result of a
     target function. It takes several parameters related to VAT and PDRI calculations
     and returns a decorated function.
@@ -156,6 +146,84 @@ def apply_vat_and_pdri(
 
             total_multiplier = _get_vat() + _get_pdri()
             return f(*args, **kwargs) * (1.0 + total_multiplier)
+        return _wrapper
+    return _decorated
+
+
+def apply_lbt(
+    lbt_portion: float | int,
+    lbt_rate: np.ndarray | float | int,
+    lbt_discount: np.ndarray | float | int,
+):
+    """
+    Decorator for applying LBT scheme to a target function's result.
+
+    Parameters
+    ----------
+    lbt_portion : float or int
+        The portion of LBT (Land and Building Tax) to be applied.
+    lbt_rate : numpy.ndarray or float or int
+        The LBT/PBB rate(s) to apply. Can be a single value or an array.
+    lbt_discount : numpy.ndarray or float or int
+        The LBT/PBB discount(s) to apply. Can be a single value or an array.
+
+    Returns
+    -------
+    Callable
+        A decorated function that applies LBT/PBB scheme to a target function's result.
+
+    Notes
+    -----
+    This decorator is used to apply LBT/PBB scheme to the result of a target function.
+    It takes several parameters related to LBT/PBB and returns a decorated function.
+    """
+    def _decorated(f):
+        @wraps(f)
+        def _wrapper(*args, **kwargs):
+            lbt_portion_arr = np.repeat(lbt_portion, len(f(*args, **kwargs)))
+            lbt_rate_arr = check_input(target_func=f(*args, **kwargs), param=lbt_rate)
+            lbt_discount_arr = check_input(target_func=f(*args, **kwargs), param=lbt_discount)
+            lbt_multiplier = lbt_portion_arr * lbt_rate_arr * (1.0 - lbt_discount_arr)
+            return f(*args, **kwargs) * (1.0 + lbt_multiplier)
+        return _wrapper
+    return _decorated
+
+
+def apply_pdrd(
+    pdrd_portion: float | int,
+    pdrd_rate: np.ndarray | float | int,
+    pdrd_discount: np.ndarray | float | int,
+):
+    """
+    Decorator for applying PDRD scheme to a target function's result.
+
+    Parameters
+    ----------
+    pdrd_portion : float or int
+        The portion of PDRD to be applied.
+    pdrd_rate : numpy.ndarray or float or int
+        The PDRD rate(s) to apply. Can be a single value or an array.
+    pdrd_discount : numpy.ndarray or float or int
+        The PDRD discount(s) to apply. Can be a single value or an array.
+
+    Returns
+    -------
+    Callable
+        A decorated function that applies PDRD scheme to a target function's result.
+
+    Notes
+    -----
+    This decorator is used to apply PDRD scheme to the result of a target function.
+    It takes several parameters related to PDRD and returns a decorated function.
+    """
+    def _decorated(f):
+        @wraps(f)
+        def _wrapper(*args, **kwargs):
+            pdrd_portion_arr = np.repeat(pdrd_portion, len(f(*args, **kwargs)))
+            pdrd_rate_arr = check_input(target_func=f(*args, **kwargs), param=pdrd_rate)
+            pdrd_discount_arr = check_input(target_func=f(*args, **kwargs), param=pdrd_discount)
+            pdrd_multiplier = pdrd_portion_arr * pdrd_rate_arr * (1.0 - pdrd_discount_arr)
+            return f(*args, **kwargs) * (1.0 + pdrd_multiplier)
         return _wrapper
     return _decorated
 
@@ -189,21 +257,23 @@ def apply_cost_modification(
     project_duration: int
         Duration of the project.
     inflation_rate : np.ndarray | float | int
-        The annual inflation rate as a decimal or integer;
-        could be an array or a single-value.
+        The inflation rate to apply. Can be a single value or an array.
     vat_portion : float | int
         The portion of cost subject to Value Added Tax (VAT) as a decimal or integer.
     vat_rate : np.ndarray | float | int
-        An array or single value representing the VAT rate(s) as a decimal or integer.
+        The VAT/PPN rate(s) to apply. Can be a single value or an array.
     vat_discount : np.ndarray | float | int
-        An array or single value representing the VAT discount(s) as a decimal or integer.
+        The VAT discount(s) to apply. Can be a single value or an array.
     pdri_portion : float | int
         The portion of cost subject to PDRI as a decimal or integer.
     pdri_rate : np.ndarray | float | int
-        An array or single value representing the PDRI rate(s) as a decimal or integer.
+        The PDRI rate(s) to apply. Can be a single value or an array.
     pdri_discount : np.ndarray | float | int
-        An array or single value representing the PDRI discount(s) as a decimal or integer.
-
+        The PDRI discount(s) to apply. Can be a single value or an array.
+    pis_year: np.ndarray
+        An array representing the PIS year of a tangible asset.
+    year_ref: YearReference
+        Reference year for expenses (default is YearReference.EXPENSE_YEAR).
     Returns:
     --------
     cost_modified: np.ndarray
@@ -225,11 +295,11 @@ def apply_cost_modification(
                 f"Project duration: {project_duration}."
             )
         else:
-
             if year_ref == YearReference.EXPENSE_YEAR:
                 cost_modified_by_duration = np.bincount(expense_year - start_year, weights=cost)
             else:
                 cost_modified_by_duration = np.bincount(pis_year - start_year, weights=cost)
+
             zeros = np.zeros(project_duration - len(cost_modified_by_duration))
             cost_modified_by_duration = np.concatenate((cost_modified_by_duration, zeros))
 
@@ -244,13 +314,9 @@ def apply_cost_modification(
         cost_modified_by_inflation = cost * inflation_mult
 
         if year_ref == YearReference.EXPENSE_YEAR:
-            cost_modified = np.bincount(
-                expense_year - start_year, weights=cost_modified_by_inflation
-            )
+            cost_modified = np.bincount(expense_year - start_year, weights=cost_modified_by_inflation)
         else:
-            cost_modified = np.bincount(
-                pis_year - start_year, weights=cost_modified_by_inflation
-            )
+            cost_modified = np.bincount(pis_year - start_year, weights=cost_modified_by_inflation)
 
         zeros = np.zeros(project_duration - len(cost_modified))
         cost_modified = np.concatenate((cost_modified, zeros))

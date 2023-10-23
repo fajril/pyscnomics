@@ -14,6 +14,8 @@ from pyscnomics.tools.helper import (
     apply_inflation,
     apply_vat_and_pdri,
     apply_cost_modification,
+    apply_lbt,
+    apply_pdrd,
 )
 from pyscnomics.econ.selection import (
     FluidType,
@@ -42,6 +44,18 @@ class OPEXException(Exception):
 
 class ASRException(Exception):
     """Exception to be raised if class ASR is misused"""
+
+    pass
+
+
+class LBTException(Exception):
+    """Exception to be raised if class LBT is misused"""
+
+    pass
+
+
+class PDRDException(Exception):
+    """Exception to be raised if class PDRD is misused"""
 
     pass
 
@@ -198,27 +212,26 @@ class Tangible:
         year_ref : YearReference, optional
             Reference year for expenses (default is YearReference.EXPENSE_YEAR).
         inflation_rate : np.ndarray or float or int, optional
-            A constant depicting the escalation/inflation rate;
-            could be an array or a singlw-value (default is 0).
+            The inflation rate to apply. Can be a single value or an array (default is 0).
         vat_rate : np.ndarray, float, or int, optional
-            Value Added Tax (VAT) rate(s) as a multiplier (default is 0).
+            The VAT/PPN rate(s) to apply. Can be a single value or an array (default is 0).
         vat_discount : np.ndarray, float, or int, optional
-            Discount(s) applied to VAT (default is 0).
+            The VAT discount(s) to apply. Can be a single value or an array (default is 0).
         pdri_rate : np.ndarray, float, or int, optional
-            The PDRI rate(s) as a multiplier (default is 0).
+            The PDRI rate(s) to apply. Can be a single value or an array (default is 0).
         pdri_discount : np.ndarray, float, or int, optional
-            Discount applied to PDRI (default is 0).
+            The PDRI discount(s) to apply. Can be a single value or an array (default is 0).
 
         Returns
         -------
         expenses: np.ndarray
-            An array depicting the tangible expenditures each year, taking into
-            account various economic factors, such as inflation, VAT/PPN, and PDRI.
+            An array depicting the tangible expenditures each year, taking into account
+            various economic factors, such as inflation, VAT/PPN, and PDRI schemes.
 
         Notes
         -----
         This method calculates tangible expenditures while considering various economic factors
-        such as inflation, VAT, and PDRI. It uses decorators to apply these factors to the
+        such as inflation, VAT, and PDRI schemes. It uses decorators to apply these factors to the
         core calculation. Within the the core calculations:
         (1) Function np.bincount() is used to align the cost elements according
             to its corresponding expense year,
@@ -269,24 +282,20 @@ class Tangible:
         decline_factor : float | int, optional
             The decline factor used for declining balance depreciation (default is 2).
         inflation_rate : np.ndarray | float | int, optional
-            The annual inflation rate as a decimal or integer (default is 0.0).
+            The inflation rate to apply. Can be a single value or an array (default is 0).
         vat_rate : np.ndarray | float | int, optional
-            An array or single value representing the VAT rate(s)
-            as a decimal or integer (default is 0.0).
+            The VAT/PPN rate(s) to apply. Can be a single value or an array (default is 0).
         vat_discount : np.ndarray | float | int, optional
-            An array or single value representing the VAT discount(s)
-            as a decimal or integer (default is 0.0).
+            The VAT discount(s) to apply. Can be a single value or an array (default is 0).
         pdri_rate : np.ndarray | float | int, optional
-            An array or single value representing the PDRI rate(s)
-            as a decimal or integer (default is 0.0).
+            The PDRI rate(s) to apply. Can be a single value or an array (default is 0).
         pdri_discount : np.ndarray | float | int, optional
-            An array or single value representing the PDRI discount(s)
-            as a decimal or integer (default is 0.0).
+            The PDRI discount(s) to apply. Can be a single value or an array (default is 0).
 
         Returns
         --------
         tuple
-            A tuple containing two numpy arrays:
+            A tuple containing:
             (1) Total depreciation charges for each period.
             (2) The undepreciated asset value at the end of the analysis.
 
@@ -296,9 +305,9 @@ class Tangible:
             depreciation method.
         (2) Prior to the core calculations, attribute 'cost' is modified by
             taking into account various economic factors such as inflation,
-            VAT/PPN, and PDRI.
+            VAT/PPN, and PDRI schemes.
         (3) The depreciation charges are aligned with the corresponding periods
-            based on the pis_year (or expense_year).
+            based on the expense_year (or pis_year).
         """
 
         # Configure the modified cost
@@ -326,10 +335,10 @@ class Tangible:
         if len(salvage_value_modified) < len(cost_modified):
             salvage_value_modified = np.repeat(self.salvage_value[0], len(cost_modified))
 
-        if len(self.useful_life) < len(cost_modified):
+        if len(useful_life_modified) < len(cost_modified):
             useful_life_modified = np.repeat(self.useful_life[0], len(cost_modified))
 
-        if len(self.depreciation_factor) < len(cost_modified):
+        if len(depreciation_factor_modified) < len(cost_modified):
             depreciation_factor_modified = np.repeat(self.depreciation_factor[0], len(cost_modified))
 
         new_Tangible = Tangible(
@@ -441,25 +450,22 @@ class Tangible:
             The depreciation method to use (default is DeprMethod.PSC_DB).
         decline_factor : float, optional
             The decline factor used for declining balance depreciation (default is 2).
-        inflation_rate : float | int, optional
-            The annual inflation rate as a decimal or integer (default is 0.0).
+        inflation_rate : np.ndarray | float | int, optional
+            The inflation rate to apply. Can be a single value or an array (default is 0).
         vat_rate : np.ndarray | float | int, optional
-            An array or single value representing the VAT rate(s)
-            as a decimal or integer (default is 0.0).
+            The VAT/PPN rate(s) to apply. Can be a single value or an array (default is 0).
         vat_discount : np.ndarray | float | int, optional
-            An array or single value representing the VAT discount(s)
-            as a decimal or integer (default is 0.0).
+            The VAT discount(s) to apply. Can be a single value or an array (default is 0).
         pdri_rate : np.ndarray | float | int, optional
-            An array or single value representing the PDRI rate(s)
-            as a decimal or integer (default is 0.0).
+            The PDRI rate(s) to apply. Can be a single value or an array (default is 0).
         pdri_discount : np.ndarray | float | int, optional
-            An array or single value representing the PDRI discount(s)
-            as a decimal or integer (default is 0.0).
+            The PDRI discount(s) to apply. Can be a single value or an array (default is 0).
 
         Returns
         -------
         np.ndarray
-            An array containing the cumulative book value of depreciation for each period.
+            An array containing the cumulative book value of depreciation for each period,
+            taking into account the inflation, VAT/PPN, and PDRI schemes.
 
         Notes
         -----
@@ -607,13 +613,9 @@ class Tangible:
                     start_year=combined_start_year,
                     end_year=combined_end_year,
                     cost=np.concatenate((self.cost, other.cost)),
-                    expense_year=np.concatenate(
-                        (self.expense_year, other.expense_year)
-                    ),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
                     pis_year=np.concatenate((self.pis_year, other.pis_year)),
-                    salvage_value=np.concatenate(
-                        (self.salvage_value, other.salvage_value)
-                    ),
+                    salvage_value=np.concatenate((self.salvage_value, other.salvage_value)),
                     useful_life=np.concatenate((self.useful_life, other.useful_life)),
                     depreciation_factor=np.concatenate(
                         (self.depreciation_factor, other.depreciation_factor)
@@ -662,13 +664,9 @@ class Tangible:
                     start_year=combined_start_year,
                     end_year=combined_end_year,
                     cost=np.concatenate((self.cost, -other.cost)),
-                    expense_year=np.concatenate(
-                        (self.expense_year, other.expense_year)
-                    ),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
                     pis_year=np.concatenate((self.pis_year, other.pis_year)),
-                    salvage_value=np.concatenate(
-                        (self.salvage_value, other.salvage_value)
-                    ),
+                    salvage_value=np.concatenate((self.salvage_value, other.salvage_value)),
                     useful_life=np.concatenate((self.useful_life, other.useful_life)),
                     depreciation_factor=np.concatenate(
                         (self.depreciation_factor, other.depreciation_factor)
@@ -736,10 +734,12 @@ class Tangible:
                     end_year=self.end_year,
                     cost=self.cost / other,
                     expense_year=self.expense_year.copy(),
+                    cost_allocation=self.cost_allocation,
                     pis_year=self.pis_year.copy(),
                     salvage_value=self.salvage_value.copy(),
                     useful_life=self.useful_life.copy(),
-                    cost_allocation=self.cost_allocation,
+                    depreciation_factor=self.depreciation_factor,
+                    is_ic_applied=self.is_ic_applied,
                     vat_portion=self.vat_portion,
                     pdri_portion=self.pdri_portion,
                     description=self.description,
@@ -783,8 +783,8 @@ class Intangible:
     cost: np.ndarray
     expense_year: np.ndarray
     cost_allocation: FluidType = field(default=FluidType.OIL)
-    vat_portion: float | int = field(default=1.0, repr=False)
-    pdri_portion: float | int = field(default=1.0, repr=False)
+    vat_portion: float | int = field(default=1.0)
+    pdri_portion: float | int = field(default=1.0)
     description: list[str] = field(default=None)
 
     # Attribute to be defined later on
@@ -839,13 +839,11 @@ class Intangible:
 
     def expenditures(
         self,
-        inflation_rate: float | int = 0.0,
+        inflation_rate: np.ndarray | float | int = 0.0,
         vat_rate: np.ndarray | float | int = 0.0,
         vat_discount: np.ndarray | float | int = 0.0,
         pdri_rate: np.ndarray | float | int = 0.0,
         pdri_discount: np.ndarray | float | int = 0.0,
-        lbt_discount: np.ndarray | float | int = 0.0,
-        pdrd_discount: np.ndarray | float | int = 0.0,
     ) -> np.ndarray:
         """
         Calculate intangible expenditures per year.
@@ -853,43 +851,36 @@ class Intangible:
         This method calculates the intangible expenditures per year
         based on the expense year and cost data provided.
 
-        Parameters:
-        -----------
-        inflation_rate : float or int, optional
-            The annual inflation rate as a decimal (default is 0).
+        Parameters
+        ----------
+        inflation_rate : np.ndarray or float or int, optional
+            The inflation rate to apply. Can be a single value or an array (default is 0).
         vat_rate : numpy.ndarray or float or int, optional
-            The VAT (Value Added Tax) rate(s) as a multiplier (default is 0).
+            The VAT/PPN rate(s) to apply. Can be a single value or an array (default is 0).
         vat_discount : numpy.ndarray or float or int, optional
-            The VAT discount(s) as a multiplier (default is 0).
+            The VAT discount(s) to apply. Can be a single value or an array (default is 0).
         pdri_rate : numpy.ndarray or float or int, optional
-            The PDRI rate(s) as a multiplier (default is 0).
+            The PDRI rate(s) to apply. Can be a single value or an array (default is 0).
         pdri_discount : numpy.ndarray or float or int, optional
-            PDRI discount(s) as a multiplier (default is 0).
-        lbt_discount : numpy.ndarray or float or int, optional
-            Land and Building Tax (LBT) discount(s) as a multiplier (default is 0).
-        pdrd_discount : numpy.ndarray or float or int, optional
-            PDRD discount as a multiplier (default is 0).
+            The PDRI discount(s) to apply. Can be a single value or an array (default is 0).
 
         Returns
         -------
         expenses: np.ndarray
             An array depicting the intangible expenditures each year, taking into
-            account the inflation, VAT/PPN, PDRI, LBT/PBB, and PDRD.
+            account inflation, VAT/PPN, and PDRI schemes.
 
         Notes
         -----
         This method calculates intangible expenditures while considering various economic factors
-        such as inflation, VAT, PDRI, LBT, and PDRD. It uses decorators to apply these factors
-        to the core calculation. In the core calculations:
+        such as inflation, VAT, and PDRI schemes. It uses decorators to apply these factors to the
+        core calculation. In the core calculations:
         (1) Function np.bincount() is used to align the cost elements according
             to its corresponding expense year,
         (2) If len(expenses) < project_duration, then add the remaining elements
             with zeros.
         """
-
-        @apply_pdrd(pdrd_discount=pdrd_discount)
-        @apply_lbt(lbt_discount=lbt_discount)
-        @apply_vat_pdri(
+        @apply_vat_and_pdri(
             vat_portion=self.vat_portion,
             vat_rate=vat_rate,
             vat_discount=vat_discount,
@@ -899,13 +890,10 @@ class Intangible:
         )
         @apply_inflation(inflation_rate=inflation_rate)
         def _expenditures() -> np.ndarray:
-            expenses = np.bincount(
-                self.expense_year - self.start_year, weights=self.cost
-            )
+            expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
             zeros = np.zeros(self.project_duration - len(expenses))
             expenses = np.concatenate((expenses, zeros))
             return expenses
-
         return _expenditures()
 
     def __len__(self):
@@ -1015,9 +1003,7 @@ class Intangible:
                     start_year=combined_start_year,
                     end_year=combined_end_year,
                     cost=np.concatenate((self.cost, other.cost)),
-                    expense_year=np.concatenate(
-                        (self.expense_year, other.expense_year)
-                    ),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
                     cost_allocation=self.cost_allocation,
                     vat_portion=self.vat_portion,
                     pdri_portion=self.pdri_portion,
@@ -1059,9 +1045,7 @@ class Intangible:
                     start_year=combined_start_year,
                     end_year=combined_end_year,
                     cost=np.concatenate((self.cost, -other.cost)),
-                    expense_year=np.concatenate(
-                        (self.expense_year, other.expense_year)
-                    ),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
                     cost_allocation=self.cost_allocation,
                     vat_portion=self.vat_portion,
                     pdri_portion=self.pdri_portion,
@@ -1169,13 +1153,13 @@ class OPEX:
     cost_allocation: FluidType = field(default=FluidType.OIL)
     prod_rate: np.ndarray = field(default=None, repr=False)
     cost_per_volume: np.ndarray = field(default=None, repr=False)
-    vat_portion: float | int = field(default=1.0, repr=False)
-    pdri_portion: float | int = field(default=1.0, repr=False)
+    vat_portion: float | int = field(default=1.0)
+    pdri_portion: float | int = field(default=1.0)
     description: list[str] = field(default=None)
 
     # Attribute to be defined later on
     variable_cost: np.ndarray = field(default=None, init=False, repr=False)
-    cost: np.ndarray = field(default=None, init=False, repr=False)
+    cost: np.ndarray = field(default=None, init=False)
     project_duration: int = field(default=None, init=False, repr=False)
     project_years: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -1254,13 +1238,11 @@ class OPEX:
 
     def expenditures(
         self,
-        inflation_rate: float | int = 0.0,
+        inflation_rate: np.ndarray | float | int = 0.0,
         vat_rate: np.ndarray | float | int = 0.0,
         vat_discount: np.ndarray | float | int = 0.0,
         pdri_rate: np.ndarray | float | int = 0.0,
         pdri_discount: np.ndarray | float | int = 0.0,
-        lbt_discount: np.ndarray | float | int = 0.0,
-        pdrd_discount: np.ndarray | float | int = 0.0,
     ) -> np.ndarray:
         """
         Calculate OPEX expenditures per year.
@@ -1268,41 +1250,34 @@ class OPEX:
 
         Parameters:
         -----------
-        inflation_rate : float or int, optional
-            The annual inflation rate as a decimal (default is 0).
+        inflation_rate : np.ndarray or float or int, optional
+            The inflation rate to apply. Can be a single value or an array (default is 0).
         vat_rate : numpy.ndarray or float or int, optional
-            The VAT (Value Added Tax) rate(s) as a multiplier (default is 0).
+            The VAT/PPN rate(s) to apply. Can be a single value or an array (default is 0).
         vat_discount : numpy.ndarray or float or int, optional
-            The VAT discount(s) as a multiplier (default is 0).
+            The VAT discount(s) to apply. Can be a single value or an array (default is 0).
         pdri_rate : numpy.ndarray or float or int, optional
-            The PDRI rate(s) as a multiplier (default is 0).
+            The PDRI rate(s) to apply. Can be a single value or an array (default is 0).
         pdri_discount : numpy.ndarray or float or int, optional
-            PDRI discount(s) as a multiplier (default is 0).
-        lbt_discount : numpy.ndarray or float or int, optional
-            Land and Building Tax (LBT) discount(s) as a multiplier (default is 0).
-        pdrd_discount : numpy.ndarray or float or int, optional
-            PDRD discount as a multiplier (default is 0).
+            The PDRI discount(s) to apply. Can be a single value or an array (default is 0).
 
         Returns
         -------
         expenses: np.ndarray
             An array depicting the OPEX expenditures each year, taking into
-            account the inflation, VAT/PPN, PDRI, LBT/PBB, and PDRD.
+            account the inflation, VAT/PPN, and PDRI schemes.
 
         Notes
         -----
         This method calculates OPEX expenditures while considering various economic factors
-        such as inflation, VAT, PDRI, LBT, and PDRD. It uses decorators to apply these factors
+        such as inflation, VAT, and PDRI schemes. It uses decorators to apply these factors
         to the core calculation. In the core calculations:
         (1) Function np.bincount() is used to align the cost elements according
             to its corresponding expense year,
         (2) If len(expenses) < project_duration, then add the remaining elements
             with zeros.
         """
-
-        @apply_pdrd(pdrd_discount=pdrd_discount)
-        @apply_lbt(lbt_discount=lbt_discount)
-        @apply_vat_pdri(
+        @apply_vat_and_pdri(
             vat_portion=self.vat_portion,
             vat_rate=vat_rate,
             vat_discount=vat_discount,
@@ -1312,13 +1287,10 @@ class OPEX:
         )
         @apply_inflation(inflation_rate=inflation_rate)
         def _expenditures() -> np.ndarray:
-            expenses = np.bincount(
-                self.expense_year - self.start_year, weights=self.cost
-            )
+            expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
             zeros = np.zeros(self.project_duration - len(expenses))
             expenses = np.concatenate((expenses, zeros))
             return expenses
-
         return _expenditures()
 
     def __len__(self):
@@ -1429,14 +1401,10 @@ class OPEX:
                     start_year=combined_start_year,
                     end_year=combined_end_year,
                     fixed_cost=np.concatenate((self.fixed_cost, other.fixed_cost)),
-                    expense_year=np.concatenate(
-                        (self.expense_year, other.expense_year)
-                    ),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
                     cost_allocation=self.cost_allocation,
                     prod_rate=np.concatenate((self.prod_rate, other.prod_rate)),
-                    cost_per_volume=np.concatenate(
-                        (self.cost_per_volume, other.cost_per_volume)
-                    ),
+                    cost_per_volume=np.concatenate((self.cost_per_volume, other.cost_per_volume)),
                     vat_portion=self.vat_portion,
                     pdri_portion=self.pdri_portion,
                     description=combined_description,
@@ -1477,14 +1445,10 @@ class OPEX:
                     start_year=combined_start_year,
                     end_year=combined_end_year,
                     fixed_cost=np.concatenate((self.fixed_cost, -other.fixed_cost)),
-                    expense_year=np.concatenate(
-                        (self.expense_year, other.expense_year)
-                    ),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
                     cost_allocation=self.cost_allocation,
                     prod_rate=np.concatenate((self.prod_rate, -other.prod_rate)),
-                    cost_per_volume=np.concatenate(
-                        (self.cost_per_volume, other.cost_per_volume)
-                    ),
+                    cost_per_volume=np.concatenate((self.cost_per_volume, other.cost_per_volume)),
                     vat_portion=self.vat_portion,
                     pdri_portion=self.pdri_portion,
                     description=combined_description,
@@ -1646,13 +1610,11 @@ class ASR:
     def future_cost(
         self,
         future_rate: float = 0.02,
-        inflation_rate: float | int = 0.0,
+        inflation_rate: np.ndarray | float | int = 0.0,
         vat_rate: np.ndarray | float | int = 0.0,
         vat_discount: np.ndarray | float | int = 0.0,
         pdri_rate: np.ndarray | float | int = 0.0,
         pdri_discount: np.ndarray | float | int = 0.0,
-        lbt_discount: np.ndarray | float | int = 0.0,
-        pdrd_discount: np.ndarray | float | int = 0.0,
     ) -> np.ndarray:
         """
         Calculate the future cost of an asset.
@@ -1660,27 +1622,17 @@ class ASR:
         Parameters:
         -----------
         future_rate : float, optional
-            The future rate of cost as a decimal (default is 0.02).
-        inflation_rate : float or int, optional
-            The annual inflation rate as a decimal (default is 0.0).
+            The future rate used in cost calculation (default is 0.02).
+        inflation_rate : np.ndarray or float or int, optional
+            The inflation rate to apply. Can be a single value or an array (default is 0).
         vat_rate : np.ndarray, float, or int, optional
-            The Value Added Tax (VAT) rate(s) to be applied as a multiplier.
-            Can be a single value or an array (default is 0.0).
+            The VAT/PPN rate(s) to apply. Can be a single value or an array (default is 0).
         vat_discount : np.ndarray, float, or int, optional
-            The VAT discount(s) to be applied as a multiplier.
-            Can be a single value or an array (default is 0.0).
+            The VAT discount(s) to apply. Can be a single value or an array (default is 0).
         pdri_rate : np.ndarray, float, or int, optional
-            The PDRI rate(s) to be applied as a multiplier.
-            Can be a single value or an array (default is 0.0).
+            The PDRI rate(s) to apply. Can be a single value or an array (default is 0).
         pdri_discount : np.ndarray, float, or int, optional
-            The PDRI discount(s) to be applied as a multiplier.
-            Can be a single value or an array (default is 0.0).
-        lbt_discount : np.ndarray, float, or int, optional
-            The Land and Building Tax (LBT) discount rate as a decimal
-            or an array of discount rates (default is 0.0).
-        pdrd_discount : np.ndarray, float, or int, optional
-            The PDRD discount(s) to be applied as a multiplier.
-            Can be a single value or an array (default is 0.0).
+            The PDRI discount(s) to apply. Can be a single value or an array (default is 0).
 
         Returns:
         --------
@@ -1690,7 +1642,7 @@ class ASR:
         Notes:
         ------
         This function calculates the future cost of an asset, taking into account
-        inflation and various taxes and discounts schemes.
+        inflation, VAT/PPN, and PDRI schemes.
         """
         # Configure the modified cost
         cost_modified = apply_cost_modification(
@@ -1705,8 +1657,6 @@ class ASR:
             pdri_portion=self.pdri_portion,
             pdri_rate=pdri_rate,
             pdri_discount=pdri_discount,
-            lbt_discount=lbt_discount,
-            pdrd_discount=pdrd_discount,
         )
 
         # Create a new instance of ASR
@@ -1727,13 +1677,11 @@ class ASR:
     def expenditures(
         self,
         future_rate: float = 0.02,
-        inflation_rate: float | int = 0.0,
+        inflation_rate: np.ndarray | float | int = 0.0,
         vat_rate: np.ndarray | float | int = 0.0,
         vat_discount: np.ndarray | float | int = 0.0,
         pdri_rate: np.ndarray | float | int = 0.0,
         pdri_discount: np.ndarray | float | int = 0.0,
-        lbt_discount: np.ndarray | float | int = 0.0,
-        pdrd_discount: np.ndarray | float | int = 0.0,
     ) -> np.ndarray:
         """
         Calculate ASR expenditures per year.
@@ -1745,8 +1693,8 @@ class ASR:
         ----------
         future_rate : float, optional
             The future rate used in cost calculation (default is 0.02).
-        inflation_rate : float or int, optional
-            The inflation rate to apply (default is 0).
+        inflation_rate : np.ndarray or float or int, optional
+            The inflation rate to apply. Can be a single value or an array (default is 0).
         vat_rate : np.ndarray, float, or int, optional
             The VAT/PPN rate(s) to apply. Can be a single value or an array (default is 0).
         vat_discount : np.ndarray, float, or int, optional
@@ -1755,22 +1703,19 @@ class ASR:
             The PDRI rate(s) to apply. Can be a single value or an array (default is 0).
         pdri_discount : np.ndarray, float, or int, optional
             The PDRI discount(s) to apply. Can be a single value or an array (default is 0).
-        lbt_discount : np.ndarray, float, or int, optional
-            The LBT discount(s) to apply. Can be a single value or an array (default is 0).
-        pdrd_discount : np.ndarray, float, or int, optional
-            The PDRD discount(s) to apply. Can be a single value or an array (default is 0).
 
         Returns
         -------
         expenses: np.ndarray
             An array depicting the ASR expenditures each year, taking into
-            account the inflation, VAT/PPN, PDRI, LBT/PBB, and PDRD.
+            account the inflation, VAT/PPN, and PDRI schemes.
 
         Notes
         -----
         This method calculates ASR expenditures while considering various economic factors
-        such as inflation, VAT, PDRI, LBT, and PDRD.
+        such as inflation, VAT, and PDRI schemes.
         """
+
         # Configure the modified cost
         cost_modified = apply_cost_modification(
             start_year=self.start_year,
@@ -1784,8 +1729,6 @@ class ASR:
             pdri_portion=self.pdri_portion,
             pdri_rate=pdri_rate,
             pdri_discount=pdri_discount,
-            lbt_discount=lbt_discount,
-            pdrd_discount=pdrd_discount,
         )
 
         # Create a new instance of ASR
@@ -1811,8 +1754,6 @@ class ASR:
                 vat_discount=vat_discount,
                 pdri_rate=pdri_rate,
                 pdri_discount=pdri_discount,
-                lbt_discount=lbt_discount,
-                pdrd_discount=pdrd_discount,
             )
             / cost_duration
         )
@@ -1937,9 +1878,7 @@ class ASR:
                     start_year=combined_start_year,
                     end_year=combined_end_year,
                     cost=np.concatenate((self.cost, other.cost)),
-                    expense_year=np.concatenate(
-                        (self.expense_year, other.expense_year)
-                    ),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
                     cost_allocation=self.cost_allocation,
                     vat_portion=self.vat_portion,
                     pdri_portion=self.pdri_portion,
@@ -1981,9 +1920,7 @@ class ASR:
                     start_year=combined_start_year,
                     end_year=combined_end_year,
                     cost=np.concatenate((self.cost, -other.cost)),
-                    expense_year=np.concatenate(
-                        (self.expense_year, other.expense_year)
-                    ),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
                     cost_allocation=self.cost_allocation,
                     vat_portion=self.vat_portion,
                     pdri_portion=self.pdri_portion,
@@ -2053,3 +1990,226 @@ class ASR:
                 f"{other}({other.__class__.__qualname__}) is not an instance "
                 f"of Tangible/Intangible/OPEX/ASR nor an integer nor a float."
             )
+
+
+@dataclass
+class LBT:
+    """
+    Manages a Land and Building Tax (LBT/PBB) asset.
+
+    Parameters
+    ----------
+    start_year : int
+        The start year of the project.
+    end_year : int
+        The end year of the project.
+    cost : numpy.ndarray
+        An array representing the cost of an LBT asset.
+    expense_year : numpy.ndarray
+        An array representing the expense year of an LBT asset.
+    cost_allocation : FluidType
+        A string depicting the cost allocation of an LBT asset.
+    lbt_portion: float | int
+        A fraction of LBT cost susceptible for LBT tax.
+    description: list[str]
+        A list of string description regarding the associated LBT cost.
+    """
+
+    start_year: int
+    end_year: int
+    cost: np.ndarray
+    expense_year: np.ndarray
+    cost_allocation: FluidType = field(default=FluidType.OIL)
+    lbt_portion: float | int = field(default=1.0)
+    description: list[str] = field(default=None)
+
+    # Attribute to be defined later on
+    project_duration: int = field(default=None, init=False, repr=False)
+    project_years: np.ndarray = field(default=None, init=False, repr=False)
+
+    def __post_init__(self):
+        # Check for inappropriate start and end year project
+        if self.end_year >= self.start_year:
+            self.project_duration = self.end_year - self.start_year + 1
+            self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
+
+        else:
+            raise LBTException(
+                f"start year {self.start_year} "
+                f"is after the end year {self.end_year}"
+            )
+
+        # Configure attribute "description"
+        if self.description is None:
+            self.description = [" " for _ in range(len(self.cost))]
+
+        if self.description is not None:
+            if len(self.description) != len(self.cost):
+                raise LBTException(
+                    f"Unequal length of array: "
+                    f"description: {len(self.description)}, "
+                    f"cost: {len(self.cost)}"
+                )
+
+        # Check input data for unequal length
+        if len(self.expense_year) != len(self.cost):
+            raise LBTException(
+                f"Unequal length of array: "
+                f"cost: {len(self.cost)}, "
+                f"expense_year: {len(self.expense_year)}"
+            )
+
+        # Raise an error message: expense year is after the end year of the project
+        if np.max(self.expense_year) > self.end_year:
+            raise LBTException(
+                f"Expense year ({np.max(self.expense_year)}) "
+                f"is after the end year of the project ({self.end_year})"
+            )
+
+        # Raise an error message: expense year is before the start year of the project
+        if np.min(self.expense_year) < self.start_year:
+            raise LBTException(
+                f"Expense year ({np.min(self.expense_year)}) "
+                f"is before the start year of the project ({self.start_year})"
+            )
+
+    def expenditures(
+        self,
+        inflation_rate: np.ndarray | float | int = 0.0,
+        lbt_rate: np.ndarray | float | int = 0.0,
+        lbt_discount: np.ndarray | float | int = 0.0,
+    ) -> np.ndarray:
+        """
+        Calculate LBT/PBB expenditures per year.
+
+        This method calculates LBT/PBB expenditures per year
+        based on the expense year and cost data provided.
+
+        Parameters
+        ----------
+        inflation_rate : np.ndarray or float or int, optional
+            The inflation rate to apply. Can be a single value or an array (default is 0).
+        lbt_rate : numpy.ndarray or float or int, optional
+            The LBT/PBB rate(s) to apply. Can be a single value or an array (default is 0).
+        lbt_discount : numpy.ndarray or float or int, optional
+            The LBT/ PBB discount(s) to apply. Can be a single value or an array (default is 0).
+
+        Returns
+        -------
+        expenses: np.ndarray
+            An array depicting LBT/PBB expenditures each year, taking into
+            account inflation and LBT schemes.
+
+        Notes
+        -----
+        This method calculates LBT/PBB expenditures while considering various economic factors
+        such as inflation and LBT schemes. It uses decorators to apply these factors to the
+        core calculation. In the core calculations:
+        (1) Function np.bincount() is used to align the cost elements according
+            to its corresponding expense year,
+        (2) If len(expenses) < project_duration, then add the remaining elements
+            with zeros.
+        """
+        @apply_lbt(
+            lbt_portion=self.lbt_portion,
+            lbt_rate=lbt_rate,
+            lbt_discount=lbt_discount,
+        )
+        @apply_inflation(inflation_rate=inflation_rate)
+        def _expenditures() -> np.ndarray:
+            expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
+            zeros = np.zeros(self.project_duration - len(expenses))
+            expenses = np.concatenate((expenses, zeros))
+            return expenses
+        return _expenditures()
+
+    def __len__(self):
+        raise NotImplemented
+
+    def __eq__(self, other):
+        raise NotImplemented
+
+    def __lt__(self, other):
+        raise NotImplemented
+
+    def __le__(self, other):
+        raise NotImplemented
+
+    def __gt__(self, other):
+        raise NotImplemented
+
+    def __ge__(self, other):
+        raise NotImplemented
+
+    def __add__(self, other):
+        raise NotImplemented
+
+    def __iadd__(self, other):
+        raise NotImplemented
+
+    def __sub__(self, other):
+        raise NotImplemented
+
+    def __rsub__(self, other):
+        raise NotImplemented
+
+    def __mul__(self, other):
+        raise NotImplemented
+
+    def __rmul__(self, other):
+        raise NotImplemented
+
+    def __truediv__(self, other):
+        raise NotImplemented
+
+
+@dataclass
+class PDRD:
+    """ 1234 """
+
+    def __post_init__(self):
+        pass
+
+    def expenditures(self):
+        """ 1234 """
+        pass
+
+    def __len__(self):
+        raise NotImplemented
+
+    def __eq__(self, other):
+        raise NotImplemented
+
+    def __lt__(self, other):
+        raise NotImplemented
+
+    def __le__(self, other):
+        raise NotImplemented
+
+    def __gt__(self, other):
+        raise NotImplemented
+
+    def __ge__(self, other):
+        raise NotImplemented
+
+    def __add__(self, other):
+        raise NotImplemented
+
+    def __iadd__(self, other):
+        raise NotImplemented
+
+    def __sub__(self, other):
+        raise NotImplemented
+
+    def __rsub__(self, other):
+        raise NotImplemented
+
+    def __mul__(self, other):
+        raise NotImplemented
+
+    def __rmul__(self, other):
+        raise NotImplemented
+
+    def __truediv__(self, other):
+        raise NotImplemented
+    
