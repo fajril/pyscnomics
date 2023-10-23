@@ -25,7 +25,9 @@ psc.gas_dmo_volume_portion = 0.25
 psc.gas_dmo_fee_portion = 1
 psc.gas_dmo_holiday_duration = 60
 
-psc.run()
+tax_rate = 0.424
+
+psc.run(tax_rate=tax_rate)
 
 
 def test_revenue():
@@ -287,15 +289,57 @@ def test_taxable_income():
     np.testing.assert_allclose(gas_taxable_income, gas_taxable_income_base, rtol=1e-6)
 
 
-def test_consistency_revenue_ct_gt():
-    # gross_revenue_calc = psc._ctr_take + psc._gov_take
-    # gross_revenue_engine = psc._oil_revenue + psc._gas_revenue
+def test_tax():
+    # Calculated result
+    oil_tax = psc._oil_tax_payment
+    gas_tax = psc._gas_tax_payment
 
-    # np.testing.assert_allclose(gross_revenue_calc, gross_revenue_engine, rtol=1e-6)
+    # Expected result
+    oil_tax_base = load_testing(dataset_type='case1', key='oil_tax')
+    gas_tax_base = load_testing(dataset_type='case1', key='gas_tax')
+
+    # Execute testing
+    np.testing.assert_allclose(oil_tax, oil_tax_base, rtol=1e-6)
+    np.testing.assert_allclose(gas_tax, gas_tax_base, rtol=1e-6)
 
 
-def test_consistency_ets():
-    # revenue = psc._ftp + psc._oil_ic + psc._cost_recovery + psc._ctr_share + psc._gov_share
-    # revenue_base = psc._oil_revenue + psc._gas_revenue
-    #
-    # np.testing.assert_allclose(revenue, revenue_base, rtol=1e-6)
+def test_ctr_share_after_tax():
+    # Calculated result
+    oil_ctr_share_after_tax = psc._oil_ctr_share_after_tax
+    gas_ctr_share_after_tax = psc._gas_ctr_share_after_tax
+
+    # Expected result
+    oil_ctr_share_after_tax_base = load_testing(dataset_type='case1', key='oil_ctr_share_after_tax')
+    gas_ctr_share_after_tax_base = load_testing(dataset_type='case1', key='gas_ctr_share_after_tax')
+
+    # Execute testing
+    np.testing.assert_allclose(oil_ctr_share_after_tax, oil_ctr_share_after_tax_base, rtol=1e-6)
+    np.testing.assert_allclose(gas_ctr_share_after_tax, gas_ctr_share_after_tax_base, rtol=1e-6)
+
+
+def test_ctr_cashflow():
+    # Calculated result
+    oil_ctr_cashflow = psc._oil_cashflow
+    # gas_ctr_cashflow = psc._gas_cashflow
+
+    # Expected result
+    oil_ctr_cashflow_base = load_testing(dataset_type='case1', key='oil_ctr_cashflow')
+    # gas_ctr_cashflow_base = load_testing(dataset_type='case1', key='gas_ctr_cashflow')
+
+    # Execute testing
+    np.testing.assert_allclose(oil_ctr_cashflow, oil_ctr_cashflow_base, rtol=1e-6)
+    # np.testing.assert_allclose(gas_ctr_cashflow, gas_ctr_cashflow_base, rtol=1e-6)
+
+
+# def test_consistency_revenue_ct_gt():
+#     gross_revenue_calc = psc._ctr_take + psc._gov_take
+#     gross_revenue_engine = psc._oil_revenue + psc._gas_revenue
+
+#     np.testing.assert_allclose(gross_revenue_calc, gross_revenue_engine, rtol=1e-6)
+#
+#
+# def test_consistency_ets():
+#     revenue = psc._ftp + psc._oil_ic + psc._cost_recovery + psc._ctr_share + psc._gov_share
+#     revenue_base = psc._oil_revenue + psc._gas_revenue
+#
+#     np.testing.assert_allclose(revenue, revenue_base, rtol=1e-6)

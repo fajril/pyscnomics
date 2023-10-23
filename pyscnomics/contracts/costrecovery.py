@@ -96,8 +96,11 @@ class CostRecovery(BaseProject):
 
     _oil_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
     _gas_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_ftp_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_ftp_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_ctr_share_after_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ctr_share_after_tax: np.ndarray = field(default=None, init=False, repr=False)
 
     _oil_contractor_take: np.ndarray = field(default=None, init=False, repr=False)
     _gas_contractor_take: np.ndarray = field(default=None, init=False, repr=False)
@@ -338,10 +341,10 @@ class CostRecovery(BaseProject):
         return ftp_tax_payment
 
     @staticmethod
-    def _get_ftp_tax_payment2(ctr_share,
-                              taxable_income,
-                              tax_rate,
-                              ftp_tax_regime: FTPTaxRegime = FTPTaxRegime.PDJP_20_2017):
+    def _get_tax_payment2(ctr_share,
+                          taxable_income,
+                          tax_rate,
+                          ftp_tax_regime: FTPTaxRegime = FTPTaxRegime.PDJP_20_2017):
         if ftp_tax_regime == FTPTaxRegime.PDJP_20_2017:
             cum_ftp = np.cumsum(taxable_income)
             applied_tax = np.where(ctr_share > 0, 1, 0)
@@ -640,75 +643,80 @@ class CostRecovery(BaseProject):
         #                                                       tax_rate=tax_rate,
         #                                                       ftp_tax_regime=ftp_tax_regime)
 
-        self._oil_ftp_tax_payment = self._get_ftp_tax_payment2(ctr_share=self._oil_contractor_share,
-                                                               taxable_income=self._oil_taxable_income,
-                                                               tax_rate=tax_rate,
-                                                               ftp_tax_regime=ftp_tax_regime)
+        self._oil_tax_payment = self._get_tax_payment2(ctr_share=self._oil_contractor_share,
+                                                       taxable_income=self._oil_taxable_income,
+                                                       tax_rate=tax_rate,
+                                                       ftp_tax_regime=ftp_tax_regime)
 
-        self._gas_ftp_tax_payment = self._get_ftp_tax_payment2(ctr_share=self._gas_contractor_share,
-                                                               taxable_income=self._gas_taxable_income,
-                                                               tax_rate=tax_rate,
-                                                               ftp_tax_regime=ftp_tax_regime)
+        self._gas_tax_payment = self._get_tax_payment2(ctr_share=self._gas_contractor_share,
+                                                       taxable_income=self._gas_taxable_income,
+                                                       tax_rate=tax_rate,
+                                                       ftp_tax_regime=ftp_tax_regime)
+
+        # Contractor Share
+        self._oil_ctr_share_after_tax = self._oil_taxable_income - self._oil_tax_payment
+        self._gas_ctr_share_after_tax = self._gas_taxable_income - self._gas_tax_payment
 
         # Contractor Take by Fluid
         self._oil_contractor_take = (
-                self._oil_taxable_income - self._oil_ftp_tax_payment + self._oil_cost_recovery
+                self._oil_taxable_income - self._oil_tax_payment + self._oil_cost_recovery + self._transfer_to_oil
         )
 
         self._gas_contractor_take = (
-                self._gas_taxable_income - self._gas_ftp_tax_payment + self._gas_cost_recovery
+                self._gas_taxable_income - self._gas_tax_payment + self._gas_cost_recovery + self._transfer_to_gas
         )
+
+        # Contractor CashFlow
+        self._oil_cashflow = self._oil_contractor_take - (self._oil_tangible.expenditures() + self._oil_non_capital)
+        self._gas_cashflow = self._gas_contractor_take - (self._gas_tangible.expenditures() + self._gas_non_capital)
+
 
         # Government Take by Fluid
         self._oil_government_take = (
                 self._oil_ftp_gov
                 + self._oil_government_share
-                + self._oil_ftp_tax_payment
+                + self._oil_tax_payment
                 + self._oil_ddmo
         )
 
         self._gas_government_take = (
                 self._gas_ftp_gov
                 + self._gas_government_share
-                + self._gas_ftp_tax_payment
+                + self._gas_tax_payment
                 + self._gas_ddmo
         )
-
-        # Contractor CashFlow
-        self._oil_cashflow = self._oil_contractor_take - self._oil_tangible.expenditures() - self._oil_non_capital
-        self._gas_cashflow = self._gas_contractor_take - self._gas_tangible.expenditures() - self._gas_non_capital
-
-        # Pay Out Time (POT) and Internal Rate Return (IRR)
-        # Condition where there is no revenue from one of Oil and Gas
-        if np.sum(self._oil_cashflow) == 0:
-            self._oil_pot = 0
-            self._oil_irr = 0
-        else:
-            self._oil_pot = indicator.pot(cashflow=self._oil_cashflow)
-            self._oil_irr = indicator.irr(cashflow=self._oil_cashflow)
-
-        if np.sum(self._gas_cashflow) == 0:
-            self._gas_pot = 0
-            self._gas_irr = 0
-        else:
-            self._gas_pot = indicator.pot(cashflow=self._gas_cashflow)
-            self._gas_irr = indicator.irr(cashflow=self._gas_cashflow)
-
-        # NPV
-        self._oil_npv = indicator.npv(cashflow=self._oil_cashflow)
-        self._gas_npv = indicator.npv(cashflow=self._gas_cashflow)
-
-        # Combined Contractor Take and Contractor Share, used for testing the consistency
-        self._ctr_take = self._oil_contractor_take + self._gas_contractor_take
-        self._ctr_share = self._oil_contractor_share + self._gas_contractor_share
-
-        # Combined Government Take and Contractor Share, used for testing the consistency
-        self._gov_take = self._oil_government_take + self._gas_government_take
-        self._gov_share = self._oil_government_share + self._gas_government_share
-
-        # Combined FTP, IC, Cost_Recovery, used for testing the consistency
-        self._ftp = self._oil_ftp + self._gas_ftp
-        self._ic = self._oil_ic + self._gas_ic
-        self._cost_recovery = self._oil_cost_recovery + self._gas_cost_recovery
+        #
+        # # Pay Out Time (POT) and Internal Rate Return (IRR)
+        # # Condition where there is no revenue from one of Oil and Gas
+        # if np.sum(self._oil_cashflow) == 0:
+        #     self._oil_pot = 0
+        #     self._oil_irr = 0
+        # else:
+        #     self._oil_pot = indicator.pot(cashflow=self._oil_cashflow)
+        #     self._oil_irr = indicator.irr(cashflow=self._oil_cashflow)
+        #
+        # if np.sum(self._gas_cashflow) == 0:
+        #     self._gas_pot = 0
+        #     self._gas_irr = 0
+        # else:
+        #     self._gas_pot = indicator.pot(cashflow=self._gas_cashflow)
+        #     self._gas_irr = indicator.irr(cashflow=self._gas_cashflow)
+        #
+        # # NPV
+        # self._oil_npv = indicator.npv(cashflow=self._oil_cashflow)
+        # self._gas_npv = indicator.npv(cashflow=self._gas_cashflow)
+        #
+        # # Combined Contractor Take and Contractor Share, used for testing the consistency
+        # self._ctr_take = self._oil_contractor_take + self._gas_contractor_take
+        # self._ctr_share = self._oil_contractor_share + self._gas_contractor_share
+        #
+        # # Combined Government Take and Contractor Share, used for testing the consistency
+        # self._gov_take = self._oil_government_take + self._gas_government_take
+        # self._gov_share = self._oil_government_share + self._gas_government_share
+        #
+        # # Combined FTP, IC, Cost_Recovery, used for testing the consistency
+        # self._ftp = self._oil_ftp + self._gas_ftp
+        # self._ic = self._oil_ic + self._gas_ic
+        # self._cost_recovery = self._oil_cost_recovery + self._gas_cost_recovery
 
         return
