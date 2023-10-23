@@ -390,6 +390,8 @@ class GrossSplit(BaseProject):
             discounting_mode: DiscountingMode = DiscountingMode.HALF_YEAR
             ):
 
+        self._get_wap_price()
+
         # Depreciation (Tangible cost)
         self._oil_depreciation, self._oil_undepreciated_asset = self._oil_tangible.total_depreciation_rate()
         self._gas_depreciation, self._gas_undepreciated_asset = self._gas_tangible.total_depreciation_rate()
@@ -524,6 +526,7 @@ class GrossSplit(BaseProject):
             dmo_volume_portion=self.oil_dmo_volume_portion,
             dmo_fee_portion=self.oil_dmo_fee_portion,
             lifting=self._oil_lifting,
+            price=self._oil_wap_price,
             ctr_pretax_share=1.0,
             unrecovered_cost=self._oil_carward_cost_aftertf,
             is_dmo_end_weighted=is_dmo_end_weighted)
@@ -536,6 +539,7 @@ class GrossSplit(BaseProject):
             dmo_volume_portion=self.gas_dmo_volume_portion,
             dmo_fee_portion=self.gas_dmo_fee_portion,
             lifting=self._gas_lifting,
+            price=self._gas_wap_price,
             ctr_pretax_share=1.0,
             unrecovered_cost=self._gas_carward_cost_aftertf,
             is_dmo_end_weighted=is_dmo_end_weighted)

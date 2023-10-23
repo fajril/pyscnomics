@@ -261,6 +261,8 @@ def get_dmo(onstream_date: date,
         The DMO fee portion.
     lifting: Lifting
         The Lifting class of the produced fluid.
+    price: np.ndarray
+        The Weighted Average Price (WAP) price of the produced fluid.
     ctr_pretax_share: float
         The Contractor PreTax.
     unrecovered_cost: np.ndarray

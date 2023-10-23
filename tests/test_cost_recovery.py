@@ -206,17 +206,33 @@ def test_taxable_income():
     np.testing.assert_allclose(gas_taxable_income, gas_taxable_income_base)
 
 
-def test_consistency_revenue_ct_gt():
+def test_consistency():
+    # Top side result
+    gross_revenue_topside = psc._oil_revenue + psc._gas_revenue
 
-    gross_revenue_calc = psc._oil_contractor_take + psc._oil_government_take
-    gross_revenue_engine = psc._oil_revenue + psc._gas_revenue
+    # Bottom side result
+    gross_revenue_botside = psc._oil_contractor_take + psc._gas_contractor_take + psc._oil_government_take + psc._gas_government_take
 
-    np.testing.assert_allclose(gross_revenue_calc, gross_revenue_engine)
+    # Execute testing
+    np.testing.assert_allclose(gross_revenue_topside, gross_revenue_botside, rtol=1e-6)
 
 
 def test_consistency_ets():
+    # Calculated result Oil
+    oil_revenue = (psc._oil_ftp +
+                   psc._oil_ic +
+                   psc._oil_cost_recovery +
+                   psc._oil_ets_before_transfer)
 
-    revenue = psc._ftp + psc._gas_ic + psc._cost_recovery + psc._ctr_share + psc._gov_share
-    revenue_base = psc._oil_revenue + psc._gas_revenue
+    # Calculated result Gas
+    gas_revenue = (psc._gas_ftp +
+                   psc._gas_ic +
+                   psc._gas_cost_recovery +
+                   psc._gas_ets_before_transfer)
 
-    np.testing.assert_allclose(revenue, revenue_base)
+    # Expected result Oil
+    oil_revenue_base = psc._oil_revenue
+    gas_revenue_base = psc._gas_revenue
+
+    np.testing.assert_allclose(oil_revenue, oil_revenue_base)
+    np.testing.assert_allclose(gas_revenue, gas_revenue_base)
