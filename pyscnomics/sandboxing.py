@@ -10,6 +10,7 @@ from dataclasses import asdict
 from pyscnomics.econ.selection import DeprMethod, FluidType
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR, LBT, PDRD
+from pyscnomics.econ.depreciation import psc_declining_balance_depreciation_rate as psc_db
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.econ.results import CashFlow
@@ -78,16 +79,16 @@ sulfur_apel_lifting = Lifting(
 
 '------------------------------------------- TANGIBLE COST DATA --------------------------------------------'
 
-oil_mangga1_tangible = Tangible(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([100, 100, 100]),
-    expense_year=np.array([2023, 2024, 2025]),
-    cost_allocation=FluidType.OIL,
-    depreciation_factor=np.array([0.5, 0.5, 0.5]),
-    vat_portion=1.0,
-    pdri_portion=1.0,
-)
+# oil_mangga1_tangible = Tangible(
+#     start_year=2023,
+#     end_year=2030,
+#     cost=np.array([100, 100, 100]),
+#     expense_year=np.array([2023, 2024, 2025]),
+#     cost_allocation=FluidType.OIL,
+#     depreciation_factor=np.array([0.5, 0.5, 0.5]),
+#     vat_portion=1.0,
+#     pdri_portion=1.0,
+# )
 
 oil_mangga2_tangible = Tangible(
     start_year=2023,
@@ -246,13 +247,13 @@ oil_apel_lbt = LBT(
 
 '--------------------------------------------- PDRD COST DATA ----------------------------------------------'
 
-# oil_mangga_pdrd = PDRD(
-#     start_year=2023,
-#     end_year=2030,
-#     cost=np.array([50, 50, 50, 50]),
-#     expense_year=np.array([2024, 2025, 2026, 2027]),
-#     cost_allocation=FluidType.OIL
-# )
+oil_mangga_pdrd = PDRD(
+    start_year=2023,
+    end_year=2030,
+    cost=np.array([50, 50, 50, 50]),
+    expense_year=np.array([2024, 2025, 2026, 2027]),
+    cost_allocation=FluidType.OIL
+)
 
 oil_apel_pdrd = PDRD(
     start_year=2023,
@@ -299,6 +300,17 @@ lifting = (
     sulfur_apel_lifting,
 )
 
+oil_mangga1_tangible = Tangible(
+    start_year=2023,
+    end_year=2030,
+    cost=np.array([50, 50]),
+    expense_year=np.array([2026, 2027]),
+    cost_allocation=FluidType.OIL,
+    depreciation_factor=np.array([0.5, 0.5]),
+    vat_portion=1.0,
+    pdri_portion=1.0,
+)
+
 tangible_cost = (
     oil_mangga1_tangible,
     oil_apel1_tangible,
@@ -311,29 +323,16 @@ tangible_cost = (
     sulfur_mangga2_tangible
 )
 
-oil_mangga_pdrd = PDRD(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([100, 100, 100, 100]),
-    expense_year=np.array([2024, 2025, 2026, 2027]),
-    cost_allocation=FluidType.OIL
-)
-
 start_timer = tm.time()
 
-t1 = oil_mangga_pdrd.expenditures(
-    # inflation_rate=0.05,
-    # pdrd_rate=0.05,
-    # inflation_rate=np.array([0.05, 0.05, 0.05, 0.05, 0.1, 0.1, 0.1, 0.1]),
-    pdrd_rate=np.array([0.05 for _ in range(8)]),
-)
+t1 = oil_mangga1_tangible.total_depreciation_rate()
 
 end_timer = tm.time() - start_timer
 
-print('\t')
-print(f'Filetype: {type(t1)}')
-print(f'Length: {len(t1)}')
-print('t1 = \n', t1)
+# print('\t')
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t2)}')

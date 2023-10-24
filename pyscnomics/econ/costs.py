@@ -327,6 +327,10 @@ class Tangible:
             pis_year=self.pis_year,
         )
 
+        print('\t')
+        print(f'Length: {len(cost_modified)}')
+        print('cost_modified = ', cost_modified)
+
         # Create a new instance of Tangible
         salvage_value_modified = self.salvage_value
         useful_life_modified = self.useful_life
@@ -355,6 +359,9 @@ class Tangible:
             vat_portion=self.vat_portion,
             pdri_portion=self.pdri_portion,
         )
+
+        print('\t')
+        print('new Tangible = ', new_Tangible)
 
         # Straight line
         if depr_method == DeprMethod.SL:
@@ -411,6 +418,18 @@ class Tangible:
                 ]
             )
 
+        print('\t')
+        print(f'Shape: {depreciation_charge.shape}')
+        print(f'Length: {len(depreciation_charge)}')
+        print('depreciation_charge = \n', depreciation_charge)
+
+        t1 = np.sum(depreciation_charge, axis=1, keepdims=True)
+
+        print('\t')
+        print(f'Shape: {t1.shape}')
+        print(f'Length: {len(t1)}')
+        print('t1 = \n', t1)
+
         # The relative difference of pis_year and start_year
         shift_indices = new_Tangible.pis_year - new_Tangible.start_year
 
@@ -422,6 +441,18 @@ class Tangible:
                 for row, i in zip(depreciation_charge, shift_indices)
             ]
         )
+
+        print('\t')
+        print(f'Shape: {depreciation_charge.shape}')
+        print(f'Length: {len(depreciation_charge)}')
+        print('depreciation_charge = \n', depreciation_charge)
+
+        t2 = np.sum(depreciation_charge, axis=1, keepdims=True)
+
+        print('\t')
+        print(f'Shape: {t2.shape}')
+        print(f'Length: {len(t2)}')
+        print('t2 = \n', t2)
 
         total_depreciation_charge = depreciation_charge.sum(axis=0)
         undepreciated_asset = np.sum(new_Tangible.cost) - np.sum(total_depreciation_charge)
