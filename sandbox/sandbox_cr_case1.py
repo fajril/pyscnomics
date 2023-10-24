@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import time
 
 from pyscnomics.dataset.sample import load_data, load_testing
 
@@ -37,7 +38,10 @@ psc.gas_dmo_holiday_duration = 60
 
 tax_rate = 0.424
 
+start_time = time.time()
 psc.run(tax_rate=tax_rate)
+end_time = time.time()
+print('Execution Time: ', end_time - start_time, '\n')
 
 # base = np.asarray(load_testing(dataset_type='case1', key='Unrec Cost'))
 # engine = psc._oil_unrecovered_before_transfer
@@ -121,19 +125,19 @@ psc_table_gas['Contractor Share'] = psc._gas_ctr_net_share
 psc_table_gas['Contractor Take'] = psc._gas_ctr_net_share
 psc_table_gas['Cashflow'] = psc._gas_cashflow
 psc_table_gas['Government Take'] = psc._gas_government_take
-psc_table_gas.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
+psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
 print(psc_table_gas, '\n')
 
 
 psc_table_consolidated = pd.DataFrame()
 psc_table_consolidated['Year'] = psc.project_years
+psc_table_consolidated['cnsltd_revenue'] = psc._consolidated_revenue
 psc_table_consolidated['cnsltd_non_capital'] = psc._consolidated_non_capital
 psc_table_consolidated['cnsltd_ic'] = psc._consolidated_ic
 psc_table_consolidated['cnsltd_ic_unrecovered'] = psc._consolidated_ic_unrecovered
 psc_table_consolidated['cnsltd_ic_paid'] = psc._consolidated_ic_paid
 psc_table_consolidated['cnsltd_unrecovered_before_transfer'] = psc._consolidated_unrecovered_before_transfer
-psc_table_consolidated['cnsltd_cost_to_be_recovered'] = psc._consolidated_cost_to_be_recovered
-psc_table_consolidated['cnsltd_cost_recovery'] = psc._consolidated_cost_recovery
+psc_table_consolidated['cnsltd_cost_recovery'] = psc._consolidated_cost_recovery_before_transfer
 psc_table_consolidated['cnsltd_ets_before_transfer'] = psc._consolidated_ets_before_transfer
 psc_table_consolidated['cnsltd_unrecovered_after_transfer'] = psc._consolidated_unrecovered_after_transfer
 psc_table_consolidated['cnsltd_cost_to_be_recovered_after_tf'] = psc._consolidated_cost_to_be_recovered_after_tf
@@ -145,6 +149,8 @@ psc_table_consolidated['cnsltd_dmo_volume'] = psc._consolidated_dmo_volume
 psc_table_consolidated['cnsltd_dmo_fee'] = psc._consolidated_dmo_fee
 psc_table_consolidated['cnsltd_ddmo'] = psc._consolidated_ddmo
 psc_table_consolidated['cnsltd_taxable_income'] = psc._consolidated_taxable_income
+psc_table_consolidated['cnsltd_tax_due'] = psc._consolidated_tax_due
+psc_table_consolidated['cnsltd_unpaid_tax_balance'] = psc._consolidated_unpaid_tax_balance
 psc_table_consolidated['cnsltd_tax_payment'] = psc._consolidated_tax_payment
 psc_table_consolidated['cnsltd_ctr_net_share'] = psc._consolidated_ctr_net_share
 psc_table_consolidated['cnsltd_contractor_take'] = psc._consolidated_contractor_take
@@ -154,20 +160,22 @@ psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_
 print(psc_table_consolidated, '\n')
 
 
-df_comparison = pd.DataFrame()
-# Calculated result
-engine = psc._gas_cashflow
-# Expected result
-base = load_testing(dataset_type='case1', key='gas_ctr_cashflow')
-
-df_comparison['Year'] = psc.project_years
-df_comparison['Base'] = base
-df_comparison['Engine'] = engine
-df_comparison['Diff'] = base - engine
-print(df_comparison)
+# df_comparison = pd.DataFrame()
+# # Calculated result
+# engine = psc._consolidated_unrecovered_before_transfer
+#
+# # Expected result
+# base = load_testing(dataset_type='case1', key='cnsltd_unrec_cost')
+#
+# df_comparison['Year'] = psc.project_years
+# df_comparison['Base'] = base
+# df_comparison['Engine'] = engine
+# df_comparison['Diff'] = base - engine
+# print(df_comparison, '\n')
 
 # gross_revenue_calc = psc._oil_contractor_take + psc._oil_government_take
 # gross_revenue_engine = psc._oil_revenue + psc._gas_revenue
 #
 # print(gross_revenue_calc)
 # print(gross_revenue_engine)
+

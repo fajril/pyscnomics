@@ -69,7 +69,7 @@ def get_cost_to_be_recovered(unrecovered_cost: np.ndarray) -> np.ndarray:
 
 
 def get_cost_to_be_recovered_after_tf(unrecovered_cost: np.ndarray,
-                                      transferred_cost) -> np.ndarray:
+                                      transferred_cost: np.ndarray) -> np.ndarray:
     """
     A function to get the array of cost to be recovered.
 

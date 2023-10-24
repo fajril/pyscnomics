@@ -317,18 +317,18 @@ def test_ctr_net_share():
     np.testing.assert_allclose(gas_ctr_share_after_tax, gas_ctr_share_after_tax_base, atol=1e-6)
 
 
-# def test_ctr_take():
-#     # Calculated result
-#     oil_ctr_share_after_tax = psc._oil_ctr_net_share
-#     gas_ctr_share_after_tax = psc._gas_ctr_net_share
-#
-#     # Expected result
-#     oil_ctr_share_after_tax_base = load_testing(dataset_type='case1', key='oil_ctr_net_share')
-#     gas_ctr_share_after_tax_base = load_testing(dataset_type='case1', key='gas_ctr_net_share')
-#
-#     # Execute testing
-#     np.testing.assert_allclose(oil_ctr_share_after_tax, oil_ctr_share_after_tax_base, atol=1e-6)
-#     np.testing.assert_allclose(gas_ctr_share_after_tax, gas_ctr_share_after_tax_base, atol=1e-6)
+def test_ctr_take():
+    # Calculated result
+    oil_ctr_share_after_tax = psc._oil_ctr_net_share
+    gas_ctr_share_after_tax = psc._gas_ctr_net_share
+
+    # Expected result
+    oil_ctr_share_after_tax_base = load_testing(dataset_type='case1', key='oil_ctr_net_share')
+    gas_ctr_share_after_tax_base = load_testing(dataset_type='case1', key='gas_ctr_net_share')
+
+    # Execute testing
+    np.testing.assert_allclose(oil_ctr_share_after_tax, oil_ctr_share_after_tax_base, atol=1e-6)
+    np.testing.assert_allclose(gas_ctr_share_after_tax, gas_ctr_share_after_tax_base, atol=1e-6)
 
 
 def test_ctr_cashflow():
@@ -389,3 +389,236 @@ def test_consistency_ets():
 
     np.testing.assert_allclose(oil_revenue, oil_revenue_base)
     np.testing.assert_allclose(gas_revenue, gas_revenue_base)
+
+
+def test_consolidated_revenue():
+    # Calculated result
+    engine = psc._consolidated_revenue
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_revenue')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_depreciation():
+    # Calculated result
+    engine = psc._consolidated_depreciation
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_depreciation')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_non_capital():
+    # Calculated result
+    engine = psc._consolidated_non_capital
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_non_capital')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_ftp():
+    # Calculated result
+    engine = psc._consolidated_ftp
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_ftp')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_ftp_ctr():
+    # Calculated result
+    engine = psc._consolidated_ftp_ctr
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_ftp_ctr')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_ftp_gov():
+    # Calculated result
+    engine = psc._consolidated_ftp_gov
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_ftp_gov')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_ic():
+    # Calculated result
+    engine = psc._consolidated_ic
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_ic')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_ic_unrec():
+    # Calculated result
+    engine = psc._consolidated_ic_unrecovered
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_ic_unrec')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_ic_paid():
+    # Calculated result
+    engine = psc._consolidated_ic_paid
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_ic_paid')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_unrec_cost():
+    # Calculated result
+    engine = psc._consolidated_unrecovered_before_transfer
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_unrec_cost')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_cost_recovery_before_transfer():
+    # Calculated result
+    engine = psc._consolidated_cost_recovery_before_transfer
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_cost_recovery_before_transfer')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_ets_before_transfer():
+    # Calculated result
+    engine = psc._consolidated_ets_before_transfer
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_ets_before_transfer')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_unrec_after_transfer():
+    # Calculated result
+    engine = psc._consolidated_unrecovered_after_transfer
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_unrec_after_transfer')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_cost_recovery_after_transfer():
+    # Calculated result
+    engine = psc._consolidated_cost_recovery_after_tf
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_cost_recovery_after_transfer')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_ets_after_transfer():
+    # Calculated result
+    engine = psc._consolidated_ets_after_transfer
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_ets_after_transfer')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_ctr_share():
+    # Calculated result
+    engine = psc._consolidated_contractor_share
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_ctr_share')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_gov_share():
+    # Calculated result
+    engine = psc._consolidated_government_share
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_gov_share')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_dmo_volume():
+    # Calculated result
+    engine = psc._consolidated_dmo_volume
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_dmo_volume')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_dmo_fee():
+    # Calculated result
+    engine = psc._consolidated_dmo_fee
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_dmo_fee')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_ddmo():
+    # Calculated result
+    engine = psc._consolidated_ddmo
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_ddmo')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_taxable_income():
+    # Calculated result
+    engine = psc._consolidated_taxable_income
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_taxable_income')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
