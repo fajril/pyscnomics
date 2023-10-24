@@ -2124,92 +2124,566 @@ class LBT:
         return _expenditures()
 
     def __len__(self):
-        raise NotImplemented
+        return self.project_duration
 
     def __eq__(self, other):
-        raise NotImplemented
+        # Between an instance of LBT with another instance of LBT
+        if isinstance(other, LBT):
+            return all((
+                np.allclose(self.cost, other.cost),
+                np.allclose(self.expense_year, other.expense_year),
+                self.cost_allocation == other.cost_allocation,
+                self.lbt_portion == other.lbt_portion,
+            ))
+
+        # Between an instance of LBT and an integer/float
+        elif isinstance(other, (float, int)):
+            return np.sum(self.cost) == other
+
+        else:
+            return False
 
     def __lt__(self, other):
-        raise NotImplemented
+        # Between an instance of LBT with another instance of LBT
+        if isinstance(other, LBT):
+            return np.sum(self.cost) < np.sum(other.cost)
+
+        # Between an instance of LBT with an integer/float
+        elif isinstance(other, (float, int)):
+            return np.sum(self.cost) < other
+
+        else:
+            raise LBTException(
+                f"Must compare an instance of LBT with another "
+                f"instance of LBT, an integer, or a float. "
+                f"{other.__class__.__qualname__} is not an instance "
+                f"of LBT, nor an integer/float."
+            )
 
     def __le__(self, other):
-        raise NotImplemented
+        # Between an instance of LBT with another instance of LBT
+        if isinstance(other, LBT):
+            return np.sum(self.cost) <= np.sum(other.cost)
+
+        # Between an instance of LBT with an integer/float
+        elif isinstance(other, (float, int)):
+            return np.sum(self.cost) <= other
+
+        else:
+            raise LBTException(
+                f"Must compare an instance of LBT with another "
+                f"instance of LBT, an integer, or a float. "
+                f"{other.__class__.__qualname__} is not an instance "
+                f"of LBT, nor an integer/float."
+            )
 
     def __gt__(self, other):
-        raise NotImplemented
+        # Between an instance of LBT with another instance of LBT
+        if isinstance(other, LBT):
+            return np.sum(self.cost) > np.sum(other.cost)
+
+        # Between an instance of LBT with an integer/float
+        elif isinstance(other, (float, int)):
+            return np.sum(self.cost) > other
+
+        else:
+            raise LBTException(
+                f"Must compare an instance of LBT with another "
+                f"instance of LBT, an integer, or a float. "
+                f"{other.__class__.__qualname__} is not an instance "
+                f"of LBT, nor an integer/float."
+            )
 
     def __ge__(self, other):
-        raise NotImplemented
+        # Between an instance of LBT with another instance of LBT
+        if isinstance(other, LBT):
+            return np.sum(self.cost) >= np.sum(other.cost)
+
+        # Between an instance of LBT with an integer/float
+        elif isinstance(other, (float, int)):
+            return np.sum(self.cost) >= other
+
+        else:
+            raise LBTException(
+                f"Must compare an instance of LBT with another "
+                f"instance of LBT, an integer, or a float. "
+                f"{other.__class__.__qualname__} is not an instance "
+                f"of LBT, nor an integer/float."
+            )
 
     def __add__(self, other):
-        raise NotImplemented
+        # Only allows addition between an instance of LBT and another instance of LBT
+        if isinstance(other, LBT):
+            if (
+                self.cost_allocation != other.cost_allocation
+                or self.lbt_portion != other.lbt_portion
+            ):
+                raise LBTException(
+                    f"Cost allocation or LBT/PBB portion is not equal. "
+                    f"Cost allocation: {self.cost_allocation} vs. {other.cost_allocation}, "
+                    f"LBT/PBB portion: {self.lbt_portion} vs. {other.lbt_portion}."
+                )
+
+            else:
+                start_year_combined = min(self.start_year, other.start_year)
+                end_year_combined = max(self.end_year, other.end_year)
+                description_combined = self.description + other.description
+
+                return LBT(
+                    start_year=start_year_combined,
+                    end_year=end_year_combined,
+                    cost=np.concatenate((self.cost, other.cost)),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
+                    cost_allocation=self.cost_allocation,
+                    lbt_portion=self.lbt_portion,
+                    description=description_combined,
+                )
+
+        else:
+            raise LBTException(
+                f"Must add between an instance of LBT "
+                f"with another instance of LBT. "
+                f"{other}({other.__class__.__qualname__}) is not "
+                f"an instance of LBT."
+            )
 
     def __iadd__(self, other):
-        raise NotImplemented
+        return self.__add__(other)
 
     def __sub__(self, other):
-        raise NotImplemented
+        # Only allows subtraction between an instance of LBT and another instance of LBT
+        if isinstance(other, LBT):
+            if (
+                self.cost_allocation != other.cost_allocation
+                or self.lbt_portion != other.lbt_portion
+            ):
+                raise LBTException(
+                    f"Cost allocation or LBT/PBB portion is not equal. "
+                    f"Cost allocation: {self.cost_allocation} vs. {other.cost_allocation}, "
+                    f"LBT/PBB portion: {self.lbt_portion} vs. {other.lbt_portion}."
+                )
+
+            else:
+                start_year_combined = min(self.start_year, other.start_year)
+                end_year_combined = max(self.end_year, other.end_year)
+                description_combined = self.description + other.description
+
+                return LBT(
+                    start_year=start_year_combined,
+                    end_year=end_year_combined,
+                    cost=np.concatenate((self.cost, -other.cost)),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
+                    cost_allocation=self.cost_allocation,
+                    lbt_portion=self.lbt_portion,
+                    description=description_combined,
+                )
+
+        else:
+            raise LBTException(
+                f"Must subtract between an instance of LBT "
+                f"with another instance of LBT. "
+                f"{other}({other.__class__.__qualname__}) is not "
+                f"an instance of LBT."
+            )
 
     def __rsub__(self, other):
-        raise NotImplemented
+        return self.__sub__(other)
 
     def __mul__(self, other):
-        raise NotImplemented
+        # Multiplication is allowed only with an integer/a float
+        if isinstance(other, (float, int)):
+            return LBT(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                cost=self.cost * other,
+                expense_year=self.expense_year,
+                cost_allocation=self.cost_allocation,
+                lbt_portion=self.lbt_portion,
+                description=self.description,
+            )
+
+        else:
+            raise LBTException(
+                f"Must multiply with an integer or a float; "
+                f"{other}({other.__class__.__qualname__}) is not an integer nor a float."
+            )
 
     def __rmul__(self, other):
-        raise NotImplemented
+        return self.__mul__(other)
 
     def __truediv__(self, other):
-        raise NotImplemented
+        # Between an instance of LBT with another instance of Tangible/Intangible/OPEX/ASR/LBT/PDRD
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR, LBT, PDRD)):
+            return np.sum(self.cost) / np.sum(other.cost)
+
+        # Between an instance of LBT and an integer/float
+        elif isinstance(other, (float, int)):
+            # Cannot divide with zero
+            if other == 0:
+                raise LBTException(f"Cannot divide with zero")
+
+            else:
+                return LBT(
+                    start_year=self.start_year,
+                    end_year=self.end_year,
+                    cost=self.cost / other,
+                    expense_year=self.expense_year,
+                    cost_allocation=self.cost_allocation,
+                    lbt_portion=self.lbt_portion,
+                    description=self.description,
+                )
+
+        else:
+            raise LBTException(
+                f"Must divide with an instance of Tangible/Intangible/OPEX/ASR/LBT/PDRD, "
+                f"an integer or a float; {other}({other.__class__.__qualname__}) is not "
+                f"an instance of Tangible/Intangible/OPEX/ASR/LBT/PDRD nor an integer nor a float."
+            )
 
 
 @dataclass
 class PDRD:
-    """ 1234 """
+    """
+    Manages PDRD asset.
+
+    Parameters
+    ----------
+    start_year : int
+        The start year of the project.
+    end_year : int
+        The end year of the project.
+    cost : numpy.ndarray
+        An array representing the cost of a PDRD asset.
+    expense_year : numpy.ndarray
+        An array representing the expense year of a PDRD asset.
+    cost_allocation : FluidType
+        A string depicting the cost allocation of a PDRD asset.
+    pdrd_portion: float | int
+        A fraction of PDRD cost susceptible for PDRD tax.
+    description: list[str]
+        A list of string description regarding the associated PDRD cost.
+    """
+
+    start_year: int
+    end_year: int
+    cost: np.ndarray
+    expense_year: np.ndarray
+    cost_allocation: FluidType = field(default=FluidType.OIL)
+    pdrd_portion: float | int = field(default=1.0)
+    description: list[str] = field(default=None)
+
+    # Attribute to be defined later on
+    project_duration: int = field(default=None, init=False, repr=False)
+    project_years: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
-        pass
+        # Check for inappropriate start and end year project
+        if self.end_year >= self.start_year:
+            self.project_duration = self.end_year - self.start_year + 1
+            self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
 
-    def expenditures(self):
-        """ 1234 """
-        pass
+        else:
+            raise PDRDException(
+                f"start year {self.start_year} "
+                f"is after the end year {self.end_year}"
+            )
+
+        # Configure attribute "description"
+        if self.description is None:
+            self.description = [" " for _ in range(len(self.cost))]
+
+        if self.description is not None:
+            if len(self.description) != len(self.cost):
+                raise PDRDException(
+                    f"Unequal length of array: "
+                    f"description: {len(self.description)}, "
+                    f"cost: {len(self.cost)}"
+                )
+
+        # Check input data for unequal length
+        if len(self.expense_year) != len(self.cost):
+            raise PDRDException(
+                f"Unequal length of array: "
+                f"cost: {len(self.cost)}, "
+                f"expense_year: {len(self.expense_year)}"
+            )
+
+        # Raise an error message: expense year is after the end year of the project
+        if np.max(self.expense_year) > self.end_year:
+            raise PDRDException(
+                f"Expense year ({np.max(self.expense_year)}) "
+                f"is after the end year of the project ({self.end_year})"
+            )
+
+        if np.min(self.expense_year) < self.start_year:
+            raise PDRDException(
+                f"Expense year ({np.min(self.expense_year)}) "
+                f"is before the start year of the project ({self.start_year})"
+            )
+
+    def expenditures(
+        self,
+        inflation_rate: np.ndarray | float | int = 0.0,
+        pdrd_rate: np.ndarray | float | int = 0.0,
+        pdrd_discount: np.ndarray | float | int = 0.0,
+    ) -> np.ndarray:
+        """
+        Calculate PDRD expenditures per year.
+
+        This method calculates PDRD expenditures per year
+        based on the expense year and cost data provided.
+
+        Parameters
+        ----------
+        inflation_rate : np.ndarray or float or int, optional
+            The inflation rate to apply. Can be a single value or an array (default is 0).
+        pdrd_rate : numpy.ndarray or float or int, optional
+            The PDRD rate(s) to apply. Can be a single value or an array (default is 0).
+        pdrd_discount : numpy.ndarray or float or int, optional
+            The PDRD discount(s) to apply. Can be a single value or an array (default is 0).
+
+        Returns
+        -------
+        expenses: np.ndarray
+            An array depicting PDRD expenditures each year, taking into
+            account inflation and PDRD schemes.
+
+        Notes
+        -----
+        This method calculates PDRD expenditures while considering various economic factors
+        such as inflation and PDRD schemes. It uses decorators to apply these factors to the
+        core calculation. In the core calculations:
+        (1) Function np.bincount() is used to align the cost elements according
+            to its corresponding expense year,
+        (2) If len(expenses) < project_duration, then add the remaining elements
+            with zeros.
+        """
+        @apply_pdrd(
+            pdrd_portion=self.pdrd_portion,
+            pdrd_rate=pdrd_rate,
+            pdrd_discount=pdrd_discount,
+        )
+        @apply_inflation(inflation_rate=inflation_rate)
+        def _expenditures() -> np.ndarray:
+            expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
+            zeros = np.zeros(self.project_duration - len(expenses))
+            expenses = np.concatenate((expenses, zeros))
+            return expenses
+        return _expenditures()
 
     def __len__(self):
-        raise NotImplemented
+        return self.project_duration
 
     def __eq__(self, other):
-        raise NotImplemented
+        # Between an instance of PDRD with another instance of PDRD
+        if isinstance(other, PDRD):
+            return all((
+                np.allclose(self.cost, other.cost),
+                np.allclose(self.expense_year, other.expense_year),
+                self.cost_allocation == other.cost_allocation,
+                self.pdrd_portion == other.pdrd_portion
+            ))
+
+        # Between an instance of PDRD and an integer/float
+        elif isinstance(other, (float, int)):
+            return np.sum(self.cost) == other
+
+        else:
+            return False
 
     def __lt__(self, other):
-        raise NotImplemented
+        # Between an instance of PDRD with another instance of PDRD
+        if isinstance(other, PDRD):
+            return np.sum(self.cost) < np.sum(other.cost)
+
+        # Between an instance of PDRD with an integer/float
+        elif isinstance(other, (float, int)):
+            return np.sum(self.cost) < other
+
+        else:
+            raise PDRDException(
+                f"Must compare an instance of PDRD with another "
+                f"instance of PDRD, an integer, or a float. "
+                f"{other.__class__.__qualname__} is not an instance "
+                f"of PDRD, nor an integer/float."
+            )
 
     def __le__(self, other):
-        raise NotImplemented
+        # Between an instance of PDRD with another instance of PDRD
+        if isinstance(other, PDRD):
+            return np.sum(self.cost) <= np.sum(other.cost)
+
+        # Between an instance of PDRD with an integer/float
+        elif isinstance(other, (float, int)):
+            return np.sum(self.cost) <= other
+
+        else:
+            raise PDRDException(
+                f"Must compare an instance of PDRD with another "
+                f"instance of PDRD, an integer, or a float. "
+                f"{other.__class__.__qualname__} is not an instance "
+                f"of PDRD, nor an integer/float."
+            )
 
     def __gt__(self, other):
-        raise NotImplemented
+        # Between an instance of PDRD with another instance of PDRD
+        if isinstance(other, PDRD):
+            return np.sum(self.cost) > np.sum(other.cost)
+
+        # Between an instance of PDRD with an integer/float
+        elif isinstance(other, (float, int)):
+            return np.sum(self.cost) > other
+
+        else:
+            raise PDRDException(
+                f"Must compare an instance of PDRD with another "
+                f"instance of PDRD, an integer, or a float. "
+                f"{other.__class__.__qualname__} is not an instance "
+                f"of PDRD, nor an integer/float."
+            )
 
     def __ge__(self, other):
-        raise NotImplemented
+        # Between an instance of PDRD with another instance of PDRD
+        if isinstance(other, PDRD):
+            return np.sum(self.cost) >= np.sum(other.cost)
+
+        # Between an instance of PDRD with an integer/float
+        elif isinstance(other, (float, int)):
+            return np.sum(self.cost) >= other
+
+        else:
+            raise PDRDException(
+                f"Must compare an instance of PDRD with another "
+                f"instance of PDRD, an integer, or a float. "
+                f"{other.__class__.__qualname__} is not an instance "
+                f"of PDRD, nor an integer/float."
+            )
 
     def __add__(self, other):
-        raise NotImplemented
+        # Only allows addition between an instance of PDRD and another instance of PDRD
+        if isinstance(other, PDRD):
+            if (
+                self.cost_allocation != other.cost_allocation
+                or self.pdrd_portion != other.pdrd_portion
+            ):
+                raise PDRDException(
+                    f"Cost allocation or PDRD portion is not equal. "
+                    f"Cost allocation: {self.cost_allocation} vs. {other.cost_allocation}, "
+                    f"PDRD portion: {self.pdrd_portion} vs. {other.pdrd_portion}."
+                )
+
+            else:
+                start_year_combined = min(self.start_year, other.start_year)
+                end_year_combined = max(self.end_year, other.end_year)
+                description_combined = self.description + other.description
+
+                return PDRD(
+                    start_year=start_year_combined,
+                    end_year=end_year_combined,
+                    cost=np.concatenate((self.cost, other.cost)),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
+                    cost_allocation=self.cost_allocation,
+                    pdrd_portion=self.pdrd_portion,
+                    description=description_combined,
+                )
+
+        else:
+            raise PDRDException(
+                f"Must add between an instance of PDRD "
+                f"with another instance of PDRD. "
+                f"{other}({other.__class__.__qualname__}) is not "
+                f"an instance of PDRD."
+            )
 
     def __iadd__(self, other):
-        raise NotImplemented
+        return self.__add__(other)
 
     def __sub__(self, other):
-        raise NotImplemented
+        # Only allows subtraction between an instance of PDRD and another instance of PDRD
+        if isinstance(other, PDRD):
+            if (
+                self.cost_allocation != other.cost_allocation
+                or self.pdrd_portion != other.pdrd_portion
+            ):
+                raise PDRDException(
+                    f"Cost allocation or PDRD portion is not equal. "
+                    f"Cost allocation: {self.cost_allocation} vs. {other.cost_allocation}, "
+                    f"PDRD portion: {self.pdrd_portion} vs. {other.pdrd_portion}."
+                )
+
+            else:
+                start_year_combined = min(self.start_year, other.start_year)
+                end_year_combined = max(self.end_year, other.end_year)
+                description_combined = self.description + other.description
+
+                return PDRD(
+                    start_year=start_year_combined,
+                    end_year=end_year_combined,
+                    cost=np.concatenate((self.cost, -other.cost)),
+                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
+                    cost_allocation=self.cost_allocation,
+                    pdrd_portion=self.pdrd_portion,
+                    description=description_combined,
+                )
+
+        else:
+            raise PDRDException(
+                f"Must subtract between an instance of PDRD "
+                f"with another instance of PDRD. "
+                f"{other}({other.__class__.__qualname__}) is not "
+                f"an instance of PDRD."
+            )
 
     def __rsub__(self, other):
-        raise NotImplemented
+        return self.__sub__(other)
 
     def __mul__(self, other):
-        raise NotImplemented
+        # Multiplication is allowed only with an integer/a float
+        if isinstance(other, (float, int)):
+            return PDRD(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                cost=self.cost * other,
+                expense_year=self.expense_year,
+                cost_allocation=self.cost_allocation,
+                pdrd_portion=self.pdrd_portion,
+                description=self.description,
+            )
+
+        else:
+            raise PDRDException(
+                f"Must multiply with an integer or a float; "
+                f"{other}({other.__class__.__qualname__}) is not an integer nor a float."
+            )
 
     def __rmul__(self, other):
-        raise NotImplemented
+        return self.__mul__(other)
 
     def __truediv__(self, other):
-        raise NotImplemented
-    
+        # Between an instance of PDRD with another instance of Tangible/Intangible/OPEX/ASR/LBT/PDRD
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR, LBT, PDRD)):
+            return np.sum(self.cost) / np.sum(other.cost)
+
+        # Between an instance of PDRD and an integer/float
+        elif isinstance(other, (float, int)):
+            # Cannot divide with zero
+            if other == 0:
+                raise PDRDException(f"Cannot divide with zero")
+
+            else:
+                return PDRD(
+                    start_year=self.start_year,
+                    end_year=self.end_year,
+                    cost=self.cost / other,
+                    expense_year=self.expense_year,
+                    cost_allocation=self.cost_allocation,
+                    pdrd_portion=self.pdrd_portion,
+                    description=self.description,
+                )
+
+        else:
+            raise PDRDException(
+                f"Must divide with an instance of Tangible/Intangible/OPEX/ASR/LBT/PDRD, "
+                f"an integer or a float; {other}({other.__class__.__qualname__}) is not "
+                f"an instance of Tangible/Intangible/OPEX/ASR/LBT/PDRD nor an integer nor a float."
+            )

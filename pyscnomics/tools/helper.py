@@ -154,7 +154,7 @@ def apply_lbt(
     lbt_portion: float | int,
     lbt_rate: np.ndarray | float | int,
     lbt_discount: np.ndarray | float | int,
-):
+) -> callable:
     """
     Decorator for applying LBT scheme to a target function's result.
 
@@ -193,7 +193,7 @@ def apply_pdrd(
     pdrd_portion: float | int,
     pdrd_rate: np.ndarray | float | int,
     pdrd_discount: np.ndarray | float | int,
-):
+) -> callable:
     """
     Decorator for applying PDRD scheme to a target function's result.
 

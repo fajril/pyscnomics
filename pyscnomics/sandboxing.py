@@ -9,7 +9,7 @@ from dataclasses import asdict
 
 from pyscnomics.econ.selection import DeprMethod, FluidType
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR, LBT
+from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR, LBT, PDRD
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.econ.results import CashFlow
@@ -225,9 +225,28 @@ oil_apel_asr = ASR(
     expense_year=np.array([2025, 2026]),
     cost_allocation=FluidType.OIL
 )
+
 '-------------------------------------------- LBT/PBB COST DATA --------------------------------------------'
 
-# oil_mangga_lbt = LBT(
+oil_mangga_lbt = LBT(
+    start_year=2023,
+    end_year=2030,
+    cost=np.array([50, 50, 50, 50]),
+    expense_year=np.array([2024, 2025, 2026, 2027]),
+    cost_allocation=FluidType.OIL
+)
+
+oil_apel_lbt = LBT(
+    start_year=2023,
+    end_year=2030,
+    cost=np.array([50, 50, 50]),
+    expense_year=np.array([2027, 2028, 2029]),
+    cost_allocation=FluidType.OIL
+)
+
+'--------------------------------------------- PDRD COST DATA ----------------------------------------------'
+
+# oil_mangga_pdrd = PDRD(
 #     start_year=2023,
 #     end_year=2030,
 #     cost=np.array([50, 50, 50, 50]),
@@ -235,7 +254,7 @@ oil_apel_asr = ASR(
 #     cost_allocation=FluidType.OIL
 # )
 
-oil_apel_lbt = LBT(
+oil_apel_pdrd = PDRD(
     start_year=2023,
     end_year=2030,
     cost=np.array([50, 50, 50]),
@@ -292,7 +311,7 @@ tangible_cost = (
     sulfur_mangga2_tangible
 )
 
-oil_mangga_lbt = LBT(
+oil_mangga_pdrd = PDRD(
     start_year=2023,
     end_year=2030,
     cost=np.array([100, 100, 100, 100]),
@@ -302,10 +321,11 @@ oil_mangga_lbt = LBT(
 
 start_timer = tm.time()
 
-t1 = oil_mangga_lbt.expenditures(
+t1 = oil_mangga_pdrd.expenditures(
     # inflation_rate=0.05,
-    lbt_rate=np.array([0.05 for _ in range(8)]),
-    inflation_rate=np.array([0.0 for _ in range(8)]),
+    # pdrd_rate=0.05,
+    # inflation_rate=np.array([0.05, 0.05, 0.05, 0.05, 0.1, 0.1, 0.1, 0.1]),
+    pdrd_rate=np.array([0.05 for _ in range(8)]),
 )
 
 end_timer = tm.time() - start_timer
