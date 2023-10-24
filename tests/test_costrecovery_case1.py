@@ -622,3 +622,70 @@ def test_consolidated_taxable_income():
     np.testing.assert_allclose(engine, base, atol=1e-6)
 
 
+def test_consolidated_tax_due():
+    # Calculated result
+    engine = psc._consolidated_tax_due
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_tax_due')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_unpaid_tax_balance():
+    # Calculated result
+    engine = psc._consolidated_unpaid_tax_balance
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_unpaid_tax_balance')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_tax_payment():
+    # Calculated result
+    engine = psc._consolidated_tax_payment
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_tax_payment')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_ctr_net_share():
+    # Calculated result
+    engine = psc._consolidated_ctr_net_share
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_ctr_net_share')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_gov_take():
+    # Calculated result
+    engine = psc._consolidated_government_take
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_gov_take')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+def test_consolidated_cashflow():
+    # Calculated result
+    engine = psc._consolidated_cashflow
+
+    # Expected result
+    base = load_testing(dataset_type='case1', key='cnsltd_cashflow')
+
+    # Execute testing
+    np.testing.assert_allclose(engine, base, atol=1e-6)
+
+
+

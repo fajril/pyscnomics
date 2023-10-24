@@ -766,11 +766,14 @@ class CostRecovery(BaseProject):
         self._consolidated_ic = self._oil_ic + self._gas_ic
         self._consolidated_ic_unrecovered = self._oil_ic_unrecovered + self._gas_ic_unrecovered
         self._consolidated_ic_paid = self._oil_ic_paid + self._gas_ic_paid
-        self._consolidated_unrecovered_before_transfer = self._oil_unrecovered_before_transfer + self._gas_unrecovered_before_transfer
+        self._consolidated_unrecovered_before_transfer = (self._oil_unrecovered_before_transfer +
+                                                          self._gas_unrecovered_before_transfer)
         self._consolidated_cost_recovery_before_transfer = self._oil_cost_recovery + self._gas_cost_recovery
         self._consolidated_ets_before_transfer = self._oil_ets_before_transfer + self._gas_ets_before_transfer
-        self._consolidated_unrecovered_after_transfer = self._oil_unrecovered_after_transfer + self._gas_unrecovered_after_transfer
-        self._consolidated_cost_to_be_recovered_after_tf = self._oil_cost_to_be_recovered_after_tf + self._gas_cost_to_be_recovered_after_tf
+        self._consolidated_unrecovered_after_transfer = (self._oil_unrecovered_after_transfer +
+                                                         self._gas_unrecovered_after_transfer)
+        self._consolidated_cost_to_be_recovered_after_tf = (self._oil_cost_to_be_recovered_after_tf +
+                                                            self._gas_cost_to_be_recovered_after_tf)
         self._consolidated_cost_recovery_after_tf = self._oil_cost_recovery_after_tf + self._gas_cost_recovery_after_tf
         self._consolidated_ets_after_transfer = self._oil_ets_after_transfer + self._gas_ets_after_transfer
         self._consolidated_contractor_share = self._oil_contractor_share + self._gas_contractor_share
@@ -795,4 +798,13 @@ class CostRecovery(BaseProject):
                                               self._consolidated_tax_payment +
                                               self._consolidated_cost_recovery_after_tf)
 
-        self._consolidated_cashflow = self._consolidated_contractor_take - (self._consolidated_tangible + self._consolidated_non_capital)
+        self._consolidated_government_take = (
+                self._consolidated_ftp_gov
+                + self._consolidated_government_share
+                + self._consolidated_tax_payment
+                + self._consolidated_ddmo
+        )
+
+        self._consolidated_cashflow = (self._consolidated_contractor_take -
+                                       (self._consolidated_tangible +
+                                        self._consolidated_non_capital))
