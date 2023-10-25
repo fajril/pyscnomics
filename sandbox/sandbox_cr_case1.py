@@ -39,7 +39,7 @@ psc.gas_dmo_holiday_duration = 60
 tax_rate = 0.424
 
 start_time = time.time()
-psc.run(tax_rate=tax_rate)
+psc.run(tax_rate=tax_rate, discount_rate_year=2021, discount_rate=0.1)
 end_time = time.time()
 print('Execution Time: ', end_time - start_time, '\n')
 
@@ -156,49 +156,56 @@ psc_table_consolidated['cnsltd_ctr_net_share'] = psc._consolidated_ctr_net_share
 psc_table_consolidated['cnsltd_contractor_take'] = psc._consolidated_contractor_take
 psc_table_consolidated['cnsltd_government_take'] = psc._consolidated_government_take
 psc_table_consolidated['cnsltd_cashflow'] = psc._consolidated_cashflow
+psc_table_consolidated['cum. cnsltd_cashflow'] = np.cumsum(psc._consolidated_cashflow)
 psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
 print(psc_table_consolidated, '\n')
 
 
 # df_comparison = pd.DataFrame()
 # # Calculated result
-# engine = psc._consolidated_unrecovered_before_transfer
+# engine = psc._consolidated_cashflow
 #
 # # Expected result
-# base = load_testing(dataset_type='case1', key='cnsltd_unrec_cost')
+# base = load_testing(dataset_type='case1', key='cnsltd_cashflow')
 #
 # df_comparison['Year'] = psc.project_years
 # df_comparison['Base'] = base
 # df_comparison['Engine'] = engine
 # df_comparison['Diff'] = base - engine
 # print(df_comparison, '\n')
-
+#
 # gross_revenue_calc = psc._oil_contractor_take + psc._oil_government_take
 # gross_revenue_engine = psc._oil_revenue + psc._gas_revenue
 #
 # print(gross_revenue_calc)
 # print(gross_revenue_engine)
 
-psc.get_summary()
-print('Lifting Oil/Condensate', psc._summary.lifting_oil)
-print('Lifting Gas', psc._summary.lifting_gas)
-print('Oil WAP', psc._summary.oil_wap)
-print('Gas WAP', psc._summary.gas_wap)
-print('Gross Revenue', psc._summary.gross_revenue)
-print('CTR Gross Share', psc._summary.ctr_gross_share)
-print('GOV Gross Share', psc._summary.gov_gross_share)
-print('Sunk Cost', psc._summary.sunk_cost)
-print('Investment', psc._summary.investment)
-print('Tangible', psc._summary.tangible)
-print('Intangible', psc._summary.intangible)
-print('OPEX and ASR', psc._summary.opex_and_asr)
-print('OPEX', psc._summary.opex)
-print('ASR', psc._summary.asr)
-print('Cost Recovery', psc._summary.cost_recovery_or_deductible_cost)
-print('(%) Gross Rev', psc._summary.gross_rev_cost_recovery_or_deductible_cost)
-print('Unrec. Cost', psc._summary.unrec_or_carry_forward_deductible_cost)
-print('Unrec. Over Cost Recovery', psc._summary.unrec_over_cost_recovery)
-print('CTR Net Share)', psc._summary.ctr_net_share)
-print('(%) CTR Net Share over Gross Rev.))', psc._summary.ctr_net_share_over_gross_share)
+# psc.get_summary()
+# print('Lifting Oil/Condensate', psc._summary.lifting_oil)
+# print('Lifting Gas', psc._summary.lifting_gas)
+# print('Oil WAP', psc._summary.oil_wap)
+# print('Gas WAP', psc._summary.gas_wap)
+# print('Gross Revenue', psc._summary.gross_revenue)
+# print('CTR Gross Share', psc._summary.ctr_gross_share)
+# print('GOV Gross Share', psc._summary.gov_gross_share)
+# print('Sunk Cost', psc._summary.sunk_cost)
+# print('Investment', psc._summary.investment)
+# print('Tangible', psc._summary.tangible)
+# print('Intangible', psc._summary.intangible)
+# print('OPEX and ASR', psc._summary.opex_and_asr)
+# print('OPEX', psc._summary.opex)
+# print('ASR', psc._summary.asr)
+# print('Cost Recovery', psc._summary.cost_recovery_or_deductible_cost)
+# print('(%) Gross Rev', psc._summary.gross_rev_cost_recovery_or_deductible_cost)
+# print('Unrec. Cost', psc._summary.unrec_or_carry_forward_deductible_cost)
+# print('Unrec. Over Cost Recovery', psc._summary.unrec_over_cost_recovery)
+# print('CTR Net Share)', psc._summary.ctr_net_share)
+# print('(%) CTR Net Share over Gross Rev.))', psc._summary.ctr_net_share_over_gross_share)
 # print('POT', psc._summary.ctr_pot)
+
+# psc._get_sunk_cost(discount_rate_year=2021)
+# print(psc._oil_sunk_cost)
+# print(psc._gas_sunk_cost)
+# print(np.sum(psc._oil_sunk_cost))
+# print(np.sum(psc._gas_sunk_cost))
 

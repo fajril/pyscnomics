@@ -417,37 +417,6 @@ class BaseProject:
 
         self._co2_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
-    def _get_oil_sunk_cost(self):
-        """
-        Function to get the sunk cost of the oil's cost.
-
-        Notes
-        -----
-        The sunk cost in this method is categorized as an Intangible cost that exist
-        prior of the Operating Expenditures occur.
-        """
-        oil_sunk_cost_years = np.arange(self.start_date.year, np.min(self._oil_opex.expense_year)-1, 1)
-        updated = np.bincount(self._oil_intangible.project_years - np.min(oil_sunk_cost_years),
-                              weights=self._oil_intangible.expenditures())
-        zeros = np.zeros(self.project_duration - len(updated))
-        self._oil_sunk_cost = np.concatenate((updated, zeros))
-
-    def _get_gas_sunk_cost(self):
-        """
-        Function to get the sunk cost of the gas's cost.
-
-        Notes
-        -----
-        The sunk cost in this method is categorized as an Intangible cost that exist
-        prior of the Operating Expenditures occur.
-        """
-        # Gas Sunk Cost
-        gas_sunk_cost_years = np.arange(self.start_date.year, np.min(self._gas_opex.expense_year) - 1, 1)
-        updated = np.bincount(self._gas_intangible.project_years - np.min(gas_sunk_cost_years),
-                              weights=self._gas_intangible.expenditures())
-        zeros = np.zeros(self.project_duration - len(updated))
-        self._gas_sunk_cost = np.concatenate((updated, zeros))
-
     def _get_oil_lifting(self):
         """
         Determines total oil Lifting from the number of oil Lifting instances in

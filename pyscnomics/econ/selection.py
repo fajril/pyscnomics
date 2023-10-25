@@ -136,3 +136,9 @@ class ContractType(Enum):
     TRANSITION_CR_GS = 'Transition CR - GS'
     TRANSITION_GS_GS = 'Transition GS - GS'
     TRANSITION_GS_CR = 'Transition GS - CR'
+
+
+class NPVSelection(Enum):
+    FULL_CYCLE_REAL_TERMS = 'NPV Full Cycle using real terms method'
+    FULL_CYCLE_NOMINAL_TERMS = 'NPV Full Cycle using real nominal terms method'
+    POINT_FORWARD = 'NPV Point Forward using real nominal terms method'
