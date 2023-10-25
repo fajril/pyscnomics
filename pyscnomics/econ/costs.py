@@ -5,12 +5,15 @@ Prepare and classify cost data based on its components. The associated cost comp
 (3) OPEX,
 (4) ASR
 """
+import enum
 
 import numpy as np
 from dataclasses import dataclass, field
 
 import pyscnomics.econ.depreciation as depr
 from pyscnomics.tools.helper import (
+    apply_cost_adjustment,
+    apply_tax,
     apply_inflation,
     apply_vat_and_pdri,
     apply_cost_modification,
@@ -19,6 +22,7 @@ from pyscnomics.tools.helper import (
 )
 from pyscnomics.econ.selection import (
     FluidType,
+    TaxType,
     DeprMethod,
     YearReference,
 )
@@ -86,12 +90,6 @@ class Tangible:
     depreciation_factor: np.ndarray, optional
         The value of depreciation factor to be used in PSC_DB depreciation method.
         Default value is 0.5 for the entire project duration.
-    is_ic_applied: bool, optional
-        Whether investment credit is applied or not. Default value is False.
-    vat_portion: float | int, optional
-        A fraction of tangible cost susceptible for VAT/PPN.
-    pdri_portion: float | int, optional
-        A fraction of tangible cost susceptible for PDRI.
     description: list[str]
         A list of string description regarding the associated tangible cost.
     """
@@ -100,14 +98,11 @@ class Tangible:
     end_year: int
     cost: np.ndarray
     expense_year: np.ndarray
-    cost_allocation: FluidType = field(default=FluidType.OIL)
-    pis_year: np.ndarray = field(default=None, repr=False)
+    pis_year: np.ndarray = field(default=None)
+    cost_allocation: list[FluidType] = field(default=None)
     salvage_value: np.ndarray = field(default=None)
     useful_life: np.ndarray = field(default=None)
     depreciation_factor: np.ndarray = field(default=None)
-    is_ic_applied: bool = field(default=False)
-    vat_portion: float | int = field(default=1.0)
-    pdri_portion: float | int = field(default=1.0)
     description: list[str] = field(default=None)
 
     # Attribute to be defined later on
@@ -127,33 +122,77 @@ class Tangible:
                 f"is after the end year: {self.end_year}"
             )
 
-        # Configure attribute "description"
+        # Configure description data
         if self.description is None:
             self.description = [" " for _ in range(len(self.cost))]
 
         if self.description is not None:
-            if len(self.description) != len(self.cost):
+            if not isinstance(self.description, list):
                 raise TangibleException(
-                    f"Unequal length of array: "
-                    f"description: {len(self.description)}, "
-                    f"cost: {len(self.cost)}"
+                    f"Attribute description must be a list; "
+                    f"description ({self.description.__class__.__qualname__}) "
+                    f"is not a list."
                 )
 
-        # User does not provide pis_year data
+        # Configure pis_year data
         if self.pis_year is None:
-            self.pis_year = self.expense_year.copy()
+            self.pis_year = self.expense_year
 
-        # User does not provide salvage_value data
+        if self.pis_year is not None:
+            if not isinstance(self.pis_year, np.ndarray):
+                raise TangibleException(
+                    f"Attribute pis_year must be a numpy.ndarray; "
+                    f"pis_year ({self.description.__class__.__qualname__}) "
+                    f"is not a numpy.ndarray."
+                )
+
+        # Configure salvage_value data
         if self.salvage_value is None:
             self.salvage_value = np.zeros(len(self.cost))
 
-        # User does not provide useful_life data
+        if self.salvage_value is not None:
+            if not isinstance(self.salvage_value, np.ndarray):
+                raise TangibleException(
+                    f"Attribute salvage_value must be a numpy.ndarray; "
+                    f"salvage_value ({self.description.__class__.__qualname__}) "
+                    f"is not a numpy.ndarray."
+                )
+
+        # Configure useful_life data
         if self.useful_life is None:
             self.useful_life = np.repeat(5.0, len(self.cost))
 
-        # User does not provide depreciation_factor data
+        if self.useful_life is not None:
+            if not isinstance(self.useful_life, np.ndarray):
+                raise TangibleException(
+                    f"Attribute useful_life must be a numpy.ndarray; "
+                    f"useful_life ({self.description.__class__.__qualname__}) "
+                    f"is not a numpy.ndarray."
+                )
+
+        # Configure depreciation_factor data
         if self.depreciation_factor is None:
             self.depreciation_factor = np.repeat(0.5, len(self.cost))
+
+        if self.depreciation_factor is not None:
+            if not isinstance(self.depreciation_factor, np.ndarray):
+                raise TangibleException(
+                    f"Attribute depreciation_factor must be a numpy.ndarray; "
+                    f"depreciation_factor ({self.description.__class__.__qualname__}) "
+                    f"is not a numpy.ndarray."
+                )
+
+        # Configure cost_allocation data
+        if self.cost_allocation is None:
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
+
+        if self.cost_allocation is not None:
+            if not isinstance(self.cost_allocation, list):
+                raise TangibleException(
+                    f"Attribute cost_allocation must be a list. "
+                    f"cost_allocation ({self.cost_allocation.__class__.__qualname__}) "
+                    f"is not a list."
+                )
 
         # Check input data for unequal length
         arr_length = len(self.cost)
@@ -166,6 +205,8 @@ class Tangible:
                 self.salvage_value,
                 self.useful_life,
                 self.depreciation_factor,
+                self.cost_allocation,
+                self.description,
             ]
         ):
             raise TangibleException(
@@ -175,7 +216,9 @@ class Tangible:
                 f"pis_year: {len(self.pis_year)}, "
                 f"salvage_value: {len(self.salvage_value)}, "
                 f"useful_life: {len(self.useful_life)}, "
-                f"depreciation_factor: {len(self.depreciation_factor)}"
+                f"depreciation_factor: {len(self.depreciation_factor)}, "
+                f"cost_allocation: {len(self.cost_allocation)}, "
+                f"description: {len(self.description)}."
             )
 
         # Raise an error message: expense year is after the end year of the project
@@ -194,81 +237,41 @@ class Tangible:
 
     def expenditures(
         self,
+        inflation_rate: np.ndarray | float = 0.0,
+        year_now: int = None,
         year_ref: YearReference = YearReference.EXPENSE_YEAR,
-        inflation_rate: np.ndarray | float | int = 0.0,
-        vat_rate: np.ndarray | float | int = 0.0,
-        vat_discount: np.ndarray | float | int = 0.0,
-        pdri_rate: np.ndarray | float | int = 0.0,
-        pdri_discount: np.ndarray | float | int = 0.0,
     ) -> np.ndarray:
-        """
-        Calculate tangible expenditures per year.
+        """ 1234 """
 
-        This method calculates the tangible expenditures per year
-        based on the expense year and cost data provided.
+        if year_now is None:
+            year_now = self.start_year
 
-        Parameters
-        ----------
-        year_ref : YearReference, optional
-            Reference year for expenses (default is YearReference.EXPENSE_YEAR).
-        inflation_rate : np.ndarray or float or int, optional
-            The inflation rate to apply. Can be a single value or an array (default is 0).
-        vat_rate : np.ndarray, float, or int, optional
-            The VAT/PPN rate(s) to apply. Can be a single value or an array (default is 0).
-        vat_discount : np.ndarray, float, or int, optional
-            The VAT discount(s) to apply. Can be a single value or an array (default is 0).
-        pdri_rate : np.ndarray, float, or int, optional
-            The PDRI rate(s) to apply. Can be a single value or an array (default is 0).
-        pdri_discount : np.ndarray, float, or int, optional
-            The PDRI discount(s) to apply. Can be a single value or an array (default is 0).
-
-        Returns
-        -------
-        expenses: np.ndarray
-            An array depicting the tangible expenditures each year, taking into account
-            various economic factors, such as inflation, VAT/PPN, and PDRI schemes.
-
-        Notes
-        -----
-        This method calculates tangible expenditures while considering various economic factors
-        such as inflation, VAT, and PDRI schemes. It uses decorators to apply these factors to the
-        core calculation. Within the the core calculations:
-        (1) Function np.bincount() is used to align the cost elements according
-            to its corresponding expense year,
-        (2) If len(expenses) < project_duration, then add the remaining elements
-            with zeros.
-        """
-
-        @apply_vat_and_pdri(
-            vat_portion=self.vat_portion,
-            vat_rate=vat_rate,
-            vat_discount=vat_discount,
-            pdri_portion=self.pdri_portion,
-            pdri_rate=pdri_rate,
-            pdri_discount=pdri_discount,
+        cost_adjusted = apply_cost_adjustment(
+            start_year=self.start_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_duration=self.project_duration,
+            project_years=self.project_years,
+            year_now=year_now,
+            inflation_rate=inflation_rate,
         )
-        @apply_inflation(inflation_rate=inflation_rate)
-        def _expenditures() -> np.ndarray:
-            if year_ref == YearReference.EXPENSE_YEAR:
-                expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
 
-            else:
-                expenses = np.bincount(self.pis_year - self.start_year, weights=self.cost)
-            zeros = np.zeros(self.project_duration - len(expenses))
-            expenses = np.concatenate((expenses, zeros))
-            return expenses
-        return _expenditures()
+        # def _expenditures():
+        #     if year_ref == YearReference.EXPENSE_YEAR:
+        #         expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
+        #     else:
+        #         expenses = np.bincount(self.pis_year - self.start_year, weights=self.cost)
+        #     zeros = np.zeros(self.project_duration - len(expenses))
+        #     expenses = np.concatenate((expenses, zeros))
+        #     return expenses
+        # return _expenditures()
 
     def total_depreciation_rate(
         self,
         year_ref: YearReference = YearReference.EXPENSE_YEAR,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
-        inflation_rate: np.ndarray | float | int = 0.0,
-        vat_rate: np.ndarray | float | int = 0.0,
-        vat_discount: np.ndarray | float | int = 0.0,
-        pdri_rate: np.ndarray | float | int = 0.0,
-        pdri_discount: np.ndarray | float | int = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
     ) -> tuple:
         """
         Calculate total depreciation charge and undepreciated asset value based on various parameters.
@@ -283,14 +286,6 @@ class Tangible:
             The decline factor used for declining balance depreciation (default is 2).
         inflation_rate : np.ndarray | float | int, optional
             The inflation rate to apply. Can be a single value or an array (default is 0).
-        vat_rate : np.ndarray | float | int, optional
-            The VAT/PPN rate(s) to apply. Can be a single value or an array (default is 0).
-        vat_discount : np.ndarray | float | int, optional
-            The VAT discount(s) to apply. Can be a single value or an array (default is 0).
-        pdri_rate : np.ndarray | float | int, optional
-            The PDRI rate(s) to apply. Can be a single value or an array (default is 0).
-        pdri_discount : np.ndarray | float | int, optional
-            The PDRI discount(s) to apply. Can be a single value or an array (default is 0).
 
         Returns
         --------
@@ -304,8 +299,7 @@ class Tangible:
         (1) This method calculates depreciation charges based on the specified
             depreciation method.
         (2) Prior to the core calculations, attribute 'cost' is modified by
-            taking into account various economic factors such as inflation,
-            VAT/PPN, and PDRI schemes.
+            taking into account inflation scheme.
         (3) The depreciation charges are aligned with the corresponding periods
             based on the expense_year (or pis_year).
         """
@@ -317,19 +311,14 @@ class Tangible:
             expense_year=self.expense_year,
             project_duration=self.project_duration,
             inflation_rate=inflation_rate,
-            vat_portion=self.vat_portion,
-            vat_rate=vat_rate,
-            vat_discount=vat_discount,
-            pdri_portion=self.pdri_portion,
-            pdri_rate=pdri_rate,
-            pdri_discount=pdri_discount,
             year_ref=year_ref,
             pis_year=self.pis_year,
         )
 
         print('\t')
+        print(f'Filetype: {type(cost_modified)}')
         print(f'Length: {len(cost_modified)}')
-        print('cost_modified = ', cost_modified)
+        print('cost_modified = \n', cost_modified)
 
         # Create a new instance of Tangible
         salvage_value_modified = self.salvage_value
@@ -345,7 +334,7 @@ class Tangible:
         if len(depreciation_factor_modified) < len(cost_modified):
             depreciation_factor_modified = np.repeat(self.depreciation_factor[0], len(cost_modified))
 
-        new_Tangible = Tangible(
+        newTangible = Tangible(
             start_year=self.start_year,
             end_year=self.end_year,
             cost=cost_modified,
@@ -355,109 +344,79 @@ class Tangible:
             salvage_value=salvage_value_modified,
             useful_life=useful_life_modified,
             depreciation_factor=depreciation_factor_modified,
-            is_ic_applied=self.is_ic_applied,
-            vat_portion=self.vat_portion,
-            pdri_portion=self.pdri_portion,
         )
 
-        print('\t')
-        print('new Tangible = ', new_Tangible)
-
-        # Straight line
-        if depr_method == DeprMethod.SL:
-            depreciation_charge = np.asarray(
-                [
-                    depr.straight_line_depreciation_rate(
-                        cost=c,
-                        salvage_value=sv,
-                        useful_life=ul,
-                        depreciation_len=self.project_duration,
-                    )
-                    for c, sv, ul in zip(
-                        new_Tangible.cost,
-                        new_Tangible.salvage_value,
-                        new_Tangible.useful_life,
-                    )
-                ]
-            )
-
-        # Declining balance/double declining balance
-        if depr_method == DeprMethod.DB:
-            depreciation_charge = np.asarray(
-                [
-                    depr.declining_balance_depreciation_rate(
-                        cost=c,
-                        salvage_value=sv,
-                        useful_life=ul,
-                        decline_factor=decline_factor,
-                        depreciation_len=self.project_duration,
-                    )
-                    for c, sv, ul in zip(
-                        new_Tangible.cost,
-                        new_Tangible.salvage_value,
-                        new_Tangible.useful_life,
-                    )
-                ]
-            )
-
-        # PSC_DB
-        if depr_method == DeprMethod.PSC_DB:
-            depreciation_charge = np.asarray(
-                [
-                    depr.psc_declining_balance_depreciation_rate(
-                        cost=c,
-                        depreciation_factor=dr,
-                        useful_life=ul,
-                        depreciation_len=self.project_duration,
-                    )
-                    for c, dr, ul in zip(
-                        new_Tangible.cost,
-                        new_Tangible.depreciation_factor,
-                        new_Tangible.useful_life,
-                    )
-                ]
-            )
-
-        print('\t')
-        print(f'Shape: {depreciation_charge.shape}')
-        print(f'Length: {len(depreciation_charge)}')
-        print('depreciation_charge = \n', depreciation_charge)
-
-        t1 = np.sum(depreciation_charge, axis=1, keepdims=True)
-
-        print('\t')
-        print(f'Shape: {t1.shape}')
-        print(f'Length: {len(t1)}')
-        print('t1 = \n', t1)
-
-        # The relative difference of pis_year and start_year
-        shift_indices = new_Tangible.pis_year - new_Tangible.start_year
-
-        # Modify depreciation_charge so that expenditures are aligned with
-        # the corresponding pis_year (or expense_year)
-        depreciation_charge = np.asarray(
-            [
-                np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
-                for row, i in zip(depreciation_charge, shift_indices)
-            ]
-        )
-
-        print('\t')
-        print(f'Shape: {depreciation_charge.shape}')
-        print(f'Length: {len(depreciation_charge)}')
-        print('depreciation_charge = \n', depreciation_charge)
-
-        t2 = np.sum(depreciation_charge, axis=1, keepdims=True)
-
-        print('\t')
-        print(f'Shape: {t2.shape}')
-        print(f'Length: {len(t2)}')
-        print('t2 = \n', t2)
-
-        total_depreciation_charge = depreciation_charge.sum(axis=0)
-        undepreciated_asset = np.sum(new_Tangible.cost) - np.sum(total_depreciation_charge)
-
-        return total_depreciation_charge, undepreciated_asset
+        # # Straight line
+        # if depr_method == DeprMethod.SL:
+        #     depreciation_charge = np.asarray(
+        #         [
+        #             depr.straight_line_depreciation_rate(
+        #                 cost=c,
+        #                 salvage_value=sv,
+        #                 useful_life=ul,
+        #                 depreciation_len=self.project_duration,
+        #             )
+        #             for c, sv, ul in zip(
+        #                 new_Tangible.cost,
+        #                 new_Tangible.salvage_value,
+        #                 new_Tangible.useful_life,
+        #             )
+        #         ]
+        #     )
+        #
+        # # Declining balance/double declining balance
+        # if depr_method == DeprMethod.DB:
+        #     depreciation_charge = np.asarray(
+        #         [
+        #             depr.declining_balance_depreciation_rate(
+        #                 cost=c,
+        #                 salvage_value=sv,
+        #                 useful_life=ul,
+        #                 decline_factor=decline_factor,
+        #                 depreciation_len=self.project_duration,
+        #             )
+        #             for c, sv, ul in zip(
+        #                 new_Tangible.cost,
+        #                 new_Tangible.salvage_value,
+        #                 new_Tangible.useful_life,
+        #             )
+        #         ]
+        #     )
+        #
+        # # PSC_DB
+        # if depr_method == DeprMethod.PSC_DB:
+        #     depreciation_charge = np.asarray(
+        #         [
+        #             depr.psc_declining_balance_depreciation_rate(
+        #                 cost=c,
+        #                 depreciation_factor=dr,
+        #                 useful_life=ul,
+        #                 depreciation_len=self.project_duration,
+        #             )
+        #             for c, dr, ul in zip(
+        #                 new_Tangible.cost,
+        #                 new_Tangible.depreciation_factor,
+        #                 new_Tangible.useful_life,
+        #             )
+        #         ]
+        #     )
+        #
+        # # The relative difference of pis_year and start_year
+        # shift_indices = new_Tangible.pis_year - new_Tangible.start_year
+        #
+        # # Modify depreciation_charge so that expenditures are aligned with
+        # # the corresponding pis_year (or expense_year)
+        # depreciation_charge = np.asarray(
+        #     [
+        #         np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
+        #         for row, i in zip(depreciation_charge, shift_indices)
+        #     ]
+        # )
+        #
+        # total_depreciation_charge = depreciation_charge.sum(axis=0)
+        # undepreciated_asset = np.sum(new_Tangible.cost) - np.sum(total_depreciation_charge)
+        #
+        # return total_depreciation_charge, undepreciated_asset
 
     def total_depreciation_book_value(
         self,

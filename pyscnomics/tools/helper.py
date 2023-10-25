@@ -4,7 +4,7 @@ Handles summation operation on two arrays, accounting for different starting yea
 
 import numpy as np
 from functools import wraps
-from pyscnomics.econ.selection import FluidType, YearReference
+from pyscnomics.econ.selection import FluidType, YearReference, TaxType
 
 
 class TaxesException(Exception):
@@ -54,7 +54,51 @@ def check_input(target_func, param: np.ndarray | float | int) -> np.ndarray:
     return param_arr
 
 
-def apply_inflation(inflation_rate: np.ndarray | float | int) -> callable:
+def apply_cost_adjustment(
+    start_year: int,
+    cost: np.ndarray,
+    expense_year: np.ndarray,
+    project_duration: int,
+    project_years: np.ndarray,
+    year_now: int,
+    inflation_rate: np.ndarray | float,
+) -> np.ndarray:
+    """ 1234 """
+
+    inflation_rate_arr = check_input(target_func=project_years, param=inflation_rate)
+    if isinstance(inflation_rate, float):
+        inflation_rate_arr = np.repeat(inflation_rate, project_duration)
+
+    id_rate_arr = ((expense_year - year_now) + (year_now - start_year)).astype("int")
+    id_year_now = np.argwhere(year_now == project_years).ravel()[0]
+    id_captured = int(id_year_now + 1)
+
+    inflation_mult = np.ones([len(cost), project_duration], dtype=np.float_)
+    for i in range(len(cost)):
+        inflation_mult[i, id_captured:int(id_rate_arr[i] + 1)] = (
+            1.0 + inflation_rate_arr[id_captured:int(id_rate_arr[i] + 1)]
+        )
+
+    inflation_mult = np.prod(inflation_mult, axis=1)
+    cost_adjusted = cost * inflation_mult
+
+    print('\t')
+    print(f"Filetype: {type(cost)}")
+    print(f"Length: {len(cost)}")
+    print("cost = ", cost)
+
+    print("\t")
+    print(f"Filetype: {type(inflation_mult)}")
+    print(f'Shape: {inflation_mult.shape}')
+    print("inflation_mult = \n", inflation_mult)
+
+    print('\t')
+    print(f"Filetype: {type(cost_adjusted)}")
+    print(f"Length: {len(cost_adjusted)}")
+    print("cost_adjusted = ", cost_adjusted)
+
+
+def apply_inflation(inflation_rate: np.ndarray | float) -> callable:
     """
     Decorator function to apply inflation/escalation to a target function's result.
 
@@ -73,15 +117,39 @@ def apply_inflation(inflation_rate: np.ndarray | float | int) -> callable:
     This decorator is used to apply inflation multiplier to the result of a target function.
     It takes inflation rate as an input argument and returns a decorated function.
     """
+
     def _decorated(f):
         @wraps(f)
         def _wrapper(*args, **kwargs):
             exponents = np.arange(0, len(f(*args, **kwargs)), 1)
-            inflation_rate_arr = check_input(target_func=f(*args, **kwargs), param=inflation_rate)
+            inflation_rate_arr = check_input(
+                target_func=f(*args, **kwargs), param=inflation_rate
+            )
             inflation_mult = (1.0 + inflation_rate_arr) ** exponents
             modified_arr = f(*args, **kwargs) * inflation_mult
             return modified_arr
+
         return _wrapper
+
+    return _decorated
+
+
+def apply_tax(
+    tax_portion: np.ndarray,
+    tax_rate: np.ndarray | float,
+    tax_discount: float,
+) -> callable:
+    """1234"""
+
+    def _decorated(f):
+        @wraps(f)
+        def _wrapper(*args, **kwargs):
+            tax_rate_arr = check_input(target_func=f(*args, **kwargs), param=tax_rate)
+            tax_multiplier = tax_portion * tax_rate_arr * (1.0 - tax_discount)
+            return f(*args, **kwargs) * (1.0 + tax_multiplier)
+
+        return _wrapper
+
     return _decorated
 
 
@@ -127,26 +195,41 @@ def apply_vat_and_pdri(
     VAT multiplier with the PDRI multiplier. The total multiplier is then invoked
     into the result of the target function.
     """
+
     def _decorated(f):
         @wraps(f)
         def _wrapper(*args, **kwargs):
             def _get_vat():
                 vat_portion_arr = np.repeat(vat_portion, len(f(*args, **kwargs)))
-                vat_rate_arr = check_input(target_func=f(*args, **kwargs), param=vat_rate)
-                vat_discount_arr = check_input(target_func=f(*args, **kwargs), param=vat_discount)
-                vat_multiplier = vat_portion_arr * vat_rate_arr * (1.0 - vat_discount_arr)
+                vat_rate_arr = check_input(
+                    target_func=f(*args, **kwargs), param=vat_rate
+                )
+                vat_discount_arr = check_input(
+                    target_func=f(*args, **kwargs), param=vat_discount
+                )
+                vat_multiplier = (
+                    vat_portion_arr * vat_rate_arr * (1.0 - vat_discount_arr)
+                )
                 return vat_multiplier
 
             def _get_pdri():
                 pdri_portion_arr = np.repeat(pdri_portion, len(f(*args, **kwargs)))
-                pdri_rate_arr = check_input(target_func=f(*args, **kwargs), param=pdri_rate)
-                pdri_discount_arr = check_input(target_func=f(*args, **kwargs), param=pdri_discount)
-                pdri_multiplier = pdri_portion_arr * pdri_rate_arr * (1.0 - pdri_discount_arr)
+                pdri_rate_arr = check_input(
+                    target_func=f(*args, **kwargs), param=pdri_rate
+                )
+                pdri_discount_arr = check_input(
+                    target_func=f(*args, **kwargs), param=pdri_discount
+                )
+                pdri_multiplier = (
+                    pdri_portion_arr * pdri_rate_arr * (1.0 - pdri_discount_arr)
+                )
                 return pdri_multiplier
 
             total_multiplier = _get_vat() + _get_pdri()
             return f(*args, **kwargs) * (1.0 + total_multiplier)
+
         return _wrapper
+
     return _decorated
 
 
@@ -177,15 +260,20 @@ def apply_lbt(
     This decorator is used to apply LBT/PBB scheme to the result of a target function.
     It takes several parameters related to LBT/PBB and returns a decorated function.
     """
+
     def _decorated(f):
         @wraps(f)
         def _wrapper(*args, **kwargs):
             lbt_portion_arr = np.repeat(lbt_portion, len(f(*args, **kwargs)))
             lbt_rate_arr = check_input(target_func=f(*args, **kwargs), param=lbt_rate)
-            lbt_discount_arr = check_input(target_func=f(*args, **kwargs), param=lbt_discount)
+            lbt_discount_arr = check_input(
+                target_func=f(*args, **kwargs), param=lbt_discount
+            )
             lbt_multiplier = lbt_portion_arr * lbt_rate_arr * (1.0 - lbt_discount_arr)
             return f(*args, **kwargs) * (1.0 + lbt_multiplier)
+
         return _wrapper
+
     return _decorated
 
 
@@ -216,15 +304,22 @@ def apply_pdrd(
     This decorator is used to apply PDRD scheme to the result of a target function.
     It takes several parameters related to PDRD and returns a decorated function.
     """
+
     def _decorated(f):
         @wraps(f)
         def _wrapper(*args, **kwargs):
             pdrd_portion_arr = np.repeat(pdrd_portion, len(f(*args, **kwargs)))
             pdrd_rate_arr = check_input(target_func=f(*args, **kwargs), param=pdrd_rate)
-            pdrd_discount_arr = check_input(target_func=f(*args, **kwargs), param=pdrd_discount)
-            pdrd_multiplier = pdrd_portion_arr * pdrd_rate_arr * (1.0 - pdrd_discount_arr)
+            pdrd_discount_arr = check_input(
+                target_func=f(*args, **kwargs), param=pdrd_discount
+            )
+            pdrd_multiplier = (
+                pdrd_portion_arr * pdrd_rate_arr * (1.0 - pdrd_discount_arr)
+            )
             return f(*args, **kwargs) * (1.0 + pdrd_multiplier)
+
         return _wrapper
+
     return _decorated
 
 
@@ -233,15 +328,15 @@ def apply_cost_modification(
     cost: np.ndarray,
     expense_year: np.ndarray,
     project_duration: int,
-    inflation_rate: np.ndarray | float | int,
-    vat_portion: float | int,
-    vat_rate: np.ndarray | float | int,
-    vat_discount: np.ndarray | float | int,
-    pdri_portion: float | int,
-    pdri_rate: np.ndarray | float | int,
-    pdri_discount: np.ndarray | float | int,
+    inflation_rate: np.ndarray | float,
     pis_year: np.ndarray = None,
     year_ref: YearReference = None,
+    # vat_portion: float | int,
+    # vat_rate: np.ndarray | float | int,
+    # vat_discount: np.ndarray | float | int,
+    # pdri_portion: float | int,
+    # pdri_rate: np.ndarray | float | int,
+    # pdri_discount: np.ndarray | float | int,
 ) -> np.ndarray:
     """
     Apply cost modifications to the given cost array based on various parameters.
@@ -296,45 +391,57 @@ def apply_cost_modification(
             )
         else:
             if year_ref == YearReference.EXPENSE_YEAR:
-                cost_modified_by_duration = np.bincount(expense_year - start_year, weights=cost)
+                cost_modified_by_duration = np.bincount(
+                    expense_year - start_year, weights=cost
+                )
             else:
-                cost_modified_by_duration = np.bincount(pis_year - start_year, weights=cost)
+                cost_modified_by_duration = np.bincount(
+                    pis_year - start_year, weights=cost
+                )
 
             zeros = np.zeros(project_duration - len(cost_modified_by_duration))
-            cost_modified_by_duration = np.concatenate((cost_modified_by_duration, zeros))
+            cost_modified_by_duration = np.concatenate(
+                (cost_modified_by_duration, zeros)
+            )
 
         exponents = np.arange(0, len(cost_modified_by_duration), 1)
-        inflation_rate_arr = check_input(target_func=cost_modified_by_duration, param=inflation_rate)
+        inflation_rate_arr = check_input(
+            target_func=cost_modified_by_duration, param=inflation_rate
+        )
         inflation_mult = (1.0 + inflation_rate_arr) ** exponents
         cost_modified = cost_modified_by_duration * inflation_mult
 
-    if isinstance(inflation_rate, (float, int)):
+    if isinstance(inflation_rate, float):
         exponents = expense_year - start_year
         inflation_mult = (1.0 + inflation_rate) ** exponents
         cost_modified_by_inflation = cost * inflation_mult
 
         if year_ref == YearReference.EXPENSE_YEAR:
-            cost_modified = np.bincount(expense_year - start_year, weights=cost_modified_by_inflation)
+            cost_modified = np.bincount(
+                expense_year - start_year, weights=cost_modified_by_inflation
+            )
         else:
-            cost_modified = np.bincount(pis_year - start_year, weights=cost_modified_by_inflation)
+            cost_modified = np.bincount(
+                pis_year - start_year, weights=cost_modified_by_inflation
+            )
 
         zeros = np.zeros(project_duration - len(cost_modified))
         cost_modified = np.concatenate((cost_modified, zeros))
 
-    # Apply VAT/PPN
-    vat_portion_arr = np.repeat(vat_portion, len(cost_modified))
-    vat_rate_arr = check_input(target_func=cost_modified, param=vat_rate)
-    vat_discount_arr = check_input(target_func=cost_modified, param=vat_discount)
-    vat_multiplier = vat_portion_arr * vat_rate_arr * (1.0 - vat_discount_arr)
-
-    # Apply PDRI
-    pdri_portion_arr = np.repeat(pdri_portion, len(cost_modified))
-    pdri_rate_arr = check_input(target_func=cost_modified, param=pdri_rate)
-    pdri_discount_arr = check_input(target_func=cost_modified, param=pdri_discount)
-    pdri_multiplier = pdri_portion_arr * pdri_rate_arr * (1.0 - pdri_discount_arr)
-
-    total_multiplier = vat_multiplier + pdri_multiplier
-    cost_modified *= 1.0 + total_multiplier
+    # # Apply VAT/PPN
+    # vat_portion_arr = np.repeat(vat_portion, len(cost_modified))
+    # vat_rate_arr = check_input(target_func=cost_modified, param=vat_rate)
+    # vat_discount_arr = check_input(target_func=cost_modified, param=vat_discount)
+    # vat_multiplier = vat_portion_arr * vat_rate_arr * (1.0 - vat_discount_arr)
+    #
+    # # Apply PDRI
+    # pdri_portion_arr = np.repeat(pdri_portion, len(cost_modified))
+    # pdri_rate_arr = check_input(target_func=cost_modified, param=pdri_rate)
+    # pdri_discount_arr = check_input(target_func=cost_modified, param=pdri_discount)
+    # pdri_multiplier = pdri_portion_arr * pdri_rate_arr * (1.0 - pdri_discount_arr)
+    #
+    # total_multiplier = vat_multiplier + pdri_multiplier
+    # cost_modified *= 1.0 + total_multiplier
 
     return cost_modified
 
@@ -367,19 +474,24 @@ def get_identifier(target_instances: tuple, cost_alloc: FluidType) -> list:
     (5) Specify the elements of target data to be added.
     """
     # Operations associated with Notes #1 (see the above docstring)
-    id_arr = [[0 for _ in range(len(target_instances))] for _ in range(len(target_instances))]
+    id_arr = [
+        [0 for _ in range(len(target_instances))] for _ in range(len(target_instances))
+    ]
     for i in range(len(target_instances)):
         if target_instances[i].cost_allocation == cost_alloc:
             for j in range(len(target_instances)):
                 id_arr[i][j] = 1 * (
                     target_instances[i].vat_portion == target_instances[j].vat_portion
-                    and target_instances[i].pdri_portion == target_instances[j].pdri_portion
+                    and target_instances[i].pdri_portion
+                    == target_instances[j].pdri_portion
                 )
 
     id_arr = np.array(id_arr)
 
     # Operations associated with Notes #2 (see the above docstring)
-    group_arr = [np.argwhere(id_arr[i, :] == 1).ravel() for i in range(len(target_instances))]
+    group_arr = [
+        np.argwhere(id_arr[i, :] == 1).ravel() for i in range(len(target_instances))
+    ]
 
     # Operations associated with Notes #3 (see the above docstring)
     group_id = [0 for _ in range(len(group_arr))]
@@ -395,7 +507,11 @@ def get_identifier(target_instances: tuple, cost_alloc: FluidType) -> list:
     loc_id = np.unique(group_id)
 
     # Operations associated with Notes #5 (see the above docstring)
-    identifier = [np.argwhere(group_id == loc_id[i]).ravel() for i in range(len(loc_id)) if loc_id[i] >= 0]
+    identifier = [
+        np.argwhere(group_id == loc_id[i]).ravel()
+        for i in range(len(loc_id))
+        if loc_id[i] >= 0
+    ]
 
     return identifier
 

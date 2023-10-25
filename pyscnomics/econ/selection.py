@@ -57,6 +57,13 @@ class FluidType(Enum):
     CO2 = "co2"
 
 
+class TaxType(Enum):
+    """ 1234 """
+
+    VAT = "vat"
+    LBT = "lbt"
+
+
 class TaxSplitTypeCR(Enum):
     """
     Enumeration of split type for cost recovery.

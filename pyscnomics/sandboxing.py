@@ -7,7 +7,7 @@ import numpy as np
 from datetime import date
 from dataclasses import asdict
 
-from pyscnomics.econ.selection import DeprMethod, FluidType
+from pyscnomics.econ.selection import DeprMethod, FluidType, TaxType
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR, LBT, PDRD
 from pyscnomics.econ.depreciation import psc_declining_balance_depreciation_rate as psc_db
@@ -90,88 +90,88 @@ sulfur_apel_lifting = Lifting(
 #     pdri_portion=1.0,
 # )
 
-oil_mangga2_tangible = Tangible(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([100, 100, 100]),
-    expense_year=np.array([2023, 2024, 2025]),
-    cost_allocation=FluidType.OIL,
-    depreciation_factor=np.array([0.5, 0.5, 0.5]),
-    vat_portion=1.0,
-    pdri_portion=1.0,
-)
+# oil_mangga2_tangible = Tangible(
+#     start_year=2023,
+#     end_year=2030,
+#     cost=np.array([100, 100, 100]),
+#     expense_year=np.array([2023, 2024, 2025]),
+#     cost_allocation=FluidType.OIL,
+#     depreciation_factor=np.array([0.5, 0.5, 0.5]),
+#     vat_portion=1.0,
+#     pdri_portion=1.0,
+# )
 
-gas_mangga1_tangible = Tangible(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([10, 10, 10]),
-    expense_year=np.array([2023, 2024, 2025]),
-    cost_allocation=FluidType.GAS,
-    depreciation_factor=np.array([0.5, 0.5, 0.5]),
-    vat_portion=0.8,
-    pdri_portion=0.8,
-)
-
-gas_mangga2_tangible = Tangible(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([10, 10, 10]),
-    expense_year=np.array([2023, 2024, 2025]),
-    cost_allocation=FluidType.GAS,
-    depreciation_factor=np.array([0.5, 0.5, 0.5]),
-    vat_portion=0.8,
-    pdri_portion=0.8,
-)
-
-oil_apel1_tangible = Tangible(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([25, 25, 25]),
-    expense_year=np.array([2027, 2028, 2029]),
-    cost_allocation=FluidType.OIL,
-    vat_portion=0.5,
-    pdri_portion=0.5,
-)
-
-oil_apel2_tangible = Tangible(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([25, 25, 25]),
-    expense_year=np.array([2027, 2028, 2029]),
-    cost_allocation=FluidType.OIL,
-    vat_portion=0.5,
-    pdri_portion=0.5,
-)
-
-oil_nanas1_tangible = Tangible(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([50, 50, 50]),
-    expense_year=np.array([2027, 2028, 2029]),
-    cost_allocation=FluidType.OIL,
-    vat_portion=1,
-    pdri_portion=0.5,
-)
-
-sulfur_mangga1_tangible = Tangible(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([0.5, 0.5, 0.5]),
-    expense_year=np.array([2027, 2028, 2029]),
-    cost_allocation=FluidType.SULFUR,
-    vat_portion=0.5,
-    pdri_portion=0.5,
-)
-
-sulfur_mangga2_tangible = Tangible(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([0.5, 0.5, 0.5]),
-    expense_year=np.array([2027, 2028, 2029]),
-    cost_allocation=FluidType.SULFUR,
-    vat_portion=0.5,
-    pdri_portion=0.5,
-)
+# gas_mangga1_tangible = Tangible(
+#     start_year=2023,
+#     end_year=2030,
+#     cost=np.array([10, 10, 10]),
+#     expense_year=np.array([2023, 2024, 2025]),
+#     cost_allocation=FluidType.GAS,
+#     depreciation_factor=np.array([0.5, 0.5, 0.5]),
+#     vat_portion=0.8,
+#     pdri_portion=0.8,
+# )
+#
+# gas_mangga2_tangible = Tangible(
+#     start_year=2023,
+#     end_year=2030,
+#     cost=np.array([10, 10, 10]),
+#     expense_year=np.array([2023, 2024, 2025]),
+#     cost_allocation=FluidType.GAS,
+#     depreciation_factor=np.array([0.5, 0.5, 0.5]),
+#     vat_portion=0.8,
+#     pdri_portion=0.8,
+# )
+#
+# oil_apel1_tangible = Tangible(
+#     start_year=2023,
+#     end_year=2030,
+#     cost=np.array([25, 25, 25]),
+#     expense_year=np.array([2027, 2028, 2029]),
+#     cost_allocation=FluidType.OIL,
+#     vat_portion=0.5,
+#     pdri_portion=0.5,
+# )
+#
+# oil_apel2_tangible = Tangible(
+#     start_year=2023,
+#     end_year=2030,
+#     cost=np.array([25, 25, 25]),
+#     expense_year=np.array([2027, 2028, 2029]),
+#     cost_allocation=FluidType.OIL,
+#     vat_portion=0.5,
+#     pdri_portion=0.5,
+# )
+#
+# oil_nanas1_tangible = Tangible(
+#     start_year=2023,
+#     end_year=2030,
+#     cost=np.array([50, 50, 50]),
+#     expense_year=np.array([2027, 2028, 2029]),
+#     cost_allocation=FluidType.OIL,
+#     vat_portion=1,
+#     pdri_portion=0.5,
+# )
+#
+# sulfur_mangga1_tangible = Tangible(
+#     start_year=2023,
+#     end_year=2030,
+#     cost=np.array([0.5, 0.5, 0.5]),
+#     expense_year=np.array([2027, 2028, 2029]),
+#     cost_allocation=FluidType.SULFUR,
+#     vat_portion=0.5,
+#     pdri_portion=0.5,
+# )
+#
+# sulfur_mangga2_tangible = Tangible(
+#     start_year=2023,
+#     end_year=2030,
+#     cost=np.array([0.5, 0.5, 0.5]),
+#     expense_year=np.array([2027, 2028, 2029]),
+#     cost_allocation=FluidType.SULFUR,
+#     vat_portion=0.5,
+#     pdri_portion=0.5,
+# )
 
 '------------------------------------------- INTANGIBLE COST DATA ------------------------------------------'
 
@@ -291,43 +291,40 @@ oil_nanas_cashflow = CashFlow(
 
 '------------------------------------------------- EXECUTE -------------------------------------------------'
 
-lifting = (
-    oil_mangga_lifting,
-    oil_apel_lifting,
-    gas_mangga_lifting,
-    gas_apel_lifting,
-    sulfur_mangga_lifting,
-    sulfur_apel_lifting,
-)
+# lifting = (
+#     oil_mangga_lifting,
+#     oil_apel_lifting,
+#     gas_mangga_lifting,
+#     gas_apel_lifting,
+#     sulfur_mangga_lifting,
+#     sulfur_apel_lifting,
+# )
+#
+# tangible_cost = (
+#     oil_mangga1_tangible,
+#     oil_apel1_tangible,
+#     oil_apel2_tangible,
+#     gas_mangga1_tangible,
+#     gas_mangga2_tangible,
+#     oil_mangga2_tangible,
+#     oil_nanas1_tangible,
+#     sulfur_mangga1_tangible,
+#     sulfur_mangga2_tangible
+# )
 
-oil_mangga1_tangible = Tangible(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([50, 50]),
-    expense_year=np.array([2026, 2027]),
-    cost_allocation=FluidType.OIL,
+tangible_mangga = Tangible(
+    start_year=2022,
+    end_year=2027,
+    cost=np.array([100, 100]),
+    expense_year=np.array([2025, 2026]),
     depreciation_factor=np.array([0.5, 0.5]),
-    vat_portion=1.0,
-    pdri_portion=1.0,
+    cost_allocation=[FluidType.OIL, FluidType.OIL],
 )
 
-tangible_cost = (
-    oil_mangga1_tangible,
-    oil_apel1_tangible,
-    oil_apel2_tangible,
-    gas_mangga1_tangible,
-    gas_mangga2_tangible,
-    oil_mangga2_tangible,
-    oil_nanas1_tangible,
-    sulfur_mangga1_tangible,
-    sulfur_mangga2_tangible
+t1 = tangible_mangga.expenditures(
+    year_now=2023,
+    inflation_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06]),
 )
-
-start_timer = tm.time()
-
-t1 = oil_mangga1_tangible.total_depreciation_rate()
-
-end_timer = tm.time() - start_timer
 
 # print('\t')
 # print(f'Filetype: {type(t1)}')
@@ -338,9 +335,6 @@ end_timer = tm.time() - start_timer
 # print(f'Filetype: {type(t2)}')
 # print(f'Length: {len(t2)}')
 # print('t2 = ', t2)
-
-print('\t')
-print('calculation time: {0:.8f} seconds'.format(end_timer))
 
 # get_gas_tangible = case._get_gas_tangible()
 #
