@@ -88,6 +88,9 @@ class BaseProject:
     _oil_total_prod: np.ndarray = field(default=None, init=False, repr=False)
     _gas_total_prod: np.ndarray = field(default=None, init=False, repr=False)
 
+    _oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+
     def __post_init__(self):
 
         # Specify project duration and project years, raise error for inappropriate start date
@@ -327,6 +330,10 @@ class BaseProject:
                 self.gas_onstream_date = self.end_date
 
     def _get_wap_price(self):
+        """
+        The function to wrap functions of getting the Weighted Average Price (WAP) of the produced products.
+
+        """
         self._get_oil_wap_price()
         self._get_gas_wap_price()
         self._get_sulfur_wap_price()
@@ -334,6 +341,10 @@ class BaseProject:
         self._get_co2_wap_price()
 
     def _get_oil_wap_price(self):
+        """
+        The function to fill the variable self._oil_wap_price.
+
+        """
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
 
@@ -345,6 +356,12 @@ class BaseProject:
         self._oil_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
     def _get_gas_wap_price(self):
+        """
+        The function to fill the variable self._gas_wap_price.
+        Returns
+        -------
+
+        """
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
 
@@ -356,6 +373,10 @@ class BaseProject:
         self._gas_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
     def _get_sulfur_wap_price(self):
+        """
+        The function to fill the variable self._sulfur_wap_price.
+
+        """
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
 
@@ -367,6 +388,10 @@ class BaseProject:
         self._sulfur_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
     def _get_electricity_wap_price(self):
+        """
+        The function to fill the variable self._electricity_wap_price.
+
+        """
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
 
@@ -378,6 +403,10 @@ class BaseProject:
         self._electricity_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
     def _get_co2_wap_price(self):
+        """
+        The function to fill the variable self._co2_wap_price.
+
+        """
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
 
@@ -387,6 +416,37 @@ class BaseProject:
                 total_vol = total_vol + lift.lifting_rate
 
         self._co2_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
+
+    def _get_oil_sunk_cost(self):
+        """
+        Function to get the sunk cost of the oil's cost.
+
+        Notes
+        -----
+        The sunk cost in this method is categorized as an Intangible cost that exist
+        prior of the Operating Expenditures occur.
+        """
+        oil_sunk_cost_years = np.arange(self.start_date.year, np.min(self._oil_opex.expense_year)-1, 1)
+        updated = np.bincount(self._oil_intangible.project_years - np.min(oil_sunk_cost_years),
+                              weights=self._oil_intangible.expenditures())
+        zeros = np.zeros(self.project_duration - len(updated))
+        self._oil_sunk_cost = np.concatenate((updated, zeros))
+
+    def _get_gas_sunk_cost(self):
+        """
+        Function to get the sunk cost of the gas's cost.
+
+        Notes
+        -----
+        The sunk cost in this method is categorized as an Intangible cost that exist
+        prior of the Operating Expenditures occur.
+        """
+        # Gas Sunk Cost
+        gas_sunk_cost_years = np.arange(self.start_date.year, np.min(self._gas_opex.expense_year) - 1, 1)
+        updated = np.bincount(self._gas_intangible.project_years - np.min(gas_sunk_cost_years),
+                              weights=self._gas_intangible.expenditures())
+        zeros = np.zeros(self.project_duration - len(updated))
+        self._gas_sunk_cost = np.concatenate((updated, zeros))
 
     def _get_oil_lifting(self):
         """

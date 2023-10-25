@@ -10,6 +10,7 @@ from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
 from pyscnomics.econ.selection import FluidType, YearReference, TaxRegime, FTPTaxRegime, TaxSplitTypeCR
 from pyscnomics.econ import indicator
+from pyscnomics.tools.summary import Summary
 
 
 @dataclass
@@ -41,6 +42,8 @@ class CostRecovery(BaseProject):
     gas_dmo_volume_portion: float = field(default=1.0)
     gas_dmo_fee_portion: float = field(default=1.0)
     gas_dmo_holiday_duration: int = field(default=60)
+
+    _summary: Summary = field(default=None)
 
     _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
@@ -113,6 +116,10 @@ class CostRecovery(BaseProject):
     # Consolidated Attributes
     _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_tangible: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_intangible: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_opex: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_asr: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
@@ -429,12 +436,20 @@ class CostRecovery(BaseProject):
             ctr_tax: float | np.ndarray = None,
             tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
             tax_rate: float = 0.44,
-            ftp_tax_regime=FTPTaxRegime.PDJP_20_2017
+            ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
+            discount_rate_year: int = None
             ):
 
         self._get_aggregate()
 
         self._get_wap_price()
+
+        # Conditional formula if the discount rate year is none
+        if discount_rate_year is None:
+            discount_rate_year = self.start_date.year
+
+        self._get_oil_sunk_cost()
+        self._get_gas_sunk_cost()
 
         self._get_revenue()
         self._get_ftp()
@@ -757,6 +772,10 @@ class CostRecovery(BaseProject):
         # Consolidated attributes
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue
         self._consolidated_tangible = self._oil_tangible.expenditures() + self._gas_tangible.expenditures()
+        self._consolidated_intangible = self._oil_intangible.expenditures() + self._gas_intangible.expenditures()
+        self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
+        self._consolidated_opex = self._oil_opex.expenditures() + self._gas_opex.expenditures()
+        self._consolidated_asr = self._oil_asr.expenditures() + self._gas_asr.expenditures()
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
         self._consolidated_depreciation = self._oil_depreciation + self._gas_depreciation
         self._consolidated_undepreciated_asset = self._oil_undepreciated_asset + self._gas_undepreciated_asset
@@ -808,3 +827,53 @@ class CostRecovery(BaseProject):
         self._consolidated_cashflow = (self._consolidated_contractor_take -
                                        (self._consolidated_tangible +
                                         self._consolidated_non_capital))
+
+    def get_summary(self):
+        investment_value = np.sum(self._consolidated_tangible) + np.sum(
+            self._consolidated_intangible - self._consolidated_sunk_cost)
+        unrec_cost = (investment_value +
+                      np.sum(self._consolidated_sunk_cost) +
+                      np.sum(self._consolidated_opex) +
+                      np.sum(self._consolidated_asr) -
+                      np.sum(self._consolidated_cost_recovery_after_tf))
+        self._summary = Summary(
+            lifting_oil=float(np.sum(self._oil_lifting.lifting_rate_arr())),
+            lifting_gas=float(np.sum(self._gas_lifting.lifting_rate_arr())),
+            # lifting_sulfur=,
+            # sales_electricity= ,
+            # co2_production= ,
+            oil_wap=np.sum(self._oil_revenue) / np.sum(self._oil_lifting.lifting_rate_arr()),
+            gas_wap=np.sum(self._gas_revenue) / np.sum(self._gas_lifting.lifting_rate_arr()),
+            # sulfur_wap= ,
+            # electricity_wap= ,
+            # co2_wap= ,
+            gross_revenue=float(np.sum(self._consolidated_revenue)),
+            ctr_gross_share=float(np.sum(self._consolidated_contractor_share)),
+            gov_gross_share=float(np.sum(self._consolidated_government_share)),
+            sunk_cost=float(np.sum(self._consolidated_sunk_cost)),
+            investment=float(investment_value),
+            tangible=float(np.sum(self._consolidated_tangible)),
+            intangible=float(np.sum(self._consolidated_intangible - self._consolidated_sunk_cost)),
+            opex_and_asr=float(np.sum(self._consolidated_opex) + np.sum(self._consolidated_asr)),
+            opex=float(np.sum(self._consolidated_opex)),
+            asr=float(np.sum(self._consolidated_asr)),
+            cost_recovery_or_deductible_cost=float(np.sum(self._consolidated_cost_recovery_after_tf)),
+            gross_rev_cost_recovery_or_deductible_cost=(np.sum(self._consolidated_cost_recovery_after_tf) /
+                                                        np.sum(self._consolidated_revenue)) * 100,
+            unrec_or_carry_forward_deductible_cost=unrec_cost,
+            unrec_over_cost_recovery=unrec_cost/np.sum(self._consolidated_cost_recovery_after_tf),
+            ctr_net_share=float(np.sum(self._consolidated_ctr_net_share)),
+            ctr_net_share_over_gross_share=np.sum(self._consolidated_ctr_net_share) / np.sum(self._consolidated_revenue) * 100,
+            # ctr_net_cashflow=,
+            # gross_rev_net_cashflow=,
+            # ctr_npv=,
+            # ctr_irr=,
+            # ctr_pot=indicator.pot(cashflow=self._consolidated_cashflow),
+            # ctr_pi=,
+            # gov_profitability=,
+            # net_dmo=,
+            # tax=,
+            # goi_take=,
+            # gross_rev_goi_take=,
+            # goi_npv=
+        )
