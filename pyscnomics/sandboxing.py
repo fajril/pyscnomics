@@ -9,7 +9,7 @@ from dataclasses import asdict
 
 from pyscnomics.econ.selection import DeprMethod, FluidType, TaxType
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR, LBT, PDRD
+from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.econ.depreciation import psc_declining_balance_depreciation_rate as psc_db
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
@@ -227,42 +227,6 @@ oil_apel_asr = ASR(
     cost_allocation=FluidType.OIL
 )
 
-'-------------------------------------------- LBT/PBB COST DATA --------------------------------------------'
-
-oil_mangga_lbt = LBT(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([50, 50, 50, 50]),
-    expense_year=np.array([2024, 2025, 2026, 2027]),
-    cost_allocation=FluidType.OIL
-)
-
-oil_apel_lbt = LBT(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([50, 50, 50]),
-    expense_year=np.array([2027, 2028, 2029]),
-    cost_allocation=FluidType.OIL
-)
-
-'--------------------------------------------- PDRD COST DATA ----------------------------------------------'
-
-oil_mangga_pdrd = PDRD(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([50, 50, 50, 50]),
-    expense_year=np.array([2024, 2025, 2026, 2027]),
-    cost_allocation=FluidType.OIL
-)
-
-oil_apel_pdrd = PDRD(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([50, 50, 50]),
-    expense_year=np.array([2027, 2028, 2029]),
-    cost_allocation=FluidType.OIL
-)
-
 '------------------------------------------------- CASHFLOW ------------------------------------------------'
 
 oil_mangga_cashflow = CashFlow(
@@ -313,24 +277,34 @@ oil_nanas_cashflow = CashFlow(
 # )
 
 tangible_mangga = Tangible(
-    start_year=2022,
-    end_year=2027,
+    start_year=2023,
+    end_year=2030,
     cost=np.array([100, 100]),
-    expense_year=np.array([2025, 2026]),
+    expense_year=np.array([2024, 2025]),
     depreciation_factor=np.array([0.5, 0.5]),
     cost_allocation=[FluidType.OIL, FluidType.OIL],
 )
 
-t1 = tangible_mangga.expenditures(
-    year_now=2023,
-    inflation_rate=0.0,
+tangible_apel = Tangible(
+    start_year=2023,
+    end_year=2030,
+    cost=np.array([50, 50]),
+    expense_year=np.array([2023, 2028]),
+    depreciation_factor=np.array([0.5, 0.5]),
+    cost_allocation=[FluidType.GAS, FluidType.GAS],
 )
+
+tangible_add = tangible_mangga - tangible_apel
+
+print('\t')
+print(f'Filetype: {type(tangible_add)}')
+print('tangible_add = \n', tangible_add)
 
 # print('\t')
 # print(f'Filetype: {type(t1)}')
 # print(f'Length: {len(t1)}')
 # print('t1 = \n', t1)
-
+#
 # print('\t')
 # print(f'Filetype: {type(t2)}')
 # print(f'Length: {len(t2)}')

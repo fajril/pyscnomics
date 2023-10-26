@@ -5,27 +5,13 @@ Prepare and classify cost data based on its components. The associated cost comp
 (3) OPEX,
 (4) ASR
 """
-import enum
 
 import numpy as np
 from dataclasses import dataclass, field
 
 import pyscnomics.econ.depreciation as depr
-from pyscnomics.tools.helper import (
-    apply_cost_adjustment,
-    apply_tax,
-    apply_inflation,
-    apply_vat_and_pdri,
-    apply_cost_modification,
-    apply_lbt,
-    apply_pdrd,
-)
-from pyscnomics.econ.selection import (
-    FluidType,
-    TaxType,
-    DeprMethod,
-    YearReference,
-)
+from pyscnomics.tools.helper import apply_cost_adjustment
+from pyscnomics.econ.selection import FluidType, DeprMethod, YearReference
 
 
 class TangibleException(Exception):
@@ -48,18 +34,6 @@ class OPEXException(Exception):
 
 class ASRException(Exception):
     """Exception to be raised if class ASR is misused"""
-
-    pass
-
-
-class LBTException(Exception):
-    """Exception to be raised if class LBT is misused"""
-
-    pass
-
-
-class PDRDException(Exception):
-    """Exception to be raised if class PDRD is misused"""
 
     pass
 
@@ -241,8 +215,37 @@ class Tangible:
         year_now: int = None,
         year_ref: YearReference = YearReference.EXPENSE_YEAR,
     ) -> np.ndarray:
-        """ 1234 """
+        """
+        Calculate tangible expenditures per year.
 
+        This method calculates the tangible expenditures per year
+        based on the expense year and cost data provided.
+
+        Parameters
+        ----------
+        inflation_rate : np.ndarray or float or int, optional
+            The inflation rate to apply. Can be a single value or an array (default is 0).
+        year_now : int
+            The reference year for inflation calculation.
+        year_ref : YearReference, optional
+            Reference year for expenses (default is YearReference.EXPENSE_YEAR).
+
+        Returns
+        -------
+        expenses: np.ndarray
+            An array depicting the tangible expenditures each year, adjusted by
+            inflation (if any).
+
+        Notes
+        -----
+        This method calculates tangible expenditures while considering inflation scheme.
+        The core calculations are as follows:
+        (1) Apply adjustment to cost due to inflation (if any),
+        (2) Function np.bincount() is used to align the 'cost_adjusted' elements
+            according to its corresponding expense year,
+        (3) If len(expenses) < project_duration, then add the remaining elements
+            with zeros.
+        """
         if year_now is None:
             year_now = self.start_year
 
@@ -256,44 +259,39 @@ class Tangible:
             inflation_rate=inflation_rate,
         )
 
-        print('\t')
-        print(f'Filetype: {type(cost_adjusted)}')
-        print(f'Length: {len(cost_adjusted)}')
-        print('cost_adjusted = ', cost_adjusted)
+        if year_ref == YearReference.EXPENSE_YEAR:
+            expenses = np.bincount(self.expense_year - self.start_year, weights=cost_adjusted)
+        else:
+            expenses = np.bincount(self.pis_year - self.start_year, weights=cost_adjusted)
 
-        # def _expenditures():
-        #     if year_ref == YearReference.EXPENSE_YEAR:
-        #         expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
-        #     else:
-        #         expenses = np.bincount(self.pis_year - self.start_year, weights=self.cost)
-        #     zeros = np.zeros(self.project_duration - len(expenses))
-        #     expenses = np.concatenate((expenses, zeros))
-        #     return expenses
-        # return _expenditures()
+        zeros = np.zeros(self.project_duration - len(expenses))
+        expenses = np.concatenate((expenses, zeros))
+
+        return expenses
 
     def total_depreciation_rate(
         self,
-        year_ref: YearReference = YearReference.EXPENSE_YEAR,
+        inflation_rate: np.ndarray | float = 0.0,
+        year_now: int = None,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
-        inflation_rate: np.ndarray | float = 0.0,
     ) -> tuple:
         """
         Calculate total depreciation charge and undepreciated asset value based on various parameters.
 
         Parameters
-        -----------
-        year_ref : YearReference, optional
-            Reference year for expenses (default is YearReference.EXPENSE_YEAR).
+        ----------
+        inflation_rate : np.ndarray | float | int, optional
+            The inflation rate to apply. Can be a single value or an array (default is 0).
+        year_now : int
+            The reference year for inflation calculation.
         depr_method : DeprMethod, optional
             The depreciation method to use (default is DeprMethod.PSC_DB).
         decline_factor : float | int, optional
             The decline factor used for declining balance depreciation (default is 2).
-        inflation_rate : np.ndarray | float | int, optional
-            The inflation rate to apply. Can be a single value or an array (default is 0).
 
         Returns
-        --------
+        -------
         tuple
             A tuple containing:
             (1) Total depreciation charges for each period.
@@ -303,158 +301,118 @@ class Tangible:
         ------
         (1) This method calculates depreciation charges based on the specified
             depreciation method.
-        (2) Prior to the core calculations, attribute 'cost' is modified by
-            taking into account inflation scheme.
+        (2) Prior to the core calculations, attribute 'cost' is adjusted by inflation (if any),
         (3) The depreciation charges are aligned with the corresponding periods
-            based on the expense_year (or pis_year).
+            based on pis_year.
         """
+        if year_now is None:
+            year_now = self.start_year
 
-        # Configure the modified cost
-        cost_modified = apply_cost_modification(
+        cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
             cost=self.cost,
             expense_year=self.expense_year,
             project_duration=self.project_duration,
+            project_years=self.project_years,
+            year_now=year_now,
             inflation_rate=inflation_rate,
-            year_ref=year_ref,
-            pis_year=self.pis_year,
         )
 
-        print('\t')
-        print(f'Filetype: {type(cost_modified)}')
-        print(f'Length: {len(cost_modified)}')
-        print('cost_modified = \n', cost_modified)
+        # Straight line
+        if depr_method == DeprMethod.SL:
+            depreciation_charge = np.asarray(
+                [
+                    depr.straight_line_depreciation_rate(
+                        cost=c,
+                        salvage_value=sv,
+                        useful_life=ul,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, sv, ul in zip(
+                        cost_adjusted,
+                        self.salvage_value,
+                        self.useful_life,
+                    )
+                ]
+            )
 
-        # Create a new instance of Tangible
-        salvage_value_modified = self.salvage_value
-        useful_life_modified = self.useful_life
-        depreciation_factor_modified = self.depreciation_factor
+        # Declining balance/double declining balance
+        if depr_method == DeprMethod.DB:
+            depreciation_charge = np.asarray(
+                [
+                    depr.declining_balance_depreciation_rate(
+                        cost=c,
+                        salvage_value=sv,
+                        useful_life=ul,
+                        decline_factor=decline_factor,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, sv, ul in zip(
+                        cost_adjusted,
+                        self.salvage_value,
+                        self.useful_life,
+                    )
+                ]
+            )
 
-        if len(salvage_value_modified) < len(cost_modified):
-            salvage_value_modified = np.repeat(self.salvage_value[0], len(cost_modified))
+        # PSC_DB
+        if depr_method == DeprMethod.PSC_DB:
+            depreciation_charge = np.asarray(
+                [
+                    depr.psc_declining_balance_depreciation_rate(
+                        cost=c,
+                        depreciation_factor=dr,
+                        useful_life=ul,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, dr, ul in zip(
+                        cost_adjusted,
+                        self.depreciation_factor,
+                        self.useful_life,
+                    )
+                ]
+            )
 
-        if len(useful_life_modified) < len(cost_modified):
-            useful_life_modified = np.repeat(self.useful_life[0], len(cost_modified))
+        # The relative difference of pis_year and start_year
+        shift_indices = self.pis_year - self.start_year
 
-        if len(depreciation_factor_modified) < len(cost_modified):
-            depreciation_factor_modified = np.repeat(self.depreciation_factor[0], len(cost_modified))
-
-        newTangible = Tangible(
-            start_year=self.start_year,
-            end_year=self.end_year,
-            cost=cost_modified,
-            expense_year=self.project_years,
-            cost_allocation=self.cost_allocation,
-            pis_year=self.project_years,
-            salvage_value=salvage_value_modified,
-            useful_life=useful_life_modified,
-            depreciation_factor=depreciation_factor_modified,
+        # Modify depreciation_charge so that expenditures are aligned with
+        # the corresponding pis_year (or expense_year)
+        depreciation_charge = np.asarray(
+            [
+                np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
+                for row, i in zip(depreciation_charge, shift_indices)
+            ]
         )
 
-        # # Straight line
-        # if depr_method == DeprMethod.SL:
-        #     depreciation_charge = np.asarray(
-        #         [
-        #             depr.straight_line_depreciation_rate(
-        #                 cost=c,
-        #                 salvage_value=sv,
-        #                 useful_life=ul,
-        #                 depreciation_len=self.project_duration,
-        #             )
-        #             for c, sv, ul in zip(
-        #                 new_Tangible.cost,
-        #                 new_Tangible.salvage_value,
-        #                 new_Tangible.useful_life,
-        #             )
-        #         ]
-        #     )
-        #
-        # # Declining balance/double declining balance
-        # if depr_method == DeprMethod.DB:
-        #     depreciation_charge = np.asarray(
-        #         [
-        #             depr.declining_balance_depreciation_rate(
-        #                 cost=c,
-        #                 salvage_value=sv,
-        #                 useful_life=ul,
-        #                 decline_factor=decline_factor,
-        #                 depreciation_len=self.project_duration,
-        #             )
-        #             for c, sv, ul in zip(
-        #                 new_Tangible.cost,
-        #                 new_Tangible.salvage_value,
-        #                 new_Tangible.useful_life,
-        #             )
-        #         ]
-        #     )
-        #
-        # # PSC_DB
-        # if depr_method == DeprMethod.PSC_DB:
-        #     depreciation_charge = np.asarray(
-        #         [
-        #             depr.psc_declining_balance_depreciation_rate(
-        #                 cost=c,
-        #                 depreciation_factor=dr,
-        #                 useful_life=ul,
-        #                 depreciation_len=self.project_duration,
-        #             )
-        #             for c, dr, ul in zip(
-        #                 new_Tangible.cost,
-        #                 new_Tangible.depreciation_factor,
-        #                 new_Tangible.useful_life,
-        #             )
-        #         ]
-        #     )
-        #
-        # # The relative difference of pis_year and start_year
-        # shift_indices = new_Tangible.pis_year - new_Tangible.start_year
-        #
-        # # Modify depreciation_charge so that expenditures are aligned with
-        # # the corresponding pis_year (or expense_year)
-        # depreciation_charge = np.asarray(
-        #     [
-        #         np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
-        #         for row, i in zip(depreciation_charge, shift_indices)
-        #     ]
-        # )
-        #
-        # total_depreciation_charge = depreciation_charge.sum(axis=0)
-        # undepreciated_asset = np.sum(new_Tangible.cost) - np.sum(total_depreciation_charge)
-        #
-        # return total_depreciation_charge, undepreciated_asset
+        total_depreciation_charge = depreciation_charge.sum(axis=0)
+        undepreciated_asset = np.sum(cost_adjusted) - np.sum(total_depreciation_charge)
+
+        return total_depreciation_charge, undepreciated_asset
 
     def total_depreciation_book_value(
         self,
-        year_ref: YearReference = YearReference.EXPENSE_YEAR,
+        inflation_rate: np.ndarray | float = 0.0,
+        year_now: int = None,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float = 2,
-        inflation_rate: float | int = 0.0,
-        vat_rate: np.ndarray | float | int = 0.0,
-        vat_discount: np.ndarray | float | int = 0.0,
-        pdri_rate: np.ndarray | float | int = 0.0,
-        pdri_discount: np.ndarray | float | int = 0.0,
+        year_ref: YearReference = YearReference.EXPENSE_YEAR,
     ) -> np.ndarray:
         """
         Calculate the total book value of depreciation for the asset.
 
         Parameters
         ----------
-        year_ref : YearReference, optional
-            Reference year for expenses (default is YearReference.EXPENSE_YEAR).
+        inflation_rate : np.ndarray | float | int, optional
+            The inflation rate to apply. Can be a single value or an array (default is 0).
+        year_now : int
+            The reference year for inflation calculation.
         depr_method : DeprMethod, optional
             The depreciation method to use (default is DeprMethod.PSC_DB).
         decline_factor : float, optional
             The decline factor used for declining balance depreciation (default is 2).
-        inflation_rate : np.ndarray | float | int, optional
-            The inflation rate to apply. Can be a single value or an array (default is 0).
-        vat_rate : np.ndarray | float | int, optional
-            The VAT/PPN rate(s) to apply. Can be a single value or an array (default is 0).
-        vat_discount : np.ndarray | float | int, optional
-            The VAT discount(s) to apply. Can be a single value or an array (default is 0).
-        pdri_rate : np.ndarray | float | int, optional
-            The PDRI rate(s) to apply. Can be a single value or an array (default is 0).
-        pdri_discount : np.ndarray | float | int, optional
-            The PDRI discount(s) to apply. Can be a single value or an array (default is 0).
+        year_ref : YearReference, optional
+            Reference year for expenses (default is YearReference.EXPENSE_YEAR).
 
         Returns
         -------
@@ -469,27 +427,22 @@ class Tangible:
         (2) The cumulative book value is obtained by subtracting the cumulative
             depreciation charges from the cumulative expenditures.
         """
+        if year_now is None:
+            year_now = self.start_year
 
         # Calculate total depreciation charge from method total_depreciation_rate
         depreciation_charge = self.total_depreciation_rate(
-            year_ref=year_ref,
+            inflation_rate=inflation_rate,
+            year_now=year_now,
             depr_method=depr_method,
             decline_factor=decline_factor,
-            inflation_rate=inflation_rate,
-            vat_rate=vat_rate,
-            vat_discount=vat_discount,
-            pdri_rate=pdri_rate,
-            pdri_discount=pdri_discount,
         )[0]
 
         return (
             np.cumsum(self.expenditures(
-                year_ref=year_ref,
                 inflation_rate=inflation_rate,
-                vat_rate=vat_rate,
-                vat_discount=vat_discount,
-                pdri_rate=pdri_rate,
-                pdri_discount=pdri_discount,
+                year_now=year_now,
+                year_ref=year_ref,
             ))
             - np.cumsum(depreciation_charge)
         )
@@ -509,9 +462,6 @@ class Tangible:
                     np.allclose(self.useful_life, other.useful_life),
                     np.allclose(self.depreciation_factor, other.depreciation_factor),
                     self.cost_allocation == other.cost_allocation,
-                    self.is_ic_applied == other.is_ic_applied,
-                    self.vat_portion == other.vat_portion,
-                    self.pdri_portion == other.pdri_portion,
                 )
             )
 
@@ -585,42 +535,22 @@ class Tangible:
     def __add__(self, other):
         # Only allows addition between an instance of Tangible and another instance of Tangible
         if isinstance(other, Tangible):
-            if (
-                self.cost_allocation != other.cost_allocation
-                or self.is_ic_applied != other.is_ic_applied
-                or self.vat_portion != other.vat_portion
-                or self.pdri_portion != other.pdri_portion
-            ):
-                raise TangibleException(
-                    f"Cost allocation/VAT portion/PDRI portion is not equal. "
-                    f"Cost allocation: {self.cost_allocation} vs. {other.cost_allocation}, "
-                    f"Is IC applied: {self.is_ic_applied} vs. {other.is_ic_applied}, "
-                    f"VAT portion: {self.vat_portion} vs. {other.vat_portion}, "
-                    f"PDRI portion: {self.pdri_portion} vs. {other.pdri_portion}."
-                )
+            start_year_combined = min(self.start_year, other.start_year)
+            end_year_combined = max(self.end_year, other.end_year)
+            description_combined = self.description + other.description
 
-            else:
-                combined_start_year = min(self.start_year, other.start_year)
-                combined_end_year = max(self.end_year, other.end_year)
-                combined_description = self.description + other.description
-
-                return Tangible(
-                    start_year=combined_start_year,
-                    end_year=combined_end_year,
-                    cost=np.concatenate((self.cost, other.cost)),
-                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                    pis_year=np.concatenate((self.pis_year, other.pis_year)),
-                    salvage_value=np.concatenate((self.salvage_value, other.salvage_value)),
-                    useful_life=np.concatenate((self.useful_life, other.useful_life)),
-                    depreciation_factor=np.concatenate(
-                        (self.depreciation_factor, other.depreciation_factor)
-                    ),
-                    cost_allocation=self.cost_allocation,
-                    is_ic_applied=self.is_ic_applied,
-                    vat_portion=self.vat_portion,
-                    pdri_portion=self.pdri_portion,
-                    description=combined_description,
-                )
+            return Tangible(
+                start_year=start_year_combined,
+                end_year=end_year_combined,
+                cost=np.concatenate((self.cost, other.cost)),
+                expense_year=np.concatenate((self.expense_year, other.expense_year)),
+                pis_year=np.concatenate((self.pis_year, other.pis_year)),
+                cost_allocation=self.cost_allocation + other.cost_allocation,
+                salvage_value=np.concatenate((self.salvage_value, other.salvage_value)),
+                useful_life=np.concatenate((self.useful_life, other.useful_life)),
+                depreciation_factor=np.concatenate((self.depreciation_factor, other.depreciation_factor)),
+                description=description_combined,
+            )
 
         else:
             raise TangibleException(
@@ -636,42 +566,22 @@ class Tangible:
     def __sub__(self, other):
         # Only allows subtraction between an instance of Tangible and another instance of Tangible
         if isinstance(other, Tangible):
-            if (
-                self.cost_allocation != other.cost_allocation
-                or self.is_ic_applied != other.is_ic_applied
-                or self.vat_portion != other.vat_portion
-                or self.pdri_portion != other.pdri_portion
-            ):
-                raise TangibleException(
-                    f"Cost allocation/VAT portion/PDRI portion is not equal. "
-                    f"Cost allocation: {self.cost_allocation} vs. {other.cost_allocation}, "
-                    f"Is IC applied: {self.is_ic_applied} vs. {other.is_ic_applied}, "
-                    f"VAT portion: {self.vat_portion} vs. {other.vat_portion}, "
-                    f"PDRI portion: {self.pdri_portion} vs. {other.pdri_portion}."
-                )
+            start_year_combined = min(self.start_year, other.start_year)
+            end_year_combined = max(self.end_year, other.end_year)
+            description_combined = self.description + other.description
 
-            else:
-                combined_start_year = min(self.start_year, other.start_year)
-                combined_end_year = max(self.end_year, other.end_year)
-                combined_description = self.description + other.description
-
-                return Tangible(
-                    start_year=combined_start_year,
-                    end_year=combined_end_year,
-                    cost=np.concatenate((self.cost, -other.cost)),
-                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                    pis_year=np.concatenate((self.pis_year, other.pis_year)),
-                    salvage_value=np.concatenate((self.salvage_value, other.salvage_value)),
-                    useful_life=np.concatenate((self.useful_life, other.useful_life)),
-                    depreciation_factor=np.concatenate(
-                        (self.depreciation_factor, other.depreciation_factor)
-                    ),
-                    cost_allocation=self.cost_allocation,
-                    is_ic_applied=self.is_ic_applied,
-                    vat_portion=self.vat_portion,
-                    pdri_portion=self.pdri_portion,
-                    description=combined_description,
-                )
+            return Tangible(
+                start_year=start_year_combined,
+                end_year=end_year_combined,
+                cost=np.concatenate((self.cost, -other.cost)),
+                expense_year=np.concatenate((self.expense_year, other.expense_year)),
+                pis_year=np.concatenate((self.pis_year, other.pis_year)),
+                cost_allocation=self.cost_allocation + other.cost_allocation,
+                salvage_value=np.concatenate((self.salvage_value, other.salvage_value)),
+                useful_life=np.concatenate((self.useful_life, other.useful_life)),
+                depreciation_factor=np.concatenate((self.depreciation_factor, other.depreciation_factor)),
+                description=description_combined,
+            )
 
         else:
             raise TangibleException(
@@ -691,15 +601,12 @@ class Tangible:
                 start_year=self.start_year,
                 end_year=self.end_year,
                 cost=self.cost * other,
-                expense_year=self.expense_year.copy(),
-                pis_year=self.pis_year.copy(),
-                salvage_value=self.salvage_value.copy(),
-                useful_life=self.useful_life.copy(),
-                depreciation_factor=self.depreciation_factor.copy(),
+                expense_year=self.expense_year,
+                pis_year=self.pis_year,
                 cost_allocation=self.cost_allocation,
-                is_ic_applied=self.is_ic_applied,
-                vat_portion=self.vat_portion,
-                pdri_portion=self.pdri_portion,
+                salvage_value=self.salvage_value,
+                useful_life=self.useful_life,
+                depreciation_factor=self.depreciation_factor,
                 description=self.description,
             )
 
@@ -728,15 +635,12 @@ class Tangible:
                     start_year=self.start_year,
                     end_year=self.end_year,
                     cost=self.cost / other,
-                    expense_year=self.expense_year.copy(),
+                    expense_year=self.expense_year,
+                    pis_year=self.pis_year,
                     cost_allocation=self.cost_allocation,
-                    pis_year=self.pis_year.copy(),
-                    salvage_value=self.salvage_value.copy(),
-                    useful_life=self.useful_life.copy(),
+                    salvage_value=self.salvage_value,
+                    useful_life=self.useful_life,
                     depreciation_factor=self.depreciation_factor,
-                    is_ic_applied=self.is_ic_applied,
-                    vat_portion=self.vat_portion,
-                    pdri_portion=self.pdri_portion,
                     description=self.description,
                 )
 
@@ -1984,701 +1888,4 @@ class ASR:
                 f"Must divide with an instance of Tangible/Intangible/OPEX/ASR, integer or a float; "
                 f"{other}({other.__class__.__qualname__}) is not an instance "
                 f"of Tangible/Intangible/OPEX/ASR nor an integer nor a float."
-            )
-
-
-@dataclass
-class LBT:
-    """
-    Manages a Land and Building Tax (LBT/PBB) asset.
-
-    Parameters
-    ----------
-    start_year : int
-        The start year of the project.
-    end_year : int
-        The end year of the project.
-    cost : numpy.ndarray
-        An array representing the cost of an LBT asset.
-    expense_year : numpy.ndarray
-        An array representing the expense year of an LBT asset.
-    cost_allocation : FluidType
-        A string depicting the cost allocation of an LBT asset.
-    lbt_portion: float | int
-        A fraction of LBT cost susceptible for LBT tax.
-    description: list[str]
-        A list of string description regarding the associated LBT cost.
-    """
-
-    start_year: int
-    end_year: int
-    cost: np.ndarray
-    expense_year: np.ndarray
-    cost_allocation: FluidType = field(default=FluidType.OIL)
-    lbt_portion: float | int = field(default=1.0)
-    description: list[str] = field(default=None)
-
-    # Attribute to be defined later on
-    project_duration: int = field(default=None, init=False, repr=False)
-    project_years: np.ndarray = field(default=None, init=False, repr=False)
-
-    def __post_init__(self):
-        # Check for inappropriate start and end year project
-        if self.end_year >= self.start_year:
-            self.project_duration = self.end_year - self.start_year + 1
-            self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
-
-        else:
-            raise LBTException(
-                f"start year {self.start_year} "
-                f"is after the end year {self.end_year}"
-            )
-
-        # Configure attribute "description"
-        if self.description is None:
-            self.description = [" " for _ in range(len(self.cost))]
-
-        if self.description is not None:
-            if len(self.description) != len(self.cost):
-                raise LBTException(
-                    f"Unequal length of array: "
-                    f"description: {len(self.description)}, "
-                    f"cost: {len(self.cost)}"
-                )
-
-        # Check input data for unequal length
-        if len(self.expense_year) != len(self.cost):
-            raise LBTException(
-                f"Unequal length of array: "
-                f"cost: {len(self.cost)}, "
-                f"expense_year: {len(self.expense_year)}"
-            )
-
-        # Raise an error message: expense year is after the end year of the project
-        if np.max(self.expense_year) > self.end_year:
-            raise LBTException(
-                f"Expense year ({np.max(self.expense_year)}) "
-                f"is after the end year of the project ({self.end_year})"
-            )
-
-        # Raise an error message: expense year is before the start year of the project
-        if np.min(self.expense_year) < self.start_year:
-            raise LBTException(
-                f"Expense year ({np.min(self.expense_year)}) "
-                f"is before the start year of the project ({self.start_year})"
-            )
-
-    def expenditures(
-        self,
-        inflation_rate: np.ndarray | float | int = 0.0,
-        lbt_rate: np.ndarray | float | int = 0.0,
-        lbt_discount: np.ndarray | float | int = 0.0,
-    ) -> np.ndarray:
-        """
-        Calculate LBT/PBB expenditures per year.
-
-        This method calculates LBT/PBB expenditures per year
-        based on the expense year and cost data provided.
-
-        Parameters
-        ----------
-        inflation_rate : np.ndarray or float or int, optional
-            The inflation rate to apply. Can be a single value or an array (default is 0).
-        lbt_rate : numpy.ndarray or float or int, optional
-            The LBT/PBB rate(s) to apply. Can be a single value or an array (default is 0).
-        lbt_discount : numpy.ndarray or float or int, optional
-            The LBT/ PBB discount(s) to apply. Can be a single value or an array (default is 0).
-
-        Returns
-        -------
-        expenses: np.ndarray
-            An array depicting LBT/PBB expenditures each year, taking into
-            account inflation and LBT schemes.
-
-        Notes
-        -----
-        This method calculates LBT/PBB expenditures while considering various economic factors
-        such as inflation and LBT schemes. It uses decorators to apply these factors to the
-        core calculation. In the core calculations:
-        (1) Function np.bincount() is used to align the cost elements according
-            to its corresponding expense year,
-        (2) If len(expenses) < project_duration, then add the remaining elements
-            with zeros.
-        """
-        @apply_lbt(
-            lbt_portion=self.lbt_portion,
-            lbt_rate=lbt_rate,
-            lbt_discount=lbt_discount,
-        )
-        @apply_inflation(inflation_rate=inflation_rate)
-        def _expenditures() -> np.ndarray:
-            expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
-            zeros = np.zeros(self.project_duration - len(expenses))
-            expenses = np.concatenate((expenses, zeros))
-            return expenses
-        return _expenditures()
-
-    def __len__(self):
-        return self.project_duration
-
-    def __eq__(self, other):
-        # Between an instance of LBT with another instance of LBT
-        if isinstance(other, LBT):
-            return all((
-                np.allclose(self.cost, other.cost),
-                np.allclose(self.expense_year, other.expense_year),
-                self.cost_allocation == other.cost_allocation,
-                self.lbt_portion == other.lbt_portion,
-            ))
-
-        # Between an instance of LBT and an integer/float
-        elif isinstance(other, (float, int)):
-            return np.sum(self.cost) == other
-
-        else:
-            return False
-
-    def __lt__(self, other):
-        # Between an instance of LBT with another instance of LBT
-        if isinstance(other, LBT):
-            return np.sum(self.cost) < np.sum(other.cost)
-
-        # Between an instance of LBT with an integer/float
-        elif isinstance(other, (float, int)):
-            return np.sum(self.cost) < other
-
-        else:
-            raise LBTException(
-                f"Must compare an instance of LBT with another "
-                f"instance of LBT, an integer, or a float. "
-                f"{other.__class__.__qualname__} is not an instance "
-                f"of LBT, nor an integer/float."
-            )
-
-    def __le__(self, other):
-        # Between an instance of LBT with another instance of LBT
-        if isinstance(other, LBT):
-            return np.sum(self.cost) <= np.sum(other.cost)
-
-        # Between an instance of LBT with an integer/float
-        elif isinstance(other, (float, int)):
-            return np.sum(self.cost) <= other
-
-        else:
-            raise LBTException(
-                f"Must compare an instance of LBT with another "
-                f"instance of LBT, an integer, or a float. "
-                f"{other.__class__.__qualname__} is not an instance "
-                f"of LBT, nor an integer/float."
-            )
-
-    def __gt__(self, other):
-        # Between an instance of LBT with another instance of LBT
-        if isinstance(other, LBT):
-            return np.sum(self.cost) > np.sum(other.cost)
-
-        # Between an instance of LBT with an integer/float
-        elif isinstance(other, (float, int)):
-            return np.sum(self.cost) > other
-
-        else:
-            raise LBTException(
-                f"Must compare an instance of LBT with another "
-                f"instance of LBT, an integer, or a float. "
-                f"{other.__class__.__qualname__} is not an instance "
-                f"of LBT, nor an integer/float."
-            )
-
-    def __ge__(self, other):
-        # Between an instance of LBT with another instance of LBT
-        if isinstance(other, LBT):
-            return np.sum(self.cost) >= np.sum(other.cost)
-
-        # Between an instance of LBT with an integer/float
-        elif isinstance(other, (float, int)):
-            return np.sum(self.cost) >= other
-
-        else:
-            raise LBTException(
-                f"Must compare an instance of LBT with another "
-                f"instance of LBT, an integer, or a float. "
-                f"{other.__class__.__qualname__} is not an instance "
-                f"of LBT, nor an integer/float."
-            )
-
-    def __add__(self, other):
-        # Only allows addition between an instance of LBT and another instance of LBT
-        if isinstance(other, LBT):
-            if (
-                self.cost_allocation != other.cost_allocation
-                or self.lbt_portion != other.lbt_portion
-            ):
-                raise LBTException(
-                    f"Cost allocation or LBT/PBB portion is not equal. "
-                    f"Cost allocation: {self.cost_allocation} vs. {other.cost_allocation}, "
-                    f"LBT/PBB portion: {self.lbt_portion} vs. {other.lbt_portion}."
-                )
-
-            else:
-                start_year_combined = min(self.start_year, other.start_year)
-                end_year_combined = max(self.end_year, other.end_year)
-                description_combined = self.description + other.description
-
-                return LBT(
-                    start_year=start_year_combined,
-                    end_year=end_year_combined,
-                    cost=np.concatenate((self.cost, other.cost)),
-                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                    cost_allocation=self.cost_allocation,
-                    lbt_portion=self.lbt_portion,
-                    description=description_combined,
-                )
-
-        else:
-            raise LBTException(
-                f"Must add between an instance of LBT "
-                f"with another instance of LBT. "
-                f"{other}({other.__class__.__qualname__}) is not "
-                f"an instance of LBT."
-            )
-
-    def __iadd__(self, other):
-        return self.__add__(other)
-
-    def __sub__(self, other):
-        # Only allows subtraction between an instance of LBT and another instance of LBT
-        if isinstance(other, LBT):
-            if (
-                self.cost_allocation != other.cost_allocation
-                or self.lbt_portion != other.lbt_portion
-            ):
-                raise LBTException(
-                    f"Cost allocation or LBT/PBB portion is not equal. "
-                    f"Cost allocation: {self.cost_allocation} vs. {other.cost_allocation}, "
-                    f"LBT/PBB portion: {self.lbt_portion} vs. {other.lbt_portion}."
-                )
-
-            else:
-                start_year_combined = min(self.start_year, other.start_year)
-                end_year_combined = max(self.end_year, other.end_year)
-                description_combined = self.description + other.description
-
-                return LBT(
-                    start_year=start_year_combined,
-                    end_year=end_year_combined,
-                    cost=np.concatenate((self.cost, -other.cost)),
-                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                    cost_allocation=self.cost_allocation,
-                    lbt_portion=self.lbt_portion,
-                    description=description_combined,
-                )
-
-        else:
-            raise LBTException(
-                f"Must subtract between an instance of LBT "
-                f"with another instance of LBT. "
-                f"{other}({other.__class__.__qualname__}) is not "
-                f"an instance of LBT."
-            )
-
-    def __rsub__(self, other):
-        return self.__sub__(other)
-
-    def __mul__(self, other):
-        # Multiplication is allowed only with an integer/a float
-        if isinstance(other, (float, int)):
-            return LBT(
-                start_year=self.start_year,
-                end_year=self.end_year,
-                cost=self.cost * other,
-                expense_year=self.expense_year,
-                cost_allocation=self.cost_allocation,
-                lbt_portion=self.lbt_portion,
-                description=self.description,
-            )
-
-        else:
-            raise LBTException(
-                f"Must multiply with an integer or a float; "
-                f"{other}({other.__class__.__qualname__}) is not an integer nor a float."
-            )
-
-    def __rmul__(self, other):
-        return self.__mul__(other)
-
-    def __truediv__(self, other):
-        # Between an instance of LBT with another instance of Tangible/Intangible/OPEX/ASR/LBT/PDRD
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR, LBT, PDRD)):
-            return np.sum(self.cost) / np.sum(other.cost)
-
-        # Between an instance of LBT and an integer/float
-        elif isinstance(other, (float, int)):
-            # Cannot divide with zero
-            if other == 0:
-                raise LBTException(f"Cannot divide with zero")
-
-            else:
-                return LBT(
-                    start_year=self.start_year,
-                    end_year=self.end_year,
-                    cost=self.cost / other,
-                    expense_year=self.expense_year,
-                    cost_allocation=self.cost_allocation,
-                    lbt_portion=self.lbt_portion,
-                    description=self.description,
-                )
-
-        else:
-            raise LBTException(
-                f"Must divide with an instance of Tangible/Intangible/OPEX/ASR/LBT/PDRD, "
-                f"an integer or a float; {other}({other.__class__.__qualname__}) is not "
-                f"an instance of Tangible/Intangible/OPEX/ASR/LBT/PDRD nor an integer nor a float."
-            )
-
-
-@dataclass
-class PDRD:
-    """
-    Manages PDRD asset.
-
-    Parameters
-    ----------
-    start_year : int
-        The start year of the project.
-    end_year : int
-        The end year of the project.
-    cost : numpy.ndarray
-        An array representing the cost of a PDRD asset.
-    expense_year : numpy.ndarray
-        An array representing the expense year of a PDRD asset.
-    cost_allocation : FluidType
-        A string depicting the cost allocation of a PDRD asset.
-    pdrd_portion: float | int
-        A fraction of PDRD cost susceptible for PDRD tax.
-    description: list[str]
-        A list of string description regarding the associated PDRD cost.
-    """
-
-    start_year: int
-    end_year: int
-    cost: np.ndarray
-    expense_year: np.ndarray
-    cost_allocation: FluidType = field(default=FluidType.OIL)
-    pdrd_portion: float | int = field(default=1.0)
-    description: list[str] = field(default=None)
-
-    # Attribute to be defined later on
-    project_duration: int = field(default=None, init=False, repr=False)
-    project_years: np.ndarray = field(default=None, init=False, repr=False)
-
-    def __post_init__(self):
-        # Check for inappropriate start and end year project
-        if self.end_year >= self.start_year:
-            self.project_duration = self.end_year - self.start_year + 1
-            self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
-
-        else:
-            raise PDRDException(
-                f"start year {self.start_year} "
-                f"is after the end year {self.end_year}"
-            )
-
-        # Configure attribute "description"
-        if self.description is None:
-            self.description = [" " for _ in range(len(self.cost))]
-
-        if self.description is not None:
-            if len(self.description) != len(self.cost):
-                raise PDRDException(
-                    f"Unequal length of array: "
-                    f"description: {len(self.description)}, "
-                    f"cost: {len(self.cost)}"
-                )
-
-        # Check input data for unequal length
-        if len(self.expense_year) != len(self.cost):
-            raise PDRDException(
-                f"Unequal length of array: "
-                f"cost: {len(self.cost)}, "
-                f"expense_year: {len(self.expense_year)}"
-            )
-
-        # Raise an error message: expense year is after the end year of the project
-        if np.max(self.expense_year) > self.end_year:
-            raise PDRDException(
-                f"Expense year ({np.max(self.expense_year)}) "
-                f"is after the end year of the project ({self.end_year})"
-            )
-
-        if np.min(self.expense_year) < self.start_year:
-            raise PDRDException(
-                f"Expense year ({np.min(self.expense_year)}) "
-                f"is before the start year of the project ({self.start_year})"
-            )
-
-    def expenditures(
-        self,
-        inflation_rate: np.ndarray | float | int = 0.0,
-        pdrd_rate: np.ndarray | float | int = 0.0,
-        pdrd_discount: np.ndarray | float | int = 0.0,
-    ) -> np.ndarray:
-        """
-        Calculate PDRD expenditures per year.
-
-        This method calculates PDRD expenditures per year
-        based on the expense year and cost data provided.
-
-        Parameters
-        ----------
-        inflation_rate : np.ndarray or float or int, optional
-            The inflation rate to apply. Can be a single value or an array (default is 0).
-        pdrd_rate : numpy.ndarray or float or int, optional
-            The PDRD rate(s) to apply. Can be a single value or an array (default is 0).
-        pdrd_discount : numpy.ndarray or float or int, optional
-            The PDRD discount(s) to apply. Can be a single value or an array (default is 0).
-
-        Returns
-        -------
-        expenses: np.ndarray
-            An array depicting PDRD expenditures each year, taking into
-            account inflation and PDRD schemes.
-
-        Notes
-        -----
-        This method calculates PDRD expenditures while considering various economic factors
-        such as inflation and PDRD schemes. It uses decorators to apply these factors to the
-        core calculation. In the core calculations:
-        (1) Function np.bincount() is used to align the cost elements according
-            to its corresponding expense year,
-        (2) If len(expenses) < project_duration, then add the remaining elements
-            with zeros.
-        """
-        @apply_pdrd(
-            pdrd_portion=self.pdrd_portion,
-            pdrd_rate=pdrd_rate,
-            pdrd_discount=pdrd_discount,
-        )
-        @apply_inflation(inflation_rate=inflation_rate)
-        def _expenditures() -> np.ndarray:
-            expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
-            zeros = np.zeros(self.project_duration - len(expenses))
-            expenses = np.concatenate((expenses, zeros))
-            return expenses
-        return _expenditures()
-
-    def __len__(self):
-        return self.project_duration
-
-    def __eq__(self, other):
-        # Between an instance of PDRD with another instance of PDRD
-        if isinstance(other, PDRD):
-            return all((
-                np.allclose(self.cost, other.cost),
-                np.allclose(self.expense_year, other.expense_year),
-                self.cost_allocation == other.cost_allocation,
-                self.pdrd_portion == other.pdrd_portion
-            ))
-
-        # Between an instance of PDRD and an integer/float
-        elif isinstance(other, (float, int)):
-            return np.sum(self.cost) == other
-
-        else:
-            return False
-
-    def __lt__(self, other):
-        # Between an instance of PDRD with another instance of PDRD
-        if isinstance(other, PDRD):
-            return np.sum(self.cost) < np.sum(other.cost)
-
-        # Between an instance of PDRD with an integer/float
-        elif isinstance(other, (float, int)):
-            return np.sum(self.cost) < other
-
-        else:
-            raise PDRDException(
-                f"Must compare an instance of PDRD with another "
-                f"instance of PDRD, an integer, or a float. "
-                f"{other.__class__.__qualname__} is not an instance "
-                f"of PDRD, nor an integer/float."
-            )
-
-    def __le__(self, other):
-        # Between an instance of PDRD with another instance of PDRD
-        if isinstance(other, PDRD):
-            return np.sum(self.cost) <= np.sum(other.cost)
-
-        # Between an instance of PDRD with an integer/float
-        elif isinstance(other, (float, int)):
-            return np.sum(self.cost) <= other
-
-        else:
-            raise PDRDException(
-                f"Must compare an instance of PDRD with another "
-                f"instance of PDRD, an integer, or a float. "
-                f"{other.__class__.__qualname__} is not an instance "
-                f"of PDRD, nor an integer/float."
-            )
-
-    def __gt__(self, other):
-        # Between an instance of PDRD with another instance of PDRD
-        if isinstance(other, PDRD):
-            return np.sum(self.cost) > np.sum(other.cost)
-
-        # Between an instance of PDRD with an integer/float
-        elif isinstance(other, (float, int)):
-            return np.sum(self.cost) > other
-
-        else:
-            raise PDRDException(
-                f"Must compare an instance of PDRD with another "
-                f"instance of PDRD, an integer, or a float. "
-                f"{other.__class__.__qualname__} is not an instance "
-                f"of PDRD, nor an integer/float."
-            )
-
-    def __ge__(self, other):
-        # Between an instance of PDRD with another instance of PDRD
-        if isinstance(other, PDRD):
-            return np.sum(self.cost) >= np.sum(other.cost)
-
-        # Between an instance of PDRD with an integer/float
-        elif isinstance(other, (float, int)):
-            return np.sum(self.cost) >= other
-
-        else:
-            raise PDRDException(
-                f"Must compare an instance of PDRD with another "
-                f"instance of PDRD, an integer, or a float. "
-                f"{other.__class__.__qualname__} is not an instance "
-                f"of PDRD, nor an integer/float."
-            )
-
-    def __add__(self, other):
-        # Only allows addition between an instance of PDRD and another instance of PDRD
-        if isinstance(other, PDRD):
-            if (
-                self.cost_allocation != other.cost_allocation
-                or self.pdrd_portion != other.pdrd_portion
-            ):
-                raise PDRDException(
-                    f"Cost allocation or PDRD portion is not equal. "
-                    f"Cost allocation: {self.cost_allocation} vs. {other.cost_allocation}, "
-                    f"PDRD portion: {self.pdrd_portion} vs. {other.pdrd_portion}."
-                )
-
-            else:
-                start_year_combined = min(self.start_year, other.start_year)
-                end_year_combined = max(self.end_year, other.end_year)
-                description_combined = self.description + other.description
-
-                return PDRD(
-                    start_year=start_year_combined,
-                    end_year=end_year_combined,
-                    cost=np.concatenate((self.cost, other.cost)),
-                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                    cost_allocation=self.cost_allocation,
-                    pdrd_portion=self.pdrd_portion,
-                    description=description_combined,
-                )
-
-        else:
-            raise PDRDException(
-                f"Must add between an instance of PDRD "
-                f"with another instance of PDRD. "
-                f"{other}({other.__class__.__qualname__}) is not "
-                f"an instance of PDRD."
-            )
-
-    def __iadd__(self, other):
-        return self.__add__(other)
-
-    def __sub__(self, other):
-        # Only allows subtraction between an instance of PDRD and another instance of PDRD
-        if isinstance(other, PDRD):
-            if (
-                self.cost_allocation != other.cost_allocation
-                or self.pdrd_portion != other.pdrd_portion
-            ):
-                raise PDRDException(
-                    f"Cost allocation or PDRD portion is not equal. "
-                    f"Cost allocation: {self.cost_allocation} vs. {other.cost_allocation}, "
-                    f"PDRD portion: {self.pdrd_portion} vs. {other.pdrd_portion}."
-                )
-
-            else:
-                start_year_combined = min(self.start_year, other.start_year)
-                end_year_combined = max(self.end_year, other.end_year)
-                description_combined = self.description + other.description
-
-                return PDRD(
-                    start_year=start_year_combined,
-                    end_year=end_year_combined,
-                    cost=np.concatenate((self.cost, -other.cost)),
-                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                    cost_allocation=self.cost_allocation,
-                    pdrd_portion=self.pdrd_portion,
-                    description=description_combined,
-                )
-
-        else:
-            raise PDRDException(
-                f"Must subtract between an instance of PDRD "
-                f"with another instance of PDRD. "
-                f"{other}({other.__class__.__qualname__}) is not "
-                f"an instance of PDRD."
-            )
-
-    def __rsub__(self, other):
-        return self.__sub__(other)
-
-    def __mul__(self, other):
-        # Multiplication is allowed only with an integer/a float
-        if isinstance(other, (float, int)):
-            return PDRD(
-                start_year=self.start_year,
-                end_year=self.end_year,
-                cost=self.cost * other,
-                expense_year=self.expense_year,
-                cost_allocation=self.cost_allocation,
-                pdrd_portion=self.pdrd_portion,
-                description=self.description,
-            )
-
-        else:
-            raise PDRDException(
-                f"Must multiply with an integer or a float; "
-                f"{other}({other.__class__.__qualname__}) is not an integer nor a float."
-            )
-
-    def __rmul__(self, other):
-        return self.__mul__(other)
-
-    def __truediv__(self, other):
-        # Between an instance of PDRD with another instance of Tangible/Intangible/OPEX/ASR/LBT/PDRD
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR, LBT, PDRD)):
-            return np.sum(self.cost) / np.sum(other.cost)
-
-        # Between an instance of PDRD and an integer/float
-        elif isinstance(other, (float, int)):
-            # Cannot divide with zero
-            if other == 0:
-                raise PDRDException(f"Cannot divide with zero")
-
-            else:
-                return PDRD(
-                    start_year=self.start_year,
-                    end_year=self.end_year,
-                    cost=self.cost / other,
-                    expense_year=self.expense_year,
-                    cost_allocation=self.cost_allocation,
-                    pdrd_portion=self.pdrd_portion,
-                    description=self.description,
-                )
-
-        else:
-            raise PDRDException(
-                f"Must divide with an instance of Tangible/Intangible/OPEX/ASR/LBT/PDRD, "
-                f"an integer or a float; {other}({other.__class__.__qualname__}) is not "
-                f"an instance of Tangible/Intangible/OPEX/ASR/LBT/PDRD nor an integer nor a float."
             )
