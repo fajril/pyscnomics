@@ -7,8 +7,8 @@ from functools import wraps
 from pyscnomics.econ.selection import FluidType
 
 
-class TaxesException(Exception):
-    """Exception to be raised for a misuse of VAT and PDRI function"""
+class InflationException(Exception):
+    """ Exception to be raised for an incorrect inflation configuration """
 
     pass
 
@@ -41,7 +41,7 @@ def check_input(target_func, param: np.ndarray | float | int) -> np.ndarray:
     """
     if isinstance(param, np.ndarray):
         if len(param) != len(target_func):
-            raise TaxesException(
+            raise InflationException(
                 f"Unequal length of arrays: "
                 f"{param.__class__.__qualname__} ({len(param)}), "
                 f"{target_func.__class__.__qualname__} ({len(target_func)})."
@@ -56,6 +56,7 @@ def check_input(target_func, param: np.ndarray | float | int) -> np.ndarray:
 
 def apply_cost_adjustment(
     start_year: int,
+    end_year: int,
     cost: np.ndarray,
     expense_year: np.ndarray,
     project_duration: int,
@@ -70,6 +71,8 @@ def apply_cost_adjustment(
     ----------
     start_year : int
         The start year of the project.
+    end_year : int
+        The end year of the project.
     cost : np.ndarray
         An array of costs to be adjusted.
     expense_year : np.ndarray
@@ -105,6 +108,16 @@ def apply_cost_adjustment(
         by unity, then multiple the associated elements.
     (5) Cost adjustment is undertaken by multiplication: 'cost' * 'inflation_mult'.
     """
+
+    if year_now < start_year:
+        raise InflationException(
+            f"year_now ({year_now}) is before start_year of the project ({start_year})."
+        )
+
+    if year_now > end_year:
+        raise InflationException(
+            f"year_now ({year_now}) is after end_year of the project ({end_year})."
+        )
 
     inflation_rate_arr = check_input(target_func=project_years, param=inflation_rate)
 

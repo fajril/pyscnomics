@@ -251,6 +251,7 @@ class Tangible:
 
         cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
+            end_year=self.end_year,
             cost=self.cost,
             expense_year=self.expense_year,
             project_duration=self.project_duration,
@@ -310,6 +311,7 @@ class Tangible:
 
         cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
+            end_year=self.end_year,
             cost=self.cost,
             expense_year=self.expense_year,
             project_duration=self.project_duration,
@@ -669,10 +671,6 @@ class Intangible:
         An array representing the expense year of an intangible asset.
     cost_allocation : FluidType
         A string depicting the cost allocation of an intangible asset.
-    vat_portion: float | int
-        A fraction of intangible cost susceptible for VAT/PPN.
-    pdri_portion: float | int
-        A fraction of intangible cost susceptible for PDRI.
     description: list[str]
         A list of string description regarding the associated intangible cost.
     """
@@ -681,9 +679,7 @@ class Intangible:
     end_year: int
     cost: np.ndarray
     expense_year: np.ndarray
-    cost_allocation: FluidType = field(default=FluidType.OIL)
-    vat_portion: float | int = field(default=1.0)
-    pdri_portion: float | int = field(default=1.0)
+    cost_allocation: list[FluidType] = field(default=None)
     description: list[str] = field(default=None)
 
     # Attribute to be defined later on
@@ -691,6 +687,7 @@ class Intangible:
     project_years: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
+
         # Check for inappropriate start and end year project
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -702,24 +699,47 @@ class Intangible:
                 f"is after the end year {self.end_year}"
             )
 
-        # Configure attribute "description"
+        # Configure description data
         if self.description is None:
             self.description = [" " for _ in range(len(self.cost))]
 
         if self.description is not None:
-            if len(self.description) != len(self.cost):
+            if not isinstance(self.description, list):
                 raise IntangibleException(
-                    f"Unequal length of array: "
-                    f"description: {len(self.description)}, "
-                    f"cost: {len(self.cost)}"
+                    f"Attribute description must be a list; "
+                    f"description ({self.description.__class__.__qualname__}) "
+                    f"is not a list."
+                )
+
+        # Configure cost_allocation data
+        if self.cost_allocation is None:
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
+
+        if self.cost_allocation is not None:
+            if not isinstance(self.cost_allocation, list):
+                raise IntangibleException(
+                    "Attribute cost_allocation must be a list. "
+                    f"cost_allocation ({self.cost_allocation.__class__.__qualname__}) "
+                    f"is not a list."
                 )
 
         # Check input data for unequal length
-        if len(self.expense_year) != len(self.cost):
+        arr_length = len(self.cost)
+
+        if not all(
+            len(arr) == arr_length
+            for arr in [
+                self.expense_year,
+                self.cost_allocation,
+                self.description,
+            ]
+        ):
             raise IntangibleException(
                 f"Unequal length of array: "
                 f"cost: {len(self.cost)}, "
-                f"expense_year: {len(self.expense_year)}"
+                f"expense_year: {len(self.expense_year)}, "
+                f"cost_allocation: {len(self.cost_allocation)}, "
+                f"description: {len(self.description)}."
             )
 
         # Raise an error message: expense year is after the end year of the project
@@ -738,11 +758,8 @@ class Intangible:
 
     def expenditures(
         self,
-        inflation_rate: np.ndarray | float | int = 0.0,
-        vat_rate: np.ndarray | float | int = 0.0,
-        vat_discount: np.ndarray | float | int = 0.0,
-        pdri_rate: np.ndarray | float | int = 0.0,
-        pdri_discount: np.ndarray | float | int = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
+        year_now: int = None,
     ) -> np.ndarray:
         """
         Calculate intangible expenditures per year.
@@ -754,46 +771,44 @@ class Intangible:
         ----------
         inflation_rate : np.ndarray or float or int, optional
             The inflation rate to apply. Can be a single value or an array (default is 0).
-        vat_rate : numpy.ndarray or float or int, optional
-            The VAT/PPN rate(s) to apply. Can be a single value or an array (default is 0).
-        vat_discount : numpy.ndarray or float or int, optional
-            The VAT discount(s) to apply. Can be a single value or an array (default is 0).
-        pdri_rate : numpy.ndarray or float or int, optional
-            The PDRI rate(s) to apply. Can be a single value or an array (default is 0).
-        pdri_discount : numpy.ndarray or float or int, optional
-            The PDRI discount(s) to apply. Can be a single value or an array (default is 0).
+        year_now : int
+            The reference year for inflation calculation.
 
         Returns
         -------
         expenses: np.ndarray
-            An array depicting the intangible expenditures each year, taking into
-            account inflation, VAT/PPN, and PDRI schemes.
+            An array depicting the intangible expenditures each year, adjusted by
+            inflation (if any).
 
         Notes
         -----
-        This method calculates intangible expenditures while considering various economic factors
-        such as inflation, VAT, and PDRI schemes. It uses decorators to apply these factors to the
-        core calculation. In the core calculations:
-        (1) Function np.bincount() is used to align the cost elements according
-            to its corresponding expense year,
-        (2) If len(expenses) < project_duration, then add the remaining elements
+        This method calculates intangible expenditures while considering inflation scheme.
+        The core calculations are as follows:
+        (1) Apply adjustment to cost due to inflation (if any),
+        (2) Function np.bincount() is used to align the 'cost_adjusted' elements
+            according to its corresponding expense year,
+        (3) If len(expenses) < project_duration, then add the remaining elements
             with zeros.
         """
-        @apply_vat_and_pdri(
-            vat_portion=self.vat_portion,
-            vat_rate=vat_rate,
-            vat_discount=vat_discount,
-            pdri_portion=self.pdri_portion,
-            pdri_rate=pdri_rate,
-            pdri_discount=pdri_discount,
+        if year_now is None:
+            year_now = self.start_year
+
+        cost_adjusted = apply_cost_adjustment(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_duration=self.project_duration,
+            project_years=self.project_years,
+            year_now=year_now,
+            inflation_rate=inflation_rate,
         )
-        @apply_inflation(inflation_rate=inflation_rate)
-        def _expenditures() -> np.ndarray:
-            expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)
-            zeros = np.zeros(self.project_duration - len(expenses))
-            expenses = np.concatenate((expenses, zeros))
-            return expenses
-        return _expenditures()
+
+        expenses = np.bincount(self.expense_year - self.start_year, weights=cost_adjusted)
+        zeros = np.zeros(self.project_duration - len(expenses))
+        expenses = np.concatenate((expenses, zeros))
+
+        return expenses
 
     def __len__(self):
         return self.project_duration
@@ -806,8 +821,6 @@ class Intangible:
                     np.allclose(self.cost, other.cost),
                     np.allclose(self.expense_year, other.expense_year),
                     self.cost_allocation == other.cost_allocation,
-                    self.vat_portion == other.vat_portion,
-                    self.pdri_portion == other.pdri_portion,
                 )
             )
 
@@ -881,33 +894,18 @@ class Intangible:
     def __add__(self, other):
         # Only allows addition between an instance of Intangible and another instance of Intangible
         if isinstance(other, Intangible):
-            if (
-                self.cost_allocation != other.cost_allocation
-                or self.vat_portion != other.vat_portion
-                or self.pdri_portion != other.pdri_portion
-            ):
-                raise IntangibleException(
-                    f"Cost allocation/VAT portion/PDRI portion is not equal. "
-                    f"Cost allocation: {self.cost_allocation} vs. {other.cost_allocation}, "
-                    f"VAT portion: {self.vat_portion} vs. {other.vat_portion}, "
-                    f"PDRI portion: {self.pdri_portion} vs. {other.pdri_portion}."
-                )
+            start_year_combined = min(self.start_year, other.start_year)
+            end_year_combined = max(self.end_year, other.end_year)
+            description_combined = self.description + other.description
 
-            else:
-                combined_start_year = min(self.start_year, other.start_year)
-                combined_end_year = max(self.end_year, other.end_year)
-                combined_description = self.description + other.description
-
-                return Intangible(
-                    start_year=combined_start_year,
-                    end_year=combined_end_year,
-                    cost=np.concatenate((self.cost, other.cost)),
-                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                    cost_allocation=self.cost_allocation,
-                    vat_portion=self.vat_portion,
-                    pdri_portion=self.pdri_portion,
-                    description=combined_description,
-                )
+            return Intangible(
+                start_year=start_year_combined,
+                end_year=end_year_combined,
+                cost=np.concatenate((self.cost, other.cost)),
+                expense_year=np.concatenate((self.expense_year, other.expense_year)),
+                cost_allocation=self.cost_allocation + other.cost_allocation,
+                description=description_combined,
+            )
 
         else:
             raise IntangibleException(
@@ -923,33 +921,18 @@ class Intangible:
     def __sub__(self, other):
         # Only allows subtraction between an instance of Intangible and another instance of Intangible
         if isinstance(other, Intangible):
-            if (
-                self.cost_allocation != other.cost_allocation
-                or self.vat_portion != other.vat_portion
-                or self.pdri_portion != other.pdri_portion
-            ):
-                raise IntangibleException(
-                    f"Cost allocation/VAT portion/PDRI portion is not equal. "
-                    f"Cost allocation: {self.cost_allocation} vs. {other.cost_allocation}, "
-                    f"VAT portion: {self.vat_portion} vs. {other.vat_portion}, "
-                    f"PDRI portion: {self.pdri_portion} vs. {other.pdri_portion}."
-                )
+            start_year_combined = min(self.start_year, other.start_year)
+            end_year_combined = max(self.end_year, other.end_year)
+            description_combined = self.description + other.description
 
-            else:
-                combined_start_year = min(self.start_year, other.start_year)
-                combined_end_year = max(self.end_year, other.end_year)
-                combined_description = self.description + other.description
-
-                return Intangible(
-                    start_year=combined_start_year,
-                    end_year=combined_end_year,
-                    cost=np.concatenate((self.cost, -other.cost)),
-                    expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                    cost_allocation=self.cost_allocation,
-                    vat_portion=self.vat_portion,
-                    pdri_portion=self.pdri_portion,
-                    description=combined_description,
-                )
+            return Intangible(
+                start_year=start_year_combined,
+                end_year=end_year_combined,
+                cost=np.concatenate((self.cost, -other.cost)),
+                expense_year=np.concatenate((self.expense_year, other.expense_year)),
+                cost_allocation=self.cost_allocation + other.cost_allocation,
+                description=description_combined,
+            )
 
         else:
             raise IntangibleException(
@@ -969,10 +952,8 @@ class Intangible:
                 start_year=self.start_year,
                 end_year=self.end_year,
                 cost=self.cost * other,
-                expense_year=self.expense_year.copy(),
+                expense_year=self.expense_year,
                 cost_allocation=self.cost_allocation,
-                vat_portion=self.vat_portion,
-                pdri_portion=self.pdri_portion,
                 description=self.description,
             )
 
@@ -1001,10 +982,8 @@ class Intangible:
                     start_year=self.start_year,
                     end_year=self.end_year,
                     cost=self.cost / other,
-                    expense_year=self.expense_year.copy(),
+                    expense_year=self.expense_year,
                     cost_allocation=self.cost_allocation,
-                    vat_portion=self.vat_portion,
-                    pdri_portion=self.pdri_portion,
                     description=self.description,
                 )
 
