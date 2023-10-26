@@ -85,7 +85,6 @@ class TaxSplitTypeCR(Enum):
         Represents sliding scale split type
     R2C : str
         Represents revenue to cost split type
-
     """
 
     CONVENTIONAL = "conventional"
