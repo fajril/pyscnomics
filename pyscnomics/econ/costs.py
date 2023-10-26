@@ -256,6 +256,11 @@ class Tangible:
             inflation_rate=inflation_rate,
         )
 
+        print('\t')
+        print(f'Filetype: {type(cost_adjusted)}')
+        print(f'Length: {len(cost_adjusted)}')
+        print('cost_adjusted = ', cost_adjusted)
+
         # def _expenditures():
         #     if year_ref == YearReference.EXPENSE_YEAR:
         #         expenses = np.bincount(self.expense_year - self.start_year, weights=self.cost)

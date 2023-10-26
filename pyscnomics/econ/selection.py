@@ -58,7 +58,16 @@ class FluidType(Enum):
 
 
 class TaxType(Enum):
-    """ 1234 """
+    """
+    Enumeration of tax types for incorporation of tax adjustment.
+
+    Attributes
+    ----------
+    VAT : str
+        Represents Value Added Tax.
+    LBT : str
+        Represents Land and Building Tax.
+    """
 
     VAT = "vat"
     LBT = "lbt"

@@ -323,7 +323,7 @@ tangible_mangga = Tangible(
 
 t1 = tangible_mangga.expenditures(
     year_now=2023,
-    inflation_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06]),
+    inflation_rate=0.0,
 )
 
 # print('\t')

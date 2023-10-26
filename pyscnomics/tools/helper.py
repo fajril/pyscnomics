@@ -4,7 +4,7 @@ Handles summation operation on two arrays, accounting for different starting yea
 
 import numpy as np
 from functools import wraps
-from pyscnomics.econ.selection import FluidType, YearReference, TaxType
+from pyscnomics.econ.selection import FluidType
 
 
 class TaxesException(Exception):
@@ -63,39 +63,61 @@ def apply_cost_adjustment(
     year_now: int,
     inflation_rate: np.ndarray | float,
 ) -> np.ndarray:
-    """ 1234 """
+    """
+    Adjusts cost based on inflation over the specified time period.
+
+    Parameters
+    ----------
+    start_year : int
+        The start year of the project.
+    cost : np.ndarray
+        An array of costs to be adjusted.
+    expense_year : np.ndarray
+        An array specifying the expense years for each cost element.
+    project_duration : int
+        The total duration of the project in years.
+    project_years : np.ndarray
+        An array of project years.
+    year_now : int
+        The reference year for inflation calculation.
+    inflation_rate : np.ndarray | float
+        The inflation rate to apply. Can be a single value or an array.
+
+    Returns
+    -------
+    cost_adjusted: np.ndarray
+        An array of adjusted costs after applying inflation.
+
+    Notes
+    -----
+    The core operations are as follows:
+    (1) Check 'inflation_rate' whether it is provided as an array or as a single value.
+        If it is given as an array, the length of the array must be consistent with the
+        duration of the project. If it is given as a single value, then create an array
+        of length equal to project duration with all elements set equal to the single
+        value.
+    (2) Parameter 'id_rate_arr' configure the index location of the cost in the 'project_years'
+        based on the associated 'expense_year' and the reference 'year_now'. The result is
+        then added by unity.
+    (3) Identify the index location of 'year_now' in array 'project_years'. The result is
+        then added by unity.
+    (4) Slice 'inflation_rate_arr' according to 'id_year_now' and 'id_rate_arr'. Add the results
+        by unity, then multiple the associated elements.
+    (5) Cost adjustment is undertaken by multiplication: 'cost' * 'inflation_mult'.
+    """
 
     inflation_rate_arr = check_input(target_func=project_years, param=inflation_rate)
+
     if isinstance(inflation_rate, float):
         inflation_rate_arr = np.repeat(inflation_rate, project_duration)
 
-    id_rate_arr = ((expense_year - year_now) + (year_now - start_year)).astype("int")
-    id_year_now = np.argwhere(year_now == project_years).ravel()[0]
-    id_captured = int(id_year_now + 1)
+    id_rate_arr = ((expense_year - year_now) + (year_now - start_year) + 1).astype("int")
+    id_year_now = int(np.argwhere(year_now == project_years).ravel()[0] + 1)
+    inflation_mult = np.array(
+        [np.prod(1.0 + inflation_rate_arr[id_year_now:id_rate_arr[i]]) for i, c in enumerate(cost)]
+    )
 
-    inflation_mult = np.ones([len(cost), project_duration], dtype=np.float_)
-    for i in range(len(cost)):
-        inflation_mult[i, id_captured:int(id_rate_arr[i] + 1)] = (
-            1.0 + inflation_rate_arr[id_captured:int(id_rate_arr[i] + 1)]
-        )
-
-    inflation_mult = np.prod(inflation_mult, axis=1)
-    cost_adjusted = cost * inflation_mult
-
-    print('\t')
-    print(f"Filetype: {type(cost)}")
-    print(f"Length: {len(cost)}")
-    print("cost = ", cost)
-
-    print("\t")
-    print(f"Filetype: {type(inflation_mult)}")
-    print(f'Shape: {inflation_mult.shape}')
-    print("inflation_mult = \n", inflation_mult)
-
-    print('\t')
-    print(f"Filetype: {type(cost_adjusted)}")
-    print(f"Length: {len(cost_adjusted)}")
-    print("cost_adjusted = ", cost_adjusted)
+    return cost * inflation_mult
 
 
 def apply_inflation(inflation_rate: np.ndarray | float) -> callable:
@@ -128,25 +150,6 @@ def apply_inflation(inflation_rate: np.ndarray | float) -> callable:
             inflation_mult = (1.0 + inflation_rate_arr) ** exponents
             modified_arr = f(*args, **kwargs) * inflation_mult
             return modified_arr
-
-        return _wrapper
-
-    return _decorated
-
-
-def apply_tax(
-    tax_portion: np.ndarray,
-    tax_rate: np.ndarray | float,
-    tax_discount: float,
-) -> callable:
-    """1234"""
-
-    def _decorated(f):
-        @wraps(f)
-        def _wrapper(*args, **kwargs):
-            tax_rate_arr = check_input(target_func=f(*args, **kwargs), param=tax_rate)
-            tax_multiplier = tax_portion * tax_rate_arr * (1.0 - tax_discount)
-            return f(*args, **kwargs) * (1.0 + tax_multiplier)
 
         return _wrapper
 
@@ -321,129 +324,6 @@ def apply_pdrd(
         return _wrapper
 
     return _decorated
-
-
-def apply_cost_modification(
-    start_year: int,
-    cost: np.ndarray,
-    expense_year: np.ndarray,
-    project_duration: int,
-    inflation_rate: np.ndarray | float,
-    pis_year: np.ndarray = None,
-    year_ref: YearReference = None,
-    # vat_portion: float | int,
-    # vat_rate: np.ndarray | float | int,
-    # vat_discount: np.ndarray | float | int,
-    # pdri_portion: float | int,
-    # pdri_rate: np.ndarray | float | int,
-    # pdri_discount: np.ndarray | float | int,
-) -> np.ndarray:
-    """
-    Apply cost modifications to the given cost array based on various parameters.
-
-    Parameters:
-    -----------
-    start_year : int
-        The start year of the project.
-    cost : np.ndarray
-        An array containing the original cost data.
-    expense_year : np.ndarray
-        An array specifying the expense years for each cost element.
-    project_duration: int
-        Duration of the project.
-    inflation_rate : np.ndarray | float | int
-        The inflation rate to apply. Can be a single value or an array.
-    vat_portion : float | int
-        The portion of cost subject to Value Added Tax (VAT) as a decimal or integer.
-    vat_rate : np.ndarray | float | int
-        The VAT/PPN rate(s) to apply. Can be a single value or an array.
-    vat_discount : np.ndarray | float | int
-        The VAT discount(s) to apply. Can be a single value or an array.
-    pdri_portion : float | int
-        The portion of cost subject to PDRI as a decimal or integer.
-    pdri_rate : np.ndarray | float | int
-        The PDRI rate(s) to apply. Can be a single value or an array.
-    pdri_discount : np.ndarray | float | int
-        The PDRI discount(s) to apply. Can be a single value or an array.
-    pis_year: np.ndarray
-        An array representing the PIS year of a tangible asset.
-    year_ref: YearReference
-        Reference year for expenses (default is YearReference.EXPENSE_YEAR).
-    Returns:
-    --------
-    cost_modified: np.ndarray
-        An array containing the modified cost data after applying various adjustments.
-    """
-
-    if year_ref is None:
-        year_ref = YearReference.EXPENSE_YEAR
-
-    if pis_year is None:
-        pis_year = expense_year
-
-    # Apply inflation
-    if isinstance(inflation_rate, np.ndarray):
-        if len(inflation_rate) != project_duration:
-            raise TaxesException(
-                f"Unequal length of array: "
-                f"Inflation rate: {len(inflation_rate)}, "
-                f"Project duration: {project_duration}."
-            )
-        else:
-            if year_ref == YearReference.EXPENSE_YEAR:
-                cost_modified_by_duration = np.bincount(
-                    expense_year - start_year, weights=cost
-                )
-            else:
-                cost_modified_by_duration = np.bincount(
-                    pis_year - start_year, weights=cost
-                )
-
-            zeros = np.zeros(project_duration - len(cost_modified_by_duration))
-            cost_modified_by_duration = np.concatenate(
-                (cost_modified_by_duration, zeros)
-            )
-
-        exponents = np.arange(0, len(cost_modified_by_duration), 1)
-        inflation_rate_arr = check_input(
-            target_func=cost_modified_by_duration, param=inflation_rate
-        )
-        inflation_mult = (1.0 + inflation_rate_arr) ** exponents
-        cost_modified = cost_modified_by_duration * inflation_mult
-
-    if isinstance(inflation_rate, float):
-        exponents = expense_year - start_year
-        inflation_mult = (1.0 + inflation_rate) ** exponents
-        cost_modified_by_inflation = cost * inflation_mult
-
-        if year_ref == YearReference.EXPENSE_YEAR:
-            cost_modified = np.bincount(
-                expense_year - start_year, weights=cost_modified_by_inflation
-            )
-        else:
-            cost_modified = np.bincount(
-                pis_year - start_year, weights=cost_modified_by_inflation
-            )
-
-        zeros = np.zeros(project_duration - len(cost_modified))
-        cost_modified = np.concatenate((cost_modified, zeros))
-
-    # # Apply VAT/PPN
-    # vat_portion_arr = np.repeat(vat_portion, len(cost_modified))
-    # vat_rate_arr = check_input(target_func=cost_modified, param=vat_rate)
-    # vat_discount_arr = check_input(target_func=cost_modified, param=vat_discount)
-    # vat_multiplier = vat_portion_arr * vat_rate_arr * (1.0 - vat_discount_arr)
-    #
-    # # Apply PDRI
-    # pdri_portion_arr = np.repeat(pdri_portion, len(cost_modified))
-    # pdri_rate_arr = check_input(target_func=cost_modified, param=pdri_rate)
-    # pdri_discount_arr = check_input(target_func=cost_modified, param=pdri_discount)
-    # pdri_multiplier = pdri_portion_arr * pdri_rate_arr * (1.0 - pdri_discount_arr)
-    #
-    # total_multiplier = vat_multiplier + pdri_multiplier
-    # cost_modified *= 1.0 + total_multiplier
-
-    return cost_modified
 
 
 def get_identifier(target_instances: tuple, cost_alloc: FluidType) -> list:
