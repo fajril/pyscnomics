@@ -20,7 +20,7 @@ def test_tangible_incorrect_year_input():
             expense_year=np.array([2023, 2024]),
             salvage_value=np.array([25, 25]),
             useful_life=np.array([5, 5]),
-            cost_allocation=FluidType.OIL,
+            cost_allocation=[FluidType.OIL, FluidType.OIL],
         )
 
 
@@ -36,7 +36,7 @@ def test_tangible_unequal_length_of_data_input():
             expense_year=np.array([2023, 2024, 2025]),
             salvage_value=np.array([25, 25]),
             useful_life=np.array([5, 5]),
-            cost_allocation=FluidType.OIL,
+            cost_allocation=[FluidType.OIL, FluidType.OIL],
         )
 
 
@@ -52,7 +52,7 @@ def test_tangible_incorrect_expense_year_input():
             expense_year=np.array([2023, 2040]),
             salvage_value=np.array([25, 25]),
             useful_life=np.array([5, 5]),
-            cost_allocation=FluidType.OIL,
+            cost_allocation=[FluidType.OIL, FluidType.OIL],
         )
 
     with pytest.raises(TangibleException):
@@ -62,7 +62,7 @@ def test_tangible_incorrect_expense_year_input():
             end_year=2032,
             cost=np.array([200, 200]),
             expense_year=np.array([2020, 2023]),
-            cost_allocation=FluidType.OIL,
+            cost_allocation=[FluidType.OIL, FluidType.OIL],
         )
 
 
@@ -76,7 +76,7 @@ def test_tangible_comparison():
         expense_year=np.array([2023, 2024]),
         salvage_value=np.array([25, 25]),
         useful_life=np.array([5, 5]),
-        cost_allocation=FluidType.OIL,
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
     jeruk_tangible = Tangible(
@@ -86,7 +86,7 @@ def test_tangible_comparison():
         expense_year=np.array([2023, 2024]),
         salvage_value=np.array([25, 25]),
         useful_life=np.array([5, 5]),
-        cost_allocation=FluidType.OIL,
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
     hiu_tangible = Tangible(
@@ -94,7 +94,7 @@ def test_tangible_comparison():
         end_year=2030,
         cost=np.array([100, 100]),
         expense_year=np.array([2025, 2026]),
-        cost_allocation=FluidType.GAS,
+        cost_allocation=[FluidType.GAS, FluidType.GAS],
     )
 
     # Execute comparison operations
@@ -105,30 +105,6 @@ def test_tangible_comparison():
     assert hiu_tangible <= jeruk_tangible
 
 
-def test_tangible_arithmetics_incorrect_fluidtype():
-    """A unit testing for incorrect addition operation: addition between two different fluid types"""
-
-    with pytest.raises(TangibleException):
-
-        mangga_tangible_oil = Tangible(
-            start_year=2023,
-            end_year=2030,
-            cost=np.array([100, 100]),
-            expense_year=np.array([2023, 2024]),
-            cost_allocation=FluidType.OIL,
-        )
-
-        mangga_tangible_gas = Tangible(
-            start_year=2023,
-            end_year=2030,
-            cost=np.array([50, 50]),
-            expense_year=np.array([2026, 2027]),
-            cost_allocation=FluidType.GAS,
-        )
-
-        assert mangga_tangible_oil + mangga_tangible_gas
-
-
 def test_tangible_arithmetics_misuse():
     """A unit testing for incorrect arithmetic operations"""
 
@@ -137,7 +113,7 @@ def test_tangible_arithmetics_misuse():
         end_year=2030,
         cost=np.array([100, 100]),
         expense_year=np.array([2023, 2024]),
-        cost_allocation=FluidType.OIL,
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
     with pytest.raises(TangibleException):
@@ -158,7 +134,7 @@ def test_tangible_arithmetics():
         end_year=2030,
         cost=np.array([100, 100]),
         expense_year=np.array([2024, 2023]),
-        cost_allocation=FluidType.OIL,
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
     apel_tangible = Tangible(
@@ -166,7 +142,7 @@ def test_tangible_arithmetics():
         end_year=2030,
         cost=np.array([50, 50]),
         expense_year=np.array([2026, 2027]),
-        cost_allocation=FluidType.OIL,
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
     jeruk_tangible = Tangible(
@@ -174,7 +150,7 @@ def test_tangible_arithmetics():
         end_year=2032,
         cost=np.array([200]),
         expense_year=np.array([2023]),
-        cost_allocation=FluidType.OIL,
+        cost_allocation=[FluidType.OIL],
     )
 
     # Expected results
@@ -215,7 +191,7 @@ def test_tangible_expenditures():
         cost=np.array([100, 100, 100]),
         expense_year=np.array([2023, 2024, 2025]),
         useful_life=np.array([5, 5, 5]),
-        cost_allocation=FluidType.OIL,
+        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
     jeruk_tangible = Tangible(
@@ -224,7 +200,7 @@ def test_tangible_expenditures():
         cost=np.array([50]),
         expense_year=np.array([2025]),
         useful_life=np.array([5]),
-        cost_allocation=FluidType.OIL,
+        cost_allocation=[FluidType.OIL],
     )
 
     total_tangible = mangga_tangible + jeruk_tangible
@@ -234,17 +210,14 @@ def test_tangible_expenditures():
     np.testing.assert_allclose(expenses, calc_expenses)
 
 
-def test_tangible_expenditures_with_taxes_schemes():
+def test_tangible_expenditures_with_inflation():
     """
     A unit testing for expenditures method in Tangible class,
-    taking into account several taxes schemes.
+    taking into account inflation scheme.
     """
 
     # Expected results
     expenses_infl = [0, 102, 104.04, 106.1208, 108.243216, 0, 0, 0]
-    expenses_vat = [0, 105, 105, 105, 105, 0, 0, 0]
-    expenses_pdri = [0, 103, 103, 103, 103, 0, 0, 0]
-    expenses_all = [0, 107.3125, 108.385625, 109.4694813, 110.3040251, 0, 0, 0]
 
     # Calculated results
     mangga_tangible = Tangible(
@@ -252,7 +225,7 @@ def test_tangible_expenditures_with_taxes_schemes():
         end_year=2030,
         cost=np.array([100, 100, 100, 50]),
         expense_year=np.array([2024, 2025, 2026, 2027]),
-        cost_allocation=FluidType.OIL,
+        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
     jeruk_tangible = Tangible(
@@ -260,27 +233,15 @@ def test_tangible_expenditures_with_taxes_schemes():
         end_year=2030,
         cost=np.array([50]),
         expense_year=np.array([2027]),
-        cost_allocation=FluidType.OIL,
+        cost_allocation=[FluidType.OIL],
     )
 
     tangible_total = mangga_tangible + jeruk_tangible
 
     expenses_infl_calc = tangible_total.expenditures(inflation_rate=0.02)
-    expenses_vat_calc = tangible_total.expenditures(vat_rate=0.05)
-    expenses_pdri_calc = tangible_total.expenditures(pdri_rate=0.03)
-    expenses_all_calc = tangible_total.expenditures(
-        inflation_rate=0.01,
-        vat_rate=np.array([0.11, 0.11, 0.11, 0.11, 0.11, 0.15, 0.15, 0.15]),
-        vat_discount=0.5,
-        pdri_rate=np.array([0.01, 0.01, 0.01, 0.01, 0.01, 0.03, 0.03, 0.03]),
-        pdri_discount=np.array([0.25, 0.25, 0.25, 0.25, 0.5, 0.5, 0.5, 0.5]),
-    )
 
     # Execute testing (expected == calculated)
     np.testing.assert_allclose(expenses_infl, expenses_infl_calc)
-    np.testing.assert_allclose(expenses_vat, expenses_vat_calc)
-    np.testing.assert_allclose(expenses_pdri, expenses_pdri_calc)
-    np.testing.assert_allclose(expenses_all, expenses_all_calc)
 
 
 def test_tangible_depreciation():
@@ -303,7 +264,7 @@ def test_tangible_depreciation():
         end_year=2030,
         cost=np.array([100, 50]),
         expense_year=np.array([2025, 2026]),
-        cost_allocation=FluidType.OIL,
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
         useful_life=np.array([5, 5]),
     )
 
@@ -312,7 +273,7 @@ def test_tangible_depreciation():
         end_year=2030,
         cost=np.array([100, 50]),
         expense_year=np.array([2025, 2028]),
-        cost_allocation=FluidType.OIL,
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
         useful_life=np.array([5, 5]),
     )
 
@@ -321,7 +282,7 @@ def test_tangible_depreciation():
         end_year=2030,
         cost=np.array([100, 50]),
         expense_year=np.array([2025, 2029]),
-        cost_allocation=FluidType.OIL,
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
         useful_life=np.array([5, 5]),
     )
 
@@ -353,7 +314,7 @@ def test_tangible_depreciation():
     np.testing.assert_allclose(np.array([undeprePSC]), np.array([calc_undeprePSC]))
 
 
-def test_tangible_depreciation_with_taxes_schemes():
+def test_tangible_depreciation_with_inflation():
     """A unit testing for total depreciation rate of Tangible object"""
 
     # Expected results: depreciation_charge, undepreciated asset
@@ -368,43 +329,7 @@ def test_tangible_depreciation_with_taxes_schemes():
         7.416035156
     ]
 
-    depreVAT = [
-        55.5,
-        83.25,
-        97.125,
-        76.3125,
-        69.375,
-        34.6875,
-        17.34375,
-        6.9375,
-    ]
-
-    deprePDRI = [
-        56.5,
-        84.75,
-        98.875,
-        77.6875,
-        70.625,
-        35.3125,
-        17.65625,
-        7.0625,
-    ]
-
-    depreALL = [
-        54.5,
-        83.93,
-        100.9122,
-        81.108644,
-        75.83921776,
-        38.05585888,
-        19.16962944,
-        7.81639872,
-    ]
-
     undepreInflation = 3.798457031
-    undepreVAT = 3.46875
-    undeprePDRI = 3.53125
-    undepreALL = 3.98483072
 
     # Calculated results
     tangible_mangga = Tangible(
@@ -412,69 +337,19 @@ def test_tangible_depreciation_with_taxes_schemes():
         end_year=2030,
         cost=np.array([100, 100, 100, 50, 50, 0, 0, 0]),
         expense_year=np.array([2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]),
-        cost_allocation=FluidType.OIL,
-        vat_portion=1.0,
-        pdri_portion=1.0,
+        cost_allocation=[
+            FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+            FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+        ],
     )
 
     calc_depreInflation, calc_undepreInflation = (
         tangible_mangga.total_depreciation_rate(inflation_rate=0.05)
     )
 
-    calc_depreVAT, calc_undepreVAT = (
-        tangible_mangga.total_depreciation_rate(vat_rate=0.11)
-    )
-
-    calc_deprePDRI, calc_undeprePDRI = (
-        tangible_mangga.total_depreciation_rate(pdri_rate=0.13)
-    )
-
-    calc_depreALL, calc_undepreALL = (
-        tangible_mangga.total_depreciation_rate(
-            inflation_rate=0.04,
-            vat_rate=np.array([
-                0.08,
-                0.08,
-                0.08,
-                0.08,
-                0.08,
-                0.12,
-                0.12,
-                0.12,
-            ]),
-            vat_discount=np.array([
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-            ]),
-            pdri_rate=0.1,
-            pdri_discount=np.array([
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.3,
-                0.3,
-                0.3,
-            ])
-        )
-    )
-
     # Execute testing
     np.testing.assert_allclose(depreInflation, calc_depreInflation)
     np.testing.assert_allclose(undepreInflation, calc_undepreInflation)
-    np.testing.assert_allclose(depreVAT, calc_depreVAT)
-    np.testing.assert_allclose(undepreVAT, calc_undepreVAT)
-    np.testing.assert_allclose(deprePDRI, calc_deprePDRI)
-    np.testing.assert_allclose(undeprePDRI, calc_undeprePDRI)
-    np.testing.assert_allclose(depreALL, calc_depreALL)
-    np.testing.assert_allclose(undepreALL, calc_undepreALL)
 
 
 def test_tangible_book_value():
@@ -492,8 +367,8 @@ def test_tangible_book_value():
         end_year=2030,
         cost=np.array([100, 50]),
         expense_year=np.array([2025, 2026]),
-        cost_allocation=FluidType.OIL,
         useful_life=np.array([5, 5]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
     apel_tangible = Tangible(
@@ -501,8 +376,8 @@ def test_tangible_book_value():
         end_year=2030,
         cost=np.array([100, 50]),
         expense_year=np.array([2025, 2028]),
-        cost_allocation=FluidType.OIL,
         useful_life=np.array([5, 5]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
     nanas_tangible = Tangible(
@@ -510,8 +385,8 @@ def test_tangible_book_value():
         end_year=2030,
         cost=np.array([100, 50]),
         expense_year=np.array([2025, 2029]),
-        cost_allocation=FluidType.OIL,
         useful_life=np.array([5, 5]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
     calc_bookSL = mangga_tangible.total_depreciation_book_value(

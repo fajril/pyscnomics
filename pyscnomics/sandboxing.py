@@ -223,8 +223,9 @@ print(f'Filetype: {type(asr_add)}')
 print('asr_add = \n', asr_add)
 
 t1 = asr_add.expenditures(
+    year_now=2030,
     future_rate=0.0,
-    inflation_rate=0.0,
+    inflation_rate=0.01,
 )
 
 print('\t')
