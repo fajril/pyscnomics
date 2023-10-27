@@ -106,7 +106,7 @@ def apply_cost_adjustment(
         then added by unity.
     (4) Slice 'inflation_rate_arr' according to 'id_year_now' and 'id_rate_arr'. Add the results
         by unity, then multiple the associated elements.
-    (5) Cost adjustment is undertaken by multiplication: 'cost' * 'inflation_mult'.
+    (5) Cost adjustment is undertaken by multiplication: 'cost' * 'mult'.
     """
 
     if year_now < start_year:
@@ -124,13 +124,11 @@ def apply_cost_adjustment(
     if isinstance(inflation_rate, float):
         inflation_rate_arr = np.repeat(inflation_rate, project_duration)
 
-    id_rate_arr = ((expense_year - year_now) + (year_now - start_year) + 1).astype("int")
     id_year_now = int(np.argwhere(year_now == project_years).ravel()[0] + 1)
-    inflation_mult = np.array(
-        [np.prod(1.0 + inflation_rate_arr[id_year_now:id_rate_arr[i]]) for i, c in enumerate(cost)]
-    )
+    id_rate_arr = ((expense_year - year_now) + (year_now - start_year) + 1).astype("int")
+    mult = np.array([np.prod(1.0 + inflation_rate_arr[id_year_now:i]) for i in id_rate_arr])
 
-    return cost * inflation_mult
+    return cost * mult
 
 
 def apply_inflation(inflation_rate: np.ndarray | float) -> callable:

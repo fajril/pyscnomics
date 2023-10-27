@@ -415,7 +415,7 @@ def unit_of_production_rate(
         amortization_charge[idx] = (
             cost - salvage_value - np.cumsum(amortization_charge)[idx - 1]
         )
-        amortization_charge[idx + 1 :] = 0
+        amortization_charge[idx + 1:] = 0
 
     if amortization_charge.size < amortization_len:
         extension = np.zeros(amortization_len - amortization_charge.size)
