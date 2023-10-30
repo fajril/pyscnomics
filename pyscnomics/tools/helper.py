@@ -4,7 +4,7 @@ Handles summation operation on two arrays, accounting for different starting yea
 
 import numpy as np
 from functools import wraps
-from pyscnomics.econ.selection import FluidType
+from pyscnomics.econ.selection import FluidType, TaxType
 
 
 class InflationException(Exception):
@@ -54,6 +54,46 @@ def check_input(target_func, param: np.ndarray | float | int) -> np.ndarray:
     return param_arr
 
 
+def get_rate(
+    start_year: int,
+    end_year: int,
+    cost: np.ndarray,
+    expense_year: np.ndarray,
+    project_years: np.ndarray,
+    year_ref: int,
+    target_portion: np.ndarray,
+    target_rate: np.ndarray | float,
+    target_discount: float,
+):
+    if year_ref < start_year:
+        raise InflationException(
+            f"year_ref ({year_ref}) is before start_year of the project ({start_year})."
+        )
+
+    if year_ref > end_year:
+        raise InflationException(
+            f"year_ref ({year_ref}) is after end_year of the project ({end_year})."
+        )
+
+    target_rate_arr = check_input(target_func=project_years, param=target_rate)
+
+    print('\t')
+    print(f'Filetype: {type(target_rate_arr)}')
+    print(f'Length: {len(target_rate_arr)}')
+    print('target_rate_arr = \n', target_rate_arr)
+
+    target_id = ((expense_year - year_ref) + (year_ref - start_year)).astype("int")
+
+    print('\t')
+    print(f'Filetype: {type(target_id)}')
+    print(f'Length: {len(target_id)}')
+    print('target_id = \n', target_id)
+
+    return cost * (
+        1.0 + target_portion * target_rate_arr[target_id] * (1.0 - target_discount)
+    )
+
+
 def apply_cost_adjustment(
     start_year: int,
     end_year: int,
@@ -61,8 +101,11 @@ def apply_cost_adjustment(
     expense_year: np.ndarray,
     project_duration: int,
     project_years: np.ndarray,
-    year_now: int,
+    year_ref: int,
     inflation_rate: np.ndarray | float,
+    vat_portion: np.ndarray,
+    vat_rate: np.ndarray | float,
+    vat_discount: float,
 ) -> np.ndarray:
     """
     Adjusts cost based on inflation over the specified time period.
@@ -81,7 +124,7 @@ def apply_cost_adjustment(
         The total duration of the project in years.
     project_years : np.ndarray
         An array of project years.
-    year_now : int
+    year_ref : int
         The reference year for inflation calculation.
     inflation_rate : np.ndarray | float
         The inflation rate to apply. Can be a single value or an array.
@@ -108,27 +151,49 @@ def apply_cost_adjustment(
         by unity, then multiple the associated elements.
     (5) Cost adjustment is undertaken by multiplication: 'cost' * 'mult'.
     """
+    # Cost adjustment due to tax
+    cost_adjusted = get_rate(
+        start_year=start_year,
+        end_year=end_year,
+        cost=cost,
+        expense_year=expense_year,
+        project_years=project_years,
+        year_ref=year_ref,
+        target_portion=vat_portion,
+        target_rate=vat_rate,
+        target_discount=vat_discount,
+    )
 
-    if year_now < start_year:
-        raise InflationException(
-            f"year_now ({year_now}) is before start_year of the project ({start_year})."
-        )
+    print('\t')
+    print(f'Filetype: {type(cost_adjusted)}')
+    print(f'Length: {len(cost_adjusted)}')
+    print('cost_adjusted = ', cost_adjusted)
 
-    if year_now > end_year:
-        raise InflationException(
-            f"year_now ({year_now}) is after end_year of the project ({end_year})."
-        )
 
-    inflation_rate_arr = check_input(target_func=project_years, param=inflation_rate)
+    # # Cost adjustment due to inflation
+    # if year_ref < start_year:
+    #     raise InflationException(
+    #         f"year_ref ({year_ref}) is before start_year of the project ({start_year})."
+    #     )
+    #
+    # if year_ref > end_year:
+    #     raise InflationException(
+    #         f"year_ref ({year_ref}) is after end_year of the project ({end_year})."
+    #     )
+    #
+    # inflation_rate_arr = check_input(target_func=project_years, param=inflation_rate)
+    # id_year_ref = int(np.argwhere(year_ref == project_years).ravel()[0] + 1)
+    # id_rate_arr = ((expense_year - year_ref) + (year_ref - start_year) + 1).astype("int")
+    # mult = np.array([np.prod(1.0 + inflation_rate_arr[id_year_ref:i]) for i in id_rate_arr])
+    #
+    # cost_adjusted = cost * mult
+    #
+    # print('\t')
+    # print(f'Filetype: {type(cost_adjusted)}')
+    # print(f'Length: {len(cost_adjusted)}')
+    # print('cost_adjusted = ', cost_adjusted)
 
-    if isinstance(inflation_rate, float):
-        inflation_rate_arr = np.repeat(inflation_rate, project_duration)
-
-    id_year_now = int(np.argwhere(year_now == project_years).ravel()[0] + 1)
-    id_rate_arr = ((expense_year - year_now) + (year_now - start_year) + 1).astype("int")
-    mult = np.array([np.prod(1.0 + inflation_rate_arr[id_year_now:i]) for i in id_rate_arr])
-
-    return cost * mult
+    # return cost * mult
 
 
 def apply_inflation(inflation_rate: np.ndarray | float) -> callable:

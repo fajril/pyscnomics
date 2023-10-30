@@ -88,14 +88,14 @@ sulfur_apel_lifting = Lifting(
 #     cost_allocation=[FluidType.OIL, FluidType.OIL],
 # )
 
-tangible_apel = Tangible(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([50, 50]),
-    expense_year=np.array([2023, 2028]),
-    depreciation_factor=np.array([0.5, 0.5]),
-    cost_allocation=[FluidType.GAS, FluidType.GAS],
-)
+# tangible_apel = Tangible(
+#     start_year=2023,
+#     end_year=2030,
+#     cost=np.array([50, 50]),
+#     expense_year=np.array([2023, 2028]),
+#     depreciation_factor=np.array([0.5, 0.5]),
+#     cost_allocation=[FluidType.GAS, FluidType.GAS],
+# )
 
 '------------------------------------------- INTANGIBLE COST DATA ------------------------------------------'
 
@@ -206,40 +206,23 @@ tangible_mangga = Tangible(
     cost=np.array([100, 100, 100, 100]),
     expense_year=np.array([2026, 2027, 2028, 2029]),
     depreciation_factor=np.array([0.5, 0.5, 0.5, 0.5]),
+    inflation_rate=0.0,
+    vat_portion=np.array([1, 1, 1, 1]),
+    # vat_rate=0.0,
+    vat_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
+    vat_discount=0.0,
 )
 
 print('\t')
 print(f'Filetype: {type(tangible_mangga)}')
 print('tangible_mangga = \n', tangible_mangga)
 
-t1 = tangible_mangga.expenditures(
-    inflation_rate=0.05,
-)
+t1 = tangible_mangga.expenditures()
 
 # print('\t')
 # print(f'Filetype: {type(t1)}')
 # print(f'Length: {len(t1)}')
 # print('t1 = \n', t1)
-
-a = np.zeros([3, 3])
-a[0, :] = [1, 2, 3]
-a[1, :] = [4, 5, 6]
-a[2, :] = [7, 8, 9]
-
-b = np.array([-1, 0, 1])
-
-print('\t')
-print(a)
-print(b)
-
-print('\t')
-print('test1 = \n', np.einsum('ji, j -> j', a, b))
-
-print('\t')
-print('test2 = \n', np.einsum('ij, j -> j', a, b))
-
-print('\t')
-print('test3 = \n', np.einsum('ij, j -> ', a, b))
 
 # print('\t')
 # print(f'Filetype: {type(t2)}')
