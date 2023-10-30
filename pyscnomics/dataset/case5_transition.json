@@ -1,0 +1,69 @@
+
+{
+  "start_date": "2023",
+  "end_date": "2019",
+  "oil_onstream_date": null,
+  "gas_onstream_date": "01/01/2023",
+
+  "lifting": {
+    "GSA 1": {
+      "start_year": 2023,
+      "end_year": 2019,
+      "lifting_rate": [4.4115933369863000, 8.9000419506849300, 8.9311060983606500, 9.1681734136986300, 9.3933273424657500, 9.5716867506849300, 9.4776718688524600, 9.2589140164383600, 5.5697646465753400],
+      "price": [],
+      "prod_year": [],
+      "fluid_type": "Gas",
+      "ghv":  [],
+      "prod_rate":  []},
+
+    "GSA 2": {
+      "start_year": 2023,
+      "end_year": 2019,
+      "lifting_rate": [],
+      "price": [],
+      "prod_year": [],
+      "fluid_type": "Gas",
+      "ghv":  [],
+      "prod_rate":  []}
+  },
+
+  "tangible": {
+    "Gas": {
+      "start_year": 2023,
+      "end_year": 2019,
+      "cost": [],
+      "expense_year": [],
+      "pis_year": [],
+      "useful_life": [],
+      "depreciation_factor": [],
+      "cost_allocation": "Gas"}
+  },
+
+  "intangible": {
+    "Gas": {
+      "start_year": 2023,
+      "end_year": 2019,
+      "cost": [],
+      "expense_year": [],
+      "cost_allocation": "Gas"}
+  },
+
+  "opex": {
+    "Gas": {
+      "start_year": 2023,
+      "end_year": 2019,
+      "fixed_cost": [],
+      "expense_year": [],
+      "cost_allocation": "Gas"}
+  },
+
+  "asr": {
+    "Gas": {
+      "start_year": 2023,
+      "end_year": 2019,
+      "cost": [],
+      "expense_year": [],
+      "rate": ,
+      "cost_allocation": "Gas"}
+  }
+}
