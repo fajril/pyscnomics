@@ -8,9 +8,7 @@ from functools import reduce
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
-from pyscnomics.econ.selection import FluidType, YearReference, TaxRegime, FTPTaxRegime, TaxSplitTypeCR, NPVSelection
-from pyscnomics.econ import indicator
-from pyscnomics.tools.summary import Summary
+from pyscnomics.econ.selection import FluidType, YearReference, TaxRegime, FTPTaxRegime, TaxSplitTypeCR
 
 
 class SunkCostException(Exception):
@@ -48,8 +46,6 @@ class CostRecovery(BaseProject):
     gas_dmo_volume_portion: float = field(default=1.0)
     gas_dmo_fee_portion: float = field(default=1.0)
     gas_dmo_holiday_duration: int = field(default=60)
-
-    _summary: Summary = field(default=None)
 
     _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
@@ -451,14 +447,13 @@ class CostRecovery(BaseProject):
             self._gas_sunk_cost = np.zeros(1)
 
     def run(self,
-            is_dmo_end_weighted: bool =False,
+            is_dmo_end_weighted: bool = False,
             ctr_tax: float | np.ndarray = None,
             tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
             tax_rate: float = 0.44,
             ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
             discount_rate_year: int = None,
             discount_rate: float = 0.1,
-            npv_mode: NPVSelection = NPVSelection.POINT_FORWARD
             ):
 
         if discount_rate_year is None:
@@ -477,7 +472,7 @@ class CostRecovery(BaseProject):
         self._get_revenue()
         self._get_ftp()
 
-        # Defining the PreTax Split, wheter using conventional PreTax or Sliding
+        # Defining the PreTax Split, whether using conventional PreTax or Sliding
         if self.tax_split_type is not TaxSplitTypeCR.CONVENTIONAL:
             self._get_rc_icp_pretax()
 
