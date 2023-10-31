@@ -3,113 +3,136 @@ A module to execute preliminary evaluations
 """
 
 import numpy as np
-from datetime import date
-from dataclasses import asdict
-
-from pyscnomics.econ.selection import DeprMethod, FluidType
+from datetime import datetime
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import Tangible, ASR
-from pyscnomics.contracts.project import BaseProject
+from pyscnomics.econ.selection import FluidType
+from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.contracts.costrecovery import CostRecovery
+from pyscnomics.contracts.grossplit import GrossSplit
+
+from pyscnomics.contracts.transition import transition
+
+# Defining Start Date and End Date
+psc_1_start_date = datetime.strptime("01/01/2010", '%d/%m/%Y').date()
+psc_1_end_date = datetime.strptime("20/6/2019", '%d/%m/%Y').date()
+psc_1_oil_onstream_date = datetime.strptime("01/01/2010", '%d/%m/%Y').date()
+
+psc_2_start_date = datetime.strptime("21/6/2019", '%d/%m/%Y').date()
+psc_2_end_date = datetime.strptime("31/12/2028", '%d/%m/%Y').date()
+psc_2_oil_onstream_date = datetime.strptime("21/6/2019", '%d/%m/%Y').date()
 
 
-# Lifting data
-oil_mangga_lifting = Lifting(
-        start_year=2023,
-        end_year=2030,
-        lifting_rate=np.array([100, 100, 100]),
-        price=np.array([10, 10, 10]),
-        prod_year=np.array([2026, 2027, 2028]),
-        fluid_type=FluidType.OIL
-)
+# Defining the Oil lifting data
+psc1_oil_lifting = Lifting(
+    start_year=2010,
+    end_year=2019,
+    lifting_rate=np.repeat(100, 10),
+    price=np.repeat(60, 10),
+    prod_year=np.array([2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]),
+    fluid_type=FluidType.OIL)
 
-oil_apel_lifting = Lifting(
-        start_year=2023,
-        end_year=2030,
-        lifting_rate=np.array([50, 50, 50]),
-        price=np.array([10, 10, 10]),
-        prod_year=np.array([2027, 2028, 2029]),
-        fluid_type=FluidType.OIL
-)
-
-gas_mangga_lifting = Lifting(
-        start_year=2023,
-        end_year=2030,
-        lifting_rate=np.array([100, 100, 100]),
-        price=np.array([1, 1, 1]),
-        prod_year=np.array([2025, 2026, 2027]),
-        ghv=np.array([0.1, 0.1, 0.1]),
-        fluid_type=FluidType.GAS
-)
-
-gas_apel_lifting = Lifting(
-        start_year=2023,
-        end_year=2030,
-        lifting_rate=np.array([100, 100, 100]),
-        price=np.array([1, 1, 1]),
-        prod_year=np.array([2028, 2029, 2030]),
-        ghv=np.array([0.1, 0.1, 0.1]),
-        fluid_type=FluidType.GAS
-)
-
-# Tangible data
-oil_mangga_tangible = Tangible(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([25, 25, 25, 25]),
-    expense_year=np.array([2023, 2024, 2025, 2026]),
-    cost_allocation=FluidType.OIL,
-    depreciation_factor=np.array([0.5, 0.5, 0.5, 0.5])
-)
-
-oil_apel_tangible = Tangible(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([25, 25, 25]),
-    expense_year=np.array([2025, 2026, 2027]),
-    cost_allocation=FluidType.OIL,
-    depreciation_factor=np.array([0.5, 0.5, 0.5])
-)
+psc2_oil_lifting = Lifting(
+    start_year=2019,
+    end_year=2028,
+    lifting_rate=np.repeat(50, 10),
+    price=np.repeat(60, 10),
+    prod_year=np.array([2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028]),
+    fluid_type=FluidType.OIL)
 
 
-base_project = BaseProject(
-        start_date=date(2023, 1, 1),
-        end_date=date(2030, 12, 31),
-        oil_onstream_date=date(2026, 1, 1),
-        gas_onstream_date=date(2025, 1, 1),
-        lifting=(oil_mangga_lifting, oil_apel_lifting, gas_mangga_lifting, gas_apel_lifting)
-)
+# Defining the Oil Tangible Data - Drilling Tangible
+psc1_oil_tangible = Tangible(
+    start_year=2010,
+    end_year=2019,
+    cost=np.array([200]),
+    expense_year=np.array([2010]),
+    pis_year=np.array([2010]),
+    useful_life=np.array([5]),
+    depreciation_factor=np.array([0.25]),
+    cost_allocation=FluidType.OIL)
 
-base_project.run()
+psc2_oil_tangible = Tangible(
+    start_year=2019,
+    end_year=2028,
+    cost=np.array([200]),
+    expense_year=np.array([2020]),
+    pis_year=np.array([2020]),
+    useful_life=np.array([5]),
+    depreciation_factor=np.array([0.25]),
+    cost_allocation=FluidType.OIL)
 
-# create_dict = vars(base_project)
-create_dict = asdict(base_project)
 
-print('\t')
-print(create_dict.keys())
-print('create dict = \n', create_dict)
+# Defining the Oil Intangible Data
+psc1_oil_intang = Intangible(
+    start_year=2010,
+    end_year=2019,
+    cost=np.array([50]),
+    expense_year=np.array([2010]),
+    cost_allocation=FluidType.OIL)
 
-# print('\t')
-# print('base project = ', base_project.lifting)
+psc2_oil_intang = Intangible(
+    start_year=2019,
+    end_year=2028,
+    cost=np.array([50]),
+    expense_year=np.array([2020]),
+    cost_allocation=FluidType.OIL)
 
-# print('\t')
-# print(f'Filetype: {type(mangga_project.lifting)}, Length: {len(mangga_project.lifting)}')
-# print('lifting = \n', mangga_project.lifting)
-#
-# print('\t')
-# print(f'Filetype: {type(mangga_project.tangible_cost)}, Length: {len(mangga_project.tangible_cost)}')
-# print('tangible cost = \n', mangga_project.tangible_cost)
-#
-# print('\t')
-# print(f'Filetype: {type(mangga_project.intangible_cost)}')
-# print(f'Length: {len(mangga_project.intangible_cost)}')
-# print('intangible cost = \n', mangga_project.intangible_cost)
-#
-# print('\t')
-# print(f'Filetype: {type(mangga_project.opex)}')
-# print(f'Length: {len(mangga_project.opex)}')
-# print('opex = \n', mangga_project.opex)
-#
-# print('\t')
-# print(f'Filetype: {type(mangga_project.asr_cost)}')
-# print(f'Length: {len(mangga_project.asr_cost)}')
-# print('asr cost = \n', mangga_project.asr_cost)
+# Defining the Oil OPEX Data
+psc1_oil_opex_cost = OPEX(
+    start_year=2010,
+    end_year=2019,
+    fixed_cost=np.repeat(5, 10),
+    expense_year=np.array([2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]),
+    cost_allocation=FluidType.OIL)
+
+psc2_oil_opex_cost = OPEX(
+    start_year=2019,
+    end_year=2028,
+    fixed_cost=np.repeat(5, 10),
+    expense_year=np.array([2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028]),
+    cost_allocation=FluidType.OIL)
+
+
+# Defining the Oil ASR Data
+psc1_oil_asr_cost = ASR(
+    start_year=2010,
+    end_year=2019,
+    cost=np.array([0]),
+    expense_year=np.array([2010]),
+    cost_allocation=FluidType.OIL)
+
+psc2_oil_asr_cost = ASR(
+    start_year=2019,
+    end_year=2028,
+    cost=np.array([0]),
+    expense_year=np.array([2020]),
+    cost_allocation=FluidType.OIL)
+
+
+psc1 = CostRecovery(
+    start_date=psc_1_start_date,
+    end_date=psc_1_end_date,
+    oil_onstream_date=psc_1_oil_onstream_date,
+    lifting=tuple([psc1_oil_lifting]),
+    tangible_cost=tuple([psc1_oil_tangible]),
+    intangible_cost=tuple([psc1_oil_intang]),
+    opex=tuple([psc1_oil_opex_cost]),
+    asr_cost=tuple([psc1_oil_asr_cost]))
+
+
+psc2 = CostRecovery(
+    start_date=psc_2_start_date,
+    end_date=psc_2_end_date,
+    oil_onstream_date=psc_2_oil_onstream_date,
+    lifting=tuple([psc2_oil_lifting]),
+    tangible_cost=tuple([psc2_oil_tangible]),
+    intangible_cost=tuple([psc2_oil_intang]),
+    opex=tuple([psc2_oil_opex_cost]),
+    asr_cost=tuple([psc2_oil_asr_cost]))
+
+
+if __name__ == "__main__":
+    psc_trans = transition(contract1=psc1, contract2=psc2)
+
+
+
