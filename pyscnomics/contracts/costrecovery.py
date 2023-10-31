@@ -337,7 +337,8 @@ class CostRecovery(BaseProject):
             The array of ETS before transfer.
         """
         ets_after_transfer = revenue - (ftp_ctr + ftp_gov) - ic - cost_recovery - transferred_out + transferred_in
-        return np.where(ets_after_transfer < 0, 0, ets_after_transfer)
+        tol = np.full_like(ets_after_transfer, fill_value=1.0e-14)
+        return np.where(ets_after_transfer < tol, 0, ets_after_transfer)
 
     @staticmethod
     def _get_equity_share(ets, pretax_ctr):
@@ -476,6 +477,10 @@ class CostRecovery(BaseProject):
         self._get_revenue()
         self._get_ftp()
 
+        # Defining the PreTax Split, wheter using conventional PreTax or Sliding
+        if self.tax_split_type is not TaxSplitTypeCR.CONVENTIONAL:
+            self._get_rc_icp_pretax()
+
         # Depreciation (tangible cost)
         (
             self._oil_depreciation,
@@ -589,13 +594,6 @@ class CostRecovery(BaseProject):
         )
 
         # Unrecovered cost after transfer/consolidation
-        # self._oil_unrecovered_after_transfer = (
-        #         self._oil_unrecovered_before_transfer - self._transfer_to_oil
-        # )
-        # self._gas_unrecovered_after_transfer = (
-        #         self._gas_unrecovered_before_transfer - self._transfer_to_gas
-        # )
-
         self._oil_unrecovered_after_transfer = psc_tools.get_unrec_cost_after_tf(
             depreciation=self._oil_depreciation,
             non_capital=self._oil_non_capital,
@@ -646,19 +644,7 @@ class CostRecovery(BaseProject):
             cr_cap_rate=self.gas_cr_cap_rate
         ) + self._transfer_to_gas
 
-        # ETS (Equity to be Split) after transfer/consolidation
-        # self._oil_ets_after_transfer = psc_tools.get_ets_after_transfer(
-        #     ets_before_transfer=self._oil_ets_before_transfer,
-        #     trfto=self._transfer_to_oil,
-        #     unrecovered_after_transfer=self._oil_unrecovered_after_transfer,
-        # )
-        #
-        # self._gas_ets_after_transfer = psc_tools.get_ets_after_transfer(
-        #     ets_before_transfer=self._gas_ets_before_transfer,
-        #     trfto=self._transfer_to_gas,
-        #     unrecovered_after_transfer=self._gas_unrecovered_after_transfer,
-        # )
-
+        # ETS after Transfer
         self._oil_ets_after_transfer = self._get_ets_after_transfer(
             revenue=self._oil_revenue,
             ftp_ctr=self._oil_ftp_ctr,
@@ -679,20 +665,6 @@ class CostRecovery(BaseProject):
             transferred_out=self._transfer_to_oil
         )
 
-        # self._oil_ets_after_transfer = psc_tools.get_ets_after_transfer(
-        #     ets_before_transfer=self._oil_ets_before_transfer,
-        #     trfto=self._transfer_to_gas,
-        #     trffrom=self._transfer_to_oil,
-        #     unrecovered_after_transfer=self._oil_unrecovered_after_transfer,
-        # )
-        #
-        # self._gas_ets_after_transfer = psc_tools.get_ets_after_transfer(
-        #     ets_before_transfer=self._gas_ets_before_transfer,
-        #     trfto=self._transfer_to_oil,
-        #     trffrom=self._transfer_to_gas,
-        #     unrecovered_after_transfer=self._gas_unrecovered_after_transfer,
-        # )
-
         # ES (Equity Share)
         self._oil_contractor_share, self._oil_government_share = self._get_equity_share(
             ets=self._oil_ets_after_transfer, pretax_ctr=self.oil_ctr_pretax_share
@@ -702,6 +674,7 @@ class CostRecovery(BaseProject):
             ets=self._gas_ets_after_transfer, pretax_ctr=self.gas_ctr_pretax_share
         )
 
+        # DMO
         self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo(
             onstream_date=self.oil_onstream_date,
             start_date=self.start_date,
@@ -742,16 +715,7 @@ class CostRecovery(BaseProject):
                 - self._gas_ddmo
         )
 
-        # self._oil_ftp_tax_payment = self._get_ftp_tax_payment(unrec=self._oil_unrecovered_after_transfer,
-        #                                                       ftp=self._oil_ftp_ctr,
-        #                                                       tax_rate=tax_rate,
-        #                                                       ftp_tax_regime=ftp_tax_regime)
-
-        # self._gas_ftp_tax_payment = self._get_ftp_tax_payment(unrec=self._gas_unrecovered_after_transfer,
-        #                                                       ftp=self._gas_ftp_ctr,
-        #                                                       tax_rate=tax_rate,
-        #                                                       ftp_tax_regime=ftp_tax_regime)
-
+        # Tax Payment
         self._oil_tax_payment = self._get_tax_payment(ctr_share=self._oil_contractor_share,
                                                       taxable_income=self._oil_taxable_income,
                                                       tax_rate=tax_rate,

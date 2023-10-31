@@ -1,12 +1,12 @@
+"""
+CR MS DN 1
+"""
 import numpy as np
 import pandas as pd
 import time
 
 from pyscnomics.dataset.sample import load_data, load_testing
 
-'''
-CR MS DN 1
-'''
 
 # pd.options.display.float_format = '{:,.2f}'.format
 pd.set_option('display.max_columns', None)
