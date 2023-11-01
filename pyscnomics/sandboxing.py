@@ -206,23 +206,36 @@ tangible_mangga = Tangible(
     cost=np.array([100, 100, 100, 100]),
     expense_year=np.array([2026, 2027, 2028, 2029]),
     depreciation_factor=np.array([0.5, 0.5, 0.5, 0.5]),
-    inflation_rate=0.0,
     vat_portion=np.array([1, 1, 1, 1]),
-    # vat_rate=0.0,
-    vat_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
     vat_discount=0.0,
+    lbt_portion=np.array([1, 1, 1, 1]),
+    lbt_discount=0.0,
+    useful_life=np.array([5, 3, 3, 2]),
+    cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
 )
 
-print('\t')
-print(f'Filetype: {type(tangible_mangga)}')
-print('tangible_mangga = \n', tangible_mangga)
-
-t1 = tangible_mangga.expenditures()
-
 # print('\t')
-# print(f'Filetype: {type(t1)}')
-# print(f'Length: {len(t1)}')
-# print('t1 = \n', t1)
+# print(f'Filetype: {type(tangible_mangga)}')
+# print(f'Length: {len(tangible_mangga)}')
+# print('tangible_mangga = \n', tangible_mangga)
+
+t1 = tangible_mangga.total_depreciation_rate(
+    tax_type=TaxType.VAT,
+    vat_rate=0.0,
+    # vat_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
+    # lbt_rate=0.0,
+    # inflation_rate=0.05,
+    # inflation_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
+    # year_ref=2029,
+)
+
+# t1 = tangible_mangga.total_depreciation_rate()
+# t2 = tangible_mangga.total_depreciation_book_value()
+
+print('\t')
+print(f'Filetype: {type(t1)}')
+print(f'Length: {len(t1)}')
+print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t2)}')

@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 import pyscnomics.econ.depreciation as depr
 from pyscnomics.tools.helper import apply_cost_adjustment
-from pyscnomics.econ.selection import FluidType, DeprMethod, YearReference
+from pyscnomics.econ.selection import FluidType, DeprMethod, TaxType
 
 
 class TangibleException(Exception):
@@ -57,6 +57,16 @@ class GeneralCost:
         A list representing the cost allocation of a tangible asset.
     description: list[str]
         A list of string description regarding the associated tangible cost.
+    vat_portion: np.ndarray
+        The portion of 'cost' that is subject to VAT.
+        Must be an array of length equals to the length of 'cost' array.
+    vat_discount: float
+        The VAT discount to apply.
+    lbt_portion: np.ndarray
+        The portion of 'cost' that is subject to LBT.
+        Must be an array of length equals to the length of 'cost' array.
+    lbt_discount: float
+        The LBT discount to apply.
     """
 
     start_year: int
@@ -66,11 +76,8 @@ class GeneralCost:
     cost_allocation: list[FluidType] = field(default=None)
     description: list[str] = field(default=None)
     vat_portion: np.ndarray = field(default=None)
-    lbt_portion: np.ndarray = field(default=None)
-    inflation_rate: np.ndarray = field(default=None)
-    vat_rate: np.ndarray = field(default=None)
-    lbt_rate: np.ndarray = field(default=None)
     vat_discount: float = field(default=0.0)
+    lbt_portion: np.ndarray = field(default=None)
     lbt_discount: float = field(default=0.0)
 
     # Attribute to be defined later on
@@ -80,33 +87,135 @@ class GeneralCost:
     def expenditures(
         self,
         year_ref: int = None,
-    ):
+        tax_type: TaxType = TaxType.VAT,
+        vat_rate: np.ndarray | float = 0.0,
+        lbt_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
+    ) -> np.ndarray:
+        """
+        Calculate expenditures per year.
+
+        This method calculates the expenditures per year based on the expense year
+        and cost data provided.
+
+        Parameters
+        ----------
+        year_ref : int
+            The reference year for inflation calculation.
+        tax_type: TaxType
+            The type of tax applied to the corresponding asset.
+            Available options: TaxType.VAT or TaxType.LBT
+        vat_rate: np.ndarray | float
+            The VAT rate to apply. Can be a single value or an array (default is 0.0).
+        lbt_rate: np.ndarray | float
+            The LBT rate to apply. Can be a single value or an array (default is 0.0).
+        inflation_rate: np.ndarray | float
+            The inflation rate to apply. Can be a single value or an array (default is 0.0).
+
+        Returns
+        -------
+        np.ndarray
+            An array depicting the expenditures each year, adjusted by tax
+            and inflation schemes (if any).
+
+        Notes
+        -----
+        This method calculates expenditures while considering tax and inflation schemes.
+        The core calculations are as follows:
+        (1) Apply adjustment to cost due to tax and inflation (if any), by calling
+            'apply_cost_adjustment()' function,
+        (2) Function np.bincount() is used to align the 'cost_adjusted' elements
+            according to its corresponding expense year,
+        (3) If len(expenses) < project_duration, then add the remaining elements
+            with zeros.
+        """
         if year_ref is None:
             year_ref = self.start_year
-
-        # print('\t')
-        # print(f'Filetype: {type(self.vat_rate)}')
-        # print(f'Length: {len(self.vat_rate)}')
-        # print('vat_rate = ', self.vat_rate)
 
         cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
             end_year=self.end_year,
             cost=self.cost,
             expense_year=self.expense_year,
-            project_duration=self.project_duration,
             project_years=self.project_years,
             year_ref=year_ref,
-            inflation_rate=self.inflation_rate,
+            tax_type=tax_type,
             vat_portion=self.vat_portion,
-            vat_rate=self.vat_rate,
+            vat_rate=vat_rate,
             vat_discount=self.vat_discount,
+            lbt_portion=self.lbt_portion,
+            lbt_rate=lbt_rate,
+            lbt_discount=self.lbt_discount,
+            inflation_rate=inflation_rate,
         )
 
-        # print('\t')
-        # print(f'Filetype: {type(cost_adjusted)}')
-        # print(f'Length: {len(cost_adjusted)}')
-        # print('cost_adjusted = \n', cost_adjusted)
+        expenses = np.bincount(self.expense_year - self.start_year, weights=cost_adjusted)
+        zeros = np.zeros(self.project_duration - len(expenses))
+
+        return np.concatenate((expenses, zeros))
+
+    def __len__(self):
+        return self.project_duration
+
+    def __lt__(self, other):
+        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) < np.sum(other.cost)
+
+        # Between an instance of Tangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) < other
+
+        else:
+            raise TangibleException(
+                f"Must compare an instance of Tangible with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
+            )
+
+    def __le__(self, other):
+        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) <= np.sum(other.cost)
+
+        # Between an instance of Tangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) <= other
+
+        else:
+            raise TangibleException(
+                f"Must compare an instance of Tangible with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
+            )
+
+    def __gt__(self, other):
+        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) > np.sum(other.cost)
+
+        # Between an instance of Tangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) > other
+
+        else:
+            raise TangibleException(
+                f"Must compare an instance of Tangible with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
+            )
+
+    def __ge__(self, other):
+        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) >= np.sum(other.cost)
+
+        # Between an instance of Tangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) >= other
+
+        else:
+            raise TangibleException(
+                f"Must compare an instance of Tangible with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
+            )
 
 
 @dataclass
@@ -169,80 +278,25 @@ class Tangible(GeneralCost):
                     f"{self.lbt_portion.__class__.__qualname__}."
                 )
 
-        # Configure inflation rate
-        if self.inflation_rate is None:
-            self.inflation_rate = np.zeros_like(self.project_years)
-
-        if self.inflation_rate is not None:
-            if isinstance(self.inflation_rate, float):
-                self.inflation_rate = np.repeat(self.inflation_rate, self.project_duration)
-
-            elif isinstance(self.inflation_rate, np.ndarray):
-                if len(self.inflation_rate) != self.project_duration:
-                    raise TangibleException(
-                        f"Unequal length of arrays: "
-                        f"Inflation rate: {len(self.inflation_rate)}, "
-                        f"Project duration: {self.project_duration}."
-                    )
-
-            else:
-                raise TangibleException(
-                    f"Attribute inflation rate must be a float or a numpy ndarray; "
-                    f"Inflation rate ({self.inflation_rate}) is of datatype "
-                    f"{self.inflation_rate.__class__.__qualname__}."
-                )
-
-        # Configure VAT rate
-        if self.vat_rate is None:
-            self.vat_rate = np.zeros_like(self.project_years)
-
-        if self.vat_rate is not None:
-            if isinstance(self.vat_rate, float):
-                self.vat_rate = np.repeat(self.vat_rate, self.project_duration)
-
-            elif isinstance(self.vat_portion, np.ndarray):
-                if len(self.vat_rate) != self.project_duration:
-                    raise TangibleException(
-                        f"Unequal length of arrays: "
-                        f"VAT rate: {len(self.vat_rate)}, "
-                        f"Project duration: {self.project_duration}."
-                    )
-
-            else:
-                raise TangibleException(
-                    f"Attribute VAT rate must be a float or a numpy ndarray; "
-                    f"VAT rate ({self.vat_rate}) is of datatype "
-                    f"{self.vat_rate.__class__.__qualname__}."
-                )
-
-        # Configure LBT rate
-        if self.lbt_rate is None:
-            self.lbt_rate = np.zeros_like(self.project_years)
-
-        if self.lbt_rate is not None:
-            if isinstance(self.lbt_rate, float):
-                self.lbt_rate = np.repeat(self.lbt_rate, self.project_duration)
-
-            elif isinstance(self.lbt_rate, np.ndarray):
-                if len(self.lbt_rate) != self.project_duration:
-                    raise TangibleException(
-                        f"Unequal length of arrays: "
-                        f"LBT rate: {len(self.lbt_rate)}, "
-                        f"Project duration: {self.project_duration}."
-                    )
-
-            else:
-                raise TangibleException(
-                    f"Attribute LBT rate must be a float or a numpy ndarray; "
-                    f"LBT rate ({self.lbt_rate}) is of datatype "
-                    f"{self.vat_rate.__class__.__qualname__}."
-                )
-
         # Configure VAT discount
+        if not isinstance(self.vat_discount, float):
+            raise TangibleException(
+                f"Attribute VAT discount must be a float; "
+                f"VAT discount ({self.vat_discount}) is of datatype "
+                f"{self.vat_discount.__class__.__qualname__}."
+            )
+
         if isinstance(self.vat_discount, float):
             self.vat_discount = np.repeat(self.vat_discount, len(self.cost))
 
         # Configure LBT discount
+        if not isinstance(self.lbt_discount, float):
+            raise TangibleException(
+                f"Attribute LBT discount must be a float; "
+                f"LBT discount ({self.lbt_discount}) is of datatype "
+                f"{self.lbt_discount.__class__.__qualname__}."
+            )
+
         if isinstance(self.lbt_discount, float):
             self.lbt_discount = np.repeat(self.lbt_discount, len(self.cost))
 
@@ -314,7 +368,7 @@ class Tangible(GeneralCost):
             if not isinstance(self.cost_allocation, list):
                 raise TangibleException(
                     f"Attribute cost_allocation must be a list. "
-                    f"cost_allocation ({self.cost_allocation.__class__.__qualname__}) "
+                    f"cost_allocation (datatype: {self.cost_allocation.__class__.__qualname__}) "
                     f"is not a list."
                 )
 
@@ -332,6 +386,9 @@ class Tangible(GeneralCost):
                 self.cost_allocation,
                 self.description,
                 self.vat_portion,
+                self.lbt_portion,
+                self.vat_discount,
+                self.lbt_discount,
             ]
         ):
             raise TangibleException(
@@ -344,7 +401,10 @@ class Tangible(GeneralCost):
                 f"depreciation_factor: {len(self.depreciation_factor)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
                 f"description: {len(self.description)}, "
-                f"vat_portion: {len(self.vat_portion)}."
+                f"vat_portion: {len(self.vat_portion)}, "
+                f"lbt_portion: {len(self.lbt_portion)}, "
+                f"vat_discount: {len(self.vat_discount)}, "
+                f"lbt_discount: {len(self.lbt_discount)}."
             )
 
         # Raise an error message: expense year is after the end year of the project
@@ -361,87 +421,36 @@ class Tangible(GeneralCost):
                 f"is before the start year of the project ({self.start_year})"
             )
 
-    # def expenditures(
-    #     self,
-    #     inflation_rate: np.ndarray | float = 0.0,
-    #     year_now: int = None,
-    #     year_ref: YearReference = YearReference.EXPENSE_YEAR,
-    # ) -> np.ndarray:
-    #     """
-    #     Calculate tangible expenditures per year.
-    #
-    #     This method calculates the tangible expenditures per year
-    #     based on the expense year and cost data provided.
-    #
-    #     Parameters
-    #     ----------
-    #     inflation_rate : np.ndarray or float or int, optional
-    #         The inflation rate to apply. Can be a single value or an array (default is 0).
-    #     year_now : int
-    #         The reference year for inflation calculation.
-    #     year_ref : YearReference, optional
-    #         Reference year for expenses (default is YearReference.EXPENSE_YEAR).
-    #
-    #     Returns
-    #     -------
-    #     expenses: np.ndarray
-    #         An array depicting the tangible expenditures each year, adjusted by
-    #         inflation (if any).
-    #
-    #     Notes
-    #     -----
-    #     This method calculates tangible expenditures while considering inflation scheme.
-    #     The core calculations are as follows:
-    #     (1) Apply adjustment to cost due to inflation (if any),
-    #     (2) Function np.bincount() is used to align the 'cost_adjusted' elements
-    #         according to its corresponding expense year,
-    #     (3) If len(expenses) < project_duration, then add the remaining elements
-    #         with zeros.
-    #     """
-    #     if year_now is None:
-    #         year_now = self.start_year
-    #
-    #     cost_adjusted = apply_cost_adjustment(
-    #         start_year=self.start_year,
-    #         end_year=self.end_year,
-    #         cost=self.cost,
-    #         expense_year=self.expense_year,
-    #         project_duration=self.project_duration,
-    #         project_years=self.project_years,
-    #         year_now=year_now,
-    #         inflation_rate=inflation_rate,
-    #     )
-    #
-    #     if year_ref == YearReference.EXPENSE_YEAR:
-    #         expenses = np.bincount(self.expense_year - self.start_year, weights=cost_adjusted)
-    #     else:
-    #         expenses = np.bincount(self.pis_year - self.start_year, weights=cost_adjusted)
-    #
-    #     zeros = np.zeros(self.project_duration - len(expenses))
-    #     expenses = np.concatenate((expenses, zeros))
-    #
-    #     return expenses
-
     def total_depreciation_rate(
         self,
-        inflation_rate: np.ndarray | float = 0.0,
-        year_now: int = None,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
+        year_ref: int = None,
+        tax_type: TaxType = TaxType.VAT,
+        vat_rate: np.ndarray | float = 0.0,
+        lbt_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
     ) -> tuple:
         """
         Calculate total depreciation charge and undepreciated asset value based on various parameters.
 
         Parameters
         ----------
-        inflation_rate : np.ndarray | float | int, optional
-            The inflation rate to apply. Can be a single value or an array (default is 0).
-        year_now : int
+        year_ref : int
             The reference year for inflation calculation.
+        tax_type: TaxType
+            The type of tax applied to the corresponding asset.
+            Available options: TaxType.VAT or TaxType.LBT (default is TaxType.VAT).
         depr_method : DeprMethod, optional
             The depreciation method to use (default is DeprMethod.PSC_DB).
         decline_factor : float | int, optional
             The decline factor used for declining balance depreciation (default is 2).
+        vat_rate: np.ndarray | float
+            The VAT rate to apply. Can be a single value or an array (default is 0.0).
+        lbt_rate: np.ndarray | float
+            The LBT rate to apply. Can be a single value or an array (default is 0.0).
+        inflation_rate: np.ndarray | float
+            The inflation rate to apply. Can be a single value or an array (default is 0.0).
 
         Returns
         -------
@@ -454,21 +463,28 @@ class Tangible(GeneralCost):
         ------
         (1) This method calculates depreciation charges based on the specified
             depreciation method.
-        (2) Prior to the core calculations, attribute 'cost' is adjusted by inflation (if any),
+        (2) Prior to the core calculations, attribute 'cost' is adjusted by tax
+            and inflation schemes (if any),
         (3) The depreciation charges are aligned with the corresponding periods
             based on pis_year.
         """
-        if year_now is None:
-            year_now = self.start_year
+        if year_ref is None:
+            year_ref = self.start_year
 
         cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
             end_year=self.end_year,
             cost=self.cost,
             expense_year=self.expense_year,
-            project_duration=self.project_duration,
             project_years=self.project_years,
-            year_now=year_now,
+            year_ref=year_ref,
+            tax_type=tax_type,
+            vat_portion=self.vat_portion,
+            vat_rate=vat_rate,
+            vat_discount=self.vat_discount,
+            lbt_portion=self.lbt_portion,
+            lbt_rate=lbt_rate,
+            lbt_discount=self.lbt_discount,
             inflation_rate=inflation_rate,
         )
 
@@ -546,33 +562,31 @@ class Tangible(GeneralCost):
 
     def total_depreciation_book_value(
         self,
-        inflation_rate: np.ndarray | float = 0.0,
-        year_now: int = None,
+        year_ref: int = None,
+        tax_type: TaxType = TaxType.VAT,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float = 2,
-        year_ref: YearReference = YearReference.EXPENSE_YEAR,
     ) -> np.ndarray:
         """
         Calculate the total book value of depreciation for the asset.
 
         Parameters
         ----------
-        inflation_rate : np.ndarray | float | int, optional
-            The inflation rate to apply. Can be a single value or an array (default is 0).
-        year_now : int
+        year_ref : int
             The reference year for inflation calculation.
+        tax_type: TaxType
+            The type of tax applied to the corresponding asset.
+            Available options: TaxType.VAT or TaxType.LBT (default is TaxType.VAT).
         depr_method : DeprMethod, optional
             The depreciation method to use (default is DeprMethod.PSC_DB).
         decline_factor : float, optional
             The decline factor used for declining balance depreciation (default is 2).
-        year_ref : YearReference, optional
-            Reference year for expenses (default is YearReference.EXPENSE_YEAR).
 
         Returns
         -------
         np.ndarray
             An array containing the cumulative book value of depreciation for each period,
-            taking into account the inflation, VAT/PPN, and PDRI schemes.
+            taking into account tax and inflation schemes.
 
         Notes
         -----
@@ -581,28 +595,21 @@ class Tangible(GeneralCost):
         (2) The cumulative book value is obtained by subtracting the cumulative
             depreciation charges from the cumulative expenditures.
         """
-        if year_now is None:
-            year_now = self.start_year
+        if year_ref is None:
+            year_ref = self.start_year
 
         # Calculate total depreciation charge from method total_depreciation_rate
         depreciation_charge = self.total_depreciation_rate(
-            inflation_rate=inflation_rate,
-            year_now=year_now,
+            year_ref=year_ref,
+            tax_type=tax_type,
             depr_method=depr_method,
             decline_factor=decline_factor,
         )[0]
 
         return (
-            np.cumsum(self.expenditures(
-                inflation_rate=inflation_rate,
-                year_now=year_now,
-                year_ref=year_ref,
-            ))
+            np.cumsum(self.expenditures(year_ref=year_ref, tax_type=tax_type))
             - np.cumsum(depreciation_charge)
         )
-
-    def __len__(self):
-        return self.project_duration
 
     def __eq__(self, other):
         # Between two instances of Tangible
@@ -615,6 +622,13 @@ class Tangible(GeneralCost):
                     np.allclose(self.salvage_value, other.salvage_value),
                     np.allclose(self.useful_life, other.useful_life),
                     np.allclose(self.depreciation_factor, other.depreciation_factor),
+                    np.allclose(self.inflation_rate, other.inflation_rate),
+                    np.allclose(self.vat_portion, other.vat_portion),
+                    np.allclose(self.vat_rate, other.vat_rate),
+                    np.allclose(self.vat_discount, other.vat_discount),
+                    np.allclose(self.lbt_portion, other.lbt_portion),
+                    np.allclose(self.lbt_rate, other.lbt_rate),
+                    np.allclose(self.lbt_discount, other.lbt_discount),
                     self.cost_allocation == other.cost_allocation,
                 )
             )
@@ -626,84 +640,37 @@ class Tangible(GeneralCost):
         else:
             return False
 
-    def __lt__(self, other):
-        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) < np.sum(other.cost)
-
-        # Between an instance of Tangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) < other
-
-        else:
-            raise TangibleException(
-                f"Must compare an instance of Tangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
-            )
-
-    def __le__(self, other):
-        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) <= np.sum(other.cost)
-
-        # Between an instance of Tangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) <= other
-
-        else:
-            raise TangibleException(
-                f"Must compare an instance of Tangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
-            )
-
-    def __gt__(self, other):
-        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) > np.sum(other.cost)
-
-        # Between an instance of Tangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) > other
-
-        else:
-            raise TangibleException(
-                f"Must compare an instance of Tangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
-            )
-
-    def __ge__(self, other):
-        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) >= np.sum(other.cost)
-
-        # Between an instance of Tangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) >= other
-
-        else:
-            raise TangibleException(
-                f"Must compare an instance of Tangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
-            )
-
     def __add__(self, other):
         # Only allows addition between an instance of Tangible and another instance of Tangible
         if isinstance(other, Tangible):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
             description_combined = self.description + other.description
+            inflation_rate_combined = np.average((self.inflation_rate, other.inflation_rate), axis=0)
+
+            print('\t')
+            print(f'Filetype: {type(inflation_rate_combined)}')
+            print(f'Length: {len(inflation_rate_combined)}')
+            print('inflation_rate_combined = ', inflation_rate_combined)
 
             return Tangible(
                 start_year=start_year_combined,
                 end_year=end_year_combined,
                 cost=np.concatenate((self.cost, other.cost)),
                 expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                pis_year=np.concatenate((self.pis_year, other.pis_year)),
                 cost_allocation=self.cost_allocation + other.cost_allocation,
+                description=description_combined,
+                vat_portion=np.concatenate((self.vat_portion, other.vat_portion)),
+                vat_rate=np.concatenate((self.vat_rate, other.vat_rate)),
+                vat_discount=np.concatenate((self.vat_discount, other.vat_discount)),
+                lbt_portion=np.concatenate((self.lbt_portion, other.lbt_portion)),
+                lbt_rate=np.concatenate((self.lbt_rate, other.lbt_rate)),
+                lbt_discount=np.concatenate((self.lbt_discount, other.lbt_discount)),
+                inflation_rate=np.concatenate((self.inflation_rate, other.inflation_rate)),
+                pis_year=np.concatenate((self.pis_year, other.pis_year)),
                 salvage_value=np.concatenate((self.salvage_value, other.salvage_value)),
                 useful_life=np.concatenate((self.useful_life, other.useful_life)),
                 depreciation_factor=np.concatenate((self.depreciation_factor, other.depreciation_factor)),
-                description=description_combined,
             )
 
         else:
