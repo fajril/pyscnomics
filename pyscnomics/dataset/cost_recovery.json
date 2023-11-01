@@ -15,7 +15,7 @@
   "oil_dmo_volume_portion": 0.25,
   "oil_dmo_fee_portion": 0.25,
   "oil_dmo_holiday_duration": 60,
-  "gas_dmo_volume_portion": 1,
+  "gas_dmo_volume_portion": 0.25,
   "gas_dmo_fee_portion": 1,
   "gas_dmo_holiday_duration": 60
 }

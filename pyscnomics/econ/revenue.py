@@ -126,7 +126,7 @@ class Lifting:
 
     def lifting_rate_arr(self):
 
-        lifting_rate_arr = np.bincount(self.prod_year - self.start_year, weights=self.lifting_rate)
+        lifting_rate_arr = np.bincount(self.prod_year - self.start_year, weights=self.lifting_rate * self.ghv)
         zeros = np.zeros(self.project_duration - len(lifting_rate_arr))
         lifting_rate_arr = np.concatenate((lifting_rate_arr, zeros))
 
