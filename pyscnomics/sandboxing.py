@@ -105,39 +105,39 @@ tangible_apel = Tangible(
 
 '------------------------------------------- INTANGIBLE COST DATA ------------------------------------------'
 
-# intangible_mangga = Intangible(
-#     start_year=2023,
-#     end_year=2030,
-#     cost=np.array([100, 100, 100, 100]),
-#     expense_year=np.array([2024, 2025, 2026, 2027]),
-#     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
-# )
-#
-# intangible_apel = Intangible(
-#     start_year=2023,
-#     end_year=2030,
-#     cost=np.array([50, 50, 50]),
-#     expense_year=np.array([2027, 2028, 2029]),
-#     cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS]
-# )
-
-'------------------------------------------------ OPEX DATA ------------------------------------------------'
-
-opex_mangga = OPEX(
+intangible_mangga = Intangible(
     start_year=2023,
     end_year=2030,
-    fixed_cost=np.array([100, 100, 100, 100]),
-    expense_year=np.array([2023, 2024, 2025, 2026]),
+    cost=np.array([100, 100, 100, 100]),
+    expense_year=np.array([2024, 2025, 2026, 2027]),
     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
 )
 
-opex_apel = OPEX(
+intangible_apel = Intangible(
     start_year=2023,
     end_year=2030,
-    fixed_cost=np.array([50, 50, 50]),
-    expense_year=np.array([2023, 2024, 2025]),
-    cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+    cost=np.array([50, 50, 50]),
+    expense_year=np.array([2027, 2028, 2029]),
+    cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS]
 )
+
+'------------------------------------------------ OPEX DATA ------------------------------------------------'
+
+# opex_mangga = OPEX(
+#     start_year=2023,
+#     end_year=2030,
+#     fixed_cost=np.array([100, 100, 100, 100]),
+#     expense_year=np.array([2023, 2024, 2025, 2026]),
+#     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+# )
+#
+# opex_apel = OPEX(
+#     start_year=2023,
+#     end_year=2030,
+#     fixed_cost=np.array([50, 50, 50]),
+#     expense_year=np.array([2023, 2024, 2025]),
+#     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+# )
 
 '---------------------------------------------- ASR COST DATA ----------------------------------------------'
 
@@ -206,43 +206,32 @@ oil_nanas_cashflow = CashFlow(
 #     sulfur_mangga2_tangible
 # )
 
-intangible_mangga = Intangible(
+opex_mangga = OPEX(
     start_year=2023,
     end_year=2030,
-    cost=np.array([100, 100, 100, 100]),
-    expense_year=np.array([2024, 2025, 2026, 2027]),
+    fixed_cost=np.array([100, 100, 100, 100]),
+    expense_year=np.array([2023, 2024, 2025, 2026]),
     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
 )
 
-intangible_apel = Intangible(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([50, 50, 50]),
-    expense_year=np.array([2027, 2028, 2029]),
-    cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS]
-)
+# opex_apel = OPEX(
+#     start_year=2023,
+#     end_year=2030,
+#     fixed_cost=np.array([50, 50, 50]),
+#     expense_year=np.array([2023, 2024, 2025]),
+#     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+# )
 
 print('\t')
-print(f'Filetype: {type(intangible_mangga)}')
-print(f'Length: {len(intangible_mangga)}')
-print('intangible_mangga = \n', intangible_mangga)
+print(f'Filetype: {type(opex_mangga)}')
+print(f'Length: {len(opex_mangga)}')
+print('opex_mangga = \n', opex_mangga)
 
-t1 = intangible_mangga.expenditures(
-    vat_rate=0.0,
-    inflation_rate=0.01,
+t1 = opex_mangga.expenditures(
+    tax_type=TaxType.VAT,
+    # vat_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
+    inflation_rate=0.02,
 )
-
-# t1 = tangible_add.expenditures(
-#     tax_type=TaxType.VAT,
-#     lbt_rate=0.05,
-#     vat_rate=0.0,
-# )
-#
-# t2 = tangible_add.total_depreciation_rate(
-#     tax_type=TaxType.VAT,
-#     lbt_rate=0.05,
-#     vat_rate=0.0,
-# )
 
 print('\t')
 print(f'Filetype: {type(t1)}')

@@ -1175,44 +1175,27 @@ class Intangible(GeneralCost):
 
 
 @dataclass
-class OPEX:
+class OPEX(GeneralCost):
     """
     Manages an OPEX asset.
 
     Parameters
     ----------
-    start_year : int
-        The start year of the project.
-    end_year : int
-        The end year of the project.
     fixed_cost : np.ndarray
         An array representing the fixed cost of an OPEX asset.
-    expense_year : np.ndarray
-        An array representing the expense year of an OPEX asset.
-    cost_allocation : list[FluidType]
-        A list of strings depicting the cost allocation of an OPEX asset.
     prod_rate: np.ndarray
         The production rate of a particular fluid type.
     cost_per_volume: np.ndarray
         Cost associated with production of a particular fluid type.
-    description: list[str]
-        A list of string description regarding the associated OPEX cost.
     """
 
-    start_year: int
-    end_year: int
-    fixed_cost: np.ndarray
-    expense_year: np.ndarray
-    cost_allocation: list[FluidType] = field(default=None)
-    prod_rate: np.ndarray = field(default=None, repr=False)
-    cost_per_volume: np.ndarray = field(default=None, repr=False)
-    description: list[str] = field(default=None)
+    fixed_cost: np.ndarray = field(default=None)
+    prod_rate: np.ndarray = field(default=None)
+    cost_per_volume: np.ndarray = field(default=None)
 
     # Attribute to be defined later on
     variable_cost: np.ndarray = field(default=None, init=False)
-    cost: np.ndarray = field(default=None, init=False)
-    project_duration: int = field(default=None, init=False, repr=False)
-    project_years: np.ndarray = field(default=None, init=False, repr=False)
+    cost: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         # Check for inappropriate start and end year project
@@ -1225,6 +1208,54 @@ class OPEX:
                 f"start year {self.start_year} "
                 f"is after the end year {self.end_year}"
             )
+
+        # Configure VAT portion
+        if self.vat_portion is None:
+            self.vat_portion = np.ones_like(self.fixed_cost)
+
+        if self.vat_portion is not None:
+            if not isinstance(self.vat_portion, np.ndarray):
+                raise OPEXException(
+                    f"Attribute VAT portion must be a numpy ndarray; "
+                    f"VAT portion ({self.vat_portion}) is of datatype "
+                    f"{self.vat_portion.__class__.__qualname__}."
+                )
+
+        # Configure LBT portion
+        if self.lbt_portion is None:
+            self.lbt_portion = np.ones_like(self.fixed_cost)
+
+        if self.lbt_portion is not None:
+            if not isinstance(self.lbt_portion, np.ndarray):
+                raise OPEXException(
+                    f"Attribute LBT portion must be a numpy ndarray; "
+                    f"LBT portion ({self.lbt_portion}) is of datatype "
+                    f"{self.lbt_portion.__class__.__qualname__}."
+                )
+
+        # Configure VAT discount
+        if isinstance(self.vat_discount, float):
+            self.vat_discount = np.repeat(self.vat_discount, len(self.fixed_cost))
+
+        if isinstance(self.vat_discount, np.ndarray):
+            if len(self.vat_discount) != len(self.fixed_cost):
+                raise OPEXException(
+                    f"Unequal length of array: "
+                    f"VAT discount: ({len(self.vat_discount)}), "
+                    f"Fixed cost: ({len(self.fixed_cost)})."
+                )
+
+        # Configure LBT discount
+        if isinstance(self.lbt_discount, float):
+            self.lbt_discount = np.repeat(self.lbt_discount, len(self.fixed_cost))
+
+        if isinstance(self.lbt_discount, np.ndarray):
+            if len(self.lbt_discount) != len(self.fixed_cost):
+                raise OPEXException(
+                    f"Unequal length of array: "
+                    f"LBT discount: ({len(self.lbt_discount)}), "
+                    f"Fixed cost: ({len(self.fixed_cost)})."
+                )
 
         # Configure description data
         if self.description is None:
@@ -1240,7 +1271,7 @@ class OPEX:
 
         # Configure cost_allocation data
         if self.cost_allocation is None:
-            self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.fixed_cost))]
 
         if self.cost_allocation is not None:
             if not isinstance(self.cost_allocation, list):
@@ -1252,6 +1283,7 @@ class OPEX:
 
         # User provides both prod_rate and cost_per_volume data
         if self.prod_rate is not None and self.cost_per_volume is not None:
+
             # Check input data for unequal length
             arr_length = len(self.fixed_cost)
 
@@ -1263,6 +1295,8 @@ class OPEX:
                     self.cost_per_volume,
                     self.cost_allocation,
                     self.description,
+                    self.vat_portion,
+                    self.lbt_portion,
                 ]
             ):
                 raise OPEXException(
@@ -1272,22 +1306,24 @@ class OPEX:
                     f"prod_rate: {len(self.prod_rate)}, "
                     f"cost_per_volume: {len(self.cost_per_volume)}, "
                     f"cost_allocation: {len(self.cost_allocation)}, "
-                    f"description: {len(self.description)}."
+                    f"description: {len(self.description)}, "
+                    f"vat_portion: {len(self.vat_portion)}, "
+                    f"lbt_portion: {len(self.lbt_portion)}."
                 )
 
             # Specify attribute variable_cost
             self.variable_cost = self.prod_rate * self.cost_per_volume
 
         # User only provides prod_rate data
-        elif self.prod_rate is not None and self.cost_per_volume is None:
+        if self.prod_rate is not None and self.cost_per_volume is None:
             raise OPEXException(f"cost_per_volume data is missing")
 
         # User only provides cost_per_volume data
-        elif self.prod_rate is None and self.cost_per_volume is not None:
+        if self.prod_rate is None and self.cost_per_volume is not None:
             raise OPEXException(f"prod_rate data is missing")
 
         # User does not provide both prod_rate and cost_per_volume data
-        elif self.prod_rate is None and self.cost_per_volume is None:
+        if self.prod_rate is None and self.cost_per_volume is None:
             self.prod_rate = np.zeros_like(self.fixed_cost)
             self.cost_per_volume = np.zeros_like(self.fixed_cost)
             self.variable_cost = np.zeros_like(self.fixed_cost)
@@ -1309,60 +1345,6 @@ class OPEX:
                 f"is before the start year of the project ({self.start_year})"
             )
 
-    def expenditures(
-        self,
-        inflation_rate: np.ndarray | float | int = 0.0,
-        year_now: int = None,
-    ) -> np.ndarray:
-        """
-        Calculate OPEX expenditures per year.
-        Allocate OPEX expenditures following the associated expense year.
-
-        Parameters
-        ----------
-        inflation_rate : np.ndarray or float or int, optional
-            The inflation rate to apply. Can be a single value or an array (default is 0).
-        year_now : int
-            The reference year for inflation calculation.
-
-        Returns
-        -------
-        expenses: np.ndarray
-            An array depicting the opex expenditures each year, adjusted by
-            inflation (if any).
-
-        Notes
-        -----
-        This method calculates opex expenditures while considering inflation scheme.
-        The core calculations are as follows:
-        (1) Apply adjustment to cost due to inflation (if any),
-        (2) Function np.bincount() is used to align the 'cost_adjusted' elements
-            according to its corresponding expense year,
-        (3) If len(expenses) < project_duration, then add the remaining elements
-            with zeros.
-        """
-        if year_now is None:
-            year_now = self.start_year
-
-        cost_adjusted = apply_cost_adjustment(
-            start_year=self.start_year,
-            end_year=self.end_year,
-            cost=self.cost,
-            expense_year=self.expense_year,
-            project_duration=self.project_duration,
-            project_years=self.project_years,
-            year_now=year_now,
-            inflation_rate=inflation_rate,
-        )
-
-        expenses = np.bincount(
-            self.expense_year - self.start_year, weights=cost_adjusted
-        )
-        zeros = np.zeros(self.project_duration - len(expenses))
-        expenses = np.concatenate((expenses, zeros))
-
-        return expenses
-
     def __eq__(self, other):
         # Between two instances of OPEX
         if isinstance(other, OPEX):
@@ -1371,6 +1353,10 @@ class OPEX:
                     np.allclose(self.fixed_cost, other.fixed_cost),
                     np.allclose(self.variable_cost, other.variable_cost),
                     np.allclose(self.expense_year, other.expense_year),
+                    np.allclose(self.vat_portion, other.vat_portion),
+                    np.allclose(self.vat_discount, other.vat_discount),
+                    np.allclose(self.lbt_portion, other.lbt_portion),
+                    np.allclose(self.lbt_discount, other.lbt_discount),
                     self.cost_allocation == other.cost_allocation,
                 )
             )
@@ -1382,24 +1368,95 @@ class OPEX:
         else:
             return False
 
+    def __lt__(self, other):
+        # Between an instance of OPEX with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) < np.sum(other.cost)
+
+        # Between an instance of OPEX and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) < other
+
+        else:
+            raise OPEXException(
+                f"Must compare an instance of OPEX with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __le__(self, other):
+        # Between an instance of OPEX with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) <= np.sum(other.cost)
+
+        # Between an instance of OPEX and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) <= other
+
+        else:
+            raise OPEXException(
+                f"Must compare an instance of OPEX with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __gt__(self, other):
+        # Between an instance of OPEX with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) > np.sum(other.cost)
+
+        # Between an instance of OPEX and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) > other
+
+        else:
+            raise OPEXException(
+                f"Must compare an instance of OPEX with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __ge__(self, other):
+        # Between an instance of OPEX with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) >= np.sum(other.cost)
+
+        # Between an instance of OPEX and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) >= other
+
+        else:
+            raise OPEXException(
+                f"Must compare an instance of OPEX with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
     def __add__(self, other):
         # Only allows addition between an instance of OPEX and another instance of OPEX
         if isinstance(other, OPEX):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
+            vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
+            vat_discount_combined = np.concatenate((self.vat_discount, other.vat_discount))
+            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
+            lbt_discount_combined = np.concatenate((self.lbt_discount, other.lbt_discount))
+            fixed_cost_combined = np.concatenate((self.fixed_cost, other.fixed_cost))
+            prod_rate_combined = np.concatenate((self.prod_rate, other.prod_rate))
+            cost_per_volume_combined = np.concatenate((self.cost_per_volume, other.cost_per_volume))
 
             return OPEX(
                 start_year=start_year_combined,
                 end_year=end_year_combined,
-                fixed_cost=np.concatenate((self.fixed_cost, other.fixed_cost)),
-                expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                cost_allocation=self.cost_allocation + other.cost_allocation,
-                prod_rate=np.concatenate((self.prod_rate, other.prod_rate)),
-                cost_per_volume=np.concatenate(
-                    (self.cost_per_volume, other.cost_per_volume)
-                ),
+                expense_year=expense_year_combined,
+                cost_allocation=cost_allocation_combined,
                 description=description_combined,
+                vat_portion=vat_portion_combined,
+                vat_discount=vat_discount_combined,
+                lbt_portion=lbt_portion_combined,
+                lbt_discount=lbt_discount_combined,
+                fixed_cost=fixed_cost_combined,
+                prod_rate=prod_rate_combined,
+                cost_per_volume=cost_per_volume_combined,
             )
 
         else:
@@ -1418,19 +1475,30 @@ class OPEX:
         if isinstance(other, OPEX):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
+            vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
+            vat_discount_combined = np.concatenate((self.vat_discount, other.vat_discount))
+            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
+            lbt_discount_combined = np.concatenate((self.lbt_discount, other.lbt_discount))
+            fixed_cost_combined = np.concatenate((self.fixed_cost, -other.fixed_cost))
+            prod_rate_combined = np.concatenate((self.prod_rate, -other.prod_rate))
+            cost_per_volume_combined = np.concatenate((self.cost_per_volume, other.cost_per_volume))
 
             return OPEX(
                 start_year=start_year_combined,
                 end_year=end_year_combined,
-                fixed_cost=np.concatenate((self.fixed_cost, -other.fixed_cost)),
-                expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                cost_allocation=self.cost_allocation + other.cost_allocation,
-                prod_rate=np.concatenate((self.prod_rate, -other.prod_rate)),
-                cost_per_volume=np.concatenate(
-                    (self.cost_per_volume, other.cost_per_volume)
-                ),
+                expense_year=expense_year_combined,
+                cost_allocation=cost_allocation_combined,
                 description=description_combined,
+                vat_portion=vat_portion_combined,
+                vat_discount=vat_discount_combined,
+                lbt_portion=lbt_portion_combined,
+                lbt_discount=lbt_discount_combined,
+                fixed_cost=fixed_cost_combined,
+                prod_rate=prod_rate_combined,
+                cost_per_volume=cost_per_volume_combined,
             )
 
         else:
@@ -1450,12 +1518,16 @@ class OPEX:
             return OPEX(
                 start_year=self.start_year,
                 end_year=self.end_year,
-                fixed_cost=self.fixed_cost * other,
                 expense_year=self.expense_year,
                 cost_allocation=self.cost_allocation,
+                description=self.description,
+                vat_portion=self.vat_portion,
+                vat_discount=self.vat_discount,
+                lbt_portion=self.lbt_portion,
+                lbt_discount=self.lbt_discount,
+                fixed_cost=self.fixed_cost * other,
                 prod_rate=self.prod_rate * other,
                 cost_per_volume=self.cost_per_volume,
-                description=self.description,
             )
 
         else:
@@ -1482,12 +1554,16 @@ class OPEX:
                 return OPEX(
                     start_year=self.start_year,
                     end_year=self.end_year,
-                    fixed_cost=self.fixed_cost / other,
                     expense_year=self.expense_year,
                     cost_allocation=self.cost_allocation,
+                    description=self.description,
+                    vat_portion=self.vat_portion,
+                    vat_discount=self.vat_discount,
+                    lbt_portion=self.lbt_portion,
+                    lbt_discount=self.lbt_discount,
+                    fixed_cost=self.fixed_cost / other,
                     prod_rate=self.prod_rate / other,
                     cost_per_volume=self.cost_per_volume,
-                    description=self.description,
                 )
 
         else:
