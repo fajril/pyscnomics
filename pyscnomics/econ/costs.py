@@ -835,34 +835,7 @@ class Tangible(GeneralCost):
 class Intangible(GeneralCost):
     """
     Manages an intangible asset.
-
-    Parameters
-    ----------
-    start_year : int
-        The start year of the project.
-    end_year : int
-        The end year of the project.
-    cost : numpy.ndarray
-        An array representing the cost of an intangible asset.
-    expense_year : numpy.ndarray
-        An array representing the expense year of an intangible asset.
-    cost_allocation : list[FluidType]
-        A list representing the cost allocation of an intangible asset.
-    description: list[str]
-        A list of string description regarding the associated intangible cost.
     """
-
-    start_year: int
-    end_year: int
-    cost: np.ndarray
-    expense_year: np.ndarray
-    cost_allocation: list[FluidType] = field(default=None)
-    description: list[str] = field(default=None)
-
-    # Attribute to be defined later on
-    project_duration: int = field(default=None, init=False, repr=False)
-    project_years: np.ndarray = field(default=None, init=False, repr=False)
-
     def __post_init__(self):
         # Check for inappropriate start and end year project
         if self.end_year >= self.start_year:
@@ -875,6 +848,54 @@ class Intangible(GeneralCost):
                 f"is after the end year {self.end_year}"
             )
 
+        # Configure VAT portion
+        if self.vat_portion is None:
+            self.vat_portion = np.ones_like(self.cost)
+
+        if self.vat_portion is not None:
+            if not isinstance(self.vat_portion, np.ndarray):
+                raise IntangibleException(
+                    f"Attribute VAT portion must be a numpy ndarray; "
+                    f"VAT portion ({self.vat_portion}) is of datatype "
+                    f"{self.vat_portion.__class__.__qualname__}."
+                )
+
+        # Configure LBT portion
+        if self.lbt_portion is None:
+            self.lbt_portion = np.ones_like(self.cost)
+
+        if self.lbt_portion is not None:
+            if not isinstance(self.lbt_portion, np.ndarray):
+                raise IntangibleException(
+                    f"Attribute LBT portion must be a numpy ndarray; "
+                    f"LBT portion ({self.lbt_portion}) is of datatype "
+                    f"{self.lbt_portion.__class__.__qualname__}."
+                )
+
+        # Configure VAT discount
+        if isinstance(self.vat_discount, float):
+            self.vat_discount = np.repeat(self.vat_discount, len(self.cost))
+
+        if isinstance(self.vat_discount, np.ndarray):
+            if len(self.vat_discount) != len(self.cost):
+                raise IntangibleException(
+                    f"Unequal length of array: "
+                    f"VAT discount: ({len(self.vat_discount)}), "
+                    f"cost: ({len(self.cost)})."
+                )
+
+        # Configure LBT discount
+        if isinstance(self.lbt_discount, float):
+            self.lbt_discount = np.repeat(self.lbt_discount, len(self.cost))
+
+        if isinstance(self.lbt_discount, np.ndarray):
+            if len(self.lbt_discount) != len(self.cost):
+                raise IntangibleException(
+                    f"Unequal length of array: "
+                    f"LBT discount: ({len(self.lbt_discount)}), "
+                    f"cost: ({len(self.cost)})."
+                )
+
         # Configure description data
         if self.description is None:
             self.description = [" " for _ in range(len(self.cost))]
@@ -883,7 +904,7 @@ class Intangible(GeneralCost):
             if not isinstance(self.description, list):
                 raise IntangibleException(
                     f"Attribute description must be a list; "
-                    f"description ({self.description.__class__.__qualname__}) "
+                    f"description (datatype: {self.description.__class__.__qualname__}) "
                     f"is not a list."
                 )
 
@@ -908,6 +929,8 @@ class Intangible(GeneralCost):
                 self.expense_year,
                 self.cost_allocation,
                 self.description,
+                self.vat_portion,
+                self.lbt_portion,
             ]
         ):
             raise IntangibleException(
@@ -915,7 +938,9 @@ class Intangible(GeneralCost):
                 f"cost: {len(self.cost)}, "
                 f"expense_year: {len(self.expense_year)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
-                f"description: {len(self.description)}."
+                f"description: {len(self.description)}, "
+                f"vat_portion: {len(self.vat_portion)}, "
+                f"lbt_portion: {len(self.lbt_portion)}."
             )
 
         # Raise an error message: expense year is after the end year of the project
@@ -932,62 +957,6 @@ class Intangible(GeneralCost):
                 f"is before the start year of the project ({self.start_year})"
             )
 
-    def expenditures(
-        self,
-        inflation_rate: np.ndarray | float = 0.0,
-        year_now: int = None,
-    ) -> np.ndarray:
-        """
-        Calculate intangible expenditures per year.
-
-        This method calculates the intangible expenditures per year
-        based on the expense year and cost data provided.
-
-        Parameters
-        ----------
-        inflation_rate : np.ndarray or float or int, optional
-            The inflation rate to apply. Can be a single value or an array (default is 0).
-        year_now : int
-            The reference year for inflation calculation.
-
-        Returns
-        -------
-        expenses: np.ndarray
-            An array depicting the intangible expenditures each year, adjusted by
-            inflation (if any).
-
-        Notes
-        -----
-        This method calculates intangible expenditures while considering inflation scheme.
-        The core calculations are as follows:
-        (1) Apply adjustment to cost due to inflation (if any),
-        (2) Function np.bincount() is used to align the 'cost_adjusted' elements
-            according to its corresponding expense year,
-        (3) If len(expenses) < project_duration, then add the remaining elements
-            with zeros.
-        """
-        if year_now is None:
-            year_now = self.start_year
-
-        cost_adjusted = apply_cost_adjustment(
-            start_year=self.start_year,
-            end_year=self.end_year,
-            cost=self.cost,
-            expense_year=self.expense_year,
-            project_duration=self.project_duration,
-            project_years=self.project_years,
-            year_now=year_now,
-            inflation_rate=inflation_rate,
-        )
-
-        expenses = np.bincount(
-            self.expense_year - self.start_year, weights=cost_adjusted
-        )
-        zeros = np.zeros(self.project_duration - len(expenses))
-        expenses = np.concatenate((expenses, zeros))
-
-        return expenses
-
     def __eq__(self, other):
         # Between two instances of Intangible
         if isinstance(other, Intangible):
@@ -995,6 +964,10 @@ class Intangible(GeneralCost):
                 (
                     np.allclose(self.cost, other.cost),
                     np.allclose(self.expense_year, other.expense_year),
+                    np.allclose(self.vat_portion, other.vat_portion),
+                    np.allclose(self.vat_discount, other.vat_discount),
+                    np.allclose(self.lbt_portion, other.lbt_portion),
+                    np.allclose(self.lbt_discount, other.lbt_discount),
                     self.cost_allocation == other.cost_allocation,
                 )
             )
@@ -1006,20 +979,91 @@ class Intangible(GeneralCost):
         else:
             return False
 
+    def __lt__(self, other):
+        # Between an instance of Intangible with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) < np.sum(other.cost)
+
+        # Between an instance of Intangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) < other
+
+        else:
+            raise IntangibleException(
+                f"Must compare an instance of Intangible with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __le__(self, other):
+        # Between an instance of Intangible with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) <= np.sum(other.cost)
+
+        # Between an instance of Intangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) <= other
+
+        else:
+            raise IntangibleException(
+                f"Must compare an instance of Intangible with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __gt__(self, other):
+        # Between an instance of Intangible with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) > np.sum(other.cost)
+
+        # Between an instance of Intangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) > other
+
+        else:
+            raise IntangibleException(
+                f"Must compare an instance of Intangible with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __ge__(self, other):
+        # Between an instance of Intangible with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) >= np.sum(other.cost)
+
+        # Between an instance of Intangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) >= other
+
+        else:
+            raise IntangibleException(
+                f"Must compare an instance of Intangible with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
     def __add__(self, other):
         # Only allows addition between an instance of Intangible and another instance of Intangible
         if isinstance(other, Intangible):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
+            cost_combined = np.concatenate((self.cost, other.cost))
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
+            vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
+            vat_discount_combined = np.concatenate((self.vat_discount, other.vat_discount))
+            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
+            lbt_discount_combined = np.concatenate((self.lbt_discount, other.lbt_discount))
 
             return Intangible(
                 start_year=start_year_combined,
                 end_year=end_year_combined,
-                cost=np.concatenate((self.cost, other.cost)),
-                expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                cost_allocation=self.cost_allocation + other.cost_allocation,
+                cost=cost_combined,
+                expense_year=expense_year_combined,
+                cost_allocation=cost_allocation_combined,
                 description=description_combined,
+                vat_portion=vat_portion_combined,
+                vat_discount=vat_discount_combined,
+                lbt_portion=lbt_portion_combined,
+                lbt_discount=lbt_discount_combined,
             )
 
         else:
@@ -1038,15 +1082,26 @@ class Intangible(GeneralCost):
         if isinstance(other, Intangible):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
+            cost_combined = np.concatenate((self.cost, -other.cost))
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
+            vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
+            vat_discount_combined = np.concatenate((self.vat_discount, other.vat_discount))
+            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
+            lbt_discount_combined = np.concatenate((self.lbt_discount, other.lbt_discount))
 
             return Intangible(
                 start_year=start_year_combined,
                 end_year=end_year_combined,
-                cost=np.concatenate((self.cost, -other.cost)),
-                expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                cost_allocation=self.cost_allocation + other.cost_allocation,
+                cost=cost_combined,
+                expense_year=expense_year_combined,
+                cost_allocation=cost_allocation_combined,
                 description=description_combined,
+                vat_portion=vat_portion_combined,
+                vat_discount=vat_discount_combined,
+                lbt_portion=lbt_portion_combined,
+                lbt_discount=lbt_discount_combined,
             )
 
         else:
@@ -1070,6 +1125,10 @@ class Intangible(GeneralCost):
                 expense_year=self.expense_year,
                 cost_allocation=self.cost_allocation,
                 description=self.description,
+                vat_portion=self.vat_portion,
+                vat_discount=self.vat_discount,
+                lbt_portion=self.lbt_portion,
+                lbt_discount=self.lbt_discount,
             )
 
         else:
@@ -1100,11 +1159,16 @@ class Intangible(GeneralCost):
                     expense_year=self.expense_year,
                     cost_allocation=self.cost_allocation,
                     description=self.description,
+                    vat_portion=self.vat_portion,
+                    vat_discount=self.vat_discount,
+                    lbt_portion=self.lbt_portion,
+                    lbt_discount=self.lbt_discount,
                 )
 
         else:
             raise IntangibleException(
-                f"Must divide with an instance of Tangible/Intangible/OPEX/ASR, integer or a float; "
+                f"Must divide with an instance of Tangible/Intangible/OPEX/ASR, "
+                f"integer or a float; "
                 f"{other}({other.__class__.__qualname__}) is not an instance "
                 f"of Tangible/Intangible/OPEX/ASR nor an integer nor a float."
             )
