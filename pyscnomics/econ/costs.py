@@ -76,9 +76,9 @@ class GeneralCost:
     cost_allocation: list[FluidType] = field(default=None)
     description: list[str] = field(default=None)
     vat_portion: np.ndarray = field(default=None)
-    vat_discount: float = field(default=0.0)
+    vat_discount: float | np.ndarray = field(default=0.0)
     lbt_portion: np.ndarray = field(default=None)
-    lbt_discount: float = field(default=0.0)
+    lbt_discount: float | np.ndarray = field(default=0.0)
 
     # Attribute to be defined later on
     project_duration: int = field(default=None, init=False, repr=False)
@@ -149,73 +149,15 @@ class GeneralCost:
             inflation_rate=inflation_rate,
         )
 
-        expenses = np.bincount(self.expense_year - self.start_year, weights=cost_adjusted)
+        expenses = np.bincount(
+            self.expense_year - self.start_year, weights=cost_adjusted
+        )
         zeros = np.zeros(self.project_duration - len(expenses))
 
         return np.concatenate((expenses, zeros))
 
     def __len__(self):
         return self.project_duration
-
-    def __lt__(self, other):
-        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) < np.sum(other.cost)
-
-        # Between an instance of Tangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) < other
-
-        else:
-            raise TangibleException(
-                f"Must compare an instance of Tangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
-            )
-
-    def __le__(self, other):
-        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) <= np.sum(other.cost)
-
-        # Between an instance of Tangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) <= other
-
-        else:
-            raise TangibleException(
-                f"Must compare an instance of Tangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
-            )
-
-    def __gt__(self, other):
-        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) > np.sum(other.cost)
-
-        # Between an instance of Tangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) > other
-
-        else:
-            raise TangibleException(
-                f"Must compare an instance of Tangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
-            )
-
-    def __ge__(self, other):
-        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) >= np.sum(other.cost)
-
-        # Between an instance of Tangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) >= other
-
-        else:
-            raise TangibleException(
-                f"Must compare an instance of Tangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
-            )
 
 
 @dataclass
@@ -242,7 +184,6 @@ class Tangible(GeneralCost):
     depreciation_factor: np.ndarray = field(default=None)
 
     def __post_init__(self):
-
         # Check for inappropriate start and end year project
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -279,26 +220,28 @@ class Tangible(GeneralCost):
                 )
 
         # Configure VAT discount
-        if not isinstance(self.vat_discount, float):
-            raise TangibleException(
-                f"Attribute VAT discount must be a float; "
-                f"VAT discount ({self.vat_discount}) is of datatype "
-                f"{self.vat_discount.__class__.__qualname__}."
-            )
-
         if isinstance(self.vat_discount, float):
             self.vat_discount = np.repeat(self.vat_discount, len(self.cost))
 
-        # Configure LBT discount
-        if not isinstance(self.lbt_discount, float):
-            raise TangibleException(
-                f"Attribute LBT discount must be a float; "
-                f"LBT discount ({self.lbt_discount}) is of datatype "
-                f"{self.lbt_discount.__class__.__qualname__}."
-            )
+        if isinstance(self.vat_discount, np.ndarray):
+            if len(self.vat_discount) != len(self.cost):
+                raise TangibleException(
+                    f"Unequal length of array: "
+                    f"VAT discount: ({len(self.vat_discount)}), "
+                    f"cost: ({len(self.cost)})."
+                )
 
+        # Configure LBT discount
         if isinstance(self.lbt_discount, float):
             self.lbt_discount = np.repeat(self.lbt_discount, len(self.cost))
+
+        if isinstance(self.lbt_discount, np.ndarray):
+            if len(self.lbt_discount) != len(self.cost):
+                raise TangibleException(
+                    f"Unequal length of array: "
+                    f"LBT discount: ({len(self.lbt_discount)}), "
+                    f"cost: ({len(self.cost)})."
+                )
 
         # Configure description data
         if self.description is None:
@@ -387,8 +330,6 @@ class Tangible(GeneralCost):
                 self.description,
                 self.vat_portion,
                 self.lbt_portion,
-                self.vat_discount,
-                self.lbt_discount,
             ]
         ):
             raise TangibleException(
@@ -402,9 +343,7 @@ class Tangible(GeneralCost):
                 f"cost_allocation: {len(self.cost_allocation)}, "
                 f"description: {len(self.description)}, "
                 f"vat_portion: {len(self.vat_portion)}, "
-                f"lbt_portion: {len(self.lbt_portion)}, "
-                f"vat_discount: {len(self.vat_discount)}, "
-                f"lbt_discount: {len(self.lbt_discount)}."
+                f"lbt_portion: {len(self.lbt_portion)}."
             )
 
         # Raise an error message: expense year is after the end year of the project
@@ -436,15 +375,15 @@ class Tangible(GeneralCost):
 
         Parameters
         ----------
+        depr_method : DeprMethod, optional
+            The depreciation method to use (default is DeprMethod.PSC_DB).
+        decline_factor : float | int, optional
+            The decline factor used for declining balance depreciation (default is 2).
         year_ref : int
             The reference year for inflation calculation.
         tax_type: TaxType
             The type of tax applied to the corresponding asset.
             Available options: TaxType.VAT or TaxType.LBT (default is TaxType.VAT).
-        depr_method : DeprMethod, optional
-            The depreciation method to use (default is DeprMethod.PSC_DB).
-        decline_factor : float | int, optional
-            The decline factor used for declining balance depreciation (default is 2).
         vat_rate: np.ndarray | float
             The VAT rate to apply. Can be a single value or an array (default is 0.0).
         lbt_rate: np.ndarray | float
@@ -562,25 +501,34 @@ class Tangible(GeneralCost):
 
     def total_depreciation_book_value(
         self,
+        depr_method: DeprMethod = DeprMethod.PSC_DB,
+        decline_factor: float | int = 2,
         year_ref: int = None,
         tax_type: TaxType = TaxType.VAT,
-        depr_method: DeprMethod = DeprMethod.PSC_DB,
-        decline_factor: float = 2,
+        vat_rate: np.ndarray | float = 0.0,
+        lbt_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
         """
         Calculate the total book value of depreciation for the asset.
 
         Parameters
         ----------
+        depr_method : DeprMethod, optional
+            The depreciation method to use (default is DeprMethod.PSC_DB).
+        decline_factor : float, optional
+            The decline factor used for declining balance depreciation (default is 2).
         year_ref : int
             The reference year for inflation calculation.
         tax_type: TaxType
             The type of tax applied to the corresponding asset.
             Available options: TaxType.VAT or TaxType.LBT (default is TaxType.VAT).
-        depr_method : DeprMethod, optional
-            The depreciation method to use (default is DeprMethod.PSC_DB).
-        decline_factor : float, optional
-            The decline factor used for declining balance depreciation (default is 2).
+        vat_rate: np.ndarray | float
+            The VAT rate to apply. Can be a single value or an array (default is 0.0).
+        lbt_rate: np.ndarray | float
+            The LBT rate to apply. Can be a single value or an array (default is 0.0).
+        inflation_rate: np.ndarray | float
+            The inflation rate to apply. Can be a single value or an array (default is 0.0).
 
         Returns
         -------
@@ -599,17 +547,25 @@ class Tangible(GeneralCost):
             year_ref = self.start_year
 
         # Calculate total depreciation charge from method total_depreciation_rate
-        depreciation_charge = self.total_depreciation_rate(
-            year_ref=year_ref,
-            tax_type=tax_type,
+        total_depreciation_charge = self.total_depreciation_rate(
             depr_method=depr_method,
             decline_factor=decline_factor,
+            year_ref=year_ref,
+            tax_type=tax_type,
+            vat_rate=vat_rate,
+            lbt_rate=lbt_rate,
+            inflation_rate=inflation_rate,
         )[0]
 
-        return (
-            np.cumsum(self.expenditures(year_ref=year_ref, tax_type=tax_type))
-            - np.cumsum(depreciation_charge)
-        )
+        return np.cumsum(
+            self.expenditures(
+                year_ref=year_ref,
+                tax_type=tax_type,
+                vat_rate=vat_rate,
+                lbt_rate=lbt_rate,
+                inflation_rate=inflation_rate,
+            )
+        ) - np.cumsum(total_depreciation_charge)
 
     def __eq__(self, other):
         # Between two instances of Tangible
@@ -622,12 +578,9 @@ class Tangible(GeneralCost):
                     np.allclose(self.salvage_value, other.salvage_value),
                     np.allclose(self.useful_life, other.useful_life),
                     np.allclose(self.depreciation_factor, other.depreciation_factor),
-                    np.allclose(self.inflation_rate, other.inflation_rate),
                     np.allclose(self.vat_portion, other.vat_portion),
-                    np.allclose(self.vat_rate, other.vat_rate),
                     np.allclose(self.vat_discount, other.vat_discount),
                     np.allclose(self.lbt_portion, other.lbt_portion),
-                    np.allclose(self.lbt_rate, other.lbt_rate),
                     np.allclose(self.lbt_discount, other.lbt_discount),
                     self.cost_allocation == other.cost_allocation,
                 )
@@ -640,45 +593,115 @@ class Tangible(GeneralCost):
         else:
             return False
 
+    def __lt__(self, other):
+        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) < np.sum(other.cost)
+
+        # Between an instance of Tangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) < other
+
+        else:
+            raise TangibleException(
+                f"Must compare an instance of Tangible with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __le__(self, other):
+        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) <= np.sum(other.cost)
+
+        # Between an instance of Tangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) <= other
+
+        else:
+            raise TangibleException(
+                f"Must compare an instance of Tangible with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __gt__(self, other):
+        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) > np.sum(other.cost)
+
+        # Between an instance of Tangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) > other
+
+        else:
+            raise TangibleException(
+                f"Must compare an instance of Tangible with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __ge__(self, other):
+        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) >= np.sum(other.cost)
+
+        # Between an instance of Tangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) >= other
+
+        else:
+            raise TangibleException(
+                f"Must compare an instance of Tangible with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
     def __add__(self, other):
         # Only allows addition between an instance of Tangible and another instance of Tangible
         if isinstance(other, Tangible):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
+            cost_combined = np.concatenate((self.cost, other.cost))
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
-            inflation_rate_combined = np.average((self.inflation_rate, other.inflation_rate), axis=0)
-
-            print('\t')
-            print(f'Filetype: {type(inflation_rate_combined)}')
-            print(f'Length: {len(inflation_rate_combined)}')
-            print('inflation_rate_combined = ', inflation_rate_combined)
+            vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
+            vat_discount_combined = np.concatenate(
+                (self.vat_discount, other.vat_discount)
+            )
+            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
+            lbt_discount_combined = np.concatenate(
+                (self.lbt_discount, other.lbt_discount)
+            )
+            pis_year_combined = np.concatenate((self.pis_year, other.pis_year))
+            salvage_value_combined = np.concatenate(
+                (self.salvage_value, other.salvage_value)
+            )
+            useful_life_combined = np.concatenate((self.useful_life, other.useful_life))
+            depreciation_factor_combined = np.concatenate(
+                (self.depreciation_factor, other.depreciation_factor)
+            )
 
             return Tangible(
                 start_year=start_year_combined,
                 end_year=end_year_combined,
-                cost=np.concatenate((self.cost, other.cost)),
-                expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                cost_allocation=self.cost_allocation + other.cost_allocation,
+                cost=cost_combined,
+                expense_year=expense_year_combined,
+                cost_allocation=cost_allocation_combined,
                 description=description_combined,
-                vat_portion=np.concatenate((self.vat_portion, other.vat_portion)),
-                vat_rate=np.concatenate((self.vat_rate, other.vat_rate)),
-                vat_discount=np.concatenate((self.vat_discount, other.vat_discount)),
-                lbt_portion=np.concatenate((self.lbt_portion, other.lbt_portion)),
-                lbt_rate=np.concatenate((self.lbt_rate, other.lbt_rate)),
-                lbt_discount=np.concatenate((self.lbt_discount, other.lbt_discount)),
-                inflation_rate=np.concatenate((self.inflation_rate, other.inflation_rate)),
-                pis_year=np.concatenate((self.pis_year, other.pis_year)),
-                salvage_value=np.concatenate((self.salvage_value, other.salvage_value)),
-                useful_life=np.concatenate((self.useful_life, other.useful_life)),
-                depreciation_factor=np.concatenate((self.depreciation_factor, other.depreciation_factor)),
+                vat_portion=vat_portion_combined,
+                vat_discount=vat_discount_combined,
+                lbt_portion=lbt_portion_combined,
+                lbt_discount=lbt_discount_combined,
+                pis_year=pis_year_combined,
+                salvage_value=salvage_value_combined,
+                useful_life=useful_life_combined,
+                depreciation_factor=depreciation_factor_combined,
             )
 
         else:
             raise TangibleException(
-                f"Must add an instance of Tangible with "
-                f"another instance of Tangible. "
-                f"{other}({other.__class__.__qualname__}) is not "
-                f"an instance of Tangible."
+                f"Must add an instance of Tangible with another instance of Tangible. "
+                f"{other}({other.__class__.__qualname__}) is not an instance of Tangible."
             )
 
     def __iadd__(self, other):
@@ -689,19 +712,44 @@ class Tangible(GeneralCost):
         if isinstance(other, Tangible):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
+            cost_combined = np.concatenate((self.cost, -other.cost))
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
+            vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
+            vat_discount_combined = np.concatenate(
+                (self.vat_discount, other.vat_discount)
+            )
+            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
+            lbt_discount_combined = np.concatenate(
+                (self.lbt_discount, other.lbt_discount)
+            )
+            pis_year_combined = np.concatenate((self.pis_year, other.pis_year))
+            salvage_value_combined = np.concatenate(
+                (self.salvage_value, other.salvage_value)
+            )
+            useful_life_combined = np.concatenate((self.useful_life, other.useful_life))
+            depreciation_factor_combined = np.concatenate(
+                (self.depreciation_factor, other.depreciation_factor)
+            )
 
             return Tangible(
                 start_year=start_year_combined,
                 end_year=end_year_combined,
-                cost=np.concatenate((self.cost, -other.cost)),
-                expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                pis_year=np.concatenate((self.pis_year, other.pis_year)),
-                cost_allocation=self.cost_allocation + other.cost_allocation,
-                salvage_value=np.concatenate((self.salvage_value, other.salvage_value)),
-                useful_life=np.concatenate((self.useful_life, other.useful_life)),
-                depreciation_factor=np.concatenate((self.depreciation_factor, other.depreciation_factor)),
+                cost=cost_combined,
+                expense_year=expense_year_combined,
+                cost_allocation=cost_allocation_combined,
                 description=description_combined,
+                vat_portion=vat_portion_combined,
+                vat_discount=vat_discount_combined,
+                lbt_portion=lbt_portion_combined,
+                lbt_discount=lbt_discount_combined,
+                pis_year=pis_year_combined,
+                salvage_value=salvage_value_combined,
+                useful_life=useful_life_combined,
+                depreciation_factor=depreciation_factor_combined,
             )
 
         else:
@@ -723,18 +771,23 @@ class Tangible(GeneralCost):
                 end_year=self.end_year,
                 cost=self.cost * other,
                 expense_year=self.expense_year,
-                pis_year=self.pis_year,
                 cost_allocation=self.cost_allocation,
+                description=self.description,
+                vat_portion=self.vat_portion,
+                vat_discount=self.vat_discount,
+                lbt_portion=self.lbt_portion,
+                lbt_discount=self.lbt_discount,
+                pis_year=self.pis_year,
                 salvage_value=self.salvage_value,
                 useful_life=self.useful_life,
                 depreciation_factor=self.depreciation_factor,
-                description=self.description,
             )
 
         else:
             raise TangibleException(
                 f"Must multiply with an integer or a float; "
-                f"{other} is of {other.__class__.__qualname__} datatype."
+                f"{other}({other.__class__.__qualname__}) "
+                f"is not an integer nor a float."
             )
 
     def __rmul__(self, other):
@@ -757,24 +810,29 @@ class Tangible(GeneralCost):
                     end_year=self.end_year,
                     cost=self.cost / other,
                     expense_year=self.expense_year,
-                    pis_year=self.pis_year,
                     cost_allocation=self.cost_allocation,
+                    description=self.description,
+                    vat_portion=self.vat_portion,
+                    vat_discount=self.vat_discount,
+                    lbt_portion=self.lbt_portion,
+                    lbt_discount=self.lbt_discount,
+                    pis_year=self.pis_year,
                     salvage_value=self.salvage_value,
                     useful_life=self.useful_life,
                     depreciation_factor=self.depreciation_factor,
-                    description=self.description,
                 )
 
         else:
             raise TangibleException(
-                f"Must divide with an instance of Tangible/Intangible/OPEX/ASR, integer or a float; "
+                f"Must divide with an instance of Tangible/Intangible/OPEX/ASR, "
+                f"integer or a float; "
                 f"{other}({other.__class__.__qualname__}) is not an instance "
                 f"of Tangible/Intangible/OPEX/ASR nor an integer nor a float."
             )
 
 
 @dataclass
-class Intangible:
+class Intangible(GeneralCost):
     """
     Manages an intangible asset.
 
@@ -806,7 +864,6 @@ class Intangible:
     project_years: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
-
         # Check for inappropriate start and end year project
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -923,14 +980,13 @@ class Intangible:
             inflation_rate=inflation_rate,
         )
 
-        expenses = np.bincount(self.expense_year - self.start_year, weights=cost_adjusted)
+        expenses = np.bincount(
+            self.expense_year - self.start_year, weights=cost_adjusted
+        )
         zeros = np.zeros(self.project_duration - len(expenses))
         expenses = np.concatenate((expenses, zeros))
 
         return expenses
-
-    def __len__(self):
-        return self.project_duration
 
     def __eq__(self, other):
         # Between two instances of Intangible
@@ -949,66 +1005,6 @@ class Intangible:
 
         else:
             return False
-
-    def __lt__(self, other):
-        # Between an instance of Intangible with another instance of Intangible/Tangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) < np.sum(other.cost)
-
-        # Between an instance of Intangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) < other
-
-        else:
-            raise IntangibleException(
-                f"Must compare an instance of Intangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
-            )
-
-    def __le__(self, other):
-        # Between an instance of Intangible with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) <= np.sum(other.cost)
-
-        # Between an instance of Intangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) <= other
-
-        else:
-            raise IntangibleException(
-                f"Must compare an instance of Intangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
-            )
-
-    def __gt__(self, other):
-        # Between an instance of Intangible with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) > np.sum(other.cost)
-
-        # Between an instance of Intangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) > other
-
-        else:
-            raise IntangibleException(
-                f"Must compare an instance of Intangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
-            )
-
-    def __ge__(self, other):
-        # Between an instance of Intangible with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) >= np.sum(other.cost)
-
-        # Between an instance of Intangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) >= other
-
-        else:
-            raise IntangibleException(
-                f"Must compare an instance of Intangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
-            )
 
     def __add__(self, other):
         # Only allows addition between an instance of Intangible and another instance of Intangible
@@ -1155,7 +1151,6 @@ class OPEX:
     project_years: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
-
         # Check for inappropriate start and end year project
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -1296,14 +1291,13 @@ class OPEX:
             inflation_rate=inflation_rate,
         )
 
-        expenses = np.bincount(self.expense_year - self.start_year, weights=cost_adjusted)
+        expenses = np.bincount(
+            self.expense_year - self.start_year, weights=cost_adjusted
+        )
         zeros = np.zeros(self.project_duration - len(expenses))
         expenses = np.concatenate((expenses, zeros))
 
         return expenses
-
-    def __len__(self):
-        return self.project_duration
 
     def __eq__(self, other):
         # Between two instances of OPEX
@@ -1324,66 +1318,6 @@ class OPEX:
         else:
             return False
 
-    def __lt__(self, other):
-        # Between an instance of OPEX with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) < np.sum(other.cost)
-
-        # Between an instance of OPEX and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) < other
-
-        else:
-            raise OPEXException(
-                f"Must compare an instance of OPEX with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
-            )
-
-    def __le__(self, other):
-        # Between an instance of OPEX with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) <= np.sum(other.cost)
-
-        # Between an instance of OPEX and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) <= other
-
-        else:
-            raise OPEXException(
-                f"Must compare an instance of OPEX with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
-            )
-
-    def __gt__(self, other):
-        # Between an instance of OPEX with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) > np.sum(other.cost)
-
-        # Between an instance of OPEX and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) > other
-
-        else:
-            raise OPEXException(
-                f"Must compare an instance of OPEX with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
-            )
-
-    def __ge__(self, other):
-        # Between an instance of OPEX with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) >= np.sum(other.cost)
-
-        # Between an instance of OPEX and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) >= other
-
-        else:
-            raise OPEXException(
-                f"Must compare an instance of OPEX with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float"
-            )
-
     def __add__(self, other):
         # Only allows addition between an instance of OPEX and another instance of OPEX
         if isinstance(other, OPEX):
@@ -1398,7 +1332,9 @@ class OPEX:
                 expense_year=np.concatenate((self.expense_year, other.expense_year)),
                 cost_allocation=self.cost_allocation + other.cost_allocation,
                 prod_rate=np.concatenate((self.prod_rate, other.prod_rate)),
-                cost_per_volume=np.concatenate((self.cost_per_volume, other.cost_per_volume)),
+                cost_per_volume=np.concatenate(
+                    (self.cost_per_volume, other.cost_per_volume)
+                ),
                 description=description_combined,
             )
 
@@ -1427,7 +1363,9 @@ class OPEX:
                 expense_year=np.concatenate((self.expense_year, other.expense_year)),
                 cost_allocation=self.cost_allocation + other.cost_allocation,
                 prod_rate=np.concatenate((self.prod_rate, -other.prod_rate)),
-                cost_per_volume=np.concatenate((self.cost_per_volume, other.cost_per_volume)),
+                cost_per_volume=np.concatenate(
+                    (self.cost_per_volume, other.cost_per_volume)
+                ),
                 description=description_combined,
             )
 
@@ -1529,7 +1467,6 @@ class ASR:
     project_years: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
-
         # Check for inappropriate start and end year project
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -1687,7 +1624,8 @@ class ASR:
                 future_rate=future_rate,
                 inflation_rate=inflation_rate,
                 year_now=year_now,
-            ) / cost_duration
+            )
+            / cost_duration
         )
 
         # Distance of expense year from the start year of the project
@@ -1702,9 +1640,6 @@ class ASR:
         )
 
         return asr_alloc.sum(axis=0)
-
-    def __len__(self):
-        return self.project_duration
 
     def __eq__(self, other):
         # Between two instances of ASR
@@ -1723,66 +1658,6 @@ class ASR:
 
         else:
             return False
-
-    def __lt__(self, other):
-        # Between an instance of ASR with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) < np.sum(other.cost)
-
-        # Between an instance of ASR with an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) < other
-
-        else:
-            raise ASRException(
-                f"Must compare an instance of ASR with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
-            )
-
-    def __le__(self, other):
-        # Between an instance of ASR with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) <= np.sum(other.cost)
-
-        # Between an instance of ASR and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) <= other
-
-        else:
-            raise ASRException(
-                f"Must compare an instance of ASR with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
-            )
-
-    def __gt__(self, other):
-        # Between an instance of ASR with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) > np.sum(other.cost)
-
-        # Between an instance of ASR with an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) > other
-
-        else:
-            raise ASRException(
-                f"Must compare an instance of ASR with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
-            )
-
-    def __ge__(self, other):
-        # Between an instance of ASR with another instance of Tangible/Intangible/OPEX/ASR
-        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
-            return np.sum(self.cost) >= np.sum(other.cost)
-
-        # Between an instance of ASR and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) >= other
-
-        else:
-            raise ASRException(
-                f"Must compare an instance of ASR with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
-            )
 
     def __add__(self, other):
         # Only allows addition between an instance of ASR and another instance of ASR

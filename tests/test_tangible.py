@@ -4,7 +4,7 @@ A collection of unit testing for Tangible class
 
 import pytest
 import numpy as np
-from pyscnomics.econ.selection import DeprMethod, FluidType
+from pyscnomics.econ.selection import DeprMethod, FluidType, TaxType
 from pyscnomics.econ.costs import TangibleException, Tangible
 
 
@@ -12,7 +12,6 @@ def test_tangible_incorrect_year_input():
     """A unit testing for incorrect data input: start year is after end year"""
 
     with pytest.raises(TangibleException):
-
         Tangible(
             start_year=2030,
             end_year=2023,
@@ -28,7 +27,6 @@ def test_tangible_unequal_length_of_data_input():
     """A unit testing for incorrect data input: unequal length of data input"""
 
     with pytest.raises(TangibleException):
-
         Tangible(
             start_year=2023,
             end_year=2032,
@@ -44,7 +42,6 @@ def test_tangible_incorrect_expense_year_input():
     """A unit testing for incorrect data input: expense year is after end year of the project"""
 
     with pytest.raises(TangibleException):
-
         Tangible(
             start_year=2023,
             end_year=2032,
@@ -56,7 +53,6 @@ def test_tangible_incorrect_expense_year_input():
         )
 
     with pytest.raises(TangibleException):
-
         Tangible(
             start_year=2023,
             end_year=2032,
@@ -210,17 +206,20 @@ def test_tangible_expenditures():
     np.testing.assert_allclose(expenses, calc_expenses)
 
 
-def test_tangible_expenditures_with_inflation():
+def test_tangible_expenditures_with_tax_and_inflation():
     """
     A unit testing for expenditures method in Tangible class,
-    taking into account inflation scheme.
+    taking into account tax and inflation schemes.
     """
 
     # Expected results
-    expenses_infl = [0, 102, 104.04, 106.1208, 108.243216, 0, 0, 0]
+    case1 = np.array([0, 102, 104.04, 106.1208, 108.243216, 0, 0, 0])
+    case2 = np.array([0, 102, 105.06, 109.2624, 114.72552, 0, 0, 0])
+    case3 = np.array([0, 105, 105, 105, 105, 0, 0, 0])
+    case4 = np.array([0, 102.24, 101.92, 101.6, 107.688, 0, 0, 0])
 
     # Calculated results
-    mangga_tangible = Tangible(
+    tangible_mangga = Tangible(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 100, 100, 50]),
@@ -228,7 +227,7 @@ def test_tangible_expenditures_with_inflation():
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
-    jeruk_tangible = Tangible(
+    tangible_jeruk = Tangible(
         start_year=2023,
         end_year=2030,
         cost=np.array([50]),
@@ -236,12 +235,44 @@ def test_tangible_expenditures_with_inflation():
         cost_allocation=[FluidType.OIL],
     )
 
-    tangible_total = mangga_tangible + jeruk_tangible
+    tangible_apel = Tangible(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([100, 100, 100, 100]),
+        expense_year=np.array([2024, 2025, 2026, 2027]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+        lbt_portion=np.array([0.8, 0.8, 0.8, 0.8]),
+        lbt_discount=np.array([0.6, 0.6, 0.6, 0.2]),
 
-    expenses_infl_calc = tangible_total.expenditures(inflation_rate=0.02)
+    )
+
+    tangible_add = tangible_mangga + tangible_jeruk
+
+    case1_calc = tangible_add.expenditures(
+        year_ref=2023,
+        inflation_rate=0.02
+    )
+    case2_calc = tangible_add.expenditures(
+        year_ref=2023,
+        inflation_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
+    )
+    case3_calc = tangible_add.expenditures(
+        year_ref=2023,
+        tax_type=TaxType.VAT,
+        vat_rate=0.05,
+    )
+    case4_calc = tangible_apel.expenditures(
+        year_ref=2026,
+        tax_type=TaxType.LBT,
+        lbt_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
+        inflation_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
+    )
 
     # Execute testing (expected == calculated)
-    np.testing.assert_allclose(expenses_infl, expenses_infl_calc)
+    np.testing.assert_allclose(case1, case1_calc)
+    np.testing.assert_allclose(case2, case2_calc)
+    np.testing.assert_allclose(case3, case3_calc)
+    np.testing.assert_allclose(case4, case4_calc)
 
 
 def test_tangible_depreciation():
@@ -314,11 +345,11 @@ def test_tangible_depreciation():
     np.testing.assert_allclose(np.array([undeprePSC]), np.array([calc_undeprePSC]))
 
 
-def test_tangible_depreciation_with_inflation():
+def test_tangible_depreciation_with_tax_and_inflation():
     """A unit testing for total depreciation rate of Tangible object"""
 
     # Expected results: depreciation_charge, undepreciated asset
-    depreInflation = [
+    depreCase1 = [
         50,
         77.5,
         93.875,
@@ -326,10 +357,22 @@ def test_tangible_depreciation_with_inflation():
         71.45171875,
         35.88210938,
         18.10511719,
-        7.416035156
+        7.416035156,
     ]
 
-    undepreInflation = 3.798457031
+    depreCase2 = [
+        54,
+        81.57,
+        96.4668,
+        76.91478,
+        71.6610252,
+        35.8661376,
+        18.0025563,
+        7.3137519,
+    ]
+
+    undepreCase1 = 3.798457031
+    undepreCase2 = 3.7285794
 
     # Calculated results
     tangible_mangga = Tangible(
@@ -338,18 +381,32 @@ def test_tangible_depreciation_with_inflation():
         cost=np.array([100, 100, 100, 50, 50, 0, 0, 0]),
         expense_year=np.array([2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]),
         cost_allocation=[
-            FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-            FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+            FluidType.OIL,
+            FluidType.OIL,
+            FluidType.OIL,
+            FluidType.OIL,
+            FluidType.OIL,
+            FluidType.OIL,
+            FluidType.OIL,
+            FluidType.OIL,
         ],
     )
 
-    calc_depreInflation, calc_undepreInflation = (
-        tangible_mangga.total_depreciation_rate(inflation_rate=0.05)
+    depreCase1_calc, undepreCase1_calc = tangible_mangga.total_depreciation_rate(
+        inflation_rate=0.05
+    )
+
+    depreCase2_calc, undepreCase2_calc = tangible_mangga.total_depreciation_rate(
+        tax_type=TaxType.VAT,
+        vat_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
+        inflation_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
     )
 
     # Execute testing
-    np.testing.assert_allclose(depreInflation, calc_depreInflation)
-    np.testing.assert_allclose(undepreInflation, calc_undepreInflation)
+    np.testing.assert_allclose(depreCase1, depreCase1_calc)
+    np.testing.assert_allclose(undepreCase1, undepreCase1_calc)
+    np.testing.assert_allclose(depreCase2, depreCase2_calc)
+    np.testing.assert_allclose(undepreCase2, undepreCase2_calc)
 
 
 def test_tangible_book_value():
