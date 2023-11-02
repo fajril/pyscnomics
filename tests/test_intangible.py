@@ -4,7 +4,7 @@ A collection of unit testing for Intangible class.
 
 import pytest
 import numpy as np
-from pyscnomics.econ.selection import FluidType
+from pyscnomics.econ.selection import FluidType, TaxType
 from pyscnomics.econ.costs import Tangible, Intangible, IntangibleException
 
 
@@ -202,10 +202,10 @@ def test_intangible_arithmetics():
     calc_div = mangga_intangible / 2
 
     # Execute testing
-    np.testing.assert_allclose(add, calc_add.expenditures(inflation_rate=0.0))
-    np.testing.assert_allclose(sub, calc_sub.expenditures(inflation_rate=0.0))
-    np.testing.assert_allclose(mul, calc_mul.expenditures(inflation_rate=0.0))
-    np.testing.assert_allclose(div, calc_div.expenditures(inflation_rate=0.0))
+    np.testing.assert_allclose(add, calc_add.expenditures())
+    np.testing.assert_allclose(sub, calc_sub.expenditures())
+    np.testing.assert_allclose(mul, calc_mul.expenditures())
+    np.testing.assert_allclose(div, calc_div.expenditures())
 
 
 def test_intangible_expenditures():
@@ -216,7 +216,7 @@ def test_intangible_expenditures():
     expense2 = [50, 50, 0, 0, 0, 100, 150, 100]
 
     # Calculated result
-    mangga_intangible = Intangible(
+    intangible_mangga = Intangible(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 50]),
@@ -224,7 +224,7 @@ def test_intangible_expenditures():
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    apel_intangible = Intangible(
+    intangible_apel = Intangible(
         start_year=2023,
         end_year=2030,
         cost=np.array([50, 50, 100, 100]),
@@ -232,29 +232,29 @@ def test_intangible_expenditures():
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
-    calc_expense1 = mangga_intangible.expenditures(inflation_rate=0.0)
-    calc_expense2 = mangga_intangible + apel_intangible
+    expense1_calc = intangible_mangga.expenditures()
+    expense2_calc = (intangible_mangga + intangible_apel).expenditures()
 
     # Execute testing
-    np.testing.assert_allclose(expense1, calc_expense1)
-    np.testing.assert_allclose(expense2, calc_expense2.expenditures(inflation_rate=0.0))
+    np.testing.assert_allclose(expense1, expense1_calc)
+    np.testing.assert_allclose(expense2, expense2_calc)
 
 
-def test_intangible_expenditures_with_inflation():
+def test_intangible_expenditures_with_tax_and_inflation():
     """ A unit testing for expenditures method in Intangible class with inflation scheme """
 
     # Expected result
-    expense = [
+    case1 = np.array([0, 102, 105.06, 109.2624, 114.72552, 0, 0, 0])
+    case2 = np.array([
         0,
-        102,
-        105.06,
-        109.2624,
-        114.72552,
+        105.57,
+        108.7371,
+        113.086584,
+        118.7409132,
         0,
         0,
         0,
-
-    ]
+    ])
 
     # Calculated result
     intangible_mangga = Intangible(
@@ -268,10 +268,28 @@ def test_intangible_expenditures_with_inflation():
         ],
     )
 
-    expense_calc = intangible_mangga.expenditures(
-        year_now=2023,
+    intangible_apel = Intangible(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([0, 100, 100, 100, 100, 0, 0, 0]),
+        expense_year=np.array([2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]),
+        cost_allocation=[
+            FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+            FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS
+        ],
+        lbt_discount=np.array([0, 0.3, 0.3, 0.3, 0.3, 0, 0, 0]),
+    )
+
+    case1_calc = intangible_mangga.expenditures(
         inflation_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
     )
 
+    case2_calc = intangible_apel.expenditures(
+        tax_type=TaxType.LBT,
+        inflation_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
+        lbt_rate=0.05,
+    )
+
     # Execute testing
-    np.testing.assert_allclose(expense, expense_calc)
+    np.testing.assert_allclose(case1, case1_calc)
+    np.testing.assert_allclose(case2, case2_calc)

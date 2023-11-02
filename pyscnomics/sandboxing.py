@@ -79,41 +79,47 @@ sulfur_apel_lifting = Lifting(
 
 '------------------------------------------- TANGIBLE COST DATA --------------------------------------------'
 
-# tangible_mangga = Tangible(
-#     start_year=2023,
-#     end_year=2030,
-#     cost=np.array([100, 100]),
-#     expense_year=np.array([2024, 2025]),
-#     depreciation_factor=np.array([0.5, 0.5]),
-#     cost_allocation=[FluidType.OIL, FluidType.OIL],
-# )
-
-# tangible_apel = Tangible(
-#     start_year=2023,
-#     end_year=2030,
-#     cost=np.array([50, 50]),
-#     expense_year=np.array([2023, 2028]),
-#     depreciation_factor=np.array([0.5, 0.5]),
-#     cost_allocation=[FluidType.GAS, FluidType.GAS],
-# )
-
-'------------------------------------------- INTANGIBLE COST DATA ------------------------------------------'
-
-intangible_mangga = Intangible(
+tangible_mangga = Tangible(
     start_year=2023,
     end_year=2030,
     cost=np.array([100, 100, 100, 100]),
-    expense_year=np.array([2024, 2025, 2026, 2027]),
+    expense_year=np.array([2023, 2024, 2025, 2026]),
+    vat_portion=np.array([1, 1, 1, 1]),
+    vat_discount=0.0,
+    lbt_portion=np.array([1, 1, 1, 1]),
+    lbt_discount=0.0,
     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
 )
 
-intangible_apel = Intangible(
+tangible_apel = Tangible(
     start_year=2023,
     end_year=2030,
     cost=np.array([50, 50, 50]),
-    expense_year=np.array([2027, 2028, 2029]),
-    cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS]
+    expense_year=np.array([2028, 2029, 2030]),
+    vat_portion=np.array([1, 1, 1]),
+    vat_discount=0.5,
+    lbt_portion=np.array([0.5, 0.5, 0.5]),
+    lbt_discount=0.5,
+    cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS],
 )
+
+'------------------------------------------- INTANGIBLE COST DATA ------------------------------------------'
+
+# intangible_mangga = Intangible(
+#     start_year=2023,
+#     end_year=2030,
+#     cost=np.array([100, 100, 100, 100]),
+#     expense_year=np.array([2024, 2025, 2026, 2027]),
+#     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+# )
+#
+# intangible_apel = Intangible(
+#     start_year=2023,
+#     end_year=2030,
+#     cost=np.array([50, 50, 50]),
+#     expense_year=np.array([2027, 2028, 2029]),
+#     cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS]
+# )
 
 '------------------------------------------------ OPEX DATA ------------------------------------------------'
 
@@ -200,70 +206,53 @@ oil_nanas_cashflow = CashFlow(
 #     sulfur_mangga2_tangible
 # )
 
-tangible_mangga = Tangible(
+intangible_mangga = Intangible(
     start_year=2023,
     end_year=2030,
     cost=np.array([100, 100, 100, 100]),
-    expense_year=np.array([2023, 2024, 2025, 2026]),
-    vat_portion=np.array([1, 1, 1, 1]),
-    vat_discount=0.0,
-    lbt_portion=np.array([1, 1, 1, 1]),
-    lbt_discount=0.0,
+    expense_year=np.array([2024, 2025, 2026, 2027]),
     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
 )
 
-tangible_apel = Tangible(
+intangible_apel = Intangible(
     start_year=2023,
     end_year=2030,
     cost=np.array([50, 50, 50]),
-    expense_year=np.array([2028, 2029, 2030]),
-    vat_portion=np.array([1, 1, 1]),
-    vat_discount=0.5,
-    lbt_portion=np.array([0.5, 0.5, 0.5]),
-    lbt_discount=0.5,
-    cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS],
+    expense_year=np.array([2027, 2028, 2029]),
+    cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS]
 )
-
-tangible_add = tangible_mangga + tangible_apel
-tangible_sub = tangible_mangga - tangible_apel
 
 print('\t')
-print(f'Filetype: {type(tangible_add)}')
-print(f'Length: {len(tangible_add)}')
-print('tangible_add = \n', tangible_add)
+print(f'Filetype: {type(intangible_mangga)}')
+print(f'Length: {len(intangible_mangga)}')
+print('intangible_mangga = \n', intangible_mangga)
 
-t1 = tangible_add.expenditures(
-    tax_type=TaxType.VAT,
-    lbt_rate=0.05,
+t1 = intangible_mangga.expenditures(
     vat_rate=0.0,
+    inflation_rate=0.01,
 )
 
-t2 = tangible_add.total_depreciation_rate(
-    tax_type=TaxType.VAT,
-    lbt_rate=0.05,
-    vat_rate=0.0,
-)
-
-
-# print('\t')
-# print(f'Filetype: {type(tangible_sub)}')
-# print(f'Length: {len(tangible_sub)}')
-# print('tangible_sub = \n', tangible_sub)
-
-# t1 = vars(tangible_add)
+# t1 = tangible_add.expenditures(
+#     tax_type=TaxType.VAT,
+#     lbt_rate=0.05,
+#     vat_rate=0.0,
+# )
 #
-# print('\t')
-# print(t1.keys())
+# t2 = tangible_add.total_depreciation_rate(
+#     tax_type=TaxType.VAT,
+#     lbt_rate=0.05,
+#     vat_rate=0.0,
+# )
 
 print('\t')
 print(f'Filetype: {type(t1)}')
 print(f'Length: {len(t1)}')
 print('t1 = \n', t1)
 
-print('\t')
-print(f'Filetype: {type(t2)}')
-print(f'Length: {len(t2)}')
-print('t2 = ', t2)
+# print('\t')
+# print(f'Filetype: {type(t2)}')
+# print(f'Length: {len(t2)}')
+# print('t2 = ', t2)
 
 # get_gas_tangible = case._get_gas_tangible()
 #
