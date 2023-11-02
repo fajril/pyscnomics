@@ -1575,7 +1575,7 @@ class OPEX(GeneralCost):
 
 
 @dataclass
-class ASR:
+class ASR(GeneralCost):
     """
     Manages an ASR asset.
 
