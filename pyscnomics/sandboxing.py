@@ -28,13 +28,13 @@ psc1_gas_lifting = Lifting(
     prod_year=np.array([2019, 2020]),
     fluid_type=FluidType.GAS)
 
-psc2_gas_lifting = Lifting(
-    start_year=,
-    end_year=,
-    lifting_rate=,
-    price=,
-    prod_year=,
-    fluid_type=FluidType.GAS)
+# psc2_gas_lifting = Lifting(
+#     start_year=,
+#     end_year=,
+#     lifting_rate=,
+#     price=,
+#     prod_year=,
+#     fluid_type=FluidType.GAS)
 
 # Defining the Gas Tangible Data - Drilling Tangible
 psc1_gas_tangible = Tangible(
@@ -62,7 +62,7 @@ psc1_gas_tangible = Tangible(
 psc1_gas_intang = Intangible(
     start_year=2019,
     end_year=2020,
-    cost=np.array([ 9.532633600000]),
+    cost=np.array([9.532633600000]),
     expense_year=np.array([2019]),
     cost_allocation=FluidType.GAS)
 

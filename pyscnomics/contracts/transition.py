@@ -22,6 +22,8 @@ from pyscnomics.contracts.grossplit import GrossSplit
 # Run each PSC
 
 # Sum the generated cashflow
+
+
 def parse_dataclass(contract):
     attr_contract = vars(contract)
     if isinstance(contract, CostRecovery):

@@ -135,14 +135,13 @@ def assign_lifting(data_raw: dict) -> tuple:
     lifting_list = []
     for key in lifting_data.keys():
         # Since the Lifting data for gas has different arguments input, conditional formatting is applied
-        if key == 'Gas':
+        if 'Gas' in key or 'GSA' in key:
             lifting = Lifting(start_year=lifting_data[key]["start_year"],
                               end_year=lifting_data[key]["end_year"],
                               lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
                               price=np.array(lifting_data[key]["price"]),
                               fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
                               ghv=np.array(lifting_data[key]["ghv"]),
-                              prod_rate=np.array(lifting_data[key]["prod_rate"]),
                               prod_year=np.array(lifting_data[key]["prod_year"])
                               )
             lifting_list.append(lifting)

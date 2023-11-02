@@ -1,69 +1,76 @@
 
 {
-  "start_date": "2023",
-  "end_date": "2019",
+  "start_date": "01/01/2019",
+  "end_date": "22/4/2020",
   "oil_onstream_date": null,
-  "gas_onstream_date": "01/01/2023",
+  "gas_onstream_date": "01/01/2019",
 
   "lifting": {
     "GSA 1": {
-      "start_year": 2023,
-      "end_year": 2019,
-      "lifting_rate": [4.4115933369863000, 8.9000419506849300, 8.9311060983606500, 9.1681734136986300, 9.3933273424657500, 9.5716867506849300, 9.4776718688524600, 9.2589140164383600, 5.5697646465753400],
-      "price": [],
-      "prod_year": [],
+      "start_year": 2019,
+      "end_year": 2020,
+      "lifting_rate": [0.00158446786291200, 0.00098961346458056],
+      "price": [6.260, 6.260],
+      "prod_year": [2019, 2020],
       "fluid_type": "Gas",
-      "ghv":  [],
-      "prod_rate":  []},
-
-    "GSA 2": {
-      "start_year": 2023,
-      "end_year": 2019,
-      "lifting_rate": [],
-      "price": [],
-      "prod_year": [],
-      "fluid_type": "Gas",
-      "ghv":  [],
-      "prod_rate":  []}
+      "ghv":  [1047.0, 1047.0],
+      "prod_rate":  [1.658937852468860, 1.036125297415850]}
   },
 
   "tangible": {
     "Gas": {
-      "start_year": 2023,
-      "end_year": 2019,
-      "cost": [],
-      "expense_year": [],
-      "pis_year": [],
-      "useful_life": [],
-      "depreciation_factor": [],
+      "start_year": 2019,
+      "end_year": 2020,
+      "cost": [3.36367743703704000, 0.80273224043715800],
+      "expense_year": [2019, 2020],
+      "pis_year": [2019, 2020],
+      "useful_life": [5, 5],
+      "depreciation_factor": [0.25, 0.25],
+      "vat_portion": 0,
+      "pdri_portion": 0,
       "cost_allocation": "Gas"}
   },
 
   "intangible": {
     "Gas": {
-      "start_year": 2023,
-      "end_year": 2019,
-      "cost": [],
-      "expense_year": [],
+      "start_year": 2019,
+      "end_year": 2020,
+      "cost": [9.532633600000],
+      "expense_year": [2019],
+      "vat_portion": 0,
+      "pdri_portion": 0,
       "cost_allocation": "Gas"}
   },
 
   "opex": {
     "Gas": {
-      "start_year": 2023,
-      "end_year": 2019,
-      "fixed_cost": [],
-      "expense_year": [],
+      "start_year": 2019,
+      "end_year": 2020,
+      "fixed_cost": [2.076908222642980, 1.297582047244550],
+      "expense_year": [2019, 2020],
+      "vat_portion": 0,
+      "pdri_portion": 0,
+      "cost_allocation": "Gas"},
+
+    "ASR": {
+      "start_year": 2019,
+      "end_year": 2020,
+      "fixed_cost": [0.035515809523809900, 0.010965263596148900],
+      "expense_year": [2019, 2020],
+      "vat_portion": 0,
+      "pdri_portion": 0,
       "cost_allocation": "Gas"}
   },
 
   "asr": {
     "Gas": {
-      "start_year": 2023,
-      "end_year": 2019,
-      "cost": [],
-      "expense_year": [],
-      "rate": ,
+      "start_year": 2019,
+      "end_year": 2020,
+      "cost": [0],
+      "expense_year": [2019],
+      "rate": 1,
+      "vat_portion": 0,
+      "pdri_portion": 0,
       "cost_allocation": "Gas"}
   }
 }

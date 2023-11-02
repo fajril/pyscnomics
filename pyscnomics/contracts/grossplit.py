@@ -353,24 +353,24 @@ class GrossSplit(BaseProject):
                 ps = 0
         else:
             raise ValueError('Unknown fluid type')
-        #
-        # # Cumulative Progressive Split
-        # if np.less(cum, 30):
-        #     px = 0.1
-        # elif np.logical_and(np.less_equal(30, cum), cum < np.less(cum, 60)):
-        #     px = 0.09
-        # elif np.logical_and(np.less_equal(60, cum), cum < np.less(cum, 90)):
-        #     px = 0.08
-        # elif np.logical_and(np.less_equal(90, cum), cum < np.less(cum, 125)):
-        #     px = 0.06
-        # elif np.logical_and(np.less_equal(125, cum), cum < np.less(cum, 175)):
-        #     px = 0.04
-        # elif np.greater(cum, 175):
-        #     px = 0
-        # else:
-        #     raise ValueError('No Regulation exist regarding the cumulative value')
-        #
-        # ps = ps + px
+
+        # Cumulative Progressive Split
+        if np.less(cum, 30):
+            px = 0.1
+        elif np.logical_and(np.less_equal(30, cum), cum < np.less(cum, 60)):
+            px = 0.09
+        elif np.logical_and(np.less_equal(60, cum), cum < np.less(cum, 90)):
+            px = 0.08
+        elif np.logical_and(np.less_equal(90, cum), cum < np.less(cum, 125)):
+            px = 0.06
+        elif np.logical_and(np.less_equal(125, cum), cum < np.less(cum, 175)):
+            px = 0.04
+        elif np.greater(cum, 175):
+            px = 0
+        else:
+            raise ValueError('No Regulation exist regarding the cumulative value')
+
+        ps = ps + px
         return ps
 
     @staticmethod
@@ -567,57 +567,6 @@ class GrossSplit(BaseProject):
         # Government Take
         self._oil_gov_take = self._oil_gov_share + self._oil_ddmo + self._oil_tax
         self._gas_gov_take = self._gas_gov_share + self._gas_ddmo + self._gas_tax
-
-        # Pay Out Time (POT) and Internal Rate Return (IRR)
-        # Condition where there is no revenue from one of Oil and Gas
-        if np.sum(self._oil_ctr_cashflow) == 0:
-            self._oil_pot = 0
-            self._oil_irr = 0
-        else:
-            self._oil_pot = indicator.pot(cashflow=self._oil_ctr_cashflow)
-            self._oil_irr = indicator.irr(cashflow=self._oil_ctr_cashflow)
-
-        if np.sum(self._gas_ctr_cashflow) == 0:
-            self._gas_pot = 0
-            self._gas_irr = 0
-        else:
-            self._gas_pot = indicator.pot(cashflow=self._oil_ctr_cashflow)
-            self._gas_irr = indicator.irr(cashflow=self._oil_ctr_cashflow)
-
-        # NPV
-        self._oil_npv = indicator.npv(cashflow=self._oil_ctr_cashflow)
-        self._gas_npv = indicator.npv(cashflow=self._oil_ctr_cashflow)
-
-        # Condition if discounted_year is None:
-        if discounted_year is None:
-            discounted_year = self.start_date.year
-
-        if discounting_mode == DiscountingMode.FULL_YEAR:
-            dcf = 0
-        else:
-            dcf = 0.5
-
-        discount_factor = 1 / np.power(1 + discount_rate, self.project_years - discounted_year + dcf)
-
-        # Discounted Contractor Cashflow
-        self._oil_ctr_cashflow_disc = self._oil_ctr_cashflow * discount_factor
-        self._gas_ctr_cashflow_disc = self._gas_ctr_cashflow * discount_factor
-
-        self._oil_gov_cashflow_disc = self._oil_gov_take * discount_factor
-        self._gas_gov_cashflow_disc = self._gas_gov_take * discount_factor
-
-        # Cashflow Object
-        self._oil_cashflow = CashFlow(start_date=self.start_date,
-                                      end_date=self.end_date,
-                                      cash=self._oil_ctr_cashflow,
-                                      cashed_year=self.project_years,
-                                      cash_allocation=FluidType.OIL)
-
-        self._gas_cashflow = CashFlow(start_date=self.start_date,
-                                      end_date=self.end_date,
-                                      cash=self._gas_ctr_cashflow,
-                                      cashed_year=self.project_years,
-                                      cash_allocation=FluidType.GAS)
 
     def __len__(self):
         return self.project_duration

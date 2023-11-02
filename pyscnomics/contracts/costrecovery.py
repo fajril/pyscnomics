@@ -504,6 +504,10 @@ class CostRecovery(BaseProject):
                 + self._gas_asr.expenditures()
         )
 
+        # Filtering for only the cost that in the bracket of the project years
+        self._oil_depreciation = self._oil_depreciation[:(self.end_date.year - self.start_date.year + 1)]
+        self._gas_depreciation = self._gas_depreciation[:(self.end_date.year - self.start_date.year + 1)]
+
         # Get Sunk Cost
         self._get_sunk_cost(discount_rate_year)
 
