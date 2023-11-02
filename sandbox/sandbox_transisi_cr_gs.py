@@ -9,8 +9,6 @@ from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
-from pyscnomics.dataset.sample import load_data
-
 
 # pd.options.display.float_format = '{:,.2f}'.format
 pd.set_option('display.max_columns', None)
@@ -44,7 +42,6 @@ psc1_gas_tangible = Tangible(
     useful_life=np.array([5, 5]),
     depreciation_factor=np.array([0.25, 0.25]),
     cost_allocation=FluidType.GAS)
-
 
 # Defining the Gas Intangible Data
 psc1_gas_intang = Intangible(
@@ -114,6 +111,7 @@ psc1_table_oil['Lifting'] = psc1._oil_lifting.lifting_rate_arr()
 psc1_table_oil['Price'] = psc1._oil_lifting.lifting_price_arr()
 psc1_table_oil['Revenue'] = psc1._oil_revenue
 psc1_table_oil['Depreciable'] = psc1._oil_tangible.expenditures()
+psc1_table_oil['Intangible'] = psc1._oil_intangible.expenditures()
 psc1_table_oil['Opex'] = psc1._oil_opex.expenditures()
 psc1_table_oil['ASR'] = psc1._oil_asr.expenditures()
 psc1_table_oil['Depreciation'] = psc1._oil_depreciation
@@ -145,7 +143,6 @@ psc1_table_oil['Cashflow'] = psc1._oil_cashflow
 psc1_table_oil['Government Take'] = psc1._oil_government_take
 psc1_table_oil.loc['Column_Total'] = psc1_table_oil.sum(numeric_only=True, axis=0)
 print(psc1_table_oil, '\n')
-
 
 psc1_table_gas = pd.DataFrame()
 psc1_table_gas['Year'] = psc1.project_years
@@ -186,7 +183,6 @@ psc1_table_gas['Government Take'] = psc1._gas_government_take
 psc1_table_gas.loc['Column_Total'] = psc1_table_gas.sum(numeric_only=True, axis=0)
 print(psc1_table_gas, '\n')
 
-
 """
 Gross Split
 """
@@ -198,12 +194,13 @@ psc_2_end_date = datetime.strptime("22/4/2027", '%d/%m/%Y').date()
 psc2_gas_lifting = Lifting(
     start_year=2020,
     end_year=2027,
-    lifting_rate=np.array([0.00221568324370692000, 0.00320769606628721000, 0.00329284116326400000, 0.00337370744832000000, 0.00344718555313867000, 0.00340400062841705000, 0.00332543155814400000, 0.00200043667046400000]),
+    lifting_rate=np.array(
+        [0.00221568324370692000, 0.00320769606628721000, 0.00329284116326400000, 0.00337370744832000000,
+         0.00344718555313867000, 0.00340400062841705000, 0.00332543155814400000, 0.00200043667046400000]),
     price=np.array([6.2600, 6.2600, 6.2600, 6.2600, 6.2600, 6.2600, 6.2600, 6.2600]),
     prod_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]),
-    ghv=np.array([1047.0, 1047.0, 1047.0, 1047.0, 1047.0, 1047.0, 1047.0, 1047.0,]),
+    ghv=np.array([1047.0, 1047.0, 1047.0, 1047.0, 1047.0, 1047.0, 1047.0, 1047.0, ]),
     fluid_type=FluidType.GAS)
-
 
 # Defining the Gas Tangible Data - Drilling Tangible
 psc2_gas_tangible = Tangible(
@@ -228,16 +225,41 @@ psc2_gas_intang = Intangible(
 psc2_gas_opex_cost = OPEX(
     start_year=2020,
     end_year=2027,
-    fixed_cost=np.array([3.1374561521272200, 3.8348277754882300, 3.9438595100171400, 4.0408953543109500, 4.1146574450911200, 4.2724109557000400, 5.0576546904997800, 4.4627942473087100,]),
+    fixed_cost=np.array(
+        [3.1374561521272200, 3.8348277754882300, 3.9438595100171400, 4.0408953543109500, 4.1146574450911200,
+         4.2724109557000400, 5.0576546904997800, 4.4627942473087100, ]),
+    expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]),
+    cost_allocation=FluidType.GAS)
+
+psc2_gas_lbt_cost = OPEX(
+    start_year=2020,
+    end_year=2027,
+    fixed_cost=np.array([0.63640338233533300, 1.06286476325927000, 1.09105051487026000, 1.11733210409363000, 1.14029666892703000, 1.29608012023605000, 1.12478850166335000, 0.78684662704513200]),
+    expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]),
+    cost_allocation=FluidType.GAS)
+
+# Defining VAT and Import Duty
+psc2_gas_vat = OPEX(
+    start_year=2020,
+    end_year=2027,
+    fixed_cost=np.array([0.3965062479576550, 0.2867125283653920, 0.2947836073052500, 0.3019666899432990, 0.3074269319547460, 0.5538846425099840, 0.3772323444857470, 0.3331977740376320,]),
     expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027,]),
+    cost_allocation=FluidType.GAS)
+
+psc2_gas_import_duty = OPEX(
+    start_year=2020,
+    end_year=2027,
+    fixed_cost=np.array([0.159965353, 0.055922218, 0.057496452, 0.058897486, 0.059962486, 0.227566547, 0.073577773, 0.064988993]),
+    expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]),
     cost_allocation=FluidType.GAS)
 
 # Defining the Gas ASR Data
 psc2_gas_asr_cost_opx = OPEX(
     start_year=2020,
     end_year=2027,
-    fixed_cost=np.array([0.026513186, 0.038355043, 0.038355043, 0.038355043, 0.038355043, 0.038355043, 0.038355043, 0.038355043,]),
-    expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027,]),
+    fixed_cost=np.array(
+        [0.026513186, 0.038355043, 0.038355043, 0.038355043, 0.038355043, 0.038355043, 0.038355043, 0.038355043, ]),
+    expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, ]),
     cost_allocation=FluidType.GAS)
 
 psc2_gas_asr_cost = ASR(
@@ -254,7 +276,7 @@ psc2 = GrossSplit(
     lifting=tuple([psc2_gas_lifting]),
     tangible_cost=tuple([psc2_gas_tangible]),
     intangible_cost=tuple([psc2_gas_intang]),
-    opex=tuple([psc2_gas_opex_cost, psc2_gas_asr_cost_opx]),
+    opex=tuple([psc2_gas_opex_cost, psc2_gas_asr_cost_opx, psc2_gas_lbt_cost]),
     asr_cost=tuple([psc2_gas_asr_cost]),
     field_status='No POD',
     field_loc='Onshore',
@@ -294,6 +316,8 @@ psc2_table_oil['Contractor Split'] = psc2._oil_ctr_split
 psc2_table_oil['Government Share'] = psc2._oil_gov_share
 psc2_table_oil['Contractor Share'] = psc2._oil_ctr_share_before_transfer
 psc2_table_oil['Depreciation'] = psc2._oil_depreciation
+psc2_table_oil['Opex'] = psc2._oil_opex.expenditures()
+psc2_table_oil['ASR'] = psc2._oil_asr.expenditures()
 psc2_table_oil['Non Capital'] = psc2._oil_non_capital
 psc2_table_oil['Total Expenses'] = psc2._oil_total_expenses
 psc2_table_oil['Cost To Be Deducted'] = psc2._oil_cost_tobe_deducted
@@ -315,7 +339,6 @@ psc2_table_oil['Government Take'] = psc2._oil_gov_take
 psc2_table_oil.loc['Column_Total'] = psc2_table_oil.sum(numeric_only=True, axis=0)
 print(psc2_table_oil, '\n')
 
-
 psc2_table_gas = pd.DataFrame()
 psc2_table_gas['Years'] = psc2.project_years
 psc2_table_gas['Lifting'] = psc2._gas_lifting.lifting_rate
@@ -328,6 +351,8 @@ psc2_table_gas['Contractor Split'] = psc2._gas_ctr_split
 psc2_table_gas['Government Share'] = psc2._gas_gov_share
 psc2_table_gas['Contractor Share'] = psc2._gas_ctr_share_before_transfer
 psc2_table_gas['Depreciation'] = psc2._gas_depreciation
+psc2_table_gas['Opex'] = psc2._gas_opex.expenditures()
+psc2_table_gas['ASR'] = psc2._gas_asr.expenditures()
 psc2_table_gas['Non Capital'] = psc2._gas_non_capital
 psc2_table_gas['Total Expenses'] = psc2._gas_total_expenses
 psc2_table_gas['Cost To Be Deducted'] = psc2._gas_cost_tobe_deducted
@@ -348,4 +373,3 @@ psc2_table_gas['CTR CashFlow'] = psc2._gas_ctr_cashflow
 psc2_table_gas['Government Take'] = psc2._gas_gov_take
 psc2_table_gas.loc['Column_Total'] = psc2_table_gas.sum(numeric_only=True, axis=0)
 print(psc2_table_gas, '\n')
-
