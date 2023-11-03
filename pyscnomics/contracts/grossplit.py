@@ -106,8 +106,8 @@ class GrossSplit(BaseProject):
     _oil_ctr_cashflow: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ctr_cashflow: np.ndarray = field(default=None, init=False, repr=False)
 
-    _oil_gov_take: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_gov_take: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_government_take: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_government_take: np.ndarray = field(default=None, init=False, repr=False)
 
     _oil_cashflow: CashFlow = field(default=None, init=False, repr=False)
     _gas_cashflow: CashFlow = field(default=None, init=False, repr=False)
@@ -123,6 +123,33 @@ class GrossSplit(BaseProject):
     _gas_ctr_cashflow_disc: np.ndarray = field(default=None, init=False, repr=False)
     _oil_gov_cashflow_disc: np.ndarray = field(default=None, init=False, repr=False)
     _gas_gov_cashflow_disc: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Consolidated Attributes
+    _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_tangible: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_intangible: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_opex: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_asr: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_non_capital: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_depreciation: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_ctr_share_before_tf: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_gov_share_before_tf: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_cost_tobe_deducted: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_carward_deduct_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_deductible_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_carward_cost_aftertf: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_ctr_share_after_transfer: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_net_operating_profit: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_dmo_volume: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_ddmo: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_ctr_cashflow: np.ndarray = field(default=None, init=False, repr=False)
 
     def _wrapper_variable_split(self,
                                 regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
@@ -565,59 +592,35 @@ class GrossSplit(BaseProject):
                                   self._gas_tax)
 
         # Government Take
-        self._oil_gov_take = self._oil_gov_share + self._oil_ddmo + self._oil_tax
-        self._gas_gov_take = self._gas_gov_share + self._gas_ddmo + self._gas_tax
+        self._oil_government_take = self._oil_gov_share + self._oil_ddmo + self._oil_tax
+        self._gas_government_take = self._gas_gov_share + self._gas_ddmo + self._gas_tax
 
-        # Pay Out Time (POT) and Internal Rate Return (IRR)
-        # Condition where there is no revenue from one of Oil and Gas
-        if np.sum(self._oil_ctr_cashflow) == 0:
-            self._oil_pot = 0
-            self._oil_irr = 0
-        else:
-            self._oil_pot = indicator.pot(cashflow=self._oil_ctr_cashflow)
-            self._oil_irr = indicator.irr(cashflow=self._oil_ctr_cashflow)
-
-        if np.sum(self._gas_ctr_cashflow) == 0:
-            self._gas_pot = 0
-            self._gas_irr = 0
-        else:
-            self._gas_pot = indicator.pot(cashflow=self._oil_ctr_cashflow)
-            self._gas_irr = indicator.irr(cashflow=self._oil_ctr_cashflow)
-
-        # NPV
-        self._oil_npv = indicator.npv(cashflow=self._oil_ctr_cashflow)
-        self._gas_npv = indicator.npv(cashflow=self._oil_ctr_cashflow)
-
-        # Condition if discounted_year is None:
-        if discounted_year is None:
-            discounted_year = self.start_date.year
-
-        if discounting_mode == DiscountingMode.FULL_YEAR:
-            dcf = 0
-        else:
-            dcf = 0.5
-
-        discount_factor = 1 / np.power(1 + discount_rate, self.project_years - discounted_year + dcf)
-
-        # Discounted Contractor Cashflow
-        self._oil_ctr_cashflow_disc = self._oil_ctr_cashflow * discount_factor
-        self._gas_ctr_cashflow_disc = self._gas_ctr_cashflow * discount_factor
-
-        self._oil_gov_cashflow_disc = self._oil_gov_take * discount_factor
-        self._gas_gov_cashflow_disc = self._gas_gov_take * discount_factor
-
-        # Cashflow Object
-        self._oil_cashflow = CashFlow(start_date=self.start_date,
-                                      end_date=self.end_date,
-                                      cash=self._oil_ctr_cashflow,
-                                      cashed_year=self.project_years,
-                                      cash_allocation=FluidType.OIL)
-
-        self._gas_cashflow = CashFlow(start_date=self.start_date,
-                                      end_date=self.end_date,
-                                      cash=self._gas_ctr_cashflow,
-                                      cashed_year=self.project_years,
-                                      cash_allocation=FluidType.GAS)
+        # Consolidated attributes
+        self._consolidated_revenue = self._oil_revenue + self._gas_revenue
+        self._consolidated_tangible = self._oil_tangible.expenditures() + self._gas_tangible.expenditures()
+        self._consolidated_intangible = self._oil_intangible.expenditures() + self._gas_intangible.expenditures()
+        self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
+        self._consolidated_opex = self._oil_opex.expenditures() + self._gas_opex.expenditures()
+        self._consolidated_asr = self._oil_asr.expenditures() + self._gas_asr.expenditures()
+        self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
+        self._consolidated_depreciation = self._oil_depreciation + self._gas_depreciation
+        self._consolidated_undepreciated_asset = self._oil_undepreciated_asset + self._gas_undepreciated_asset
+        self._consolidated_ctr_share_before_tf = self._oil_ctr_share_before_transfer + self._gas_ctr_share_before_transfer
+        self._consolidated_gov_share_before_tf = self._oil_gov_share + self._gas_gov_share
+        self._consolidated_total_expenses = self._oil_total_expenses + self._gas_total_expenses
+        self._consolidated_cost_tobe_deducted = self._oil_cost_tobe_deducted + self._gas_cost_tobe_deducted
+        self._consolidated_carward_deduct_cost = self._oil_carward_deduct_cost + self._gas_carward_deduct_cost
+        self._consolidated_deductible_cost = self._oil_deductible_cost + self._gas_deductible_cost
+        self._consolidated_carward_cost_aftertf = self._oil_carward_cost_aftertf + self._gas_carward_cost_aftertf
+        self._consolidated_ctr_share_after_transfer = self._oil_ctr_share_after_transfer + self._gas_ctr_share_after_transfer
+        self._consolidated_net_operating_profit = self._oil_net_operating_profit + self._gas_net_operating_profit
+        self._consolidated_dmo_volume = self._oil_dmo_volume + self._gas_dmo_volume
+        self._consolidated_dmo_fee = self._oil_dmo_fee + self._gas_dmo_fee
+        self._consolidated_ddmo = self._oil_ddmo + self._gas_ddmo
+        self._consolidated_taxable_income = self._oil_taxable_income + self._gas_taxable_income
+        self._consolidated_tax = self._oil_tax + self._gas_tax
+        self._consolidated_ctr_net_share = self._oil_ctr_net_share + self._gas_ctr_net_share
+        self._consolidated_ctr_cashflow = self._oil_ctr_cashflow + self._gas_ctr_cashflow
 
     def __len__(self):
         return self.project_duration
