@@ -10,6 +10,8 @@ from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 
+from pyscnomics.contracts import transition
+
 # pd.options.display.float_format = '{:,.2f}'.format
 pd.set_option('display.max_columns', None)
 pd.set_option('display.expand_frame_repr', False)
@@ -98,6 +100,7 @@ psc1 = CostRecovery(
     gas_dmo_fee_portion=0.15,
     gas_dmo_holiday_duration=0)
 
+print('------------------------------------------ Cost Recovery ------------------------------------------')
 start_time = time.time()
 ftp_tax_regime = FTPTaxRegime.PRE_2017
 eff_tax_rate = 0.48
@@ -234,7 +237,9 @@ psc2_gas_opex_cost = OPEX(
 psc2_gas_lbt_cost = OPEX(
     start_year=2020,
     end_year=2027,
-    fixed_cost=np.array([0.63640338233533300, 1.06286476325927000, 1.09105051487026000, 1.11733210409363000, 1.14029666892703000, 1.29608012023605000, 1.12478850166335000, 0.78684662704513200]),
+    fixed_cost=np.array(
+        [0.63640338233533300, 1.06286476325927000, 1.09105051487026000, 1.11733210409363000, 1.14029666892703000,
+         1.29608012023605000, 1.12478850166335000, 0.78684662704513200]),
     expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]),
     cost_allocation=FluidType.GAS)
 
@@ -242,14 +247,17 @@ psc2_gas_lbt_cost = OPEX(
 psc2_gas_vat = OPEX(
     start_year=2020,
     end_year=2027,
-    fixed_cost=np.array([0.3965062479576550, 0.2867125283653920, 0.2947836073052500, 0.3019666899432990, 0.3074269319547460, 0.5538846425099840, 0.3772323444857470, 0.3331977740376320,]),
-    expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027,]),
+    fixed_cost=np.array(
+        [0.3965062479576550, 0.2867125283653920, 0.2947836073052500, 0.3019666899432990, 0.3074269319547460,
+         0.5538846425099840, 0.3772323444857470, 0.3331977740376320, ]),
+    expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, ]),
     cost_allocation=FluidType.GAS)
 
 psc2_gas_import_duty = OPEX(
     start_year=2020,
     end_year=2027,
-    fixed_cost=np.array([0.159965353, 0.055922218, 0.057496452, 0.058897486, 0.059962486, 0.227566547, 0.073577773, 0.064988993]),
+    fixed_cost=np.array(
+        [0.159965353, 0.055922218, 0.057496452, 0.058897486, 0.059962486, 0.227566547, 0.073577773, 0.064988993]),
     expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]),
     cost_allocation=FluidType.GAS)
 
@@ -299,6 +307,7 @@ psc2 = GrossSplit(
     gas_dmo_fee_portion=1.0,
     gas_dmo_holiday_duration=0)
 
+print('------------------------------------------ Gross Split ------------------------------------------')
 start_time = time.time()
 psc2.run()
 end_time = time.time()
@@ -373,3 +382,153 @@ psc2_table_gas['CTR CashFlow'] = psc2._gas_ctr_cashflow
 psc2_table_gas['Government Take'] = psc2._gas_gov_take
 psc2_table_gas.loc['Column_Total'] = psc2_table_gas.sum(numeric_only=True, axis=0)
 print(psc2_table_gas, '\n')
+
+print('------------------------------------------ Transition ------------------------------------------')
+start_time = time.time()
+trans1, trans2 = transition.transition(contract1=psc1, contract2=psc2)
+end_time = time.time()
+print('Execution Time: ', end_time - start_time, '\n')
+
+print('Cost Recovery Transition')
+trans1_table_oil = pd.DataFrame()
+trans1_table_oil['Year'] = trans1.project_years
+trans1_table_oil['Lifting'] = trans1._oil_lifting.lifting_rate_arr()
+trans1_table_oil['Price'] = trans1._oil_lifting.lifting_price_arr()
+trans1_table_oil['Revenue'] = trans1._oil_revenue
+trans1_table_oil['Depreciable'] = trans1._oil_tangible.expenditures()
+trans1_table_oil['Intangible'] = trans1._oil_intangible.expenditures()
+trans1_table_oil['Opex'] = trans1._oil_opex.expenditures()
+trans1_table_oil['ASR'] = trans1._oil_asr.expenditures()
+trans1_table_oil['Depreciation'] = trans1._oil_depreciation
+trans1_table_oil['NonCapital'] = trans1._oil_non_capital
+trans1_table_oil['FTP'] = trans1._oil_ftp
+trans1_table_oil['FTP_CTR'] = trans1._oil_ftp_ctr
+trans1_table_oil['FTP_GOV'] = trans1._oil_ftp_gov
+trans1_table_oil['InvestmentCredit'] = trans1._oil_ic_paid
+trans1_table_oil['UnrecoveredCost'] = trans1._oil_unrecovered_before_transfer
+trans1_table_oil['CosttoBeRecovered'] = trans1._oil_cost_to_be_recovered
+trans1_table_oil['CostRecovery'] = trans1._oil_cost_recovery
+trans1_table_oil['ETSBeforeTransfer'] = trans1._oil_ets_before_transfer
+trans1_table_oil['TransfertoOil'] = trans1._transfer_to_oil
+trans1_table_oil['TransfertoGas'] = trans1._transfer_to_gas
+trans1_table_oil['UnrecafterTransfer'] = trans1._oil_unrecovered_after_transfer
+trans1_table_oil['CostToBeRecoveredAfterTF'] = trans1._oil_cost_to_be_recovered_after_tf
+trans1_table_oil['CostRecoveryAfterTF'] = trans1._oil_cost_recovery_after_tf
+trans1_table_oil['ETSAfterTransfer'] = trans1._oil_ets_after_transfer
+trans1_table_oil['ContractorShare'] = trans1._oil_contractor_share
+trans1_table_oil['GovernmentShare'] = trans1._oil_government_share
+trans1_table_oil['DMOVolume'] = trans1._oil_dmo_volume
+trans1_table_oil['DMOFee'] = trans1._oil_dmo_fee
+trans1_table_oil['DDMO'] = trans1._oil_ddmo
+trans1_table_oil['TaxableIncome'] = trans1._oil_taxable_income
+trans1_table_oil['Tax'] = trans1._oil_tax_payment
+trans1_table_oil['NetContractorShare'] = trans1._oil_ctr_net_share
+trans1_table_oil['ContractorTake'] = trans1._gas_ctr_net_share
+trans1_table_oil['Cashflow'] = trans1._oil_cashflow
+trans1_table_oil['GovernmentTake'] = trans1._oil_government_take
+trans1_table_oil.loc['Column_Total'] = trans1_table_oil.sum(numeric_only=True, axis=0)
+print(trans1_table_oil, '\n')
+
+trans1_table_gas = pd.DataFrame()
+trans1_table_gas['Year'] = trans1.project_years
+trans1_table_gas['Lifting'] = trans1._gas_lifting.lifting_rate_arr()
+trans1_table_gas['Price'] = trans1._gas_lifting.lifting_price_arr()
+trans1_table_gas['Revenue'] = trans1._gas_revenue
+trans1_table_gas['Depreciable'] = trans1._gas_tangible.expenditures()
+trans1_table_gas['Intangible'] = trans1._gas_intangible.expenditures()
+trans1_table_gas['Opex'] = trans1._gas_opex.expenditures()
+trans1_table_gas['ASR'] = trans1._gas_asr.expenditures()
+trans1_table_gas['Depreciation'] = trans1._gas_depreciation
+trans1_table_gas['NonCapital'] = trans1._gas_non_capital
+trans1_table_gas['FTP'] = trans1._gas_ftp
+trans1_table_gas['FTP_CTR'] = trans1._gas_ftp_ctr
+trans1_table_gas['FTP_GOV'] = trans1._gas_ftp_gov
+trans1_table_gas['InvestmentCredit'] = trans1._gas_ic_paid
+trans1_table_gas['UnrecoveredCost'] = trans1._gas_unrecovered_before_transfer
+trans1_table_gas['CosttoBeRecovered'] = trans1._gas_cost_to_be_recovered
+trans1_table_gas['CostRecovery'] = trans1._gas_cost_recovery
+trans1_table_gas['ETSBeforeTransfer'] = trans1._gas_ets_before_transfer
+trans1_table_gas['TransfertoOil'] = trans1._transfer_to_oil
+trans1_table_gas['TransfertoGas'] = trans1._transfer_to_gas
+trans1_table_gas['UnrecafterTransfer'] = trans1._gas_unrecovered_after_transfer
+trans1_table_gas['CostToBeRecoveredAfterTF'] = trans1._gas_cost_to_be_recovered_after_tf
+trans1_table_gas['CostRecoveryAfterTF'] = trans1._gas_cost_recovery_after_tf
+trans1_table_gas['ETSAfterTransfer'] = trans1._gas_ets_after_transfer
+trans1_table_gas['ContractorShare'] = trans1._gas_contractor_share
+trans1_table_gas['GovernmentShare'] = trans1._gas_government_share
+trans1_table_gas['DMOVolume'] = trans1._gas_dmo_volume
+trans1_table_gas['DMOFee'] = trans1._gas_dmo_fee
+trans1_table_gas['DDMO'] = trans1._gas_ddmo
+trans1_table_gas['TaxableIncome'] = trans1._gas_taxable_income
+trans1_table_gas['Tax'] = trans1._gas_tax_payment
+trans1_table_gas['NetContractorShare'] = trans1._gas_ctr_net_share
+trans1_table_gas['ContractorTake'] = trans1._gas_ctr_net_share
+trans1_table_gas['Cashflow'] = trans1._gas_cashflow
+trans1_table_gas['GovernmentTake'] = trans1._gas_government_take
+trans1_table_gas.loc['Column_Total'] = trans1_table_gas.sum(numeric_only=True, axis=0)
+print(trans1_table_gas, '\n')
+
+print('Gross Split Transition')
+trans2_table_oil = pd.DataFrame()
+trans2_table_oil['Years'] = trans2.project_years
+trans2_table_oil['Lifting'] = trans2._oil_lifting.lifting_rate
+trans2_table_oil['Revenue'] = trans2._oil_revenue
+trans2_table_oil['BaseSplit'] = trans2._oil_base_split
+trans2_table_oil['VariableSplit'] = trans2._var_split_array
+trans2_table_oil['ProgressiveSplit'] = trans2._oil_prog_split
+trans2_table_oil['ContractorSplitSplit'] = trans2._oil_ctr_split
+trans2_table_oil['GovernmentShare'] = trans2._oil_gov_share
+trans2_table_oil['ContractorShare'] = trans2._oil_ctr_share_before_transfer
+trans2_table_oil['Depreciation'] = trans2._oil_depreciation
+trans2_table_oil['NonCapital'] = trans2._oil_non_capital
+trans2_table_oil['TotalExpenses'] = trans2._oil_total_expenses
+trans2_table_oil['CostToBeDeducted'] = trans2._oil_cost_tobe_deducted
+trans2_table_oil['CarryForwardCost'] = trans2._oil_carward_deduct_cost
+trans2_table_oil['DeductibleCost'] = trans2._oil_deductible_cost
+trans2_table_oil['TransferToOil'] = trans2._transfer_to_oil
+trans2_table_oil['TransferToGas'] = trans2._transfer_to_gas
+trans2_table_oil['CarryForwardCostafterTF'] = trans2._oil_carward_cost_aftertf
+trans2_table_oil['CTRShareAfterTF'] = trans2._oil_ctr_share_after_transfer
+trans2_table_oil['CTRNetOperatingProfit'] = trans2._oil_net_operating_profit
+trans2_table_oil['DMOVolume'] = trans2._oil_dmo_volume
+trans2_table_oil['DMOFee'] = trans2._oil_dmo_fee
+trans2_table_oil['DDMO'] = trans2._oil_ddmo
+trans2_table_oil['TaxableIncome'] = trans2._oil_taxable_income
+trans2_table_oil['Tax'] = trans2._oil_tax
+trans2_table_oil['NetCTRShare'] = trans2._oil_ctr_net_share
+trans2_table_oil['CTRCashFlow'] = trans2._oil_ctr_cashflow
+trans2_table_oil['GovernmentTake'] = trans2._oil_gov_take
+trans2_table_oil.loc['Column_Total'] = trans2_table_oil.sum(numeric_only=True, axis=0)
+print(trans2_table_oil, '\n')
+
+trans2_table_gas = pd.DataFrame()
+trans2_table_gas['Years'] = trans2.project_years
+trans2_table_gas['Lifting'] = trans2._gas_lifting.lifting_rate
+trans2_table_gas['Revenue'] = trans2._gas_revenue
+trans2_table_gas['BaseSplit'] = trans2._gas_base_split
+trans2_table_gas['VariableSplit'] = trans2._var_split_array
+trans2_table_gas['ProgressiveSplit'] = trans2._gas_prog_split
+trans2_table_gas['ContractorSplitSplit'] = trans2._gas_ctr_split
+trans2_table_gas['GovernmentShare'] = trans2._gas_gov_share
+trans2_table_gas['ContractorShare'] = trans2._gas_ctr_share_before_transfer
+trans2_table_gas['Depreciation'] = trans2._gas_depreciation
+trans2_table_gas['NonCapital'] = trans2._gas_non_capital
+trans2_table_gas['TotalExpenses'] = trans2._gas_total_expenses
+trans2_table_gas['CostToBeDeducted'] = trans2._gas_cost_tobe_deducted
+trans2_table_gas['CarryForwardCost'] = trans2._gas_carward_deduct_cost
+trans2_table_gas['DeductibleCost'] = trans2._gas_deductible_cost
+trans2_table_gas['TransferToOil'] = trans2._transfer_to_oil
+trans2_table_gas['TransferToGas'] = trans2._transfer_to_gas
+trans2_table_gas['CarryForwardCostafterTF'] = trans2._gas_carward_cost_aftertf
+trans2_table_gas['CTRShareAfterTF'] = trans2._gas_ctr_share_after_transfer
+trans2_table_gas['CTRNetOperatingProfit'] = trans2._gas_net_operating_profit
+trans2_table_gas['DMOVolume'] = trans2._gas_dmo_volume
+trans2_table_gas['DMOFee'] = trans2._gas_dmo_fee
+trans2_table_gas['DDMO'] = trans2._gas_ddmo
+trans2_table_gas['TaxableIncome'] = trans2._gas_taxable_income
+trans2_table_gas['Tax'] = trans2._gas_tax
+trans2_table_gas['NetCTRShare'] = trans2._gas_ctr_net_share
+trans2_table_gas['CTRCashFlow'] = trans2._gas_ctr_cashflow
+trans2_table_gas['GovernmentTake'] = trans2._gas_gov_take
+trans2_table_gas.loc['Column_Total'] = trans2_table_gas.sum(numeric_only=True, axis=0)
+print(trans2_table_gas, '\n')

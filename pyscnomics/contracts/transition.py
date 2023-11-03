@@ -5,6 +5,7 @@ import itertools
 
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.selection import FluidType
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 
@@ -25,13 +26,23 @@ from pyscnomics.contracts.grossplit import GrossSplit
 
 
 def parse_dataclass(contract):
+    # Getting the attributes of the contract
     attr_contract = vars(contract)
+
+    # Condition where only one fluid is produced
+    produced_fluid = [i.fluid_type for i in attr_contract['lifting']]
+
+    if FluidType.OIL not in produced_fluid:
+        attr_contract['oil_onstream_date'] = None
+    if FluidType.GAS not in produced_fluid:
+        attr_contract['gas_onstream_date'] = None
+
     if isinstance(contract, CostRecovery):
         new_contract = CostRecovery(
             start_date=attr_contract['start_date'],
             end_date=attr_contract['end_date'],
             oil_onstream_date=attr_contract['oil_onstream_date'],
-            # gas_onstream_date=attr_contract['gas_onstream_date'],
+            gas_onstream_date=attr_contract['gas_onstream_date'],
             lifting=attr_contract['lifting'],
             tangible_cost=attr_contract['tangible_cost'],
             intangible_cost=attr_contract['intangible_cost'],
@@ -179,10 +190,14 @@ def transition(contract1: CostRecovery | GrossSplit,
         opx.start_year = start_date_trans.year
         opx.end_year = end_date_trans.year
 
-        opx.cost = np.concatenate((opx.cost, zeros_to_new))
-        opx.description = opx.description + desc_to_new
+        opx.fixed_cost = np.concatenate((opx.fixed_cost, zeros_to_new))
         opx.expense_year = np.concatenate((opx.expense_year, years_to_new)).astype(int)
+        opx.prod_rate = np.concatenate((opx.prod_rate, zeros_to_new))
+        opx.cost_per_volume = np.concatenate((opx.cost_per_volume, zeros_to_new))
+        opx.description = opx.description + desc_to_new
 
+        opx.variable_cost = np.concatenate((opx.variable_cost, zeros_to_new))
+        opx.cost = np.concatenate((opx.cost, zeros_to_new))
         opx.project_duration = project_duration_trans
         opx.project_years = project_years_trans
 
@@ -210,11 +225,11 @@ def transition(contract1: CostRecovery | GrossSplit,
         lift.start_year = start_date_trans.year
         lift.end_year = end_date_trans.year
 
-        lift.lifting_rate = np.concatenate((zeros_to_new, lift.lifting_rate))
-        lift.price = np.concatenate((zeros_to_new, lift.price))
-        lift.ghv = np.concatenate((zeros_to_new, lift.ghv))
-        lift.prod_rate = np.concatenate((zeros_to_new, lift.prod_rate))
-        lift.prod_year = np.concatenate((years_to_new, lift.prod_year)).astype(int)
+        lift.lifting_rate = np.concatenate((zeros_to_prior, lift.lifting_rate))
+        lift.price = np.concatenate((zeros_to_prior, lift.price))
+        lift.ghv = np.concatenate((zeros_to_prior, lift.ghv))
+        lift.prod_rate = np.concatenate((zeros_to_prior, lift.prod_rate))
+        lift.prod_year = np.concatenate((years_to_prior, lift.prod_year)).astype(int)
 
         lift.project_duration = project_duration_trans
         lift.project_years = project_years_trans
@@ -224,13 +239,13 @@ def transition(contract1: CostRecovery | GrossSplit,
         tang.start_year = start_date_trans.year
         tang.end_year = end_date_trans.year
 
-        tang.cost = np.concatenate((zeros_to_new, tang.cost))
-        tang.pis_year = np.concatenate((zeros_to_new, tang.pis_year)).astype(int)
-        tang.salvage_value = np.concatenate((zeros_to_new, tang.salvage_value))
-        tang.useful_life = np.concatenate((zeros_to_new, tang.useful_life))
-        tang.depreciation_factor = np.concatenate((zeros_to_new, tang.depreciation_factor))
-        tang.description = tang.description + desc_to_new
-        tang.expense_year = np.concatenate((years_to_new, tang.expense_year)).astype(int)
+        tang.cost = np.concatenate((zeros_to_prior, tang.cost))
+        tang.pis_year = np.concatenate((zeros_to_prior, tang.pis_year)).astype(int)
+        tang.salvage_value = np.concatenate((zeros_to_prior, tang.salvage_value))
+        tang.useful_life = np.concatenate((zeros_to_prior, tang.useful_life))
+        tang.depreciation_factor = np.concatenate((zeros_to_prior, tang.depreciation_factor))
+        tang.description = desc_to_prior + tang.description
+        tang.expense_year = np.concatenate((years_to_prior, tang.expense_year)).astype(int)
 
         tang.project_duration = project_duration_trans
         tang.project_years = project_years_trans
@@ -240,9 +255,9 @@ def transition(contract1: CostRecovery | GrossSplit,
         intang.start_year = start_date_trans.year
         intang.end_year = end_date_trans.year
 
-        intang.cost = np.concatenate((zeros_to_new, intang.cost))
-        intang.description = intang.description + desc_to_new
-        intang.expense_year = np.concatenate((years_to_new, intang.expense_year)).astype(int)
+        intang.cost = np.concatenate((zeros_to_prior, intang.cost))
+        intang.description = desc_to_prior + intang.description
+        intang.expense_year = np.concatenate((years_to_prior, intang.expense_year)).astype(int)
 
         intang.project_duration = project_duration_trans
         intang.project_years = project_years_trans
@@ -252,10 +267,14 @@ def transition(contract1: CostRecovery | GrossSplit,
         opx.start_year = start_date_trans.year
         opx.end_year = end_date_trans.year
 
-        opx.cost = np.concatenate((zeros_to_new, opx.cost))
-        opx.description = opx.description + desc_to_new
-        opx.expense_year = np.concatenate((years_to_new, opx.expense_year)).astype(int)
+        opx.fixed_cost = np.concatenate((zeros_to_prior, opx.fixed_cost))
+        opx.expense_year = np.concatenate((years_to_prior, opx.expense_year)).astype(int)
+        opx.prod_rate = np.concatenate((zeros_to_prior, opx.prod_rate))
+        opx.cost_per_volume = np.concatenate((zeros_to_prior, opx.cost_per_volume))
+        opx.description = desc_to_prior + opx.description
 
+        opx.variable_cost = np.concatenate((zeros_to_prior, opx.variable_cost))
+        opx.cost = np.concatenate((zeros_to_prior, opx.cost))
         opx.project_duration = project_duration_trans
         opx.project_years = project_years_trans
 
@@ -264,17 +283,20 @@ def transition(contract1: CostRecovery | GrossSplit,
         asr.start_year = start_date_trans.year
         asr.end_year = end_date_trans.year
 
-        asr.cost = np.concatenate((zeros_to_new, asr.cost))
-        asr.description = asr.description + desc_to_new
-        asr.expense_year = np.concatenate((years_to_new, asr.expense_year)).astype(int)
+        asr.cost = np.concatenate((zeros_to_prior, asr.cost))
+        asr.description = desc_to_prior + asr.description
+        asr.expense_year = np.concatenate((years_to_prior, asr.expense_year)).astype(int)
 
         asr.project_duration = project_duration_trans
         asr.project_years = project_years_trans
 
     contract1_new = parse_dataclass(contract=contract1)
     contract2_new = parse_dataclass(contract=contract2)
+
     contract1_new.run()
     contract2_new.run()
+
+    return contract1_new, contract2_new
 
 
 
