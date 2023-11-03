@@ -17,6 +17,12 @@ class GrossSplitException(Exception):
     pass
 
 
+class SunkCostException(Exception):
+    """Exception to raise for a misuse of Sunk Cost Method"""
+
+    pass
+
+
 @dataclass
 class GrossSplit(BaseProject):
     field_status: str = field(default='No POD')
@@ -111,18 +117,6 @@ class GrossSplit(BaseProject):
 
     _oil_cashflow: CashFlow = field(default=None, init=False, repr=False)
     _gas_cashflow: CashFlow = field(default=None, init=False, repr=False)
-
-    _oil_pot: float = field(default=None, init=False, repr=False)
-    _oil_irr: float = field(default=None, init=False, repr=False)
-    _gas_pot: float = field(default=None, init=False, repr=False)
-    _gas_irr: float = field(default=None, init=False, repr=False)
-    _oil_npv: float = field(default=None, init=False, repr=False)
-    _gas_npv: float = field(default=None, init=False, repr=False)
-
-    _oil_ctr_cashflow_disc: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_ctr_cashflow_disc: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_gov_cashflow_disc: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_gov_cashflow_disc: np.ndarray = field(default=None, init=False, repr=False)
 
     # Consolidated Attributes
     _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
@@ -409,13 +403,33 @@ class GrossSplit(BaseProject):
                         cost_tobe_deducted + carward_deduct_cost,
                         ctr_gross_share)
 
+    def _get_sunk_cost(self, discount_rate_year: int):
+
+        oil_cost_raw = self._oil_depreciation + self._oil_undepreciated_asset + self._oil_non_capital
+        self._oil_sunk_cost = oil_cost_raw[:(discount_rate_year - self.start_date.year + 1)]
+
+        gas_cost_raw = self._gas_depreciation + self._gas_undepreciated_asset + self._gas_non_capital
+        self._gas_sunk_cost = gas_cost_raw[:(discount_rate_year - self.start_date.year + 1)]
+
+        if discount_rate_year == self.start_date.year:
+            self._oil_sunk_cost = np.zeros(1)
+            self._gas_sunk_cost = np.zeros(1)
+
     def run(self,
             is_dmo_end_weighted=False,
             regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
-            discount_rate: float = 0.1,
-            discounted_year: int | None = None,
+            discount_rate_year: int | None = None,
             discounting_mode: DiscountingMode = DiscountingMode.HALF_YEAR
             ):
+
+        if discount_rate_year is None:
+            discount_rate_year = self.start_date.year
+
+        if discount_rate_year < self.start_date.year:
+            raise SunkCostException(
+                f"start_date year {self.start_date} "
+                f"is after the discount rate year: {self.end_date}"
+            )
 
         self._get_wap_price()
 
@@ -435,6 +449,9 @@ class GrossSplit(BaseProject):
                 + self._gas_opex.expenditures()
                 + self._gas_asr.expenditures()
         )
+
+        # Get Sunk Cost
+        self._get_sunk_cost(discount_rate_year)
 
         # Variable Split. -> Will set the value of _variable_split
         self._wrapper_variable_split(regime=regime)
