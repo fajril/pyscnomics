@@ -344,7 +344,7 @@ psc2_table_oil['Taxable Income'] = psc2._oil_taxable_income
 psc2_table_oil['Tax'] = psc2._oil_tax
 psc2_table_oil['Net CTR Share'] = psc2._oil_ctr_net_share
 psc2_table_oil['CTR CashFlow'] = psc2._oil_ctr_cashflow
-psc2_table_oil['Government Take'] = psc2._oil_gov_take
+psc2_table_oil['Government Take'] = psc2._oil_government_take
 psc2_table_oil.loc['Column_Total'] = psc2_table_oil.sum(numeric_only=True, axis=0)
 print(psc2_table_oil, '\n')
 
@@ -379,13 +379,13 @@ psc2_table_gas['Taxable Income'] = psc2._gas_taxable_income
 psc2_table_gas['Tax'] = psc2._gas_tax
 psc2_table_gas['Net CTR Share'] = psc2._gas_ctr_net_share
 psc2_table_gas['CTR CashFlow'] = psc2._gas_ctr_cashflow
-psc2_table_gas['Government Take'] = psc2._gas_gov_take
+psc2_table_gas['Government Take'] = psc2._gas_government_take
 psc2_table_gas.loc['Column_Total'] = psc2_table_gas.sum(numeric_only=True, axis=0)
 print(psc2_table_gas, '\n')
 
 print('------------------------------------------ Transition ------------------------------------------')
 start_time = time.time()
-trans1, trans2 = transition.transition(contract1=psc1, contract2=psc2)
+trans1, trans2 = transition.transition(contract1=psc1, contract2=psc2, tax_rate=0.4)
 end_time = time.time()
 print('Execution Time: ', end_time - start_time, '\n')
 
@@ -497,7 +497,7 @@ trans2_table_oil['TaxableIncome'] = trans2._oil_taxable_income
 trans2_table_oil['Tax'] = trans2._oil_tax
 trans2_table_oil['NetCTRShare'] = trans2._oil_ctr_net_share
 trans2_table_oil['CTRCashFlow'] = trans2._oil_ctr_cashflow
-trans2_table_oil['GovernmentTake'] = trans2._oil_gov_take
+trans2_table_oil['GovernmentTake'] = trans2._oil_government_take
 trans2_table_oil.loc['Column_Total'] = trans2_table_oil.sum(numeric_only=True, axis=0)
 print(trans2_table_oil, '\n')
 
@@ -529,6 +529,6 @@ trans2_table_gas['TaxableIncome'] = trans2._gas_taxable_income
 trans2_table_gas['Tax'] = trans2._gas_tax
 trans2_table_gas['NetCTRShare'] = trans2._gas_ctr_net_share
 trans2_table_gas['CTRCashFlow'] = trans2._gas_ctr_cashflow
-trans2_table_gas['GovernmentTake'] = trans2._gas_gov_take
+trans2_table_gas['GovernmentTake'] = trans2._gas_government_take
 trans2_table_gas.loc['Column_Total'] = trans2_table_gas.sum(numeric_only=True, axis=0)
 print(trans2_table_gas, '\n')

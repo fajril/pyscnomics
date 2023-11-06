@@ -8,6 +8,7 @@ from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
+from pyscnomics.contracts import psc_tools
 
 
 # Defining the gap between the prior contract and the new contract
@@ -107,7 +108,8 @@ def parse_dataclass(contract):
 
 
 def transition(contract1: CostRecovery | GrossSplit,
-               contract2: CostRecovery | GrossSplit):
+               contract2: CostRecovery | GrossSplit,
+               tax_rate: float = 0.4):
     # Defining the proportional of the day of the year
     days_in_year = 365 + calendar.isleap(int(contract2.start_date.year))
     dty = (contract2.start_date - date(contract2.start_date.year, 1, 1)).days / days_in_year
@@ -290,11 +292,47 @@ def transition(contract1: CostRecovery | GrossSplit,
         asr.project_duration = project_duration_trans
         asr.project_years = project_years_trans
 
+    # Parsing the attributes to the new object of contract
     contract1_new = parse_dataclass(contract=contract1)
     contract2_new = parse_dataclass(contract=contract2)
 
+    # Executing the new contract
     contract1_new.run()
     contract2_new.run()
+
+    # Defining the unrecoverable cost from the prior contract
+    latest_unrec = contract1_new._consolidated_unrecovered_after_transfer[-1]
+    unrec_cost_prior = np.zeros_like(contract2_new.project_years, dtype=float)
+    unrec_cost_prior[len(years_to_prior)] = latest_unrec
+
+    # Calculating the Unrecoverable cost in the transitioned cashflow
+    unrec_trans = psc_tools.get_unrecovered_cost(revenue=contract2_new._consolidated_taxable_income,
+                                                 depreciation=unrec_cost_prior,
+                                                 non_capital=np.zeros_like(contract2_new.project_years, dtype=float),
+                                                 ftp_ctr=np.zeros_like(contract2_new.project_years, dtype=float),
+                                                 ftp_gov=np.zeros_like(contract2_new.project_years, dtype=float),
+                                                 ic=np.zeros_like(contract2_new.project_years, dtype=float))
+
+    cost_to_be_recovered_trans = psc_tools.get_cost_to_be_recovered(unrecovered_cost=unrec_trans)
+
+    cost_recovery_trans = CostRecovery._get_cost_recovery(
+        revenue=contract2_new._consolidated_taxable_income,
+        ftp=np.zeros_like(contract2_new.project_years, dtype=float),
+        ic=np.zeros_like(contract2_new.project_years, dtype=float),
+        depreciation=unrec_cost_prior,
+        non_capital=np.zeros_like(contract2_new.project_years, dtype=float),
+        cost_to_be_recovered=cost_to_be_recovered_trans,
+        cr_cap_rate=1.0)
+
+    # Calculate taxable income
+    taxable_income_trans = CostRecovery._get_ets_before_transfer(revenue=contract2_new._consolidated_taxable_income,
+                                                                 ftp_ctr=np.zeros_like(contract2_new.project_years, dtype=float),
+                                                                 ftp_gov=np.zeros_like(contract2_new.project_years, dtype=float),
+                                                                 ic=np.zeros_like(contract2_new.project_years, dtype=float),
+                                                                 cost_recovery=cost_recovery_trans)
+
+    tax_payment_transition = taxable_income_trans * tax_rate
+
 
     return contract1_new, contract2_new
 
