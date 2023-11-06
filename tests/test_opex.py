@@ -291,16 +291,7 @@ def test_opex_expenditures_with_tax_and_inflation():
     # Expected results
     case1 = np.array([0, 105, 110.25, 115.7625, 121.550625, 0, 0, 0])
     case2 = np.array([0, 102, 103, 104, 105, 0, 0, 0])
-    case3 = np.array([
-        0,
-        107.1979928,
-        113.7348086,
-        119.531732,
-        124.4275916,
-        0,
-        0,
-        0,
-    ])
+    case3 = np.array([0, 107.1979928, 113.7348086, 119.531732, 124.4275916, 0, 0, 0])
 
     # Calculated results
     opex_mangga = OPEX(

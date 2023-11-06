@@ -1707,6 +1707,12 @@ class ASR(GeneralCost):
         if year_ref is None:
             year_ref = self.start_year
 
+        if not isinstance(future_rate, float):
+            raise ASRException(
+                f"Future rate must be a float, not a "
+                f"{future_rate.__class__.__qualname__}"
+            )
+
         cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
             end_year=self.end_year,
@@ -1780,6 +1786,12 @@ class ASR(GeneralCost):
         if year_ref is None:
             year_ref = self.start_year
 
+        if not isinstance(future_rate, float):
+            raise ASRException(
+                f"Future rate must be a float, not a "
+                f"{future_rate.__class__.__qualname__}"
+            )
+
         cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
             end_year=self.end_year,
@@ -1839,6 +1851,12 @@ class ASR(GeneralCost):
         """
         if year_ref is None:
             year_ref = self.start_year
+
+        if not isinstance(future_rate, float):
+            raise ASRException(
+                f"Future rate must be a float, not a "
+                f"{future_rate.__class__.__qualname__}"
+            )
 
         # Distance of expense year from the end year of the project
         cost_duration = self.end_year - self.expense_year + 1
