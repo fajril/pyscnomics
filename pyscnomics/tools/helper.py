@@ -7,8 +7,8 @@ from functools import wraps
 from pyscnomics.econ.selection import FluidType, TaxType
 
 
-class InflationException(Exception):
-    """ Exception to be raised for an incorrect inflation configuration """
+class TaxInflationException(Exception):
+    """ Exception to be raised for an incorrect tax and inflation configurations """
 
     pass
 
@@ -41,7 +41,7 @@ def check_input(target_func, param: np.ndarray | float | int) -> np.ndarray:
     """
     if isinstance(param, np.ndarray):
         if len(param) != len(target_func):
-            raise InflationException(
+            raise TaxInflationException(
                 f"Unequal length of arrays: "
                 f"{param.__class__.__qualname__}({param}): ({len(param)}), "
                 f"{target_func.__class__.__qualname__}({target_func}): ({len(target_func)})."
@@ -50,6 +50,12 @@ def check_input(target_func, param: np.ndarray | float | int) -> np.ndarray:
 
     if isinstance(param, (float, int)):
         param_arr = np.repeat(param, len(target_func))
+
+    if not isinstance(param, (float, int, np.ndarray)):
+        raise TaxInflationException(
+            f"Input parameter must be of datatype np.ndarray, int, or float. "
+            f"{param} is of datatype ({param.__class__.__qualname__})."
+        )
 
     return param_arr
 
@@ -212,12 +218,12 @@ def apply_cost_adjustment(
 
     # Cost adjustment due to inflation
     if year_ref < start_year:
-        raise InflationException(
+        raise TaxInflationException(
             f"year_ref ({year_ref}) is before start_year of the project ({start_year})."
         )
 
     if year_ref > end_year:
-        raise InflationException(
+        raise TaxInflationException(
             f"year_ref ({year_ref}) is after end_year of the project ({end_year})."
         )
 

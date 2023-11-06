@@ -167,6 +167,9 @@ class Tangible(GeneralCost):
 
     Parameters
     ----------
+    The attributes are inherited from class GeneralCost. Local attributes associated
+    with class Tangible are:
+
     pis_year : numpy.ndarray, optional
         An array representing the PIS year of a tangible asset.
     salvage_value : numpy.ndarray, optional
@@ -223,25 +226,9 @@ class Tangible(GeneralCost):
         if isinstance(self.vat_discount, float):
             self.vat_discount = np.repeat(self.vat_discount, len(self.cost))
 
-        if isinstance(self.vat_discount, np.ndarray):
-            if len(self.vat_discount) != len(self.cost):
-                raise TangibleException(
-                    f"Unequal length of array: "
-                    f"VAT discount: ({len(self.vat_discount)}), "
-                    f"cost: ({len(self.cost)})."
-                )
-
         # Configure LBT discount
         if isinstance(self.lbt_discount, float):
             self.lbt_discount = np.repeat(self.lbt_discount, len(self.cost))
-
-        if isinstance(self.lbt_discount, np.ndarray):
-            if len(self.lbt_discount) != len(self.cost):
-                raise TangibleException(
-                    f"Unequal length of array: "
-                    f"LBT discount: ({len(self.lbt_discount)}), "
-                    f"cost: ({len(self.cost)})."
-                )
 
         # Configure description data
         if self.description is None:
@@ -252,6 +239,18 @@ class Tangible(GeneralCost):
                 raise TangibleException(
                     f"Attribute description must be a list; "
                     f"description (datatype: {self.description.__class__.__qualname__}) "
+                    f"is not a list."
+                )
+
+        # Configure cost_allocation data
+        if self.cost_allocation is None:
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
+
+        if self.cost_allocation is not None:
+            if not isinstance(self.cost_allocation, list):
+                raise TangibleException(
+                    f"Attribute cost_allocation must be a list. "
+                    f"cost_allocation (datatype: {self.cost_allocation.__class__.__qualname__}) "
                     f"is not a list."
                 )
 
@@ -303,18 +302,6 @@ class Tangible(GeneralCost):
                     f"is not a numpy.ndarray."
                 )
 
-        # Configure cost_allocation data
-        if self.cost_allocation is None:
-            self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
-
-        if self.cost_allocation is not None:
-            if not isinstance(self.cost_allocation, list):
-                raise TangibleException(
-                    f"Attribute cost_allocation must be a list. "
-                    f"cost_allocation (datatype: {self.cost_allocation.__class__.__qualname__}) "
-                    f"is not a list."
-                )
-
         # Check input data for unequal length
         arr_length = len(self.cost)
 
@@ -322,28 +309,32 @@ class Tangible(GeneralCost):
             len(arr) == arr_length
             for arr in [
                 self.expense_year,
+                self.cost_allocation,
+                self.description,
+                self.vat_portion,
+                self.vat_discount,
+                self.lbt_portion,
+                self.lbt_discount,
                 self.pis_year,
                 self.salvage_value,
                 self.useful_life,
                 self.depreciation_factor,
-                self.cost_allocation,
-                self.description,
-                self.vat_portion,
-                self.lbt_portion,
             ]
         ):
             raise TangibleException(
                 f"Unequal length of array: "
                 f"cost: {len(self.cost)}, "
                 f"expense_year: {len(self.expense_year)}, "
-                f"pis_year: {len(self.pis_year)}, "
-                f"salvage_value: {len(self.salvage_value)}, "
-                f"useful_life: {len(self.useful_life)}, "
-                f"depreciation_factor: {len(self.depreciation_factor)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
                 f"description: {len(self.description)}, "
                 f"vat_portion: {len(self.vat_portion)}, "
-                f"lbt_portion: {len(self.lbt_portion)}."
+                f"vat_discount: {len(self.vat_discount)}, "
+                f"lbt_portion: {len(self.lbt_portion)}, "
+                f"lbt_discount: {len(self.lbt_discount)}, "
+                f"pis_year: {len(self.pis_year)}, "
+                f"salvage_value: {len(self.salvage_value)}, "
+                f"useful_life: {len(self.useful_life)}, "
+                f"depreciation_factor: {len(self.depreciation_factor)}."
             )
 
         # Raise an error message: expense year is after the end year of the project
@@ -835,6 +826,10 @@ class Tangible(GeneralCost):
 class Intangible(GeneralCost):
     """
     Manages an intangible asset.
+
+    Parameters
+    ----------
+    The attributes are inherited from class GeneralCost.
     """
     def __post_init__(self):
         # Check for inappropriate start and end year project
@@ -876,25 +871,9 @@ class Intangible(GeneralCost):
         if isinstance(self.vat_discount, float):
             self.vat_discount = np.repeat(self.vat_discount, len(self.cost))
 
-        if isinstance(self.vat_discount, np.ndarray):
-            if len(self.vat_discount) != len(self.cost):
-                raise IntangibleException(
-                    f"Unequal length of array: "
-                    f"VAT discount: ({len(self.vat_discount)}), "
-                    f"cost: ({len(self.cost)})."
-                )
-
         # Configure LBT discount
         if isinstance(self.lbt_discount, float):
             self.lbt_discount = np.repeat(self.lbt_discount, len(self.cost))
-
-        if isinstance(self.lbt_discount, np.ndarray):
-            if len(self.lbt_discount) != len(self.cost):
-                raise IntangibleException(
-                    f"Unequal length of array: "
-                    f"LBT discount: ({len(self.lbt_discount)}), "
-                    f"cost: ({len(self.cost)})."
-                )
 
         # Configure description data
         if self.description is None:
@@ -930,7 +909,9 @@ class Intangible(GeneralCost):
                 self.cost_allocation,
                 self.description,
                 self.vat_portion,
+                self.vat_discount,
                 self.lbt_portion,
+                self.lbt_discount,
             ]
         ):
             raise IntangibleException(
@@ -940,7 +921,9 @@ class Intangible(GeneralCost):
                 f"cost_allocation: {len(self.cost_allocation)}, "
                 f"description: {len(self.description)}, "
                 f"vat_portion: {len(self.vat_portion)}, "
-                f"lbt_portion: {len(self.lbt_portion)}."
+                f"vat_discount: {len(self.vat_discount)}, "
+                f"lbt_portion: {len(self.lbt_portion)}, "
+                f"lbt_discount: {len(self.lbt_discount)}."
             )
 
         # Raise an error message: expense year is after the end year of the project
@@ -1181,6 +1164,9 @@ class OPEX(GeneralCost):
 
     Parameters
     ----------
+    The attributes are inherited from class GeneralCost. Local attributes associated
+    with class OPEX are:
+
     fixed_cost : np.ndarray
         An array representing the fixed cost of an OPEX asset.
     prod_rate: np.ndarray
@@ -1237,25 +1223,9 @@ class OPEX(GeneralCost):
         if isinstance(self.vat_discount, float):
             self.vat_discount = np.repeat(self.vat_discount, len(self.fixed_cost))
 
-        if isinstance(self.vat_discount, np.ndarray):
-            if len(self.vat_discount) != len(self.fixed_cost):
-                raise OPEXException(
-                    f"Unequal length of array: "
-                    f"VAT discount: ({len(self.vat_discount)}), "
-                    f"Fixed cost: ({len(self.fixed_cost)})."
-                )
-
         # Configure LBT discount
         if isinstance(self.lbt_discount, float):
             self.lbt_discount = np.repeat(self.lbt_discount, len(self.fixed_cost))
-
-        if isinstance(self.lbt_discount, np.ndarray):
-            if len(self.lbt_discount) != len(self.fixed_cost):
-                raise OPEXException(
-                    f"Unequal length of array: "
-                    f"LBT discount: ({len(self.lbt_discount)}), "
-                    f"Fixed cost: ({len(self.fixed_cost)})."
-                )
 
         # Configure description data
         if self.description is None:
@@ -1291,24 +1261,28 @@ class OPEX(GeneralCost):
                 len(i) == arr_length
                 for i in [
                     self.expense_year,
-                    self.prod_rate,
-                    self.cost_per_volume,
                     self.cost_allocation,
                     self.description,
                     self.vat_portion,
+                    self.vat_discount,
                     self.lbt_portion,
+                    self.lbt_discount,
+                    self.prod_rate,
+                    self.cost_per_volume,
                 ]
             ):
                 raise OPEXException(
                     f"Unequal length of array: "
                     f"fixed_cost: {len(self.fixed_cost)}, "
                     f"expense_year: {len(self.expense_year)}, "
-                    f"prod_rate: {len(self.prod_rate)}, "
-                    f"cost_per_volume: {len(self.cost_per_volume)}, "
                     f"cost_allocation: {len(self.cost_allocation)}, "
                     f"description: {len(self.description)}, "
                     f"vat_portion: {len(self.vat_portion)}, "
-                    f"lbt_portion: {len(self.lbt_portion)}."
+                    f"vat_discount: {len(self.vat_discount)}, "
+                    f"lbt_portion: {len(self.lbt_portion)}, "
+                    f"lbt_discount: {len(self.lbt_discount)}, "
+                    f"prod_rate: {len(self.prod_rate)}, "
+                    f"cost_per_volume: {len(self.cost_per_volume)}."
                 )
 
             # Specify attribute variable_cost
@@ -1581,31 +1555,8 @@ class ASR(GeneralCost):
 
     Parameters
     ----------
-    start_year : int
-        The start year of the project.
-    end_year : int
-        The end year of the project.
-    cost : numpy.ndarray
-        An array representing the cost of an ASR asset.
-    expense_year : numpy.ndarray
-        An array representing the expense year of an ASR asset.
-    cost_allocation : list[FluidType]
-        A list representing the cost allocation of an ASR asset.
-    description: list[str]
-        A list of string description regarding the associated ASR cost.
+    The attributes are inherited from class GeneralCost.
     """
-
-    start_year: int
-    end_year: int
-    cost: np.ndarray
-    expense_year: np.ndarray
-    cost_allocation: list[FluidType] = field(default=None)
-    description: list[str] = field(default=None)
-
-    # Attribute to de defined later on
-    project_duration: int = field(default=None, init=False, repr=False)
-    project_years: np.ndarray = field(default=None, init=False, repr=False)
-
     def __post_init__(self):
         # Check for inappropriate start and end year project
         if self.end_year >= self.start_year:
@@ -1618,6 +1569,38 @@ class ASR(GeneralCost):
                 f"is after the end year {self.end_year}"
             )
 
+        # Configure VAT portion
+        if self.vat_portion is None:
+            self.vat_portion = np.ones_like(self.cost)
+
+        if self.vat_portion is not None:
+            if not isinstance(self.vat_portion, np.ndarray):
+                raise ASRException(
+                    f"Attribute VAT portion must be a numpy ndarray; "
+                    f"VAT portion ({self.vat_portion}) is of datatype "
+                    f"{self.vat_portion.__class__.__qualname__}."
+                )
+
+        # Configure LBT portion
+        if self.lbt_portion is None:
+            self.lbt_portion = np.ones_like(self.cost)
+
+        if self.lbt_portion is not None:
+            if not isinstance(self.lbt_portion, np.ndarray):
+                raise ASRException(
+                    f"Attribute LBT portion must be a numpy ndarray; "
+                    f"LBT portion ({self.lbt_portion}) is of datatype "
+                    f"{self.lbt_portion.__class__.__qualname__}."
+                )
+
+        # Configure VAT discount
+        if isinstance(self.vat_discount, float):
+            self.vat_discount = np.repeat(self.vat_discount, len(self.cost))
+
+        # Configure LBT discount
+        if isinstance(self.lbt_discount, float):
+            self.lbt_discount = np.repeat(self.lbt_discount, len(self.cost))
+
         # Configure description data
         if self.description is None:
             self.description = [" " for _ in range(len(self.cost))]
@@ -1626,7 +1609,7 @@ class ASR(GeneralCost):
             if not isinstance(self.description, list):
                 raise ASRException(
                     f"Attribute description must be a list; "
-                    f"description ({self.description.__class__.__qualname__}) "
+                    f"description (datatype: {self.description.__class__.__qualname__}) "
                     f"is not a list."
                 )
 
@@ -1651,6 +1634,10 @@ class ASR(GeneralCost):
                 self.expense_year,
                 self.cost_allocation,
                 self.description,
+                self.vat_portion,
+                self.vat_discount,
+                self.lbt_portion,
+                self.lbt_discount,
             ]
         ):
             raise ASRException(
@@ -1658,7 +1645,11 @@ class ASR(GeneralCost):
                 f"cost: {len(self.cost)}, "
                 f"expense_year: {len(self.expense_year)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
-                f"description: {len(self.description)}."
+                f"description: {len(self.description)}, "
+                f"vat_portion: {len(self.vat_portion)}, "
+                f"vat_discount: {len(self.vat_discount)}, "
+                f"lbt_portion: {len(self.lbt_portion)}, "
+                f"lbt_discount: {len(self.lbt_discount)}."
             )
 
         # Raise an error message: expense year is after the end year of the project
@@ -1677,21 +1668,31 @@ class ASR(GeneralCost):
 
     def future_cost(
         self,
+        year_ref: int = None,
+        tax_type: TaxType = TaxType.VAT,
+        vat_rate: np.ndarray | float = 0.0,
+        lbt_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
         future_rate: float = 0.02,
-        inflation_rate: np.ndarray | float | int = 0.0,
-        year_now: int = None,
     ) -> np.ndarray:
         """
         Calculate the future cost of an asset.
 
         Parameters
         ----------
-        future_rate : float, optional
-            The future rate used in cost calculation (default is 0.02).
+        year_ref : int
+            The reference year for inflation calculation.
+        tax_type: TaxType
+            The type of tax applied to the corresponding asset.
+            Available options: TaxType.VAT or TaxType.LBT
+        vat_rate: np.ndarray | float
+            The VAT rate to apply. Can be a single value or an array (default is 0.0).
+        lbt_rate: np.ndarray | float
+            The LBT rate to apply. Can be a single value or an array (default is 0.0).
         inflation_rate : np.ndarray or float or int, optional
             The inflation rate to apply. Can be a single value or an array (default is 0).
-        year_now : int
-            The reference year for inflation calculation.
+        future_rate : float, optional
+            The future rate used in cost calculation (default is 0.02).
 
         Returns
         -------
@@ -1701,19 +1702,25 @@ class ASR(GeneralCost):
         Notes
         -----
         This function calculates the future cost of an asset, taking into
-        account inflation scheme.
+        account tax and inflation schemes.
         """
-        if year_now is None:
-            year_now = self.start_year
+        if year_ref is None:
+            year_ref = self.start_year
 
         cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
             end_year=self.end_year,
             cost=self.cost,
             expense_year=self.expense_year,
-            project_duration=self.project_duration,
             project_years=self.project_years,
-            year_now=year_now,
+            year_ref=year_ref,
+            tax_type=tax_type,
+            vat_portion=self.vat_portion,
+            vat_rate=vat_rate,
+            vat_discount=self.vat_discount,
+            lbt_portion=self.lbt_portion,
+            lbt_rate=lbt_rate,
+            lbt_discount=self.lbt_discount,
             inflation_rate=inflation_rate,
         )
 
@@ -1723,50 +1730,131 @@ class ASR(GeneralCost):
 
     def expenditures(
         self,
+        year_ref: int = None,
+        tax_type: TaxType = TaxType.VAT,
+        vat_rate: np.ndarray | float = 0.0,
+        lbt_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
         future_rate: float = 0.02,
-        inflation_rate: np.ndarray | float | int = 0.0,
-        year_now: int = None,
-    ) -> np.ndarray:
+    ):
         """
         Calculate ASR expenditures per year.
 
-        This method calculates the ASR expenditures per year
-        based on the expense year and cost data provided.
+        This method calculates the expenditures per year based on the expense year
+        and cost data provided.
 
         Parameters
         ----------
+        year_ref : int
+            The reference year for inflation calculation.
+        tax_type: TaxType
+            The type of tax applied to the corresponding asset.
+            Available options: TaxType.VAT or TaxType.LBT
+        vat_rate: np.ndarray | float
+            The VAT rate to apply. Can be a single value or an array (default is 0.0).
+        lbt_rate: np.ndarray | float
+            The LBT rate to apply. Can be a single value or an array (default is 0.0).
+        inflation_rate: np.ndarray | float
+            The inflation rate to apply. Can be a single value or an array (default is 0.0).
         future_rate : float, optional
             The future rate used in cost calculation (default is 0.02).
-        inflation_rate : np.ndarray or float or int, optional
-            The inflation rate to apply. Can be a single value or an array (default is 0).
-        year_now : int
-            The reference year for inflation calculation.
 
         Returns
         -------
-        expenses: np.ndarray
-            An array depicting ASR expenditures each year, adjusted by
-            inflation (if any).
+        np.ndarray
+            An array depicting the expenditures each year, adjusted by tax
+            and inflation schemes (if any).
 
         Notes
         -----
-        This method calculates ASR expenditures while considering inflation scheme.
+        This method calculates expenditures while considering tax and inflation schemes.
+        The core calculations are as follows:
+        (1) Apply adjustment to cost due to tax and inflation (if any), by calling
+            'apply_cost_adjustment()' function,
+        (2) Apply further adjustment to cost due to future_rate,
+        (3) Function np.bincount() is used to align the 'cost_adjusted' elements
+            according to its corresponding expense year,
+        (4) If len(expenses) < project_duration, then add the remaining elements
+            with zeros.
         """
-        if year_now is None:
-            year_now = self.start_year
+        if year_ref is None:
+            year_ref = self.start_year
+
+        cost_adjusted = apply_cost_adjustment(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            year_ref=year_ref,
+            tax_type=tax_type,
+            vat_portion=self.vat_portion,
+            vat_rate=vat_rate,
+            vat_discount=self.vat_discount,
+            lbt_portion=self.lbt_portion,
+            lbt_rate=lbt_rate,
+            lbt_discount=self.lbt_discount,
+            inflation_rate=inflation_rate,
+        )
+
+        cost_adjusted *= np.power((1 + future_rate), self.end_year - self.expense_year + 1)
+        expenses = np.bincount(self.expense_year - self.start_year, weights=cost_adjusted)
+        zeros = np.zeros(self.project_duration - len(expenses))
+
+        return np.concatenate((expenses, zeros))
+
+    def proportion(
+        self,
+        year_ref: int = None,
+        tax_type: TaxType = TaxType.VAT,
+        vat_rate: np.ndarray | float = 0.0,
+        lbt_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
+        future_rate: float = 0.02,
+    ) -> np.ndarray:
+        """
+        Allocate ASR expenditures per year.
+
+        Parameters
+        ----------
+        year_ref : int
+            The reference year for inflation calculation.
+        tax_type: TaxType
+            The type of tax applied to the corresponding asset.
+            Available options: TaxType.VAT or TaxType.LBT
+        vat_rate: np.ndarray | float
+            The VAT rate to apply. Can be a single value or an array (default is 0.0).
+        lbt_rate: np.ndarray | float
+            The LBT rate to apply. Can be a single value or an array (default is 0.0).
+        inflation_rate : np.ndarray or float or int, optional
+            The inflation rate to apply. Can be a single value or an array (default is 0).
+        future_rate : float, optional
+            The future rate used in cost calculation (default is 0.02).
+
+        Returns
+        -------
+        np.ndarray
+            An array depicting allocation of ASR expenditures each year, adjusted by
+            tax and inflation (if any).
+        """
+        if year_ref is None:
+            year_ref = self.start_year
 
         # Distance of expense year from the end year of the project
         cost_duration = self.end_year - self.expense_year + 1
 
-        # Cost allocation: cost distribution per year
-        cost_alloc = (
-            self.future_cost(
-                future_rate=future_rate,
-                inflation_rate=inflation_rate,
-                year_now=year_now,
-            )
-            / cost_duration
+        # Configure future cost
+        cost_future = self.future_cost(
+            year_ref=year_ref,
+            tax_type=tax_type,
+            vat_rate=vat_rate,
+            lbt_rate=lbt_rate,
+            inflation_rate=inflation_rate,
+            future_rate=future_rate,
         )
+
+        # Allocation of future cost: cost distribution per year
+        cost_alloc = cost_future / cost_duration
 
         # Distance of expense year from the start year of the project
         shift_indices = self.expense_year - self.start_year
@@ -1788,6 +1876,10 @@ class ASR(GeneralCost):
                 (
                     np.allclose(self.cost, other.cost),
                     np.allclose(self.expense_year, other.expense_year),
+                    np.allclose(self.vat_portion, other.vat_portion),
+                    np.allclose(self.vat_discount, other.vat_discount),
+                    np.allclose(self.lbt_portion, other.lbt_portion),
+                    np.allclose(self.lbt_discount, other.lbt_discount),
                     self.cost_allocation == other.cost_allocation,
                 )
             )
@@ -1799,20 +1891,91 @@ class ASR(GeneralCost):
         else:
             return False
 
+    def __lt__(self, other):
+        # Between an instance of ASR with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) < np.sum(other.cost)
+
+        # Between an instance of ASR and an integer/float
+        elif isinstance(other, (float, int)):
+            return np.sum(self.cost) < other
+
+        else:
+            raise ASRException(
+                f"Must compare an instance of ASR with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __le__(self, other):
+        # Between an instance of ASR with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) <= np.sum(other.cost)
+
+        # Between an instance of ASR and an integer/float
+        elif isinstance(other, (float, int)):
+            return np.sum(self.cost) <= other
+
+        else:
+            raise ASRException(
+                f"Must compare an instance of ASR with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __gt__(self, other):
+        # Between an instance of ASR with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) > np.sum(other.cost)
+
+        # Between an instance of ASR and an integer/float
+        elif isinstance(other, (float, int)):
+            return np.sum(self.cost) > other
+
+        else:
+            raise ASRException(
+                f"Must compare an instance of ASR with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __ge__(self, other):
+        # Between an instance of ASR with another instance of Tangible/Intangible/OPEX/ASR
+        if isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) >= np.sum(other.cost)
+
+        # Between an instance of ASR and an integer/float
+        elif isinstance(other, (float, int)):
+            return np.sum(self.cost) >= other
+
+        else:
+            raise ASRException(
+                f"Must compare an instance of ASR with another instance of "
+                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
     def __add__(self, other):
         # Only allows addition between an instance of ASR and another instance of ASR
         if isinstance(other, ASR):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
+            cost_combined = np.concatenate((self.cost, other.cost))
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
+            vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
+            vat_discount_combined = np.concatenate((self.vat_discount, other.vat_discount))
+            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
+            lbt_discount_combined = np.concatenate((self.lbt_discount, other.lbt_discount))
 
             return ASR(
                 start_year=start_year_combined,
                 end_year=end_year_combined,
-                cost=np.concatenate((self.cost, other.cost)),
-                expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                cost_allocation=self.cost_allocation + other.cost_allocation,
+                cost=cost_combined,
+                expense_year=expense_year_combined,
+                cost_allocation=cost_allocation_combined,
                 description=description_combined,
+                vat_portion=vat_portion_combined,
+                vat_discount=vat_discount_combined,
+                lbt_portion=lbt_portion_combined,
+                lbt_discount=lbt_discount_combined,
             )
 
         else:
@@ -1831,15 +1994,26 @@ class ASR(GeneralCost):
         if isinstance(other, ASR):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
+            cost_combined = np.concatenate((self.cost, -other.cost))
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
+            vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
+            vat_discount_combined = np.concatenate((self.vat_discount, other.vat_discount))
+            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
+            lbt_discount_combined = np.concatenate((self.lbt_discount, other.lbt_discount))
 
             return ASR(
                 start_year=start_year_combined,
                 end_year=end_year_combined,
-                cost=np.concatenate((self.cost, -other.cost)),
-                expense_year=np.concatenate((self.expense_year, other.expense_year)),
-                cost_allocation=self.cost_allocation + other.cost_allocation,
+                cost=cost_combined,
+                expense_year=expense_year_combined,
+                cost_allocation=cost_allocation_combined,
                 description=description_combined,
+                vat_portion=vat_portion_combined,
+                vat_discount=vat_discount_combined,
+                lbt_portion=lbt_portion_combined,
+                lbt_discount=lbt_discount_combined,
             )
 
         else:
@@ -1863,6 +2037,10 @@ class ASR(GeneralCost):
                 expense_year=self.expense_year,
                 cost_allocation=self.cost_allocation,
                 description=self.description,
+                vat_portion=self.vat_portion,
+                vat_discount=self.vat_discount,
+                lbt_portion=self.lbt_portion,
+                lbt_discount=self.lbt_discount,
             )
 
         else:
@@ -1893,11 +2071,16 @@ class ASR(GeneralCost):
                     expense_year=self.expense_year,
                     cost_allocation=self.cost_allocation,
                     description=self.description,
+                    vat_portion=self.vat_portion,
+                    vat_discount=self.vat_discount,
+                    lbt_portion=self.lbt_portion,
+                    lbt_discount=self.lbt_discount,
                 )
 
         else:
             raise ASRException(
-                f"Must divide with an instance of Tangible/Intangible/OPEX/ASR, integer or a float; "
+                f"Must divide with an instance of Tangible/Intangible/OPEX/ASR, "
+                f"integer or a float; "
                 f"{other}({other.__class__.__qualname__}) is not an instance "
                 f"of Tangible/Intangible/OPEX/ASR nor an integer nor a float."
             )
