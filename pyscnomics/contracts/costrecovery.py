@@ -713,7 +713,7 @@ class CostRecovery(BaseProject):
 
         # Tax Payment
         # Generating Tax array if tax_rate argument is a single value not array
-        if tax_rate is float:
+        if isinstance(tax_rate, float):
             self._tax_rate_arr = np.full_like(self.project_years, tax_rate, dtype=float)
 
         # Generating Tax array based on the tax regime if tax_rate argument is None
