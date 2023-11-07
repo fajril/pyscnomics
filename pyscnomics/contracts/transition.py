@@ -92,7 +92,6 @@ def parse_dataclass(contract):
             prod_stage=attr_contract['prod_stage'],
             co2_content=attr_contract['co2_content'],
             h2s_content=attr_contract['h2s_content'],
-            ctr_effective_tax_rate=attr_contract['ctr_effective_tax_rate'],
             base_split_ctr_oil=attr_contract['base_split_ctr_oil'],
             base_split_ctr_gas=attr_contract['base_split_ctr_gas'],
             split_ministry_disc=attr_contract['split_ministry_disc'],

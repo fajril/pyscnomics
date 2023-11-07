@@ -8,7 +8,7 @@ from functools import reduce
 import numpy as np
 
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.selection import FluidType
+from pyscnomics.econ.selection import FluidType, TaxRegime
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.econ.results import CashFlow
 
@@ -328,6 +328,30 @@ class BaseProject:
 
             else:
                 self.gas_onstream_date = self.end_date
+
+    def _get_tax_by_regime(self, tax_regime):
+        tax_config = {2013: 0.44,
+                      2016: 0.42,
+                      2020: 0.40}
+
+        tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[min(tax_config)], dtype=float)
+
+        for year in tax_config:
+            indices = np.array(np.where(self.project_years >= year)).ravel()
+            tax_rate_arr[indices] = tax_config[year]
+
+        if tax_regime == TaxRegime.UU_07_2021:
+            tax_rate_arr = np.full_like(self.project_years, fill_value=0.40, dtype=float)
+        if tax_regime == TaxRegime.UU_02_2020:
+            tax_rate_arr = np.full_like(self.project_years, fill_value=0.42, dtype=float)
+        if tax_regime == TaxRegime.UU_36_2008:
+            tax_rate_arr = np.full_like(self.project_years, fill_value=0.44, dtype=float)
+        if tax_regime == TaxRegime.NAILED_DOWN:
+            if self.start_date.year >= max(tax_config):
+                tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[max(tax_config)], dtype=float)
+            else:
+                tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[min(tax_config)], dtype=float)
+        return tax_rate_arr
 
     def _get_wap_price(self):
         """

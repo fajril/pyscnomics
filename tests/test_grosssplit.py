@@ -161,5 +161,5 @@ def test_oil_ctr_cashflow():
 
 def test_oil_gov_take():
     base = np.asarray(load_testing(dataset_type='small_oil', key='oil_gov_take'))
-    calc = np.array(psc._oil_gov_take)
+    calc = np.array(psc._oil_government_take)
     np.testing.assert_allclose(base, calc)

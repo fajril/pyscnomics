@@ -360,7 +360,6 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
                           prod_stage=config['prod_stage'],
                           co2_content=config['co2_content'],
                           h2s_content=config['h2s_content'],
-                          ctr_effective_tax_rate=config['ctr_effective_tax_rate'],
                           base_split_ctr_oil=config['base_split_ctr_oil'],
                           base_split_ctr_gas=config['base_split_ctr_gas'],
                           split_ministry_disc=config['split_ministry_disc'],

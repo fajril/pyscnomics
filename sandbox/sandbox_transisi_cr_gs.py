@@ -296,7 +296,6 @@ psc2 = GrossSplit(
     prod_stage='Primer',
     co2_content='<5',
     h2s_content='<100',
-    ctr_effective_tax_rate=0.40,
     base_split_ctr_oil=0.43,
     base_split_ctr_gas=0.48,
     split_ministry_disc=0.0,
@@ -309,7 +308,7 @@ psc2 = GrossSplit(
 
 print('------------------------------------------ Gross Split ------------------------------------------')
 start_time = time.time()
-psc2.run()
+psc2.run(tax_rate=0.40)
 end_time = time.time()
 print('Execution Time: ', end_time - start_time, '\n')
 
