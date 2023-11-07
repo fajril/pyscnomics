@@ -104,7 +104,9 @@ print('------------------------------------------ Cost Recovery ----------------
 start_time = time.time()
 ftp_tax_regime = FTPTaxRegime.PRE_2017
 eff_tax_rate = 0.48
-psc1.run(ftp_tax_regime=ftp_tax_regime, tax_rate=eff_tax_rate)
+argument_contract1 = {'ftp_tax_regime': FTPTaxRegime.PRE_2017,
+                      'tax_rate': eff_tax_rate}
+psc1.run(**argument_contract1)
 end_time = time.time()
 print('Execution Time: ', end_time - start_time, '\n')
 
@@ -120,30 +122,30 @@ psc1_table_oil['ASR'] = psc1._oil_asr.expenditures()
 psc1_table_oil['Depreciation'] = psc1._oil_depreciation
 psc1_table_oil['Non Capital'] = psc1._oil_non_capital
 psc1_table_oil['FTP'] = psc1._oil_ftp
-psc1_table_oil['FTP - CTR'] = psc1._oil_ftp_ctr
-psc1_table_oil['FTP - GOV'] = psc1._oil_ftp_gov
-psc1_table_oil['Investment Credit'] = psc1._oil_ic_paid
-psc1_table_oil['Unrecovered Cost'] = psc1._oil_unrecovered_before_transfer
-psc1_table_oil['Cost to Be Recovered'] = psc1._oil_cost_to_be_recovered
-psc1_table_oil['Cost Recovery'] = psc1._oil_cost_recovery
-psc1_table_oil['ETS Before Transfer'] = psc1._oil_ets_before_transfer
-psc1_table_oil['Transfer to Oil'] = psc1._transfer_to_oil
-psc1_table_oil['Transfer to Gas'] = psc1._transfer_to_gas
-psc1_table_oil['Unrec after Transfer'] = psc1._oil_unrecovered_after_transfer
-psc1_table_oil['Cost To Be Recovered After TF'] = psc1._oil_cost_to_be_recovered_after_tf
-psc1_table_oil['Cost Recovery After TF'] = psc1._oil_cost_recovery_after_tf
-psc1_table_oil['ETS After Transfer'] = psc1._oil_ets_after_transfer
-psc1_table_oil['Contractor Share'] = psc1._oil_contractor_share
-psc1_table_oil['Government Share'] = psc1._oil_government_share
-psc1_table_oil['DMO Volume'] = psc1._oil_dmo_volume
-psc1_table_oil['DMO Fee'] = psc1._oil_dmo_fee
+psc1_table_oil['FTP-CTR'] = psc1._oil_ftp_ctr
+psc1_table_oil['FTP-GOV'] = psc1._oil_ftp_gov
+psc1_table_oil['InvestmentCredit'] = psc1._oil_ic_paid
+psc1_table_oil['UnrecoveredCost'] = psc1._oil_unrecovered_before_transfer
+psc1_table_oil['CosttoBeRecovered'] = psc1._oil_cost_to_be_recovered
+psc1_table_oil['CostRecovery'] = psc1._oil_cost_recovery
+psc1_table_oil['ETSBeforeTransfer'] = psc1._oil_ets_before_transfer
+psc1_table_oil['TransfertoOil'] = psc1._transfer_to_oil
+psc1_table_oil['TransfertoGas'] = psc1._transfer_to_gas
+psc1_table_oil['UnrecafterTransfer'] = psc1._oil_unrecovered_after_transfer
+psc1_table_oil['CostToBeRecoveredAfterTF'] = psc1._oil_cost_to_be_recovered_after_tf
+psc1_table_oil['CostRecoveryAfterTF'] = psc1._oil_cost_recovery_after_tf
+psc1_table_oil['ETSAfterTransfer'] = psc1._oil_ets_after_transfer
+psc1_table_oil['ContractorShare'] = psc1._oil_contractor_share
+psc1_table_oil['GovernmentShare'] = psc1._oil_government_share
+psc1_table_oil['DMOVolume'] = psc1._oil_dmo_volume
+psc1_table_oil['DMOFee'] = psc1._oil_dmo_fee
 psc1_table_oil['DDMO'] = psc1._oil_ddmo
-psc1_table_oil['Taxable Income'] = psc1._oil_taxable_income
+psc1_table_oil['TaxableIncome'] = psc1._oil_taxable_income
 psc1_table_oil['Tax'] = psc1._oil_tax_payment
-psc1_table_oil['Net Contractor Share'] = psc1._oil_ctr_net_share
-psc1_table_oil['Contractor Take'] = psc1._gas_ctr_net_share
+psc1_table_oil['NetContractorShare'] = psc1._oil_ctr_net_share
+psc1_table_oil['ContractorTake'] = psc1._gas_ctr_net_share
 psc1_table_oil['Cashflow'] = psc1._oil_cashflow
-psc1_table_oil['Government Take'] = psc1._oil_government_take
+psc1_table_oil['GovernmentTake'] = psc1._oil_government_take
 psc1_table_oil.loc['Column_Total'] = psc1_table_oil.sum(numeric_only=True, axis=0)
 print(psc1_table_oil, '\n')
 
@@ -157,34 +159,65 @@ psc1_table_gas['Intangible'] = psc1._gas_intangible.expenditures()
 psc1_table_gas['Opex'] = psc1._gas_opex.expenditures()
 psc1_table_gas['ASR'] = psc1._gas_asr.expenditures()
 psc1_table_gas['Depreciation'] = psc1._gas_depreciation
-psc1_table_gas['Non Capital'] = psc1._gas_non_capital
+psc1_table_gas['Non'] = psc1._gas_non_capital
 psc1_table_gas['FTP'] = psc1._gas_ftp
-psc1_table_gas['FTP - CTR'] = psc1._gas_ftp_ctr
-psc1_table_gas['FTP - GOV'] = psc1._gas_ftp_gov
-psc1_table_gas['Investment Credit'] = psc1._gas_ic_paid
-psc1_table_gas['Unrecovered Cost'] = psc1._gas_unrecovered_before_transfer
-psc1_table_gas['Cost to Be Recovered'] = psc1._gas_cost_to_be_recovered
-psc1_table_gas['Cost Recovery'] = psc1._gas_cost_recovery
-psc1_table_gas['ETS Before Transfer'] = psc1._gas_ets_before_transfer
-psc1_table_gas['Transfer to Oil'] = psc1._transfer_to_oil
-psc1_table_gas['Transfer to Gas'] = psc1._transfer_to_gas
-psc1_table_gas['Unrec after Transfer'] = psc1._gas_unrecovered_after_transfer
-psc1_table_gas['Cost To Be Recovered After TF'] = psc1._gas_cost_to_be_recovered_after_tf
-psc1_table_gas['Cost Recovery After TF'] = psc1._gas_cost_recovery_after_tf
-psc1_table_gas['ETS After Transfer'] = psc1._gas_ets_after_transfer
-psc1_table_gas['Contractor Share'] = psc1._gas_contractor_share
-psc1_table_gas['Government Share'] = psc1._gas_government_share
-psc1_table_gas['DMO Volume'] = psc1._gas_dmo_volume
-psc1_table_gas['DMO Fee'] = psc1._gas_dmo_fee
+psc1_table_gas['FTP'] = psc1._gas_ftp_ctr
+psc1_table_gas['FTP'] = psc1._gas_ftp_gov
+psc1_table_gas['InvestmentCredit'] = psc1._gas_ic_paid
+psc1_table_gas['UnrecoveredCost'] = psc1._gas_unrecovered_before_transfer
+psc1_table_gas['CosttoBeRecovered'] = psc1._gas_cost_to_be_recovered
+psc1_table_gas['CostRecovery'] = psc1._gas_cost_recovery
+psc1_table_gas['ETSBeforeTransfer'] = psc1._gas_ets_before_transfer
+psc1_table_gas['TransfertoOil'] = psc1._transfer_to_oil
+psc1_table_gas['TransfertoGas'] = psc1._transfer_to_gas
+psc1_table_gas['UnrecafterTransfer'] = psc1._gas_unrecovered_after_transfer
+psc1_table_gas['CostToBeRecoveredAfterTF'] = psc1._gas_cost_to_be_recovered_after_tf
+psc1_table_gas['CostRecoveryAfterTF'] = psc1._gas_cost_recovery_after_tf
+psc1_table_gas['ETSAfterTransfer'] = psc1._gas_ets_after_transfer
+psc1_table_gas['ContractorShare'] = psc1._gas_contractor_share
+psc1_table_gas['GovernmentShare'] = psc1._gas_government_share
+psc1_table_gas['DMOVolume'] = psc1._gas_dmo_volume
+psc1_table_gas['DMOFee'] = psc1._gas_dmo_fee
 psc1_table_gas['DDMO'] = psc1._gas_ddmo
-psc1_table_gas['Taxable Income'] = psc1._gas_taxable_income
+psc1_table_gas['TaxableIncome'] = psc1._gas_taxable_income
 psc1_table_gas['Tax'] = psc1._gas_tax_payment
-psc1_table_gas['Net Contractor Share'] = psc1._gas_ctr_net_share
-psc1_table_gas['Contractor Take'] = psc1._gas_ctr_net_share
+psc1_table_gas['NetContractorShare'] = psc1._gas_ctr_net_share
+psc1_table_gas['ContractorTake'] = psc1._gas_ctr_net_share
 psc1_table_gas['Cashflow'] = psc1._gas_cashflow
-psc1_table_gas['Government Take'] = psc1._gas_government_take
+psc1_table_gas['GovernmentTake'] = psc1._gas_government_take
 psc1_table_gas.loc['Column_Total'] = psc1_table_gas.sum(numeric_only=True, axis=0)
 print(psc1_table_gas, '\n')
+
+psc_table_consolidated = pd.DataFrame()
+psc_table_consolidated['Year'] = psc1.project_years
+psc_table_consolidated['cnsltd_revenue'] = psc1._consolidated_revenue
+psc_table_consolidated['cnsltd_non_capital'] = psc1._consolidated_non_capital
+psc_table_consolidated['cnsltd_ic'] = psc1._consolidated_ic
+psc_table_consolidated['cnsltd_ic_unrecovered'] = psc1._consolidated_ic_unrecovered
+psc_table_consolidated['cnsltd_ic_paid'] = psc1._consolidated_ic_paid
+psc_table_consolidated['cnsltd_unrecovered_before_transfer'] = psc1._consolidated_unrecovered_before_transfer
+psc_table_consolidated['cnsltd_cost_recovery'] = psc1._consolidated_cost_recovery_before_transfer
+psc_table_consolidated['cnsltd_ets_before_transfer'] = psc1._consolidated_ets_before_transfer
+psc_table_consolidated['cnsltd_unrecovered_after_transfer'] = psc1._consolidated_unrecovered_after_transfer
+psc_table_consolidated['cnsltd_cost_to_be_recovered_after_tf'] = psc1._consolidated_cost_to_be_recovered_after_tf
+psc_table_consolidated['cnsltd_cost_recovery_after_tf'] = psc1._consolidated_cost_recovery_after_tf
+psc_table_consolidated['cnsltd_ets_after_transfer'] = psc1._consolidated_ets_after_transfer
+psc_table_consolidated['cnsltd_contractor_share'] = psc1._consolidated_contractor_share
+psc_table_consolidated['cnsltd_government_share'] = psc1._consolidated_government_share
+psc_table_consolidated['cnsltd_dmo_volume'] = psc1._consolidated_dmo_volume
+psc_table_consolidated['cnsltd_dmo_fee'] = psc1._consolidated_dmo_fee
+psc_table_consolidated['cnsltd_ddmo'] = psc1._consolidated_ddmo
+psc_table_consolidated['cnsltd_taxable_income'] = psc1._consolidated_taxable_income
+psc_table_consolidated['cnsltd_tax_due'] = psc1._consolidated_tax_due
+psc_table_consolidated['cnsltd_unpaid_tax_balance'] = psc1._consolidated_unpaid_tax_balance
+psc_table_consolidated['cnsltd_tax_payment'] = psc1._consolidated_tax_payment
+psc_table_consolidated['cnsltd_ctr_net_share'] = psc1._consolidated_ctr_net_share
+psc_table_consolidated['cnsltd_contractor_take'] = psc1._consolidated_contractor_take
+psc_table_consolidated['cnsltd_government_take'] = psc1._consolidated_government_take
+psc_table_consolidated['cnsltd_cashflow'] = psc1._consolidated_cashflow
+psc_table_consolidated['cum. cnsltd_cashflow'] = np.cumsum(psc1._consolidated_cashflow)
+psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
+print(psc_table_consolidated, '\n')
 
 """
 Gross Split
@@ -308,7 +341,8 @@ psc2 = GrossSplit(
 
 print('------------------------------------------ Gross Split ------------------------------------------')
 start_time = time.time()
-psc2.run(tax_rate=0.40)
+argument_contract2 = {'tax_rate':0.40}
+psc2.run(**argument_contract2)
 end_time = time.time()
 print('Execution Time: ', end_time - start_time, '\n')
 
@@ -317,33 +351,33 @@ psc2_table_oil['Years'] = psc2.project_years
 psc2_table_oil['Lifting'] = psc2._oil_lifting.lifting_rate
 psc2_table_oil['Price'] = psc2._oil_lifting.lifting_price_arr()
 psc2_table_oil['Revenue'] = psc2._oil_revenue
-psc2_table_oil['Base Split'] = psc2._oil_base_split
-psc2_table_oil['Variable Split'] = psc2._var_split_array
-psc2_table_oil['Progressive Split'] = psc2._oil_prog_split
-psc2_table_oil['Contractor Split'] = psc2._oil_ctr_split
-psc2_table_oil['Government Share'] = psc2._oil_gov_share
-psc2_table_oil['Contractor Share'] = psc2._oil_ctr_share_before_transfer
+psc2_table_oil['BaseSplit'] = psc2._oil_base_split
+psc2_table_oil['VariableSplit'] = psc2._var_split_array
+psc2_table_oil['ProgressiveSplit'] = psc2._oil_prog_split
+psc2_table_oil['ContractorSplit'] = psc2._oil_ctr_split
+psc2_table_oil['GovernmentShare'] = psc2._oil_gov_share
+psc2_table_oil['ContractorShare'] = psc2._oil_ctr_share_before_transfer
 psc2_table_oil['Depreciation'] = psc2._oil_depreciation
 psc2_table_oil['Opex'] = psc2._oil_opex.expenditures()
 psc2_table_oil['ASR'] = psc2._oil_asr.expenditures()
-psc2_table_oil['Non Capital'] = psc2._oil_non_capital
-psc2_table_oil['Total Expenses'] = psc2._oil_total_expenses
-psc2_table_oil['Cost To Be Deducted'] = psc2._oil_cost_tobe_deducted
-psc2_table_oil['Carry Forward Cost'] = psc2._oil_carward_deduct_cost
-psc2_table_oil['Deductible Cost'] = psc2._oil_deductible_cost
-psc2_table_oil['Transfer To Oil'] = psc2._transfer_to_oil
-psc2_table_oil['Transfer To Gas'] = psc2._transfer_to_gas
-psc2_table_oil['Carry Forward Cost after TF'] = psc2._oil_carward_cost_aftertf
-psc2_table_oil['CTR Share After TF'] = psc2._oil_ctr_share_after_transfer
-psc2_table_oil['CTR Net Operating Profit'] = psc2._oil_net_operating_profit
-psc2_table_oil['DMO Volume'] = psc2._oil_dmo_volume
-psc2_table_oil['DMO Fee'] = psc2._oil_dmo_fee
+psc2_table_oil['NonCapital'] = psc2._oil_non_capital
+psc2_table_oil['TotalExpenses'] = psc2._oil_total_expenses
+psc2_table_oil['CostToBeDeducted'] = psc2._oil_cost_tobe_deducted
+psc2_table_oil['CarryForwardCost'] = psc2._oil_carward_deduct_cost
+psc2_table_oil['DeductibleCost'] = psc2._oil_deductible_cost
+psc2_table_oil['TransferToOil'] = psc2._transfer_to_oil
+psc2_table_oil['TransferToGas'] = psc2._transfer_to_gas
+psc2_table_oil['CarryForwardCostafterTF'] = psc2._oil_carward_cost_aftertf
+psc2_table_oil['CTRShareAfterTF'] = psc2._oil_ctr_share_after_transfer
+psc2_table_oil['CTRNetOperatingProfit'] = psc2._oil_net_operating_profit
+psc2_table_oil['DMOVolume'] = psc2._oil_dmo_volume
+psc2_table_oil['DMOFee'] = psc2._oil_dmo_fee
 psc2_table_oil['DDMO'] = psc2._oil_ddmo
-psc2_table_oil['Taxable Income'] = psc2._oil_taxable_income
+psc2_table_oil['TaxableIncome'] = psc2._oil_taxable_income
 psc2_table_oil['Tax'] = psc2._oil_tax
-psc2_table_oil['Net CTR Share'] = psc2._oil_ctr_net_share
-psc2_table_oil['CTR CashFlow'] = psc2._oil_ctr_cashflow
-psc2_table_oil['Government Take'] = psc2._oil_government_take
+psc2_table_oil['NetCTRShare'] = psc2._oil_ctr_net_share
+psc2_table_oil['CTRCashFlow'] = psc2._oil_ctr_cashflow
+psc2_table_oil['GovernmentTake'] = psc2._oil_government_take
 psc2_table_oil.loc['Column_Total'] = psc2_table_oil.sum(numeric_only=True, axis=0)
 print(psc2_table_oil, '\n')
 
@@ -352,39 +386,39 @@ psc2_table_gas['Years'] = psc2.project_years
 psc2_table_gas['Lifting'] = psc2._gas_lifting.lifting_rate
 psc2_table_gas['Price'] = psc2._gas_lifting.lifting_price_arr()
 psc2_table_gas['Revenue'] = psc2._gas_revenue
-psc2_table_gas['Base Split'] = psc2._gas_base_split
-psc2_table_gas['Variable Split'] = psc2._var_split_array
-psc2_table_gas['Progressive Split'] = psc2._gas_prog_split
-psc2_table_gas['Contractor Split'] = psc2._gas_ctr_split
-psc2_table_gas['Government Share'] = psc2._gas_gov_share
-psc2_table_gas['Contractor Share'] = psc2._gas_ctr_share_before_transfer
+psc2_table_gas['BaseSplit'] = psc2._gas_base_split
+psc2_table_gas['VariableSplit'] = psc2._var_split_array
+psc2_table_gas['ProgressiveSplit'] = psc2._gas_prog_split
+psc2_table_gas['ContractorSplit'] = psc2._gas_ctr_split
+psc2_table_gas['GovernmentShare'] = psc2._gas_gov_share
+psc2_table_gas['ContractorShare'] = psc2._gas_ctr_share_before_transfer
 psc2_table_gas['Depreciation'] = psc2._gas_depreciation
 psc2_table_gas['Opex'] = psc2._gas_opex.expenditures()
 psc2_table_gas['ASR'] = psc2._gas_asr.expenditures()
 psc2_table_gas['Non Capital'] = psc2._gas_non_capital
-psc2_table_gas['Total Expenses'] = psc2._gas_total_expenses
-psc2_table_gas['Cost To Be Deducted'] = psc2._gas_cost_tobe_deducted
-psc2_table_gas['Carry Forward Cost'] = psc2._gas_carward_deduct_cost
-psc2_table_gas['Deductible Cost'] = psc2._gas_deductible_cost
-psc2_table_gas['Transfer To Oil'] = psc2._transfer_to_oil
-psc2_table_gas['Transfer To Gas'] = psc2._transfer_to_gas
-psc2_table_gas['Carry Forward Cost after TF'] = psc2._gas_carward_cost_aftertf
-psc2_table_gas['CTR Share After TF'] = psc2._gas_ctr_share_after_transfer
-psc2_table_gas['CTR Net Operating Profit'] = psc2._gas_net_operating_profit
-psc2_table_gas['DMO Volume'] = psc2._gas_dmo_volume
-psc2_table_gas['DMO Fee'] = psc2._gas_dmo_fee
+psc2_table_gas['TotalExpenses'] = psc2._gas_total_expenses
+psc2_table_gas['CostToBeDeducted'] = psc2._gas_cost_tobe_deducted
+psc2_table_gas['CarryForwardCost'] = psc2._gas_carward_deduct_cost
+psc2_table_gas['DeductibleCost'] = psc2._gas_deductible_cost
+psc2_table_gas['TransferToOil'] = psc2._transfer_to_oil
+psc2_table_gas['TransferToGas'] = psc2._transfer_to_gas
+psc2_table_gas['CarryForwardCostafterTF'] = psc2._gas_carward_cost_aftertf
+psc2_table_gas['CTRShareAfterTF'] = psc2._gas_ctr_share_after_transfer
+psc2_table_gas['CTRNetOperatingProfit'] = psc2._gas_net_operating_profit
+psc2_table_gas['DMOVolume'] = psc2._gas_dmo_volume
+psc2_table_gas['DMOFee'] = psc2._gas_dmo_fee
 psc2_table_gas['DDMO'] = psc2._gas_ddmo
-psc2_table_gas['Taxable Income'] = psc2._gas_taxable_income
+psc2_table_gas['TaxableIncome'] = psc2._gas_taxable_income
 psc2_table_gas['Tax'] = psc2._gas_tax
-psc2_table_gas['Net CTR Share'] = psc2._gas_ctr_net_share
-psc2_table_gas['CTR CashFlow'] = psc2._gas_ctr_cashflow
-psc2_table_gas['Government Take'] = psc2._gas_government_take
+psc2_table_gas['NetCTRShare'] = psc2._gas_ctr_net_share
+psc2_table_gas['CTRCashFlow'] = psc2._gas_ctr_cashflow
+psc2_table_gas['GovernmentTake'] = psc2._gas_government_take
 psc2_table_gas.loc['Column_Total'] = psc2_table_gas.sum(numeric_only=True, axis=0)
 print(psc2_table_gas, '\n')
 
 print('------------------------------------------ Transition ------------------------------------------')
 start_time = time.time()
-trans1, trans2 = transition.transition(contract1=psc1, contract2=psc2, tax_rate=0.4)
+trans1, trans2 = transition.transition(contract1=psc1, contract2=psc2, argument_contract1=argument_contract1, argument_contract2=argument_contract2)
 end_time = time.time()
 print('Execution Time: ', end_time - start_time, '\n')
 

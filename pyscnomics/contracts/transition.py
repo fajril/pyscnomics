@@ -108,7 +108,7 @@ def parse_dataclass(contract):
 
 def transition(contract1: CostRecovery | GrossSplit,
                contract2: CostRecovery | GrossSplit,
-               tax_rate: float = 0.4):
+               argument_contract1: dict, argument_contract2: dict):
     # Defining the proportional of the day of the year
     days_in_year = 365 + calendar.isleap(int(contract2.start_date.year))
     dty = (contract2.start_date - date(contract2.start_date.year, 1, 1)).days / days_in_year
@@ -296,8 +296,8 @@ def transition(contract1: CostRecovery | GrossSplit,
     contract2_new = parse_dataclass(contract=contract2)
 
     # Executing the new contract
-    contract1_new.run()
-    contract2_new.run()
+    contract1_new.run(**argument_contract1)
+    contract2_new.run(**argument_contract2)
 
     # Defining the unrecoverable cost from the prior contract
     latest_unrec = contract1_new._consolidated_unrecovered_after_transfer[-1]
@@ -323,15 +323,25 @@ def transition(contract1: CostRecovery | GrossSplit,
         cost_to_be_recovered=cost_to_be_recovered_trans,
         cr_cap_rate=1.0)
 
-    # Calculate taxable income
+    # Calculate taxable income after considering transferred unrecoverable cost from contract1
     taxable_income_trans = CostRecovery._get_ets_before_transfer(revenue=contract2_new._consolidated_taxable_income,
                                                                  ftp_ctr=np.zeros_like(contract2_new.project_years, dtype=float),
                                                                  ftp_gov=np.zeros_like(contract2_new.project_years, dtype=float),
                                                                  ic=np.zeros_like(contract2_new.project_years, dtype=float),
                                                                  cost_recovery=cost_recovery_trans)
 
-    tax_payment_transition = taxable_income_trans * tax_rate
+    # Calculate tax payment of adjusted taxable income
+    tax_payment_transition = taxable_income_trans * contract2_new._tax_rate_arr
 
+    # Calculate new ctr net share
+    contract2_new._consolidated_ctr_net_share = taxable_income_trans - tax_payment_transition
+
+    # Calculate new cashflow of contract2
+    contract2_new._consolidated_cashflow = (contract2_new._consolidated_cashflow +
+                                            contract2_new._consolidated_tax_payment -
+                                            tax_payment_transition
+                                            )
+    contract2_new._consolidated_tax_payment = tax_payment_transition
 
     return contract1_new, contract2_new
 
