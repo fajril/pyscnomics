@@ -37,7 +37,7 @@ psc.gas_dmo_holiday_duration = 60
 tax_rate = 0.424
 
 start_time = time.time()
-psc.run(tax_rate=tax_rate, discount_rate_year=2021, discount_rate=0.1)
+psc.run(tax_rate=tax_rate, discount_rate_year=2021)
 end_time = time.time()
 print('Execution Time: ', end_time - start_time, '\n')
 

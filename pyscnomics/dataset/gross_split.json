@@ -9,7 +9,6 @@
   "prod_stage":"Secondary",
   "co2_content":"<5",
   "h2s_content":"<100",
-  "ctr_effective_tax_rate": 0.22,
   "base_split_ctr_oil":0.43,
   "base_split_ctr_gas":0.48,
   "split_ministry_disc": 0.08,

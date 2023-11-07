@@ -402,9 +402,9 @@ class CostRecovery(BaseProject):
         return ftp_tax_payment
 
     @staticmethod
-    def _get_tax_payment(ctr_share,
-                         taxable_income,
-                         tax_rate,
+    def _get_tax_payment(ctr_share: np.ndarray,
+                         taxable_income: np.ndarray,
+                         tax_rate: np.ndarray,
                          ftp_tax_regime: FTPTaxRegime = FTPTaxRegime.PDJP_20_2017):
         applied_tax = np.where(ctr_share > 0, 1, 0)
         if ftp_tax_regime == FTPTaxRegime.PDJP_20_2017:
@@ -448,12 +448,10 @@ class CostRecovery(BaseProject):
 
     def run(self,
             is_dmo_end_weighted: bool = False,
-            ctr_tax: float | np.ndarray = None,
             tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
-            tax_rate: float = 0.44,
+            tax_rate: float | np.ndarray | None = None,
             ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
-            discount_rate_year: int = None,
-            discount_rate: float = 0.1,
+            discount_rate_year: int = None
             ):
 
         if discount_rate_year is None:
@@ -711,6 +709,14 @@ class CostRecovery(BaseProject):
         )
 
         # Tax Payment
+        # Generating Tax array if tax_rate argument is a single value not array
+        if tax_rate is float:
+            tax_rate = np.full_like(self.project_years, tax_rate, dtype=float)
+
+        # Generating Tax array based on the tax regime if tax_rate argument is None
+        if tax_rate is None:
+            tax_rate = self._get_tax_by_regime(tax_regime=tax_regime)
+
         self._oil_tax_payment = self._get_tax_payment(ctr_share=self._oil_contractor_share,
                                                       taxable_income=self._oil_taxable_income,
                                                       tax_rate=tax_rate,

@@ -6,7 +6,7 @@ import numpy as np
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
-from pyscnomics.econ.selection import FluidType, GrossSplitRegime, DiscountingMode
+from pyscnomics.econ.selection import FluidType, GrossSplitRegime, TaxRegime
 from pyscnomics.econ import indicator
 from pyscnomics.econ.results import CashFlow
 
@@ -35,8 +35,6 @@ class GrossSplit(BaseProject):
     prod_stage: str = field(default='Secondary')
     co2_content: str = field(default='<5')
     h2s_content: str = field(default='<100')
-
-    ctr_effective_tax_rate: float = field(default=0.22)
 
     base_split_ctr_oil: float = field(default=0.43)
     base_split_ctr_gas: float = field(default=0.48)
@@ -418,8 +416,9 @@ class GrossSplit(BaseProject):
     def run(self,
             is_dmo_end_weighted=False,
             regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
+            tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
+            tax_rate: float | np.ndarray = 0.22,
             discount_rate_year: int | None = None,
-            discounting_mode: DiscountingMode = DiscountingMode.HALF_YEAR
             ):
 
         if discount_rate_year is None:
@@ -592,11 +591,17 @@ class GrossSplit(BaseProject):
         self._oil_taxable_income = self._oil_net_operating_profit - self._oil_ddmo
         self._gas_taxable_income = self._gas_net_operating_profit - self._gas_ddmo
 
-        # Tax
-        self._oil_tax = self._oil_taxable_income * np.full_like(self.project_years, self.ctr_effective_tax_rate,
-                                                                dtype=float)
-        self._gas_tax = self._gas_taxable_income * np.full_like(self.project_years, self.ctr_effective_tax_rate,
-                                                                dtype=float)
+        # Tax Payment
+        # Generating Tax array if tax_rate argument is a single value not array
+        if tax_rate is float:
+            tax_rate = np.full_like(self.project_years, tax_rate, dtype=float)
+
+        # Generating Tax array based on the tax regime if tax_rate argument is None
+        if tax_rate is None:
+            tax_rate = self._get_tax_by_regime(tax_regime=tax_regime)
+
+        self._oil_tax = self._oil_taxable_income * tax_rate
+        self._gas_tax = self._gas_taxable_income * tax_rate
 
         # Contractor Net Share
         self._oil_ctr_net_share = self._oil_taxable_income - self._oil_tax
