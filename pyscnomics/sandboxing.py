@@ -19,7 +19,7 @@ from pyscnomics.tools.helper import summarizer
 
 '----------------------------------------------- LIFTING DATA ----------------------------------------------'
 
-oil_mangga_lifting = Lifting(
+oil_lifting_mangga = Lifting(
     start_year=2023,
     end_year=2030,
     lifting_rate=np.array([100, 100, 100]),
@@ -28,7 +28,7 @@ oil_mangga_lifting = Lifting(
     fluid_type=FluidType.OIL,
 )
 
-oil_apel_lifting = Lifting(
+oil_lifting_apel = Lifting(
     start_year=2023,
     end_year=2030,
     lifting_rate=np.array([100, 100, 100]),
@@ -37,7 +37,7 @@ oil_apel_lifting = Lifting(
     fluid_type=FluidType.OIL,
 )
 
-gas_mangga_lifting = Lifting(
+gas_lifting_mangga = Lifting(
     start_year=2023,
     end_year=2030,
     lifting_rate=np.array([10, 10, 10]),
@@ -47,7 +47,7 @@ gas_mangga_lifting = Lifting(
     fluid_type=FluidType.GAS,
 )
 
-gas_apel_lifting = Lifting(
+gas_lifting_apel = Lifting(
     start_year=2023,
     end_year=2030,
     lifting_rate=np.array([10, 10, 10]),
@@ -57,7 +57,7 @@ gas_apel_lifting = Lifting(
     fluid_type=FluidType.GAS,
 )
 
-sulfur_mangga_lifting = Lifting(
+sulfur_lifting_mangga = Lifting(
     start_year=2023,
     end_year=2030,
     lifting_rate=np.array([5, 5, 5]),
@@ -67,7 +67,7 @@ sulfur_mangga_lifting = Lifting(
     fluid_type=FluidType.SULFUR,
 )
 
-sulfur_apel_lifting = Lifting(
+sulfur_lifting_apel = Lifting(
     start_year=2023,
     end_year=2030,
     lifting_rate=np.array([5, 5, 5]),
@@ -128,7 +128,7 @@ opex_mangga = OPEX(
     end_year=2030,
     fixed_cost=np.array([100, 100, 100, 100]),
     expense_year=np.array([2023, 2024, 2025, 2026]),
-    cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+    cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
 )
 
 opex_apel = OPEX(
@@ -141,21 +141,21 @@ opex_apel = OPEX(
 
 '---------------------------------------------- ASR COST DATA ----------------------------------------------'
 
-# asr_mangga = ASR(
-#     start_year=2023,
-#     end_year=2030,
-#     cost=np.array([100, 100]),
-#     expense_year=np.array([2026, 2027]),
-#     cost_allocation=[FluidType.OIL, FluidType.OIL],
-# )
-#
-# asr_apel = ASR(
-#     start_year=2023,
-#     end_year=2030,
-#     cost=np.array([50, 50]),
-#     expense_year=np.array([2026, 2027]),
-#     cost_allocation=[FluidType.GAS, FluidType.GAS],
-# )
+asr_mangga = ASR(
+    start_year=2023,
+    end_year=2030,
+    cost=np.array([100, 100]),
+    expense_year=np.array([2026, 2027]),
+    cost_allocation=[FluidType.OIL, FluidType.OIL],
+)
+
+asr_apel = ASR(
+    start_year=2023,
+    end_year=2030,
+    cost=np.array([50, 50]),
+    expense_year=np.array([2026, 2027]),
+    cost_allocation=[FluidType.GAS, FluidType.GAS],
+)
 
 '------------------------------------------------- CASHFLOW ------------------------------------------------'
 
@@ -183,40 +183,55 @@ oil_nanas_cashflow = CashFlow(
     cash_allocation=FluidType.OIL
 )
 
-'------------------------------------------------- EXECUTE -------------------------------------------------'
+'---------------------------------------------- BASE PROJECT -----------------------------------------------'
 
-# lifting = (
-#     oil_mangga_lifting,
-#     oil_apel_lifting,
-#     gas_mangga_lifting,
-#     gas_apel_lifting,
-#     sulfur_mangga_lifting,
-#     sulfur_apel_lifting,
-# )
-#
-# tangible_cost = (
-#     oil_mangga1_tangible,
-#     oil_apel1_tangible,
-#     oil_apel2_tangible,
-#     gas_mangga1_tangible,
-#     gas_mangga2_tangible,
-#     oil_mangga2_tangible,
-#     oil_nanas1_tangible,
-#     sulfur_mangga1_tangible,
-#     sulfur_mangga2_tangible
-# )
-
-asr_mangga = ASR(
-    start_year=2023,
-    end_year=2030,
-    cost=np.array([100, 100, 100]),
-    expense_year=np.array([2026, 2027, 2028]),
-    cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
-    lbt_portion=np.array([0.8, 0.8, 0.8]),
-    # vat_discount=[0.2, 0.2, 0.2, 0.2],
+lifting_data = (
+    oil_lifting_mangga,
+    oil_lifting_apel,
+    gas_lifting_mangga,
+    gas_lifting_apel,
+    # sulfur_lifting_mangga,
+    # sulfur_lifting_apel,
 )
 
-t1 = asr_mangga.proportion()
+tangible_cost_data = (
+    tangible_mangga,
+    tangible_apel,
+)
+
+intangible_cost_data = (
+    intangible_mangga,
+    intangible_apel,
+)
+
+opex_data = (
+    opex_mangga,
+    opex_apel,
+)
+
+asr_cost_data = (
+    asr_mangga,
+    asr_apel,
+)
+
+'------------------------------------------------- EXECUTE -------------------------------------------------'
+
+case = BaseProject(
+    start_date=date(2023, 1, 1),
+    end_date=date(2030, 12, 31),
+    lifting=lifting_data,
+    tangible_cost=tangible_cost_data,
+    intangible_cost=intangible_cost_data,
+    opex=opex_data,
+    asr_cost=asr_cost_data,
+)
+
+# print('\t')
+# print(f'Filetype: {type(case.tangible_cost)}')
+# print(f'Length: {len(case.tangible_cost)}')
+# print('tangible_cost = \n', case.tangible_cost)
+
+t1 = case._get_oil_asr()
 
 print('\t')
 print(f'Filetype: {type(t1)}')
@@ -227,29 +242,3 @@ print('t1 = ', t1)
 # print(f'Filetype: {type(t2)}')
 # print(f'Length: {len(t2)}')
 # print('t2 = ', t2)
-
-# get_gas_tangible = case._get_gas_tangible()
-#
-# print('\t')
-# print(f'Filetype: {type(get_gas_tangible)}')
-# print(f'Length: {len(get_gas_tangible)}')
-# print('get_gas_tangible = \n', get_gas_tangible)
-#
-# get_sulfur_tangible = case._get_sulfur_tangible()
-#
-# print('\t')
-# print(f'Filetype: {type(get_sulfur_tangible)}')
-# print(f'Length: {len(get_sulfur_tangible)}')
-# print('get_sulfur_tangible = \n', get_sulfur_tangible)
-
-# add = np.zeros(8)
-# for i in range(len(get_oil_tangible)):
-#     add = add + get_oil_tangible[i].expenditures(
-#         lbt_discount=0.5
-#     )
-#
-# print('\t')
-# print(f'Length: {len(add)}')
-# print('add = ', add)
-
-

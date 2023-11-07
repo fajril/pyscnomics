@@ -62,9 +62,15 @@ class BaseProject:
     asr_cost: tuple[ASR] = field(default=None)
     is_ic_applied: bool = field(default=False)
 
-    # Attributes to be defined later
+    # Attributes associated with project duration
     project_duration: int = field(default=None, init=False, repr=False)
     project_years: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes associated with total cost per component
+    tangible_cost_total: Tangible = field(default=None, init=False, repr=False)
+    intangible_cost_total: Intangible = field(default=None, init=False, repr=False)
+    opex_total: OPEX = field(default=None, init=False, repr=False)
+    asr_cost_total: ASR = field(default=None, init=False, repr=False)
 
     # Private attributes (associated with lifting)
     _oil_lifting: Lifting = field(default=None, init=False, repr=False)
@@ -91,17 +97,15 @@ class BaseProject:
     _oil_asr: tuple[ASR] = field(default=None, init=False, repr=False)
     _gas_asr: tuple[ASR] = field(default=None, init=False, repr=False)
 
-    _oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_undepreciated_asset: float = field(default=None, init=False, repr=False)
-    _gas_undepreciated_asset: float = field(default=None, init=False, repr=False)
-    _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
-
+    # Private attributes (associated with expenditures)
     _oil_tangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     _gas_tangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_intangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_intangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_intangible_expenditures: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _gas_intangible_expenditures: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
     _oil_opex_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     _gas_opex_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     _oil_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
@@ -109,11 +113,21 @@ class BaseProject:
     _oil_total_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     _gas_total_expenditures: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Private attributes (associated with depreciable assets)
+    _oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_undepreciated_asset: float = field(default=None, init=False, repr=False)
+    _gas_undepreciated_asset: float = field(default=None, init=False, repr=False)
+
+    # Private attributes (associated with undepreciable assets)
+    _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Private attributes (associated with BaseProject cashflow)
     _oil_base_cashflow: CashFlow = field(default=None, init=False, repr=False)
     _gas_base_cashflow: CashFlow = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
-
         # Specify project duration and project years, raise error for inappropriate start date
         if self.start_date <= self.end_date:
             self.project_duration = self.end_date.year - self.start_date.year + 1
@@ -146,6 +160,30 @@ class BaseProject:
                     prod_year=self.project_years,
                     fluid_type=FluidType.GAS,
                 ),
+                Lifting(
+                    start_year=self.start_date.year,
+                    end_year=self.end_date.year,
+                    lifting_rate=np.zeros(self.project_duration),
+                    price=np.zeros(self.project_duration),
+                    prod_year=self.project_years,
+                    fluid_type=FluidType.SULFUR,
+                ),
+                Lifting(
+                    start_year=self.start_date.year,
+                    end_year=self.end_date.year,
+                    lifting_rate=np.zeros(self.project_duration),
+                    price=np.zeros(self.project_duration),
+                    prod_year=self.project_years,
+                    fluid_type=FluidType.ELECTRICITY,
+                ),
+                Lifting(
+                    start_year=self.start_date.year,
+                    end_year=self.end_date.year,
+                    lifting_rate=np.zeros(self.project_duration),
+                    price=np.zeros(self.project_duration),
+                    prod_year=self.project_years,
+                    fluid_type=FluidType.CO2,
+                )
             )
 
         # User does not provide tangible_cost data (both OIL and GAS)
@@ -156,15 +194,15 @@ class BaseProject:
                     end_year=self.end_date.year,
                     cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
-                    cost_allocation=FluidType.OIL,
+                    cost_allocation=[FluidType.OIL],
                 ),
                 Tangible(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
                     cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
-                    cost_allocation=FluidType.GAS,
-                ),
+                    cost_allocation=[FluidType.GAS],
+                )
             )
 
         # User does not provide intangible_cost data (both OIL and GAS)
@@ -175,14 +213,14 @@ class BaseProject:
                     end_year=self.end_date.year,
                     cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
-                    cost_allocation=FluidType.OIL,
+                    cost_allocation=[FluidType.OIL],
                 ),
                 Intangible(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
                     cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
-                    cost_allocation=FluidType.GAS,
+                    cost_allocation=[FluidType.GAS],
                 ),
             )
 
@@ -194,14 +232,14 @@ class BaseProject:
                     end_year=self.end_date.year,
                     fixed_cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
-                    cost_allocation=FluidType.OIL,
+                    cost_allocation=[FluidType.OIL],
                 ),
                 OPEX(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
                     fixed_cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
-                    cost_allocation=FluidType.GAS,
+                    cost_allocation=[FluidType.GAS],
                 ),
             )
 
@@ -213,16 +251,22 @@ class BaseProject:
                     end_year=self.end_date.year,
                     cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
-                    cost_allocation=FluidType.OIL,
+                    cost_allocation=[FluidType.OIL],
                 ),
                 ASR(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
                     cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
-                    cost_allocation=FluidType.GAS,
+                    cost_allocation=[FluidType.GAS],
                 ),
             )
+
+        # Fill in the total cost per component
+        self.tangible_cost_total = reduce(lambda x, y: x + y, self.tangible_cost)
+        self.intangible_cost_total = reduce(lambda x, y: x + y, self.intangible_cost)
+        self.opex_total = reduce(lambda x, y: x + y, self.opex)
+        self.asr_cost_total = reduce(lambda x, y: x + y, self.asr_cost)
 
         # Specify lifting data
         self._oil_lifting = self._get_oil_lifting()
@@ -237,28 +281,30 @@ class BaseProject:
         self._sulfur_revenue = self._get_sulfur_lifting().revenue()
         self._electricity_revenue = self._get_electricity_lifting().revenue()
         self._co2_revenue = self._get_co2_lifting().revenue()
-        self._other_revenue = self._sulfur_revenue + self._electricity_revenue + self._co2_revenue
+        self._other_revenue = (
+            self._sulfur_revenue + self._electricity_revenue + self._co2_revenue
+        )
 
-        # Specify cost data
-        self._oil_tangible = self._get_oil_tangible()
-        self._gas_tangible = self._get_gas_tangible()
-        self._oil_intangible = self._get_oil_intangible()
-        self._gas_intangible = self._get_gas_intangible()
-        self._oil_opex = self._get_oil_opex()
-        self._gas_opex = self._get_gas_opex()
-        self._oil_asr = self._get_oil_asr()
-        self._gas_asr = self._get_gas_asr()
+        # # Specify cost data
+        # self._oil_tangible = self._get_oil_tangible()
+        # self._gas_tangible = self._get_gas_tangible()
+        # self._oil_intangible = self._get_oil_intangible()
+        # self._gas_intangible = self._get_gas_intangible()
+        # self._oil_opex = self._get_oil_opex()
+        # self._gas_opex = self._get_gas_opex()
+        # self._oil_asr = self._get_oil_asr()
+        # self._gas_asr = self._get_gas_asr()
 
         # Raise an exception error if the start year of the project is inconsistent
         if not all(
-                i == self.start_date.year
-                for i in [
-                    self._oil_lifting.start_year,
-                    self._gas_lifting.start_year,
-                    self._sulfur_lifting.start_year,
-                    self._electricity_lifting.start_year,
-                    self._co2_lifting.start_year,
-                ]
+            i == self.start_date.year
+            for i in [
+                self._oil_lifting.start_year,
+                self._gas_lifting.start_year,
+                self._sulfur_lifting.start_year,
+                self._electricity_lifting.start_year,
+                self._co2_lifting.start_year,
+            ]
         ):
             raise BaseProjectException(
                 f"Inconsistent start project data: "
@@ -270,114 +316,114 @@ class BaseProject:
                 f"CO2 lifting ({self._co2_lifting.start_year})"
             )
 
-        # Raise an exception error if the end year of the project is inconsistent
-        if not all(
-                i == self.end_date.year
-                for i in [
-                    self._oil_lifting.end_year,
-                    self._gas_lifting.end_year,
-                    self._sulfur_lifting.end_year,
-                    self._electricity_lifting.end_year,
-                    self._co2_lifting.end_year,
-                ]
-        ):
-            raise BaseProjectException(
-                f"Inconsistent end project data: "
-                f"Base project ({self.end_date.year}), "
-                f"Oil lifting ({self._oil_lifting.end_year}), "
-                f"Gas lifting ({self._gas_lifting.end_year}), "
-                f"Sulfur lifting ({self._sulfur_lifting.end_year}), "
-                f"Electricity lifting ({self._electricity_lifting.end_year}), "
-                f"CO2 lifting ({self._co2_lifting.end_year})"
-            )
-
-        # Configure oil_onstream_date: set default value and error message
-        oil_revenue_index = np.argwhere(self._oil_revenue > 0).ravel()
-
-        if len(oil_revenue_index) > 0:
-            if self.oil_onstream_date is not None:
-                if self.oil_onstream_date.year < self.start_date.year:
-                    raise BaseProjectException(
-                        f"Oil onstream year ({self.oil_onstream_date.year}) is before "
-                        f"the start project year ({self.start_date.year})"
-                    )
-
-                if self.oil_onstream_date.year > self.end_date.year:
-                    raise BaseProjectException(
-                        f"Oil onstream year ({self.oil_onstream_date.year}) is after "
-                        f"the end year of the project ({self.end_date.year})"
-                    )
-
-                oil_onstream_index = int(
-                    np.argwhere(
-                        self.oil_onstream_date.year == self.project_years
-                    ).ravel()
-                )
-
-                if oil_onstream_index != oil_revenue_index[0]:
-                    raise BaseProjectException(
-                        f"Oil onstream year ({self.oil_onstream_date.year}) is different from "
-                        f"the starting year of oil production ({self.project_years[oil_revenue_index[0]]})"
-                    )
-
-            else:
-                self.oil_onstream_date = date(
-                    year=self.project_years[oil_revenue_index[0]], month=1, day=1
-                )
-
-        else:
-            if self.oil_onstream_date is not None:
-                raise BaseProjectException(
-                    f"Oil onstream year is given ({self.oil_onstream_date.year}) "
-                    f"but oil lifting rate is missing or zero for the entire project duration"
-                )
-
-            else:
-                self.oil_onstream_date = self.end_date
-
-        # Configure gas_onstream_date: set default value and error message
-        gas_revenue_index = np.argwhere(self._gas_revenue > 0).ravel()
-
-        if len(gas_revenue_index) > 0:
-            if self.gas_onstream_date is not None:
-                if self.gas_onstream_date.year < self.start_date.year:
-                    raise BaseProjectException(
-                        f"Gas onstream year ({self.gas_onstream_date.year}) is before "
-                        f"the start project year ({self.start_date.year})"
-                    )
-
-                if self.gas_onstream_date.year > self.end_date.year:
-                    raise BaseProjectException(
-                        f"Gas onstream year ({self.gas_onstream_date.year}) is after "
-                        f"the end year of the project ({self.end_date.year})"
-                    )
-
-                gas_onstream_index = int(
-                    np.argwhere(
-                        self.gas_onstream_date.year == self.project_years
-                    ).ravel()
-                )
-
-                if gas_onstream_index != gas_revenue_index[0]:
-                    raise BaseProjectException(
-                        f"Gas onstream year ({self.gas_onstream_date.year}) is different from "
-                        f"the starting year of gas production ({self.project_years[gas_revenue_index[0]]})"
-                    )
-
-            else:
-                self.gas_onstream_date = date(
-                    year=self.project_years[gas_revenue_index[0]], month=1, day=1
-                )
-
-        else:
-            if self.gas_onstream_date is not None:
-                raise BaseProjectException(
-                    f"Gas onstream year is given ({self.gas_onstream_date.year}) "
-                    f"but gas lifting rate is missing or zero for the entire project duration"
-                )
-
-            else:
-                self.gas_onstream_date = self.end_date
+        # # Raise an exception error if the end year of the project is inconsistent
+        # if not all(
+        #     i == self.end_date.year
+        #     for i in [
+        #         self._oil_lifting.end_year,
+        #         self._gas_lifting.end_year,
+        #         self._sulfur_lifting.end_year,
+        #         self._electricity_lifting.end_year,
+        #         self._co2_lifting.end_year,
+        #     ]
+        # ):
+        #     raise BaseProjectException(
+        #         f"Inconsistent end project data: "
+        #         f"Base project ({self.end_date.year}), "
+        #         f"Oil lifting ({self._oil_lifting.end_year}), "
+        #         f"Gas lifting ({self._gas_lifting.end_year}), "
+        #         f"Sulfur lifting ({self._sulfur_lifting.end_year}), "
+        #         f"Electricity lifting ({self._electricity_lifting.end_year}), "
+        #         f"CO2 lifting ({self._co2_lifting.end_year})"
+        #     )
+        #
+        # # Configure oil_onstream_date: set default value and error message
+        # oil_revenue_index = np.argwhere(self._oil_revenue > 0).ravel()
+        #
+        # if len(oil_revenue_index) > 0:
+        #     if self.oil_onstream_date is not None:
+        #         if self.oil_onstream_date.year < self.start_date.year:
+        #             raise BaseProjectException(
+        #                 f"Oil onstream year ({self.oil_onstream_date.year}) is before "
+        #                 f"the start project year ({self.start_date.year})"
+        #             )
+        #
+        #         if self.oil_onstream_date.year > self.end_date.year:
+        #             raise BaseProjectException(
+        #                 f"Oil onstream year ({self.oil_onstream_date.year}) is after "
+        #                 f"the end year of the project ({self.end_date.year})"
+        #             )
+        #
+        #         oil_onstream_index = int(
+        #             np.argwhere(
+        #                 self.oil_onstream_date.year == self.project_years
+        #             ).ravel()
+        #         )
+        #
+        #         if oil_onstream_index != oil_revenue_index[0]:
+        #             raise BaseProjectException(
+        #                 f"Oil onstream year ({self.oil_onstream_date.year}) is different from "
+        #                 f"the starting year of oil production ({self.project_years[oil_revenue_index[0]]})"
+        #             )
+        #
+        #     else:
+        #         self.oil_onstream_date = date(
+        #             year=self.project_years[oil_revenue_index[0]], month=1, day=1
+        #         )
+        #
+        # else:
+        #     if self.oil_onstream_date is not None:
+        #         raise BaseProjectException(
+        #             f"Oil onstream year is given ({self.oil_onstream_date.year}) "
+        #             f"but oil lifting rate is missing or zero for the entire project duration"
+        #         )
+        #
+        #     else:
+        #         self.oil_onstream_date = self.end_date
+        #
+        # # Configure gas_onstream_date: set default value and error message
+        # gas_revenue_index = np.argwhere(self._gas_revenue > 0).ravel()
+        #
+        # if len(gas_revenue_index) > 0:
+        #     if self.gas_onstream_date is not None:
+        #         if self.gas_onstream_date.year < self.start_date.year:
+        #             raise BaseProjectException(
+        #                 f"Gas onstream year ({self.gas_onstream_date.year}) is before "
+        #                 f"the start project year ({self.start_date.year})"
+        #             )
+        #
+        #         if self.gas_onstream_date.year > self.end_date.year:
+        #             raise BaseProjectException(
+        #                 f"Gas onstream year ({self.gas_onstream_date.year}) is after "
+        #                 f"the end year of the project ({self.end_date.year})"
+        #             )
+        #
+        #         gas_onstream_index = int(
+        #             np.argwhere(
+        #                 self.gas_onstream_date.year == self.project_years
+        #             ).ravel()
+        #         )
+        #
+        #         if gas_onstream_index != gas_revenue_index[0]:
+        #             raise BaseProjectException(
+        #                 f"Gas onstream year ({self.gas_onstream_date.year}) is different from "
+        #                 f"the starting year of gas production ({self.project_years[gas_revenue_index[0]]})"
+        #             )
+        #
+        #     else:
+        #         self.gas_onstream_date = date(
+        #             year=self.project_years[gas_revenue_index[0]], month=1, day=1
+        #         )
+        #
+        # else:
+        #     if self.gas_onstream_date is not None:
+        #         raise BaseProjectException(
+        #             f"Gas onstream year is given ({self.gas_onstream_date.year}) "
+        #             f"but gas lifting rate is missing or zero for the entire project duration"
+        #         )
+        #
+        #     else:
+        #         self.gas_onstream_date = self.end_date
 
     def _get_oil_lifting(self) -> Lifting:
         """
@@ -584,344 +630,444 @@ class BaseProject:
             (lft for lft in self.lifting if lft.fluid_type == FluidType.CO2),
         )
 
-    def _get_oil_tangible(self) -> tuple[Tangible]:
+    def _get_oil_tangible(self) -> Tangible:
         """
         Determines total oil Tangible from the number of oil Tangible instances in
-        attribute self.tangible_cost.
+        attribute self.tangible_cost_total.
 
         Returns
         -------
-        tuple
-            A tuple consisting instances of oil Tangible that has been added and
-            classified according to dunder method __add__() of Tangible class.
+        Tangible
+            An instance of Tangible that only includes FluidType.OIL as the associated
+            cost_allocation that has been combined altogether following the rules prescribed
+            in the dunder method __add__() of Tangible class.
 
         Notes
         -----
         The core operations are as follows:
-        (1) Check the attribute cost_allocation in attribute self.tangible_cost,
-        (2) If OIL is not available as an instance in attribute self.tangible_cost, then
-            establish a new instance of OIL Tangible with the following attribute set
+        (1) Check the attribute cost_allocation in attribute self.tangible_cost_total,
+        (2) If OIL is not available as an instance in attribute self.tangible_cost_total,
+            then establish a new instance of OIL Tangible with the following attribute set
             to zero: cost.
-        (3) Identify the OIL Tangible instances in self.tangible_cost where the
-            vat_portion and pdri_portion are equal. To do so, we employ a function
-            get_identifier from helper.py module.
-        (4) Add similar OIL Tangible instances obtained in (3), return the results as
-            a tuple of new OIL Tangible instances (following the rule prescribed in the
-            dunder method __add__() of class Tangible).
+        (3) Identify index location where cost_allocation is FluidType.OIL in attribute
+            self.tangible_cost_total,
+        (4) Create a new instance of Tangible with only FluidType.OIL as its cost_allocation.
         """
-
-        fluid_types = [cst.cost_allocation for cst in self.tangible_cost]
-
-        if FluidType.OIL not in fluid_types:
-            return tuple(
-                [
-                    Tangible(
-                        start_year=self.start_date.year,
-                        end_year=self.end_date.year,
-                        cost=np.array([0]),
-                        expense_year=np.array([self.start_date.year]),
-                        cost_allocation=FluidType.OIL,
-                    )
-                ]
+        if FluidType.OIL not in self.tangible_cost_total.cost_allocation:
+            return Tangible(
+                start_year=self.start_date.year,
+                end_year=self.end_date.year,
+                cost=np.array([0]),
+                expense_year=np.array([self.start_date.year]),
+                cost_allocation=[FluidType.OIL],
             )
 
-        add_identifier = get_identifier(
-            target_instances=self.tangible_cost, cost_alloc=FluidType.OIL
-        )
+        else:
+            oil_tangible_id = np.argwhere(
+                np.array(self.tangible_cost_total.cost_allocation) == FluidType.OIL
+            ).ravel()
 
-        return get_instances(
-            target_instances=self.tangible_cost, identifier=add_identifier
-        )
+            start_year = self.tangible_cost_total.start_year
+            end_year = self.tangible_cost_total.end_year
+            cost = self.tangible_cost_total.cost[oil_tangible_id]
+            expense_year = self.tangible_cost_total.expense_year[oil_tangible_id]
+            cost_allocation = np.array(self.tangible_cost_total.cost_allocation)[oil_tangible_id]
+            vat_portion = self.tangible_cost_total.vat_portion[oil_tangible_id]
+            vat_discount = self.tangible_cost_total.vat_discount[oil_tangible_id]
+            lbt_portion = self.tangible_cost_total.lbt_portion[oil_tangible_id]
+            lbt_discount = self.tangible_cost_total.lbt_discount[oil_tangible_id]
+            pis_year = self.tangible_cost_total.pis_year[oil_tangible_id]
+            salvage_value = self.tangible_cost_total.salvage_value[oil_tangible_id]
+            useful_life = self.tangible_cost_total.useful_life[oil_tangible_id]
+            depreciation_factor = self.tangible_cost_total.depreciation_factor[oil_tangible_id]
 
-    def _get_gas_tangible(self) -> tuple[Tangible]:
+            return Tangible(
+                start_year=start_year,
+                end_year=end_year,
+                cost=cost,
+                expense_year=expense_year,
+                cost_allocation=cost_allocation.tolist(),
+                vat_portion=vat_portion,
+                vat_discount=vat_discount,
+                lbt_portion=lbt_portion,
+                lbt_discount=lbt_discount,
+                pis_year=pis_year,
+                salvage_value=salvage_value,
+                useful_life=useful_life,
+                depreciation_factor=depreciation_factor,
+            )
+
+    def _get_gas_tangible(self) -> Tangible:
         """
         Determines total gas Tangible from the number of gas Tangible instances in
-        attribute self.tangible_cost.
+        attribute self.tangible_cost_total.
 
         Returns
         -------
-        tuple
-            A tuple consisting instances of gas Tangible that has been added and
-            classified according to dunder method __add__() of Tangible class.
+        Tangible
+            An instance of Tangible that only includes FluidType.GAS as the associated
+            cost_allocation that has been combined altogether following the rules prescribed
+            in the dunder method __add__() of Tangible class.
 
         Notes
         -----
         The core operations are as follows:
-        (1) Check the attribute cost_allocation in attribute self.tangible_cost,
-        (2) If GAS is not available as an instance in attribute self.tangible_cost, then
-            establish a new instance of GAS Tangible with the following attribute set
+        (1) Check the attribute cost_allocation in attribute self.tangible_cost_total,
+        (2) If GAS is not available as an instance in attribute self.tangible_cost_total,
+            then establish a new instance of GAS Tangible with the following attribute set
             to zero: cost.
-        (3) Identify the GAS Tangible instances in self.tangible_cost where the
-            vat_portion and pdri_portion are equal. To do so, we employ a function
-            get_identifier from helper.py module.
-        (4) Add similar GAS Tangible instances obtained in (3), return the results as
-            a tuple of new GAS Tangible instances (following the rule prescribed in the
-            dunder method __add__() of class Tangible).
+        (3) Identify index location where cost_allocation is FluidType.GAS in attribute
+            self.tangible_cost_total,
+        (4) Create a new instance of Tangible with only FluidType.GAS as its cost_allocation.
         """
-
-        fluid_types = [cst.cost_allocation for cst in self.tangible_cost]
-
-        if FluidType.GAS not in fluid_types:
-            return tuple(
-                [
-                    Tangible(
-                        start_year=self.start_date.year,
-                        end_year=self.end_date.year,
-                        cost=np.array([0]),
-                        expense_year=np.array([self.start_date.year]),
-                        cost_allocation=FluidType.GAS,
-                    )
-                ]
+        if FluidType.GAS not in self.tangible_cost_total.cost_allocation:
+            return Tangible(
+                start_year=self.start_date.year,
+                end_year=self.end_date.year,
+                cost=np.array([0]),
+                expense_year=np.array([self.start_date.year]),
+                cost_allocation=[FluidType.GAS],
             )
 
-        add_identifier = get_identifier(
-            target_instances=self.tangible_cost, cost_alloc=FluidType.GAS
-        )
+        else:
+            gas_tangible_id = np.argwhere(
+                np.array(self.tangible_cost_total.cost_allocation) == FluidType.GAS
+            ).ravel()
 
-        return get_instances(
-            target_instances=self.tangible_cost, identifier=add_identifier
-        )
+            start_year = self.tangible_cost_total.start_year
+            end_year = self.tangible_cost_total.end_year
+            cost = self.tangible_cost_total.cost[gas_tangible_id]
+            expense_year = self.tangible_cost_total.expense_year[gas_tangible_id]
+            cost_allocation = np.array(self.tangible_cost_total.cost_allocation)[gas_tangible_id]
+            vat_portion = self.tangible_cost_total.vat_portion[gas_tangible_id]
+            vat_discount = self.tangible_cost_total.vat_discount[gas_tangible_id]
+            lbt_portion = self.tangible_cost_total.lbt_portion[gas_tangible_id]
+            lbt_discount = self.tangible_cost_total.lbt_discount[gas_tangible_id]
+            pis_year = self.tangible_cost_total.pis_year[gas_tangible_id]
+            salvage_value = self.tangible_cost_total.salvage_value[gas_tangible_id]
+            useful_life = self.tangible_cost_total.useful_life[gas_tangible_id]
+            depreciation_factor = self.tangible_cost_total.depreciation_factor[gas_tangible_id]
 
-    def _get_oil_intangible(self) -> tuple[Intangible]:
+            return Tangible(
+                start_year=start_year,
+                end_year=end_year,
+                cost=cost,
+                expense_year=expense_year,
+                cost_allocation=cost_allocation.tolist(),
+                vat_portion=vat_portion,
+                vat_discount=vat_discount,
+                lbt_portion=lbt_portion,
+                lbt_discount=lbt_discount,
+                pis_year=pis_year,
+                salvage_value=salvage_value,
+                useful_life=useful_life,
+                depreciation_factor=depreciation_factor,
+            )
+
+    def _get_oil_intangible(self) -> Intangible:
         """
         Determines total oil Intangible from the number of oil Intangible instances in
-        attribute self.intangible_cost.
+        attribute self.intangible_cost_total.
 
         Returns
         -------
-        tuple
-            A tuple consisting instances of oil Intangible that has been added and
-            classified according to dunder method __add__() of Intangible class.
+        Intangible
+            An instance of Intangible that only includes FluidType.OIL as the associated
+            cost_allocation that has been combined altogether following the rules prescribed
+            in the dunder method __add__() of Intangible class.
 
         Notes
         -----
         The core operations are as follows:
-        (1) Check the attribute cost_allocation in attribute self.intangible_cost,
-        (2) If OIL is not available as an instance in attribute self.intangible_cost, then
-            establish a new instance of OIL Intangible with the following attribute set
+        (1) Check the attribute cost_allocation in attribute self.intangible_cost_total,
+        (2) If OIL is not available as an instance in attribute self.intangible_cost_total,
+            then establish a new instance of OIL Intangible with the following attribute set
             to zero: cost.
-        (3) Identify the OIL Intangible instances in self.intangible_cost where the
-            vat_portion and pdri_portion are equal. To do so, we employ a function
-            get_identifier from helper.py module.
-        (4) Add similar OIL Intangible instances obtained in (3), return the results as
-            a tuple of new OIL Intangible instances (following the rule prescribed in the
-            dunder method __add__() of class Intangible).
+        (3) Identify index location where cost_allocation is FluidType.OIL in attribute
+            self.intangible_cost_total,
+        (4) Create a new instance of Intangible with only FluidType.OIL as its cost_allocation.
         """
-
-        fluid_types = [cst.cost_allocation for cst in self.intangible_cost]
-
-        if FluidType.OIL not in fluid_types:
-            return tuple(
-                [
-                    Intangible(
-                        start_year=self.start_date.year,
-                        end_year=self.end_date.year,
-                        cost=np.array([0]),
-                        expense_year=np.array([self.start_date.year]),
-                        cost_allocation=FluidType.OIL,
-                    )
-                ]
+        if FluidType.OIL not in self.intangible_cost_total.cost_allocation:
+            return Intangible(
+                start_year=self.start_date.year,
+                end_year=self.end_date.year,
+                cost=np.array([0]),
+                expense_year=np.array([self.start_date.year]),
+                cost_allocation=[FluidType.OIL],
             )
 
-        add_identifier = get_identifier(
-            target_instances=self.intangible_cost, cost_alloc=FluidType.OIL
-        )
+        else:
+            oil_intangible_id = np.argwhere(
+                np.array(self.intangible_cost_total.cost_allocation) == FluidType.OIL
+            ).ravel()
 
-        return get_instances(
-            target_instances=self.intangible_cost, identifier=add_identifier
-        )
+            start_year = self.intangible_cost_total.start_year
+            end_year = self.intangible_cost_total.end_year
+            cost = self.intangible_cost_total.cost[oil_intangible_id]
+            expense_year = self.intangible_cost_total.expense_year[oil_intangible_id]
+            cost_allocation = np.array(self.intangible_cost_total.cost_allocation)[oil_intangible_id]
+            vat_portion = self.intangible_cost_total.vat_portion[oil_intangible_id]
+            vat_discount = self.intangible_cost_total.vat_discount[oil_intangible_id]
+            lbt_portion = self.intangible_cost_total.lbt_portion[oil_intangible_id]
+            lbt_discount = self.intangible_cost_total.lbt_discount[oil_intangible_id]
 
-    def _get_gas_intangible(self) -> tuple[Intangible]:
+            return Intangible(
+                start_year=start_year,
+                end_year=end_year,
+                cost=cost,
+                expense_year=expense_year,
+                cost_allocation=cost_allocation.tolist(),
+                vat_portion=vat_portion,
+                vat_discount=vat_discount,
+                lbt_portion=lbt_portion,
+                lbt_discount=lbt_discount,
+            )
+
+    def _get_gas_intangible(self) -> Intangible:
         """
         Determines total gas Intangible from the number of gas Intangible instances in
-        attribute self.intangible_cost.
+        attribute self.intangible_cost_total.
 
         Returns
         -------
-        tuple
-            A tuple consisting instances of gas Intangible that has been added and
-            classified according to dunder method __add__() of Intangible class.
+        Intangible
+            An instance of Intangible that only includes FluidType.GAS as the associated
+            cost_allocation that has been combined altogether following the rules prescribed
+            in the dunder method __add__() of Intangible class.
 
         Notes
         -----
         The core operations are as follows:
-        (1) Check the attribute cost_allocation in attribute self.intangible_cost,
-        (2) If GAS is not available as an instance in attribute self.intangible_cost, then
-            establish a new instance of GAS Intangible with the following attribute set
+        (1) Check the attribute cost_allocation in attribute self.intangible_cost_total,
+        (2) If GAS is not available as an instance in attribute self.intangible_cost_total,
+            then establish a new instance of GAS Intangible with the following attribute set
             to zero: cost.
-        (3) Identify the GAS Intangible instances in self.intangible_cost where the
-            vat_portion and pdri_portion are equal. To do so, we employ a function
-            get_identifier from helper.py module.
-        (4) Add similar GAS Intangible instances obtained in (3), return the results as
-            a tuple of new GAS Intangible instances (following the rule prescribed in the
-            dunder method __add__() of class Intangible).
+        (3) Identify index location where cost_allocation is FluidType.GAS in attribute
+            self.intangible_cost_total,
+        (4) Create a new instance of Intangible with only FluidType.GAS as its cost_allocation.
         """
-
-        fluid_types = [cst.cost_allocation for cst in self.intangible_cost]
-
-        if FluidType.GAS not in fluid_types:
-            return tuple(
-                [
-                    Intangible(
-                        start_year=self.start_date.year,
-                        end_year=self.end_date.year,
-                        cost=np.array([0]),
-                        expense_year=np.array([self.start_date.year]),
-                        cost_allocation=FluidType.GAS,
-                    )
-                ]
+        if FluidType.GAS not in self.intangible_cost_total.cost_allocation:
+            return Intangible(
+                start_year=self.start_date.year,
+                end_year=self.end_date.year,
+                cost=np.array([0]),
+                expense_year=np.array([self.start_date.year]),
+                cost_allocation=[FluidType.GAS],
             )
 
-        add_identifier = get_identifier(
-            target_instances=self.intangible_cost, cost_alloc=FluidType.GAS
-        )
+        else:
+            gas_intangible_id = np.argwhere(
+                np.array(self.intangible_cost_total.cost_allocation) == FluidType.GAS
+            ).ravel()
 
-        return get_instances(
-            target_instances=self.intangible_cost, identifier=add_identifier
-        )
+            start_year = self.intangible_cost_total.start_year
+            end_year = self.intangible_cost_total.end_year
+            cost = self.intangible_cost_total.cost[gas_intangible_id]
+            expense_year = self.intangible_cost_total.expense_year[gas_intangible_id]
+            cost_allocation = np.array(self.intangible_cost_total.cost_allocation)[gas_intangible_id]
+            vat_portion = self.intangible_cost_total.vat_portion[gas_intangible_id]
+            vat_discount = self.intangible_cost_total.vat_discount[gas_intangible_id]
+            lbt_portion = self.intangible_cost_total.lbt_portion[gas_intangible_id]
+            lbt_discount = self.intangible_cost_total.lbt_discount[gas_intangible_id]
 
-    def _get_oil_opex(self) -> tuple[OPEX]:
+            return Intangible(
+                start_year=start_year,
+                end_year=end_year,
+                cost=cost,
+                expense_year=expense_year,
+                cost_allocation=cost_allocation.tolist(),
+                vat_portion=vat_portion,
+                vat_discount=vat_discount,
+                lbt_portion=lbt_portion,
+                lbt_discount=lbt_discount,
+            )
+
+    def _get_oil_opex(self) -> OPEX:
         """
         Determines total oil OPEX from the number of oil OPEX instances in
-        attribute self.opex.
+        attribute self.opex_total.
 
         Returns
         -------
-        tuple
-            A tuple consisting instances of oil OPEX that has been added and
-            classified according to dunder method __add__() of OPEX class.
+        OPEX
+            An instance of OPEX that only includes FluidType.OIL as the associated
+            cost_allocation that has been combined altogether following the rules prescribed
+            in the dunder method __add__() of OPEX class.
 
         Notes
         -----
         The core operations are as follows:
-        (1) Check the attribute cost_allocation in attribute self.opex,
-        (2) If OIL is not available as an instance in attribute self.opex, then
-            establish a new instance of OIL OPEX with the following attribute set
+        (1) Check the attribute cost_allocation in attribute self.opex_total,
+        (2) If OIL is not available as an instance in attribute self.opex_total,
+            then establish a new instance of OIL OPEX with the following attribute set
             to zero: cost.
-        (3) Identify the OIL OPEX instances in self.opex where the vat_portion and
-            pdri_portion are equal. To do so, we employ a function get_identifier
-            from helper.py module.
-        (4) Add similar OIL OPEX instances obtained in (3), return the results as
-            a tuple of new OIL OPEX instances (following the rule prescribed in the
-            dunder method __add__() of class OPEX).
+        (3) Identify index location where cost_allocation is FluidType.OIL in attribute
+            self.opex_total,
+        (4) Create a new instance of OPEX with only FluidType.OIL as its cost_allocation.
         """
-
-        fluid_types = [cst.cost_allocation for cst in self.opex]
-
-        if FluidType.OIL not in fluid_types:
-            return tuple(
-                [
-                    OPEX(
-                        start_year=self.start_date.year,
-                        end_year=self.end_date.year,
-                        fixed_cost=np.array([0]),
-                        expense_year=np.array([self.start_date.year]),
-                        cost_allocation=FluidType.OIL,
-                    )
-                ]
+        if FluidType.OIL not in self.opex_total.cost_allocation:
+            return OPEX(
+                start_year=self.start_date.year,
+                end_year=self.end_date.year,
+                fixed_cost=np.array([0]),
+                expense_year=np.array([self.start_date.year]),
+                cost_allocation=[FluidType.OIL],
             )
 
-        add_identifier = get_identifier(
-            target_instances=self.opex, cost_alloc=FluidType.OIL
-        )
+        else:
+            oil_opex_id = np.argwhere(
+                np.array(self.opex_total.cost_allocation) == FluidType.OIL
+            ).ravel()
 
-        return get_instances(target_instances=self.opex, identifier=add_identifier)
+            start_year = self.opex_total.start_year
+            end_year = self.opex_total.end_year
+            expense_year = self.opex_total.expense_year[oil_opex_id]
+            cost_allocation = np.array(self.opex_total.cost_allocation)[oil_opex_id]
+            vat_portion = self.opex_total.vat_portion[oil_opex_id]
+            vat_discount = self.opex_total.vat_discount[oil_opex_id]
+            lbt_portion = self.opex_total.lbt_portion[oil_opex_id]
+            lbt_discount = self.opex_total.lbt_discount[oil_opex_id]
+            fixed_cost = self.opex_total.fixed_cost[oil_opex_id]
+            prod_rate = self.opex_total.prod_rate[oil_opex_id]
+            cost_per_volume = self.opex_total.cost_per_volume[oil_opex_id]
 
-    def _get_gas_opex(self) -> tuple[OPEX]:
+            return OPEX(
+                start_year=start_year,
+                end_year=end_year,
+                expense_year=expense_year,
+                cost_allocation=cost_allocation.tolist(),
+                vat_portion=vat_portion,
+                vat_discount=vat_discount,
+                lbt_portion=lbt_portion,
+                lbt_discount=lbt_discount,
+                fixed_cost=fixed_cost,
+                prod_rate=prod_rate,
+                cost_per_volume=cost_per_volume,
+            )
+
+    def _get_gas_opex(self) -> OPEX:
         """
         Determines total gas OPEX from the number of gas OPEX instances in
-        attribute self.opex.
+        attribute self.opex_total.
 
         Returns
         -------
-        tuple
-            A tuple consisting instances of GAS OPEX that has been added and
-            classified according to dunder method __add__() of OPEX class.
+        OPEX
+            An instance of OPEX that only includes FluidType.GAS as the associated
+            cost_allocation that has been combined altogether following the rules prescribed
+            in the dunder method __add__() of OPEX class.
 
         Notes
         -----
         The core operations are as follows:
-        (1) Check the attribute cost_allocation in attribute self.opex,
-        (2) If GAS is not available as an instance in attribute self.opex, then
-            establish a new instance of GAS OPEX with the following attribute set
+        (1) Check the attribute cost_allocation in attribute self.opex_total,
+        (2) If GAS is not available as an instance in attribute self.opex_total,
+            then establish a new instance of GAS OPEX with the following attribute set
             to zero: cost.
-        (3) Identify the GAS OPEX instances in self.opex where the vat_portion and
-            pdri_portion are equal. To do so, we employ a function get_identifier
-            from helper.py module.
-        (4) Add similar GAS OPEX instances obtained in (3), return the results as
-            a tuple of new GAS OPEX instances (following the rule prescribed in the
-            dunder method __add__() of class OPEX).
+        (3) Identify index location where cost_allocation is FluidType.GAS in attribute
+            self.opex_total,
+        (4) Create a new instance of OPEX with only FluidType.GAS as its cost_allocation.
         """
-
-        fluid_types = [cst.cost_allocation for cst in self.opex]
-
-        if FluidType.GAS not in fluid_types:
-            return tuple(
-                [
-                    OPEX(
-                        start_year=self.start_date.year,
-                        end_year=self.end_date.year,
-                        fixed_cost=np.array([0]),
-                        expense_year=np.array([self.start_date.year]),
-                        cost_allocation=FluidType.GAS,
-                    )
-                ]
+        if FluidType.GAS not in self.opex_total.cost_allocation:
+            return OPEX(
+                start_year=self.start_date.year,
+                end_year=self.end_date.year,
+                fixed_cost=np.array([0]),
+                expense_year=np.array([self.start_date.year]),
+                cost_allocation=[FluidType.GAS],
             )
 
-        add_identifier = get_identifier(
-            target_instances=self.opex, cost_alloc=FluidType.GAS
-        )
+        else:
+            gas_opex_id = np.argwhere(
+                np.array(self.opex_total.cost_allocation) == FluidType.GAS
+            ).ravel()
 
-        return get_instances(target_instances=self.opex, identifier=add_identifier)
+            start_year = self.opex_total.start_year
+            end_year = self.opex_total.end_year
+            expense_year = self.opex_total.expense_year[gas_opex_id]
+            cost_allocation = np.array(self.opex_total.cost_allocation)[gas_opex_id]
+            vat_portion = self.opex_total.vat_portion[gas_opex_id]
+            vat_discount = self.opex_total.vat_discount[gas_opex_id]
+            lbt_portion = self.opex_total.lbt_portion[gas_opex_id]
+            lbt_discount = self.opex_total.lbt_discount[gas_opex_id]
+            fixed_cost = self.opex_total.fixed_cost[gas_opex_id]
+            prod_rate = self.opex_total.prod_rate[gas_opex_id]
+            cost_per_volume = self.opex_total.cost_per_volume[gas_opex_id]
 
-    def _get_oil_asr(self) -> tuple[ASR]:
+            return OPEX(
+                start_year=start_year,
+                end_year=end_year,
+                expense_year=expense_year,
+                cost_allocation=cost_allocation.tolist(),
+                vat_portion=vat_portion,
+                vat_discount=vat_discount,
+                lbt_portion=lbt_portion,
+                lbt_discount=lbt_discount,
+                fixed_cost=fixed_cost,
+                prod_rate=prod_rate,
+                cost_per_volume=cost_per_volume,
+            )
+
+    def _get_oil_asr(self) -> ASR:
         """
         Determines total oil ASR from the number of oil ASR instances in
-        attribute self.asr_cost.
+        attribute self.asr_cost_total.
 
         Returns
         -------
-        tuple
-            A tuple consisting instances of oil ASR that has been added and
-            classified according to dunder method __add__() of ASR class.
+        ASR
+            An instance of ASR that only includes FluidType.OIL as the associated
+            cost_allocation that has been combined altogether following the rules
+            prescribed in the dunder method __add__() of ASR class.
 
         Notes
         -----
         The core operations are as follows:
-        (1) Check the attribute cost_allocation in attribute self.asr_cost,
-        (2) If OIL is not available as an instance in attribute self.asr_cost, then
-            establish a new instance of OIL ASR with the following attribute set
+        (1) Check the attribute cost_allocation in attribute self.asr_cost_total,
+        (2) If OIL is not available as an instance in attribute self.asr_cost_total,
+            then establish a new instance of OIL ASR with the following attribute set
             to zero: cost.
-        (3) Identify the OIL ASR instances in self.asr_cost where the vat_portion and
-            pdri_portion are equal. To do so, we employ a function get_identifier
-            from helper.py module.
-        (4) Add similar OIL ASR instances obtained in (3), return the results as
-            a tuple of new OIL ASR instances (following the rule prescribed in the
-            dunder method __add__() of class ASR).
+        (3) Identify index location where cost_allocation is FluidType.OIL in attribute
+            self.asr_cost_total,
+        (4) Create a new instance of ASR with only FluidType.OIL as its cost_allocation.
         """
-
-        fluid_types = [cst.cost_allocation for cst in self.asr_cost]
-
-        if FluidType.OIL not in fluid_types:
-            return tuple(
-                [
-                    ASR(
-                        start_year=self.start_date.year,
-                        end_year=self.end_date.year,
-                        cost=np.array([0]),
-                        expense_year=np.array([self.start_date.year]),
-                        cost_allocation=FluidType.OIL,
-                    )
-                ]
+        if FluidType.OIL not in self.asr_cost_total.cost_allocation:
+            return ASR(
+                start_year=self.start_date.year,
+                end_year=self.end_date.year,
+                cost=np.array([0]),
+                expense_year=np.array([self.start_date.year]),
+                cost_allocation=[FluidType.OIL],
             )
 
-        add_identifier = get_identifier(
-            target_instances=self.asr_cost, cost_alloc=FluidType.OIL
-        )
+        else:
+            oil_asr_id = np.argwhere(
+                np.array(self.asr_cost_total.cost_allocation) == FluidType.OIL
+            ).ravel()
 
-        return get_instances(target_instances=self.asr_cost, identifier=add_identifier)
+            start_year = self.asr_cost_total.start_year
+            end_year = self.asr_cost_total.end_year
+            cost = self.asr_cost_total.cost[oil_asr_id]
+            expense_year = self.asr_cost_total.expense_year[oil_asr_id]
+            cost_allocation = np.array(self.asr_cost_total.cost_allocation)[oil_asr_id]
+            vat_portion = self.asr_cost_total.vat_portion[oil_asr_id]
+            vat_discount = self.asr_cost_total.vat_discount[oil_asr_id]
+            lbt_portion = self.asr_cost_total.lbt_portion[oil_asr_id]
+            lbt_discount = self.asr_cost_total.lbt_discount[oil_asr_id]
 
-    def _get_gas_asr(self) -> tuple[ASR]:
+            return ASR(
+                start_year=start_year,
+                end_year=end_year,
+                cost=cost,
+                expense_year=expense_year,
+                cost_allocation=cost_allocation.tolist(),
+                vat_portion=vat_portion,
+                vat_discount=vat_discount,
+                lbt_portion=lbt_portion,
+                lbt_discount=lbt_discount,
+            )
+
+    def _get_gas_asr(self) -> ASR:
         """
         Determines total gas ASR from the number of gas ASR instances in
         attribute self.asr_cost.
@@ -1065,8 +1211,9 @@ class BaseProject:
                     pdri_discount=kwargs["pdri_discount"],
                     lbt_discount=kwargs["lbt_discount"],
                     pdrd_discount=kwargs["pdrd_discount"],
-                )[0] for i in self._oil_tangible
-            ]
+                )[0]
+                for i in self._oil_tangible
+            ],
         )
 
         self._gas_depreciation = reduce(
@@ -1082,8 +1229,9 @@ class BaseProject:
                     pdri_discount=kwargs["pdri_discount"],
                     lbt_discount=kwargs["lbt_discount"],
                     pdrd_discount=kwargs["pdrd_discount"],
-                )[0] for i in self._gas_tangible
-            ]
+                )[0]
+                for i in self._gas_tangible
+            ],
         )
 
         # Calculate undepreciated asset for OIL and GAS
@@ -1100,8 +1248,9 @@ class BaseProject:
                     pdri_discount=kwargs["pdri_discount"],
                     lbt_discount=kwargs["lbt_discount"],
                     pdrd_discount=kwargs["pdrd_discount"],
-                )[1] for i in self._oil_tangible
-            ]
+                )[1]
+                for i in self._oil_tangible
+            ],
         )
 
         self._gas_undepreciated_asset = reduce(
@@ -1117,8 +1266,9 @@ class BaseProject:
                     pdri_discount=kwargs["pdri_discount"],
                     lbt_discount=kwargs["lbt_discount"],
                     pdrd_discount=kwargs["pdrd_discount"],
-                )[1] for i in self._gas_tangible
-            ]
+                )[1]
+                for i in self._gas_tangible
+            ],
         )
 
         # Calculate tangible expenditures for OIL and GAS
@@ -1134,8 +1284,9 @@ class BaseProject:
                     pdri_discount=kwargs["pdri_discount"],
                     lbt_discount=kwargs["lbt_discount"],
                     pdrd_discount=kwargs["pdrd_discount"],
-                ) for i in self._oil_tangible
-            ]
+                )
+                for i in self._oil_tangible
+            ],
         )
 
         self._gas_tangible_expenditures = reduce(
@@ -1150,8 +1301,9 @@ class BaseProject:
                     pdri_discount=kwargs["pdri_discount"],
                     lbt_discount=kwargs["lbt_discount"],
                     pdrd_discount=kwargs["pdrd_discount"],
-                ) for i in self._gas_tangible
-            ]
+                )
+                for i in self._gas_tangible
+            ],
         )
 
         # Configure intangible expenditures
@@ -1166,8 +1318,9 @@ class BaseProject:
                     pdri_discount=kwargs["pdri_discount"],
                     lbt_discount=kwargs["lbt_discount"],
                     pdrd_discount=kwargs["pdrd_discount"],
-                ) for i in self._oil_intangible
-            ]
+                )
+                for i in self._oil_intangible
+            ],
         )
 
         self._gas_intangible_expenditures = reduce(
@@ -1181,8 +1334,9 @@ class BaseProject:
                     pdri_discount=kwargs["pdri_discount"],
                     lbt_discount=kwargs["lbt_discount"],
                     pdrd_discount=kwargs["pdrd_discount"],
-                ) for i in self._gas_intangible
-            ]
+                )
+                for i in self._gas_intangible
+            ],
         )
 
         # Configure OPEX expenditures
@@ -1197,8 +1351,9 @@ class BaseProject:
                     pdri_discount=kwargs["pdri_discount"],
                     lbt_discount=kwargs["lbt_discount"],
                     pdrd_discount=kwargs["pdrd_discount"],
-                ) for i in self._oil_opex
-            ]
+                )
+                for i in self._oil_opex
+            ],
         )
 
         self._gas_opex_expenditures = reduce(
@@ -1212,8 +1367,9 @@ class BaseProject:
                     pdri_discount=kwargs["pdri_discount"],
                     lbt_discount=kwargs["lbt_discount"],
                     pdrd_discount=kwargs["pdrd_discount"],
-                ) for i in self._gas_opex
-            ]
+                )
+                for i in self._gas_opex
+            ],
         )
 
         # Configure ASR expenditures
@@ -1229,8 +1385,9 @@ class BaseProject:
                     pdri_discount=kwargs["pdri_discount"],
                     lbt_discount=kwargs["lbt_discount"],
                     pdrd_discount=kwargs["pdrd_discount"],
-                ) for i in self._oil_asr
-            ]
+                )
+                for i in self._oil_asr
+            ],
         )
 
         self._gas_asr_expenditures = reduce(
@@ -1245,19 +1402,24 @@ class BaseProject:
                     pdri_discount=kwargs["pdri_discount"],
                     lbt_discount=kwargs["lbt_discount"],
                     pdrd_discount=kwargs["pdrd_discount"],
-                ) for i in self._gas_asr
-            ]
+                )
+                for i in self._gas_asr
+            ],
         )
 
         # Configure total expenditures for OIL and GAS
         self._oil_total_expenditures = (
-                self._oil_tangible_expenditures + self._oil_intangible_expenditures
-                + self._oil_opex_expenditures + self._oil_asr_expenditures
+            self._oil_tangible_expenditures
+            + self._oil_intangible_expenditures
+            + self._oil_opex_expenditures
+            + self._oil_asr_expenditures
         )
 
         self._gas_total_expenditures = (
-                self._gas_tangible_expenditures + self._gas_intangible_expenditures
-                + self._gas_opex_expenditures + self._gas_asr_expenditures
+            self._gas_tangible_expenditures
+            + self._gas_intangible_expenditures
+            + self._gas_opex_expenditures
+            + self._gas_asr_expenditures
         )
 
         # Configure non-capital costs for OIL and GAS
@@ -1392,130 +1554,116 @@ class BaseProject:
         )
 
     def __eq__(self, other):
-
         # Between two instances of BaseProject
         if isinstance(other, BaseProject):
             revenue_self = sum(self._oil_revenue) + sum(self._gas_revenue)
             revenue_other = sum(other._oil_revenue) + sum(other._gas_revenue)
 
-            tangible_self = (
-                sum([sum(i.cost) for i in self._oil_tangible])
-                + sum([sum(i.cost) for i in self._gas_tangible])
+            tangible_self = sum([sum(i.cost) for i in self._oil_tangible]) + sum(
+                [sum(i.cost) for i in self._gas_tangible]
             )
 
-            tangible_other = (
-                sum([sum(i.cost) for i in other._oil_tangible])
-                + sum([sum(i.cost) for i in other._gas_tangible])
+            tangible_other = sum([sum(i.cost) for i in other._oil_tangible]) + sum(
+                [sum(i.cost) for i in other._gas_tangible]
             )
 
-            intangible_self = (
-                sum([sum(i.cost) for i in self._oil_intangible])
-                + sum([sum(i.cost) for i in self._gas_intangible])
+            intangible_self = sum([sum(i.cost) for i in self._oil_intangible]) + sum(
+                [sum(i.cost) for i in self._gas_intangible]
             )
 
-            intangible_other = (
-                sum([sum(i.cost) for i in other._oil_intangible])
-                + sum([sum(i.cost) for i in other._gas_intangible])
+            intangible_other = sum([sum(i.cost) for i in other._oil_intangible]) + sum(
+                [sum(i.cost) for i in other._gas_intangible]
             )
 
-            opex_self = (
-                sum([sum(i.cost) for i in self._oil_opex])
-                + sum([sum(i.cost) for i in self._gas_opex])
+            opex_self = sum([sum(i.cost) for i in self._oil_opex]) + sum(
+                [sum(i.cost) for i in self._gas_opex]
             )
 
-            opex_other = (
-                sum([sum(i.cost) for i in other._oil_opex])
-                + sum([sum(i.cost) for i in other._gas_opex])
+            opex_other = sum([sum(i.cost) for i in other._oil_opex]) + sum(
+                [sum(i.cost) for i in other._gas_opex]
             )
 
-            asr_self = (
-                sum([sum(i.cost) for i in self._oil_asr])
-                + sum([sum(i.cost) for i in self._gas_asr])
+            asr_self = sum([sum(i.cost) for i in self._oil_asr]) + sum(
+                [sum(i.cost) for i in self._gas_asr]
             )
 
-            asr_other = (
-                sum([sum(i.cost) for i in other._oil_asr])
-                + sum([sum(i.cost) for i in other._gas_asr])
+            asr_other = sum([sum(i.cost) for i in other._oil_asr]) + sum(
+                [sum(i.cost) for i in other._gas_asr]
             )
 
             expenses_self = tangible_self + intangible_self + opex_self + asr_self
             expenses_other = tangible_other + intangible_other + opex_other + asr_other
 
-            return all((
-                self.start_date.year == other.start_date.year,
-                self.start_date.month == other.start_date.month,
-                self.start_date.day == other.start_date.day,
-                self.end_date.year == other.end_date.year,
-                self.end_date.month == other.end_date.month,
-                self.end_date.day == other.end_date.day,
-                self.oil_onstream_date.year == other.oil_onstream_date.year,
-                self.oil_onstream_date.month == other.oil_onstream_date.month,
-                self.oil_onstream_date.day == other.oil_onstream_date.day,
-                self.gas_onstream_date.year == other.gas_onstream_date.year,
-                self.gas_onstream_date.month == other.gas_onstream_date.month,
-                self.gas_onstream_date.day == other.gas_onstream_date.day,
-                self.is_ic_applied == other.is_ic_applied,
-                revenue_self == revenue_other,
-                expenses_self == expenses_other,
-            ))
+            return all(
+                (
+                    self.start_date.year == other.start_date.year,
+                    self.start_date.month == other.start_date.month,
+                    self.start_date.day == other.start_date.day,
+                    self.end_date.year == other.end_date.year,
+                    self.end_date.month == other.end_date.month,
+                    self.end_date.day == other.end_date.day,
+                    self.oil_onstream_date.year == other.oil_onstream_date.year,
+                    self.oil_onstream_date.month == other.oil_onstream_date.month,
+                    self.oil_onstream_date.day == other.oil_onstream_date.day,
+                    self.gas_onstream_date.year == other.gas_onstream_date.year,
+                    self.gas_onstream_date.month == other.gas_onstream_date.month,
+                    self.gas_onstream_date.day == other.gas_onstream_date.day,
+                    self.is_ic_applied == other.is_ic_applied,
+                    revenue_self == revenue_other,
+                    expenses_self == expenses_other,
+                )
+            )
 
         else:
             return False
 
     def __lt__(self, other):
-
         # Between an instance of BaseProject with another instance of BaseProject
         if isinstance(other, BaseProject):
             revenue_self = sum(self._oil_revenue) + sum(self._gas_revenue)
             revenue_other = sum(other._oil_revenue) + sum(other._gas_revenue)
 
-            tangible_self = (
-                sum([sum(i.cost) for i in self._oil_tangible])
-                + sum([sum(i.cost) for i in self._gas_tangible])
+            tangible_self = sum([sum(i.cost) for i in self._oil_tangible]) + sum(
+                [sum(i.cost) for i in self._gas_tangible]
             )
 
-            tangible_other = (
-                sum([sum(i.cost) for i in other._oil_tangible])
-                + sum([sum(i.cost) for i in other._gas_tangible])
+            tangible_other = sum([sum(i.cost) for i in other._oil_tangible]) + sum(
+                [sum(i.cost) for i in other._gas_tangible]
             )
 
-            intangible_self = (
-                sum([sum(i.cost) for i in self._oil_intangible])
-                + sum([sum(i.cost) for i in self._gas_intangible])
+            intangible_self = sum([sum(i.cost) for i in self._oil_intangible]) + sum(
+                [sum(i.cost) for i in self._gas_intangible]
             )
 
-            intangible_other = (
-                sum([sum(i.cost) for i in other._oil_intangible])
-                + sum([sum(i.cost) for i in other._gas_intangible])
+            intangible_other = sum([sum(i.cost) for i in other._oil_intangible]) + sum(
+                [sum(i.cost) for i in other._gas_intangible]
             )
 
-            opex_self = (
-                sum([sum(i.cost) for i in self._oil_opex])
-                + sum([sum(i.cost) for i in self._gas_opex])
+            opex_self = sum([sum(i.cost) for i in self._oil_opex]) + sum(
+                [sum(i.cost) for i in self._gas_opex]
             )
 
-            opex_other = (
-                sum([sum(i.cost) for i in other._oil_opex])
-                + sum([sum(i.cost) for i in other._gas_opex])
+            opex_other = sum([sum(i.cost) for i in other._oil_opex]) + sum(
+                [sum(i.cost) for i in other._gas_opex]
             )
 
-            asr_self = (
-                sum([sum(i.cost) for i in self._oil_asr])
-                + sum([sum(i.cost) for i in self._gas_asr])
+            asr_self = sum([sum(i.cost) for i in self._oil_asr]) + sum(
+                [sum(i.cost) for i in self._gas_asr]
             )
 
-            asr_other = (
-                sum([sum(i.cost) for i in other._oil_asr])
-                + sum([sum(i.cost) for i in other._gas_asr])
+            asr_other = sum([sum(i.cost) for i in other._oil_asr]) + sum(
+                [sum(i.cost) for i in other._gas_asr]
             )
 
             expenses_self = tangible_self + intangible_self + opex_self + asr_self
             expenses_other = tangible_other + intangible_other + opex_other + asr_other
 
-            return all((
-                revenue_self < revenue_other,
-                expenses_self < expenses_other,
-            ))
+            return all(
+                (
+                    revenue_self < revenue_other,
+                    expenses_self < expenses_other,
+                )
+            )
 
         else:
             raise BaseProjectException(
@@ -1525,59 +1673,52 @@ class BaseProject:
             )
 
     def __le__(self, other):
-
         # Between an instance of BaseProject with another instance of BaseProject
         if isinstance(other, BaseProject):
             revenue_self = sum(self._oil_revenue) + sum(self._gas_revenue)
             revenue_other = sum(other._oil_revenue) + sum(other._gas_revenue)
 
-            tangible_self = (
-                    sum([sum(i.cost) for i in self._oil_tangible])
-                    + sum([sum(i.cost) for i in self._gas_tangible])
+            tangible_self = sum([sum(i.cost) for i in self._oil_tangible]) + sum(
+                [sum(i.cost) for i in self._gas_tangible]
             )
 
-            tangible_other = (
-                    sum([sum(i.cost) for i in other._oil_tangible])
-                    + sum([sum(i.cost) for i in other._gas_tangible])
+            tangible_other = sum([sum(i.cost) for i in other._oil_tangible]) + sum(
+                [sum(i.cost) for i in other._gas_tangible]
             )
 
-            intangible_self = (
-                    sum([sum(i.cost) for i in self._oil_intangible])
-                    + sum([sum(i.cost) for i in self._gas_intangible])
+            intangible_self = sum([sum(i.cost) for i in self._oil_intangible]) + sum(
+                [sum(i.cost) for i in self._gas_intangible]
             )
 
-            intangible_other = (
-                    sum([sum(i.cost) for i in other._oil_intangible])
-                    + sum([sum(i.cost) for i in other._gas_intangible])
+            intangible_other = sum([sum(i.cost) for i in other._oil_intangible]) + sum(
+                [sum(i.cost) for i in other._gas_intangible]
             )
 
-            opex_self = (
-                    sum([sum(i.cost) for i in self._oil_opex])
-                    + sum([sum(i.cost) for i in self._gas_opex])
+            opex_self = sum([sum(i.cost) for i in self._oil_opex]) + sum(
+                [sum(i.cost) for i in self._gas_opex]
             )
 
-            opex_other = (
-                    sum([sum(i.cost) for i in other._oil_opex])
-                    + sum([sum(i.cost) for i in other._gas_opex])
+            opex_other = sum([sum(i.cost) for i in other._oil_opex]) + sum(
+                [sum(i.cost) for i in other._gas_opex]
             )
 
-            asr_self = (
-                    sum([sum(i.cost) for i in self._oil_asr])
-                    + sum([sum(i.cost) for i in self._gas_asr])
+            asr_self = sum([sum(i.cost) for i in self._oil_asr]) + sum(
+                [sum(i.cost) for i in self._gas_asr]
             )
 
-            asr_other = (
-                    sum([sum(i.cost) for i in other._oil_asr])
-                    + sum([sum(i.cost) for i in other._gas_asr])
+            asr_other = sum([sum(i.cost) for i in other._oil_asr]) + sum(
+                [sum(i.cost) for i in other._gas_asr]
             )
 
             expenses_self = tangible_self + intangible_self + opex_self + asr_self
             expenses_other = tangible_other + intangible_other + opex_other + asr_other
 
-            return all((
-                revenue_self <= revenue_other,
-                expenses_self <= expenses_other,
-            ))
+            return all(
+                (
+                    revenue_self <= revenue_other,
+                    expenses_self <= expenses_other,
+                )
+            )
 
         else:
             raise BaseProjectException(
@@ -1587,59 +1728,52 @@ class BaseProject:
             )
 
     def __gt__(self, other):
-
         # Between an instance of BaseProject with another instance of BaseProject
         if isinstance(other, BaseProject):
             revenue_self = sum(self._oil_revenue) + sum(self._gas_revenue)
             revenue_other = sum(other._oil_revenue) + sum(other._gas_revenue)
 
-            tangible_self = (
-                    sum([sum(i.cost) for i in self._oil_tangible])
-                    + sum([sum(i.cost) for i in self._gas_tangible])
+            tangible_self = sum([sum(i.cost) for i in self._oil_tangible]) + sum(
+                [sum(i.cost) for i in self._gas_tangible]
             )
 
-            tangible_other = (
-                    sum([sum(i.cost) for i in other._oil_tangible])
-                    + sum([sum(i.cost) for i in other._gas_tangible])
+            tangible_other = sum([sum(i.cost) for i in other._oil_tangible]) + sum(
+                [sum(i.cost) for i in other._gas_tangible]
             )
 
-            intangible_self = (
-                    sum([sum(i.cost) for i in self._oil_intangible])
-                    + sum([sum(i.cost) for i in self._gas_intangible])
+            intangible_self = sum([sum(i.cost) for i in self._oil_intangible]) + sum(
+                [sum(i.cost) for i in self._gas_intangible]
             )
 
-            intangible_other = (
-                    sum([sum(i.cost) for i in other._oil_intangible])
-                    + sum([sum(i.cost) for i in other._gas_intangible])
+            intangible_other = sum([sum(i.cost) for i in other._oil_intangible]) + sum(
+                [sum(i.cost) for i in other._gas_intangible]
             )
 
-            opex_self = (
-                    sum([sum(i.cost) for i in self._oil_opex])
-                    + sum([sum(i.cost) for i in self._gas_opex])
+            opex_self = sum([sum(i.cost) for i in self._oil_opex]) + sum(
+                [sum(i.cost) for i in self._gas_opex]
             )
 
-            opex_other = (
-                    sum([sum(i.cost) for i in other._oil_opex])
-                    + sum([sum(i.cost) for i in other._gas_opex])
+            opex_other = sum([sum(i.cost) for i in other._oil_opex]) + sum(
+                [sum(i.cost) for i in other._gas_opex]
             )
 
-            asr_self = (
-                    sum([sum(i.cost) for i in self._oil_asr])
-                    + sum([sum(i.cost) for i in self._gas_asr])
+            asr_self = sum([sum(i.cost) for i in self._oil_asr]) + sum(
+                [sum(i.cost) for i in self._gas_asr]
             )
 
-            asr_other = (
-                    sum([sum(i.cost) for i in other._oil_asr])
-                    + sum([sum(i.cost) for i in other._gas_asr])
+            asr_other = sum([sum(i.cost) for i in other._oil_asr]) + sum(
+                [sum(i.cost) for i in other._gas_asr]
             )
 
             expenses_self = tangible_self + intangible_self + opex_self + asr_self
             expenses_other = tangible_other + intangible_other + opex_other + asr_other
 
-            return all((
-                revenue_self > revenue_other,
-                expenses_self > expenses_other,
-            ))
+            return all(
+                (
+                    revenue_self > revenue_other,
+                    expenses_self > expenses_other,
+                )
+            )
 
         else:
             raise BaseProjectException(
@@ -1649,59 +1783,52 @@ class BaseProject:
             )
 
     def __ge__(self, other):
-
         # Between an instance of BaseProject with another instance of BaseProject
         if isinstance(other, BaseProject):
             revenue_self = sum(self._oil_revenue) + sum(self._gas_revenue)
             revenue_other = sum(other._oil_revenue) + sum(other._gas_revenue)
 
-            tangible_self = (
-                    sum([sum(i.cost) for i in self._oil_tangible])
-                    + sum([sum(i.cost) for i in self._gas_tangible])
+            tangible_self = sum([sum(i.cost) for i in self._oil_tangible]) + sum(
+                [sum(i.cost) for i in self._gas_tangible]
             )
 
-            tangible_other = (
-                    sum([sum(i.cost) for i in other._oil_tangible])
-                    + sum([sum(i.cost) for i in other._gas_tangible])
+            tangible_other = sum([sum(i.cost) for i in other._oil_tangible]) + sum(
+                [sum(i.cost) for i in other._gas_tangible]
             )
 
-            intangible_self = (
-                    sum([sum(i.cost) for i in self._oil_intangible])
-                    + sum([sum(i.cost) for i in self._gas_intangible])
+            intangible_self = sum([sum(i.cost) for i in self._oil_intangible]) + sum(
+                [sum(i.cost) for i in self._gas_intangible]
             )
 
-            intangible_other = (
-                    sum([sum(i.cost) for i in other._oil_intangible])
-                    + sum([sum(i.cost) for i in other._gas_intangible])
+            intangible_other = sum([sum(i.cost) for i in other._oil_intangible]) + sum(
+                [sum(i.cost) for i in other._gas_intangible]
             )
 
-            opex_self = (
-                    sum([sum(i.cost) for i in self._oil_opex])
-                    + sum([sum(i.cost) for i in self._gas_opex])
+            opex_self = sum([sum(i.cost) for i in self._oil_opex]) + sum(
+                [sum(i.cost) for i in self._gas_opex]
             )
 
-            opex_other = (
-                    sum([sum(i.cost) for i in other._oil_opex])
-                    + sum([sum(i.cost) for i in other._gas_opex])
+            opex_other = sum([sum(i.cost) for i in other._oil_opex]) + sum(
+                [sum(i.cost) for i in other._gas_opex]
             )
 
-            asr_self = (
-                    sum([sum(i.cost) for i in self._oil_asr])
-                    + sum([sum(i.cost) for i in self._gas_asr])
+            asr_self = sum([sum(i.cost) for i in self._oil_asr]) + sum(
+                [sum(i.cost) for i in self._gas_asr]
             )
 
-            asr_other = (
-                    sum([sum(i.cost) for i in other._oil_asr])
-                    + sum([sum(i.cost) for i in other._gas_asr])
+            asr_other = sum([sum(i.cost) for i in other._oil_asr]) + sum(
+                [sum(i.cost) for i in other._gas_asr]
             )
 
             expenses_self = tangible_self + intangible_self + opex_self + asr_self
             expenses_other = tangible_other + intangible_other + opex_other + asr_other
 
-            return all((
-                revenue_self >= revenue_other,
-                expenses_self >= expenses_other,
-            ))
+            return all(
+                (
+                    revenue_self >= revenue_other,
+                    expenses_self >= expenses_other,
+                )
+            )
 
         else:
             raise BaseProjectException(
@@ -1711,10 +1838,8 @@ class BaseProject:
             )
 
     def __add__(self, other):
-
         # Between an instance of BaseProject and another instance of BaseProject
         if isinstance(other, BaseProject):
-
             # Specify the start_date and end_date of the combined instances
             start_date_combined = date(
                 year=min(self.start_date.year, other.start_date.year),

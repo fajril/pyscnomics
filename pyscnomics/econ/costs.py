@@ -185,6 +185,7 @@ class Tangible(GeneralCost):
     salvage_value: np.ndarray = field(default=None)
     useful_life: np.ndarray = field(default=None)
     depreciation_factor: np.ndarray = field(default=None)
+    is_ic_applied: bool = field(default=None)
 
     def __post_init__(self):
         # Check for inappropriate start and end year project
@@ -302,6 +303,18 @@ class Tangible(GeneralCost):
                     f"is not a numpy.ndarray."
                 )
 
+        # Configure is_ic_applied data
+        if self.is_ic_applied is None:
+            self.is_ic_applied = [False for _ in range(len(self.cost))]
+
+        if self.is_ic_applied is not None:
+            if not isinstance(self.is_ic_applied, list):
+                raise TangibleException(
+                    f"Attribute is_ic_applied must be a list; "
+                    f"is_ic_applied (datatype: {self.is_ic_applied.__class__.__qualname__}) "
+                    f"is not a list."
+                )
+
         # Check input data for unequal length
         arr_length = len(self.cost)
 
@@ -319,6 +332,7 @@ class Tangible(GeneralCost):
                 self.salvage_value,
                 self.useful_life,
                 self.depreciation_factor,
+                self.is_ic_applied,
             ]
         ):
             raise TangibleException(
@@ -334,7 +348,8 @@ class Tangible(GeneralCost):
                 f"pis_year: {len(self.pis_year)}, "
                 f"salvage_value: {len(self.salvage_value)}, "
                 f"useful_life: {len(self.useful_life)}, "
-                f"depreciation_factor: {len(self.depreciation_factor)}."
+                f"depreciation_factor: {len(self.depreciation_factor)}, "
+                f"is_ic_applied: {len(self.is_ic_applied)}."
             )
 
         # Raise an error message: expense year is after the end year of the project
