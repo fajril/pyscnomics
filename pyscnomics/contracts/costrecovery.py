@@ -101,6 +101,9 @@ class CostRecovery(BaseProject):
 
     _oil_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
     _gas_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
+
+    _tax_rate_arr: np.ndarray = field(default=None, init=False, repr=False)
+
     _oil_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
     _gas_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -711,20 +714,20 @@ class CostRecovery(BaseProject):
         # Tax Payment
         # Generating Tax array if tax_rate argument is a single value not array
         if tax_rate is float:
-            tax_rate = np.full_like(self.project_years, tax_rate, dtype=float)
+            self._tax_rate_arr = np.full_like(self.project_years, tax_rate, dtype=float)
 
         # Generating Tax array based on the tax regime if tax_rate argument is None
         if tax_rate is None:
-            tax_rate = self._get_tax_by_regime(tax_regime=tax_regime)
+            self._tax_rate_arr = self._get_tax_by_regime(tax_regime=tax_regime)
 
         self._oil_tax_payment = self._get_tax_payment(ctr_share=self._oil_contractor_share,
                                                       taxable_income=self._oil_taxable_income,
-                                                      tax_rate=tax_rate,
+                                                      tax_rate=self._tax_rate_arr,
                                                       ftp_tax_regime=ftp_tax_regime)
 
         self._gas_tax_payment = self._get_tax_payment(ctr_share=self._gas_contractor_share,
                                                       taxable_income=self._gas_taxable_income,
-                                                      tax_rate=tax_rate,
+                                                      tax_rate=self._tax_rate_arr,
                                                       ftp_tax_regime=ftp_tax_regime)
 
         # Contractor Share
