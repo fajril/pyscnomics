@@ -112,6 +112,11 @@ class TaxRegime(Enum):
     UU_07_2021 = "UU No.07 Tahun 2021"
 
 
+class TaxPaymentMode(Enum):
+    TAX_DUE_MODE = "Calculation method where it treated like the unrecoverable cost, could be weighted on the next year"
+    TAX_DIRECT_MODE = "Calculation method where the tax calculated directly from taxable income"
+
+
 class FTPTaxRegime(Enum):
     PDJP_20_2017 = "Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
     PRE_2017 = "Pre Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
