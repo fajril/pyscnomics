@@ -8,7 +8,7 @@ from functools import reduce
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
-from pyscnomics.econ.selection import FluidType, YearReference, TaxRegime, FTPTaxRegime, TaxSplitTypeCR
+from pyscnomics.econ.selection import FluidType, YearReference, TaxRegime, FTPTaxRegime, TaxSplitTypeCR, TaxPaymentMode
 
 
 class SunkCostException(Exception):
@@ -453,6 +453,7 @@ class CostRecovery(BaseProject):
             is_dmo_end_weighted: bool = False,
             tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
             tax_rate: float | np.ndarray | None = None,
+            tax_payment_method: TaxPaymentMode = TaxPaymentMode.TAX_DUE_MODE,
             ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
             discount_rate_year: int = None
             ):
@@ -799,14 +800,19 @@ class CostRecovery(BaseProject):
         self._consolidated_ddmo = self._oil_ddmo + self._gas_ddmo
         self._consolidated_taxable_income = self._oil_taxable_income + self._gas_taxable_income
 
-        self._consolidated_tax_due = self._get_tax_payment(ctr_share=self._consolidated_contractor_share,
-                                                           taxable_income=self._consolidated_taxable_income,
-                                                           tax_rate=tax_rate,
-                                                           ftp_tax_regime=ftp_tax_regime)
+        # Calculating the consolidated tax based on the tax payment mode
+        if tax_payment_method is TaxPaymentMode.TAX_DUE_MODE:
+            self._consolidated_tax_due = self._get_tax_payment(ctr_share=self._consolidated_contractor_share,
+                                                               taxable_income=self._consolidated_taxable_income,
+                                                               tax_rate=self._tax_rate_arr,
+                                                               ftp_tax_regime=ftp_tax_regime)
 
-        self._consolidated_unpaid_tax_balance, self._consolidated_tax_payment = self._unpaid_and_tax_balance(
-            tax_payment=self._consolidated_tax_due,
-            ets_ctr=self._consolidated_contractor_share)
+            self._consolidated_unpaid_tax_balance, self._consolidated_tax_payment = self._unpaid_and_tax_balance(
+                tax_payment=self._consolidated_tax_due,
+                ets_ctr=self._consolidated_contractor_share)
+
+        elif tax_payment_method is TaxPaymentMode.TAX_DIRECT_MODE:
+            self._consolidated_tax_payment = self._oil_tax_payment + self._gas_tax_payment
 
         self._consolidated_ctr_net_share = self._consolidated_taxable_income - self._consolidated_tax_payment
 

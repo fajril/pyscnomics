@@ -1,29 +1,11 @@
 import numpy as np
 from datetime import date
 import calendar
-import itertools
 
-from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts import psc_tools
-
-
-# Defining the gap between the prior contract and the new contract
-
-# Get the proportion of the days of contract transition to a year
-
-# Modifying the Lifting attributes into the current updates project length, fill it with zeros
-
-# Modifying the Tangible, Intangible, OPEX, ASR attributes into the current updates project length, fill it with zeros
-
-# Modify the latest row of Lifting, Tangible, Intangible, OPEX, ASR into the proportioned value
-
-# Run each PSC
-
-# Sum the generated cashflow
 
 
 def parse_dataclass(contract):
@@ -109,9 +91,6 @@ def parse_dataclass(contract):
 def transition(contract1: CostRecovery | GrossSplit,
                contract2: CostRecovery | GrossSplit,
                argument_contract1: dict, argument_contract2: dict):
-    # Defining the proportional of the day of the year
-    days_in_year = 365 + calendar.isleap(int(contract2.start_date.year))
-    dty = (contract2.start_date - date(contract2.start_date.year, 1, 1)).days / days_in_year
 
     # Defining the transition start date and end date
     start_date_trans = min([contract1.start_date, contract2.start_date])
@@ -341,8 +320,13 @@ def transition(contract1: CostRecovery | GrossSplit,
                                             contract2_new._consolidated_tax_payment -
                                             tax_payment_transition
                                             )
-    contract2_new._consolidated_tax_payment = tax_payment_transition
 
+    # Calculate new government take
+    contract2_new._consolidated_government_take = (contract2_new._consolidated_government_take -
+                                                   contract2_new._consolidated_tax_payment +
+                                                   tax_payment_transition)
+
+    contract2_new._consolidated_tax_payment = tax_payment_transition
     return contract1_new, contract2_new
 
 

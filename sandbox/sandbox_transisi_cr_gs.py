@@ -3,9 +3,8 @@ import pandas as pd
 import time
 from datetime import datetime
 
-from pyscnomics.econ.selection import FTPTaxRegime
+from pyscnomics.econ.selection import FTPTaxRegime, FluidType, TaxPaymentMode
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
@@ -104,8 +103,10 @@ print('------------------------------------------ Cost Recovery ----------------
 start_time = time.time()
 ftp_tax_regime = FTPTaxRegime.PRE_2017
 eff_tax_rate = 0.48
+tax_payment_method = TaxPaymentMode.TAX_DIRECT_MODE
 argument_contract1 = {'ftp_tax_regime': FTPTaxRegime.PRE_2017,
-                      'tax_rate': eff_tax_rate}
+                      'tax_rate': eff_tax_rate,
+                      'tax_payment_method': tax_payment_method}
 psc1.run(**argument_contract1)
 end_time = time.time()
 print('Execution Time: ', end_time - start_time, '\n')
@@ -416,6 +417,33 @@ psc2_table_gas['GovernmentTake'] = psc2._gas_government_take
 psc2_table_gas.loc['Column_Total'] = psc2_table_gas.sum(numeric_only=True, axis=0)
 print(psc2_table_gas, '\n')
 
+psc2_table_consolidated = pd.DataFrame()
+psc2_table_consolidated['cnsltd_Years'] = psc2.project_years
+psc2_table_consolidated['cnsltd_Revenue'] = psc2._consolidated_revenue
+psc2_table_consolidated['cnsltd_GovernmentShare'] = psc2._consolidated_ctr_share_before_tf
+psc2_table_consolidated['cnsltd_ContractorShare'] = psc2._consolidated_gov_share_before_tf
+psc2_table_consolidated['cnsltd_Depreciation'] = psc2._consolidated_depreciation
+psc2_table_consolidated['cnsltd_Opex'] = psc2._consolidated_opex
+psc2_table_consolidated['cnsltd_ASR'] = psc2._consolidated_asr
+psc2_table_consolidated['cnsltd_NonCapital'] = psc2._consolidated_non_capital
+psc2_table_consolidated['cnsltd_TotalExpenses'] = psc2._consolidated_total_expenses
+psc2_table_consolidated['cnsltd_CostToBeDeducted'] = psc2._consolidated_cost_tobe_deducted
+psc2_table_consolidated['cnsltd_CarryForwardCost'] = psc2._consolidated_carward_deduct_cost
+psc2_table_consolidated['cnsltd_DeductibleCost'] = psc2._consolidated_deductible_cost
+psc2_table_consolidated['cnsltd_CarryForwardCostafterTF'] = psc2._consolidated_carward_cost_aftertf
+psc2_table_consolidated['cnsltd_CTRShareAfterTF'] = psc2._consolidated_ctr_share_after_transfer
+psc2_table_consolidated['cnsltd_CTRNetOperatingProfit'] = psc2._consolidated_net_operating_profit
+psc2_table_consolidated['cnsltd_DMOVolume'] = psc2._consolidated_dmo_volume
+psc2_table_consolidated['cnsltd_DMOFee'] = psc2._consolidated_dmo_fee
+psc2_table_consolidated['cnsltd_DDMO'] = psc2._consolidated_ddmo
+psc2_table_consolidated['cnsltd_TaxableIncome'] = psc2._consolidated_taxable_income
+psc2_table_consolidated['cnsltd_Tax'] = psc2._consolidated_tax_payment
+psc2_table_consolidated['cnsltd_NetCTRShare'] = psc2._consolidated_ctr_net_share
+psc2_table_consolidated['cnsltd_CTRCashFlow'] = psc2._consolidated_cashflow
+psc2_table_consolidated['cnsltd_GovernmentTake'] = psc2._consolidated_government_take
+psc2_table_consolidated.loc['Column_Total'] = psc2_table_consolidated.sum(numeric_only=True, axis=0)
+print(psc2_table_consolidated, '\n')
+
 print('------------------------------------------ Transition ------------------------------------------')
 start_time = time.time()
 trans1, trans2 = transition.transition(contract1=psc1, contract2=psc2, argument_contract1=argument_contract1, argument_contract2=argument_contract2)
@@ -501,6 +529,37 @@ trans1_table_gas['GovernmentTake'] = trans1._gas_government_take
 trans1_table_gas.loc['Column_Total'] = trans1_table_gas.sum(numeric_only=True, axis=0)
 print(trans1_table_gas, '\n')
 
+trans1_table_consolidated = pd.DataFrame()
+trans1_table_consolidated['Year'] = trans1.project_years
+trans1_table_consolidated['cnsltd_revenue'] = trans1._consolidated_revenue
+trans1_table_consolidated['cnsltd_non_capital'] = trans1._consolidated_non_capital
+trans1_table_consolidated['cnsltd_ic'] = trans1._consolidated_ic
+trans1_table_consolidated['cnsltd_ic_unrecovered'] = trans1._consolidated_ic_unrecovered
+trans1_table_consolidated['cnsltd_ic_paid'] = trans1._consolidated_ic_paid
+trans1_table_consolidated['cnsltd_unrecovered_before_transfer'] = trans1._consolidated_unrecovered_before_transfer
+trans1_table_consolidated['cnsltd_cost_recovery'] = trans1._consolidated_cost_recovery_before_transfer
+trans1_table_consolidated['cnsltd_ets_before_transfer'] = trans1._consolidated_ets_before_transfer
+trans1_table_consolidated['cnsltd_unrecovered_after_transfer'] = trans1._consolidated_unrecovered_after_transfer
+trans1_table_consolidated['cnsltd_cost_to_be_recovered_after_tf'] = trans1._consolidated_cost_to_be_recovered_after_tf
+trans1_table_consolidated['cnsltd_cost_recovery_after_tf'] = trans1._consolidated_cost_recovery_after_tf
+trans1_table_consolidated['cnsltd_ets_after_transfer'] = trans1._consolidated_ets_after_transfer
+trans1_table_consolidated['cnsltd_contractor_share'] = trans1._consolidated_contractor_share
+trans1_table_consolidated['cnsltd_government_share'] = trans1._consolidated_government_share
+trans1_table_consolidated['cnsltd_dmo_volume'] = trans1._consolidated_dmo_volume
+trans1_table_consolidated['cnsltd_dmo_fee'] = trans1._consolidated_dmo_fee
+trans1_table_consolidated['cnsltd_ddmo'] = trans1._consolidated_ddmo
+trans1_table_consolidated['cnsltd_taxable_income'] = trans1._consolidated_taxable_income
+trans1_table_consolidated['cnsltd_tax_due'] = trans1._consolidated_tax_due
+trans1_table_consolidated['cnsltd_unpaid_tax_balance'] = trans1._consolidated_unpaid_tax_balance
+trans1_table_consolidated['cnsltd_tax_payment'] = trans1._consolidated_tax_payment
+trans1_table_consolidated['cnsltd_ctr_net_share'] = trans1._consolidated_ctr_net_share
+trans1_table_consolidated['cnsltd_contractor_take'] = trans1._consolidated_contractor_take
+trans1_table_consolidated['cnsltd_government_take'] = trans1._consolidated_government_take
+trans1_table_consolidated['cnsltd_cashflow'] = trans1._consolidated_cashflow
+trans1_table_consolidated['cum. cnsltd_cashflow'] = np.cumsum(trans1._consolidated_cashflow)
+trans1_table_consolidated.loc['Column_Total'] = trans1_table_consolidated.sum(numeric_only=True, axis=0)
+print(trans1_table_consolidated, '\n')
+
 print('Gross Split Transition')
 trans2_table_oil = pd.DataFrame()
 trans2_table_oil['Years'] = trans2.project_years
@@ -565,3 +624,30 @@ trans2_table_gas['CTRCashFlow'] = trans2._gas_ctr_cashflow
 trans2_table_gas['GovernmentTake'] = trans2._gas_government_take
 trans2_table_gas.loc['Column_Total'] = trans2_table_gas.sum(numeric_only=True, axis=0)
 print(trans2_table_gas, '\n')
+
+trans2_table_consolidated = pd.DataFrame()
+trans2_table_consolidated['Years'] = trans2.project_years
+trans2_table_consolidated['cnsltd_Revenue'] = trans2._consolidated_revenue
+trans2_table_consolidated['cnsltd_GovernmentShare'] = trans2._consolidated_ctr_share_before_tf
+trans2_table_consolidated['cnsltd_ContractorShare'] = trans2._consolidated_gov_share_before_tf
+trans2_table_consolidated['cnsltd_Depreciation'] = trans2._consolidated_depreciation
+trans2_table_consolidated['cnsltd_Opex'] = trans2._consolidated_opex
+trans2_table_consolidated['cnsltd_ASR'] = trans2._consolidated_asr
+trans2_table_consolidated['cnsltd_NonCapital'] = trans2._consolidated_non_capital
+trans2_table_consolidated['cnsltd_TotalExpenses'] = trans2._consolidated_total_expenses
+trans2_table_consolidated['cnsltd_CostToBeDeducted'] = trans2._consolidated_cost_tobe_deducted
+trans2_table_consolidated['cnsltd_CarryForwardCost'] = trans2._consolidated_carward_deduct_cost
+trans2_table_consolidated['cnsltd_DeductibleCost'] = trans2._consolidated_deductible_cost
+trans2_table_consolidated['cnsltd_CarryForwardCostafterTF'] = trans2._consolidated_carward_cost_aftertf
+trans2_table_consolidated['cnsltd_CTRShareAfterTF'] = trans2._consolidated_ctr_share_after_transfer
+trans2_table_consolidated['cnsltd_CTRNetOperatingProfit'] = trans2._consolidated_net_operating_profit
+trans2_table_consolidated['cnsltd_DMOVolume'] = trans2._consolidated_dmo_volume
+trans2_table_consolidated['cnsltd_DMOFee'] = trans2._consolidated_dmo_fee
+trans2_table_consolidated['cnsltd_DDMO'] = trans2._consolidated_ddmo
+trans2_table_consolidated['cnsltd_TaxableIncome'] = trans2._consolidated_taxable_income
+trans2_table_consolidated['cnsltd_Tax'] = trans2._consolidated_tax_payment
+trans2_table_consolidated['cnsltd_NetCTRShare'] = trans2._consolidated_ctr_net_share
+trans2_table_consolidated['cnsltd_CTRCashFlow'] = trans2._consolidated_cashflow
+trans2_table_consolidated['cnsltd_GovernmentTake'] = trans2._consolidated_government_take
+trans2_table_consolidated.loc['Column_Total'] = trans2_table_consolidated.sum(numeric_only=True, axis=0)
+print(trans2_table_consolidated, '\n')
