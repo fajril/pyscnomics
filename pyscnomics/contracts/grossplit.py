@@ -101,6 +101,8 @@ class GrossSplit(BaseProject):
     _oil_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
     _gas_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
 
+    _tax_rate_arr: np.ndarray = field(default=None, init=False, repr=False)
+
     _oil_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_tax: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -139,9 +141,10 @@ class GrossSplit(BaseProject):
     _consolidated_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ddmo: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_ctr_cashflow: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_government_take: np.ndarray = field(default=None, init=False, repr=False)
 
     def _wrapper_variable_split(self,
                                 regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
@@ -593,15 +596,15 @@ class GrossSplit(BaseProject):
 
         # Tax Payment
         # Generating Tax array if tax_rate argument is a single value not array
-        if tax_rate is float:
-            tax_rate = np.full_like(self.project_years, tax_rate, dtype=float)
+        if isinstance(tax_rate, float):
+            self._tax_rate_arr = np.full_like(self.project_years, tax_rate, dtype=float)
 
         # Generating Tax array based on the tax regime if tax_rate argument is None
         if tax_rate is None:
-            tax_rate = self._get_tax_by_regime(tax_regime=tax_regime)
+            self._tax_rate_arr = self._get_tax_by_regime(tax_regime=tax_regime)
 
-        self._oil_tax = self._oil_taxable_income * tax_rate
-        self._gas_tax = self._gas_taxable_income * tax_rate
+        self._oil_tax = self._oil_taxable_income * self._tax_rate_arr
+        self._gas_tax = self._gas_taxable_income * self._tax_rate_arr
 
         # Contractor Net Share
         self._oil_ctr_net_share = self._oil_taxable_income - self._oil_tax
@@ -640,9 +643,10 @@ class GrossSplit(BaseProject):
         self._consolidated_dmo_fee = self._oil_dmo_fee + self._gas_dmo_fee
         self._consolidated_ddmo = self._oil_ddmo + self._gas_ddmo
         self._consolidated_taxable_income = self._oil_taxable_income + self._gas_taxable_income
-        self._consolidated_tax = self._oil_tax + self._gas_tax
+        self._consolidated_tax_payment = self._oil_tax + self._gas_tax
         self._consolidated_ctr_net_share = self._oil_ctr_net_share + self._gas_ctr_net_share
-        self._consolidated_ctr_cashflow = self._oil_ctr_cashflow + self._gas_ctr_cashflow
+        self._consolidated_government_take = self._oil_government_take + self._gas_government_take
+        self._consolidated_cashflow = self._oil_ctr_cashflow + self._gas_ctr_cashflow
 
     def __len__(self):
         return self.project_duration
