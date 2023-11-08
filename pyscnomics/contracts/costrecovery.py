@@ -15,12 +15,96 @@ from pyscnomics.econ.selection import (
     FTPTaxRegime,
     TaxSplitTypeCR,
     DeprMethod,
+    TaxType
 )
 from pyscnomics.econ import indicator
 
 
 @dataclass
 class CostRecovery(BaseProject):
+    """
+    CostRecovery Class
+
+    Perform economic analysis of a production-sharing contract in the oil and gas industry,
+    in Indonesia following PSC cost recovery scheme.
+
+    Parameters
+    ----------
+    oil_ftp_is_available : bool, default=True
+        Indicating whether First Tranche Petroleum (FTP) is available for oil.
+    oil_ftp_is_shared : bool, default=True
+        Indicating whether oil FTP is shared.
+    oil_ftp_portion : float, default=0.2
+        The portion of oil revenue allocated to FTP.
+
+    gas_ftp_is_available : bool, default=True
+        Indicating whether FTP is available for gas.
+    gas_ftp_is_shared : bool, default=True
+        Indicating whether gas FTP is shared.
+    gas_ftp_portion : float, default=0.2
+        The portion of gas revenue allocated to FTP.
+
+    tax_split_type : TaxSplitTypeCR, default=TaxSplitTypeCR.CONVENTIONAL
+        The type of tax split used.
+    condition_dict : dict, default={}
+        Dictionary containing conditions for revenue and cost calculations.
+    indicator_rc_icp_sliding : list[float], default=[]
+        List of indicator values for sliding scale of contractor's share.
+
+    oil_ctr_pretax_share : float | np.ndarray, default=0.25
+        Pretax share of oil revenue for the contractor.
+    gas_ctr_pretax_share : float | np.ndarray, default=0.5
+        Pretax share of gas revenue for the contractor.
+
+    oil_ic_rate : float, default=0.0
+        Investment credit rate for oil.
+    gas_ic_rate : float, default=0.0
+        Investment credit rate for gas.
+    ic_is_available : bool, default=False
+        Indicating whether investment credit is available.
+
+    oil_cr_cap_rate : float, default=1.0
+        Cost recovery cap rate for oil.
+    gas_cr_cap_rate : float, default=1.0
+        Cost recovery cap rate for gas.
+
+    oil_dmo_volume_portion : float, default=0.25
+        The portion of oil revenue allocated to Domestic Market Obligation (DMO) volume.
+    oil_dmo_fee_portion : float, default=0.25
+        The portion of oil revenue allocated to DMO fee.
+    oil_dmo_holiday_duration : int, default=60
+        The holiday duration for DMO.
+
+    gas_dmo_volume_portion : float, default=1.0
+        The portion of gas revenue allocated to DMO volume.
+    gas_dmo_fee_portion : float, default=1.0
+        The portion of gas revenue allocated to DMO fee.
+    gas_dmo_holiday_duration : int, default=60
+        The holiday duration for gas DMO.
+
+    _split_ctr_oil : np.ndarray, default=None (init=False, repr=False)
+        Internal variable for storing contractor's share split for oil.
+    _split_ctr_gas : np.ndarray, default=None (init=False, repr=False)
+        Internal variable for storing contractor's share split for gas.
+
+    Methods
+    -------
+    _get_rc_icp_pretax()
+        Internal method to calculate and store pretax contractor's share
+        based on sliding scale.
+
+    _get_ftp()
+        Internal method to calculate and store First Tranche Petroleum (FTP)
+        for oil and gas.
+
+    _get_ic(...) -> tuple
+        Internal method to calculate investment credit for oil or gas.
+
+    _get_cost_recovery(...) -> np.ndarray
+        Internal static method to calculate cost recovery.
+
+    ... (Additional methods and attributes)
+    """
     oil_ftp_is_available: bool = field(default=True)
     oil_ftp_is_shared: bool = field(default=True)
     oil_ftp_portion: float = field(default=0.2)
@@ -49,9 +133,21 @@ class CostRecovery(BaseProject):
     gas_dmo_fee_portion: float = field(default=1.0)
     gas_dmo_holiday_duration: int = field(default=60)
 
+    # Private attributes associated with depreciable assets
+    _oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_undepreciated_asset: float = field(default=None, init=False, repr=False)
+    _gas_undepreciated_asset: float = field(default=None, init=False, repr=False)
+
+    # Private attributes associated with undepreciable assets
+    _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Private attributes associated with contractors' split
     _split_ctr_oil: np.ndarray = field(default=None, init=False, repr=False)
     _split_ctr_gas: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Private attributes associated with investment credit
     _oil_ic: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ic_unrecovered: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ic_paid: np.ndarray = field(default=None, init=False, repr=False)
@@ -59,6 +155,7 @@ class CostRecovery(BaseProject):
     _gas_ic_unrecovered: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ic_paid: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Private attributes associated with unrecovered cost before transfer
     _oil_unrecovered_before_transfer: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -66,18 +163,23 @@ class CostRecovery(BaseProject):
         default=None, init=False, repr=False
     )
 
+    # Private attributes associated with cost to be recovered
     _oil_cost_to_be_recovered: np.ndarray = field(default=None, init=False, repr=False)
     _gas_cost_to_be_recovered: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Private attributes associated with cost recovery
     _oil_cost_recovery: np.ndarray = field(default=None, init=False, repr=False)
     _gas_cost_recovery: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Private attributes associated with ETS before transfer
     _oil_ets_before_transfer: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ets_before_transfer: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Private attributes associated with transfer
     _transfer_to_oil: np.ndarray = field(default=None, init=False, repr=False)
     _transfer_to_gas: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Private attributes associated with unrecovered cost after transfer
     _oil_unrecovered_after_transfer: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -85,14 +187,17 @@ class CostRecovery(BaseProject):
         default=None, init=False, repr=False
     )
 
+    # Private attributes associated with ETS after transfer
     _oil_ets_after_transfer: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ets_after_transfer: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Private attributes associated with government and contractor share
     _oil_contractor_share: np.ndarray = field(default=None, init=False, repr=False)
     _oil_government_share: np.ndarray = field(default=None, init=False, repr=False)
     _gas_contractor_share: np.ndarray = field(default=None, init=False, repr=False)
     _gas_government_share: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Private attributes associated with DMO
     _oil_dmo_volume: np.ndarray = field(default=None, init=False, repr=False)
     _oil_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ddmo: np.ndarray = field(default=None, init=False, repr=False)
@@ -100,19 +205,23 @@ class CostRecovery(BaseProject):
     _gas_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ddmo: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Private attributes associated with taxable income
     _oil_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
     _gas_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ftp_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ftp_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Private attributes associated with government and contractor take
     _oil_contractor_take: np.ndarray = field(default=None, init=False, repr=False)
     _gas_contractor_take: np.ndarray = field(default=None, init=False, repr=False)
     _oil_government_take: np.ndarray = field(default=None, init=False, repr=False)
     _gas_government_take: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Private attributes associated with cashflow
     _oil_cashflow: np.ndarray = field(default=None, init=False, repr=False)
     _gas_cashflow: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Private attributes associated with economic indicators
     _oil_pot: float = field(default=None, init=False, repr=False)
     _gas_pot: float = field(default=None, init=False, repr=False)
 
@@ -130,6 +239,19 @@ class CostRecovery(BaseProject):
     _ftp: np.ndarray = field(default=None, init=False, repr=False)
     _ic: np.ndarray = field(default=None, init=False, repr=False)
     _cost_recovery: np.ndarray = field(default=None, init=False, repr=False)
+
+    # # Configure non-capital costs for OIL and GAS
+    # self._oil_non_capital = (
+    #         self._oil_intangible_expenditures
+    #         + self._oil_opex_expenditures
+    #         + self._oil_asr_expenditures
+    # )
+    #
+    # self._gas_non_capital = (
+    #         self._gas_intangible_expenditures
+    #         + self._gas_opex_expenditures
+    #         + self._gas_asr_expenditures
+    # )
 
     def _get_aggregate(self):
         self._oil_lifting = self._get_oil_lifting()

@@ -146,7 +146,7 @@ asr_mangga = ASR(
     end_year=2030,
     cost=np.array([100, 100]),
     expense_year=np.array([2026, 2027]),
-    cost_allocation=[FluidType.OIL, FluidType.OIL],
+    cost_allocation=[FluidType.OIL, FluidType.GAS],
 )
 
 asr_apel = ASR(
@@ -154,7 +154,7 @@ asr_apel = ASR(
     end_year=2030,
     cost=np.array([50, 50]),
     expense_year=np.array([2026, 2027]),
-    cost_allocation=[FluidType.GAS, FluidType.GAS],
+    cost_allocation=[FluidType.OIL, FluidType.GAS],
 )
 
 '------------------------------------------------- CASHFLOW ------------------------------------------------'
@@ -216,7 +216,7 @@ asr_cost_data = (
 
 '------------------------------------------------- EXECUTE -------------------------------------------------'
 
-case = BaseProject(
+case1 = BaseProject(
     start_date=date(2023, 1, 1),
     end_date=date(2030, 12, 31),
     lifting=lifting_data,
@@ -226,17 +226,43 @@ case = BaseProject(
     asr_cost=asr_cost_data,
 )
 
+case2 = BaseProject(
+    start_date=date(2023, 1, 1),
+    end_date=date(2030, 12, 31),
+    lifting=lifting_data,
+    tangible_cost=tangible_cost_data,
+    intangible_cost=intangible_cost_data,
+    opex=opex_data,
+    asr_cost=asr_cost_data,
+)
+
+case_add = case1 + case2
+
+print('\t')
+print(f'Filetype: {type(case_add)}')
+print(f'Length: {len(case_add)}')
+print('case_add = \n', case_add.tangible_cost)
+
+# case.run(
+#     tax_type=TaxType.VAT,
+#     # future_rate=0.0,
+#     # vat_rate=0.05,
+#     # lbt_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
+#     # inflation_rate=0.01,
+#     vat_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
+# )
+
 # print('\t')
 # print(f'Filetype: {type(case.tangible_cost)}')
 # print(f'Length: {len(case.tangible_cost)}')
 # print('tangible_cost = \n', case.tangible_cost)
 
-t1 = case._get_oil_asr()
-
-print('\t')
-print(f'Filetype: {type(t1)}')
-print(f'Length: {len(t1)}')
-print('t1 = ', t1)
+# t1 = case._get_gas_asr()
+#
+# print('\t')
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = ', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t2)}')
