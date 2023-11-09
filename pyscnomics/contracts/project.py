@@ -1190,15 +1190,6 @@ class BaseProject:
                     inflation_rate=inflation_rate,
                 )
 
-        expenditures = list(
-            map(
-                calc_expenses,
-                [self._oil_tangible, self._gas_tangible, self._oil_intangible,
-                 self._gas_intangible, self._oil_opex, self._gas_opex,
-                 self._oil_asr, self._gas_asr]
-            )
-        )
-
         (
             self._oil_tangible_expenditures,
             self._gas_tangible_expenditures,
@@ -1207,8 +1198,15 @@ class BaseProject:
             self._oil_opex_expenditures,
             self._gas_opex_expenditures,
             self._oil_asr_expenditures,
-            self._gas_asr_expenditures
-        ) = [expenditures[i] for i, val in enumerate(expenditures)]
+            self._gas_asr_expenditures,
+        ) = list(
+            map(
+                calc_expenses,
+                [self._oil_tangible, self._gas_tangible, self._oil_intangible,
+                 self._gas_intangible, self._oil_opex, self._gas_opex,
+                 self._oil_asr, self._gas_asr]
+            )
+        )
 
     def run(
         self,

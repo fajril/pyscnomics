@@ -239,9 +239,9 @@ case2 = BaseProject(
 case_add = case1 + case2
 
 print('\t')
-print(f'Filetype: {type(case_add)}')
-print(f'Length: {len(case_add)}')
-print('case_add = \n', case_add.tangible_cost)
+print(f'Filetype: {type(asr_apel)}')
+print(f'Length: {len(asr_apel)}')
+print('asr_apel = \n', asr_apel)
 
 # case.run(
 #     tax_type=TaxType.VAT,
