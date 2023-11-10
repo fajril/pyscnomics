@@ -7,6 +7,7 @@ import numpy as np
 from datetime import date
 from dataclasses import asdict
 
+from pyscnomics.io.spreadsheet import Spreadsheet
 from pyscnomics.econ.selection import DeprMethod, FluidType, TaxType
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
@@ -214,7 +215,7 @@ asr_cost_data = (
     asr_apel,
 )
 
-'------------------------------------------------- EXECUTE -------------------------------------------------'
+'---------------------------------------------- COST RECOVERY ----------------------------------------------'
 
 costrec = CostRecovery(
     start_date=date(2023, 1, 1),
@@ -226,12 +227,13 @@ costrec = CostRecovery(
     asr_cost=asr_cost_data,
 )
 
-costrec.run(
-    tax_type=TaxType.VAT,
-    vat_rate=0.0,
-    future_rate=0.0,
+'------------------------------------------------- EXECUTE -------------------------------------------------'
+
+data = Spreadsheet(
+    workbook_to_read="Workbook.xlsm",
 )
 
+data.read_from_excel()
 
 # print('\t')
 # print(f'Filetype: {type(asr_apel)}')
