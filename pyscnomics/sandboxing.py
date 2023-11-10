@@ -216,7 +216,7 @@ asr_cost_data = (
 
 '------------------------------------------------- EXECUTE -------------------------------------------------'
 
-case1 = BaseProject(
+costrec = CostRecovery(
     start_date=date(2023, 1, 1),
     end_date=date(2030, 12, 31),
     lifting=lifting_data,
@@ -226,22 +226,16 @@ case1 = BaseProject(
     asr_cost=asr_cost_data,
 )
 
-case2 = BaseProject(
-    start_date=date(2023, 1, 1),
-    end_date=date(2030, 12, 31),
-    lifting=lifting_data,
-    tangible_cost=tangible_cost_data,
-    intangible_cost=intangible_cost_data,
-    opex=opex_data,
-    asr_cost=asr_cost_data,
+costrec.run(
+    tax_type=TaxType.VAT,
+    vat_rate=0.05,
 )
 
-case_add = case1 + case2
 
-print('\t')
-print(f'Filetype: {type(asr_apel)}')
-print(f'Length: {len(asr_apel)}')
-print('asr_apel = \n', asr_apel)
+# print('\t')
+# print(f'Filetype: {type(asr_apel)}')
+# print(f'Length: {len(asr_apel)}')
+# print('asr_apel = \n', asr_apel)
 
 # case.run(
 #     tax_type=TaxType.VAT,
