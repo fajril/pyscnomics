@@ -228,7 +228,8 @@ costrec = CostRecovery(
 
 costrec.run(
     tax_type=TaxType.VAT,
-    vat_rate=0.05,
+    vat_rate=0.0,
+    future_rate=0.0,
 )
 
 
