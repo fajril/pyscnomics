@@ -324,4 +324,78 @@ def test_base_project_opex_expenditures():
 
 
 def test_base_project_asr_expenditures():
-    pass
+    """ A unit testing to calculate asr expenditures in BaseProject class """
+
+    # Expected results
+    oil_case1 = np.array([117.1659381, 114.8685668, 112.6162419, 110.4080803, 0, 0, 0, 0])
+    gas_case1 = np.array([0, 0, 0, 0, 54.121608, 53.0604, 52.02, 51])
+    oil_case2 = np.array([125.1332219, 125.3543439, 125.5677742, 0, 0, 0, 126.3410973, 0])
+    gas_case2 = np.array([0, 0, 0, 0, 62.9854344, 63.08009052, 0, 63.25671746])
+
+    # Calculated results
+    asr_mangga = ASR(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([100, 100, 100, 100]),
+        expense_year=np.array([2023, 2024, 2025, 2026]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+    )
+
+    asr_apel = ASR(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([50, 50, 50, 50]),
+        expense_year=np.array([2027, 2028, 2029, 2030]),
+        cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+    )
+
+    asr_jeruk = ASR(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([100, 100, 100, 100]),
+        expense_year=np.array([2023, 2024, 2025, 2029]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+        vat_portion=np.array([0.85, 0.85, 0.85, 0.85]),
+    )
+
+    asr_nanas = ASR(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([50, 50, 50]),
+        expense_year=np.array([2027, 2028, 2030]),
+        cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS],
+        vat_portion=np.array([0.85, 0.85, 0.85]),
+    )
+
+    case1 = BaseProject(
+        start_date=date(2023, 1, 1),
+        end_date=date(2030, 1, 1),
+        asr_cost=(asr_mangga, asr_apel),
+    )
+
+    case2 = BaseProject(
+        start_date=date(2023, 1, 1),
+        end_date=date(2030, 1, 1),
+        asr_cost=(asr_jeruk, asr_nanas),
+    )
+
+    case1._get_expenditures()
+    case2._get_expenditures(
+        tax_type=TaxType.VAT,
+        vat_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
+        inflation_rate=0.03,
+    )
+
+    results1 = vars(case1)
+    results2 = vars(case2)
+
+    oil_case1_calc = results1["_oil_asr_expenditures"]
+    gas_case1_calc = results1["_gas_asr_expenditures"]
+    oil_case2_calc = results2["_oil_asr_expenditures"]
+    gas_case2_calc = results2["_gas_asr_expenditures"]
+
+    # Testing (expected == calculated)
+    np.testing.assert_allclose(oil_case1, oil_case1_calc)
+    np.testing.assert_allclose(gas_case1, gas_case1_calc)
+    np.testing.assert_allclose(oil_case2, oil_case2_calc)
+    np.testing.assert_allclose(gas_case2, gas_case2_calc)
