@@ -233,7 +233,11 @@ data = Spreadsheet(
     workbook_to_read="Workbook.xlsm",
 )
 
-data.read_from_excel()
+timer_start = tm.time()
+
+data.prepare_data()
+
+timer_end = tm.time() - timer_start
 
 # print('\t')
 # print(f'Filetype: {type(asr_apel)}')
@@ -254,8 +258,6 @@ data.read_from_excel()
 # print(f'Length: {len(case.tangible_cost)}')
 # print('tangible_cost = \n', case.tangible_cost)
 
-# t1 = case._get_gas_asr()
-#
 # print('\t')
 # print(f'Filetype: {type(t1)}')
 # print(f'Length: {len(t1)}')
@@ -265,3 +267,6 @@ data.read_from_excel()
 # print(f'Filetype: {type(t2)}')
 # print(f'Length: {len(t2)}')
 # print('t2 = ', t2)
+
+print('\t')
+print('timer end = ', timer_end)
