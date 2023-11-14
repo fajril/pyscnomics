@@ -13,6 +13,12 @@ class ExcelDataException(Exception):
     pass
 
 
+class OilLiftingDataException(Exception):
+    """ Exception to be raised for inappropriate use of OilLifingData class """
+
+    pass
+
+
 @dataclass
 class GeneralConfigData:
     """
@@ -52,6 +58,7 @@ class GeneralConfigData:
     inflation_rate_applied_to: str = field(default=None)
     vat_discount: float = field(default=0.0)
     lbt_discount: float = field(default=0.0)
+    gsa_number: int = field(default=1)
 
     # Attributes associated with duration of the project
     project_duration: int = field(default=None, init=False)
@@ -127,3 +134,72 @@ class FiscalConfigData:
                 "Year": self.year_arr,
                 "Tax Rate": self.tax_rate_arr,
             }
+
+
+@dataclass
+class OilLiftingData:
+    """
+    A dataclass representing oil lifting information for an oil and gas economic project.
+
+    Attributes
+    ----------
+    project_duration: int
+        The duration of the project.
+    project_years: numpy.ndarray
+        An array representing the project years.
+    prod_year: dict
+        Dictionary containing production years data.
+    oil_lifting_rate : dict
+        Dictionary containing oil lifting rate data.
+    oil_price : dict
+        Dictionary containing oil price data.
+    condensate_lifting_rate : dict
+        Dictionary containing condensate lifting rate data.
+    condensate_price : dict
+        Dictionary containing condensate price data.
+
+    Notes
+    -----
+    This dataclass is used to store and organize information related to oil lifting.
+    """
+    project_duration: int
+    project_years: np.ndarray
+    prod_year: dict
+    oil_lifting_rate: dict
+    oil_price: dict
+    condensate_lifting_rate: dict
+    condensate_price: dict
+
+
+@dataclass
+class GasLiftingData:
+    """
+    A dataclass representing gas lifting information for an oil and gas economic project.
+
+    Attributes
+    ----------
+    project_duration: int
+        The duration of the project.
+    project_years: numpy.ndarray
+        An array representing the project years.
+    gas_gsa_number: int
+        The number of GSA.
+    prod_year: dict
+        Dictionary containing production years data.
+    gas_lifting_rate: dict
+        Dictionary containing gas lifting rate data.
+    gas_ghv: dict
+        Dictionary containing gas ghv data.
+    gas_price: dict
+        Dictionary containing gas price data.
+    """
+    project_duration: int
+    project_years: np.ndarray
+    gas_gsa_number: int
+    prod_year: dict
+    gas_lifting_rate: dict
+    gas_ghv: dict
+    gas_price: dict
+
+
+
