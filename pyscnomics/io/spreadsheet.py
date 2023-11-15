@@ -25,7 +25,9 @@ class SpreadsheetException(Exception):
 @dataclass
 class Spreadsheet:
     """
-    Parameters
+    Load and prepare data from a target Excel file.
+
+    Attributes
     ----------
     workbook_to_read: str
         The name of the target Excel file. Must be given in '.xlsm' format.
@@ -88,22 +90,20 @@ class Spreadsheet:
         excel = pd.ExcelFile(load_dir)
         sheets = excel.book.worksheets
         self.sheets_raw = dict([(sh.title, sh.sheet_state) for sh in sheets])
-        self.sheets_visible = [
-            key for key, val in self.sheets_raw.items() if val == "visible"
-        ]
+        self.sheets_visible = [key for key, val in self.sheets_raw.items() if val == "visible"]
         self.sheets_loaded = self.sheets_visible[3 : len(self.sheets_visible) - 2]
 
         # Load data from 'visible' worksheets only
         self.data_loaded = {
-            i: pd.read_excel(
+            key: pd.read_excel(
                 excel,
-                sheet_name=i,
+                sheet_name=key,
                 skiprows=1,
                 index_col=None,
                 header=None,
                 engine="openpyxl",
             )
-            for i in self.sheets_loaded
+            for key in self.sheets_loaded
         }
 
     def _get_general_config_data(self) -> GeneralConfigData:
@@ -127,7 +127,9 @@ class Spreadsheet:
         """
 
         # Prepare data
-        self.data_loaded["General Config"] = self.data_loaded["General Config"].iloc[:, np.r_[1:3, -1]]
+        self.data_loaded["General Config"] = self.data_loaded["General Config"].iloc[
+            :, np.r_[1:3, -1]
+        ]
         self.data_loaded["General Config"] = (
             self.data_loaded["General Config"]
             .dropna(axis=0, how="all")
@@ -176,17 +178,19 @@ class Spreadsheet:
         The procedures are as follows:
         (1) Slice the data, only capture columns that contain necessary data,
         (2) Drop NaN values from the associated dataframe,
-        (3) Convert NaN to None,
+        (3) Convert the remaining NaN values to zero,
         (4) Assign data to their associated attributes,
         (5) Return a new instance of GeneralConfigData with filled attributes.
         """
 
         # Prepare data
-        self.data_loaded["Fiscal Config"] = self.data_loaded["Fiscal Config"].iloc[:, 1:]
+        self.data_loaded["Fiscal Config"] = self.data_loaded["Fiscal Config"].iloc[
+            :, 1:
+        ]
         self.data_loaded["Fiscal Config"] = (
             self.data_loaded["Fiscal Config"]
             .dropna(axis=0, how="all")
-            .replace(np.nan, 0.0)
+            .replace(np.nan, None)
         )
 
         # Assign the prepared data to their associated attributes
@@ -255,77 +259,195 @@ class Spreadsheet:
         oil_data_available = list(filter(lambda i: "Prod Oil" in i, self.sheets_loaded))
 
         # Step #2 (See 'Notes' section in the docstring)
+        oil_attrs = [
+            "prod_year",
+            "oil_lifting_rate",
+            "oil_price",
+            "condensate_lifting_rate",
+            "condensate_price",
+        ]
+
         if len(oil_data_available) == 0:
             oil_data = {
-                key: {"Prod Oil": np.zeros_like(self.general_config_data.project_years)}
-                for key in [
-                    "prod_year",
-                    "oil_lifting_rate",
-                    "oil_price",
-                    "condensate_lifting_rate",
-                    "condensate_price",
-                ]
+                key: {"Prod Oil": None}
+                for key in oil_attrs
             }
 
             return OilLiftingData(
-                project_duration=self.general_config_data.project_duration,
-                project_years=self.general_config_data.project_years,
                 prod_year=oil_data["prod_year"],
                 oil_lifting_rate=oil_data["oil_lifting_rate"],
                 oil_price=oil_data["oil_price"],
                 condensate_lifting_rate=oil_data["condensate_lifting_rate"],
                 condensate_price=oil_data["condensate_price"],
+                project_duration=self.general_config_data.project_duration,
+                project_years=self.general_config_data.project_years,
             )
 
         # Step #3 (See 'Notes' section in the docstring)
         else:
             oil_data = {}
-            oil_attrs = [
-                "prod_year",
-                "oil_lifting_rate",
-                "oil_price",
-                "condensate_lifting_rate",
-                "condensate_price",
-            ]
+            oil_data_loaded = {i: self.data_loaded[i].fillna(0) for i in oil_data_available}
 
-            for i, val_attr in enumerate(oil_attrs):
+            for key, val_attr in enumerate(oil_attrs):
                 oil_data[val_attr] = {}
-                for j in oil_data_available:
-                    if self.data_loaded[j].empty:
-                        oil_data[val_attr][j] = np.zeros_like(
-                            self.general_config_data.project_years
-                        )
+                for i in oil_data_available:
+                    if oil_data_loaded[i].empty:
+                        oil_data[val_attr][i] = None
                     else:
-                        self.data_loaded[j] = self.data_loaded[j].fillna(0)
-                        oil_data[val_attr][j] = self.data_loaded[j].iloc[:, i].to_numpy()
+                        oil_data[val_attr][i] = (
+                            oil_data_loaded[i].iloc[:, key]
+                            .to_numpy()
+                        )
 
             return OilLiftingData(
-                project_duration=self.general_config_data.project_duration,
-                project_years=self.general_config_data.project_years,
                 prod_year=oil_data["prod_year"],
                 oil_lifting_rate=oil_data["oil_lifting_rate"],
                 oil_price=oil_data["oil_price"],
                 condensate_lifting_rate=oil_data["condensate_lifting_rate"],
                 condensate_price=oil_data["condensate_price"],
+                project_duration=self.general_config_data.project_duration,
+                project_years=self.general_config_data.project_years,
             )
 
     def _get_gas_lifting_data(self) -> GasLiftingData:
+        """
+        Retrieves gas lifting data based on available sheets.
 
+        Returns
+        -------
+        GasLiftingData
+            An instance of GasLiftingData class containing the following attributes:
+                - gas_gsa_number: int
+                    The number of GSA.
+                - prod_year: dict
+                    Dictionary containing production years data.
+                - gas_lifting_rate: dict
+                    Dictionary containing gas lifting rate data.
+                - gas_gsa_lifting_rate: dict
+                    Dictionary containing gas GSA lifting rate data.
+                - gas_gsa_ghv: dict
+                    Dictionary containing gas GSA ghv data.
+                - gas_gsa_price: dict
+                    Dictionary containing gas GSA price data.
+                - project_duration: int
+                    The duration of the project.
+                - project_years: numpy.ndarray
+                    An array representing the project years.
+
+        Notes
+        -----
+        The undertaken procedures are as follows:
+        (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod Gas' data,
+            then assigned it as local variable named 'gas_data_available',
+        (2) Configure the number of active GSA in each element of 'gas_data_available',
+        (3) If 'gas_data_available' is empty (length is zero), then return a new instance
+            of GasLiftingData with the associated attributes set as None. Here, the associated
+            operations are as follows:
+            -   Create a dictionary named 'gas_data' where each corresponding attributes
+                set to None,
+            -   Create a new instance of GasLiftingData with attributes set accordingly
+                based on information stored in 'gas_data',
+        (4) If 'gas_data_available' is not empty, then return a new instance of GasLiftingData
+            with the associated attributes loaded from the commensurate Excel worksheet. Here,
+            the associated operations are as follows:
+            -   Specify two variables, namely 'gas_attrs_general' and 'gas_attrs_gsa',
+            -   Define variable named 'gas_id'. This variable stores information regarding
+                the associated column indices in self.data_loaded that corresponds to
+                'gas_gsa_lifting_rate', 'gas_gsa_ghv', and 'gas_gsa_price'. Variable 'gas_id'
+                is a 2D array: the zeroth axis depicts indices of 'gas_gsa_lifting_rate',
+                'gas_gsa_ghv', and 'gas_gsa_price' while the first axis manifest the number of
+                GSA available,
+            -   Rearrange self.loaded_data encompassing only gas lifting data; stores the
+                information in a variable named 'gas_data_loaded',
+            -   Instantiate an empty dictionary named 'gas_data', then fills in the variable
+                by specifying the elements accordingly: (a) 'prod_year', (b) 'gas_lifting_rate',
+                (c) 'gas_gsa_lifting_rate', (d) 'gas_gsa_ghv', and (e) gas_gsa_price,
+            -   Create a new instance of GasLiftingData with attributes set accordingly
+                based on information stored in 'gas_data'.
+        """
+
+        # Step #1 (See 'Notes' section in the docstring)
         gas_data_available = list(filter(lambda i: "Prod Gas" in i, self.sheets_loaded))
+
+        # Step #2 (See 'Notes' section in the docstring)
         gas_gsa_number = self.general_config_data.gsa_number
+        gas_gsa_variables = ["GSA {0}".format(i + 1) for i in range(gas_gsa_number)]
+
+        # Step #3 (See 'Notes' section in the docstring)
+        gas_attrs = [
+            "prod_year",
+            "gas_prod_rate",
+            "gas_gsa_lifting_rate",
+            "gas_gsa_ghv",
+            "gas_gsa_price",
+        ]
 
         if len(gas_data_available) == 0:
+            gas_data = {
+                key: {"Prod Gas": {i: None for i in gas_gsa_variables}}
+                if key not in ["prod_year", "gas_prod_rate"]
+                else {"Prod Gas": None}
+                for key in gas_attrs
+            }
+
+            return GasLiftingData(
+                gas_gsa_number=gas_gsa_number,
+                prod_year=gas_data["prod_year"],
+                gas_prod_rate=gas_data["gas_prod_rate"],
+                gas_gsa_lifting_rate=gas_data["gas_gsa_lifting_rate"],
+                gas_gsa_ghv=gas_data["gas_gsa_ghv"],
+                gas_gsa_price=gas_data["gas_gsa_price"],
+                project_duration=self.general_config_data.project_duration,
+                project_years=self.general_config_data.project_years,
+            )
+
+        # Step #4 (See 'Notes' section in the docstring)
+        else:
+            gas_attrs_general = ["prod_year", "gas_prod_rate"]
+            gas_attrs_gsa = ["gas_gsa_lifting_rate", "gas_gsa_ghv", "gas_gsa_price"]
+            gas_id = (
+                np.repeat(np.arange(len(gas_attrs_gsa))[:, np.newaxis] + 2, gas_gsa_number, axis=1)
+                + np.arange(gas_gsa_number) * len(gas_attrs_gsa)
+            )
+            gas_data_loaded = {i: self.data_loaded[i].fillna(0) for i in gas_data_available}
+
             gas_data = {}
 
-        print('\t')
-        print(f'Filetype: {type(gas_data_available)}')
-        print(f'Length: {len(gas_data_available)}')
-        print('gas_data_available = \n', gas_data_available)
+            for key, val_attr in enumerate(gas_attrs_general):
+                gas_data[val_attr] = {}
+                for i in gas_data_available:
+                    if gas_data_loaded[i].empty:
+                        gas_data[val_attr][i] = None
+                    else:
+                        gas_data[val_attr][i] = (
+                            gas_data_loaded[i].iloc[:, key]
+                            .to_numpy()
+                        )
 
-        print('\t')
-        print(f'Filetype: {type(gas_gsa_number)}')
-        print('gas_gsa_number = \n', gas_gsa_number)
+            for key, val_attr in enumerate(gas_attrs_gsa):
+                gas_data[val_attr] = {}
+                for i in gas_data_available:
+                    gas_data[val_attr][i] = {}
+                    if gas_data_loaded[i].empty:
+                        for j in gas_gsa_variables:
+                            gas_data[val_attr][i][j] = None
+                    else:
+                        for j, k in zip(gas_gsa_variables, range(gas_gsa_number)):
+                            gas_data[val_attr][i][j] = (
+                                gas_data_loaded[i].iloc[:, gas_id[key, k]]
+                                .to_numpy()
+                            )
 
+            return GasLiftingData(
+                gas_gsa_number=gas_gsa_number,
+                prod_year=gas_data["prod_year"],
+                gas_prod_rate=gas_data["gas_prod_rate"],
+                gas_gsa_lifting_rate=gas_data["gas_gsa_lifting_rate"],
+                gas_gsa_ghv=gas_data["gas_gsa_ghv"],
+                gas_gsa_price=gas_data["gas_gsa_price"],
+                project_duration=self.general_config_data.project_duration,
+                project_years=self.general_config_data.project_years,
+            )
 
     def _get_lpg_propane_lifting_data(self):
         raise NotImplementedError
@@ -370,12 +492,12 @@ class Spreadsheet:
         self.general_config_data = self._get_general_config_data()
         self.fiscal_config_data = self._get_fiscal_config_data()
         self.oil_lifting_data = self._get_oil_lifting_data()
-        # self.gas_lifting_data = self._get_gas_lifting_data()
+        self.gas_lifting_data = self._get_gas_lifting_data()
 
-        print('\t')
-        print(f'Filetype: {type(self.oil_lifting_data.oil_price)}')
-        print(f'Keys: {self.oil_lifting_data.oil_price.keys()}')
-        print('self.oil_lifting_data = \n', self.oil_lifting_data.oil_price)
+        print("\t")
+        print(f"Filetype: {type(self.gas_lifting_data)}")
+        print(f"Keys: {self.gas_lifting_data.__annotations__}")
+        print("self.gas_lifting_data = \n", self.gas_lifting_data)
 
         # print('\t')
         # print('fiscal_config_data = \n', self.data_loaded["Fiscal Config"].iloc[:, 1])

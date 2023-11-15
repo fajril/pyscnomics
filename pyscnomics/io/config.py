@@ -2,19 +2,31 @@
 Prepare data input loaded from a target Excel file.
 """
 
-from dataclasses import dataclass, field, InitVar
+from dataclasses import dataclass, field
 from datetime import date
 import numpy as np
 
 
-class ExcelDataException(Exception):
-    """ Exception to be raised for inappropriate data input in Excel """
+class GeneralConfigDataException(Exception):
+    """ Exception to be raised for inappropriate use of GeneralConfigData class """
+
+    pass
+
+
+class FiscalConfigDataException(Exception):
+    """ Exception to be raised for inappropriate use of FiscalConfigData class """
 
     pass
 
 
 class OilLiftingDataException(Exception):
-    """ Exception to be raised for inappropriate use of OilLifingData class """
+    """ Exception to be raised for an inappropriate use of OilLiftingData class """
+
+    pass
+
+
+class GasLiftingDataException(Exception):
+    """ Exception to be raised for an inappropriate use of GasLiftingData class """
 
     pass
 
@@ -73,7 +85,7 @@ class GeneralConfigData:
             )
 
         else:
-            raise ExcelDataException(
+            raise GeneralConfigDataException(
                 f"start year {self.start_date_project.year} "
                 f"is after the end year: {self.end_date_project.year}"
             )
@@ -108,27 +120,45 @@ class FiscalConfigData:
     depreciation_method: str
 
     # Attributes to be defined later
-    tax_rate: float | dict = field(default=0.44)
+    tax_rate: float = field(default=None)
     year_arr: np.ndarray = field(default=None, repr=False)
     tax_rate_arr: np.ndarray = field(default=None, repr=False)
 
     def __post_init__(self):
         # Configure attribute tax_rate
         if self.tax_mode == "User Input - Single Value":
-            self.tax_rate = self.tax_rate
+            if self.tax_rate is None:
+                self.tax_rate = 0.44
+            else:
+                self.tax_rate = self.tax_rate
 
         if self.tax_mode == "Nailed Down" or self.tax_mode == "Prevailing":
-            self.tax_rate = None
+            if self.tax_rate is None:
+                self.tax_rate = 0.44
+            else:
+                self.tax_rate = self.tax_rate
 
         if self.tax_mode == "User Input - Multi Value":
             if not isinstance(self.year_arr, np.ndarray):
-                raise ExcelDataException
+                raise FiscalConfigDataException(
+                    f"Year data must be inserted as a numpy ndarray. "
+                    f"{self.year_arr} is of datatype "
+                    f"({self.year_arr.__class__.__qualname__})."
+                )
 
             if not isinstance(self.tax_rate_arr, np.ndarray):
-                raise ExcelDataException
+                raise FiscalConfigDataException(
+                    f"Tax rate data must be inserted as a numpy ndarray. "
+                    f"{self.tax_rate_arr} is of datatype "
+                    f"({self.tax_rate_arr.__class__.__qualname__})."
+                )
 
             if len(self.year_arr) != len(self.tax_rate_arr):
-                raise ExcelDataException
+                raise FiscalConfigDataException(
+                    f"Unequal length of array: "
+                    f"year_arr: {len(self.year_arr)}, "
+                    f"tax_rate_arr: {len(self.tax_rate_arr)}"
+                )
 
             self.tax_rate = {
                 "Year": self.year_arr,
@@ -162,13 +192,77 @@ class OilLiftingData:
     -----
     This dataclass is used to store and organize information related to oil lifting.
     """
-    project_duration: int
-    project_years: np.ndarray
+
     prod_year: dict
     oil_lifting_rate: dict
     oil_price: dict
     condensate_lifting_rate: dict
     condensate_price: dict
+
+    # Attributes associated with project duration
+    project_duration: int
+    project_years: np.ndarray
+
+    def __post_init__(self):
+        # Prepare attribute prod_year
+        if not isinstance(self.prod_year, dict):
+            raise OilLiftingDataException(
+                f"Attribute prod_year must be provided in the form of dictionary. "
+                f"The current datatype of prod_year is "
+                f"{self.prod_year.__class__.__qualname__}"
+            )
+
+        for i in self.prod_year.keys():
+            if self.prod_year[i] is None:
+                self.prod_year[i] = self.project_years
+
+        # Prepare attribute oil_lifting_rate
+        if not isinstance(self.oil_lifting_rate, dict):
+            raise OilLiftingDataException(
+                f"Attribute oil_lifting_rate must be provided in the form of dictionary. "
+                f"The current datatype of oil_lifting_rate is "
+                f"{self.oil_lifting_rate.__class__.__qualname__}"
+            )
+
+        for i in self.oil_lifting_rate.keys():
+            if self.oil_lifting_rate[i] is None:
+                self.oil_lifting_rate[i] = np.zeros_like(self.project_years)
+
+        # Prepare attribute oil_price
+        if not isinstance(self.oil_price, dict):
+            raise OilLiftingDataException(
+                f"Attribute oil_price must be provided in the form of dictionary. "
+                f"The current datatype of oil_price is "
+                f"{self.oil_price.__class__.__qualname__}"
+            )
+
+        for i in self.oil_price.keys():
+            if self.oil_price[i] is None:
+                self.oil_price[i] = np.zeros_like(self.project_years)
+
+        # Prepare attribute condensate_lifting_rate
+        if not isinstance(self.condensate_lifting_rate, dict):
+            raise OilLiftingDataException(
+                f"Attribute condensate_lifting_rate must be provided in the form of dictionary. "
+                f"The current datatype of condensate_lifting_rate is "
+                f"{self.condensate_lifting_rate.__class__.__qualname__}"
+            )
+
+        for i in self.condensate_lifting_rate.keys():
+            if self.condensate_lifting_rate[i] is None:
+                self.condensate_lifting_rate[i] = np.zeros_like(self.project_years)
+
+        # Prepare attribute condensate_price
+        if not isinstance(self.condensate_price, dict):
+            raise OilLiftingDataException(
+                f"Attribute condensate_price must be provided in the form of dictionary. "
+                f"The current datatype of condensate_price is "
+                f"{self.condensate_price.__class__.__qualname__}"
+            )
+
+        for i in self.condensate_price.keys():
+            if self.condensate_price[i] is None:
+                self.condensate_price[i] = np.zeros_like(self.project_years)
 
 
 @dataclass
@@ -178,28 +272,95 @@ class GasLiftingData:
 
     Attributes
     ----------
-    project_duration: int
-        The duration of the project.
-    project_years: numpy.ndarray
-        An array representing the project years.
     gas_gsa_number: int
         The number of GSA.
     prod_year: dict
         Dictionary containing production years data.
-    gas_lifting_rate: dict
+    gas_prod_rate: dict
         Dictionary containing gas lifting rate data.
-    gas_ghv: dict
-        Dictionary containing gas ghv data.
-    gas_price: dict
-        Dictionary containing gas price data.
-    """
+    gas_gsa_lifting_rate: dict
+        Dictionary containing gas GSA lifting rate data.
+    gas_gsa_ghv: dict
+        Dictionary containing gas GSA ghv data.
+    gas_gsa_price: dict
+        Dictionary containing gas GSA price data.
     project_duration: int
-    project_years: np.ndarray
+        The duration of the project.
+    project_years: numpy.ndarray
+        An array representing the project years.
+    """
+
     gas_gsa_number: int
     prod_year: dict
-    gas_lifting_rate: dict
-    gas_ghv: dict
-    gas_price: dict
+    gas_prod_rate: dict
+    gas_gsa_lifting_rate: dict
+    gas_gsa_ghv: dict
+    gas_gsa_price: dict
 
+    # Attributes associated with project duration
+    project_duration: int
+    project_years: np.ndarray
 
+    def __post_init__(self):
+        # Prepare attribute prod_year
+        if not isinstance(self.prod_year, dict):
+            raise GasLiftingDataException(
+                f"Attribute prod_year must be provided in the form of dictionary. "
+                f"The current datatype of prod_year is "
+                f"{self.prod_year.__class__.__qualname__}"
+            )
 
+        for i in self.prod_year.keys():
+            if self.prod_year[i] is None:
+                self.prod_year[i] = self.project_years
+
+        # Prepare attribute gas_prod_rate
+        if not isinstance(self.gas_prod_rate, dict):
+            raise GasLiftingDataException(
+                f"Attribute gas_prod_rate must be provided in the form of dictionary. "
+                f"The current datatype of gas_prod_rate is "
+                f"{self.gas_prod_rate.__class__.__qualname__}"
+            )
+
+        for i in self.gas_prod_rate.keys():
+            if self.gas_prod_rate[i] is None:
+                self.gas_prod_rate[i] = np.zeros_like(self.project_years)
+
+        # Prepare attribute gas_gsa_lifting_rate
+        if not isinstance(self.gas_gsa_lifting_rate, dict):
+            raise GasLiftingDataException(
+                f"Attribute gas_gsa_lifting_rate must be provided in the form of dictionary. "
+                f"The current datatype of gas_gsa_lifting_rate is "
+                f"{self.gas_gsa_lifting_rate.__class__.__qualname__}"
+            )
+
+        for i in self.gas_gsa_lifting_rate.keys():
+            for j in self.gas_gsa_lifting_rate[i].keys():
+                if self.gas_gsa_lifting_rate[i][j] is None:
+                    self.gas_gsa_lifting_rate[i][j] = np.zeros_like(self.project_years)
+
+        # Prepare attribute gas_gsa_ghv
+        if not isinstance(self.gas_gsa_ghv, dict):
+            raise GasLiftingDataException(
+                f"Attribute gas_gsa_ghv must be provided in the form of dictionary. "
+                f"The current datatype of gas_gsa_ghv is "
+                f"{self.gas_gsa_ghv.__class__.__qualname__}"
+            )
+
+        for i in self.gas_gsa_ghv.keys():
+            for j in self.gas_gsa_ghv[i].keys():
+                if self.gas_gsa_ghv[i][j] is None:
+                    self.gas_gsa_ghv[i][j] = np.zeros_like(self.project_years)
+
+        # Prepare attribute gas_gsa_price
+        if not isinstance(self.gas_gsa_price, dict):
+            raise GasLiftingDataException(
+                f"Attribute gas_gsa_price must be provided in the form of dictionary. "
+                f"The current datatype of gas_gsa_price is "
+                f"{self.gas_gsa_price.__class__.__qualname__}"
+            )
+
+        for i in self.gas_gsa_price.keys():
+            for j in self.gas_gsa_price[i].keys():
+                if self.gas_gsa_price[i][j] is None:
+                    self.gas_gsa_price[i][j] = np.zeros_like(self.project_years)
