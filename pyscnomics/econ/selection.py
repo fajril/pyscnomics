@@ -146,4 +146,3 @@ class ContractType(Enum):
 class NPVSelection(Enum):
     FULL_CYCLE_REAL_TERMS = 'NPV Full Cycle using real terms method'
     FULL_CYCLE_NOMINAL_TERMS = 'NPV Full Cycle using real nominal terms method'
-    POINT_FORWARD = 'NPV Point Forward using real nominal terms method'

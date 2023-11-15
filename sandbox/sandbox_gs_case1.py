@@ -3,7 +3,8 @@ import pandas as pd
 
 
 from pyscnomics.dataset.sample import load_data, load_testing
-from pyscnomics.tools.summary import Summary
+from pyscnomics.tools.summary import get_summary
+from pyscnomics.econ.selection import NPVSelection
 # pd.options.display.float_format = '{:,.2f}'.format
 
 pd.set_option('display.max_columns', None)
@@ -23,6 +24,7 @@ psc_table['Progressive Split'] = psc._oil_prog_split
 psc_table['Contractor Split Split'] = psc._oil_ctr_split
 psc_table['Government Share'] = psc._oil_gov_share
 psc_table['Contractor Share'] = psc._oil_ctr_share_before_transfer
+psc_table['Tangbile'] = psc._oil_tangible.expenditures()
 psc_table['Depreciation'] = psc._oil_depreciation
 psc_table['Non Capital'] = psc._oil_non_capital
 psc_table['Total Expenses'] = psc._oil_total_expenses
@@ -43,11 +45,18 @@ psc_table['Net CTR Share'] = psc._oil_ctr_net_share
 psc_table['CTR CashFlow'] = psc._oil_ctr_cashflow
 psc_table['Government Take'] = psc._oil_government_take
 psc_table['Cumulative CTR CashFlow'] = np.cumsum(psc._oil_ctr_cashflow)
+psc_table.loc['Column_Total'] = psc_table.sum(numeric_only=True, axis=0)
 
 
 print('Calculation Table: Gross Split \n', psc_table, '\n')
 
 
+psc_summary = get_summary(contract=psc,
+                          reference_year=2010,
+                          npv_mode=NPVSelection.FULL_CYCLE_REAL_TERMS,
+                          discount_rate=0.1, )
 
+for key, value in psc_summary.items():
+    print(key, ":", value)
 
 

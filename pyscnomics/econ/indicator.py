@@ -7,7 +7,7 @@ import pyxirr
 
 
 def pot(
-    cashflow: np.ndarray,
+        cashflow: np.ndarray,
 ) -> float:
     """
     Calculate the payout time (POT) for a series of cashflows.
@@ -41,8 +41,8 @@ def pot(
 
 
 def npv(
-    cashflow: np.ndarray,
-    disc_rate: float = 0.1,
+        cashflow: np.ndarray,
+        disc_rate: float = 0.1,
 ) -> float:
     """
     Calculate the Net Present Value (NPV) of a series of cashflows.
@@ -74,10 +74,10 @@ def npv(
 
 
 def xnpv(
-    cashflow: np.ndarray,
-    start_date: date,
-    end_date: date = None,
-    disc_rate: float = 0.1,
+        cashflow: np.ndarray,
+        start_date: date,
+        end_date: date = None,
+        disc_rate: float = 0.1,
 ) -> float:
     """
     Calculate the Extended Net Present Value (XNPV) of a series of cashflows.
@@ -117,7 +117,7 @@ def xnpv(
 
 
 def irr(
-    cashflow: np.ndarray,
+        cashflow: np.ndarray,
 ) -> float:
     """
     Calculate the Internal Rate of Return (IRR) of a series of cashflows.
@@ -144,9 +144,9 @@ def irr(
 
 
 def xirr(
-    cashflow: np.ndarray,
-    start_date: date,
-    end_date: date = None,
+        cashflow: np.ndarray,
+        start_date: date,
+        end_date: date = None,
 ) -> float:
     """
     Calculate the Extended Internal Rate of Return (XIRR) of a series of cashflows.
@@ -229,3 +229,29 @@ def _date_arange(
         dates.append(end_date)
 
     return dates
+
+
+def npv_skk_real_terms(cashflow: np.ndarray,
+                       cashflow_years: np.ndarray,
+                       discount_rate: float,
+                       reference_year: int):
+    t = np.arange(1, len(cashflow_years) + 1)
+    reference_year = np.full_like(a=cashflow, fill_value=reference_year, dtype=float)
+    cashflow_disc = np.where(t > 1,
+                             cashflow / np.power((1 + discount_rate), (cashflow_years - reference_year)),
+                             cashflow * np.power((1 + discount_rate), len(cashflow_years))
+                             )
+    return np.sum(cashflow_disc)
+
+
+def npv_skk_nominal_terms(cashflow: np.ndarray,
+                          cashflow_years: np.ndarray,
+                          discount_rate: float,
+                          ):
+    t = np.arange(1, len(cashflow_years) + 1)
+    reference_year = np.full_like(a=cashflow, fill_value=np.min(cashflow_years), dtype=float)
+    cashflow_disc = np.where(t > 1,
+                             cashflow / np.power((1 + discount_rate), (cashflow_years - reference_year)),
+                             cashflow)
+
+    return np.sum(cashflow_disc)

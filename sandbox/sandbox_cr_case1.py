@@ -7,6 +7,8 @@ import time
 
 from pyscnomics.dataset.sample import load_data, load_testing
 
+from pyscnomics.tools.summary import get_summary
+from pyscnomics.econ.selection import NPVSelection
 
 # pd.options.display.float_format = '{:,.2f}'.format
 pd.set_option('display.max_columns', None)
@@ -89,7 +91,6 @@ psc_table_oil['Government Take'] = psc._oil_government_take
 psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
 print(psc_table_oil, '\n')
 
-
 psc_table_gas = pd.DataFrame()
 psc_table_gas['Year'] = psc.project_years
 psc_table_gas['Lifting'] = psc._gas_lifting.lifting_rate_arr()
@@ -128,7 +129,6 @@ psc_table_gas['Government Take'] = psc._gas_government_take
 psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
 print(psc_table_gas, '\n')
 
-
 psc_table_consolidated = pd.DataFrame()
 psc_table_consolidated['Year'] = psc.project_years
 psc_table_consolidated['cnsltd_revenue'] = psc._consolidated_revenue
@@ -159,7 +159,6 @@ psc_table_consolidated['cnsltd_cashflow'] = psc._consolidated_cashflow
 psc_table_consolidated['cum. cnsltd_cashflow'] = np.cumsum(psc._consolidated_cashflow)
 psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
 print(psc_table_consolidated, '\n')
-
 
 # df_comparison = pd.DataFrame()
 # # Calculated result
@@ -209,3 +208,11 @@ print(psc_table_consolidated, '\n')
 # print(np.sum(psc._oil_sunk_cost))
 # print(np.sum(psc._gas_sunk_cost))
 
+
+psc_summary = get_summary(contract=psc,
+                          reference_year=2010,
+                          npv_mode=NPVSelection.FULL_CYCLE_REAL_TERMS,
+                          discount_rate=0.1, )
+
+for key, value in psc_summary.items():
+    print(key, ":", value)
