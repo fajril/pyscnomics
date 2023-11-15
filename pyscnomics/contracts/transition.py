@@ -98,7 +98,7 @@ class Transition:
 
         return new_contract
 
-    def run(self):
+    def run(self, unrec_portion: float = 1.0):
         # Defining the transition start date and end date
         start_date_trans = min([self.contract1.start_date, self.contract2.start_date])
         end_date_trans = max([self.contract1.end_date, self.contract2.end_date])
@@ -286,7 +286,7 @@ class Transition:
         contract2_new.run(**self.argument_contract2)
 
         # Defining the unrecoverable cost from the prior contract
-        latest_unrec = contract1_new._consolidated_unrecovered_after_transfer[-1]
+        latest_unrec = contract1_new._consolidated_unrecovered_after_transfer[-1] * unrec_portion
         unrec_cost_prior = np.zeros_like(contract2_new.project_years, dtype=float)
         unrec_cost_prior[len(years_to_prior)] = latest_unrec
 
