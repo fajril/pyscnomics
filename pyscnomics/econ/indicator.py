@@ -255,3 +255,15 @@ def npv_skk_nominal_terms(cashflow: np.ndarray,
                              cashflow)
 
     return np.sum(cashflow_disc)
+
+
+def npv_point_forward(cashflow: np.ndarray,
+                      cashflow_years: np.ndarray,
+                      discount_rate: float):
+    t = np.arange(1, len(cashflow_years) + 1)
+    cashflow_disc = np.where(t > 1,
+                             cashflow / np.power((1 + discount_rate), cashflow_years),
+                             cashflow)
+
+    return np.sum(cashflow_disc)
+
