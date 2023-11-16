@@ -13,6 +13,9 @@ from pyscnomics.io.config import (
     FiscalConfigData,
     OilLiftingData,
     GasLiftingData,
+    LPGPropaneLiftingData,
+    LPGButaneLiftingData,
+    SulfurLiftingData,
 )
 
 
@@ -47,6 +50,9 @@ class Spreadsheet:
     fiscal_config_data: FiscalConfigData = field(default=None, init=False)
     oil_lifting_data: OilLiftingData = field(default=None, init=False)
     gas_lifting_data: GasLiftingData = field(default=None, init=False)
+    lpg_propane_lifting_data: LPGPropaneLiftingData = field(default=None, init=False)
+    lpg_butane_lifting_data: LPGButaneLiftingData = field(default=None, init=False)
+    sulfur_lifting_data: SulfurLiftingData = field(default=None, init=False)
 
     def __post_init__(self):
         # Configure attribute workbook_to_read
@@ -245,14 +251,13 @@ class Spreadsheet:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod Oil' data,
             then assigned it as local variable named 'oil_data_available',
         (2) If 'oil_data_available' is empty (length is zero), then return a new instance
-            of OilLiftingData with the associated attributes set as an array of zeros,
+            of OilLiftingData with the associated attributes set to None,
         (3) If 'oil_data_available' is not empty, first check whether a particular
             self.data_loaded[oil_data_available] is an empty dataframe. If it is, then
             create a new instance of OilLiftingData with the associated attributes set
-            as an array of zeros. If a particular self.data_loaded[oil_data_available]
-            is not an empty dataframe, then create a new instance of OilLiftingData with
-            the associated attributes set as the loaded value from the corresponding
-            Excel worksheet.
+            to None. If a particular self.data_loaded[oil_data_available] is not an empty
+            dataframe, then create a new instance of OilLiftingData with the associated
+            attributes set as the loaded value from the corresponding Excel worksheet.
         """
 
         # Step #1 (See 'Notes' section in the docstring)
@@ -268,10 +273,7 @@ class Spreadsheet:
         ]
 
         if len(oil_data_available) == 0:
-            oil_data = {
-                key: {"Prod Oil": None}
-                for key in oil_attrs
-            }
+            oil_data = {key: {"Prod Oil": None}for key in oil_attrs}
 
             return OilLiftingData(
                 prod_year=oil_data["prod_year"],
@@ -341,7 +343,7 @@ class Spreadsheet:
             then assigned it as local variable named 'gas_data_available',
         (2) Configure the number of active GSA in each element of 'gas_data_available',
         (3) If 'gas_data_available' is empty (length is zero), then return a new instance
-            of GasLiftingData with the associated attributes set as None. Here, the associated
+            of GasLiftingData with the associated attributes set to None. Here, the associated
             operations are as follows:
             -   Create a dictionary named 'gas_data' where each corresponding attributes
                 set to None,
@@ -449,14 +451,236 @@ class Spreadsheet:
                 project_years=self.general_config_data.project_years,
             )
 
-    def _get_lpg_propane_lifting_data(self):
-        raise NotImplementedError
+    def _get_lpg_propane_lifting_data(self) -> LPGPropaneLiftingData:
+        """
+        Retrieves LPG propane lifting data based on available sheets.
 
-    def _get_lpg_butane_lifting_data(self):
-        raise NotImplementedError
+        Returns
+        -------
+        LPGPropaneLiftingData
+            An instance of the LPGPropaneLiftingData class containing the following attributes:
+                - prod_year: dict
+                    Dictionary containing production years data.
+                - lifting_rate: dict
+                    Dictionary containing LPG propane lifting rate data.
+                - price: dict
+                    Dictionary containing LPG propane price data.
+                - project_duration: int
+                    The duration of the project.
+                - project_years: numpy.ndarray
+                    An array representing the project years.
 
-    def _get_sulfur_lifting_data(self):
-        raise NotImplementedError
+        Notes
+        -----
+        The undertaken procedures are as follows:
+        (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod LPG Propane'
+            data, then assigned it as local variable named 'lpg_propane_data_available',
+        (2) If 'lpg_propane_data_available' is empty (length is zero), then return a new
+            instance of LPGPropaneLiftingData with the associated attributes set to None,
+        (3) If 'lpg_propane_data_available' is not empty, first check whether a particular
+            self.data_loaded[lpg_propane_data_available] is an empty dataframe. If it is, then
+            create a new instance of LPGPropaneLiftingData with the associated attributes set
+            to None. If a particular self.data_loaded[lpg_propane_data_available] is not an empty
+            dataframe, then create a new instance of LPGPropaneLiftingData with the associated
+            attributes set as the loaded value from the corresponding Excel worksheet.
+        """
+
+        # Step #1 (See 'Notes' section in the docstring)
+        lpg_propane_data_available = list(
+            filter(lambda i: "Prod LPG Propane" in i, self.sheets_loaded)
+        )
+
+        # Step #2 (See 'Notes' section in the docstring)
+        lpg_propane_attrs = ["prod_year", "lifting_rate", "price"]
+
+        if len(lpg_propane_data_available) == 0:
+            lpg_propane_data = {key: {"Prod LPG Propane": None} for key in lpg_propane_attrs}
+
+            return LPGPropaneLiftingData(
+                prod_year=lpg_propane_data["prod_year"],
+                lifting_rate=lpg_propane_data["lifting_rate"],
+                price=lpg_propane_data["price"],
+                project_duration=self.general_config_data.project_duration,
+                project_years=self.general_config_data.project_years,
+            )
+
+        # Step #3 (See 'Notes' section in the docstring)
+        else:
+            lpg_propane_data = {}
+            lpg_propane_data_loaded = {
+                i: self.data_loaded[i].fillna(0) for i in lpg_propane_data_available
+            }
+
+            for key, val_attr in enumerate(lpg_propane_attrs):
+                lpg_propane_data[val_attr] = {}
+                for i in lpg_propane_data_available:
+                    if lpg_propane_data_loaded[i].empty:
+                        lpg_propane_data[val_attr][i] = None
+                    else:
+                        lpg_propane_data[val_attr][i] = (
+                            lpg_propane_data_loaded[i].iloc[:, key]
+                            .to_numpy()
+                        )
+
+            return LPGPropaneLiftingData(
+                prod_year=lpg_propane_data["prod_year"],
+                lifting_rate=lpg_propane_data["lifting_rate"],
+                price=lpg_propane_data["price"],
+                project_duration=self.general_config_data.project_duration,
+                project_years=self.general_config_data.project_years,
+            )
+
+    def _get_lpg_butane_lifting_data(self) -> LPGButaneLiftingData:
+        """
+        Retrieves LPG butane lifting data based on available sheets.
+
+        Returns
+        -------
+        LPGButaneLiftingData
+            An instance of the LPGButaneLiftingData class containing the following attributes:
+                - prod_year: dict
+                    Dictionary containing production years data.
+                - lifting_rate: dict
+                    Dictionary containing LPG butane lifting rate data.
+                - price: dict
+                    Dictionary containing LPG butane price data.
+                - project_duration: int
+                    The duration of the project.
+                - project_years: numpy.ndarray
+                    An array representing the project years.
+
+        Notes
+        -----
+        The undertaken procedures are as follows:
+        (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod LPG Butane'
+            data, then assigned it as local variable named 'lpg_butane_data_available',
+        (2) If 'lpg_butane_data_available' is empty (length is zero), then return a new
+            instance of LPGButaneLiftingData with the associated attributes set to None,
+        (3) If 'lpg_butane_data_available' is not empty, first check whether a particular
+            self.data_loaded[lpg_butane_data_available] is an empty dataframe. If it is, then
+            create a new instance of LPGButaneLiftingData with the associated attributes set
+            to None. If a particular self.data_loaded[lpg_butane_data_available] is not an empty
+            dataframe, then create a new instance of LPGButaneLiftingData with the associated
+            attributes set as the loaded value from the corresponding Excel worksheet.
+        """
+
+        # Step #1 (See 'Notes' section in the docstring)
+        lpg_butane_data_available = list(
+            filter(lambda i: "Prod LPG Butane" in i, self.sheets_loaded)
+        )
+
+        # Step #2 (See 'Notes' section in the docstring)
+        lpg_butane_attrs = ["prod_year", "lifting_rate", "price"]
+
+        if len(lpg_butane_data_available) == 0:
+            lpg_butane_data = {key: {"Prod LPG Butane": None} for key in lpg_butane_attrs}
+
+            return LPGButaneLiftingData(
+                prod_year=lpg_butane_data["prod_year"],
+                lifting_rate=lpg_butane_data["lifting_rate"],
+                price=lpg_butane_data["price"],
+                project_duration=self.general_config_data.project_duration,
+                project_years=self.general_config_data.project_years,
+            )
+
+        else:
+            lpg_butane_data = {}
+            lpg_butane_data_loaded = {
+                i: self.data_loaded[i].fillna(0) for i in lpg_butane_data_available
+            }
+
+            for key, val_attr in enumerate(lpg_butane_attrs):
+                lpg_butane_data[val_attr] = {}
+                for i in lpg_butane_data_available:
+                    if lpg_butane_data_loaded[i].empty:
+                        lpg_butane_data[val_attr][i] = None
+                    else:
+                        lpg_butane_data[val_attr][i] = (
+                            lpg_butane_data_loaded[i].iloc[:, key]
+                            .to_numpy()
+                        )
+
+            return LPGButaneLiftingData(
+                prod_year=lpg_butane_data["prod_year"],
+                lifting_rate=lpg_butane_data["lifting_rate"],
+                price=lpg_butane_data["price"],
+                project_duration=self.general_config_data.project_duration,
+                project_years=self.general_config_data.project_years,
+            )
+
+    def _get_sulfur_lifting_data(self) -> SulfurLiftingData:
+        """
+        Retrieves sulfur lifting data based on available sheets.
+
+        Returns
+        -------
+        SulfurLiftingData
+            An instance of the SulfurLiftingData class containing the following attributes:
+                - prod_year: dict
+                    Dictionary containing production years data.
+                - lifting_rate: dict
+                    Dictionary containing sulfur lifting rate data.
+                - price: dict
+                    Dictionary containing sulfur price data.
+                - project_duration: int
+                    The duration of the project.
+                - project_years: numpy.ndarray
+                    An array representing the project years.
+
+        Notes
+        -----
+        The undertaken procedures are as follows:
+        (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod Sulfur'
+            data, then assigned it as local variable named 'sulfur_data_available',
+        (2) If 'sulfur_data_available' is empty (length is zero), then return a new
+            instance of SulfurLiftingData with the associated attributes set to None,
+        (3) If 'sulfur_data_available' is not empty, first check whether a particular
+            self.data_loaded[sulfur_data_available] is an empty dataframe. If it is, then
+            create a new instance of SulfurLiftingData with the associated attributes set
+            to None. If a particular self.data_loaded[sulfur_data_available] is not an empty
+            dataframe, then create a new instance of SulfurLiftingData with the associated
+            attributes set as the loaded value from the corresponding Excel worksheet.
+        """
+
+        # Step #1 (See 'Notes' section in the docstring)
+        sulfur_data_available = list(filter(lambda i: "Prod Sulfur" in i, self.sheets_loaded))
+
+        # Step #2 (See 'Notes' section in the docstring)
+        sulfur_data_attrs = ["prod_year", "lifting_rate", "price"]
+
+        if len(sulfur_data_available) == 0:
+            sulfur_data = {key: {"Prod Sulfur": None} for key in sulfur_data_attrs}
+
+            return SulfurLiftingData(
+                prod_year=sulfur_data["prod_year"],
+                lifting_rate=sulfur_data["lifting_rate"],
+                price=sulfur_data["price"],
+                project_duration=self.general_config_data.project_duration,
+                project_years=self.general_config_data.project_years,
+            )
+
+        else:
+            sulfur_data = {}
+            sulfur_data_loaded = {i: self.data_loaded[i].fillna(0) for i in sulfur_data_available}
+
+            for key, val_attr in enumerate(sulfur_data_attrs):
+                sulfur_data[val_attr] = {}
+                for i in sulfur_data_available:
+                    if sulfur_data_loaded[i].empty:
+                        sulfur_data[val_attr][i] = None
+                    else:
+                        sulfur_data[val_attr][i] = (
+                            sulfur_data_loaded[i].iloc[:, key]
+                            .to_numpy()
+                        )
+
+            return SulfurLiftingData(
+                prod_year=sulfur_data["prod_year"],
+                lifting_rate=sulfur_data["lifting_rate"],
+                price=sulfur_data["price"],
+                project_duration=self.general_config_data.project_duration,
+                project_years=self.general_config_data.project_years,
+            )
 
     def _get_electricity_lifting_data(self):
         raise NotImplementedError
@@ -493,11 +717,18 @@ class Spreadsheet:
         self.fiscal_config_data = self._get_fiscal_config_data()
         self.oil_lifting_data = self._get_oil_lifting_data()
         self.gas_lifting_data = self._get_gas_lifting_data()
+        self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
+        self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
+        self.sulfur_lifting_data = self._get_sulfur_lifting_data()
 
         print("\t")
-        print(f"Filetype: {type(self.gas_lifting_data)}")
-        print(f"Keys: {self.gas_lifting_data.__annotations__}")
-        print("self.gas_lifting_data = \n", self.gas_lifting_data)
+        print(f"Filetype: {type(self.sulfur_lifting_data)}")
+        # print(f"Keys: {self.sulfur_lifting_data.__annotations__}")
+        print("self.sulfur_lifting_data = \n", self.sulfur_lifting_data)
+
+        # print('\t')
+        # print(f'Filetype: {type(self.gas_lifting_data.gas_gsa_price)}')
+        # print('gas gsa price = \n', self.gas_lifting_data.gas_gsa_price["Prod Gas (3)"])
 
         # print('\t')
         # print('fiscal_config_data = \n', self.data_loaded["Fiscal Config"].iloc[:, 1])

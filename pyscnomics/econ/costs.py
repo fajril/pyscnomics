@@ -185,7 +185,7 @@ class Tangible(GeneralCost):
     salvage_value: np.ndarray = field(default=None)
     useful_life: np.ndarray = field(default=None)
     depreciation_factor: np.ndarray = field(default=None)
-    is_ic_applied: bool = field(default=None)
+    is_ic_applied: list[bool] = field(default=None)
 
     def __post_init__(self):
         # Check for inappropriate start and end year project

@@ -31,6 +31,36 @@ class GasLiftingDataException(Exception):
     pass
 
 
+class LPGPropaneLiftingDataException(Exception):
+    """ Exception to be raised for an inappropriate use of LPGPropaneLiftingData class """
+
+    pass
+
+
+class LPGButaneLiftingDataException(Exception):
+    """ Exception to be raised for an inappropriate use of LPGButaneLiftingData class """
+
+    pass
+
+
+class SulfurLiftingDataException(Exception):
+    """ Exception to be raised for an inappropriate use of SulfurLiftingData class """
+
+    pass
+
+
+class ElectricityLiftingDataException(Exception):
+    """ Exception to be raised for an inappropriate use of ElectricityLiftingData class """
+
+    pass
+
+
+class CO2LiftingDataException(Exception):
+    """ Exception to be raised for an inappropriate use of CO2LiftingData class """
+
+    pass
+
+
 @dataclass
 class GeneralConfigData:
     """
@@ -364,3 +394,204 @@ class GasLiftingData:
             for j in self.gas_gsa_price[i].keys():
                 if self.gas_gsa_price[i][j] is None:
                     self.gas_gsa_price[i][j] = np.zeros_like(self.project_years)
+
+
+@dataclass
+class LPGPropaneLiftingData:
+    """
+    A dataclass representing LPG Propane lifting information for an oil and gas economic project.
+
+    Attributes
+    ----------
+    prod_year: dict
+        Dictionary containing production years data.
+    lifting_rate: dict
+        Dictionary containing LPG Propane lifting rate data.
+    price: dict
+        Dictionary containing LPG Propane price data.
+    project_duration: int
+        The duration of the project.
+    project_years: numpy.ndarray
+        An array representing the project years.
+    """
+    prod_year: dict
+    lifting_rate: dict
+    price: dict
+
+    # Attributes associated with project duration
+    project_duration: int
+    project_years: np.ndarray
+
+    def __post_init__(self):
+        # Prepare attribute prod_year
+        if not isinstance(self.prod_year, dict):
+            raise LPGPropaneLiftingDataException(
+                f"Attribute prod_year must be provided in the form of dictionary. "
+                f"The current datatype of prod_year is "
+                f"{self.prod_year.__class__.__qualname__}"
+            )
+
+        for i in self.prod_year.keys():
+            if self.prod_year[i] is None:
+                self.prod_year[i] = self.project_years
+
+        # Prepare attribute lifting_rate
+        if not isinstance(self.lifting_rate, dict):
+            raise LPGPropaneLiftingDataException(
+                f"Attribute lifting_rate must be provided in the form of dictionary. "
+                f"The current datatype of lifting_rate is "
+                f"{self.lifting_rate.__class__.__qualname__}"
+            )
+
+        for i in self.lifting_rate.keys():
+            if self.lifting_rate[i] is None:
+                self.lifting_rate[i] = np.zeros_like(self.project_years)
+
+        # Prepare attribute price
+        if not isinstance(self.price, dict):
+            raise LPGPropaneLiftingDataException(
+                f"Attribute price must be provided in the form of dictionary. "
+                f"The current datatype of price is "
+                f"{self.price.__class__.__qualname__}"
+            )
+
+        for i in self.price.keys():
+            if self.price[i] is None:
+                self.price[i] = np.zeros_like(self.project_years)
+
+
+@dataclass
+class LPGButaneLiftingData:
+    """
+    A dataclass representing LPG Butane lifting information for an oil and gas economic project.
+
+    Attributes
+    ----------
+    prod_year: dict
+        Dictionary containing production years data.
+    lifting_rate: dict
+        Dictionary containing LPG Butane lifting rate data.
+    price: dict
+        Dictionary containing LPG Butane price data.
+    project_duration: int
+        The duration of the project.
+    project_years: numpy.ndarray
+        An array representing the project years.
+    """
+    prod_year: dict
+    lifting_rate: dict
+    price: dict
+
+    # Attributes associated with project duration
+    project_duration: int
+    project_years: np.ndarray
+
+    def __post_init__(self):
+        # Prepare attribute prod_year
+        if not isinstance(self.prod_year, dict):
+            raise LPGButaneLiftingDataException(
+                f"Attribute prod_year must be provided in the form of dictionary. "
+                f"The current datatype of prod_year is "
+                f"{self.prod_year.__class__.__qualname__}"
+            )
+
+        for i in self.prod_year.keys():
+            if self.prod_year[i] is None:
+                self.prod_year[i] = self.project_years
+
+        # Prepare attribute lifting_rate
+        if not isinstance(self.lifting_rate, dict):
+            raise LPGButaneLiftingDataException(
+                f"Attribute lifting_rate must be provided in the form of dictionary. "
+                f"The current datatype of lifting_rate is "
+                f"{self.lifting_rate.__class__.__qualname__}"
+            )
+
+        for i in self.lifting_rate.keys():
+            if self.lifting_rate[i] is None:
+                self.lifting_rate[i] = np.zeros_like(self.project_years)
+
+        # Prepare attribute price
+        if not isinstance(self.price, dict):
+            raise LPGButaneLiftingDataException(
+                f"Attribute price must be provided in the form of dictionary. "
+                f"The current datatype of price is "
+                f"{self.price.__class__.__qualname__}"
+            )
+
+        for i in self.price.keys():
+            if self.price[i] is None:
+                self.price[i] = np.zeros_like(self.project_years)
+
+
+@dataclass
+class SulfurLiftingData:
+    """
+    A dataclass representing sulfur lifting information for an oil and gas economic project.
+
+    Attributes
+    ----------
+    prod_year: dict
+        Dictionary containing production years data.
+    lifting_rate: dict
+        Dictionary containing sulfur lifting rate data.
+    price: dict
+        Dictionary containing sulfur price data.
+    project_duration: int
+        The duration of the project.
+    project_years: numpy.ndarray
+        An array representing the project years.
+    """
+    prod_year: dict
+    lifting_rate: dict
+    price: dict
+
+    # Attributes associated with project duration
+    project_duration: int
+    project_years: np.ndarray
+
+    def __post_init__(self):
+        # Prepare attribute prod_year
+        if not isinstance(self.prod_year, dict):
+            raise SulfurLiftingDataException(
+                f"Attribute prod_year must be provided in the form of dictionary. "
+                f"The current datatype of prod_year is "
+                f"{self.prod_year.__class__.__qualname__}"
+            )
+
+        for i in self.prod_year.keys():
+            if self.prod_year[i] is None:
+                self.prod_year[i] = self.project_years
+
+        # Prepare attribute lifting_rate
+        if not isinstance(self.lifting_rate, dict):
+            raise SulfurLiftingDataException(
+                f"Attribute lifting_rate must be provided in the form of dictionary. "
+                f"The current datatype of lifting_rate is "
+                f"{self.lifting_rate.__class__.__qualname__}"
+            )
+
+        for i in self.lifting_rate.keys():
+            if self.lifting_rate[i] is None:
+                self.lifting_rate[i] = np.zeros_like(self.project_years)
+
+        # Prepare attribute price
+        if not isinstance(self.price, dict):
+            raise SulfurLiftingDataException
+
+        for i in self.price.keys():
+            if self.price[i] is None:
+                self.price[i] = np.zeros_like(self.project_years)
+
+
+@dataclass
+class ElectricityLiftingData:
+    """ A dataclass representing electricity lifting information for an oil and gas economic project. """
+    NotImplemented
+
+
+@dataclass
+class CO2LiftingData:
+    """ 123
+    """
+    pass
