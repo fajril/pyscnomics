@@ -6,7 +6,7 @@ import os
 import numpy as np
 import pandas as pd
 from datetime import date
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 
 from pyscnomics.io.config import (
     GeneralConfigData,
@@ -91,7 +91,7 @@ class Spreadsheet:
         sheets = excel.book.worksheets
         self.sheets_raw = dict([(sh.title, sh.sheet_state) for sh in sheets])
         self.sheets_visible = [key for key, val in self.sheets_raw.items() if val == "visible"]
-        self.sheets_loaded = self.sheets_visible[3 : len(self.sheets_visible) - 2]
+        self.sheets_loaded = self.sheets_visible[3:len(self.sheets_visible) - 2]
 
         # Load data from 'visible' worksheets only
         self.data_loaded = {
