@@ -52,7 +52,7 @@ def straight_line_depreciation_rate(
 
     # Extend the depreciation charge array beyond useful life if needed
     if depreciation_len > useful_life:
-        extension = np.zeros(depreciation_len - useful_life)
+        extension = np.zeros(int(depreciation_len - useful_life))
         depreciation_charge = np.concatenate((depreciation_charge, extension))
 
     return depreciation_charge
@@ -140,7 +140,7 @@ def declining_balance_depreciation_rate(
     """
 
     # Exponent value
-    periods = np.arange(1, useful_life, 1, dtype=np.int_)
+    periods = np.arange(1, int(useful_life), 1, dtype=np.int_)
 
     # Depreciation factor
     depreciation_factor = decline_factor / useful_life
@@ -153,18 +153,12 @@ def declining_balance_depreciation_rate(
     # When depreciation charge reaches the salvage value
     if depreciation_charge.sum() > (cost - salvage_value):
         remaining_depreciation = cost - salvage_value - np.cumsum(depreciation_charge)
-
-        remaining_depreciation = np.where(
-            remaining_depreciation > 0, remaining_depreciation, 0
-        )
+        remaining_depreciation = np.where(remaining_depreciation > 0, remaining_depreciation, 0)
         idx = np.argmin(remaining_depreciation)
 
         # Adjust the depreciation charge to take only the remainder when it reaches the salvage value
-        depreciation_charge[idx] = (
-            cost - salvage_value - np.cumsum(depreciation_charge)[idx - 1]
-        )
-
-        depreciation_charge[idx + 1 :] = 0
+        depreciation_charge[idx] = (cost - salvage_value - np.cumsum(depreciation_charge)[idx - 1])
+        depreciation_charge[idx + 1:] = 0
 
     # Add an element to array depreciation_charge, accounting the remaining unpaid cost
     depreciation_charge = np.concatenate(
@@ -176,7 +170,7 @@ def declining_balance_depreciation_rate(
 
     # Extend the depreciation charge array beyond useful life if project duration is longer than useful life
     if depreciation_len > useful_life:
-        extension = np.zeros(depreciation_len - useful_life)
+        extension = np.zeros(int(depreciation_len - useful_life))
         depreciation_charge = np.concatenate((depreciation_charge, extension))
 
     return depreciation_charge
@@ -291,7 +285,7 @@ def psc_declining_balance_depreciation_rate(
 
     else:
         # Create an array of exponents
-        periods = np.arange(1, useful_life, 1, dtype=np.int_)
+        periods = np.arange(1, int(useful_life), 1, dtype=np.int_)
 
         # Calculate depreciation charge
         depreciation_charge = (
@@ -305,7 +299,7 @@ def psc_declining_balance_depreciation_rate(
 
         # Modify depreciation charge; accounting for project duration
         if depreciation_len > len(depreciation_charge):
-            extension = np.zeros(depreciation_len - len(depreciation_charge))
+            extension = np.zeros(int(depreciation_len - len(depreciation_charge)))
             depreciation_charge = np.concatenate((depreciation_charge, extension))
 
         return depreciation_charge
@@ -421,7 +415,7 @@ def unit_of_production_rate(
         amortization_charge[idx] = (
             cost - salvage_value - np.cumsum(amortization_charge)[idx - 1]
         )
-        amortization_charge[idx + 1 :] = 0
+        amortization_charge[idx + 1:] = 0
 
     if amortization_charge.size < amortization_len:
         extension = np.zeros(amortization_len - amortization_charge.size)

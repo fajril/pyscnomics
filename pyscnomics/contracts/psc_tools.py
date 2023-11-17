@@ -291,7 +291,7 @@ def get_dmo(onstream_date: date,
 
     # Calculate DMO volume
     dmo_holiday = np.where(project_years >= dmo_end_date.year, False, True)
-    dmo_volume = dmo_volume_portion * lifting.lifting_rate_arr() * ctr_pretax_share
+    dmo_volume = dmo_volume_portion * lifting.get_lifting_rate_arr() * ctr_pretax_share
     dmo_fee = np.where(np.logical_and(unrecovered_cost == 0, ~dmo_holiday),
                        dmo_fee_portion * price * dmo_volume,
                        dmo_volume * price)

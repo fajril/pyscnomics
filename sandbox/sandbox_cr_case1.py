@@ -55,8 +55,8 @@ print('Execution Time: ', end_time - start_time, '\n')
 
 psc_table_oil = pd.DataFrame()
 psc_table_oil['Year'] = psc.project_years
-psc_table_oil['Lifting'] = psc._oil_lifting.lifting_rate_arr()
-psc_table_oil['Price'] = psc._oil_lifting.lifting_price_arr()
+psc_table_oil['Lifting'] = psc._oil_lifting.get_lifting_rate_arr()
+psc_table_oil['Price'] = psc._oil_lifting.get_price_arr()
 psc_table_oil['Revenue'] = psc._oil_revenue
 psc_table_oil['Depreciable'] = psc._oil_tangible.expenditures()
 psc_table_oil['Opex'] = psc._oil_opex.expenditures()
@@ -93,8 +93,8 @@ print(psc_table_oil, '\n')
 
 psc_table_gas = pd.DataFrame()
 psc_table_gas['Year'] = psc.project_years
-psc_table_gas['Lifting'] = psc._gas_lifting.lifting_rate_arr()
-psc_table_gas['Price'] = psc._gas_lifting.lifting_price_arr()
+psc_table_gas['Lifting'] = psc._gas_lifting.get_lifting_rate_arr()
+psc_table_gas['Price'] = psc._gas_lifting.get_price_arr()
 psc_table_gas['Revenue'] = psc._gas_revenue
 psc_table_gas['Depreciable'] = psc._gas_tangible.expenditures()
 psc_table_gas['Opex'] = psc._gas_opex.expenditures()

@@ -66,13 +66,13 @@ def read_json_file(file_name: str) -> dict:
     return json.loads(file_contents)
 
 
-def read_fluid_type(fluid: str) -> FluidType:
+def read_fluid_type(fluid: list | str) -> list | FluidType:
     """
     A function to converting the str input into FluidType Enum class.
 
     Parameters
     ----------
-    fluid: str
+    fluid: str | list
         The fluid type.
 
     Returns
@@ -81,16 +81,30 @@ def read_fluid_type(fluid: str) -> FluidType:
         The enum class for FluidType.
 
     """
-    if fluid == 'Oil':
-        return FluidType.OIL
-    elif fluid == 'Gas':
-        return FluidType.GAS
-    elif fluid == 'Sulfur':
-        return FluidType.SULFUR
-    elif fluid == 'Electricity':
-        return FluidType.ELECTRICITY
-    elif fluid == 'CO2':
-        return FluidType.CO2
+    if isinstance(fluid, str):
+        if fluid == 'Oil':
+            return FluidType.OIL
+        elif fluid == 'Gas':
+            return FluidType.GAS
+        elif fluid == 'Sulfur':
+            return FluidType.SULFUR
+        elif fluid == 'Electricity':
+            return FluidType.ELECTRICITY
+        elif fluid == 'CO2':
+            return FluidType.CO2
+
+    else:
+
+        fluid_mapping = {'Oil': FluidType.OIL,
+                         'Gas': FluidType.GAS,
+                         'Sulfur': FluidType.SULFUR,
+                         'Electricity': FluidType.ELECTRICITY,
+                         'CO2': FluidType.CO2}
+
+        # Replace elements in the list using the mapping
+        result = [fluid_mapping[i] for i in fluid if i in fluid_mapping]
+
+        return result
 
 
 def assign_onstream_date(date_data: None | str) -> datetime | None:
@@ -187,12 +201,18 @@ def assign_cost(data_raw: dict) -> tuple:
                             end_year=tangible_data[key]['end_year'],
                             cost=np.array(tangible_data[key]['cost']),
                             expense_year=np.array(tangible_data[key]['expense_year']),
+                            cost_allocation=read_fluid_type(fluid=tangible_data[key]['cost_allocation']),
+                            description=tangible_data[key]['description'],
+                            vat_portion=np.array(tangible_data[key]['vat_portion']),
+                            vat_discount=np.array(tangible_data[key]['vat_discount']),
+                            lbt_portion=np.array(tangible_data[key]['lbt_portion']),
+                            lbt_discount=np.array(tangible_data[key]['lbt_discount']),
                             pis_year=np.array(tangible_data[key]['pis_year']),
-                            cost_allocation=read_fluid_type(tangible_data[key]['cost_allocation']),
+                            salvage_value=np.array(tangible_data[key]['salvage_value']),
                             useful_life=np.array(tangible_data[key]['useful_life']),
                             depreciation_factor=np.array(tangible_data[key]['depreciation_factor']),
-                            vat_portion=tangible_data[key]['vat_portion'],
-                            pdri_portion=tangible_data[key]['pdri_portion'])
+                            is_ic_applied=tangible_data[key]['is_ic_applied'],
+                            )
         tangible_list.append(tangible)
 
     # Defining the data source and the list container for Intangible. Then, assign them based on their fluid type
@@ -203,9 +223,12 @@ def assign_cost(data_raw: dict) -> tuple:
                                 end_year=intangible_data[key]['end_year'],
                                 cost=np.array(intangible_data[key]['cost']),
                                 expense_year=np.array(intangible_data[key]['expense_year']),
-                                vat_portion=intangible_data[key]['vat_portion'],
-                                pdri_portion=intangible_data[key]['pdri_portion'],
-                                cost_allocation=read_fluid_type(intangible_data[key]['cost_allocation']),
+                                cost_allocation=read_fluid_type(fluid=intangible_data[key]['cost_allocation']),
+                                description=intangible_data[key]['description'],
+                                vat_portion=np.array(intangible_data[key]['vat_portion']),
+                                vat_discount=np.array(intangible_data[key]['vat_discount']),
+                                lbt_portion=np.array(intangible_data[key]['lbt_portion']),
+                                lbt_discount=np.array(intangible_data[key]['lbt_discount']),
                                 )
         intangible_list.append(intangible)
 
@@ -215,11 +238,14 @@ def assign_cost(data_raw: dict) -> tuple:
     for key in opex_data.keys():
         opex = OPEX(start_year=opex_data[key]['start_year'],
                     end_year=opex_data[key]['end_year'],
-                    fixed_cost=np.array(opex_data[key]['fixed_cost']),
                     expense_year=np.array(opex_data[key]['expense_year']),
-                    vat_portion=opex_data[key]['vat_portion'],
-                    pdri_portion=opex_data[key]['pdri_portion'],
-                    cost_allocation=read_fluid_type(opex_data[key]['cost_allocation']))
+                    cost_allocation=read_fluid_type(fluid=opex_data[key]['cost_allocation']),
+                    description=opex_data[key]['description'],
+                    vat_portion=np.array(opex_data[key]['vat_portion']),
+                    vat_discount=np.array(opex_data[key]['vat_discount']),
+                    lbt_portion=np.array(opex_data[key]['lbt_portion']),
+                    lbt_discount=np.array(opex_data[key]['lbt_discount']),
+                    fixed_cost=np.array(opex_data[key]['fixed_cost']))
         opex_list.append(opex)
 
     # Defining the data source and the list container for ASR. Then, them based on their fluid type
@@ -230,9 +256,9 @@ def assign_cost(data_raw: dict) -> tuple:
                   end_year=asr_data[key]['end_year'],
                   cost=np.array(asr_data[key]['cost']),
                   expense_year=np.array(asr_data[key]['expense_year']),
-                  vat_portion=asr_data[key]['vat_portion'],
-                  pdri_portion=asr_data[key]['pdri_portion'],
-                  cost_allocation=read_fluid_type(asr_data[key]['cost_allocation']))
+                  cost_allocation=read_fluid_type(fluid=asr_data[key]['cost_allocation']),
+                  description=asr_data[key]['description'],
+                  vat_portion=np.array(asr_data[key]['vat_portion']))
         asr_list.append(asr)
 
     return tangible_list, intangible_list, opex_list, asr_list

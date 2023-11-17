@@ -39,10 +39,11 @@ psc1_gas_tangible = Tangible(
     end_year=2020,
     cost=np.array([3363.67743703704000, 802.73224043715800]),
     expense_year=np.array([2019, 2020]),
+    cost_allocation=[FluidType.GAS] * 2,
     pis_year=np.array([2019, 2020]),
     useful_life=np.array([5, 5]),
     depreciation_factor=np.array([0.25, 0.25]),
-    cost_allocation=FluidType.GAS)
+    )
 
 # Defining the Gas Intangible Data
 psc1_gas_intang = Intangible(
@@ -50,7 +51,7 @@ psc1_gas_intang = Intangible(
     end_year=2020,
     cost=np.array([9532.633600000]),
     expense_year=np.array([2019]),
-    cost_allocation=FluidType.GAS)
+    cost_allocation=[FluidType.GAS])
 
 # Defining the Gas OPEX Data
 psc1_gas_opex_cost = OPEX(
@@ -58,7 +59,7 @@ psc1_gas_opex_cost = OPEX(
     end_year=2020,
     fixed_cost=np.array([2076.908222642980, 1297.582047244550]),
     expense_year=np.array([2019, 2020]),
-    cost_allocation=FluidType.GAS)
+    cost_allocation=[FluidType.GAS] * 2)
 
 # Defining the Gas ASR Data
 psc1_gas_asr_cost_opx = OPEX(
@@ -66,14 +67,14 @@ psc1_gas_asr_cost_opx = OPEX(
     end_year=2020,
     fixed_cost=np.array([35.515809523809900, 10.965263596148900]),
     expense_year=np.array([2019, 2020]),
-    cost_allocation=FluidType.GAS)
+    cost_allocation=[FluidType.GAS] * 2)
 
 psc1_gas_asr_cost = ASR(
     start_year=2019,
     end_year=2020,
     cost=np.array([0]),
     expense_year=np.array([2019]),
-    cost_allocation=FluidType.GAS)
+    cost_allocation=[FluidType.GAS])
 
 # Parsing the fiscal terms into Cost Recovery
 psc1 = CostRecovery(
@@ -128,7 +129,7 @@ psc2_gas_tangible = Tangible(
     pis_year=np.array([2020, 2025]),
     useful_life=np.array([5, 5]),
     depreciation_factor=np.array([0.25, 0.25]),
-    cost_allocation=FluidType.GAS)
+    cost_allocation=[FluidType.GAS] * 2)
 
 # Defining the Gas Intangible Data
 psc2_gas_intang = Intangible(
@@ -136,7 +137,7 @@ psc2_gas_intang = Intangible(
     end_year=2027,
     cost=np.array([0]),
     expense_year=np.array([2020]),
-    cost_allocation=FluidType.GAS)
+    cost_allocation=[FluidType.GAS])
 
 # Defining the Gas OPEX Data
 psc2_gas_opex_cost = OPEX(
@@ -146,7 +147,7 @@ psc2_gas_opex_cost = OPEX(
         [3137.4561521272200, 3834.8277754882300, 3943.8595100171400, 4040.8953543109500, 4114.6574450911200,
          4272.4109557000400, 5057.6546904997800, 4462.7942473087100, ]),
     expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]),
-    cost_allocation=FluidType.GAS)
+    cost_allocation=[FluidType.GAS] * 8)
 
 psc2_gas_lbt_cost = OPEX(
     start_year=2020,
@@ -155,7 +156,7 @@ psc2_gas_lbt_cost = OPEX(
         [636.40338233533300, 1062.86476325927000, 1091.05051487026000, 1117.33210409363000, 1140.29666892703000,
          1296.08012023605000, 1124.78850166335000, 786.84662704513200]),
     expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]),
-    cost_allocation=FluidType.GAS)
+    cost_allocation=[FluidType.GAS] * 8)
 
 # Defining VAT and Import Duty
 psc2_gas_vat = OPEX(
@@ -164,8 +165,8 @@ psc2_gas_vat = OPEX(
     fixed_cost=np.array(
         [396.5062479576550, 286.7125283653920, 294.7836073052500, 301.9666899432990, 307.4269319547460,
          553.8846425099840, 377.2323444857470, 333.1977740376320, ]),
-    expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, ]),
-    cost_allocation=FluidType.GAS)
+    expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]),
+    cost_allocation=[FluidType.GAS] * 8)
 
 psc2_gas_import_duty = OPEX(
     start_year=2020,
@@ -173,7 +174,7 @@ psc2_gas_import_duty = OPEX(
     fixed_cost=np.array(
         [159.965353, 55.922218, 57.496452, 58.897486, 59.962486, 227.566547, 73.577773, 64.988993]),
     expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]),
-    cost_allocation=FluidType.GAS)
+    cost_allocation=[FluidType.GAS] * 8)
 
 # Defining the Gas ASR Data
 psc2_gas_asr_cost_opx = OPEX(
@@ -181,15 +182,15 @@ psc2_gas_asr_cost_opx = OPEX(
     end_year=2027,
     fixed_cost=np.array(
         [26.513186, 38.355043, 38.355043, 38.355043, 38.355043, 38.355043, 38.355043, 38.355043, ]),
-    expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, ]),
-    cost_allocation=FluidType.GAS)
+    expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]),
+    cost_allocation=[FluidType.GAS] * 8)
 
 psc2_gas_asr_cost = ASR(
     start_year=2020,
     end_year=2027,
     cost=np.array([0]),
     expense_year=np.array([2020]),
-    cost_allocation=FluidType.GAS)
+    cost_allocation=[FluidType.GAS])
 
 # Parsing the fiscal terms into Gross Split
 psc2 = GrossSplit(
@@ -234,15 +235,15 @@ psc_trans = transition.Transition(contract1=psc1,
                                   argument_contract1=argument_contract1,
                                   argument_contract2=argument_contract2)
 start_time = time.time()
-psc_trans.run()
+psc_trans.run(unrec_portion=0)
 end_time = time.time()
 print('Execution Time: ', end_time - start_time, '\n')
 
 print('Cost Recovery Transition')
 trans1_table_oil = pd.DataFrame()
 trans1_table_oil['Year'] = psc_trans._contract1_transitioned.project_years
-trans1_table_oil['Lifting'] = psc_trans._contract1_transitioned._oil_lifting.lifting_rate_arr()
-trans1_table_oil['Price'] = psc_trans._contract1_transitioned._oil_lifting.lifting_price_arr()
+trans1_table_oil['Lifting'] = psc_trans._contract1_transitioned._oil_lifting.get_lifting_rate_arr()
+trans1_table_oil['Price'] = psc_trans._contract1_transitioned._oil_lifting.get_price_arr()
 trans1_table_oil['Revenue'] = psc_trans._contract1_transitioned._oil_revenue
 trans1_table_oil['Depreciable'] = psc_trans._contract1_transitioned._oil_tangible.expenditures()
 trans1_table_oil['Intangible'] = psc_trans._contract1_transitioned._oil_intangible.expenditures()
@@ -280,8 +281,8 @@ print(trans1_table_oil, '\n')
 
 trans1_table_gas = pd.DataFrame()
 trans1_table_gas['Year'] = psc_trans._contract1_transitioned.project_years
-trans1_table_gas['Lifting'] = psc_trans._contract1_transitioned._gas_lifting.lifting_rate_arr()
-trans1_table_gas['Price'] = psc_trans._contract1_transitioned._gas_lifting.lifting_price_arr()
+trans1_table_gas['Lifting'] = psc_trans._contract1_transitioned._gas_lifting.get_lifting_rate_arr()
+trans1_table_gas['Price'] = psc_trans._contract1_transitioned._gas_lifting.get_price_arr()
 trans1_table_gas['Revenue'] = psc_trans._contract1_transitioned._gas_revenue
 trans1_table_gas['Depreciable'] = psc_trans._contract1_transitioned._gas_tangible.expenditures()
 trans1_table_gas['Intangible'] = psc_trans._contract1_transitioned._gas_intangible.expenditures()

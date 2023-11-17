@@ -98,7 +98,7 @@ class Transition:
 
         return new_contract
 
-    def run(self, unrec_portion: float = 1.0):
+    def run(self, unrec_portion: float = 0.0):
         # Defining the transition start date and end date
         start_date_trans = min([self.contract1.start_date, self.contract2.start_date])
         end_date_trans = max([self.contract1.end_date, self.contract2.end_date])
@@ -118,6 +118,10 @@ class Transition:
         zeros_to_prior = np.zeros(self.contract1.project_duration - 1 + additional_year)
         desc_to_new = ['-'] * (self.contract2.project_duration - 1 + additional_year)
         desc_to_prior = ['-'] * (self.contract1.project_duration - 1 + additional_year)
+        fluid_to_new = [FluidType.OIL] * (self.contract2.project_duration - 1 + additional_year)
+        fluid_to_prior = [FluidType.OIL] * (self.contract1.project_duration - 1 + additional_year)
+        ic_to_new = [False] * (self.contract2.project_duration - 1 + additional_year)
+        ic_to_prior = [False] * (self.contract1.project_duration - 1 + additional_year)
 
         # Defining the array of years between the prior contract to the new contract
         years_to_new = np.arange(self.contract1.end_date.year + 1, self.contract2.end_date.year + 1 + additional_year)
@@ -150,12 +154,18 @@ class Transition:
             tang.end_year = end_date_trans.year
 
             tang.cost = np.concatenate((tang.cost, zeros_to_new))
+            tang.expense_year = np.concatenate((tang.expense_year, years_to_new)).astype(int)
+            tang.cost_allocation = tang.cost_allocation + fluid_to_new
+            tang.description = tang.description + desc_to_new
+            tang.vat_portion = np.concatenate((tang.vat_portion, zeros_to_new))
+            tang.vat_discount = np.concatenate((tang.vat_discount, zeros_to_new))
+            tang.lbt_portion = np.concatenate((tang.lbt_portion, zeros_to_new))
+            tang.lbt_discount = np.concatenate((tang.lbt_discount, zeros_to_new))
             tang.pis_year = np.concatenate((tang.pis_year, zeros_to_new)).astype(int)
             tang.salvage_value = np.concatenate((tang.salvage_value, zeros_to_new))
             tang.useful_life = np.concatenate((tang.useful_life, zeros_to_new))
             tang.depreciation_factor = np.concatenate((tang.depreciation_factor, zeros_to_new))
-            tang.description = tang.description + desc_to_new
-            tang.expense_year = np.concatenate((tang.expense_year, years_to_new)).astype(int)
+            tang.is_ic_applied = tang.is_ic_applied + ic_to_new
 
             tang.project_duration = project_duration_trans
             tang.project_years = project_years_trans
@@ -166,8 +176,13 @@ class Transition:
             intang.end_year = end_date_trans.year
 
             intang.cost = np.concatenate((intang.cost, zeros_to_new))
-            intang.description = intang.description + desc_to_new
             intang.expense_year = np.concatenate((intang.expense_year, years_to_new)).astype(int)
+            intang.cost_allocation = intang.cost_allocation + fluid_to_new
+            intang.description = intang.description + desc_to_new
+            intang.vat_portion = np.concatenate((intang.vat_portion, zeros_to_new))
+            intang.vat_discount = np.concatenate((intang.vat_discount, zeros_to_new))
+            intang.lbt_portion = np.concatenate((intang.lbt_portion, zeros_to_new))
+            intang.lbt_discount = np.concatenate((intang.lbt_discount, zeros_to_new))
 
             intang.project_duration = project_duration_trans
             intang.project_years = project_years_trans
@@ -177,14 +192,19 @@ class Transition:
             opx.start_year = start_date_trans.year
             opx.end_year = end_date_trans.year
 
-            opx.fixed_cost = np.concatenate((opx.fixed_cost, zeros_to_new))
             opx.expense_year = np.concatenate((opx.expense_year, years_to_new)).astype(int)
+            opx.cost_allocation = opx.cost_allocation + fluid_to_new
+            opx.description = opx.description + desc_to_new
+            opx.fixed_cost = np.concatenate((opx.fixed_cost, zeros_to_new))
             opx.prod_rate = np.concatenate((opx.prod_rate, zeros_to_new))
             opx.cost_per_volume = np.concatenate((opx.cost_per_volume, zeros_to_new))
-            opx.description = opx.description + desc_to_new
-
             opx.variable_cost = np.concatenate((opx.variable_cost, zeros_to_new))
             opx.cost = np.concatenate((opx.cost, zeros_to_new))
+            opx.vat_portion = np.concatenate((opx.vat_portion, zeros_to_new))
+            opx.vat_discount = np.concatenate((opx.vat_discount, zeros_to_new))
+            opx.lbt_portion = np.concatenate((opx.lbt_portion, zeros_to_new))
+            opx.lbt_discount = np.concatenate((opx.lbt_discount, zeros_to_new))
+
             opx.project_duration = project_duration_trans
             opx.project_years = project_years_trans
 
@@ -194,8 +214,13 @@ class Transition:
             asr.end_year = end_date_trans.year
 
             asr.cost = np.concatenate((asr.cost, zeros_to_new))
-            asr.description = asr.description + desc_to_new
             asr.expense_year = np.concatenate((asr.expense_year, years_to_new)).astype(int)
+            asr.cost_allocation = asr.cost_allocation + fluid_to_new
+            asr.description = asr.description + desc_to_new
+            asr.vat_portion = np.concatenate((asr.vat_portion, zeros_to_new))
+            asr.vat_discount = np.concatenate((asr.vat_discount, zeros_to_new))
+            asr.lbt_portion = np.concatenate((asr.lbt_portion, zeros_to_new))
+            asr.lbt_discount = np.concatenate((asr.lbt_discount, zeros_to_new))
 
             asr.project_duration = project_duration_trans
             asr.project_years = project_years_trans
@@ -227,12 +252,18 @@ class Transition:
             tang.end_year = end_date_trans.year
 
             tang.cost = np.concatenate((zeros_to_prior, tang.cost))
+            tang.expense_year = np.concatenate((years_to_prior, tang.expense_year)).astype(int)
+            tang.cost_allocation = fluid_to_prior + tang.cost_allocation
+            tang.description = desc_to_prior + tang.description
+            tang.vat_portion = np.concatenate((zeros_to_prior, tang.vat_portion))
+            tang.vat_discount = np.concatenate((zeros_to_prior, tang.vat_discount))
+            tang.lbt_portion = np.concatenate((zeros_to_prior, tang.lbt_portion))
+            tang.lbt_discount = np.concatenate((zeros_to_prior, tang.lbt_discount))
             tang.pis_year = np.concatenate((zeros_to_prior, tang.pis_year)).astype(int)
             tang.salvage_value = np.concatenate((zeros_to_prior, tang.salvage_value))
             tang.useful_life = np.concatenate((zeros_to_prior, tang.useful_life))
             tang.depreciation_factor = np.concatenate((zeros_to_prior, tang.depreciation_factor))
-            tang.description = desc_to_prior + tang.description
-            tang.expense_year = np.concatenate((years_to_prior, tang.expense_year)).astype(int)
+            tang.is_ic_applied = ic_to_prior + tang.is_ic_applied
 
             tang.project_duration = project_duration_trans
             tang.project_years = project_years_trans
@@ -243,8 +274,13 @@ class Transition:
             intang.end_year = end_date_trans.year
 
             intang.cost = np.concatenate((zeros_to_prior, intang.cost))
-            intang.description = desc_to_prior + intang.description
             intang.expense_year = np.concatenate((years_to_prior, intang.expense_year)).astype(int)
+            intang.cost_allocation = fluid_to_prior + intang.cost_allocation
+            intang.description = desc_to_prior + intang.description
+            intang.vat_portion = np.concatenate((zeros_to_prior, intang.vat_portion))
+            intang.vat_discount = np.concatenate((zeros_to_prior, intang.vat_discount))
+            intang.lbt_portion = np.concatenate((zeros_to_prior, intang.lbt_portion))
+            intang.lbt_discount = np.concatenate((zeros_to_prior, intang.lbt_discount))
 
             intang.project_duration = project_duration_trans
             intang.project_years = project_years_trans
@@ -254,14 +290,19 @@ class Transition:
             opx.start_year = start_date_trans.year
             opx.end_year = end_date_trans.year
 
-            opx.fixed_cost = np.concatenate((zeros_to_prior, opx.fixed_cost))
             opx.expense_year = np.concatenate((years_to_prior, opx.expense_year)).astype(int)
+            opx.cost_allocation = fluid_to_prior + opx.cost_allocation
+            opx.description = desc_to_prior + opx.description
+            opx.fixed_cost = np.concatenate((zeros_to_prior, opx.fixed_cost))
             opx.prod_rate = np.concatenate((zeros_to_prior, opx.prod_rate))
             opx.cost_per_volume = np.concatenate((zeros_to_prior, opx.cost_per_volume))
-            opx.description = desc_to_prior + opx.description
-
             opx.variable_cost = np.concatenate((zeros_to_prior, opx.variable_cost))
             opx.cost = np.concatenate((zeros_to_prior, opx.cost))
+            opx.vat_portion = np.concatenate((zeros_to_prior, opx.vat_portion))
+            opx.vat_discount = np.concatenate((zeros_to_prior, opx.vat_discount))
+            opx.lbt_portion = np.concatenate((zeros_to_prior, opx.lbt_portion))
+            opx.lbt_discount = np.concatenate((zeros_to_prior, opx.lbt_discount))
+
             opx.project_duration = project_duration_trans
             opx.project_years = project_years_trans
 
@@ -271,8 +312,13 @@ class Transition:
             asr.end_year = end_date_trans.year
 
             asr.cost = np.concatenate((zeros_to_prior, asr.cost))
-            asr.description = desc_to_prior + asr.description
             asr.expense_year = np.concatenate((years_to_prior, asr.expense_year)).astype(int)
+            asr.cost_allocation = fluid_to_prior + asr.cost_allocation
+            asr.description = desc_to_prior + asr.description
+            asr.vat_portion = np.concatenate((zeros_to_prior, asr.vat_portion))
+            asr.vat_discount = np.concatenate((zeros_to_prior, asr.vat_discount))
+            asr.lbt_portion = np.concatenate((zeros_to_prior, asr.lbt_portion))
+            asr.lbt_discount = np.concatenate((zeros_to_prior, asr.lbt_discount))
 
             asr.project_duration = project_duration_trans
             asr.project_years = project_years_trans
@@ -286,7 +332,7 @@ class Transition:
         contract2_new.run(**self.argument_contract2)
 
         # Defining the unrecoverable cost from the prior contract
-        latest_unrec = contract1_new._consolidated_unrecovered_after_transfer[-1] * unrec_portion
+        latest_unrec = contract1_new._consolidated_unrecovered_after_transfer[-1]
         unrec_cost_prior = np.zeros_like(contract2_new.project_years, dtype=float)
         unrec_cost_prior[len(years_to_prior)] = latest_unrec
 
@@ -324,7 +370,9 @@ class Transition:
         tax_payment_transition = taxable_income_trans * contract2_new._tax_rate_arr
 
         # Calculate new ctr net share
-        contract2_new._consolidated_ctr_net_share = taxable_income_trans - tax_payment_transition
+        contract2_new._consolidated_ctr_net_share = (contract2_new._consolidated_taxable_income -
+                                                     (unrec_cost_prior * unrec_portion) -
+                                                     tax_payment_transition)
 
         # Calculate new cashflow of contract2
         contract2_new._consolidated_cashflow = (contract2_new._consolidated_cashflow +

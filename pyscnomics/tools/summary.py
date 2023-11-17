@@ -66,9 +66,9 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
 
     # Defining the same summary parameters for any contract
     # Lifting
-    lifting_oil = np.sum(contract._oil_lifting.lifting_rate_arr(), dtype=float)
+    lifting_oil = np.sum(contract._oil_lifting.get_lifting_rate_arr(), dtype=float)
     oil_wap = np.average(contract._oil_wap_price[np.where(contract._oil_wap_price > 0)])
-    lifting_gas = np.sum(contract._gas_lifting.lifting_rate_arr(), dtype=float)
+    lifting_gas = np.sum(contract._gas_lifting.get_lifting_rate_arr(), dtype=float)
     gas_wap = np.average(contract._gas_wap_price[np.where(contract._gas_wap_price > 0)])
     gross_revenue = np.sum(contract._consolidated_revenue, dtype=float)
     gross_revenue_oil = np.sum(contract._oil_revenue, dtype=float)
