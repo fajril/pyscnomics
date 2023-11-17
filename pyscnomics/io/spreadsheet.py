@@ -16,6 +16,7 @@ from pyscnomics.io.config import (
     LPGPropaneLiftingData,
     LPGButaneLiftingData,
     SulfurLiftingData,
+    CO2LiftingData,
 )
 
 
@@ -53,6 +54,7 @@ class Spreadsheet:
     lpg_propane_lifting_data: LPGPropaneLiftingData = field(default=None, init=False)
     lpg_butane_lifting_data: LPGButaneLiftingData = field(default=None, init=False)
     sulfur_lifting_data: SulfurLiftingData = field(default=None, init=False)
+    co2_lifting_data: CO2LiftingData = field(default=None, init=False)
 
     def __post_init__(self):
         # Configure attribute workbook_to_read
@@ -686,7 +688,39 @@ class Spreadsheet:
         raise NotImplementedError
 
     def _get_co2_lifting_data(self):
-        raise NotImplementedError
+        """
+        Notes
+        -----
+        The undertaken procedures are as follows:
+        (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod CO2'
+            data, then assigned it as local variable named 'co2_data_available',
+        (2) If 'co2_data_available' is empty (length is zero), then return a new
+            instance of CO2LiftingData with the associated attributes set to None,
+        """
+
+        # Step #1 (See 'Notes' section in the docstring)
+        co2_data_available = list(filter(lambda i: "Prod CO2" in i, self.sheets_loaded))
+
+        # Step #2 (See 'Notes' section in the docstring)
+        co2_data_attrs = ["prod_year", "lifting_rate", "price"]
+
+        if len(co2_data_available) == 0:
+            co2_data = {key: {"Prod CO2": None} for key in co2_data_attrs}
+
+            return CO2LiftingData(
+                prod_year=co2_data["prod_year"],
+                lifting_rate=co2_data["lifting_rate"],
+                price=co2_data["price"],
+                project_duration=self.general_config_data.project_duration,
+                project_years=self.general_config_data.project_years,
+            )
+
+        # print('\t')
+        # print(f'Filetype: {type(co2_data)}')
+        # print(f'Length: {len(co2_data)}')
+        # print('co2_data = \n', co2_data)
+
+
 
     def _get_tangible_cost_data(self):
         raise NotImplementedError
@@ -720,11 +754,12 @@ class Spreadsheet:
         self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
         self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
         self.sulfur_lifting_data = self._get_sulfur_lifting_data()
+        self.co2_lifting_data = self._get_co2_lifting_data()
 
         print("\t")
-        print(f"Filetype: {type(self.sulfur_lifting_data)}")
+        print(f"Filetype: {type(self.co2_lifting_data)}")
         # print(f"Keys: {self.sulfur_lifting_data.__annotations__}")
-        print("self.sulfur_lifting_data = \n", self.sulfur_lifting_data)
+        print("self.co2_lifting_data = \n", self.co2_lifting_data)
 
         # print('\t')
         # print(f'Filetype: {type(self.gas_lifting_data.gas_gsa_price)}')

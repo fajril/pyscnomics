@@ -587,11 +587,58 @@ class SulfurLiftingData:
 @dataclass
 class ElectricityLiftingData:
     """ A dataclass representing electricity lifting information for an oil and gas economic project. """
-    NotImplemented
+    pass
 
 
 @dataclass
 class CO2LiftingData:
-    """ 123
     """
-    pass
+    A dataclass representing CO2 lifting information for an oil and gas economic project.
+
+    Attributes
+    ----------
+    prod_year: dict
+        Dictionary containing production years data.
+    lifting_rate: dict
+        Dictionary containing CO2 lifting rate data.
+    price: dict
+        Dictionary containing CO2 price data.
+    project_duration: int
+        The duration of the project.
+    project_years: numpy.ndarray
+        An array representing the project years.
+    """
+    prod_year: dict
+    lifting_rate: dict
+    price: dict
+
+    # Attributes associated with project duration
+    project_duration: int
+    project_years: np.ndarray
+
+    def __post_init__(self):
+        # Prepare attribute prod_year
+        if not isinstance(self.prod_year, dict):
+            raise CO2LiftingDataException(
+                f"Attribute prod_year must be provided in the form of dictionary. "
+                f"The current datatype of prod_year is "
+                f"{self.prod_year.__class__.__qualname__}"
+            )
+
+        for i in self.prod_year.keys():
+            if self.prod_year[i] is None:
+                self.prod_year[i] = self.project_years
+
+        # Prepare attribute lifting_rate
+        if not isinstance(self.lifting_rate, dict):
+            raise CO2LiftingDataException(
+                f"Attribute lifting_rate must be provided in the form of dictionary. "
+                f"The current datatype of lifting_rate is "
+                f"{self.lifting_rate.__class__.__qualname__}"
+            )
+
+        for i in self.lifting_rate.keys():
+            if self.lifting_rate[i] is None:
+                self.lifting_rate[i] = np.zeros_like(self.project_years)
+
+
