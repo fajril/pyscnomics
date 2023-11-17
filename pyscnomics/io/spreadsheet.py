@@ -18,6 +18,7 @@ from pyscnomics.io.config import (
     SulfurLiftingData,
     ElectricityLiftingData,
     CO2LiftingData,
+    TangibleCostData,
 )
 
 
@@ -57,6 +58,7 @@ class Spreadsheet:
     sulfur_lifting_data: SulfurLiftingData = field(default=None, init=False)
     electricity_lifting_data: ElectricityLiftingData = field(default=None, init=False)
     co2_lifting_data: CO2LiftingData = field(default=None, init=False)
+    tangible_cost_data: TangibleCostData = field(default=None, init=False)
 
     def __post_init__(self):
         # Configure attribute workbook_to_read
@@ -841,7 +843,60 @@ class Spreadsheet:
         )
 
     def _get_tangible_cost_data(self):
-        raise NotImplementedError
+        """
+        Notes
+        -----
+        The core operations are as follows:
+        (1) Capture tangible data from attribute self.data_loaded, then perform the
+            necessary adjustment,
+        (2) Specify the associated attributes of interest,
+        (3) Load and arrange the attributes of interest from variable 'tangible_data_loaded',
+            then create a new instance of TangibleCostData to store them.
+        """
+        # Step #1 (See 'Notes' section in the docstring)
+        tangible_data_loaded = (
+            self.data_loaded["Cost Tangible"]
+            .dropna(axis=0, how="all")
+            .replace(np.nan, None)
+        )
+
+        # Step #2 (See 'Notes' section in the docstring)
+        tangible_data_attrs = [
+            "expense_year",
+            "cost_allocation",
+            "cost",
+            "pis_year",
+            "useful_life",
+            "depreciation_factor",
+            "salvage_value",
+            "is_ic_applied",
+            "vat_portion",
+            "lbt_portion",
+            "description",
+        ]
+
+        # Step #3 (See 'Notes' section in the docstring)
+        tangible_data = {
+            val_i: (
+                None if tangible_data_loaded.empty
+                else tangible_data_loaded.iloc[:, i].to_numpy()
+            )
+            for i, val_i in enumerate(tangible_data_attrs)
+        }
+
+        return TangibleCostData(
+            expense_year=tangible_data["expense_year"],
+            cost_allocation=tangible_data["cost_allocation"].tolist(),
+            cost=tangible_data["cost"],
+            pis_year=tangible_data["pis_year"],
+            useful_life=tangible_data["useful_life"],
+            depreciation_factor=tangible_data["depreciation_factor"],
+            salvage_value=tangible_data["salvage_value"],
+            is_ic_applied=tangible_data["is_ic_applied"].tolist(),
+            vat_portion=tangible_data["vat_portion"],
+            lbt_portion=tangible_data["lbt_portion"],
+            description=tangible_data["description"].tolist(),
+        )
 
     def _get_intangible_cost_data(self):
         raise NotImplementedError
@@ -873,12 +928,13 @@ class Spreadsheet:
         self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
         self.sulfur_lifting_data = self._get_sulfur_lifting_data()
         self.electricity_lifting_data = self._get_electricity_lifting_data()
-        # self.co2_lifting_data = self._get_co2_lifting_data()
+        self.co2_lifting_data = self._get_co2_lifting_data()
+        self.tangible_cost_data = self._get_tangible_cost_data()
 
         print("\t")
-        print(f"Filetype: {type(self.electricity_lifting_data)}")
+        print(f"Filetype: {type(self.tangible_cost_data)}")
         # print(f"Keys: {self.sulfur_lifting_data.__annotations__}")
-        print("self.electricity_lifting_data = \n", self.electricity_lifting_data)
+        print("tangible_cost_data = \n", self.tangible_cost_data)
 
         # print('\t')
         # print(f'Filetype: {type(self.gas_lifting_data.gas_gsa_price)}')

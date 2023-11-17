@@ -61,6 +61,12 @@ class CO2LiftingDataException(Exception):
     pass
 
 
+class TangibleDataException(Exception):
+    """ Exception to be raised for an inappropriate use of TangibleData class """
+
+    pass
+
+
 @dataclass
 class GeneralConfigData:
     """
@@ -714,3 +720,19 @@ class CO2LiftingData:
         for i in self.price.keys():
             if self.price[i] is None:
                 self.price[i] = np.zeros_like(self.project_years)
+
+
+@dataclass
+class TangibleCostData:
+
+    expense_year: np.ndarray
+    cost: np.ndarray
+    cost_allocation: list
+    pis_year: np.ndarray
+    useful_life: np.ndarray
+    depreciation_factor: np.ndarray
+    salvage_value: np.ndarray
+    is_ic_applied: list
+    vat_portion: np.ndarray
+    lbt_portion: np.ndarray
+    description: list
