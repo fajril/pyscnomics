@@ -577,7 +577,11 @@ class SulfurLiftingData:
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
-            raise SulfurLiftingDataException
+            raise SulfurLiftingDataException(
+                f"Attribute price must be provided in the form of dictionary. "
+                f"The current datatype of price is "
+                f"{self.price.__class__.__qualname__}"
+            )
 
         for i in self.price.keys():
             if self.price[i] is None:
@@ -586,8 +590,66 @@ class SulfurLiftingData:
 
 @dataclass
 class ElectricityLiftingData:
-    """ A dataclass representing electricity lifting information for an oil and gas economic project. """
-    pass
+    """
+    A dataclass representing electricity lifting information for an oil and gas economic project.
+
+    Attributes
+    ----------
+    prod_year: dict
+        Dictionary containing production years data.
+    lifting_rate: dict
+        Dictionary containing electricity lifting rate data.
+    price: dict
+        Dictionary containing electricity price data.
+    project_duration: int
+        The duration of the project.
+    project_years: numpy.ndarray
+        An array representing the project years.
+    """
+    prod_year: dict
+    lifting_rate: dict
+    price: dict
+
+    # Attributes associated with project duration
+    project_duration: int
+    project_years: np.ndarray
+
+    def __post_init__(self):
+        # Prepare attribute prod_year
+        if not isinstance(self.prod_year, dict):
+            raise ElectricityLiftingDataException(
+                f"Attribute prod_year must be provided in the form of dictionary. "
+                f"The current datatype of prod_year is "
+                f"{self.prod_year.__class__.__qualname__}"
+            )
+
+        for i in self.prod_year.keys():
+            if self.prod_year[i] is None:
+                self.prod_year[i] = self.project_years
+
+        # Prepare attribute lifting_rate
+        if not isinstance(self.lifting_rate, dict):
+            raise ElectricityLiftingDataException(
+                f"Attribute lifting_rate must be provided in the form of dictionary. "
+                f"The current datatype of lifting_rate is "
+                f"{self.lifting_rate.__class__.__qualname__}"
+            )
+
+        for i in self.lifting_rate.keys():
+            if self.lifting_rate[i] is None:
+                self.lifting_rate[i] = np.zeros_like(self.project_years)
+
+        # Prepare attribute price
+        if not isinstance(self.price, dict):
+            raise ElectricityLiftingDataException(
+                f"Attribute price must be provided in the form of dictionary. "
+                f"The current datatype of price is "
+                f"{self.price.__class__.__qualname__}"
+            )
+
+        for i in self.price.keys():
+            if self.price[i] is None:
+                self.price[i] = np.zeros_like(self.project_years)
 
 
 @dataclass
@@ -641,4 +703,14 @@ class CO2LiftingData:
             if self.lifting_rate[i] is None:
                 self.lifting_rate[i] = np.zeros_like(self.project_years)
 
+        # Prepare attribute price
+        if not isinstance(self.price, dict):
+            raise CO2LiftingDataException(
+                f"Attribute price must be provided in the form of dictionary. "
+                f"The current datatype of price is "
+                f"{self.price.__class__.__qualname__}"
+            )
 
+        for i in self.price.keys():
+            if self.price[i] is None:
+                self.price[i] = np.zeros_like(self.project_years)

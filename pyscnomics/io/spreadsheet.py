@@ -16,6 +16,7 @@ from pyscnomics.io.config import (
     LPGPropaneLiftingData,
     LPGButaneLiftingData,
     SulfurLiftingData,
+    ElectricityLiftingData,
     CO2LiftingData,
 )
 
@@ -54,6 +55,7 @@ class Spreadsheet:
     lpg_propane_lifting_data: LPGPropaneLiftingData = field(default=None, init=False)
     lpg_butane_lifting_data: LPGButaneLiftingData = field(default=None, init=False)
     sulfur_lifting_data: SulfurLiftingData = field(default=None, init=False)
+    electricity_lifting_data: ElectricityLiftingData = field(default=None, init=False)
     co2_lifting_data: CO2LiftingData = field(default=None, init=False)
 
     def __post_init__(self):
@@ -585,6 +587,7 @@ class Spreadsheet:
                 project_years=self.general_config_data.project_years,
             )
 
+        # Step #3 (See 'Notes' section in the docstring)
         else:
             lpg_butane_data = {}
             lpg_butane_data_loaded = {
@@ -661,6 +664,7 @@ class Spreadsheet:
                 project_years=self.general_config_data.project_years,
             )
 
+        # Step #3 (See 'Notes' section in the docstring)
         else:
             sulfur_data = {}
             sulfur_data_loaded = {i: self.data_loaded[i].fillna(0) for i in sulfur_data_available}
@@ -684,11 +688,102 @@ class Spreadsheet:
                 project_years=self.general_config_data.project_years,
             )
 
-    def _get_electricity_lifting_data(self):
-        raise NotImplementedError
-
-    def _get_co2_lifting_data(self):
+    def _get_electricity_lifting_data(self) -> ElectricityLiftingData:
         """
+        Retrieves electricity lifting data based on available sheets.
+
+        Returns
+        -------
+        ElectricityLiftingData
+            An instance of the ElectricityLiftingData class containing the following attributes:
+                - prod_year: dict
+                    Dictionary containing production years data.
+                - lifting_rate: dict
+                    Dictionary containing electricity lifting rate data.
+                - price: dict
+                    Dictionary containing electricity price data.
+                - project_duration: int
+                    The duration of the project.
+                - project_years: numpy.ndarray
+                    An array representing the project years.
+
+        Notes
+        -----
+        The undertaken procedures are as follows:
+        (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod Electricity'
+            data, then assigned it as local variable named 'electricity_data_available',
+        (2) If 'electricity_data_available' is empty (length is zero), then return a new
+            instance of ElectricityLiftingData with the associated attributes set to None,
+        (3) If 'electricity_data_available' is not empty, first check whether a particular
+            self.data_loaded[electricity_data_available] is an empty dataframe. If it is, then
+            create a new instance of ElectricityLiftingData with the associated attributes set
+            to None. If a particular self.data_loaded[electricity_data_available] is not an empty
+            dataframe, then create a new instance of ElectricityLiftingData with the associated
+            attributes set as the loaded value from the corresponding Excel worksheet.
+        """
+
+        # Step #1 (See 'Notes' section in the docstring)
+        electricity_data_available = list(filter(lambda i: "Prod Electricity" in i, self.sheets_loaded))
+
+        # Step #2 (See 'Notes' section in the docstring)
+        electricity_data_attrs = ["prod_year", "lifting_rate", "price"]
+
+        if len(electricity_data_available) == 0:
+            electricity_data = {key: {"Prod Electricity": None} for key in electricity_data_attrs}
+
+            return ElectricityLiftingData(
+                prod_year=electricity_data["prod_year"],
+                lifting_rate=electricity_data["lifting_rate"],
+                price=electricity_data["price"],
+                project_duration=self.general_config_data.project_duration,
+                project_years=self.general_config_data.project_years,
+            )
+
+        # Step #3 (See 'Notes' section in the docstring)
+        else:
+            electricity_data = {}
+            electricity_data_loaded = {
+                i: self.data_loaded[i].fillna(0) for i in electricity_data_available
+            }
+
+            for key, val_attr in enumerate(electricity_data_attrs):
+                electricity_data[val_attr] = {}
+                for i in electricity_data_available:
+                    if electricity_data_loaded[i].empty:
+                        electricity_data[val_attr][i] = None
+                    else:
+                        electricity_data[val_attr][i] = (
+                            electricity_data_loaded[i].iloc[:, key]
+                            .to_numpy()
+                        )
+
+            return ElectricityLiftingData(
+                prod_year=electricity_data["prod_year"],
+                lifting_rate=electricity_data["lifting_rate"],
+                price=electricity_data["price"],
+                project_duration=self.general_config_data.project_duration,
+                project_years=self.general_config_data.project_years,
+            )
+
+    def _get_co2_lifting_data(self) -> CO2LiftingData:
+        """
+        Retrieves CO2 lifting data based on available sheets.
+
+        Returns
+        -------
+        CO2LiftingData
+            An instance of the CO2LiftingData class containing the following attributes:
+                - prod_year: dict
+                    Dictionary containing production years data.
+                - lifting_rate: dict
+                    Dictionary containing CO2 lifting rate data.
+                - price: dict
+                    Dictionary containing CO2 price data.
+                - project_duration: int
+                    The duration of the project.
+                - project_years: numpy.ndarray
+                    An array representing the project years.
+
         Notes
         -----
         The undertaken procedures are as follows:
@@ -696,6 +791,12 @@ class Spreadsheet:
             data, then assigned it as local variable named 'co2_data_available',
         (2) If 'co2_data_available' is empty (length is zero), then return a new
             instance of CO2LiftingData with the associated attributes set to None,
+        (3) If 'co2_data_available' is not empty, first check whether a particular
+            self.data_loaded[co2_data_available] is an empty dataframe. If it is, then
+            create a new instance of CO2LiftingData with the associated attributes set
+            to None. If a particular self.data_loaded[co2_data_available] is not an empty
+            dataframe, then create a new instance of CO2LiftingData with the associated
+            attributes set as the loaded value from the corresponding Excel worksheet.
         """
 
         # Step #1 (See 'Notes' section in the docstring)
@@ -715,12 +816,29 @@ class Spreadsheet:
                 project_years=self.general_config_data.project_years,
             )
 
-        # print('\t')
-        # print(f'Filetype: {type(co2_data)}')
-        # print(f'Length: {len(co2_data)}')
-        # print('co2_data = \n', co2_data)
+        # Step #3 (See 'Notes' section in the docstring)
+        else:
+            co2_data = {}
+            co2_data_loaded = {i: self.data_loaded[i].fillna(0) for i in co2_data_available}
 
+            for key, val_attr in enumerate(co2_data_attrs):
+                co2_data[val_attr] = {}
+                for i in co2_data_available:
+                    if co2_data_loaded[i].empty:
+                        co2_data[val_attr][i] = None
+                    else:
+                        co2_data[val_attr][i] = (
+                            co2_data_loaded[i].iloc[:, key]
+                            .to_numpy()
+                        )
 
+        return CO2LiftingData(
+            prod_year=co2_data["prod_year"],
+            lifting_rate=co2_data["lifting_rate"],
+            price=co2_data["price"],
+            project_duration=self.general_config_data.project_duration,
+            project_years=self.general_config_data.project_years,
+        )
 
     def _get_tangible_cost_data(self):
         raise NotImplementedError
@@ -754,12 +872,13 @@ class Spreadsheet:
         self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
         self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
         self.sulfur_lifting_data = self._get_sulfur_lifting_data()
-        self.co2_lifting_data = self._get_co2_lifting_data()
+        self.electricity_lifting_data = self._get_electricity_lifting_data()
+        # self.co2_lifting_data = self._get_co2_lifting_data()
 
         print("\t")
-        print(f"Filetype: {type(self.co2_lifting_data)}")
+        print(f"Filetype: {type(self.electricity_lifting_data)}")
         # print(f"Keys: {self.sulfur_lifting_data.__annotations__}")
-        print("self.co2_lifting_data = \n", self.co2_lifting_data)
+        print("self.electricity_lifting_data = \n", self.electricity_lifting_data)
 
         # print('\t')
         # print(f'Filetype: {type(self.gas_lifting_data.gas_gsa_price)}')
