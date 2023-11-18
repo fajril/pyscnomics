@@ -90,7 +90,6 @@ tangible_mangga = Tangible(
     lbt_portion=np.array([1, 1, 1, 1]),
     lbt_discount=0.0,
     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
-    is_ic_applied=
 )
 
 tangible_apel = Tangible(

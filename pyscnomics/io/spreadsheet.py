@@ -857,6 +857,7 @@ class Spreadsheet:
         tangible_data_loaded = (
             self.data_loaded["Cost Tangible"]
             .dropna(axis=0, how="all")
+            # .dropna(subset=[self.data_loaded["Cost Tangible"].columns[0]])
             .replace(np.nan, None)
         )
 
@@ -934,9 +935,8 @@ class Spreadsheet:
         self.tangible_cost_data = self._get_tangible_cost_data()
 
         print("\t")
-        print(f"Filetype: {type(self.tangible_cost_data)}")
-        # print(f"Keys: {self.sulfur_lifting_data.__annotations__}")
-        print("tangible_cost_data = \n", self.tangible_cost_data)
+        print(f"Filetype: {type(self.fiscal_config_data)}")
+        print("self.fiscal_config_data = \n", self.fiscal_config_data)
 
         # print('\t')
         # print(f'Filetype: {type(self.gas_lifting_data.gas_gsa_price)}')
