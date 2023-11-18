@@ -686,6 +686,7 @@ class Tangible(GeneralCost):
             depreciation_factor_combined = np.concatenate(
                 (self.depreciation_factor, other.depreciation_factor)
             )
+            is_ic_applied_combined = self.is_ic_applied + other.is_ic_applied
 
             return Tangible(
                 start_year=start_year_combined,
@@ -702,6 +703,7 @@ class Tangible(GeneralCost):
                 salvage_value=salvage_value_combined,
                 useful_life=useful_life_combined,
                 depreciation_factor=depreciation_factor_combined,
+                is_ic_applied=is_ic_applied_combined,
             )
 
         else:
@@ -740,6 +742,7 @@ class Tangible(GeneralCost):
             depreciation_factor_combined = np.concatenate(
                 (self.depreciation_factor, other.depreciation_factor)
             )
+            is_ic_applied_combined = self.is_ic_applied + other.is_ic_applied
 
             return Tangible(
                 start_year=start_year_combined,
@@ -756,6 +759,7 @@ class Tangible(GeneralCost):
                 salvage_value=salvage_value_combined,
                 useful_life=useful_life_combined,
                 depreciation_factor=depreciation_factor_combined,
+                is_ic_applied=is_ic_applied_combined,
             )
 
         else:
@@ -787,6 +791,7 @@ class Tangible(GeneralCost):
                 salvage_value=self.salvage_value,
                 useful_life=self.useful_life,
                 depreciation_factor=self.depreciation_factor,
+                is_ic_applied=self.is_ic_applied,
             )
 
         else:
@@ -826,6 +831,7 @@ class Tangible(GeneralCost):
                     salvage_value=self.salvage_value,
                     useful_life=self.useful_life,
                     depreciation_factor=self.depreciation_factor,
+                    is_ic_applied=self.is_ic_applied,
                 )
 
         else:
