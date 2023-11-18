@@ -190,3 +190,10 @@ class ContractType(Enum):
 class NPVSelection(Enum):
     FULL_CYCLE_REAL_TERMS = 'NPV Full Cycle using real terms method'
     FULL_CYCLE_NOMINAL_TERMS = 'NPV Full Cycle using real nominal terms method'
+
+
+class OtherRevenue(Enum):
+    ADDITION_TO_OIL_REVENUE = "The revenue will be treated as the Oil Revenue Addition"
+    ADDITION_TO_GAS_REVENUE = "The revenue will be treated as the Gas Revenue Addition"
+    REDUCTION_TO_OIL_OPEX = "The revenue will be treated as the Oil OPEX Reduction"
+    REDUCTION_TO_GAS_OPEX = "The revenue will be treated as the GAS OPEX Reduction"

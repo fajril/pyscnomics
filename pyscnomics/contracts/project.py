@@ -8,13 +8,19 @@ from functools import reduce
 import numpy as np
 
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.selection import FluidType, TaxType, TaxRegime
+from pyscnomics.econ.selection import FluidType, TaxType, TaxRegime, OtherRevenue
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.econ.results import CashFlow
 
 
 class BaseProjectException(Exception):
     """Exception to raise for a misuse of BaseProject class"""
+
+    pass
+
+
+class OtherRevenueException(Exception):
+    """Exception to raise for a misuse of Other Revenue"""
 
     pass
 
@@ -1326,6 +1332,64 @@ class BaseProject:
                 total_vol = total_vol + lift.lifting_rate
 
         self._co2_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
+
+    def _get_other_revenue(self,
+                           sulfur_revenue: OtherRevenue,
+                           electricity_revenue: OtherRevenue,
+                           co2_revenue: OtherRevenue):
+        # Configure sulfur revenue
+        if sulfur_revenue is OtherRevenue.ADDITION_TO_OIL_REVENUE:
+            self._oil_revenue = self._oil_revenue + self._sulfur_revenue
+
+        elif sulfur_revenue is OtherRevenue.ADDITION_TO_GAS_REVENUE:
+            self._gas_revenue = self._gas_revenue + self._sulfur_revenue
+
+        elif sulfur_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
+            self._oil_opex_expenditures = self._oil_opex_expenditures - self._sulfur_revenue
+
+        elif sulfur_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
+            self._gas_opex_expenditures = self._gas_opex_expenditures - self._sulfur_revenue
+
+        else:
+            raise OtherRevenueException(
+                f"Other Revenue Selection is not available {sulfur_revenue} "
+            )
+
+        # Configure electricity revenue
+        if electricity_revenue is OtherRevenue.ADDITION_TO_OIL_REVENUE:
+            self._oil_revenue = self._oil_revenue + self._electricity_revenue
+
+        elif electricity_revenue is OtherRevenue.ADDITION_TO_GAS_REVENUE:
+            self._gas_revenue = self._gas_revenue + self._sulfur_revenue
+
+        elif electricity_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
+            self._oil_opex_expenditures = self._oil_opex_expenditures - self._sulfur_revenue
+
+        elif electricity_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
+            self._gas_opex_expenditures = self._gas_opex_expenditures - self._sulfur_revenue
+
+        else:
+            raise OtherRevenueException(
+                f"Other Revenue Selection is not available {electricity_revenue} "
+            )
+
+        # Configure CO2 revenue
+        if co2_revenue is OtherRevenue.ADDITION_TO_OIL_REVENUE:
+            self._oil_revenue = self._oil_revenue + self._co2_revenue
+
+        elif co2_revenue is OtherRevenue.ADDITION_TO_GAS_REVENUE:
+            self._gas_revenue = self._gas_revenue + self._co2_revenue
+
+        elif co2_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
+            self._oil_opex_expenditures = self._oil_opex_expenditures - self._co2_revenue
+
+        elif co2_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
+            self._gas_opex_expenditures = self._gas_opex_expenditures - self._co2_revenue
+
+        else:
+            raise OtherRevenueException(
+                f"Other Revenue Selection is not available {co2_revenue} "
+            )
 
     def run(
         self,

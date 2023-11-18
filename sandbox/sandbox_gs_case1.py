@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import time
 
 
 from pyscnomics.dataset.sample import load_data, load_testing
@@ -11,7 +12,10 @@ pd.set_option('display.max_columns', None)
 pd.set_option('display.expand_frame_repr', False)
 
 psc = load_data(dataset_type='small_oil', contract_type='gross_split')
+start_time = time.time()
 psc.run()
+end_time = time.time()
+print('Execution Time: ', end_time - start_time, '\n')
 
 
 psc_table = pd.DataFrame()

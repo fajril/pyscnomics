@@ -6,8 +6,7 @@ import numpy as np
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
-from pyscnomics.econ.selection import FluidType, GrossSplitRegime, TaxRegime
-from pyscnomics.econ import indicator
+from pyscnomics.econ.selection import FluidType, GrossSplitRegime, TaxRegime, TaxType, DeprMethod, OtherRevenue
 from pyscnomics.econ.results import CashFlow
 
 
@@ -417,11 +416,22 @@ class GrossSplit(BaseProject):
             self._gas_sunk_cost = np.zeros(1)
 
     def run(self,
+            sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+            electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
+            co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
             is_dmo_end_weighted=False,
             regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
             tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
             tax_rate: float | np.ndarray = 0.22,
             discount_rate_year: int | None = None,
+            depr_method: DeprMethod = DeprMethod.PSC_DB,
+            decline_factor: float | int = 2,
+            year_ref: int = None,
+            tax_type: TaxType = TaxType.VAT,
+            vat_rate: np.ndarray | float = 0.0,
+            lbt_rate: np.ndarray | float = 0.0,
+            inflation_rate: np.ndarray | float = 0.0,
+            future_rate: float = 0.02,
             ):
 
         if discount_rate_year is None:
@@ -433,23 +443,66 @@ class GrossSplit(BaseProject):
                 f"is after the discount rate year: {self.end_date}"
             )
 
+        # Configure year reference
+        if year_ref is None:
+            year_ref = self.start_date.year
+
+        # Get the WAP Price
         self._get_wap_price()
 
-        # Depreciation (Tangible cost)
-        self._oil_depreciation, self._oil_undepreciated_asset = self._oil_tangible.total_depreciation_rate()
-        self._gas_depreciation, self._gas_undepreciated_asset = self._gas_tangible.total_depreciation_rate()
+        # Calculate expenditures for every cost components
+        self._get_expenditures(
+            year_ref=year_ref,
+            tax_type=tax_type,
+            vat_rate=vat_rate,
+            lbt_rate=lbt_rate,
+            inflation_rate=inflation_rate,
+            future_rate=future_rate,
+        )
+
+        # Get The Other Revenue as the chosen selection
+        self._get_other_revenue(sulfur_revenue=sulfur_revenue,
+                                electricity_revenue=electricity_revenue,
+                                co2_revenue=co2_revenue)
+
+        # Depreciation (tangible cost)
+        (
+            self._oil_depreciation,
+            self._oil_undepreciated_asset,
+        ) = self._oil_tangible.total_depreciation_rate(
+            depr_method=depr_method,
+            decline_factor=decline_factor,
+            year_ref=year_ref,
+            tax_type=tax_type,
+            vat_rate=vat_rate,
+            lbt_rate=lbt_rate,
+            inflation_rate=inflation_rate,
+        )
+
+        (
+            self._gas_depreciation,
+            self._gas_undepreciated_asset,
+        ) = self._gas_tangible.total_depreciation_rate(
+            depr_method=depr_method,
+            decline_factor=decline_factor,
+            year_ref=year_ref,
+            tax_type=tax_type,
+            vat_rate=vat_rate,
+            lbt_rate=lbt_rate,
+            inflation_rate=inflation_rate,
+        )
 
         # Non Capital Cost
         self._oil_non_capital = (
-                self._oil_intangible.expenditures()
-                + self._oil_opex.expenditures()
-                + self._oil_asr.expenditures()
+                self._oil_intangible_expenditures
+                + self._oil_opex_expenditures
+                + self._oil_asr_expenditures
         )
 
         self._gas_non_capital = (
-                self._gas_intangible.expenditures()
-                + self._gas_opex.expenditures()
-                + self._gas_asr.expenditures()
+                self._gas_intangible_expenditures
+                + self._gas_opex_expenditures
+                + self._gas_asr_expenditures
         )
 
         # Get Sunk Cost

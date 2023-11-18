@@ -17,6 +17,7 @@ from pyscnomics.econ.selection import (
     TaxPaymentMode,
     TaxType,
     DeprMethod,
+    OtherRevenue
 )
 
 
@@ -550,6 +551,9 @@ class CostRecovery(BaseProject):
 
     def run(
         self,
+        sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
+        co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
         is_dmo_end_weighted: bool = False,
         tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
         tax_rate: float | np.ndarray | None = None,
@@ -579,7 +583,7 @@ class CostRecovery(BaseProject):
         if year_ref is None:
             year_ref = self.start_date.year
 
-
+        # Get the WAP Price
         self._get_wap_price()
 
         # Calculate expenditures for every cost components
@@ -591,6 +595,11 @@ class CostRecovery(BaseProject):
             inflation_rate=inflation_rate,
             future_rate=future_rate,
         )
+
+        # Get The Other Revenue as the chosen selection
+        self._get_other_revenue(sulfur_revenue=sulfur_revenue,
+                                electricity_revenue=electricity_revenue,
+                                co2_revenue=co2_revenue)
 
         # Calculate FTP
         self._get_ftp()
