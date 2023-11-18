@@ -61,9 +61,26 @@ class CO2LiftingDataException(Exception):
     pass
 
 
-class TangibleDataException(Exception):
-    """ Exception to be raised for an inappropriate use of TangibleData class """
+class TangibleCostDataException(Exception):
+    """ Exception to be raised for an inappropriate use of TangibleCostData class """
 
+    pass
+
+
+class IntangibleCostDataException(Exception):
+    """ Exception to be raised for an inappropriate use of IntangibleCostData class """
+
+    pass
+
+
+class OPEXDataException(Exception):
+    """ Exception to be raised for an inappropriate use of OPEXData class """
+
+    pass
+
+
+class ASRCostDataException(Exception):
+    """ Exception to be raised for an inappropriate use of ASRCostData class """
     pass
 
 
@@ -736,3 +753,114 @@ class TangibleCostData:
     vat_portion: np.ndarray
     lbt_portion: np.ndarray
     description: list
+
+    # Attribute associated with length of the captured data
+    data_length: int
+    project_years: np.ndarray
+
+    def __post_init__(self):
+        # Prepare attribute expense_year
+        if not isinstance(self.expense_year, np.ndarray):
+            raise TangibleCostDataException(
+                f"Incompatible datatype: "
+                f"expense_year: ({self.expense_year.__class__.__qualname__}). "
+                f"Expense year must be provided as a numpy array."
+            )
+
+        expense_year_none = list(filter(lambda i: i is None, self.expense_year))
+
+        if None in expense_year_none:
+            if len(expense_year_none) == self.data_length:
+                self.expense_year = np.repeat(self.project_years[0], self.data_length)
+
+            else:
+                raise TangibleCostDataException(
+                    f"Expense year data is incomplete. "
+                    f"The number of expense_year data should be ({self.data_length}), "
+                    f"not ({self.data_length - len(expense_year_none)})."
+                )
+
+        # Prepare attribute cost_allocation
+        if not isinstance(self.cost_allocation, list):
+            raise TangibleCostDataException(
+                f"Incompatible datatype: "
+                f"cost_allocation: ({self.cost_allocation.__class__.__qualname__}). "
+                f"Cost allocation must be provided as a numpy array."
+            )
+
+        cost_allocation_none = list(filter(lambda i: i is None, self.cost_allocation))
+
+        if None in cost_allocation_none:
+            if len(cost_allocation_none) == self.data_length:
+                self.cost_allocation = None
+            else:
+                raise TangibleCostDataException(
+                    f"Cost allocation data is incomplete. "
+                    f"The number of cost_allocation data should be ({self.data_length}), "
+                    f"not ({self.data_length - len(cost_allocation_none)})."
+                )
+
+        # Prepare attribute cost
+        if not isinstance(self.cost, np.ndarray):
+            raise TangibleCostDataException(
+                f"Incompatible datatype: "
+                f"cost: ({self.cost.__class__.__qualname__}). "
+                f"Cost must be provided as a numpy array."
+            )
+
+        cost_none = list(filter(lambda i: i is None, self.cost))
+
+        if None in cost_none:
+            if len(cost_none) == self.data_length:
+                self.cost = np.zeros(len(self.data_length))
+            else:
+                raise TangibleCostDataException(
+
+                )
+
+        print('\t')
+        print(f'Filetype: {type(cost_none)}')
+        print('cost_none = \n', cost_none)
+
+        # if len(expense_year_not_none) == 0:
+        #     self.expense_year = np.repeat(self.project_years[0], self.project_duration)
+        #
+        # if 0 < len(expense_year_not_none) < self.project_duration:
+        #     raise TangibleCostDataException(
+        #         f"Expense year data is incomplete. "
+        #         f"The number of expense_year data should be ({self.project_duration}), "
+        #         f"not ({len(expense_year_not_none)})."
+        #     )
+
+    #     if len(expense_year_not_none) > self.project_duration:
+    #         raise TangibleCostDataException(
+    #             f"The length of expense year data ({len(expense_year_not_none)}) "
+    #             f"is longer than the project duration ({self.project_duration})."
+    #         )
+    #
+    #     # Prepare attribute cost_allocation
+    #     if not isinstance(self.cost_allocation, list):
+    #         raise TangibleCostDataException(
+    #             f"Incompatible datatype: "
+    #             f"cost_allocation: ({self.cost_allocation.__class__.__qualname__}). "
+    #             f"Cost allocation must be provided as a list."
+    #         )
+    #
+    #     if None in self.cost_allocation:
+    #         cost_allocation_none = list(filter(lambda i: i is None, self.cost_allocation))
+    #         if len(cost_allocation_none) == :
+    #             self.cost_allocation = None
+    #         else:
+    #             raise TangibleCostDataException(
+    #                 f"Cost allocation data is incomplete. "
+    #                 f"The number of cost_allocation data should be ({self.project_duration}), "
+    #                 f"not ({self.project_duration - len(cost_allocation_none)})."
+    #             )
+    #
+    #     elif None not in self.cost_allocation:
+    #         if len(self.cost_allocation) > self.project_duration:
+    #             raise TangibleCostDataException
+    #
+    #     print('\t')
+    #     print(f'Filetype: {type(self.cost_allocation)}')
+    #     print('cost_allocation = ', self.cost_allocation)

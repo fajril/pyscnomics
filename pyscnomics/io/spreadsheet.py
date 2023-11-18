@@ -842,7 +842,7 @@ class Spreadsheet:
             project_years=self.general_config_data.project_years,
         )
 
-    def _get_tangible_cost_data(self):
+    def _get_tangible_cost_data(self) -> TangibleCostData:
         """
         Notes
         -----
@@ -896,6 +896,8 @@ class Spreadsheet:
             vat_portion=tangible_data["vat_portion"],
             lbt_portion=tangible_data["lbt_portion"],
             description=tangible_data["description"].tolist(),
+            data_length=tangible_data_loaded.shape[0],
+            project_years=self.general_config_data.project_years,
         )
 
     def _get_intangible_cost_data(self):

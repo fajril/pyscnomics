@@ -676,6 +676,7 @@ class BaseProject:
             salvage_value = self.tangible_cost_total.salvage_value[oil_tangible_id]
             useful_life = self.tangible_cost_total.useful_life[oil_tangible_id]
             depreciation_factor = self.tangible_cost_total.depreciation_factor[oil_tangible_id]
+            is_ic_applied = np.array(self.tangible_cost_total.is_ic_applied)[oil_tangible_id]
 
             return Tangible(
                 start_year=start_year,
@@ -691,6 +692,7 @@ class BaseProject:
                 salvage_value=salvage_value,
                 useful_life=useful_life,
                 depreciation_factor=depreciation_factor,
+                is_ic_applied=is_ic_applied.tolist(),
             )
 
     def _get_gas_tangible(self) -> Tangible:
@@ -743,6 +745,7 @@ class BaseProject:
             salvage_value = self.tangible_cost_total.salvage_value[gas_tangible_id]
             useful_life = self.tangible_cost_total.useful_life[gas_tangible_id]
             depreciation_factor = self.tangible_cost_total.depreciation_factor[gas_tangible_id]
+            is_ic_applied = np.array(self.tangible_cost_total.is_ic_applied)[gas_tangible_id]
 
             return Tangible(
                 start_year=start_year,
@@ -758,6 +761,7 @@ class BaseProject:
                 salvage_value=salvage_value,
                 useful_life=useful_life,
                 depreciation_factor=depreciation_factor,
+                is_ic_applied=is_ic_applied.tolist(),
             )
 
     def _get_oil_intangible(self) -> Intangible:
