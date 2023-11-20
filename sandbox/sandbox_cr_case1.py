@@ -38,6 +38,9 @@ psc.gas_dmo_volume_portion = 0.25
 psc.gas_dmo_fee_portion = 1
 psc.gas_dmo_holiday_duration = 60
 
+# IC
+psc.oil_ic_rate = 0.2
+
 tax_rate = 0.424
 
 start_time = time.time()

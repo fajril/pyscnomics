@@ -235,7 +235,7 @@ class CostRecovery(BaseProject):
 
         # Create conditions using vectorized comparisons
         conditions = (bot_limits < self.indicator_rc_icp_sliding) & (
-            self.indicator_rc_icp_sliding <= top_limits
+                self.indicator_rc_icp_sliding <= top_limits
         )
 
         # Calculate corresponding values using np.select()
@@ -265,47 +265,49 @@ class CostRecovery(BaseProject):
             self._gas_ftp_gov = self._gas_ftp - self._gas_ftp_ctr
 
     def _get_ic(
-        self,
-        revenue: np.ndarray,
-        ftp: np.ndarray,
-        cost_alloc: FluidType,
-        ic_rate: float,
-    ) -> tuple:
-        if any(i for i in self.tangible_cost if i.is_ic_applied):
-            tangible_ic_applied = reduce(
-                lambda x, y: x + y,
-                (
-                    i
-                    for i in self.tangible_cost
-                    if i.cost_allocation == cost_alloc and i.is_ic_applied
-                ),
-            )
+            self,
+            revenue: np.ndarray,
+            ftp: np.ndarray,
+            cost_alloc: FluidType,
+            ic_rate: float,
+    ):
 
-            ic_total = ic_rate * tangible_ic_applied.expenditures(
-                year_ref=YearReference.PIS_YEAR
-            )
-
-            # Unrec IC
-            ic_unrecovered = np.cumsum(ic_total) - np.cumsum(revenue - ftp)
-            ic_unrecovered = np.where(ic_unrecovered > 0, ic_unrecovered, 0)
-
-            ic_unrec_next = np.roll(ic_unrecovered, 1)
-            ic_unrec_next[0] = 0
-            ic_paid = np.minimum(revenue - ftp, ic_total + ic_unrec_next)
-            return ic_total, ic_unrecovered, ic_paid
-
+        # Condition where fluid is Oil:
+        if cost_alloc == FluidType.GAS:
+            tangible_class = self._gas_tangible
         else:
-            return tuple(np.squeeze(np.hsplit(np.zeros((revenue.size, 3)), 3)))
+            tangible_class = self._oil_tangible
+
+        # Applying the IC calculation to only true value
+        ic_arr = np.where(np.asarray(tangible_class.is_ic_applied) == True,
+                          tangible_class.cost * ic_rate,
+                          0)
+
+        ic_expenses = np.bincount(
+            tangible_class.expense_year - tangible_class.start_year, weights=ic_arr
+        )
+        zeros = np.zeros(self.project_duration - len(ic_expenses))
+        ic_total = np.concatenate((ic_expenses, zeros))
+
+        # Unrec IC
+        ic_unrecovered = np.cumsum(ic_total) - np.cumsum(revenue - ftp)
+        ic_unrecovered = np.where(ic_unrecovered > 0, ic_unrecovered, 0)
+
+        ic_unrec_next = np.roll(ic_unrecovered, 1)
+        ic_unrec_next[0] = 0
+        ic_paid = np.minimum(revenue - ftp, ic_total + ic_unrec_next)
+
+        return ic_total, ic_unrecovered, ic_paid
 
     @staticmethod
     def _get_cost_recovery(
-        revenue: np.ndarray,
-        ftp: np.ndarray,
-        ic: np.ndarray,
-        depreciation: np.ndarray,
-        non_capital: np.ndarray,
-        cost_to_be_recovered: np.ndarray,
-        cr_cap_rate: float,
+            revenue: np.ndarray,
+            ftp: np.ndarray,
+            ic: np.ndarray,
+            depreciation: np.ndarray,
+            non_capital: np.ndarray,
+            cost_to_be_recovered: np.ndarray,
+            cr_cap_rate: float,
     ) -> np.ndarray:
         """
         A function to get the array of cost recovery.
@@ -344,11 +346,11 @@ class CostRecovery(BaseProject):
 
     @staticmethod
     def _get_ets_before_transfer(
-        revenue: np.ndarray,
-        ftp_ctr: np.ndarray,
-        ftp_gov: np.ndarray,
-        ic: np.ndarray,
-        cost_recovery: np.ndarray,
+            revenue: np.ndarray,
+            ftp_ctr: np.ndarray,
+            ftp_gov: np.ndarray,
+            ic: np.ndarray,
+            cost_recovery: np.ndarray,
     ) -> np.ndarray:
         """
         A function to get the Equity To be Shared (ETS) before transfer.
@@ -375,13 +377,13 @@ class CostRecovery(BaseProject):
 
     @staticmethod
     def _get_ets_after_transfer(
-        revenue: np.ndarray,
-        ftp_ctr: np.ndarray,
-        ftp_gov: np.ndarray,
-        ic: np.ndarray,
-        cost_recovery: np.ndarray,
-        transferred_in: np.ndarray,
-        transferred_out: np.ndarray,
+            revenue: np.ndarray,
+            ftp_ctr: np.ndarray,
+            ftp_gov: np.ndarray,
+            ic: np.ndarray,
+            cost_recovery: np.ndarray,
+            transferred_in: np.ndarray,
+            transferred_out: np.ndarray,
     ) -> np.ndarray:
         """
         A function to get the Equity To be Shared (ETS) before transfer.
@@ -410,12 +412,12 @@ class CostRecovery(BaseProject):
             The array of ETS before transfer.
         """
         ets_after_transfer = (
-            revenue
-            - (ftp_ctr + ftp_gov)
-            - ic
-            - cost_recovery
-            - transferred_out
-            + transferred_in
+                revenue
+                - (ftp_ctr + ftp_gov)
+                - ic
+                - cost_recovery
+                - transferred_out
+                + transferred_in
         )
         tol = np.full_like(ets_after_transfer, fill_value=1.0e-14)
         return np.where(ets_after_transfer < tol, 0, ets_after_transfer)
@@ -452,10 +454,10 @@ class CostRecovery(BaseProject):
 
     @staticmethod
     def _get_ftp_tax_payment(
-        unrec: np.ndarray,
-        ftp: np.ndarray,
-        tax_rate: float,
-        ftp_tax_regime: FTPTaxRegime = FTPTaxRegime.PDJP_20_2017,
+            unrec: np.ndarray,
+            ftp: np.ndarray,
+            tax_rate: float,
+            ftp_tax_regime: FTPTaxRegime = FTPTaxRegime.PDJP_20_2017,
     ):
         """
         A funtion to get the array of tax payment of the First Tranche Petroleum (FTP).
@@ -489,10 +491,10 @@ class CostRecovery(BaseProject):
 
     @staticmethod
     def _get_tax_payment(
-        ctr_share: np.ndarray,
-        taxable_income: np.ndarray,
-        tax_rate: np.ndarray,
-        ftp_tax_regime: FTPTaxRegime = FTPTaxRegime.PDJP_20_2017,
+            ctr_share: np.ndarray,
+            taxable_income: np.ndarray,
+            tax_rate: np.ndarray,
+            ftp_tax_regime: FTPTaxRegime = FTPTaxRegime.PDJP_20_2017,
     ):
         applied_tax = np.where(ctr_share > 0, 1, 0)
         if ftp_tax_regime == FTPTaxRegime.PDJP_20_2017:
@@ -528,46 +530,46 @@ class CostRecovery(BaseProject):
 
     def _get_sunk_cost(self, discount_rate_year: int):
         oil_cost_raw = (
-            self._oil_depreciation
-            + self._oil_undepreciated_asset
-            + self._oil_non_capital
+                self._oil_depreciation
+                + self._oil_undepreciated_asset
+                + self._oil_non_capital
         )
         self._oil_sunk_cost = oil_cost_raw[
-            : (discount_rate_year - self.start_date.year + 1)
-        ]
+                              : (discount_rate_year - self.start_date.year + 1)
+                              ]
 
         gas_cost_raw = (
-            self._gas_depreciation
-            + self._gas_undepreciated_asset
-            + self._gas_non_capital
+                self._gas_depreciation
+                + self._gas_undepreciated_asset
+                + self._gas_non_capital
         )
         self._gas_sunk_cost = gas_cost_raw[
-            : (discount_rate_year - self.start_date.year + 1)
-        ]
+                              : (discount_rate_year - self.start_date.year + 1)
+                              ]
 
         if discount_rate_year == self.start_date.year:
             self._oil_sunk_cost = np.zeros(1)
             self._gas_sunk_cost = np.zeros(1)
 
     def run(
-        self,
-        sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
-        electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
-        co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
-        is_dmo_end_weighted: bool = False,
-        tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
-        tax_rate: float | np.ndarray | None = None,
-        tax_payment_method: TaxPaymentMode = TaxPaymentMode.TAX_DUE_MODE,
-        ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
-        discount_rate_year: int = None,
-        depr_method: DeprMethod = DeprMethod.PSC_DB,
-        decline_factor: float | int = 2,
-        year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
-        vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
-        inflation_rate: np.ndarray | float = 0.0,
-        future_rate: float = 0.02,
+            self,
+            sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+            electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
+            co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+            is_dmo_end_weighted: bool = False,
+            tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
+            tax_rate: float | np.ndarray | None = None,
+            tax_payment_method: TaxPaymentMode = TaxPaymentMode.TAX_DUE_MODE,
+            ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
+            discount_rate_year: int = None,
+            depr_method: DeprMethod = DeprMethod.PSC_DB,
+            decline_factor: float | int = 2,
+            year_ref: int = None,
+            tax_type: TaxType = TaxType.VAT,
+            vat_rate: np.ndarray | float = 0.0,
+            lbt_rate: np.ndarray | float = 0.0,
+            inflation_rate: np.ndarray | float = 0.0,
+            future_rate: float = 0.02,
     ):
         # Configure discount rate
         if discount_rate_year is None:
@@ -637,46 +639,48 @@ class CostRecovery(BaseProject):
 
         # Non-capital costs (intangible + opex + asr)
         self._oil_non_capital = (
-            self._oil_intangible_expenditures
-            + self._oil_opex_expenditures
-            + self._oil_asr_expenditures
+                self._oil_intangible_expenditures
+                + self._oil_opex_expenditures
+                + self._oil_asr_expenditures
         )
 
         self._gas_non_capital = (
-            self._gas_intangible_expenditures
-            + self._gas_opex_expenditures
-            + self._gas_asr_expenditures
+                self._gas_intangible_expenditures
+                + self._gas_opex_expenditures
+                + self._gas_asr_expenditures
         )
 
         # Filtering for only the cost that in the bracket of the project years
         self._oil_depreciation = self._oil_depreciation[
-            : (self.end_date.year - self.start_date.year + 1)
-        ]
+                                 : (self.end_date.year - self.start_date.year + 1)
+                                 ]
         self._gas_depreciation = self._gas_depreciation[
-            : (self.end_date.year - self.start_date.year + 1)
-        ]
+                                 : (self.end_date.year - self.start_date.year + 1)
+                                 ]
 
         # Get Sunk Cost
         self._get_sunk_cost(discount_rate_year)
 
         # Investment credit
-        # self._oil_ic, self._oil_ic_unrecovered, self._oil_ic_paid = self._get_ic(
-        #     revenue=self._oil_revenue,
-        #     ftp=self._oil_ftp,
-        #     cost_alloc=FluidType.OIL,
-        #     ic_rate=self.oil_ic_rate,
-        # )
+        self._oil_ic, self._oil_ic_unrecovered, self._oil_ic_paid = self._get_ic(
+            revenue=self._oil_revenue,
+            ftp=self._oil_ftp,
+            cost_alloc=FluidType.OIL,
+            ic_rate=self.oil_ic_rate,
+        )
+
+        self._gas_ic, self._gas_ic_unrecovered, self._gas_ic_paid = self._get_ic(
+            revenue=self._gas_revenue,
+            ftp=self._gas_ftp,
+            cost_alloc=FluidType.GAS,
+            ic_rate=self.gas_ic_rate,
+        )
+
+        # self._oil_ic, self._oil_ic_unrecovered, self._oil_ic_paid = np.zeros_like(self.project_years), np.zeros_like(
+        #     self.project_years), np.zeros_like(self.project_years)
         #
-        # self._gas_ic, self._gas_ic_unrecovered, self._gas_ic_paid = self._get_ic(
-        #     revenue=self._gas_revenue,
-        #     ftp=self._gas_ftp,
-        #     cost_alloc=FluidType.GAS,
-        #     ic_rate=self.gas_ic_rate,
-        # )
-
-        self._oil_ic, self._oil_ic_unrecovered, self._oil_ic_paid = np.zeros_like(self.project_years), np.zeros_like(self.project_years), np.zeros_like(self.project_years)
-
-        self._gas_ic, self._gas_ic_unrecovered, self._gas_ic_paid = np.zeros_like(self.project_years), np.zeros_like(self.project_years), np.zeros_like(self.project_years)
+        # self._gas_ic, self._gas_ic_unrecovered, self._gas_ic_paid = np.zeros_like(self.project_years), np.zeros_like(
+        #     self.project_years), np.zeros_like(self.project_years)
 
         # Unrecovered cost before transfer/consolidation
         self._oil_unrecovered_before_transfer = psc_tools.get_unrecovered_cost(
@@ -789,29 +793,29 @@ class CostRecovery(BaseProject):
 
         # Cost recovery after transfer
         self._oil_cost_recovery_after_tf = (
-            self._get_cost_recovery(
-                revenue=self._oil_revenue,
-                ftp=self._oil_ftp,
-                ic=self._oil_ic_paid,
-                depreciation=self._oil_depreciation,
-                non_capital=self._oil_non_capital,
-                cost_to_be_recovered=self._oil_cost_to_be_recovered_after_tf,
-                cr_cap_rate=self.oil_cr_cap_rate,
-            )
-            + self._transfer_to_oil
+                self._get_cost_recovery(
+                    revenue=self._oil_revenue,
+                    ftp=self._oil_ftp,
+                    ic=self._oil_ic_paid,
+                    depreciation=self._oil_depreciation,
+                    non_capital=self._oil_non_capital,
+                    cost_to_be_recovered=self._oil_cost_to_be_recovered_after_tf,
+                    cr_cap_rate=self.oil_cr_cap_rate,
+                )
+                + self._transfer_to_oil
         )
 
         self._gas_cost_recovery_after_tf = (
-            self._get_cost_recovery(
-                revenue=self._gas_revenue,
-                ftp=self._gas_ftp,
-                ic=self._gas_ic_paid,
-                depreciation=self._gas_depreciation,
-                non_capital=self._gas_non_capital,
-                cost_to_be_recovered=self._gas_cost_to_be_recovered_after_tf,
-                cr_cap_rate=self.gas_cr_cap_rate,
-            )
-            + self._transfer_to_gas
+                self._get_cost_recovery(
+                    revenue=self._gas_revenue,
+                    ftp=self._gas_ftp,
+                    ic=self._gas_ic_paid,
+                    depreciation=self._gas_depreciation,
+                    non_capital=self._gas_non_capital,
+                    cost_to_be_recovered=self._gas_cost_to_be_recovered_after_tf,
+                    cr_cap_rate=self.gas_cr_cap_rate,
+                )
+                + self._transfer_to_gas
         )
 
         # ETS after Transfer
@@ -875,16 +879,16 @@ class CostRecovery(BaseProject):
 
         # Taxable income (also known as Net Contractor Share - NCS)
         self._oil_taxable_income = (
-            self._oil_ftp_ctr
-            + self._oil_contractor_share
-            + self._oil_ic_paid
-            - self._oil_ddmo
+                self._oil_ftp_ctr
+                + self._oil_contractor_share
+                + self._oil_ic_paid
+                - self._oil_ddmo
         )
         self._gas_taxable_income = (
-            self._gas_ftp_ctr
-            + self._gas_contractor_share
-            + self._gas_ic_paid
-            - self._gas_ddmo
+                self._gas_ftp_ctr
+                + self._gas_contractor_share
+                + self._gas_ic_paid
+                - self._gas_ddmo
         )
 
         # Tax Payment
@@ -916,105 +920,105 @@ class CostRecovery(BaseProject):
 
         # Contractor Take by Fluid
         self._oil_contractor_take = (
-            self._oil_taxable_income
-            - self._oil_tax_payment
-            + self._oil_cost_recovery_after_tf
+                self._oil_taxable_income
+                - self._oil_tax_payment
+                + self._oil_cost_recovery_after_tf
         )
 
         self._gas_contractor_take = (
-            self._gas_taxable_income
-            - self._gas_tax_payment
-            + self._gas_cost_recovery_after_tf
+                self._gas_taxable_income
+                - self._gas_tax_payment
+                + self._gas_cost_recovery_after_tf
         )
 
         # Contractor CashFlow
         self._oil_cashflow = self._oil_contractor_take - (
-            self._oil_tangible.expenditures() + self._oil_non_capital
+                self._oil_tangible.expenditures() + self._oil_non_capital
         )
         self._gas_cashflow = self._gas_contractor_take - (
-            self._gas_tangible.expenditures() + self._gas_non_capital
+                self._gas_tangible.expenditures() + self._gas_non_capital
         )
 
         # Government Take by Fluid
         self._oil_government_take = (
-            self._oil_ftp_gov
-            + self._oil_government_share
-            + self._oil_tax_payment
-            + self._oil_ddmo
+                self._oil_ftp_gov
+                + self._oil_government_share
+                + self._oil_tax_payment
+                + self._oil_ddmo
         )
 
         self._gas_government_take = (
-            self._gas_ftp_gov
-            + self._gas_government_share
-            + self._gas_tax_payment
-            + self._gas_ddmo
+                self._gas_ftp_gov
+                + self._gas_government_share
+                + self._gas_tax_payment
+                + self._gas_ddmo
         )
 
         # Consolidated attributes
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue
         self._consolidated_tangible = (
-            self._oil_tangible.expenditures() + self._gas_tangible.expenditures()
+                self._oil_tangible.expenditures() + self._gas_tangible.expenditures()
         )
         self._consolidated_intangible = (
-            self._oil_intangible.expenditures() + self._gas_intangible.expenditures()
+                self._oil_intangible.expenditures() + self._gas_intangible.expenditures()
         )
         self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
         self._consolidated_opex = (
-            self._oil_opex.expenditures() + self._gas_opex.expenditures()
+                self._oil_opex.expenditures() + self._gas_opex.expenditures()
         )
         self._consolidated_asr = (
-            self._oil_asr.expenditures() + self._gas_asr.expenditures()
+                self._oil_asr.expenditures() + self._gas_asr.expenditures()
         )
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
         self._consolidated_depreciation = (
-            self._oil_depreciation + self._gas_depreciation
+                self._oil_depreciation + self._gas_depreciation
         )
 
         self._consolidated_undepreciated_asset = (
-            self._oil_undepreciated_asset + self._gas_undepreciated_asset
+                self._oil_undepreciated_asset + self._gas_undepreciated_asset
         )
         self._consolidated_ftp = self._oil_ftp + self._gas_ftp
         self._consolidated_ftp_ctr = self._oil_ftp_ctr + self._gas_ftp_ctr
         self._consolidated_ftp_gov = self._oil_ftp_gov + self._gas_ftp_gov
         self._consolidated_ic = self._oil_ic + self._gas_ic
         self._consolidated_ic_unrecovered = (
-            self._oil_ic_unrecovered + self._gas_ic_unrecovered
+                self._oil_ic_unrecovered + self._gas_ic_unrecovered
         )
         self._consolidated_ic_paid = self._oil_ic_paid + self._gas_ic_paid
         self._consolidated_unrecovered_before_transfer = (
-            self._oil_unrecovered_before_transfer
-            + self._gas_unrecovered_before_transfer
+                self._oil_unrecovered_before_transfer
+                + self._gas_unrecovered_before_transfer
         )
         self._consolidated_cost_recovery_before_transfer = (
-            self._oil_cost_recovery + self._gas_cost_recovery
+                self._oil_cost_recovery + self._gas_cost_recovery
         )
         self._consolidated_ets_before_transfer = (
-            self._oil_ets_before_transfer + self._gas_ets_before_transfer
+                self._oil_ets_before_transfer + self._gas_ets_before_transfer
         )
         self._consolidated_unrecovered_after_transfer = (
-            self._oil_unrecovered_after_transfer + self._gas_unrecovered_after_transfer
+                self._oil_unrecovered_after_transfer + self._gas_unrecovered_after_transfer
         )
         self._consolidated_cost_to_be_recovered_after_tf = (
-            self._oil_cost_to_be_recovered_after_tf
-            + self._gas_cost_to_be_recovered_after_tf
+                self._oil_cost_to_be_recovered_after_tf
+                + self._gas_cost_to_be_recovered_after_tf
         )
         self._consolidated_cost_recovery_after_tf = (
-            self._oil_cost_recovery_after_tf + self._gas_cost_recovery_after_tf
+                self._oil_cost_recovery_after_tf + self._gas_cost_recovery_after_tf
         )
         self._consolidated_ets_after_transfer = (
-            self._oil_ets_after_transfer + self._gas_ets_after_transfer
+                self._oil_ets_after_transfer + self._gas_ets_after_transfer
         )
         self._consolidated_contractor_share = (
-            self._oil_contractor_share + self._gas_contractor_share
+                self._oil_contractor_share + self._gas_contractor_share
         )
         self._consolidated_government_share = (
-            self._oil_government_share + self._gas_government_share
+                self._oil_government_share + self._gas_government_share
         )
         self._consolidated_dmo_volume = self._oil_dmo_volume + self._gas_dmo_volume
         self._consolidated_dmo_fee = self._oil_dmo_fee + self._gas_dmo_fee
         self._consolidated_ddmo = self._oil_ddmo + self._gas_ddmo
         self._consolidated_taxable_income = (
-            self._oil_taxable_income + self._gas_taxable_income
+                self._oil_taxable_income + self._gas_taxable_income
         )
 
         # Calculating the consolidated tax based on the tax payment mode
@@ -1036,26 +1040,26 @@ class CostRecovery(BaseProject):
 
         elif tax_payment_method is TaxPaymentMode.TAX_DIRECT_MODE:
             self._consolidated_tax_payment = (
-                self._oil_tax_payment + self._gas_tax_payment
+                    self._oil_tax_payment + self._gas_tax_payment
             )
 
         self._consolidated_ctr_net_share = (
-            self._consolidated_taxable_income - self._consolidated_tax_payment
+                self._consolidated_taxable_income - self._consolidated_tax_payment
         )
 
         self._consolidated_contractor_take = (
-            self._consolidated_taxable_income
-            - self._consolidated_tax_payment
-            + self._consolidated_cost_recovery_after_tf
+                self._consolidated_taxable_income
+                - self._consolidated_tax_payment
+                + self._consolidated_cost_recovery_after_tf
         )
 
         self._consolidated_government_take = (
-            self._consolidated_ftp_gov
-            + self._consolidated_government_share
-            + self._consolidated_tax_payment
-            + self._consolidated_ddmo
+                self._consolidated_ftp_gov
+                + self._consolidated_government_share
+                + self._consolidated_tax_payment
+                + self._consolidated_ddmo
         )
 
         self._consolidated_cashflow = self._consolidated_contractor_take - (
-            self._consolidated_tangible + self._consolidated_non_capital
+                self._consolidated_tangible + self._consolidated_non_capital
         )
