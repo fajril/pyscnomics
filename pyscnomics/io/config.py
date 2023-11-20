@@ -789,15 +789,18 @@ class TangibleCostData:
             if not isinstance(self.cost_allocation, list):
                 raise TangibleCostDataException
 
-        cost_allocation_nan = np.argwhere(pd.isna(self.cost_allocation)).ravel()
+            cost_allocation_nan = np.argwhere(pd.isna(self.cost_allocation)).ravel()
 
-        if len(cost_allocation_nan) > 0:
-            raise TangibleCostDataException(
-                f"Cost allocation data is incomplete. "
-                f"Please re-check cost_allocation data. "
-                f"The number of cost_allocation data must be ({self.data_length}), "
-                f"not ({self.data_length - len(cost_allocation_nan)})."
-            )
+            if len(cost_allocation_nan) > 0:
+                raise TangibleCostDataException(
+                    f"Cost allocation data is incomplete. "
+                    f"Please re-check cost_allocation data. "
+                    f"The number of cost_allocation data must be ({self.data_length}), "
+                    f"not ({self.data_length - len(cost_allocation_nan)})."
+                )
+
+            else:
+                self.cost_allocation = self.cost_allocation
 
         # Prepare attribute cost
         if self.cost is None:
@@ -816,7 +819,8 @@ class TangibleCostData:
             if len(cost_none) > 0:
                 self.cost[cost_none] = np.zeros(len(cost_none))
 
-            self.cost = self.cost
+            else:
+                self.cost = self.cost
 
         # Prepare attribute pis_year
         if self.pis_year is not None:
@@ -832,7 +836,8 @@ class TangibleCostData:
             if len(pis_year_nan) > 0:
                 self.pis_year[pis_year_nan] = self.expense_year[pis_year_nan]
 
-            self.pis_year = self.pis_year
+            else:
+                self.pis_year = self.pis_year
 
         # Prepare attribute useful_life
         if self.useful_life is not None:
@@ -847,6 +852,9 @@ class TangibleCostData:
 
             if len(useful_life_nan) > 0:
                 self.useful_life[useful_life_nan] = np.repeat(5.0, len(useful_life_nan))
+
+            else:
+                self.useful_life = self.useful_life
 
         # Prepare attribute depreciation_factor
         if self.depreciation_factor is not None:
@@ -864,6 +872,9 @@ class TangibleCostData:
                     np.repeat(0.5, len(depreciation_factor_nan))
                 )
 
+            else:
+                self.depreciation_factor = self.depreciation_factor
+
         # Prepare attribute salvage_value
         if self.salvage_value is not None:
             if not isinstance(self.salvage_value, np.ndarray):
@@ -873,6 +884,9 @@ class TangibleCostData:
 
             if len(salvage_value_nan) > 0:
                 self.salvage_value[salvage_value_nan] = np.zeros(len(salvage_value_nan))
+
+            else:
+                self.salvage_value = self.salvage_value
 
         # Prepare attribute is_ic_applied
         if self.is_ic_applied is not None:
@@ -885,6 +899,9 @@ class TangibleCostData:
                 for i in is_ic_applied_nan:
                     self.is_ic_applied[i] = "No"
 
+            else:
+                self.is_ic_applied = self.is_ic_applied
+
         # Prepare attribute vat_portion
         if self.vat_portion is not None:
             if not isinstance(self.vat_portion, np.ndarray):
@@ -894,3 +911,6 @@ class TangibleCostData:
 
             if len(vat_portion_nan) > 0:
                 self.vat_portion[vat_portion_nan] = np.ones(len(vat_portion_nan))
+
+            else:
+                self.vat_portion = self.vat_portion
