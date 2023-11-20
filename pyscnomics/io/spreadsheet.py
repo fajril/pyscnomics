@@ -43,8 +43,7 @@ class Spreadsheet:
     workbook_to_read: str = field(default=None)
 
     # Attributes associated with loading data from a target Excel file
-    sheets_raw: dict = field(default=None, init=False, repr=False)
-    sheets_visible: list = field(default=None, init=False, repr=False)
+    sheets_name: list = field(default=None, init=False, repr=False)
     sheets_loaded: list = field(default=None, init=False, repr=False)
     data_loaded: dict = field(default=None, init=False, repr=False)
 
@@ -92,20 +91,28 @@ class Spreadsheet:
         -----
         The core procedures are as follows:
         (1) Identify the directory location of the target Excel file,
-        (2) From the target Excel file, identify 'visible' worksheets,
-        (3) Load data from the target Excel file, capturing the 'visible' worksheets only.
+        (2) From the target Excel file, identify the worksheets,
+        (3) Load data from the target Excel file, capturing all worksheets.
         """
         # Directory location of the target Excel file
         load_dir = os.path.join(os.getcwd(), self.workbook_to_read)
 
-        # Identify 'visible' worksheets in the target Excel file
+        # Identify worksheets in the target Excel file
         excel = pd.ExcelFile(load_dir)
         sheets = excel.book.worksheets
-        self.sheets_raw = dict([(sh.title, sh.sheet_state) for sh in sheets])
-        self.sheets_visible = [key for key, val in self.sheets_raw.items() if val == "visible"]
-        self.sheets_loaded = self.sheets_visible[3:len(self.sheets_visible) - 2]
+        self.sheets_name = [sh.title for sh in sheets]
+        self.sheets_loaded = [
+            i for i in self.sheets_name
+            if i not in [
+                "Cover",
+                "UserGuide",
+                "Summary",
+                "Result Table CR",
+                "Result Table GS"
+            ]
+        ]
 
-        # Load data from 'visible' worksheets only
+        # Load data from all worksheets
         self.data_loaded = {
             key: pd.read_excel(
                 excel,
@@ -857,8 +864,6 @@ class Spreadsheet:
         tangible_data_loaded = (
             self.data_loaded["Cost Tangible"]
             .dropna(axis=0, how="all")
-            # .dropna(subset=[self.data_loaded["Cost Tangible"].columns[0]])
-            .replace(np.nan, None)
         )
 
         # Step #2 (See 'Notes' section in the docstring)
@@ -877,29 +882,54 @@ class Spreadsheet:
         ]
 
         # Step #3 (See 'Notes' section in the docstring)
-        tangible_data = {
-            val_i: (
-                None if tangible_data_loaded.empty
-                else tangible_data_loaded.iloc[:, i].to_numpy()
-            )
-            for i, val_i in enumerate(tangible_data_attrs)
-        }
+        if tangible_data_loaded.empty:
+            tangible_data = {key: None for key in tangible_data_attrs}
 
-        return TangibleCostData(
-            expense_year=tangible_data["expense_year"],
-            cost_allocation=tangible_data["cost_allocation"].tolist(),
-            cost=tangible_data["cost"],
-            pis_year=tangible_data["pis_year"],
-            useful_life=tangible_data["useful_life"],
-            depreciation_factor=tangible_data["depreciation_factor"],
-            salvage_value=tangible_data["salvage_value"],
-            is_ic_applied=tangible_data["is_ic_applied"].tolist(),
-            vat_portion=tangible_data["vat_portion"],
-            lbt_portion=tangible_data["lbt_portion"],
-            description=tangible_data["description"].tolist(),
-            data_length=tangible_data_loaded.shape[0],
-            project_years=self.general_config_data.project_years,
-        )
+            print('\t')
+            print(f'Filetype: {type(tangible_data)}')
+            print('tangible_data = \n', tangible_data)
+
+            return TangibleCostData(
+                expense_year=tangible_data["expense_year"],
+                cost_allocation=tangible_data["cost_allocation"],
+                cost=tangible_data["cost"],
+                pis_year=tangible_data["pis_year"],
+                useful_life=tangible_data["useful_life"],
+                depreciation_factor=tangible_data["depreciation_factor"],
+                salvage_value=tangible_data["salvage_value"],
+                is_ic_applied=tangible_data["is_ic_applied"],
+                vat_portion=tangible_data["vat_portion"],
+                lbt_portion=tangible_data["lbt_portion"],
+                description=tangible_data["description"],
+                data_length=tangible_data_loaded.shape[0],
+                project_years=self.general_config_data.project_years,
+            )
+
+        else:
+            tangible_data = {
+                val: tangible_data_loaded.iloc[:, key].to_numpy()
+                for key, val in enumerate(tangible_data_attrs)
+            }
+
+            print('\t')
+            print(f'Filetype: {type(tangible_data)}')
+            print('tangible_data = \n', tangible_data)
+
+            return TangibleCostData(
+                expense_year=tangible_data["expense_year"],
+                cost_allocation=tangible_data["cost_allocation"].tolist(),
+                cost=tangible_data["cost"],
+                pis_year=tangible_data["pis_year"],
+                useful_life=tangible_data["useful_life"],
+                depreciation_factor=tangible_data["depreciation_factor"],
+                salvage_value=tangible_data["salvage_value"],
+                is_ic_applied=tangible_data["is_ic_applied"].tolist(),
+                vat_portion=tangible_data["vat_portion"],
+                lbt_portion=tangible_data["lbt_portion"],
+                description=tangible_data["description"].tolist(),
+                data_length=tangible_data_loaded.shape[0],
+                project_years=self.general_config_data.project_years,
+            )
 
     def _get_intangible_cost_data(self):
         raise NotImplementedError
@@ -935,8 +965,8 @@ class Spreadsheet:
         self.tangible_cost_data = self._get_tangible_cost_data()
 
         print("\t")
-        print(f"Filetype: {type(self.fiscal_config_data)}")
-        print("self.fiscal_config_data = \n", self.fiscal_config_data)
+        print(f"Filetype: {type(self.tangible_cost_data)}")
+        print("self.tangible_cost_data = \n", self.tangible_cost_data)
 
         # print('\t')
         # print(f'Filetype: {type(self.gas_lifting_data.gas_gsa_price)}')
