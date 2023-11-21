@@ -5,6 +5,8 @@ from datetime import date
 import numpy as np
 import pyxirr
 
+from pyscnomics.econ.selection import DiscountingMode
+
 
 def pot(
     cashflow: np.ndarray,
@@ -231,39 +233,312 @@ def _date_arange(
     return dates
 
 
-def npv_skk_real_terms(cashflow: np.ndarray,
-                       cashflow_years: np.ndarray,
-                       discount_rate: float,
-                       reference_year: int):
-    t = np.arange(1, len(cashflow_years) + 1)
-    reference_year = np.full_like(a=cashflow, fill_value=reference_year, dtype=float)
-    cashflow_disc = np.where(t > 1,
-                             cashflow / np.power((1 + discount_rate), (cashflow_years - reference_year)),
-                             cashflow * np.power((1 + discount_rate), len(cashflow_years))
-                             )
-    return np.sum(cashflow_disc)
+def npv_nominal_terms(cashflow: np.ndarray,
+                      cashflow_years: np.ndarray,
+                      discount_rate: float,
+                      reference_year: int,
+                      discounting_mode: DiscountingMode.END_YEAR) -> float:
+    """
+    A function to calculate the Net Present Value (NPV) of a series of cashflows in nominal terms.
+
+    Parameters
+    ----------
+    cashflow : np.ndarray
+        Array of cashflows for each period.
+
+    cashflow_years : np.ndarray
+        Array of corresponding years for each cashflow..
+
+    discount_rate : float
+        The discount rate to be applied.
+
+    reference_year : int
+        The reference year used to calculate NPV.
+
+    discounting_mode : DiscountingMode
+        Enum representing the discounting mode,
+        either DiscountingMode.END_YEAR or DiscountingMode.MID_YEAR.
+
+    Returns
+    -------
+    float
+        The Net Present Value of the cashflows in nominal terms.
+
+    Notes
+    -----
+    If discounting_mode is DiscountingMode.END_YEAR, the discounting is applied
+    at the end of each year. If it is DiscountingMode.MID_YEAR, the discounting is
+    applied at the mid-year of each period.
+    """
+    reference_year_arr = np.full_like(cashflow, fill_value=reference_year)
+    t_arr = cashflow_years - reference_year_arr
+
+    if discounting_mode is DiscountingMode.END_YEAR:
+        year_factor = 0
+    else:
+        year_factor = 0.5
+
+    dcf = np.where(t_arr > 0,
+                   1 / (np.power(1 + discount_rate, t_arr + year_factor)),
+                   1)
+
+    discounted_cashflow = cashflow * dcf
+    return float(np.sum(discounted_cashflow))
+
+
+def npv_real_terms(cashflow: np.ndarray,
+                   cashflow_years: np.ndarray,
+                   discount_rate: float,
+                   reference_year: int,
+                   inflation_rate: float,
+                   discounting_mode: DiscountingMode.END_YEAR) -> float:
+    """
+    A function to calculate the Net Present Value (NPV) of a series of cashflows in real terms.
+
+    Parameters
+    ----------
+    cashflow : np.ndarray
+        Array of cashflows for each period.
+    cashflow_years : np.ndarray
+        Array of corresponding years for each cashflow.
+    discount_rate : float
+        The discount rate to be applied.
+    reference_year : int
+        The reference year for discounting and inflation adjustments.
+    inflation_rate : float
+        The inflation rate for adjusting future cashflows.
+    discounting_mode : DiscountingMode
+        Enum representing the discounting mode,
+        either DiscountingMode.END_YEAR or DiscountingMode.MID_YEAR.
+
+    Returns
+    -------
+    float
+        The Net Present Value of the cashflows in real terms.
+
+    Notes
+    -----
+    If discounting_mode is DiscountingMode.END_YEAR, the discounting is applied
+    at the end of each year. If it is DiscountingMode.MID_YEAR, the discounting is
+    applied at the mid-year of each period.
+    """
+    reference_year_arr = np.full_like(cashflow, fill_value=reference_year)
+    t_arr = cashflow_years - reference_year_arr
+
+    if discounting_mode is DiscountingMode.END_YEAR:
+        year_factor = 0
+    else:
+        year_factor = 0.5
+
+    dcf = np.where(t_arr > 0,
+                   1 / (np.power(1 + discount_rate, t_arr + year_factor)),
+                   1)
+
+    discounted_cashflow = np.where(t_arr > 0,
+                                   dcf * cashflow,
+                                   cashflow * np.power((1 + inflation_rate), np.max(cashflow_years) - reference_year))
+    return float(np.sum(discounted_cashflow))
 
 
 def npv_skk_nominal_terms(cashflow: np.ndarray,
                           cashflow_years: np.ndarray,
                           discount_rate: float,
-                          ):
-    t = np.arange(1, len(cashflow_years) + 1)
-    reference_year = np.full_like(a=cashflow, fill_value=np.min(cashflow_years), dtype=float)
-    cashflow_disc = np.where(t > 1,
-                             cashflow / np.power((1 + discount_rate), (cashflow_years - reference_year)),
-                             cashflow)
+                          discounting_mode: DiscountingMode.END_YEAR) -> float:
+    """
+    A function to calculate the Net Present Value (NPV) of a series of cashflows in SKK Nominal terms method.
 
-    return np.sum(cashflow_disc)
+    Parameters
+    ----------
+    cashflow : np.ndarray
+        Array of cashflows for each period.
+    cashflow_years : np.ndarray
+        Array of corresponding years for each cashflow.
+    discount_rate : float
+        The discount rate to be applied.
+    discounting_mode : DiscountingMode
+        Enum representing the discounting mode,
+        either DiscountingMode.END_YEAR or DiscountingMode.MID_YEAR.
+
+    Returns
+    -------
+    float
+        The Net Present Value of the cashflows in SKK nominal terms.
+
+    Notes
+    -----
+    [1] If discounting_mode is DiscountingMode.END_YEAR, the discounting is applied
+    at the end of each year. If it is DiscountingMode.MID_YEAR, the discounting is
+    applied at the mid-year of each period.
+
+    [2] In SKK Nominal terms, the reference year is set to the starting year of the project.
+    """
+
+    if discounting_mode is DiscountingMode.END_YEAR:
+        year_factor = 0
+    else:
+        year_factor = 0.5
+
+    reference_year_arr = np.full_like(cashflow, fill_value=np.min(cashflow_years))
+    dcf = 1/(np.power((1+discount_rate), cashflow_years - reference_year_arr + year_factor))
+    discounted_cashflow = cashflow * dcf
+    return float(np.sum(discounted_cashflow))
+
+
+def npv_skk_real_terms(cashflow: np.ndarray,
+                       cashflow_years: np.ndarray,
+                       discount_rate: float,
+                       reference_year: int,
+                       discounting_mode: DiscountingMode.END_YEAR) -> float:
+    """
+    A function to calculate the Net Present Value (NPV) of a series of cashflows in SKK Real terms method.
+
+    Parameters
+    ----------
+    cashflow : np.ndarray
+        Array of cashflows for each period.
+    cashflow_years : np.ndarray
+        Array of corresponding years for each cashflow.
+    discount_rate : float
+        The discount rate to be applied.
+    reference_year : int
+        The reference year for discounting and inflation adjustments.
+    discounting_mode : DiscountingMode
+        Enum representing the discounting mode,
+        either DiscountingMode.END_YEAR or DiscountingMode.MID_YEAR.
+
+    Returns
+    -------
+    float
+        The Net Present Value of the cashflows in SKK real terms.
+
+    Notes
+    -----
+    [1] If discounting_mode is DiscountingMode.END_YEAR, the discounting is applied
+    at the end of each year. If it is DiscountingMode.MID_YEAR, the discounting is
+    applied at the mid-year of each period.
+
+    [2] In SKK Real terms, the inflation rate is set to as the same as discount rate.
+
+    """
+
+    reference_year_arr = np.full_like(cashflow, fill_value=reference_year)
+    t_arr = cashflow_years - reference_year_arr
+
+    if discounting_mode is DiscountingMode.END_YEAR:
+        year_factor = 0
+    else:
+        year_factor = 0.5
+
+    dcf = np.where(t_arr >= 0,
+                   1/np.power((1+discount_rate), t_arr + year_factor),
+                   1)
+
+    discounted_cashflow = np.where(cashflow_years > reference_year,
+                                   dcf * cashflow,
+                                   dcf * cashflow * np.power((1+discount_rate),
+                                                             np.max(cashflow_years) - reference_year) + year_factor)
+    return float(np.sum(discounted_cashflow))
 
 
 def npv_point_forward(cashflow: np.ndarray,
                       cashflow_years: np.ndarray,
-                      discount_rate: float):
-    t = np.arange(1, len(cashflow_years) + 1)
-    cashflow_disc = np.where(t > 1,
-                             cashflow / np.power((1 + discount_rate), cashflow_years),
-                             cashflow)
+                      discount_rate: float,
+                      reference_year: int,
+                      discounting_mode: DiscountingMode.END_YEAR) -> float:
+    """
+        Calculate the Net Present Value (NPV) of a series of cashflows using a point-forward approach.
 
-    return np.sum(cashflow_disc)
+        Parameters
+        ----------
+        cashflow : np.ndarray
+            Array of cashflows for each period.
+        cashflow_years : np.ndarray
+            Array of corresponding years for each cashflow.
+        discount_rate : float
+            The discount rate to be applied.
+        reference_year : int
+            The reference year for discounting.
+        discounting_mode : DiscountingMode
+            Enum representing the discounting mode,
+            either DiscountingMode.END_YEAR or DiscountingMode.MID_YEAR.
 
+        Returns
+        -------
+        float
+            The Net Present Value of the cashflows using the point-forward approach.
+
+        Notes
+        -----
+        [1] If discounting_mode is DiscountingMode.END_YEAR, the discounting is applied
+        at the end of each year. If it is DiscountingMode.MID_YEAR, the discounting is
+        applied at the mid-year of each period.
+
+        [2] The point-forward approach is that any cashflow prior to the reference year will be neglected..
+        """
+    reference_year_arr = np.full_like(cashflow, fill_value=reference_year)
+    t_arr = cashflow_years - reference_year_arr
+
+    if discounting_mode is DiscountingMode.END_YEAR:
+        year_factor = 0
+    else:
+        year_factor = 0.5
+
+    dcf = np.where(t_arr >= 0,
+                   1/np.power((1+discount_rate), t_arr + year_factor),
+                   1)
+
+    discounted_cashflow = np.where(t_arr < 0,
+                                   0,
+                                   dcf * cashflow)
+    return float(np.sum(discounted_cashflow))
+
+
+def pot_psc(cashflow: np.ndarray,
+            cashflow_years: np.ndarray,
+            reference_year: int):
+
+    project_year = np.arange(1, (np.max(cashflow_years) - reference_year + 1) + 1)
+    project_year = np.concatenate((np.zeros(reference_year - np.min(cashflow_years)), project_year))
+    cum_cashflow = np.cumsum(cashflow)
+
+    # Create an array of zeros with the same length as cum_cashflow
+    pot = np.zeros_like(cum_cashflow, dtype=float)
+
+    # Find indices where cum_cashflow changes sign from negative to positive
+    positive_change_indices = np.where((cum_cashflow[:-1] < 0) & (cum_cashflow[1:] >= 0))[0]
+
+    # Calculate the values using vectorized operations
+    pot[positive_change_indices] = (project_year[positive_change_indices] +
+                                    (project_year[positive_change_indices + 1] - project_year[positive_change_indices])
+                                    /
+                                    (cum_cashflow[positive_change_indices + 1] - cum_cashflow[positive_change_indices])
+                                    *
+                                    (0 - cum_cashflow[positive_change_indices]))
+
+    return float(np.max(pot))
+
+# def pot_psc(cashflow: np.ndarray,
+#             cashflow_years: np.ndarray,
+#             reference_year: int):
+#
+#     project_year = np.arange(1, (np.max(cashflow_years) - reference_year + 1) + 1)
+#     project_year = np.concatenate((np.zeros(reference_year - np.min(cashflow_years)), project_year))
+#     cum_cashflow = np.cumsum(cashflow)
+#
+#     pot = []
+#     for index, cash in enumerate(cum_cashflow):
+#         print(index, cash)
+#         if index == 0 or index == len(cum_cashflow) - 1:
+#             value = 0
+#             pot.append(float(value))
+#         else:
+#             value = np.where(np.logical_and(cum_cashflow[index] < 0, cum_cashflow[index + 1] > 0),
+#                              project_year[index] + np.divide((project_year[index+1] - project_year[index]),
+#                                                              (cum_cashflow[index + 1] - cum_cashflow[index]),
+#                                                              where=(cum_cashflow[index + 1] -
+#                                                              cum_cashflow[index]) != 0)
+#                              * (0-cum_cashflow[index]),
+#                              0)
+#             pot.append(float(value))
+#
+#     return float(np.max(pot))

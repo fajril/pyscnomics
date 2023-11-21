@@ -39,7 +39,6 @@ psc.gas_dmo_fee_portion = 1
 psc.gas_dmo_holiday_duration = 60
 
 # IC
-psc.oil_ic_rate = 0.2
 
 tax_rate = 0.424
 
@@ -212,10 +211,10 @@ print(psc_table_consolidated, '\n')
 # print(np.sum(psc._gas_sunk_cost))
 
 
-psc_summary = get_summary(contract=psc,
-                          reference_year=2010,
-                          npv_mode=NPVSelection.FULL_CYCLE_REAL_TERMS,
-                          discount_rate=0.1, )
+# psc_summary = get_summary(contract=psc,
+#                           reference_year=2010,
+#                           npv_mode=NPVSelection.FULL_CYCLE_NOMINAL_TERMS,
+#                           discount_rate=0.1, )
 
-for key, value in psc_summary.items():
-    print(key, ":", value)
+# for key, value in psc_summary.items():
+#     print(key, ":", value)

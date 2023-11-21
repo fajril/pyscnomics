@@ -174,8 +174,8 @@ class GrossSplitRegime(Enum):
 
 
 class DiscountingMode(Enum):
-    FULL_YEAR = "Full Year Discounting"
-    HALF_YEAR = "Half Year Discounting"
+    END_YEAR = "End Year Discounting"
+    MID_YEAR = "Mid Year Discounting"
 
 
 class ContractType(Enum):
@@ -188,8 +188,11 @@ class ContractType(Enum):
 
 
 class NPVSelection(Enum):
-    FULL_CYCLE_REAL_TERMS = 'NPV Full Cycle using real terms method'
-    FULL_CYCLE_NOMINAL_TERMS = 'NPV Full Cycle using real nominal terms method'
+    NPV_REAL_TERMS = 'NPV Calculation using real terms method'
+    NPV_NOMINAL_TERMS = 'NPV Calculation using nominal terms method'
+    NPV_SKK_NOMINAL_TERMS = 'NPV Calculation using SKK Nominal terms method'
+    NPV_SKK_REAL_TERMS = 'NPV Calculation using SKK Real terms method'
+    NPV_POINT_FORWARD = 'NPV Calculation using Point Forward method'
 
 
 class OtherRevenue(Enum):
