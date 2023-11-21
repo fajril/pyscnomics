@@ -19,6 +19,9 @@ from pyscnomics.io.config import (
     ElectricityLiftingData,
     CO2LiftingData,
     TangibleCostData,
+    IntangibleCostData,
+    OPEXData,
+    ASRCostData,
 )
 
 
@@ -58,6 +61,9 @@ class Spreadsheet:
     electricity_lifting_data: ElectricityLiftingData = field(default=None, init=False)
     co2_lifting_data: CO2LiftingData = field(default=None, init=False)
     tangible_cost_data: TangibleCostData = field(default=None, init=False)
+    intangible_cost_data: IntangibleCostData = field(default=None, init=False)
+    opex_data: OPEXData = field(default=None, init=False)
+    asr_cost_data: ASRCostData = field(default=None, init=False)
 
     def __post_init__(self):
         # Configure attribute workbook_to_read
@@ -92,7 +98,7 @@ class Spreadsheet:
         The core procedures are as follows:
         (1) Identify the directory location of the target Excel file,
         (2) From the target Excel file, identify the worksheets,
-        (3) Load data from the target Excel file, capturing all worksheets.
+        (3) Load data from the target Excel file, capturing all necessary worksheets.
         """
         # Directory location of the target Excel file
         load_dir = os.path.join(os.getcwd(), self.workbook_to_read)
@@ -849,71 +855,51 @@ class Spreadsheet:
             project_years=self.general_config_data.project_years,
         )
 
-    def _get_tangible_cost_data(self) -> TangibleCostData:
+    def _get_tangible_cost_data(self) -> None | TangibleCostData:
         """
+        Retrieves tangible cost data based on available sheets.
+
+        Returns
+        -------
+        None or TangibleCostData
+
         Notes
         -----
         The core operations are as follows:
-        (1) Capture tangible data from attribute self.data_loaded, then perform the
+        (1) Capture tangible cost data from attribute self.data_loaded, then perform the
             necessary adjustment,
-        (2) Specify the associated attributes of interest,
-        (3) Load and arrange the attributes of interest from variable 'tangible_data_loaded',
-            then create a new instance of TangibleCostData to store them.
+        (2) If 'tangible_data_loaded' is an empty dataframe, then return None,
+        (3) If 'tangible_data_loaded' is not an empty dataframe, then load and
+            arrange the attributes of interest from variable 'tangible_data_loaded'.
+            Afterwards, create a new instance of TangibleCostData to store them.
         """
         # Step #1 (See 'Notes' section in the docstring)
-        tangible_data_loaded = (
-            self.data_loaded["Cost Tangible"]
-            .dropna(axis=0, how="all")
-        )
+        tangible_data_loaded = self.data_loaded["Cost Tangible"].dropna(axis=0, how="all")
 
         # Step #2 (See 'Notes' section in the docstring)
-        tangible_data_attrs = [
-            "expense_year",
-            "cost_allocation",
-            "cost",
-            "pis_year",
-            "useful_life",
-            "depreciation_factor",
-            "salvage_value",
-            "is_ic_applied",
-            "vat_portion",
-            "lbt_portion",
-            "description",
-        ]
+        if tangible_data_loaded.empty:
+            return None
 
         # Step #3 (See 'Notes' section in the docstring)
-        if tangible_data_loaded.empty:
-            tangible_data = {key: None for key in tangible_data_attrs}
-
-            print('\t')
-            print(f'Filetype: {type(tangible_data)}')
-            print('tangible_data = \n', tangible_data)
-
-            return TangibleCostData(
-                expense_year=tangible_data["expense_year"],
-                cost_allocation=tangible_data["cost_allocation"],
-                cost=tangible_data["cost"],
-                pis_year=tangible_data["pis_year"],
-                useful_life=tangible_data["useful_life"],
-                depreciation_factor=tangible_data["depreciation_factor"],
-                salvage_value=tangible_data["salvage_value"],
-                is_ic_applied=tangible_data["is_ic_applied"],
-                vat_portion=tangible_data["vat_portion"],
-                lbt_portion=tangible_data["lbt_portion"],
-                description=tangible_data["description"],
-                data_length=tangible_data_loaded.shape[0],
-                project_years=self.general_config_data.project_years,
-            )
-
         else:
-            tangible_data = {
-                val: tangible_data_loaded.iloc[:, key].to_numpy()
-                for key, val in enumerate(tangible_data_attrs)
-            }
+            tangible_data_attrs = [
+                "expense_year",
+                "cost_allocation",
+                "cost",
+                "pis_year",
+                "useful_life",
+                "depreciation_factor",
+                "salvage_value",
+                "is_ic_applied",
+                "vat_portion",
+                "lbt_portion",
+                "description",
+            ]
 
-            print('\t')
-            print(f'Filetype: {type(tangible_data)}')
-            print('tangible_data = \n', tangible_data)
+            tangible_data = {
+                key: tangible_data_loaded.iloc[:, i].to_numpy()
+                for i, key in enumerate(tangible_data_attrs)
+            }
 
             return TangibleCostData(
                 expense_year=tangible_data["expense_year"],
@@ -931,14 +917,165 @@ class Spreadsheet:
                 project_years=self.general_config_data.project_years,
             )
 
-    def _get_intangible_cost_data(self):
-        raise NotImplementedError
+    def _get_intangible_cost_data(self) -> None | IntangibleCostData:
+        """
+        Retrieves intangible cost data based on available sheets.
 
-    def _get_opex_data(self):
-        raise NotImplementedError
+        Returns
+        -------
+        None or IntangibleCostData
 
-    def _get_asr_cost_data(self):
-        raise NotImplementedError
+        Notes
+        -----
+        The core operations are as follows:
+        (1) Capture intangible data from attribute self.data_loaded, then perform the
+            necessary adjustment,
+        (2) If 'intangible_data_loaded' is an empty dataframe, then return None,
+        (3) If 'intangible_data_loaded' is not an empty dataframe, then load and
+            arrange the attributes of interest from variable 'intangible_data_loaded'.
+            Afterwards, create a new instance of IntangibleCostData to store them.
+        """
+        # Step #1 (See 'Notes' section in the docstring)
+        intangible_data_loaded = self.data_loaded["Cost Intangible"].dropna(axis=0, how="all")
+
+        # Step #2 (See 'Notes' section in the docstring)
+        if intangible_data_loaded.empty:
+            return None
+
+        # Step #3 (See 'Notes' section in the docstring)
+        else:
+            intangible_data_attrs = [
+                "expense_year",
+                "cost_allocation",
+                "cost",
+                "vat_portion",
+                "lbt_portion",
+                "description",
+            ]
+
+            intangible_data = {
+                key: intangible_data_loaded.iloc[:, i].to_numpy()
+                for i, key in enumerate(intangible_data_attrs)
+            }
+
+            return IntangibleCostData(
+                expense_year=intangible_data["expense_year"],
+                cost_allocation=intangible_data["cost_allocation"].tolist(),
+                cost=intangible_data["cost"],
+                vat_portion=intangible_data["vat_portion"],
+                lbt_portion=intangible_data["lbt_portion"],
+                description=intangible_data["description"].tolist(),
+                data_length=intangible_data_loaded.shape[0],
+                project_years=self.general_config_data.project_years,
+            )
+
+    def _get_opex_data(self) -> None | OPEXData:
+        """
+        Retrieves opex data based on available sheets.
+
+        Returns
+        -------
+        None or OPEXData
+
+        Notes
+        -----
+        The core operations are as follows:
+        (1) Capture opex data from attribute self.data_loaded, then perform the
+            necessary adjustment,
+        (2) If 'opex_data_loaded' is an empty dataframe, then return None,
+        (3) If 'opex_data_loaded' is not an empty dataframe, then load and
+            arrange the attributes of interest from variable 'opex_data_loaded'.
+            Afterwards, create a new instance of OPEXData to store them.
+        """
+        # Step #1 (See 'Notes' section in the docstring)
+        opex_data_loaded = self.data_loaded["Cost OPEX"].dropna(axis=0, how="all")
+
+        # Step #2 (See 'Notes' section in the docstring)
+        if opex_data_loaded.empty:
+            return None
+
+        # Step #3 (See 'Notes' section in the docstring)
+        else:
+            opex_data_attrs = [
+                "expense_year",
+                "cost_allocation",
+                "fixed_cost",
+                "prod_rate",
+                "cost_per_volume",
+                "vat_portion",
+                "lbt_portion",
+                "description",
+            ]
+
+            opex_data = {
+                key: opex_data_loaded.iloc[:, i].to_numpy()
+                for i, key in enumerate(opex_data_attrs)
+            }
+
+            return OPEXData(
+                expense_year=opex_data["expense_year"],
+                cost_allocation=opex_data["cost_allocation"].tolist(),
+                fixed_cost=opex_data["fixed_cost"],
+                prod_rate=opex_data["prod_rate"],
+                cost_per_volume=opex_data["cost_per_volume"],
+                vat_portion=opex_data["vat_portion"],
+                lbt_portion=opex_data["lbt_portion"],
+                description=opex_data["description"].tolist(),
+                data_length=opex_data_loaded.shape[0],
+                project_years=self.general_config_data.project_years,
+            )
+
+    def _get_asr_cost_data(self) -> None | ASRCostData:
+        """
+        Retrieves ASR cost data based on available sheets.
+
+        Returns
+        -------
+        None or ASRCostData
+
+        Notes
+        -----
+        The core operations are as follows:
+        (1) Capture asr cost data from attribute self.data_loaded, then perform the
+            necessary adjustment,
+        (2) If 'asr_data_loaded' is an empty dataframe, then return None,
+        (3) If 'asr_data_loaded' is not an empty dataframe, then load and
+            arrange the attributes of interest from variable 'asr_data_loaded'.
+            Afterwards, create a new instance of ASRCostData to store them.
+        """
+        # Step #1 (See 'Notes' section in the docstring)
+        asr_data_loaded = self.data_loaded["Cost ASR"].dropna(axis=0, how="all")
+
+        # Step #2 (See 'Notes' section in the docstring)
+        if asr_data_loaded.empty:
+            return None
+
+        # Step #3 (See 'Notes' section in the docstring)
+        else:
+            asr_data_attrs = [
+                "expense_year",
+                "cost_allocation",
+                "cost",
+                "vat_portion",
+                "lbt_portion",
+                "description",
+            ]
+
+            asr_data = {
+                key: asr_data_loaded.iloc[:, i].to_numpy()
+                for i, key in enumerate(asr_data_attrs)
+            }
+
+            return ASRCostData(
+                expense_year=asr_data["expense_year"],
+                cost_allocation=asr_data["cost_allocation"].tolist(),
+                cost=asr_data["cost"],
+                vat_portion=asr_data["vat_portion"],
+                lbt_portion=asr_data["lbt_portion"],
+                description=asr_data["description"].tolist(),
+                data_length=asr_data_loaded.shape[0],
+                project_years=self.general_config_data.project_years,
+            )
 
     def prepare_data(self):
         """123"""
@@ -963,14 +1100,10 @@ class Spreadsheet:
         self.electricity_lifting_data = self._get_electricity_lifting_data()
         self.co2_lifting_data = self._get_co2_lifting_data()
         self.tangible_cost_data = self._get_tangible_cost_data()
+        # self.intangible_cost_data = self._get_intangible_cost_data()
+        # self.opex_data = self._get_opex_data()
+        # self.asr_cost_data = self._get_asr_cost_data()
 
         print("\t")
         print(f"Filetype: {type(self.tangible_cost_data)}")
         print("self.tangible_cost_data = \n", self.tangible_cost_data)
-
-        # print('\t')
-        # print(f'Filetype: {type(self.gas_lifting_data.gas_gsa_price)}')
-        # print('gas gsa price = \n', self.gas_lifting_data.gas_gsa_price["Prod Gas (3)"])
-
-        # print('\t')
-        # print('fiscal_config_data = \n', self.data_loaded["Fiscal Config"].iloc[:, 1])
