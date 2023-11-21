@@ -150,29 +150,26 @@ class Spreadsheet:
         (4) Assign data to their associated attributes,
         (5) Return a new instance of GeneralConfigData with filled attributes.
         """
-
-        # Prepare data
-        self.data_loaded["General Config"] = self.data_loaded["General Config"].iloc[
-            :, np.r_[1:3, -1]
-        ]
-        self.data_loaded["General Config"] = (
+        # Step #1 - Step #3 (See 'Notes' section in the docstring)
+        general_config_data_loaded = (
             self.data_loaded["General Config"]
+            .iloc[:, np.r_[1:3, -1]]
             .dropna(axis=0, how="all")
             .replace(np.nan, None)
         )
 
-        # Assign the prepared data to their associated attributes
-        type_of_contract = self.data_loaded["General Config"].iloc[0, 1]
-        discount_rate_start_year = self.data_loaded["General Config"].iloc[1, 1]
-        discount_rate = self.data_loaded["General Config"].iloc[2, 1]
-        inflation_rate_applied_to = self.data_loaded["General Config"].iloc[3, 1]
-        start_date_project = self.data_loaded["General Config"].iloc[4, 1]
-        end_date_project = self.data_loaded["General Config"].iloc[5, 1]
-        oil_onstream_date = self.data_loaded["General Config"].iloc[6, 1]
-        gas_onstream_date = self.data_loaded["General Config"].iloc[7, 1]
-        vat_discount = self.data_loaded["General Config"].iloc[10, 1]
-        lbt_discount = self.data_loaded["General Config"].iloc[11, 1]
-        gsa_number = self.data_loaded["General Config"].iloc[9, 2]
+        # Step #4 - Step #5 (See 'Notes' section in the docstring)
+        type_of_contract = general_config_data_loaded.iloc[0, 1]
+        discount_rate_start_year = general_config_data_loaded.iloc[1, 1]
+        discount_rate = general_config_data_loaded.iloc[2, 1]
+        inflation_rate_applied_to = general_config_data_loaded.iloc[3, 1]
+        start_date_project = general_config_data_loaded.iloc[4, 1]
+        end_date_project = general_config_data_loaded.iloc[5, 1]
+        oil_onstream_date = general_config_data_loaded.iloc[6, 1]
+        gas_onstream_date = general_config_data_loaded.iloc[7, 1]
+        vat_discount = general_config_data_loaded.iloc[10, 1]
+        lbt_discount = general_config_data_loaded.iloc[11, 1]
+        gsa_number = general_config_data_loaded.iloc[9, 2]
 
         return GeneralConfigData(
             start_date_project=start_date_project,
@@ -205,40 +202,47 @@ class Spreadsheet:
         (2) Drop NaN values from the associated dataframe,
         (3) Convert the remaining NaN values to zero,
         (4) Assign data to their associated attributes,
-        (5) Return a new instance of GeneralConfigData with filled attributes.
+        (5) Return a new instance of FiscalConfigData with filled attributes.
         """
-
-        # Prepare data
-        self.data_loaded["Fiscal Config"] = self.data_loaded["Fiscal Config"].iloc[
-            :, 1:
-        ]
-        self.data_loaded["Fiscal Config"] = (
+        # Step #1 - Step #3 (See 'Notes' section in the docstring)
+        fiscal_config_data_loaded = (
             self.data_loaded["Fiscal Config"]
-            .dropna(axis=0, how="all")
-            .replace(np.nan, None)
+            .iloc[:, 1:]
+            # .dropna(axis=0, how="all")
+            # .replace(np.nan, None)
         )
 
-        # Assign the prepared data to their associated attributes
-        tax_mode = self.data_loaded["Fiscal Config"].iloc[0, 1]
-        tax_payment_method = self.data_loaded["Fiscal Config"].iloc[9, 1]
-        tax_psc_cost_recovery = self.data_loaded["Fiscal Config"].iloc[10, 1]
-        npv_mode = self.data_loaded["Fiscal Config"].iloc[11, 1]
-        future_rate_asr = self.data_loaded["Fiscal Config"].iloc[12, 1]
-        depreciation_factor = self.data_loaded["Fiscal Config"].iloc[13, 1]
-        tax_rate = self.data_loaded["Fiscal Config"].iloc[1, 1]
-        year_arr = self.data_loaded["Fiscal Config"].iloc[3:9, 0]
-        tax_rate_arr = self.data_loaded["Fiscal Config"].iloc[3:9, 1]
+        # print('\t')
+        # print(f'Filetype: {type(fiscal_config_data_loaded)}')
+        # print(f'Length: {len(fiscal_config_data_loaded)}')
+        # print('fiscal_config_data_loaded = ', fiscal_config_data_loaded)
+
+        # Step #4 - Step #5 (See 'Notes' section in the docstring)
+        tax_mode = fiscal_config_data_loaded.iloc[0, 1]
+        tax_rate_input = fiscal_config_data_loaded.iloc[1, 1]
+        tax_payment_method = fiscal_config_data_loaded.iloc[11, 1]
+        tax_psc_cost_recovery = fiscal_config_data_loaded.iloc[14, 1]
+        npv_mode = fiscal_config_data_loaded.iloc[17, 1]
+        future_rate_asr = fiscal_config_data_loaded.iloc[20, 1]
+        depreciation_method = fiscal_config_data_loaded.iloc[23, 1]
+        tax_multi = {
+            "year": fiscal_config_data_loaded.iloc[4:10, 0].to_numpy(),
+            "tax_rate": fiscal_config_data_loaded.iloc[4:10, 1].to_numpy(),
+        }
+
+        # year_arr = fiscal_config_data_loaded.iloc[4:10, 0]
+        # tax_arr = fiscal_config_data_loaded.iloc[4:10, 1]
 
         return FiscalConfigData(
             tax_mode=tax_mode,
+            tax_rate_input=tax_rate_input,
             tax_payment_method=tax_payment_method,
             tax_psc_cost_recovery=tax_psc_cost_recovery,
             npv_mode=npv_mode,
             future_rate_asr=future_rate_asr,
-            depreciation_method=depreciation_factor,
-            tax_rate=tax_rate,
-            year_arr=year_arr.to_numpy(),
-            tax_rate_arr=tax_rate_arr.to_numpy(),
+            depreciation_method=depreciation_method,
+            tax_multi=tax_multi,
+            project_years=self.general_config_data.project_years,
         )
 
     def _get_oil_lifting_data(self) -> OilLiftingData:
@@ -1092,18 +1096,18 @@ class Spreadsheet:
         # Fill in the attributes associated with data preparation
         self.general_config_data = self._get_general_config_data()
         self.fiscal_config_data = self._get_fiscal_config_data()
-        self.oil_lifting_data = self._get_oil_lifting_data()
-        self.gas_lifting_data = self._get_gas_lifting_data()
-        self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
-        self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
-        self.sulfur_lifting_data = self._get_sulfur_lifting_data()
-        self.electricity_lifting_data = self._get_electricity_lifting_data()
-        self.co2_lifting_data = self._get_co2_lifting_data()
-        self.tangible_cost_data = self._get_tangible_cost_data()
+        # self.oil_lifting_data = self._get_oil_lifting_data()
+        # self.gas_lifting_data = self._get_gas_lifting_data()
+        # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
+        # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
+        # self.sulfur_lifting_data = self._get_sulfur_lifting_data()
+        # self.electricity_lifting_data = self._get_electricity_lifting_data()
+        # self.co2_lifting_data = self._get_co2_lifting_data()
+        # self.tangible_cost_data = self._get_tangible_cost_data()
         # self.intangible_cost_data = self._get_intangible_cost_data()
         # self.opex_data = self._get_opex_data()
         # self.asr_cost_data = self._get_asr_cost_data()
-
-        print("\t")
-        print(f"Filetype: {type(self.tangible_cost_data)}")
-        print("self.tangible_cost_data = \n", self.tangible_cost_data)
+        #
+        # print("\t")
+        # print(f"Filetype: {type(self.tangible_cost_data)}")
+        # print("tangible_cost_data = \n", self.tangible_cost_data)

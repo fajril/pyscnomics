@@ -167,58 +167,167 @@ class FiscalConfigData:
     """
 
     tax_mode: str
+    tax_rate_input: float = field(repr=False)
     tax_payment_method: str
     tax_psc_cost_recovery: str
     npv_mode: str
     future_rate_asr: float
     depreciation_method: str
+    tax_multi: dict
+    # year_arr: np.ndarray = field(default=None, repr=False)
+    # tax_arr: np.ndarray = field(default=None, repr=False)
+    project_years: np.ndarray = field(default=None, repr=False)
 
     # Attributes to be defined later
-    tax_rate: float = field(default=None)
-    year_arr: np.ndarray = field(default=None, repr=False)
-    tax_rate_arr: np.ndarray = field(default=None, repr=False)
+    tax_rate: None | float | np.ndarray = field(default=None, init=False)
 
     def __post_init__(self):
+
+        # print('\t')
+        # print(f'Filetype: {type(self.year_arr)}')
+        # print(f'Length: {len(self.year_arr)}')
+        # print('year_arr = ', self.year_arr)
+        #
+        # print('\t')
+        # print(f'Filetype: {type(self.tax_rate_arr)}')
+        # print(f'Length: {len(self.tax_rate_arr)}')
+        # print('tax_rate_arr = ', self.tax_rate_arr)
+
         # Configure attribute tax_rate
         if self.tax_mode == "User Input - Single Value":
-            if self.tax_rate is None:
+            if pd.isna(self.tax_rate_input):
                 self.tax_rate = 0.44
             else:
-                self.tax_rate = self.tax_rate
+                self.tax_rate = self.tax_rate_input
 
-        if self.tax_mode == "Nailed Down" or self.tax_mode == "Prevailing":
+        elif self.tax_mode == "Nailed Down" or self.tax_mode == "Prevailing":
             self.tax_rate = None
-            # if self.tax_rate is None:
-            #     self.tax_rate = 0.44
-            # else:
-            #     self.tax_rate = self.tax_rate
 
-        if self.tax_mode == "User Input - Multi Value":
-            if not isinstance(self.year_arr, np.ndarray):
-                raise FiscalConfigDataException(
-                    f"Year data must be inserted as a numpy ndarray. "
-                    f"{self.year_arr} is of datatype "
-                    f"({self.year_arr.__class__.__qualname__})."
+        elif self.tax_mode == "User Input - Multi Value":
+
+            # Filter dict 'self.tax_multi' for 'nan' values
+            tax_multi_filtered = {}
+
+            for key in self.tax_multi.keys():
+                tax_multi_filtered[key] = np.array(
+                    list(filter(lambda i: i is not np.nan, self.tax_multi[key]))
                 )
 
-            if not isinstance(self.tax_rate_arr, np.ndarray):
+            print('\t')
+            print(f'Filetype: {type(tax_multi_filtered)}')
+            print(f'Length: {len(tax_multi_filtered)}')
+            print('tax_multi_filtered = \n', tax_multi_filtered)
+
+            # Raise error for unequal length of 'year' and 'tax_rate' in 'tax_multi_filtered'
+            if len(tax_multi_filtered["year"]) != len(tax_multi_filtered["tax_rate"]):
                 raise FiscalConfigDataException(
-                    f"Tax rate data must be inserted as a numpy ndarray. "
-                    f"{self.tax_rate_arr} is of datatype "
-                    f"({self.tax_rate_arr.__class__.__qualname__})."
+                    f"Unequal number of arrays: "
+                    f"year: {len(tax_multi_filtered['year'])}, "
+                    f"tax_rate: {len(tax_multi_filtered['tax_rate'])}."
                 )
 
-            if len(self.year_arr) != len(self.tax_rate_arr):
-                raise FiscalConfigDataException(
-                    f"Unequal length of array: "
-                    f"year_arr: {len(self.year_arr)}, "
-                    f"tax_rate_arr: {len(self.tax_rate_arr)}"
-                )
+            # Specify the minimum and maximum years
+            min_year = min(self.project_years)
+            max_year = max(self.project_years)
 
-            self.tax_rate = {
-                "Year": self.year_arr,
-                "Tax Rate": self.tax_rate_arr,
+            if min(tax_multi_filtered["year"]) < min(self.project_years):
+                min_year = min(tax_multi_filtered["year"])
+
+            if max(tax_multi_filtered["year"]) > max(self.project_years):
+                max_year = max(tax_multi_filtered["year"])
+
+            # Create new variable: tax_multi_new
+            tax_multi_new = {
+                "year": np.arange(min_year, max_year + 1, 1),
+                "location": np.zeros(len(tax_multi_filtered["year"]), dtype=np.int_),
+                "tax_rate": np.bincount(
+                    tax_multi_filtered["year"] - min_year, weights=tax_multi_filtered["tax_rate"]
+                )
             }
+
+            for i, val in enumerate(tax_multi_filtered["year"]):
+                tax_multi_new["location"][i] = (
+                    np.argwhere(tax_multi_new["year"] == tax_multi_filtered["year"][i])
+                    .ravel()
+                )
+
+            print('\t')
+            print(f'Filetype: {type(tax_multi_new)}')
+            print('tax_multi_new = \n', tax_multi_new)
+
+            # year_arr_adjusted = np.array(list(filter(lambda i: i is not np.nan, self.year_arr)))
+            # tax_arr_adjusted = np.array(list(filter(lambda i: i is not np.nan, self.tax_arr)))
+
+            # if len(year_arr_adjusted) != len(tax_arr_adjusted):
+            #     raise FiscalConfigDataException(
+            #         f"Unequal number of arrays: "
+            #         f"year: {len(year_arr_adjusted)}, "
+            #         f"tax_rate: {len(tax_arr_adjusted)}."
+            #     )
+            #
+            # min_year = min(self.project_years)
+            # max_year = max(self.project_years)
+            #
+            # if min(year_arr_adjusted) < min(self.project_years):
+            #     min_year = min(year_arr_adjusted)
+            #
+            # if max(year_arr_adjusted) > max(self.project_years):
+            #     max_year = max(year_arr_adjusted)
+            #
+            # year_arr_new = np.arange(min_year, max_year + 1, 1)
+            #
+            # loc_arr_new = np.zeros(len(year_arr_adjusted), dtype=np.int_)
+            # for i, val in enumerate(year_arr_adjusted):
+            #     loc_arr_new[i] = np.argwhere(year_arr_new == year_arr_adjusted[i]).ravel()
+            #
+            # tax_arr_new = np.bincount(year_arr_adjusted - min_year, weights=tax_arr_adjusted)
+
+
+
+            # for i in range(len(tax_arr_adjusted) - 1):
+            #     tax_arr_new[loc_arr_new[i]:loc_arr_new[i + 1]] = tax_arr_adjusted[i]
+            #
+            # if len(year_arr_new) > len(tax_arr_new):
+            #     arr_fill = np.repeat(tax_arr_adjusted[-1], len(year_arr_new) - len(tax_arr_new))
+            #     tax_arr_new = np.concatenate((tax_arr_new, arr_fill))
+            #
+            # if loc_arr_new[0] > 0:
+            #     arr_fill_before = np.repeat(tax_arr_adjusted[0], loc_arr_new[0])
+            #     tax_arr_new[0:loc_arr_new[0]] = arr_fill_before
+            #
+            # print('\t')
+            # print(f'Filetype: {type(tax_arr_new)}')
+            # print(f'Length: {len(tax_arr_new)}')
+            # print('year = ', year_arr_new)
+            # print('tax_rate = ', tax_arr_new)
+
+
+    #     if self.tax_mode == "User Input - Multi Value":
+    #         if not isinstance(self.year_arr, np.ndarray):
+    #             raise FiscalConfigDataException(
+    #                 f"Year data must be inserted as a numpy ndarray. "
+    #                 f"{self.year_arr} is of datatype "
+    #                 f"({self.year_arr.__class__.__qualname__})."
+    #             )
+    #
+    #         if not isinstance(self.tax_rate_arr, np.ndarray):
+    #             raise FiscalConfigDataException(
+    #                 f"Tax rate data must be inserted as a numpy ndarray. "
+    #                 f"{self.tax_rate_arr} is of datatype "
+    #                 f"({self.tax_rate_arr.__class__.__qualname__})."
+    #             )
+    #
+    #         if len(self.year_arr) != len(self.tax_rate_arr):
+    #             raise FiscalConfigDataException(
+    #                 f"Unequal length of array: "
+    #                 f"year_arr: {len(self.year_arr)}, "
+    #                 f"tax_rate_arr: {len(self.tax_rate_arr)}"
+    #             )
+    #
+    #         self.tax_rate = {
+    #             "Year": self.year_arr,
+    #             "Tax Rate": self.tax_rate_arr,
+    #         }
 
 
 @dataclass
