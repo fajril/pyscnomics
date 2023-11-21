@@ -8,7 +8,7 @@ import time
 from pyscnomics.dataset.sample import load_data, load_testing
 
 from pyscnomics.tools.summary import get_summary
-from pyscnomics.econ.selection import NPVSelection
+from pyscnomics.econ.selection import NPVSelection, DiscountingMode
 
 # pd.options.display.float_format = '{:,.2f}'.format
 pd.set_option('display.max_columns', None)
@@ -96,7 +96,7 @@ print(psc_table_oil, '\n')
 psc_table_gas = pd.DataFrame()
 psc_table_gas['Year'] = psc.project_years
 psc_table_gas['Lifting'] = psc._gas_lifting.get_lifting_rate_arr()
-psc_table_gas['Price'] = psc._gas_lifting.get_price_arr()
+psc_table_gas['Price'] = psc._gas_wap_price
 psc_table_gas['Revenue'] = psc._gas_revenue
 psc_table_gas['Depreciable'] = psc._gas_tangible.expenditures()
 psc_table_gas['Opex'] = psc._gas_opex.expenditures()
@@ -211,10 +211,12 @@ print(psc_table_consolidated, '\n')
 # print(np.sum(psc._gas_sunk_cost))
 
 
-# psc_summary = get_summary(contract=psc,
-#                           reference_year=2010,
-#                           npv_mode=NPVSelection.FULL_CYCLE_NOMINAL_TERMS,
-#                           discount_rate=0.1, )
+psc_summary = get_summary(contract=psc,
+                          reference_year=2022,
+                          inflation_rate=0.1,
+                          discount_rate=0.1,
+                          npv_mode=NPVSelection.NPV_POINT_FORWARD,
+                          discounting_mode=DiscountingMode.END_YEAR)
 
-# for key, value in psc_summary.items():
-#     print(key, ":", value)
+for key, value in psc_summary.items():
+    print(key, ":", value)
