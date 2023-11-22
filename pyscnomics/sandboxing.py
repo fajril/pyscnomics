@@ -229,33 +229,15 @@ costrec = CostRecovery(
 
 '------------------------------------------------- EXECUTE -------------------------------------------------'
 
-# timer_start = tm.time()
-#
-# data = Spreadsheet(workbook_to_read="Workbook.xlsm")
-# data.prepare_data()
-#
-# timer_end = tm.time() - timer_start
-#
-# print('\t')
-# print('timer end = ', timer_end)
+timer_start = tm.time()
 
-costrec._get_expenditures(
-    inflation_rate_applied_to=None,
-    inflation_rate=0.05,
-    future_rate=0.0,
-)
+data = Spreadsheet(workbook_to_read="Workbook.xlsm")
+data.prepare_data()
+
+timer_end = tm.time() - timer_start
 
 print('\t')
-print('_oil_tangible_expenditures = \n', costrec._oil_tangible_expenditures)
-
-print('\t')
-print('_oil_intangible_expenditures = \n', costrec._oil_intangible_expenditures)
-
-print('\t')
-print('_oil_opex_expenditures = \n', costrec._oil_opex_expenditures)
-
-print('\t')
-print('_oil_asr_expenditures = \n', costrec._oil_asr_expenditures)
+print('timer end = ', timer_end)
 
 # print('\t')
 # print(f'Filetype: {type(costrec)}')

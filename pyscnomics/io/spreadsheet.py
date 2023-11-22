@@ -24,6 +24,8 @@ from pyscnomics.io.config import (
     ASRCostData,
     PSCCostRecoveryData,
     PSCGrossSplitData,
+    SensitivityData,
+    OptimizationData,
 )
 
 
@@ -68,10 +70,12 @@ class Spreadsheet:
     asr_cost_data: ASRCostData = field(default=None, init=False)
     psc_cr_data: PSCCostRecoveryData = field(default=None, init=False)
     psc_gs_data: PSCGrossSplitData = field(default=None, init=False)
-    psc_trans_cr_to_cr: dict = field(default=None, init=False)
-    psc_trans_cr_to_gs: dict = field(default=None, init=False)
-    psc_trans_gs_to_gs: dict = field(default=None, init=False)
-    psc_trans_gs_to_cr: dict = field(default=None, init=False)
+    psc_transition_cr_to_cr: dict = field(default=None, init=False)
+    psc_transition_cr_to_gs: dict = field(default=None, init=False)
+    psc_transition_gs_to_gs: dict = field(default=None, init=False)
+    psc_transition_gs_to_cr: dict = field(default=None, init=False)
+    sensitivity_data: SensitivityData = field(default=None, init=False)
+    optimization_data: OptimizationData = field(default=None, init=False)
 
     def __post_init__(self):
         # Configure attribute workbook_to_read
@@ -92,10 +96,10 @@ class Spreadsheet:
                 )
 
         # Instantiate attributes of dict type
-        self.psc_trans_cr_to_cr = {}
-        self.psc_trans_cr_to_gs = {}
-        self.psc_trans_gs_to_gs = {}
-        self.psc_trans_gs_to_cr = {}
+        self.psc_transition_cr_to_cr = {}
+        self.psc_transition_cr_to_gs = {}
+        self.psc_transition_gs_to_gs = {}
+        self.psc_transition_gs_to_cr = {}
 
     def read_from_excel(self) -> None:
         """
@@ -1081,6 +1085,24 @@ class Spreadsheet:
                 data_length=asr_data_loaded.shape[0],
                 project_years=self.general_config_data.project_years,
             )
+
+    def _get_psc_cr_data(self):
+        pass
+
+    def _get_psc_gs_data(self):
+        pass
+
+    def _get_psc_transition_cr_to_cr(self):
+        pass
+
+    def _get_psc_transition_cr_to_gs(self):
+        pass
+
+    def _get_psc_transition_gs_to_gs(self):
+        pass
+
+    def _get_psc_transition_gs_to_cr(self):
+        pass
 
     def prepare_data(self):
         """123"""

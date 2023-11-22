@@ -1155,6 +1155,8 @@ class BaseProject:
             The inflation rate to apply. Can be a single value or an array (defaults to 0.0).
         future_rate : float, optional
             The future rate used in cost calculation (defaults to 0.02).
+        inflation_rate_applied_to: str
+            Cost component subject to inflation rate (defaults to None).
 
         Returns
         -------

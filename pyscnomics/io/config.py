@@ -1506,18 +1506,125 @@ class ASRCostData:
 
 @dataclass
 class PSCCostRecoveryData:
-    """123
+    """
+    A dataclass representing attributes associated with Production Sharing Contract
+    (PSC) cost recovery.
+
+    Attributes
+    ----------
+    ftp_availability: str
+        Availability status of the First Tranche Petroleum (FTP).
+    ftp_is_shared: str
+        Shared status of FTP.
+    ftp_portion: float
+        Portion of FTP.
+    split_type: str
+        Type of pretax split configuration.
+    oil_ctr_pretax: float
+        Pretax split configuration for oil.
+    gas_ctr_pretax: float
+        Pretax split configuration for gas.
+    ic_availability: str
+        Availability status of the Investment Credit (IC).
+    ic_oil: float
+        Investment Credit (IC) for oil.
+    ic_gas: float
+        Investment Credit (IC) for gas.
+    oil_cr_cap_rate: float
+        Cost Recovery (CR) cap rate for oil.
+    gas_cr_cap_rate: float
+        Cost Recovery (CR) cap rate for gas.
+    dmo_is_weighted: str
+        Weighted status of the general Domestic Market Obligation (DMO).
+    oil_dmo_holiday: str
+        Holiday status for DMO related to oil.
+    oil_dmo_period: int | float
+        Period for DMO related to oil.
+    oil_dmo_start_production: date
+        Start production date for DMO related to oil.
+    oil_dmo_volume: float
+        Volume for DMO related to oil.
+    oil_dmo_fee: float
+        Fee for DMO related to oil.
+    gas_dmo_holiday: str
+        Holiday status for DMO related to gas.
+    gas_dmo_period: int | float
+        Period for DMO related to gas.
+    gas_dmo_start_production: date
+        Start production date for DMO related to gas.
+    gas_dmo_volume: float
+        Volume for DMO related to gas.
+    gas_dmo_fee: float
+        Fee for DMO related to gas.
+    rc_split: dict
+        Dictionary for rc split.
+    icp_sliding_scale : dict
+        Dictionary for icp sliding scale.
+
+    Notes
+    -----
+    -   This class is designed to store data related to a Production Sharing Contract
+        (PSC) cost recovery scenario.
+    -   Some attributes, such as rc_split and icp_sliding_scale, are meant to be
+        defined later during class execution.
     """
     # Attributes associated with FTP
     ftp_availability: str
     ftp_is_shared: str
     ftp_portion: float
 
-    pass
+    # Attributes associated with pretax split configuration
+    split_type: str
+    oil_ctr_pretax: float
+    gas_ctr_pretax: float
+
+    # Attributes associated with investment credit
+    ic_availability: str
+    ic_oil: float
+    ic_gas: float
+
+    # Attributes associated with cap
+    oil_cr_cap_rate: float
+    gas_cr_cap_rate: float
+
+    # Attribute associated with general DMO
+    dmo_is_weighted: str
+
+    # Attributes associated with DMO oil
+    oil_dmo_holiday: str
+    oil_dmo_period: int | float
+    oil_dmo_start_production: date
+    oil_dmo_volume: float
+    oil_dmo_fee: float
+
+    # Attributes associated with DMO gas
+    gas_dmo_holiday: str
+    gas_dmo_period: int | float
+    gas_dmo_start_production: date
+    gas_dmo_volume: float
+    gas_dmo_fee: float
+
+    # Attributes to be defined later on
+    rc_split: dict
+    icp_sliding_scale: dict
 
 
 @dataclass
 class PSCGrossSplitData:
+    """123
+    """
+    pass
+
+
+@dataclass
+class SensitivityData:
+    """123
+    """
+    pass
+
+
+@dataclass
+class OptimizationData:
     """123
     """
     pass
