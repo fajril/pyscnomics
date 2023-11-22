@@ -229,17 +229,43 @@ costrec = CostRecovery(
 
 '------------------------------------------------- EXECUTE -------------------------------------------------'
 
-timer_start = tm.time()
+# timer_start = tm.time()
+#
+# data = Spreadsheet(workbook_to_read="Workbook.xlsm")
+# data.prepare_data()
+#
+# timer_end = tm.time() - timer_start
+#
+# print('\t')
+# print('timer end = ', timer_end)
 
-data = Spreadsheet(workbook_to_read="Workbook.xlsm")
-data.prepare_data()
+costrec._get_expenditures(
+    inflation_rate_applied_to=None,
+    inflation_rate=0.05,
+    future_rate=0.0,
+)
 
-timer_end = tm.time() - timer_start
+print('\t')
+print('_oil_tangible_expenditures = \n', costrec._oil_tangible_expenditures)
+
+print('\t')
+print('_oil_intangible_expenditures = \n', costrec._oil_intangible_expenditures)
+
+print('\t')
+print('_oil_opex_expenditures = \n', costrec._oil_opex_expenditures)
+
+print('\t')
+print('_oil_asr_expenditures = \n', costrec._oil_asr_expenditures)
 
 # print('\t')
-# print(f'Filetype: {type(asr_apel)}')
-# print(f'Length: {len(asr_apel)}')
-# print('asr_apel = \n', asr_apel)
+# print(f'Filetype: {type(costrec)}')
+# print('tangible_cost = \n', costrec.tangible_cost)
+#
+# print('\t')
+# print('_oil_tangible = \n', costrec._oil_tangible)
+#
+# print('\t')
+# print('_gas_tangible = \n', costrec._gas_tangible)
 
 # case.run(
 #     tax_type=TaxType.VAT,
@@ -264,6 +290,3 @@ timer_end = tm.time() - timer_start
 # print(f'Filetype: {type(t2)}')
 # print(f'Length: {len(t2)}')
 # print('t2 = ', t2)
-
-print('\t')
-print('timer end = ', timer_end)

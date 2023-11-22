@@ -22,6 +22,8 @@ from pyscnomics.io.config import (
     IntangibleCostData,
     OPEXData,
     ASRCostData,
+    PSCCostRecoveryData,
+    PSCGrossSplitData,
 )
 
 
@@ -64,6 +66,12 @@ class Spreadsheet:
     intangible_cost_data: IntangibleCostData = field(default=None, init=False)
     opex_data: OPEXData = field(default=None, init=False)
     asr_cost_data: ASRCostData = field(default=None, init=False)
+    psc_cr_data: PSCCostRecoveryData = field(default=None, init=False)
+    psc_gs_data: PSCGrossSplitData = field(default=None, init=False)
+    psc_trans_cr_to_cr: dict = field(default=None, init=False)
+    psc_trans_cr_to_gs: dict = field(default=None, init=False)
+    psc_trans_gs_to_gs: dict = field(default=None, init=False)
+    psc_trans_gs_to_cr: dict = field(default=None, init=False)
 
     def __post_init__(self):
         # Configure attribute workbook_to_read
@@ -82,6 +90,12 @@ class Spreadsheet:
                 raise SpreadsheetException(
                     f"Excel filename must be provided in '.xlsm' format."
                 )
+
+        # Instantiate attributes of dict type
+        self.psc_trans_cr_to_cr = {}
+        self.psc_trans_cr_to_gs = {}
+        self.psc_trans_gs_to_gs = {}
+        self.psc_trans_gs_to_cr = {}
 
     def read_from_excel(self) -> None:
         """
@@ -205,17 +219,7 @@ class Spreadsheet:
         (5) Return a new instance of FiscalConfigData with filled attributes.
         """
         # Step #1 - Step #3 (See 'Notes' section in the docstring)
-        fiscal_config_data_loaded = (
-            self.data_loaded["Fiscal Config"]
-            .iloc[:, 1:]
-            # .dropna(axis=0, how="all")
-            # .replace(np.nan, None)
-        )
-
-        # print('\t')
-        # print(f'Filetype: {type(fiscal_config_data_loaded)}')
-        # print(f'Length: {len(fiscal_config_data_loaded)}')
-        # print('fiscal_config_data_loaded = ', fiscal_config_data_loaded)
+        fiscal_config_data_loaded = self.data_loaded["Fiscal Config"].iloc[:, 1:]
 
         # Step #4 - Step #5 (See 'Notes' section in the docstring)
         tax_mode = fiscal_config_data_loaded.iloc[0, 1]
@@ -225,13 +229,10 @@ class Spreadsheet:
         npv_mode = fiscal_config_data_loaded.iloc[17, 1]
         future_rate_asr = fiscal_config_data_loaded.iloc[20, 1]
         depreciation_method = fiscal_config_data_loaded.iloc[23, 1]
-        tax_multi = {
+        multi_val = {
             "year": fiscal_config_data_loaded.iloc[4:10, 0].to_numpy(),
             "tax_rate": fiscal_config_data_loaded.iloc[4:10, 1].to_numpy(),
         }
-
-        # year_arr = fiscal_config_data_loaded.iloc[4:10, 0]
-        # tax_arr = fiscal_config_data_loaded.iloc[4:10, 1]
 
         return FiscalConfigData(
             tax_mode=tax_mode,
@@ -241,7 +242,7 @@ class Spreadsheet:
             npv_mode=npv_mode,
             future_rate_asr=future_rate_asr,
             depreciation_method=depreciation_method,
-            tax_multi=tax_multi,
+            multi_val=multi_val,
             project_years=self.general_config_data.project_years,
         )
 
@@ -1096,18 +1097,18 @@ class Spreadsheet:
         # Fill in the attributes associated with data preparation
         self.general_config_data = self._get_general_config_data()
         self.fiscal_config_data = self._get_fiscal_config_data()
-        # self.oil_lifting_data = self._get_oil_lifting_data()
-        # self.gas_lifting_data = self._get_gas_lifting_data()
-        # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
-        # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
-        # self.sulfur_lifting_data = self._get_sulfur_lifting_data()
-        # self.electricity_lifting_data = self._get_electricity_lifting_data()
-        # self.co2_lifting_data = self._get_co2_lifting_data()
-        # self.tangible_cost_data = self._get_tangible_cost_data()
-        # self.intangible_cost_data = self._get_intangible_cost_data()
-        # self.opex_data = self._get_opex_data()
-        # self.asr_cost_data = self._get_asr_cost_data()
-        #
+        self.oil_lifting_data = self._get_oil_lifting_data()
+        self.gas_lifting_data = self._get_gas_lifting_data()
+        self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
+        self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
+        self.sulfur_lifting_data = self._get_sulfur_lifting_data()
+        self.electricity_lifting_data = self._get_electricity_lifting_data()
+        self.co2_lifting_data = self._get_co2_lifting_data()
+        self.tangible_cost_data = self._get_tangible_cost_data()
+        self.intangible_cost_data = self._get_intangible_cost_data()
+        self.opex_data = self._get_opex_data()
+        self.asr_cost_data = self._get_asr_cost_data()
+
         # print("\t")
-        # print(f"Filetype: {type(self.tangible_cost_data)}")
-        # print("tangible_cost_data = \n", self.tangible_cost_data)
+        # print(f"Filetype: {type(self.fiscal_config_data)}")
+        # print("fiscal_config_data = \n", self.fiscal_config_data)

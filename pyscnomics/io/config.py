@@ -164,6 +164,10 @@ class FiscalConfigData:
         The future rate used in ASR cost calculation.
     depreciation_method: str
         The depreciation method to use.
+    multi_val: dict
+        Attribute that stores information of year and tax_rate for multi value case.
+    project_years: np.ndarray
+        The array of project years
     """
 
     tax_mode: str
@@ -173,26 +177,13 @@ class FiscalConfigData:
     npv_mode: str
     future_rate_asr: float
     depreciation_method: str
-    tax_multi: dict
-    # year_arr: np.ndarray = field(default=None, repr=False)
-    # tax_arr: np.ndarray = field(default=None, repr=False)
-    project_years: np.ndarray = field(default=None, repr=False)
+    multi_val: dict = field(repr=False)
+    project_years: np.ndarray
 
     # Attributes to be defined later
     tax_rate: None | float | np.ndarray = field(default=None, init=False)
 
     def __post_init__(self):
-
-        # print('\t')
-        # print(f'Filetype: {type(self.year_arr)}')
-        # print(f'Length: {len(self.year_arr)}')
-        # print('year_arr = ', self.year_arr)
-        #
-        # print('\t')
-        # print(f'Filetype: {type(self.tax_rate_arr)}')
-        # print(f'Length: {len(self.tax_rate_arr)}')
-        # print('tax_rate_arr = ', self.tax_rate_arr)
-
         # Configure attribute tax_rate
         if self.tax_mode == "User Input - Single Value":
             if pd.isna(self.tax_rate_input):
@@ -204,130 +195,77 @@ class FiscalConfigData:
             self.tax_rate = None
 
         elif self.tax_mode == "User Input - Multi Value":
+            # Filter dict 'self.multi_val' for 'nan' values
+            multi_val_adj = {
+                key: np.array(list(filter(lambda i: i is not np.nan, self.multi_val[key])))
+                for key in self.multi_val.keys()
+            }
 
-            # Filter dict 'self.tax_multi' for 'nan' values
-            tax_multi_filtered = {}
-
-            for key in self.tax_multi.keys():
-                tax_multi_filtered[key] = np.array(
-                    list(filter(lambda i: i is not np.nan, self.tax_multi[key]))
-                )
-
-            print('\t')
-            print(f'Filetype: {type(tax_multi_filtered)}')
-            print(f'Length: {len(tax_multi_filtered)}')
-            print('tax_multi_filtered = \n', tax_multi_filtered)
-
-            # Raise error for unequal length of 'year' and 'tax_rate' in 'tax_multi_filtered'
-            if len(tax_multi_filtered["year"]) != len(tax_multi_filtered["tax_rate"]):
+            # Raise error for unequal length of 'year' and 'tax_rate' in 'multi_val_adj'
+            if len(multi_val_adj["year"]) != len(multi_val_adj["tax_rate"]):
                 raise FiscalConfigDataException(
                     f"Unequal number of arrays: "
-                    f"year: {len(tax_multi_filtered['year'])}, "
-                    f"tax_rate: {len(tax_multi_filtered['tax_rate'])}."
+                    f"year: {len(multi_val_adj['year'])}, "
+                    f"tax_rate: {len(multi_val_adj['tax_rate'])}."
                 )
 
             # Specify the minimum and maximum years
             min_year = min(self.project_years)
             max_year = max(self.project_years)
 
-            if min(tax_multi_filtered["year"]) < min(self.project_years):
-                min_year = min(tax_multi_filtered["year"])
+            if min(multi_val_adj["year"]) < min(self.project_years):
+                min_year = min(multi_val_adj["year"])
 
-            if max(tax_multi_filtered["year"]) > max(self.project_years):
-                max_year = max(tax_multi_filtered["year"])
+            if max(multi_val_adj["year"]) > max(self.project_years):
+                max_year = max(multi_val_adj["year"])
 
-            # Create new variable: tax_multi_new
-            tax_multi_new = {
+            # Create new arrays of 'year' and 'tax_rate'
+            multi_val_new = {
                 "year": np.arange(min_year, max_year + 1, 1),
-                "location": np.zeros(len(tax_multi_filtered["year"]), dtype=np.int_),
                 "tax_rate": np.bincount(
-                    tax_multi_filtered["year"] - min_year, weights=tax_multi_filtered["tax_rate"]
+                    multi_val_adj["year"] - min_year,
+                    weights=multi_val_adj["tax_rate"]
                 )
             }
 
-            for i, val in enumerate(tax_multi_filtered["year"]):
-                tax_multi_new["location"][i] = (
-                    np.argwhere(tax_multi_new["year"] == tax_multi_filtered["year"][i])
-                    .ravel()
-                )
+            # Specify the index location of multi_val_adj["year"] in array multi_val_new["year"]
+            loc = np.array(
+                [
+                    np.argwhere(multi_val_new["year"] == multi_val_adj["year"][i]).ravel()
+                    for i, val in enumerate(multi_val_adj["year"])
+                ]
+            ).ravel()
 
-            print('\t')
-            print(f'Filetype: {type(tax_multi_new)}')
-            print('tax_multi_new = \n', tax_multi_new)
+            # Modify the value of multi_val_new["year"]
+            for i, val in enumerate(multi_val_adj["tax_rate"]):
+                if i == (len(multi_val_adj["tax_rate"]) - 1):
+                    break
+                multi_val_new["tax_rate"][loc[i]:loc[i + 1]] = multi_val_adj["tax_rate"][i]
 
-            # year_arr_adjusted = np.array(list(filter(lambda i: i is not np.nan, self.year_arr)))
-            # tax_arr_adjusted = np.array(list(filter(lambda i: i is not np.nan, self.tax_arr)))
+            # Add values to the right side of multi_val_new["year"]
+            if len(multi_val_new["year"]) > len(multi_val_new["tax_rate"]):
+                fill_num = len(multi_val_new["year"]) - len(multi_val_new["tax_rate"])
+                fill_right = np.repeat(multi_val_adj["tax_rate"][-1], fill_num)
+                multi_val_new["tax_rate"] = np.concatenate((multi_val_new["tax_rate"], fill_right))
 
-            # if len(year_arr_adjusted) != len(tax_arr_adjusted):
-            #     raise FiscalConfigDataException(
-            #         f"Unequal number of arrays: "
-            #         f"year: {len(year_arr_adjusted)}, "
-            #         f"tax_rate: {len(tax_arr_adjusted)}."
-            #     )
-            #
-            # min_year = min(self.project_years)
-            # max_year = max(self.project_years)
-            #
-            # if min(year_arr_adjusted) < min(self.project_years):
-            #     min_year = min(year_arr_adjusted)
-            #
-            # if max(year_arr_adjusted) > max(self.project_years):
-            #     max_year = max(year_arr_adjusted)
-            #
-            # year_arr_new = np.arange(min_year, max_year + 1, 1)
-            #
-            # loc_arr_new = np.zeros(len(year_arr_adjusted), dtype=np.int_)
-            # for i, val in enumerate(year_arr_adjusted):
-            #     loc_arr_new[i] = np.argwhere(year_arr_new == year_arr_adjusted[i]).ravel()
-            #
-            # tax_arr_new = np.bincount(year_arr_adjusted - min_year, weights=tax_arr_adjusted)
+            # Add values to the left side of multi_val_new["year"]
+            if loc[0] > 0:
+                fill_left = np.repeat(multi_val_adj["tax_rate"][0], loc[0])
+                multi_val_new["tax_rate"][0:loc[0]] = fill_left
 
+            # Identify the index of project_years in multi_val_new["year"]
+            idx = np.array(
+                [
+                    np.argwhere(multi_val_new["year"] == i).ravel() for i in
+                    [min(self.project_years), max(self.project_years)]
+                ]
+            ).ravel()
 
+            # Identify the final tax_rate array
+            for key, j in zip(["year_final", "tax_rate_final"], ["year", "tax_rate"]):
+                multi_val_new[key] = multi_val_new[j][idx[0]:int(idx[1] + 1)]
 
-            # for i in range(len(tax_arr_adjusted) - 1):
-            #     tax_arr_new[loc_arr_new[i]:loc_arr_new[i + 1]] = tax_arr_adjusted[i]
-            #
-            # if len(year_arr_new) > len(tax_arr_new):
-            #     arr_fill = np.repeat(tax_arr_adjusted[-1], len(year_arr_new) - len(tax_arr_new))
-            #     tax_arr_new = np.concatenate((tax_arr_new, arr_fill))
-            #
-            # if loc_arr_new[0] > 0:
-            #     arr_fill_before = np.repeat(tax_arr_adjusted[0], loc_arr_new[0])
-            #     tax_arr_new[0:loc_arr_new[0]] = arr_fill_before
-            #
-            # print('\t')
-            # print(f'Filetype: {type(tax_arr_new)}')
-            # print(f'Length: {len(tax_arr_new)}')
-            # print('year = ', year_arr_new)
-            # print('tax_rate = ', tax_arr_new)
-
-
-    #     if self.tax_mode == "User Input - Multi Value":
-    #         if not isinstance(self.year_arr, np.ndarray):
-    #             raise FiscalConfigDataException(
-    #                 f"Year data must be inserted as a numpy ndarray. "
-    #                 f"{self.year_arr} is of datatype "
-    #                 f"({self.year_arr.__class__.__qualname__})."
-    #             )
-    #
-    #         if not isinstance(self.tax_rate_arr, np.ndarray):
-    #             raise FiscalConfigDataException(
-    #                 f"Tax rate data must be inserted as a numpy ndarray. "
-    #                 f"{self.tax_rate_arr} is of datatype "
-    #                 f"({self.tax_rate_arr.__class__.__qualname__})."
-    #             )
-    #
-    #         if len(self.year_arr) != len(self.tax_rate_arr):
-    #             raise FiscalConfigDataException(
-    #                 f"Unequal length of array: "
-    #                 f"year_arr: {len(self.year_arr)}, "
-    #                 f"tax_rate_arr: {len(self.tax_rate_arr)}"
-    #             )
-    #
-    #         self.tax_rate = {
-    #             "Year": self.year_arr,
-    #             "Tax Rate": self.tax_rate_arr,
-    #         }
+            self.tax_rate = multi_val_new["tax_rate_final"]
 
 
 @dataclass
@@ -1564,3 +1502,22 @@ class ASRCostData:
 
         else:
             self.description = self.description
+
+
+@dataclass
+class PSCCostRecoveryData:
+    """123
+    """
+    # Attributes associated with FTP
+    ftp_availability: str
+    ftp_is_shared: str
+    ftp_portion: float
+
+    pass
+
+
+@dataclass
+class PSCGrossSplitData:
+    """123
+    """
+    pass
