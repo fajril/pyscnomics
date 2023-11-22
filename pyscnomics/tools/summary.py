@@ -88,14 +88,20 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
     sunk_cost = np.sum(contract._oil_sunk_cost + contract._gas_sunk_cost, dtype=float)
 
     # Investment (Capital Cost)
-    tangible = np.sum(contract._oil_tangible.expenditures() + contract._gas_tangible.expenditures(), dtype=float)
-    intangible = np.sum(contract._oil_intangible.expenditures() + contract._gas_intangible.expenditures(),
+    tangible = np.sum(contract._oil_tangible_expenditures + contract._gas_tangible_expenditures, dtype=float)
+    intangible = np.sum(contract._oil_intangible_expenditures + contract._gas_intangible_expenditures,
                         dtype=float)
     investment = tangible + intangible - sunk_cost
 
+    # Oil Capex
+    oil_capex = np.sum(contract._oil_tangible_expenditures)
+    gas_capex = np.sum(contract._gas_tangible_expenditures)
+
+    # Gas Capex
+
     # OPEX and ASR (Non-Capital Cost)
-    opex = np.sum(contract._oil_opex.expenditures() + contract._gas_opex.expenditures(), dtype=float)
-    asr = np.sum(contract._oil_asr.expenditures() + contract._gas_asr.expenditures(), dtype=float)
+    opex = np.sum(contract._oil_opex_expenditures + contract._gas_opex_expenditures, dtype=float)
+    asr = np.sum(contract._oil_asr_expenditures + contract._gas_asr_expenditures, dtype=float)
 
     # Cashflow sunk cost
     if sunk_cost == 0:
@@ -123,6 +129,10 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
     # Government Share
     gov_take_over_gross_rev = gov_take / gross_revenue
 
+    # Contractor IRR
+    ctr_irr = irr(cashflow=contract._consolidated_cashflow)
+    ctr_irr_sunk_cost_pooled = irr(cashflow=cashflow_sunk_cost_pooled)
+
     # Calculation related to NPV Calculation which are depends on the NPV Mode
     # NPV Calculation for SKK Real Terms
     if npv_mode == NPVSelection.NPV_SKK_REAL_TERMS:
@@ -141,15 +151,9 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                                                       discounting_mode=discounting_mode)
 
         # Contractor Investment NPV
-        investment_npv = npv_skk_real_terms(cashflow=(sunk_cost_extended +
-                                                      contract._oil_tangible.expenditures() +
-                                                      contract._gas_tangible.expenditures() +
-                                                      contract._oil_intangible.expenditures() +
-                                                      contract._gas_intangible.expenditures() +
-                                                      contract._oil_opex.expenditures() +
-                                                      contract._gas_opex.expenditures() +
-                                                      contract._oil_asr.expenditures() +
-                                                      contract._gas_asr.expenditures()
+        investment_npv = npv_skk_real_terms(cashflow=(
+                                                      contract._oil_tangible_expenditures +
+                                                      contract._gas_tangible_expenditures
                                                       ),
                                             cashflow_years=contract.project_years,
                                             discount_rate=discount_rate,
@@ -178,15 +182,9 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                                                          discounting_mode=discounting_mode)
 
         # Contractor Investment NPV
-        investment_npv = npv_skk_nominal_terms(cashflow=(sunk_cost_extended +
-                                                         contract._oil_tangible.expenditures() +
-                                                         contract._gas_tangible.expenditures() +
-                                                         contract._oil_intangible.expenditures() +
-                                                         contract._gas_intangible.expenditures() +
-                                                         contract._oil_opex.expenditures() +
-                                                         contract._gas_opex.expenditures() +
-                                                         contract._oil_asr.expenditures() +
-                                                         contract._gas_asr.expenditures()
+        investment_npv = npv_skk_nominal_terms(cashflow=(
+                                                         contract._oil_tangible_expenditures +
+                                                         contract._gas_tangible_expenditures
                                                          ),
                                                cashflow_years=contract.project_years,
                                                discount_rate=discount_rate,
@@ -215,15 +213,9 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                                                      discounting_mode=discounting_mode)
 
         # Contractor Investment NPV
-        investment_npv = npv_nominal_terms(cashflow=(sunk_cost_extended +
-                                                     contract._oil_tangible.expenditures() +
-                                                     contract._gas_tangible.expenditures() +
-                                                     contract._oil_intangible.expenditures() +
-                                                     contract._gas_intangible.expenditures() +
-                                                     contract._oil_opex.expenditures() +
-                                                     contract._gas_opex.expenditures() +
-                                                     contract._oil_asr.expenditures() +
-                                                     contract._gas_asr.expenditures()
+        investment_npv = npv_nominal_terms(cashflow=(
+                                                     contract._oil_tangible_expenditures +
+                                                     contract._gas_tangible_expenditures
                                                      ),
                                            cashflow_years=contract.project_years,
                                            discount_rate=discount_rate,
@@ -256,15 +248,9 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                                                   discounting_mode=discounting_mode)
 
         # Contractor Investment NPV
-        investment_npv = npv_real_terms(cashflow=(sunk_cost_extended +
-                                                  contract._oil_tangible.expenditures() +
-                                                  contract._gas_tangible.expenditures() +
-                                                  contract._oil_intangible.expenditures() +
-                                                  contract._gas_intangible.expenditures() +
-                                                  contract._oil_opex.expenditures() +
-                                                  contract._gas_opex.expenditures() +
-                                                  contract._oil_asr.expenditures() +
-                                                  contract._gas_asr.expenditures()
+        investment_npv = npv_real_terms(cashflow=(
+                                                  contract._oil_tangible_expenditures +
+                                                  contract._gas_tangible_expenditures
                                                   ),
                                         cashflow_years=contract.project_years,
                                         discount_rate=discount_rate,
@@ -289,6 +275,9 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                                     reference_year=reference_year,
                                     discounting_mode=discounting_mode)
 
+        # IRR Point Forward
+        ctr_irr = irr(cashflow=contract._consolidated_cashflow[len(contract._consolidated_sunk_cost):])
+
         # Contractor NPV when the sunk cost is being pooled on the first year
         ctr_npv_sunk_cost_pooled = npv_point_forward(cashflow=cashflow_sunk_cost_pooled,
                                                      cashflow_years=years_sunk_cost_pooled,
@@ -297,16 +286,9 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                                                      discounting_mode=discounting_mode)
 
         # Contractor Investment NPV
-
-        investment_npv = npv_point_forward(cashflow=(sunk_cost_extended +
-                                                     contract._oil_tangible.expenditures() +
-                                                     contract._gas_tangible.expenditures() +
-                                                     contract._oil_intangible.expenditures() +
-                                                     contract._gas_intangible.expenditures() +
-                                                     contract._oil_opex.expenditures() +
-                                                     contract._gas_opex.expenditures() +
-                                                     contract._oil_asr.expenditures() +
-                                                     contract._gas_asr.expenditures()
+        investment_npv = npv_point_forward(cashflow=(
+                                                     contract._oil_tangible_expenditures +
+                                                     contract._gas_tangible_expenditures
                                                      ),
                                            cashflow_years=contract.project_years,
                                            discount_rate=discount_rate,
@@ -331,6 +313,7 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
 
         # Unrecoverable Cost
         unrec_cost = contract._consolidated_unrecovered_after_transfer[-1]
+        unrec_over_costrec = unrec_cost / cost_recovery
         unrec_over_gross_rev = unrec_cost / gross_revenue
 
         # Gross Share of Contractor and Government
@@ -351,9 +334,6 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
         # Government Equity Share
         gov_equity_share = np.sum(contract._consolidated_government_share)
 
-        # Contractor IRR
-        ctr_irr = irr(cashflow=contract._consolidated_cashflow)
-
         # Contractor POT
         ctr_pot = pot_psc(cashflow=contract._consolidated_cashflow,
                           cashflow_years=contract.project_years,
@@ -370,6 +350,8 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                 'ctr_gross_share': ctr_gross_share,
                 'gov_gross_share': gov_gross_share,
                 'investment': investment,
+                'oil_capex': oil_capex,
+                'gas_capex': gas_capex,
                 'sunk_cost': sunk_cost,
                 'tangible': tangible,
                 'intangible': intangible,
@@ -378,6 +360,7 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                 'cost_recovery': cost_recovery,
                 'cost_recovery_over_gross_rev': cost_recovery_over_gross_rev,
                 'unrec_cost': unrec_cost,
+                'unrec_over_costrec': unrec_over_costrec,
                 'unrec_over_gross_rev': unrec_over_gross_rev,
                 'ctr_net_share': ctr_net_share,
                 'ctr_net_share_over_gross_share': ctr_net_share_over_gross_share,
@@ -386,6 +369,7 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                 'ctr_npv': ctr_npv,
                 'ctr_npv_sunk_cost_pooled': ctr_npv_sunk_cost_pooled,
                 'ctr_irr': ctr_irr,
+                'ctr_irr_sunk_cost_pooled': ctr_irr_sunk_cost_pooled,
                 'ctr_pot': ctr_pot,
                 'ctr_pv_ratio': ctr_pv_ratio,
                 'gov_ftp_share': gov_ftp_share,
