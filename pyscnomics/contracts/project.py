@@ -8,7 +8,7 @@ from functools import reduce
 import numpy as np
 
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.selection import FluidType, TaxType, TaxRegime, OtherRevenue
+from pyscnomics.econ.selection import FluidType, TaxType, TaxRegime, OtherRevenue, InflationAppliedTo
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.econ.results import CashFlow
 
@@ -1147,6 +1147,7 @@ class BaseProject:
         lbt_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
         future_rate: float = 0.02,
+        inflation_rate_applied_to: InflationAppliedTo | None = None,
     ) -> None:
         """
         Calculate and assign expenditures for various cost components.
@@ -1188,23 +1189,127 @@ class BaseProject:
         def calc_expenses(target_attr):
             """ Calculate expenditures for a target attribute """
 
-            if target_attr is self._oil_asr or target_attr is self._gas_asr:
-                return target_attr.expenditures(
-                    year_ref=year_ref,
-                    tax_type=tax_type,
-                    vat_rate=vat_rate,
-                    lbt_rate=lbt_rate,
-                    inflation_rate=inflation_rate,
-                    future_rate=future_rate,
-                )
+            # No inflation rate
+            if inflation_rate_applied_to is None:
+                if target_attr is self._oil_asr or target_attr is self._gas_asr:
+                    return target_attr.expenditures(
+                        year_ref=year_ref,
+                        tax_type=tax_type,
+                        vat_rate=vat_rate,
+                        lbt_rate=lbt_rate,
+                        inflation_rate=0.0,
+                        future_rate=future_rate,
+                    )
+
+                else:
+                    return target_attr.expenditures(
+                        year_ref=year_ref,
+                        tax_type=tax_type,
+                        vat_rate=vat_rate,
+                        lbt_rate=lbt_rate,
+                        inflation_rate=0.0,
+                    )
+
+            # Inflation rate applied to CAPEX only
+            elif inflation_rate_applied_to == InflationAppliedTo.CAPEX:
+                if (
+                    target_attr is self._oil_tangible
+                    or target_attr is self._gas_tangible
+                    or target_attr is self._oil_intangible
+                    or target_attr is self._gas_intangible
+                ):
+                    return target_attr.expenditures(
+                        year_ref=year_ref,
+                        tax_type=tax_type,
+                        vat_rate=vat_rate,
+                        lbt_rate=lbt_rate,
+                        inflation_rate=inflation_rate,
+                    )
+
+                else:
+                    if target_attr is self._oil_asr or target_attr is self._gas_asr:
+                        return target_attr.expenditures(
+                            year_ref=year_ref,
+                            tax_type=tax_type,
+                            vat_rate=vat_rate,
+                            lbt_rate=lbt_rate,
+                            inflation_rate=0.0,
+                            future_rate=future_rate,
+                        )
+
+                    else:
+                        return target_attr.expenditures(
+                            year_ref=year_ref,
+                            tax_type=tax_type,
+                            vat_rate=vat_rate,
+                            lbt_rate=lbt_rate,
+                            inflation_rate=0.0,
+                        )
+
+            # Inflation rate applied to OPEX only
+            elif inflation_rate_applied_to == InflationAppliedTo.OPEX:
+                if target_attr is self._oil_opex or target_attr is self._gas_opex:
+                    return target_attr.expenditures(
+                        year_ref=year_ref,
+                        tax_type=tax_type,
+                        vat_rate=vat_rate,
+                        lbt_rate=lbt_rate,
+                        inflation_rate=inflation_rate,
+                    )
+
+                else:
+                    if target_attr is self._oil_asr or target_attr is self._gas_asr:
+                        return target_attr.expenditures(
+                            year_ref=year_ref,
+                            tax_type=tax_type,
+                            vat_rate=vat_rate,
+                            lbt_rate=lbt_rate,
+                            inflation_rate=0.0,
+                            future_rate=future_rate,
+                        )
+
+                    else:
+                        return target_attr.expenditures(
+                            year_ref=year_ref,
+                            tax_type=tax_type,
+                            vat_rate=vat_rate,
+                            lbt_rate=lbt_rate,
+                            inflation_rate=0.0,
+                        )
+
+            # Inflation rate applied to CAPEX and OPEX
+            elif inflation_rate_applied_to == InflationAppliedTo.CAPEX_AND_OPEX:
+                if (
+                    target_attr is self._oil_tangible
+                    or target_attr is self._gas_tangible
+                    or target_attr is self._oil_intangible
+                    or target_attr is self._gas_intangible
+                    or target_attr is self._oil_opex
+                    or target_attr is self._gas_opex
+                ):
+                    return target_attr.expenditures(
+                        year_ref=year_ref,
+                        tax_type=tax_type,
+                        vat_rate=vat_rate,
+                        lbt_rate=lbt_rate,
+                        inflation_rate=inflation_rate,
+                    )
+
+                else:
+                    return target_attr.expenditures(
+                        year_ref=year_ref,
+                        tax_type=tax_type,
+                        vat_rate=vat_rate,
+                        lbt_rate=lbt_rate,
+                        inflation_rate=0.0,
+                        future_rate=future_rate,
+                    )
 
             else:
-                return target_attr.expenditures(
-                    year_ref=year_ref,
-                    tax_type=tax_type,
-                    vat_rate=vat_rate,
-                    lbt_rate=lbt_rate,
-                    inflation_rate=inflation_rate,
+                raise BaseProjectException(
+                    f"The value of inflation_rate_applied_to ({inflation_rate_applied_to}) "
+                    f"is not recognized. "
+                    f"Please select between CAPEX, OPEX, CAPEX AND OPEX, or None. "
                 )
 
         (

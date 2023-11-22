@@ -5,7 +5,7 @@ import time
 
 from pyscnomics.dataset.sample import load_data, load_testing
 from pyscnomics.tools.summary import get_summary
-from pyscnomics.econ.selection import NPVSelection, DiscountingMode
+from pyscnomics.econ.selection import NPVSelection, DiscountingMode, InflationAppliedTo
 # pd.options.display.float_format = '{:,.2f}'.format
 
 pd.set_option('display.max_columns', None)
@@ -15,7 +15,11 @@ psc = load_data(dataset_type='small_oil', contract_type='gross_split')
 tax_rate = np.array([0.11, 0.11, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12])
 inflation_rate = np.array([0, 0.0, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02])
 start_time = time.time()
-psc.run(tax_rate=0.22, vat_rate=tax_rate, inflation_rate=inflation_rate)
+psc.run(tax_rate=0.22,
+        vat_rate=tax_rate,
+        inflation_rate=inflation_rate,
+        inflation_rate_applied_to=InflationAppliedTo.CAPEX)
+
 end_time = time.time()
 print('Execution Time: ', end_time - start_time, '\n')
 

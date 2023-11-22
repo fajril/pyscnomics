@@ -5,8 +5,6 @@ class Test:
     weight: int
     age: int
 
-    proportion: str = field(init=False, default=None, repr=False)
-
     def __post_init__(self):
         if self.weight > self.age:
             self.proportion = "Over"
@@ -16,7 +14,7 @@ class Test:
 
 test1 = Test(weight=20,
              age=23)
-
+test1.proportion = "hehehehehe"
 print(test1.proportion)
 
 

@@ -200,3 +200,10 @@ class OtherRevenue(Enum):
     ADDITION_TO_GAS_REVENUE = "The revenue will be treated as the Gas Revenue Addition"
     REDUCTION_TO_OIL_OPEX = "The revenue will be treated as the Oil OPEX Reduction"
     REDUCTION_TO_GAS_OPEX = "The revenue will be treated as the GAS OPEX Reduction"
+
+
+class InflationAppliedTo(Enum):
+    CAPEX = "Inlflation rate will be applied to Tangible and Intangible Cost"
+    OPEX = "Inflation rate will be applied to Operating Cost"
+    CAPEX_AND_OPEX = "Inflation rate will be applied to Tangible, Intangible, Operating Cost"
+

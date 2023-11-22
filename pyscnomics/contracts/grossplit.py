@@ -6,7 +6,8 @@ import numpy as np
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
-from pyscnomics.econ.selection import FluidType, GrossSplitRegime, TaxRegime, TaxType, DeprMethod, OtherRevenue
+from pyscnomics.econ.selection import (FluidType, GrossSplitRegime, TaxRegime, TaxType, DeprMethod, OtherRevenue,
+                                       InflationAppliedTo)
 from pyscnomics.econ.results import CashFlow
 
 
@@ -432,6 +433,7 @@ class GrossSplit(BaseProject):
             lbt_rate: np.ndarray | float = 0.0,
             inflation_rate: np.ndarray | float = 0.0,
             future_rate: float = 0.02,
+            inflation_rate_applied_to: InflationAppliedTo = InflationAppliedTo.CAPEX
             ):
 
         if discount_rate_year is None:
@@ -458,6 +460,7 @@ class GrossSplit(BaseProject):
             lbt_rate=lbt_rate,
             inflation_rate=inflation_rate,
             future_rate=future_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to
         )
 
         # Get The Other Revenue as the chosen selection
