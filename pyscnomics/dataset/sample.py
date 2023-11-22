@@ -66,7 +66,7 @@ def read_json_file(file_name: str) -> dict:
     return json.loads(file_contents)
 
 
-def read_fluid_type(fluid: list | str) -> list | FluidType:
+def read_fluid_type(fluid: list | str) -> list[FluidType] | FluidType:
     """
     A function to converting the str input into FluidType Enum class.
 
@@ -77,7 +77,7 @@ def read_fluid_type(fluid: list | str) -> list | FluidType:
 
     Returns
     -------
-    FluidType
+    list[FluidType] | FluidType
         The enum class for FluidType.
 
     """

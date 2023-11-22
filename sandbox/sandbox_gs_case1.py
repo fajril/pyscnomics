@@ -5,15 +5,17 @@ import time
 
 from pyscnomics.dataset.sample import load_data, load_testing
 from pyscnomics.tools.summary import get_summary
-from pyscnomics.econ.selection import NPVSelection
+from pyscnomics.econ.selection import NPVSelection, DiscountingMode
 # pd.options.display.float_format = '{:,.2f}'.format
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.expand_frame_repr', False)
 
 psc = load_data(dataset_type='small_oil', contract_type='gross_split')
+tax_rate = np.array([0.11, 0.11, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12])
+inflation_rate = np.array([0, 0.0, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02])
 start_time = time.time()
-psc.run()
+psc.run(tax_rate=0.22, vat_rate=tax_rate, inflation_rate=inflation_rate)
 end_time = time.time()
 print('Execution Time: ', end_time - start_time, '\n')
 
@@ -28,7 +30,8 @@ psc_table['Progressive Split'] = psc._oil_prog_split
 psc_table['Contractor Split Split'] = psc._oil_ctr_split
 psc_table['Government Share'] = psc._oil_gov_share
 psc_table['Contractor Share'] = psc._oil_ctr_share_before_transfer
-psc_table['Tangbile'] = psc._oil_tangible.expenditures()
+psc_table['Tangible'] = psc._oil_tangible_expenditures
+psc_table['OPEX'] = psc._oil_opex_expenditures
 psc_table['Depreciation'] = psc._oil_depreciation
 psc_table['Non Capital'] = psc._oil_non_capital
 psc_table['Total Expenses'] = psc._oil_total_expenses
@@ -56,9 +59,11 @@ print('Calculation Table: Gross Split \n', psc_table, '\n')
 
 
 psc_summary = get_summary(contract=psc,
-                          reference_year=2010,
-                          npv_mode=NPVSelection.FULL_CYCLE_REAL_TERMS,
-                          discount_rate=0.1, )
+                          reference_year=2023,
+                          inflation_rate=0.1,
+                          discount_rate=0.1,
+                          npv_mode=NPVSelection.NPV_SKK_NOMINAL_TERMS,
+                          discounting_mode=DiscountingMode.END_YEAR)
 
 for key, value in psc_summary.items():
     print(key, ":", value)

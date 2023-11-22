@@ -74,10 +74,11 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
     # Defining the same summary parameters for any contract
     # Lifting
     lifting_oil = np.sum(contract._oil_lifting.get_lifting_rate_arr(), dtype=float)
-    oil_wap = np.average(contract._oil_wap_price[np.where(contract._oil_wap_price > 0)])
+    oil_wap = np.sum(contract._oil_revenue) / np.sum(contract._oil_lifting.get_lifting_rate_arr())
     lifting_gas = np.sum(contract._gas_lifting.get_lifting_rate_arr(), dtype=float)
-    gas_wap = np.sum(contract._gas_wap_price * contract._gas_lifting.get_lifting_rate_arr()) / np.sum(
-        contract._gas_lifting.get_lifting_rate_arr())
+    gas_wap = np.divide(np.sum(contract._gas_wap_price * contract._gas_lifting.get_lifting_rate_arr()), np.sum(
+        contract._gas_lifting.get_lifting_rate_arr()), where=np.sum(
+        contract._gas_lifting.get_lifting_rate_arr()) != 0)
 
     # Gross Revenue
     gross_revenue = np.sum(contract._consolidated_revenue, dtype=float)
@@ -408,7 +409,9 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
         ctr_irr = irr(cashflow=contract._consolidated_cashflow)
 
         # Contractor POT
-        ctr_pot = pot_psc(cashflow=contract._consolidated_cashflow)
+        ctr_pot = pot_psc(cashflow=contract._consolidated_cashflow,
+                          cashflow_years=contract.project_years,
+                          reference_year=reference_year)
 
         # Parsing the obtained variable into a dictionary, Summary
         return {'lifting_oil': lifting_oil,
