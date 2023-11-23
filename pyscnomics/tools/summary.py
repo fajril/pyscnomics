@@ -37,10 +37,14 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
     sunk_cost = np.sum(contract._oil_sunk_cost + contract._gas_sunk_cost, dtype=float)
 
     # Investment (Capital Cost)
-    tangible = np.sum(contract._oil_tangible_expenditures + contract._gas_tangible_expenditures, dtype=float)
-    intangible = np.sum(contract._oil_intangible_expenditures + contract._gas_intangible_expenditures,
+    sunk_cost_extended = np.concatenate((contract._consolidated_sunk_cost,
+                                         np.zeros(len(contract.project_years) - len(contract._consolidated_sunk_cost))))
+
+    tangible = np.sum(contract._oil_tangible_expenditures + contract._gas_tangible_expenditures)
+
+    intangible = np.sum(contract._oil_intangible_expenditures + contract._gas_intangible_expenditures - sunk_cost_extended,
                         dtype=float)
-    investment = tangible + intangible - sunk_cost
+    investment = tangible + intangible
 
     # Capex
     oil_capex = np.sum(contract._oil_tangible_expenditures)
@@ -57,9 +61,6 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
         cashflow_sunk_cost_pooled = np.concatenate(
             (np.array([-sunk_cost]),
              contract._consolidated_cashflow[len(contract._consolidated_sunk_cost):]))
-
-    sunk_cost_extended = np.concatenate((contract._consolidated_sunk_cost,
-                                         np.zeros(len(contract.project_years) - len(contract._consolidated_sunk_cost))))
 
     # Years sunk cost pooled
     years_sunk_cost_pooled = (contract.project_years[(len(contract.project_years) - len(cashflow_sunk_cost_pooled)):])
