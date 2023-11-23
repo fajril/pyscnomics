@@ -66,7 +66,7 @@ psc_summary = get_summary(contract=psc,
                           reference_year=2023,
                           inflation_rate=0.02,
                           discount_rate=0.1,
-                          npv_mode=NPVSelection.NPV_NOMINAL_TERMS,
+                          npv_mode=NPVSelection.NPV_POINT_FORWARD,
                           discounting_mode=DiscountingMode.MID_YEAR)
 
 for key, value in psc_summary.items():

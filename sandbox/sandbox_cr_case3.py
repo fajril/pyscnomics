@@ -6,6 +6,8 @@ import pandas as pd
 import time
 
 from pyscnomics.dataset.sample import load_data, load_testing
+from pyscnomics.tools.summary import get_summary
+from pyscnomics.econ.selection import NPVSelection, DiscountingMode
 
 
 # pd.options.display.float_format = '{:,.2f}'.format
@@ -208,4 +210,14 @@ print(psc_table_consolidated, '\n')
 # print(psc._gas_sunk_cost)
 # print(np.sum(psc._oil_sunk_cost))
 # print(np.sum(psc._gas_sunk_cost))
+
+psc_summary = get_summary(contract=psc,
+                          reference_year=2022,
+                          inflation_rate=0.1,
+                          discount_rate=0.1,
+                          npv_mode=NPVSelection.NPV_SKK_NOMINAL_TERMS,
+                          discounting_mode=DiscountingMode.END_YEAR)
+
+for key, value in psc_summary.items():
+    print(key, ":", value)
 
