@@ -12,8 +12,8 @@ pd.set_option('display.max_columns', None)
 pd.set_option('display.expand_frame_repr', False)
 
 psc = load_data(dataset_type='small_oil', contract_type='gross_split')
-tax_rate = np.array([0.11, 0.11, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12])
-inflation_rate = np.array([0, 0.0, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02])
+tax_rate = np.array([0.11, 0.11, 0.11, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12])
+inflation_rate = np.array([0, 0, 0.0, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02])
 start_time = time.time()
 psc.run(tax_rate=0.22,
         vat_rate=tax_rate,
@@ -64,10 +64,10 @@ print('Calculation Table: Gross Split \n', psc_table, '\n')
 
 psc_summary = get_summary(contract=psc,
                           reference_year=2023,
-                          inflation_rate=0.1,
+                          inflation_rate=0.02,
                           discount_rate=0.1,
-                          npv_mode=NPVSelection.NPV_SKK_NOMINAL_TERMS,
-                          discounting_mode=DiscountingMode.END_YEAR)
+                          npv_mode=NPVSelection.NPV_NOMINAL_TERMS,
+                          discounting_mode=DiscountingMode.MID_YEAR)
 
 for key, value in psc_summary.items():
     print(key, ":", value)

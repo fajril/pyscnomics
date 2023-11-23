@@ -44,11 +44,9 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                         dtype=float)
     investment = tangible + intangible - sunk_cost
 
-    # Oil Capex
+    # Capex
     oil_capex = np.sum(contract._oil_tangible_expenditures)
     gas_capex = np.sum(contract._gas_tangible_expenditures)
-
-    # Gas Capex
 
     # OPEX and ASR (Non-Capital Cost)
     opex = np.sum(contract._oil_opex_expenditures + contract._gas_opex_expenditures, dtype=float)
@@ -225,9 +223,6 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                                     discount_rate=discount_rate,
                                     reference_year=reference_year,
                                     discounting_mode=discounting_mode)
-
-        # IRR Point Forward
-        ctr_irr = irr(cashflow=contract._consolidated_cashflow[len(contract._consolidated_sunk_cost):])
 
         # Contractor NPV when the sunk cost is being pooled on the first year
         ctr_npv_sunk_cost_pooled = npv_point_forward(cashflow=cashflow_sunk_cost_pooled,
