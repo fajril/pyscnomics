@@ -273,7 +273,7 @@ trans1_table_oil['DDMO'] = psc_trans._contract1_transitioned._oil_ddmo
 trans1_table_oil['TaxableIncome'] = psc_trans._contract1_transitioned._oil_taxable_income
 trans1_table_oil['Tax'] = psc_trans._contract1_transitioned._oil_tax_payment
 trans1_table_oil['NetContractorShare'] = psc_trans._contract1_transitioned._oil_ctr_net_share
-trans1_table_oil['ContractorTake'] = psc_trans._contract1_transitioned._gas_ctr_net_share
+trans1_table_oil['ContractorTake'] = psc_trans._contract1_transitioned._oil_ctr_net_share
 trans1_table_oil['Cashflow'] = psc_trans._contract1_transitioned._oil_cashflow
 trans1_table_oil['GovernmentTake'] = psc_trans._contract1_transitioned._oil_government_take
 trans1_table_oil.loc['Column_Total'] = trans1_table_oil.sum(numeric_only=True, axis=0)
@@ -352,7 +352,7 @@ print(trans1_table_consolidated, '\n')
 print('Gross Split Transition')
 trans2_table_oil = pd.DataFrame()
 trans2_table_oil['Years'] = psc_trans._contract2_transitioned.project_years
-trans2_table_oil['Lifting'] = psc_trans._contract2_transitioned._oil_lifting.lifting_rate
+trans2_table_oil['Lifting'] = psc_trans._contract2_transitioned._oil_lifting.get_lifting_rate_arr()
 trans2_table_oil['Revenue'] = psc_trans._contract2_transitioned._oil_revenue
 trans2_table_oil['BaseSplit'] = psc_trans._contract2_transitioned._oil_base_split
 trans2_table_oil['VariableSplit'] = psc_trans._contract2_transitioned._var_split_array
@@ -384,7 +384,7 @@ print(trans2_table_oil, '\n')
 
 trans2_table_gas = pd.DataFrame()
 trans2_table_gas['Years'] = psc_trans._contract2_transitioned.project_years
-trans2_table_gas['Lifting'] = psc_trans._contract2_transitioned._gas_lifting.lifting_rate
+trans2_table_gas['Lifting'] = psc_trans._contract2_transitioned._gas_lifting.get_lifting_rate_arr()
 trans2_table_gas['Revenue'] = psc_trans._contract2_transitioned._gas_revenue
 trans2_table_gas['BaseSplit'] = psc_trans._contract2_transitioned._gas_base_split
 trans2_table_gas['VariableSplit'] = psc_trans._contract2_transitioned._var_split_array
@@ -440,5 +440,9 @@ trans2_table_consolidated['cnsltd_CTRCashFlow'] = psc_trans._contract2_transitio
 trans2_table_consolidated['cnsltd_GovernmentTake'] = psc_trans._contract2_transitioned._consolidated_government_take
 trans2_table_consolidated.loc['Column_Total'] = trans2_table_consolidated.sum(numeric_only=True, axis=0)
 print(trans2_table_consolidated, '\n')
+
+# Showing the Attributes
+
+
 
 

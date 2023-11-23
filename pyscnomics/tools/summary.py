@@ -1,5 +1,3 @@
-from dataclasses import dataclass, field
-
 import numpy as np
 
 from pyscnomics.contracts.costrecovery import CostRecovery
@@ -101,13 +99,13 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
 
         # Contractor Investment NPV
         investment_npv = npv_skk_real_terms(cashflow=(
-                                                      contract._oil_tangible_expenditures +
-                                                      contract._gas_tangible_expenditures
-                                                      ),
-                                            cashflow_years=contract.project_years,
-                                            discount_rate=discount_rate,
-                                            reference_year=reference_year,
-                                            discounting_mode=discounting_mode)
+                contract._oil_tangible_expenditures +
+                contract._gas_tangible_expenditures
+        ),
+            cashflow_years=contract.project_years,
+            discount_rate=discount_rate,
+            reference_year=reference_year,
+            discounting_mode=discounting_mode)
 
         # Government Take Net Present Value
         gov_take_npv = npv_skk_real_terms(cashflow=contract._consolidated_government_take,
@@ -132,12 +130,12 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
 
         # Contractor Investment NPV
         investment_npv = npv_skk_nominal_terms(cashflow=(
-                                                         contract._oil_tangible_expenditures +
-                                                         contract._gas_tangible_expenditures
-                                                         ),
-                                               cashflow_years=contract.project_years,
-                                               discount_rate=discount_rate,
-                                               discounting_mode=discounting_mode)
+                contract._oil_tangible_expenditures +
+                contract._gas_tangible_expenditures
+        ),
+            cashflow_years=contract.project_years,
+            discount_rate=discount_rate,
+            discounting_mode=discounting_mode)
 
         # Government Take Net Present Value
         gov_take_npv = npv_skk_nominal_terms(cashflow=contract._consolidated_government_take,
@@ -163,13 +161,13 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
 
         # Contractor Investment NPV
         investment_npv = npv_nominal_terms(cashflow=(
-                                                     contract._oil_tangible_expenditures +
-                                                     contract._gas_tangible_expenditures
-                                                     ),
-                                           cashflow_years=contract.project_years,
-                                           discount_rate=discount_rate,
-                                           reference_year=reference_year,
-                                           discounting_mode=discounting_mode)
+                contract._oil_tangible_expenditures +
+                contract._gas_tangible_expenditures
+        ),
+            cashflow_years=contract.project_years,
+            discount_rate=discount_rate,
+            reference_year=reference_year,
+            discounting_mode=discounting_mode)
 
         # Government Take Net Present Value
         gov_take_npv = npv_nominal_terms(cashflow=contract._consolidated_government_take,
@@ -198,14 +196,14 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
 
         # Contractor Investment NPV
         investment_npv = npv_real_terms(cashflow=(
-                                                  contract._oil_tangible_expenditures +
-                                                  contract._gas_tangible_expenditures
-                                                  ),
-                                        cashflow_years=contract.project_years,
-                                        discount_rate=discount_rate,
-                                        reference_year=reference_year,
-                                        inflation_rate=inflation_rate,
-                                        discounting_mode=discounting_mode)
+                contract._oil_tangible_expenditures +
+                contract._gas_tangible_expenditures
+        ),
+            cashflow_years=contract.project_years,
+            discount_rate=discount_rate,
+            reference_year=reference_year,
+            inflation_rate=inflation_rate,
+            discounting_mode=discounting_mode)
 
         # Government Take Net Present Value
         gov_take_npv = npv_real_terms(cashflow=contract._consolidated_government_take,
@@ -233,13 +231,13 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
 
         # Contractor Investment NPV
         investment_npv = npv_point_forward(cashflow=(
-                                                     contract._oil_tangible_expenditures +
-                                                     contract._gas_tangible_expenditures
-                                                     ),
-                                           cashflow_years=contract.project_years,
-                                           discount_rate=discount_rate,
-                                           reference_year=reference_year,
-                                           discounting_mode=discounting_mode)
+                contract._oil_tangible_expenditures +
+                contract._gas_tangible_expenditures
+        ),
+            cashflow_years=contract.project_years,
+            discount_rate=discount_rate,
+            reference_year=reference_year,
+            discounting_mode=discounting_mode)
 
         # Government Take Net Present Value
         gov_take_npv = npv_point_forward(cashflow=contract._consolidated_government_take,
@@ -335,6 +333,7 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
         # Carry Forward Cost
         carry_forward_deductible_cost = contract._consolidated_carward_deduct_cost[-1]
         carry_forcost_over_gross_share = carry_forward_deductible_cost / gross_revenue
+        carry_forcost_over_deductible_cost = carry_forward_deductible_cost / deductible_cost
 
         # CTR Gross Share
         ctr_gross_share = np.sum(contract._consolidated_ctr_share_before_tf, dtype=float)
@@ -369,6 +368,8 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                 'ctr_gross_share': ctr_gross_share,
                 'gov_gross_share': gov_gross_share,
                 'investment': investment,
+                'oil_capex': oil_capex,
+                'gas_capex': gas_capex,
                 'sunk_cost': sunk_cost,
                 'tangible': tangible,
                 'intangible': intangible,
@@ -377,6 +378,7 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                 'deductible_cost': deductible_cost,
                 'cost_recovery_over_gross_rev': deductible_cost_over_gross_rev,
                 'unrec_cost': carry_forward_deductible_cost,
+                'unrec_over_costrec': carry_forcost_over_deductible_cost,
                 'unrec_over_gross_rev': carry_forcost_over_gross_share,
                 'ctr_net_share': ctr_net_share,
                 'ctr_net_share_over_gross_share': ctr_net_share_over_gross_share,
@@ -385,6 +387,7 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                 'ctr_npv': ctr_npv,
                 'ctr_npv_sunk_cost_pooled': ctr_npv_sunk_cost_pooled,
                 'ctr_irr': ctr_irr,
+                'ctr_irr_sunk_cost_pooled': ctr_irr_sunk_cost_pooled,
                 'ctr_pot': ctr_pot,
                 'ctr_pv_ratio': ctr_pv_ratio,
                 'gov_ddmo': gov_ddmo,
@@ -392,3 +395,76 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                 'gov_take': gov_take,
                 'gov_take_over_gross_rev': gov_take_over_gross_rev,
                 'gov_take_npv': gov_take_npv}
+
+    if isinstance(contract, Transition):
+        # Lifting
+        lifting_oil = (np.sum(contract._contract1_transitioned._oil_lifting.get_lifting_rate_arr(), dtype=float) +
+                       np.sum(contract._contract2_transitioned._oil_lifting.get_lifting_rate_arr(), dtype=float))
+
+        lifting_gas = (np.sum(contract._contract1_transitioned._gas_lifting.get_lifting_rate_arr(), dtype=float) +
+                       np.sum(contract._contract2_transitioned._gas_lifting.get_lifting_rate_arr(), dtype=float))
+
+        # WAP Price
+        oil_wap = np.sum(contract._contract2_transitioned._oil_revenue) / np.sum(
+            contract._contract2_transitioned._oil_lifting.get_lifting_rate_arr())
+        gas_wap = np.divide(
+            np.sum(contract._contract2_transitioned._gas_wap_price * contract._contract2_transitioned._gas_lifting.get_lifting_rate_arr()), np.sum(
+                contract._contract2_transitioned._gas_lifting.get_lifting_rate_arr()), where=np.sum(
+                contract._contract2_transitioned._gas_lifting.get_lifting_rate_arr()) != 0)
+
+        # Gross Revenue
+        gross_revenue = (np.sum(contract._contract1_transitioned._consolidated_revenue) +
+                         np.sum(contract._contract2_transitioned._consolidated_revenue))
+        gross_revenue_oil = np.sum(contract._contract1_transitioned._oil_revenue) + np.sum(contract._contract2_transitioned._oil_revenue)
+        gross_revenue_gas = np.sum(contract._contract1_transitioned._gas_revenue) + np.sum(contract._contract2_transitioned._gas_revenue)
+
+        # Sunk Cost
+        sunk_cost = (np.sum(contract._contract1_transitioned._oil_sunk_cost + contract._contract1_transitioned._gas_sunk_cost, dtype=float) +
+                     np.sum(contract._contract2_transitioned._oil_sunk_cost + contract._contract2_transitioned._gas_sunk_cost, dtype=float))
+
+        # Investment (Capital Cost)
+        tangible = (np.sum(
+            contract._contract1_transitioned._oil_tangible_expenditures + contract._contract1_transitioned._gas_tangible_expenditures,
+            dtype=float) +
+                    np.sum(
+                        contract._contract2_transitioned._oil_tangible_expenditures + contract._contract2_transitioned._gas_tangible_expenditures,
+                        dtype=float))
+
+        intangible = (np.sum(
+            contract._contract1_transitioned._oil_intangible_expenditures + contract._contract1_transitioned._gas_intangible_expenditures,
+            dtype=float) +
+                      np.sum(
+            contract._contract2_transitioned._oil_intangible_expenditures + contract._contract2_transitioned._gas_intangible_expenditures,
+            dtype=float))
+
+        investment = tangible + intangible - sunk_cost
+
+        # Capex
+        oil_capex = (np.sum(contract._contract1_transitioned._oil_tangible_expenditures) +
+                     np.sum(contract._contract2_transitioned._oil_tangible_expenditures))
+        gas_capex = (np.sum(contract._contract1_transitioned._gas_tangible_expenditures) +
+                     np.sum(contract._contract2_transitioned._gas_tangible_expenditures))
+
+        # OPEX and ASR (Non-Capital Cost)
+        opex = (np.sum(contract._contract1_transitioned._oil_opex_expenditures + contract._contract1_transitioned._gas_opex_expenditures, dtype=float) +
+                np.sum(contract._contract2_transitioned._oil_opex_expenditures + contract._contract2_transitioned._gas_opex_expenditures, dtype=float))
+        asr = (np.sum(contract._contract1_transitioned._oil_asr_expenditures + contract._contract1_transitioned._gas_asr_expenditures, dtype=float) +
+               np.sum(contract._contract2_transitioned._oil_asr_expenditures + contract._contract2_transitioned._gas_asr_expenditures, dtype=float))
+
+        # Cashflow sunk cost
+        if sunk_cost == 0:
+            cashflow_sunk_cost_pooled = (contract._contract1_transitioned._consolidated_cashflow +
+                                         contract._contract2_transitioned._consolidated_cashflow)
+        else:
+            cashflow_sunk_cost_pooled = np.concatenate(
+                (np.array([-sunk_cost]),
+                 contract._contract2_transitioned._consolidated_cashflow[len(contract._contract2_transitioned._consolidated_sunk_cost):]))
+
+
+
+
+
+
+
+
+

@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import numpy as np
 
+from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
@@ -17,6 +18,49 @@ class Transition:
     # Attributes to define later
     _contract1_transitioned: CostRecovery | GrossSplit = field(default=None, init=False, repr=False)
     _contract2_transitioned: CostRecovery | GrossSplit = field(default=None, init=False, repr=False)
+
+    _oil_lifting: Lifting = field(default=None, init=False, repr=False)
+    _gas_lifting: Lifting = field(default=None, init=False, repr=False)
+    _sulfur_lifting: Lifting = field(default=None, init=False, repr=False)
+    _electricity_lifting: Lifting = field(default=None, init=False, repr=False)
+    _co2_lifting: Lifting = field(default=None, init=False, repr=False)
+
+    _oil_revenue: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_revenue: np.ndarray = field(default=None, init=False, repr=False)
+    _sulfur_revenue: np.ndarray = field(default=None, init=False, repr=False)
+    _electricity_revenue: np.ndarray = field(default=None, init=False, repr=False)
+    _co2_revenue: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_tangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_tangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_intangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_intangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_opex_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_opex_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+    _sulfur_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+    _electricity_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+    _co2_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_deductible_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_deductible_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_unrec_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_unrec_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_ctr_ets: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ctr_ets: np.ndarray = field(default=None, init=False, repr=False)
+    _net_operating_profit: np.ndarray = field(default=None, init=False, repr=False)
+    _ctr_net_cashflow: np.ndarray = field(default=None, init=False, repr=False)
+    _ctr_ftp: np.ndarray = field(default=None, init=False, repr=False)
+    _gov_ftp: np.ndarray = field(default=None, init=False, repr=False)
+    _ddmo: np.ndarray = field(default=None, init=False, repr=False)
+    _tax_payment: np.ndarray = field(default=None, init=False, repr=False)
+    _government_take: np.ndarray = field(default=None, init=False, repr=False)
 
     @staticmethod
     def _parse_dataclass(contract):
@@ -390,3 +434,194 @@ class Transition:
         # Parsing new contract to the attributes of Transition dataclass
         self._contract1_transitioned = contract1_new
         self._contract2_transitioned = contract2_new
+
+        # Populating transition attributes
+        # Lifting
+        self._oil_lifting = (self._contract1_transitioned._oil_lifting +
+                             self._contract2_transitioned._oil_lifting)
+
+        self._gas_lifting = (self._contract1_transitioned._gas_lifting +
+                             self._contract2_transitioned._gas_lifting)
+
+        self._sulfur_lifting = (self._contract1_transitioned._sulfur_lifting +
+                                self._contract2_transitioned._sulfur_lifting)
+
+        self._electricity_lifting = (self._contract1_transitioned._electricity_lifting +
+                                     self._contract2_transitioned._electricity_lifting)
+
+        self._co2_lifting = (self._contract1_transitioned._co2_lifting +
+                             self._contract2_transitioned._co2_lifting)
+
+        # Revenue
+        self._oil_revenue = (self._contract1_transitioned._oil_revenue +
+                             self._contract2_transitioned._oil_revenue)
+
+        self._gas_revenue = (self._contract1_transitioned._gas_revenue +
+                             self._contract2_transitioned._gas_revenue)
+
+        self._sulfur_revenue = (self._contract1_transitioned._sulfur_revenue +
+                                self._contract2_transitioned._sulfur_revenue)
+
+        self._electricity_revenue = (self._contract1_transitioned._electricity_revenue +
+                                     self._contract2_transitioned._electricity_revenue)
+
+        self._co2_revenue = (self._contract1_transitioned._co2_revenue +
+                             self._contract2_transitioned._co2_revenue)
+
+        # Tangible
+        self._oil_tangible_expenditures = (self._contract1_transitioned._oil_tangible_expenditures +
+                                           self._contract2_transitioned._oil_tangible_expenditures)
+
+        self._gas_tangible_expenditures = (self._contract1_transitioned._gas_tangible_expenditures +
+                                           self._contract2_transitioned._gas_tangible_expenditures)
+
+        # Intangible
+        self._oil_intangible_expenditures = (self._contract1_transitioned._oil_intangible_expenditures +
+                                             self._contract2_transitioned._oil_intangible_expenditures)
+
+        self._gas_intangible_expenditures = (self._contract1_transitioned._gas_intangible_expenditures +
+                                             self._contract2_transitioned._gas_intangible_expenditures)
+
+        # Opex
+        self._oil_opex_expenditures = (self._contract1_transitioned._oil_opex_expenditures +
+                                       self._contract2_transitioned._oil_opex_expenditures)
+
+        self._gas_opex_expenditures = (self._contract1_transitioned._gas_opex_expenditures +
+                                       self._contract2_transitioned._gas_opex_expenditures)
+
+        # ASR
+        self._oil_asr_expenditures = (self._contract1_transitioned._oil_asr_expenditures +
+                                      self._contract2_transitioned._oil_asr_expenditures)
+
+        self._gas_asr_expenditures = (self._contract1_transitioned._gas_asr_expenditures +
+                                      self._contract2_transitioned._gas_asr_expenditures)
+
+        # WAP Price
+        self._oil_wap_price = self._contract2_transitioned._oil_wap_price
+        self._gas_wap_price = self._contract2_transitioned._gas_wap_price
+        self._sulfur_wap_price = self._contract2_transitioned._sulfur_wap_price
+        self._electricity_wap_price = self._contract2_transitioned._electricity_wap_price
+        self._co2_wap_price = self._contract2_transitioned._co2_wap_price
+
+        # Sunk Cost
+        self._oil_sunk_cost = self._contract1_transitioned._oil_sunk_cost + self._contract2_transitioned._oil_sunk_cost
+        self._gas_sunk_cost = self._contract1_transitioned._gas_sunk_cost + self._contract2_transitioned._gas_sunk_cost
+
+        # Deductible Cost / Cost Recovery
+        _oil_deductible_cost_1 = None
+        _gas_deductible_cost_1 = None
+        _oil_deductible_cost_2 = None
+        _gas_deductible_cost_2 = None
+        _oil_unrec_cost_1 = None
+        _gas_unrec_cost_1 = None
+        _oil_unrec_cost_2 = None
+        _gas_unrec_cost_2 = None
+        _oil_ctr_ets_1 = None
+        _gas_ctr_ets_1 = None
+        _oil_ctr_ets_2 = None
+        _gas_ctr_ets_2 = None
+
+        _ctr_ftp_1 = None
+        _gov_ftp_1 = None
+        _ctr_ftp_2 = None
+        _gov_ftp_2 = None
+
+        # Determining variables if the type of Contract1 is Cost Recovery
+        if isinstance(self.contract1, CostRecovery):
+            _oil_deductible_cost_1 = self._contract1_transitioned._oil_cost_recovery_after_tf
+            _gas_deductible_cost_1 = self._contract1_transitioned._gas_cost_recovery_after_tf
+            _oil_unrec_cost_1 = self._contract1_transitioned._oil_unrecovered_after_transfer
+            _gas_unrec_cost_1 = self._contract1_transitioned._gas_unrecovered_after_transfer
+            _oil_ctr_ets_1 = self._contract1_transitioned._oil_ets_after_transfer
+            _gas_ctr_ets_1 = self._contract1_transitioned._gas_ets_after_transfer
+            _ctr_ftp_1 = self._contract1_transitioned._consolidated_ftp_ctr
+            _gov_ftp_1 = self._contract1_transitioned._consolidated_ftp_gov
+
+        # Determining variables if the type of Contract1 is Gross Split
+        elif isinstance(self.contract1, GrossSplit):
+            _oil_deductible_cost_1 = self._contract1_transitioned._oil_deductible_cost
+            _gas_deductible_cost_1 = self._contract1_transitioned._gas_deductible_cost
+            _oil_unrec_cost_1 = self._contract1_transitioned._oil_carward_cost_aftertf
+            _gas_unrec_cost_1 = self._contract1_transitioned._gas_carward_cost_aftertf
+            _oil_ctr_ets_1 = self._contract1_transitioned._oil_gov_share
+            _gas_ctr_ets_1 = self._contract1_transitioned._gas_gov_share
+            _ctr_ftp_1 = np.zeros_like(self._contract1_transitioned.project_years, dtype=float)
+            _gov_ftp_1 = np.zeros_like(self._contract1_transitioned.project_years, dtype=float)
+
+        # Determining variables if the type of Contract2 is Cost Recovery
+        if isinstance(self.contract2, CostRecovery):
+            _oil_deductible_cost_2 = self._contract2_transitioned._oil_cost_recovery_after_tf
+            _gas_deductible_cost_2 = self._contract2_transitioned._gas_cost_recovery_after_tf
+            _oil_unrec_cost_2 = self._contract2_transitioned._oil_unrecovered_after_transfer
+            _gas_unrec_cost_2 = self._contract2_transitioned._gas_unrecovered_after_transfer
+            _oil_ctr_ets_2 = self._contract2_transitioned._oil_ets_after_transfer
+            _gas_ctr_ets_2 = self._contract2_transitioned._gas_ets_after_transfer
+            _ctr_ftp_2 = self._contract2_transitioned._consolidated_ftp_ctr
+            _gov_ftp_2 = self._contract2_transitioned._consolidated_ftp_gov
+
+        # Determining variables if the type of Contract2 is Gross Split
+        elif isinstance(self.contract2, GrossSplit):
+            _oil_deductible_cost_2 = self._contract2_transitioned._oil_deductible_cost
+            _gas_deductible_cost_2 = self._contract2_transitioned._gas_deductible_cost
+            _oil_unrec_cost_2 = self._contract2_transitioned._oil_carward_cost_aftertf
+            _gas_unrec_cost_2 = self._contract2_transitioned._gas_carward_cost_aftertf
+            _oil_ctr_ets_2 = self._contract2_transitioned._oil_gov_share
+            _gas_ctr_ets_2 = self._contract2_transitioned._gas_gov_share
+            _ctr_ftp_2 = np.zeros_like(self._contract2_transitioned.project_years, dtype=float)
+            _gov_ftp_2 = np.zeros_like(self._contract2_transitioned.project_years, dtype=float)
+
+        # Deductible Cost / Cost Recovery
+        self._oil_deductible_cost = _oil_deductible_cost_1 + _oil_deductible_cost_2
+        self._gas_deductible_cost = _gas_deductible_cost_1 + _gas_deductible_cost_2
+
+        # Carry Forward Cost / Unrecoverable Cost
+        self._oil_unrec_cost = _oil_unrec_cost_1 + _oil_unrec_cost_2
+        self._gas_unrec_cost = _gas_unrec_cost_1 + _gas_unrec_cost_2
+
+        # ETS
+        self._oil_ctr_ets = _oil_ctr_ets_1 + _oil_ctr_ets_2
+        self._gas_ctr_ets = _gas_ctr_ets_1 + _gas_ctr_ets_2
+
+        # Contractor Net Operating Profit
+        self._net_operating_profit = (self._contract1_transitioned._consolidated_ctr_net_share +
+                                      self._contract2_transitioned._consolidated_ctr_net_share)
+
+        # Contractor Net Cash Flow
+        self._ctr_net_cashflow = (self._contract1_transitioned._consolidated_cashflow +
+                                  self._contract2_transitioned._consolidated_cashflow)
+
+        # FTP
+        self._ctr_ftp = _ctr_ftp_1 + _ctr_ftp_2
+        self._gov_ftp = _gov_ftp_1 + _gov_ftp_2
+
+        # DDMO
+        self._ddmo = (self._contract1_transitioned._consolidated_ddmo +
+                      self._contract2_transitioned._consolidated_ddmo)
+
+        # Tax
+        self._tax_payment = (self._contract1_transitioned._consolidated_tax_payment +
+                             self._contract2_transitioned._consolidated_tax_payment)
+
+        # Government Take
+        self._government_take = (self._contract1_transitioned._consolidated_government_take +
+                                 self._contract2_transitioned._consolidated_government_take)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
