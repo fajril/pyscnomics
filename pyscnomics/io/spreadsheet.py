@@ -25,6 +25,7 @@ from pyscnomics.io.config import (
     PSCCostRecoveryData,
     PSCGrossSplitData,
     SensitivityData,
+    MonteCarloData,
     OptimizationData,
 )
 
@@ -54,9 +55,11 @@ class Spreadsheet:
     sheets_loaded: list = field(default=None, init=False, repr=False)
     data_loaded: dict = field(default=None, init=False, repr=False)
 
-    # Attributes associated with data preparation
+    # Attributes associated with config data
     general_config_data: GeneralConfigData = field(default=None, init=False)
     fiscal_config_data: FiscalConfigData = field(default=None, init=False)
+
+    # Attributes associated with lifting data
     oil_lifting_data: OilLiftingData = field(default=None, init=False)
     gas_lifting_data: GasLiftingData = field(default=None, init=False)
     lpg_propane_lifting_data: LPGPropaneLiftingData = field(default=None, init=False)
@@ -64,17 +67,24 @@ class Spreadsheet:
     sulfur_lifting_data: SulfurLiftingData = field(default=None, init=False)
     electricity_lifting_data: ElectricityLiftingData = field(default=None, init=False)
     co2_lifting_data: CO2LiftingData = field(default=None, init=False)
+
+    # Attributes associated with cost data
     tangible_cost_data: TangibleCostData = field(default=None, init=False)
     intangible_cost_data: IntangibleCostData = field(default=None, init=False)
     opex_data: OPEXData = field(default=None, init=False)
     asr_cost_data: ASRCostData = field(default=None, init=False)
+
+    # Attributes associated with contract data
     psc_cr_data: PSCCostRecoveryData = field(default=None, init=False)
     psc_gs_data: PSCGrossSplitData = field(default=None, init=False)
     psc_transition_cr_to_cr: dict = field(default=None, init=False)
     psc_transition_cr_to_gs: dict = field(default=None, init=False)
     psc_transition_gs_to_gs: dict = field(default=None, init=False)
     psc_transition_gs_to_cr: dict = field(default=None, init=False)
+
+    # Fill in the attributes associated with additional functionality
     sensitivity_data: SensitivityData = field(default=None, init=False)
+    montecarlo_data: MonteCarloData = field(default=None, init=False)
     optimization_data: OptimizationData = field(default=None, init=False)
 
     def __post_init__(self):
@@ -1086,22 +1096,488 @@ class Spreadsheet:
                 project_years=self.general_config_data.project_years,
             )
 
-    def _get_psc_cr_data(self):
-        pass
+    def _get_psc_cr_data(self) -> PSCCostRecoveryData:
+        """
+        Retrieves Production Sharing Contract (PSC) Cost Recovery data
+        based on available sheets.
 
-    def _get_psc_gs_data(self):
-        pass
+        Returns
+        -------
+        PSCCostRecoveryData
+            An instance of PSCCostRecoveryData representing the extracted data
+            stored as its attributes.
 
-    def _get_psc_transition_cr_to_cr(self):
-        pass
+        Notes
+        -----
+        The procedures are as follows:
+        (1) Slice the data, only capture the columns that contain necessary data,
+        (2) Convert the remaining NaN values to None,
+        (3) Assign data to their associated attributes,
+        (4) Return a new instance of PSCCostRecoveryData with filled attributes.
+        """
+        # Step #1 - Step #2 (See 'Notes' section in the docstring)
+        psc_cr_data_loaded = self.data_loaded["Cost Recovery Config"].replace(np.nan, None)
 
-    def _get_psc_transition_cr_to_gs(self):
-        pass
+        # Step #3 - Step #4 (See 'Notes' section in the docstring)
+        return PSCCostRecoveryData(
+            ftp_availability=psc_cr_data_loaded.iloc[0, 2],
+            ftp_is_shared=psc_cr_data_loaded.iloc[1, 2],
+            ftp_portion=psc_cr_data_loaded.iloc[2, 2],
+            split_type=psc_cr_data_loaded.iloc[5, 2],
+            oil_ctr_pretax=psc_cr_data_loaded.iloc[6, 2],
+            gas_ctr_pretax=psc_cr_data_loaded.iloc[7, 2],
+            ic_availability=psc_cr_data_loaded.iloc[10, 2],
+            ic_oil=psc_cr_data_loaded.iloc[11, 2],
+            ic_gas=psc_cr_data_loaded.iloc[12, 2],
+            oil_cr_cap_rate=psc_cr_data_loaded.iloc[15, 2],
+            gas_cr_cap_rate=psc_cr_data_loaded.iloc[16, 2],
+            dmo_is_weighted=psc_cr_data_loaded.iloc[19, 2],
+            oil_dmo_holiday=psc_cr_data_loaded.iloc[22, 2],
+            oil_dmo_period=psc_cr_data_loaded.iloc[23, 2],
+            oil_dmo_start_production=psc_cr_data_loaded.iloc[24, 2],
+            oil_dmo_volume=psc_cr_data_loaded.iloc[25, 2],
+            oil_dmo_fee=psc_cr_data_loaded.iloc[26, 2],
+            gas_dmo_holiday=psc_cr_data_loaded.iloc[29, 2],
+            gas_dmo_period=psc_cr_data_loaded.iloc[30, 2],
+            gas_dmo_start_production=psc_cr_data_loaded.iloc[31, 2],
+            gas_dmo_volume=psc_cr_data_loaded.iloc[32, 2],
+            gas_dmo_fee=psc_cr_data_loaded.iloc[33, 2],
+            rc_split_data=psc_cr_data_loaded.iloc[38:45, 1:].to_numpy(),
+            icp_sliding_scale_data=psc_cr_data_loaded.iloc[49:, 1:].to_numpy(),
+        )
 
-    def _get_psc_transition_gs_to_gs(self):
-        pass
+    def _get_psc_gs_data(self) -> PSCGrossSplitData:
+        """
+        Retrieves Production Sharing Contract (PSC) Gross Split data
+        based on available sheets.
 
-    def _get_psc_transition_gs_to_cr(self):
+        Returns
+        -------
+        PSCGrossSplitData
+            An instance of PSCGrossSplitData representing the extracted data
+            stored as its attributes.
+
+        Notes
+        -----
+        The procedures are as follows:
+        (1) Slice the data, only capture the columns that contain necessary data,
+        (2) Convert the remaining NaN values to None,
+        (3) Assign data to their associated attributes,
+        (4) Return a new instance of PSCGrossSplitData with filled attributes.
+        """
+        # Step #1 - Step #2 (See 'Notes' section in the docstring)
+        psc_gs_data_loaded = (
+            self.data_loaded["Gross Split Config"]
+            .iloc[:, 2]
+            .replace(np.nan, None)
+        )
+
+        # Step #3 - Step #4 (See 'Notes' section in the docstring)
+        return PSCGrossSplitData(
+            field_status=psc_gs_data_loaded.iloc[0],
+            field_location=psc_gs_data_loaded.iloc[1],
+            reservoir_depth=psc_gs_data_loaded.iloc[2],
+            infrastructure_availability=psc_gs_data_loaded.iloc[3],
+            reservoir_type=psc_gs_data_loaded.iloc[4],
+            co2_content=psc_gs_data_loaded.iloc[5],
+            h2s_content=psc_gs_data_loaded.iloc[6],
+            oil_api=psc_gs_data_loaded.iloc[7],
+            domestic_content_use=psc_gs_data_loaded.iloc[8],
+            production_stage=psc_gs_data_loaded.iloc[9],
+            ministry_discretion_split=psc_gs_data_loaded.iloc[11],
+            dmo_is_weighted=psc_gs_data_loaded.iloc[14],
+            oil_dmo_holiday=psc_gs_data_loaded.iloc[17],
+            oil_dmo_period=psc_gs_data_loaded.iloc[18],
+            oil_dmo_start_production=psc_gs_data_loaded.iloc[19],
+            oil_dmo_volume=psc_gs_data_loaded.iloc[20],
+            oil_dmo_fee=psc_gs_data_loaded.iloc[21],
+            gas_dmo_holiday=psc_gs_data_loaded.iloc[24],
+            gas_dmo_period=psc_gs_data_loaded.iloc[25],
+            gas_dmo_start_production=psc_gs_data_loaded.iloc[26],
+            gas_dmo_volume=psc_gs_data_loaded.iloc[27],
+            gas_dmo_fee=psc_gs_data_loaded.iloc[28],
+        )
+
+    def _get_psc_transition_cr_to_cr(self) -> dict:
+        """
+        Extract and process the associated data for PSC transition CR to CR.
+
+        Returns
+        -------
+        dict
+            A dictionary containing PSCCostRecoveryData objects.
+
+        Notes
+        -----
+        The undertaken procedures are as follows:
+        (1) Filter attribute self.sheets_loaded for sheets that contain 'Cost Recovery Config' data,
+            then assigned it as local variable named 'psc_cr_to_cr_available',
+        (2) Capture psc_cr_to_cr data from attribute self.data_loaded, then perform the
+            necessary adjustment. Stored the result in a variable named 'psc_cr_to_cr_data_loaded',
+        (3) Define a variable named 'psc_cr_to_cr_data' as a dictionary that contain two
+            keys: (1) 'Cost Recovery Config', and (2) 'Cost Recovery Config (2)'. Each key is
+            an instance of PSCCostRecoveryData with the associated attributes loaded from
+            'psc_cr_to_cr_data_loaded',
+        (4) Return the variable 'psc_cr_to_cr_data'.
+
+        Example
+        -------
+        transition_cr_to_cr_data = instance._get_psc_transition_cr_to_cr()
+        config_1 = transition_cr_to_cr_data['Cost Recovery Config']
+        config_2 = transition_cr_to_cr_data['Cost Recovery Config (2)']
+        """
+        # Step #1 (See 'Notes' section in the docstring)
+        psc_cr_to_cr_available = list(filter(lambda i: "Cost Recovery Config" in i, self.sheets_loaded))
+
+        # Step #2 (See 'Notes' section in the docstring)
+        psc_cr_to_cr_data_loaded = {
+            key: self.data_loaded[key].replace(np.nan, None) for key in psc_cr_to_cr_available
+        }
+
+        # Step #3 - Step #4 (See 'Notes' section in the docstring)
+        psc_cr_to_cr_data = {
+            key: PSCCostRecoveryData(
+                ftp_availability=psc_cr_to_cr_data_loaded[key].iloc[0, 2],
+                ftp_is_shared=psc_cr_to_cr_data_loaded[key].iloc[1, 2],
+                ftp_portion=psc_cr_to_cr_data_loaded[key].iloc[2, 2],
+                split_type=psc_cr_to_cr_data_loaded[key].iloc[5, 2],
+                oil_ctr_pretax=psc_cr_to_cr_data_loaded[key].iloc[6, 2],
+                gas_ctr_pretax=psc_cr_to_cr_data_loaded[key].iloc[7, 2],
+                ic_availability=psc_cr_to_cr_data_loaded[key].iloc[10, 2],
+                ic_oil=psc_cr_to_cr_data_loaded[key].iloc[11, 2],
+                ic_gas=psc_cr_to_cr_data_loaded[key].iloc[12, 2],
+                oil_cr_cap_rate=psc_cr_to_cr_data_loaded[key].iloc[15, 2],
+                gas_cr_cap_rate=psc_cr_to_cr_data_loaded[key].iloc[16, 2],
+                dmo_is_weighted=psc_cr_to_cr_data_loaded[key].iloc[19, 2],
+                oil_dmo_holiday=psc_cr_to_cr_data_loaded[key].iloc[22, 2],
+                oil_dmo_period=psc_cr_to_cr_data_loaded[key].iloc[23, 2],
+                oil_dmo_start_production=psc_cr_to_cr_data_loaded[key].iloc[24, 2],
+                oil_dmo_volume=psc_cr_to_cr_data_loaded[key].iloc[25, 2],
+                oil_dmo_fee=psc_cr_to_cr_data_loaded[key].iloc[26, 2],
+                gas_dmo_holiday=psc_cr_to_cr_data_loaded[key].iloc[29, 2],
+                gas_dmo_period=psc_cr_to_cr_data_loaded[key].iloc[30, 2],
+                gas_dmo_start_production=psc_cr_to_cr_data_loaded[key].iloc[31, 2],
+                gas_dmo_volume=psc_cr_to_cr_data_loaded[key].iloc[32, 2],
+                gas_dmo_fee=psc_cr_to_cr_data_loaded[key].iloc[33, 2],
+                rc_split_data=psc_cr_to_cr_data_loaded[key].iloc[38:45, 1:].to_numpy(),
+                icp_sliding_scale_data=psc_cr_to_cr_data_loaded[key].iloc[49:, 1:].to_numpy(),
+            )
+            for key in psc_cr_to_cr_available
+        }
+
+        return psc_cr_to_cr_data
+
+    def _get_psc_transition_cr_to_gs(self) -> dict:
+        """
+        Extract and process the associated data for PSC transition CR to GS.
+
+        Returns
+        -------
+        dict
+            A dictionary containing PSCCostRecoveryData and PSCGrossSplitData objects.
+
+        Notes
+        -----
+        The undertaken procedures are as follows:
+        (1) Load the PSC CR and PSC GS data, respectively,
+        (2) Combine both data into a dictionary called 'psc_cr_to_gs_data_loaded',
+        (3) Define a variable named 'psc_cr_to_gs_data' as a dictionary that contain two
+            keys: (1) 'Cost Recovery Config', and (2) 'Gross Split Config'. The value of each
+            key is an instance of PSCCostRecoveryData and PSCGrossSplitData, respectively, with
+            the associated attributes loaded from 'psc_cr_to_gs_data_loaded',
+        (4) Return the variable 'psc_cr_to_gs_data'.
+
+        Example
+        -------
+        transition_cr_to_gs_data = instance._get_psc_transition_cr_to_gs()
+        config_1 = transition_cr_to_gs_data['Cost Recovery Config']
+        config_2 = transition_cr_to_gs_data['Gross Split Config']
+        """
+        # Step #1 (See 'Notes' section in the docstring)
+        psc_cr_data_loaded = self.data_loaded["Cost Recovery Config"].replace(np.nan, None)
+        psc_gs_data_loaded = (
+            self.data_loaded["Gross Split Config"]
+            .iloc[:, 2]
+            .replace(np.nan, None)
+        )
+
+        # Step #2 (See 'Notes' section in the docstring)
+        sheets_target = ["Cost Recovery Config", "Gross Split Config"]
+        data_loaded_target = [psc_cr_data_loaded, psc_gs_data_loaded]
+        psc_cr_to_gs_data_loaded = {key: data_loaded_target[i] for i, key in enumerate(sheets_target)}
+
+        # Step #3 - Step #4 (See 'Notes' section in the docstring)
+        psc_cr_to_gs_data = {
+            sheets_target[0]: PSCCostRecoveryData(
+                ftp_availability=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[0, 2],
+                ftp_is_shared=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[1, 2],
+                ftp_portion=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[2, 2],
+                split_type=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[5, 2],
+                oil_ctr_pretax=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[6, 2],
+                gas_ctr_pretax=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[7, 2],
+                ic_availability=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[10, 2],
+                ic_oil=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[11, 2],
+                ic_gas=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[12, 2],
+                oil_cr_cap_rate=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[15, 2],
+                gas_cr_cap_rate=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[16, 2],
+                dmo_is_weighted=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[19, 2],
+                oil_dmo_holiday=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[22, 2],
+                oil_dmo_period=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[23, 2],
+                oil_dmo_start_production=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[24, 2],
+                oil_dmo_volume=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[25, 2],
+                oil_dmo_fee=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[26, 2],
+                gas_dmo_holiday=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[29, 2],
+                gas_dmo_period=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[30, 2],
+                gas_dmo_start_production=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[31, 2],
+                gas_dmo_volume=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[32, 2],
+                gas_dmo_fee=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[33, 2],
+                rc_split_data=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[38:45, 1:].to_numpy(),
+                icp_sliding_scale_data=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[49:, 1:].to_numpy(),
+            ),
+            sheets_target[1]: PSCGrossSplitData(
+                field_status=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[0],
+                field_location=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[1],
+                reservoir_depth=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[2],
+                infrastructure_availability=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[3],
+                reservoir_type=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[4],
+                co2_content=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[5],
+                h2s_content=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[6],
+                oil_api=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[7],
+                domestic_content_use=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[8],
+                production_stage=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[9],
+                ministry_discretion_split=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[11],
+                dmo_is_weighted=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[14],
+                oil_dmo_holiday=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[17],
+                oil_dmo_period=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[18],
+                oil_dmo_start_production=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[19],
+                oil_dmo_volume=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[20],
+                oil_dmo_fee=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[21],
+                gas_dmo_holiday=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[24],
+                gas_dmo_period=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[25],
+                gas_dmo_start_production=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[26],
+                gas_dmo_volume=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[27],
+                gas_dmo_fee=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[28],
+            )
+        }
+
+        return psc_cr_to_gs_data
+
+    def _get_psc_transition_gs_to_gs(self) -> dict:
+        """
+        Extract and process the associated data for PSC transition GS to GS.
+
+        Returns
+        -------
+        dict
+            A dictionary containing PSCGrossSplitData objects.
+
+        Notes
+        -----
+        The undertaken procedures are as follows:
+        (1) Filter attribute self.sheets_loaded for sheets that contain 'Gross Split Config' data,
+            then assigned it as local variable named 'psc_gs_to_gs_available',
+        (2) Capture psc_gs_to_gs data from attribute self.data_loaded, then perform the
+            necessary adjustment. Stored the result in a variable named 'psc_gs_to_gs_data_loaded',
+        (3) Define a variable named 'psc_gs_to_gs_data' as a dictionary that contain two
+            keys: (1) 'Gross Split Config', and (2) 'Gross Split Config (2)'. Each keys is
+            an instance of PSCGrossSplitData with the associated attributes loaded from
+            'psc_gs_to_gs_data_loaded',
+        (4) Return the variable 'psc_gs_to_gs_data'.
+
+        Example
+        -------
+        transition_gs_to_gs_data = instance._get_psc_transition_gs_to_gs()
+        config_1 = transition_gs_to_gs_data['Gross Split Config']
+        config_2 = transition_gs_to_gs_data['Gross Split Config (2)']
+        """
+        # Step #1 (See 'Notes' section in the docstring)
+        psc_gs_to_gs_available = list(filter(lambda i: "Gross Split Config" in i, self.sheets_loaded))
+
+        # Step #2 (See 'Notes' section in the docstring)
+        psc_gs_to_gs_data_loaded = {
+            key: self.data_loaded[key].iloc[:, 2].replace(np.nan, None)
+            for key in psc_gs_to_gs_available
+        }
+
+        # Step #3 - Step #4 (See 'Notes' section in the docstring)
+        psc_gs_to_gs_data = {
+            key: PSCGrossSplitData(
+                field_status=psc_gs_to_gs_data_loaded[key].iloc[0],
+                field_location=psc_gs_to_gs_data_loaded[key].iloc[1],
+                reservoir_depth=psc_gs_to_gs_data_loaded[key].iloc[2],
+                infrastructure_availability=psc_gs_to_gs_data_loaded[key].iloc[3],
+                reservoir_type=psc_gs_to_gs_data_loaded[key].iloc[4],
+                co2_content=psc_gs_to_gs_data_loaded[key].iloc[5],
+                h2s_content=psc_gs_to_gs_data_loaded[key].iloc[6],
+                oil_api=psc_gs_to_gs_data_loaded[key].iloc[7],
+                domestic_content_use=psc_gs_to_gs_data_loaded[key].iloc[8],
+                production_stage=psc_gs_to_gs_data_loaded[key].iloc[9],
+                ministry_discretion_split=psc_gs_to_gs_data_loaded[key].iloc[11],
+                dmo_is_weighted=psc_gs_to_gs_data_loaded[key].iloc[14],
+                oil_dmo_holiday=psc_gs_to_gs_data_loaded[key].iloc[17],
+                oil_dmo_period=psc_gs_to_gs_data_loaded[key].iloc[18],
+                oil_dmo_start_production=psc_gs_to_gs_data_loaded[key].iloc[19],
+                oil_dmo_volume=psc_gs_to_gs_data_loaded[key].iloc[20],
+                oil_dmo_fee=psc_gs_to_gs_data_loaded[key].iloc[21],
+                gas_dmo_holiday=psc_gs_to_gs_data_loaded[key].iloc[24],
+                gas_dmo_period=psc_gs_to_gs_data_loaded[key].iloc[25],
+                gas_dmo_start_production=psc_gs_to_gs_data_loaded[key].iloc[26],
+                gas_dmo_volume=psc_gs_to_gs_data_loaded[key].iloc[27],
+                gas_dmo_fee=psc_gs_to_gs_data_loaded[key].iloc[28],
+            )
+            for key in psc_gs_to_gs_available
+        }
+
+        return psc_gs_to_gs_data
+
+    def _get_psc_transition_gs_to_cr(self) -> dict:
+        """
+        Extract and process the associated data for PSC transition GS to CR.
+
+        Returns
+        -------
+        dict
+            A dictionary containing PSCGrossSplitData and PSCCostRecoveryData objects.
+
+        Notes
+        -----
+        The undertaken procedures are as follows:
+        (1) Load the PSC GS and PSC CR data, respectively,
+        (2) Combine both data into a dictionary called 'psc_gs_to_cr_data_loaded',
+        (3) Define a variable named 'psc_gs_to_cr_data' as a dictionary that contain two
+            keys: (1) 'Gross Split Config', and (2) 'Cost Recovery Config'. The value of each
+            key is an instance of PSCGrossSplitData and PSCCostRecoveryData, respectively, with
+            the associated attributes loaded from 'psc_gs_to_cr_data_loaded',
+        (4) Return the variable 'psc_gs_to_cr_data'.
+
+        Example
+        -------
+        transition_gs_to_cr_data = instance._get_psc_transition_gs_to_cr()
+        config_1 = transition_gs_to_cr_data['Gross Split Config']
+        config_2 = transition_gs_to_cr_data['Cost Recovery Config']
+        """
+        # Step #1 (See 'Notes' section in the docstring)
+        psc_gs_data_loaded = (
+            self.data_loaded["Gross Split Config"]
+            .iloc[:, 2]
+            .replace(np.nan, None)
+        )
+        psc_cr_data_loaded = self.data_loaded["Cost Recovery Config"].replace(np.nan, None)
+
+        # Step #2 (See 'Notes' section in the docstring)
+        sheets_target = ["Gross Split Config", "Cost Recovery Config"]
+        data_loaded_target = [psc_gs_data_loaded, psc_cr_data_loaded]
+        psc_gs_to_cr_data_loaded = {key: data_loaded_target[i] for i, key in enumerate(sheets_target)}
+
+        # Step #3 - Step #4 (See 'Notes' section in the docstring)
+        psc_gs_to_cr_data = {
+            sheets_target[0]: PSCGrossSplitData(
+                field_status=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[0],
+                field_location=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[1],
+                reservoir_depth=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[2],
+                infrastructure_availability=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[3],
+                reservoir_type=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[4],
+                co2_content=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[5],
+                h2s_content=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[6],
+                oil_api=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[7],
+                domestic_content_use=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[8],
+                production_stage=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[9],
+                ministry_discretion_split=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[11],
+                dmo_is_weighted=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[14],
+                oil_dmo_holiday=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[17],
+                oil_dmo_period=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[18],
+                oil_dmo_start_production=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[19],
+                oil_dmo_volume=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[20],
+                oil_dmo_fee=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[21],
+                gas_dmo_holiday=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[24],
+                gas_dmo_period=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[25],
+                gas_dmo_start_production=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[26],
+                gas_dmo_volume=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[27],
+                gas_dmo_fee=psc_gs_to_cr_data_loaded[sheets_target[0]].iloc[28],
+            ),
+            sheets_target[1]: PSCCostRecoveryData(
+                ftp_availability=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[0, 2],
+                ftp_is_shared=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[1, 2],
+                ftp_portion=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[2, 2],
+                split_type=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[5, 2],
+                oil_ctr_pretax=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[6, 2],
+                gas_ctr_pretax=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[7, 2],
+                ic_availability=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[10, 2],
+                ic_oil=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[11, 2],
+                ic_gas=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[12, 2],
+                oil_cr_cap_rate=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[15, 2],
+                gas_cr_cap_rate=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[16, 2],
+                dmo_is_weighted=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[19, 2],
+                oil_dmo_holiday=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[22, 2],
+                oil_dmo_period=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[23, 2],
+                oil_dmo_start_production=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[24, 2],
+                oil_dmo_volume=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[25, 2],
+                oil_dmo_fee=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[26, 2],
+                gas_dmo_holiday=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[29, 2],
+                gas_dmo_period=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[30, 2],
+                gas_dmo_start_production=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[31, 2],
+                gas_dmo_volume=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[32, 2],
+                gas_dmo_fee=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[33, 2],
+                rc_split_data=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[38:45, 1:].to_numpy(),
+                icp_sliding_scale_data=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[49:, 1:].to_numpy(),
+            )
+        }
+
+        return psc_gs_to_cr_data
+
+    def _get_sensitivity_data(self) -> SensitivityData:
+        """
+        Extract and process the associated data for sensitivity analysis.
+
+        Returns
+        -------
+        SensitivityData
+            An instance of SensitivityData.
+
+        Notes
+        -----
+        The undertaken procedures are as follows:
+        (1) Extract sensitivity data from 'self.data_loaded',
+        (2) Create a new instance of SensitivityData with the necessary information
+            stored as the corresponding attributes.
+        """
+        sensitivity_data_loaded = self.data_loaded["Sensitivity"].iloc[0:10, 1:3]
+
+        return SensitivityData(
+            parameter=sensitivity_data_loaded.iloc[5:, 0].to_numpy().tolist(),
+            percentage_min=sensitivity_data_loaded.iloc[0, 1],
+            percentage_max=sensitivity_data_loaded.iloc[1, 1],
+            step=sensitivity_data_loaded.iloc[2, 1],
+        )
+
+    def _get_montecarlo_data(self):
+        """
+        Extract and process the associated data for montecarlo analysis.
+
+        Returns
+        -------
+        MonteCarloData
+            An instance of MonteCarloData.
+
+        Notes
+        -----
+        The undertaken procedures are as follows:
+        (1) Extract montecarlo data from 'self.data_loaded',
+        (2) Create a new instance of MonteCarloData with the necessary information
+            stored as the corresponding attributes.
+        """
+        mc_data_loaded = self.data_loaded["Uncertainity"].iloc[1:6, np.r_[1:3, 4, 6:8]]
+
+        return MonteCarloData(
+            parameter=mc_data_loaded.iloc[:, 0].to_numpy(),
+            distribution=mc_data_loaded.iloc[:, 1].to_numpy(),
+            min_values=mc_data_loaded.iloc[:, 2].to_numpy(),
+            max_values=mc_data_loaded.iloc[:, 3].to_numpy(),
+            std_dev=mc_data_loaded.iloc[:, 4].to_numpy(),
+            data_length=mc_data_loaded.shape[0],
+        )
+
+    def _get_optimization_data(self):
         pass
 
     def prepare_data(self):
@@ -1116,9 +1592,11 @@ class Spreadsheet:
         # print(f'Filetype: {self.data_loaded["Prod Oil"]}')
         # print('oil prod = ', self.data_loaded["Prod Oil"])
 
-        # Fill in the attributes associated with data preparation
+        # Fill in the attributes associated with config data
         self.general_config_data = self._get_general_config_data()
         self.fiscal_config_data = self._get_fiscal_config_data()
+
+        # Fill in the attributes associated with lifting data
         self.oil_lifting_data = self._get_oil_lifting_data()
         self.gas_lifting_data = self._get_gas_lifting_data()
         self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
@@ -1126,11 +1604,25 @@ class Spreadsheet:
         self.sulfur_lifting_data = self._get_sulfur_lifting_data()
         self.electricity_lifting_data = self._get_electricity_lifting_data()
         self.co2_lifting_data = self._get_co2_lifting_data()
+
+        # Fill in the attributes associated with cost data
         self.tangible_cost_data = self._get_tangible_cost_data()
         self.intangible_cost_data = self._get_intangible_cost_data()
         self.opex_data = self._get_opex_data()
         self.asr_cost_data = self._get_asr_cost_data()
 
-        # print("\t")
-        # print(f"Filetype: {type(self.fiscal_config_data)}")
-        # print("fiscal_config_data = \n", self.fiscal_config_data)
+        # Fill in the attributes associated with contract data
+        self.psc_cr_data = self._get_psc_cr_data()
+        self.psc_gs_data = self._get_psc_gs_data()
+        self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
+        self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
+        self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
+        self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
+
+        # Fill in the attributes associated with additional functionality
+        self.sensitivity_data = self._get_sensitivity_data()
+        self.montecarlo_data = self._get_montecarlo_data()
+
+        print("\t")
+        print(f"Filetype: {type(self.montecarlo_data)}")
+        print("montecarlo_data = \n", self.montecarlo_data)

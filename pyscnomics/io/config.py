@@ -85,6 +85,11 @@ class ASRCostDataException(Exception):
     pass
 
 
+class MonteCarloDataException(Exception):
+    """ Exception to be raised for an inappropriate use of MonteCarloData class """
+
+    pass
+
 @dataclass
 class GeneralConfigData:
     """
@@ -1556,10 +1561,10 @@ class PSCCostRecoveryData:
         Volume for DMO related to gas.
     gas_dmo_fee: float
         Fee for DMO related to gas.
-    rc_split: dict
-        Dictionary for rc split.
-    icp_sliding_scale : dict
-        Dictionary for icp sliding scale.
+    rc_split_data: np.ndarray
+        Array of rc split data.
+    icp_sliding_scale_data : np.ndarray
+        Array of icp sliding scale data.
 
     Notes
     -----
@@ -1604,23 +1609,253 @@ class PSCCostRecoveryData:
     gas_dmo_volume: float
     gas_dmo_fee: float
 
+    # Attributes associated with rc_split and icp_sliding_scale
+    rc_split_data: np.ndarray = field(repr=False)
+    icp_sliding_scale_data: np.ndarray = field(repr=False)
+
     # Attributes to be defined later on
-    rc_split: dict
-    icp_sliding_scale: dict
+    rc_split: dict = field(default=None, init=False)
+    icp_sliding_scale: dict = field(default=None, init=False)
+
+    def __post_init__(self):
+        # Prepare attribute rc_split
+        if self.split_type == "RC Split":
+            rc_split_attrs = [
+                "RC Bottom Limit",
+                "RC Top Limit",
+                "Pre Tax CTR Oil",
+                "Pre Tax CTR Gas",
+            ]
+            rc_split = {key: self.rc_split_data[:, i] for i, key in enumerate(rc_split_attrs)}
+            self.rc_split = {
+                key: np.array(list(filter(lambda i: i is not None, rc_split[key])))
+                for key in rc_split_attrs
+            }
+
+        # Prepare attribute icp_sliding_scale
+        if self.split_type == "ICP Sliding Scale":
+            icp_attrs = [
+                "ICP Bottom Limit",
+                "ICP Top Limit",
+                "Pre Tax CTR Oil",
+                "Pre Tax CTR Gas",
+            ]
+            self.icp_sliding_scale = {
+                key: self.icp_sliding_scale_data[:, i] for i, key in enumerate(icp_attrs)
+            }
 
 
 @dataclass
 class PSCGrossSplitData:
-    """123
     """
-    pass
+    A dataclass representing attributes associated with Production Sharing Contract
+    (PSC) gross split.
+
+    Attributes
+    ----------
+    field_status: str
+        The status of the field.
+    field_location: str
+        The location of the field.
+    reservoir_depth: str
+        The depth of the reservoir.
+    infrastructure_availability: str
+        The availability of infrastructure.
+    reservoir_type: str
+        The type of reservoir.
+    co2_content: str
+        The CO2 content in the production.
+    h2s_content: str
+        The H2S content in the production.
+    oil_api: str
+        The API gravity of the oil.
+    domestic_content_use: str
+        The use of domestic content.
+    production_stage: str
+        The stage of production.
+    ministry_discretion_split: float
+        The split determined by ministry discretion.
+    dmo_is_weighted: str
+        Weighting information for general DMO.
+    oil_dmo_holiday: str
+        Holiday information for DMO oil.
+    oil_dmo_period: int | float
+        The period of DMO oil production.
+    oil_dmo_start_production: date
+        The start date of DMO oil production.
+    oil_dmo_volume: float
+        The volume of DMO oil production.
+    oil_dmo_fee: float
+        The fee associated with DMO oil production.
+    gas_dmo_holiday: str
+        Holiday information for DMO gas.
+    gas_dmo_period: int | float
+        The period of DMO gas production.
+    gas_dmo_start_production: date
+        The start date of DMO gas production.
+    gas_dmo_volume: float
+        The volume of DMO gas production.
+    gas_dmo_fee: float
+        The fee associated with DMO gas production.
+
+    Notes
+    -----
+    This class is designed to store data related to a Production Sharing Contract
+    (PSC) gross split scenario.
+    """
+    # Attributes associated with split configuration
+    field_status: str
+    field_location: str
+    reservoir_depth: str
+    infrastructure_availability: str
+    reservoir_type: str
+    co2_content: str
+    h2s_content: str
+    oil_api: str
+    domestic_content_use: str
+    production_stage: str
+    ministry_discretion_split: float
+
+    # Attribute associated with general DMO
+    dmo_is_weighted: str
+
+    # Attributes associated with DMO oil
+    oil_dmo_holiday: str
+    oil_dmo_period: int | float
+    oil_dmo_start_production: date
+    oil_dmo_volume: float
+    oil_dmo_fee: float
+
+    # Attributes associated with DMO gas
+    gas_dmo_holiday: str
+    gas_dmo_period: int | float
+    gas_dmo_start_production: date
+    gas_dmo_volume: float
+    gas_dmo_fee: float
 
 
 @dataclass
 class SensitivityData:
-    """123
     """
-    pass
+    A dataclass representing attributes associated with sensitivity analysis.
+
+    Attributes
+    ----------
+    parameter: list
+        A list of parameters or values for which sensitivity analysis is conducted.
+    percentage_min: float
+        The minimum percentage value for sensitivity analysis.
+    percentage_max: float
+        The maximum percentage value for sensitivity analysis.
+    step: int
+        The step size for the sensitivity analysis.
+    """
+    parameter: list
+    percentage_min: float
+    percentage_max: float
+    step: int
+
+
+@dataclass
+class MonteCarloData:
+    """
+    A dataclass representing attributes associated with montecarlo analysis.
+
+    Attributes
+    ----------
+    parameter: list
+        A list of parameters or variables for the simulation.
+    distribution: list
+        A list of probability distributions corresponding to each parameter.
+    min_values: np.ndarray
+        An array of minimum values for each parameter.
+    max_values: np.ndarray
+        An array of maximum values for each parameter.
+    std_dev: np.ndarray
+        An array of standard deviations for each parameter.
+    """
+    parameter: list
+    distribution: list
+    min_values: np.ndarray
+    max_values: np.ndarray
+    std_dev: np.ndarray
+
+    # Attribute associated with length of the captured data
+    data_length: int
+
+    def __post_init__(self):
+        # Prepare attribute min_values
+        if not isinstance(self.min_values, np.ndarray):
+            raise MonteCarloDataException(
+                f"Minimum values data must be given in the form of numpy.ndarray. "
+                f"The current min_values data is given in the form of: "
+                f"({self.min_values.__class__.__qualname__})."
+            )
+
+        min_values_nan = list(filter(lambda i: i is np.nan, self.min_values))
+
+        if len(min_values_nan) > 0:
+            raise MonteCarloDataException(
+                f"Minimum values data is incomplete. Please re-check the min_values data. "
+                f"The number of min_values data must be ({self.data_length}), "
+                f"not ({self.data_length - len(min_values_nan)})."
+            )
+
+        else:
+            self.min_values = self.min_values
+
+        # Prepare attribute max_values
+        if not isinstance(self.max_values, np.ndarray):
+            raise MonteCarloDataException(
+                f"Maximum values data must be given in the form of numpy.ndarray. "
+                f"The current max_values data is given in the form of: "
+                f"({self.max_values.__class__.__qualname__})."
+            )
+
+        max_values_nan = list(filter(lambda i: i is np.nan, self.max_values))
+
+        if len(max_values_nan) > 0:
+            raise MonteCarloDataException(
+                f"Maximum values data is incomplete. Please re-check the max_values data. "
+                f"The number of max_values data must be ({self.data_length}), "
+                f"not ({self.data_length - len(max_values_nan)})."
+            )
+
+        else:
+            self.max_values = self.max_values
+
+        # Prepare attribute std_dev
+        if not isinstance(self.std_dev, np.ndarray):
+            raise MonteCarloDataException(
+                f"Standard deviation data must be given in the form of numpy.ndarray. "
+                f"The current std_dev data is given in the form of: "
+                f"({self.std_dev.__class__.__qualname__})."
+            )
+
+        std_dev_nan = list(filter(lambda i: i is np.nan, self.std_dev))
+
+        if len(std_dev_nan) > 0:
+            raise MonteCarloDataException(
+                f"Standard deviation data is incomplete. Please re-check the std_dev data. "
+                f"The number of std_dev data must be ({self.data_length}), "
+                f"not ({self.data_length - len(std_dev_nan)})."
+            )
+
+        else:
+            self.std_dev = self.std_dev
+
+        # Conditions to raise exception
+        for i, val in enumerate(self.min_values):
+            if self.min_values[i] == self.max_values[i]:
+                raise MonteCarloDataException(
+                    f"Maximum and minimum value(s) are the same."
+                )
+
+            if self.min_values[i] > self.max_values[i]:
+                raise MonteCarloDataException(
+                    f"Maximum values of parameter(s) are less "
+                    f"than their corresponding minimum values."
+                )
 
 
 @dataclass
