@@ -90,6 +90,13 @@ class MonteCarloDataException(Exception):
 
     pass
 
+
+class OptimizationDataException(Exception):
+    """ Exception to be raised for an inappropriate use of OptimizationData class """
+
+    pass
+
+
 @dataclass
 class GeneralConfigData:
     """
@@ -169,24 +176,28 @@ class FiscalConfigData:
         The future rate used in ASR cost calculation.
     depreciation_method: str
         The depreciation method to use.
-    multi_val: dict
+    multi_tax: dict
         Attribute that stores information of year and tax_rate for multi value case.
     project_years: np.ndarray
         The array of project years
     """
-
     tax_mode: str
     tax_rate_input: float = field(repr=False)
     tax_payment_method: str
     tax_psc_cost_recovery: str
     npv_mode: str
+    discounting_mode: str
     future_rate_asr: float
     depreciation_method: str
-    multi_val: dict = field(repr=False)
+    inflation_rate_mode: str
+    inflation_rate_input: float = field(repr=False)
+    multi_tax: dict = field(repr=False)
+    multi_inflation: dict = field(repr=False)
     project_years: np.ndarray
 
     # Attributes to be defined later
     tax_rate: None | float | np.ndarray = field(default=None, init=False)
+    inflation_rate: float | np.ndarray = field(default=None, init=False)
 
     def __post_init__(self):
         # Configure attribute tax_rate
@@ -200,77 +211,121 @@ class FiscalConfigData:
             self.tax_rate = None
 
         elif self.tax_mode == "User Input - Multi Value":
-            # Filter dict 'self.multi_val' for 'nan' values
-            multi_val_adj = {
-                key: np.array(list(filter(lambda i: i is not np.nan, self.multi_val[key])))
-                for key in self.multi_val.keys()
+            # Filter dict 'self.multi_tax' for NaN values
+            multi_tax_adj = {
+                key: np.array(list(filter(lambda i: i is not np.nan, self.multi_tax[key])))
+                for key in self.multi_tax.keys()
             }
 
-            # Raise error for unequal length of 'year' and 'tax_rate' in 'multi_val_adj'
-            if len(multi_val_adj["year"]) != len(multi_val_adj["tax_rate"]):
+            # Raise error for unequal length of 'year' and 'rate' in 'multi_tax_adj'
+            if len(multi_tax_adj["year"]) != len(multi_tax_adj["rate"]):
                 raise FiscalConfigDataException(
                     f"Unequal number of arrays: "
-                    f"year: {len(multi_val_adj['year'])}, "
-                    f"tax_rate: {len(multi_val_adj['tax_rate'])}."
+                    f"year: {len(multi_tax_adj['year'])}, "
+                    f"tax_rate: {len(multi_tax_adj['rate'])}."
                 )
 
             # Specify the minimum and maximum years
-            min_year = min(self.project_years)
-            max_year = max(self.project_years)
+            min_year_tax = min(self.project_years)
+            max_year_tax = max(self.project_years)
 
-            if min(multi_val_adj["year"]) < min(self.project_years):
-                min_year = min(multi_val_adj["year"])
+            if min(multi_tax_adj["year"]) < min(self.project_years):
+                min_year_tax = min(multi_tax_adj["year"])
 
-            if max(multi_val_adj["year"]) > max(self.project_years):
-                max_year = max(multi_val_adj["year"])
+            if max(multi_tax_adj["year"]) > max(self.project_years):
+                max_year_tax = max(multi_tax_adj["year"])
 
             # Create new arrays of 'year' and 'tax_rate'
-            multi_val_new = {
-                "year": np.arange(min_year, max_year + 1, 1),
-                "tax_rate": np.bincount(
-                    multi_val_adj["year"] - min_year,
-                    weights=multi_val_adj["tax_rate"]
+            multi_tax_new = {
+                "year": np.arange(min_year_tax, max_year_tax + 1, 1),
+                "rate": np.bincount(
+                    multi_tax_adj["year"] - min_year_tax,
+                    weights=multi_tax_adj["rate"]
                 )
             }
 
             # Specify the index location of multi_val_adj["year"] in array multi_val_new["year"]
-            loc = np.array(
+            id_tax = np.array(
                 [
-                    np.argwhere(multi_val_new["year"] == multi_val_adj["year"][i]).ravel()
-                    for i, val in enumerate(multi_val_adj["year"])
+                    np.argwhere(multi_tax_new["year"] == val).ravel()
+                    for val in multi_tax_adj["year"]
                 ]
             ).ravel()
 
-            # Modify the value of multi_val_new["year"]
-            for i, val in enumerate(multi_val_adj["tax_rate"]):
-                if i == (len(multi_val_adj["tax_rate"]) - 1):
+            # Modify the value of multi_tax_new["year"]
+            for i, val in enumerate(multi_tax_adj["rate"]):
+                if i == (len(multi_tax_adj["rate"]) - 1):
                     break
-                multi_val_new["tax_rate"][loc[i]:loc[i + 1]] = multi_val_adj["tax_rate"][i]
+                multi_tax_new["rate"][id_tax[i]:id_tax[i + 1]] = multi_tax_adj["rate"][i]
 
-            # Add values to the right side of multi_val_new["year"]
-            if len(multi_val_new["year"]) > len(multi_val_new["tax_rate"]):
-                fill_num = len(multi_val_new["year"]) - len(multi_val_new["tax_rate"])
-                fill_right = np.repeat(multi_val_adj["tax_rate"][-1], fill_num)
-                multi_val_new["tax_rate"] = np.concatenate((multi_val_new["tax_rate"], fill_right))
+            # Add values to the right side of multi_tax_new["year"]
+            if len(multi_tax_new["year"]) > len(multi_tax_new["rate"]):
+                fill_num = len(multi_tax_new["year"]) - len(multi_tax_new["rate"])
+                fill_right = np.repeat(multi_tax_adj["rate"][-1], fill_num)
+                multi_tax_new["rate"] = np.concatenate((multi_tax_new["rate"], fill_right))
 
             # Add values to the left side of multi_val_new["year"]
-            if loc[0] > 0:
-                fill_left = np.repeat(multi_val_adj["tax_rate"][0], loc[0])
-                multi_val_new["tax_rate"][0:loc[0]] = fill_left
+            if id_tax[0] > 0:
+                fill_left = np.repeat(multi_tax_adj["rate"][0], id_tax[0])
+                multi_tax_new["rate"][0:id_tax[0]] = fill_left
 
-            # Identify the index of project_years in multi_val_new["year"]
-            idx = np.array(
+            # Capture 'year' and 'rate' in accordance with project_years
+            id_tax_new = np.array(
                 [
-                    np.argwhere(multi_val_new["year"] == i).ravel() for i in
-                    [min(self.project_years), max(self.project_years)]
+                    np.argwhere(multi_tax_new["year"] == i).ravel()
+                    for i in [min(self.project_years), max(self.project_years)]
                 ]
             ).ravel()
 
-            # Identify the final tax_rate array
-            for key, j in zip(["year_final", "tax_rate_final"], ["year", "tax_rate"]):
-                multi_val_new[key] = multi_val_new[j][idx[0]:int(idx[1] + 1)]
+            multi_tax_new["year_final"] = (
+                multi_tax_new["year"][id_tax_new[0]:int(id_tax_new[1] + 1)]
+            )
 
-            self.tax_rate = multi_val_new["tax_rate_final"]
+            multi_tax_new["rate_final"] = (
+                multi_tax_new["rate"][id_tax_new[0]:int(id_tax_new[1] + 1)]
+            )
+
+            self.tax_rate = multi_tax_new["rate_final"]
+
+        # Configure attribute inflation_rate
+        if self.inflation_rate_mode == "User Input - Single Value":
+            if pd.isna(self.inflation_rate_input):
+                self.inflation_rate = 0.02
+            else:
+                self.inflation_rate = self.inflation_rate_input
+
+        elif self.inflation_rate_mode == "User Input - Multi Value":
+            # Filter dict 'self.multi_inflation' for NaN values
+            multi_inflation_adj = {
+                key: np.array(list(filter(lambda i: i is not np.nan, self.multi_inflation[key])))
+                for key in self.multi_inflation.keys()
+            }
+
+            # Raise error for unequal length of 'year' and 'rate' in 'multi_inflation_adj'
+            if len(multi_inflation_adj["year"]) != len(multi_inflation_adj["rate"]):
+                raise FiscalConfigDataException(
+                    f"Unequal number of arrays: "
+                    f"year: {len(multi_inflation_adj['year'])}, "
+                    f"tax_rate: {len(multi_inflation_adj['rate'])}."
+                )
+
+            # Specify the minimum and maximum years
+            min_year_inflation = min(self.project_years)
+            max_year_inflation = max(self.project_years)
+
+            if min(multi_inflation_adj["year"]) < min(self.project_years):
+                min_year_inflation = min(multi_inflation_adj["year"])
+
+            if max(multi_inflation_adj["year"]) > max(self.project_years):
+                max_year_inflation = max(multi_inflation_adj["year"])
+
+            print('\t')
+            print(f'Filetype: {type(min_year_inflation)}')
+            print('min_year_inflation = ', min_year_inflation)
+
+            print('\t')
+            print(f'Filetype: {type(max_year_inflation)}')
+            print('max_year_inflation = ', max_year_inflation)
 
 
 @dataclass
@@ -1860,6 +1915,67 @@ class MonteCarloData:
 
 @dataclass
 class OptimizationData:
-    """123
     """
-    pass
+    A dataclass representing attributes associated with optimization study.
+
+    Attributes
+    ----------
+    target: dict
+        The target data.
+    data_cr_init: dict
+        The initial cost recovery data.
+    data_gs_init: dict
+        The initial gross split data.
+    """
+    target: dict
+    data_cr_init: dict = field(repr=False)
+    data_gs_init: dict = field(repr=False)
+
+    # Attributes to be defined later
+    data_cr: dict = field(default=None, init=False)
+    data_gs: dict = field(default=None, init=False)
+
+    def __post_init__(self):
+        # Prepare attribute data_cr
+        # Step #1: raise exception for inappropriate data input
+        check_data_cr = [i <= j for i, j in zip(self.data_cr_init["max"], self.data_cr_init["min"])]
+
+        if True in check_data_cr:
+            raise OptimizationDataException(
+                f"Error in cost recovery data input. "
+                f"The maximum value(s) must be larger than the minimum value(s). "
+                f"Max: ({self.data_cr_init['max']}), "
+                f"Min: ({self.data_cr_init['min']})."
+            )
+
+        # Step #2: filter out 'None' values
+        id_cr_unsorted = np.array(
+            [i for i, val in enumerate(self.data_cr_init["priority"]) if val is not None]
+        )
+        data_cr_unsorted = {key: self.data_cr_init[key][id_cr_unsorted] for key in self.data_cr_init}
+
+        # Step #3: sorted the data based on the values of "priority"
+        id_cr_sorted = np.argsort(data_cr_unsorted["priority"])
+        self.data_cr = {key: data_cr_unsorted[key][id_cr_sorted] for key in data_cr_unsorted}
+
+        # Prepare attribute data_gs
+        # Step #1: raise exception for inappropriate data input
+        check_data_gs = [i <= j for i, j in zip(self.data_gs_init["max"], self.data_gs_init["min"])]
+
+        if True in check_data_gs:
+            raise OptimizationDataException(
+                f"Error in cost recovery data input. "
+                f"The maximum value(s) must be larger than the minimum value(s). "
+                f"Max: ({self.data_gs_init['max']}), "
+                f"Min: ({self.data_gs_init['min']})."
+            )
+
+        # Step #2: filter out 'None' values
+        id_gs_unsorted = np.array(
+            [i for i, val in enumerate(self.data_gs_init["priority"]) if val is not None]
+        )
+        data_gs_unsorted = {key: self.data_gs_init[key][id_gs_unsorted] for key in self.data_gs_init}
+
+        # Step #3: sorted the data based on the values of "priority"
+        id_gs_sorted = np.argsort(data_gs_unsorted["priority"])
+        self.data_gs = {key: data_gs_unsorted[key][id_gs_sorted] for key in data_gs_unsorted}

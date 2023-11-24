@@ -105,12 +105,6 @@ class Spreadsheet:
                     f"Excel filename must be provided in '.xlsm' format."
                 )
 
-        # Instantiate attributes of dict type
-        self.psc_transition_cr_to_cr = {}
-        self.psc_transition_cr_to_gs = {}
-        self.psc_transition_gs_to_gs = {}
-        self.psc_transition_gs_to_cr = {}
-
     def read_from_excel(self) -> None:
         """
         Reads data from a target Excel file specified by 'workbook_to_read' attribute.
@@ -241,11 +235,18 @@ class Spreadsheet:
         tax_payment_method = fiscal_config_data_loaded.iloc[11, 1]
         tax_psc_cost_recovery = fiscal_config_data_loaded.iloc[14, 1]
         npv_mode = fiscal_config_data_loaded.iloc[17, 1]
-        future_rate_asr = fiscal_config_data_loaded.iloc[20, 1]
-        depreciation_method = fiscal_config_data_loaded.iloc[23, 1]
-        multi_val = {
+        discounting_mode = fiscal_config_data_loaded.iloc[18, 1]
+        future_rate_asr = fiscal_config_data_loaded.iloc[21, 1]
+        depreciation_method = fiscal_config_data_loaded.iloc[24, 1]
+        inflation_rate_mode = fiscal_config_data_loaded.iloc[27, 1]
+        inflation_rate_input = fiscal_config_data_loaded.iloc[28, 1]
+        multi_tax = {
             "year": fiscal_config_data_loaded.iloc[4:10, 0].to_numpy(),
-            "tax_rate": fiscal_config_data_loaded.iloc[4:10, 1].to_numpy(),
+            "rate": fiscal_config_data_loaded.iloc[4:10, 1].to_numpy(),
+        }
+        multi_inflation = {
+            "year": fiscal_config_data_loaded.iloc[31:, 0].to_numpy(),
+            "rate": fiscal_config_data_loaded.iloc[31:, 1].to_numpy(),
         }
 
         return FiscalConfigData(
@@ -254,9 +255,13 @@ class Spreadsheet:
             tax_payment_method=tax_payment_method,
             tax_psc_cost_recovery=tax_psc_cost_recovery,
             npv_mode=npv_mode,
+            discounting_mode=discounting_mode,
             future_rate_asr=future_rate_asr,
             depreciation_method=depreciation_method,
-            multi_val=multi_val,
+            inflation_rate_mode=inflation_rate_mode,
+            inflation_rate_input=inflation_rate_input,
+            multi_tax=multi_tax,
+            multi_inflation=multi_inflation,
             project_years=self.general_config_data.project_years,
         )
 
@@ -1550,7 +1555,7 @@ class Spreadsheet:
             step=sensitivity_data_loaded.iloc[2, 1],
         )
 
-    def _get_montecarlo_data(self):
+    def _get_montecarlo_data(self) -> MonteCarloData:
         """
         Extract and process the associated data for montecarlo analysis.
 
@@ -1566,7 +1571,7 @@ class Spreadsheet:
         (2) Create a new instance of MonteCarloData with the necessary information
             stored as the corresponding attributes.
         """
-        mc_data_loaded = self.data_loaded["Uncertainity"].iloc[1:6, np.r_[1:3, 4, 6:8]]
+        mc_data_loaded = self.data_loaded["Uncertainty"].iloc[1:6, np.r_[1:3, 4, 6:8]]
 
         return MonteCarloData(
             parameter=mc_data_loaded.iloc[:, 0].to_numpy(),
@@ -1577,52 +1582,115 @@ class Spreadsheet:
             data_length=mc_data_loaded.shape[0],
         )
 
-    def _get_optimization_data(self):
-        pass
+    def _get_optimization_data(self) -> OptimizationData:
+        """
+        Extract and process the associated data for optimization study.
 
-    def prepare_data(self):
-        """123"""
+        Returns
+        -------
+        OptimizationData
+            An instance of OptimizationData.
+
+        Notes
+        -----
+        The undertaken operations are as follows:
+        (1) Extract optimization data from 'self.data_loaded' and perform the necessary adjustments,
+        (2) Configure the data associated with PSC Cost Recovery optimization,
+        (3) Configure the data associated with PSC Gross Split optimization,
+        (4) Configure the data associated with objective function,
+        (5) Create an instance of OptimizationData and store the above data as its attributes.
+        """
+        # Step #1 (See 'Notes' section in the docstring)
+        optimization_data_loaded = (
+            self.data_loaded["Optimization"]
+            .iloc[:, np.r_[1, 4, 6:8, 3, 5]]
+            .replace(np.nan, None)
+        )
+
+        # Step #2 (See 'Notes' section in the docstring)
+        data_cr_init = {
+            key: optimization_data_loaded.iloc[3:12, i].to_numpy()
+            for i, key in enumerate(["parameter", "priority", "min", "max"])
+        }
+
+        # Step #3 (See 'Notes' section in the docstring)
+        data_gs_init = {
+            key: optimization_data_loaded.iloc[14:, i].to_numpy()
+            for i, key in enumerate(["parameter", "priority", "min", "max"])
+        }
+
+        # Step #4 (See 'Notes' section in the docstring)
+        target = {
+            key: optimization_data_loaded.iloc[0, i + 4]
+            for i, key in enumerate(["parameter", "value"])
+        }
+
+        # Step #5 (See 'Notes' section in the docstring)
+        return OptimizationData(
+            target=target,
+            data_cr_init=data_cr_init,
+            data_gs_init=data_gs_init,
+        )
+
+    def prepare_data(self) -> None:
+        """
+        Prepare data for optimization.
+
+        Reads and prepare data from a target Excel file and fills in attributes
+        associated with various categories, including configuration, lifting, cost,
+        contract, and additional functionality.
+
+        Returns
+        -------
+        None
+            This method modifies the instance attributes of the class.
+
+        Notes
+        -----
+        This method serves as a comprehensive data preparation step, calling specific
+        private methods to obtain and assign data based on their category.
+
+        The attributes include general configuration data, fiscal configuration data,
+        lifting data for oil, gas, LPG propane, LPG butane, sulfur, electricity, and CO2, cost data
+        including tangible and intangible costs, opex, and ASR costs, contract data including
+        PSC Cost Recovery (CR), Gross Split (GS), and transition cases, as well as additional
+        functionality data such as sensitivity, Monte Carlo, and optimization data.
+        """
         # Read data from a target Excel file
         self.read_from_excel()
-
-        # print("\t")
-        # print("data loaded = \n", self.data_loaded.keys())
-
-        # print('\t')
-        # print(f'Filetype: {self.data_loaded["Prod Oil"]}')
-        # print('oil prod = ', self.data_loaded["Prod Oil"])
 
         # Fill in the attributes associated with config data
         self.general_config_data = self._get_general_config_data()
         self.fiscal_config_data = self._get_fiscal_config_data()
 
-        # Fill in the attributes associated with lifting data
-        self.oil_lifting_data = self._get_oil_lifting_data()
-        self.gas_lifting_data = self._get_gas_lifting_data()
-        self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
-        self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
-        self.sulfur_lifting_data = self._get_sulfur_lifting_data()
-        self.electricity_lifting_data = self._get_electricity_lifting_data()
-        self.co2_lifting_data = self._get_co2_lifting_data()
-
-        # Fill in the attributes associated with cost data
-        self.tangible_cost_data = self._get_tangible_cost_data()
-        self.intangible_cost_data = self._get_intangible_cost_data()
-        self.opex_data = self._get_opex_data()
-        self.asr_cost_data = self._get_asr_cost_data()
-
-        # Fill in the attributes associated with contract data
-        self.psc_cr_data = self._get_psc_cr_data()
-        self.psc_gs_data = self._get_psc_gs_data()
-        self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
-        self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
-        self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
-        self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
-
-        # Fill in the attributes associated with additional functionality
-        self.sensitivity_data = self._get_sensitivity_data()
-        self.montecarlo_data = self._get_montecarlo_data()
+        # # Fill in the attributes associated with lifting data
+        # self.oil_lifting_data = self._get_oil_lifting_data()
+        # self.gas_lifting_data = self._get_gas_lifting_data()
+        # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
+        # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
+        # self.sulfur_lifting_data = self._get_sulfur_lifting_data()
+        # self.electricity_lifting_data = self._get_electricity_lifting_data()
+        # self.co2_lifting_data = self._get_co2_lifting_data()
+        #
+        # # Fill in the attributes associated with cost data
+        # self.tangible_cost_data = self._get_tangible_cost_data()
+        # self.intangible_cost_data = self._get_intangible_cost_data()
+        # self.opex_data = self._get_opex_data()
+        # self.asr_cost_data = self._get_asr_cost_data()
+        #
+        # # Fill in the attributes associated with contract data
+        # self.psc_cr_data = self._get_psc_cr_data()
+        # self.psc_gs_data = self._get_psc_gs_data()
+        # self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
+        # self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
+        # self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
+        # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
+        #
+        # # Fill in the attributes associated with additional functionality
+        # self.sensitivity_data = self._get_sensitivity_data()
+        # self.montecarlo_data = self._get_montecarlo_data()
+        # self.optimization_data = self._get_optimization_data()
 
         print("\t")
-        print(f"Filetype: {type(self.montecarlo_data)}")
-        print("montecarlo_data = \n", self.montecarlo_data)
+        print(f"Filetype: {type(self.fiscal_config_data)}")
+        print("fiscal_config_data = \n", self.fiscal_config_data)
