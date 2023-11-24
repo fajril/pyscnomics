@@ -1375,8 +1375,8 @@ class BaseProject:
 
         for lift in self.lifting:
             if lift.fluid_type == FluidType.OIL:
-                vol_x_price = vol_x_price + lift.lifting_rate * lift.price
-                total_vol = total_vol + lift.lifting_rate
+                vol_x_price = vol_x_price + lift.get_lifting_rate_arr() * lift.get_price_arr()
+                total_vol = total_vol + lift.get_lifting_rate_arr()
 
         self._oil_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
@@ -1392,8 +1392,8 @@ class BaseProject:
 
         for lift in self.lifting:
             if lift.fluid_type == FluidType.GAS:
-                vol_x_price = vol_x_price + lift.lifting_rate * lift.price
-                total_vol = total_vol + lift.lifting_rate
+                vol_x_price = vol_x_price + lift.get_lifting_rate_arr() * lift.get_price_arr()
+                total_vol = total_vol + lift.get_lifting_rate_arr()
 
         self._gas_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
@@ -1407,8 +1407,8 @@ class BaseProject:
 
         for lift in self.lifting:
             if lift.fluid_type == FluidType.SULFUR:
-                vol_x_price = vol_x_price + lift.lifting_rate * lift.price
-                total_vol = total_vol + lift.lifting_rate
+                vol_x_price = vol_x_price + lift.get_lifting_rate_arr() * lift.get_price_arr()
+                total_vol = total_vol + lift.get_lifting_rate_arr()
 
         self._sulfur_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
@@ -1422,8 +1422,8 @@ class BaseProject:
 
         for lift in self.lifting:
             if lift.fluid_type == FluidType.ELECTRICITY:
-                vol_x_price = vol_x_price + lift.lifting_rate * lift.price
-                total_vol = total_vol + lift.lifting_rate
+                vol_x_price = vol_x_price + lift.get_lifting_rate_arr() * lift.get_price_arr()
+                total_vol = total_vol + lift.get_lifting_rate_arr()
 
         self._electricity_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
@@ -1437,8 +1437,8 @@ class BaseProject:
 
         for lift in self.lifting:
             if lift.fluid_type == FluidType.CO2:
-                vol_x_price = vol_x_price + lift.lifting_rate * lift.price
-                total_vol = total_vol + lift.lifting_rate
+                vol_x_price = vol_x_price + lift.get_lifting_rate_arr() * lift.get_price_arr()
+                total_vol = total_vol + lift.get_lifting_rate_arr()
 
         self._co2_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 

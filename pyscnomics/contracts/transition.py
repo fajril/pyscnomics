@@ -19,6 +19,8 @@ class Transition:
     _contract1_transitioned: CostRecovery | GrossSplit = field(default=None, init=False, repr=False)
     _contract2_transitioned: CostRecovery | GrossSplit = field(default=None, init=False, repr=False)
 
+    project_years: np.ndarray = field(default=None, init=False, repr=False)
+
     _oil_lifting: Lifting = field(default=None, init=False, repr=False)
     _gas_lifting: Lifting = field(default=None, init=False, repr=False)
     _sulfur_lifting: Lifting = field(default=None, init=False, repr=False)
@@ -636,6 +638,9 @@ class Transition:
         # Consolidated Government Take
         self._consolidated_government_take = (self._contract1_transitioned._consolidated_government_take +
                                               self._contract2_transitioned._consolidated_government_take)
+
+        # Project Years
+        self.project_years = np.copy(self._contract1_transitioned.project_years)
 
 
 

@@ -22,7 +22,8 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
     # Defining the same summary parameters for any contract
     # Lifting
     lifting_oil = np.sum(contract._oil_lifting.get_lifting_rate_arr(), dtype=float)
-    oil_wap = np.sum(contract._oil_revenue) / np.sum(contract._oil_lifting.get_lifting_rate_arr())
+    oil_wap = np.divide(np.sum(contract._oil_revenue), np.sum(contract._oil_lifting.get_lifting_rate_arr()),
+                        where= np.sum(contract._oil_lifting.get_lifting_rate_arr()) != 0)
     lifting_gas = np.sum(contract._gas_lifting.get_lifting_rate_arr(), dtype=float)
     gas_wap = np.divide(np.sum(contract._gas_wap_price * contract._gas_lifting.get_lifting_rate_arr()), np.sum(
         contract._gas_lifting.get_lifting_rate_arr()), where=np.sum(
@@ -398,10 +399,25 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                 'gov_take_npv': gov_take_npv}
 
     if isinstance(contract, Transition):
-        print(lifting_oil)
-        print(oil_wap)
-        print(lifting_gas)
-        print(gas_wap)
+        # print('lifting_oil: ', lifting_oil)
+        # print('oil_wap: ', oil_wap)
+        # print('lifting_gas: ', lifting_gas)
+        # print('gas_wap: ', gas_wap)
+        # print('gross_revenue: ', gross_revenue)
+        # print('gross_revenue_oil: ', gross_revenue_oil)
+        # print('gross_revenue_gas: ', gross_revenue_gas)
+        # print('ctr_ftp: ', np.sum(contract._ctr_ftp, dtype=float))
+        # print('sunk_costs: ', sunk_cost)
+        # print('tangible: ', tangible)
+        # print('intangible: ', intangible)
+        # print('investment: ', investment)
+        # print('opex: ', opex)
+        # print('asr: ', asr)
+
+        deductible_cost = np.sum(contract._oil_deductible_cost+contract._gas_deductible_cost, dtype=float)
+        deductible_cost_over_grossrev = deductible_cost/gross_revenue
+        carry_forward_cost = contract._gas_unrec_cost
+        print(carry_forward_cost)
         input()
 
         return {'lifting_oil': lifting_oil,

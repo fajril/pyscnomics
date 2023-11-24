@@ -444,7 +444,15 @@ trans2_table_consolidated['cnsltd_GovernmentTake'] = psc_trans._contract2_transi
 trans2_table_consolidated.loc['Column_Total'] = trans2_table_consolidated.sum(numeric_only=True, axis=0)
 print(trans2_table_consolidated, '\n')
 
-# Summary
+psc_summary = get_summary(contract=psc_trans,
+                          reference_year=2022,
+                          inflation_rate=0.1,
+                          discount_rate=0.1,
+                          npv_mode=NPVSelection.NPV_SKK_NOMINAL_TERMS,
+                          discounting_mode=DiscountingMode.END_YEAR)
+
+for key, value in psc_summary.items():
+    print(key, ":", value)
 
 
 

@@ -530,14 +530,14 @@ class GrossSplit(BaseProject):
 
         self._oil_prog_split = vectorized_get_prog_split(
             fluid=self._oil_lifting.fluid_type,
-            price=self._oil_lifting.price,
+            price=self._oil_lifting.get_price_arr(),
             cum=self._cumulative_prod,
             regime=regime
         )
 
         self._gas_prog_split = vectorized_get_prog_split(
             fluid=self._gas_lifting.fluid_type,
-            price=self._gas_lifting.price,
+            price=self._gas_lifting.get_price_arr(),
             cum=self._cumulative_prod,
             regime=regime
         )
