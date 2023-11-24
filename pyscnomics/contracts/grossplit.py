@@ -522,8 +522,11 @@ class GrossSplit(BaseProject):
         self._var_split_array = np.full_like(self.project_years, fill_value=self._variable_split, dtype=float)
 
         # Cumulative Production
-        self._cumulative_prod = np.cumsum(self._oil_lifting.lifting_rate +
-                                          (self._gas_lifting.lifting_rate / self.conversion_bboe2bscf))
+        # self._cumulative_prod = np.cumsum(self._oil_lifting.lifting_rate +
+        #                                   (self._gas_lifting.lifting_rate / self.conversion_bboe2bscf))
+
+        self._cumulative_prod = np.cumsum(np.divide(self._oil_lifting.get_lifting_rate_arr(), self._oil_lifting.get_lifting_ghv_arr(), where=self._oil_lifting.get_lifting_ghv_arr()!=0) +
+                                          (np.divide(self._gas_lifting.get_lifting_rate_arr(), self._gas_lifting.get_lifting_ghv_arr(), where=self._gas_lifting.get_lifting_ghv_arr()!=0) / self.conversion_bboe2bscf))
 
         # Progressive Split
         vectorized_get_prog_split = np.vectorize(self._wrapper_progressive_split)

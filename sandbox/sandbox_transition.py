@@ -109,12 +109,12 @@ Gross Split
 """
 # Defining Start Date and End Date
 psc_2_start_date = datetime.strptime("23/4/2020", '%d/%m/%Y').date()
-psc_2_end_date = datetime.strptime("22/4/2027", '%d/%m/%Y').date()
+psc_2_end_date = datetime.strptime("22/4/2030", '%d/%m/%Y').date()
 
 # Defining the Gas lifting data
 psc2_gas_lifting = Lifting(
     start_year=2020,
-    end_year=2027,
+    end_year=2030,
     lifting_rate=np.array(
         [2.21568324370692000, 3.20769606628721000, 3.29284116326400000, 3.37370744832000000,
          3.44718555313867000, 3.40400062841705000, 3.32543155814400000, 2.00043667046400000]),
@@ -126,7 +126,7 @@ psc2_gas_lifting = Lifting(
 # Defining the Gas Tangible Data - Drilling Tangible
 psc2_gas_tangible = Tangible(
     start_year=2020,
-    end_year=2027,
+    end_year=2030,
     cost=np.array([1959.561038251370, 2834.780000000000]),
     expense_year=np.array([2020, 2025]),
     pis_year=np.array([2020, 2025]),
@@ -137,7 +137,7 @@ psc2_gas_tangible = Tangible(
 # Defining the Gas Intangible Data
 psc2_gas_intang = Intangible(
     start_year=2020,
-    end_year=2027,
+    end_year=2030,
     cost=np.array([0]),
     expense_year=np.array([2020]),
     cost_allocation=[FluidType.GAS])
@@ -145,7 +145,7 @@ psc2_gas_intang = Intangible(
 # Defining the Gas OPEX Data
 psc2_gas_opex_cost = OPEX(
     start_year=2020,
-    end_year=2027,
+    end_year=2030,
     fixed_cost=np.array(
         [3137.4561521272200, 3834.8277754882300, 3943.8595100171400, 4040.8953543109500, 4114.6574450911200,
          4272.4109557000400, 5057.6546904997800, 4462.7942473087100, ]),
@@ -154,7 +154,7 @@ psc2_gas_opex_cost = OPEX(
 
 psc2_gas_lbt_cost = OPEX(
     start_year=2020,
-    end_year=2027,
+    end_year=2030,
     fixed_cost=np.array(
         [636.40338233533300, 1062.86476325927000, 1091.05051487026000, 1117.33210409363000, 1140.29666892703000,
          1296.08012023605000, 1124.78850166335000, 786.84662704513200]),
@@ -164,7 +164,7 @@ psc2_gas_lbt_cost = OPEX(
 # Defining VAT and Import Duty
 psc2_gas_vat = OPEX(
     start_year=2020,
-    end_year=2027,
+    end_year=2030,
     fixed_cost=np.array(
         [396.5062479576550, 286.7125283653920, 294.7836073052500, 301.9666899432990, 307.4269319547460,
          553.8846425099840, 377.2323444857470, 333.1977740376320, ]),
@@ -173,7 +173,7 @@ psc2_gas_vat = OPEX(
 
 psc2_gas_import_duty = OPEX(
     start_year=2020,
-    end_year=2027,
+    end_year=2030,
     fixed_cost=np.array(
         [159.965353, 55.922218, 57.496452, 58.897486, 59.962486, 227.566547, 73.577773, 64.988993]),
     expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]),
@@ -182,7 +182,7 @@ psc2_gas_import_duty = OPEX(
 # Defining the Gas ASR Data
 psc2_gas_asr_cost_opx = OPEX(
     start_year=2020,
-    end_year=2027,
+    end_year=2030,
     fixed_cost=np.array(
         [26.513186, 38.355043, 38.355043, 38.355043, 38.355043, 38.355043, 38.355043, 38.355043, ]),
     expense_year=np.array([2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]),
@@ -190,7 +190,7 @@ psc2_gas_asr_cost_opx = OPEX(
 
 psc2_gas_asr_cost = ASR(
     start_year=2020,
-    end_year=2027,
+    end_year=2030,
     cost=np.array([0]),
     expense_year=np.array([2020]),
     cost_allocation=[FluidType.GAS])
