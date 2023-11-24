@@ -56,6 +56,8 @@ class Transition:
     _gas_unrec_cost: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ctr_ets: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ctr_ets: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_gov_ets: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_gov_ets: np.ndarray = field(default=None, init=False, repr=False)
     _net_operating_profit: np.ndarray = field(default=None, init=False, repr=False)
     _ctr_net_cashflow: np.ndarray = field(default=None, init=False, repr=False)
     _ctr_ftp: np.ndarray = field(default=None, init=False, repr=False)
@@ -522,14 +524,21 @@ class Transition:
         _gas_deductible_cost_1 = None
         _oil_deductible_cost_2 = None
         _gas_deductible_cost_2 = None
+
         _oil_unrec_cost_1 = None
         _gas_unrec_cost_1 = None
         _oil_unrec_cost_2 = None
         _gas_unrec_cost_2 = None
+
         _oil_ctr_ets_1 = None
         _gas_ctr_ets_1 = None
         _oil_ctr_ets_2 = None
         _gas_ctr_ets_2 = None
+
+        _oil_gov_ets_1 = None
+        _gas_gov_ets_1 = None
+        _oil_gov_ets_2 = None
+        _gas_gov_ets_2 = None
 
         _ctr_ftp_1 = None
         _gov_ftp_1 = None
@@ -544,6 +553,8 @@ class Transition:
             _gas_unrec_cost_1 = self._contract1_transitioned._gas_unrecovered_after_transfer
             _oil_ctr_ets_1 = self._contract1_transitioned._oil_ets_after_transfer
             _gas_ctr_ets_1 = self._contract1_transitioned._gas_ets_after_transfer
+            _oil_gov_ets_1 = self._contract1_transitioned._oil_government_share
+            _gas_gov_ets_1 = self._contract1_transitioned._gas_government_share
             _ctr_ftp_1 = self._contract1_transitioned._consolidated_ftp_ctr
             _gov_ftp_1 = self._contract1_transitioned._consolidated_ftp_gov
 
@@ -551,12 +562,14 @@ class Transition:
         elif isinstance(self.contract1, GrossSplit):
             _oil_deductible_cost_1 = self._contract1_transitioned._oil_deductible_cost
             _gas_deductible_cost_1 = self._contract1_transitioned._gas_deductible_cost
-            _oil_unrec_cost_1 = self._contract1_transitioned._oil_carward_cost_aftertf
-            _gas_unrec_cost_1 = self._contract1_transitioned._gas_carward_cost_aftertf
-            _oil_ctr_ets_1 = self._contract1_transitioned._oil_gov_share
-            _gas_ctr_ets_1 = self._contract1_transitioned._gas_gov_share
+            _oil_unrec_cost_1 = self._contract1_transitioned._oil_carward_deduct_cost
+            _gas_unrec_cost_1 = self._contract1_transitioned._gas_carward_deduct_cost
+            _oil_ctr_ets_1 = self._contract1_transitioned._oil_ctr_share_after_transfer
+            _gas_ctr_ets_1 = self._contract1_transitioned._gas_ctr_share_after_transfer
+            _oil_gov_ets_1 = np.zeros_like(self._contract1_transitioned.project_years)
+            _gas_gov_ets_1 = np.zeros_like(self._contract1_transitioned.project_years)
             _ctr_ftp_1 = np.zeros_like(self._contract1_transitioned.project_years, dtype=float)
-            _gov_ftp_1 = np.zeros_like(self._contract1_transitioned.project_years, dtype=float)
+            _gov_ftp_1 = self._contract1_transitioned._consolidated_gov_share_before_tf
 
         # Determining variables if the type of Contract2 is Cost Recovery
         if isinstance(self.contract2, CostRecovery):
@@ -566,6 +579,8 @@ class Transition:
             _gas_unrec_cost_2 = self._contract2_transitioned._gas_unrecovered_after_transfer
             _oil_ctr_ets_2 = self._contract2_transitioned._oil_ets_after_transfer
             _gas_ctr_ets_2 = self._contract2_transitioned._gas_ets_after_transfer
+            _oil_gov_ets_2 = self._contract2_transitioned._oil_government_share
+            _gas_gov_ets_2 = self._contract2_transitioned._gas_government_share
             _ctr_ftp_2 = self._contract2_transitioned._consolidated_ftp_ctr
             _gov_ftp_2 = self._contract2_transitioned._consolidated_ftp_gov
 
@@ -573,24 +588,29 @@ class Transition:
         elif isinstance(self.contract2, GrossSplit):
             _oil_deductible_cost_2 = self._contract2_transitioned._oil_deductible_cost
             _gas_deductible_cost_2 = self._contract2_transitioned._gas_deductible_cost
-            _oil_unrec_cost_2 = self._contract2_transitioned._oil_carward_cost_aftertf
-            _gas_unrec_cost_2 = self._contract2_transitioned._gas_carward_cost_aftertf
-            _oil_ctr_ets_2 = self._contract2_transitioned._oil_gov_share
-            _gas_ctr_ets_2 = self._contract2_transitioned._gas_gov_share
+            _oil_unrec_cost_2 = self._contract2_transitioned._oil_carward_deduct_cost
+            _gas_unrec_cost_2 = self._contract2_transitioned._gas_carward_deduct_cost
+            _oil_ctr_ets_2 = self._contract2_transitioned._oil_ctr_share_after_transfer
+            _gas_ctr_ets_2 = self._contract2_transitioned._gas_ctr_share_after_transfer
+            _oil_gov_ets_2 = np.zeros_like(self._contract2_transitioned.project_years)
+            _gas_gov_ets_2 = np.zeros_like(self._contract2_transitioned.project_years)
             _ctr_ftp_2 = np.zeros_like(self._contract2_transitioned.project_years, dtype=float)
-            _gov_ftp_2 = np.zeros_like(self._contract2_transitioned.project_years, dtype=float)
+            _gov_ftp_2 = self._contract2_transitioned._consolidated_gov_share_before_tf
 
         # Deductible Cost / Cost Recovery
         self._oil_deductible_cost = _oil_deductible_cost_1 + _oil_deductible_cost_2
         self._gas_deductible_cost = _gas_deductible_cost_1 + _gas_deductible_cost_2
 
         # Carry Forward Cost / Unrecoverable Cost
-        self._oil_unrec_cost = _oil_unrec_cost_1 + _oil_unrec_cost_2
-        self._gas_unrec_cost = _gas_unrec_cost_1 + _gas_unrec_cost_2
+        self._oil_unrec_cost = _oil_unrec_cost_2
+        self._gas_unrec_cost = _gas_unrec_cost_2
 
         # ETS
         self._oil_ctr_ets = _oil_ctr_ets_1 + _oil_ctr_ets_2
         self._gas_ctr_ets = _gas_ctr_ets_1 + _gas_ctr_ets_2
+
+        self._oil_gov_ets = _oil_gov_ets_1 + _oil_gov_ets_2
+        self._gas_gov_ets = _gas_gov_ets_1 + _gas_gov_ets_2
 
         # Contractor Net Operating Profit
         self._net_operating_profit = (self._contract1_transitioned._consolidated_ctr_net_share +

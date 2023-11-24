@@ -399,31 +399,88 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                 'gov_take_npv': gov_take_npv}
 
     if isinstance(contract, Transition):
-        # print('lifting_oil: ', lifting_oil)
-        # print('oil_wap: ', oil_wap)
-        # print('lifting_gas: ', lifting_gas)
-        # print('gas_wap: ', gas_wap)
-        # print('gross_revenue: ', gross_revenue)
-        # print('gross_revenue_oil: ', gross_revenue_oil)
-        # print('gross_revenue_gas: ', gross_revenue_gas)
-        # print('ctr_ftp: ', np.sum(contract._ctr_ftp, dtype=float))
-        # print('sunk_costs: ', sunk_cost)
-        # print('tangible: ', tangible)
-        # print('intangible: ', intangible)
-        # print('investment: ', investment)
-        # print('opex: ', opex)
-        # print('asr: ', asr)
+        ctr_ftp = np.sum(contract._ctr_ftp, dtype=float)
+        gov_ftp = np.sum(contract._gov_ftp, dtype=float)
+        ftp = ctr_ftp + gov_ftp
 
         deductible_cost = np.sum(contract._oil_deductible_cost+contract._gas_deductible_cost, dtype=float)
-        deductible_cost_over_grossrev = deductible_cost/gross_revenue
-        carry_forward_cost = contract._gas_unrec_cost
-        print(carry_forward_cost)
-        input()
+        deductible_cost_over_grossrev = deductible_cost / gross_revenue
+
+        carry_forward_cost = (contract._oil_unrec_cost + contract._gas_unrec_cost)[-1]
+        carry_forward_cost_over_grossrev = carry_forward_cost / gross_revenue
+
+        ctr_equity_share = np.sum(contract._oil_ctr_ets + contract._gas_ctr_ets, dtype=float)
+        gov_equity_share = np.sum(contract._oil_gov_ets + contract._gas_gov_ets, dtype=float)
+        equity_to_be_split = ctr_equity_share + gov_equity_share
+
+        ctr_net_operating_profit = np.sum(contract._net_operating_profit, dtype=float)
+        ctr_net_operating_profit_over_grossrev = ctr_net_operating_profit / gross_revenue
+
+        ctr_net_cash_flow = np.sum(contract._ctr_net_cashflow, dtype=float)
+        ctr_net_cash_flow_over_grossrev = ctr_net_cash_flow / gross_revenue
+
+        # Contractor POT
+        ctr_pot = pot_psc(cashflow=contract._consolidated_cashflow,
+                          cashflow_years=contract.project_years,
+                          reference_year=reference_year)
 
         return {'lifting_oil': lifting_oil,
                 'oil_wap': oil_wap,
                 'lifting_gas': lifting_gas,
-                'gas_wap': gas_wap}
+                'gas_wap': gas_wap,
+                'gross_revenue': gross_revenue,
+                'gross_revenue_oil': gross_revenue_oil,
+                'gross_revenue_gas': gross_revenue_gas,
+                'ftp': ftp,
+                'gov_ftp': gov_ftp,
+                'ctr_ftp': ctr_ftp,
+                'sunk_cost': sunk_cost,
+                'tangible': tangible,
+                'intangible': intangible,
+                'opex': opex,
+                'asr': asr,
+                'deductible_cost': deductible_cost,
+                'deductible_cost_over_grossrev': deductible_cost_over_grossrev,
+                'carry_forward_cost': carry_forward_cost,
+                'carry_forward_cost_over_grossrev': carry_forward_cost_over_grossrev,
+                'equity_to_be_split': equity_to_be_split,
+                'ctr_equity_share': ctr_equity_share,
+                'gov_equity_share': gov_equity_share,
+                'ctr_net_operating_profit': ctr_net_operating_profit,
+                'ctr_net_operating_profit_over_grossrev': ctr_net_operating_profit_over_grossrev,
+                'ctr_net_cash_flow': ctr_net_cash_flow,
+                'ctr_net_cash_flow_over_grossrev': ctr_net_cash_flow_over_grossrev,
+                'ctr_npv': ctr_npv,
+                'ctr_npv_sunk_cost_pooled': ctr_npv_sunk_cost_pooled,
+                'ctr_irr': ctr_irr,
+                'ctr_irr_sunk_cost_pooled': ctr_irr_sunk_cost_pooled,
+                'ctr_pot': ctr_pot,
+                'ctr_pv_ratio': ctr_pv_ratio,
+                'gov_ddmo': gov_ddmo,
+                'gov_tax_income': gov_tax_income,
+                'gov_take': gov_take,
+                'gov_take_over_gross_rev': gov_take_over_gross_rev,
+                'gov_take_npv': gov_take_npv
+                }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

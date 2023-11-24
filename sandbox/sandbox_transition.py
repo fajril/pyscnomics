@@ -23,12 +23,12 @@ Cost Recovery
 """
 
 # Defining Start Date and End Date
-psc_1_start_date = datetime.strptime("01/01/2019", '%d/%m/%Y').date()
+psc_1_start_date = datetime.strptime("01/01/2018", '%d/%m/%Y').date()
 psc_1_end_date = datetime.strptime("22/4/2020", '%d/%m/%Y').date()
 
 # Defining the Gas lifting data
 psc1_gas_lifting = Lifting(
-    start_year=2019,
+    start_year=2018,
     end_year=2020,
     lifting_rate=np.array([1.58446786291200, 0.98961346458056]),
     price=np.array([6.260, 6.260]),
@@ -38,7 +38,7 @@ psc1_gas_lifting = Lifting(
 
 # Defining the Gas Tangible Data - Drilling Tangible
 psc1_gas_tangible = Tangible(
-    start_year=2019,
+    start_year=2018,
     end_year=2020,
     cost=np.array([3363.67743703704000, 802.73224043715800]),
     expense_year=np.array([2019, 2020]),
@@ -50,7 +50,7 @@ psc1_gas_tangible = Tangible(
 
 # Defining the Gas Intangible Data
 psc1_gas_intang = Intangible(
-    start_year=2019,
+    start_year=2018,
     end_year=2020,
     cost=np.array([9532.633600000]),
     expense_year=np.array([2019]),
@@ -58,7 +58,7 @@ psc1_gas_intang = Intangible(
 
 # Defining the Gas OPEX Data
 psc1_gas_opex_cost = OPEX(
-    start_year=2019,
+    start_year=2018,
     end_year=2020,
     fixed_cost=np.array([2076.908222642980, 1297.582047244550]),
     expense_year=np.array([2019, 2020]),
@@ -66,14 +66,14 @@ psc1_gas_opex_cost = OPEX(
 
 # Defining the Gas ASR Data
 psc1_gas_asr_cost_opx = OPEX(
-    start_year=2019,
+    start_year=2018,
     end_year=2020,
     fixed_cost=np.array([35.515809523809900, 10.965263596148900]),
     expense_year=np.array([2019, 2020]),
     cost_allocation=[FluidType.GAS] * 2)
 
 psc1_gas_asr_cost = ASR(
-    start_year=2019,
+    start_year=2018,
     end_year=2020,
     cost=np.array([0]),
     expense_year=np.array([2019]),
@@ -445,10 +445,10 @@ trans2_table_consolidated.loc['Column_Total'] = trans2_table_consolidated.sum(nu
 print(trans2_table_consolidated, '\n')
 
 psc_summary = get_summary(contract=psc_trans,
-                          reference_year=2022,
+                          reference_year=2018,
                           inflation_rate=0.1,
                           discount_rate=0.1,
-                          npv_mode=NPVSelection.NPV_SKK_NOMINAL_TERMS,
+                          npv_mode=NPVSelection.NPV_POINT_FORWARD,
                           discounting_mode=DiscountingMode.END_YEAR)
 
 for key, value in psc_summary.items():
