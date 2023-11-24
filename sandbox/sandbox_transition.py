@@ -9,6 +9,9 @@ from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 
+from pyscnomics.tools.summary import get_summary
+from pyscnomics.econ.selection import NPVSelection, DiscountingMode
+
 from pyscnomics.contracts import transition
 
 # pd.options.display.float_format = '{:,.2f}'.format
@@ -441,7 +444,9 @@ trans2_table_consolidated['cnsltd_GovernmentTake'] = psc_trans._contract2_transi
 trans2_table_consolidated.loc['Column_Total'] = trans2_table_consolidated.sum(numeric_only=True, axis=0)
 print(trans2_table_consolidated, '\n')
 
-# Showing the Attributes
+# Summary
+
+
 
 
 

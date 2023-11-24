@@ -398,68 +398,23 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                 'gov_take_npv': gov_take_npv}
 
     if isinstance(contract, Transition):
-        # Lifting
-        lifting_oil = (np.sum(contract._contract1_transitioned._oil_lifting.get_lifting_rate_arr(), dtype=float) +
-                       np.sum(contract._contract2_transitioned._oil_lifting.get_lifting_rate_arr(), dtype=float))
+        print(lifting_oil)
+        print(oil_wap)
+        print(lifting_gas)
+        print(gas_wap)
+        input()
 
-        lifting_gas = (np.sum(contract._contract1_transitioned._gas_lifting.get_lifting_rate_arr(), dtype=float) +
-                       np.sum(contract._contract2_transitioned._gas_lifting.get_lifting_rate_arr(), dtype=float))
+        return {'lifting_oil': lifting_oil,
+                'oil_wap': oil_wap,
+                'lifting_gas': lifting_gas,
+                'gas_wap': gas_wap}
 
-        # WAP Price
-        oil_wap = np.sum(contract._contract2_transitioned._oil_revenue) / np.sum(
-            contract._contract2_transitioned._oil_lifting.get_lifting_rate_arr())
-        gas_wap = np.divide(
-            np.sum(contract._contract2_transitioned._gas_wap_price * contract._contract2_transitioned._gas_lifting.get_lifting_rate_arr()), np.sum(
-                contract._contract2_transitioned._gas_lifting.get_lifting_rate_arr()), where=np.sum(
-                contract._contract2_transitioned._gas_lifting.get_lifting_rate_arr()) != 0)
 
-        # Gross Revenue
-        gross_revenue = (np.sum(contract._contract1_transitioned._consolidated_revenue) +
-                         np.sum(contract._contract2_transitioned._consolidated_revenue))
-        gross_revenue_oil = np.sum(contract._contract1_transitioned._oil_revenue) + np.sum(contract._contract2_transitioned._oil_revenue)
-        gross_revenue_gas = np.sum(contract._contract1_transitioned._gas_revenue) + np.sum(contract._contract2_transitioned._gas_revenue)
 
-        # Sunk Cost
-        sunk_cost = (np.sum(contract._contract1_transitioned._oil_sunk_cost + contract._contract1_transitioned._gas_sunk_cost, dtype=float) +
-                     np.sum(contract._contract2_transitioned._oil_sunk_cost + contract._contract2_transitioned._gas_sunk_cost, dtype=float))
 
-        # Investment (Capital Cost)
-        tangible = (np.sum(
-            contract._contract1_transitioned._oil_tangible_expenditures + contract._contract1_transitioned._gas_tangible_expenditures,
-            dtype=float) +
-                    np.sum(
-                        contract._contract2_transitioned._oil_tangible_expenditures + contract._contract2_transitioned._gas_tangible_expenditures,
-                        dtype=float))
 
-        intangible = (np.sum(
-            contract._contract1_transitioned._oil_intangible_expenditures + contract._contract1_transitioned._gas_intangible_expenditures,
-            dtype=float) +
-                      np.sum(
-            contract._contract2_transitioned._oil_intangible_expenditures + contract._contract2_transitioned._gas_intangible_expenditures,
-            dtype=float))
 
-        investment = tangible + intangible - sunk_cost
 
-        # Capex
-        oil_capex = (np.sum(contract._contract1_transitioned._oil_tangible_expenditures) +
-                     np.sum(contract._contract2_transitioned._oil_tangible_expenditures))
-        gas_capex = (np.sum(contract._contract1_transitioned._gas_tangible_expenditures) +
-                     np.sum(contract._contract2_transitioned._gas_tangible_expenditures))
-
-        # OPEX and ASR (Non-Capital Cost)
-        opex = (np.sum(contract._contract1_transitioned._oil_opex_expenditures + contract._contract1_transitioned._gas_opex_expenditures, dtype=float) +
-                np.sum(contract._contract2_transitioned._oil_opex_expenditures + contract._contract2_transitioned._gas_opex_expenditures, dtype=float))
-        asr = (np.sum(contract._contract1_transitioned._oil_asr_expenditures + contract._contract1_transitioned._gas_asr_expenditures, dtype=float) +
-               np.sum(contract._contract2_transitioned._oil_asr_expenditures + contract._contract2_transitioned._gas_asr_expenditures, dtype=float))
-
-        # Cashflow sunk cost
-        if sunk_cost == 0:
-            cashflow_sunk_cost_pooled = (contract._contract1_transitioned._consolidated_cashflow +
-                                         contract._contract2_transitioned._consolidated_cashflow)
-        else:
-            cashflow_sunk_cost_pooled = np.concatenate(
-                (np.array([-sunk_cost]),
-                 contract._contract2_transitioned._consolidated_cashflow[len(contract._contract2_transitioned._consolidated_sunk_cost):]))
 
 
 

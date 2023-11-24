@@ -62,6 +62,14 @@ class Transition:
     _tax_payment: np.ndarray = field(default=None, init=False, repr=False)
     _government_take: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Consolidated Attributes
+    _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_ddmo: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_government_take: np.ndarray = field(default=None, init=False, repr=False)
+
     @staticmethod
     def _parse_dataclass(contract):
         # Getting the attributes of the contract
@@ -605,6 +613,29 @@ class Transition:
         # Government Take
         self._government_take = (self._contract1_transitioned._consolidated_government_take +
                                  self._contract2_transitioned._consolidated_government_take)
+
+        # Consolidated Attributes
+        # Consolidated Revenue
+        self._consolidated_revenue = self._oil_revenue + self._gas_revenue
+
+        # Consolidated Sunk Cost
+        self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
+
+        # Consolidated Cash Flow
+        self._consolidated_cashflow = (self._contract1_transitioned._consolidated_cashflow +
+                                       self._contract2_transitioned._consolidated_cashflow)
+
+        # Consolidated DDMO
+        self._consolidated_ddmo = (self._contract1_transitioned._consolidated_ddmo +
+                                   self._contract2_transitioned._consolidated_ddmo)
+
+        # Consolidated Tax Payment
+        self._consolidated_tax_payment = (self._contract1_transitioned._consolidated_tax_payment +
+                                          self._contract2_transitioned._consolidated_tax_payment)
+
+        # Consolidated Government Take
+        self._consolidated_government_take = (self._contract1_transitioned._consolidated_government_take +
+                                              self._contract2_transitioned._consolidated_government_take)
 
 
 
