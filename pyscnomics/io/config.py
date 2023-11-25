@@ -235,7 +235,7 @@ class FiscalConfigData:
             if max(multi_tax_adj["year"]) > max(self.project_years):
                 max_year_tax = max(multi_tax_adj["year"])
 
-            # Create new arrays of 'year' and 'tax_rate'
+            # Create new arrays of 'year' and 'rate'
             multi_tax_new = {
                 "year": np.arange(min_year_tax, max_year_tax + 1, 1),
                 "rate": np.bincount(
@@ -252,19 +252,19 @@ class FiscalConfigData:
                 ]
             ).ravel()
 
-            # Modify the value of multi_tax_new["year"]
+            # Modify the value of multi_tax_new["rate"]
             for i, val in enumerate(multi_tax_adj["rate"]):
                 if i == (len(multi_tax_adj["rate"]) - 1):
                     break
                 multi_tax_new["rate"][id_tax[i]:id_tax[i + 1]] = multi_tax_adj["rate"][i]
 
-            # Add values to the right side of multi_tax_new["year"]
+            # Add values to the right side of multi_tax_new
             if len(multi_tax_new["year"]) > len(multi_tax_new["rate"]):
                 fill_num = len(multi_tax_new["year"]) - len(multi_tax_new["rate"])
                 fill_right = np.repeat(multi_tax_adj["rate"][-1], fill_num)
                 multi_tax_new["rate"] = np.concatenate((multi_tax_new["rate"], fill_right))
 
-            # Add values to the left side of multi_val_new["year"]
+            # Add values to the left side of multi_tax_new
             if id_tax[0] > 0:
                 fill_left = np.repeat(multi_tax_adj["rate"][0], id_tax[0])
                 multi_tax_new["rate"][0:id_tax[0]] = fill_left
@@ -277,15 +277,15 @@ class FiscalConfigData:
                 ]
             ).ravel()
 
-            multi_tax_new["year_final"] = (
+            multi_tax_new["year_new"] = (
                 multi_tax_new["year"][id_tax_new[0]:int(id_tax_new[1] + 1)]
             )
 
-            multi_tax_new["rate_final"] = (
+            multi_tax_new["rate_new"] = (
                 multi_tax_new["rate"][id_tax_new[0]:int(id_tax_new[1] + 1)]
             )
 
-            self.tax_rate = multi_tax_new["rate_final"]
+            self.tax_rate = multi_tax_new["rate_new"]
 
         # Configure attribute inflation_rate
         if self.inflation_rate_mode == "User Input - Single Value":
@@ -319,13 +319,63 @@ class FiscalConfigData:
             if max(multi_inflation_adj["year"]) > max(self.project_years):
                 max_year_inflation = max(multi_inflation_adj["year"])
 
-            print('\t')
-            print(f'Filetype: {type(min_year_inflation)}')
-            print('min_year_inflation = ', min_year_inflation)
+            # Create new arrays of 'year' and 'rate'
+            multi_inflation_new = {
+                "year": np.arange(min_year_inflation, max_year_inflation + 1, 1),
+                "rate": np.bincount(
+                    multi_inflation_adj["year"] - min_year_inflation,
+                    weights=multi_inflation_adj["rate"]
+                )
+            }
 
-            print('\t')
-            print(f'Filetype: {type(max_year_inflation)}')
-            print('max_year_inflation = ', max_year_inflation)
+            # Specify the index location of multi_inflation_adj["year"] in
+            # multi_inflation_new["year"]
+            id_inflation = np.array(
+                [
+                    np.argwhere(multi_inflation_new["year"] == val).ravel() for val in
+                    multi_inflation_adj["year"]
+                ]
+            ).ravel()
+
+            # Modify the value of multi_inflation_new["rate"]
+            for i, val in enumerate(multi_inflation_adj["rate"]):
+                if i == (len(multi_inflation_adj["rate"]) - 1):
+                    break
+                (
+                    multi_inflation_new["rate"]
+                    [id_inflation[i]:id_inflation[i + 1]]
+                ) = multi_inflation_adj["rate"][i]
+
+            # Add values to the right side of multi_inflation_new["rate"]
+            if len(multi_inflation_new["year"]) > len(multi_inflation_new["rate"]):
+                fill_num_infl = len(multi_inflation_new["year"]) - len(multi_inflation_new["rate"])
+                fill_right_infl = np.repeat(multi_inflation_adj["rate"][-1], fill_num_infl)
+                multi_inflation_new["rate"] = np.concatenate(
+                    (multi_inflation_new["rate"], fill_right_infl)
+                )
+
+            # Add values to the left side of multi_inflation_new["rate"]
+            if id_inflation[0] > 0:
+                fill_left_infl = np.repeat(multi_inflation_adj["rate"][0], id_inflation[0])
+                multi_inflation_new["rate"][0:id_inflation[0]] = fill_left_infl
+
+            # Capture "year" and "rate" in accordance with project_years
+            id_inflation_new = np.array(
+                [
+                    np.argwhere(multi_inflation_new["year"] == i).ravel()
+                    for i in [min(self.project_years), max(self.project_years)]
+                ]
+            ).ravel()
+
+            multi_inflation_new["year_new"] = (
+                multi_inflation_new["year"][id_inflation_new[0]:int(id_inflation_new[1] + 1)]
+            )
+
+            multi_inflation_new["rate_new"] = (
+                multi_inflation_new["rate"][id_inflation_new[0]:int(id_inflation_new[1] + 1)]
+            )
+
+            self.inflation_rate = multi_inflation_new["rate_new"]
 
 
 @dataclass

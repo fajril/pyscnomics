@@ -239,16 +239,6 @@ timer_end = tm.time() - timer_start
 print('\t')
 print('timer end = ', timer_end)
 
-# print('\t')
-# print(f'Filetype: {type(costrec)}')
-# print('tangible_cost = \n', costrec.tangible_cost)
-#
-# print('\t')
-# print('_oil_tangible = \n', costrec._oil_tangible)
-#
-# print('\t')
-# print('_gas_tangible = \n', costrec._gas_tangible)
-
 # case.run(
 #     tax_type=TaxType.VAT,
 #     # future_rate=0.0,
@@ -257,11 +247,6 @@ print('timer end = ', timer_end)
 #     # inflation_rate=0.01,
 #     vat_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
 # )
-
-# print('\t')
-# print(f'Filetype: {type(case.tangible_cost)}')
-# print(f'Length: {len(case.tangible_cost)}')
-# print('tangible_cost = \n', case.tangible_cost)
 
 # print('\t')
 # print(f'Filetype: {type(t1)}')
