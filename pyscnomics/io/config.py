@@ -108,6 +108,10 @@ class GeneralConfigData:
         The start date of the project.
     end_date_project: date
         The end date of the project.
+    start_date_project_second: date
+        The start date of the second project (for PSC transition).
+    end_date_project_second: date
+        The end date of the second project (for PSC transition).
     type_of_contract: str
         The type of contract associated with the project.
     oil_onstream_date: date, optional
@@ -124,37 +128,76 @@ class GeneralConfigData:
         The value-added tax discount (defaults to 0.0).
     lbt_discount: float
         The land and building tax discount (defaults to 0.0).
+    gsa_number: int
+        The number of GSA available.
     """
 
     start_date_project: date
     end_date_project: date
+    start_date_project_second: date
+    end_date_project_second: date
     type_of_contract: str
-    oil_onstream_date: date = field(default=None)
-    gas_onstream_date: date = field(default=None)
-    discount_rate_start_year: int = field(default=None)
-    discount_rate: float = field(default=0.1)
-    inflation_rate_applied_to: str = field(default=None)
-    vat_discount: float = field(default=0.0)
-    lbt_discount: float = field(default=0.0)
-    gsa_number: int = field(default=1)
+    oil_onstream_date: date
+    gas_onstream_date: date
+    discount_rate_start_year: int
+    discount_rate: float
+    inflation_rate_applied_to: str
+    vat_discount: float
+    lbt_discount: float
+    gsa_number: int
 
     # Attributes associated with duration of the project
     project_duration: int = field(default=None, init=False)
     project_years: np.ndarray = field(default=None, init=False)
 
     def __post_init__(self):
-        # Check for inappropriate start and end year project
-        if self.end_date_project.year >= self.start_date_project.year:
-            self.project_duration = self.end_date_project.year - self.start_date_project.year + 1
+        # Prepare attribute vat_discount and lbt_discount
+        if self.vat_discount is None:
+            self.vat_discount = 0.0
+
+        if self.lbt_discount is None:
+            self.lbt_discount = 0.0
+
+        # Prepare attribute project_years and project_duration
+        if "Transition" in self.type_of_contract:
+            if self.end_date_project.year < self.start_date_project.year:
+                raise GeneralConfigDataException(
+                    f"Start year of the first contract ({self.start_date_project.year}) "
+                    f"is after the end year of the first contract ({self.end_date_project.year})."
+                )
+
+            if self.end_date_project_second.year < self.start_date_project_second.year:
+                raise GeneralConfigDataException(
+                    f"Start year of the second contract ({self.start_date_project_second.year}) "
+                    f"is after the end year of the second contract ({self.end_date_project_second.year})."
+                )
+
+            if self.end_date_project.year > self.start_date_project_second.year:
+                raise GeneralConfigDataException(
+                    f"End year of the first contract ({self.end_date_project.year}) "
+                    f"is after the start year of the second contract "
+                    f"({self.start_date_project_second.year})."
+                )
+
+            self.project_duration = (
+                    self.end_date_project_second.year - self.start_date_project.year + 1
+            )
             self.project_years = np.arange(
-                self.start_date_project.year, self.end_date_project.year + 1, 1
+                self.start_date_project.year, self.end_date_project_second.year + 1, 1
             )
 
         else:
-            raise GeneralConfigDataException(
-                f"start year {self.start_date_project.year} "
-                f"is after the end year: {self.end_date_project.year}"
-            )
+            if self.end_date_project.year >= self.start_date_project.year:
+                self.project_duration = self.end_date_project.year - self.start_date_project.year + 1
+                self.project_years = np.arange(
+                    self.start_date_project.year, self.end_date_project.year + 1, 1
+                )
+
+            else:
+                raise GeneralConfigDataException(
+                    f"start year {self.start_date_project.year} "
+                    f"is after the end year: {self.end_date_project.year}"
+                )
 
 
 @dataclass
@@ -165,21 +208,33 @@ class FiscalConfigData:
     Attributes
     ----------
     tax_mode: str
-        The tax mode for fiscal configuration.
+        The tax mode used for economic analysis.
+    tax_rate_input: float, optional
+        The tax rate input, default is None.
     tax_payment_method: str
         The method of tax payment.
     tax_psc_cost_recovery: str
-        The basis of tax configuration for PSC cost recovery.
+        Basis for tax value to be used in PSC cost recovery.
     npv_mode: str
         The Net Present Value (NPV) calculation mode.
+    discounting_mode: str
+        The method used for discounting future cash flows.
     future_rate_asr: float
-        The future rate used in ASR cost calculation.
+        The future rate of ASR cost.
     depreciation_method: str
-        The depreciation method to use.
-    multi_tax: dict
-        Attribute that stores information of year and tax_rate for multi value case.
+        The depreciation method to be used for calculation.
+    inflation_rate_mode: str
+        The mode for handling inflation rate.
+    inflation_rate_input: float, optional
+        The input inflation rate, default is None.
+    multi_tax: dict, optional
+        Dictionary containing information about multiple tax values.
+    multi_inflation: dict, optional
+        Dictionary containing information about multiple inflation rates.
+    transferred_unrec_cost: float
+        The transferred unrecovered cost.
     project_years: np.ndarray
-        The array of project years
+        An array representing the project years.
     """
     tax_mode: str
     tax_rate_input: float = field(repr=False)
@@ -193,6 +248,7 @@ class FiscalConfigData:
     inflation_rate_input: float = field(repr=False)
     multi_tax: dict = field(repr=False)
     multi_inflation: dict = field(repr=False)
+    transferred_unrec_cost: float
     project_years: np.ndarray
 
     # Attributes to be defined later
@@ -404,7 +460,6 @@ class OilLiftingData:
     -----
     This dataclass is used to store and organize information related to oil lifting.
     """
-
     prod_year: dict
     oil_lifting_rate: dict
     oil_price: dict
@@ -415,6 +470,11 @@ class OilLiftingData:
     project_duration: int
     project_years: np.ndarray
 
+    # Attributes associated with PSC transition
+    type_of_contract: str
+    end_date_project: date
+    start_date_project_second: date
+
     def __post_init__(self):
         # Prepare attribute prod_year
         if not isinstance(self.prod_year, dict):
@@ -424,57 +484,103 @@ class OilLiftingData:
                 f"{self.prod_year.__class__.__qualname__}"
             )
 
+        print('\t')
+        print(f'Filetype: {type(self.project_years)}')
+        print('project_years = \n', self.project_years)
+
+        print('\t')
+        print(f'Filetype: {type(self.prod_year)}')
+        print('prod_year = \n', self.prod_year)
+
+        print('\t')
+        print('=======================================================================')
+
         for i in self.prod_year.keys():
             if self.prod_year[i] is None:
                 self.prod_year[i] = self.project_years
 
-        # Prepare attribute oil_lifting_rate
-        if not isinstance(self.oil_lifting_rate, dict):
-            raise OilLiftingDataException(
-                f"Attribute oil_lifting_rate must be provided in the form of dictionary. "
-                f"The current datatype of oil_lifting_rate is "
-                f"{self.oil_lifting_rate.__class__.__qualname__}"
-            )
+        if "Transition" in self.type_of_contract:
+            prod_year_keys = ["PSC 1", "PSC 2"]
 
-        for i in self.oil_lifting_rate.keys():
-            if self.oil_lifting_rate[i] is None:
-                self.oil_lifting_rate[i] = np.zeros_like(self.project_years)
+            if self.end_date_project.year == self.start_date_project_second.year:
+                prod_year_id = np.argwhere(self.project_years == self.end_date_project.year).ravel()
 
-        # Prepare attribute oil_price
-        if not isinstance(self.oil_price, dict):
-            raise OilLiftingDataException(
-                f"Attribute oil_price must be provided in the form of dictionary. "
-                f"The current datatype of oil_price is "
-                f"{self.oil_price.__class__.__qualname__}"
-            )
+                for key in self.prod_year.keys():
+                    self.prod_year[key] = {
+                        prod_year_keys[0]: self.project_years[:prod_year_id[0] + 1],
+                        prod_year_keys[1]: self.project_years[prod_year_id[0]:]
+                    }
+            else:
+                prod_year_id = np.array(
+                    [
+                        np.argwhere(self.project_years == i).ravel() for i in
+                        [self.end_date_project.year, self.start_date_project_second.year]
+                    ]
+                ).ravel()
 
-        for i in self.oil_price.keys():
-            if self.oil_price[i] is None:
-                self.oil_price[i] = np.zeros_like(self.project_years)
+                for key in self.prod_year.keys():
+                    self.prod_year[key] = {
+                        prod_year_keys[0]: self.project_years[:prod_year_id[0] + 1],
+                        prod_year_keys[1]: self.project_years[prod_year_id[1]:]
+                    }
 
-        # Prepare attribute condensate_lifting_rate
-        if not isinstance(self.condensate_lifting_rate, dict):
-            raise OilLiftingDataException(
-                f"Attribute condensate_lifting_rate must be provided in the form of dictionary. "
-                f"The current datatype of condensate_lifting_rate is "
-                f"{self.condensate_lifting_rate.__class__.__qualname__}"
-            )
+        print('\t')
+        print(f'Filetype: {type(self.project_years)}')
+        print('project_years = \n', self.project_years)
 
-        for i in self.condensate_lifting_rate.keys():
-            if self.condensate_lifting_rate[i] is None:
-                self.condensate_lifting_rate[i] = np.zeros_like(self.project_years)
+        print('\t')
+        print(f'Filetype: {type(self.prod_year)}')
+        print('prod_year = \n', self.prod_year)
 
-        # Prepare attribute condensate_price
-        if not isinstance(self.condensate_price, dict):
-            raise OilLiftingDataException(
-                f"Attribute condensate_price must be provided in the form of dictionary. "
-                f"The current datatype of condensate_price is "
-                f"{self.condensate_price.__class__.__qualname__}"
-            )
 
-        for i in self.condensate_price.keys():
-            if self.condensate_price[i] is None:
-                self.condensate_price[i] = np.zeros_like(self.project_years)
+
+    #     # Prepare attribute oil_lifting_rate
+    #     if not isinstance(self.oil_lifting_rate, dict):
+    #         raise OilLiftingDataException(
+    #             f"Attribute oil_lifting_rate must be provided in the form of dictionary. "
+    #             f"The current datatype of oil_lifting_rate is "
+    #             f"{self.oil_lifting_rate.__class__.__qualname__}"
+    #         )
+    #
+    #     for i in self.oil_lifting_rate.keys():
+    #         if self.oil_lifting_rate[i] is None:
+    #             self.oil_lifting_rate[i] = np.zeros_like(self.project_years)
+    #
+    #     # Prepare attribute oil_price
+    #     if not isinstance(self.oil_price, dict):
+    #         raise OilLiftingDataException(
+    #             f"Attribute oil_price must be provided in the form of dictionary. "
+    #             f"The current datatype of oil_price is "
+    #             f"{self.oil_price.__class__.__qualname__}"
+    #         )
+    #
+    #     for i in self.oil_price.keys():
+    #         if self.oil_price[i] is None:
+    #             self.oil_price[i] = np.zeros_like(self.project_years)
+    #
+    #     # Prepare attribute condensate_lifting_rate
+    #     if not isinstance(self.condensate_lifting_rate, dict):
+    #         raise OilLiftingDataException(
+    #             f"Attribute condensate_lifting_rate must be provided in the form of dictionary. "
+    #             f"The current datatype of condensate_lifting_rate is "
+    #             f"{self.condensate_lifting_rate.__class__.__qualname__}"
+    #         )
+    #
+    #     for i in self.condensate_lifting_rate.keys():
+    #         if self.condensate_lifting_rate[i] is None:
+    #             self.condensate_lifting_rate[i] = np.zeros_like(self.project_years)
+    #
+    #     # Prepare attribute condensate_price
+    #     if not isinstance(self.condensate_price, dict):
+    #         raise OilLiftingDataException(
+    #             f"Attribute condensate_price must be provided in the form of dictionary. "
+    #             f"The current datatype of condensate_price is "
+    #             f"{self.condensate_price.__class__.__qualname__}"
+    #         )
+    #
+    #     for i in self.condensate_price.keys():
+    #         if self.condensate_price[i] is None:
+    #             self.condensate_price[i] = np.zeros_like(self.project_years)
 
 
 @dataclass

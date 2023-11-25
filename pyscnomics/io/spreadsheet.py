@@ -165,36 +165,33 @@ class Spreadsheet:
         Notes
         -----
         The procedures are as follows:
-        (1) Slice the data, only capture the columns that contain necessary data,
-        (2) Drop all-column-NaN values from the associated dataframe,
-        (3) Convert the remaining NaN values to None,
-        (4) Assign data to their associated attributes,
-        (5) Return a new instance of GeneralConfigData with filled attributes.
+        (1) In the associated dataframe, convert NaN values to None,
+        (2) Assign data to their associated attributes,
+        (3) Return a new instance of GeneralConfigData with filled attributes.
         """
-        # Step #1 - Step #3 (See 'Notes' section in the docstring)
-        general_config_data_loaded = (
-            self.data_loaded["General Config"]
-            .iloc[:, np.r_[1:3, -1]]
-            .dropna(axis=0, how="all")
-            .replace(np.nan, None)
-        )
+        # Step #1 (See 'Notes' section in the docstring)
+        general_config_data_loaded = self.data_loaded["General Config"].replace(np.nan, None)
 
-        # Step #4 - Step #5 (See 'Notes' section in the docstring)
-        type_of_contract = general_config_data_loaded.iloc[0, 1]
-        discount_rate_start_year = general_config_data_loaded.iloc[1, 1]
-        discount_rate = general_config_data_loaded.iloc[2, 1]
-        inflation_rate_applied_to = general_config_data_loaded.iloc[3, 1]
-        start_date_project = general_config_data_loaded.iloc[4, 1]
-        end_date_project = general_config_data_loaded.iloc[5, 1]
-        oil_onstream_date = general_config_data_loaded.iloc[6, 1]
-        gas_onstream_date = general_config_data_loaded.iloc[7, 1]
-        vat_discount = general_config_data_loaded.iloc[10, 1]
-        lbt_discount = general_config_data_loaded.iloc[11, 1]
-        gsa_number = general_config_data_loaded.iloc[9, 2]
+        # Step #2 - Step #3 (See 'Notes' section in the docstring)
+        type_of_contract = general_config_data_loaded.iloc[0, 2]
+        discount_rate_start_year = general_config_data_loaded.iloc[1, 2]
+        discount_rate = general_config_data_loaded.iloc[2, 2]
+        inflation_rate_applied_to = general_config_data_loaded.iloc[3, 2]
+        start_date_project = general_config_data_loaded.iloc[4, 2]
+        end_date_project = general_config_data_loaded.iloc[5, 2]
+        start_date_project_second = general_config_data_loaded.iloc[6, 2]
+        end_date_project_second = general_config_data_loaded.iloc[7, 2]
+        oil_onstream_date = general_config_data_loaded.iloc[8, 2]
+        gas_onstream_date = general_config_data_loaded.iloc[9, 2]
+        vat_discount = general_config_data_loaded.iloc[18, 2]
+        lbt_discount = general_config_data_loaded.iloc[19, 2]
+        gsa_number = general_config_data_loaded.iloc[11, 7]
 
         return GeneralConfigData(
             start_date_project=start_date_project,
             end_date_project=end_date_project,
+            start_date_project_second=start_date_project_second,
+            end_date_project_second=end_date_project_second,
             type_of_contract=type_of_contract,
             oil_onstream_date=oil_onstream_date,
             gas_onstream_date=gas_onstream_date,
@@ -244,9 +241,10 @@ class Spreadsheet:
             "rate": fiscal_config_data_loaded.iloc[4:10, 1].to_numpy(),
         }
         multi_inflation = {
-            "year": fiscal_config_data_loaded.iloc[31:, 0].to_numpy(),
-            "rate": fiscal_config_data_loaded.iloc[31:, 1].to_numpy(),
+            "year": fiscal_config_data_loaded.iloc[31:37, 0].to_numpy(),
+            "rate": fiscal_config_data_loaded.iloc[31:37, 1].to_numpy(),
         }
+        transferred_unrec_cost = fiscal_config_data_loaded.iloc[39, 1]
 
         return FiscalConfigData(
             tax_mode=tax_mode,
@@ -261,6 +259,7 @@ class Spreadsheet:
             inflation_rate_input=inflation_rate_input,
             multi_tax=multi_tax,
             multi_inflation=multi_inflation,
+            transferred_unrec_cost=float(transferred_unrec_cost),
             project_years=self.general_config_data.project_years,
         )
 
@@ -271,21 +270,7 @@ class Spreadsheet:
         Returns
         -------
         OilLiftingData
-            An instance of the OilLiftingData class containing the following attributes:
-                - project_duration: int
-                    The duration of the project.
-                - project_years: numpy.ndarray
-                    An array representing the project years.
-                - prod_year: dict
-                    Dictionary containing production years data.
-                - oil_lifting_rate: dict
-                    Dictionary containing oil lifting rate data.
-                - oil_price: dict
-                    Dictionary containing oil price data.
-                - condensate_lifting_rate: dict
-                    Dictionary containing condensate lifting rate data.
-                - condensate_price: dict
-                    Dictionary containing condensate price data.
+            An instance of the OilLiftingData class.
 
         Notes
         -----
@@ -315,7 +300,7 @@ class Spreadsheet:
         ]
 
         if len(oil_data_available) == 0:
-            oil_data = {key: {"Prod Oil": None}for key in oil_attrs}
+            oil_data = {key: {"Prod Oil": None} for key in oil_attrs}
 
             return OilLiftingData(
                 prod_year=oil_data["prod_year"],
@@ -325,6 +310,9 @@ class Spreadsheet:
                 condensate_price=oil_data["condensate_price"],
                 project_duration=self.general_config_data.project_duration,
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
         # Step #3 (See 'Notes' section in the docstring)
@@ -351,6 +339,9 @@ class Spreadsheet:
                 condensate_price=oil_data["condensate_price"],
                 project_duration=self.general_config_data.project_duration,
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
     def _get_gas_lifting_data(self) -> GasLiftingData:
@@ -1664,32 +1655,32 @@ class Spreadsheet:
 
         # Fill in the attributes associated with lifting data
         self.oil_lifting_data = self._get_oil_lifting_data()
-        self.gas_lifting_data = self._get_gas_lifting_data()
-        self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
-        self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
-        self.sulfur_lifting_data = self._get_sulfur_lifting_data()
-        self.electricity_lifting_data = self._get_electricity_lifting_data()
-        self.co2_lifting_data = self._get_co2_lifting_data()
+        # self.gas_lifting_data = self._get_gas_lifting_data()
+        # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
+        # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
+        # self.sulfur_lifting_data = self._get_sulfur_lifting_data()
+        # self.electricity_lifting_data = self._get_electricity_lifting_data()
+        # self.co2_lifting_data = self._get_co2_lifting_data()
+        #
+        # # Fill in the attributes associated with cost data
+        # self.tangible_cost_data = self._get_tangible_cost_data()
+        # self.intangible_cost_data = self._get_intangible_cost_data()
+        # self.opex_data = self._get_opex_data()
+        # self.asr_cost_data = self._get_asr_cost_data()
+        #
+        # # Fill in the attributes associated with contract data
+        # self.psc_cr_data = self._get_psc_cr_data()
+        # self.psc_gs_data = self._get_psc_gs_data()
+        # self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
+        # self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
+        # self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
+        # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
+        #
+        # # Fill in the attributes associated with additional functionality
+        # self.sensitivity_data = self._get_sensitivity_data()
+        # self.montecarlo_data = self._get_montecarlo_data()
+        # self.optimization_data = self._get_optimization_data()
 
-        # Fill in the attributes associated with cost data
-        self.tangible_cost_data = self._get_tangible_cost_data()
-        self.intangible_cost_data = self._get_intangible_cost_data()
-        self.opex_data = self._get_opex_data()
-        self.asr_cost_data = self._get_asr_cost_data()
-
-        # Fill in the attributes associated with contract data
-        self.psc_cr_data = self._get_psc_cr_data()
-        self.psc_gs_data = self._get_psc_gs_data()
-        self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
-        self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
-        self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
-        self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
-
-        # Fill in the attributes associated with additional functionality
-        self.sensitivity_data = self._get_sensitivity_data()
-        self.montecarlo_data = self._get_montecarlo_data()
-        self.optimization_data = self._get_optimization_data()
-
-        print("\t")
-        print(f"Filetype: {type(self.fiscal_config_data)}")
-        print("fiscal_config_data = \n", self.fiscal_config_data)
+        # print("\t")
+        # print(f"Filetype: {type(self.oil_lifting_data)}")
+        # print("oil_lifting_data = \n", self.oil_lifting_data)
