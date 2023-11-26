@@ -353,23 +353,7 @@ class Spreadsheet:
         Returns
         -------
         GasLiftingData
-            An instance of GasLiftingData class containing the following attributes:
-                - gas_gsa_number: int
-                    The number of GSA.
-                - prod_year: dict
-                    Dictionary containing production years data.
-                - gas_lifting_rate: dict
-                    Dictionary containing gas lifting rate data.
-                - gas_gsa_lifting_rate: dict
-                    Dictionary containing gas GSA lifting rate data.
-                - gas_gsa_ghv: dict
-                    Dictionary containing gas GSA ghv data.
-                - gas_gsa_price: dict
-                    Dictionary containing gas GSA price data.
-                - project_duration: int
-                    The duration of the project.
-                - project_years: numpy.ndarray
-                    An array representing the project years.
+            An instance of GasLiftingData class.
 
         Notes
         -----
@@ -429,13 +413,16 @@ class Spreadsheet:
 
             return GasLiftingData(
                 gas_gsa_number=gas_gsa_number,
-                prod_year=gas_data["prod_year"],
+                prod_year_input=gas_data["prod_year"],
                 gas_prod_rate=gas_data["gas_prod_rate"],
                 gas_gsa_lifting_rate=gas_data["gas_gsa_lifting_rate"],
                 gas_gsa_ghv=gas_data["gas_gsa_ghv"],
                 gas_gsa_price=gas_data["gas_gsa_price"],
                 project_duration=self.general_config_data.project_duration,
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
         # Step #4 (See 'Notes' section in the docstring)
@@ -477,13 +464,16 @@ class Spreadsheet:
 
             return GasLiftingData(
                 gas_gsa_number=gas_gsa_number,
-                prod_year=gas_data["prod_year"],
+                prod_year_input=gas_data["prod_year"],
                 gas_prod_rate=gas_data["gas_prod_rate"],
                 gas_gsa_lifting_rate=gas_data["gas_gsa_lifting_rate"],
                 gas_gsa_ghv=gas_data["gas_gsa_ghv"],
                 gas_gsa_price=gas_data["gas_gsa_price"],
                 project_duration=self.general_config_data.project_duration,
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
     def _get_lpg_propane_lifting_data(self) -> LPGPropaneLiftingData:
@@ -1684,7 +1674,7 @@ class Spreadsheet:
         # self.montecarlo_data = self._get_montecarlo_data()
         # self.optimization_data = self._get_optimization_data()
 
-        print("\t")
-        print(f"Filetype: {type(self.asr_cost_data)}")
-        # print(f"Keys: {self.general_config_data.__annotations__}")
-        print("asr_cost_data = \n", self.asr_cost_data)
+        # print("\t")
+        # print(f"Filetype: {type(self.gas_lifting_data)}")
+        # # print(f"Keys: {self.general_config_data.__annotations__}")
+        # print("gas_lifting_data = \n", self.gas_lifting_data)

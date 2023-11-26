@@ -657,8 +657,65 @@ def get_lifting_data_split_non_gas(
     return target_attr
 
 
-def get_lifting_data_split_gas():
-    pass
+def get_lifting_data_split_gas_no_nested(
+    target_attr: dict,
+    # is_target_attr_volume: bool,
+    prod_year: dict,
+    end_date_contract_1: datetime,
+    start_date_contract_2: datetime,
+):
+
+    keys_transition = ["PSC 1", "PSC 2"]
+
+    # End year of the first contract is the same as the start year of the second contract
+    if end_date_contract_1.year == start_date_contract_2.year:
+        id_transition = {
+            key: np.argwhere(
+                prod_year[key] == end_date_contract_1.year
+            ).ravel().astype("int")
+            for key in prod_year.keys()
+        }
+
+        for key in target_attr.keys():
+            target_attr[key] = {
+                keys_transition[0]: target_attr[key][:id_transition[key][0] + 1].astype("float"),
+                keys_transition[1]: target_attr[key][id_transition[key][0]:].astype("float")
+            }
+
+    else:
+        id_transition = {
+            key: np.array(
+                [
+                    np.argwhere(prod_year[key] == i).ravel().astype("int")
+                    for i in [end_date_contract_1.year, start_date_contract_2.year]
+                ]
+            ).ravel()
+            for key in prod_year.keys()
+        }
+
+        for key in target_attr.keys():
+            if target_attr[key] is None:
+                target_attr[key] = {keys_transition[0]: None, keys_transition[1]: None}
+            else:
+                target_attr[key] = {
+                    keys_transition[0]: target_attr[key][:id_transition[key][0] + 1].astype("float"),
+                    keys_transition[1]: target_attr[key][id_transition[key][1]:].astype("float")
+                }
+
+    return target_attr
+
+        # for key in self.gas_prod_rate.keys():
+        #     if self.gas_prod_rate[key] is None:
+        #         self.gas_prod_rate[key] = {
+        #             keys_transition[0]: None,
+        #             keys_transition[1]: None,
+        #         }
+        #     else:
+        #         self.gas_prod_rate[key] = {
+        #             keys_transition[0]: self.gas_prod_rate[key][:id_transition[key][0] + 1].astype("float"),
+        #             keys_transition[1]: self.gas_prod_rate[key][id_transition[key][1]:].astype("float")
+        #         }
+
 
 
 def get_cost_data_split(

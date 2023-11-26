@@ -10,6 +10,7 @@ import pandas as pd
 from pyscnomics.tools.helper import (
     get_datetime,
     get_lifting_data_split_non_gas,
+    get_lifting_data_split_gas_no_nested,
     get_cost_data_split,
 )
 
@@ -623,7 +624,7 @@ class GasLiftingData:
     ----------
     gas_gsa_number: int
         The number of GSA.
-    prod_year: dict
+    prod_year_input: dict
         Dictionary containing production years data.
     gas_prod_rate: dict
         Dictionary containing gas lifting rate data.
@@ -638,29 +639,38 @@ class GasLiftingData:
     project_years: numpy.ndarray
         An array representing the project years.
     """
-
     gas_gsa_number: int
-    prod_year: dict
+    prod_year_input: dict
     gas_prod_rate: dict
     gas_gsa_lifting_rate: dict
     gas_gsa_ghv: dict
     gas_gsa_price: dict
 
+    # Attributes associated with PSC transition
+    type_of_contract: str
+    end_date_project: date
+    start_date_project_second: date
+
     # Attributes associated with project duration
     project_duration: int
     project_years: np.ndarray
 
+    prod_year: dict = field(default=None, init=False)
+
     def __post_init__(self):
         # Prepare attribute prod_year
-        if not isinstance(self.prod_year, dict):
+        if not isinstance(self.prod_year_input, dict):
             raise GasLiftingDataException(
                 f"Attribute prod_year must be provided in the form of dictionary. "
                 f"The current datatype of prod_year is "
-                f"{self.prod_year.__class__.__qualname__}"
+                f"{self.prod_year_input.__class__.__qualname__}"
             )
 
-        for i in self.prod_year.keys():
-            if self.prod_year[i] is None:
+        self.prod_year = self.prod_year_input
+
+        for i in self.prod_year_input.keys():
+            if self.prod_year_input[i] is None:
+                self.prod_year_input[i] = self.project_years
                 self.prod_year[i] = self.project_years
 
         # Prepare attribute gas_prod_rate
@@ -713,6 +723,92 @@ class GasLiftingData:
             for j in self.gas_gsa_price[i].keys():
                 if self.gas_gsa_price[i][j] is None:
                     self.gas_gsa_price[i][j] = np.zeros_like(self.project_years)
+
+        # Adjust data for transition case
+        if "Transition" in self.type_of_contract:
+
+            if self.end_date_project.year == self.start_date_project_second.year:
+                id_transition = np.argwhere()
+
+        # print('\t')
+        # print(f'Filetype: {type(self.prod_year_input)}')
+        # print(f'Length: {len(self.prod_year_input)}')
+        # print('prod_year_input = \n', self.prod_year_input)
+        #
+        # print('\t')
+        # print(f'Filetype: {type(self.prod_year)}')
+        # print(f'Length: {len(self.prod_year)}')
+        # print('prod_year = \n', self.prod_year)
+
+        # print('\t')
+        # print(f'Filetype: {type(self.gas_prod_rate)}')
+        # print(f'Length: {len(self.gas_prod_rate)}')
+        # print('gas_prod_rate = \n', self.gas_prod_rate)
+        #
+        # print('=================================================================================')
+        #
+        # if "Transition" in self.type_of_contract:
+        #     self.prod_year = get_lifting_data_split_gas_no_nested(
+        #         target_attr=self.prod_year,
+        #         prod_year=self.prod_year_input,
+        #         end_date_contract_1=self.end_date_project,
+        #         start_date_contract_2=self.start_date_project_second,
+        #     )
+
+            # keys_transition = ["PSC 1", "PSC 2"]
+            #
+            # if self.end_date_project.year == self.start_date_project_second.year:
+            #     id_transition = {
+            #         key: np.argwhere(
+            #             self.prod_year_input[key] == self.end_date_project.year
+            #         ).ravel().astype("int")
+            #         for key in self.prod_year_input.keys()
+            #     }
+            #
+            #     for key in self.prod_year.keys():
+            #         self.prod_year[key] = {
+            #             keys_transition[0]: self.prod_year[key][:id_transition[key][0] + 1].astype("float"),
+            #             keys_transition[1]: self.prod_year[key][id_transition[key][0]:].astype("float")
+            #         }
+            #
+            # else:
+            #     id_transition = {
+            #         key: np.array(
+            #             [
+            #                 np.argwhere(self.prod_year[key] == i).ravel().astype("int")
+            #                 for i in [self.end_date_project.year, self.start_date_project_second.year]
+            #             ]
+            #         ).ravel()
+            #         for key in self.prod_year_input.keys()
+            #     }
+            #
+            #     for key in self.prod_year.keys():
+            #         self.prod_year[key] = {
+            #             keys_transition[0]: self.prod_year[key][:id_transition[key][0] + 1].astype("float"),
+            #             keys_transition[1]: self.prod_year[key][id_transition[key][1]:].astype("float")
+            #         }
+            #
+            #     for key in self.gas_prod_rate.keys():
+            #         if self.gas_prod_rate[key] is None:
+            #             self.gas_prod_rate[key] = {
+            #                 keys_transition[0]: None,
+            #                 keys_transition[1]: None,
+            #             }
+            #         else:
+            #             self.gas_prod_rate[key] = {
+            #                 keys_transition[0]: self.gas_prod_rate[key][:id_transition[key][0] + 1].astype("float"),
+            #                 keys_transition[1]: self.gas_prod_rate[key][id_transition[key][1]:].astype("float")
+            #             }
+
+        # print('\t')
+        # print(f'Filetype: {type(self.gas_prod_rate)}')
+        # print(f'Length: {len(self.gas_prod_rate)}')
+        # print('gas_prod_rate = \n', self.gas_prod_rate)
+
+
+
+
+
 
 
 @dataclass
