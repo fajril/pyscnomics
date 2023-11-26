@@ -693,6 +693,10 @@ def get_lifting_data_split_gas_no_nested(
             for key in prod_year.keys()
         }
 
+        print('\t')
+        print(f'Filetype: {type(id_transition)}')
+        print('id_transition = ', id_transition)
+
         for key in target_attr.keys():
             if target_attr[key] is None:
                 target_attr[key] = {keys_transition[0]: None, keys_transition[1]: None}
@@ -703,19 +707,6 @@ def get_lifting_data_split_gas_no_nested(
                 }
 
     return target_attr
-
-        # for key in self.gas_prod_rate.keys():
-        #     if self.gas_prod_rate[key] is None:
-        #         self.gas_prod_rate[key] = {
-        #             keys_transition[0]: None,
-        #             keys_transition[1]: None,
-        #         }
-        #     else:
-        #         self.gas_prod_rate[key] = {
-        #             keys_transition[0]: self.gas_prod_rate[key][:id_transition[key][0] + 1].astype("float"),
-        #             keys_transition[1]: self.gas_prod_rate[key][id_transition[key][1]:].astype("float")
-        #         }
-
 
 
 def get_cost_data_split(

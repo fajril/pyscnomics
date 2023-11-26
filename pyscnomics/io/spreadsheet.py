@@ -90,7 +90,7 @@ class Spreadsheet:
     def __post_init__(self):
         # Configure attribute workbook_to_read
         if self.workbook_to_read is None:
-            self.workbook_to_read = "Workbook.xlsb"
+            self.workbook_to_read = "Workbook.xlsm"
 
         if self.workbook_to_read is not None:
             if not isinstance(self.workbook_to_read, str):
@@ -98,11 +98,6 @@ class Spreadsheet:
                     f"Excel filename must be provided in str format. "
                     f"{self.workbook_to_read} ({self.workbook_to_read.__class__.__qualname__}) "
                     f"is not a str format."
-                )
-
-            if ".xlsb" not in self.workbook_to_read:
-                raise SpreadsheetException(
-                    f"Excel filename must be provided in '.xlsb' format."
                 )
 
     def read_from_excel(self) -> None:
@@ -149,7 +144,7 @@ class Spreadsheet:
                 skiprows=1,
                 index_col=None,
                 header=None,
-                engine="pyxlsb",
+                engine="openpyxl",
             )
             for key in self.sheets_loaded
         }
@@ -1674,7 +1669,9 @@ class Spreadsheet:
         # self.montecarlo_data = self._get_montecarlo_data()
         # self.optimization_data = self._get_optimization_data()
 
-        # print("\t")
-        # print(f"Filetype: {type(self.gas_lifting_data)}")
-        # # print(f"Keys: {self.general_config_data.__annotations__}")
-        # print("gas_lifting_data = \n", self.gas_lifting_data)
+        print("\t")
+        print(f"Filetype: {type(self.gas_lifting_data)}")
+        print("\t")
+        print("gas_lifting_data = \n", self.gas_lifting_data)
+        # # print("\t")
+        # # print(f"Keys: {self.tangible_cost_data.__annotations__}")
