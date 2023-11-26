@@ -231,7 +231,7 @@ costrec = CostRecovery(
 
 timer_start = tm.time()
 
-data = Spreadsheet(workbook_to_read="Workbook.xlsm")
+data = Spreadsheet(workbook_to_read="Workbook.xlsb")
 data.prepare_data()
 
 timer_end = tm.time() - timer_start

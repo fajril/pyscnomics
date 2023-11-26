@@ -3,6 +3,7 @@ Handles summation operation on two arrays, accounting for different starting yea
 """
 
 import numpy as np
+from datetime import datetime
 from functools import wraps
 from pyscnomics.econ.selection import FluidType, TaxType
 
@@ -551,6 +552,187 @@ def get_instances(target_instances: tuple, identifier: list) -> tuple:
                 result.append(add)
 
     return tuple(result)
+
+
+def get_datetime(ordinal_date):
+    """
+    Convert an ordinal date to a datetime object.
+
+    Parameters
+    ----------
+    ordinal_date: int
+        Ordinal date to be converted.
+
+    Returns
+    -------
+    datetime
+        Datetime object corresponding to the given ordinal date.
+    """
+    date_time = datetime.fromordinal(
+        datetime(1900, 1, 1).toordinal() + ordinal_date - 2
+    )
+    return date_time
+
+
+def get_lifting_data_split_non_gas(
+    target_attr: dict,
+    is_target_attr_volume: bool,
+    project_years: np.ndarray,
+    end_date_contract_1: datetime,
+    start_date_contract_2: datetime,
+) -> dict:
+    """
+    Split non-gas lifting data based on Production Sharing Contract (PSC) transitions.
+
+    Parameters
+    ----------
+    target_attr: Dict[str, np.ndarray]
+        Dictionary of target attribute data to be split.
+    is_target_attr_volume: bool
+        Indicates if the target attribute represents volume.
+    project_years: np.ndarray
+        Array of years corresponding to the project data.
+    end_date_contract_1: datetime
+        End date of the first contract.
+    start_date_contract_2: datetime
+        Start date of the second contract.
+
+    Returns
+    -------
+    Dict[str, Dict[str, np.ndarray]]
+        A nested dictionary containing split target attribute data for PSC 1 and PSC 2.
+        The outer dictionary keys represent different target attributes, and the inner
+        dictionary keys are 'PSC 1' and 'PSC 2', each with a numpy array of the split target_attr.
+
+    Notes
+    -----
+    - If end year of the first contract is the same as the start year of the second contract,
+      the target_attr for each attribute is split based on the transition year, adjusting
+      the volume accordingly.
+    - If end year of the first contract is different from the start year of the second contract,
+      the target_attr for each attribute is split based on the transition years.
+    """
+    keys_transition = ["PSC 1", "PSC 2"]
+
+    # End year of the first contract is the same as the start year of the second contract
+    if end_date_contract_1.year == start_date_contract_2.year:
+        id_transition = np.argwhere(project_years == end_date_contract_1.year).ravel().astype("int")
+        days_diff = (
+            end_date_contract_1
+            - datetime(day=1, month=1, year=end_date_contract_1.year)
+        )
+        days_delta = (
+            datetime(day=31, month=12, year=end_date_contract_1.year)
+            - datetime(day=1, month=1, year=end_date_contract_1.year)
+        )
+
+        multiplier = (days_diff.days + 1) / (days_delta.days + 2)
+
+        for key in target_attr.keys():
+            target_attr[key] = {
+                keys_transition[0]: target_attr[key][:id_transition[0] + 1].astype("float"),
+                keys_transition[1]: target_attr[key][id_transition[0]:].astype("float"),
+            }
+
+        for key in target_attr.keys():
+            if is_target_attr_volume is True:
+                target_attr[key][keys_transition[0]][-1] *= multiplier
+                target_attr[key][keys_transition[1]][0] *= (1.0 - multiplier)
+
+    # End year of the first contract is different from the start year of the second contract
+    else:
+        id_transition = np.array(
+            [
+                np.argwhere(project_years == i).ravel().astype("int") for i in
+                [end_date_contract_1.year, start_date_contract_2.year]
+            ]
+        ).ravel()
+
+        for key in target_attr.keys():
+            target_attr[key] = {
+                keys_transition[0]: target_attr[key][:id_transition[0] + 1].astype("float"),
+                keys_transition[1]: target_attr[key][id_transition[1]:].astype("float"),
+            }
+
+    return target_attr
+
+
+def get_lifting_data_split_gas():
+    pass
+
+
+def get_cost_data_split(
+    target_attr: list | np.ndarray,
+    is_target_attr_volume: bool,
+    expense_year: np.ndarray,
+    end_date_contract_1: datetime,
+    start_date_contract_2: datetime,
+) -> dict:
+    """
+    Split cost data based on the transition between two Production Sharing Contracts (PSCs).
+
+    Parameters
+    ----------
+    target_attr: list, np.ndarray
+        The target attribute data to be split.
+    is_target_attr_volume: bool
+        Indicates if the target attribute represents volume.
+    expense_year: np.ndarray
+        Array of years corresponding to the cost data.
+    end_date_contract_1: datetime
+        End date of the first contract.
+    start_date_contract_2: datetime
+        Start date of the second contract.
+
+    Returns
+    -------
+    dict
+        A dictionary containing split target attribute data for PSC 1 and PSC 2.
+
+    Notes
+    -----
+    - If end year of the first contract is the same as the start year of the second contract,
+      the target_attr is split based on the transition year, adjusting the volume accordingly.
+    - If end year of the first contract is different from the start year of the second contract,
+      the target_attr is split based on the transition year.
+    """
+    keys_transition = ["PSC 1", "PSC 2"]
+
+    id_transition = np.argwhere(expense_year == end_date_contract_1.year).ravel()
+
+    if isinstance(target_attr, list):
+        target_attr = np.array(target_attr)
+
+    # End year of the first contract is the same as the start year of the second contract
+    if end_date_contract_1.year == start_date_contract_2.year:
+        days_diff = (
+            end_date_contract_1
+            - datetime(day=1, month=1, year=end_date_contract_1.year)
+        )
+        days_delta = (
+            datetime(day=31, month=12, year=end_date_contract_1.year)
+            - datetime(day=1, month=1, year=end_date_contract_1.year)
+        )
+
+        multiplier = (days_diff.days + 1) / (days_delta.days + 2)
+
+        target_attr = {
+            keys_transition[0]: target_attr[:int(max(id_transition) + 1)],
+            keys_transition[1]: target_attr[int(min(id_transition)):]
+        }
+
+        if is_target_attr_volume is True:
+            target_attr[keys_transition[0]][-1] = target_attr[keys_transition[0]][-1] * multiplier
+            target_attr[keys_transition[1]][0] = target_attr[keys_transition[1]][0] * (1.0 - multiplier)
+
+    # End year of the first contract is different from the start year of the second contract
+    else:
+        target_attr = {
+            keys_transition[0]: target_attr[0:int(max(id_transition) + 1)],
+            keys_transition[1]: target_attr[int(max(id_transition) + 1):]
+        }
+
+    return target_attr
 
 
 def summarizer(

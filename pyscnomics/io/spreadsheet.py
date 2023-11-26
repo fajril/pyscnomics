@@ -6,6 +6,7 @@ import os
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass, field
+from datetime import date, datetime
 
 from pyscnomics.io.config import (
     GeneralConfigData,
@@ -89,7 +90,7 @@ class Spreadsheet:
     def __post_init__(self):
         # Configure attribute workbook_to_read
         if self.workbook_to_read is None:
-            self.workbook_to_read = "Workbook.xlsm"
+            self.workbook_to_read = "Workbook.xlsb"
 
         if self.workbook_to_read is not None:
             if not isinstance(self.workbook_to_read, str):
@@ -99,9 +100,9 @@ class Spreadsheet:
                     f"is not a str format."
                 )
 
-            if ".xlsm" not in self.workbook_to_read:
+            if ".xlsb" not in self.workbook_to_read:
                 raise SpreadsheetException(
-                    f"Excel filename must be provided in '.xlsm' format."
+                    f"Excel filename must be provided in '.xlsb' format."
                 )
 
     def read_from_excel(self) -> None:
@@ -126,8 +127,9 @@ class Spreadsheet:
 
         # Identify worksheets in the target Excel file
         excel = pd.ExcelFile(load_dir)
-        sheets = excel.book.worksheets
-        self.sheets_name = [sh.title for sh in sheets]
+        self.sheets_name = excel.sheet_names
+
+        # self.sheets_name = [sh.title for sh in sheets]
         self.sheets_loaded = [
             i for i in self.sheets_name
             if i not in [
@@ -147,7 +149,7 @@ class Spreadsheet:
                 skiprows=1,
                 index_col=None,
                 header=None,
-                engine="openpyxl",
+                engine="pyxlsb",
             )
             for key in self.sheets_loaded
         }
@@ -198,9 +200,9 @@ class Spreadsheet:
             discount_rate_start_year=discount_rate_start_year,
             discount_rate=discount_rate,
             inflation_rate_applied_to=inflation_rate_applied_to,
-            vat_discount=float(vat_discount),
-            lbt_discount=float(lbt_discount),
-            gsa_number=int(gsa_number),
+            vat_discount=vat_discount,
+            lbt_discount=lbt_discount,
+            gsa_number=gsa_number,
         )
 
     def _get_fiscal_config_data(self) -> FiscalConfigData:
@@ -491,17 +493,7 @@ class Spreadsheet:
         Returns
         -------
         LPGPropaneLiftingData
-            An instance of the LPGPropaneLiftingData class containing the following attributes:
-                - prod_year: dict
-                    Dictionary containing production years data.
-                - lifting_rate: dict
-                    Dictionary containing LPG propane lifting rate data.
-                - price: dict
-                    Dictionary containing LPG propane price data.
-                - project_duration: int
-                    The duration of the project.
-                - project_years: numpy.ndarray
-                    An array representing the project years.
+            An instance of the LPGPropaneLiftingData class.
 
         Notes
         -----
@@ -535,6 +527,9 @@ class Spreadsheet:
                 price=lpg_propane_data["price"],
                 project_duration=self.general_config_data.project_duration,
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
         # Step #3 (See 'Notes' section in the docstring)
@@ -561,6 +556,9 @@ class Spreadsheet:
                 price=lpg_propane_data["price"],
                 project_duration=self.general_config_data.project_duration,
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second= self.general_config_data.start_date_project_second,
             )
 
     def _get_lpg_butane_lifting_data(self) -> LPGButaneLiftingData:
@@ -570,17 +568,7 @@ class Spreadsheet:
         Returns
         -------
         LPGButaneLiftingData
-            An instance of the LPGButaneLiftingData class containing the following attributes:
-                - prod_year: dict
-                    Dictionary containing production years data.
-                - lifting_rate: dict
-                    Dictionary containing LPG butane lifting rate data.
-                - price: dict
-                    Dictionary containing LPG butane price data.
-                - project_duration: int
-                    The duration of the project.
-                - project_years: numpy.ndarray
-                    An array representing the project years.
+            An instance of the LPGButaneLiftingData class.
 
         Notes
         -----
@@ -596,7 +584,6 @@ class Spreadsheet:
             dataframe, then create a new instance of LPGButaneLiftingData with the associated
             attributes set as the loaded value from the corresponding Excel worksheet.
         """
-
         # Step #1 (See 'Notes' section in the docstring)
         lpg_butane_data_available = list(
             filter(lambda i: "Prod LPG Butane" in i, self.sheets_loaded)
@@ -614,6 +601,9 @@ class Spreadsheet:
                 price=lpg_butane_data["price"],
                 project_duration=self.general_config_data.project_duration,
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
         # Step #3 (See 'Notes' section in the docstring)
@@ -640,6 +630,9 @@ class Spreadsheet:
                 price=lpg_butane_data["price"],
                 project_duration=self.general_config_data.project_duration,
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
     def _get_sulfur_lifting_data(self) -> SulfurLiftingData:
@@ -649,17 +642,7 @@ class Spreadsheet:
         Returns
         -------
         SulfurLiftingData
-            An instance of the SulfurLiftingData class containing the following attributes:
-                - prod_year: dict
-                    Dictionary containing production years data.
-                - lifting_rate: dict
-                    Dictionary containing sulfur lifting rate data.
-                - price: dict
-                    Dictionary containing sulfur price data.
-                - project_duration: int
-                    The duration of the project.
-                - project_years: numpy.ndarray
-                    An array representing the project years.
+            An instance of the SulfurLiftingData class.
 
         Notes
         -----
@@ -691,6 +674,9 @@ class Spreadsheet:
                 price=sulfur_data["price"],
                 project_duration=self.general_config_data.project_duration,
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
         # Step #3 (See 'Notes' section in the docstring)
@@ -715,6 +701,9 @@ class Spreadsheet:
                 price=sulfur_data["price"],
                 project_duration=self.general_config_data.project_duration,
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second
             )
 
     def _get_electricity_lifting_data(self) -> ElectricityLiftingData:
@@ -766,6 +755,9 @@ class Spreadsheet:
                 price=electricity_data["price"],
                 project_duration=self.general_config_data.project_duration,
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
         # Step #3 (See 'Notes' section in the docstring)
@@ -792,6 +784,9 @@ class Spreadsheet:
                 price=electricity_data["price"],
                 project_duration=self.general_config_data.project_duration,
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
     def _get_co2_lifting_data(self) -> CO2LiftingData:
@@ -801,17 +796,7 @@ class Spreadsheet:
         Returns
         -------
         CO2LiftingData
-            An instance of the CO2LiftingData class containing the following attributes:
-                - prod_year: dict
-                    Dictionary containing production years data.
-                - lifting_rate: dict
-                    Dictionary containing CO2 lifting rate data.
-                - price: dict
-                    Dictionary containing CO2 price data.
-                - project_duration: int
-                    The duration of the project.
-                - project_years: numpy.ndarray
-                    An array representing the project years.
+            An instance of the CO2LiftingData class.
 
         Notes
         -----
@@ -843,6 +828,9 @@ class Spreadsheet:
                 price=co2_data["price"],
                 project_duration=self.general_config_data.project_duration,
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
         # Step #3 (See 'Notes' section in the docstring)
@@ -867,6 +855,9 @@ class Spreadsheet:
             price=co2_data["price"],
             project_duration=self.general_config_data.project_duration,
             project_years=self.general_config_data.project_years,
+            type_of_contract=self.general_config_data.type_of_contract,
+            end_date_project=self.general_config_data.end_date_project,
+            start_date_project_second=self.general_config_data.start_date_project_second,
         )
 
     def _get_tangible_cost_data(self) -> None | TangibleCostData:
@@ -916,7 +907,7 @@ class Spreadsheet:
             }
 
             return TangibleCostData(
-                expense_year=tangible_data["expense_year"],
+                expense_year_input=tangible_data["expense_year"],
                 cost_allocation=tangible_data["cost_allocation"].tolist(),
                 cost=tangible_data["cost"],
                 pis_year=tangible_data["pis_year"],
@@ -929,6 +920,9 @@ class Spreadsheet:
                 description=tangible_data["description"].tolist(),
                 data_length=tangible_data_loaded.shape[0],
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
     def _get_intangible_cost_data(self) -> None | IntangibleCostData:
@@ -973,7 +967,7 @@ class Spreadsheet:
             }
 
             return IntangibleCostData(
-                expense_year=intangible_data["expense_year"],
+                expense_year_input=intangible_data["expense_year"],
                 cost_allocation=intangible_data["cost_allocation"].tolist(),
                 cost=intangible_data["cost"],
                 vat_portion=intangible_data["vat_portion"],
@@ -981,6 +975,9 @@ class Spreadsheet:
                 description=intangible_data["description"].tolist(),
                 data_length=intangible_data_loaded.shape[0],
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
     def _get_opex_data(self) -> None | OPEXData:
@@ -1027,7 +1024,7 @@ class Spreadsheet:
             }
 
             return OPEXData(
-                expense_year=opex_data["expense_year"],
+                expense_year_input=opex_data["expense_year"],
                 cost_allocation=opex_data["cost_allocation"].tolist(),
                 fixed_cost=opex_data["fixed_cost"],
                 prod_rate=opex_data["prod_rate"],
@@ -1037,6 +1034,9 @@ class Spreadsheet:
                 description=opex_data["description"].tolist(),
                 data_length=opex_data_loaded.shape[0],
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
     def _get_asr_cost_data(self) -> None | ASRCostData:
@@ -1081,7 +1081,7 @@ class Spreadsheet:
             }
 
             return ASRCostData(
-                expense_year=asr_data["expense_year"],
+                expense_year_input=asr_data["expense_year"],
                 cost_allocation=asr_data["cost_allocation"].tolist(),
                 cost=asr_data["cost"],
                 vat_portion=asr_data["vat_portion"],
@@ -1089,6 +1089,9 @@ class Spreadsheet:
                 description=asr_data["description"].tolist(),
                 data_length=asr_data_loaded.shape[0],
                 project_years=self.general_config_data.project_years,
+                type_of_contract=self.general_config_data.type_of_contract,
+                end_date_project=self.general_config_data.end_date_project,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
     def _get_psc_cr_data(self) -> PSCCostRecoveryData:
@@ -1655,32 +1658,33 @@ class Spreadsheet:
 
         # Fill in the attributes associated with lifting data
         self.oil_lifting_data = self._get_oil_lifting_data()
-        # self.gas_lifting_data = self._get_gas_lifting_data()
-        # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
-        # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
-        # self.sulfur_lifting_data = self._get_sulfur_lifting_data()
-        # self.electricity_lifting_data = self._get_electricity_lifting_data()
-        # self.co2_lifting_data = self._get_co2_lifting_data()
-        #
-        # # Fill in the attributes associated with cost data
-        # self.tangible_cost_data = self._get_tangible_cost_data()
-        # self.intangible_cost_data = self._get_intangible_cost_data()
-        # self.opex_data = self._get_opex_data()
-        # self.asr_cost_data = self._get_asr_cost_data()
-        #
-        # # Fill in the attributes associated with contract data
-        # self.psc_cr_data = self._get_psc_cr_data()
-        # self.psc_gs_data = self._get_psc_gs_data()
-        # self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
-        # self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
-        # self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
-        # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
-        #
+        self.gas_lifting_data = self._get_gas_lifting_data()
+        self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
+        self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
+        self.sulfur_lifting_data = self._get_sulfur_lifting_data()
+        self.electricity_lifting_data = self._get_electricity_lifting_data()
+        self.co2_lifting_data = self._get_co2_lifting_data()
+
+        # Fill in the attributes associated with cost data
+        self.tangible_cost_data = self._get_tangible_cost_data()
+        self.intangible_cost_data = self._get_intangible_cost_data()
+        self.opex_data = self._get_opex_data()
+        self.asr_cost_data = self._get_asr_cost_data()
+
+        # Fill in the attributes associated with contract data
+        self.psc_cr_data = self._get_psc_cr_data()
+        self.psc_gs_data = self._get_psc_gs_data()
+        self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
+        self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
+        self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
+        self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
+
         # # Fill in the attributes associated with additional functionality
         # self.sensitivity_data = self._get_sensitivity_data()
         # self.montecarlo_data = self._get_montecarlo_data()
         # self.optimization_data = self._get_optimization_data()
 
-        # print("\t")
-        # print(f"Filetype: {type(self.oil_lifting_data)}")
-        # print("oil_lifting_data = \n", self.oil_lifting_data)
+        print("\t")
+        print(f"Filetype: {type(self.asr_cost_data)}")
+        # print(f"Keys: {self.general_config_data.__annotations__}")
+        print("asr_cost_data = \n", self.asr_cost_data)
