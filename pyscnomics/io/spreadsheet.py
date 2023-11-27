@@ -244,7 +244,7 @@ class Spreadsheet:
 
         return FiscalConfigData(
             tax_mode=tax_mode,
-            tax_rate_input=tax_rate_input,
+            tax_rate_init=tax_rate_input,
             tax_payment_method=tax_payment_method,
             tax_psc_cost_recovery=tax_psc_cost_recovery,
             npv_mode=npv_mode,
@@ -252,7 +252,7 @@ class Spreadsheet:
             future_rate_asr=future_rate_asr,
             depreciation_method=depreciation_method,
             inflation_rate_mode=inflation_rate_mode,
-            inflation_rate_input=inflation_rate_input,
+            inflation_rate_init=inflation_rate_input,
             multi_tax=multi_tax,
             multi_inflation=multi_inflation,
             transferred_unrec_cost=float(transferred_unrec_cost),
@@ -299,7 +299,7 @@ class Spreadsheet:
             oil_data = {key: {"Prod Oil": None} for key in oil_attrs}
 
             return OilLiftingData(
-                prod_year=oil_data["prod_year"],
+                prod_year_init=oil_data["prod_year"],
                 oil_lifting_rate=oil_data["oil_lifting_rate"],
                 oil_price=oil_data["oil_price"],
                 condensate_lifting_rate=oil_data["condensate_lifting_rate"],
@@ -328,7 +328,7 @@ class Spreadsheet:
                         )
 
             return OilLiftingData(
-                prod_year=oil_data["prod_year"],
+                prod_year_init=oil_data["prod_year"],
                 oil_lifting_rate=oil_data["oil_lifting_rate"],
                 oil_price=oil_data["oil_price"],
                 condensate_lifting_rate=oil_data["condensate_lifting_rate"],
@@ -506,7 +506,7 @@ class Spreadsheet:
             lpg_propane_data = {key: {"Prod LPG Propane": None} for key in lpg_propane_attrs}
 
             return LPGPropaneLiftingData(
-                prod_year=lpg_propane_data["prod_year"],
+                prod_year_init=lpg_propane_data["prod_year"],
                 lifting_rate=lpg_propane_data["lifting_rate"],
                 price=lpg_propane_data["price"],
                 project_duration=self.general_config_data.project_duration,
@@ -535,7 +535,7 @@ class Spreadsheet:
                         )
 
             return LPGPropaneLiftingData(
-                prod_year=lpg_propane_data["prod_year"],
+                prod_year_init=lpg_propane_data["prod_year"],
                 lifting_rate=lpg_propane_data["lifting_rate"],
                 price=lpg_propane_data["price"],
                 project_duration=self.general_config_data.project_duration,
@@ -580,7 +580,7 @@ class Spreadsheet:
             lpg_butane_data = {key: {"Prod LPG Butane": None} for key in lpg_butane_attrs}
 
             return LPGButaneLiftingData(
-                prod_year=lpg_butane_data["prod_year"],
+                prod_year_init=lpg_butane_data["prod_year"],
                 lifting_rate=lpg_butane_data["lifting_rate"],
                 price=lpg_butane_data["price"],
                 project_duration=self.general_config_data.project_duration,
@@ -609,7 +609,7 @@ class Spreadsheet:
                         )
 
             return LPGButaneLiftingData(
-                prod_year=lpg_butane_data["prod_year"],
+                prod_year_init=lpg_butane_data["prod_year"],
                 lifting_rate=lpg_butane_data["lifting_rate"],
                 price=lpg_butane_data["price"],
                 project_duration=self.general_config_data.project_duration,
@@ -653,7 +653,7 @@ class Spreadsheet:
             sulfur_data = {key: {"Prod Sulfur": None} for key in sulfur_data_attrs}
 
             return SulfurLiftingData(
-                prod_year=sulfur_data["prod_year"],
+                prod_year_init=sulfur_data["prod_year"],
                 lifting_rate=sulfur_data["lifting_rate"],
                 price=sulfur_data["price"],
                 project_duration=self.general_config_data.project_duration,
@@ -680,7 +680,7 @@ class Spreadsheet:
                         )
 
             return SulfurLiftingData(
-                prod_year=sulfur_data["prod_year"],
+                prod_year_init=sulfur_data["prod_year"],
                 lifting_rate=sulfur_data["lifting_rate"],
                 price=sulfur_data["price"],
                 project_duration=self.general_config_data.project_duration,
@@ -734,7 +734,7 @@ class Spreadsheet:
             electricity_data = {key: {"Prod Electricity": None} for key in electricity_data_attrs}
 
             return ElectricityLiftingData(
-                prod_year=electricity_data["prod_year"],
+                prod_year_init=electricity_data["prod_year"],
                 lifting_rate=electricity_data["lifting_rate"],
                 price=electricity_data["price"],
                 project_duration=self.general_config_data.project_duration,
@@ -763,7 +763,7 @@ class Spreadsheet:
                         )
 
             return ElectricityLiftingData(
-                prod_year=electricity_data["prod_year"],
+                prod_year_init=electricity_data["prod_year"],
                 lifting_rate=electricity_data["lifting_rate"],
                 price=electricity_data["price"],
                 project_duration=self.general_config_data.project_duration,
@@ -807,7 +807,7 @@ class Spreadsheet:
             co2_data = {key: {"Prod CO2": None} for key in co2_data_attrs}
 
             return CO2LiftingData(
-                prod_year=co2_data["prod_year"],
+                prod_year_init=co2_data["prod_year"],
                 lifting_rate=co2_data["lifting_rate"],
                 price=co2_data["price"],
                 project_duration=self.general_config_data.project_duration,
@@ -834,7 +834,7 @@ class Spreadsheet:
                         )
 
         return CO2LiftingData(
-            prod_year=co2_data["prod_year"],
+            prod_year_init=co2_data["prod_year"],
             lifting_rate=co2_data["lifting_rate"],
             price=co2_data["price"],
             project_duration=self.general_config_data.project_duration,
@@ -891,7 +891,7 @@ class Spreadsheet:
             }
 
             return TangibleCostData(
-                expense_year_input=tangible_data["expense_year"],
+                expense_year_init=tangible_data["expense_year"],
                 cost_allocation=tangible_data["cost_allocation"].tolist(),
                 cost=tangible_data["cost"],
                 pis_year=tangible_data["pis_year"],
@@ -1643,14 +1643,14 @@ class Spreadsheet:
         # Fill in the attributes associated with lifting data
         self.oil_lifting_data = self._get_oil_lifting_data()
         self.gas_lifting_data = self._get_gas_lifting_data()
-        # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
-        # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
-        # self.sulfur_lifting_data = self._get_sulfur_lifting_data()
-        # self.electricity_lifting_data = self._get_electricity_lifting_data()
-        # self.co2_lifting_data = self._get_co2_lifting_data()
-        #
-        # # Fill in the attributes associated with cost data
-        # self.tangible_cost_data = self._get_tangible_cost_data()
+        self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
+        self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
+        self.sulfur_lifting_data = self._get_sulfur_lifting_data()
+        self.electricity_lifting_data = self._get_electricity_lifting_data()
+        self.co2_lifting_data = self._get_co2_lifting_data()
+
+        # Fill in the attributes associated with cost data
+        self.tangible_cost_data = self._get_tangible_cost_data()
         # self.intangible_cost_data = self._get_intangible_cost_data()
         # self.opex_data = self._get_opex_data()
         # self.asr_cost_data = self._get_asr_cost_data()
@@ -1668,7 +1668,7 @@ class Spreadsheet:
         # self.montecarlo_data = self._get_montecarlo_data()
         # self.optimization_data = self._get_optimization_data()
 
-        print("\t")
-        print(f"Filetype: {type(self.gas_lifting_data)}")
-        print("\t")
-        print("gas_lifting_data = \n", self.gas_lifting_data)
+        # print("\t")
+        # print(f"Filetype: {type(self.co2_lifting_data)}")
+        # print("\t")
+        # print("co2_lifting_data = \n", self.co2_lifting_data)

@@ -2,13 +2,12 @@
 Prepare data input loaded from a target Excel file.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, InitVar
 from datetime import datetime
 import numpy as np
 import pandas as pd
 
 from pyscnomics.tools.helper import (
-    get_lifting_data_split_non_gas,
     get_lifting_data_split_simple,
     get_lifting_data_split_advanced,
     get_cost_data_split,
@@ -222,7 +221,7 @@ class FiscalConfigData:
     ----------
     tax_mode: str
         The tax mode used for economic analysis.
-    tax_rate_input: float, optional
+    tax_rate_init: float, optional
         The tax rate input, default is None.
     tax_payment_method: str
         The method of tax payment.
@@ -238,7 +237,7 @@ class FiscalConfigData:
         The depreciation method to be used for calculation.
     inflation_rate_mode: str
         The mode for handling inflation rate.
-    inflation_rate_input: float, optional
+    inflation_rate_init: float, optional
         The input inflation rate, default is None.
     multi_tax: dict, optional
         Dictionary containing information about multiple tax values.
@@ -250,7 +249,7 @@ class FiscalConfigData:
         An array representing the project years.
     """
     tax_mode: str
-    tax_rate_input: float = field(repr=False)
+    tax_rate_init: InitVar[float] = field(repr=False)
     tax_payment_method: str
     tax_psc_cost_recovery: str
     npv_mode: str
@@ -258,9 +257,9 @@ class FiscalConfigData:
     future_rate_asr: float
     depreciation_method: str
     inflation_rate_mode: str
-    inflation_rate_input: float = field(repr=False)
-    multi_tax: dict = field(repr=False)
-    multi_inflation: dict = field(repr=False)
+    inflation_rate_init: InitVar[float] = field(repr=False)
+    multi_tax: InitVar[dict] = field(repr=False)
+    multi_inflation: InitVar[dict] = field(repr=False)
     transferred_unrec_cost: float
     project_years: np.ndarray
 
@@ -268,13 +267,13 @@ class FiscalConfigData:
     tax_rate: None | float | np.ndarray = field(default=None, init=False)
     inflation_rate: float | np.ndarray = field(default=None, init=False)
 
-    def __post_init__(self):
+    def __post_init__(self, tax_rate_init, inflation_rate_init, multi_tax, multi_inflation):
         # Configure attribute tax_rate
         if self.tax_mode == "User Input - Single Value":
-            if pd.isna(self.tax_rate_input):
+            if pd.isna(tax_rate_init):
                 self.tax_rate = 0.44
             else:
-                self.tax_rate = self.tax_rate_input
+                self.tax_rate = tax_rate_init
 
         elif self.tax_mode == "Nailed Down" or self.tax_mode == "Prevailing":
             self.tax_rate = None
@@ -282,8 +281,8 @@ class FiscalConfigData:
         elif self.tax_mode == "User Input - Multi Value":
             # Filter dict 'self.multi_tax' for NaN values
             multi_tax_adj = {
-                key: np.array(list(filter(lambda i: i is not np.nan, self.multi_tax[key])))
-                for key in self.multi_tax.keys()
+                key: np.array(list(filter(lambda i: i is not np.nan, multi_tax[key])))
+                for key in multi_tax.keys()
             }
 
             # Raise error for unequal length of 'year' and 'rate' in 'multi_tax_adj'
@@ -358,16 +357,16 @@ class FiscalConfigData:
 
         # Configure attribute inflation_rate
         if self.inflation_rate_mode == "User Input - Single Value":
-            if pd.isna(self.inflation_rate_input):
+            if pd.isna(inflation_rate_init):
                 self.inflation_rate = 0.02
             else:
-                self.inflation_rate = self.inflation_rate_input
+                self.inflation_rate = inflation_rate_init
 
         elif self.inflation_rate_mode == "User Input - Multi Value":
             # Filter dict 'self.multi_inflation' for NaN values
             multi_inflation_adj = {
-                key: np.array(list(filter(lambda i: i is not np.nan, self.multi_inflation[key])))
-                for key in self.multi_inflation.keys()
+                key: np.array(list(filter(lambda i: i is not np.nan, multi_inflation[key])))
+                for key in multi_inflation.keys()
             }
 
             # Raise error for unequal length of 'year' and 'rate' in 'multi_inflation_adj'
@@ -479,33 +478,40 @@ class OilLiftingData:
     -----
     This dataclass is used to store and organize information related to oil lifting.
     """
-    prod_year: dict
+    prod_year_init: InitVar[dict] = field(repr=False)
     oil_lifting_rate: dict
     oil_price: dict
     condensate_lifting_rate: dict
     condensate_price: dict
 
     # Attributes associated with PSC transition
-    type_of_contract: str
-    end_date_project: datetime
-    start_date_project_second: datetime
+    type_of_contract: str = field(repr=False)
+    end_date_project: datetime = field(repr=False)
+    start_date_project_second: datetime = field(repr=False)
 
     # Attributes associated with project duration
-    project_duration: int
-    project_years: np.ndarray
+    project_duration: int = field(repr=False)
+    project_years: np.ndarray = field(repr=False)
 
-    def __post_init__(self):
+    # Attributes to be defined later
+    prod_year: dict = field(default=None, init=False)
+
+    def __post_init__(self, prod_year_init):
         # Prepare attribute prod_year
-        if not isinstance(self.prod_year, dict):
+        if not isinstance(prod_year_init, dict):
             raise OilLiftingDataException(
                 f"Attribute prod_year must be provided in the form of dictionary. "
                 f"The current datatype of prod_year is "
-                f"{self.prod_year.__class__.__qualname__}"
+                f"{prod_year_init.__class__.__qualname__}"
             )
 
-        for i in self.prod_year.keys():
-            if self.prod_year[i] is None:
-                self.prod_year[i] = self.project_years
+        for i in prod_year_init.keys():
+            if prod_year_init[i] is None:
+                prod_year_init[i] = np.int_(self.project_years)
+            else:
+                prod_year_init[i] = np.int_(prod_year_init[i])
+
+        self.prod_year = prod_year_init.copy()
 
         # Prepare attribute oil_lifting_rate
         if not isinstance(self.oil_lifting_rate, dict):
@@ -517,7 +523,9 @@ class OilLiftingData:
 
         for i in self.oil_lifting_rate.keys():
             if self.oil_lifting_rate[i] is None:
-                self.oil_lifting_rate[i] = np.zeros_like(self.project_years)
+                self.oil_lifting_rate[i] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                self.oil_lifting_rate[i] = np.float_(self.oil_lifting_rate[i])
 
         # Prepare attribute oil_price
         if not isinstance(self.oil_price, dict):
@@ -529,7 +537,9 @@ class OilLiftingData:
 
         for i in self.oil_price.keys():
             if self.oil_price[i] is None:
-                self.oil_price[i] = np.zeros_like(self.project_years)
+                self.oil_price[i] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                self.oil_price[i] = np.float_(self.oil_price[i])
 
         # Prepare attribute condensate_lifting_rate
         if not isinstance(self.condensate_lifting_rate, dict):
@@ -541,7 +551,9 @@ class OilLiftingData:
 
         for i in self.condensate_lifting_rate.keys():
             if self.condensate_lifting_rate[i] is None:
-                self.condensate_lifting_rate[i] = np.zeros_like(self.project_years)
+                self.condensate_lifting_rate[i] = np.zeros_like(self.project_years, np.float_)
+            else:
+                self.condensate_lifting_rate[i] = np.float_(self.condensate_lifting_rate[i])
 
         # Prepare attribute condensate_price
         if not isinstance(self.condensate_price, dict):
@@ -553,10 +565,15 @@ class OilLiftingData:
 
         for i in self.condensate_price.keys():
             if self.condensate_price[i] is None:
-                self.condensate_price[i] = np.zeros_like(self.project_years)
+                self.condensate_price[i] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                self.condensate_price[i] = np.float_(self.condensate_price[i])
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
+
+            # Modify attributes "prod_year", "oil_lifting_rate", "oil_price",
+            # "condensate_lifting_rate", and "condensate_price"
             target_attrs = {
                 "attr": [
                     self.prod_year,
@@ -581,10 +598,10 @@ class OilLiftingData:
                 self.condensate_lifting_rate,
                 self.condensate_price,
             ) = [
-                get_lifting_data_split_non_gas(
+                get_lifting_data_split_simple(
                     target_attr=i,
                     is_target_attr_volume=j,
-                    project_years=self.project_years,
+                    prod_year_init=prod_year_init,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
                 )
@@ -623,40 +640,40 @@ class GasLiftingData:
         An array representing the project years.
     """
     gas_gsa_number: int
-    prod_year_init: dict
+    prod_year_init: InitVar[dict] = field(repr=False)
     gas_prod_rate: dict
     gas_gsa_lifting_rate: dict
     gas_gsa_ghv: dict
     gas_gsa_price: dict
 
     # Attributes associated with PSC transition
-    type_of_contract: str
-    end_date_project: datetime
-    start_date_project_second: datetime
+    type_of_contract: str = field(repr=False)
+    end_date_project: datetime = field(repr=False)
+    start_date_project_second: datetime = field(repr=False)
 
     # Attributes associated with project duration
-    project_duration: int
-    project_years: np.ndarray
+    project_duration: int = field(repr=False)
+    project_years: np.ndarray = field(repr=False)
 
     # Attributes to be defined later
     prod_year: dict = field(default=None, init=False)
 
-    def __post_init__(self):
+    def __post_init__(self, prod_year_init):
         # Prepare attribute prod_year
-        if not isinstance(self.prod_year_init, dict):
+        if not isinstance(prod_year_init, dict):
             raise GasLiftingDataException(
                 f"Attribute prod_year must be provided in the form of dictionary. "
                 f"The current datatype of prod_year is "
-                f"{self.prod_year_init.__class__.__qualname__}"
+                f"{prod_year_init.__class__.__qualname__}"
             )
 
-        for i in self.prod_year_init.keys():
-            if self.prod_year_init[i] is None:
-                self.prod_year_init[i] = np.int_(self.project_years)
+        for i in prod_year_init.keys():
+            if prod_year_init[i] is None:
+                prod_year_init[i] = np.int_(self.project_years)
             else:
-                self.prod_year_init[i] = np.int_(self.prod_year_init[i])
+                prod_year_init[i] = np.int_(prod_year_init[i])
 
-        self.prod_year = self.prod_year_init
+        self.prod_year = prod_year_init.copy()
 
         # Prepare attribute gas_prod_rate
         if not isinstance(self.gas_prod_rate, dict):
@@ -733,7 +750,7 @@ class GasLiftingData:
                 get_lifting_data_split_simple(
                     target_attr=i,
                     is_target_attr_volume=j,
-                    prod_year_init=self.prod_year_init,
+                    prod_year_init=prod_year_init,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
                 )
@@ -754,7 +771,7 @@ class GasLiftingData:
                 get_lifting_data_split_advanced(
                     target_attr=i,
                     is_target_attr_volume=j,
-                    prod_year_init=self.prod_year_init,
+                    prod_year_init=prod_year_init,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
                 )
@@ -779,32 +796,45 @@ class LPGPropaneLiftingData:
         The duration of the project.
     project_years: numpy.ndarray
         An array representing the project years.
+    type_of_contract: str
+        A string depicting the type of PSC contract.
+    end_date_project: date
+        The end date of the project.
+    start_date_project_second: date
+        The start date of the second project (for PSC transition).
     """
-    prod_year: dict
+    prod_year_init: InitVar[dict] = field(repr=False)
     lifting_rate: dict
     price: dict
 
     # Attributes associated with project duration
-    project_duration: int
-    project_years: np.ndarray
+    project_duration: int = field(repr=False)
+    project_years: np.ndarray = field(repr=False)
 
     # Attributes associated with PSC transition
-    type_of_contract: str
-    end_date_project: datetime
-    start_date_project_second: datetime
+    type_of_contract: str = field(repr=False)
+    end_date_project: datetime = field(repr=False)
+    start_date_project_second: datetime = field(repr=False)
 
-    def __post_init__(self):
+    # Attributes to be defined later
+    prod_year: dict = field(default=None, init=False)
+
+    def __post_init__(self, prod_year_init):
         # Prepare attribute prod_year
-        if not isinstance(self.prod_year, dict):
+        if not isinstance(prod_year_init, dict):
             raise LPGPropaneLiftingDataException(
                 f"Attribute prod_year must be provided in the form of dictionary. "
                 f"The current datatype of prod_year is "
-                f"{self.prod_year.__class__.__qualname__}"
+                f"{prod_year_init.__class__.__qualname__}"
             )
 
-        for i in self.prod_year.keys():
-            if self.prod_year[i] is None:
-                self.prod_year[i] = self.project_years
+        for i in prod_year_init.keys():
+            if prod_year_init[i] is None:
+                prod_year_init[i] = np.int_(self.project_years)
+            else:
+                prod_year_init[i] = np.int_(prod_year_init[i])
+
+        self.prod_year = prod_year_init.copy()
 
         # Prepare attribute lifting_rate
         if not isinstance(self.lifting_rate, dict):
@@ -816,7 +846,9 @@ class LPGPropaneLiftingData:
 
         for i in self.lifting_rate.keys():
             if self.lifting_rate[i] is None:
-                self.lifting_rate[i] = np.zeros_like(self.project_years)
+                self.lifting_rate[i] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                self.lifting_rate[i] = np.float_(self.lifting_rate[i])
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
@@ -828,7 +860,9 @@ class LPGPropaneLiftingData:
 
         for i in self.price.keys():
             if self.price[i] is None:
-                self.price[i] = np.zeros_like(self.project_years)
+                self.price[i] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                self.price[i] = np.float_(self.price[i])
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
@@ -842,10 +876,10 @@ class LPGPropaneLiftingData:
                 self.lifting_rate,
                 self.price,
             ) = [
-                get_lifting_data_split_non_gas(
+                get_lifting_data_split_simple(
                     target_attr=i,
                     is_target_attr_volume=j,
-                    project_years=self.project_years,
+                    prod_year_init=prod_year_init,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
                 )
@@ -870,32 +904,45 @@ class LPGButaneLiftingData:
         The duration of the project.
     project_years: numpy.ndarray
         An array representing the project years.
+    type_of_contract: str
+        A string depicting the type of PSC contract.
+    end_date_project: date
+        The end date of the project.
+    start_date_project_second: date
+        The start date of the second project (for PSC transition).
     """
-    prod_year: dict
+    prod_year_init: InitVar[dict] = field(repr=False)
     lifting_rate: dict
     price: dict
 
     # Attributes associated with project duration
-    project_duration: int
-    project_years: np.ndarray
+    project_duration: int = field(repr=False)
+    project_years: np.ndarray = field(repr=False)
 
     # Attributes associated with PSC transition
-    type_of_contract: str
-    end_date_project: datetime
-    start_date_project_second: datetime
+    type_of_contract: str = field(repr=False)
+    end_date_project: datetime = field(repr=False)
+    start_date_project_second: datetime = field(repr=False)
 
-    def __post_init__(self):
+    # Attributes to be defined later
+    prod_year: dict = field(default=None, init=False)
+
+    def __post_init__(self, prod_year_init):
         # Prepare attribute prod_year
-        if not isinstance(self.prod_year, dict):
+        if not isinstance(prod_year_init, dict):
             raise LPGButaneLiftingDataException(
                 f"Attribute prod_year must be provided in the form of dictionary. "
                 f"The current datatype of prod_year is "
-                f"{self.prod_year.__class__.__qualname__}"
+                f"{prod_year_init.__class__.__qualname__}"
             )
 
-        for i in self.prod_year.keys():
-            if self.prod_year[i] is None:
-                self.prod_year[i] = self.project_years
+        for i in prod_year_init.keys():
+            if prod_year_init[i] is None:
+                prod_year_init[i] = np.int_(self.project_years)
+            else:
+                prod_year_init[i] = np.int_(prod_year_init[i])
+
+        self.prod_year = prod_year_init.copy()
 
         # Prepare attribute lifting_rate
         if not isinstance(self.lifting_rate, dict):
@@ -907,7 +954,9 @@ class LPGButaneLiftingData:
 
         for i in self.lifting_rate.keys():
             if self.lifting_rate[i] is None:
-                self.lifting_rate[i] = np.zeros_like(self.project_years)
+                self.lifting_rate[i] = np.zeros_like(self.project_years, np.float_)
+            else:
+                self.lifting_rate[i] = np.float_(self.lifting_rate[i])
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
@@ -919,7 +968,9 @@ class LPGButaneLiftingData:
 
         for i in self.price.keys():
             if self.price[i] is None:
-                self.price[i] = np.zeros_like(self.project_years)
+                self.price[i] = np.zeros_like(self.project_years, np.float_)
+            else:
+                self.price[i] = np.float_(self.price[i])
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
@@ -933,10 +984,10 @@ class LPGButaneLiftingData:
                 self.lifting_rate,
                 self.price,
             ) = [
-                get_lifting_data_split_non_gas(
+                get_lifting_data_split_simple(
                     target_attr=i,
                     is_target_attr_volume=j,
-                    project_years=self.project_years,
+                    prod_year_init=prod_year_init,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
                 )
@@ -961,32 +1012,45 @@ class SulfurLiftingData:
         The duration of the project.
     project_years: numpy.ndarray
         An array representing the project years.
+    type_of_contract: str
+        A string depicting the type of PSC contract.
+    end_date_project: date
+        The end date of the project.
+    start_date_project_second: date
+        The start date of the second project (for PSC transition).
     """
-    prod_year: dict
+    prod_year_init: InitVar[dict] = field(repr=False)
     lifting_rate: dict
     price: dict
 
     # Attributes associated with project duration
-    project_duration: int
-    project_years: np.ndarray
+    project_duration: int = field(repr=False)
+    project_years: np.ndarray = field(repr=False)
 
     # Attributes associated with PSC transition
-    type_of_contract: str
-    end_date_project: datetime
-    start_date_project_second: datetime
+    type_of_contract: str = field(repr=False)
+    end_date_project: datetime = field(repr=False)
+    start_date_project_second: datetime = field(repr=False)
 
-    def __post_init__(self):
+    # Attributes to be defined later
+    prod_year: dict = field(default=None, init=False)
+
+    def __post_init__(self, prod_year_init):
         # Prepare attribute prod_year
-        if not isinstance(self.prod_year, dict):
+        if not isinstance(prod_year_init, dict):
             raise SulfurLiftingDataException(
                 f"Attribute prod_year must be provided in the form of dictionary. "
                 f"The current datatype of prod_year is "
-                f"{self.prod_year.__class__.__qualname__}"
+                f"{prod_year_init.__class__.__qualname__}"
             )
 
-        for i in self.prod_year.keys():
-            if self.prod_year[i] is None:
-                self.prod_year[i] = self.project_years
+        for i in prod_year_init.keys():
+            if prod_year_init[i] is None:
+                prod_year_init[i] = np.int_(self.project_years)
+            else:
+                prod_year_init[i] = np.int_(prod_year_init[i])
+
+        self.prod_year = prod_year_init.copy()
 
         # Prepare attribute lifting_rate
         if not isinstance(self.lifting_rate, dict):
@@ -998,7 +1062,9 @@ class SulfurLiftingData:
 
         for i in self.lifting_rate.keys():
             if self.lifting_rate[i] is None:
-                self.lifting_rate[i] = np.zeros_like(self.project_years)
+                self.lifting_rate[i] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                self.lifting_rate[i] = np.float_(self.lifting_rate[i])
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
@@ -1010,7 +1076,9 @@ class SulfurLiftingData:
 
         for i in self.price.keys():
             if self.price[i] is None:
-                self.price[i] = np.zeros_like(self.project_years)
+                self.price[i] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                self.price[i] = np.float_(self.price[i])
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
@@ -1024,10 +1092,10 @@ class SulfurLiftingData:
                 self.lifting_rate,
                 self.price,
             ) = [
-                get_lifting_data_split_non_gas(
+                get_lifting_data_split_simple(
                     target_attr=i,
                     is_target_attr_volume=j,
-                    project_years=self.project_years,
+                    prod_year_init=prod_year_init,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
                 )
@@ -1052,32 +1120,45 @@ class ElectricityLiftingData:
         The duration of the project.
     project_years: numpy.ndarray
         An array representing the project years.
+    type_of_contract: str
+        A string depicting the type of PSC contract.
+    end_date_project: date
+        The end date of the project.
+    start_date_project_second: date
+        The start date of the second project (for PSC transition).
     """
-    prod_year: dict
+    prod_year_init: InitVar[dict] = field(repr=False)
     lifting_rate: dict
     price: dict
 
     # Attributes associated with project duration
-    project_duration: int
-    project_years: np.ndarray
+    project_duration: int = field(repr=False)
+    project_years: np.ndarray = field(repr=False)
 
     # Attributes associated with PSC transition
-    type_of_contract: str
-    end_date_project: datetime
-    start_date_project_second: datetime
+    type_of_contract: str = field(repr=False)
+    end_date_project: datetime = field(repr=False)
+    start_date_project_second: datetime = field(repr=False)
 
-    def __post_init__(self):
+    # Attributes to be defined later
+    prod_year: dict = field(default=None, init=False)
+
+    def __post_init__(self, prod_year_init):
         # Prepare attribute prod_year
-        if not isinstance(self.prod_year, dict):
+        if not isinstance(prod_year_init, dict):
             raise ElectricityLiftingDataException(
                 f"Attribute prod_year must be provided in the form of dictionary. "
                 f"The current datatype of prod_year is "
-                f"{self.prod_year.__class__.__qualname__}"
+                f"{prod_year_init.__class__.__qualname__}"
             )
 
-        for i in self.prod_year.keys():
-            if self.prod_year[i] is None:
-                self.prod_year[i] = self.project_years
+        for i in prod_year_init.keys():
+            if prod_year_init[i] is None:
+                prod_year_init[i] = np.int_(self.project_years)
+            else:
+                prod_year_init[i] = np.float_(prod_year_init[i])
+
+        self.prod_year = prod_year_init.copy()
 
         # Prepare attribute lifting_rate
         if not isinstance(self.lifting_rate, dict):
@@ -1089,7 +1170,9 @@ class ElectricityLiftingData:
 
         for i in self.lifting_rate.keys():
             if self.lifting_rate[i] is None:
-                self.lifting_rate[i] = np.zeros_like(self.project_years)
+                self.lifting_rate[i] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                self.lifting_rate[i] = np.float_(self.lifting_rate[i])
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
@@ -1101,7 +1184,9 @@ class ElectricityLiftingData:
 
         for i in self.price.keys():
             if self.price[i] is None:
-                self.price[i] = np.zeros_like(self.project_years)
+                self.price[i] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                self.price[i] = np.float_(self.price[i])
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
@@ -1115,10 +1200,10 @@ class ElectricityLiftingData:
                 self.lifting_rate,
                 self.price,
             ) = [
-                get_lifting_data_split_non_gas(
+                get_lifting_data_split_simple(
                     target_attr=i,
                     is_target_attr_volume=j,
-                    project_years=self.project_years,
+                    prod_year_init=prod_year_init,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
                 )
@@ -1143,32 +1228,45 @@ class CO2LiftingData:
         The duration of the project.
     project_years: numpy.ndarray
         An array representing the project years.
+    type_of_contract: str
+        A string depicting the type of PSC contract.
+    end_date_project: date
+        The end date of the project.
+    start_date_project_second: date
+        The start date of the second project (for PSC transition).
     """
-    prod_year: dict
+    prod_year_init: InitVar[dict] = field(repr=False)
     lifting_rate: dict
     price: dict
 
     # Attributes associated with project duration
-    project_duration: int
-    project_years: np.ndarray
+    project_duration: int = field(repr=False)
+    project_years: np.ndarray = field(repr=False)
 
     # Attributes associated with PSC transition
-    type_of_contract: str
-    end_date_project: datetime
-    start_date_project_second: datetime
+    type_of_contract: str = field(repr=False)
+    end_date_project: datetime = field(repr=False)
+    start_date_project_second: datetime = field(repr=False)
 
-    def __post_init__(self):
+    # Attributes to be defined later
+    prod_year: dict = field(default=None, init=False)
+
+    def __post_init__(self, prod_year_init):
         # Prepare attribute prod_year
-        if not isinstance(self.prod_year, dict):
+        if not isinstance(prod_year_init, dict):
             raise CO2LiftingDataException(
                 f"Attribute prod_year must be provided in the form of dictionary. "
                 f"The current datatype of prod_year is "
-                f"{self.prod_year.__class__.__qualname__}"
+                f"{prod_year_init.__class__.__qualname__}"
             )
 
-        for i in self.prod_year.keys():
-            if self.prod_year[i] is None:
-                self.prod_year[i] = self.project_years
+        for i in prod_year_init.keys():
+            if prod_year_init[i] is None:
+                prod_year_init[i] = np.float_(self.project_years)
+            else:
+                prod_year_init[i] = np.float_(prod_year_init[i])
+
+        self.prod_year = prod_year_init.copy()
 
         # Prepare attribute lifting_rate
         if not isinstance(self.lifting_rate, dict):
@@ -1180,7 +1278,9 @@ class CO2LiftingData:
 
         for i in self.lifting_rate.keys():
             if self.lifting_rate[i] is None:
-                self.lifting_rate[i] = np.zeros_like(self.project_years)
+                self.lifting_rate[i] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                self.lifting_rate[i] = np.float_(self.lifting_rate[i])
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
@@ -1192,7 +1292,9 @@ class CO2LiftingData:
 
         for i in self.price.keys():
             if self.price[i] is None:
-                self.price[i] = np.zeros_like(self.project_years)
+                self.price[i] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                self.price[i] = np.float_(self.price[i])
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
@@ -1206,10 +1308,10 @@ class CO2LiftingData:
                 self.lifting_rate,
                 self.price,
             ) = [
-                get_lifting_data_split_non_gas(
+                get_lifting_data_split_simple(
                     target_attr=i,
                     is_target_attr_volume=j,
-                    project_years=self.project_years,
+                    prod_year_init=prod_year_init,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
                 )
@@ -1251,7 +1353,7 @@ class TangibleCostData:
     project_years: np.ndarray
         Array of project years.
     """
-    expense_year_input: np.ndarray = field(repr=False)
+    expense_year_init: InitVar[np.ndarray] = field(repr=False)
     cost: np.ndarray
     cost_allocation: list
     pis_year: np.ndarray
@@ -1277,16 +1379,16 @@ class TangibleCostData:
     # Attributes to be defined later
     expense_year: np.ndarray = field(default=None, init=False)
 
-    def __post_init__(self):
+    def __post_init__(self, expense_year_init):
         # Prepare attribute expense_year
-        if not isinstance(self.expense_year_input, np.ndarray):
+        if not isinstance(expense_year_init, np.ndarray):
             raise TangibleCostDataException(
                 f"Expense year data must be given in the form of numpy.ndarray. "
                 f"The current expense_year data is given in the form of: "
-                f"({self.expense_year_input.__class__.__qualname__})."
+                f"({expense_year_init.__class__.__qualname__})."
             )
 
-        expense_year_nan = np.argwhere(np.isnan(self.expense_year_input)).ravel()
+        expense_year_nan = np.argwhere(np.isnan(expense_year_init)).ravel()
 
         if len(expense_year_nan) > 0:
             raise TangibleCostDataException(
@@ -1296,8 +1398,8 @@ class TangibleCostData:
             )
 
         else:
-            self.expense_year_input = self.expense_year_input
-            self.expense_year = self.expense_year_input
+            expense_year_init = np.int_(expense_year_init)
+            self.expense_year = expense_year_init.copy()
 
         # Prepare attribute cost_allocation
         if not isinstance(self.cost_allocation, list):
@@ -1320,207 +1422,211 @@ class TangibleCostData:
         else:
             self.cost_allocation = self.cost_allocation
 
-        # Prepare attribute cost
-        if not isinstance(self.cost, np.ndarray):
-            raise TangibleCostDataException(
-                f"Cost data must be given in the form of numpy.ndarray. "
-                f"The current cost data is given in the form of: "
-                f"({self.cost.__class__.__qualname__})."
-            )
+        print('\t')
+        print(f'Filetype: {type(self.cost_allocation)}')
+        print('cost_allocation = \n', self.cost_allocation)
 
-        cost_nan = np.argwhere(np.isnan(self.cost)).ravel()
-
-        if len(cost_nan) > 0:
-            self.cost[cost_nan] = np.zeros(len(cost_nan))
-
-        else:
-            self.cost = self.cost
-
-        # Prepare attribute pis_year
-        if not isinstance(self.pis_year, np.ndarray):
-            raise TangibleCostDataException(
-                f"PIS year data must be given in the form of numpy.ndarray. "
-                f"The current pis_year data is given in the form of: "
-                f"({self.pis_year.__class__.__qualname__})."
-            )
-
-        pis_year_nan = np.argwhere(np.isnan(self.pis_year)).ravel()
-
-        if len(pis_year_nan) > 0:
-            self.pis_year[pis_year_nan] = self.expense_year_input[pis_year_nan]
-
-        else:
-            self.pis_year = self.pis_year
-
-        # Prepare attribute useful_life
-        if not isinstance(self.useful_life, np.ndarray):
-            raise TangibleCostDataException(
-                f"Useful life data must be given in the form of numpy.ndarray. "
-                f"The current useful_life data is given in the form of: "
-                f"({self.useful_life.__class__.__qualname__})."
-            )
-
-        useful_life_nan = np.argwhere(np.isnan(self.useful_life)).ravel()
-
-        if len(useful_life_nan) > 0:
-            self.useful_life[useful_life_nan] = np.repeat(5.0, len(useful_life_nan))
-
-        else:
-            self.useful_life = self.useful_life
-
-        # Prepare attribute depreciation_factor
-        if not isinstance(self.depreciation_factor, np.ndarray):
-            raise TangibleCostDataException(
-                f"Depreciation factor data must be given in the form of numpy.ndarray. "
-                f"The current depreciation_factor data is given in the form of: "
-                f"({self.depreciation_factor.__class__.__qualname__})."
-            )
-
-        depreciation_factor_nan = np.argwhere(np.isnan(self.depreciation_factor)).ravel()
-
-        if len(depreciation_factor_nan) > 0:
-            self.depreciation_factor[depreciation_factor_nan] = (
-                np.repeat(0.5, len(depreciation_factor_nan))
-            )
-
-        else:
-            self.depreciation_factor = self.depreciation_factor
-
-        # Prepare attribute salvage_value
-        if not isinstance(self.salvage_value, np.ndarray):
-            raise TangibleCostDataException(
-                f"Salvage value data must be given in the form of numpy.ndarray. "
-                f"The current salvage_value data is given in the form of: "
-                f"({self.salvage_value.__class__.__qualname__})."
-            )
-
-        salvage_value_nan = np.argwhere(np.isnan(self.salvage_value)).ravel()
-
-        if len(salvage_value_nan) > 0:
-            self.salvage_value[salvage_value_nan] = np.zeros(len(salvage_value_nan))
-
-        else:
-            self.salvage_value = self.salvage_value
-
-        # Prepare attribute is_ic_applied
-        if not isinstance(self.is_ic_applied, list):
-            raise TangibleCostDataException(
-                f"Is IC applied data must be given in the form of list. "
-                f"The current is_ic_applied data is given in the form of: "
-                f"({self.is_ic_applied.__class__.__qualname__})."
-            )
-
-        is_ic_applied_nan = np.argwhere(pd.isna(self.is_ic_applied)).ravel()
-
-        if len(is_ic_applied_nan) > 0:
-            for i in is_ic_applied_nan:
-                self.is_ic_applied[i] = "No"
-
-        else:
-            self.is_ic_applied = self.is_ic_applied
-
-        # Prepare attribute vat_portion
-        if not isinstance(self.vat_portion, np.ndarray):
-            raise TangibleCostDataException(
-                f"VAT portion data must be given in the form of numpy.ndarray. "
-                f"The current vat_portion data is given in the form of: "
-                f"({self.vat_portion.__class__.__qualname__})."
-            )
-
-        vat_portion_nan = np.argwhere(np.isnan(self.vat_portion)).ravel()
-
-        if len(vat_portion_nan) > 0:
-            self.vat_portion[vat_portion_nan] = np.ones(len(vat_portion_nan))
-
-        else:
-            self.vat_portion = self.vat_portion
-
-        # Prepare attribute lbt_portion
-        if not isinstance(self.lbt_portion, np.ndarray):
-            raise TangibleCostDataException(
-                f"LBT portion data must be given in the form of numpy.ndarray. "
-                f"The current lbt_portion data is given in the form of: "
-                f"({self.lbt_portion.__class__.__qualname__})."
-            )
-
-        lbt_portion_nan = np.argwhere(np.isnan(self.lbt_portion)).ravel()
-
-        if len(lbt_portion_nan) > 0:
-            self.lbt_portion[lbt_portion_nan] = np.ones(len(lbt_portion_nan))
-
-        else:
-            self.lbt_portion = self.lbt_portion
-
-        # Prepare attribute description
-        if not isinstance(self.description, list):
-            raise TangibleCostDataException(
-                f"Description data must be given in the form of list. "
-                f"The current description data is given in the form of: "
-                f"({self.description.__class__.__qualname__})."
-            )
-
-        description_nan = np.argwhere(pd.isna(self.description)).ravel()
-
-        if len(description_nan) > 0:
-            for i in description_nan:
-                self.description[i] = " "
-
-        else:
-            self.description = self.description
-
-        # Adjust data for transition case
-        if "Transition" in self.type_of_contract:
-            target_attrs = {
-                "attr": [
-                    self.expense_year,
-                    self.cost,
-                    self.cost_allocation,
-                    self.pis_year,
-                    self.useful_life,
-                    self.depreciation_factor,
-                    self.salvage_value,
-                    self.is_ic_applied,
-                    self.vat_portion,
-                    self.lbt_portion,
-                    self.description,
-                ],
-                "status": [
-                    False,
-                    True,
-                    False,
-                    False,
-                    False,
-                    False,
-                    False,
-                    False,
-                    False,
-                    False,
-                    False,
-                ]
-            }
-
-            (
-                self.expense_year,
-                self.cost,
-                self.cost_allocation,
-                self.pis_year,
-                self.useful_life,
-                self.depreciation_factor,
-                self.salvage_value,
-                self.is_ic_applied,
-                self.vat_portion,
-                self.lbt_portion,
-                self.description,
-            ) = [
-                get_cost_data_split(
-                    target_attr=i,
-                    is_target_attr_volume=j,
-                    expense_year=self.expense_year_input,
-                    end_date_contract_1=self.end_date_project,
-                    start_date_contract_2=self.start_date_project_second,
-                )
-                for i, j in zip(target_attrs["attr"], target_attrs["status"])
-            ]
+        # # Prepare attribute cost
+        # if not isinstance(self.cost, np.ndarray):
+        #     raise TangibleCostDataException(
+        #         f"Cost data must be given in the form of numpy.ndarray. "
+        #         f"The current cost data is given in the form of: "
+        #         f"({self.cost.__class__.__qualname__})."
+        #     )
+        #
+        # cost_nan = np.argwhere(np.isnan(self.cost)).ravel()
+        #
+        # if len(cost_nan) > 0:
+        #     self.cost[cost_nan] = np.zeros(len(cost_nan))
+        #
+        # else:
+        #     self.cost = self.cost
+        #
+        # # Prepare attribute pis_year
+        # if not isinstance(self.pis_year, np.ndarray):
+        #     raise TangibleCostDataException(
+        #         f"PIS year data must be given in the form of numpy.ndarray. "
+        #         f"The current pis_year data is given in the form of: "
+        #         f"({self.pis_year.__class__.__qualname__})."
+        #     )
+        #
+        # pis_year_nan = np.argwhere(np.isnan(self.pis_year)).ravel()
+        #
+        # if len(pis_year_nan) > 0:
+        #     self.pis_year[pis_year_nan] = self.expense_year_init[pis_year_nan]
+        #
+        # else:
+        #     self.pis_year = self.pis_year
+        #
+        # # Prepare attribute useful_life
+        # if not isinstance(self.useful_life, np.ndarray):
+        #     raise TangibleCostDataException(
+        #         f"Useful life data must be given in the form of numpy.ndarray. "
+        #         f"The current useful_life data is given in the form of: "
+        #         f"({self.useful_life.__class__.__qualname__})."
+        #     )
+        #
+        # useful_life_nan = np.argwhere(np.isnan(self.useful_life)).ravel()
+        #
+        # if len(useful_life_nan) > 0:
+        #     self.useful_life[useful_life_nan] = np.repeat(5.0, len(useful_life_nan))
+        #
+        # else:
+        #     self.useful_life = self.useful_life
+        #
+        # # Prepare attribute depreciation_factor
+        # if not isinstance(self.depreciation_factor, np.ndarray):
+        #     raise TangibleCostDataException(
+        #         f"Depreciation factor data must be given in the form of numpy.ndarray. "
+        #         f"The current depreciation_factor data is given in the form of: "
+        #         f"({self.depreciation_factor.__class__.__qualname__})."
+        #     )
+        #
+        # depreciation_factor_nan = np.argwhere(np.isnan(self.depreciation_factor)).ravel()
+        #
+        # if len(depreciation_factor_nan) > 0:
+        #     self.depreciation_factor[depreciation_factor_nan] = (
+        #         np.repeat(0.5, len(depreciation_factor_nan))
+        #     )
+        #
+        # else:
+        #     self.depreciation_factor = self.depreciation_factor
+        #
+        # # Prepare attribute salvage_value
+        # if not isinstance(self.salvage_value, np.ndarray):
+        #     raise TangibleCostDataException(
+        #         f"Salvage value data must be given in the form of numpy.ndarray. "
+        #         f"The current salvage_value data is given in the form of: "
+        #         f"({self.salvage_value.__class__.__qualname__})."
+        #     )
+        #
+        # salvage_value_nan = np.argwhere(np.isnan(self.salvage_value)).ravel()
+        #
+        # if len(salvage_value_nan) > 0:
+        #     self.salvage_value[salvage_value_nan] = np.zeros(len(salvage_value_nan))
+        #
+        # else:
+        #     self.salvage_value = self.salvage_value
+        #
+        # # Prepare attribute is_ic_applied
+        # if not isinstance(self.is_ic_applied, list):
+        #     raise TangibleCostDataException(
+        #         f"Is IC applied data must be given in the form of list. "
+        #         f"The current is_ic_applied data is given in the form of: "
+        #         f"({self.is_ic_applied.__class__.__qualname__})."
+        #     )
+        #
+        # is_ic_applied_nan = np.argwhere(pd.isna(self.is_ic_applied)).ravel()
+        #
+        # if len(is_ic_applied_nan) > 0:
+        #     for i in is_ic_applied_nan:
+        #         self.is_ic_applied[i] = "No"
+        #
+        # else:
+        #     self.is_ic_applied = self.is_ic_applied
+        #
+        # # Prepare attribute vat_portion
+        # if not isinstance(self.vat_portion, np.ndarray):
+        #     raise TangibleCostDataException(
+        #         f"VAT portion data must be given in the form of numpy.ndarray. "
+        #         f"The current vat_portion data is given in the form of: "
+        #         f"({self.vat_portion.__class__.__qualname__})."
+        #     )
+        #
+        # vat_portion_nan = np.argwhere(np.isnan(self.vat_portion)).ravel()
+        #
+        # if len(vat_portion_nan) > 0:
+        #     self.vat_portion[vat_portion_nan] = np.ones(len(vat_portion_nan))
+        #
+        # else:
+        #     self.vat_portion = self.vat_portion
+        #
+        # # Prepare attribute lbt_portion
+        # if not isinstance(self.lbt_portion, np.ndarray):
+        #     raise TangibleCostDataException(
+        #         f"LBT portion data must be given in the form of numpy.ndarray. "
+        #         f"The current lbt_portion data is given in the form of: "
+        #         f"({self.lbt_portion.__class__.__qualname__})."
+        #     )
+        #
+        # lbt_portion_nan = np.argwhere(np.isnan(self.lbt_portion)).ravel()
+        #
+        # if len(lbt_portion_nan) > 0:
+        #     self.lbt_portion[lbt_portion_nan] = np.ones(len(lbt_portion_nan))
+        #
+        # else:
+        #     self.lbt_portion = self.lbt_portion
+        #
+        # # Prepare attribute description
+        # if not isinstance(self.description, list):
+        #     raise TangibleCostDataException(
+        #         f"Description data must be given in the form of list. "
+        #         f"The current description data is given in the form of: "
+        #         f"({self.description.__class__.__qualname__})."
+        #     )
+        #
+        # description_nan = np.argwhere(pd.isna(self.description)).ravel()
+        #
+        # if len(description_nan) > 0:
+        #     for i in description_nan:
+        #         self.description[i] = " "
+        #
+        # else:
+        #     self.description = self.description
+        #
+        # # Adjust data for transition case
+        # if "Transition" in self.type_of_contract:
+        #     target_attrs = {
+        #         "attr": [
+        #             self.expense_year,
+        #             self.cost,
+        #             self.cost_allocation,
+        #             self.pis_year,
+        #             self.useful_life,
+        #             self.depreciation_factor,
+        #             self.salvage_value,
+        #             self.is_ic_applied,
+        #             self.vat_portion,
+        #             self.lbt_portion,
+        #             self.description,
+        #         ],
+        #         "status": [
+        #             False,
+        #             True,
+        #             False,
+        #             False,
+        #             False,
+        #             False,
+        #             False,
+        #             False,
+        #             False,
+        #             False,
+        #             False,
+        #         ]
+        #     }
+        #
+        #     (
+        #         self.expense_year,
+        #         self.cost,
+        #         self.cost_allocation,
+        #         self.pis_year,
+        #         self.useful_life,
+        #         self.depreciation_factor,
+        #         self.salvage_value,
+        #         self.is_ic_applied,
+        #         self.vat_portion,
+        #         self.lbt_portion,
+        #         self.description,
+        #     ) = [
+        #         get_cost_data_split(
+        #             target_attr=i,
+        #             is_target_attr_volume=j,
+        #             expense_year=self.expense_year_init,
+        #             end_date_contract_1=self.end_date_project,
+        #             start_date_contract_2=self.start_date_project_second,
+        #         )
+        #         for i, j in zip(target_attrs["attr"], target_attrs["status"])
+        #     ]
 
 
 @dataclass
