@@ -3,14 +3,14 @@ Prepare data input loaded from a target Excel file.
 """
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import datetime
 import numpy as np
 import pandas as pd
 
 from pyscnomics.tools.helper import (
-    get_datetime,
     get_lifting_data_split_non_gas,
-    get_lifting_data_split_gas_no_nested,
+    get_lifting_data_split_simple,
+    get_lifting_data_split_advanced,
     get_cost_data_split,
 )
 
@@ -139,13 +139,13 @@ class GeneralConfigData:
         The number of GSA available.
     """
 
-    start_date_project: date
-    end_date_project: date
-    start_date_project_second: date
-    end_date_project_second: date
+    start_date_project: datetime
+    end_date_project: datetime
+    start_date_project_second: datetime
+    end_date_project_second: datetime
     type_of_contract: str
-    oil_onstream_date: date
-    gas_onstream_date: date
+    oil_onstream_date: datetime
+    gas_onstream_date: datetime
     discount_rate_start_year: int
     discount_rate: float
     inflation_rate_applied_to: str
@@ -510,8 +510,8 @@ class OilLiftingData:
 
     # Attributes associated with PSC transition
     type_of_contract: str
-    end_date_project: date
-    start_date_project_second: date
+    end_date_project: datetime
+    start_date_project_second: datetime
 
     # Attributes associated with project duration
     project_duration: int
@@ -624,7 +624,7 @@ class GasLiftingData:
     ----------
     gas_gsa_number: int
         The number of GSA.
-    prod_year_input: dict
+    prod_year_init: dict
         Dictionary containing production years data.
     gas_prod_rate: dict
         Dictionary containing gas lifting rate data.
@@ -634,13 +634,19 @@ class GasLiftingData:
         Dictionary containing gas GSA ghv data.
     gas_gsa_price: dict
         Dictionary containing gas GSA price data.
+    type_of_contract: str
+        The type of contract associated with the project.
+    end_date_project: date
+        The end date of the project.
+    start_date_project_second: date
+        The start date of the second project (for PSC transition).
     project_duration: int
         The duration of the project.
     project_years: numpy.ndarray
         An array representing the project years.
     """
     gas_gsa_number: int
-    prod_year_input: dict
+    prod_year_init: dict
     gas_prod_rate: dict
     gas_gsa_lifting_rate: dict
     gas_gsa_ghv: dict
@@ -648,30 +654,32 @@ class GasLiftingData:
 
     # Attributes associated with PSC transition
     type_of_contract: str
-    end_date_project: date
-    start_date_project_second: date
+    end_date_project: datetime
+    start_date_project_second: datetime
 
     # Attributes associated with project duration
     project_duration: int
     project_years: np.ndarray
 
+    # Attributes to be defined later
     prod_year: dict = field(default=None, init=False)
 
     def __post_init__(self):
         # Prepare attribute prod_year
-        if not isinstance(self.prod_year_input, dict):
+        if not isinstance(self.prod_year_init, dict):
             raise GasLiftingDataException(
                 f"Attribute prod_year must be provided in the form of dictionary. "
                 f"The current datatype of prod_year is "
-                f"{self.prod_year_input.__class__.__qualname__}"
+                f"{self.prod_year_init.__class__.__qualname__}"
             )
 
-        self.prod_year = self.prod_year_input
+        for i in self.prod_year_init.keys():
+            if self.prod_year_init[i] is None:
+                self.prod_year_init[i] = np.int_(self.project_years)
+            else:
+                self.prod_year_init[i] = np.int_(self.prod_year_init[i])
 
-        for i in self.prod_year_input.keys():
-            if self.prod_year_input[i] is None:
-                self.prod_year_input[i] = self.project_years
-                self.prod_year[i] = self.project_years
+        self.prod_year = self.prod_year_init
 
         # Prepare attribute gas_prod_rate
         if not isinstance(self.gas_prod_rate, dict):
@@ -683,7 +691,9 @@ class GasLiftingData:
 
         for i in self.gas_prod_rate.keys():
             if self.gas_prod_rate[i] is None:
-                self.gas_prod_rate[i] = np.zeros_like(self.project_years)
+                self.gas_prod_rate[i] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                self.gas_prod_rate[i] = np.float_(self.gas_prod_rate[i])
 
         # Prepare attribute gas_gsa_lifting_rate
         if not isinstance(self.gas_gsa_lifting_rate, dict):
@@ -696,7 +706,9 @@ class GasLiftingData:
         for i in self.gas_gsa_lifting_rate.keys():
             for j in self.gas_gsa_lifting_rate[i].keys():
                 if self.gas_gsa_lifting_rate[i][j] is None:
-                    self.gas_gsa_lifting_rate[i][j] = np.zeros_like(self.project_years)
+                    self.gas_gsa_lifting_rate[i][j] = np.zeros_like(self.project_years, dtype=np.float_)
+                else:
+                    self.gas_gsa_lifting_rate[i][j] = np.float_(self.gas_gsa_lifting_rate[i][j])
 
         # Prepare attribute gas_gsa_ghv
         if not isinstance(self.gas_gsa_ghv, dict):
@@ -709,7 +721,9 @@ class GasLiftingData:
         for i in self.gas_gsa_ghv.keys():
             for j in self.gas_gsa_ghv[i].keys():
                 if self.gas_gsa_ghv[i][j] is None:
-                    self.gas_gsa_ghv[i][j] = np.zeros_like(self.project_years)
+                    self.gas_gsa_ghv[i][j] = np.zeros_like(self.project_years, dtype=np.float_)
+                else:
+                    self.gas_gsa_ghv[i][j] = np.float_(self.gas_gsa_ghv[i][j])
 
         # Prepare attribute gas_gsa_price
         if not isinstance(self.gas_gsa_price, dict):
@@ -722,113 +736,53 @@ class GasLiftingData:
         for i in self.gas_gsa_price.keys():
             for j in self.gas_gsa_price[i].keys():
                 if self.gas_gsa_price[i][j] is None:
-                    self.gas_gsa_price[i][j] = np.zeros_like(self.project_years)
+                    self.gas_gsa_price[i][j] = np.zeros_like(self.project_years, dtype=np.float_)
+                else:
+                    self.gas_gsa_price[i][j] = np.float_(self.gas_gsa_price[i][j])
 
-        print('\t')
-        print("Transition" in self.type_of_contract)
-
-        # Adjust data for transition case
-        # if "Transition" in self.type_of_contract:
-        #     self.prod_year = get_lifting_data_split_gas_no_nested(
-        #         target_attr=self.prod_year,
-        #         prod_year=self.prod_year_input,
-        #         end_date_contract_1=self.end_date_project,
-        #         start_date_contract_2=self.start_date_project_second,
-        #     )
-        #
-        #     print('\t')
-        #     print(f'Filetype: {type(self.prod_year)}')
-        #     print('prod_year = \n', self.prod_year)
-        #
-        #     print('\t')
-        #     print('========================================================================')
-        #
-        #     self.gas_prod_rate = get_lifting_data_split_gas_no_nested(
-        #         target_attr=self.gas_prod_rate,
-        #         prod_year=self.prod_year_input,
-        #         end_date_contract_1=self.end_date_project,
-        #         start_date_contract_2=self.start_date_project_second,
-        #     )
-        #
-        #     print('\t')
-        #     print(f'Filetype: {type(self.gas_prod_rate)}')
-        #     print('gas_prod_rate = \n', self.gas_prod_rate)
-
-        #     if self.end_date_project.year == self.start_date_project_second.year:
-        #         id_transition = np.argwhere()
-
-        # print('\t')
-        # print(f'Filetype: {type(self.prod_year_input)}')
-        # print(f'Length: {len(self.prod_year_input)}')
-        # print('prod_year_input = \n', self.prod_year_input)
-        #
-        # print('\t')
-        # print(f'Filetype: {type(self.prod_year)}')
-        # print(f'Length: {len(self.prod_year)}')
-        # print('prod_year = \n', self.prod_year)
-
-        # print('\t')
-        # print(f'Filetype: {type(self.gas_prod_rate)}')
-        # print(f'Length: {len(self.gas_prod_rate)}')
-        # print('gas_prod_rate = \n', self.gas_prod_rate)
-        #
-        # print('=================================================================================')
-
+        # Adjust data for PSC transition case
         if "Transition" in self.type_of_contract:
-            keys_transition = ["PSC 1", "PSC 2"]
 
-            if self.end_date_project.year == self.start_date_project_second.year:
-                id_transition = {
-                    key: np.argwhere(
-                        self.prod_year_input[key] == self.end_date_project.year
-                    ).ravel().astype("int")
-                    for key in self.prod_year_input.keys()
-                }
+            # Modify attributes "prod_year" and "gas_prod_rate"
+            target_attrs_first = {
+                "attr": [self.prod_year, self.gas_prod_rate],
+                "status": [False, True],
+            }
 
-                for key in self.prod_year.keys():
-                    self.prod_year[key] = {
-                        keys_transition[0]: self.prod_year[key][:id_transition[key][0] + 1].astype("float"),
-                        keys_transition[1]: self.prod_year[key][id_transition[key][0]:].astype("float")
-                    }
+            (
+                self.prod_year,
+                self.gas_prod_rate,
+            ) = [
+                get_lifting_data_split_simple(
+                    target_attr=i,
+                    is_target_attr_volume=j,
+                    prod_year_init=self.prod_year_init,
+                    end_date_contract_1=self.end_date_project,
+                    start_date_contract_2=self.start_date_project_second,
+                )
+                for i, j in zip(target_attrs_first["attr"], target_attrs_first["status"])
+            ]
 
-            else:
-                id_transition = {
-                    key: np.array(
-                        [
-                            np.argwhere(self.prod_year_input[key] == i).ravel().astype("int")
-                            for i in [self.end_date_project.year, self.start_date_project_second.year]
-                        ]
-                    ).ravel()
-                    for key in self.prod_year_input.keys()
-                }
+            # Modify attributes "gas_gsa_lifting_rate", "gas_gsa_ghv", and "gas_gsa_price"
+            target_attrs_second = {
+                "attr": [self.gas_gsa_lifting_rate, self.gas_gsa_ghv, self.gas_gsa_price],
+                "status": [True, False, False],
+            }
 
-                for key in self.prod_year.keys():
-                    self.prod_year[key] = {
-                        keys_transition[0]: self.prod_year[key][:id_transition[key][0] + 1].astype("float"),
-                        keys_transition[1]: self.prod_year[key][id_transition[key][1]:].astype("float")
-                    }
-
-                for key in self.gas_prod_rate.keys():
-                    if self.gas_prod_rate[key] is None:
-                        self.gas_prod_rate[key] = {
-                            keys_transition[0]: None,
-                            keys_transition[1]: None,
-                        }
-                    else:
-                        self.gas_prod_rate[key] = {
-                            keys_transition[0]: self.gas_prod_rate[key][:id_transition[key][0] + 1].astype("float"),
-                            keys_transition[1]: self.gas_prod_rate[key][id_transition[key][1]:].astype("float")
-                        }
-
-        print('\t')
-        print(f'Filetype: {type(self.prod_year)}')
-        print(f'Length: {len(self.prod_year)}')
-        print('prod_year = \n', self.prod_year)
-
-        print('\t')
-        print(f'Filetype: {type(self.gas_prod_rate)}')
-        print(f'Length: {len(self.gas_prod_rate)}')
-        print('gas_prod_rate = \n', self.gas_prod_rate)
+            (
+                self.gas_gsa_lifting_rate,
+                self.gas_gsa_ghv,
+                self.gas_gsa_price,
+            ) = [
+                get_lifting_data_split_advanced(
+                    target_attr=i,
+                    is_target_attr_volume=j,
+                    prod_year_init=self.prod_year_init,
+                    end_date_contract_1=self.end_date_project,
+                    start_date_contract_2=self.start_date_project_second,
+                )
+                for i, j in zip(target_attrs_second["attr"], target_attrs_second["status"])
+            ]
 
 
 @dataclass
@@ -859,8 +813,8 @@ class LPGPropaneLiftingData:
 
     # Attributes associated with PSC transition
     type_of_contract: str
-    end_date_project: date
-    start_date_project_second: date
+    end_date_project: datetime
+    start_date_project_second: datetime
 
     def __post_init__(self):
         # Prepare attribute prod_year
@@ -950,8 +904,8 @@ class LPGButaneLiftingData:
 
     # Attributes associated with PSC transition
     type_of_contract: str
-    end_date_project: date
-    start_date_project_second: date
+    end_date_project: datetime
+    start_date_project_second: datetime
 
     def __post_init__(self):
         # Prepare attribute prod_year
@@ -1041,8 +995,8 @@ class SulfurLiftingData:
 
     # Attributes associated with PSC transition
     type_of_contract: str
-    end_date_project: date
-    start_date_project_second: date
+    end_date_project: datetime
+    start_date_project_second: datetime
 
     def __post_init__(self):
         # Prepare attribute prod_year
@@ -1132,8 +1086,8 @@ class ElectricityLiftingData:
 
     # Attributes associated with PSC transition
     type_of_contract: str
-    end_date_project: date
-    start_date_project_second: date
+    end_date_project: datetime
+    start_date_project_second: datetime
 
     def __post_init__(self):
         # Prepare attribute prod_year
@@ -1223,8 +1177,8 @@ class CO2LiftingData:
 
     # Attributes associated with PSC transition
     type_of_contract: str
-    end_date_project: date
-    start_date_project_second: date
+    end_date_project: datetime
+    start_date_project_second: datetime
 
     def __post_init__(self):
         # Prepare attribute prod_year
@@ -1340,8 +1294,8 @@ class TangibleCostData:
 
     # Attributes associated with PSC transition
     type_of_contract: str = field(repr=False)
-    end_date_project: date = field(repr=False)
-    start_date_project_second: date = field(repr=False)
+    end_date_project: datetime = field(repr=False)
+    start_date_project_second: datetime = field(repr=False)
 
     # Attributes to be defined later
     expense_year: np.ndarray = field(default=None, init=False)
@@ -1631,8 +1585,8 @@ class IntangibleCostData:
 
     # Attributes associated with PSC transition
     type_of_contract: str = field(repr=False)
-    end_date_project: date = field(repr=False)
-    start_date_project_second: date = field(repr=False)
+    end_date_project: datetime = field(repr=False)
+    start_date_project_second: datetime = field(repr=False)
 
     # Attributes to be defined later
     expense_year: np.ndarray = field(default=None, init=False)
@@ -1830,8 +1784,8 @@ class OPEXData:
 
     # Attributes associated with PSC transition
     type_of_contract: str = field(repr=False)
-    end_date_project: date = field(repr=False)
-    start_date_project_second: date = field(repr=False)
+    end_date_project: datetime = field(repr=False)
+    start_date_project_second: datetime = field(repr=False)
 
     # Attributes to be defined later
     expense_year: np.ndarray = field(default=None, init=False)
@@ -2061,8 +2015,8 @@ class ASRCostData:
 
     # Attributes associated with PSC transition
     type_of_contract: str = field(repr=False)
-    end_date_project: date = field(repr=False)
-    start_date_project_second: date = field(repr=False)
+    end_date_project: datetime = field(repr=False)
+    start_date_project_second: datetime = field(repr=False)
 
     # Attributes to be defined later
     expense_year: np.ndarray = field(default=None, init=False)
@@ -2304,14 +2258,14 @@ class PSCCostRecoveryData:
     # Attributes associated with DMO oil
     oil_dmo_holiday: str
     oil_dmo_period: int | float
-    oil_dmo_start_production: date
+    oil_dmo_start_production: datetime
     oil_dmo_volume: float
     oil_dmo_fee: float
 
     # Attributes associated with DMO gas
     gas_dmo_holiday: str
     gas_dmo_period: int | float
-    gas_dmo_start_production: date
+    gas_dmo_start_production: datetime
     gas_dmo_volume: float
     gas_dmo_fee: float
 
@@ -2428,14 +2382,14 @@ class PSCGrossSplitData:
     # Attributes associated with DMO oil
     oil_dmo_holiday: str
     oil_dmo_period: int | float
-    oil_dmo_start_production: date
+    oil_dmo_start_production: datetime
     oil_dmo_volume: float
     oil_dmo_fee: float
 
     # Attributes associated with DMO gas
     gas_dmo_holiday: str
     gas_dmo_period: int | float
-    gas_dmo_start_production: date
+    gas_dmo_start_production: datetime
     gas_dmo_volume: float
     gas_dmo_fee: float
 
