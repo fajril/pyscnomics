@@ -6,7 +6,6 @@ import os
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass, field
-from datetime import date, datetime
 
 from pyscnomics.io.config import (
     GeneralConfigData,
@@ -543,7 +542,7 @@ class Spreadsheet:
                 project_years=self.general_config_data.project_years,
                 type_of_contract=self.general_config_data.type_of_contract,
                 end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second= self.general_config_data.start_date_project_second,
+                start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
     def _get_lpg_butane_lifting_data(self) -> LPGButaneLiftingData:

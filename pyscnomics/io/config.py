@@ -171,29 +171,6 @@ class GeneralConfigData:
         # Prepare attribute gsa_number
         self.gsa_number = int(self.gsa_number)
 
-        # # Convert ordinal date into int date
-        # target_attrs = [
-        #     self.start_date_project,
-        #     self.end_date_project,
-        #     self.start_date_project_second,
-        #     self.end_date_project_second,
-        #     self.oil_onstream_date,
-        #     self.gas_onstream_date,
-        # ]
-        #
-        # (
-        #     self.start_date_project,
-        #     self.end_date_project,
-        #     self.start_date_project_second,
-        #     self.end_date_project_second,
-        #     self.oil_onstream_date,
-        #     self.gas_onstream_date,
-        # ) = [
-        #     None if val is None
-        #     else get_datetime(ordinal_date=val)
-        #     for i, val in enumerate(target_attrs)
-        # ]
-
         # Prepare attribute project_years and project_duration
         if "Transition" in self.type_of_contract:
             if self.end_date_project.year < self.start_date_project.year:
