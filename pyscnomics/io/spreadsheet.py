@@ -1668,7 +1668,7 @@ class Spreadsheet:
         # self.montecarlo_data = self._get_montecarlo_data()
         # self.optimization_data = self._get_optimization_data()
 
-        # print("\t")
-        # print(f"Filetype: {type(self.co2_lifting_data)}")
-        # print("\t")
-        # print("co2_lifting_data = \n", self.co2_lifting_data)
+        print("\t")
+        print(f"Filetype: {type(self.tangible_cost_data)}")
+        print("\t")
+        print("tangible_cost_data = \n", self.tangible_cost_data)

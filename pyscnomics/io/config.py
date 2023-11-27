@@ -11,6 +11,8 @@ from pyscnomics.tools.helper import (
     get_lifting_data_split_simple,
     get_lifting_data_split_advanced,
     get_cost_data_split,
+    get_fluidtype_converter,
+    get_boolean_converter,
 )
 
 
@@ -1420,213 +1422,211 @@ class TangibleCostData:
             )
 
         else:
-            self.cost_allocation = self.cost_allocation
+            self.cost_allocation = [get_fluidtype_converter(target=i) for i in self.cost_allocation]
 
-        print('\t')
-        print(f'Filetype: {type(self.cost_allocation)}')
-        print('cost_allocation = \n', self.cost_allocation)
+        # Prepare attribute cost
+        if not isinstance(self.cost, np.ndarray):
+            raise TangibleCostDataException(
+                f"Cost data must be given in the form of numpy.ndarray. "
+                f"The current cost data is given in the form of: "
+                f"({self.cost.__class__.__qualname__})."
+            )
 
-        # # Prepare attribute cost
-        # if not isinstance(self.cost, np.ndarray):
-        #     raise TangibleCostDataException(
-        #         f"Cost data must be given in the form of numpy.ndarray. "
-        #         f"The current cost data is given in the form of: "
-        #         f"({self.cost.__class__.__qualname__})."
-        #     )
-        #
-        # cost_nan = np.argwhere(np.isnan(self.cost)).ravel()
-        #
-        # if len(cost_nan) > 0:
-        #     self.cost[cost_nan] = np.zeros(len(cost_nan))
-        #
-        # else:
-        #     self.cost = self.cost
-        #
-        # # Prepare attribute pis_year
-        # if not isinstance(self.pis_year, np.ndarray):
-        #     raise TangibleCostDataException(
-        #         f"PIS year data must be given in the form of numpy.ndarray. "
-        #         f"The current pis_year data is given in the form of: "
-        #         f"({self.pis_year.__class__.__qualname__})."
-        #     )
-        #
-        # pis_year_nan = np.argwhere(np.isnan(self.pis_year)).ravel()
-        #
-        # if len(pis_year_nan) > 0:
-        #     self.pis_year[pis_year_nan] = self.expense_year_init[pis_year_nan]
-        #
-        # else:
-        #     self.pis_year = self.pis_year
-        #
-        # # Prepare attribute useful_life
-        # if not isinstance(self.useful_life, np.ndarray):
-        #     raise TangibleCostDataException(
-        #         f"Useful life data must be given in the form of numpy.ndarray. "
-        #         f"The current useful_life data is given in the form of: "
-        #         f"({self.useful_life.__class__.__qualname__})."
-        #     )
-        #
-        # useful_life_nan = np.argwhere(np.isnan(self.useful_life)).ravel()
-        #
-        # if len(useful_life_nan) > 0:
-        #     self.useful_life[useful_life_nan] = np.repeat(5.0, len(useful_life_nan))
-        #
-        # else:
-        #     self.useful_life = self.useful_life
-        #
-        # # Prepare attribute depreciation_factor
-        # if not isinstance(self.depreciation_factor, np.ndarray):
-        #     raise TangibleCostDataException(
-        #         f"Depreciation factor data must be given in the form of numpy.ndarray. "
-        #         f"The current depreciation_factor data is given in the form of: "
-        #         f"({self.depreciation_factor.__class__.__qualname__})."
-        #     )
-        #
-        # depreciation_factor_nan = np.argwhere(np.isnan(self.depreciation_factor)).ravel()
-        #
-        # if len(depreciation_factor_nan) > 0:
-        #     self.depreciation_factor[depreciation_factor_nan] = (
-        #         np.repeat(0.5, len(depreciation_factor_nan))
-        #     )
-        #
-        # else:
-        #     self.depreciation_factor = self.depreciation_factor
-        #
-        # # Prepare attribute salvage_value
-        # if not isinstance(self.salvage_value, np.ndarray):
-        #     raise TangibleCostDataException(
-        #         f"Salvage value data must be given in the form of numpy.ndarray. "
-        #         f"The current salvage_value data is given in the form of: "
-        #         f"({self.salvage_value.__class__.__qualname__})."
-        #     )
-        #
-        # salvage_value_nan = np.argwhere(np.isnan(self.salvage_value)).ravel()
-        #
-        # if len(salvage_value_nan) > 0:
-        #     self.salvage_value[salvage_value_nan] = np.zeros(len(salvage_value_nan))
-        #
-        # else:
-        #     self.salvage_value = self.salvage_value
-        #
-        # # Prepare attribute is_ic_applied
-        # if not isinstance(self.is_ic_applied, list):
-        #     raise TangibleCostDataException(
-        #         f"Is IC applied data must be given in the form of list. "
-        #         f"The current is_ic_applied data is given in the form of: "
-        #         f"({self.is_ic_applied.__class__.__qualname__})."
-        #     )
-        #
-        # is_ic_applied_nan = np.argwhere(pd.isna(self.is_ic_applied)).ravel()
-        #
-        # if len(is_ic_applied_nan) > 0:
-        #     for i in is_ic_applied_nan:
-        #         self.is_ic_applied[i] = "No"
-        #
-        # else:
-        #     self.is_ic_applied = self.is_ic_applied
-        #
-        # # Prepare attribute vat_portion
-        # if not isinstance(self.vat_portion, np.ndarray):
-        #     raise TangibleCostDataException(
-        #         f"VAT portion data must be given in the form of numpy.ndarray. "
-        #         f"The current vat_portion data is given in the form of: "
-        #         f"({self.vat_portion.__class__.__qualname__})."
-        #     )
-        #
-        # vat_portion_nan = np.argwhere(np.isnan(self.vat_portion)).ravel()
-        #
-        # if len(vat_portion_nan) > 0:
-        #     self.vat_portion[vat_portion_nan] = np.ones(len(vat_portion_nan))
-        #
-        # else:
-        #     self.vat_portion = self.vat_portion
-        #
-        # # Prepare attribute lbt_portion
-        # if not isinstance(self.lbt_portion, np.ndarray):
-        #     raise TangibleCostDataException(
-        #         f"LBT portion data must be given in the form of numpy.ndarray. "
-        #         f"The current lbt_portion data is given in the form of: "
-        #         f"({self.lbt_portion.__class__.__qualname__})."
-        #     )
-        #
-        # lbt_portion_nan = np.argwhere(np.isnan(self.lbt_portion)).ravel()
-        #
-        # if len(lbt_portion_nan) > 0:
-        #     self.lbt_portion[lbt_portion_nan] = np.ones(len(lbt_portion_nan))
-        #
-        # else:
-        #     self.lbt_portion = self.lbt_portion
-        #
-        # # Prepare attribute description
-        # if not isinstance(self.description, list):
-        #     raise TangibleCostDataException(
-        #         f"Description data must be given in the form of list. "
-        #         f"The current description data is given in the form of: "
-        #         f"({self.description.__class__.__qualname__})."
-        #     )
-        #
-        # description_nan = np.argwhere(pd.isna(self.description)).ravel()
-        #
-        # if len(description_nan) > 0:
-        #     for i in description_nan:
-        #         self.description[i] = " "
-        #
-        # else:
-        #     self.description = self.description
-        #
-        # # Adjust data for transition case
-        # if "Transition" in self.type_of_contract:
-        #     target_attrs = {
-        #         "attr": [
-        #             self.expense_year,
-        #             self.cost,
-        #             self.cost_allocation,
-        #             self.pis_year,
-        #             self.useful_life,
-        #             self.depreciation_factor,
-        #             self.salvage_value,
-        #             self.is_ic_applied,
-        #             self.vat_portion,
-        #             self.lbt_portion,
-        #             self.description,
-        #         ],
-        #         "status": [
-        #             False,
-        #             True,
-        #             False,
-        #             False,
-        #             False,
-        #             False,
-        #             False,
-        #             False,
-        #             False,
-        #             False,
-        #             False,
-        #         ]
-        #     }
-        #
-        #     (
-        #         self.expense_year,
-        #         self.cost,
-        #         self.cost_allocation,
-        #         self.pis_year,
-        #         self.useful_life,
-        #         self.depreciation_factor,
-        #         self.salvage_value,
-        #         self.is_ic_applied,
-        #         self.vat_portion,
-        #         self.lbt_portion,
-        #         self.description,
-        #     ) = [
-        #         get_cost_data_split(
-        #             target_attr=i,
-        #             is_target_attr_volume=j,
-        #             expense_year=self.expense_year_init,
-        #             end_date_contract_1=self.end_date_project,
-        #             start_date_contract_2=self.start_date_project_second,
-        #         )
-        #         for i, j in zip(target_attrs["attr"], target_attrs["status"])
-        #     ]
+        cost_nan = np.argwhere(np.isnan(self.cost)).ravel()
+
+        if len(cost_nan) > 0:
+            self.cost[cost_nan] = np.zeros(len(cost_nan), dtype=np.float_)
+
+        else:
+            self.cost = np.float_(self.cost)
+
+        # Prepare attribute pis_year
+        if not isinstance(self.pis_year, np.ndarray):
+            raise TangibleCostDataException(
+                f"PIS year data must be given in the form of numpy.ndarray. "
+                f"The current pis_year data is given in the form of: "
+                f"({self.pis_year.__class__.__qualname__})."
+            )
+
+        pis_year_nan = np.argwhere(np.isnan(self.pis_year)).ravel()
+
+        if len(pis_year_nan) > 0:
+            self.pis_year[pis_year_nan] = expense_year_init[pis_year_nan]
+
+        else:
+            self.pis_year = self.pis_year
+
+        # Prepare attribute useful_life
+        if not isinstance(self.useful_life, np.ndarray):
+            raise TangibleCostDataException(
+                f"Useful life data must be given in the form of numpy.ndarray. "
+                f"The current useful_life data is given in the form of: "
+                f"({self.useful_life.__class__.__qualname__})."
+            )
+
+        useful_life_nan = np.argwhere(np.isnan(self.useful_life)).ravel()
+
+        if len(useful_life_nan) > 0:
+            self.useful_life[useful_life_nan] = np.repeat(5.0, len(useful_life_nan))
+
+        else:
+            self.useful_life = np.float_(self.useful_life)
+
+        # Prepare attribute depreciation_factor
+        if not isinstance(self.depreciation_factor, np.ndarray):
+            raise TangibleCostDataException(
+                f"Depreciation factor data must be given in the form of numpy.ndarray. "
+                f"The current depreciation_factor data is given in the form of: "
+                f"({self.depreciation_factor.__class__.__qualname__})."
+            )
+
+        depreciation_factor_nan = np.argwhere(np.isnan(self.depreciation_factor)).ravel()
+
+        if len(depreciation_factor_nan) > 0:
+            self.depreciation_factor[depreciation_factor_nan] = (
+                np.repeat(0.5, len(depreciation_factor_nan))
+            )
+
+        else:
+            self.depreciation_factor = np.float_(self.depreciation_factor)
+
+        # Prepare attribute salvage_value
+        if not isinstance(self.salvage_value, np.ndarray):
+            raise TangibleCostDataException(
+                f"Salvage value data must be given in the form of numpy.ndarray. "
+                f"The current salvage_value data is given in the form of: "
+                f"({self.salvage_value.__class__.__qualname__})."
+            )
+
+        salvage_value_nan = np.argwhere(np.isnan(self.salvage_value)).ravel()
+
+        if len(salvage_value_nan) > 0:
+            self.salvage_value[salvage_value_nan] = np.zeros(len(salvage_value_nan), dtype=np.float_)
+
+        else:
+            self.salvage_value = np.float_(self.salvage_value)
+
+        # Prepare attribute is_ic_applied
+        if not isinstance(self.is_ic_applied, list):
+            raise TangibleCostDataException(
+                f"Is IC applied data must be given in the form of list. "
+                f"The current is_ic_applied data is given in the form of: "
+                f"({self.is_ic_applied.__class__.__qualname__})."
+            )
+
+        is_ic_applied_nan = np.argwhere(pd.isna(self.is_ic_applied)).ravel()
+
+        if len(is_ic_applied_nan) > 0:
+            for i in is_ic_applied_nan:
+                self.is_ic_applied[i] = "No"
+
+        else:
+            self.is_ic_applied = self.is_ic_applied
+
+        self.is_ic_applied = [get_boolean_converter(target=i) for i in self.is_ic_applied]
+
+        # Prepare attribute vat_portion
+        if not isinstance(self.vat_portion, np.ndarray):
+            raise TangibleCostDataException(
+                f"VAT portion data must be given in the form of numpy.ndarray. "
+                f"The current vat_portion data is given in the form of: "
+                f"({self.vat_portion.__class__.__qualname__})."
+            )
+
+        vat_portion_nan = np.argwhere(np.isnan(self.vat_portion)).ravel()
+
+        if len(vat_portion_nan) > 0:
+            self.vat_portion[vat_portion_nan] = np.ones(len(vat_portion_nan), dtype=np.float_)
+
+        else:
+            self.vat_portion = np.float_(self.vat_portion)
+
+        # Prepare attribute lbt_portion
+        if not isinstance(self.lbt_portion, np.ndarray):
+            raise TangibleCostDataException(
+                f"LBT portion data must be given in the form of numpy.ndarray. "
+                f"The current lbt_portion data is given in the form of: "
+                f"({self.lbt_portion.__class__.__qualname__})."
+            )
+
+        lbt_portion_nan = np.argwhere(np.isnan(self.lbt_portion)).ravel()
+
+        if len(lbt_portion_nan) > 0:
+            self.lbt_portion[lbt_portion_nan] = np.ones(len(lbt_portion_nan), dtype=np.float_)
+
+        else:
+            self.lbt_portion = np.float_(self.lbt_portion)
+
+        # Prepare attribute description
+        if not isinstance(self.description, list):
+            raise TangibleCostDataException(
+                f"Description data must be given in the form of list. "
+                f"The current description data is given in the form of: "
+                f"({self.description.__class__.__qualname__})."
+            )
+
+        description_nan = np.argwhere(pd.isna(self.description)).ravel()
+
+        if len(description_nan) > 0:
+            for i in description_nan:
+                self.description[i] = " "
+
+        else:
+            self.description = self.description
+
+        # Adjust data for transition case
+        if "Transition" in self.type_of_contract:
+            target_attrs = {
+                "attr": [
+                    self.expense_year,
+                    self.cost,
+                    self.cost_allocation,
+                    self.pis_year,
+                    self.useful_life,
+                    self.depreciation_factor,
+                    self.salvage_value,
+                    self.is_ic_applied,
+                    self.vat_portion,
+                    self.lbt_portion,
+                    self.description,
+                ],
+                "status": [
+                    False,
+                    True,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                ]
+            }
+
+            (
+                self.expense_year,
+                self.cost,
+                self.cost_allocation,
+                self.pis_year,
+                self.useful_life,
+                self.depreciation_factor,
+                self.salvage_value,
+                self.is_ic_applied,
+                self.vat_portion,
+                self.lbt_portion,
+                self.description,
+            ) = [
+                get_cost_data_split(
+                    target_attr=i,
+                    is_target_attr_volume=j,
+                    expense_year_init=expense_year_init,
+                    end_date_contract_1=self.end_date_project,
+                    start_date_contract_2=self.start_date_project_second,
+                )
+                for i, j in zip(target_attrs["attr"], target_attrs["status"])
+            ]
 
 
 @dataclass
@@ -1814,7 +1814,7 @@ class IntangibleCostData:
                 get_cost_data_split(
                     target_attr=i,
                     is_target_attr_volume=j,
-                    expense_year=self.expense_year_input,
+                    expense_year_init=self.expense_year_input,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
                 )
@@ -2051,7 +2051,7 @@ class OPEXData:
                 get_cost_data_split(
                     target_attr=i,
                     is_target_attr_volume=j,
-                    expense_year=self.expense_year_input,
+                    expense_year_init=self.expense_year_input,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
                 )
@@ -2244,7 +2244,7 @@ class ASRCostData:
                 get_cost_data_split(
                     target_attr=i,
                     is_target_attr_volume=j,
-                    expense_year=self.expense_year_input,
+                    expense_year_init=self.expense_year_input,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
                 )

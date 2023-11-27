@@ -788,7 +788,7 @@ def get_lifting_data_split_advanced(
 def get_cost_data_split(
     target_attr: list | np.ndarray,
     is_target_attr_volume: bool,
-    expense_year: np.ndarray,
+    expense_year_init: np.ndarray,
     end_date_contract_1: datetime,
     start_date_contract_2: datetime,
 ) -> dict:
@@ -801,7 +801,7 @@ def get_cost_data_split(
         The target attribute data to be split.
     is_target_attr_volume: bool
         Indicates if the target attribute represents volume.
-    expense_year: np.ndarray
+    expense_year_init: np.ndarray
         Array of years corresponding to the cost data.
     end_date_contract_1: datetime
         End date of the first contract.
@@ -822,7 +822,7 @@ def get_cost_data_split(
     """
     keys_transition = ["PSC 1", "PSC 2"]
 
-    id_transition = np.argwhere(expense_year == end_date_contract_1.year).ravel()
+    id_transition = np.argwhere(expense_year_init == end_date_contract_1.year).ravel()
 
     if isinstance(target_attr, list):
         target_attr = np.array(target_attr)
@@ -840,23 +840,100 @@ def get_cost_data_split(
 
         multiplier = (days_diff.days + 1) / (days_delta.days + 2)
 
-        target_attr = {
-            keys_transition[0]: target_attr[:int(max(id_transition) + 1)],
-            keys_transition[1]: target_attr[int(min(id_transition)):]
+        target_attr_modified = {
+            keys_transition[0]: target_attr[:int(max(id_transition) + 1)].copy(),
+            keys_transition[1]: target_attr[int(min(id_transition)):].copy(),
         }
 
         if is_target_attr_volume is True:
-            target_attr[keys_transition[0]][-1] = target_attr[keys_transition[0]][-1] * multiplier
-            target_attr[keys_transition[1]][0] = target_attr[keys_transition[1]][0] * (1.0 - multiplier)
+            target_attr_modified[keys_transition[0]][-1] *= multiplier
+            target_attr_modified[keys_transition[1]][0] *= (1.0 - multiplier)
 
     # End year of the first contract is different from the start year of the second contract
     else:
-        target_attr = {
-            keys_transition[0]: target_attr[0:int(max(id_transition) + 1)],
-            keys_transition[1]: target_attr[int(max(id_transition) + 1):]
+        target_attr_modified = {
+            keys_transition[0]: target_attr[0:int(max(id_transition) + 1)].copy(),
+            keys_transition[1]: target_attr[int(max(id_transition) + 1):].copy(),
         }
 
-    return target_attr
+    return target_attr_modified
+
+
+def get_fluidtype_converter(target: str):
+    """
+    Get the corresponding FluidType enum for a given target fluid.
+
+    Parameters
+    ----------
+    target: str
+        The target fluid for which the FluidType enum is to be retrieved.
+
+    Returns
+    -------
+    FluidType or None
+        The FluidType enum corresponding to the provided target fluid.
+        Returns None if the target fluid is not found in the predefined attributes.
+
+    Examples
+    --------
+    >>> get_fluidtype_converter("Oil")
+    <FluidType.OIL: 'Oil'>
+
+    >>> get_fluidtype_converter("CO2")
+    <FluidType.CO2: 'CO2'>
+
+    >>> get_fluidtype_converter("Water")
+    None
+    """
+    attrs = {
+        "Oil": FluidType.OIL,
+        "Gas": FluidType.GAS,
+        "Sulfur": FluidType.SULFUR,
+        "Electricity": FluidType.ELECTRICITY,
+        "CO2": FluidType.CO2,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_boolean_converter(target: str):
+    """
+    Get the boolean value corresponding to the provided target.
+
+    Parameters
+    ----------
+    target: str
+        The target string representing a boolean value ("Yes" or "No").
+
+    Returns
+    -------
+    bool or None
+        The boolean value corresponding to the provided target.
+        Returns True if target is "Yes", False if target is "No".
+        Returns None if the target is neither "Yes" nor "No".
+
+    Examples
+    --------
+    >>> get_boolean_converter("Yes")
+    True
+
+    >>> get_boolean_converter("No")
+    False
+
+    >>> get_boolean_converter("Maybe")
+    None
+    """
+    attrs = {"Yes": True, "No": False}
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
 
 
 def summarizer(
