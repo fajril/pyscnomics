@@ -971,21 +971,33 @@ def get_lifting_data_split_simple(
         # Identify the index location of the transition year
         id_transition = {}
         for key in prod_year_init.keys():
-            id_transition[key] = np.array(
-                [
-                    np.argwhere(prod_year_init[key] == i).ravel()
-                    for i in [end_date_contract_1.year, start_date_contract_2.year]
-                ]
-            ).ravel()
+            if prod_year_init[key] is None:
+                id_transition[key] = None
+            else:
+                id_transition[key] = np.array(
+                    [
+                        np.argwhere(prod_year_init[key] == i).ravel()
+                        for i in [end_date_contract_1.year, start_date_contract_2.year]
+                    ]
+                ).ravel()
+
+        print('\t')
+        print(f'Filetype: {type(id_transition)}')
+        print('id_transition = \n', id_transition)
 
         # Split the original target data into two corresponding PSC contracts
         target_attr_modified = {
-            key: {
+            key: None if prod_year_init[key] is None else
+            {
                 keys_transition[0]: target_attr[key][:int(min(id_transition[key]) + 1)].copy(),
                 keys_transition[1]: target_attr[key][int(max(id_transition[key])):].copy()
             }
             for key in prod_year_init.keys()
         }
+
+        print('\t')
+        print(f'Filetype: {type(target_attr_modified)}')
+        print('target_attr_modified = \n', target_attr_modified)
 
     return target_attr_modified
 

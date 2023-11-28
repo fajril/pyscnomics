@@ -317,50 +317,77 @@ class Spreadsheet:
             "condensate_price",
         ]
 
-        if len(oil_data_available) == 0:
-            oil_data = {key: {"Prod Oil": None} for key in oil_attrs}
+        oil_data = {}
+        oil_data_loaded = {i: self.data_loaded[i].fillna(0) for i in oil_data_available}
 
-            return OilLiftingData(
-                prod_year_init=oil_data["prod_year"],
-                oil_lifting_rate=oil_data["oil_lifting_rate"],
-                oil_price=oil_data["oil_price"],
-                condensate_lifting_rate=oil_data["condensate_lifting_rate"],
-                condensate_price=oil_data["condensate_price"],
-                project_duration=self.general_config_data.project_duration,
-                project_years=self.general_config_data.project_years,
-                type_of_contract=self.general_config_data.type_of_contract,
-                end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second=self.general_config_data.start_date_project_second,
-            )
+        for key, val_attr in enumerate(oil_attrs):
+            oil_data[val_attr] = {}
+            for i in oil_data_available:
+                if oil_data_loaded[i].empty:
+                    oil_data[val_attr][i] = None
+                else:
+                    oil_data[val_attr][i] = (
+                        oil_data_loaded[i].iloc[:, key]
+                        .to_numpy()
+                    )
 
-        # Step #3 (See 'Notes' section in the docstring)
-        else:
-            oil_data = {}
-            oil_data_loaded = {i: self.data_loaded[i].fillna(0) for i in oil_data_available}
+        return OilLiftingData(
+            prod_year_init=oil_data["prod_year"],
+            oil_lifting_rate=oil_data["oil_lifting_rate"],
+            oil_price=oil_data["oil_price"],
+            condensate_lifting_rate=oil_data["condensate_lifting_rate"],
+            condensate_price=oil_data["condensate_price"],
+            project_duration=self.general_config_data.project_duration,
+            project_years=self.general_config_data.project_years,
+            type_of_contract=self.general_config_data.type_of_contract,
+            end_date_project=self.general_config_data.end_date_project,
+            start_date_project_second=self.general_config_data.start_date_project_second,
+        )
 
-            for key, val_attr in enumerate(oil_attrs):
-                oil_data[val_attr] = {}
-                for i in oil_data_available:
-                    if oil_data_loaded[i].empty:
-                        oil_data[val_attr][i] = None
-                    else:
-                        oil_data[val_attr][i] = (
-                            oil_data_loaded[i].iloc[:, key]
-                            .to_numpy()
-                        )
-
-            return OilLiftingData(
-                prod_year_init=oil_data["prod_year"],
-                oil_lifting_rate=oil_data["oil_lifting_rate"],
-                oil_price=oil_data["oil_price"],
-                condensate_lifting_rate=oil_data["condensate_lifting_rate"],
-                condensate_price=oil_data["condensate_price"],
-                project_duration=self.general_config_data.project_duration,
-                project_years=self.general_config_data.project_years,
-                type_of_contract=self.general_config_data.type_of_contract,
-                end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second=self.general_config_data.start_date_project_second,
-            )
+        # if len(oil_data_available) == 0:
+        #     oil_data = {key: {"Prod Oil": None} for key in oil_attrs}
+        #
+        #     return OilLiftingData(
+        #         prod_year_init=oil_data["prod_year"],
+        #         oil_lifting_rate=oil_data["oil_lifting_rate"],
+        #         oil_price=oil_data["oil_price"],
+        #         condensate_lifting_rate=oil_data["condensate_lifting_rate"],
+        #         condensate_price=oil_data["condensate_price"],
+        #         project_duration=self.general_config_data.project_duration,
+        #         project_years=self.general_config_data.project_years,
+        #         type_of_contract=self.general_config_data.type_of_contract,
+        #         end_date_project=self.general_config_data.end_date_project,
+        #         start_date_project_second=self.general_config_data.start_date_project_second,
+        #     )
+        #
+        # # Step #3 (See 'Notes' section in the docstring)
+        # else:
+        #     oil_data = {}
+        #     oil_data_loaded = {i: self.data_loaded[i].fillna(0) for i in oil_data_available}
+        #
+        #     for key, val_attr in enumerate(oil_attrs):
+        #         oil_data[val_attr] = {}
+        #         for i in oil_data_available:
+        #             if oil_data_loaded[i].empty:
+        #                 oil_data[val_attr][i] = None
+        #             else:
+        #                 oil_data[val_attr][i] = (
+        #                     oil_data_loaded[i].iloc[:, key]
+        #                     .to_numpy()
+        #                 )
+        #
+        #     return OilLiftingData(
+        #         prod_year_init=oil_data["prod_year"],
+        #         oil_lifting_rate=oil_data["oil_lifting_rate"],
+        #         oil_price=oil_data["oil_price"],
+        #         condensate_lifting_rate=oil_data["condensate_lifting_rate"],
+        #         condensate_price=oil_data["condensate_price"],
+        #         project_duration=self.general_config_data.project_duration,
+        #         project_years=self.general_config_data.project_years,
+        #         type_of_contract=self.general_config_data.type_of_contract,
+        #         end_date_project=self.general_config_data.end_date_project,
+        #         start_date_project_second=self.general_config_data.start_date_project_second,
+        #     )
 
     def _get_gas_lifting_data(self) -> GasLiftingData:
         """
@@ -1698,23 +1725,31 @@ class Spreadsheet:
 
         # Fill in the attributes associated with lifting data
         self.oil_lifting_data = self._get_oil_lifting_data()
-        self.gas_lifting_data = self._get_gas_lifting_data()
-        self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
-        self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
-        self.sulfur_lifting_data = self._get_sulfur_lifting_data()
-        self.electricity_lifting_data = self._get_electricity_lifting_data()
-        self.co2_lifting_data = self._get_co2_lifting_data()
+        # self.gas_lifting_data = self._get_gas_lifting_data()
+        # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
+        # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
+        # self.sulfur_lifting_data = self._get_sulfur_lifting_data()
+        # self.electricity_lifting_data = self._get_electricity_lifting_data()
+        # self.co2_lifting_data = self._get_co2_lifting_data()
+        #
+        # # Fill in the attributes associated with cost data
+        # self.tangible_cost_data = self._get_tangible_cost_data()
+        # self.intangible_cost_data = self._get_intangible_cost_data()
+        # self.opex_data = self._get_opex_data()
+        # self.asr_cost_data = self._get_asr_cost_data()
+        #
+        # # Fill in the attributes associated with contract data
+        # self.psc_cr_data = self._get_psc_cr_data()
+        # self.psc_gs_data = self._get_psc_gs_data()
+        # self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
+        # self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
+        # self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
+        # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
 
-        # Fill in the attributes associated with cost data
-        self.tangible_cost_data = self._get_tangible_cost_data()
-        self.intangible_cost_data = self._get_intangible_cost_data()
-        self.opex_data = self._get_opex_data()
-        self.asr_cost_data = self._get_asr_cost_data()
-
-        # Fill in the attributes associated with contract data
-        self.psc_cr_data = self._get_psc_cr_data()
-        self.psc_gs_data = self._get_psc_gs_data()
-        self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
-        self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
-        self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
-        self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
+        # print('\t')
+        # print(f'Filetype: {type(self.oil_lifting_data.oil_lifting_rate)}')
+        # print('oil_lifting_data = \n', self.oil_lifting_data.oil_lifting_rate)
+        #
+        # print('\t')
+        # print(f'Filetype: {type(self.oil_lifting_data.oil_lifting_rate["Prod Oil (2)"])}')
+        # print('oil_lifting_rate = \n', self.oil_lifting_data.oil_lifting_rate["Prod Oil (2)"])
