@@ -236,55 +236,109 @@ class FiscalConfigData:
 
     Attributes
     ----------
-    tax_mode: str
-        The tax mode used for economic analysis.
-    tax_rate_init: float, optional
-        The tax rate input, default is None.
     tax_payment_method: str
         The method of tax payment.
     tax_ftp_regime: str
-        Basis for tax value to be used in PSC cost recovery.
+        The tax regime for FTP.
     npv_mode: str
-        The Net Present Value (NPV) calculation mode.
+        The mode for Net Present Value (NPV) calculation.
     discounting_mode: str
-        The method used for discounting future cash flows.
+        The mode for discounting.
     future_rate_asr: float
-        The future rate of ASR cost.
+        The future rate for ASR.
     depreciation_method: str
-        The depreciation method to be used for calculation.
-    inflation_rate_mode: str
-        The mode for handling inflation rate.
-    inflation_rate_init: float, optional
-        The input inflation rate, default is None.
-    multi_tax: dict, optional
-        Dictionary containing information about multiple tax values.
-    multi_inflation: dict, optional
-        Dictionary containing information about multiple inflation rates.
+        The method of depreciation.
+    decline_factor: float | int
+        The decline factor for economic analysis.
     transferred_unrec_cost: float
-        The transferred unrecovered cost.
-    project_years: np.ndarray
-        An array representing the project years.
-    """
+        The transferred unrecoverable cost.
+    tax_rate_second_contract: float
+        The tax rate for the second contract
     tax_mode: str
-    tax_rate_init: InitVar[float] = field(repr=False)
+        The mode for tax calculation.
+    tax_rate_init: float
+        Initial value for tax rate (used in User Input - Single Value mode).
+    multi_tax: dict
+        Dictionary for multi-year tax rates (used in User Input - Multi Value mode)
+    inflation_rate_mode: str
+        The mode for inflation rate calculation.
+    inflation_rate_init: float
+        Initial value for inflation rate (used in User Input - Single Value mode).
+    multi_inflation: dict
+        Dictionary for multi-year inflation rates (used in User Input - Multi Value mode)
+    vat_mode: str
+        The mode for VAT calculation.
+    vat_rate_init: float
+        Initial value for VAT rate (used in User Input - Single Value mode).
+    multi_vat: dict
+        Dictionary for multi-year VAT rates (used in User Input - Multi Value mode)
+    lbt_mode: str
+        The mode for LBT calculation.
+    lbt_rate_init: float
+        Initial value for LBT rate (used in User Input - Single Value mode).
+    multi_lbt: float
+        Multi-year LBT rates (used in User Input - Multi Value mode)
+    project_years: np.ndarray
+        Array representing project years
+    tax_rate: None | float | np.ndarray
+        Calculated tax rate based on the specified mode.
+    inflation_rate: float | np.ndarray
+        Calculated inflation rate based on the specified mode.
+    vat_rate: float | np.ndarray
+        Calculated VAT rate based on the specified mode.
+    lbt_rate: float | np.ndarray
+        Calculated LBT rate based on the specified mode.
+    """
     tax_payment_method: str
     tax_ftp_regime: str
     npv_mode: str
     discounting_mode: str
     future_rate_asr: float
     depreciation_method: str
+    decline_factor: float | int
+    transferred_unrec_cost: float
+    tax_rate_second_contract: float
+
+    # Attributes associated with tax
+    tax_mode: str
+    tax_rate_init: InitVar[float] = field(repr=False)
+    multi_tax: InitVar[dict] = field(repr=False)
+
+    # Attributes associated with inflation
     inflation_rate_mode: str
     inflation_rate_init: InitVar[float] = field(repr=False)
-    multi_tax: InitVar[dict] = field(repr=False)
     multi_inflation: InitVar[dict] = field(repr=False)
-    transferred_unrec_cost: float
-    project_years: np.ndarray
+
+    # Attributes associated with VAT
+    vat_mode: str
+    vat_rate_init: InitVar[float] = field(repr=False)
+    multi_vat: InitVar[dict] = field(repr=False)
+
+    # Attributes associated with LBT
+    lbt_mode: str
+    lbt_rate_init: InitVar[float] = field(repr=False)
+    multi_lbt: InitVar[float] = field(repr=False)
+
+    # Attributes associated with project duration
+    project_years: np.ndarray = field(repr=False)
 
     # Attributes to be defined later
     tax_rate: None | float | np.ndarray = field(default=None, init=False)
     inflation_rate: float | np.ndarray = field(default=None, init=False)
+    vat_rate: float | np.ndarray = field(default=None, init=False)
+    lbt_rate: float | np.ndarray = field(default=None, init=False)
 
-    def __post_init__(self, tax_rate_init, inflation_rate_init, multi_tax, multi_inflation):
+    def __post_init__(
+        self,
+        tax_rate_init,
+        multi_tax,
+        inflation_rate_init,
+        multi_inflation,
+        vat_rate_init,
+        multi_vat,
+        lbt_rate_init,
+        multi_lbt,
+    ):
         # Prepare attribute tax_payment_method
         self.tax_payment_method = get_tax_payment_converter(target=self.tax_payment_method)
 
@@ -300,7 +354,7 @@ class FiscalConfigData:
         # Prepare attribute depreciation_method
         self.depreciation_method = get_depreciation_method_converter(target=self.depreciation_method)
 
-        # Configure attribute tax_rate
+        # Prepare attribute tax_rate
         if self.tax_mode == "User Input - Single Value":
             if pd.isna(tax_rate_init):
                 self.tax_rate = 0.44
@@ -313,7 +367,7 @@ class FiscalConfigData:
         elif self.tax_mode == "User Input - Multi Value":
             self.tax_rate = get_array_from_target(target=multi_tax, project_years=self.project_years)
 
-        # Configure attribute inflation_rate
+        # Prepare attribute inflation_rate
         if self.inflation_rate_mode == "User Input - Single Value":
             if pd.isna(inflation_rate_init):
                 self.inflation_rate = 0.02
@@ -324,6 +378,26 @@ class FiscalConfigData:
             self.inflation_rate = (
                 get_array_from_target(target=multi_inflation, project_years=self.project_years)
             )
+
+        # Prepare attribute vat_rate
+        if self.vat_mode == "User Input - Single Value":
+            if pd.isna(vat_rate_init):
+                self.vat_rate = 0.12
+            else:
+                self.vat_rate = float(vat_rate_init)
+
+        elif self.vat_mode == "User Input - Multi Value":
+            self.vat_rate = get_array_from_target(target=multi_vat, project_years=self.project_years)
+
+        # Prepare attribute lbt_rate
+        if self.lbt_mode == "User Input - Single Value":
+            if pd.isna(lbt_rate_init):
+                self.lbt_rate = 0.02
+            else:
+                self.lbt_rate = float(lbt_rate_init)
+
+        elif self.lbt_mode == "User Input - Multi Value":
+            self.lbt_rate = get_array_from_target(target=multi_lbt, project_years=self.project_years)
 
 
 @dataclass
@@ -2190,66 +2264,81 @@ class PSCCostRecoveryData:
 
     Attributes
     ----------
-    ftp_availability: str
-        Availability status of the First Tranche Petroleum (FTP).
-    ftp_is_shared: str
-        Shared status of FTP.
-    ftp_portion: float
-        Portion of FTP.
+    oil_ftp_availability: str
+        Availability status of oil for FTP.
+    oil_ftp_is_shared: str
+        Shared status of oil for FTP.
+    oil_ftp_portion: float
+        Portion of oil for FTP.
+    gas_ftp_availability: str
+        Availability status of gas for FTP.
+    gas_ftp_is_shared: str
+        Shared status of gas for FTP.
+    gas_ftp_portion: float
+        Portion of gas for FTP.
     split_type: str
         Type of pretax split configuration.
     oil_ctr_pretax: float
-        Pretax split configuration for oil.
+        Pretax contribution of oil.
     gas_ctr_pretax: float
-        Pretax split configuration for gas.
+        Pretax contribution of gas.
     ic_availability: str
-        Availability status of the Investment Credit (IC).
+        Availability status of investment credit (IC).
     ic_oil: float
-        Investment Credit (IC) for oil.
+        Investment credit for oil.
     ic_gas: float
-        Investment Credit (IC) for gas.
+        Investment credit for gas.
     oil_cr_cap_rate: float
-        Cost Recovery (CR) cap rate for oil.
+        Cap rate for oil cost recovery.
     gas_cr_cap_rate: float
-        Cost Recovery (CR) cap rate for gas.
+        Cap rate for gas cost recovery.
     dmo_is_weighted: str
-        Weighted status of the general Domestic Market Obligation (DMO).
+        Weighted status of general DMO.
     oil_dmo_holiday: str
-        Holiday status for DMO related to oil.
+        Holiday status for DMO oil.
     oil_dmo_period: int | float
-        Period for DMO related to oil.
-    oil_dmo_start_production: date
-        Start production date for DMO related to oil.
+        Period for DMO oil.
+    oil_dmo_start_production: datetime
+        Start production date for DMO oil.
     oil_dmo_volume: float
-        Volume for DMO related to oil.
+        Volume for DMO oil.
     oil_dmo_fee: float
-        Fee for DMO related to oil.
+        Fee for DMO oil.
     gas_dmo_holiday: str
-        Holiday status for DMO related to gas.
+        Holiday status for DMO gas.
     gas_dmo_period: int | float
-        Period for DMO related to gas.
-    gas_dmo_start_production: date
-        Start production date for DMO related to gas.
+        Period for DMO gas.
+    gas_dmo_start_production: datetime
+        Start production date for DMO gas.
     gas_dmo_volume: float
-        Volume for DMO related to gas.
+        Volume for DMO gas.
     gas_dmo_fee: float
-        Fee for DMO related to gas.
-    rc_split: np.ndarray
-        Array of rc split data.
-    icp_sliding_scale: np.ndarray
-        Array of icp sliding scale data.
+        Fee for DMO gas.
+    rc_split_init: InitVar[np.ndarray]
+        Initial values for rc_split attributes.
+    icp_sliding_scale_init: InitVar[np.ndarray]
+        Initial values for icp_sliding_scale attributes.
+    indicator_rc_split_sliding_scale_init: InitVar[np.ndarray]
+        Initial values for indicator_rc_split_sliding_scale attributes.
+    rc_split: dict
+        Dictionary storing rc_split attributes (to be defined later).
+    icp_sliding_scale: dict
+        Dictionary storing icp_sliding_scale attributes (to be defined later).
+    indicator_rc_split_sliding_scale: dict
+        Dictionary storing indicator_rc_split_sliding_scale attributes (to be defined later).
 
     Notes
     -----
-    -   This class is designed to store data related to a Production Sharing Contract
-        (PSC) cost recovery scenario.
-    -   Some attributes, such as rc_split and icp_sliding_scale, are meant to be
-        defined later during class execution.
+    This class is designed to store data related to a Production Sharing Contract
+    (PSC) cost recovery scenario.
     """
     # Attributes associated with FTP
-    ftp_availability: str
-    ftp_is_shared: str
-    ftp_portion: float
+    oil_ftp_availability: str
+    oil_ftp_is_shared: str
+    oil_ftp_portion: float
+    gas_ftp_availability: str
+    gas_ftp_is_shared: str
+    gas_ftp_portion: float
 
     # Attributes associated with pretax split configuration
     split_type: str
@@ -2285,15 +2374,24 @@ class PSCCostRecoveryData:
     # Attributes associated with rc_split and icp_sliding_scale
     rc_split_init: InitVar[np.ndarray] = field(repr=False)
     icp_sliding_scale_init: InitVar[np.ndarray] = field(repr=False)
+    indicator_rc_split_sliding_scale_init: InitVar[np.ndarray] = field(repr=False)
 
     # Attributes to be defined later on
     rc_split: dict = field(default=None, init=False)
     icp_sliding_scale: dict = field(default=None, init=False)
+    indicator_rc_split_sliding_scale: dict = field(default=None, init=False)
 
-    def __post_init__(self, rc_split_init, icp_sliding_scale_init):
+    def __post_init__(
+        self,
+        rc_split_init,
+        icp_sliding_scale_init,
+        indicator_rc_split_sliding_scale_init,
+    ):
         # Convert attributes to boolean
-        self.ftp_availability = get_boolean_converter(target=self.ftp_availability)
-        self.ftp_is_shared = get_boolean_converter(target=self.ftp_is_shared)
+        self.oil_ftp_availability = get_boolean_converter(target=self.oil_ftp_availability)
+        self.oil_ftp_is_shared = get_boolean_converter(target=self.oil_ftp_is_shared)
+        self.gas_ftp_availability = get_boolean_converter(target=self.gas_ftp_availability)
+        self.gas_ftp_is_shared = get_boolean_converter(target=self.gas_ftp_is_shared)
         self.ic_availability = get_boolean_converter(target=self.ic_availability)
         self.dmo_is_weighted = get_boolean_converter(target=self.dmo_is_weighted)
         self.oil_dmo_holiday = get_boolean_converter(target=self.oil_dmo_holiday)
@@ -2311,9 +2409,21 @@ class PSCCostRecoveryData:
                 "Pre Tax CTR Gas",
             ]
             rc_split = {key: rc_split_init[:, i] for i, key in enumerate(rc_split_attrs)}
+
             self.rc_split = {
                 key: np.array(list(filter(lambda i: i is not None, rc_split[key])))
                 for key in rc_split_attrs
+            }
+
+            indicator_attrs = ["Year", "Indicator"]
+            indicator_split = {
+                key: indicator_rc_split_sliding_scale_init[:, i]
+                for i, key in enumerate(indicator_attrs)
+            }
+
+            self.indicator_rc_split_sliding_scale = {
+                key: np.array(list(filter(lambda i: i is not None, indicator_split[key])))
+                for key in indicator_attrs
             }
 
         # Prepare attribute icp_sliding_scale
@@ -2324,8 +2434,24 @@ class PSCCostRecoveryData:
                 "Pre Tax CTR Oil",
                 "Pre Tax CTR Gas",
             ]
-            self.icp_sliding_scale = {
+            icp_sliding_scale = {
                 key: icp_sliding_scale_init[:, i] for i, key in enumerate(icp_attrs)
+            }
+
+            self.icp_sliding_scale = {
+                key: np.array(list(filter(lambda i: i is not None, icp_sliding_scale[key])))
+                for key in icp_attrs
+            }
+
+            indicator_attrs = ["Year", "Indicator"]
+            indicator_split = {
+                key: indicator_rc_split_sliding_scale_init[:, i]
+                for i, key in enumerate(indicator_attrs)
+            }
+
+            self.indicator_rc_split_sliding_scale = {
+                key: np.array(list(filter(lambda i: i is not None, indicator_split[key])))
+                for key in indicator_attrs
             }
 
 

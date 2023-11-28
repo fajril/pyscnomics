@@ -223,39 +223,61 @@ class Spreadsheet:
 
         # Step #4 - Step #5 (See 'Notes' section in the docstring)
         tax_mode = fiscal_config_data_loaded.iloc[0, 1]
-        tax_rate_input = fiscal_config_data_loaded.iloc[1, 1]
+        tax_rate_init = fiscal_config_data_loaded.iloc[1, 1]
         tax_payment_method = fiscal_config_data_loaded.iloc[11, 1]
-        tax_psc_cost_recovery = fiscal_config_data_loaded.iloc[14, 1]
+        tax_ftp_regime = fiscal_config_data_loaded.iloc[14, 1]
         npv_mode = fiscal_config_data_loaded.iloc[17, 1]
         discounting_mode = fiscal_config_data_loaded.iloc[18, 1]
         future_rate_asr = fiscal_config_data_loaded.iloc[21, 1]
         depreciation_method = fiscal_config_data_loaded.iloc[24, 1]
-        inflation_rate_mode = fiscal_config_data_loaded.iloc[27, 1]
-        inflation_rate_input = fiscal_config_data_loaded.iloc[28, 1]
+        decline_factor = fiscal_config_data_loaded.iloc[25, 1]
+        inflation_rate_mode = fiscal_config_data_loaded.iloc[28, 1]
+        inflation_rate_init = fiscal_config_data_loaded.iloc[29, 1]
         multi_tax = {
             "year": fiscal_config_data_loaded.iloc[4:10, 0].to_numpy(),
             "rate": fiscal_config_data_loaded.iloc[4:10, 1].to_numpy(),
         }
         multi_inflation = {
-            "year": fiscal_config_data_loaded.iloc[31:37, 0].to_numpy(),
-            "rate": fiscal_config_data_loaded.iloc[31:37, 1].to_numpy(),
+            "year": fiscal_config_data_loaded.iloc[32:52, 0].to_numpy(),
+            "rate": fiscal_config_data_loaded.iloc[32:52, 1].to_numpy(),
         }
-        transferred_unrec_cost = fiscal_config_data_loaded.iloc[39, 1]
+        transferred_unrec_cost = fiscal_config_data_loaded.iloc[54, 1]
+        tax_rate_second_contract = fiscal_config_data_loaded.iloc[55, 1]
+        vat_mode = fiscal_config_data_loaded.iloc[58, 1]
+        vat_rate_init = fiscal_config_data_loaded.iloc[59, 1]
+        multi_vat = {
+            "year": fiscal_config_data_loaded.iloc[62:82, 0].to_numpy(),
+            "rate": fiscal_config_data_loaded.iloc[62:82, 1].to_numpy(),
+        }
+        lbt_mode = fiscal_config_data_loaded.iloc[84, 1]
+        lbt_rate_init = fiscal_config_data_loaded.iloc[85, 1]
+        multi_lbt = {
+            "year": fiscal_config_data_loaded.iloc[87:108, 0].to_numpy(),
+            "rate": fiscal_config_data_loaded.iloc[87:108, 1].to_numpy(),
+        }
 
         return FiscalConfigData(
-            tax_mode=tax_mode,
-            tax_rate_init=tax_rate_input,
             tax_payment_method=tax_payment_method,
-            tax_ftp_regime=tax_psc_cost_recovery,
+            tax_ftp_regime=tax_ftp_regime,
             npv_mode=npv_mode,
             discounting_mode=discounting_mode,
-            future_rate_asr=future_rate_asr,
+            future_rate_asr=float(future_rate_asr),
             depreciation_method=depreciation_method,
-            inflation_rate_mode=inflation_rate_mode,
-            inflation_rate_init=inflation_rate_input,
-            multi_tax=multi_tax,
-            multi_inflation=multi_inflation,
+            decline_factor=float(decline_factor),
             transferred_unrec_cost=float(transferred_unrec_cost),
+            tax_rate_second_contract=float(tax_rate_second_contract),
+            tax_mode=tax_mode,
+            tax_rate_init=tax_rate_init,
+            multi_tax=multi_tax,
+            inflation_rate_mode=inflation_rate_mode,
+            inflation_rate_init=inflation_rate_init,
+            multi_inflation=multi_inflation,
+            vat_mode=vat_mode,
+            vat_rate_init=vat_rate_init,
+            multi_vat=multi_vat,
+            lbt_mode=lbt_mode,
+            lbt_rate_init=lbt_rate_init,
+            multi_lbt=multi_lbt,
             project_years=self.general_config_data.project_years,
         )
 
@@ -1102,30 +1124,34 @@ class Spreadsheet:
 
         # Step #3 - Step #4 (See 'Notes' section in the docstring)
         return PSCCostRecoveryData(
-            ftp_availability=psc_cr_data_loaded.iloc[0, 2],
-            ftp_is_shared=psc_cr_data_loaded.iloc[1, 2],
-            ftp_portion=psc_cr_data_loaded.iloc[2, 2],
-            split_type=psc_cr_data_loaded.iloc[5, 2],
-            oil_ctr_pretax=psc_cr_data_loaded.iloc[6, 2],
-            gas_ctr_pretax=psc_cr_data_loaded.iloc[7, 2],
-            ic_availability=psc_cr_data_loaded.iloc[10, 2],
-            ic_oil=psc_cr_data_loaded.iloc[11, 2],
-            ic_gas=psc_cr_data_loaded.iloc[12, 2],
-            oil_cr_cap_rate=psc_cr_data_loaded.iloc[15, 2],
-            gas_cr_cap_rate=psc_cr_data_loaded.iloc[16, 2],
-            dmo_is_weighted=psc_cr_data_loaded.iloc[19, 2],
-            oil_dmo_holiday=psc_cr_data_loaded.iloc[22, 2],
-            oil_dmo_period=psc_cr_data_loaded.iloc[23, 2],
-            oil_dmo_start_production=psc_cr_data_loaded.iloc[24, 2],
-            oil_dmo_volume=psc_cr_data_loaded.iloc[25, 2],
-            oil_dmo_fee=psc_cr_data_loaded.iloc[26, 2],
-            gas_dmo_holiday=psc_cr_data_loaded.iloc[29, 2],
-            gas_dmo_period=psc_cr_data_loaded.iloc[30, 2],
-            gas_dmo_start_production=psc_cr_data_loaded.iloc[31, 2],
-            gas_dmo_volume=psc_cr_data_loaded.iloc[32, 2],
-            gas_dmo_fee=psc_cr_data_loaded.iloc[33, 2],
-            rc_split_init=psc_cr_data_loaded.iloc[38:45, 1:].to_numpy(),
-            icp_sliding_scale_init=psc_cr_data_loaded.iloc[49:, 1:].to_numpy(),
+            oil_ftp_availability=psc_cr_data_loaded.iloc[0, 2],
+            oil_ftp_is_shared=psc_cr_data_loaded.iloc[1, 2],
+            oil_ftp_portion=psc_cr_data_loaded.iloc[2, 2],
+            gas_ftp_availability=psc_cr_data_loaded.iloc[3, 2],
+            gas_ftp_is_shared=psc_cr_data_loaded.iloc[4, 2],
+            gas_ftp_portion=psc_cr_data_loaded.iloc[5, 2],
+            split_type=psc_cr_data_loaded.iloc[8, 2],
+            oil_ctr_pretax=psc_cr_data_loaded.iloc[9, 2],
+            gas_ctr_pretax=psc_cr_data_loaded.iloc[10, 2],
+            ic_availability=psc_cr_data_loaded.iloc[13, 2],
+            ic_oil=psc_cr_data_loaded.iloc[14, 2],
+            ic_gas=psc_cr_data_loaded.iloc[15, 2],
+            oil_cr_cap_rate=psc_cr_data_loaded.iloc[18, 2],
+            gas_cr_cap_rate=psc_cr_data_loaded.iloc[19, 2],
+            dmo_is_weighted=psc_cr_data_loaded.iloc[22, 2],
+            oil_dmo_holiday=psc_cr_data_loaded.iloc[25, 2],
+            oil_dmo_period=psc_cr_data_loaded.iloc[26, 2],
+            oil_dmo_start_production=psc_cr_data_loaded.iloc[27, 2],
+            oil_dmo_volume=psc_cr_data_loaded.iloc[28, 2],
+            oil_dmo_fee=psc_cr_data_loaded.iloc[29, 2],
+            gas_dmo_holiday=psc_cr_data_loaded.iloc[32, 2],
+            gas_dmo_period=psc_cr_data_loaded.iloc[33, 2],
+            gas_dmo_start_production=psc_cr_data_loaded.iloc[34, 2],
+            gas_dmo_volume=psc_cr_data_loaded.iloc[35, 2],
+            gas_dmo_fee=psc_cr_data_loaded.iloc[36, 2],
+            rc_split_init=psc_cr_data_loaded.iloc[41:48, 1:].to_numpy(),
+            icp_sliding_scale_init=psc_cr_data_loaded.iloc[52:60, 1:].to_numpy(),
+            indicator_rc_split_sliding_scale_init=psc_cr_data_loaded.iloc[63:83, 1:3].to_numpy(),
         )
 
     def _get_psc_gs_data(self) -> PSCGrossSplitData:
@@ -1657,13 +1683,13 @@ class Spreadsheet:
 
         # Fill in the attributes associated with contract data
         self.psc_cr_data = self._get_psc_cr_data()
-        self.psc_gs_data = self._get_psc_gs_data()
-        self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
-        self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
-        self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
-        self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
+        # self.psc_gs_data = self._get_psc_gs_data()
+        # self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
+        # self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
+        # self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
+        # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
 
-        # print("\t")
-        # print(f"Filetype: {type(self.fiscal_config_data)}")
-        # print("\t")
-        # print("fiscal_config_data = \n", self.fiscal_config_data)
+        print("\t")
+        print(f"Filetype: {type(self.psc_cr_data)}")
+        print("\t")
+        print("data = \n", self.psc_cr_data)
