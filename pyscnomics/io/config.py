@@ -2485,6 +2485,10 @@ class PSCGrossSplitData:
         The stage of production.
     ministry_discretion_split: float
         The split determined by ministry discretion.
+    oil_base_split: float
+        Base split for oil.
+    gas_base_split: float
+        Base split for gas.
     dmo_is_weighted: str
         Weighting information for general DMO.
     oil_dmo_holiday: str
@@ -2525,6 +2529,10 @@ class PSCGrossSplitData:
     domestic_content_use: str
     production_stage: str
     ministry_discretion_split: float
+
+    # Attribute associated with split
+    oil_base_split: float
+    gas_base_split: float
 
     # Attribute associated with general DMO
     dmo_is_weighted: str
