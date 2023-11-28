@@ -189,22 +189,16 @@ class GeneralConfigData:
         )
 
         # Prepare attributes associated with datetime
-        (
-            self.start_date_project,
-            self.end_date_project,
-            self.start_date_project_second,
-            self.end_date_project_second,
-        ) = list(
-            map(get_datetime, [
-                self.start_date_project,
-                self.end_date_project,
-                self.start_date_project_second,
-                self.end_date_project_second,
-            ])
+        self.start_date_project, self.end_date_project = list(
+            map(get_datetime, [self.start_date_project, self.end_date_project])
         )
 
         # Prepare attribute project_years and project_duration
         if "Transition" in self.type_of_contract:
+            self.start_date_project_second, self.end_date_project_second = list(
+                map(get_datetime, [self.start_date_project_second, self.end_date_project_second])
+            )
+
             if self.end_date_project.year < self.start_date_project.year:
                 raise GeneralConfigDataException(
                     f"Start year of the first contract ({self.start_date_project.year}) "
