@@ -7,12 +7,15 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from pyscnomics.econ.selection import TaxSplitTypeCR
 from pyscnomics.tools.helper import (
     get_lifting_data_split_simple,
     get_lifting_data_split_advanced,
     get_cost_data_split,
+    get_to_list_converter,
     get_fluidtype_converter,
     get_boolean_converter,
+    get_split_type_converter,
 )
 
 
@@ -1354,6 +1357,12 @@ class TangibleCostData:
         Length of the captured data.
     project_years: np.ndarray
         Array of project years.
+    type_of_contract: str
+        A string depicting the type of PSC contract.
+    end_date_project: date
+        The end date of the project.
+    start_date_project_second: date
+        The start date of the second project (for PSC transition).
     """
     expense_year_init: InitVar[np.ndarray] = field(repr=False)
     cost: np.ndarray
@@ -1371,7 +1380,7 @@ class TangibleCostData:
     data_length: int = field(repr=False)
 
     # Attribute associated with project duration
-    project_years: np.ndarray
+    project_years: np.ndarray = field(repr=False)
 
     # Attributes associated with PSC transition
     type_of_contract: str = field(repr=False)
@@ -1576,6 +1585,7 @@ class TangibleCostData:
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
+            # Modify the values of the attributes
             target_attrs = {
                 "attr": [
                     self.expense_year,
@@ -1602,7 +1612,7 @@ class TangibleCostData:
                     False,
                     False,
                     False,
-                ]
+                ],
             }
 
             (
@@ -1628,6 +1638,15 @@ class TangibleCostData:
                 for i, j in zip(target_attrs["attr"], target_attrs["status"])
             ]
 
+            # Prepare attributes with datatype list
+            (
+                self.cost_allocation,
+                self.is_ic_applied,
+                self.description,
+            ) = list(
+                map(get_to_list_converter, [self.cost_allocation, self.is_ic_applied, self.description])
+            )
+
 
 @dataclass
 class IntangibleCostData:
@@ -1652,8 +1671,14 @@ class IntangibleCostData:
         Length of the captured data.
     project_years: np.ndarray
         Array of project years.
+    type_of_contract: str
+        A string depicting the type of PSC contract.
+    end_date_project: date
+        The end date of the project.
+    start_date_project_second: date
+        The start date of the second project (for PSC transition).
     """
-    expense_year_input: np.ndarray = field(repr=False)
+    expense_year_init: InitVar[np.ndarray] = field(repr=False)
     cost_allocation: list
     cost: np.ndarray
     vat_portion: np.ndarray
@@ -1664,7 +1689,7 @@ class IntangibleCostData:
     data_length: int = field(repr=False)
 
     # Attribute associated with project duration
-    project_years: np.ndarray
+    project_years: np.ndarray = field(repr=False)
 
     # Attributes associated with PSC transition
     type_of_contract: str = field(repr=False)
@@ -1674,16 +1699,16 @@ class IntangibleCostData:
     # Attributes to be defined later
     expense_year: np.ndarray = field(default=None, init=False)
 
-    def __post_init__(self):
+    def __post_init__(self, expense_year_init):
         # Prepare attribute expense_year
-        if not isinstance(self.expense_year_input, np.ndarray):
+        if not isinstance(expense_year_init, np.ndarray):
             raise IntangibleCostDataException(
                 f"Expense year data must be given in the form of numpy.ndarray. "
                 f"The current expense_year data is given in the form of: "
-                f"({self.expense_year_input.__class__.__qualname__})."
+                f"({expense_year_init.__class__.__qualname__})."
             )
 
-        expense_year_nan = np.argwhere(np.isnan(self.expense_year_input)).ravel()
+        expense_year_nan = np.argwhere(np.isnan(expense_year_init)).ravel()
 
         if len(expense_year_nan) > 0:
             raise IntangibleCostDataException(
@@ -1693,8 +1718,8 @@ class IntangibleCostData:
             )
 
         else:
-            self.expense_year_input = self.expense_year_input
-            self.expense_year = self.expense_year_input
+            expense_year_init = np.int_(expense_year_init)
+            self.expense_year = expense_year_init.copy()
 
         # Prepare attribute cost_allocation
         if not isinstance(self.cost_allocation, list):
@@ -1715,7 +1740,7 @@ class IntangibleCostData:
             )
 
         else:
-            self.cost_allocation = self.cost_allocation
+            self.cost_allocation = [get_fluidtype_converter(target=i) for i in self.cost_allocation]
 
         # Prepare attribute cost
         if not isinstance(self.cost, np.ndarray):
@@ -1728,10 +1753,10 @@ class IntangibleCostData:
         cost_nan = np.argwhere(np.isnan(self.cost)).ravel()
 
         if len(cost_nan) > 0:
-            self.cost[cost_nan] = np.zeros(len(cost_nan))
+            self.cost[cost_nan] = np.zeros(len(cost_nan), dtype=np.float_)
 
         else:
-            self.cost = self.cost
+            self.cost = np.float_(self.cost)
 
         # Prepare attribute vat_portion
         if not isinstance(self.vat_portion, np.ndarray):
@@ -1744,10 +1769,10 @@ class IntangibleCostData:
         vat_portion_nan = np.argwhere(np.isnan(self.vat_portion)).ravel()
 
         if len(vat_portion_nan) > 0:
-            self.vat_portion[vat_portion_nan] = np.ones(len(vat_portion_nan))
+            self.vat_portion[vat_portion_nan] = np.ones(len(vat_portion_nan), dtype=np.float_)
 
         else:
-            self.vat_portion = self.vat_portion
+            self.vat_portion = np.float_(self.vat_portion)
 
         # Prepare attribute lbt_portion
         if not isinstance(self.lbt_portion, np.ndarray):
@@ -1760,10 +1785,10 @@ class IntangibleCostData:
         lbt_portion_nan = np.argwhere(np.isnan(self.lbt_portion)).ravel()
 
         if len(lbt_portion_nan) > 0:
-            self.lbt_portion[lbt_portion_nan] = np.ones(len(lbt_portion_nan))
+            self.lbt_portion[lbt_portion_nan] = np.ones(len(lbt_portion_nan), dtype=np.float_)
 
         else:
-            self.lbt_portion = self.lbt_portion
+            self.lbt_portion = np.float_(self.lbt_portion)
 
         # Prepare attribute description
         if not isinstance(self.description, list):
@@ -1784,6 +1809,7 @@ class IntangibleCostData:
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
+            # Modify the values of the attributes
             target_attrs = {
                 "attr": [
                     self.expense_year,
@@ -1800,7 +1826,7 @@ class IntangibleCostData:
                     False,
                     False,
                     False,
-                ]
+                ],
             }
 
             (
@@ -1814,12 +1840,17 @@ class IntangibleCostData:
                 get_cost_data_split(
                     target_attr=i,
                     is_target_attr_volume=j,
-                    expense_year_init=self.expense_year_input,
+                    expense_year_init=expense_year_init,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
                 )
                 for i, j in zip(target_attrs["attr"], target_attrs["status"])
             ]
+
+            # Prepare attributes with datatype list
+            self.cost_allocation, self.description = list(
+                map(get_to_list_converter, [self.cost_allocation, self.description])
+            )
 
 
 @dataclass
@@ -1849,8 +1880,14 @@ class OPEXData:
         Length of the captured data.
     project_years: np.ndarray
         Array of project years.
+    type_of_contract: str
+        A string depicting the type of PSC contract.
+    end_date_project: date
+        The end date of the project.
+    start_date_project_second: date
+        The start date of the second project (for PSC transition).
     """
-    expense_year_input: np.ndarray = field(repr=False)
+    expense_year_init: InitVar[np.ndarray] = field(repr=False)
     cost_allocation: list
     fixed_cost: np.ndarray
     prod_rate: np.ndarray
@@ -1863,7 +1900,7 @@ class OPEXData:
     data_length: int = field(repr=False)
 
     # Attribute associated with project duration
-    project_years: np.ndarray
+    project_years: np.ndarray = field(repr=False)
 
     # Attributes associated with PSC transition
     type_of_contract: str = field(repr=False)
@@ -1873,16 +1910,16 @@ class OPEXData:
     # Attributes to be defined later
     expense_year: np.ndarray = field(default=None, init=False)
 
-    def __post_init__(self):
+    def __post_init__(self, expense_year_init):
         # Prepare attribute expense year
-        if not isinstance(self.expense_year_input, np.ndarray):
+        if not isinstance(expense_year_init, np.ndarray):
             raise OPEXDataException(
                 f"Expense year data must be given in the form of numpy.ndarray. "
                 f"The current expense_year data is given in the form of: "
-                f"({self.expense_year_input.__class__.__qualname__})."
+                f"({expense_year_init.__class__.__qualname__})."
             )
 
-        expense_year_nan = np.argwhere(np.isnan(self.expense_year_input)).ravel()
+        expense_year_nan = np.argwhere(np.isnan(expense_year_init)).ravel()
 
         if len(expense_year_nan) > 0:
             raise OPEXDataException(
@@ -1892,8 +1929,8 @@ class OPEXData:
             )
 
         else:
-            self.expense_year_input = self.expense_year_input
-            self.expense_year = self.expense_year_input
+            expense_year_init = np.int_(expense_year_init)
+            self.expense_year = expense_year_init.copy()
 
         # Prepare attribute cost_allocation
         if not isinstance(self.cost_allocation, list):
@@ -1914,7 +1951,7 @@ class OPEXData:
             )
 
         else:
-            self.cost_allocation = self.cost_allocation
+            self.cost_allocation = [get_fluidtype_converter(target=i) for i in self.cost_allocation]
 
         # Prepare attribute fixed_cost
         if not isinstance(self.fixed_cost, np.ndarray):
@@ -1927,10 +1964,10 @@ class OPEXData:
         fixed_cost_nan = np.argwhere(np.isnan(self.fixed_cost)).ravel()
 
         if len(fixed_cost_nan) > 0:
-            self.fixed_cost[fixed_cost_nan] = np.zeros(len(fixed_cost_nan))
+            self.fixed_cost[fixed_cost_nan] = np.zeros(len(fixed_cost_nan), dtype=np.float_)
 
         else:
-            self.fixed_cost = self.fixed_cost
+            self.fixed_cost = np.float_(self.fixed_cost)
 
         # Prepare attribute prod_rate
         if not isinstance(self.prod_rate, np.ndarray):
@@ -1943,10 +1980,10 @@ class OPEXData:
         prod_rate_nan = np.argwhere(np.isnan(self.prod_rate)).ravel()
 
         if len(prod_rate_nan) > 0:
-            self.prod_rate[prod_rate_nan] = np.zeros(len(prod_rate_nan))
+            self.prod_rate[prod_rate_nan] = np.zeros(len(prod_rate_nan), dtype=np.float_)
 
         else:
-            self.prod_rate = self.prod_rate
+            self.prod_rate = np.float_(self.prod_rate)
 
         # Prepare attribute cost_per_volume
         if not isinstance(self.cost_per_volume, np.ndarray):
@@ -1959,10 +1996,10 @@ class OPEXData:
         cost_per_volume_nan = np.argwhere(np.isnan(self.cost_per_volume)).ravel()
 
         if len(cost_per_volume_nan) > 0:
-            self.cost_per_volume[cost_per_volume_nan] = np.zeros(len(cost_per_volume_nan))
+            self.cost_per_volume[cost_per_volume_nan] = np.zeros(len(cost_per_volume_nan), dtype=np.float_)
 
         else:
-            self.cost_per_volume = self.cost_per_volume
+            self.cost_per_volume = np.float_(self.cost_per_volume)
 
         # Prepare attribute vat_portion
         if not isinstance(self.vat_portion, np.ndarray):
@@ -1975,10 +2012,10 @@ class OPEXData:
         vat_portion_nan = np.argwhere(np.isnan(self.vat_portion)).ravel()
 
         if len(vat_portion_nan) > 0:
-            self.vat_portion[vat_portion_nan] = np.ones(len(vat_portion_nan))
+            self.vat_portion[vat_portion_nan] = np.ones(len(vat_portion_nan), dtype=np.float_)
 
         else:
-            self.vat_portion = self.vat_portion
+            self.vat_portion = np.float_(self.vat_portion)
 
         # Prepare attribute lbt_portion
         if not isinstance(self.lbt_portion, np.ndarray):
@@ -1991,10 +2028,10 @@ class OPEXData:
         lbt_portion_nan = np.argwhere(np.isnan(self.lbt_portion)).ravel()
 
         if len(lbt_portion_nan) > 0:
-            self.lbt_portion[lbt_portion_nan] = np.ones(len(lbt_portion_nan))
+            self.lbt_portion[lbt_portion_nan] = np.ones(len(lbt_portion_nan), dtype=np.float_)
 
         else:
-            self.lbt_portion = self.lbt_portion
+            self.lbt_portion = np.float_(self.lbt_portion)
 
         # Prepare attribute description
         if not isinstance(self.description, list):
@@ -2015,6 +2052,7 @@ class OPEXData:
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
+            # Modify the values of the attributes
             target_attrs = {
                 "attr": [
                     self.expense_year,
@@ -2051,12 +2089,17 @@ class OPEXData:
                 get_cost_data_split(
                     target_attr=i,
                     is_target_attr_volume=j,
-                    expense_year_init=self.expense_year_input,
+                    expense_year_init=expense_year_init,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
                 )
                 for i, j in zip(target_attrs["attr"], target_attrs["status"])
             ]
+
+            # Prepare attributes with datatype list
+            self.cost_allocation, self.description = list(
+                map(get_to_list_converter, [self.cost_allocation, self.description])
+            )
 
 
 @dataclass
@@ -2082,8 +2125,14 @@ class ASRCostData:
         Length of the captured data.
     project_years: np.ndarray
         Array of project years.
+    type_of_contract: str
+        A string depicting the type of PSC contract.
+    end_date_project: date
+        The end date of the project.
+    start_date_project_second: date
+        The start date of the second project (for PSC transition).
     """
-    expense_year_input: np.ndarray = field(repr=False)
+    expense_year_init: InitVar[np.ndarray] = field(repr=False)
     cost_allocation: list
     cost: np.ndarray
     vat_portion: np.ndarray
@@ -2094,7 +2143,7 @@ class ASRCostData:
     data_length: int = field(repr=False)
 
     # Attribute associated with project duration
-    project_years: np.ndarray
+    project_years: np.ndarray = field(repr=False)
 
     # Attributes associated with PSC transition
     type_of_contract: str = field(repr=False)
@@ -2104,16 +2153,16 @@ class ASRCostData:
     # Attributes to be defined later
     expense_year: np.ndarray = field(default=None, init=False)
 
-    def __post_init__(self):
+    def __post_init__(self, expense_year_init):
         # Prepare attribute expense_year
-        if not isinstance(self.expense_year_input, np.ndarray):
+        if not isinstance(expense_year_init, np.ndarray):
             raise ASRCostDataException(
                 f"Expense year data must be given in the form of numpy.ndarray. "
                 f"The current expense_year data is given in the form of: "
-                f"({self.expense_year_input.__class__.__qualname__})."
+                f"({expense_year_init.__class__.__qualname__})."
             )
 
-        expense_year_nan = np.argwhere(np.isnan(self.expense_year_input)).ravel()
+        expense_year_nan = np.argwhere(np.isnan(expense_year_init)).ravel()
 
         if len(expense_year_nan) > 0:
             raise ASRCostDataException(
@@ -2123,8 +2172,8 @@ class ASRCostData:
             )
 
         else:
-            self.expense_year_input = self.expense_year_input
-            self.expense_year = self.expense_year_input
+            expense_year_init = np.int_(expense_year_init)
+            self.expense_year = expense_year_init.copy()
 
         # Prepare attribute cost_allocation
         if not isinstance(self.cost_allocation, list):
@@ -2145,7 +2194,7 @@ class ASRCostData:
             )
 
         else:
-            self.cost_allocation = self.cost_allocation
+            self.cost_allocation = [get_fluidtype_converter(target=i) for i in self.cost_allocation]
 
         # Prepare attribute cost
         if not isinstance(self.cost, np.ndarray):
@@ -2158,10 +2207,10 @@ class ASRCostData:
         cost_nan = np.argwhere(np.isnan(self.cost)).ravel()
 
         if len(cost_nan) > 0:
-            self.cost[cost_nan] = np.zeros(len(cost_nan))
+            self.cost[cost_nan] = np.zeros(len(cost_nan), dtype=np.float_)
 
         else:
-            self.cost = self.cost
+            self.cost = np.float_(self.cost)
 
         # Prepare attribute vat_portion
         if not isinstance(self.vat_portion, np.ndarray):
@@ -2174,10 +2223,10 @@ class ASRCostData:
         vat_portion_nan = np.argwhere(np.isnan(self.vat_portion)).ravel()
 
         if len(vat_portion_nan) > 0:
-            self.vat_portion[vat_portion_nan] = np.ones(len(vat_portion_nan))
+            self.vat_portion[vat_portion_nan] = np.ones(len(vat_portion_nan), dtype=np.float_)
 
         else:
-            self.vat_portion = self.vat_portion
+            self.vat_portion = np.float_(self.vat_portion)
 
         # Prepare attribute lbt_portion
         if not isinstance(self.lbt_portion, np.ndarray):
@@ -2190,10 +2239,10 @@ class ASRCostData:
         lbt_portion_nan = np.argwhere(np.isnan(self.lbt_portion)).ravel()
 
         if len(lbt_portion_nan) > 0:
-            self.lbt_portion[lbt_portion_nan] = np.ones(len(lbt_portion_nan))
+            self.lbt_portion[lbt_portion_nan] = np.ones(len(lbt_portion_nan), dtype=np.float_)
 
         else:
-            self.lbt_portion = self.lbt_portion
+            self.lbt_portion = np.float_(self.lbt_portion)
 
         # Prepare attribute description
         if not isinstance(self.description, list):
@@ -2214,6 +2263,7 @@ class ASRCostData:
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
+            # Modify the values of the attributes
             target_attrs = {
                 "attr": [
                     self.expense_year,
@@ -2244,12 +2294,17 @@ class ASRCostData:
                 get_cost_data_split(
                     target_attr=i,
                     is_target_attr_volume=j,
-                    expense_year_init=self.expense_year_input,
+                    expense_year_init=expense_year_init,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
                 )
                 for i, j in zip(target_attrs["attr"], target_attrs["status"])
             ]
+
+            # Prepare attributes with datatype list
+            self.cost_allocation, self.description = list(
+                map(get_to_list_converter, [self.cost_allocation, self.description])
+            )
 
 
 @dataclass
@@ -2304,9 +2359,9 @@ class PSCCostRecoveryData:
         Volume for DMO related to gas.
     gas_dmo_fee: float
         Fee for DMO related to gas.
-    rc_split_data: np.ndarray
+    rc_split: np.ndarray
         Array of rc split data.
-    icp_sliding_scale_data : np.ndarray
+    icp_sliding_scale: np.ndarray
         Array of icp sliding scale data.
 
     Notes
@@ -2353,30 +2408,41 @@ class PSCCostRecoveryData:
     gas_dmo_fee: float
 
     # Attributes associated with rc_split and icp_sliding_scale
-    rc_split_data: np.ndarray = field(repr=False)
-    icp_sliding_scale_data: np.ndarray = field(repr=False)
+    rc_split_init: InitVar[np.ndarray] = field(repr=False)
+    icp_sliding_scale_init: InitVar[np.ndarray] = field(repr=False)
 
     # Attributes to be defined later on
     rc_split: dict = field(default=None, init=False)
     icp_sliding_scale: dict = field(default=None, init=False)
 
-    def __post_init__(self):
+    def __post_init__(self, rc_split_init, icp_sliding_scale_init):
+        # Convert attributes with datatype str to boolean
+        self.ftp_availability = get_boolean_converter(target=self.ftp_availability)
+        self.ftp_is_shared = get_boolean_converter(target=self.ftp_is_shared)
+        self.ic_availability = get_boolean_converter(target=self.ic_availability)
+        self.dmo_is_weighted = get_boolean_converter(target=self.dmo_is_weighted)
+        self.oil_dmo_holiday = get_boolean_converter(target=self.oil_dmo_holiday)
+        self.gas_dmo_holiday = get_boolean_converter(target=self.gas_dmo_holiday)
+
+        # Prepare attribute split_type
+        self.split_type = get_split_type_converter(target=self.split_type)
+
         # Prepare attribute rc_split
-        if self.split_type == "RC Split":
+        if self.split_type == TaxSplitTypeCR.R2C:
             rc_split_attrs = [
                 "RC Bottom Limit",
                 "RC Top Limit",
                 "Pre Tax CTR Oil",
                 "Pre Tax CTR Gas",
             ]
-            rc_split = {key: self.rc_split_data[:, i] for i, key in enumerate(rc_split_attrs)}
+            rc_split = {key: rc_split_init[:, i] for i, key in enumerate(rc_split_attrs)}
             self.rc_split = {
                 key: np.array(list(filter(lambda i: i is not None, rc_split[key])))
                 for key in rc_split_attrs
             }
 
         # Prepare attribute icp_sliding_scale
-        if self.split_type == "ICP Sliding Scale":
+        if self.split_type == TaxSplitTypeCR.SLIDING_SCALE:
             icp_attrs = [
                 "ICP Bottom Limit",
                 "ICP Top Limit",
@@ -2384,7 +2450,7 @@ class PSCCostRecoveryData:
                 "Pre Tax CTR Gas",
             ]
             self.icp_sliding_scale = {
-                key: self.icp_sliding_scale_data[:, i] for i, key in enumerate(icp_attrs)
+                key: icp_sliding_scale_init[:, i] for i, key in enumerate(icp_attrs)
             }
 
 

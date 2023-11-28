@@ -382,351 +382,351 @@ class GrossSplit(BaseProject):
                         cost_tobe_deducted + carward_deduct_cost,
                         ctr_gross_share)
 
-    def run(self,
-            is_dmo_end_weighted=False,
-            regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
-            discount_rate: float = 0.1,
-            discounted_year: int | None = None,
-            discounting_mode: DiscountingMode = DiscountingMode.HALF_YEAR,
-            **kwargs):
-
-        # Specify default values for optional arguments
-        if "inflation_rate" not in kwargs.keys():
-            kwargs["inflation_rate"]: float | int = 0.0
-
-        if "vat_rate" not in kwargs.keys():
-            kwargs["vat_rate"]: float | int = 0.0
-
-        if "vat_discount" not in kwargs.keys():
-            kwargs["vat_discount"]: float | int = 0.0
-
-        if "pdri_rate" not in kwargs.keys():
-            kwargs["pdri_rate"]: float | int = 0.0
-
-        if "pdri_discount" not in kwargs.keys():
-            kwargs["pdri_discount"]: float | int = 0.0
-
-        if "lbt_discount" not in kwargs.keys():
-            kwargs["lbt_discount"]: float | int = 0.0
-
-        if "pdrd_discount" not in kwargs.keys():
-            kwargs["pdrd_discount"]: float | int = 0.0
-
-        if "year_ref" not in kwargs.keys():
-            kwargs["year_ref"]: YearReference = YearReference.EXPENSE_YEAR
-
-        if "depr_method" not in kwargs.keys():
-            kwargs["depr_method"]: DeprMethod = DeprMethod.PSC_DB
-
-        if "decline_factor" not in kwargs.keys():
-            kwargs["decline_factor"]: float | int = 2
-
-        if "future_rate" not in kwargs.keys():
-            kwargs["future_rate"]: float = 0.02
-
-        # Prepare the data
-        self._get_costpool(
-            inflation_rate=kwargs["inflation_rate"],
-            vat_rate=kwargs["vat_rate"],
-            vat_discount=kwargs["vat_discount"],
-            pdri_rate=kwargs["pdri_rate"],
-            pdri_discount=kwargs["pdri_discount"],
-            lbt_discount=kwargs["lbt_discount"],
-            pdrd_discount=kwargs["pdrd_discount"],
-            year_ref=kwargs["year_ref"],
-            depr_method=kwargs["depr_method"],
-            decline_factor=kwargs["decline_factor"],
-            future_rate=kwargs["future_rate"],
-        )
-
-        # Variable Split. -> Will set the value of _variable_split
-        self._wrapper_variable_split(regime=regime)
-
-        # Base Split
-        self._oil_base_split = np.full_like(self.project_years, fill_value=self.base_split_ctr_oil, dtype=float)
-        self._gas_base_split = np.full_like(self.project_years, fill_value=self.base_split_ctr_gas, dtype=float)
-
-        # Variable Split
-        self._var_split_array = np.full_like(self.project_years, fill_value=self._variable_split, dtype=float)
-
-        # Cumulative Production
-        self._cumulative_prod = np.cumsum(self._oil_lifting.lifting_rate +
-                                          (self._gas_lifting.lifting_rate / self.conversion_bboe2bscf))
-
-        # Progressive Split
-        vectorized_get_prog_split = np.vectorize(self._wrapper_progressive_split)
-
-        self._oil_prog_split = vectorized_get_prog_split(
-            fluid=self._oil_lifting.fluid_type,
-            price=self._oil_lifting.price,
-            cum=self._cumulative_prod,
-            regime=regime
-        )
-
-        self._gas_prog_split = vectorized_get_prog_split(
-            fluid=self._gas_lifting.fluid_type,
-            price=self._gas_lifting.price,
-            cum=self._cumulative_prod,
-            regime=regime
-        )
-
-        # Ministerial Discretion
-        minis_disc_array = np.full_like(self.project_years, fill_value=self.split_ministry_disc, dtype=float)
-
-        # Total Contractor Split
-        self._oil_ctr_split = (self._oil_base_split + self._var_split_array + self._oil_prog_split +
-                               minis_disc_array)
-        self._gas_ctr_split = (self._gas_base_split + self._var_split_array + self._gas_prog_split +
-                               minis_disc_array)
-
-        # Contractor Share
-        self._oil_ctr_share_before_transfer = self._oil_revenue * self._oil_ctr_split
-        self._gas_ctr_share_before_transfer = self._gas_revenue * self._gas_ctr_split
-
-        # Government Share
-        self._oil_gov_share = self._oil_revenue - self._oil_ctr_share_before_transfer
-        self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
-
-        # Total Investment
-        # self._oil_total_expenses = (self._oil_tangible.expenditures() + self._oil_intangible.expenditures() +
-        #                             self._oil_opex.expenditures() + self._oil_asr.expenditures())
-        # self._gas_total_expenses = (self._gas_tangible.expenditures() + self._gas_intangible.expenditures() +
-        #                             self._gas_opex.expenditures() + self._gas_asr.expenditures())
-
-        self._oil_total_expenses = self._oil_total_expenditures
-        self._gas_total_expenses = self._gas_total_expenditures
-
-        # Cost to be Deducted
-        self._oil_cost_tobe_deducted = (self._oil_depreciation + self._oil_intangible_expenditures +
-                                        self._oil_opex_expenditures + self._oil_asr_expenditures)
-        self._gas_cost_tobe_deducted = (self._gas_depreciation + self._gas_intangible_expenditures +
-                                        self._gas_opex_expenditures + self._gas_asr_expenditures)
-
-        # Carry Forward Deductible Cost (In PSC Cost Recovery called Unrecovered Cost)
-        self._oil_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._oil_depreciation,
-                                                                       non_capital=self._oil_non_capital,
-                                                                       revenue=self._oil_ctr_share_before_transfer,
-                                                                       ftp_ctr=np.zeros_like(self.project_years),
-                                                                       ftp_gov=np.zeros_like(self.project_years),
-                                                                       ic=np.zeros_like(self.project_years))
-
-        self._gas_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._gas_depreciation,
-                                                                       non_capital=self._gas_non_capital,
-                                                                       revenue=self._gas_ctr_share_before_transfer,
-                                                                       ftp_ctr=np.zeros_like(self.project_years),
-                                                                       ftp_gov=np.zeros_like(self.project_years),
-                                                                       ic=np.zeros_like(self.project_years))
-
-        # Deductible Cost (In PSC Cost Recovery called Cost Recovery)
-        self._oil_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._oil_ctr_share_before_transfer,
-                                                              cost_tobe_deducted=self._oil_cost_tobe_deducted,
-                                                              carward_deduct_cost=self._oil_carward_deduct_cost)
-
-        self._gas_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._gas_ctr_share_before_transfer,
-                                                              cost_tobe_deducted=self._gas_cost_tobe_deducted,
-                                                              carward_deduct_cost=self._gas_carward_deduct_cost)
-
-        # Transfer
-        self._transfer_to_oil, self._transfer_to_gas = psc_tools.get_transfer(
-            oil_unrecovered=self._oil_carward_deduct_cost,
-            gas_unrecovered=self._gas_carward_deduct_cost,
-            oil_ets_pretransfer=self._oil_ctr_share_before_transfer,
-            gas_ets_pretransfer=self._gas_ctr_share_before_transfer)
-
-        # Carry Forward Deductible Cost After Transfer
-        self._oil_carward_cost_aftertf = self._oil_carward_deduct_cost - self._transfer_to_gas
-        self._gas_carward_cost_aftertf = self._gas_carward_deduct_cost - self._transfer_to_oil
-
-        # Contractor Share After Transfer
-        self._oil_ctr_share_after_transfer = (self._oil_ctr_share_before_transfer +
-                                              self._transfer_to_oil -
-                                              self._transfer_to_gas)
-
-        self._gas_ctr_share_after_transfer = (self._gas_ctr_share_before_transfer +
-                                              self._transfer_to_gas -
-                                              self._transfer_to_oil)
-
-        # Contractor Net Operating Profit
-        self._oil_net_operating_profit = self._oil_ctr_share_after_transfer - self._oil_deductible_cost
-        self._gas_net_operating_profit = self._gas_ctr_share_after_transfer - self._gas_deductible_cost
-
-        # DMO
-        self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo(
-            onstream_date=self.oil_onstream_date,
-            start_date=self.start_date,
-            project_years=self.project_years,
-            dmo_holiday_duration=self.oil_dmo_holiday_duration,
-            dmo_volume_portion=self.oil_dmo_volume_portion,
-            dmo_fee_portion=self.oil_dmo_fee_portion,
-            lifting=self._oil_lifting,
-            ctr_pretax_share=1.0,
-            unrecovered_cost=self._oil_carward_cost_aftertf,
-            is_dmo_end_weighted=is_dmo_end_weighted)
-
-        self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo(
-            onstream_date=self.gas_onstream_date,
-            start_date=self.start_date,
-            project_years=self.project_years,
-            dmo_holiday_duration=self.gas_dmo_holiday_duration,
-            dmo_volume_portion=self.gas_dmo_volume_portion,
-            dmo_fee_portion=self.gas_dmo_fee_portion,
-            lifting=self._gas_lifting,
-            ctr_pretax_share=1.0,
-            unrecovered_cost=self._gas_carward_cost_aftertf,
-            is_dmo_end_weighted=is_dmo_end_weighted)
-
-        # Taxable Income
-        self._oil_taxable_income = self._oil_net_operating_profit - self._oil_ddmo
-        self._gas_taxable_income = self._gas_net_operating_profit - self._gas_ddmo
-
-        # Tax
-        self._oil_tax = self._oil_taxable_income * np.full_like(self.project_years, self.ctr_effective_tax_rate,
-                                                                dtype=float)
-        self._gas_tax = self._gas_taxable_income * np.full_like(self.project_years, self.ctr_effective_tax_rate,
-                                                                dtype=float)
-
-        # Contractor Net Share
-        self._oil_ctr_net_share = self._oil_taxable_income - self._oil_tax
-        self._gas_ctr_net_share = self._gas_taxable_income - self._gas_tax
-
-        # Contractor Cash Flow
-        self._oil_ctr_cashflow = (self._oil_ctr_share_before_transfer - self._oil_total_expenses - self._oil_ddmo -
-                                  self._oil_tax)
-        self._gas_ctr_cashflow = (self._gas_ctr_share_before_transfer - self._gas_total_expenses - self._gas_ddmo -
-                                  self._gas_tax)
-
-        # Government Take
-        self._oil_gov_take = self._oil_gov_share + self._oil_ddmo + self._oil_tax
-        self._gas_gov_take = self._gas_gov_share + self._gas_ddmo + self._gas_tax
-
-        # Pay Out Time (POT) and Internal Rate Return (IRR)
-        # Condition where there is no revenue from one of Oil and Gas
-        if np.sum(self._oil_ctr_cashflow) == 0:
-            self._oil_pot = 0
-            self._oil_irr = 0
-        else:
-            self._oil_pot = indicator.pot(cashflow=self._oil_ctr_cashflow)
-            self._oil_irr = indicator.irr(cashflow=self._oil_ctr_cashflow)
-
-        if np.sum(self._gas_ctr_cashflow) == 0:
-            self._gas_pot = 0
-            self._gas_irr = 0
-        else:
-            self._gas_pot = indicator.pot(cashflow=self._oil_ctr_cashflow)
-            self._gas_irr = indicator.irr(cashflow=self._oil_ctr_cashflow)
-
-        # NPV
-        self._oil_npv = indicator.npv(cashflow=self._oil_ctr_cashflow)
-        self._gas_npv = indicator.npv(cashflow=self._oil_ctr_cashflow)
-
-        # Condition if discounted_year is None:
-        if discounted_year is None:
-            discounted_year = self.start_date.year
-
-        if discounting_mode == DiscountingMode.FULL_YEAR:
-            dcf = 0
-        else:
-            dcf = 0.5
-
-        discount_factor = 1 / np.power(1 + discount_rate, self.project_years - discounted_year + dcf)
-
-        # Discounted Contractor Cashflow
-        self._oil_ctr_cashflow_disc = self._oil_ctr_cashflow * discount_factor
-        self._gas_ctr_cashflow_disc = self._gas_ctr_cashflow * discount_factor
-
-        self._oil_gov_cashflow_disc = self._oil_gov_take * discount_factor
-        self._gas_gov_cashflow_disc = self._gas_gov_take * discount_factor
-
-        # Cashflow Object
-        self._oil_cashflow = CashFlow(start_date=self.start_date,
-                                      end_date=self.end_date,
-                                      cash=self._oil_ctr_cashflow,
-                                      cashed_year=self.project_years,
-                                      cash_allocation=FluidType.OIL)
-
-        self._gas_cashflow = CashFlow(start_date=self.start_date,
-                                      end_date=self.end_date,
-                                      cash=self._gas_ctr_cashflow,
-                                      cashed_year=self.project_years,
-                                      cash_allocation=FluidType.GAS)
-
-    def __len__(self):
-        return self.project_duration
-
-    def __eq__(self, other):
-        # Between two instances of Gross Split
-        if isinstance(other, GrossSplit):
-            return all(
-                (
-                    np.allclose(self._oil_lifting.lifting_rate, other._oil_lifting.lifting_rate),
-                    np.allclose(self._gas_lifting.lifting_rate, other._gas_lifting.lifting_rate),
-                    np.allclose(self._oil_revenue, other._oil_revenue),
-                    np.allclose(self._gas_revenue, other._gas_revenue),
-                    np.allclose(self._oil_tangible_expenditures, other._oil_tangible_expenditures),
-                    np.allclose(self._gas_tangible_expenditures, other._gas_tangible_expenditures),
-                    np.allclose(self._oil_intangible_expenditures, other._oil_intangible_expenditures),
-                    np.allclose(self._gas_intangible_expenditures, other._gas_intangible_expenditures),
-                    np.allclose(self._oil_opex_expenditures, other._oil_opex_expenditures),
-                    np.allclose(self._gas_opex_expenditures, other._gas_opex_expenditures),
-                    np.allclose(self._oil_asr_expenditures, other._oil_asr_expenditures),
-                    np.allclose(self._gas_asr_expenditures, other._gas_asr_expenditures),
-                )
-            )
-
-        else:
-            return False
-
-    def __lt__(self, other):
-        if isinstance(other, GrossSplit):
-
-            self.run()
-            other.run()
-
-            self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
-            other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
-
-            return self_total_base_cashflow.irr() < other_total_base_cashflow.irr()
-
-        else:
-            raise GrossSplitException
-
-    def __le__(self, other):
-        if isinstance(other, GrossSplit):
-            self.run()
-            other.run()
-
-            self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
-            other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
-
-            return self_total_base_cashflow.irr() <= other_total_base_cashflow.irr()
-
-        else:
-            raise GrossSplitException
-
-    def __gt__(self, other):
-        if isinstance(other, GrossSplit):
-
-            self.run()
-            other.run()
-
-            self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
-            other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
-
-            return self_total_base_cashflow.irr() > other_total_base_cashflow.irr()
-
-        else:
-            raise GrossSplitException
-
-    def __ge__(self, other):
-        if isinstance(other, GrossSplit):
-
-            self.run()
-            other.run()
-
-            self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
-            other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
-
-            return self_total_base_cashflow.irr() >= other_total_base_cashflow.irr()
-
-        else:
-            raise GrossSplitException
+    # def run(self,
+    #         is_dmo_end_weighted=False,
+    #         regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
+    #         discount_rate: float = 0.1,
+    #         discounted_year: int | None = None,
+    #         discounting_mode: DiscountingMode = DiscountingMode.HALF_YEAR,
+    #         **kwargs):
+    #
+    #     # Specify default values for optional arguments
+    #     if "inflation_rate" not in kwargs.keys():
+    #         kwargs["inflation_rate"]: float | int = 0.0
+    #
+    #     if "vat_rate" not in kwargs.keys():
+    #         kwargs["vat_rate"]: float | int = 0.0
+    #
+    #     if "vat_discount" not in kwargs.keys():
+    #         kwargs["vat_discount"]: float | int = 0.0
+    #
+    #     if "pdri_rate" not in kwargs.keys():
+    #         kwargs["pdri_rate"]: float | int = 0.0
+    #
+    #     if "pdri_discount" not in kwargs.keys():
+    #         kwargs["pdri_discount"]: float | int = 0.0
+    #
+    #     if "lbt_discount" not in kwargs.keys():
+    #         kwargs["lbt_discount"]: float | int = 0.0
+    #
+    #     if "pdrd_discount" not in kwargs.keys():
+    #         kwargs["pdrd_discount"]: float | int = 0.0
+    #
+    #     if "year_ref" not in kwargs.keys():
+    #         kwargs["year_ref"]: YearReference = YearReference.EXPENSE_YEAR
+    #
+    #     if "depr_method" not in kwargs.keys():
+    #         kwargs["depr_method"]: DeprMethod = DeprMethod.PSC_DB
+    #
+    #     if "decline_factor" not in kwargs.keys():
+    #         kwargs["decline_factor"]: float | int = 2
+    #
+    #     if "future_rate" not in kwargs.keys():
+    #         kwargs["future_rate"]: float = 0.02
+    #
+    #     # Prepare the data
+    #     self._get_costpool(
+    #         inflation_rate=kwargs["inflation_rate"],
+    #         vat_rate=kwargs["vat_rate"],
+    #         vat_discount=kwargs["vat_discount"],
+    #         pdri_rate=kwargs["pdri_rate"],
+    #         pdri_discount=kwargs["pdri_discount"],
+    #         lbt_discount=kwargs["lbt_discount"],
+    #         pdrd_discount=kwargs["pdrd_discount"],
+    #         year_ref=kwargs["year_ref"],
+    #         depr_method=kwargs["depr_method"],
+    #         decline_factor=kwargs["decline_factor"],
+    #         future_rate=kwargs["future_rate"],
+    #     )
+    #
+    #     # Variable Split. -> Will set the value of _variable_split
+    #     self._wrapper_variable_split(regime=regime)
+    #
+    #     # Base Split
+    #     self._oil_base_split = np.full_like(self.project_years, fill_value=self.base_split_ctr_oil, dtype=float)
+    #     self._gas_base_split = np.full_like(self.project_years, fill_value=self.base_split_ctr_gas, dtype=float)
+    #
+    #     # Variable Split
+    #     self._var_split_array = np.full_like(self.project_years, fill_value=self._variable_split, dtype=float)
+    #
+    #     # Cumulative Production
+    #     self._cumulative_prod = np.cumsum(self._oil_lifting.lifting_rate +
+    #                                       (self._gas_lifting.lifting_rate / self.conversion_bboe2bscf))
+    #
+    #     # Progressive Split
+    #     vectorized_get_prog_split = np.vectorize(self._wrapper_progressive_split)
+    #
+    #     self._oil_prog_split = vectorized_get_prog_split(
+    #         fluid=self._oil_lifting.fluid_type,
+    #         price=self._oil_lifting.price,
+    #         cum=self._cumulative_prod,
+    #         regime=regime
+    #     )
+    #
+    #     self._gas_prog_split = vectorized_get_prog_split(
+    #         fluid=self._gas_lifting.fluid_type,
+    #         price=self._gas_lifting.price,
+    #         cum=self._cumulative_prod,
+    #         regime=regime
+    #     )
+    #
+    #     # Ministerial Discretion
+    #     minis_disc_array = np.full_like(self.project_years, fill_value=self.split_ministry_disc, dtype=float)
+    #
+    #     # Total Contractor Split
+    #     self._oil_ctr_split = (self._oil_base_split + self._var_split_array + self._oil_prog_split +
+    #                            minis_disc_array)
+    #     self._gas_ctr_split = (self._gas_base_split + self._var_split_array + self._gas_prog_split +
+    #                            minis_disc_array)
+    #
+    #     # Contractor Share
+    #     self._oil_ctr_share_before_transfer = self._oil_revenue * self._oil_ctr_split
+    #     self._gas_ctr_share_before_transfer = self._gas_revenue * self._gas_ctr_split
+    #
+    #     # Government Share
+    #     self._oil_gov_share = self._oil_revenue - self._oil_ctr_share_before_transfer
+    #     self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
+    #
+    #     # Total Investment
+    #     # self._oil_total_expenses = (self._oil_tangible.expenditures() + self._oil_intangible.expenditures() +
+    #     #                             self._oil_opex.expenditures() + self._oil_asr.expenditures())
+    #     # self._gas_total_expenses = (self._gas_tangible.expenditures() + self._gas_intangible.expenditures() +
+    #     #                             self._gas_opex.expenditures() + self._gas_asr.expenditures())
+    #
+    #     self._oil_total_expenses = self._oil_total_expenditures
+    #     self._gas_total_expenses = self._gas_total_expenditures
+    #
+    #     # Cost to be Deducted
+    #     self._oil_cost_tobe_deducted = (self._oil_depreciation + self._oil_intangible_expenditures +
+    #                                     self._oil_opex_expenditures + self._oil_asr_expenditures)
+    #     self._gas_cost_tobe_deducted = (self._gas_depreciation + self._gas_intangible_expenditures +
+    #                                     self._gas_opex_expenditures + self._gas_asr_expenditures)
+    #
+    #     # Carry Forward Deductible Cost (In PSC Cost Recovery called Unrecovered Cost)
+    #     self._oil_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._oil_depreciation,
+    #                                                                    non_capital=self._oil_non_capital,
+    #                                                                    revenue=self._oil_ctr_share_before_transfer,
+    #                                                                    ftp_ctr=np.zeros_like(self.project_years),
+    #                                                                    ftp_gov=np.zeros_like(self.project_years),
+    #                                                                    ic=np.zeros_like(self.project_years))
+    #
+    #     self._gas_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._gas_depreciation,
+    #                                                                    non_capital=self._gas_non_capital,
+    #                                                                    revenue=self._gas_ctr_share_before_transfer,
+    #                                                                    ftp_ctr=np.zeros_like(self.project_years),
+    #                                                                    ftp_gov=np.zeros_like(self.project_years),
+    #                                                                    ic=np.zeros_like(self.project_years))
+    #
+    #     # Deductible Cost (In PSC Cost Recovery called Cost Recovery)
+    #     self._oil_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._oil_ctr_share_before_transfer,
+    #                                                           cost_tobe_deducted=self._oil_cost_tobe_deducted,
+    #                                                           carward_deduct_cost=self._oil_carward_deduct_cost)
+    #
+    #     self._gas_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._gas_ctr_share_before_transfer,
+    #                                                           cost_tobe_deducted=self._gas_cost_tobe_deducted,
+    #                                                           carward_deduct_cost=self._gas_carward_deduct_cost)
+    #
+    #     # Transfer
+    #     self._transfer_to_oil, self._transfer_to_gas = psc_tools.get_transfer(
+    #         oil_unrecovered=self._oil_carward_deduct_cost,
+    #         gas_unrecovered=self._gas_carward_deduct_cost,
+    #         oil_ets_pretransfer=self._oil_ctr_share_before_transfer,
+    #         gas_ets_pretransfer=self._gas_ctr_share_before_transfer)
+    #
+    #     # Carry Forward Deductible Cost After Transfer
+    #     self._oil_carward_cost_aftertf = self._oil_carward_deduct_cost - self._transfer_to_gas
+    #     self._gas_carward_cost_aftertf = self._gas_carward_deduct_cost - self._transfer_to_oil
+    #
+    #     # Contractor Share After Transfer
+    #     self._oil_ctr_share_after_transfer = (self._oil_ctr_share_before_transfer +
+    #                                           self._transfer_to_oil -
+    #                                           self._transfer_to_gas)
+    #
+    #     self._gas_ctr_share_after_transfer = (self._gas_ctr_share_before_transfer +
+    #                                           self._transfer_to_gas -
+    #                                           self._transfer_to_oil)
+    #
+    #     # Contractor Net Operating Profit
+    #     self._oil_net_operating_profit = self._oil_ctr_share_after_transfer - self._oil_deductible_cost
+    #     self._gas_net_operating_profit = self._gas_ctr_share_after_transfer - self._gas_deductible_cost
+    #
+    #     # DMO
+    #     self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo(
+    #         onstream_date=self.oil_onstream_date,
+    #         start_date=self.start_date,
+    #         project_years=self.project_years,
+    #         dmo_holiday_duration=self.oil_dmo_holiday_duration,
+    #         dmo_volume_portion=self.oil_dmo_volume_portion,
+    #         dmo_fee_portion=self.oil_dmo_fee_portion,
+    #         lifting=self._oil_lifting,
+    #         ctr_pretax_share=1.0,
+    #         unrecovered_cost=self._oil_carward_cost_aftertf,
+    #         is_dmo_end_weighted=is_dmo_end_weighted)
+    #
+    #     self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo(
+    #         onstream_date=self.gas_onstream_date,
+    #         start_date=self.start_date,
+    #         project_years=self.project_years,
+    #         dmo_holiday_duration=self.gas_dmo_holiday_duration,
+    #         dmo_volume_portion=self.gas_dmo_volume_portion,
+    #         dmo_fee_portion=self.gas_dmo_fee_portion,
+    #         lifting=self._gas_lifting,
+    #         ctr_pretax_share=1.0,
+    #         unrecovered_cost=self._gas_carward_cost_aftertf,
+    #         is_dmo_end_weighted=is_dmo_end_weighted)
+    #
+    #     # Taxable Income
+    #     self._oil_taxable_income = self._oil_net_operating_profit - self._oil_ddmo
+    #     self._gas_taxable_income = self._gas_net_operating_profit - self._gas_ddmo
+    #
+    #     # Tax
+    #     self._oil_tax = self._oil_taxable_income * np.full_like(self.project_years, self.ctr_effective_tax_rate,
+    #                                                             dtype=float)
+    #     self._gas_tax = self._gas_taxable_income * np.full_like(self.project_years, self.ctr_effective_tax_rate,
+    #                                                             dtype=float)
+    #
+    #     # Contractor Net Share
+    #     self._oil_ctr_net_share = self._oil_taxable_income - self._oil_tax
+    #     self._gas_ctr_net_share = self._gas_taxable_income - self._gas_tax
+    #
+    #     # Contractor Cash Flow
+    #     self._oil_ctr_cashflow = (self._oil_ctr_share_before_transfer - self._oil_total_expenses - self._oil_ddmo -
+    #                               self._oil_tax)
+    #     self._gas_ctr_cashflow = (self._gas_ctr_share_before_transfer - self._gas_total_expenses - self._gas_ddmo -
+    #                               self._gas_tax)
+    #
+    #     # Government Take
+    #     self._oil_gov_take = self._oil_gov_share + self._oil_ddmo + self._oil_tax
+    #     self._gas_gov_take = self._gas_gov_share + self._gas_ddmo + self._gas_tax
+    #
+    #     # Pay Out Time (POT) and Internal Rate Return (IRR)
+    #     # Condition where there is no revenue from one of Oil and Gas
+    #     if np.sum(self._oil_ctr_cashflow) == 0:
+    #         self._oil_pot = 0
+    #         self._oil_irr = 0
+    #     else:
+    #         self._oil_pot = indicator.pot(cashflow=self._oil_ctr_cashflow)
+    #         self._oil_irr = indicator.irr(cashflow=self._oil_ctr_cashflow)
+    #
+    #     if np.sum(self._gas_ctr_cashflow) == 0:
+    #         self._gas_pot = 0
+    #         self._gas_irr = 0
+    #     else:
+    #         self._gas_pot = indicator.pot(cashflow=self._oil_ctr_cashflow)
+    #         self._gas_irr = indicator.irr(cashflow=self._oil_ctr_cashflow)
+    #
+    #     # NPV
+    #     self._oil_npv = indicator.npv(cashflow=self._oil_ctr_cashflow)
+    #     self._gas_npv = indicator.npv(cashflow=self._oil_ctr_cashflow)
+    #
+    #     # Condition if discounted_year is None:
+    #     if discounted_year is None:
+    #         discounted_year = self.start_date.year
+    #
+    #     if discounting_mode == DiscountingMode.FULL_YEAR:
+    #         dcf = 0
+    #     else:
+    #         dcf = 0.5
+    #
+    #     discount_factor = 1 / np.power(1 + discount_rate, self.project_years - discounted_year + dcf)
+    #
+    #     # Discounted Contractor Cashflow
+    #     self._oil_ctr_cashflow_disc = self._oil_ctr_cashflow * discount_factor
+    #     self._gas_ctr_cashflow_disc = self._gas_ctr_cashflow * discount_factor
+    #
+    #     self._oil_gov_cashflow_disc = self._oil_gov_take * discount_factor
+    #     self._gas_gov_cashflow_disc = self._gas_gov_take * discount_factor
+    #
+    #     # Cashflow Object
+    #     self._oil_cashflow = CashFlow(start_date=self.start_date,
+    #                                   end_date=self.end_date,
+    #                                   cash=self._oil_ctr_cashflow,
+    #                                   cashed_year=self.project_years,
+    #                                   cash_allocation=FluidType.OIL)
+    #
+    #     self._gas_cashflow = CashFlow(start_date=self.start_date,
+    #                                   end_date=self.end_date,
+    #                                   cash=self._gas_ctr_cashflow,
+    #                                   cashed_year=self.project_years,
+    #                                   cash_allocation=FluidType.GAS)
+    #
+    # def __len__(self):
+    #     return self.project_duration
+    #
+    # def __eq__(self, other):
+    #     # Between two instances of Gross Split
+    #     if isinstance(other, GrossSplit):
+    #         return all(
+    #             (
+    #                 np.allclose(self._oil_lifting.lifting_rate, other._oil_lifting.lifting_rate),
+    #                 np.allclose(self._gas_lifting.lifting_rate, other._gas_lifting.lifting_rate),
+    #                 np.allclose(self._oil_revenue, other._oil_revenue),
+    #                 np.allclose(self._gas_revenue, other._gas_revenue),
+    #                 np.allclose(self._oil_tangible_expenditures, other._oil_tangible_expenditures),
+    #                 np.allclose(self._gas_tangible_expenditures, other._gas_tangible_expenditures),
+    #                 np.allclose(self._oil_intangible_expenditures, other._oil_intangible_expenditures),
+    #                 np.allclose(self._gas_intangible_expenditures, other._gas_intangible_expenditures),
+    #                 np.allclose(self._oil_opex_expenditures, other._oil_opex_expenditures),
+    #                 np.allclose(self._gas_opex_expenditures, other._gas_opex_expenditures),
+    #                 np.allclose(self._oil_asr_expenditures, other._oil_asr_expenditures),
+    #                 np.allclose(self._gas_asr_expenditures, other._gas_asr_expenditures),
+    #             )
+    #         )
+    #
+    #     else:
+    #         return False
+    #
+    # def __lt__(self, other):
+    #     if isinstance(other, GrossSplit):
+    #
+    #         self.run()
+    #         other.run()
+    #
+    #         self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
+    #         other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
+    #
+    #         return self_total_base_cashflow.irr() < other_total_base_cashflow.irr()
+    #
+    #     else:
+    #         raise GrossSplitException
+    #
+    # def __le__(self, other):
+    #     if isinstance(other, GrossSplit):
+    #         self.run()
+    #         other.run()
+    #
+    #         self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
+    #         other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
+    #
+    #         return self_total_base_cashflow.irr() <= other_total_base_cashflow.irr()
+    #
+    #     else:
+    #         raise GrossSplitException
+    #
+    # def __gt__(self, other):
+    #     if isinstance(other, GrossSplit):
+    #
+    #         self.run()
+    #         other.run()
+    #
+    #         self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
+    #         other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
+    #
+    #         return self_total_base_cashflow.irr() > other_total_base_cashflow.irr()
+    #
+    #     else:
+    #         raise GrossSplitException
+    #
+    # def __ge__(self, other):
+    #     if isinstance(other, GrossSplit):
+    #
+    #         self.run()
+    #         other.run()
+    #
+    #         self_total_base_cashflow = self._oil_base_cashflow + self._gas_base_cashflow
+    #         other_total_base_cashflow = other._oil_base_cashflow + other._gas_base_cashflow
+    #
+    #         return self_total_base_cashflow.irr() >= other_total_base_cashflow.irr()
+    #
+    #     else:
+    #         raise GrossSplitException

@@ -7,7 +7,7 @@ from datetime import datetime
 from functools import wraps
 from typing import Dict
 
-from pyscnomics.econ.selection import FluidType, TaxType
+from pyscnomics.econ.selection import FluidType, TaxType, TaxSplitTypeCR
 
 
 class TaxInflationException(Exception):
@@ -820,46 +820,104 @@ def get_cost_data_split(
     - If end year of the first contract is different from the start year of the second contract,
       the target_attr is split based on the transition year.
     """
-    keys_transition = ["PSC 1", "PSC 2"]
-
-    id_transition = np.argwhere(expense_year_init == end_date_contract_1.year).ravel()
-
     if isinstance(target_attr, list):
         target_attr = np.array(target_attr)
 
+    keys_transition = ["PSC 1", "PSC 2"]
+
     # End year of the first contract is the same as the start year of the second contract
     if end_date_contract_1.year == start_date_contract_2.year:
+        # Specify the multiplier
         days_diff = (
-            end_date_contract_1
-            - datetime(day=1, month=1, year=end_date_contract_1.year)
+                end_date_contract_1
+                - datetime(day=1, month=1, year=end_date_contract_1.year)
         )
         days_delta = (
-            datetime(day=31, month=12, year=end_date_contract_1.year)
-            - datetime(day=1, month=1, year=end_date_contract_1.year)
+                datetime(day=31, month=12, year=end_date_contract_1.year)
+                - datetime(day=1, month=1, year=end_date_contract_1.year)
         )
-
         multiplier = (days_diff.days + 1) / (days_delta.days + 2)
 
-        target_attr_modified = {
-            keys_transition[0]: target_attr[:int(max(id_transition) + 1)].copy(),
-            keys_transition[1]: target_attr[int(min(id_transition)):].copy(),
+        # Identify the index location of the transition year
+        id_transition = {
+            "exact": np.argwhere(expense_year_init == end_date_contract_1.year).ravel(),
+            "before": np.argwhere(expense_year_init < end_date_contract_1.year).ravel(),
+            "after": np.argwhere(expense_year_init > end_date_contract_1.year).ravel(),
+        }
+        id_transition[keys_transition[0]] = np.concatenate(
+            (id_transition["before"], id_transition["exact"])
+        )
+        id_transition[keys_transition[1]] = np.concatenate(
+            (id_transition["exact"], id_transition["after"])
+        )
+
+        # Split the original target data into two corresponding PSC contracts
+        target_attr_modified = {key: target_attr[id_transition[key]].copy() for key in keys_transition}
+
+        # Adjust the value of target_data_modified at the transition year
+        if is_target_attr_volume is True:
+            id_transition_modified = {
+                key: np.array(
+                    [
+                        np.argwhere(id_transition[key] == i).ravel()
+                        for i in id_transition["exact"]
+                    ]
+                ).ravel()
+                for key in keys_transition
+            }
+
+            multipliers = [multiplier, (1.0 - multiplier)]
+            for i, val in enumerate(keys_transition):
+                target_attr_modified[val][id_transition_modified[val]] *= multipliers[i]
+
+    else:
+        # Identify the index location of the transition year
+        id_transition = {
+            keys_transition[0]: np.argwhere(expense_year_init <= end_date_contract_1.year).ravel(),
+            keys_transition[1]: np.argwhere(expense_year_init >= start_date_contract_2.year).ravel(),
         }
 
-        if is_target_attr_volume is True:
-            target_attr_modified[keys_transition[0]][-1] *= multiplier
-            target_attr_modified[keys_transition[1]][0] *= (1.0 - multiplier)
+        id_transition["before"] = np.argsort(expense_year_init[id_transition[keys_transition[0]]])
+        id_transition["after"] = np.argsort(expense_year_init[id_transition[keys_transition[1]]])
 
-    # End year of the first contract is different from the start year of the second contract
-    else:
+        # Split the original target data into two corresponding PSC contracts
+        target_attr_modified_unsorted = {
+            key: target_attr[id_transition[key]].copy() for key in keys_transition
+        }
+
         target_attr_modified = {
-            keys_transition[0]: target_attr[0:int(max(id_transition) + 1)].copy(),
-            keys_transition[1]: target_attr[int(max(id_transition) + 1):].copy(),
+            i: target_attr_modified_unsorted[i][j] for i, j in
+            zip(keys_transition, [id_transition["before"], id_transition["after"]])
         }
 
     return target_attr_modified
 
 
-def get_fluidtype_converter(target: str):
+def get_to_list_converter(target_param: dict) -> dict:
+    """
+    Converts the values of a dictionary from NumPy arrays to Python lists.
+
+    Parameters
+    ----------
+    target_param: dict
+        A dictionary with NumPy arrays as values.
+
+    Returns
+    -------
+    dict
+        A new dictionary with the same keys as `target_param`, but the values are
+        converted to Python lists using the `tolist()` method of NumPy arrays.
+
+    Example:
+    >>> input_dict = {'a': np.array([1, 2, 3]), 'b': np.array([4, 5, 6])}
+    >>> result = get_to_list_converter(input_dict)
+    >>> print(result)
+    {'a': [1, 2, 3], 'b': [4, 5, 6]}
+    """
+    return {key: target_param[key].tolist() for key in target_param.keys()}
+
+
+def get_fluidtype_converter(target: str) -> FluidType:
     """
     Get the corresponding FluidType enum for a given target fluid.
 
@@ -900,7 +958,7 @@ def get_fluidtype_converter(target: str):
     return None
 
 
-def get_boolean_converter(target: str):
+def get_boolean_converter(target: str) -> bool:
     """
     Get the boolean value corresponding to the provided target.
 
@@ -928,6 +986,41 @@ def get_boolean_converter(target: str):
     None
     """
     attrs = {"Yes": True, "No": False}
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_split_type_converter(target: str) -> TaxSplitTypeCR:
+    """
+    Converts a string representing a tax split type to its corresponding
+    enum value from the TaxSplitTypeCR class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the tax split type.
+
+    Returns
+    -------
+    Union: TaxSplitTypeCR, None
+        The corresponding enum value if the target matches one of the predefined split types.
+        Returns None if no match is found.
+
+    Example
+    -------
+    >>> result = get_split_type_converter("RC Split")
+    >>> print(result)
+    TaxSplitTypeCR.R2C
+    """
+    attrs = {
+        "Conventional": TaxSplitTypeCR.CONVENTIONAL,
+        "RC Split": TaxSplitTypeCR.R2C,
+        "ICP Sliding Scale": TaxSplitTypeCR.SLIDING_SCALE,
+    }
 
     for key in attrs.keys():
         if target == key:

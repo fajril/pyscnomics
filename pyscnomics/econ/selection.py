@@ -129,6 +129,11 @@ class TaxRegime(Enum):
     UU_07_2021 = "UU No.07 Tahun 2021"
 
 
+class TaxPaymentMode(Enum):
+    TAX_DUE_MODE = "Calculation method where it treated like the unrecoverable cost, could be weighted on the next year"
+    TAX_DIRECT_MODE = "Calculation method where the tax calculated directly from taxable income"
+
+
 class FTPTaxRegime(Enum):
     """
     An enumeration depicting the FTP Tax Regime associated with oil and gas
@@ -169,8 +174,8 @@ class GrossSplitRegime(Enum):
 
 
 class DiscountingMode(Enum):
-    FULL_YEAR = "Full Year Discounting"
-    HALF_YEAR = "Half Year Discounting"
+    END_YEAR = "End Year Discounting"
+    MID_YEAR = "Mid Year Discounting"
 
 
 class ContractType(Enum):
@@ -180,3 +185,25 @@ class ContractType(Enum):
     TRANSITION_CR_GS = 'Transition CR - GS'
     TRANSITION_GS_GS = 'Transition GS - GS'
     TRANSITION_GS_CR = 'Transition GS - CR'
+
+
+class NPVSelection(Enum):
+    NPV_REAL_TERMS = 'NPV Calculation using real terms method'
+    NPV_NOMINAL_TERMS = 'NPV Calculation using nominal terms method'
+    NPV_SKK_NOMINAL_TERMS = 'NPV Calculation using SKK Nominal terms method'
+    NPV_SKK_REAL_TERMS = 'NPV Calculation using SKK Real terms method'
+    NPV_POINT_FORWARD = 'NPV Calculation using Point Forward method'
+
+
+# class OtherRevenue(Enum):
+#     ADDITION_TO_OIL_REVENUE = "The revenue will be treated as the Oil Revenue Addition"
+#     ADDITION_TO_GAS_REVENUE = "The revenue will be treated as the Gas Revenue Addition"
+#     REDUCTION_TO_OIL_OPEX = "The revenue will be treated as the Oil OPEX Reduction"
+#     REDUCTION_TO_GAS_OPEX = "The revenue will be treated as the GAS OPEX Reduction"
+#
+#
+# class InflationAppliedTo(Enum):
+#     CAPEX = "Inlflation rate will be applied to Tangible and Intangible Cost"
+#     OPEX = "Inflation rate will be applied to Operating Cost"
+#     CAPEX_AND_OPEX = "Inflation rate will be applied to Tangible, Intangible, Operating Cost"
+

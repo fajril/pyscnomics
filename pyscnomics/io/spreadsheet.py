@@ -951,7 +951,7 @@ class Spreadsheet:
             }
 
             return IntangibleCostData(
-                expense_year_input=intangible_data["expense_year"],
+                expense_year_init=intangible_data["expense_year"],
                 cost_allocation=intangible_data["cost_allocation"].tolist(),
                 cost=intangible_data["cost"],
                 vat_portion=intangible_data["vat_portion"],
@@ -1008,7 +1008,7 @@ class Spreadsheet:
             }
 
             return OPEXData(
-                expense_year_input=opex_data["expense_year"],
+                expense_year_init=opex_data["expense_year"],
                 cost_allocation=opex_data["cost_allocation"].tolist(),
                 fixed_cost=opex_data["fixed_cost"],
                 prod_rate=opex_data["prod_rate"],
@@ -1065,7 +1065,7 @@ class Spreadsheet:
             }
 
             return ASRCostData(
-                expense_year_input=asr_data["expense_year"],
+                expense_year_init=asr_data["expense_year"],
                 cost_allocation=asr_data["cost_allocation"].tolist(),
                 cost=asr_data["cost"],
                 vat_portion=asr_data["vat_portion"],
@@ -1124,8 +1124,8 @@ class Spreadsheet:
             gas_dmo_start_production=psc_cr_data_loaded.iloc[31, 2],
             gas_dmo_volume=psc_cr_data_loaded.iloc[32, 2],
             gas_dmo_fee=psc_cr_data_loaded.iloc[33, 2],
-            rc_split_data=psc_cr_data_loaded.iloc[38:45, 1:].to_numpy(),
-            icp_sliding_scale_data=psc_cr_data_loaded.iloc[49:, 1:].to_numpy(),
+            rc_split_init=psc_cr_data_loaded.iloc[38:45, 1:].to_numpy(),
+            icp_sliding_scale_init=psc_cr_data_loaded.iloc[49:, 1:].to_numpy(),
         )
 
     def _get_psc_gs_data(self) -> PSCGrossSplitData:
@@ -1241,8 +1241,8 @@ class Spreadsheet:
                 gas_dmo_start_production=psc_cr_to_cr_data_loaded[key].iloc[31, 2],
                 gas_dmo_volume=psc_cr_to_cr_data_loaded[key].iloc[32, 2],
                 gas_dmo_fee=psc_cr_to_cr_data_loaded[key].iloc[33, 2],
-                rc_split_data=psc_cr_to_cr_data_loaded[key].iloc[38:45, 1:].to_numpy(),
-                icp_sliding_scale_data=psc_cr_to_cr_data_loaded[key].iloc[49:, 1:].to_numpy(),
+                rc_split_init=psc_cr_to_cr_data_loaded[key].iloc[38:45, 1:].to_numpy(),
+                icp_sliding_scale_init=psc_cr_to_cr_data_loaded[key].iloc[49:, 1:].to_numpy(),
             )
             for key in psc_cr_to_cr_available
         }
@@ -1313,8 +1313,8 @@ class Spreadsheet:
                 gas_dmo_start_production=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[31, 2],
                 gas_dmo_volume=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[32, 2],
                 gas_dmo_fee=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[33, 2],
-                rc_split_data=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[38:45, 1:].to_numpy(),
-                icp_sliding_scale_data=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[49:, 1:].to_numpy(),
+                rc_split_init=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[38:45, 1:].to_numpy(),
+                icp_sliding_scale_init=psc_cr_to_gs_data_loaded[sheets_target[0]].iloc[49:, 1:].to_numpy(),
             ),
             sheets_target[1]: PSCGrossSplitData(
                 field_status=psc_cr_to_gs_data_loaded[sheets_target[1]].iloc[0],
@@ -1500,8 +1500,8 @@ class Spreadsheet:
                 gas_dmo_start_production=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[31, 2],
                 gas_dmo_volume=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[32, 2],
                 gas_dmo_fee=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[33, 2],
-                rc_split_data=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[38:45, 1:].to_numpy(),
-                icp_sliding_scale_data=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[49:, 1:].to_numpy(),
+                rc_split_init=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[38:45, 1:].to_numpy(),
+                icp_sliding_scale_init=psc_gs_to_cr_data_loaded[sheets_target[1]].iloc[49:, 1:].to_numpy(),
             )
         }
 
@@ -1651,13 +1651,13 @@ class Spreadsheet:
 
         # Fill in the attributes associated with cost data
         self.tangible_cost_data = self._get_tangible_cost_data()
-        # self.intangible_cost_data = self._get_intangible_cost_data()
-        # self.opex_data = self._get_opex_data()
-        # self.asr_cost_data = self._get_asr_cost_data()
-        #
-        # # Fill in the attributes associated with contract data
-        # self.psc_cr_data = self._get_psc_cr_data()
-        # self.psc_gs_data = self._get_psc_gs_data()
+        self.intangible_cost_data = self._get_intangible_cost_data()
+        self.opex_data = self._get_opex_data()
+        self.asr_cost_data = self._get_asr_cost_data()
+
+        # Fill in the attributes associated with contract data
+        self.psc_cr_data = self._get_psc_cr_data()
+        self.psc_gs_data = self._get_psc_gs_data()
         # self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
         # self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
         # self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
@@ -1669,6 +1669,6 @@ class Spreadsheet:
         # self.optimization_data = self._get_optimization_data()
 
         print("\t")
-        print(f"Filetype: {type(self.tangible_cost_data)}")
+        print(f"Filetype: {type(self.psc_cr_data)}")
         print("\t")
-        print("tangible_cost_data = \n", self.tangible_cost_data)
+        print("psc_cr_data = \n", self.psc_cr_data)

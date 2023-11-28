@@ -11,11 +11,11 @@ from pyscnomics.io.spreadsheet import Spreadsheet
 from pyscnomics.econ.selection import DeprMethod, FluidType, TaxType
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
-from pyscnomics.econ.depreciation import psc_declining_balance_depreciation_rate as psc_db
-from pyscnomics.contracts.project import BaseProject
-from pyscnomics.contracts.costrecovery import CostRecovery
+# from pyscnomics.econ.depreciation import psc_declining_balance_depreciation_rate as psc_db
+# from pyscnomics.contracts.project import BaseProject
+# from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.econ.results import CashFlow
-from pyscnomics.tools.helper import summarizer
+# from pyscnomics.tools.helper import summarizer
 
 
 '----------------------------------------------- LIFTING DATA ----------------------------------------------'
@@ -217,15 +217,15 @@ asr_cost_data = (
 
 '---------------------------------------------- COST RECOVERY ----------------------------------------------'
 
-costrec = CostRecovery(
-    start_date=date(2023, 1, 1),
-    end_date=date(2030, 12, 31),
-    lifting=lifting_data,
-    tangible_cost=tangible_cost_data,
-    intangible_cost=intangible_cost_data,
-    opex=opex_data,
-    asr_cost=asr_cost_data,
-)
+# costrec = CostRecovery(
+#     start_date=date(2023, 1, 1),
+#     end_date=date(2030, 12, 31),
+#     lifting=lifting_data,
+#     tangible_cost=tangible_cost_data,
+#     intangible_cost=intangible_cost_data,
+#     opex=opex_data,
+#     asr_cost=asr_cost_data,
+# )
 
 '------------------------------------------------- EXECUTE -------------------------------------------------'
 
