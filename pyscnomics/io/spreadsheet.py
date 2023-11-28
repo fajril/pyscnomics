@@ -246,7 +246,7 @@ class Spreadsheet:
             tax_mode=tax_mode,
             tax_rate_init=tax_rate_input,
             tax_payment_method=tax_payment_method,
-            tax_psc_cost_recovery=tax_psc_cost_recovery,
+            tax_ftp_regime=tax_psc_cost_recovery,
             npv_mode=npv_mode,
             discounting_mode=discounting_mode,
             future_rate_asr=future_rate_asr,
@@ -1658,17 +1658,12 @@ class Spreadsheet:
         # Fill in the attributes associated with contract data
         self.psc_cr_data = self._get_psc_cr_data()
         self.psc_gs_data = self._get_psc_gs_data()
-        # self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
-        # self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
-        # self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
-        # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
+        self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
+        self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
+        self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
+        self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
 
-        # # Fill in the attributes associated with additional functionality
-        # self.sensitivity_data = self._get_sensitivity_data()
-        # self.montecarlo_data = self._get_montecarlo_data()
-        # self.optimization_data = self._get_optimization_data()
-
-        print("\t")
-        print(f"Filetype: {type(self.psc_cr_data)}")
-        print("\t")
-        print("psc_cr_data = \n", self.psc_cr_data)
+        # print("\t")
+        # print(f"Filetype: {type(self.fiscal_config_data)}")
+        # print("\t")
+        # print("fiscal_config_data = \n", self.fiscal_config_data)

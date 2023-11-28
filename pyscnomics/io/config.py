@@ -9,6 +9,13 @@ import pandas as pd
 
 from pyscnomics.econ.selection import TaxSplitTypeCR
 from pyscnomics.tools.helper import (
+    get_inflation_applied_converter,
+    get_tax_payment_converter,
+    get_tax_regime_converter,
+    get_npv_mode_converter,
+    get_discounting_mode_converter,
+    get_depreciation_method_converter,
+    get_array_from_target,
     get_lifting_data_split_simple,
     get_lifting_data_split_advanced,
     get_cost_data_split,
@@ -175,6 +182,11 @@ class GeneralConfigData:
         # Prepare attribute gsa_number
         self.gsa_number = int(self.gsa_number)
 
+        # Prepare attribute inflation_rate_applied_to
+        self.inflation_rate_applied_to = (
+            get_inflation_applied_converter(target=self.inflation_rate_applied_to)
+        )
+
         # Prepare attribute project_years and project_duration
         if "Transition" in self.type_of_contract:
             if self.end_date_project.year < self.start_date_project.year:
@@ -230,7 +242,7 @@ class FiscalConfigData:
         The tax rate input, default is None.
     tax_payment_method: str
         The method of tax payment.
-    tax_psc_cost_recovery: str
+    tax_ftp_regime: str
         Basis for tax value to be used in PSC cost recovery.
     npv_mode: str
         The Net Present Value (NPV) calculation mode.
@@ -256,7 +268,7 @@ class FiscalConfigData:
     tax_mode: str
     tax_rate_init: InitVar[float] = field(repr=False)
     tax_payment_method: str
-    tax_psc_cost_recovery: str
+    tax_ftp_regime: str
     npv_mode: str
     discounting_mode: str
     future_rate_asr: float
@@ -273,182 +285,45 @@ class FiscalConfigData:
     inflation_rate: float | np.ndarray = field(default=None, init=False)
 
     def __post_init__(self, tax_rate_init, inflation_rate_init, multi_tax, multi_inflation):
+        # Prepare attribute tax_payment_method
+        self.tax_payment_method = get_tax_payment_converter(target=self.tax_payment_method)
+
+        # Prepare attribute tax_ftp_regime
+        self.tax_ftp_regime = get_tax_regime_converter(target=self.tax_ftp_regime)
+
+        # Prepare attribute npv_mode
+        self.npv_mode = get_npv_mode_converter(target=self.npv_mode)
+
+        # Prepare attribute discounting_mode
+        self.discounting_mode = get_discounting_mode_converter(target=self.discounting_mode)
+
+        # Prepare attribute depreciation_method
+        self.depreciation_method = get_depreciation_method_converter(target=self.depreciation_method)
+
         # Configure attribute tax_rate
         if self.tax_mode == "User Input - Single Value":
             if pd.isna(tax_rate_init):
                 self.tax_rate = 0.44
             else:
-                self.tax_rate = tax_rate_init
+                self.tax_rate = float(tax_rate_init)
 
         elif self.tax_mode == "Nailed Down" or self.tax_mode == "Prevailing":
             self.tax_rate = None
 
         elif self.tax_mode == "User Input - Multi Value":
-            # Filter dict 'self.multi_tax' for NaN values
-            multi_tax_adj = {
-                key: np.array(list(filter(lambda i: i is not np.nan, multi_tax[key])))
-                for key in multi_tax.keys()
-            }
-
-            # Raise error for unequal length of 'year' and 'rate' in 'multi_tax_adj'
-            if len(multi_tax_adj["year"]) != len(multi_tax_adj["rate"]):
-                raise FiscalConfigDataException(
-                    f"Unequal number of arrays: "
-                    f"year: {len(multi_tax_adj['year'])}, "
-                    f"tax_rate: {len(multi_tax_adj['rate'])}."
-                )
-
-            # Specify the minimum and maximum years
-            min_year_tax = min(self.project_years)
-            max_year_tax = max(self.project_years)
-
-            if min(multi_tax_adj["year"]) < min(self.project_years):
-                min_year_tax = min(multi_tax_adj["year"])
-
-            if max(multi_tax_adj["year"]) > max(self.project_years):
-                max_year_tax = max(multi_tax_adj["year"])
-
-            # Create new arrays of 'year' and 'rate'
-            multi_tax_new = {
-                "year": np.arange(min_year_tax, max_year_tax + 1, 1),
-                "rate": np.bincount(
-                    multi_tax_adj["year"] - min_year_tax,
-                    weights=multi_tax_adj["rate"]
-                )
-            }
-
-            # Specify the index location of multi_val_adj["year"] in array multi_val_new["year"]
-            id_tax = np.array(
-                [
-                    np.argwhere(multi_tax_new["year"] == val).ravel()
-                    for val in multi_tax_adj["year"]
-                ]
-            ).ravel()
-
-            # Modify the value of multi_tax_new["rate"]
-            for i, val in enumerate(multi_tax_adj["rate"]):
-                if i == (len(multi_tax_adj["rate"]) - 1):
-                    break
-                multi_tax_new["rate"][id_tax[i]:id_tax[i + 1]] = multi_tax_adj["rate"][i]
-
-            # Add values to the right side of multi_tax_new
-            if len(multi_tax_new["year"]) > len(multi_tax_new["rate"]):
-                fill_num = len(multi_tax_new["year"]) - len(multi_tax_new["rate"])
-                fill_right = np.repeat(multi_tax_adj["rate"][-1], fill_num)
-                multi_tax_new["rate"] = np.concatenate((multi_tax_new["rate"], fill_right))
-
-            # Add values to the left side of multi_tax_new
-            if id_tax[0] > 0:
-                fill_left = np.repeat(multi_tax_adj["rate"][0], id_tax[0])
-                multi_tax_new["rate"][0:id_tax[0]] = fill_left
-
-            # Capture 'year' and 'rate' in accordance with project_years
-            id_tax_new = np.array(
-                [
-                    np.argwhere(multi_tax_new["year"] == i).ravel()
-                    for i in [min(self.project_years), max(self.project_years)]
-                ]
-            ).ravel()
-
-            multi_tax_new["year_new"] = (
-                multi_tax_new["year"][id_tax_new[0]:int(id_tax_new[1] + 1)]
-            )
-
-            multi_tax_new["rate_new"] = (
-                multi_tax_new["rate"][id_tax_new[0]:int(id_tax_new[1] + 1)]
-            )
-
-            self.tax_rate = multi_tax_new["rate_new"]
+            self.tax_rate = get_array_from_target(target=multi_tax, project_years=self.project_years)
 
         # Configure attribute inflation_rate
         if self.inflation_rate_mode == "User Input - Single Value":
             if pd.isna(inflation_rate_init):
                 self.inflation_rate = 0.02
             else:
-                self.inflation_rate = inflation_rate_init
+                self.inflation_rate = float(inflation_rate_init)
 
         elif self.inflation_rate_mode == "User Input - Multi Value":
-            # Filter dict 'self.multi_inflation' for NaN values
-            multi_inflation_adj = {
-                key: np.array(list(filter(lambda i: i is not np.nan, multi_inflation[key])))
-                for key in multi_inflation.keys()
-            }
-
-            # Raise error for unequal length of 'year' and 'rate' in 'multi_inflation_adj'
-            if len(multi_inflation_adj["year"]) != len(multi_inflation_adj["rate"]):
-                raise FiscalConfigDataException(
-                    f"Unequal number of arrays: "
-                    f"year: {len(multi_inflation_adj['year'])}, "
-                    f"tax_rate: {len(multi_inflation_adj['rate'])}."
-                )
-
-            # Specify the minimum and maximum years
-            min_year_inflation = min(self.project_years)
-            max_year_inflation = max(self.project_years)
-
-            if min(multi_inflation_adj["year"]) < min(self.project_years):
-                min_year_inflation = min(multi_inflation_adj["year"])
-
-            if max(multi_inflation_adj["year"]) > max(self.project_years):
-                max_year_inflation = max(multi_inflation_adj["year"])
-
-            # Create new arrays of 'year' and 'rate'
-            multi_inflation_new = {
-                "year": np.arange(min_year_inflation, max_year_inflation + 1, 1),
-                "rate": np.bincount(
-                    multi_inflation_adj["year"] - min_year_inflation,
-                    weights=multi_inflation_adj["rate"]
-                )
-            }
-
-            # Specify the index location of multi_inflation_adj["year"] in
-            # multi_inflation_new["year"]
-            id_inflation = np.array(
-                [
-                    np.argwhere(multi_inflation_new["year"] == val).ravel() for val in
-                    multi_inflation_adj["year"]
-                ]
-            ).ravel()
-
-            # Modify the value of multi_inflation_new["rate"]
-            for i, val in enumerate(multi_inflation_adj["rate"]):
-                if i == (len(multi_inflation_adj["rate"]) - 1):
-                    break
-                (
-                    multi_inflation_new["rate"]
-                    [id_inflation[i]:id_inflation[i + 1]]
-                ) = multi_inflation_adj["rate"][i]
-
-            # Add values to the right side of multi_inflation_new["rate"]
-            if len(multi_inflation_new["year"]) > len(multi_inflation_new["rate"]):
-                fill_num_infl = len(multi_inflation_new["year"]) - len(multi_inflation_new["rate"])
-                fill_right_infl = np.repeat(multi_inflation_adj["rate"][-1], fill_num_infl)
-                multi_inflation_new["rate"] = np.concatenate(
-                    (multi_inflation_new["rate"], fill_right_infl)
-                )
-
-            # Add values to the left side of multi_inflation_new["rate"]
-            if id_inflation[0] > 0:
-                fill_left_infl = np.repeat(multi_inflation_adj["rate"][0], id_inflation[0])
-                multi_inflation_new["rate"][0:id_inflation[0]] = fill_left_infl
-
-            # Capture "year" and "rate" in accordance with project_years
-            id_inflation_new = np.array(
-                [
-                    np.argwhere(multi_inflation_new["year"] == i).ravel()
-                    for i in [min(self.project_years), max(self.project_years)]
-                ]
-            ).ravel()
-
-            multi_inflation_new["year_new"] = (
-                multi_inflation_new["year"][id_inflation_new[0]:int(id_inflation_new[1] + 1)]
+            self.inflation_rate = (
+                get_array_from_target(target=multi_inflation, project_years=self.project_years)
             )
-
-            multi_inflation_new["rate_new"] = (
-                multi_inflation_new["rate"][id_inflation_new[0]:int(id_inflation_new[1] + 1)]
-            )
-
-            self.inflation_rate = multi_inflation_new["rate_new"]
 
 
 @dataclass
@@ -2416,7 +2291,7 @@ class PSCCostRecoveryData:
     icp_sliding_scale: dict = field(default=None, init=False)
 
     def __post_init__(self, rc_split_init, icp_sliding_scale_init):
-        # Convert attributes with datatype str to boolean
+        # Convert attributes to boolean
         self.ftp_availability = get_boolean_converter(target=self.ftp_availability)
         self.ftp_is_shared = get_boolean_converter(target=self.ftp_is_shared)
         self.ic_availability = get_boolean_converter(target=self.ic_availability)
@@ -2541,6 +2416,12 @@ class PSCGrossSplitData:
     gas_dmo_start_production: datetime
     gas_dmo_volume: float
     gas_dmo_fee: float
+
+    def __post_init__(self):
+        # Convert attributes to boolean
+        self.dmo_is_weighted = get_boolean_converter(target=self.dmo_is_weighted)
+        self.oil_dmo_holiday = get_boolean_converter(target=self.oil_dmo_holiday)
+        self.gas_dmo_holiday = get_boolean_converter(target=self.gas_dmo_holiday)
 
 
 @dataclass

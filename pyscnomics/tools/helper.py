@@ -7,11 +7,27 @@ from datetime import datetime
 from functools import wraps
 from typing import Dict
 
-from pyscnomics.econ.selection import FluidType, TaxType, TaxSplitTypeCR
+from pyscnomics.econ.selection import (
+    FluidType,
+    TaxType,
+    TaxSplitTypeCR,
+    InflationAppliedTo,
+    TaxPaymentMode,
+    FTPTaxRegime,
+    NPVSelection,
+    DiscountingMode,
+    DeprMethod,
+)
 
 
 class TaxInflationException(Exception):
     """ Exception to be raised for an incorrect tax and inflation configurations """
+
+    pass
+
+
+class CreateArrayException(Exception):
+    """ Exception to be raised for an incorrect use of function get_array_from_target """
 
     pass
 
@@ -556,7 +572,7 @@ def get_instances(target_instances: tuple, identifier: list) -> tuple:
     return tuple(result)
 
 
-def get_datetime(ordinal_date):
+def get_datetime(ordinal_date) -> datetime:
     """
     Convert an ordinal date to a datetime object.
 
@@ -574,6 +590,306 @@ def get_datetime(ordinal_date):
         datetime(1900, 1, 1).toordinal() + ordinal_date - 2
     )
     return date_time
+
+
+def get_inflation_applied_converter(target: str) -> InflationAppliedTo:
+    """
+    Converts a string representing the application of inflation to its
+    corresponding enum value from the InflationAppliedTo class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the inflation application.
+
+    Returns
+    -------
+    Union[InflationAppliedTo, None]
+        The corresponding enum value if the target matches one of the predefined options.
+        Returns None if no match is found.
+
+    Example:
+    >>> result = get_inflation_applied_converter("OPEX")
+    >>> print(result)
+    InflationAppliedTo.OPEX
+    """
+    attrs = {
+        "CAPEX": InflationAppliedTo.CAPEX,
+        "OPEX": InflationAppliedTo.OPEX,
+        "CAPEX AND OPEX": InflationAppliedTo.CAPEX_AND_OPEX,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_tax_payment_converter(target: str) -> TaxPaymentMode:
+    """
+    Converts a string representing a tax payment mode to its corresponding
+    enum value from the TaxPaymentMode class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the tax payment mode.
+
+    Returns
+    -------
+    Union[TaxPaymentMode, None]
+        The corresponding enum value if the target matches one of the predefined payment modes.
+        Returns None if no match is found.
+
+    Example
+    -------
+    >>> result = get_tax_payment_converter("Direct Mode")
+    >>> print(result)
+    TaxPaymentMode.TAX_DIRECT_MODE
+    """
+    attrs = {
+        "Direct Mode": TaxPaymentMode.TAX_DIRECT_MODE,
+        "Due Mode": TaxPaymentMode.TAX_DUE_MODE,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_tax_regime_converter(target: str) -> FTPTaxRegime:
+    """
+    Converts a string representing a tax regime to its corresponding
+    enum value from the FTPTaxRegime class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the tax regime.
+
+    Returns
+    -------
+    Union[FTPTaxRegime, None]
+        The corresponding enum value if the target matches one of the predefined tax regimes.
+        Returns None if no match is found.
+
+    Example
+    -------
+    >>> result = get_tax_regime_converter("PDJP No.20 Tahun 2017")
+    >>> print(result)
+    FTPTaxRegime.PDJP_20_2017
+    """
+    attrs = {
+        "PDJP No.20 Tahun 2017": FTPTaxRegime.PDJP_20_2017,
+        "Pre PDJP No.20 Tahun 2017": FTPTaxRegime.PRE_2017,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_npv_mode_converter(target: str) -> NPVSelection:
+    """
+    Converts a string representing an NPV mode to its corresponding
+    enum value from the NPVSelection class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the NPV mode.
+
+    Returns
+    -------
+    Union[NPVSelection, None]
+        The corresponding enum value if the target matches one of the predefined NPV modes.
+        Returns None if no match is found.
+
+    Example
+    -------
+    >>> result = get_npv_mode_converter("SKK Full Cycle Real Terms")
+    >>> print(result)
+    NPVSelection.NPV_SKK_REAL_TERMS
+    """
+    attrs = {
+        "SKK Full Cycle Real Terms": NPVSelection.NPV_SKK_REAL_TERMS,
+        "SKK Full Cycle Nominal Terms": NPVSelection.NPV_SKK_NOMINAL_TERMS,
+        "Full Cycle Real Terms": NPVSelection.NPV_REAL_TERMS,
+        "Full Cycle Nominal Terms": NPVSelection.NPV_NOMINAL_TERMS,
+        "Point Forward": NPVSelection.NPV_POINT_FORWARD,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_discounting_mode_converter(target: str) -> DiscountingMode:
+    """
+    Converts a string representing a discounting mode to its corresponding
+    enum value from the DiscountingMode class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the discounting mode.
+
+    Returns
+    -------
+    Union[DiscountingMode, None]
+        The corresponding enum value if the target matches one of the predefined discounting modes.
+        Returns None if no match is found.
+
+    Example
+    -------
+    >>> result = get_discounting_mode_converter("End Year")
+    >>> print(result)
+    DiscountingMode.END_YEAR
+    """
+    attrs = {
+        "End Year": DiscountingMode.END_YEAR,
+        "Mid Year": DiscountingMode.MID_YEAR,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_depreciation_method_converter(target: str) -> DeprMethod:
+    """
+    Converts a string representing a depreciation method to its corresponding
+    enum value from the DeprMethod class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the depreciation method.
+
+    Returns
+    -------
+    Union[DeprMethod, None]
+        The corresponding enum value if the target matches one of the predefined depreciation methods.
+        Returns None if no match is found.
+
+    Example
+    -------
+    >>> result = get_depreciation_method_converter("PSC Declining Balance")
+    >>> print(result)
+    DeprMethod.PSC_DB
+    """
+    attrs = {
+        "PSC Declining Balance": DeprMethod.PSC_DB,
+        "Declining Balance": DeprMethod.DB,
+        "Unit Of Production": DeprMethod.UOP,
+        "Straight Line": DeprMethod.SL,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_array_from_target(target: dict, project_years: np.ndarray) -> np.ndarray:
+    """
+    Create a new NumPy array of tax rates aligned with project years based on input data.
+
+    Parameters
+    ----------
+    target: dict
+        A dictionary containing 'year' and 'rate' arrays.
+    project_years: np.ndarray
+        1D NumPy array representing the project years.
+
+    Returns
+    -------
+    np.ndarray
+        A new NumPy array of 'target' aligned with project_years.
+
+    Raises
+    ------
+    CreateArrayException
+        If the lengths of 'year' and 'rate' arrays in 'target' are not equal.
+    """
+
+    # Filter dict "multi_adj" for NaN values
+    multi_adj = {
+        key: np.array(list(filter(lambda i: i is not np.nan, target[key])))
+        for key in target.keys()
+    }
+
+    # Raise error for unequal length of "year" and "rate" in "multi_adj"
+    if len(multi_adj["year"]) != len(multi_adj["rate"]):
+        raise CreateArrayException(
+            f"Unequal number of arrays: "
+            f"year: {len(multi_adj['year'])}, "
+            f"tax_rate: {len(multi_adj['rate'])}."
+        )
+
+    # Specify the minimum and maximum years
+    min_year = min(project_years)
+    max_year = max(project_years)
+
+    if min(multi_adj["year"]) < min(project_years):
+        min_year = min(multi_adj["year"])
+
+    if max(multi_adj["year"]) > max(project_years):
+        max_year = max(multi_adj["year"])
+
+    # Create new arrays of "year" and "rate"
+    multi_new = {
+        "year": np.arange(min_year, max_year + 1, 1),
+        "rate": np.bincount(multi_adj["year"] - min_year, weights=multi_adj["rate"])
+    }
+
+    # Specify the index location of multi_adj["year"] in array multi_new["year"]
+    id_arr = np.array(
+        [
+            np.argwhere(multi_new["year"] == val).ravel()
+            for val in multi_adj["year"]
+        ]
+    ).ravel()
+
+    # Modify the value of multi_new["rate"]
+    for i, val in enumerate(multi_adj["rate"]):
+        if i == (len(multi_adj["rate"]) - 1):
+            break
+        multi_new["rate"][id_arr[i]:id_arr[i + 1]] = multi_adj["rate"][i]
+
+    # Add values to the right side of multi_new
+    if len(multi_new["year"]) > len(multi_new["rate"]):
+        fill_num = len(multi_new["year"]) - len(multi_new["rate"])
+        fill_right = np.repeat(multi_adj["rate"][-1], fill_num)
+        multi_new["rate"] = np.concatenate((multi_new["rate"], fill_right))
+
+    # Add values to the left side of multi_new
+    if id_arr[0] > 0:
+        fill_left = np.repeat(multi_adj["rate"][0], id_arr[0])
+        multi_new["rate"][0:id_arr[0]] = fill_left
+
+    # Capture "year" and "rate" in accordance with project_years
+    id_arr_new = np.array(
+        [
+            np.argwhere(multi_new["year"] == i).ravel()
+            for i in [min(project_years), max(project_years)]
+        ]
+    ).ravel()
+
+    multi_new["year_new"] = (multi_new["year"][id_arr_new[0]:int(id_arr_new[1] + 1)])
+    multi_new["rate_new"] = (multi_new["rate"][id_arr_new[0]:int(id_arr_new[1] + 1)])
+
+    return multi_new["rate_new"]
 
 
 def get_lifting_data_split_simple(
