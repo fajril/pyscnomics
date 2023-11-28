@@ -89,7 +89,7 @@ class Spreadsheet:
     def __post_init__(self):
         # Configure attribute workbook_to_read
         if self.workbook_to_read is None:
-            self.workbook_to_read = "Workbook.xlsm"
+            self.workbook_to_read = "Workbook.xlsb"
 
         if self.workbook_to_read is not None:
             if not isinstance(self.workbook_to_read, str):
@@ -143,7 +143,7 @@ class Spreadsheet:
                 skiprows=1,
                 index_col=None,
                 header=None,
-                engine="openpyxl",
+                engine="pyxlsb",
             )
             for key in self.sheets_loaded
         }

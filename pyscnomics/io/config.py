@@ -9,6 +9,7 @@ import pandas as pd
 
 from pyscnomics.econ.selection import TaxSplitTypeCR
 from pyscnomics.tools.helper import (
+    get_datetime,
     get_inflation_applied_converter,
     get_tax_payment_converter,
     get_tax_regime_converter,
@@ -187,6 +188,21 @@ class GeneralConfigData:
             get_inflation_applied_converter(target=self.inflation_rate_applied_to)
         )
 
+        # Prepare attributes associated with datetime
+        (
+            self.start_date_project,
+            self.end_date_project,
+            self.start_date_project_second,
+            self.end_date_project_second,
+        ) = list(
+            map(get_datetime, [
+                self.start_date_project,
+                self.end_date_project,
+                self.start_date_project_second,
+                self.end_date_project_second,
+            ])
+        )
+
         # Prepare attribute project_years and project_duration
         if "Transition" in self.type_of_contract:
             if self.end_date_project.year < self.start_date_project.year:
@@ -215,6 +231,18 @@ class GeneralConfigData:
                 self.start_date_project.year, self.end_date_project_second.year + 1, 1
             )
 
+            if self.oil_onstream_date is None:
+                self.oil_onstream_date = {
+                    "PSC 1": self.start_date_project,
+                    "PSC 2": self.start_date_project_second,
+                }
+
+            if self.gas_onstream_date is None:
+                self.gas_onstream_date = {
+                    "PSC 1": self.start_date_project,
+                    "PSC 2": self.start_date_project_second,
+                }
+
         else:
             if self.end_date_project.year >= self.start_date_project.year:
                 self.project_duration = self.end_date_project.year - self.start_date_project.year + 1
@@ -227,6 +255,12 @@ class GeneralConfigData:
                     f"start year {self.start_date_project.year} "
                     f"is after the end year: {self.end_date_project.year}"
                 )
+
+            if self.oil_onstream_date is None:
+                self.oil_onstream_date = self.start_date_project
+
+            if self.gas_onstream_date is None:
+                self.gas_onstream_date = self.start_date_project
 
 
 @dataclass

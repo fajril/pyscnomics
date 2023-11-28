@@ -231,7 +231,7 @@ asr_cost_data = (
 
 timer_start = tm.time()
 
-data = Spreadsheet(workbook_to_read="Workbook.xlsm")
+data = Spreadsheet()
 data.prepare_data()
 
 timer_end = tm.time() - timer_start
