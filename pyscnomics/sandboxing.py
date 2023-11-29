@@ -12,8 +12,7 @@ from pyscnomics.econ.selection import DeprMethod, FluidType, TaxType
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 # from pyscnomics.econ.depreciation import psc_declining_balance_depreciation_rate as psc_db
-# from pyscnomics.contracts.project import BaseProject
-# from pyscnomics.contracts.costrecovery import CostRecovery
+from pyscnomics.contracts.project import BaseProject
 from pyscnomics.econ.results import CashFlow
 # from pyscnomics.tools.helper import summarizer
 
@@ -217,14 +216,19 @@ asr_cost_data = (
 
 '---------------------------------------------- COST RECOVERY ----------------------------------------------'
 
-# costrec = CostRecovery(
-#     start_date=date(2023, 1, 1),
-#     end_date=date(2030, 12, 31),
-#     lifting=lifting_data,
-#     tangible_cost=tangible_cost_data,
-#     intangible_cost=intangible_cost_data,
-#     opex=opex_data,
-#     asr_cost=asr_cost_data,
+# lifting_sawo = Lifting(
+#     start_year=2023,
+#     end_year=2030,
+#     prod_year=np.array([2026, 2023, 2029, 2023]),
+#     lifting_rate=np.array([37, 80, 59, 20]),
+#     price=np.array([10, 10, 10, 10]),
+#     fluid_type=FluidType.OIL,
+# )
+#
+# pr = BaseProject(
+#     start_date=date(year=2023, month=1, day=1),
+#     end_date=date(year=2030, month=12, day=31),
+#     lifting=tuple([lifting_sawo]),
 # )
 
 '------------------------------------------------- EXECUTE -------------------------------------------------'
