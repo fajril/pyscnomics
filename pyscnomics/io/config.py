@@ -504,88 +504,114 @@ class OilLiftingData:
 
         self.prod_year = prod_year_init.copy()
 
+        # Prepare attribute oil_lifting_rate
+        if not isinstance(self.oil_lifting_rate, dict):
+            raise OilLiftingDataException(
+                f"Attribute oil_lifting_rate must be provided in the form of dictionary. "
+                f"The current datatype of oil_lifting_rate is "
+                f"{self.oil_lifting_rate.__class__.__qualname__}"
+            )
+
+        for key in self.oil_lifting_rate.keys():
+            if self.oil_lifting_rate[key] is None:
+                self.oil_lifting_rate[key] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                oil_lifting_rate_nan = list(filter(lambda i: pd.isna(i), self.oil_lifting_rate[key]))
+                if len(oil_lifting_rate_nan) > 0:
+                    raise OilLiftingDataException(
+                        f"Oil lifting rate data data is incomplete. "
+                        f"Please re-check oil_lifting_rate data. "
+                        f"The number of oil_lifting_rate data must be ({oil_data_length[key]}), "
+                        f"not ({oil_data_length[key] - len(oil_lifting_rate_nan)})."
+                    )
+                else:
+                    self.oil_lifting_rate[key] = np.float_(self.oil_lifting_rate[key])
+
+        # Prepare attribute oil_price
+        if not isinstance(self.oil_price, dict):
+            raise OilLiftingDataException(
+                f"Attribute oil_price must be provided in the form of dictionary. "
+                f"The current datatype of oil_price is "
+                f"{self.oil_price.__class__.__qualname__}"
+            )
+
+        for key in self.oil_price.keys():
+            if self.oil_price[key] is None:
+                self.oil_price[key] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                oil_price_nan = list(filter(lambda i: pd.isna(i), self.oil_price[key]))
+                if len(oil_price_nan) > 0:
+                    raise OilLiftingDataException(
+                        f"Oil price data is incomplete. "
+                        f"Please re-check oil_price data. "
+                        f"The number of oil_price data must be ({oil_data_length[key]}), "
+                        f"not ({oil_data_length[key] - len(oil_price_nan)})."
+                    )
+                else:
+                    self.oil_price[key] = np.float_(self.oil_price[key])
+
+        # Prepare attribute condensate_lifting_rate
+        if not isinstance(self.condensate_lifting_rate, dict):
+            raise OilLiftingDataException(
+                f"Attribute condensate_lifting_rate must be provided in the form of dictionary. "
+                f"The current datatype of condensate_lifting_rate is "
+                f"{self.condensate_lifting_rate.__class__.__qualname__}"
+            )
+
+        for key in self.condensate_lifting_rate.keys():
+            if self.condensate_lifting_rate[key] is None:
+                self.condensate_lifting_rate[key] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                condensate_lifting_rate_nan = list(
+                    filter(lambda i: pd.isna(i), self.condensate_lifting_rate[key])
+                )
+                if len(condensate_lifting_rate_nan) > 0:
+                    raise OilLiftingDataException(
+                        f"Condensate lifting rate data is incomplete. "
+                        f"Please re-check condensate_lifting_rate data. "
+                        f"The number of condensate_lifting_rate data must be ({oil_data_length[key]}), "
+                        f"not ({oil_data_length[key] - len(condensate_lifting_rate_nan)})."
+                    )
+                else:
+                    self.condensate_lifting_rate[key] = np.float_(self.condensate_lifting_rate[key])
+
+        # Prepare attribute condensate_price
+        if not isinstance(self.condensate_price, dict):
+            raise OilLiftingDataException(
+                f"Attribute condensate_price must be provided in the form of dictionary. "
+                f"The current datatype of condensate_price is "
+                f"{self.condensate_price.__class__.__qualname__}"
+            )
+
+        for key in self.condensate_price.keys():
+            if self.condensate_price[key] is None:
+                self.condensate_price[key] = np.zeros_like(self.project_years, dtype=np.float_)
+            else:
+                condensate_price_nan = list(filter(lambda i: pd.isna(i), self.condensate_price[key]))
+                if len(condensate_price_nan) > 0:
+                    raise OilLiftingDataException(
+                        f"Condensate price data is incomplete. "
+                        f"Please re-check condensate_price data. "
+                        f"The number of condensate_price data must be ({oil_data_length[key]}), "
+                        f"not ({oil_data_length[key] - len(condensate_price_nan)})."
+                    )
+                else:
+                    self.condensate_price[key] = np.float_(self.condensate_price[key])
+
         print('\t')
         print(f'Filetype: {type(self.prod_year)}')
-        print('prod_year = ', self.prod_year)
+        print('prod_year = \n', self.prod_year)
 
-    #     # Prepare attribute oil_lifting_rate
-    #     if not isinstance(self.oil_lifting_rate, dict):
-    #         raise OilLiftingDataException(
-    #             f"Attribute oil_lifting_rate must be provided in the form of dictionary. "
-    #             f"The current datatype of oil_lifting_rate is "
-    #             f"{self.oil_lifting_rate.__class__.__qualname__}"
-    #         )
-    #
-    #     for i in self.oil_lifting_rate.keys():
-    #         if self.oil_lifting_rate[i] is not None:
-    #             self.oil_lifting_rate[i] = np.float_(self.oil_lifting_rate[i])
-    #
-    #     print('\t')
-    #     print(f'Filetype: {type(self.oil_lifting_rate)}')
-    #     print('oil_lifting_rate = \n', self.oil_lifting_rate)
-    #
-    #     # for i in self.oil_lifting_rate.keys():
-    #     #     if self.oil_lifting_rate[i] is None:
-    #     #         self.oil_lifting_rate[i] = np.zeros_like(self.project_years, dtype=np.float_)
-    #     #     else:
-    #     #         self.oil_lifting_rate[i] = np.float_(self.oil_lifting_rate[i])
-    #
-    #     # # Prepare attribute oil_price
-    #     # if not isinstance(self.oil_price, dict):
-    #     #     raise OilLiftingDataException(
-    #     #         f"Attribute oil_price must be provided in the form of dictionary. "
-    #     #         f"The current datatype of oil_price is "
-    #     #         f"{self.oil_price.__class__.__qualname__}"
-    #     #     )
-    #     #
-    #     # for i in self.oil_price.keys():
-    #     #     if self.oil_price[i] is None:
-    #     #         self.oil_price[i] = np.zeros_like(self.project_years, dtype=np.float_)
-    #     #     else:
-    #     #         self.oil_price[i] = np.float_(self.oil_price[i])
-    #     #
-    #     # # Prepare attribute condensate_lifting_rate
-    #     # if not isinstance(self.condensate_lifting_rate, dict):
-    #     #     raise OilLiftingDataException(
-    #     #         f"Attribute condensate_lifting_rate must be provided in the form of dictionary. "
-    #     #         f"The current datatype of condensate_lifting_rate is "
-    #     #         f"{self.condensate_lifting_rate.__class__.__qualname__}"
-    #     #     )
-    #     #
-    #     # for i in self.condensate_lifting_rate.keys():
-    #     #     if self.condensate_lifting_rate[i] is None:
-    #     #         self.condensate_lifting_rate[i] = np.zeros_like(self.project_years, np.float_)
-    #     #     else:
-    #     #         self.condensate_lifting_rate[i] = np.float_(self.condensate_lifting_rate[i])
-    #     #
-    #     # # Prepare attribute condensate_price
-    #     # if not isinstance(self.condensate_price, dict):
-    #     #     raise OilLiftingDataException(
-    #     #         f"Attribute condensate_price must be provided in the form of dictionary. "
-    #     #         f"The current datatype of condensate_price is "
-    #     #         f"{self.condensate_price.__class__.__qualname__}"
-    #     #     )
-    #     #
-    #     # for i in self.condensate_price.keys():
-    #     #     if self.condensate_price[i] is None:
-    #     #         self.condensate_price[i] = np.zeros_like(self.project_years, dtype=np.float_)
-    #     #     else:
-    #     #         self.condensate_price[i] = np.float_(self.condensate_price[i])
-    #
-    #     # Adjust data for transition case
-    #     if "Transition" in self.type_of_contract:
-    #         self.oil_lifting_rate = get_lifting_data_split_simple(
-    #             target_attr=self.oil_lifting_rate,
-    #             is_target_attr_volume=True,
-    #             prod_year_init=prod_year_init,
-    #             end_date_contract_1=self.end_date_project,
-    #             start_date_contract_2=self.start_date_project_second,
-    #         )
-    #
-    #         print('\t')
-    #         print(f'Filetype: {type(self.oil_lifting_rate)}')
-    #         print('oil_lifting_rate = \n', self.oil_lifting_rate)
-    #
+        # Adjust data for transition case
+        if "Transition" in self.type_of_contract:
+            t1 = get_lifting_data_split_simple(
+                target_attr=self.prod_year,
+                is_target_attr_volume=False,
+                prod_year_init=prod_year_init,
+                end_date_contract_1=self.end_date_project,
+                start_date_contract_2=self.start_date_project_second,
+            )
+
     #         # Modify attributes "prod_year", "oil_lifting_rate", "oil_price",
     #         # "condensate_lifting_rate", and "condensate_price"
     #         target_attrs = {
