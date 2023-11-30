@@ -1703,6 +1703,3 @@ class Spreadsheet:
         # print('\t')
         # print(f'Filetype: {type(self.oil_lifting_data)}')
         # print('oil_lifting_data = \n', self.oil_lifting_data)
-        #
-        # print('\t')
-        # print('project_duration = \n', self.oil_lifting_data.project_duration)

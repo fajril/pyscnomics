@@ -474,7 +474,7 @@ class OilLiftingData:
     # Attributes associated with project duration
     project_duration: int = field(repr=False)
     project_years: np.ndarray = field(repr=False)
-    oil_data_length: InitVar[int]
+    oil_data_length: InitVar[dict]
 
     # Attributes to be defined later
     prod_year: dict = field(default=None, init=False)
@@ -501,7 +501,6 @@ class OilLiftingData:
                     )
                 else:
                     prod_year_init[key] = np.int_(prod_year_init[key])
-
         self.prod_year = prod_year_init.copy()
 
         # Prepare attribute oil_lifting_rate
@@ -517,7 +516,9 @@ class OilLiftingData:
                 self.oil_lifting_rate[key] = np.zeros_like(self.project_years, dtype=np.float_)
             else:
                 oil_lifting_rate_nan = list(filter(lambda i: pd.isna(i), self.oil_lifting_rate[key]))
-                if len(oil_lifting_rate_nan) > 0:
+                if len(oil_lifting_rate_nan) == oil_data_length[key]:
+                    self.oil_lifting_rate[key] = np.zeros_like(self.prod_year[key], dtype=np.float_)
+                elif 0 < len(oil_lifting_rate_nan) < oil_data_length[key]:
                     raise OilLiftingDataException(
                         f"Oil lifting rate data data is incomplete. "
                         f"Please re-check oil_lifting_rate data. "
@@ -540,7 +541,9 @@ class OilLiftingData:
                 self.oil_price[key] = np.zeros_like(self.project_years, dtype=np.float_)
             else:
                 oil_price_nan = list(filter(lambda i: pd.isna(i), self.oil_price[key]))
-                if len(oil_price_nan) > 0:
+                if len(oil_price_nan) == oil_data_length[key]:
+                    self.oil_price[key] = np.zeros_like(self.prod_year[key], dtype=np.float_)
+                elif 0 < len(oil_price_nan) < oil_data_length[key]:
                     raise OilLiftingDataException(
                         f"Oil price data is incomplete. "
                         f"Please re-check oil_price data. "
@@ -565,7 +568,11 @@ class OilLiftingData:
                 condensate_lifting_rate_nan = list(
                     filter(lambda i: pd.isna(i), self.condensate_lifting_rate[key])
                 )
-                if len(condensate_lifting_rate_nan) > 0:
+                if len(condensate_lifting_rate_nan) == oil_data_length[key]:
+                    self.condensate_lifting_rate[key] = (
+                        np.zeros_like(self.prod_year[key], dtype=np.float_)
+                    )
+                elif 0 < len(condensate_lifting_rate_nan) < oil_data_length[key]:
                     raise OilLiftingDataException(
                         f"Condensate lifting rate data is incomplete. "
                         f"Please re-check condensate_lifting_rate data. "
@@ -588,7 +595,9 @@ class OilLiftingData:
                 self.condensate_price[key] = np.zeros_like(self.project_years, dtype=np.float_)
             else:
                 condensate_price_nan = list(filter(lambda i: pd.isna(i), self.condensate_price[key]))
-                if len(condensate_price_nan) > 0:
+                if len(condensate_price_nan) == oil_data_length[key]:
+                    self.condensate_price[key] = np.zeros_like(self.prod_year[key], dtype=np.float_)
+                elif 0 < len(condensate_price_nan) < oil_data_length[key]:
                     raise OilLiftingDataException(
                         f"Condensate price data is incomplete. "
                         f"Please re-check condensate_price data. "
@@ -598,55 +607,43 @@ class OilLiftingData:
                 else:
                     self.condensate_price[key] = np.float_(self.condensate_price[key])
 
-        print('\t')
-        print(f'Filetype: {type(self.prod_year)}')
-        print('prod_year = \n', self.prod_year)
-
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
-            t1 = get_lifting_data_split_simple(
-                target_attr=self.prod_year,
-                is_target_attr_volume=False,
-                prod_year_init=prod_year_init,
-                end_date_contract_1=self.end_date_project,
-                start_date_contract_2=self.start_date_project_second,
-            )
+            # Modify attributes "prod_year", "oil_lifting_rate", "oil_price",
+            # "condensate_lifting_rate", and "condensate_price"
+            target_attrs = {
+                "attr": [
+                    self.prod_year,
+                    self.oil_lifting_rate,
+                    self.oil_price,
+                    self.condensate_lifting_rate,
+                    self.condensate_price,
+                ],
+                "status": [
+                    False,
+                    True,
+                    False,
+                    True,
+                    False,
+                ]
+            }
 
-    #         # Modify attributes "prod_year", "oil_lifting_rate", "oil_price",
-    #         # "condensate_lifting_rate", and "condensate_price"
-    #         target_attrs = {
-    #             "attr": [
-    #                 self.prod_year,
-    #                 self.oil_lifting_rate,
-    #                 self.oil_price,
-    #                 self.condensate_lifting_rate,
-    #                 self.condensate_price,
-    #             ],
-    #             "status": [
-    #                 False,
-    #                 True,
-    #                 False,
-    #                 True,
-    #                 False,
-    #             ]
-    #         }
-    #
-    #         (
-    #             self.prod_year,
-    #             self.oil_lifting_rate,
-    #             self.oil_price,
-    #             self.condensate_lifting_rate,
-    #             self.condensate_price,
-    #         ) = [
-    #             get_lifting_data_split_simple(
-    #                 target_attr=i,
-    #                 is_target_attr_volume=j,
-    #                 prod_year_init=prod_year_init,
-    #                 end_date_contract_1=self.end_date_project,
-    #                 start_date_contract_2=self.start_date_project_second,
-    #             )
-    #             for i, j in zip(target_attrs["attr"], target_attrs["status"])
-    #         ]
+            (
+                self.prod_year,
+                self.oil_lifting_rate,
+                self.oil_price,
+                self.condensate_lifting_rate,
+                self.condensate_price,
+            ) = [
+                get_lifting_data_split_simple(
+                    target_attr=i,
+                    is_target_attr_volume=j,
+                    prod_year_init=prod_year_init,
+                    end_date_contract_1=self.end_date_project,
+                    start_date_contract_2=self.start_date_project_second,
+                )
+                for i, j in zip(target_attrs["attr"], target_attrs["status"])
+            ]
 
 
 @dataclass
