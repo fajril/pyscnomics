@@ -373,7 +373,10 @@ class CostRecovery(BaseProject):
         out: np.ndarray
             The array of ETS before transfer.
         """
-        return revenue - (ftp_ctr + ftp_gov) - ic - cost_recovery
+
+        result = revenue - (ftp_ctr + ftp_gov) - ic - cost_recovery
+        tol = np.full_like(result, fill_value=1.0e-14)
+        return np.where(result < tol, 0, result)
 
     @staticmethod
     def _get_ets_after_transfer(
@@ -579,7 +582,7 @@ class CostRecovery(BaseProject):
         if discount_rate_year < self.start_date.year:
             raise SunkCostException(
                 f"start_date year {self.start_date} "
-                f"is after the discount rate year: {self.end_date}"
+                f"is after the discount rate year: {discount_rate_year}"
             )
 
         # Configure year reference

@@ -3,12 +3,31 @@ Handles summation operation on two arrays, accounting for different starting yea
 """
 
 import numpy as np
+from datetime import datetime
 from functools import wraps
-from pyscnomics.econ.selection import FluidType, TaxType
+from typing import Dict
+
+from pyscnomics.econ.selection import (
+    FluidType,
+    TaxType,
+    TaxSplitTypeCR,
+    InflationAppliedTo,
+    TaxPaymentMode,
+    FTPTaxRegime,
+    NPVSelection,
+    DiscountingMode,
+    DeprMethod,
+)
 
 
 class TaxInflationException(Exception):
     """ Exception to be raised for an incorrect tax and inflation configurations """
+
+    pass
+
+
+class CreateArrayException(Exception):
+    """ Exception to be raised for an incorrect use of function get_array_from_target """
 
     pass
 
@@ -551,6 +570,779 @@ def get_instances(target_instances: tuple, identifier: list) -> tuple:
                 result.append(add)
 
     return tuple(result)
+
+
+def get_datetime(ordinal_date) -> datetime:
+    """
+    Convert an ordinal date to a datetime object.
+
+    Parameters
+    ----------
+    ordinal_date: int
+        Ordinal date to be converted.
+
+    Returns
+    -------
+    datetime
+        Datetime object corresponding to the given ordinal date.
+    """
+    date_time = datetime.fromordinal(
+        datetime(1900, 1, 1).toordinal() + ordinal_date - 2
+    )
+    return date_time
+
+
+def get_inflation_applied_converter(target: str) -> InflationAppliedTo:
+    """
+    Converts a string representing the application of inflation to its
+    corresponding enum value from the InflationAppliedTo class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the inflation application.
+
+    Returns
+    -------
+    Union[InflationAppliedTo, None]
+        The corresponding enum value if the target matches one of the predefined options.
+        Returns None if no match is found.
+
+    Example:
+    >>> result = get_inflation_applied_converter("OPEX")
+    >>> print(result)
+    InflationAppliedTo.OPEX
+    """
+    attrs = {
+        "CAPEX": InflationAppliedTo.CAPEX,
+        "OPEX": InflationAppliedTo.OPEX,
+        "CAPEX AND OPEX": InflationAppliedTo.CAPEX_AND_OPEX,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_tax_payment_converter(target: str) -> TaxPaymentMode:
+    """
+    Converts a string representing a tax payment mode to its corresponding
+    enum value from the TaxPaymentMode class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the tax payment mode.
+
+    Returns
+    -------
+    Union[TaxPaymentMode, None]
+        The corresponding enum value if the target matches one of the predefined payment modes.
+        Returns None if no match is found.
+
+    Example
+    -------
+    >>> result = get_tax_payment_converter("Direct Mode")
+    >>> print(result)
+    TaxPaymentMode.TAX_DIRECT_MODE
+    """
+    attrs = {
+        "Direct Mode": TaxPaymentMode.TAX_DIRECT_MODE,
+        "Due Mode": TaxPaymentMode.TAX_DUE_MODE,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_tax_regime_converter(target: str) -> FTPTaxRegime:
+    """
+    Converts a string representing a tax regime to its corresponding
+    enum value from the FTPTaxRegime class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the tax regime.
+
+    Returns
+    -------
+    Union[FTPTaxRegime, None]
+        The corresponding enum value if the target matches one of the predefined tax regimes.
+        Returns None if no match is found.
+
+    Example
+    -------
+    >>> result = get_tax_regime_converter("PDJP No.20 Tahun 2017")
+    >>> print(result)
+    FTPTaxRegime.PDJP_20_2017
+    """
+    attrs = {
+        "PDJP No.20 Tahun 2017": FTPTaxRegime.PDJP_20_2017,
+        "Pre PDJP No.20 Tahun 2017": FTPTaxRegime.PRE_2017,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_npv_mode_converter(target: str) -> NPVSelection:
+    """
+    Converts a string representing an NPV mode to its corresponding
+    enum value from the NPVSelection class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the NPV mode.
+
+    Returns
+    -------
+    Union[NPVSelection, None]
+        The corresponding enum value if the target matches one of the predefined NPV modes.
+        Returns None if no match is found.
+
+    Example
+    -------
+    >>> result = get_npv_mode_converter("SKK Full Cycle Real Terms")
+    >>> print(result)
+    NPVSelection.NPV_SKK_REAL_TERMS
+    """
+    attrs = {
+        "SKK Full Cycle Real Terms": NPVSelection.NPV_SKK_REAL_TERMS,
+        "SKK Full Cycle Nominal Terms": NPVSelection.NPV_SKK_NOMINAL_TERMS,
+        "Full Cycle Real Terms": NPVSelection.NPV_REAL_TERMS,
+        "Full Cycle Nominal Terms": NPVSelection.NPV_NOMINAL_TERMS,
+        "Point Forward": NPVSelection.NPV_POINT_FORWARD,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_discounting_mode_converter(target: str) -> DiscountingMode:
+    """
+    Converts a string representing a discounting mode to its corresponding
+    enum value from the DiscountingMode class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the discounting mode.
+
+    Returns
+    -------
+    Union[DiscountingMode, None]
+        The corresponding enum value if the target matches one of the predefined discounting modes.
+        Returns None if no match is found.
+
+    Example
+    -------
+    >>> result = get_discounting_mode_converter("End Year")
+    >>> print(result)
+    DiscountingMode.END_YEAR
+    """
+    attrs = {
+        "End Year": DiscountingMode.END_YEAR,
+        "Mid Year": DiscountingMode.MID_YEAR,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_depreciation_method_converter(target: str) -> DeprMethod:
+    """
+    Converts a string representing a depreciation method to its corresponding
+    enum value from the DeprMethod class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the depreciation method.
+
+    Returns
+    -------
+    Union[DeprMethod, None]
+        The corresponding enum value if the target matches one of the predefined depreciation methods.
+        Returns None if no match is found.
+
+    Example
+    -------
+    >>> result = get_depreciation_method_converter("PSC Declining Balance")
+    >>> print(result)
+    DeprMethod.PSC_DB
+    """
+    attrs = {
+        "PSC Declining Balance": DeprMethod.PSC_DB,
+        "Declining Balance": DeprMethod.DB,
+        "Unit Of Production": DeprMethod.UOP,
+        "Straight Line": DeprMethod.SL,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_array_from_target(target: dict, project_years: np.ndarray) -> np.ndarray:
+    """
+    Create a new NumPy array of tax rates aligned with project years based on input data.
+
+    Parameters
+    ----------
+    target: dict
+        A dictionary containing 'year' and 'rate' arrays.
+    project_years: np.ndarray
+        1D NumPy array representing the project years.
+
+    Returns
+    -------
+    np.ndarray
+        A new NumPy array of 'target' aligned with project_years.
+
+    Raises
+    ------
+    CreateArrayException
+        If the lengths of 'year' and 'rate' arrays in 'target' are not equal.
+    """
+
+    # Filter dict "multi_adj" for NaN values
+    multi_adj = {
+        key: np.array(list(filter(lambda i: i is not np.nan, target[key])))
+        for key in target.keys()
+    }
+
+    # Raise error for unequal length of "year" and "rate" in "multi_adj"
+    if len(multi_adj["year"]) != len(multi_adj["rate"]):
+        raise CreateArrayException(
+            f"Unequal number of arrays: "
+            f"year: {len(multi_adj['year'])}, "
+            f"tax_rate: {len(multi_adj['rate'])}."
+        )
+
+    # Specify the minimum and maximum years
+    min_year = min(project_years)
+    max_year = max(project_years)
+
+    if min(multi_adj["year"]) < min(project_years):
+        min_year = min(multi_adj["year"])
+
+    if max(multi_adj["year"]) > max(project_years):
+        max_year = max(multi_adj["year"])
+
+    # Create new arrays of "year" and "rate"
+    multi_new = {
+        "year": np.arange(min_year, max_year + 1, 1),
+        "rate": np.bincount(multi_adj["year"] - min_year, weights=multi_adj["rate"])
+    }
+
+    # Specify the index location of multi_adj["year"] in array multi_new["year"]
+    id_arr = np.array(
+        [
+            np.argwhere(multi_new["year"] == val).ravel()
+            for val in multi_adj["year"]
+        ]
+    ).ravel()
+
+    # Modify the value of multi_new["rate"]
+    for i, val in enumerate(multi_adj["rate"]):
+        if i == (len(multi_adj["rate"]) - 1):
+            break
+        multi_new["rate"][id_arr[i]:id_arr[i + 1]] = multi_adj["rate"][i]
+
+    # Add values to the right side of multi_new
+    if len(multi_new["year"]) > len(multi_new["rate"]):
+        fill_num = len(multi_new["year"]) - len(multi_new["rate"])
+        fill_right = np.repeat(multi_adj["rate"][-1], fill_num)
+        multi_new["rate"] = np.concatenate((multi_new["rate"], fill_right))
+
+    # Add values to the left side of multi_new
+    if id_arr[0] > 0:
+        fill_left = np.repeat(multi_adj["rate"][0], id_arr[0])
+        multi_new["rate"][0:id_arr[0]] = fill_left
+
+    # Capture "year" and "rate" in accordance with project_years
+    id_arr_new = np.array(
+        [
+            np.argwhere(multi_new["year"] == i).ravel()
+            for i in [min(project_years), max(project_years)]
+        ]
+    ).ravel()
+
+    multi_new["year_new"] = (multi_new["year"][id_arr_new[0]:int(id_arr_new[1] + 1)])
+    multi_new["rate_new"] = (multi_new["rate"][id_arr_new[0]:int(id_arr_new[1] + 1)])
+
+    return multi_new["rate_new"]
+
+
+def get_lifting_data_split_simple(
+    target_attr: Dict[str, np.ndarray],
+    is_target_attr_volume: bool,
+    prod_year_init: Dict[str, np.ndarray],
+    end_date_contract_1: datetime,
+    start_date_contract_2: datetime,
+) -> Dict[str, Dict[str, np.ndarray]]:
+    """
+    Split target attribute data into two corresponding Production Sharing Contracts (PSC).
+
+    Parameters
+    ----------
+    target_attr: dict
+        Dictionary containing the original target attribute data.
+    is_target_attr_volume: bool
+        Flag indicating whether the target attribute represents volume data.
+    prod_year_init: dict
+        Dictionary containing the production years for each contract.
+    end_date_contract_1: datetime
+        End date of the first contract.
+    start_date_contract_2: datetime
+        Start date of the second contract.
+
+    Returns
+    -------
+    Dict[str, Dict[str, np.ndarray]]
+        A modified dictionary with the original target attribute data split into two
+        corresponding PSC contracts
+
+    Notes
+    -----
+    (1) If the end year of the first contract is the same as the start year of the second
+        contract, the target data is split based on the transition year, and adjustments
+        are made for volume data.
+    (2) If the end year of the first contract is different from the start year of the second
+        contract, the target data is split based on the respective transition years.
+    """
+    keys_transition = ["PSC 1", "PSC 2"]
+
+    # End year of the first contract is the same as the start year of the second contract
+    if end_date_contract_1.year == start_date_contract_2.year:
+
+        # Specify the multiplier
+        days_diff = (
+                end_date_contract_1
+                - datetime(day=1, month=1, year=end_date_contract_1.year)
+        )
+        days_delta = (
+                datetime(day=31, month=12, year=end_date_contract_1.year)
+                - datetime(day=1, month=1, year=end_date_contract_1.year)
+        )
+        multiplier = (days_diff.days + 1) / (days_delta.days + 2)
+
+        # Identify the index location of the transition year
+        id_transition = {
+            key: np.argwhere(prod_year_init[key] == end_date_contract_1.year).ravel()
+            for key in prod_year_init.keys()
+        }
+
+        # Split the original target data into two corresponding PSC contracts
+        target_attr_modified = {
+            key: {
+                keys_transition[0]: target_attr[key][:id_transition[key][0] + 1].copy(),
+                keys_transition[1]: target_attr[key][id_transition[key][0]:].copy(),
+            }
+            for key in prod_year_init.keys()
+        }
+
+        # Adjust the value of target_data_modified at the transition year
+        if is_target_attr_volume is True:
+            for key in target_attr_modified.keys():
+                target_attr_modified[key][keys_transition[0]][-1] *= multiplier
+                target_attr_modified[key][keys_transition[1]][0] *= (1.0 - multiplier)
+
+    # End year of the first contract is different from the start year of the second contract
+    else:
+        # Identify the index location of the transition year
+        id_transition = {}
+        for key in prod_year_init.keys():
+            id_transition[key] = np.array(
+                [
+                    np.argwhere(prod_year_init[key] == i).ravel()
+                    for i in [end_date_contract_1.year, start_date_contract_2.year]
+                ]
+            ).ravel()
+
+        # Split the original target data into two corresponding PSC contracts
+        target_attr_modified = {
+            key: {
+                keys_transition[0]: target_attr[key][:int(min(id_transition[key]) + 1)].copy(),
+                keys_transition[1]: target_attr[key][int(max(id_transition[key])):].copy()
+            }
+            for key in prod_year_init.keys()
+        }
+
+    return target_attr_modified
+
+
+def get_lifting_data_split_advanced(
+    target_attr: Dict[str, Dict[str, np.ndarray]],
+    is_target_attr_volume: bool,
+    prod_year_init: Dict[str, np.ndarray],
+    end_date_contract_1: datetime,
+    start_date_contract_2: datetime,
+) -> Dict[str, Dict[str, Dict[str, np.ndarray]]]:
+    """
+    Split target attribute data into two corresponding Production Sharing Contracts (PSC).
+
+    Parameters
+    ----------
+    target_attr: dict
+        Nested dictionary containing the original target attribute data for each production year.
+    is_target_attr_volume: bool
+        Flag indicating whether the target attribute represents volume data.
+    prod_year_init: dict
+        Dictionary containing the production years for each contract.
+    end_date_contract_1: datetime
+        End date of the first contract.
+    start_date_contract_2: datetime
+        Start date of the second contract.
+
+    Returns
+    -------
+    Dict[str, Dict[str, Dict[str, np.ndarray]]]
+        A modified nested dictionary with the original target attribute data split into two
+        corresponding PSC contracts.
+
+    Notes
+    -----
+    (1) If the end year of the first contract is the same as the start year of the second
+        contract, the target data is split based on the transition year, and adjustments are
+        made for volume data.
+    (2) If the end year of the first contract is different from the start year of the second
+        contract, the target data is split based on the respective transition years.
+    """
+    keys_transition = ["PSC 1", "PSC 2"]
+
+    # End year of the first contract is the same as the start year of the second contract
+    if end_date_contract_1.year == start_date_contract_2.year:
+
+        # Specify the multiplier
+        days_diff = (
+                end_date_contract_1
+                - datetime(day=1, month=1, year=end_date_contract_1.year)
+        )
+        days_delta = (
+                datetime(day=31, month=12, year=end_date_contract_1.year)
+                - datetime(day=1, month=1, year=end_date_contract_1.year)
+        )
+        multiplier = (days_diff.days + 1) / (days_delta.days + 2)
+
+        # Identify the index location of the transition year
+        id_transition = {
+            key: {
+                i: np.argwhere(prod_year_init[key] == end_date_contract_1.year).ravel()
+                for i in target_attr[key].keys()
+            }
+            for key in target_attr.keys()
+        }
+
+        # Split the original target data into two corresponding PSC contracts
+        target_attr_modified = {
+            key: {
+                i: {
+                    keys_transition[0]: target_attr[key][i][:id_transition[key][i][0] + 1].copy(),
+                    keys_transition[1]: target_attr[key][i][id_transition[key][i][0]:].copy(),
+                }
+                for i in target_attr[key].keys()
+            }
+            for key in target_attr.keys()
+        }
+
+        # Adjust the value of target_data_modified at the transition year
+        if is_target_attr_volume is True:
+            for key in target_attr.keys():
+                for i in target_attr[key].keys():
+                    target_attr_modified[key][i]["PSC 1"][-1] *= multiplier
+                    target_attr_modified[key][i]["PSC 2"][0] *= (1.0 - multiplier)
+
+    else:
+        # Identify the index location of the transition year
+        id_transition = {
+            key: {
+                i: np.array(
+                    [
+                        np.argwhere(prod_year_init[key] == j).ravel()
+                        for j in [end_date_contract_1.year, start_date_contract_2.year]
+                    ]
+                ).ravel()
+                for i in target_attr[key].keys()
+            }
+            for key in target_attr.keys()
+        }
+
+        # Split the original target data into two corresponding PSC contracts
+        target_attr_modified = {
+            key: {
+                i: {
+                    keys_transition[0]: target_attr[key][i][:int(min(id_transition[key][i]) + 1)].copy(),
+                    keys_transition[1]: target_attr[key][i][int(max(id_transition[key][i])):].copy(),
+                }
+                for i in target_attr[key].keys()
+            }
+            for key in target_attr.keys()
+        }
+
+    return target_attr_modified
+
+
+def get_cost_data_split(
+    target_attr: list | np.ndarray,
+    is_target_attr_volume: bool,
+    expense_year_init: np.ndarray,
+    end_date_contract_1: datetime,
+    start_date_contract_2: datetime,
+) -> dict:
+    """
+    Split cost data based on the transition between two Production Sharing Contracts (PSCs).
+
+    Parameters
+    ----------
+    target_attr: list, np.ndarray
+        The target attribute data to be split.
+    is_target_attr_volume: bool
+        Indicates if the target attribute represents volume.
+    expense_year_init: np.ndarray
+        Array of years corresponding to the cost data.
+    end_date_contract_1: datetime
+        End date of the first contract.
+    start_date_contract_2: datetime
+        Start date of the second contract.
+
+    Returns
+    -------
+    dict
+        A dictionary containing split target attribute data for PSC 1 and PSC 2.
+
+    Notes
+    -----
+    - If end year of the first contract is the same as the start year of the second contract,
+      the target_attr is split based on the transition year, adjusting the volume accordingly.
+    - If end year of the first contract is different from the start year of the second contract,
+      the target_attr is split based on the transition year.
+    """
+    if isinstance(target_attr, list):
+        target_attr = np.array(target_attr)
+
+    keys_transition = ["PSC 1", "PSC 2"]
+
+    # End year of the first contract is the same as the start year of the second contract
+    if end_date_contract_1.year == start_date_contract_2.year:
+        # Specify the multiplier
+        days_diff = (
+                end_date_contract_1
+                - datetime(day=1, month=1, year=end_date_contract_1.year)
+        )
+        days_delta = (
+                datetime(day=31, month=12, year=end_date_contract_1.year)
+                - datetime(day=1, month=1, year=end_date_contract_1.year)
+        )
+        multiplier = (days_diff.days + 1) / (days_delta.days + 2)
+
+        # Identify the index location of the transition year
+        id_transition = {
+            "exact": np.argwhere(expense_year_init == end_date_contract_1.year).ravel(),
+            "before": np.argwhere(expense_year_init < end_date_contract_1.year).ravel(),
+            "after": np.argwhere(expense_year_init > end_date_contract_1.year).ravel(),
+        }
+        id_transition[keys_transition[0]] = np.concatenate(
+            (id_transition["before"], id_transition["exact"])
+        )
+        id_transition[keys_transition[1]] = np.concatenate(
+            (id_transition["exact"], id_transition["after"])
+        )
+
+        # Split the original target data into two corresponding PSC contracts
+        target_attr_modified = {key: target_attr[id_transition[key]].copy() for key in keys_transition}
+
+        # Adjust the value of target_data_modified at the transition year
+        if is_target_attr_volume is True:
+            id_transition_modified = {
+                key: np.array(
+                    [
+                        np.argwhere(id_transition[key] == i).ravel()
+                        for i in id_transition["exact"]
+                    ]
+                ).ravel()
+                for key in keys_transition
+            }
+
+            multipliers = [multiplier, (1.0 - multiplier)]
+            for i, val in enumerate(keys_transition):
+                target_attr_modified[val][id_transition_modified[val]] *= multipliers[i]
+
+    else:
+        # Identify the index location of the transition year
+        id_transition = {
+            keys_transition[0]: np.argwhere(expense_year_init <= end_date_contract_1.year).ravel(),
+            keys_transition[1]: np.argwhere(expense_year_init >= start_date_contract_2.year).ravel(),
+        }
+
+        id_transition["before"] = np.argsort(expense_year_init[id_transition[keys_transition[0]]])
+        id_transition["after"] = np.argsort(expense_year_init[id_transition[keys_transition[1]]])
+
+        # Split the original target data into two corresponding PSC contracts
+        target_attr_modified_unsorted = {
+            key: target_attr[id_transition[key]].copy() for key in keys_transition
+        }
+
+        target_attr_modified = {
+            i: target_attr_modified_unsorted[i][j] for i, j in
+            zip(keys_transition, [id_transition["before"], id_transition["after"]])
+        }
+
+    return target_attr_modified
+
+
+def get_to_list_converter(target_param: dict) -> dict:
+    """
+    Converts the values of a dictionary from NumPy arrays to Python lists.
+
+    Parameters
+    ----------
+    target_param: dict
+        A dictionary with NumPy arrays as values.
+
+    Returns
+    -------
+    dict
+        A new dictionary with the same keys as `target_param`, but the values are
+        converted to Python lists using the `tolist()` method of NumPy arrays.
+
+    Example:
+    >>> input_dict = {'a': np.array([1, 2, 3]), 'b': np.array([4, 5, 6])}
+    >>> result = get_to_list_converter(input_dict)
+    >>> print(result)
+    {'a': [1, 2, 3], 'b': [4, 5, 6]}
+    """
+    return {key: target_param[key].tolist() for key in target_param.keys()}
+
+
+def get_fluidtype_converter(target: str) -> FluidType:
+    """
+    Get the corresponding FluidType enum for a given target fluid.
+
+    Parameters
+    ----------
+    target: str
+        The target fluid for which the FluidType enum is to be retrieved.
+
+    Returns
+    -------
+    FluidType or None
+        The FluidType enum corresponding to the provided target fluid.
+        Returns None if the target fluid is not found in the predefined attributes.
+
+    Examples
+    --------
+    >>> get_fluidtype_converter("Oil")
+    <FluidType.OIL: 'Oil'>
+
+    >>> get_fluidtype_converter("CO2")
+    <FluidType.CO2: 'CO2'>
+
+    >>> get_fluidtype_converter("Water")
+    None
+    """
+    attrs = {
+        "Oil": FluidType.OIL,
+        "Gas": FluidType.GAS,
+        "Sulfur": FluidType.SULFUR,
+        "Electricity": FluidType.ELECTRICITY,
+        "CO2": FluidType.CO2,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_boolean_converter(target: str) -> bool:
+    """
+    Get the boolean value corresponding to the provided target.
+
+    Parameters
+    ----------
+    target: str
+        The target string representing a boolean value ("Yes" or "No").
+
+    Returns
+    -------
+    bool or None
+        The boolean value corresponding to the provided target.
+        Returns True if target is "Yes", False if target is "No".
+        Returns None if the target is neither "Yes" nor "No".
+
+    Examples
+    --------
+    >>> get_boolean_converter("Yes")
+    True
+
+    >>> get_boolean_converter("No")
+    False
+
+    >>> get_boolean_converter("Maybe")
+    None
+    """
+    attrs = {"Yes": True, "No": False}
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_split_type_converter(target: str) -> TaxSplitTypeCR:
+    """
+    Converts a string representing a tax split type to its corresponding
+    enum value from the TaxSplitTypeCR class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the tax split type.
+
+    Returns
+    -------
+    Union: TaxSplitTypeCR, None
+        The corresponding enum value if the target matches one of the predefined split types.
+        Returns None if no match is found.
+
+    Example
+    -------
+    >>> result = get_split_type_converter("RC Split")
+    >>> print(result)
+    TaxSplitTypeCR.R2C
+    """
+    attrs = {
+        "Conventional": TaxSplitTypeCR.CONVENTIONAL,
+        "RC Split": TaxSplitTypeCR.R2C,
+        "ICP Sliding Scale": TaxSplitTypeCR.SLIDING_SCALE,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
 
 
 def summarizer(

@@ -71,6 +71,8 @@ class GrossSplit(BaseProject):
     _gas_ctr_share_before_transfer: np.ndarray = field(default=None, init=False, repr=False)
     _oil_gov_share: np.ndarray = field(default=None, init=False, repr=False)
     _gas_gov_share: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
 
     _oil_cost_tobe_deducted: np.ndarray = field(default=None, init=False, repr=False)
     _gas_cost_tobe_deducted: np.ndarray = field(default=None, init=False, repr=False)
@@ -288,6 +290,7 @@ class GrossSplit(BaseProject):
                 '>=25': 0,
             },
             'domestic_use': {
+                'x<30': 0,
                 '30<=x<50': 0.02,
                 '50<=x<70': 0.03,
                 '70<=x<100': 0.04,
@@ -661,6 +664,9 @@ class GrossSplit(BaseProject):
         # Generating Tax array based on the tax regime if tax_rate argument is None
         if tax_rate is None:
             self._tax_rate_arr = self._get_tax_by_regime(tax_regime=tax_regime)
+
+        elif isinstance(tax_rate, np.ndarray):
+            self._tax_rate_arr = tax_rate
 
         self._oil_tax = self._oil_taxable_income * self._tax_rate_arr
         self._gas_tax = self._gas_taxable_income * self._tax_rate_arr
