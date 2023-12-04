@@ -4,12 +4,12 @@ Prepare data input loaded from a target Excel file.
 
 from dataclasses import dataclass, field, InitVar
 from datetime import datetime
+from pyxlsb import convert_date
 import numpy as np
 import pandas as pd
 
 from pyscnomics.econ.selection import TaxSplitTypeCR
 from pyscnomics.tools.helper import (
-    get_datetime,
     get_inflation_applied_converter,
     get_tax_payment_converter,
     get_tax_regime_converter,
@@ -150,7 +150,6 @@ class GeneralConfigData:
     gsa_number: int
         The number of GSA available.
     """
-
     start_date_project: datetime
     end_date_project: datetime
     start_date_project_second: datetime
@@ -190,13 +189,13 @@ class GeneralConfigData:
 
         # Prepare attributes associated with datetime
         self.start_date_project, self.end_date_project = list(
-            map(get_datetime, [self.start_date_project, self.end_date_project])
+            map(convert_date, [self.start_date_project, self.end_date_project])
         )
 
         # Prepare attribute project_years and project_duration
         if "Transition" in self.type_of_contract:
             self.start_date_project_second, self.end_date_project_second = list(
-                map(get_datetime, [self.start_date_project_second, self.end_date_project_second])
+                map(convert_date, [self.start_date_project_second, self.end_date_project_second])
             )
 
             if self.end_date_project.year < self.start_date_project.year:
@@ -225,15 +224,15 @@ class GeneralConfigData:
                 self.start_date_project.year, self.end_date_project_second.year + 1, 1
             )
 
-            if self.oil_onstream_date is None:
+            if self.oil_onstream_date is not None:
                 self.oil_onstream_date = {
-                    "PSC 1": self.start_date_project,
+                    "PSC 1": convert_date(date=self.oil_onstream_date),
                     "PSC 2": self.start_date_project_second,
                 }
 
-            if self.gas_onstream_date is None:
+            if self.gas_onstream_date is not None:
                 self.gas_onstream_date = {
-                    "PSC 1": self.start_date_project,
+                    "PSC 1": convert_date(date=self.gas_onstream_date),
                     "PSC 2": self.start_date_project_second,
                 }
 
@@ -251,10 +250,10 @@ class GeneralConfigData:
                 )
 
             if self.oil_onstream_date is not None:
-                self.oil_onstream_date = get_datetime(ordinal_date=self.oil_onstream_date)
+                self.oil_onstream_date = convert_date(date=self.oil_onstream_date)
 
             if self.gas_onstream_date is not None:
-                self.gas_onstream_date = get_datetime(ordinal_date=self.gas_onstream_date)
+                self.gas_onstream_date = convert_date(date=self.gas_onstream_date)
 
 
 @dataclass
@@ -348,7 +347,7 @@ class FiscalConfigData:
     multi_lbt: InitVar[float] = field(repr=False)
 
     # Attributes associated with project duration
-    project_years: np.ndarray = field(repr=False)
+    project_years: np.ndarray
 
     # Attributes to be defined later
     tax_rate: None | float | np.ndarray = field(default=None, init=False)

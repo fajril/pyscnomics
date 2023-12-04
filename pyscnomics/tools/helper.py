@@ -822,7 +822,6 @@ def get_array_from_target(target: dict, project_years: np.ndarray) -> np.ndarray
     CreateArrayException
         If the lengths of 'year' and 'rate' arrays in 'target' are not equal.
     """
-
     # Filter dict "multi_adj" for NaN values
     multi_adj = {
         key: np.array(list(filter(lambda i: i is not np.nan, target[key])))
@@ -886,8 +885,8 @@ def get_array_from_target(target: dict, project_years: np.ndarray) -> np.ndarray
         ]
     ).ravel()
 
-    multi_new["year_new"] = (multi_new["year"][id_arr_new[0]:int(id_arr_new[1] + 1)])
-    multi_new["rate_new"] = (multi_new["rate"][id_arr_new[0]:int(id_arr_new[1] + 1)])
+    multi_new["year_new"] = multi_new["year"][id_arr_new[0]:int(id_arr_new[1] + 1)]
+    multi_new["rate_new"] = multi_new["rate"][id_arr_new[0]:int(id_arr_new[1] + 1)]
 
     return multi_new["rate_new"]
 

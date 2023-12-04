@@ -48,6 +48,10 @@ class Spreadsheet:
     """
 
     workbook_to_read: str = field(default=None)
+    directory_location: str = field(default=None)
+
+    # Attribute associated with directory location
+    load_dir: str = field(default=None, init=False)
 
     # Attributes associated with loading data from a target Excel file
     sheets_name: list = field(default=None, init=False, repr=False)
@@ -99,6 +103,13 @@ class Spreadsheet:
                     f"is not a str format."
                 )
 
+        # Configure attribute directory_location
+        if self.directory_location is None:
+            self.load_dir = os.path.join(os.getcwd(), self.workbook_to_read)
+
+        if self.directory_location is not None:
+            self.load_dir = os.path.join(self.directory_location, self.workbook_to_read)
+
     def read_from_excel(self) -> None:
         """
         Reads data from a target Excel file specified by 'workbook_to_read' attribute.
@@ -116,14 +127,11 @@ class Spreadsheet:
         (2) From the target Excel file, identify the worksheets,
         (3) Load data from the target Excel file, capturing all necessary worksheets.
         """
-        # Directory location of the target Excel file
-        load_dir = os.path.join(os.getcwd(), self.workbook_to_read)
-
         # Identify worksheets in the target Excel file
-        excel = pd.ExcelFile(load_dir)
+        excel = pd.ExcelFile(self.load_dir)
         self.sheets_name = excel.sheet_names
 
-        # self.sheets_name = [sh.title for sh in sheets]
+        # # self.sheets_name = [sh.title for sh in sheets]
         self.sheets_loaded = [
             i for i in self.sheets_name
             if i not in [
@@ -213,15 +221,13 @@ class Spreadsheet:
         -----
         The procedures are as follows:
         (1) Slice the data, only capture columns that contain necessary data,
-        (2) Drop NaN values from the associated dataframe,
-        (3) Convert the remaining NaN values to zero,
-        (4) Assign data to their associated attributes,
-        (5) Return a new instance of FiscalConfigData with filled attributes.
+        (2) Assign data to their associated attributes,
+        (3) Return a new instance of FiscalConfigData with filled attributes.
         """
-        # Step #1 - Step #3 (See 'Notes' section in the docstring)
+        # Step #1 (See 'Notes' section in the docstring)
         fiscal_config_data_loaded = self.data_loaded["Fiscal Config"].iloc[:, 1:]
 
-        # Step #4 - Step #5 (See 'Notes' section in the docstring)
+        # Step #2 (See 'Notes' section in the docstring)
         tax_mode = fiscal_config_data_loaded.iloc[0, 1]
         tax_rate_init = fiscal_config_data_loaded.iloc[1, 1]
         tax_payment_method = fiscal_config_data_loaded.iloc[11, 1]
@@ -256,6 +262,7 @@ class Spreadsheet:
             "rate": fiscal_config_data_loaded.iloc[87:108, 1].to_numpy(),
         }
 
+        # Step #3 (See 'Notes' section in the docstring)
         return FiscalConfigData(
             tax_payment_method=tax_payment_method,
             tax_ftp_regime=tax_ftp_regime,
@@ -1700,6 +1707,6 @@ class Spreadsheet:
         # self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
         # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
 
-        # print('\t')
-        # print(f'Filetype: {type(self.oil_lifting_data)}')
-        # print('oil_lifting_data = \n', self.oil_lifting_data)
+        print('\t')
+        print(f'Filetype: {type(self.oil_lifting_data)}')
+        print('oil_lifting_data = \n', self.oil_lifting_data)
