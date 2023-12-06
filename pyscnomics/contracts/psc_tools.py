@@ -84,7 +84,7 @@ def get_cost_to_be_recovered_after_tf(unrecovered_cost: np.ndarray,
     out: np.ndarray
         The array of cost to be recovered.
     """
-    ctr = np.concatenate((np.zeros(1), -np.diff(unrecovered_cost - transferred_cost)))
+    ctr = np.concatenate((np.zeros(1), -np.diff(unrecovered_cost - np.cumsum(transferred_cost))))
     result = np.where(ctr > 0, ctr, 0)
 
     return result
@@ -147,23 +147,44 @@ def get_transfer(gas_unrecovered: np.ndarray,
     return trf2oil, trf2gas
 
 
+# def get_unrec_cost_after_tf(depreciation,
+#                             non_capital,
+#                             revenue,
+#                             ftp_ctr,
+#                             ftp_gov,
+#                             ic,
+#                             transferred_cost):
+#     unrecovered_cost = np.cumsum(depreciation + non_capital) - np.cumsum(
+#         revenue - (ftp_ctr + ftp_gov) - ic
+#     )
+#
+#     unrecovered_cost = np.where(unrecovered_cost >= 0, unrecovered_cost - np.cumsum(transferred_cost), 0)
+#
+#     # Condition where there is no revenue but still there is depreciation + non-capital
+#     left_cost = np.where(np.logical_and((revenue - ftp_ctr - ftp_gov - ic) < depreciation + non_capital,
+#                                         unrecovered_cost == 0),
+#                          (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic) - transferred_cost, 0)
+#     unrecovered_cost_final = unrecovered_cost + np.cumsum(left_cost)
+#     return unrecovered_cost_final
+
 def get_unrec_cost_after_tf(depreciation,
                             non_capital,
                             revenue,
                             ftp_ctr,
                             ftp_gov,
                             ic,
-                            transferred_cost):
+                            transferred_cost_in,
+                            transferred_cost_out):
     unrecovered_cost = np.cumsum(depreciation + non_capital) - np.cumsum(
         revenue - (ftp_ctr + ftp_gov) - ic
     )
 
-    unrecovered_cost = np.where(unrecovered_cost >= 0, unrecovered_cost - transferred_cost, 0)
+    unrecovered_cost = np.where(unrecovered_cost >= 0, unrecovered_cost - np.cumsum(transferred_cost_in) + np.cumsum(transferred_cost_out), 0)
 
     # Condition where there is no revenue but still there is depreciation + non-capital
     left_cost = np.where(np.logical_and((revenue - ftp_ctr - ftp_gov - ic) < depreciation + non_capital,
                                         unrecovered_cost == 0),
-                         (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic) - transferred_cost, 0)
+                         (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic) - transferred_cost_in + transferred_cost_out, 0)
     unrecovered_cost_final = unrecovered_cost + np.cumsum(left_cost)
     return unrecovered_cost_final
 
