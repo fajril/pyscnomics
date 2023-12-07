@@ -3,7 +3,8 @@ import pandas as pd
 import time
 from datetime import datetime
 
-from pyscnomics.econ.selection import FluidType, TaxPaymentMode, FTPTaxRegime
+# from pyscnomics.econ.selection import FluidType, TaxPaymentMode, FTPTaxRegime
+from pyscnomics.econ.selection import FluidType, FTPTaxRegime
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.contracts.costrecovery import CostRecovery
@@ -245,7 +246,7 @@ psc_table_oil['Cost to Be Recovered'] = psc._oil_cost_to_be_recovered
 psc_table_oil['Cost Recovery'] = psc._oil_cost_recovery
 psc_table_oil['ETS Before Transfer'] = psc._oil_ets_before_transfer
 psc_table_oil['Transfer to Oil'] = psc._transfer_to_oil
-# psc_table_oil['Transfer to Gas'] = psc._transfer_to_gas
+psc_table_oil['Transfer to Gas'] = psc._transfer_to_gas
 psc_table_oil['Unrec after Transfer'] = psc._oil_unrecovered_after_transfer
 psc_table_oil['Cost To Be Recovered After TF'] = psc._oil_cost_to_be_recovered_after_tf
 psc_table_oil['Cost Recovery After TF'] = psc._oil_cost_recovery_after_tf

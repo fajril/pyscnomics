@@ -12,7 +12,7 @@ from pyscnomics.econ.selection import (
     TaxType,
     TaxSplitTypeCR,
     InflationAppliedTo,
-    TaxPaymentMode,
+    # TaxPaymentMode,
     FTPTaxRegime,
     NPVSelection,
     DiscountingMode,
@@ -626,38 +626,38 @@ def get_inflation_applied_converter(target: str) -> InflationAppliedTo:
     return None
 
 
-def get_tax_payment_converter(target: str) -> TaxPaymentMode:
-    """
-    Converts a string representing a tax payment mode to its corresponding
-    enum value from the TaxPaymentMode class.
-
-    Parameters
-    ----------
-    target: str
-        The string representation of the tax payment mode.
-
-    Returns
-    -------
-    Union[TaxPaymentMode, None]
-        The corresponding enum value if the target matches one of the predefined payment modes.
-        Returns None if no match is found.
-
-    Example
-    -------
-    >>> result = get_tax_payment_converter("Direct Mode")
-    >>> print(result)
-    TaxPaymentMode.TAX_DIRECT_MODE
-    """
-    attrs = {
-        "Direct Mode": TaxPaymentMode.TAX_DIRECT_MODE,
-        "Due Mode": TaxPaymentMode.TAX_DUE_MODE,
-    }
-
-    for key in attrs.keys():
-        if target == key:
-            return attrs[key]
-
-    return None
+# def get_tax_payment_converter(target: str) -> TaxPaymentMode:
+#     """
+#     Converts a string representing a tax payment mode to its corresponding
+#     enum value from the TaxPaymentMode class.
+#
+#     Parameters
+#     ----------
+#     target: str
+#         The string representation of the tax payment mode.
+#
+#     Returns
+#     -------
+#     Union[TaxPaymentMode, None]
+#         The corresponding enum value if the target matches one of the predefined payment modes.
+#         Returns None if no match is found.
+#
+#     Example
+#     -------
+#     >>> result = get_tax_payment_converter("Direct Mode")
+#     >>> print(result)
+#     TaxPaymentMode.TAX_DIRECT_MODE
+#     """
+#     attrs = {
+#         "Direct Mode": TaxPaymentMode.TAX_DIRECT_MODE,
+#         "Due Mode": TaxPaymentMode.TAX_DUE_MODE,
+#     }
+#
+#     for key in attrs.keys():
+#         if target == key:
+#             return attrs[key]
+#
+#     return None
 
 
 def get_tax_regime_converter(target: str) -> FTPTaxRegime:
@@ -684,7 +684,7 @@ def get_tax_regime_converter(target: str) -> FTPTaxRegime:
     """
     attrs = {
         "PDJP No.20 Tahun 2017": FTPTaxRegime.PDJP_20_2017,
-        "Pre PDJP No.20 Tahun 2017": FTPTaxRegime.PRE_2017,
+        "Pre PDJP No.20 Tahun 2017": FTPTaxRegime.PRE_PDJP_20_2017,
     }
 
     for key in attrs.keys():

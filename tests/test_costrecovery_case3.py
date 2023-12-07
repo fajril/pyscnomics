@@ -1,6 +1,7 @@
 import numpy as np
 
 from pyscnomics.dataset.sample import load_data, load_testing
+from pyscnomics.econ.selection import FTPTaxRegime
 
 psc = load_data(dataset_type='case3', contract_type='cost_recovery')
 
@@ -27,7 +28,7 @@ psc.gas_dmo_holiday_duration = 60
 
 tax_rate = 0.424
 
-psc.run(tax_rate=tax_rate)
+psc.run(tax_rate=tax_rate, ftp_tax_regime=FTPTaxRegime.PRE_PDJP_20_2017)
 
 
 def test_revenue():

@@ -143,11 +143,12 @@ class FTPTaxRegime(Enum):
     ----------
     PDJP_20_2017: str
         Manifests Peraturan DIRJEN PAJAK No. PER-20/PJ/2017
-    PRE_2017: str
+    PRE_PDJP_20_2017: str
         Manifests Pre Peraturan DIRJEN PAJAK No. PER-20/PJ/2017
     """
     PDJP_20_2017 = "Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
-    PRE_2017 = "Pre Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
+    PRE_PDJP_20_2017 = "Pre Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
+    DIRECT_MODE = "The tax will be paid directly"
 
 
 class GrossSplitRegime(Enum):

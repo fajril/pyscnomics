@@ -8,7 +8,7 @@ import time
 from pyscnomics.dataset.sample import load_data, load_testing
 
 from pyscnomics.tools.summary import get_summary
-from pyscnomics.econ.selection import NPVSelection, DiscountingMode
+from pyscnomics.econ.selection import NPVSelection, DiscountingMode, FTPTaxRegime
 
 # pd.options.display.float_format = '{:,.2f}'.format
 pd.set_option('display.max_columns', None)
@@ -43,7 +43,7 @@ psc.gas_dmo_holiday_duration = 60
 tax_rate = 0.424
 
 start_time = time.time()
-psc.run(tax_rate=tax_rate, discount_rate_year=2021)
+psc.run(tax_rate=tax_rate, discount_rate_year=2021, ftp_tax_regime=FTPTaxRegime.PRE_PDJP_20_2017)
 end_time = time.time()
 print('Execution Time: ', end_time - start_time, '\n')
 
@@ -79,7 +79,7 @@ psc_table_oil['Unrec after Transfer'] = psc._oil_unrecovered_after_transfer
 psc_table_oil['Cost To Be Recovered After TF'] = psc._oil_cost_to_be_recovered_after_tf
 psc_table_oil['Cost Recovery After TF'] = psc._oil_cost_recovery_after_tf
 psc_table_oil['ETS After Transfer'] = psc._oil_ets_after_transfer
-psc_table_oil['Contractor Share'] = psc._oil_contractor_share
+psc_table_oil['Contractor Share Prior Tax'] = psc._oil_contractor_share
 psc_table_oil['Government Share'] = psc._oil_government_share
 psc_table_oil['DMO Volume'] = psc._oil_dmo_volume
 psc_table_oil['DMO Fee'] = psc._oil_dmo_fee
@@ -117,7 +117,7 @@ psc_table_gas['Unrec after Transfer'] = psc._gas_unrecovered_after_transfer
 psc_table_gas['Cost To Be Recovered After TF'] = psc._gas_cost_to_be_recovered_after_tf
 psc_table_gas['Cost Recovery After TF'] = psc._gas_cost_recovery_after_tf
 psc_table_gas['ETS After Transfer'] = psc._gas_ets_after_transfer
-psc_table_gas['Contractor Share'] = psc._gas_contractor_share
+psc_table_gas['Contractor Share Prior Tax'] = psc._gas_contractor_share
 psc_table_gas['Government Share'] = psc._gas_government_share
 psc_table_gas['DMO Volume'] = psc._gas_dmo_volume
 psc_table_gas['DMO Fee'] = psc._gas_dmo_fee

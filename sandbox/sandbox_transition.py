@@ -3,7 +3,8 @@ import pandas as pd
 import time
 from datetime import datetime
 
-from pyscnomics.econ.selection import FTPTaxRegime, FluidType, TaxPaymentMode
+# from pyscnomics.econ.selection import FTPTaxRegime, FluidType, TaxPaymentMode
+from pyscnomics.econ.selection import FTPTaxRegime, FluidType
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.contracts.costrecovery import CostRecovery
@@ -224,10 +225,10 @@ psc2 = GrossSplit(
     gas_dmo_fee_portion=1.0,
     gas_dmo_holiday_duration=0)
 
-ftp_tax_regime = FTPTaxRegime.PRE_2017
+ftp_tax_regime = FTPTaxRegime.PRE_PDJP_20_2017
 eff_tax_rate = 0.48
 tax_payment_method = TaxPaymentMode.TAX_DIRECT_MODE
-argument_contract1 = {'ftp_tax_regime': FTPTaxRegime.PRE_2017,
+argument_contract1 = {'ftp_tax_regime': FTPTaxRegime.PRE_PDJP_20_2017,
                       'tax_rate': eff_tax_rate,
                       'tax_payment_method': tax_payment_method}
 

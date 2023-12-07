@@ -4,9 +4,6 @@ Handles calculations associated with PSC Cost Recovery.
 
 from dataclasses import dataclass, field
 import numpy as np
-from functools import reduce
-
-import pandas as pd
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
@@ -16,7 +13,6 @@ from pyscnomics.econ.selection import (
     TaxRegime,
     FTPTaxRegime,
     TaxSplitTypeCR,
-    TaxPaymentMode,
     TaxType,
     DeprMethod,
     OtherRevenue
@@ -41,7 +37,7 @@ class CostRecovery(BaseProject):
 
     tax_split_type: TaxSplitTypeCR = field(default=TaxSplitTypeCR.CONVENTIONAL)
     condition_dict: dict = field(default_factory=dict)
-    indicator_rc_icp_sliding: list[float] = field(default_factory=list)
+    indicator_rc_icp_sliding: np.ndarray = field(default=None)
     oil_ctr_pretax_share: float | np.ndarray = field(default=0.25)
     gas_ctr_pretax_share: float | np.ndarray = field(default=0.5)
 
@@ -221,32 +217,68 @@ class CostRecovery(BaseProject):
     _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
 
     def _get_rc_icp_pretax(self):
+        """
+        A Function to get the value of PreTax using Revenue over Cost (RC) or Indonesian Crude Price (ICP) sliding scale.
+
+        Notes
+        -------
+        The structure of the dictionary is as the following:
+        condition_dict =
+        {
+            'condition_1': {'bot_limit': 0,
+                            'top_limit': 1,
+                            'ctr_oil': 0.3137260,
+                            'ctr_gas': 0.5498040,
+                            'gov_oil': 0.686274,
+                            'gov_gas': 0.45098,
+                            'split_ctr_oil': 20,
+                            'split_ctr_gas': 35,
+                            'split_gov_oil': 80,
+                            'split_gov_gas': 65},
+
+            'condition_2': {'bot_limit': 1,
+                            'top_limit': 1.2,
+                            'ctr_oil': 0.27451,
+                            'ctr_gas': 0.509804,
+                            'gov_oil': 0.72549,
+                            'gov_gas': 0.490196,
+                            'split_ctr_oil': 17.5,
+                            'split_ctr_gas': 32.5,
+                            'split_gov_oil': 82.5,
+                            'split_gov_gas': 67.5},
+
+            'condition_3': {'bot_limit': 1.2,
+                            'top_limit': 1.4,
+                            'ctr_oil': 0.235295,
+                            'ctr_gas': 0.470589,
+                            'gov_oil': 0.764705,
+                            'gov_gas': 0.529411,
+                            'split_ctr_oil': 15,
+                            'split_ctr_gas': 30,
+                            'split_gov_oil': 85,
+                            'split_gov_gas': 70}
+        }
+
+        Returns
+        -------
+        Modifying the following Cost Recovery attributes:
+            self.oil_ctr_pretax_share
+            self.gas_ctr_pretax_share
+
+        """
         # Extract relevant values from the condition_dict dictionary
-        bot_limits = np.array(
-            [self.condition_dict[c]["bot_limit"] for c in self.condition_dict]
-        )
-        top_limits = np.array(
-            [self.condition_dict[c]["top_limit"] for c in self.condition_dict]
-        )
-        ctr_oil_values = np.array(
-            [self.condition_dict[c]["ctr_oil"] for c in self.condition_dict]
-        )
-        ctr_gas_values = np.array(
-            [self.condition_dict[c]["ctr_gas"] for c in self.condition_dict]
-        )
+        bot_limits = np.array([self.condition_dict[c]['bot_limit'] for c in self.condition_dict])
+        top_limits = np.array([self.condition_dict[c]['top_limit'] for c in self.condition_dict])
+        ctr_oil_values = np.array([self.condition_dict[c]['ctr_oil'] for c in self.condition_dict])
+        ctr_gas_values = np.array([self.condition_dict[c]['ctr_gas'] for c in self.condition_dict])
 
         # Create conditions using vectorized comparisons
-        conditions = (bot_limits < self.indicator_rc_icp_sliding) & (
-                self.indicator_rc_icp_sliding <= top_limits
-        )
+        conditions = (bot_limits[:, np.newaxis] < self.indicator_rc_icp_sliding) & (
+                    self.indicator_rc_icp_sliding <= top_limits[:, np.newaxis])
 
         # Calculate corresponding values using np.select()
-        self.oil_ctr_pretax_share = np.select(
-            conditions, ctr_oil_values, default=np.nan
-        )
-        self.gas_ctr_pretax_share = np.select(
-            conditions, ctr_gas_values, default=np.nan
-        )
+        self.oil_ctr_pretax_share = np.select(conditions, ctr_oil_values[:, np.newaxis], default=np.nan)
+        self.gas_ctr_pretax_share = np.select(conditions, ctr_gas_values[:, np.newaxis], default=np.nan)
 
     def _get_ftp(self):
         self._oil_ftp_ctr = np.zeros_like(self._oil_revenue)
@@ -281,7 +313,7 @@ class CostRecovery(BaseProject):
             tangible_class = self._oil_tangible
 
         # Applying the IC calculation to only true value
-        ic_arr = np.where(np.asarray(tangible_class.is_ic_applied) == True,
+        ic_arr = np.where(np.asarray(tangible_class.is_ic_applied) is True,
                           tangible_class.cost * ic_rate,
                           0)
 
@@ -423,15 +455,14 @@ class CostRecovery(BaseProject):
                                       - ic
                                       - cost_recovery
                                       - transferred_out
-                                      + transferred_in
-                                      ,
+                                      + transferred_in,
                                       0)
 
         tol = np.full_like(ets_after_transfer, fill_value=1.0e-14)
         return np.where(ets_after_transfer < tol, 0, ets_after_transfer)
 
     @staticmethod
-    def _get_equity_share(ets, pretax_ctr):
+    def _get_equity_share(ets, pretax_ctr) -> tuple:
         r"""
         Use to calculate equity share (ES).
 
@@ -461,56 +492,60 @@ class CostRecovery(BaseProject):
         return contractor_share, government_share
 
     @staticmethod
-    # def _get_ftp_tax_payment(
-    #         unrec: np.ndarray,
-    #         ftp: np.ndarray,
-    #         tax_rate: float,
-    #         ftp_tax_regime: FTPTaxRegime = FTPTaxRegime.PDJP_20_2017,
-    # ):
-    #     """
-    #     A funtion to get the array of tax payment of the First Tranche Petroleum (FTP).
-    #
-    #     Parameters
-    #     ----------
-    #     unrec: np.ndarray
-    #         The array containing the Unrecovered Cost.
-    #     ftp: np.ndarray
-    #         The array containing the contractor's FTP.
-    #     tax_rate: float
-    #         The tax rate value.
-    #     ftp_tax_regime: TaxSplitTypeCR
-    #         The regime configuration used.
-    #
-    #     Returns
-    #     -------
-    #     ftp_tax_payment: np.ndarray
-    #         The array of Tax Payment of the FTP.
-    #     """
-    #     if ftp_tax_regime == FTPTaxRegime.PDJP_20_2017:
-    #         cum_ftp = np.cumsum(ftp)
-    #         cum_ftp = np.where(cum_ftp > unrec, cum_ftp, 0)
-    #         tax_of_ftp = np.concatenate((np.zeros(1), np.diff(cum_ftp * tax_rate)))
-    #         ftp_tax_payment = np.where(tax_of_ftp > 0, tax_of_ftp, 0)
-    #
-    #     else:
-    #         ftp_tax_payment = ftp * tax_rate
-    #
-    #     return ftp_tax_payment
-
-    @staticmethod
     def _get_tax_payment(
             ctr_share: np.ndarray,
             taxable_income: np.ndarray,
             tax_rate: np.ndarray,
             ftp_ctr: np.ndarray,
             unrec_cost: np.ndarray,
-            ftp_tax_regime: FTPTaxRegime = FTPTaxRegime.PRE_2017,
-    ):
+            ftp_tax_regime: FTPTaxRegime = FTPTaxRegime.PRE_PDJP_20_2017,
+    ) -> np.ndarray:
+        """
+        The function to get the tax payment of the Cost Recovery contract based on the chosen regime.
+        There are three existing regime, they are :
+            - PRE_PDJP_20_2017
+            - PDJP_20_2017
+            - DIRECT_MODE
 
-        ftp_considered_b5 = ftp_ctr
+        Notes
+        ----------
+        [1] PRE_PDJP_20_2017
+            In general, the tax will be applied after the contractor share is not zero.
+            The taxable object that occurs at the time prior of the applied tax time will be accumulated and weighted
+            on the time when the tax is applied.
+
+        [2] PDJP_20_2017
+            The tax will be applied when the cumulative First Tranche Petroleum (FTP) is greater than
+            the unrecoverable cost
+
+        [3] DIRECT_MODE
+            The tax will be applied regardless the cumulative FTP, unrecoverable cost and Contractor Share condition.
+
+
+        Parameters
+        ----------
+        ctr_share: np.ndarray
+            The contractor equity to be split
+        taxable_income: np.ndarray
+            The contractor's Taxable Income (TI)
+        tax_rate: float | np.ndarray
+            The applied effective tax rate
+        ftp_ctr: np.ndarray
+            The contractor's First Tranche Petroleum (FTP)
+        unrec_cost: np.ndarray
+            The unrecoverable cost
+        ftp_tax_regime: FTPTaxRegime
+            The regime used to calculate the tax payment
+
+        Returns
+        -------
+        ctr_tax: np.ndarray
+            The contractor's tax payment
+
+        """
 
         # Tax payment prior to PDJP 2017
-        if ftp_tax_regime == FTPTaxRegime.PRE_2017:
+        if ftp_tax_regime == FTPTaxRegime.PRE_PDJP_20_2017:
             applied_tax = np.where(ctr_share > 0, 1, 0)
             cum_ti = np.cumsum(taxable_income)
 
@@ -560,10 +595,27 @@ class CostRecovery(BaseProject):
         else:
             ctr_tax = taxable_income * tax_rate
 
-        return ctr_tax, ftp_considered_b5
+        return ctr_tax
 
     @staticmethod
     def _unpaid_and_tax_balance(tax_payment: np.ndarray, ets_ctr: np.ndarray):
+        """
+        The function to get the contractor's unpaid tax and tax payment.
+
+        Parameters
+        ----------
+        tax_payment: np.ndarray
+            The contractors tax payment
+        ets_ctr: np.ndarray
+            The contractor's share
+
+        Returns
+        -------
+        unpaid_tax: np.ndarray
+            The unpaid contractor's tax
+        ctr_tax: np.ndarray
+            The contractor's tax payment
+        """
         unpaid_tax = np.zeros_like(ets_ctr, dtype=float)
         unpaid_tax[0] = 0
         ctr_tax = np.zeros_like(ets_ctr, dtype=float)
@@ -574,26 +626,24 @@ class CostRecovery(BaseProject):
 
         return unpaid_tax, ctr_tax
 
-    def _get_sunk_cost(self, discount_rate_year: int):
+    def _get_sunk_cost(self, sunk_cost_reference_year: int):
         oil_cost_raw = (
-                self._oil_depreciation
-                + self._oil_undepreciated_asset
+                self._oil_tangible_expenditures
                 + self._oil_non_capital
         )
         self._oil_sunk_cost = oil_cost_raw[
-                              : (discount_rate_year - self.start_date.year + 1)
+                              : (sunk_cost_reference_year - self.start_date.year + 1)
                               ]
 
         gas_cost_raw = (
-                self._gas_depreciation
-                + self._gas_undepreciated_asset
+                self._gas_tangible_expenditures
                 + self._gas_non_capital
         )
         self._gas_sunk_cost = gas_cost_raw[
-                              : (discount_rate_year - self.start_date.year + 1)
+                              : (sunk_cost_reference_year - self.start_date.year + 1)
                               ]
 
-        if discount_rate_year == self.start_date.year:
+        if sunk_cost_reference_year == self.start_date.year:
             self._oil_sunk_cost = np.zeros(1)
             self._gas_sunk_cost = np.zeros(1)
 
@@ -605,9 +655,9 @@ class CostRecovery(BaseProject):
             is_dmo_end_weighted: bool = False,
             tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
             tax_rate: float | np.ndarray | None = None,
-            tax_payment_method: TaxPaymentMode = TaxPaymentMode.TAX_DUE_MODE,
             ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
             discount_rate_year: int = None,
+            sunk_cost_reference_year: int = None,
             depr_method: DeprMethod = DeprMethod.PSC_DB,
             decline_factor: float | int = 2,
             year_ref: int = None,
@@ -628,7 +678,35 @@ class CostRecovery(BaseProject):
                 f"is after the discount rate year: {discount_rate_year}"
             )
 
-        # Configure year reference
+        # Configure Sunk Cost Reference Year
+        if sunk_cost_reference_year is None:
+            sunk_cost_reference_year = self.start_date.year
+
+        if sunk_cost_reference_year > self.oil_onstream_date.year:
+            raise SunkCostException(
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is after the on stream date: {self.oil_onstream_date}"
+            )
+
+        if sunk_cost_reference_year > self.gas_onstream_date.year:
+            raise SunkCostException(
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is after the on stream date: {self.gas_onstream_date}"
+            )
+
+        if sunk_cost_reference_year < self.start_date.year:
+            raise SunkCostException(
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is before the project start date: {self.start_date}"
+            )
+
+        if sunk_cost_reference_year > self.end_date.year:
+            raise SunkCostException(
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is after the project end date: {self.end_date}"
+            )
+
+        # Configure year reference for expenditures
         if year_ref is None:
             year_ref = self.start_date.year
 
@@ -707,7 +785,7 @@ class CostRecovery(BaseProject):
                                  ]
 
         # Get Sunk Cost
-        self._get_sunk_cost(discount_rate_year)
+        self._get_sunk_cost(sunk_cost_reference_year)
 
         # Investment credit
         self._oil_ic, self._oil_ic_unrecovered, self._oil_ic_paid = self._get_ic(
@@ -723,12 +801,6 @@ class CostRecovery(BaseProject):
             cost_alloc=FluidType.GAS,
             ic_rate=self.gas_ic_rate,
         )
-
-        # self._oil_ic, self._oil_ic_unrecovered, self._oil_ic_paid = np.zeros_like(self.project_years), np.zeros_like(
-        #     self.project_years), np.zeros_like(self.project_years)
-        #
-        # self._gas_ic, self._gas_ic_unrecovered, self._gas_ic_paid = np.zeros_like(self.project_years), np.zeros_like(
-        #     self.project_years), np.zeros_like(self.project_years)
 
         # Unrecovered cost before transfer/consolidation
         self._oil_unrecovered_before_transfer = psc_tools.get_unrecovered_cost(
@@ -802,27 +874,6 @@ class CostRecovery(BaseProject):
             gas_ets_pretransfer=self._gas_ets_before_transfer,
             oil_ets_pretransfer=self._oil_ets_before_transfer,
         )
-
-        # Unrecovered cost after transfer/consolidation
-        # self._oil_unrecovered_after_transfer = psc_tools.get_unrec_cost_after_tf(
-        #     depreciation=self._oil_depreciation,
-        #     non_capital=self._oil_non_capital,
-        #     revenue=self._oil_revenue,
-        #     ftp_ctr=self._oil_ftp_ctr,
-        #     ftp_gov=self._oil_ftp_gov,
-        #     ic=self._oil_ic_paid,
-        #     transferred_cost=self._transfer_to_oil,
-        # )
-        #
-        # self._gas_unrecovered_after_transfer = psc_tools.get_unrec_cost_after_tf(
-        #     depreciation=self._gas_depreciation,
-        #     non_capital=self._gas_non_capital,
-        #     revenue=self._gas_revenue,
-        #     ftp_ctr=self._gas_ftp_ctr,
-        #     ftp_gov=self._gas_ftp_gov,
-        #     ic=self._gas_ic_paid,
-        #     transferred_cost=self._transfer_to_gas,
-        # )
 
         self._oil_unrecovered_after_transfer = psc_tools.get_unrec_cost_after_tf(
             depreciation=self._oil_depreciation,
@@ -972,7 +1023,7 @@ class CostRecovery(BaseProject):
         if tax_rate is None:
             self._tax_rate_arr = self._get_tax_by_regime(tax_regime=tax_regime)
 
-        self._oil_tax_payment, _oil_ftp_considered = self._get_tax_payment(
+        self._oil_tax_payment = self._get_tax_payment(
             ctr_share=self._oil_contractor_share,
             taxable_income=self._oil_taxable_income,
             tax_rate=self._tax_rate_arr,
@@ -981,7 +1032,7 @@ class CostRecovery(BaseProject):
             ftp_tax_regime=ftp_tax_regime,
         )
 
-        self._gas_tax_payment, _gas_ftp_considered = self._get_tax_payment(
+        self._gas_tax_payment = self._get_tax_payment(
             ctr_share=self._gas_contractor_share,
             taxable_income=self._gas_taxable_income,
             tax_rate=self._tax_rate_arr,
@@ -995,18 +1046,6 @@ class CostRecovery(BaseProject):
         self._gas_ctr_net_share = self._gas_taxable_income - self._gas_tax_payment
 
         # Contractor Take by Fluid
-        # self._oil_contractor_take = (
-        #         self._oil_taxable_income
-        #         - self._oil_tax_payment
-        #         + self._oil_cost_recovery_after_tf
-        # )
-        #
-        # self._gas_contractor_take = (
-        #         self._gas_taxable_income
-        #         - self._gas_tax_payment
-        #         + self._gas_cost_recovery_after_tf
-        # )
-
         self._oil_contractor_take = (
                 self._oil_taxable_income
                 - self._oil_tax_payment
@@ -1109,29 +1148,25 @@ class CostRecovery(BaseProject):
                 self._oil_taxable_income + self._gas_taxable_income
         )
 
-        # Calculating the consolidated tax based on the tax payment mode
-        _consolidated_ftp_tax = np.zeros_like(self._consolidated_contractor_share)
-        if tax_payment_method is TaxPaymentMode.TAX_DUE_MODE:
-            self._consolidated_tax_due, _consolidated_ftp_tax = self._get_tax_payment(
+        # Calculating the consolidated tax based on the ftp tax payment regime
+        if ftp_tax_regime is FTPTaxRegime.PDJP_20_2017:
+            self._consolidated_tax_payment = self._oil_tax_payment + self._gas_tax_payment
+
+        else:
+            self._consolidated_tax_due = self._get_tax_payment(
                 ctr_share=self._consolidated_contractor_share,
                 taxable_income=self._consolidated_taxable_income,
                 tax_rate=self._tax_rate_arr,
                 ftp_ctr=self._consolidated_ftp_ctr,
                 unrec_cost=self._consolidated_unrecovered_after_transfer,
-                ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
+                ftp_tax_regime=ftp_tax_regime,
             )
-
             (
                 self._consolidated_unpaid_tax_balance,
                 self._consolidated_tax_payment,
             ) = self._unpaid_and_tax_balance(
                 tax_payment=self._consolidated_tax_due,
                 ets_ctr=self._consolidated_contractor_share,
-            )
-
-        elif tax_payment_method is TaxPaymentMode.TAX_DIRECT_MODE:
-            self._consolidated_tax_payment = (
-                    self._oil_tax_payment + self._gas_tax_payment
             )
 
         self._consolidated_ctr_net_share = (
@@ -1142,7 +1177,6 @@ class CostRecovery(BaseProject):
                 self._consolidated_taxable_income
                 - self._consolidated_tax_payment
                 + self._consolidated_cost_recovery_after_tf
-                - _consolidated_ftp_tax
         )
 
         self._consolidated_government_take = (
