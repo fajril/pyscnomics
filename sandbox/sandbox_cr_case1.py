@@ -43,7 +43,8 @@ psc.gas_dmo_holiday_duration = 60
 tax_rate = 0.424
 
 start_time = time.time()
-psc.run(tax_rate=tax_rate, discount_rate_year=2021, ftp_tax_regime=FTPTaxRegime.PRE_PDJP_20_2017)
+psc.run(tax_rate=tax_rate, discount_rate_year=2021, ftp_tax_regime=FTPTaxRegime.PRE_PDJP_20_2017,
+        sunk_cost_reference_year=2021)
 end_time = time.time()
 print('Execution Time: ', end_time - start_time, '\n')
 
@@ -98,9 +99,9 @@ psc_table_gas['Year'] = psc.project_years
 psc_table_gas['Lifting'] = psc._gas_lifting.get_lifting_rate_arr()
 psc_table_gas['Price'] = psc._gas_wap_price
 psc_table_gas['Revenue'] = psc._gas_revenue
-psc_table_gas['Depreciable'] = psc._gas_tangible.expenditures()
-psc_table_gas['Opex'] = psc._gas_opex.expenditures()
-psc_table_gas['ASR'] = psc._gas_asr.expenditures()
+psc_table_gas['Depreciable'] = psc._gas_tangible_expenditures
+psc_table_gas['Opex'] = psc._gas_opex_expenditures
+psc_table_gas['ASR'] = psc._gas_asr_expenditures
 psc_table_gas['Depreciation'] = psc._gas_depreciation
 psc_table_gas['Non Capital'] = psc._gas_non_capital
 psc_table_gas['FTP'] = psc._gas_ftp

@@ -7,7 +7,7 @@ import time
 
 from pyscnomics.dataset.sample import load_data, load_testing
 from pyscnomics.tools.summary import get_summary
-from pyscnomics.econ.selection import NPVSelection, DiscountingMode
+from pyscnomics.econ.selection import NPVSelection, DiscountingMode, FTPTaxRegime
 
 
 # pd.options.display.float_format = '{:,.2f}'.format
@@ -41,7 +41,7 @@ psc.gas_dmo_holiday_duration = 60
 tax_rate = 0.424
 
 start_time = time.time()
-psc.run(tax_rate=tax_rate, discount_rate_year=2021)
+psc.run(tax_rate=tax_rate, discount_rate_year=2021, sunk_cost_reference_year=2021, ftp_tax_regime=FTPTaxRegime.PRE_PDJP_20_2017)
 end_time = time.time()
 print('Execution Time: ', end_time - start_time, '\n')
 
