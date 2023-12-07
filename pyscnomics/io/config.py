@@ -434,7 +434,7 @@ class OilLiftingData:
 
     Attributes
     ----------
-    prod_year: dict
+    prod_year_init: dict
         Dictionary containing production years data.
     oil_lifting_rate : dict
         Dictionary containing oil lifting rate data.
@@ -465,20 +465,19 @@ class OilLiftingData:
     condensate_lifting_rate: dict
     condensate_price: dict
 
+    # Attributes associated with project duration
+    project_duration: int = field(repr=False)
+    project_years: np.ndarray = field(repr=False)
+
     # Attributes associated with PSC transition
     type_of_contract: str = field(repr=False)
     end_date_project: datetime = field(repr=False)
     start_date_project_second: datetime = field(repr=False)
 
-    # Attributes associated with project duration
-    project_duration: int = field(repr=False)
-    project_years: np.ndarray = field(repr=False)
-    oil_data_length: InitVar[dict]
-
     # Attributes to be defined later
     prod_year: dict = field(default=None, init=False)
 
-    def __post_init__(self, prod_year_init: dict, oil_data_length: int):
+    def __post_init__(self, prod_year_init: dict):
         # Prepare attribute prod_year
         if not isinstance(prod_year_init, dict):
             raise OilLiftingDataException(
@@ -491,15 +490,8 @@ class OilLiftingData:
             if prod_year_init[key] is None:
                 prod_year_init[key] = np.int_(self.project_years)
             else:
-                prod_year_init_nan = list(filter(lambda i: pd.isna(i), prod_year_init[key]))
-                if len(prod_year_init_nan) > 0:
-                    raise OilLiftingDataException(
-                        f"Prod year data is incomplete. Please re-check the prod_year data. "
-                        f"The number of prod_year data must be ({oil_data_length[key]}), "
-                        f"not ({oil_data_length[key] - len(prod_year_init_nan)})."
-                    )
-                else:
-                    prod_year_init[key] = np.int_(prod_year_init[key])
+                prod_year_init[key] = np.int_(prod_year_init[key])
+
         self.prod_year = prod_year_init.copy()
 
         # Prepare attribute oil_lifting_rate
@@ -510,19 +502,16 @@ class OilLiftingData:
                 f"{self.oil_lifting_rate.__class__.__qualname__}"
             )
 
+        oil_lifting_rate_nan = {}
         for key in self.oil_lifting_rate.keys():
             if self.oil_lifting_rate[key] is None:
                 self.oil_lifting_rate[key] = np.zeros_like(self.project_years, dtype=np.float_)
+                oil_lifting_rate_nan[key] = None
             else:
-                oil_lifting_rate_nan = list(filter(lambda i: pd.isna(i), self.oil_lifting_rate[key]))
-                if len(oil_lifting_rate_nan) == oil_data_length[key]:
-                    self.oil_lifting_rate[key] = np.zeros_like(self.prod_year[key], dtype=np.float_)
-                elif 0 < len(oil_lifting_rate_nan) < oil_data_length[key]:
-                    raise OilLiftingDataException(
-                        f"Oil lifting rate data data is incomplete. "
-                        f"Please re-check oil_lifting_rate data. "
-                        f"The number of oil_lifting_rate data must be ({oil_data_length[key]}), "
-                        f"not ({oil_data_length[key] - len(oil_lifting_rate_nan)})."
+                oil_lifting_rate_nan[key] = np.argwhere(pd.isna(self.oil_lifting_rate[key])).ravel()
+                if len(oil_lifting_rate_nan[key]) > 0:
+                    self.oil_lifting_rate[key][oil_lifting_rate_nan[key]] = (
+                        np.zeros(len(oil_lifting_rate_nan[key]), dtype=np.float_)
                     )
                 else:
                     self.oil_lifting_rate[key] = np.float_(self.oil_lifting_rate[key])
@@ -535,19 +524,16 @@ class OilLiftingData:
                 f"{self.oil_price.__class__.__qualname__}"
             )
 
+        oil_price_nan = {}
         for key in self.oil_price.keys():
             if self.oil_price[key] is None:
                 self.oil_price[key] = np.zeros_like(self.project_years, dtype=np.float_)
+                oil_price_nan[key] = None
             else:
-                oil_price_nan = list(filter(lambda i: pd.isna(i), self.oil_price[key]))
-                if len(oil_price_nan) == oil_data_length[key]:
-                    self.oil_price[key] = np.zeros_like(self.prod_year[key], dtype=np.float_)
-                elif 0 < len(oil_price_nan) < oil_data_length[key]:
-                    raise OilLiftingDataException(
-                        f"Oil price data is incomplete. "
-                        f"Please re-check oil_price data. "
-                        f"The number of oil_price data must be ({oil_data_length[key]}), "
-                        f"not ({oil_data_length[key] - len(oil_price_nan)})."
+                oil_price_nan[key] = np.argwhere(pd.isna(self.oil_price[key])).ravel()
+                if len(oil_price_nan[key]) > 0:
+                    self.oil_price[key][oil_price_nan[key]] = (
+                        np.zeros(len(oil_price_nan[key]), dtype=np.float_)
                     )
                 else:
                     self.oil_price[key] = np.float_(self.oil_price[key])
@@ -560,23 +546,19 @@ class OilLiftingData:
                 f"{self.condensate_lifting_rate.__class__.__qualname__}"
             )
 
+        condensate_lifting_rate_nan = {}
         for key in self.condensate_lifting_rate.keys():
             if self.condensate_lifting_rate[key] is None:
                 self.condensate_lifting_rate[key] = np.zeros_like(self.project_years, dtype=np.float_)
+                condensate_lifting_rate_nan[key] = None
             else:
-                condensate_lifting_rate_nan = list(
-                    filter(lambda i: pd.isna(i), self.condensate_lifting_rate[key])
-                )
-                if len(condensate_lifting_rate_nan) == oil_data_length[key]:
-                    self.condensate_lifting_rate[key] = (
-                        np.zeros_like(self.prod_year[key], dtype=np.float_)
-                    )
-                elif 0 < len(condensate_lifting_rate_nan) < oil_data_length[key]:
-                    raise OilLiftingDataException(
-                        f"Condensate lifting rate data is incomplete. "
-                        f"Please re-check condensate_lifting_rate data. "
-                        f"The number of condensate_lifting_rate data must be ({oil_data_length[key]}), "
-                        f"not ({oil_data_length[key] - len(condensate_lifting_rate_nan)})."
+                condensate_lifting_rate_nan[key] = np.argwhere(
+                    pd.isna(self.condensate_lifting_rate[key])
+                ).ravel()
+
+                if len(condensate_lifting_rate_nan[key]) > 0:
+                    self.condensate_lifting_rate[key][condensate_lifting_rate_nan[key]] = (
+                        np.zeros(len(condensate_lifting_rate_nan[key]), dtype=np.float_)
                     )
                 else:
                     self.condensate_lifting_rate[key] = np.float_(self.condensate_lifting_rate[key])
@@ -589,60 +571,65 @@ class OilLiftingData:
                 f"{self.condensate_price.__class__.__qualname__}"
             )
 
+        condensate_price_nan = {}
         for key in self.condensate_price.keys():
             if self.condensate_price[key] is None:
                 self.condensate_price[key] = np.zeros_like(self.project_years, dtype=np.float_)
+                condensate_price_nan[key] = None
             else:
-                condensate_price_nan = list(filter(lambda i: pd.isna(i), self.condensate_price[key]))
-                if len(condensate_price_nan) == oil_data_length[key]:
-                    self.condensate_price[key] = np.zeros_like(self.prod_year[key], dtype=np.float_)
-                elif 0 < len(condensate_price_nan) < oil_data_length[key]:
-                    raise OilLiftingDataException(
-                        f"Condensate price data is incomplete. "
-                        f"Please re-check condensate_price data. "
-                        f"The number of condensate_price data must be ({oil_data_length[key]}), "
-                        f"not ({oil_data_length[key] - len(condensate_price_nan)})."
+                condensate_price_nan[key] = np.argwhere(pd.isna(self.condensate_price[key])).ravel()
+                if len(condensate_price_nan[key]) > 0:
+                    self.condensate_price[key][condensate_price_nan[key]] = (
+                        np.zeros(len(condensate_price_nan[key]), dtype=np.float_)
                     )
                 else:
                     self.condensate_price[key] = np.float_(self.condensate_price[key])
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
-            # Modify attributes "prod_year", "oil_lifting_rate", "oil_price",
-            # "condensate_lifting_rate", and "condensate_price"
-            target_attrs = {
-                "attr": [
-                    self.prod_year,
-                    self.oil_lifting_rate,
-                    self.oil_price,
-                    self.condensate_lifting_rate,
-                    self.condensate_price,
-                ],
-                "status": [
-                    False,
-                    True,
-                    False,
-                    True,
-                    False,
-                ]
-            }
+            t1 = get_lifting_data_split_simple(
+                target_attr=self.prod_year,
+                is_target_attr_volume=False,
+                prod_year_init=prod_year_init,
+                end_date_contract_1=self.end_date_project,
+                start_date_contract_2=self.start_date_project_second,
+            )
 
-            (
-                self.prod_year,
-                self.oil_lifting_rate,
-                self.oil_price,
-                self.condensate_lifting_rate,
-                self.condensate_price,
-            ) = [
-                get_lifting_data_split_simple(
-                    target_attr=i,
-                    is_target_attr_volume=j,
-                    prod_year_init=prod_year_init,
-                    end_date_contract_1=self.end_date_project,
-                    start_date_contract_2=self.start_date_project_second,
-                )
-                for i, j in zip(target_attrs["attr"], target_attrs["status"])
-            ]
+            # # Modify attributes "prod_year", "oil_lifting_rate", "oil_price",
+            # # "condensate_lifting_rate", and "condensate_price"
+            # target_attrs = {
+            #     "attr": [
+            #         self.prod_year,
+            #         self.oil_lifting_rate,
+            #         self.oil_price,
+            #         self.condensate_lifting_rate,
+            #         self.condensate_price,
+            #     ],
+            #     "status": [
+            #         False,
+            #         True,
+            #         False,
+            #         True,
+            #         False,
+            #     ]
+            # }
+            #
+            # (
+            #     self.prod_year,
+            #     self.oil_lifting_rate,
+            #     self.oil_price,
+            #     self.condensate_lifting_rate,
+            #     self.condensate_price,
+            # ) = [
+            #     get_lifting_data_split_simple(
+            #         target_attr=i,
+            #         is_target_attr_volume=j,
+            #         prod_year_init=prod_year_init,
+            #         end_date_contract_1=self.end_date_project,
+            #         start_date_contract_2=self.start_date_project_second,
+            #     )
+            #     for i, j in zip(target_attrs["attr"], target_attrs["status"])
+            # ]
 
 
 @dataclass
@@ -822,7 +809,7 @@ class LPGPropaneLiftingData:
 
     Attributes
     ----------
-    prod_year: dict
+    prod_year_init: dict
         Dictionary containing production years data.
     lifting_rate: dict
         Dictionary containing LPG Propane lifting rate data.
@@ -864,11 +851,11 @@ class LPGPropaneLiftingData:
                 f"{prod_year_init.__class__.__qualname__}"
             )
 
-        for i in prod_year_init.keys():
-            if prod_year_init[i] is None:
-                prod_year_init[i] = np.int_(self.project_years)
+        for key in prod_year_init.keys():
+            if prod_year_init[key] is None:
+                prod_year_init[key] = np.int_(self.project_years)
             else:
-                prod_year_init[i] = np.int_(prod_year_init[i])
+                prod_year_init[key] = np.int_(prod_year_init[key])
 
         self.prod_year = prod_year_init.copy()
 
@@ -880,11 +867,19 @@ class LPGPropaneLiftingData:
                 f"{self.lifting_rate.__class__.__qualname__}"
             )
 
-        for i in self.lifting_rate.keys():
-            if self.lifting_rate[i] is None:
-                self.lifting_rate[i] = np.zeros_like(self.project_years, dtype=np.float_)
+        lifting_rate_nan = {}
+        for key in self.lifting_rate.keys():
+            if self.lifting_rate[key] is None:
+                self.lifting_rate[key] = np.zeros_like(self.project_years, dtype=np.float_)
+                lifting_rate_nan[key] = None
             else:
-                self.lifting_rate[i] = np.float_(self.lifting_rate[i])
+                lifting_rate_nan[key] = np.argwhere(pd.isna(self.lifting_rate[key])).ravel()
+                if len(lifting_rate_nan[key]) > 0:
+                    self.lifting_rate[key][lifting_rate_nan[key]] = (
+                        np.zeros(len(lifting_rate_nan[key]), dtype=np.float_)
+                    )
+                else:
+                    self.lifting_rate[key] = np.float_(self.lifting_rate[key])
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
@@ -894,14 +889,21 @@ class LPGPropaneLiftingData:
                 f"{self.price.__class__.__qualname__}"
             )
 
-        for i in self.price.keys():
-            if self.price[i] is None:
-                self.price[i] = np.zeros_like(self.project_years, dtype=np.float_)
+        price_nan = {}
+        for key in self.price.keys():
+            if self.price[key] is None:
+                self.price[key] = np.zeros_like(self.project_years, dtype=np.float_)
+                price_nan[key] = None
             else:
-                self.price[i] = np.float_(self.price[i])
+                price_nan[key] = np.argwhere(pd.isna(self.price[key])).ravel()
+                if len(price_nan[key]) > 0:
+                    self.price[key][price_nan[key]] = np.zeros(len(price_nan[key]), dtype=np.float_)
+                else:
+                    self.price[key] = np.float_(self.price[key])
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
+            # Modify attributes "prod_year", "lifting_rate", "price",
             target_attrs = {
                 "attr": [self.prod_year, self.lifting_rate, self.price],
                 "status": [False, True, False],

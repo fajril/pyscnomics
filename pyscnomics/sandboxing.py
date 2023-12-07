@@ -8,6 +8,7 @@ from datetime import date
 from dataclasses import asdict
 
 from pyscnomics.io.spreadsheet import Spreadsheet
+from pyscnomics.io.aggregator import Aggregate
 from pyscnomics.econ.selection import DeprMethod, FluidType, TaxType
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
@@ -242,6 +243,16 @@ timer_end = tm.time() - timer_start
 
 print('\t')
 print('timer end = ', timer_end)
+
+# timer_start = tm.time()
+#
+# agg = Aggregate()
+# agg.fit()
+#
+# timer_end = tm.time() - timer_start
+#
+# print('\t')
+# print('timer end = ', timer_end)
 
 # case.run(
 #     tax_type=TaxType.VAT,

@@ -32,6 +32,12 @@ class CreateArrayException(Exception):
     pass
 
 
+class SplitDataException(Exception):
+    """ Exception to be raised for an incorrect setting of splitting data in PSC transition """
+
+    pass
+
+
 def check_input(target_func, param: np.ndarray | float | int) -> np.ndarray:
     """
     Check and prepare input parameters for subsequent analysis.
@@ -968,7 +974,7 @@ def get_lifting_data_split_simple(
         # Split the original target data into two corresponding PSC contracts
         target_attr_modified = {
             key: {
-                val: target_attr[key][id_transition[key][val]]
+                val: target_attr[key][id_transition[key][val]].copy()
                 for val in keys_transition
             }
             for key in prod_year_init.keys()
@@ -999,21 +1005,54 @@ def get_lifting_data_split_simple(
         # Identify the index location of the transition year
         id_transition = {
             key: {
-                keys_transition[0]: np.argwhere(prod_year_init[key] <= end_date_contract_1.year).ravel(),
-                keys_transition[1]: np.argwhere(prod_year_init[key] >= start_date_contract_2.year).ravel()
+                keys_transition[0]: (
+                    np.argwhere(prod_year_init[key] <= end_date_contract_1.year).ravel()
+                ),
+                keys_transition[1]: (
+                    np.argwhere(prod_year_init[key] >= start_date_contract_2.year).ravel()
+                )
             } for key in prod_year_init.keys()
         }
 
-        # Split the original target data into two corresponding PSC contracts
-        target_attr_modified = {
-            key: {
-                val: target_attr[key][id_transition[key][val]].copy()
-                for val in keys_transition
-            }
-            for key in prod_year_init.keys()
-        }
+        for key in prod_year_init.keys():
+            for val in keys_transition:
+                if len(id_transition[key][val]) == 0:
+                    raise SplitDataException(
+                        f"Cannot split data for PSC transition. "
+                        f"Please check the production data. "
+                        f"The provided production data is not sufficient to perform "
+                        f"splitting into two PSC contracts."
+                    )
 
-    return target_attr_modified
+        print('\t')
+        print(f'Filetype: {type(id_transition)}')
+        print('id_transition = ', id_transition)
+
+        target_attr_modified = {}
+        for key in prod_year_init.keys():
+            target_attr_modified[key] = {}
+            for val in keys_transition:
+                if len(id_transition[key][val]) == 0:
+                    target_attr_modified[key][val] = None
+                else:
+                    target_attr_modified[key][val] = (
+                        target_attr[key][id_transition[key][val]].copy()
+                    )
+
+    #     # Split the original target data into two corresponding PSC contracts
+    #     target_attr_modified = {
+    #         key: {
+    #             val: target_attr[key][id_transition[key][val]].copy()
+    #             for val in keys_transition
+    #         }
+    #         for key in prod_year_init.keys()
+    #     }
+
+        print('\t')
+        print(f'Filetype: {type(target_attr_modified)}')
+        print('target_attr_modified = \n', target_attr_modified)
+
+    # return target_attr_modified
 
 
 def get_lifting_data_split_advanced(
