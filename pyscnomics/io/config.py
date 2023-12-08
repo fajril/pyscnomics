@@ -587,49 +587,41 @@ class OilLiftingData:
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
-            t1 = get_lifting_data_split_simple(
-                target_attr=self.prod_year,
-                is_target_attr_volume=False,
-                prod_year_init=prod_year_init,
-                end_date_contract_1=self.end_date_project,
-                start_date_contract_2=self.start_date_project_second,
-            )
+            # Modify attributes "prod_year", "oil_lifting_rate", "oil_price",
+            # "condensate_lifting_rate", and "condensate_price"
+            target_attrs = {
+                "attr": [
+                    self.prod_year,
+                    self.oil_lifting_rate,
+                    self.oil_price,
+                    self.condensate_lifting_rate,
+                    self.condensate_price,
+                ],
+                "status": [
+                    False,
+                    True,
+                    False,
+                    True,
+                    False,
+                ]
+            }
 
-            # # Modify attributes "prod_year", "oil_lifting_rate", "oil_price",
-            # # "condensate_lifting_rate", and "condensate_price"
-            # target_attrs = {
-            #     "attr": [
-            #         self.prod_year,
-            #         self.oil_lifting_rate,
-            #         self.oil_price,
-            #         self.condensate_lifting_rate,
-            #         self.condensate_price,
-            #     ],
-            #     "status": [
-            #         False,
-            #         True,
-            #         False,
-            #         True,
-            #         False,
-            #     ]
-            # }
-            #
-            # (
-            #     self.prod_year,
-            #     self.oil_lifting_rate,
-            #     self.oil_price,
-            #     self.condensate_lifting_rate,
-            #     self.condensate_price,
-            # ) = [
-            #     get_lifting_data_split_simple(
-            #         target_attr=i,
-            #         is_target_attr_volume=j,
-            #         prod_year_init=prod_year_init,
-            #         end_date_contract_1=self.end_date_project,
-            #         start_date_contract_2=self.start_date_project_second,
-            #     )
-            #     for i, j in zip(target_attrs["attr"], target_attrs["status"])
-            # ]
+            (
+                self.prod_year,
+                self.oil_lifting_rate,
+                self.oil_price,
+                self.condensate_lifting_rate,
+                self.condensate_price,
+            ) = [
+                get_lifting_data_split_simple(
+                    target_attr=i,
+                    is_target_attr_volume=j,
+                    prod_year_init=prod_year_init,
+                    end_date_contract_1=self.end_date_project,
+                    start_date_contract_2=self.start_date_project_second,
+                )
+                for i, j in zip(target_attrs["attr"], target_attrs["status"])
+            ]
 
 
 @dataclass

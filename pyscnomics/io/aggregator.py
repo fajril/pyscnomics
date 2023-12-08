@@ -53,7 +53,7 @@ class Aggregate(Spreadsheet):
         # Prepare attributes associated with PSC transition
         self.psc_regimes = ["PSC 1", "PSC 2"]
 
-    def _get_aggregate_oil_lifting(self):
+    def _get_oil_lifting_aggregate(self):
         if "Transition" in self.oil_lifting_data.type_of_contract:
             start_year_combined = [
                 self.general_config_data.start_date_project.year,
@@ -111,6 +111,27 @@ class Aggregate(Spreadsheet):
             )
 
         return oil_lifting_aggr
+
+    def _get_condensate_lifting_aggregate(self):
+        pass
+
+    def _get_gas_lifting_aggregate(self):
+        pass
+
+    def _get_lpg_propane_lifting_aggregare(self):
+        pass
+
+    def _get_lpg_butane_lifting_aggregate(self):
+        pass
+
+    def _get_sulfur_lifting_aggregate(self):
+        pass
+
+    def _get_electricity_lifting_aggregate(self):
+        pass
+
+    def _get_co2_lifting_aggregate(self):
+        pass
 
     def fit(self):
         self.oil_lifting_aggregate = self._get_aggregate_oil_lifting()

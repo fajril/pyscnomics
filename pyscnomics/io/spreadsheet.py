@@ -1704,6 +1704,9 @@ class Spreadsheet:
         # self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
         # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
 
-        # print('\t')
-        # print(f'Filetype: {type(self.oil_lifting_data)}')
-        # print('oil_lifting_data = \n', self.oil_lifting_data)
+        print('\t')
+        print(f'Filetype: {type(self.oil_lifting_data)}')
+        print('oil_lifting_data = \n', self.oil_lifting_data)
+
+        print('\t')
+        print('=========================================================================================')

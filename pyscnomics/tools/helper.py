@@ -926,6 +926,11 @@ def get_lifting_data_split_simple(
         A modified dictionary with the original target attribute data split into two
         corresponding PSC contracts
 
+    Raises
+    ------
+    SplitDataException
+        If the provided production data is insufficient for splitting into two PSC contracts.
+
     Notes
     -----
     (1) If the end year of the first contract is the same as the start year of the second
@@ -934,7 +939,7 @@ def get_lifting_data_split_simple(
     (2) If the end year of the first contract is different from the start year of the second
         contract, the target data is split based on the respective transition years.
     """
-    keys_transition = ["PSC 1", "PSC 2"]
+    psc_regimes = ["PSC 1", "PSC 2"]
 
     # End year of the first contract is the same as the start year of the second contract
     if end_date_contract_1.year == start_date_contract_2.year:
@@ -949,110 +954,116 @@ def get_lifting_data_split_simple(
         )
         multiplier = (days_diff.days + 1) / (days_delta.days + 2)
 
-        # Identify the index location of the transition year
+        # Identify the index location of data: (1) at the transition year,
+        # (2) before the transition year, and (3) after the transition year
         id_transition_init = {
-            key: {
-                "exact": np.argwhere(prod_year_init[key] == end_date_contract_1.year).ravel(),
-                "before": np.argwhere(prod_year_init[key] < end_date_contract_1.year).ravel(),
-                "after": np.argwhere(prod_year_init[key] > end_date_contract_1.year).ravel(),
+            ws: {
+                "exact": np.argwhere(prod_year_init[ws] == end_date_contract_1.year).ravel(),
+                "before": np.argwhere(prod_year_init[ws] < end_date_contract_1.year).ravel(),
+                "after": np.argwhere(prod_year_init[ws] > end_date_contract_1.year).ravel(),
             }
-            for key in prod_year_init.keys()
+            for ws in prod_year_init.keys()
         }
 
+        # Identify the indices of the data that falls within PSC 1 and PSC 2, respectively
         id_transition = {
-            key: {
-                keys_transition[0]: np.concatenate(
-                    (id_transition_init[key]["before"], id_transition_init[key]["exact"])
+            ws: {
+                psc_regimes[0]: np.concatenate(
+                    (id_transition_init[ws]["before"], id_transition_init[ws]["exact"])
                 ),
-                keys_transition[1]: np.concatenate(
-                    (id_transition_init[key]["exact"], id_transition_init[key]["after"])
+                psc_regimes[1]: np.concatenate(
+                    (id_transition_init[ws]["exact"], id_transition_init[ws]["after"])
                 ),
             }
-            for key in prod_year_init.keys()
+            for ws in prod_year_init.keys()
         }
+
+        # Raise exception if the data is insuffiecient to be splitted into
+        # two corresponding psc regimes
+        if any(
+            [
+                len(id_transition[ws][psc]) == 0
+                for ws in prod_year_init.keys()
+                for psc in psc_regimes
+            ]
+        ):
+            raise SplitDataException(
+                f"Cannot split data for PSC transition. "
+                f"Please check the production data. "
+                f"The provided production data is not sufficient to perform "
+                f"splitting into two PSC contracts."
+            )
 
         # Split the original target data into two corresponding PSC contracts
         target_attr_modified = {
-            key: {
-                val: target_attr[key][id_transition[key][val]].copy()
-                for val in keys_transition
+            ws: {
+                psc: target_attr[ws][id_transition[ws][psc]].copy()
+                for psc in psc_regimes
             }
-            for key in prod_year_init.keys()
+            for ws in prod_year_init.keys()
         }
 
-        # Adjust the value of target_data_modified at the transition year
+        # Identify the location of transition year in "id_transition"
         if is_target_attr_volume is True:
             id_exact = {
-                key: {
-                    val: np.array(
+                ws: {
+                    psc: np.array(
                         [
-                            np.argwhere(id_transition[key][val] == i).ravel()
-                            for i in id_transition_init[key]["exact"]
+                            np.argwhere(id_transition[ws][psc] == i).ravel()
+                            for i in id_transition_init[ws]["exact"]
                         ]
                     ).ravel()
-                    for val in keys_transition
+                    for psc in psc_regimes
                 }
-                for key in prod_year_init.keys()
+                for ws in prod_year_init.keys()
             }
 
+            # Adjust the value of target_data_modified at the transition year
             multipliers = [multiplier, (1.0 - multiplier)]
-            for key in prod_year_init.keys():
-                for i, val in enumerate(keys_transition):
-                    target_attr_modified[key][val][id_exact[key][val]] *= multipliers[i]
+            for ws in prod_year_init.keys():
+                for i, psc in enumerate(psc_regimes):
+                    target_attr_modified[ws][psc][id_exact[ws][psc]] *= multipliers[i]
 
     # End year of the first contract is different from the start year of the second contract
     else:
         # Identify the index location of the transition year
         id_transition = {
-            key: {
-                keys_transition[0]: (
-                    np.argwhere(prod_year_init[key] <= end_date_contract_1.year).ravel()
+            ws: {
+                psc_regimes[0]: (
+                    np.argwhere(prod_year_init[ws] <= end_date_contract_1.year).ravel()
                 ),
-                keys_transition[1]: (
-                    np.argwhere(prod_year_init[key] >= start_date_contract_2.year).ravel()
+                psc_regimes[1]: (
+                    np.argwhere(prod_year_init[ws] >= start_date_contract_2.year).ravel()
                 )
-            } for key in prod_year_init.keys()
+            } for ws in prod_year_init.keys()
         }
 
-        for key in prod_year_init.keys():
-            for val in keys_transition:
-                if len(id_transition[key][val]) == 0:
-                    raise SplitDataException(
-                        f"Cannot split data for PSC transition. "
-                        f"Please check the production data. "
-                        f"The provided production data is not sufficient to perform "
-                        f"splitting into two PSC contracts."
-                    )
+        # Raise exception if the data is insuffiecient to be splitted into
+        # two corresponding psc regimes
+        if any(
+            [
+                len(id_transition[ws][psc]) == 0
+                for ws in prod_year_init.keys()
+                for psc in psc_regimes
+            ]
+        ):
+            raise SplitDataException(
+                f"Cannot split data for PSC transition. "
+                f"Please check the production data. "
+                f"The provided production data is not sufficient to perform "
+                f"splitting into two PSC contracts."
+            )
 
-        print('\t')
-        print(f'Filetype: {type(id_transition)}')
-        print('id_transition = ', id_transition)
+        # Split the original target data into two corresponding PSC contracts
+        target_attr_modified = {
+            ws: {
+                psc: target_attr[ws][id_transition[ws][psc]].copy()
+                for psc in psc_regimes
+            }
+            for ws in prod_year_init.keys()
+        }
 
-        target_attr_modified = {}
-        for key in prod_year_init.keys():
-            target_attr_modified[key] = {}
-            for val in keys_transition:
-                if len(id_transition[key][val]) == 0:
-                    target_attr_modified[key][val] = None
-                else:
-                    target_attr_modified[key][val] = (
-                        target_attr[key][id_transition[key][val]].copy()
-                    )
-
-    #     # Split the original target data into two corresponding PSC contracts
-    #     target_attr_modified = {
-    #         key: {
-    #             val: target_attr[key][id_transition[key][val]].copy()
-    #             for val in keys_transition
-    #         }
-    #         for key in prod_year_init.keys()
-    #     }
-
-        print('\t')
-        print(f'Filetype: {type(target_attr_modified)}')
-        print('target_attr_modified = \n', target_attr_modified)
-
-    # return target_attr_modified
+    return target_attr_modified
 
 
 def get_lifting_data_split_advanced(
