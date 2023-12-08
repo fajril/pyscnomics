@@ -43,8 +43,10 @@ class Spreadsheet:
     Attributes
     ----------
     workbook_to_read: str
-        The name of the target Excel file. Must be given in '.xlsm' format.
+        The name of the target Excel file. Must be given in '.xlsb' format.
         Defaults to None.
+    directory_location: str
+        The directory location of workbook.
     """
 
     workbook_to_read: str = field(default=None)

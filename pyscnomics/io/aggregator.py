@@ -22,7 +22,15 @@ class SpreadsheetException(Exception):
 
 @dataclass
 class Aggregate(Spreadsheet):
+    """
+    Prepares an aggregate of lifting data (oil, condensate, gas, LPG propane, LPG butane,
+    sulfur, electricity, and CO2) and cost data (tangible, intangible, opex, ASR) to be
+    passed on to the subsequent economic analysis.
+    """
+
+    # Attributes associated with aggregates of lifting data
     oil_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
+    condensate_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
 
     # Attributes associated with PSC transition
     psc_regimes: list = field(default=None, init=False, repr=False)
@@ -53,7 +61,29 @@ class Aggregate(Spreadsheet):
         # Prepare attributes associated with PSC transition
         self.psc_regimes = ["PSC 1", "PSC 2"]
 
-    def _get_oil_lifting_aggregate(self):
+    def _get_oil_lifting_aggregate(self) -> dict | tuple[Lifting]:
+        """
+        Retrieves the oil lifting aggregate based on the Production Sharing Contract (PSC) type.
+
+        Returns
+        -------
+        Dict[str, Tuple[Lifting, ...]], Tuple[Lifting, ...]:
+            -   If the type_of_contract is "Transition," returns a dictionary with
+                PSC regimes as keys and a tuple of Lifting instances as values.
+            -   If the type_of_contract is a single PSC (CR or GS), returns a tuple
+                of Lifting instances.
+
+        Notes
+        -----
+        (1) For single PSC case, the aggregate of oil lifting data is generated using
+            a tuple comprehension of all available oil lifting data stored in
+            parameter 'self.oil_lifting_data',
+        (2) For PSC transition case, the aggregate of oil lifting data is stored in
+            a dictionary with keys: ['PSC 1', 'PSC 2']. The value of each keys is a
+            tuple of all available oil lifting data stored in parameter 'self.oil_lifting_data'
+            for each corresponding PSC regimes.
+        """
+        # For PSC transition
         if "Transition" in self.oil_lifting_data.type_of_contract:
             start_year_combined = [
                 self.general_config_data.start_date_project.year,
@@ -66,36 +96,22 @@ class Aggregate(Spreadsheet):
             ]
 
             oil_lifting_aggr = {
-                "PSC 1": tuple(
+                psc: tuple(
                     [
                         Lifting(
-                            start_year=start_year_combined[0],
-                            end_year=end_year_combined[0],
-                            lifting_rate=self.oil_lifting_data.oil_lifting_rate[ws]["PSC 1"],
-                            price=self.oil_lifting_data.oil_price[ws]["PSC 1"],
-                            prod_year=self.oil_lifting_data.prod_year[ws]["PSC 1"],
-                            fluid_type=FluidType.OIL,
-                        ) for ws in self.oil_lifting_data.prod_year.keys()
-                    ]
-                ),
-                "PSC 2": tuple(
-                    [
-                        Lifting(
-                            start_year=start_year_combined[1],
-                            end_year=end_year_combined[1],
-                            lifting_rate=self.oil_lifting_data.oil_lifting_rate[ws]["PSC 2"],
-                            price=self.oil_lifting_data.oil_price[ws]["PSC 2"],
-                            prod_year=self.oil_lifting_data.prod_year[ws]["PSC 2"],
+                            start_year=start_year_combined[i],
+                            end_year=end_year_combined[i],
+                            lifting_rate=self.oil_lifting_data.oil_lifting_rate[ws][psc],
+                            price=self.oil_lifting_data.oil_price[ws][psc],
+                            prod_year=self.oil_lifting_data.prod_year[ws][psc],
                             fluid_type=FluidType.OIL,
                         ) for ws in self.oil_lifting_data.prod_year.keys()
                     ]
                 )
+                for i, psc in enumerate(self.psc_regimes)
             }
 
-            # print('\t')
-            # print(f'Filetype: {type(oil_lifting_aggr)}')
-            # print('oil_lifting_aggr = \n', oil_lifting_aggr)
-
+        # For single PSC (CR or GS)
         else:
             oil_lifting_aggr = tuple(
                 [
@@ -112,8 +128,28 @@ class Aggregate(Spreadsheet):
 
         return oil_lifting_aggr
 
-    def _get_condensate_lifting_aggregate(self):
-        pass
+    def _get_condensate_lifting_aggregate(self) -> dict | tuple[Lifting]:
+
+        if "Transition" in self.oil_lifting_data.type_of_contract:
+            pass
+
+        else:
+            condensate_lifting_aggr = tuple(
+                [
+                    Lifting(
+                        start_year=self.general_config_data.start_date_project.year,
+                        end_year=self.general_config_data.end_date_project.year,
+                        lifting_rate=self.oil_lifting_data.condensate_lifting_rate[ws],
+                        price=self.oil_lifting_data.condensate_price[ws],
+                        prod_year=self.oil_lifting_data.prod_year[ws],
+                        fluid_type=FluidType.OIL,
+                    ) for ws in self.oil_lifting_data.prod_year.keys()
+                ]
+            )
+
+        print('\t')
+        print(f'Filetype: {type(condensate_lifting_aggr)}')
+        print('condensate_lifting_aggr = \n', condensate_lifting_aggr)
 
     def _get_gas_lifting_aggregate(self):
         pass
@@ -134,9 +170,10 @@ class Aggregate(Spreadsheet):
         pass
 
     def fit(self):
-        self.oil_lifting_aggregate = self._get_aggregate_oil_lifting()
+        self.oil_lifting_aggregate = self._get_oil_lifting_aggregate()
+        self.conden
 
-        # print('\t')
-        # print(f'Filetype: {type(self.oil_lifting_aggregate)}')
-        # print('oil_lifting_aggregate = \n', self.oil_lifting_aggregate)
+        print('\t')
+        print(f'Filetype: {type(self.oil_lifting_aggregate)}')
+        print('oil_lifting_aggregate = \n', self.oil_lifting_aggregate)
 

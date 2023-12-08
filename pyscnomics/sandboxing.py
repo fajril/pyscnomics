@@ -234,25 +234,25 @@ asr_cost_data = (
 
 '------------------------------------------------- EXECUTE -------------------------------------------------'
 
-timer_start = tm.time()
-
-data = Spreadsheet()
-data.prepare_data()
-
-timer_end = tm.time() - timer_start
-
-print('\t')
-print('timer end = ', timer_end)
-
 # timer_start = tm.time()
 #
-# agg = Aggregate()
-# agg.fit()
+# data = Spreadsheet()
+# data.prepare_data()
 #
 # timer_end = tm.time() - timer_start
 #
 # print('\t')
 # print('timer end = ', timer_end)
+
+timer_start = tm.time()
+
+data = Aggregate()
+data.fit()
+
+timer_end = tm.time() - timer_start
+
+print('\t')
+print('timer end = ', timer_end)
 
 # case.run(
 #     tax_type=TaxType.VAT,
