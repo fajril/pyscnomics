@@ -486,11 +486,11 @@ class OilLiftingData:
                 f"{prod_year_init.__class__.__qualname__}"
             )
 
-        for key in prod_year_init.keys():
-            if prod_year_init[key] is None:
-                prod_year_init[key] = np.int_(self.project_years)
+        for ws in prod_year_init.keys():
+            if prod_year_init[ws] is None:
+                prod_year_init[ws] = np.int_(self.project_years)
             else:
-                prod_year_init[key] = np.int_(prod_year_init[key])
+                prod_year_init[ws] = np.int_(prod_year_init[ws])
 
         self.prod_year = prod_year_init.copy()
 
@@ -503,18 +503,18 @@ class OilLiftingData:
             )
 
         oil_lifting_rate_nan = {}
-        for key in self.oil_lifting_rate.keys():
-            if self.oil_lifting_rate[key] is None:
-                self.oil_lifting_rate[key] = np.zeros_like(self.project_years, dtype=np.float_)
-                oil_lifting_rate_nan[key] = None
+        for ws in self.oil_lifting_rate.keys():
+            if self.oil_lifting_rate[ws] is None:
+                self.oil_lifting_rate[ws] = np.zeros_like(self.project_years, dtype=np.float_)
+                oil_lifting_rate_nan[ws] = None
             else:
-                oil_lifting_rate_nan[key] = np.argwhere(pd.isna(self.oil_lifting_rate[key])).ravel()
-                if len(oil_lifting_rate_nan[key]) > 0:
-                    self.oil_lifting_rate[key][oil_lifting_rate_nan[key]] = (
-                        np.zeros(len(oil_lifting_rate_nan[key]), dtype=np.float_)
+                oil_lifting_rate_nan[ws] = np.argwhere(pd.isna(self.oil_lifting_rate[ws])).ravel()
+                if len(oil_lifting_rate_nan[ws]) > 0:
+                    self.oil_lifting_rate[ws][oil_lifting_rate_nan[ws]] = (
+                        np.zeros(len(oil_lifting_rate_nan[ws]), dtype=np.float_)
                     )
                 else:
-                    self.oil_lifting_rate[key] = np.float_(self.oil_lifting_rate[key])
+                    self.oil_lifting_rate[ws] = np.float_(self.oil_lifting_rate[ws])
 
         # Prepare attribute oil_price
         if not isinstance(self.oil_price, dict):
@@ -525,18 +525,18 @@ class OilLiftingData:
             )
 
         oil_price_nan = {}
-        for key in self.oil_price.keys():
-            if self.oil_price[key] is None:
-                self.oil_price[key] = np.zeros_like(self.project_years, dtype=np.float_)
-                oil_price_nan[key] = None
+        for ws in self.oil_price.keys():
+            if self.oil_price[ws] is None:
+                self.oil_price[ws] = np.zeros_like(self.project_years, dtype=np.float_)
+                oil_price_nan[ws] = None
             else:
-                oil_price_nan[key] = np.argwhere(pd.isna(self.oil_price[key])).ravel()
-                if len(oil_price_nan[key]) > 0:
-                    self.oil_price[key][oil_price_nan[key]] = (
-                        np.zeros(len(oil_price_nan[key]), dtype=np.float_)
+                oil_price_nan[ws] = np.argwhere(pd.isna(self.oil_price[ws])).ravel()
+                if len(oil_price_nan[ws]) > 0:
+                    self.oil_price[ws][oil_price_nan[ws]] = (
+                        np.zeros(len(oil_price_nan[ws]), dtype=np.float_)
                     )
                 else:
-                    self.oil_price[key] = np.float_(self.oil_price[key])
+                    self.oil_price[ws] = np.float_(self.oil_price[ws])
 
         # Prepare attribute condensate_lifting_rate
         if not isinstance(self.condensate_lifting_rate, dict):
@@ -547,21 +547,21 @@ class OilLiftingData:
             )
 
         condensate_lifting_rate_nan = {}
-        for key in self.condensate_lifting_rate.keys():
-            if self.condensate_lifting_rate[key] is None:
-                self.condensate_lifting_rate[key] = np.zeros_like(self.project_years, dtype=np.float_)
-                condensate_lifting_rate_nan[key] = None
+        for ws in self.condensate_lifting_rate.keys():
+            if self.condensate_lifting_rate[ws] is None:
+                self.condensate_lifting_rate[ws] = np.zeros_like(self.project_years, dtype=np.float_)
+                condensate_lifting_rate_nan[ws] = None
             else:
-                condensate_lifting_rate_nan[key] = np.argwhere(
-                    pd.isna(self.condensate_lifting_rate[key])
+                condensate_lifting_rate_nan[ws] = np.argwhere(
+                    pd.isna(self.condensate_lifting_rate[ws])
                 ).ravel()
 
-                if len(condensate_lifting_rate_nan[key]) > 0:
-                    self.condensate_lifting_rate[key][condensate_lifting_rate_nan[key]] = (
-                        np.zeros(len(condensate_lifting_rate_nan[key]), dtype=np.float_)
+                if len(condensate_lifting_rate_nan[ws]) > 0:
+                    self.condensate_lifting_rate[ws][condensate_lifting_rate_nan[ws]] = (
+                        np.zeros(len(condensate_lifting_rate_nan[ws]), dtype=np.float_)
                     )
                 else:
-                    self.condensate_lifting_rate[key] = np.float_(self.condensate_lifting_rate[key])
+                    self.condensate_lifting_rate[ws] = np.float_(self.condensate_lifting_rate[ws])
 
         # Prepare attribute condensate_price
         if not isinstance(self.condensate_price, dict):
@@ -572,18 +572,18 @@ class OilLiftingData:
             )
 
         condensate_price_nan = {}
-        for key in self.condensate_price.keys():
-            if self.condensate_price[key] is None:
-                self.condensate_price[key] = np.zeros_like(self.project_years, dtype=np.float_)
-                condensate_price_nan[key] = None
+        for ws in self.condensate_price.keys():
+            if self.condensate_price[ws] is None:
+                self.condensate_price[ws] = np.zeros_like(self.project_years, dtype=np.float_)
+                condensate_price_nan[ws] = None
             else:
-                condensate_price_nan[key] = np.argwhere(pd.isna(self.condensate_price[key])).ravel()
-                if len(condensate_price_nan[key]) > 0:
-                    self.condensate_price[key][condensate_price_nan[key]] = (
-                        np.zeros(len(condensate_price_nan[key]), dtype=np.float_)
+                condensate_price_nan[ws] = np.argwhere(pd.isna(self.condensate_price[ws])).ravel()
+                if len(condensate_price_nan[ws]) > 0:
+                    self.condensate_price[ws][condensate_price_nan[ws]] = (
+                        np.zeros(len(condensate_price_nan[ws]), dtype=np.float_)
                     )
                 else:
-                    self.condensate_price[key] = np.float_(self.condensate_price[key])
+                    self.condensate_price[ws] = np.float_(self.condensate_price[ws])
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
@@ -843,11 +843,11 @@ class LPGPropaneLiftingData:
                 f"{prod_year_init.__class__.__qualname__}"
             )
 
-        for key in prod_year_init.keys():
-            if prod_year_init[key] is None:
-                prod_year_init[key] = np.int_(self.project_years)
+        for ws in prod_year_init.keys():
+            if prod_year_init[ws] is None:
+                prod_year_init[ws] = np.int_(self.project_years)
             else:
-                prod_year_init[key] = np.int_(prod_year_init[key])
+                prod_year_init[ws] = np.int_(prod_year_init[ws])
 
         self.prod_year = prod_year_init.copy()
 
@@ -860,18 +860,18 @@ class LPGPropaneLiftingData:
             )
 
         lifting_rate_nan = {}
-        for key in self.lifting_rate.keys():
-            if self.lifting_rate[key] is None:
-                self.lifting_rate[key] = np.zeros_like(self.project_years, dtype=np.float_)
-                lifting_rate_nan[key] = None
+        for ws in self.lifting_rate.keys():
+            if self.lifting_rate[ws] is None:
+                self.lifting_rate[ws] = np.zeros_like(self.project_years, dtype=np.float_)
+                lifting_rate_nan[ws] = None
             else:
-                lifting_rate_nan[key] = np.argwhere(pd.isna(self.lifting_rate[key])).ravel()
-                if len(lifting_rate_nan[key]) > 0:
-                    self.lifting_rate[key][lifting_rate_nan[key]] = (
-                        np.zeros(len(lifting_rate_nan[key]), dtype=np.float_)
+                lifting_rate_nan[ws] = np.argwhere(pd.isna(self.lifting_rate[ws])).ravel()
+                if len(lifting_rate_nan[ws]) > 0:
+                    self.lifting_rate[ws][lifting_rate_nan[ws]] = (
+                        np.zeros(len(lifting_rate_nan[ws]), dtype=np.float_)
                     )
                 else:
-                    self.lifting_rate[key] = np.float_(self.lifting_rate[key])
+                    self.lifting_rate[ws] = np.float_(self.lifting_rate[ws])
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
@@ -882,16 +882,16 @@ class LPGPropaneLiftingData:
             )
 
         price_nan = {}
-        for key in self.price.keys():
-            if self.price[key] is None:
-                self.price[key] = np.zeros_like(self.project_years, dtype=np.float_)
-                price_nan[key] = None
+        for ws in self.price.keys():
+            if self.price[ws] is None:
+                self.price[ws] = np.zeros_like(self.project_years, dtype=np.float_)
+                price_nan[ws] = None
             else:
-                price_nan[key] = np.argwhere(pd.isna(self.price[key])).ravel()
-                if len(price_nan[key]) > 0:
-                    self.price[key][price_nan[key]] = np.zeros(len(price_nan[key]), dtype=np.float_)
+                price_nan[ws] = np.argwhere(pd.isna(self.price[ws])).ravel()
+                if len(price_nan[ws]) > 0:
+                    self.price[ws][price_nan[ws]] = np.zeros(len(price_nan[ws]), dtype=np.float_)
                 else:
-                    self.price[key] = np.float_(self.price[key])
+                    self.price[ws] = np.float_(self.price[ws])
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
@@ -924,7 +924,7 @@ class LPGButaneLiftingData:
 
     Attributes
     ----------
-    prod_year: dict
+    prod_year_init: dict
         Dictionary containing production years data.
     lifting_rate: dict
         Dictionary containing LPG Butane lifting rate data.
@@ -966,11 +966,11 @@ class LPGButaneLiftingData:
                 f"{prod_year_init.__class__.__qualname__}"
             )
 
-        for i in prod_year_init.keys():
-            if prod_year_init[i] is None:
-                prod_year_init[i] = np.int_(self.project_years)
+        for ws in prod_year_init.keys():
+            if prod_year_init[ws] is None:
+                prod_year_init[ws] = np.int_(self.project_years)
             else:
-                prod_year_init[i] = np.int_(prod_year_init[i])
+                prod_year_init[ws] = np.int_(prod_year_init[ws])
 
         self.prod_year = prod_year_init.copy()
 
@@ -982,11 +982,19 @@ class LPGButaneLiftingData:
                 f"{self.lifting_rate.__class__.__qualname__}"
             )
 
-        for i in self.lifting_rate.keys():
-            if self.lifting_rate[i] is None:
-                self.lifting_rate[i] = np.zeros_like(self.project_years, np.float_)
+        lifting_rate_nan = {}
+        for ws in self.lifting_rate.keys():
+            if self.lifting_rate[ws] is None:
+                self.lifting_rate[ws] = np.zeros_like(self.project_years, np.float_)
+                lifting_rate_nan[ws] = None
             else:
-                self.lifting_rate[i] = np.float_(self.lifting_rate[i])
+                lifting_rate_nan[ws] = np.argwhere(pd.isna(self.lifting_rate[ws])).ravel()
+                if len(lifting_rate_nan[ws]) > 0:
+                    self.lifting_rate[ws][lifting_rate_nan[ws]] = (
+                        np.zeros(len(lifting_rate_nan[ws]), dtype=np.float_)
+                    )
+                else:
+                    self.lifting_rate[ws] = np.float_(self.lifting_rate[ws])
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
@@ -996,11 +1004,17 @@ class LPGButaneLiftingData:
                 f"{self.price.__class__.__qualname__}"
             )
 
-        for i in self.price.keys():
-            if self.price[i] is None:
-                self.price[i] = np.zeros_like(self.project_years, np.float_)
+        price_nan = {}
+        for ws in self.price.keys():
+            if self.price[ws] is None:
+                self.price[ws] = np.zeros_like(self.project_years, np.float_)
+                price_nan[ws] = None
             else:
-                self.price[i] = np.float_(self.price[i])
+                price_nan[ws] = np.argwhere(pd.isna(self.price[ws])).ravel()
+                if len(price_nan[ws]) > 0:
+                    self.price[ws][price_nan[ws]] = np.zeros(len(price_nan[ws]), dtype=np.float_)
+                else:
+                    self.price[ws] = np.float_(self.price[ws])
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:

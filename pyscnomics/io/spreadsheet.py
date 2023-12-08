@@ -316,13 +316,13 @@ class Spreadsheet:
         oil_data_available = list(filter(lambda i: "Prod Oil" in i, self.sheets_loaded))
 
         # Step #2 (See 'Notes' section in the docstring)
-        oil_data_loaded_init = {key: self.data_loaded[key] for key in oil_data_available}
+        oil_data_loaded_init = {ws: self.data_loaded[ws] for ws in oil_data_available}
 
         # Step #3 (See 'Notes' section in the docstring)
         oil_data_loaded = {
-            key: oil_data_loaded_init[key] if oil_data_loaded_init[key].empty
-            else oil_data_loaded_init[key][~pd.isna(oil_data_loaded_init[key].iloc[:, 0])].copy()
-            for key in oil_data_available
+            ws: oil_data_loaded_init[ws] if oil_data_loaded_init[ws].empty
+            else oil_data_loaded_init[ws][~pd.isna(oil_data_loaded_init[ws].iloc[:, 0])].copy()
+            for ws in oil_data_available
         }
 
         # Step #4 (See 'Notes' section in the docstring)
@@ -336,9 +336,9 @@ class Spreadsheet:
 
         oil_data = {
             key: {
-                j: None if oil_data_loaded[j].empty
-                else oil_data_loaded[j].iloc[:, i].to_numpy()
-                for j in oil_data_available
+                ws: None if oil_data_loaded[ws].empty
+                else oil_data_loaded[ws].iloc[:, i].to_numpy()
+                for ws in oil_data_available
             }
             for i, key in enumerate(oil_attrs)
         }
@@ -500,14 +500,14 @@ class Spreadsheet:
         The undertaken procedures are as follows:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod LPG Propane'
             data, then assigned it as local variable named 'lpg_propane_data_available',
-        (2) If 'lpg_propane_data_available' is empty (length is zero), then return a new
-            instance of LPGPropaneLiftingData with the associated attributes set to None,
-        (3) If 'lpg_propane_data_available' is not empty, first check whether a particular
-            self.data_loaded[lpg_propane_data_available] is an empty dataframe. If it is, then
-            create a new instance of LPGPropaneLiftingData with the associated attributes set
-            to None. If a particular self.data_loaded[lpg_propane_data_available] is not an empty
-            dataframe, then create a new instance of LPGPropaneLiftingData with the associated
-            attributes set as the loaded value from the corresponding Excel worksheet.
+        (2) Load the data associated with lpg_propane_data, then store it in the variable
+            named 'lpg_propane_data_loaded_init',
+        (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
+            Store the results in the variable named 'lpg_propane_data_loaded',
+        (4) Create a dictionary named 'lpg_propane_data' to store the necessary data from
+            'lpg_propane_data_loaded',
+        (5) Return an instance of LPGPropaneLiftingData to store the lpg propane data
+            appropriately as its attributes.
         """
         # Step #1 (See 'Notes' section in the docstring)
         lpg_propane_data_available = list(
@@ -516,18 +516,18 @@ class Spreadsheet:
 
         # Step #2 (See 'Notes' section in the docstring)
         lpg_propane_data_loaded_init = {
-            key: self.data_loaded[key] for key in lpg_propane_data_available
+            ws: self.data_loaded[ws] for ws in lpg_propane_data_available
         }
 
         # Step #3 (See 'Notes' section in the docstring)
         lpg_propane_data_loaded = {
-            key: lpg_propane_data_loaded_init[key] if lpg_propane_data_loaded_init[key].empty
+            ws: lpg_propane_data_loaded_init[ws] if lpg_propane_data_loaded_init[ws].empty
             else (
-                lpg_propane_data_loaded_init[key]
-                [~pd.isna(lpg_propane_data_loaded_init[key].iloc[:, 0])]
+                lpg_propane_data_loaded_init[ws]
+                [~pd.isna(lpg_propane_data_loaded_init[ws].iloc[:, 0])]
                 .copy()
             )
-            for key in lpg_propane_data_available
+            for ws in lpg_propane_data_available
         }
 
         # Step #4 (See 'Notes' section in the docstring)
@@ -535,9 +535,9 @@ class Spreadsheet:
 
         lpg_propane_data = {
             key: {
-                j: None if lpg_propane_data_loaded[j].empty
-                else lpg_propane_data_loaded[j].iloc[:, i].to_numpy()
-                for j in lpg_propane_data_available
+                ws: None if lpg_propane_data_loaded[ws].empty
+                else lpg_propane_data_loaded[ws].iloc[:, i].to_numpy()
+                for ws in lpg_propane_data_available
             }
             for i, key in enumerate(lpg_propane_attrs)
         }
@@ -568,14 +568,14 @@ class Spreadsheet:
         The undertaken procedures are as follows:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod LPG Butane'
             data, then assigned it as local variable named 'lpg_butane_data_available',
-        (2) If 'lpg_butane_data_available' is empty (length is zero), then return a new
-            instance of LPGButaneLiftingData with the associated attributes set to None,
-        (3) If 'lpg_butane_data_available' is not empty, first check whether a particular
-            self.data_loaded[lpg_butane_data_available] is an empty dataframe. If it is, then
-            create a new instance of LPGButaneLiftingData with the associated attributes set
-            to None. If a particular self.data_loaded[lpg_butane_data_available] is not an empty
-            dataframe, then create a new instance of LPGButaneLiftingData with the associated
-            attributes set as the loaded value from the corresponding Excel worksheet.
+        (2) Load the data associated with lpg_butane_data, then store it in the variable
+            named 'lpg_butane_data_loaded_init',
+        (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
+            Store the results in the variable named 'lpg_butane_data_loaded',
+        (4) Create a dictionary named 'lpg_butane_data' to store the necessary data from
+            'lpg_butane_data_loaded',
+        (5) Return an instance of LPGButaneLiftingData to store the lpg butane data
+            appropriately as its attributes.
         """
         # Step #1 (See 'Notes' section in the docstring)
         lpg_butane_data_available = list(
@@ -583,50 +583,44 @@ class Spreadsheet:
         )
 
         # Step #2 (See 'Notes' section in the docstring)
-        lpg_butane_attrs = ["prod_year", "lifting_rate", "price"]
-
-        if len(lpg_butane_data_available) == 0:
-            lpg_butane_data = {key: {"Prod LPG Butane": None} for key in lpg_butane_attrs}
-
-            return LPGButaneLiftingData(
-                prod_year_init=lpg_butane_data["prod_year"],
-                lifting_rate=lpg_butane_data["lifting_rate"],
-                price=lpg_butane_data["price"],
-                project_duration=self.general_config_data.project_duration,
-                project_years=self.general_config_data.project_years,
-                type_of_contract=self.general_config_data.type_of_contract,
-                end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second=self.general_config_data.start_date_project_second,
-            )
+        lpg_butane_data_loaded_init = {
+            ws: self.data_loaded[ws] for ws in lpg_butane_data_available
+        }
 
         # Step #3 (See 'Notes' section in the docstring)
-        else:
-            lpg_butane_data = {}
-            lpg_butane_data_loaded = {
-                i: self.data_loaded[i].fillna(0) for i in lpg_butane_data_available
-            }
-
-            for key, val_attr in enumerate(lpg_butane_attrs):
-                lpg_butane_data[val_attr] = {}
-                for i in lpg_butane_data_available:
-                    if lpg_butane_data_loaded[i].empty:
-                        lpg_butane_data[val_attr][i] = None
-                    else:
-                        lpg_butane_data[val_attr][i] = (
-                            lpg_butane_data_loaded[i].iloc[:, key]
-                            .to_numpy()
-                        )
-
-            return LPGButaneLiftingData(
-                prod_year_init=lpg_butane_data["prod_year"],
-                lifting_rate=lpg_butane_data["lifting_rate"],
-                price=lpg_butane_data["price"],
-                project_duration=self.general_config_data.project_duration,
-                project_years=self.general_config_data.project_years,
-                type_of_contract=self.general_config_data.type_of_contract,
-                end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second=self.general_config_data.start_date_project_second,
+        lpg_butane_data_loaded = {
+            ws: lpg_butane_data_loaded_init[ws] if lpg_butane_data_loaded_init[ws].empty
+            else (
+                lpg_butane_data_loaded_init[ws]
+                [~pd.isna(lpg_butane_data_loaded_init[ws].iloc[:, 0])]
+                .copy()
             )
+            for ws in lpg_butane_data_available
+        }
+
+        # Step #4 (See 'Notes' section in the docstring)
+        lpg_butane_attrs = ["prod_year", "lifting_rate", "price"]
+
+        lpg_butane_data = {
+            key: {
+                ws: None if lpg_butane_data_loaded[ws].empty
+                else lpg_butane_data_loaded[ws].iloc[:, i].to_numpy()
+                for ws in lpg_butane_data_available
+            }
+            for i, key in enumerate(lpg_butane_attrs)
+        }
+
+        # Step #5 (See 'Notes' section in the docstring)
+        return LPGButaneLiftingData(
+            prod_year_init=lpg_butane_data["prod_year"],
+            lifting_rate=lpg_butane_data["lifting_rate"],
+            price=lpg_butane_data["price"],
+            project_duration=self.general_config_data.project_duration,
+            project_years=self.general_config_data.project_years,
+            type_of_contract=self.general_config_data.type_of_contract,
+            end_date_project=self.general_config_data.end_date_project,
+            start_date_project_second=self.general_config_data.start_date_project_second,
+        )
 
     def _get_sulfur_lifting_data(self) -> SulfurLiftingData:
         """
@@ -1686,8 +1680,8 @@ class Spreadsheet:
         # Fill in the attributes associated with lifting data
         self.oil_lifting_data = self._get_oil_lifting_data()
         # self.gas_lifting_data = self._get_gas_lifting_data()
-        # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
-        # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
+        self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
+        self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
         # self.sulfur_lifting_data = self._get_sulfur_lifting_data()
         # self.electricity_lifting_data = self._get_electricity_lifting_data()
         # self.co2_lifting_data = self._get_co2_lifting_data()
@@ -1707,8 +1701,8 @@ class Spreadsheet:
         # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
 
         print('\t')
-        print(f'Filetype: {type(self.oil_lifting_data)}')
-        print('oil_lifting_data = \n', self.oil_lifting_data)
+        print(f'Filetype: {type(self.lpg_butane_lifting_data)}')
+        print('lpg_butane_lifting_data = \n', self.lpg_butane_lifting_data)
 
         print('\t')
         print('=========================================================================================')
