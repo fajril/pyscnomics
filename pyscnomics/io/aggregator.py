@@ -33,6 +33,9 @@ class Aggregate(Spreadsheet):
     condensate_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
     lpg_propane_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
     lpg_butane_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
+    sulfur_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
+    electricity_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
+    co2_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
 
     # Attributes associated with PSC transition
     psc_regimes: list = field(default=None, init=False, repr=False)
@@ -272,10 +275,59 @@ class Aggregate(Spreadsheet):
 
         return lpg_propane_lifting_aggr
 
-    def _get_lpg_butane_lifting_aggregate(self):
-        if "Transition" in self.lpg_butane_lifting_data.type_of_contract:
-            pass
+    def _get_lpg_butane_lifting_aggregate(self) -> dict | tuple[Lifting]:
+        """
+        Retrieves the LPG butane lifting aggregate based on the Production
+        Sharing Contract (PSC) type.
 
+        Returns
+        -------
+        Dict[str, Tuple[Lifting, ...]], Tuple[Lifting, ...]:
+            -   If the type_of_contract is 'Transition', returns a dictionary with
+                PSC regimes as keys and a tuple of Lifting instances as values.
+            -   If the type_of_contract is a single PSC (CR or GS), returns a tuple
+                of Lifting instances.
+
+        Notes
+        -----
+        (1) For a single PSC case, the aggregate of LPG butane lifting data is generated using
+            a tuple comprehension of all available LPG butane lifting data stored in
+            parameter 'self.lpg_butane_lifting_data'.
+        (2) For a PSC transition case, the aggregate of LPG butane lifting data is stored in
+            a dictionary with keys: ['PSC 1', 'PSC 2']. The value of each key is a
+            tuple of all available LPG butane lifting data stored in parameter
+            'self.lpg_butane_lifting_data' for each corresponding PSC regime.
+        """
+        # For PSC transition
+        if "Transition" in self.lpg_butane_lifting_data.type_of_contract:
+            start_year_combined = [
+                self.general_config_data.start_date_project.year,
+                self.general_config_data.start_date_project_second.year,
+            ]
+
+            end_year_combined = [
+                self.general_config_data.end_date_project.year,
+                self.general_config_data.end_date_project_second.year,
+            ]
+
+            lpg_butane_lifting_aggr = {
+                psc: tuple(
+                    [
+                        Lifting(
+                            start_year=start_year_combined[i],
+                            end_year=end_year_combined[i],
+                            lifting_rate=self.lpg_butane_lifting_data.lifting_rate[ws][psc],
+                            price=self.lpg_butane_lifting_data.price[ws][psc],
+                            prod_year=self.lpg_butane_lifting_data.prod_year[ws][psc],
+                            fluid_type=FluidType.GAS,
+                        )
+                        for ws in self.lpg_butane_lifting_data.prod_year.keys()
+                    ]
+                )
+                for i, psc in enumerate(self.psc_regimes)
+            }
+
+        # For single PSC (CR or GS)
         else:
             lpg_butane_lifting_aggr = tuple(
                 [
@@ -291,13 +343,77 @@ class Aggregate(Spreadsheet):
                 ]
             )
 
-            print('\t')
-            print(f'Filetype: {type(lpg_butane_lifting_aggr)}')
-            print(f'Length: {len(lpg_butane_lifting_aggr)}')
-            print('lpg_butane_lifting_aggr = \n', lpg_butane_lifting_aggr)
+        return lpg_butane_lifting_aggr
 
-    def _get_sulfur_lifting_aggregate(self):
-        pass
+    def _get_sulfur_lifting_aggregate(self) -> dict | tuple[Lifting]:
+        """
+        Retrieves the sulfur lifting aggregate based on the Production
+        Sharing Contract (PSC) type.
+
+        Returns
+        -------
+        Dict[str, Tuple[Lifting, ...]], Tuple[Lifting, ...]:
+            -   If the type_of_contract is 'Transition', returns a dictionary with
+                PSC regimes as keys and a tuple of Lifting instances as values.
+            -   If the type_of_contract is a single PSC (CR or GS), returns a tuple
+                of Lifting instances.
+
+        Notes
+        -----
+        (1) For a single PSC case, the aggregate of sulfur lifting data is generated using
+            a tuple comprehension of all available sulfur lifting data stored in
+            parameter 'self.sulfur_lifting_data'.
+        (2) For a PSC transition case, the aggregate of sulfur lifting data is stored in
+            a dictionary with keys: ['PSC 1', 'PSC 2']. The value of each key is a
+            tuple of all available sulfur lifting data stored in parameter
+            'self.sulfur_lifting_data' for each corresponding PSC regime.
+        """
+        # For PSC transition
+        if "Transition" in self.sulfur_lifting_data.type_of_contract:
+            start_year_combined = [
+                self.general_config_data.start_date_project.year,
+                self.general_config_data.start_date_project_second.year,
+            ]
+
+            end_year_combined = [
+                self.general_config_data.end_date_project.year,
+                self.general_config_data.end_date_project_second.year,
+            ]
+
+            sulfur_lifting_aggr = {
+                psc: tuple(
+                    [
+                        Lifting(
+                            start_year=start_year_combined[i],
+                            end_year=end_year_combined[i],
+                            lifting_rate=self.sulfur_lifting_data.lifting_rate[ws][psc],
+                            price=self.sulfur_lifting_data.price[ws][psc],
+                            prod_year=self.sulfur_lifting_data.prod_year[ws][psc],
+                            fluid_type=FluidType.SULFUR,
+                        )
+                        for ws in self.sulfur_lifting_data.prod_year.keys()
+                    ]
+                )
+                for i, psc in enumerate(self.psc_regimes)
+            }
+
+        # For single PSC (CR or GS)
+        else:
+            sulfur_lifting_aggr = tuple(
+                [
+                    Lifting(
+                        start_year=self.general_config_data.start_date_project.year,
+                        end_year=self.general_config_data.end_date_project.year,
+                        lifting_rate=self.sulfur_lifting_data.lifting_rate[ws],
+                        price=self.sulfur_lifting_data.price[ws],
+                        prod_year=self.sulfur_lifting_data.prod_year[ws],
+                        fluid_type=FluidType.SULFUR,
+                    )
+                    for ws in self.sulfur_lifting_data.prod_year.keys()
+                ]
+            )
+
+        return sulfur_lifting_aggr
 
     def _get_electricity_lifting_aggregate(self):
         pass
@@ -310,8 +426,9 @@ class Aggregate(Spreadsheet):
         self.condensate_lifting_aggregate = self._get_condensate_lifting_aggregate()
         self.lpg_propane_lifting_aggregate = self._get_lpg_propane_lifting_aggregare()
         self.lpg_butane_lifting_aggregate = self._get_lpg_butane_lifting_aggregate()
+        self.sulfur_lifting_aggregate = self._get_sulfur_lifting_aggregate()
 
         # print('\t')
-        # print(f'Filetype: {type(self.lpg_propane_lifting_aggregate)}')
-        # print('lpg_propane_lifting_aggregate = \n', self.lpg_propane_lifting_aggregate)
+        # print(f'Filetype: {type(self.sulfur_lifting_aggregate)}')
+        # print('sulfur_lifting_aggregate = \n', self.sulfur_lifting_aggregate)
 

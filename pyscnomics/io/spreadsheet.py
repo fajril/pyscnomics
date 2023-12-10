@@ -636,62 +636,54 @@ class Spreadsheet:
         The undertaken procedures are as follows:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod Sulfur'
             data, then assigned it as local variable named 'sulfur_data_available',
-        (2) If 'sulfur_data_available' is empty (length is zero), then return a new
-            instance of SulfurLiftingData with the associated attributes set to None,
-        (3) If 'sulfur_data_available' is not empty, first check whether a particular
-            self.data_loaded[sulfur_data_available] is an empty dataframe. If it is, then
-            create a new instance of SulfurLiftingData with the associated attributes set
-            to None. If a particular self.data_loaded[sulfur_data_available] is not an empty
-            dataframe, then create a new instance of SulfurLiftingData with the associated
-            attributes set as the loaded value from the corresponding Excel worksheet.
+        (2) Load the data associated with sulfur data, then store it in the variable
+            named 'sulfur_data_loaded_init',
+        (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
+            Store the results in the variable named 'sulfur_data_loaded',
+        (4) Create a dictionary named 'sulfur_data' to store the necessary data from
+            'sulfur_data_loaded',
+        (5) Return an instance of SulfurLiftingData to store the sulfur data
+            appropriately as its attributes.
         """
-
         # Step #1 (See 'Notes' section in the docstring)
         sulfur_data_available = list(filter(lambda i: "Prod Sulfur" in i, self.sheets_loaded))
 
         # Step #2 (See 'Notes' section in the docstring)
-        sulfur_data_attrs = ["prod_year", "lifting_rate", "price"]
-
-        if len(sulfur_data_available) == 0:
-            sulfur_data = {key: {"Prod Sulfur": None} for key in sulfur_data_attrs}
-
-            return SulfurLiftingData(
-                prod_year_init=sulfur_data["prod_year"],
-                lifting_rate=sulfur_data["lifting_rate"],
-                price=sulfur_data["price"],
-                project_duration=self.general_config_data.project_duration,
-                project_years=self.general_config_data.project_years,
-                type_of_contract=self.general_config_data.type_of_contract,
-                end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second=self.general_config_data.start_date_project_second,
-            )
+        sulfur_data_loaded_init = {ws: self.data_loaded[ws] for ws in sulfur_data_available}
 
         # Step #3 (See 'Notes' section in the docstring)
-        else:
-            sulfur_data = {}
-            sulfur_data_loaded = {i: self.data_loaded[i].fillna(0) for i in sulfur_data_available}
-
-            for key, val_attr in enumerate(sulfur_data_attrs):
-                sulfur_data[val_attr] = {}
-                for i in sulfur_data_available:
-                    if sulfur_data_loaded[i].empty:
-                        sulfur_data[val_attr][i] = None
-                    else:
-                        sulfur_data[val_attr][i] = (
-                            sulfur_data_loaded[i].iloc[:, key]
-                            .to_numpy()
-                        )
-
-            return SulfurLiftingData(
-                prod_year_init=sulfur_data["prod_year"],
-                lifting_rate=sulfur_data["lifting_rate"],
-                price=sulfur_data["price"],
-                project_duration=self.general_config_data.project_duration,
-                project_years=self.general_config_data.project_years,
-                type_of_contract=self.general_config_data.type_of_contract,
-                end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second=self.general_config_data.start_date_project_second
+        sulfur_data_loaded = {
+            ws: sulfur_data_loaded_init[ws] if sulfur_data_loaded_init[ws].empty
+            else (
+                sulfur_data_loaded_init[ws]
+                [~pd.isna(sulfur_data_loaded_init[ws].iloc[:, 0])]
+                .copy()
             )
+            for ws in sulfur_data_available
+        }
+
+        # Step #4 (See 'Notes' section in the docstring)
+        sulfur_data_attrs = ["prod_year", "lifting_rate", "price"]
+
+        sulfur_data = {
+            key: {
+                ws: None if sulfur_data_loaded[ws].empty
+                else sulfur_data_loaded[ws].iloc[:, i].to_numpy()
+                for ws in sulfur_data_available
+            }
+            for i, key in enumerate(sulfur_data_attrs)
+        }
+
+        return SulfurLiftingData(
+            prod_year_init=sulfur_data["prod_year"],
+            lifting_rate=sulfur_data["lifting_rate"],
+            price=sulfur_data["price"],
+            project_duration=self.general_config_data.project_duration,
+            project_years=self.general_config_data.project_years,
+            type_of_contract=self.general_config_data.type_of_contract,
+            end_date_project=self.general_config_data.end_date_project,
+            start_date_project_second=self.general_config_data.start_date_project_second,
+        )
 
     def _get_electricity_lifting_data(self) -> ElectricityLiftingData:
         """
@@ -700,81 +692,63 @@ class Spreadsheet:
         Returns
         -------
         ElectricityLiftingData
-            An instance of the ElectricityLiftingData class containing the following attributes:
-                - prod_year: dict
-                    Dictionary containing production years data.
-                - lifting_rate: dict
-                    Dictionary containing electricity lifting rate data.
-                - price: dict
-                    Dictionary containing electricity price data.
-                - project_duration: int
-                    The duration of the project.
-                - project_years: numpy.ndarray
-                    An array representing the project years.
+            An instance of the ElectricityLiftingData class.
 
         Notes
         -----
         The undertaken procedures are as follows:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod Electricity'
             data, then assigned it as local variable named 'electricity_data_available',
-        (2) If 'electricity_data_available' is empty (length is zero), then return a new
-            instance of ElectricityLiftingData with the associated attributes set to None,
-        (3) If 'electricity_data_available' is not empty, first check whether a particular
-            self.data_loaded[electricity_data_available] is an empty dataframe. If it is, then
-            create a new instance of ElectricityLiftingData with the associated attributes set
-            to None. If a particular self.data_loaded[electricity_data_available] is not an empty
-            dataframe, then create a new instance of ElectricityLiftingData with the associated
-            attributes set as the loaded value from the corresponding Excel worksheet.
+        (2) Load the data associated with electricity data, then store it in the variable
+            named 'electricity_data_loaded_init',
+        (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
+            Store the results in the variable named 'electricity_data_loaded',
+        (4) Create a dictionary named 'electricity_data' to store the necessary data from
+            'electricity_data_loaded',
+        (5) Return an instance of ElectricityLiftingData to store the electricity data
+            appropriately as its attributes.
         """
-
         # Step #1 (See 'Notes' section in the docstring)
         electricity_data_available = list(filter(lambda i: "Prod Electricity" in i, self.sheets_loaded))
 
         # Step #2 (See 'Notes' section in the docstring)
-        electricity_data_attrs = ["prod_year", "lifting_rate", "price"]
-
-        if len(electricity_data_available) == 0:
-            electricity_data = {key: {"Prod Electricity": None} for key in electricity_data_attrs}
-
-            return ElectricityLiftingData(
-                prod_year_init=electricity_data["prod_year"],
-                lifting_rate=electricity_data["lifting_rate"],
-                price=electricity_data["price"],
-                project_duration=self.general_config_data.project_duration,
-                project_years=self.general_config_data.project_years,
-                type_of_contract=self.general_config_data.type_of_contract,
-                end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second=self.general_config_data.start_date_project_second,
-            )
+        electricity_data_loaded_init = {
+            ws: self.data_loaded[ws] for ws in electricity_data_available
+        }
 
         # Step #3 (See 'Notes' section in the docstring)
-        else:
-            electricity_data = {}
-            electricity_data_loaded = {
-                i: self.data_loaded[i].fillna(0) for i in electricity_data_available
-            }
-
-            for key, val_attr in enumerate(electricity_data_attrs):
-                electricity_data[val_attr] = {}
-                for i in electricity_data_available:
-                    if electricity_data_loaded[i].empty:
-                        electricity_data[val_attr][i] = None
-                    else:
-                        electricity_data[val_attr][i] = (
-                            electricity_data_loaded[i].iloc[:, key]
-                            .to_numpy()
-                        )
-
-            return ElectricityLiftingData(
-                prod_year_init=electricity_data["prod_year"],
-                lifting_rate=electricity_data["lifting_rate"],
-                price=electricity_data["price"],
-                project_duration=self.general_config_data.project_duration,
-                project_years=self.general_config_data.project_years,
-                type_of_contract=self.general_config_data.type_of_contract,
-                end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second=self.general_config_data.start_date_project_second,
+        electricity_data_loaded = {
+            ws: electricity_data_loaded_init[ws] if electricity_data_loaded_init[ws].empty
+            else (
+                electricity_data_loaded_init[ws]
+                [~pd.isna(electricity_data_loaded_init[ws].iloc[:, 0])]
+                .copy()
             )
+            for ws in electricity_data_available
+        }
+
+        # Step #4 (See 'Notes' section in the docstring)
+        electricity_data_attrs = ["prod_year", "lifting_rate", "price"]
+
+        electricity_data = {
+            key: {
+                ws: None if electricity_data_loaded[ws].empty
+                else electricity_data_loaded[ws].iloc[:, i].to_numpy()
+                for ws in electricity_data_available
+            }
+            for i, key in enumerate(electricity_data_attrs)
+        }
+
+        return ElectricityLiftingData(
+            prod_year_init=electricity_data["prod_year"],
+            lifting_rate=electricity_data["lifting_rate"],
+            price=electricity_data["price"],
+            project_duration=self.general_config_data.project_duration,
+            project_years=self.general_config_data.project_years,
+            type_of_contract=self.general_config_data.type_of_contract,
+            end_date_project=self.general_config_data.end_date_project,
+            start_date_project_second=self.general_config_data.start_date_project_second,
+        )
 
     def _get_co2_lifting_data(self) -> CO2LiftingData:
         """
@@ -1682,10 +1656,10 @@ class Spreadsheet:
         # self.gas_lifting_data = self._get_gas_lifting_data()
         self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
         self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
-        # self.sulfur_lifting_data = self._get_sulfur_lifting_data()
-        # self.electricity_lifting_data = self._get_electricity_lifting_data()
+        self.sulfur_lifting_data = self._get_sulfur_lifting_data()
+        self.electricity_lifting_data = self._get_electricity_lifting_data()
         # self.co2_lifting_data = self._get_co2_lifting_data()
-        #
+
         # # Fill in the attributes associated with cost data
         # self.tangible_cost_data = self._get_tangible_cost_data()
         # self.intangible_cost_data = self._get_intangible_cost_data()
@@ -1701,8 +1675,8 @@ class Spreadsheet:
         # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
 
         print('\t')
-        print(f'Filetype: {type(self.lpg_butane_lifting_data)}')
-        print('lpg_butane_lifting_data = \n', self.lpg_butane_lifting_data)
+        print(f'Filetype: {type(self.electricity_lifting_data)}')
+        print('electricity_lifting_data = \n', self.electricity_lifting_data)
 
         print('\t')
         print('=========================================================================================')

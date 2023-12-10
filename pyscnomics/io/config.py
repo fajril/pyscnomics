@@ -1046,7 +1046,7 @@ class SulfurLiftingData:
 
     Attributes
     ----------
-    prod_year: dict
+    prod_year_init: dict
         Dictionary containing production years data.
     lifting_rate: dict
         Dictionary containing sulfur lifting rate data.
@@ -1088,11 +1088,11 @@ class SulfurLiftingData:
                 f"{prod_year_init.__class__.__qualname__}"
             )
 
-        for i in prod_year_init.keys():
-            if prod_year_init[i] is None:
-                prod_year_init[i] = np.int_(self.project_years)
+        for ws in prod_year_init.keys():
+            if prod_year_init[ws] is None:
+                prod_year_init[ws] = np.int_(self.project_years)
             else:
-                prod_year_init[i] = np.int_(prod_year_init[i])
+                prod_year_init[ws] = np.int_(prod_year_init[ws])
 
         self.prod_year = prod_year_init.copy()
 
@@ -1104,11 +1104,19 @@ class SulfurLiftingData:
                 f"{self.lifting_rate.__class__.__qualname__}"
             )
 
-        for i in self.lifting_rate.keys():
-            if self.lifting_rate[i] is None:
-                self.lifting_rate[i] = np.zeros_like(self.project_years, dtype=np.float_)
+        lifting_rate_nan = {}
+        for ws in self.lifting_rate.keys():
+            if self.lifting_rate[ws] is None:
+                self.lifting_rate[ws] = np.zeros_like(self.project_years, dtype=np.float_)
+                lifting_rate_nan[ws] = None
             else:
-                self.lifting_rate[i] = np.float_(self.lifting_rate[i])
+                lifting_rate_nan[ws] = np.argwhere(pd.isna(self.lifting_rate[ws])).ravel()
+                if len(lifting_rate_nan[ws]) > 0:
+                    self.lifting_rate[ws][lifting_rate_nan[ws]] = (
+                        np.zeros(len(lifting_rate_nan[ws]), dtype=np.float_)
+                    )
+                else:
+                    self.lifting_rate[ws] = np.float_(self.lifting_rate[ws])
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
@@ -1118,11 +1126,17 @@ class SulfurLiftingData:
                 f"{self.price.__class__.__qualname__}"
             )
 
-        for i in self.price.keys():
-            if self.price[i] is None:
-                self.price[i] = np.zeros_like(self.project_years, dtype=np.float_)
+        price_nan = {}
+        for ws in self.price.keys():
+            if self.price[ws] is None:
+                self.price[ws] = np.zeros_like(self.project_years, dtype=np.float_)
+                price_nan[ws] = None
             else:
-                self.price[i] = np.float_(self.price[i])
+                price_nan[ws] = np.argwhere(pd.isna(self.price[ws])).ravel()
+                if len(price_nan[ws]) > 0:
+                    self.price[ws][price_nan[ws]] = np.zeros(len(price_nan[ws]), dtype=np.float_)
+                else:
+                    self.price[ws] = np.float_(self.price[ws])
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
@@ -1154,7 +1168,7 @@ class ElectricityLiftingData:
 
     Attributes
     ----------
-    prod_year: dict
+    prod_year_init: dict
         Dictionary containing production years data.
     lifting_rate: dict
         Dictionary containing electricity lifting rate data.
@@ -1187,72 +1201,72 @@ class ElectricityLiftingData:
     # Attributes to be defined later
     prod_year: dict = field(default=None, init=False)
 
-    def __post_init__(self, prod_year_init):
-        # Prepare attribute prod_year
-        if not isinstance(prod_year_init, dict):
-            raise ElectricityLiftingDataException(
-                f"Attribute prod_year must be provided in the form of dictionary. "
-                f"The current datatype of prod_year is "
-                f"{prod_year_init.__class__.__qualname__}"
-            )
-
-        for i in prod_year_init.keys():
-            if prod_year_init[i] is None:
-                prod_year_init[i] = np.int_(self.project_years)
-            else:
-                prod_year_init[i] = np.float_(prod_year_init[i])
-
-        self.prod_year = prod_year_init.copy()
-
-        # Prepare attribute lifting_rate
-        if not isinstance(self.lifting_rate, dict):
-            raise ElectricityLiftingDataException(
-                f"Attribute lifting_rate must be provided in the form of dictionary. "
-                f"The current datatype of lifting_rate is "
-                f"{self.lifting_rate.__class__.__qualname__}"
-            )
-
-        for i in self.lifting_rate.keys():
-            if self.lifting_rate[i] is None:
-                self.lifting_rate[i] = np.zeros_like(self.project_years, dtype=np.float_)
-            else:
-                self.lifting_rate[i] = np.float_(self.lifting_rate[i])
-
-        # Prepare attribute price
-        if not isinstance(self.price, dict):
-            raise ElectricityLiftingDataException(
-                f"Attribute price must be provided in the form of dictionary. "
-                f"The current datatype of price is "
-                f"{self.price.__class__.__qualname__}"
-            )
-
-        for i in self.price.keys():
-            if self.price[i] is None:
-                self.price[i] = np.zeros_like(self.project_years, dtype=np.float_)
-            else:
-                self.price[i] = np.float_(self.price[i])
-
-        # Adjust data for transition case
-        if "Transition" in self.type_of_contract:
-            target_attrs = {
-                "attr": [self.prod_year, self.lifting_rate, self.price],
-                "status": [False, True, False],
-            }
-
-            (
-                self.prod_year,
-                self.lifting_rate,
-                self.price,
-            ) = [
-                get_lifting_data_split_simple(
-                    target_attr=i,
-                    is_target_attr_volume=j,
-                    prod_year_init=prod_year_init,
-                    end_date_contract_1=self.end_date_project,
-                    start_date_contract_2=self.start_date_project_second,
-                )
-                for i, j in zip(target_attrs["attr"], target_attrs["status"])
-            ]
+    # def __post_init__(self, prod_year_init):
+    #     # Prepare attribute prod_year
+    #     if not isinstance(prod_year_init, dict):
+    #         raise ElectricityLiftingDataException(
+    #             f"Attribute prod_year must be provided in the form of dictionary. "
+    #             f"The current datatype of prod_year is "
+    #             f"{prod_year_init.__class__.__qualname__}"
+    #         )
+    #
+    #     for i in prod_year_init.keys():
+    #         if prod_year_init[i] is None:
+    #             prod_year_init[i] = np.int_(self.project_years)
+    #         else:
+    #             prod_year_init[i] = np.float_(prod_year_init[i])
+    #
+    #     self.prod_year = prod_year_init.copy()
+    #
+    #     # Prepare attribute lifting_rate
+    #     if not isinstance(self.lifting_rate, dict):
+    #         raise ElectricityLiftingDataException(
+    #             f"Attribute lifting_rate must be provided in the form of dictionary. "
+    #             f"The current datatype of lifting_rate is "
+    #             f"{self.lifting_rate.__class__.__qualname__}"
+    #         )
+    #
+    #     for i in self.lifting_rate.keys():
+    #         if self.lifting_rate[i] is None:
+    #             self.lifting_rate[i] = np.zeros_like(self.project_years, dtype=np.float_)
+    #         else:
+    #             self.lifting_rate[i] = np.float_(self.lifting_rate[i])
+    #
+    #     # Prepare attribute price
+    #     if not isinstance(self.price, dict):
+    #         raise ElectricityLiftingDataException(
+    #             f"Attribute price must be provided in the form of dictionary. "
+    #             f"The current datatype of price is "
+    #             f"{self.price.__class__.__qualname__}"
+    #         )
+    #
+    #     for i in self.price.keys():
+    #         if self.price[i] is None:
+    #             self.price[i] = np.zeros_like(self.project_years, dtype=np.float_)
+    #         else:
+    #             self.price[i] = np.float_(self.price[i])
+    #
+    #     # Adjust data for transition case
+    #     if "Transition" in self.type_of_contract:
+    #         target_attrs = {
+    #             "attr": [self.prod_year, self.lifting_rate, self.price],
+    #             "status": [False, True, False],
+    #         }
+    #
+    #         (
+    #             self.prod_year,
+    #             self.lifting_rate,
+    #             self.price,
+    #         ) = [
+    #             get_lifting_data_split_simple(
+    #                 target_attr=i,
+    #                 is_target_attr_volume=j,
+    #                 prod_year_init=prod_year_init,
+    #                 end_date_contract_1=self.end_date_project,
+    #                 start_date_contract_2=self.start_date_project_second,
+    #             )
+    #             for i, j in zip(target_attrs["attr"], target_attrs["status"])
+    #         ]
 
 
 @dataclass
