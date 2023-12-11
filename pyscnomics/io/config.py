@@ -631,17 +631,17 @@ class GasLiftingData:
 
     Attributes
     ----------
-    gas_gsa_number: int
+    gsa_number: int
         The number of GSA.
     prod_year_init: dict
         Dictionary containing production years data.
-    gas_prod_rate: dict
+    prod_rate: dict
         Dictionary containing gas lifting rate data.
-    gas_gsa_lifting_rate: dict
+    lifting_rate: dict
         Dictionary containing gas GSA lifting rate data.
-    gas_gsa_ghv: dict
+    ghv: dict
         Dictionary containing gas GSA ghv data.
-    gas_gsa_price: dict
+    price: dict
         Dictionary containing gas GSA price data.
     type_of_contract: str
         The type of contract associated with the project.
@@ -654,12 +654,12 @@ class GasLiftingData:
     project_years: numpy.ndarray
         An array representing the project years.
     """
-    gas_gsa_number: int
+    gsa_number: int
     prod_year_init: InitVar[dict] = field(repr=False)
-    gas_prod_rate: dict
-    gas_gsa_lifting_rate: dict
-    gas_gsa_ghv: dict
-    gas_gsa_price: dict
+    prod_rate: dict
+    lifting_rate: dict
+    ghv: dict
+    price: dict
 
     # Attributes associated with PSC transition
     type_of_contract: str = field(repr=False)
@@ -673,125 +673,125 @@ class GasLiftingData:
     # Attributes to be defined later
     prod_year: dict = field(default=None, init=False)
 
-    def __post_init__(self, prod_year_init):
-        # Prepare attribute prod_year
-        if not isinstance(prod_year_init, dict):
-            raise GasLiftingDataException(
-                f"Attribute prod_year must be provided in the form of dictionary. "
-                f"The current datatype of prod_year is "
-                f"{prod_year_init.__class__.__qualname__}"
-            )
-
-        for i in prod_year_init.keys():
-            if prod_year_init[i] is None:
-                prod_year_init[i] = np.int_(self.project_years)
-            else:
-                prod_year_init[i] = np.int_(prod_year_init[i])
-
-        self.prod_year = prod_year_init.copy()
-
-        # Prepare attribute gas_prod_rate
-        if not isinstance(self.gas_prod_rate, dict):
-            raise GasLiftingDataException(
-                f"Attribute gas_prod_rate must be provided in the form of dictionary. "
-                f"The current datatype of gas_prod_rate is "
-                f"{self.gas_prod_rate.__class__.__qualname__}"
-            )
-
-        for i in self.gas_prod_rate.keys():
-            if self.gas_prod_rate[i] is None:
-                self.gas_prod_rate[i] = np.zeros_like(self.project_years, dtype=np.float_)
-            else:
-                self.gas_prod_rate[i] = np.float_(self.gas_prod_rate[i])
-
-        # Prepare attribute gas_gsa_lifting_rate
-        if not isinstance(self.gas_gsa_lifting_rate, dict):
-            raise GasLiftingDataException(
-                f"Attribute gas_gsa_lifting_rate must be provided in the form of dictionary. "
-                f"The current datatype of gas_gsa_lifting_rate is "
-                f"{self.gas_gsa_lifting_rate.__class__.__qualname__}"
-            )
-
-        for i in self.gas_gsa_lifting_rate.keys():
-            for j in self.gas_gsa_lifting_rate[i].keys():
-                if self.gas_gsa_lifting_rate[i][j] is None:
-                    self.gas_gsa_lifting_rate[i][j] = np.zeros_like(self.project_years, dtype=np.float_)
-                else:
-                    self.gas_gsa_lifting_rate[i][j] = np.float_(self.gas_gsa_lifting_rate[i][j])
-
-        # Prepare attribute gas_gsa_ghv
-        if not isinstance(self.gas_gsa_ghv, dict):
-            raise GasLiftingDataException(
-                f"Attribute gas_gsa_ghv must be provided in the form of dictionary. "
-                f"The current datatype of gas_gsa_ghv is "
-                f"{self.gas_gsa_ghv.__class__.__qualname__}"
-            )
-
-        for i in self.gas_gsa_ghv.keys():
-            for j in self.gas_gsa_ghv[i].keys():
-                if self.gas_gsa_ghv[i][j] is None:
-                    self.gas_gsa_ghv[i][j] = np.zeros_like(self.project_years, dtype=np.float_)
-                else:
-                    self.gas_gsa_ghv[i][j] = np.float_(self.gas_gsa_ghv[i][j])
-
-        # Prepare attribute gas_gsa_price
-        if not isinstance(self.gas_gsa_price, dict):
-            raise GasLiftingDataException(
-                f"Attribute gas_gsa_price must be provided in the form of dictionary. "
-                f"The current datatype of gas_gsa_price is "
-                f"{self.gas_gsa_price.__class__.__qualname__}"
-            )
-
-        for i in self.gas_gsa_price.keys():
-            for j in self.gas_gsa_price[i].keys():
-                if self.gas_gsa_price[i][j] is None:
-                    self.gas_gsa_price[i][j] = np.zeros_like(self.project_years, dtype=np.float_)
-                else:
-                    self.gas_gsa_price[i][j] = np.float_(self.gas_gsa_price[i][j])
-
-        # Adjust data for PSC transition case
-        if "Transition" in self.type_of_contract:
-
-            # Modify attributes "prod_year" and "gas_prod_rate"
-            target_attrs_first = {
-                "attr": [self.prod_year, self.gas_prod_rate],
-                "status": [False, True],
-            }
-
-            (
-                self.prod_year,
-                self.gas_prod_rate,
-            ) = [
-                get_lifting_data_split_simple(
-                    target_attr=i,
-                    is_target_attr_volume=j,
-                    prod_year_init=prod_year_init,
-                    end_date_contract_1=self.end_date_project,
-                    start_date_contract_2=self.start_date_project_second,
-                )
-                for i, j in zip(target_attrs_first["attr"], target_attrs_first["status"])
-            ]
-
-            # Modify attributes "gas_gsa_lifting_rate", "gas_gsa_ghv", and "gas_gsa_price"
-            target_attrs_second = {
-                "attr": [self.gas_gsa_lifting_rate, self.gas_gsa_ghv, self.gas_gsa_price],
-                "status": [True, False, False],
-            }
-
-            (
-                self.gas_gsa_lifting_rate,
-                self.gas_gsa_ghv,
-                self.gas_gsa_price,
-            ) = [
-                get_lifting_data_split_advanced(
-                    target_attr=i,
-                    is_target_attr_volume=j,
-                    prod_year_init=prod_year_init,
-                    end_date_contract_1=self.end_date_project,
-                    start_date_contract_2=self.start_date_project_second,
-                )
-                for i, j in zip(target_attrs_second["attr"], target_attrs_second["status"])
-            ]
+    # def __post_init__(self, prod_year_init):
+    #     # Prepare attribute prod_year
+    #     if not isinstance(prod_year_init, dict):
+    #         raise GasLiftingDataException(
+    #             f"Attribute prod_year must be provided in the form of dictionary. "
+    #             f"The current datatype of prod_year is "
+    #             f"{prod_year_init.__class__.__qualname__}"
+    #         )
+    #
+    #     for i in prod_year_init.keys():
+    #         if prod_year_init[i] is None:
+    #             prod_year_init[i] = np.int_(self.project_years)
+    #         else:
+    #             prod_year_init[i] = np.int_(prod_year_init[i])
+    #
+    #     self.prod_year = prod_year_init.copy()
+    #
+    #     # Prepare attribute gas_prod_rate
+    #     if not isinstance(self.prod_rate, dict):
+    #         raise GasLiftingDataException(
+    #             f"Attribute gas_prod_rate must be provided in the form of dictionary. "
+    #             f"The current datatype of gas_prod_rate is "
+    #             f"{self.prod_rate.__class__.__qualname__}"
+    #         )
+    #
+    #     for i in self.prod_rate.keys():
+    #         if self.prod_rate[i] is None:
+    #             self.prod_rate[i] = np.zeros_like(self.project_years, dtype=np.float_)
+    #         else:
+    #             self.prod_rate[i] = np.float_(self.prod_rate[i])
+    #
+    #     # Prepare attribute gas_gsa_lifting_rate
+    #     if not isinstance(self.lifting_rate, dict):
+    #         raise GasLiftingDataException(
+    #             f"Attribute gas_gsa_lifting_rate must be provided in the form of dictionary. "
+    #             f"The current datatype of gas_gsa_lifting_rate is "
+    #             f"{self.lifting_rate.__class__.__qualname__}"
+    #         )
+    #
+    #     for i in self.lifting_rate.keys():
+    #         for j in self.lifting_rate[i].keys():
+    #             if self.lifting_rate[i][j] is None:
+    #                 self.lifting_rate[i][j] = np.zeros_like(self.project_years, dtype=np.float_)
+    #             else:
+    #                 self.lifting_rate[i][j] = np.float_(self.lifting_rate[i][j])
+    #
+    #     # Prepare attribute gas_gsa_ghv
+    #     if not isinstance(self.ghv, dict):
+    #         raise GasLiftingDataException(
+    #             f"Attribute gas_gsa_ghv must be provided in the form of dictionary. "
+    #             f"The current datatype of gas_gsa_ghv is "
+    #             f"{self.ghv.__class__.__qualname__}"
+    #         )
+    #
+    #     for i in self.ghv.keys():
+    #         for j in self.ghv[i].keys():
+    #             if self.ghv[i][j] is None:
+    #                 self.ghv[i][j] = np.zeros_like(self.project_years, dtype=np.float_)
+    #             else:
+    #                 self.ghv[i][j] = np.float_(self.ghv[i][j])
+    #
+    #     # Prepare attribute gas_gsa_price
+    #     if not isinstance(self.price, dict):
+    #         raise GasLiftingDataException(
+    #             f"Attribute gas_gsa_price must be provided in the form of dictionary. "
+    #             f"The current datatype of gas_gsa_price is "
+    #             f"{self.price.__class__.__qualname__}"
+    #         )
+    #
+    #     for i in self.price.keys():
+    #         for j in self.price[i].keys():
+    #             if self.price[i][j] is None:
+    #                 self.price[i][j] = np.zeros_like(self.project_years, dtype=np.float_)
+    #             else:
+    #                 self.price[i][j] = np.float_(self.price[i][j])
+    #
+    #     # Adjust data for PSC transition case
+    #     if "Transition" in self.type_of_contract:
+    #
+    #         # Modify attributes "prod_year" and "gas_prod_rate"
+    #         target_attrs_first = {
+    #             "attr": [self.prod_year, self.prod_rate],
+    #             "status": [False, True],
+    #         }
+    #
+    #         (
+    #             self.prod_year,
+    #             self.prod_rate,
+    #         ) = [
+    #             get_lifting_data_split_simple(
+    #                 target_attr=i,
+    #                 is_target_attr_volume=j,
+    #                 prod_year_init=prod_year_init,
+    #                 end_date_contract_1=self.end_date_project,
+    #                 start_date_contract_2=self.start_date_project_second,
+    #             )
+    #             for i, j in zip(target_attrs_first["attr"], target_attrs_first["status"])
+    #         ]
+    #
+    #         # Modify attributes "gas_gsa_lifting_rate", "gas_gsa_ghv", and "gas_gsa_price"
+    #         target_attrs_second = {
+    #             "attr": [self.lifting_rate, self.ghv, self.price],
+    #             "status": [True, False, False],
+    #         }
+    #
+    #         (
+    #             self.lifting_rate,
+    #             self.ghv,
+    #             self.price,
+    #         ) = [
+    #             get_lifting_data_split_advanced(
+    #                 target_attr=i,
+    #                 is_target_attr_volume=j,
+    #                 prod_year_init=prod_year_init,
+    #                 end_date_contract_1=self.end_date_project,
+    #                 start_date_contract_2=self.start_date_project_second,
+    #             )
+    #             for i, j in zip(target_attrs_second["attr"], target_attrs_second["status"])
+    #         ]
 
 
 @dataclass

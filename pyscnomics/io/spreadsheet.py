@@ -371,120 +371,86 @@ class Spreadsheet:
         The undertaken procedures are as follows:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod Gas' data,
             then assigned it as local variable named 'gas_data_available',
-        (2) Configure the number of active GSA in each element of 'gas_data_available',
-        (3) If 'gas_data_available' is empty (length is zero), then return a new instance
-            of GasLiftingData with the associated attributes set to None. Here, the associated
-            operations are as follows:
-            -   Create a dictionary named 'gas_data' where each corresponding attributes
-                set to None,
-            -   Create a new instance of GasLiftingData with attributes set accordingly
-                based on information stored in 'gas_data',
-        (4) If 'gas_data_available' is not empty, then return a new instance of GasLiftingData
-            with the associated attributes loaded from the commensurate Excel worksheet. Here,
-            the associated operations are as follows:
-            -   Specify two variables, namely 'gas_attrs_general' and 'gas_attrs_gsa',
-            -   Define variable named 'gas_id'. This variable stores information regarding
-                the associated column indices in self.data_loaded that corresponds to
-                'gas_gsa_lifting_rate', 'gas_gsa_ghv', and 'gas_gsa_price'. Variable 'gas_id'
-                is a 2D array: the zeroth axis depicts indices of 'gas_gsa_lifting_rate',
-                'gas_gsa_ghv', and 'gas_gsa_price' while the first axis manifest the number of
-                GSA available,
-            -   Rearrange self.loaded_data encompassing only gas lifting data; stores the
-                information in a variable named 'gas_data_loaded',
-            -   Instantiate an empty dictionary named 'gas_data', then fills in the variable
-                by specifying the elements accordingly: (a) 'prod_year', (b) 'gas_lifting_rate',
-                (c) 'gas_gsa_lifting_rate', (d) 'gas_gsa_ghv', and (e) gas_gsa_price,
-            -   Create a new instance of GasLiftingData with attributes set accordingly
-                based on information stored in 'gas_data'.
+        (2) Load the data associated with gas, then store it in the variable
+            named 'gas_data_loaded_init',
+        (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
+            Store the results in the variable named 'gas_data_loaded',
+        (4) Create a dictionary named 'gas_data_general' to store information related to
+            'prod_year' and 'prod_rate' from 'gas_data_loaded',
+        (5) -   Define variable named 'gsa_id'. This variable stores information regarding
+                the associated column indices in 'gas_data_loaded' that corresponds to
+                'lifting_rate', 'ghv', and 'price'. Variable 'gsa_id' is a 2D array: the
+                zeroth axis depicts indices of 'lifting_rate', 'ghv', and 'price' while the
+                first axis manifest the number of available GSA,
+            -   Create a dictionary named 'gas_data_gsa' to store information related to
+                'lifting_rate', 'ghv', and 'price',
+        (6) Return an instance of GasLiftingData to store the gas data appropriately
+            as its attributes.
         """
         # Step #1 (See 'Notes' section in the docstring)
         gas_data_available = list(filter(lambda i: "Prod Gas" in i, self.sheets_loaded))
 
         # Step #2 (See 'Notes' section in the docstring)
-        gas_gsa_number = self.general_config_data.gsa_number
-        gas_gsa_variables = ["GSA {0}".format(i + 1) for i in range(gas_gsa_number)]
+        gas_data_loaded_init = {ws: self.data_loaded[ws] for ws in gas_data_available}
 
         # Step #3 (See 'Notes' section in the docstring)
-        gas_attrs = [
-            "prod_year",
-            "gas_prod_rate",
-            "gas_gsa_lifting_rate",
-            "gas_gsa_ghv",
-            "gas_gsa_price",
-        ]
-
-        if len(gas_data_available) == 0:
-            gas_data = {
-                key: {"Prod Gas": {i: None for i in gas_gsa_variables}}
-                if key not in ["prod_year", "gas_prod_rate"]
-                else {"Prod Gas": None}
-                for key in gas_attrs
-            }
-
-            return GasLiftingData(
-                gas_gsa_number=gas_gsa_number,
-                prod_year_init=gas_data["prod_year"],
-                gas_prod_rate=gas_data["gas_prod_rate"],
-                gas_gsa_lifting_rate=gas_data["gas_gsa_lifting_rate"],
-                gas_gsa_ghv=gas_data["gas_gsa_ghv"],
-                gas_gsa_price=gas_data["gas_gsa_price"],
-                project_duration=self.general_config_data.project_duration,
-                project_years=self.general_config_data.project_years,
-                type_of_contract=self.general_config_data.type_of_contract,
-                end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second=self.general_config_data.start_date_project_second,
+        gas_data_loaded = {
+            ws: gas_data_loaded_init[ws] if gas_data_loaded_init[ws].empty
+            else (
+                gas_data_loaded_init[ws]
+                [~pd.isna(gas_data_loaded_init[ws].iloc[:, 0])]
+                .copy()
             )
+            for ws in gas_data_available
+        }
 
         # Step #4 (See 'Notes' section in the docstring)
-        else:
-            gas_attrs_general = ["prod_year", "gas_prod_rate"]
-            gas_attrs_gsa = ["gas_gsa_lifting_rate", "gas_gsa_ghv", "gas_gsa_price"]
-            gas_id = (
-                np.repeat(np.arange(len(gas_attrs_gsa))[:, np.newaxis] + 2, gas_gsa_number, axis=1)
-                + np.arange(gas_gsa_number) * len(gas_attrs_gsa)
-            )
-            gas_data_loaded = {i: self.data_loaded[i].fillna(0) for i in gas_data_available}
+        gas_attrs_general = ["prod_year", "prod_rate"]
+        gas_data_general = {
+            key: {
+                ws: None if gas_data_loaded[ws].empty
+                else gas_data_loaded[ws].iloc[:, i].to_numpy()
+                for ws in gas_data_available
+            }
+            for i, key in enumerate(gas_attrs_general)
+        }
 
-            gas_data = {}
+        # Step #5 (See 'Notes' section in the docstring)
+        gsa_number = self.general_config_data.gsa_number
+        gsa_variables = ["GSA {0}".format(i + 1) for i in range(gsa_number)]
+        gas_attrs_gsa = ["lifting_rate", "ghv", "price"]
 
-            for key, val_attr in enumerate(gas_attrs_general):
-                gas_data[val_attr] = {}
-                for i in gas_data_available:
-                    if gas_data_loaded[i].empty:
-                        gas_data[val_attr][i] = None
-                    else:
-                        gas_data[val_attr][i] = (
-                            gas_data_loaded[i].iloc[:, key]
-                            .to_numpy()
-                        )
+        gsa_id = (
+            np.repeat(np.arange(len(gas_attrs_gsa))[:, np.newaxis] + 2, gsa_number, axis=1)
+            + (np.arange(gsa_number) * len(gas_attrs_gsa))[np.newaxis, :]
+        )
 
-            for key, val_attr in enumerate(gas_attrs_gsa):
-                gas_data[val_attr] = {}
-                for i in gas_data_available:
-                    gas_data[val_attr][i] = {}
-                    if gas_data_loaded[i].empty:
-                        for j in gas_gsa_variables:
-                            gas_data[val_attr][i][j] = None
-                    else:
-                        for j, k in zip(gas_gsa_variables, range(gas_gsa_number)):
-                            gas_data[val_attr][i][j] = (
-                                gas_data_loaded[i].iloc[:, gas_id[key, k]]
-                                .to_numpy()
-                            )
+        gas_data_gsa = {
+            key: {
+                ws: {
+                    gsa: None if gas_data_loaded[ws].empty
+                    else gas_data_loaded[ws].iloc[:, gsa_id[i, j]].to_numpy()
+                    for gsa, j in zip(gsa_variables, range(gsa_number))
+                }
+                for ws in gas_data_available
+            }
+            for i, key in enumerate(gas_attrs_gsa)
+        }
 
-            return GasLiftingData(
-                gas_gsa_number=gas_gsa_number,
-                prod_year_init=gas_data["prod_year"],
-                gas_prod_rate=gas_data["gas_prod_rate"],
-                gas_gsa_lifting_rate=gas_data["gas_gsa_lifting_rate"],
-                gas_gsa_ghv=gas_data["gas_gsa_ghv"],
-                gas_gsa_price=gas_data["gas_gsa_price"],
-                project_duration=self.general_config_data.project_duration,
-                project_years=self.general_config_data.project_years,
-                type_of_contract=self.general_config_data.type_of_contract,
-                end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second=self.general_config_data.start_date_project_second,
-            )
+        # Step #6 (See 'Notes' section in the docstring)
+        return GasLiftingData(
+            gsa_number=gsa_number,
+            prod_year_init=gas_data_general["prod_year"],
+            prod_rate=gas_data_general["prod_rate"],
+            lifting_rate=gas_data_gsa["lifting_rate"],
+            ghv=gas_data_gsa["ghv"],
+            price=gas_data_gsa["price"],
+            project_duration=self.general_config_data.project_duration,
+            project_years=self.general_config_data.project_years,
+            type_of_contract=self.general_config_data.type_of_contract,
+            end_date_project=self.general_config_data.end_date_project,
+            start_date_project_second=self.general_config_data.start_date_project_second,
+        )
 
     def _get_lpg_propane_lifting_data(self) -> LPGPropaneLiftingData:
         """
@@ -1648,12 +1614,12 @@ class Spreadsheet:
 
         # Fill in the attributes associated with lifting data
         self.oil_lifting_data = self._get_oil_lifting_data()
-        # self.gas_lifting_data = self._get_gas_lifting_data()
-        self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
-        self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
-        self.sulfur_lifting_data = self._get_sulfur_lifting_data()
-        self.electricity_lifting_data = self._get_electricity_lifting_data()
-        self.co2_lifting_data = self._get_co2_lifting_data()
+        self.gas_lifting_data = self._get_gas_lifting_data()
+        # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
+        # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
+        # self.sulfur_lifting_data = self._get_sulfur_lifting_data()
+        # self.electricity_lifting_data = self._get_electricity_lifting_data()
+        # self.co2_lifting_data = self._get_co2_lifting_data()
 
         # # Fill in the attributes associated with cost data
         # self.tangible_cost_data = self._get_tangible_cost_data()
@@ -1670,8 +1636,8 @@ class Spreadsheet:
         # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
 
         print('\t')
-        print(f'Filetype: {type(self.co2_lifting_data)}')
-        print('co2_lifting_data = \n', self.co2_lifting_data)
+        print(f'Filetype: {type(self.gas_lifting_data)}')
+        print('gas_lifting_data = \n', self.gas_lifting_data)
 
         print('\t')
         print('=========================================================================================')
