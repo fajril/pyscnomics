@@ -415,20 +415,107 @@ class Aggregate(Spreadsheet):
 
         return sulfur_lifting_aggr
 
-    def _get_electricity_lifting_aggregate(self):
-        pass
+    def _get_electricity_lifting_aggregate(self) -> dict | tuple[Lifting]:
+        """
+        Retrieves the electricity lifting aggregate based on the Production
+        Sharing Contract (PSC) type.
+
+        Returns
+        -------
+        Dict[str, Tuple[Lifting, ...]], Tuple[Lifting, ...]:
+            -   If the type_of_contract is 'Transition', returns a dictionary with
+                PSC regimes as keys and a tuple of Lifting instances as values.
+            -   If the type_of_contract is a single PSC (CR or GS), returns a tuple
+                of Lifting instances.
+
+        Notes
+        -----
+        (1) For a single PSC case, the aggregate of electricity lifting data is generated using
+            a tuple comprehension of all available electricity lifting data stored in
+            parameter 'self.electricity_lifting_data'.
+        (2) For a PSC transition case, the aggregate of electricity lifting data is stored in
+            a dictionary with keys: ['PSC 1', 'PSC 2']. The value of each key is a
+            tuple of all available electricity lifting data stored in parameter
+            'self.electricity_lifting_data' for each corresponding PSC regime.
+        """
+        # For PSC transition
+        if "Transition" in self.electricity_lifting_data.type_of_contract:
+            start_year_combined = [
+                self.general_config_data.start_date_project.year,
+                self.general_config_data.start_date_project_second.year,
+            ]
+
+            end_year_combined = [
+                self.general_config_data.end_date_project.year,
+                self.general_config_data.end_date_project_second.year,
+            ]
+
+            electricity_lifting_aggr = {
+                psc: tuple(
+                    [
+                        Lifting(
+                            start_year=start_year_combined[i],
+                            end_year=end_year_combined[i],
+                            lifting_rate=self.electricity_lifting_data.lifting_rate[ws][psc],
+                            price=self.electricity_lifting_data.price[ws][psc],
+                            prod_year=self.electricity_lifting_data.prod_year[ws][psc],
+                            fluid_type=FluidType.ELECTRICITY,
+                        )
+                        for ws in self.electricity_lifting_data.prod_year.keys()
+                    ]
+                )
+                for i, psc in enumerate(self.psc_regimes)
+            }
+
+        # For single PSC (CR or GS)
+        else:
+            electricity_lifting_aggr = tuple(
+                [
+                    Lifting(
+                        start_year=self.general_config_data.start_date_project.year,
+                        end_year=self.general_config_data.end_date_project.year,
+                        lifting_rate=self.electricity_lifting_data.lifting_rate[ws],
+                        price=self.electricity_lifting_data.price[ws],
+                        prod_year=self.electricity_lifting_data.prod_year[ws],
+                        fluid_type=FluidType.ELECTRICITY,
+                    )
+                    for ws in self.electricity_lifting_data.prod_year.keys()
+                ]
+            )
+
+        return electricity_lifting_aggr
 
     def _get_co2_lifting_aggregate(self):
         pass
 
-    def fit(self):
+    def fit(self) -> None:
+        """
+        Fit method for the Aggregate class.
+        This method assigns aggregates associated with lifting data and costs data.
+
+        Returns
+        -------
+        None
+            This method modifies the instance attributes of Aggregate class.
+
+        Notes
+        -----
+        This method serves as a comprehensive data preparation step, calling specific
+        private methods to obtain and assign data based on their category.
+
+        The attributes include lifting and costs aggregates for all available components.
+        """
+        # Aggregates associated with lifting data
         self.oil_lifting_aggregate = self._get_oil_lifting_aggregate()
         self.condensate_lifting_aggregate = self._get_condensate_lifting_aggregate()
         self.lpg_propane_lifting_aggregate = self._get_lpg_propane_lifting_aggregare()
         self.lpg_butane_lifting_aggregate = self._get_lpg_butane_lifting_aggregate()
         self.sulfur_lifting_aggregate = self._get_sulfur_lifting_aggregate()
+        self.electricity_lifting_aggregate = self._get_electricity_lifting_aggregate()
 
-        # print('\t')
-        # print(f'Filetype: {type(self.sulfur_lifting_aggregate)}')
-        # print('sulfur_lifting_aggregate = \n', self.sulfur_lifting_aggregate)
+        # Aggregates associated with costs data
+
+        print('\t')
+        print(f'Filetype: {type(self.electricity_lifting_aggregate)}')
+        print('electricity_lifting_aggregate = \n', self.electricity_lifting_aggregate)
 

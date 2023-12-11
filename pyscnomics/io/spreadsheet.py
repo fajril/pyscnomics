@@ -674,6 +674,7 @@ class Spreadsheet:
             for i, key in enumerate(sulfur_data_attrs)
         }
 
+        # Step #5 (See 'Notes' section in the docstring)
         return SulfurLiftingData(
             prod_year_init=sulfur_data["prod_year"],
             lifting_rate=sulfur_data["lifting_rate"],
@@ -739,6 +740,7 @@ class Spreadsheet:
             for i, key in enumerate(electricity_data_attrs)
         }
 
+        # Step #5 (See 'Notes' section in the docstring)
         return ElectricityLiftingData(
             prod_year_init=electricity_data["prod_year"],
             lifting_rate=electricity_data["lifting_rate"],
@@ -764,52 +766,45 @@ class Spreadsheet:
         The undertaken procedures are as follows:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod CO2'
             data, then assigned it as local variable named 'co2_data_available',
-        (2) If 'co2_data_available' is empty (length is zero), then return a new
-            instance of CO2LiftingData with the associated attributes set to None,
-        (3) If 'co2_data_available' is not empty, first check whether a particular
-            self.data_loaded[co2_data_available] is an empty dataframe. If it is, then
-            create a new instance of CO2LiftingData with the associated attributes set
-            to None. If a particular self.data_loaded[co2_data_available] is not an empty
-            dataframe, then create a new instance of CO2LiftingData with the associated
-            attributes set as the loaded value from the corresponding Excel worksheet.
+        (2) Load the data associated with co2 data, then store it in the variable
+            named 'co2_data_loaded_init',
+        (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
+            Store the results in the variable named 'co2_data_loaded',
+        (4) Create a dictionary named 'co2_data' to store the necessary data from
+            'co2_data_loaded',
+        (5) Return an instance of CO2LiftingData to store the co2 data
+            appropriately as its attributes.
         """
-
         # Step #1 (See 'Notes' section in the docstring)
         co2_data_available = list(filter(lambda i: "Prod CO2" in i, self.sheets_loaded))
 
         # Step #2 (See 'Notes' section in the docstring)
-        co2_data_attrs = ["prod_year", "lifting_rate", "price"]
-
-        if len(co2_data_available) == 0:
-            co2_data = {key: {"Prod CO2": None} for key in co2_data_attrs}
-
-            return CO2LiftingData(
-                prod_year_init=co2_data["prod_year"],
-                lifting_rate=co2_data["lifting_rate"],
-                price=co2_data["price"],
-                project_duration=self.general_config_data.project_duration,
-                project_years=self.general_config_data.project_years,
-                type_of_contract=self.general_config_data.type_of_contract,
-                end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second=self.general_config_data.start_date_project_second,
-            )
+        co2_data_loaded_init = {ws: self.data_loaded[ws] for ws in co2_data_available}
 
         # Step #3 (See 'Notes' section in the docstring)
-        else:
-            co2_data = {}
-            co2_data_loaded = {i: self.data_loaded[i].fillna(0) for i in co2_data_available}
+        co2_data_loaded = {
+            ws: co2_data_loaded_init[ws] if co2_data_loaded_init[ws].empty
+            else (
+                co2_data_loaded_init[ws]
+                [~pd.isna(co2_data_loaded_init[ws].iloc[:, 0])]
+                .copy()
+            )
+            for ws in co2_data_available
+        }
 
-            for key, val_attr in enumerate(co2_data_attrs):
-                co2_data[val_attr] = {}
-                for i in co2_data_available:
-                    if co2_data_loaded[i].empty:
-                        co2_data[val_attr][i] = None
-                    else:
-                        co2_data[val_attr][i] = (
-                            co2_data_loaded[i].iloc[:, key]
-                            .to_numpy()
-                        )
+        # Step #4 (See 'Notes' section in the docstring)
+        co2_data_attrs = ["prod_year", "lifting_rate", "price"]
 
+        co2_data = {
+            key: {
+                ws: None if co2_data_loaded[ws].empty
+                else co2_data_loaded[ws].iloc[:, i].to_numpy()
+                for ws in co2_data_available
+            }
+            for i, key in enumerate(co2_data_attrs)
+        }
+
+        # Step #5 (See 'Notes' section in the docstring)
         return CO2LiftingData(
             prod_year_init=co2_data["prod_year"],
             lifting_rate=co2_data["lifting_rate"],
@@ -1622,7 +1617,7 @@ class Spreadsheet:
 
     def prepare_data(self) -> None:
         """
-        Prepare data for optimization.
+        Method to prepare data of Spreadsheet class.
 
         Reads and prepare data from a target Excel file and fills in attributes
         associated with various categories, including configuration, lifting, cost,
@@ -1631,7 +1626,7 @@ class Spreadsheet:
         Returns
         -------
         None
-            This method modifies the instance attributes of the class.
+            This method modifies the instance attributes of Spreadsheet class.
 
         Notes
         -----
@@ -1658,7 +1653,7 @@ class Spreadsheet:
         self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
         self.sulfur_lifting_data = self._get_sulfur_lifting_data()
         self.electricity_lifting_data = self._get_electricity_lifting_data()
-        # self.co2_lifting_data = self._get_co2_lifting_data()
+        self.co2_lifting_data = self._get_co2_lifting_data()
 
         # # Fill in the attributes associated with cost data
         # self.tangible_cost_data = self._get_tangible_cost_data()
@@ -1675,8 +1670,8 @@ class Spreadsheet:
         # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
 
         print('\t')
-        print(f'Filetype: {type(self.electricity_lifting_data)}')
-        print('electricity_lifting_data = \n', self.electricity_lifting_data)
+        print(f'Filetype: {type(self.co2_lifting_data)}')
+        print('co2_lifting_data = \n', self.co2_lifting_data)
 
         print('\t')
         print('=========================================================================================')
