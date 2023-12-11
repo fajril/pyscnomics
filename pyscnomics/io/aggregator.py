@@ -485,8 +485,75 @@ class Aggregate(Spreadsheet):
 
         return electricity_lifting_aggr
 
-    def _get_co2_lifting_aggregate(self):
-        pass
+    def _get_co2_lifting_aggregate(self) -> dict | tuple[Lifting]:
+        """
+        Retrieves the co2 lifting aggregate based on the Production
+        Sharing Contract (PSC) type.
+
+        Returns
+        -------
+        Dict[str, Tuple[Lifting, ...]], Tuple[Lifting, ...]:
+            -   If the type_of_contract is 'Transition', returns a dictionary with
+                PSC regimes as keys and a tuple of Lifting instances as values.
+            -   If the type_of_contract is a single PSC (CR or GS), returns a tuple
+                of Lifting instances.
+
+        Notes
+        -----
+        (1) For a single PSC case, the aggregate of co2 lifting data is generated using
+            a tuple comprehension of all available co2 lifting data stored in
+            parameter 'self.co2_lifting_data'.
+        (2) For a PSC transition case, the aggregate of co2 lifting data is stored in
+            a dictionary with keys: ['PSC 1', 'PSC 2']. The value of each key is a
+            tuple of all available co2 lifting data stored in parameter
+            'self.co2_lifting_data' for each corresponding PSC regime.
+        """
+        # For PSC transition
+        if "Transition" in self.co2_lifting_data.type_of_contract:
+            start_year_combined = [
+                self.general_config_data.start_date_project.year,
+                self.general_config_data.start_date_project_second.year,
+            ]
+
+            end_year_combined = [
+                self.general_config_data.end_date_project.year,
+                self.general_config_data.end_date_project_second.year,
+            ]
+
+            co2_lifting_aggr = {
+                psc: tuple(
+                    [
+                        Lifting(
+                            start_year=start_year_combined[i],
+                            end_year=end_year_combined[i],
+                            lifting_rate=self.co2_lifting_data.lifting_rate[ws][psc],
+                            price=self.co2_lifting_data.price[ws][psc],
+                            prod_year=self.co2_lifting_data.prod_year[ws][psc],
+                            fluid_type=FluidType.CO2,
+                        )
+                        for ws in self.co2_lifting_data.prod_year.keys()
+                    ]
+                )
+                for i, psc in enumerate(self.psc_regimes)
+            }
+
+        # For single PSC (CR or GS)
+        else:
+            co2_lifting_aggr = tuple(
+                [
+                    Lifting(
+                        start_year=self.general_config_data.start_date_project.year,
+                        end_year=self.general_config_data.end_date_project.year,
+                        lifting_rate=self.co2_lifting_data.lifting_rate[ws],
+                        price=self.co2_lifting_data.price[ws],
+                        prod_year=self.co2_lifting_data.prod_year[ws],
+                        fluid_type=FluidType.CO2,
+                    )
+                    for ws in self.co2_lifting_data.prod_year.keys()
+                ]
+            )
+
+        return co2_lifting_aggr
 
     def fit(self) -> None:
         """
@@ -512,10 +579,11 @@ class Aggregate(Spreadsheet):
         self.lpg_butane_lifting_aggregate = self._get_lpg_butane_lifting_aggregate()
         self.sulfur_lifting_aggregate = self._get_sulfur_lifting_aggregate()
         self.electricity_lifting_aggregate = self._get_electricity_lifting_aggregate()
+        self.co2_lifting_aggregate = self._get_co2_lifting_aggregate()
 
         # Aggregates associated with costs data
 
         print('\t')
-        print(f'Filetype: {type(self.electricity_lifting_aggregate)}')
-        print('electricity_lifting_aggregate = \n', self.electricity_lifting_aggregate)
+        print(f'Filetype: {type(self.co2_lifting_aggregate)}')
+        print('co2_lifting_aggregate = \n', self.co2_lifting_aggregate)
 
