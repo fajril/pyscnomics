@@ -784,63 +784,49 @@ class GasLiftingData:
                     else:
                         self.price[ws][gsa] = np.float_(self.price[ws][gsa])
 
-        # print('\t')
-        # print(f'Filetype: {type(self.prod_year)}')
-        # print(f'Length: {len(self.prod_year)}')
-        # print('prod_year = \n', self.prod_year)
-
         # Adjust data for PSC transition case
         if "Transition" in self.type_of_contract:
-            # # Modify attributes "prod_year" and "prod_rate"
-            # target_attrs_general = {
-            #     "attr": [self.prod_year, self.prod_rate],
-            #     "status": [False, True],
-            # }
-            #
-            # (
-            #     self.prod_year,
-            #     self.prod_rate,
-            # ) = [
-            #     get_lifting_data_split_simple(
-            #         target_attr=i,
-            #         is_target_attr_volume=j,
-            #         prod_year_init=prod_year_init,
-            #         end_date_contract_1=self.end_date_project,
-            #         start_date_contract_2=self.start_date_project_second,
-            #     )
-            #     for i, j in zip(target_attrs_general["attr"], target_attrs_general["status"])
-            # ]
+            # Modify attributes "prod_year" and "prod_rate"
+            target_attrs_general = {
+                "attr": [self.prod_year, self.prod_rate],
+                "status": [False, True],
+            }
 
-            t1 = get_lifting_data_split_advanced(
-                target_attr=self.lifting_rate,
-                is_target_attr_volume=True,
-                prod_year_init=prod_year_init,
-                end_date_contract_1=self.end_date_project,
-                start_date_contract_2=self.start_date_project_second,
-                gsa_number=self.gsa_number,
-            )
+            (
+                self.prod_year,
+                self.prod_rate,
+            ) = [
+                get_lifting_data_split_simple(
+                    target_attr=i,
+                    is_target_attr_volume=j,
+                    prod_year_init=prod_year_init,
+                    end_date_contract_1=self.end_date_project,
+                    start_date_contract_2=self.start_date_project_second,
+                )
+                for i, j in zip(target_attrs_general["attr"], target_attrs_general["status"])
+            ]
 
+            # Modify attributes "lifting_rate", "ghv", and "price"
+            target_attrs_gsa = {
+                "attr": [self.lifting_rate, self.ghv, self.price],
+                "status": [True, False, False],
+            }
 
-    #         # Modify attributes "gas_gsa_lifting_rate", "gas_gsa_ghv", and "gas_gsa_price"
-    #         target_attrs_second = {
-    #             "attr": [self.lifting_rate, self.ghv, self.price],
-    #             "status": [True, False, False],
-    #         }
-    #
-    #         (
-    #             self.lifting_rate,
-    #             self.ghv,
-    #             self.price,
-    #         ) = [
-    #             get_lifting_data_split_advanced(
-    #                 target_attr=i,
-    #                 is_target_attr_volume=j,
-    #                 prod_year_init=prod_year_init,
-    #                 end_date_contract_1=self.end_date_project,
-    #                 start_date_contract_2=self.start_date_project_second,
-    #             )
-    #             for i, j in zip(target_attrs_second["attr"], target_attrs_second["status"])
-    #         ]
+            (
+                self.lifting_rate,
+                self.ghv,
+                self.price,
+            ) = [
+                get_lifting_data_split_advanced(
+                    target_attr=i,
+                    is_target_attr_volume=j,
+                    prod_year_init=prod_year_init,
+                    end_date_contract_1=self.end_date_project,
+                    start_date_contract_2=self.start_date_project_second,
+                    gsa_number=self.gsa_number,
+                )
+                for i, j in zip(target_attrs_gsa["attr"], target_attrs_gsa["status"])
+            ]
 
 
 @dataclass

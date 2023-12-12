@@ -44,8 +44,8 @@ class Lifting:
     price: np.ndarray
     prod_year: np.ndarray
     fluid_type: FluidType = field(default=FluidType.OIL)
-    ghv: np.ndarray = field(default=None, repr=False)
-    prod_rate: np.ndarray = field(default=None, repr=False)
+    ghv: np.ndarray = field(default=None)
+    prod_rate: np.ndarray = field(default=None)
 
     # Attribute to be defined later on
     project_duration: int = field(default=None, init=False)

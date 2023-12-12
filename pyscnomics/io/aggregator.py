@@ -1,12 +1,12 @@
 """
-Create Lifting and Cost instances to be passed on to the main executable.
+Create aggregate of Lifting and Cost instances to be passed on to the main executable.
 """
 
 import os as os
 import numpy as np
 import pandas as pd
 import time as tm
-from dataclasses import dataclass, field, InitVar
+from dataclasses import dataclass, field
 from functools import reduce
 
 from pyscnomics.io.spreadsheet import Spreadsheet
@@ -203,8 +203,83 @@ class Aggregate(Spreadsheet):
 
         return condensate_lifting_aggr
 
-    def _get_gas_lifting_aggregate(self):
-        pass
+    def _get_gas_lifting_aggregate(self) -> dict | tuple[Lifting]:
+        """
+        Retrieves the gas lifting aggregate based on the Production Sharing Contract (PSC) type.
+
+        Returns
+        -------
+        Dict[str, Tuple[Lifting, ...]], Tuple[Lifting, ...]:
+            -   If the type_of_contract is "Transition," returns a dictionary with
+                PSC regimes as keys and a tuple of Lifting instances as values.
+            -   If the type_of_contract is a single PSC (CR or GS), returns a tuple
+                of Lifting instances.
+
+        Notes
+        -----
+        (1) For single PSC case, the aggregate of gas lifting data is generated using
+            a tuple comprehension of all available gas lifting data stored in
+            parameter 'self.gas_lifting_data',
+        (2) For PSC transition case, the aggregate of gas lifting data is stored in
+            a dictionary with keys: ['PSC 1', 'PSC 2']. The value of each keys is a
+            tuple of all available gas lifting data stored in parameter 'self.gas_lifting_data'
+            for each corresponding PSC regimes.
+        """
+        gsa_number = self.general_config_data.gsa_number
+        gsa_variables = ["GSA {0}".format(i + 1) for i in range(gsa_number)]
+
+        # For PSC transition
+        if "Transition" in self.gas_lifting_data.type_of_contract:
+            start_year_combined = [
+                self.general_config_data.start_date_project.year,
+                self.general_config_data.start_date_project_second.year,
+            ]
+
+            end_year_combined = [
+                self.general_config_data.end_date_project.year,
+                self.general_config_data.end_date_project_second.year,
+            ]
+
+            gas_lifting_aggr = {
+                psc: tuple(
+                    [
+                        Lifting(
+                            start_year=start_year_combined[i],
+                            end_year=end_year_combined[i],
+                            lifting_rate=self.gas_lifting_data.lifting_rate[ws][gsa][psc],
+                            price=self.gas_lifting_data.price[ws][gsa][psc],
+                            prod_year=self.gas_lifting_data.prod_year[ws][psc],
+                            fluid_type=FluidType.GAS,
+                            ghv=self.gas_lifting_data.ghv[ws][gsa][psc],
+                            prod_rate=self.gas_lifting_data.prod_rate[ws][psc],
+                        )
+                        for ws in self.gas_lifting_data.prod_year.keys()
+                        for gsa in gsa_variables
+                    ]
+                )
+                for i, psc in enumerate(self.psc_regimes)
+            }
+
+        # For single PSC (CR or GS)
+        else:
+            gas_lifting_aggr = tuple(
+                [
+                    Lifting(
+                        start_year=self.general_config_data.start_date_project.year,
+                        end_year=self.general_config_data.end_date_project.year,
+                        lifting_rate=self.gas_lifting_data.lifting_rate[ws][gsa],
+                        price=self.gas_lifting_data.price[ws][gsa],
+                        prod_year=self.gas_lifting_data.prod_year[ws],
+                        fluid_type=FluidType.GAS,
+                        ghv=self.gas_lifting_data.ghv[ws][gsa],
+                        prod_rate=self.gas_lifting_data.prod_rate[ws],
+                    )
+                    for ws in self.gas_lifting_data.prod_year.keys()
+                    for gsa in gsa_variables
+                ]
+            )
+
+        return gas_lifting_aggr
 
     def _get_lpg_propane_lifting_aggregare(self) -> dict | tuple[Lifting]:
         """

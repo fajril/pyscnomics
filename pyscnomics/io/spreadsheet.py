@@ -1613,7 +1613,7 @@ class Spreadsheet:
         self.fiscal_config_data = self._get_fiscal_config_data()
 
         # Fill in the attributes associated with lifting data
-        # self.oil_lifting_data = self._get_oil_lifting_data()
+        self.oil_lifting_data = self._get_oil_lifting_data()
         self.gas_lifting_data = self._get_gas_lifting_data()
         # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
         # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
@@ -1635,9 +1635,9 @@ class Spreadsheet:
         # self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
         # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
 
-        # print('\t')
-        # print(f'Filetype: {type(self.gas_lifting_data)}')
-        # print('gas_lifting_data = \n', self.gas_lifting_data)
-        #
-        # print('\t')
-        # print('=========================================================================================')
+        print('\t')
+        print(f'Filetype: {type(self.gas_lifting_data)}')
+        print('gas_lifting_data = \n', self.gas_lifting_data)
+
+        print('\t')
+        print('=========================================================================================')
