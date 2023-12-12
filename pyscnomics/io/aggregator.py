@@ -31,6 +31,7 @@ class Aggregate(Spreadsheet):
     # Attributes associated with aggregates of lifting data
     oil_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
     condensate_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
+    gas_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
     lpg_propane_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
     lpg_butane_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
     sulfur_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
@@ -574,6 +575,7 @@ class Aggregate(Spreadsheet):
         """
         # Aggregates associated with lifting data
         self.oil_lifting_aggregate = self._get_oil_lifting_aggregate()
+        self.gas_lifting_aggregate = self._get_gas_lifting_aggregate()
         self.condensate_lifting_aggregate = self._get_condensate_lifting_aggregate()
         self.lpg_propane_lifting_aggregate = self._get_lpg_propane_lifting_aggregare()
         self.lpg_butane_lifting_aggregate = self._get_lpg_butane_lifting_aggregate()
@@ -584,6 +586,6 @@ class Aggregate(Spreadsheet):
         # Aggregates associated with costs data
 
         print('\t')
-        print(f'Filetype: {type(self.co2_lifting_aggregate)}')
-        print('co2_lifting_aggregate = \n', self.co2_lifting_aggregate)
+        print(f'Filetype: {type(self.gas_lifting_aggregate)}')
+        print('gas_lifting_aggregate = \n', self.gas_lifting_aggregate)
 
