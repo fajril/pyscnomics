@@ -281,7 +281,7 @@ class Aggregate(Spreadsheet):
 
         return gas_lifting_aggr
 
-    def _get_lpg_propane_lifting_aggregare(self) -> dict | tuple[Lifting]:
+    def _get_lpg_propane_lifting_aggregate(self) -> dict | tuple[Lifting]:
         """
         Retrieves the LPG propane lifting aggregate based on the Production
         Sharing Contract (PSC) type.
@@ -652,7 +652,7 @@ class Aggregate(Spreadsheet):
         self.oil_lifting_aggregate = self._get_oil_lifting_aggregate()
         self.gas_lifting_aggregate = self._get_gas_lifting_aggregate()
         self.condensate_lifting_aggregate = self._get_condensate_lifting_aggregate()
-        self.lpg_propane_lifting_aggregate = self._get_lpg_propane_lifting_aggregare()
+        self.lpg_propane_lifting_aggregate = self._get_lpg_propane_lifting_aggregate()
         self.lpg_butane_lifting_aggregate = self._get_lpg_butane_lifting_aggregate()
         self.sulfur_lifting_aggregate = self._get_sulfur_lifting_aggregate()
         self.electricity_lifting_aggregate = self._get_electricity_lifting_aggregate()
@@ -662,5 +662,6 @@ class Aggregate(Spreadsheet):
 
         print('\t')
         print(f'Filetype: {type(self.gas_lifting_aggregate)}')
+        print(f'Length: {len(self.gas_lifting_aggregate)}')
         print('gas_lifting_aggregate = \n', self.gas_lifting_aggregate)
 

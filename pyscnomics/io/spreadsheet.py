@@ -1615,11 +1615,11 @@ class Spreadsheet:
         # Fill in the attributes associated with lifting data
         self.oil_lifting_data = self._get_oil_lifting_data()
         self.gas_lifting_data = self._get_gas_lifting_data()
-        # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
-        # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
-        # self.sulfur_lifting_data = self._get_sulfur_lifting_data()
-        # self.electricity_lifting_data = self._get_electricity_lifting_data()
-        # self.co2_lifting_data = self._get_co2_lifting_data()
+        self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
+        self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
+        self.sulfur_lifting_data = self._get_sulfur_lifting_data()
+        self.electricity_lifting_data = self._get_electricity_lifting_data()
+        self.co2_lifting_data = self._get_co2_lifting_data()
 
         # # Fill in the attributes associated with cost data
         # self.tangible_cost_data = self._get_tangible_cost_data()
