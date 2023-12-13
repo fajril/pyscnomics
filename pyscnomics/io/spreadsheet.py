@@ -795,20 +795,29 @@ class Spreadsheet:
         The core operations are as follows:
         (1) Capture tangible cost data from attribute self.data_loaded, then perform the
             necessary adjustment,
-        (2) If 'tangible_data_loaded' is an empty dataframe, then return None,
-        (3) If 'tangible_data_loaded' is not an empty dataframe, then load and
-            arrange the attributes of interest from variable 'tangible_data_loaded'.
-            Afterwards, create a new instance of TangibleCostData to store them.
+        (2) If 'tangible_data_loaded_init' is an empty dataframe, then return None,
+        (3) If 'tangible_data_loaded_init' is not an empty dataframe, undertake data cleansing:
+            remove all rows which column 'expense_year' is NaN. Store the results in a variable
+            named 'tangible_data_loaded',
+        (4) Create a dictionary named 'tangible_data' to store the necessary data from
+            'tangible_data_loaded',
+        (5) Return an instance of TangibleCostData to store the tangible data appropriately
+            as its attributes.
         """
         # Step #1 (See 'Notes' section in the docstring)
-        tangible_data_loaded = self.data_loaded["Cost Tangible"].dropna(axis=0, how="all")
+        tangible_data_loaded_init = self.data_loaded["Cost Tangible"].dropna(axis=0, how="all")
 
         # Step #2 (See 'Notes' section in the docstring)
-        if tangible_data_loaded.empty:
+        if tangible_data_loaded_init.empty:
             return None
 
         # Step #3 (See 'Notes' section in the docstring)
         else:
+            tangible_data_loaded = (
+                tangible_data_loaded_init[~pd.isna(tangible_data_loaded_init.iloc[:, 0])].copy()
+            )
+
+            # Step #4 (See 'Notes' section in the docstring)
             tangible_data_attrs = [
                 "expense_year",
                 "cost_allocation",
@@ -828,6 +837,7 @@ class Spreadsheet:
                 for i, key in enumerate(tangible_data_attrs)
             }
 
+            # Step #5 (See 'Notes' section in the docstring)
             return TangibleCostData(
                 expense_year_init=tangible_data["expense_year"],
                 cost_allocation=tangible_data["cost_allocation"].tolist(),
@@ -840,7 +850,6 @@ class Spreadsheet:
                 vat_portion=tangible_data["vat_portion"],
                 lbt_portion=tangible_data["lbt_portion"],
                 description=tangible_data["description"].tolist(),
-                data_length=tangible_data_loaded.shape[0],
                 project_years=self.general_config_data.project_years,
                 type_of_contract=self.general_config_data.type_of_contract,
                 end_date_project=self.general_config_data.end_date_project,
@@ -1621,8 +1630,8 @@ class Spreadsheet:
         self.electricity_lifting_data = self._get_electricity_lifting_data()
         self.co2_lifting_data = self._get_co2_lifting_data()
 
-        # # Fill in the attributes associated with cost data
-        # self.tangible_cost_data = self._get_tangible_cost_data()
+        # Fill in the attributes associated with cost data
+        self.tangible_cost_data = self._get_tangible_cost_data()
         # self.intangible_cost_data = self._get_intangible_cost_data()
         # self.opex_data = self._get_opex_data()
         # self.asr_cost_data = self._get_asr_cost_data()
@@ -1636,8 +1645,11 @@ class Spreadsheet:
         # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
 
         print('\t')
-        print(f'Filetype: {type(self.gas_lifting_data)}')
-        print('gas_lifting_data = \n', self.gas_lifting_data)
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+
+        print('\t')
+        print(f'Filetype: {type(self.tangible_cost_data)}')
+        print('tangible_cost_data = \n', self.tangible_cost_data)
 
         print('\t')
         print('=========================================================================================')
