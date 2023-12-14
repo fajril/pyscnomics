@@ -3,11 +3,11 @@ Create aggregate of Lifting and Cost instances to be passed on to the main execu
 """
 
 import os as os
-import numpy as np
-import pandas as pd
-import time as tm
+# import numpy as np
+# import pandas as pd
+# import time as tm
 from dataclasses import dataclass, field
-from functools import reduce
+# from functools import reduce
 
 from pyscnomics.io.spreadsheet import Spreadsheet
 from pyscnomics.econ.selection import FluidType
@@ -664,4 +664,3 @@ class Aggregate(Spreadsheet):
         print(f'Filetype: {type(self.gas_lifting_aggregate)}')
         print(f'Length: {len(self.gas_lifting_aggregate)}')
         print('gas_lifting_aggregate = \n', self.gas_lifting_aggregate)
-

@@ -1469,8 +1469,6 @@ class TangibleCostData:
         Array of LBT (Land and Building Tax) portions.
     description: list
         List of descriptions.
-    data_length: int
-        Length of the captured data.
     project_years: np.ndarray
         Array of project years.
     type_of_contract: str
@@ -1505,125 +1503,146 @@ class TangibleCostData:
 
     def __post_init__(self, expense_year_init):
         # Prepare attribute expense_year
-        if not isinstance(expense_year_init, np.ndarray):
-            raise TangibleCostDataException(
-                f"Expense year data must be given in the form of numpy.ndarray. "
-                f"The current expense_year data is given in the form of: "
-                f"({expense_year_init.__class__.__qualname__})."
+        if expense_year_init is None:
+            expense_year_init = (
+                np.array([self.project_years[0], self.project_years[-1]], dtype=np.int_)
             )
+
+        else:
+            if not isinstance(expense_year_init, np.ndarray):
+                raise TangibleCostDataException(
+                    f"Expense year data must be given in the form of numpy.ndarray. "
+                    f"The current expense_year data is given in the form of: "
+                    f"({expense_year_init.__class__.__qualname__})."
+                )
 
         expense_year_init = np.int_(expense_year_init)
         self.expense_year = expense_year_init.copy()
 
         # Prepare attribute cost_allocation
-        if not isinstance(self.cost_allocation, list):
-            raise TangibleCostDataException(
-                f"Cost allocation data must be given in the form of list. "
-                f"The current cost_allocation data is given in the form of: "
-                f"({self.cost_allocation.__class__.__qualname__})."
-            )
+        if self.cost_allocation is None:
+            self.cost_allocation = np.array(["Oil" for i in range(len(expense_year_init))])
 
-        cost_allocation_nan = np.argwhere(pd.isna(self.cost_allocation)).ravel()
-        if len(cost_allocation_nan) > 0:
-            self.cost_allocation = np.array(self.cost_allocation)
-            self.cost_allocation[cost_allocation_nan] = ["Oil" for i in range(len(cost_allocation_nan))]
-            self.cost_allocation = [get_fluidtype_converter(target=i) for i in self.cost_allocation]
         else:
-            self.cost_allocation = [get_fluidtype_converter(target=i) for i in self.cost_allocation]
+            if not isinstance(self.cost_allocation, np.ndarray):
+                raise TangibleCostDataException(
+                    f"Cost allocation data must be given in the form of np.ndarray. "
+                    f"The current cost_allocation data is given in the form of: "
+                    f"({self.cost_allocation.__class__.__qualname__})."
+                )
+
+            cost_allocation_nan = np.argwhere(pd.isna(self.cost_allocation)).ravel()
+            if len(cost_allocation_nan) > 0:
+                self.cost_allocation[cost_allocation_nan] = (
+                    ["Oil" for i in range(len(cost_allocation_nan))]
+                )
+
+        self.cost_allocation = [get_fluidtype_converter(target=i) for i in self.cost_allocation]
 
         # Prepare attribute cost
-        if not isinstance(self.cost, np.ndarray):
-            raise TangibleCostDataException(
-                f"Cost data must be given in the form of numpy.ndarray. "
-                f"The current cost data is given in the form of: "
-                f"({self.cost.__class__.__qualname__})."
-            )
+        if self.cost is None:
+            self.cost = np.zeros_like(expense_year_init, dtype=np.float_)
 
-        cost_nan = np.argwhere(pd.isna(self.cost)).ravel()
-        if len(cost_nan) > 0:
-            self.cost[cost_nan] = np.zeros(len(cost_nan), dtype=np.float_)
         else:
-            self.cost = np.float_(self.cost)
+            if not isinstance(self.cost, np.ndarray):
+                raise TangibleCostDataException(
+                    f"Cost data must be given in the form of numpy.ndarray. "
+                    f"The current cost data is given in the form of: "
+                    f"({self.cost.__class__.__qualname__})."
+                )
+
+            cost_nan = np.argwhere(pd.isna(self.cost)).ravel()
+            if len(cost_nan) > 0:
+                self.cost[cost_nan] = np.zeros(len(cost_nan), dtype=np.float_)
+
+        self.cost = np.float_(self.cost)
+
+        # Prepare attribute pis_year
+        if self.pis_year is None:
+            self.pis_year = expense_year_init
+
+        else:
+            if not isinstance(self.pis_year, np.ndarray):
+                raise TangibleCostDataException(
+                    f"PIS year data must be given in the form of numpy.ndarray. "
+                    f"The current pis_year data is given in the form of: "
+                    f"({self.pis_year.__class__.__qualname__})."
+                )
+
+            pis_year_nan = np.argwhere(pd.isna(self.pis_year)).ravel()
+            if len(pis_year_nan) > 0:
+                self.pis_year[pis_year_nan] = expense_year_init[pis_year_nan]
+
+        self.pis_year = np.int_(self.pis_year)
+
+        # Prepare attribute useful_life
+        if self.useful_life is None:
+            self.useful_life = np.full_like(expense_year_init, fill_value=5.0, dtype=np.float_)
+
+        else:
+            if not isinstance(self.useful_life, np.ndarray):
+                raise TangibleCostDataException(
+                    f"Useful life data must be given in the form of numpy.ndarray. "
+                    f"The current useful_life data is given in the form of: "
+                    f"({self.useful_life.__class__.__qualname__})."
+                )
+
+            useful_life_nan = np.argwhere(pd.isna(self.useful_life)).ravel()
+            if len(useful_life_nan) > 0:
+                self.useful_life[useful_life_nan] = np.repeat(5.0, len(useful_life_nan))
+
+        self.useful_life = np.float_(self.useful_life)
+
+        # Prepare attribute depreciation_factor
+        if self.depreciation_factor is None:
+            self.depreciation_factor = np.full_like(expense_year_init, fill_value=0.5, dtype=np.float_)
+
+        else:
+            if not isinstance(self.depreciation_factor, np.ndarray):
+                raise TangibleCostDataException(
+                    f"Depreciation factor data must be given in the form of numpy.ndarray. "
+                    f"The current depreciation_factor data is given in the form of: "
+                    f"({self.depreciation_factor.__class__.__qualname__})."
+                )
+
+            depreciation_factor_nan = np.argwhere(pd.isna(self.depreciation_factor)).ravel()
+            if len(depreciation_factor_nan) > 0:
+                self.depreciation_factor[depreciation_factor_nan] = (
+                    np.repeat(0.5, len(depreciation_factor_nan))
+                )
+
+        self.depreciation_factor = np.float_(self.depreciation_factor)
+
+        # Prepare attribute salvage_value
+        if self.salvage_value is None:
+            self.salvage_value = np.zeros_like(expense_year_init, dtype=np.float_)
+
+        else:
+            if not isinstance(self.salvage_value, np.ndarray):
+                raise TangibleCostDataException(
+                    f"Salvage value data must be given in the form of numpy.ndarray. "
+                    f"The current salvage_value data is given in the form of: "
+                    f"({self.salvage_value.__class__.__qualname__})."
+                )
+
+            salvage_value_nan = np.argwhere(pd.isna(self.salvage_value)).ravel()
+            if len(salvage_value_nan) > 0:
+                self.salvage_value[salvage_value_nan] = np.zeros(len(salvage_value_nan), dtype=np.float_)
+
+        self.salvage_value = np.float_(self.salvage_value)
 
         print('\t')
-        print(f'Filetype: {type(self.cost)}')
-        print(f'Length: {len(self.cost)}')
-        print('cost = ', self.cost)
+        print(f'Filetype: {type(self.salvage_value)}')
+        print('salvage_value = ', self.salvage_value)
 
-    #     # Prepare attribute pis_year
-    #     if not isinstance(self.pis_year, np.ndarray):
-    #         raise TangibleCostDataException(
-    #             f"PIS year data must be given in the form of numpy.ndarray. "
-    #             f"The current pis_year data is given in the form of: "
-    #             f"({self.pis_year.__class__.__qualname__})."
-    #         )
-    #
-    #     pis_year_nan = np.argwhere(np.isnan(self.pis_year)).ravel()
-    #
-    #     if len(pis_year_nan) > 0:
-    #         self.pis_year[pis_year_nan] = expense_year_init[pis_year_nan]
-    #
-    #     else:
-    #         self.pis_year = self.pis_year
-    #
-    #     # Prepare attribute useful_life
-    #     if not isinstance(self.useful_life, np.ndarray):
-    #         raise TangibleCostDataException(
-    #             f"Useful life data must be given in the form of numpy.ndarray. "
-    #             f"The current useful_life data is given in the form of: "
-    #             f"({self.useful_life.__class__.__qualname__})."
-    #         )
-    #
-    #     useful_life_nan = np.argwhere(np.isnan(self.useful_life)).ravel()
-    #
-    #     if len(useful_life_nan) > 0:
-    #         self.useful_life[useful_life_nan] = np.repeat(5.0, len(useful_life_nan))
-    #
-    #     else:
-    #         self.useful_life = np.float_(self.useful_life)
-    #
-    #     # Prepare attribute depreciation_factor
-    #     if not isinstance(self.depreciation_factor, np.ndarray):
-    #         raise TangibleCostDataException(
-    #             f"Depreciation factor data must be given in the form of numpy.ndarray. "
-    #             f"The current depreciation_factor data is given in the form of: "
-    #             f"({self.depreciation_factor.__class__.__qualname__})."
-    #         )
-    #
-    #     depreciation_factor_nan = np.argwhere(np.isnan(self.depreciation_factor)).ravel()
-    #
-    #     if len(depreciation_factor_nan) > 0:
-    #         self.depreciation_factor[depreciation_factor_nan] = (
-    #             np.repeat(0.5, len(depreciation_factor_nan))
-    #         )
-    #
-    #     else:
-    #         self.depreciation_factor = np.float_(self.depreciation_factor)
-    #
-    #     # Prepare attribute salvage_value
-    #     if not isinstance(self.salvage_value, np.ndarray):
-    #         raise TangibleCostDataException(
-    #             f"Salvage value data must be given in the form of numpy.ndarray. "
-    #             f"The current salvage_value data is given in the form of: "
-    #             f"({self.salvage_value.__class__.__qualname__})."
-    #         )
-    #
-    #     salvage_value_nan = np.argwhere(np.isnan(self.salvage_value)).ravel()
-    #
-    #     if len(salvage_value_nan) > 0:
-    #         self.salvage_value[salvage_value_nan] = np.zeros(len(salvage_value_nan), dtype=np.float_)
-    #
-    #     else:
-    #         self.salvage_value = np.float_(self.salvage_value)
-    #
-    #     # Prepare attribute is_ic_applied
-    #     if not isinstance(self.is_ic_applied, list):
-    #         raise TangibleCostDataException(
-    #             f"Is IC applied data must be given in the form of list. "
-    #             f"The current is_ic_applied data is given in the form of: "
-    #             f"({self.is_ic_applied.__class__.__qualname__})."
-    #         )
-    #
+        # # Prepare attribute is_ic_applied
+        # if not isinstance(self.is_ic_applied, list):
+        #     raise TangibleCostDataException(
+        #         f"Is IC applied data must be given in the form of list. "
+        #         f"The current is_ic_applied data is given in the form of: "
+        #         f"({self.is_ic_applied.__class__.__qualname__})."
+        #     )
+
     #     is_ic_applied_nan = np.argwhere(pd.isna(self.is_ic_applied)).ravel()
     #
     #     if len(is_ic_applied_nan) > 0:

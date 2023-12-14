@@ -782,81 +782,77 @@ class Spreadsheet:
             start_date_project_second=self.general_config_data.start_date_project_second,
         )
 
-    def _get_tangible_cost_data(self) -> None | TangibleCostData:
+    def _get_tangible_cost_data(self) -> TangibleCostData:
         """
         Retrieves tangible cost data based on available sheets.
 
         Returns
         -------
-        None or TangibleCostData
+        TangibleCostData
+            An instance of TangibleCostData class.
 
         Notes
         -----
         The core operations are as follows:
         (1) Capture tangible cost data from attribute self.data_loaded, then perform the
             necessary adjustment,
-        (2) If 'tangible_data_loaded_init' is an empty dataframe, then return None,
-        (3) If 'tangible_data_loaded_init' is not an empty dataframe, undertake data cleansing:
-            remove all rows which column 'expense_year' is NaN. Store the results in a variable
-            named 'tangible_data_loaded',
-        (4) Create a dictionary named 'tangible_data' to store the necessary data from
+        (2) Undertake data cleansing: remove all rows which column 'expense_year' is NaN.
+            Store the results in a variable named 'tangible_data_loaded',
+        (3) Create a dictionary named 'tangible_data' to store the necessary data from
             'tangible_data_loaded',
-        (5) Return an instance of TangibleCostData to store the tangible data appropriately
+        (4) Return an instance of TangibleCostData to store the tangible data appropriately
             as its attributes.
         """
         # Step #1 (See 'Notes' section in the docstring)
         tangible_data_loaded_init = self.data_loaded["Cost Tangible"].dropna(axis=0, how="all")
 
         # Step #2 (See 'Notes' section in the docstring)
-        if tangible_data_loaded_init.empty:
-            return None
+        tangible_data_loaded = (
+            tangible_data_loaded_init if tangible_data_loaded_init.empty
+            else tangible_data_loaded_init[~pd.isna(tangible_data_loaded_init.iloc[:, 0])].copy()
+        )
 
         # Step #3 (See 'Notes' section in the docstring)
-        else:
-            tangible_data_loaded = (
-                tangible_data_loaded_init[~pd.isna(tangible_data_loaded_init.iloc[:, 0])].copy()
-            )
+        tangible_data_attrs = [
+            "expense_year",
+            "cost_allocation",
+            "cost",
+            "pis_year",
+            "useful_life",
+            "depreciation_factor",
+            "salvage_value",
+            "is_ic_applied",
+            "vat_portion",
+            "lbt_portion",
+            "description",
+        ]
 
-            # Step #4 (See 'Notes' section in the docstring)
-            tangible_data_attrs = [
-                "expense_year",
-                "cost_allocation",
-                "cost",
-                "pis_year",
-                "useful_life",
-                "depreciation_factor",
-                "salvage_value",
-                "is_ic_applied",
-                "vat_portion",
-                "lbt_portion",
-                "description",
-            ]
+        tangible_data = {
+            key: None if tangible_data_loaded.empty
+            else tangible_data_loaded.iloc[:, i].to_numpy()
+            for i, key in enumerate(tangible_data_attrs)
+        }
 
-            tangible_data = {
-                key: tangible_data_loaded.iloc[:, i].to_numpy()
-                for i, key in enumerate(tangible_data_attrs)
-            }
+        # Step #4 (See 'Notes' section in the docstring)
+        return TangibleCostData(
+            expense_year_init=tangible_data["expense_year"],
+            cost_allocation=tangible_data["cost_allocation"],
+            cost=tangible_data["cost"],
+            pis_year=tangible_data["pis_year"],
+            useful_life=tangible_data["useful_life"],
+            depreciation_factor=tangible_data["depreciation_factor"],
+            salvage_value=tangible_data["salvage_value"],
+            is_ic_applied=tangible_data["is_ic_applied"],
+            vat_portion=tangible_data["vat_portion"],
+            lbt_portion=tangible_data["lbt_portion"],
+            description=tangible_data["description"],
+            project_years=self.general_config_data.project_years,
+            type_of_contract=self.general_config_data.type_of_contract,
+            end_date_project=self.general_config_data.end_date_project,
+            start_date_project_second=self.general_config_data.start_date_project_second,
+        )
 
-            # Step #5 (See 'Notes' section in the docstring)
-            return TangibleCostData(
-                expense_year_init=tangible_data["expense_year"],
-                cost_allocation=tangible_data["cost_allocation"].tolist(),
-                cost=tangible_data["cost"],
-                pis_year=tangible_data["pis_year"],
-                useful_life=tangible_data["useful_life"],
-                depreciation_factor=tangible_data["depreciation_factor"],
-                salvage_value=tangible_data["salvage_value"],
-                is_ic_applied=tangible_data["is_ic_applied"].tolist(),
-                vat_portion=tangible_data["vat_portion"],
-                lbt_portion=tangible_data["lbt_portion"],
-                description=tangible_data["description"].tolist(),
-                project_years=self.general_config_data.project_years,
-                type_of_contract=self.general_config_data.type_of_contract,
-                end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second=self.general_config_data.start_date_project_second,
-            )
-
-    def _get_intangible_cost_data(self) -> None | IntangibleCostData:
+    def _get_intangible_cost_data(self) -> IntangibleCostData:
         """
         Retrieves intangible cost data based on available sheets.
 
@@ -911,7 +907,7 @@ class Spreadsheet:
                 start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
-    def _get_opex_data(self) -> None | OPEXData:
+    def _get_opex_data(self) -> OPEXData:
         """
         Retrieves opex data based on available sheets.
 
@@ -970,7 +966,7 @@ class Spreadsheet:
                 start_date_project_second=self.general_config_data.start_date_project_second,
             )
 
-    def _get_asr_cost_data(self) -> None | ASRCostData:
+    def _get_asr_cost_data(self) -> ASRCostData:
         """
         Retrieves ASR cost data based on available sheets.
 
