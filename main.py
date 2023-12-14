@@ -6,7 +6,7 @@ import xlwings as xw
 
 def main(workbook_path, mode):
     # Defining the workbook object
-    ws = xw.Book(workbook_path).sheets('Result')
+    ws = xw.Book(workbook_path).sheets('Cover')
 
     if mode == 'Standard':
         result = 'Standard Result'
@@ -14,10 +14,10 @@ def main(workbook_path, mode):
         result = mode
 
     # Test Write
-    ws.range("B30").value = 'Test Run Python from Excel ' + result
+    ws.range("C22").value = 'Test Run Python from Excel ' + result
 
     # Giving the workbook execution status
-    ws.range("C24").value = 'Success'
+    ws.range("K15").value = 'Success'
 
 
 if __name__ == '__main__':
