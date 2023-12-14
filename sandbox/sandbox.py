@@ -1,51 +1,48 @@
-import numpy as np
-from pyscnomics.econ import indicator
-from pyscnomics.econ.selection import DiscountingMode
+# from scipy.optimize import minimize
+#
+#
+# # Define your objective function
+# def objective_function(args):
+#     return args[0]*2 + args[0] - args[0]
+#
+#
+# target = 10
+#
+#
+# def obj_func_final(args):
+#     return abs(objective_function(args) - target)
+#
+#
+# # Specify the optimization bounds for each argument
+# bounds = [(1, 20)]  # Example bounds, adjust according to your problem
+#
+# # Run the optimization
+# result = minimize(obj_func_final, [2], bounds=bounds)
+#
+# # Print the optimized arguments
+# optimized_arguments = result.x
+# print("Optimized Arguments:", optimized_arguments)
+#
+# # Print the optimized function value
+# optimized_value = result.fun
+# print("Optimized Difference Value:", optimized_value)
+#
+# # Print the result of the function
+# function_result = optimized_value + target
+# print("Funtion Result:", function_result)
+#
+# # Prove
+# prove = objective_function(optimized_arguments)
+# print("Evidence:", prove)
+#
+# tolerance = 1.0e-6
+# if optimized_value < tolerance:
+#     print("Status: Succeed")
+#
+# print(objective_function([6]))
 
-# Cashflow
-cashflow_years = np.arange(2018, 2029)
-cashflow = np.array([-100000, 0, 0, 0, 0, 0, 0, 50000, 50000, 50000, 50000])
-discount_rate = 0.1
-reference_year = 2023
 
-# Nominal Terms
-npv_nominal_terms = indicator.npv_nominal_terms(cashflow=cashflow,
-                                                cashflow_years=cashflow_years,
-                                                discount_rate=discount_rate,
-                                                reference_year=reference_year,
-                                                discounting_mode=DiscountingMode.END_YEAR)
-
-# Real Terms
-inflation_rate = 0.03
-npv_real_terms = indicator.npv_real_terms(cashflow=cashflow,
-                                          cashflow_years=cashflow_years,
-                                          discount_rate=discount_rate,
-                                          reference_year=reference_year,
-                                          inflation_rate=inflation_rate,
-                                          discounting_mode=DiscountingMode.END_YEAR)
-
-# SKK Nominal Terms
-npv_skk_nominal_terms = indicator.npv_skk_nominal_terms(cashflow=cashflow,
-                                                        cashflow_years=cashflow_years,
-                                                        discount_rate=discount_rate,
-                                                        discounting_mode=DiscountingMode.END_YEAR)
-
-# SKK Real Terms
-npv_skk_real_terms = indicator.npv_skk_real_terms(cashflow=cashflow,
-                                                  cashflow_years=cashflow_years,
-                                                  discount_rate=discount_rate,
-                                                  reference_year=reference_year,
-                                                  discounting_mode=DiscountingMode.END_YEAR)
-
-# Point Forward
-npv_point_forward = indicator.npv_point_forward(cashflow=cashflow,
-                                                cashflow_years=cashflow_years,
-                                                discount_rate=discount_rate,
-                                                reference_year=reference_year,
-                                                discounting_mode=DiscountingMode.END_YEAR)
-
-# Sort the nested dictionary by the second key (assuming each inner dictionary has at least two keys)
-sorted_nested_dict = dict(sorted(nested_dict.items(), key=lambda x: x[1]['Priority']))
-
-# Print the sorted nested dictionary
-print(sorted_nested_dict)
+for i in range(1, 10):
+    if i == 4:
+        break
+    print(i)

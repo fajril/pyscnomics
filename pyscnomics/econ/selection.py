@@ -6,7 +6,6 @@ from enum import Enum
 
 
 class DeprMethod(Enum):
-
     """
     Enumeration of depreciation methods.
 
@@ -29,7 +28,6 @@ class DeprMethod(Enum):
 
 
 class FluidType(Enum):
-
     """
     Enumeration of fluid types for depreciation calculation.
 
@@ -208,3 +206,22 @@ class InflationAppliedTo(Enum):
     OPEX = "Inflation rate will be applied to Operating Cost"
     CAPEX_AND_OPEX = "Inflation rate will be applied to Tangible, Intangible, Operating Cost"
 
+
+class OptimizationParameter(Enum):
+    OIL_CTR_PRETAX = 'OIL_CTR_PRETAX'
+    GAS_CTR_PRETAX = 'GAS_CTR_PRETAX'
+    OIL_FTP_PORTION = 'OIL_FTP_PORTION'
+    GAS_FTP_PORTION = 'GAS_FTP_PORTION'
+    OIL_IC = 'OIL_IC'
+    GAS_IC = 'GAS_IC'
+    OIL_DMO_FEE = 'OIL_DMO_FEE'
+    GAS_DMO_FEE = 'GAS_DMO_FEE'
+    VAT_RATE = 'VAT_RATE'
+    EFFECTIVE_TAX_RATE = 'EFFECTIVE_TAX_RATE'
+    MINISTERIAL_DISCRETION = 'MINISTERIAL_DISCRETION'
+
+
+class OptimizationTarget(Enum):
+    IRR = 'IRR'
+    NPV = 'NPV'
+    PV_RATIO = 'PV_RATIO'
