@@ -28,7 +28,7 @@ psc.gas_dmo_holiday_duration = 60
 
 tax_rate = 0.424
 
-psc.run(tax_rate=tax_rate, discount_rate_year=2021, ftp_tax_regime=FTPTaxRegime.PRE_PDJP_20_2017)
+psc.run(tax_rate=tax_rate, ftp_tax_regime=FTPTaxRegime.PRE_PDJP_20_2017)
 
 
 def test_revenue():

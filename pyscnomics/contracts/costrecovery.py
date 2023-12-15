@@ -656,7 +656,6 @@ class CostRecovery(BaseProject):
             tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
             tax_rate: float | np.ndarray | None = None,
             ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
-            discount_rate_year: int = None,
             sunk_cost_reference_year: int = None,
             depr_method: DeprMethod = DeprMethod.PSC_DB,
             decline_factor: float | int = 2,
@@ -668,15 +667,6 @@ class CostRecovery(BaseProject):
             future_rate: float = 0.02,
             inflation_rate_applied_to: InflationAppliedTo = InflationAppliedTo.CAPEX
     ):
-        # Configure discount rate
-        if discount_rate_year is None:
-            discount_rate_year = self.start_date.year
-
-        if discount_rate_year < self.start_date.year:
-            raise SunkCostException(
-                f"start_date year {self.start_date} "
-                f"is after the discount rate year: {discount_rate_year}"
-            )
 
         # Configure Sunk Cost Reference Year
         if sunk_cost_reference_year is None:

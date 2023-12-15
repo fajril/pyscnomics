@@ -1,6 +1,7 @@
 import numpy as np
 # from scipy.optimize import minimize
 from scipy.optimize import minimize
+from scipy.optimize import minimize_scalar
 
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
@@ -99,10 +100,13 @@ def optimize_psc(dict_optimization: dict,
         )
 
     # Changing the parameters list[str] into list[OptimizationParameters(Enum)]
-    list_params = [OptimizationParameter[param] for param in dict_optimization['parameters']]
+    list_params = dict_optimization['parameters']
 
-    # Defining empty list to contain value of optimized parameters
-    list_params_value = [None] * len(list_params)
+    # Defining empty list to contain value of optimized parameters and status of the optimization
+    list_params_value = ['Base Value'] * len(list_params)
+
+    # Defining the empty result of optimization target, will be defined later
+    result_optimization = None
 
     psc = contract
     for index, param in enumerate(list_params):
@@ -143,8 +147,8 @@ def optimize_psc(dict_optimization: dict,
         # Able to conduct optimization since the result is greater than the target
         if result_psc > target_optimization_value:
             # Defining the upper and lower limit of the optimized variable
-            bounds = [(dict_optimization['min'][index],
-                       dict_optimization['max'][index])]
+            bounds = (dict_optimization['min'][index],
+                       dict_optimization['max'][index])
 
             def objective_run(new_value):
                 result_psc_obj, _ = adjust_contract(contract=psc,
@@ -158,29 +162,47 @@ def optimize_psc(dict_optimization: dict,
                 return result_obj
 
             # Optimization of the objective function
-            optim_result = minimize(objective_run, dict_optimization['min'][index], bounds=bounds)
+            optim_result = minimize_scalar(objective_run, bounds=bounds, method='bounded')
 
             # Difference value from target and optimization result
             optimized_diff = optim_result.fun
 
             # Optimized Parameter Value
-            optimized_parameter = optim_result.x.item()
+            optimized_parameter = optim_result.x
 
-            # Appending the result of optimization to the list_params_value
+            # Result of the objective function
+            function_result = optimized_diff + target_optimization_value
+
+            # Writing the result of optimization to the list_params_value
             list_params_value[index] = optimized_parameter
+
+            # Defining the result_optimization
+            result_optimization = function_result
 
             # # Printing for debugging
             # print('Parameter:', param)
             # print('Optimized Parameter Value:', optimized_parameter)
             # print('Targeted Value:', target_optimization_value)
+            # print('Optimization Value:', function_result)
             # print('Difference of Target and Optimization Result:', optimized_diff)
-            # input()
 
-            # Exiting the loop
+            # Exiting the loop since the target has been achieved
             break
 
-        else:
+        elif result_psc <= target_optimization_value:
+            # Writing the maximum value to the list_params_value
             list_params_value[index] = max_value
 
-    print(list_params)
-    print(list_params_value)
+            # Defining the result_optimization
+            result_optimization = result_psc
+
+    # Converting the list of enum into list of str enum value
+    list_str = [enum_value.value for enum_value in list_params]
+
+    # # Printing for debugging
+    # print(list_str)
+    # print(list_params_value)
+    # print(result_optimization)
+
+    return list_str, list_params_value, result_optimization
+

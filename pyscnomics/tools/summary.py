@@ -82,14 +82,6 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
     ctr_irr = irr(cashflow=contract._consolidated_cashflow)
     ctr_irr_sunk_cost_pooled = irr(cashflow=cashflow_sunk_cost_pooled)
 
-    # Contractor Net Share
-    ctr_net_share = np.sum(contract._consolidated_ctr_net_share, dtype=float)
-    ctr_net_share_over_gross_share = ctr_net_share / gross_revenue
-
-    # Contractor Net Cashflow
-    ctr_net_cashflow = np.sum(contract._consolidated_cashflow, dtype=float)
-    ctr_net_cashflow_over_gross_rev = ctr_net_cashflow / gross_revenue
-
     # Calculation related to NPV Calculation which are depends on the NPV Mode
     # NPV Calculation for SKK Real Terms
     if npv_mode == NPVSelection.NPV_SKK_REAL_TERMS:
@@ -273,13 +265,14 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
 
         #  Modifying the Contractor Net Cashflow since the cashflow before the reference year is neglected.
         ref_year_arr = np.full_like(contract._consolidated_cashflow, fill_value=reference_year)
-        cashflow_point_forward = np.where(contract.project_years < ref_year_arr,
+        cashflow_point_forward = np.where(contract.project_years >= ref_year_arr,
                                           contract._consolidated_cashflow,
                                           0)
-        gross_revenue_point_forward = np.where(contract.project_years < ref_year_arr,
+        gross_revenue_point_forward = np.where(contract.project_years >= ref_year_arr,
                                                contract._consolidated_revenue,
                                                0)
         ctr_net_cashflow = np.sum(cashflow_point_forward, dtype=float)
+        gross_revenue_point_forward = np.sum(gross_revenue_point_forward, dtype=float)
         ctr_net_cashflow_over_gross_rev = ctr_net_cashflow / gross_revenue_point_forward
 
     # Contractor Present Value ratio to the investment npv
@@ -300,6 +293,14 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
         # Gross Share of Contractor and Government
         ctr_gross_share = np.sum(contract._consolidated_contractor_share, dtype=float)
         gov_gross_share = np.sum(contract._consolidated_government_share, dtype=float)
+
+        # Contractor Net Share
+        ctr_net_share = np.sum(contract._consolidated_ctr_net_share, dtype=float)
+        ctr_net_share_over_gross_share = ctr_net_share / gross_revenue
+
+        # Contractor Net Cashflow
+        ctr_net_cashflow = np.sum(contract._consolidated_cashflow, dtype=float)
+        ctr_net_cashflow_over_gross_rev = ctr_net_cashflow / gross_revenue
 
         # Government FTP Share
         gov_ftp_share = np.sum(contract._consolidated_ftp_gov)
@@ -372,6 +373,14 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
         # GOV GOV Gross Share
         gov_gross_share = np.sum(contract._consolidated_gov_share_before_tf, dtype=float)
 
+        # CTR Net Share
+        ctr_net_share = np.sum(contract._consolidated_ctr_net_share)
+        ctr_net_share_over_gross_share = ctr_net_share / gross_revenue
+
+        # CTR Net Cashflow
+        ctr_net_cashflow = np.sum(contract._consolidated_cashflow)
+        ctr_net_cashflow_over_gross_rev = ctr_net_cashflow / gross_revenue
+
         # Contractor IRR
         ctr_irr = irr(cashflow=contract._consolidated_cashflow)
 
@@ -440,10 +449,91 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
         ctr_net_operating_profit = np.sum(contract._net_operating_profit, dtype=float)
         ctr_net_operating_profit_over_grossrev = ctr_net_operating_profit / gross_revenue
 
+        ctr_net_cash_flow = np.sum(contract._ctr_net_cashflow, dtype=float)
+        ctr_net_cash_flow_over_grossrev = ctr_net_cash_flow / gross_revenue
+
         # Contractor POT
         ctr_pot = pot_psc(cashflow=contract._consolidated_cashflow,
                           cashflow_years=contract.project_years,
                           reference_year=reference_year)
+
+        # return {'lifting_oil': lifting_oil,
+        #         'oil_wap': oil_wap,
+        #         'lifting_gas': lifting_gas,
+        #         'gas_wap': gas_wap,
+        #         'gross_revenue': gross_revenue,
+        #         'gross_revenue_oil': gross_revenue_oil,
+        #         'gross_revenue_gas': gross_revenue_gas,
+        #         'ftp': ftp,
+        #         'gov_ftp': gov_ftp,
+        #         'ctr_ftp': ctr_ftp,
+        #         'sunk_cost': sunk_cost,
+        #         'tangible': tangible,
+        #         'intangible': intangible,
+        #         'opex': opex,
+        #         'asr': asr,
+        #         'deductible_cost': deductible_cost,
+        #         'deductible_cost_over_grossrev': deductible_cost_over_grossrev,
+        #         'carry_forward_cost': carry_forward_cost,
+        #         'carry_forward_cost_over_grossrev': carry_forward_cost_over_grossrev,
+        #         'equity_to_be_split': equity_to_be_split,
+        #         'ctr_equity_share': ctr_equity_share,
+        #         'gov_equity_share': gov_equity_share,
+        #         'ctr_net_operating_profit': ctr_net_operating_profit,
+        #         'ctr_net_operating_profit_over_grossrev': ctr_net_operating_profit_over_grossrev,
+        #         'ctr_net_cash_flow': ctr_net_cash_flow,
+        #         'ctr_net_cash_flow_over_grossrev': ctr_net_cash_flow_over_grossrev,
+        #         'ctr_npv': ctr_npv,
+        #         'ctr_npv_sunk_cost_pooled': ctr_npv_sunk_cost_pooled,
+        #         'ctr_irr': ctr_irr,
+        #         'ctr_irr_sunk_cost_pooled': ctr_irr_sunk_cost_pooled,
+        #         'ctr_pot': ctr_pot,
+        #         'ctr_pv_ratio': ctr_pv_ratio,
+        #         'gov_ddmo': gov_ddmo,
+        #         'gov_tax_income': gov_tax_income,
+        #         'gov_take': gov_take,
+        #         'gov_take_over_gross_rev': gov_take_over_gross_rev,
+        #         'gov_take_npv': gov_take_npv
+        #         }
+
+        # return {'lifting_oil': lifting_oil,
+        #         'oil_wap': oil_wap,
+        #         'lifting_gas': lifting_gas,
+        #         'gas_wap': gas_wap,
+        #         'gross_revenue': gross_revenue,
+        #         'gross_revenue_oil': gross_revenue_oil,
+        #         'gross_revenue_gas': gross_revenue_gas,
+        #         'ftp': ftp,
+        #         'gov_ftp': gov_ftp,
+        #         'ctr_ftp': ctr_ftp,
+        #         'sunk_cost': sunk_cost,
+        #         'tangible': tangible,
+        #         'intangible': intangible,
+        #         'opex': opex,
+        #         'asr': asr,
+        #         'deductible_cost': deductible_cost,
+        #         'deductible_cost_over_grossrev': deductible_cost_over_grossrev,
+        #         'carry_forward_cost': carry_forward_cost,
+        #         'carry_forward_cost_over_grossrev': carry_forward_cost_over_grossrev,
+        #         'equity_to_be_split': equity_to_be_split,
+        #         'ctr_equity_share': ctr_equity_share,
+        #         'gov_equity_share': gov_equity_share,
+        #         'ctr_net_operating_profit': ctr_net_operating_profit,
+        #         'ctr_net_operating_profit_over_grossrev': ctr_net_operating_profit_over_grossrev,
+        #         'ctr_net_cash_flow': ctr_net_cash_flow,
+        #         'ctr_net_cash_flow_over_grossrev': ctr_net_cash_flow_over_grossrev,
+        #         'ctr_npv': ctr_npv,
+        #         'ctr_npv_sunk_cost_pooled': ctr_npv_sunk_cost_pooled,
+        #         'ctr_irr': ctr_irr,
+        #         'ctr_irr_sunk_cost_pooled': ctr_irr_sunk_cost_pooled,
+        #         'ctr_pot': ctr_pot,
+        #         'ctr_pv_ratio': ctr_pv_ratio,
+        #         'gov_ddmo': gov_ddmo,
+        #         'gov_tax_income': gov_tax_income,
+        #         'gov_take': gov_take,
+        #         'gov_take_over_gross_rev': gov_take_over_gross_rev,
+        #         'gov_take_npv': gov_take_npv
+        #         }
 
         return {'lifting_oil': lifting_oil,
                 'oil_wap': oil_wap,
@@ -475,8 +565,8 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                 'gov_equity_share': gov_equity_share,
                 'ctr_net_operating_profit': ctr_net_operating_profit,
                 'ctr_net_operating_profit_over_grossrev': ctr_net_operating_profit_over_grossrev,
-                'ctr_net_cashflow': ctr_net_cashflow,
-                'ctr_net_cashflow_over_gross_rev': ctr_net_cashflow_over_gross_rev,
+                'ctr_net_cashflow': ctr_net_cash_flow,
+                'ctr_net_cashflow_over_gross_rev': ctr_net_cash_flow_over_grossrev,
                 'ctr_npv': ctr_npv,
                 'ctr_npv_sunk_cost_pooled': ctr_npv_sunk_cost_pooled,
                 'ctr_irr': ctr_irr,

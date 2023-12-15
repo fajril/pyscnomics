@@ -208,17 +208,17 @@ class InflationAppliedTo(Enum):
 
 
 class OptimizationParameter(Enum):
-    OIL_CTR_PRETAX = 'OIL_CTR_PRETAX'
-    GAS_CTR_PRETAX = 'GAS_CTR_PRETAX'
-    OIL_FTP_PORTION = 'OIL_FTP_PORTION'
-    GAS_FTP_PORTION = 'GAS_FTP_PORTION'
-    OIL_IC = 'OIL_IC'
-    GAS_IC = 'GAS_IC'
-    OIL_DMO_FEE = 'OIL_DMO_FEE'
-    GAS_DMO_FEE = 'GAS_DMO_FEE'
-    VAT_RATE = 'VAT_RATE'
-    EFFECTIVE_TAX_RATE = 'EFFECTIVE_TAX_RATE'
-    MINISTERIAL_DISCRETION = 'MINISTERIAL_DISCRETION'
+    OIL_CTR_PRETAX = 'Oil Contractor Pre Tax'
+    GAS_CTR_PRETAX = 'Gas Contractor Pre Tax'
+    OIL_FTP_PORTION = 'Oil FTP Portion'
+    GAS_FTP_PORTION = 'Gas FTP Portion'
+    OIL_IC = 'Oil IC'
+    GAS_IC = 'Gas IC'
+    OIL_DMO_FEE = 'Oil DMO Fee'
+    GAS_DMO_FEE = 'Gas Dmo Fee'
+    VAT_RATE = 'VAT Rate'
+    EFFECTIVE_TAX_RATE = 'Effective Tax Rate'
+    MINISTERIAL_DISCRETION = 'Ministerial Discretion'
 
 
 class OptimizationTarget(Enum):

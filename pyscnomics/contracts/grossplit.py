@@ -407,15 +407,24 @@ class GrossSplit(BaseProject):
                         cost_tobe_deducted + carward_deduct_cost,
                         ctr_gross_share)
 
-    def _get_sunk_cost(self, discount_rate_year: int):
+    def _get_sunk_cost(self, sunk_cost_reference_year: int):
+        oil_cost_raw = (
+                self._oil_tangible_expenditures
+                + self._oil_non_capital
+        )
+        self._oil_sunk_cost = oil_cost_raw[
+                              : (sunk_cost_reference_year - self.start_date.year + 1)
+                              ]
 
-        oil_cost_raw = self._oil_depreciation + self._oil_undepreciated_asset + self._oil_non_capital
-        self._oil_sunk_cost = oil_cost_raw[:(discount_rate_year - self.start_date.year + 1)]
+        gas_cost_raw = (
+                self._gas_tangible_expenditures
+                + self._gas_non_capital
+        )
+        self._gas_sunk_cost = gas_cost_raw[
+                              : (sunk_cost_reference_year - self.start_date.year + 1)
+                              ]
 
-        gas_cost_raw = self._gas_depreciation + self._gas_undepreciated_asset + self._gas_non_capital
-        self._gas_sunk_cost = gas_cost_raw[:(discount_rate_year - self.start_date.year + 1)]
-
-        if discount_rate_year == self.start_date.year:
+        if sunk_cost_reference_year == self.start_date.year:
             self._oil_sunk_cost = np.zeros(1)
             self._gas_sunk_cost = np.zeros(1)
 
@@ -427,7 +436,7 @@ class GrossSplit(BaseProject):
             regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
             tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
             tax_rate: float | np.ndarray = 0.22,
-            discount_rate_year: int | None = None,
+            sunk_cost_reference_year: int = None,
             depr_method: DeprMethod = DeprMethod.PSC_DB,
             decline_factor: float | int = 2,
             year_ref: int = None,
@@ -439,13 +448,32 @@ class GrossSplit(BaseProject):
             inflation_rate_applied_to: InflationAppliedTo = InflationAppliedTo.CAPEX
             ):
 
-        if discount_rate_year is None:
-            discount_rate_year = self.start_date.year
+        # Configure Sunk Cost Reference Year
+        if sunk_cost_reference_year is None:
+            sunk_cost_reference_year = self.start_date.year
 
-        if discount_rate_year < self.start_date.year:
+        if sunk_cost_reference_year > self.oil_onstream_date.year:
             raise SunkCostException(
-                f"start_date year {self.start_date} "
-                f"is after the discount rate year: {self.end_date}"
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is after the on stream date: {self.oil_onstream_date}"
+            )
+
+        if sunk_cost_reference_year > self.gas_onstream_date.year:
+            raise SunkCostException(
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is after the on stream date: {self.gas_onstream_date}"
+            )
+
+        if sunk_cost_reference_year < self.start_date.year:
+            raise SunkCostException(
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is before the project start date: {self.start_date}"
+            )
+
+        if sunk_cost_reference_year > self.end_date.year:
+            raise SunkCostException(
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is after the project end date: {self.end_date}"
             )
 
         # Configure year reference
@@ -512,7 +540,7 @@ class GrossSplit(BaseProject):
         )
 
         # Get Sunk Cost
-        self._get_sunk_cost(discount_rate_year)
+        self._get_sunk_cost(sunk_cost_reference_year)
 
         # Variable Split. -> Will set the value of _variable_split
         self._wrapper_variable_split(regime=regime)
