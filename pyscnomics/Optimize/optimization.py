@@ -1,6 +1,3 @@
-import numpy as np
-# from scipy.optimize import minimize
-from scipy.optimize import minimize
 from scipy.optimize import minimize_scalar
 
 from pyscnomics.contracts.costrecovery import CostRecovery
@@ -21,6 +18,30 @@ def adjust_contract(contract: CostRecovery | GrossSplit,
                     value: float,
                     summary_argument: dict,
                     target_parameter: str) -> (CostRecovery | GrossSplit, dict):
+    """
+    The function used to adjust the variable within a psc contract object. This function will be used by optimize_psc().
+
+    Parameters
+    ----------
+    contract: CostRecovery | GrossSplit
+        The contract object.
+    contract_arguments: dict
+        The contract arguments that passed on the fly (.run() of the contract dataclass.
+    variable: OptimizationParameter
+        The enum selection of variable that will be changed.
+    value: float
+        The new value of the variable that will be replaced.
+    summary_argument: dict
+        The dictionary containing the arguments that passed summary function.
+    target_parameter: str
+        The string of the targeted parameter.
+
+    Returns
+    -------
+    out: tuple
+        The result of the target parameter and contract object that has been modified and run.
+
+    """
     # The condition when contract is Cost Recovery
     if isinstance(contract, CostRecovery):
         # Changing the attributes of the contract based on the chosen variable
@@ -82,7 +103,49 @@ def optimize_psc(dict_optimization: dict,
                  target_optimization_value: float,
                  summary_argument: dict,
                  target_parameter: OptimizationTarget = OptimizationTarget.IRR,
-                 ):
+                 ) -> tuple:
+    """
+    The function to get contract variable(s) that resulting the desired target or contract's economic target.
+
+    Parameters
+    ----------
+    dict_optimization: dict
+        The optimization dictionary that containing the information about minimum boundary and upper boundary
+        of the optimized parameters.
+    contract: CostRecovery | GrossSplit
+        The contract object.
+    contract_arguments: dict
+        The contract arguments that passed on the fly (.run() of the contract dataclass.
+    target_optimization_value: float
+        The desired target value.
+    summary_argument: dict
+        The dictionary containing the arguments that passed summary function.
+    target_parameter: OptimizationTarget
+        The enum selection for economic indicator  that will be optimized.
+
+    Notes
+    -------
+    The dictionary of dict_optimization should be at least having the structure as the following:
+        dict_optimization = {'parameters': list[OptimizationParameter],
+                             'min': np.ndarray,
+                             'max': np.ndarray}
+
+        'parameters' keys containing the enum list of the variable that will be optimized to achieve the target.
+        'min' keys containing the minimum value of each parameter.
+        'max' keys containing the minimum value of each parameter.
+
+
+    Returns
+    -------
+    out : tuple
+
+    list_str: list
+        The list of parameter that passed to has been optimized.
+    list_params_value: list
+        The list of parameter's value that passed has been optimized.
+    result_optimization: float
+        The value of the targeted parameter which the result of the optimization.
+    """
     # Changing the Optimization selection from Enum to string in order to retrieve the result from summary dictionary
     if target_parameter is OptimizationTarget.IRR:
         target_parameter = 'ctr_irr'
@@ -148,7 +211,7 @@ def optimize_psc(dict_optimization: dict,
         if result_psc > target_optimization_value:
             # Defining the upper and lower limit of the optimized variable
             bounds = (dict_optimization['min'][index],
-                       dict_optimization['max'][index])
+                      dict_optimization['max'][index])
 
             def objective_run(new_value):
                 result_psc_obj, _ = adjust_contract(contract=psc,
@@ -205,4 +268,3 @@ def optimize_psc(dict_optimization: dict,
     # print(result_optimization)
 
     return list_str, list_params_value, result_optimization
-
