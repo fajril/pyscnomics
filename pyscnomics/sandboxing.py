@@ -247,7 +247,7 @@ asr_cost_data = (
 timer_start = tm.time()
 
 data = Aggregate()
-# data.fit()
+data.fit()
 
 timer_end = tm.time() - timer_start
 

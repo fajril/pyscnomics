@@ -1521,7 +1521,7 @@ class TangibleCostData:
 
         # Prepare attribute cost_allocation
         if self.cost_allocation is None:
-            self.cost_allocation = np.array(["Oil" for i in range(len(expense_year_init))])
+            self.cost_allocation = ["Oil" for _ in range(len(expense_year_init))]
 
         else:
             if not isinstance(self.cost_allocation, np.ndarray):
@@ -1531,11 +1531,11 @@ class TangibleCostData:
                     f"({self.cost_allocation.__class__.__qualname__})."
                 )
 
+            self.cost_allocation = self.cost_allocation.tolist()
             cost_allocation_nan = np.argwhere(pd.isna(self.cost_allocation)).ravel()
             if len(cost_allocation_nan) > 0:
-                self.cost_allocation[cost_allocation_nan] = (
-                    ["Oil" for i in range(len(cost_allocation_nan))]
-                )
+                for ca in cost_allocation_nan:
+                    self.cost_allocation[ca] = "Oil"
 
         self.cost_allocation = [get_fluidtype_converter(target=i) for i in self.cost_allocation]
 
@@ -1631,141 +1631,146 @@ class TangibleCostData:
 
         self.salvage_value = np.float_(self.salvage_value)
 
-        print('\t')
-        print(f'Filetype: {type(self.salvage_value)}')
-        print('salvage_value = ', self.salvage_value)
+        # Prepare attribute is_ic_applied
+        if self.is_ic_applied is None:
+            self.is_ic_applied = ["No" for _ in range(len(expense_year_init))]
 
-        # # Prepare attribute is_ic_applied
-        # if not isinstance(self.is_ic_applied, list):
-        #     raise TangibleCostDataException(
-        #         f"Is IC applied data must be given in the form of list. "
-        #         f"The current is_ic_applied data is given in the form of: "
-        #         f"({self.is_ic_applied.__class__.__qualname__})."
-        #     )
+        else:
+            if not isinstance(self.is_ic_applied, np.ndarray):
+                raise TangibleCostDataException(
+                    f"Is IC applied data must be given in the form of np.ndarray. "
+                    f"The current is_ic_applied data is given in the form of: "
+                    f"({self.is_ic_applied.__class__.__qualname__})."
+                )
 
-    #     is_ic_applied_nan = np.argwhere(pd.isna(self.is_ic_applied)).ravel()
-    #
-    #     if len(is_ic_applied_nan) > 0:
-    #         for i in is_ic_applied_nan:
-    #             self.is_ic_applied[i] = "No"
-    #
-    #     else:
-    #         self.is_ic_applied = self.is_ic_applied
-    #
-    #     self.is_ic_applied = [get_boolean_converter(target=i) for i in self.is_ic_applied]
-    #
-    #     # Prepare attribute vat_portion
-    #     if not isinstance(self.vat_portion, np.ndarray):
-    #         raise TangibleCostDataException(
-    #             f"VAT portion data must be given in the form of numpy.ndarray. "
-    #             f"The current vat_portion data is given in the form of: "
-    #             f"({self.vat_portion.__class__.__qualname__})."
-    #         )
-    #
-    #     vat_portion_nan = np.argwhere(np.isnan(self.vat_portion)).ravel()
-    #
-    #     if len(vat_portion_nan) > 0:
-    #         self.vat_portion[vat_portion_nan] = np.ones(len(vat_portion_nan), dtype=np.float_)
-    #
-    #     else:
-    #         self.vat_portion = np.float_(self.vat_portion)
-    #
-    #     # Prepare attribute lbt_portion
-    #     if not isinstance(self.lbt_portion, np.ndarray):
-    #         raise TangibleCostDataException(
-    #             f"LBT portion data must be given in the form of numpy.ndarray. "
-    #             f"The current lbt_portion data is given in the form of: "
-    #             f"({self.lbt_portion.__class__.__qualname__})."
-    #         )
-    #
-    #     lbt_portion_nan = np.argwhere(np.isnan(self.lbt_portion)).ravel()
-    #
-    #     if len(lbt_portion_nan) > 0:
-    #         self.lbt_portion[lbt_portion_nan] = np.ones(len(lbt_portion_nan), dtype=np.float_)
-    #
-    #     else:
-    #         self.lbt_portion = np.float_(self.lbt_portion)
-    #
-    #     # Prepare attribute description
-    #     if not isinstance(self.description, list):
-    #         raise TangibleCostDataException(
-    #             f"Description data must be given in the form of list. "
-    #             f"The current description data is given in the form of: "
-    #             f"({self.description.__class__.__qualname__})."
-    #         )
-    #
-    #     description_nan = np.argwhere(pd.isna(self.description)).ravel()
-    #
-    #     if len(description_nan) > 0:
-    #         for i in description_nan:
-    #             self.description[i] = " "
-    #
-    #     else:
-    #         self.description = self.description
-    #
-    #     # Adjust data for transition case
-    #     if "Transition" in self.type_of_contract:
-    #         # Modify the values of the attributes
-    #         target_attrs = {
-    #             "attr": [
-    #                 self.expense_year,
-    #                 self.cost,
-    #                 self.cost_allocation,
-    #                 self.pis_year,
-    #                 self.useful_life,
-    #                 self.depreciation_factor,
-    #                 self.salvage_value,
-    #                 self.is_ic_applied,
-    #                 self.vat_portion,
-    #                 self.lbt_portion,
-    #                 self.description,
-    #             ],
-    #             "status": [
-    #                 False,
-    #                 True,
-    #                 False,
-    #                 False,
-    #                 False,
-    #                 False,
-    #                 False,
-    #                 False,
-    #                 False,
-    #                 False,
-    #                 False,
-    #             ],
-    #         }
-    #
-    #         (
-    #             self.expense_year,
-    #             self.cost,
-    #             self.cost_allocation,
-    #             self.pis_year,
-    #             self.useful_life,
-    #             self.depreciation_factor,
-    #             self.salvage_value,
-    #             self.is_ic_applied,
-    #             self.vat_portion,
-    #             self.lbt_portion,
-    #             self.description,
-    #         ) = [
-    #             get_cost_data_split(
-    #                 target_attr=i,
-    #                 is_target_attr_volume=j,
-    #                 expense_year_init=expense_year_init,
-    #                 end_date_contract_1=self.end_date_project,
-    #                 start_date_contract_2=self.start_date_project_second,
-    #             )
-    #             for i, j in zip(target_attrs["attr"], target_attrs["status"])
-    #         ]
-    #
-    #         # Prepare attributes with datatype list
-    #         (
-    #             self.cost_allocation,
-    #             self.is_ic_applied,
-    #             self.description,
-    #         ) = list(
-    #             map(get_to_list_converter, [self.cost_allocation, self.is_ic_applied, self.description])
-    #         )
+            self.is_ic_applied = self.is_ic_applied.tolist()
+            is_ic_applied_nan = np.argwhere(pd.isna(self.is_ic_applied)).ravel()
+            if len(is_ic_applied_nan) > 0:
+                for ic in is_ic_applied_nan:
+                    self.is_ic_applied[ic] = "No"
+
+        self.is_ic_applied = [get_boolean_converter(target=i) for i in self.is_ic_applied]
+
+        # Prepare attribute vat_portion
+        if self.vat_portion is None:
+            self.vat_portion = np.zeros_like(expense_year_init, dtype=np.float_)
+
+        else:
+            if not isinstance(self.vat_portion, np.ndarray):
+                raise TangibleCostDataException(
+                    f"VAT portion data must be given in the form of numpy.ndarray. "
+                    f"The current vat_portion data is given in the form of: "
+                    f"({self.vat_portion.__class__.__qualname__})."
+                )
+
+            vat_portion_nan = np.argwhere(pd.isna(self.vat_portion)).ravel()
+            if len(vat_portion_nan) > 0:
+                self.vat_portion[vat_portion_nan] = np.zeros(len(vat_portion_nan), dtype=np.float_)
+
+        self.vat_portion = np.float_(self.vat_portion)
+
+        # Prepare attribute lbt_portion
+        if self.lbt_portion is None:
+            self.lbt_portion = np.zeros_like(expense_year_init, dtype=np.float_)
+
+        else:
+            if not isinstance(self.lbt_portion, np.ndarray):
+                raise TangibleCostDataException(
+                    f"LBT portion data must be given in the form of numpy.ndarray. "
+                    f"The current lbt_portion data is given in the form of: "
+                    f"({self.lbt_portion.__class__.__qualname__})."
+                )
+
+            lbt_portion_nan = np.argwhere(pd.isna(self.lbt_portion)).ravel()
+            if len(lbt_portion_nan) > 0:
+                self.lbt_portion[lbt_portion_nan] = np.zeros(len(lbt_portion_nan), dtype=np.float_)
+
+        self.lbt_portion = np.float_(self.lbt_portion)
+
+        # Prepare attribute description
+        if self.description is None:
+            self.description = [" " for _ in range(len(expense_year_init))]
+
+        else:
+            if not isinstance(self.description, np.ndarray):
+                raise TangibleCostDataException(
+                    f"Description data must be given in the form of np.ndarray. "
+                    f"The current description data is given in the form of: "
+                    f"({self.description.__class__.__qualname__})."
+                )
+
+            self.description = self.description.tolist()
+            description_nan = np.argwhere(pd.isna(self.description)).ravel()
+            if len(description_nan) > 0:
+                for desc in description_nan:
+                    self.description[desc] = " "
+
+        # Adjust data for transition case
+        if "Transition" in self.type_of_contract:
+            # Modify the values of the attributes
+            target_attrs = {
+                "attr": [
+                    self.expense_year,
+                    self.cost,
+                    self.cost_allocation,
+                    self.pis_year,
+                    self.useful_life,
+                    self.depreciation_factor,
+                    self.salvage_value,
+                    self.is_ic_applied,
+                    self.vat_portion,
+                    self.lbt_portion,
+                    self.description,
+                ],
+                "status": [
+                    False,
+                    True,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                ],
+            }
+
+            (
+                self.expense_year,
+                self.cost,
+                self.cost_allocation,
+                self.pis_year,
+                self.useful_life,
+                self.depreciation_factor,
+                self.salvage_value,
+                self.is_ic_applied,
+                self.vat_portion,
+                self.lbt_portion,
+                self.description,
+            ) = [
+                get_cost_data_split(
+                    target_attr=i,
+                    is_target_attr_adjusted=j,
+                    expense_year_init=expense_year_init,
+                    end_date_contract_1=self.end_date_project,
+                    start_date_contract_2=self.start_date_project_second,
+                )
+                for i, j in zip(target_attrs["attr"], target_attrs["status"])
+            ]
+
+            # Prepare attributes with datatype list
+            (
+                self.cost_allocation,
+                self.is_ic_applied,
+                self.description,
+            ) = list(
+                map(
+                    get_to_list_converter,
+                    [self.cost_allocation, self.is_ic_applied, self.description]
+                )
+            )
 
 
 @dataclass
@@ -1959,7 +1964,7 @@ class IntangibleCostData:
             ) = [
                 get_cost_data_split(
                     target_attr=i,
-                    is_target_attr_volume=j,
+                    is_target_attr_adjusted=j,
                     expense_year_init=expense_year_init,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
@@ -2208,7 +2213,7 @@ class OPEXData:
             ) = [
                 get_cost_data_split(
                     target_attr=i,
-                    is_target_attr_volume=j,
+                    is_target_attr_adjusted=j,
                     expense_year_init=expense_year_init,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,
@@ -2413,7 +2418,7 @@ class ASRCostData:
             ) = [
                 get_cost_data_split(
                     target_attr=i,
-                    is_target_attr_volume=j,
+                    is_target_attr_adjusted=j,
                     expense_year_init=expense_year_init,
                     end_date_contract_1=self.end_date_project,
                     start_date_contract_2=self.start_date_project_second,

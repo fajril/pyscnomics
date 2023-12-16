@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from pyscnomics.io.spreadsheet import Spreadsheet
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ.revenue import Lifting
+from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 
 
 class SpreadsheetException(Exception):
@@ -37,6 +38,12 @@ class Aggregate(Spreadsheet):
     sulfur_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
     electricity_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
     co2_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
+
+    # Attributes associated with aggregates of cost data
+    tangible_cost_aggregate: dict | tuple[Tangible] = field(default=None, init=False)
+    intangible_cost_aggregate: dict | tuple[Intangible] = field(default=None, init=False)
+    opex_aggregate: dict | tuple[OPEX] = field(default=None, init=False)
+    asr_cost_aggregate: dict | tuple[ASR] = field(default=None, init=False)
 
     # Attributes associated with PSC transition
     psc_regimes: list = field(default=None, init=False, repr=False)
@@ -631,6 +638,97 @@ class Aggregate(Spreadsheet):
 
         return co2_lifting_aggr
 
+    def _get_tangible_cost_aggregate(self) -> dict | tuple[Tangible]:
+        """
+        Retrieves the tangible cost aggregate based on the Production
+        Sharing Contract (PSC) type.
+
+        Returns
+        -------
+        -   If PSC transition: dict
+                A dictionary containing PSC regimes as keys and tuples of Tangible objects as values.
+        -   If single PSC (CR or GS): tuple[Tangible]
+                A tuple containing a single Tangible object.
+
+        Notes
+        -----
+        For a PSC transition case, the aggregate of tangible cost data is stored in
+        a dictionary with keys: ['PSC 1', 'PSC 2']. The value of each key is a tuple
+        of tangible cost data stored in parameter 'self.tangible_cost_data' for each
+        corresponding PSC regime.
+        """
+        # For PSC transition
+        if "Transition" in self.tangible_cost_data.type_of_contract:
+            start_year_combined = [
+                self.general_config_data.start_date_project.year,
+                self.general_config_data.start_date_project_second.year,
+            ]
+
+            end_year_combined = [
+                self.general_config_data.end_date_project.year,
+                self.general_config_data.end_date_project_second.year,
+            ]
+
+            tangible_cost_aggr = {
+                psc: tuple(
+                    [
+                        Tangible(
+                            start_year=start_year_combined[i],
+                            end_year=end_year_combined[i],
+                            cost=self.tangible_cost_data.cost[psc],
+                            expense_year=self.tangible_cost_data.expense_year[psc],
+                            cost_allocation=self.tangible_cost_data.cost_allocation[psc],
+                            vat_portion=self.tangible_cost_data.vat_portion[psc],
+                            vat_discount=self.general_config_data.vat_discount,
+                            lbt_portion=self.tangible_cost_data.lbt_portion[psc],
+                            lbt_discount=self.general_config_data.lbt_discount,
+                            description=self.tangible_cost_data.description[psc],
+                            pis_year=self.tangible_cost_data.pis_year[psc],
+                            salvage_value=self.tangible_cost_data.salvage_value[psc],
+                            useful_life=self.tangible_cost_data.useful_life[psc],
+                            depreciation_factor=self.tangible_cost_data.depreciation_factor[psc],
+                            is_ic_applied=self.tangible_cost_data.is_ic_applied[psc],
+                        )
+                    ]
+                )
+                for i, psc in enumerate(self.psc_regimes)
+            }
+
+        # For single PSC (CR or GS)
+        else:
+            tangible_cost_aggr = tuple(
+                [
+                    Tangible(
+                        start_year=self.general_config_data.start_date_project.year,
+                        end_year=self.general_config_data.end_date_project.year,
+                        cost=self.tangible_cost_data.cost,
+                        expense_year=self.tangible_cost_data.expense_year,
+                        cost_allocation=self.tangible_cost_data.cost_allocation,
+                        vat_portion=self.tangible_cost_data.vat_portion,
+                        vat_discount=self.general_config_data.vat_discount,
+                        lbt_portion=self.tangible_cost_data.lbt_portion,
+                        lbt_discount=self.general_config_data.lbt_discount,
+                        description=self.tangible_cost_data.description,
+                        pis_year=self.tangible_cost_data.pis_year,
+                        salvage_value=self.tangible_cost_data.salvage_value,
+                        useful_life=self.tangible_cost_data.useful_life,
+                        depreciation_factor=self.tangible_cost_data.depreciation_factor,
+                        is_ic_applied=self.tangible_cost_data.is_ic_applied,
+                    )
+                ]
+            )
+
+        return tangible_cost_aggr
+
+    def _get_intangible_cost_aggregate(self) -> dict | tuple[Intangible]:
+        pass
+
+    def _get_opex_aggregate(self) -> dict | tuple[OPEX]:
+        pass
+
+    def _get_asr_cost_aggregate(self) -> dict | tuple[ASR]:
+        pass
+
     def fit(self) -> None:
         """
         Fit method for the Aggregate class.
@@ -659,8 +757,9 @@ class Aggregate(Spreadsheet):
         self.co2_lifting_aggregate = self._get_co2_lifting_aggregate()
 
         # Aggregates associated with costs data
+        self.tangible_cost_aggregate = self._get_tangible_cost_aggregate()
 
         print('\t')
-        print(f'Filetype: {type(self.gas_lifting_aggregate)}')
-        print(f'Length: {len(self.gas_lifting_aggregate)}')
-        print('gas_lifting_aggregate = \n', self.gas_lifting_aggregate)
+        print(f'Filetype: {type(self.tangible_cost_aggregate)}')
+        print(f'Length: {len(self.tangible_cost_aggregate)}')
+        print('tangible_cost_aggregate = \n', self.tangible_cost_aggregate)

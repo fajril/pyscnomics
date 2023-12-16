@@ -1631,7 +1631,7 @@ class Spreadsheet:
         # self.intangible_cost_data = self._get_intangible_cost_data()
         # self.opex_data = self._get_opex_data()
         # self.asr_cost_data = self._get_asr_cost_data()
-        #
+
         # # Fill in the attributes associated with contract data
         # self.psc_cr_data = self._get_psc_cr_data()
         # self.psc_gs_data = self._get_psc_gs_data()
