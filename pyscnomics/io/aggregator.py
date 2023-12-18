@@ -3,11 +3,11 @@ Create aggregate of Lifting and Cost instances to be passed on to the main execu
 """
 
 import os as os
-# import numpy as np
-# import pandas as pd
-# import time as tm
+import numpy as np
+import pandas as pd
+import time as tm
 from dataclasses import dataclass, field
-# from functools import reduce
+from functools import reduce
 
 from pyscnomics.io.spreadsheet import Spreadsheet
 from pyscnomics.econ.selection import FluidType
@@ -721,13 +721,151 @@ class Aggregate(Spreadsheet):
         return tangible_cost_aggr
 
     def _get_intangible_cost_aggregate(self) -> dict | tuple[Intangible]:
-        pass
+        """
+        Retrieves the intangible cost aggregate based on the Production
+        Sharing Contract (PSC) type.
+
+        Returns
+        -------
+        -   If PSC transition: dict
+                A dictionary containing PSC regimes as keys and tuples of Intangible objects as values.
+        -   If single PSC (CR or GS): tuple[Intangible]
+                A tuple containing a single Intangible object.
+
+        Notes
+        -----
+        For a PSC transition case, the aggregate of intangible cost data is stored in
+        a dictionary with keys: ['PSC 1', 'PSC 2']. The value of each key is a tuple
+        of intangible cost data stored in parameter 'self.intangible_cost_data' for each
+        corresponding PSC regime.
+        """
+        # For PSC transition
+        if "Transition" in self.intangible_cost_data.type_of_contract:
+            start_year_combined = [
+                self.general_config_data.start_date_project.year,
+                self.general_config_data.start_date_project_second.year,
+            ]
+
+            end_year_combined = [
+                self.general_config_data.end_date_project.year,
+                self.general_config_data.end_date_project_second.year,
+            ]
+
+            intangible_cost_aggr = {
+                psc: tuple(
+                    [
+                        Intangible(
+                            start_year=start_year_combined[i],
+                            end_year=end_year_combined[i],
+                            cost=self.intangible_cost_data.cost[psc],
+                            expense_year=self.intangible_cost_data.expense_year[psc],
+                            cost_allocation=self.intangible_cost_data.cost_allocation[psc],
+                            description=self.intangible_cost_data.description[psc],
+                            vat_portion=self.intangible_cost_data.vat_portion[psc],
+                            vat_discount=self.general_config_data.vat_discount,
+                            lbt_portion=self.intangible_cost_data.lbt_portion[psc],
+                            lbt_discount=self.general_config_data.lbt_discount,
+                        )
+                    ]
+                )
+                for i, psc in enumerate(self.psc_regimes)
+            }
+
+        # For single PSC (CR or GS)
+        else:
+            intangible_cost_aggr = tuple(
+                [
+                    Intangible(
+                        start_year=self.general_config_data.start_date_project.year,
+                        end_year=self.general_config_data.end_date_project.year,
+                        cost=self.intangible_cost_data.cost,
+                        expense_year=self.intangible_cost_data.expense_year,
+                        cost_allocation=self.intangible_cost_data.cost_allocation,
+                        description=self.intangible_cost_data.description,
+                        vat_portion=self.intangible_cost_data.vat_portion,
+                        vat_discount=self.general_config_data.vat_discount,
+                        lbt_portion=self.intangible_cost_data.lbt_portion,
+                        lbt_discount=self.general_config_data.lbt_discount,
+                    )
+                ]
+            )
+
+        return intangible_cost_aggr
 
     def _get_opex_aggregate(self) -> dict | tuple[OPEX]:
         pass
 
     def _get_asr_cost_aggregate(self) -> dict | tuple[ASR]:
-        pass
+        """
+        Retrieves the ASR cost aggregate based on the Production
+        Sharing Contract (PSC) type.
+
+        Returns
+        -------
+        -   If PSC transition: dict
+                A dictionary containing PSC regimes as keys and tuples of ASR objects as values.
+        -   If single PSC (CR or GS): tuple[ASR]
+                A tuple containing a single ASR object.
+
+        Notes
+        -----
+        For a PSC transition case, the aggregate of ASR cost data is stored in
+        a dictionary with keys: ['PSC 1', 'PSC 2']. The value of each key is a tuple
+        of ASR cost data stored in parameter 'self.asr_cost_data' for each
+        corresponding PSC regime.
+        """
+        # For PSC transition
+        if "Transition" in self.asr_cost_data.type_of_contract:
+            start_year_combined = [
+                self.general_config_data.start_date_project.year,
+                self.general_config_data.start_date_project_second.year,
+            ]
+
+            end_year_combined = [
+                self.general_config_data.end_date_project.year,
+                self.general_config_data.end_date_project_second.year,
+            ]
+
+            asr_cost_aggr = {
+                psc: tuple(
+                    [
+                        ASR(
+                            start_year=start_year_combined[i],
+                            end_year=end_year_combined[i],
+                            cost=self.asr_cost_data.cost[psc],
+                            expense_year=self.asr_cost_data.expense_year[psc],
+                            cost_allocation=self.asr_cost_data.cost_allocation[psc],
+                            description=self.asr_cost_data.description[psc],
+                            vat_portion=self.asr_cost_data.vat_portion[psc],
+                            vat_discount=self.general_config_data.vat_discount,
+                            lbt_portion=self.asr_cost_data.lbt_portion[psc],
+                            lbt_discount=self.general_config_data.lbt_discount,
+                        )
+                    ]
+                )
+                for i, psc in enumerate(self.psc_regimes)
+            }
+
+        # For single PSC (CR or GS)
+        else:
+            asr_cost_aggr = tuple(
+                [
+                    ASR(
+                        start_year=self.general_config_data.start_date_project.year,
+                        end_year=self.general_config_data.end_date_project.year,
+                        cost=self.asr_cost_data.cost,
+                        expense_year=self.asr_cost_data.expense_year,
+                        cost_allocation=self.asr_cost_data.cost_allocation,
+                        description=self.asr_cost_data.description,
+                        vat_portion=self.asr_cost_data.vat_portion,
+                        vat_discount=self.general_config_data.vat_discount,
+                        lbt_portion=self.asr_cost_data.lbt_portion,
+                        lbt_discount=self.general_config_data.lbt_discount,
+                    )
+                ]
+            )
+
+        return asr_cost_aggr
 
     def fit(self) -> None:
         """
@@ -758,8 +896,11 @@ class Aggregate(Spreadsheet):
 
         # Aggregates associated with costs data
         self.tangible_cost_aggregate = self._get_tangible_cost_aggregate()
+        self.intangible_cost_aggregate = self._get_intangible_cost_aggregate()
+        self.opex_aggregate = self._get_opex_aggregate()
+        self.asr_cost_aggregate = self._get_asr_cost_aggregate()
 
         print('\t')
-        print(f'Filetype: {type(self.tangible_cost_aggregate)}')
-        print(f'Length: {len(self.tangible_cost_aggregate)}')
-        print('tangible_cost_aggregate = \n', self.tangible_cost_aggregate)
+        print(f'Filetype: {type(self.opex_aggregate)}')
+        print(f'Length: {len(self.opex_aggregate)}')
+        print('opex_aggregate = \n', self.opex_aggregate)

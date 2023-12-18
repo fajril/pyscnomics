@@ -858,54 +858,59 @@ class Spreadsheet:
 
         Returns
         -------
-        None or IntangibleCostData
+        IntangibleCostData
+            An instance of IntangibleCostData class.
 
         Notes
         -----
         The core operations are as follows:
-        (1) Capture intangible data from attribute self.data_loaded, then perform the
+        (1) Capture intangible cost data from attribute self.data_loaded, then perform the
             necessary adjustment,
-        (2) If 'intangible_data_loaded' is an empty dataframe, then return None,
-        (3) If 'intangible_data_loaded' is not an empty dataframe, then load and
-            arrange the attributes of interest from variable 'intangible_data_loaded'.
-            Afterwards, create a new instance of IntangibleCostData to store them.
+        (2) Undertake data cleansing: remove all rows which column 'expense_year' is NaN.
+            Store the results in a variable named 'intangible_data_loaded',
+        (3) Create a dictionary named 'intangible_data' to store the necessary data from
+            'intangible_data_loaded',
+        (4) Return an instance of IntangibleCostData to store the intangible data appropriately
+            as its attributes.
         """
         # Step #1 (See 'Notes' section in the docstring)
-        intangible_data_loaded = self.data_loaded["Cost Intangible"].dropna(axis=0, how="all")
+        intangible_data_loaded_init = self.data_loaded["Cost Intangible"].dropna(axis=0, how="all")
 
         # Step #2 (See 'Notes' section in the docstring)
-        if intangible_data_loaded.empty:
-            return None
+        intangible_data_loaded = (
+            intangible_data_loaded_init if intangible_data_loaded_init.empty
+            else intangible_data_loaded_init[~pd.isna(intangible_data_loaded_init.iloc[:, 0])].copy()
+        )
 
         # Step #3 (See 'Notes' section in the docstring)
-        else:
-            intangible_data_attrs = [
-                "expense_year",
-                "cost_allocation",
-                "cost",
-                "vat_portion",
-                "lbt_portion",
-                "description",
-            ]
+        intangible_data_attrs = [
+            "expense_year",
+            "cost_allocation",
+            "cost",
+            "vat_portion",
+            "lbt_portion",
+            "description",
+        ]
 
-            intangible_data = {
-                key: intangible_data_loaded.iloc[:, i].to_numpy()
-                for i, key in enumerate(intangible_data_attrs)
-            }
+        intangible_data = {
+            key: None if intangible_data_loaded.empty
+            else intangible_data_loaded.iloc[:, i].to_numpy()
+            for i, key in enumerate(intangible_data_attrs)
+        }
 
-            return IntangibleCostData(
-                expense_year_init=intangible_data["expense_year"],
-                cost_allocation=intangible_data["cost_allocation"].tolist(),
-                cost=intangible_data["cost"],
-                vat_portion=intangible_data["vat_portion"],
-                lbt_portion=intangible_data["lbt_portion"],
-                description=intangible_data["description"].tolist(),
-                data_length=intangible_data_loaded.shape[0],
-                project_years=self.general_config_data.project_years,
-                type_of_contract=self.general_config_data.type_of_contract,
-                end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second=self.general_config_data.start_date_project_second,
-            )
+        # Step #4 (See 'Notes' section in the docstring)
+        return IntangibleCostData(
+            expense_year_init=intangible_data["expense_year"],
+            cost_allocation=intangible_data["cost_allocation"],
+            cost=intangible_data["cost"],
+            vat_portion=intangible_data["vat_portion"],
+            lbt_portion=intangible_data["lbt_portion"],
+            description=intangible_data["description"],
+            project_years=self.general_config_data.project_years,
+            type_of_contract=self.general_config_data.type_of_contract,
+            end_date_project=self.general_config_data.end_date_project,
+            start_date_project_second=self.general_config_data.start_date_project_second,
+        )
 
     def _get_opex_data(self) -> OPEXData:
         """
@@ -972,54 +977,59 @@ class Spreadsheet:
 
         Returns
         -------
-        None or ASRCostData
+        ASRCostData
+            An instance of ASRCostData class.
 
         Notes
         -----
         The core operations are as follows:
         (1) Capture asr cost data from attribute self.data_loaded, then perform the
             necessary adjustment,
-        (2) If 'asr_data_loaded' is an empty dataframe, then return None,
-        (3) If 'asr_data_loaded' is not an empty dataframe, then load and
-            arrange the attributes of interest from variable 'asr_data_loaded'.
-            Afterwards, create a new instance of ASRCostData to store them.
+        (2) Undertake data cleansing: remove all rows which column 'expense_year' is NaN.
+            Store the results in a variable named 'asr_data_loaded',
+        (3) Create a dictionary named 'asr_data' to store the necessary data from
+            'asr_data_loaded',
+        (4) Return an instance of ASRCostData to store the asr data appropriately
+            as its attributes.
         """
         # Step #1 (See 'Notes' section in the docstring)
-        asr_data_loaded = self.data_loaded["Cost ASR"].dropna(axis=0, how="all")
+        asr_data_loaded_init = self.data_loaded["Cost ASR"].dropna(axis=0, how="all")
 
         # Step #2 (See 'Notes' section in the docstring)
-        if asr_data_loaded.empty:
-            return None
+        asr_data_loaded = (
+            asr_data_loaded_init if asr_data_loaded_init.empty
+            else asr_data_loaded_init[~pd.isna(asr_data_loaded_init.iloc[:, 0])].copy()
+        )
 
         # Step #3 (See 'Notes' section in the docstring)
-        else:
-            asr_data_attrs = [
-                "expense_year",
-                "cost_allocation",
-                "cost",
-                "vat_portion",
-                "lbt_portion",
-                "description",
-            ]
+        asr_data_attrs = [
+            "expense_year",
+            "cost_allocation",
+            "cost",
+            "vat_portion",
+            "lbt_portion",
+            "description",
+        ]
 
-            asr_data = {
-                key: asr_data_loaded.iloc[:, i].to_numpy()
-                for i, key in enumerate(asr_data_attrs)
-            }
+        asr_data = {
+            key: None if asr_data_loaded.empty
+            else asr_data_loaded.iloc[:, i].to_numpy()
+            for i, key in enumerate(asr_data_attrs)
+        }
 
-            return ASRCostData(
-                expense_year_init=asr_data["expense_year"],
-                cost_allocation=asr_data["cost_allocation"].tolist(),
-                cost=asr_data["cost"],
-                vat_portion=asr_data["vat_portion"],
-                lbt_portion=asr_data["lbt_portion"],
-                description=asr_data["description"].tolist(),
-                data_length=asr_data_loaded.shape[0],
-                project_years=self.general_config_data.project_years,
-                type_of_contract=self.general_config_data.type_of_contract,
-                end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second=self.general_config_data.start_date_project_second,
-            )
+        # Step #4 (See 'Notes' section in the docstring)
+        return ASRCostData(
+            expense_year_init=asr_data["expense_year"],
+            cost_allocation=asr_data["cost_allocation"],
+            cost=asr_data["cost"],
+            vat_portion=asr_data["vat_portion"],
+            lbt_portion=asr_data["lbt_portion"],
+            description=asr_data["description"],
+            project_years=self.general_config_data.project_years,
+            type_of_contract=self.general_config_data.type_of_contract,
+            end_date_project=self.general_config_data.end_date_project,
+            start_date_project_second=self.general_config_data.start_date_project_second,
+        )
 
     def _get_psc_cr_data(self) -> PSCCostRecoveryData:
         """
@@ -1628,9 +1638,9 @@ class Spreadsheet:
 
         # Fill in the attributes associated with cost data
         self.tangible_cost_data = self._get_tangible_cost_data()
-        # self.intangible_cost_data = self._get_intangible_cost_data()
+        self.intangible_cost_data = self._get_intangible_cost_data()
         # self.opex_data = self._get_opex_data()
-        # self.asr_cost_data = self._get_asr_cost_data()
+        self.asr_cost_data = self._get_asr_cost_data()
 
         # # Fill in the attributes associated with contract data
         # self.psc_cr_data = self._get_psc_cr_data()
@@ -1644,8 +1654,8 @@ class Spreadsheet:
         print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
         print('\t')
-        print(f'Filetype: {type(self.tangible_cost_data)}')
-        print('tangible_cost_data = \n', self.tangible_cost_data)
+        print(f'Filetype: {type(self.asr_cost_data)}')
+        print('asr_cost_data = \n', self.asr_cost_data)
 
         print('\t')
         print('=========================================================================================')
