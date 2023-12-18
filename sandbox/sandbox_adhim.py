@@ -145,3 +145,4 @@ df['Parameter Value'] = optim_result[1]
 print(df, '\n')
 print('Target Value:', target)
 print('Optimized Target Value:', optim_result[2])
+print('Parameter Value Value:', optim_result[1])

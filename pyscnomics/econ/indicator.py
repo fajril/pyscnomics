@@ -142,7 +142,15 @@ def irr(
       If the IRR is greater than the discount rate, the investment
       is considered financially attractive.
     """
-    return pyxirr.irr(cashflow)
+    # Condition where all the cashflow is positive
+    if np.all(cashflow >= 0):
+        result = None
+    elif np.all(cashflow <= 0):
+        result = None
+    else:
+        result = pyxirr.irr(cashflow)
+
+    return result
 
 
 def xirr(

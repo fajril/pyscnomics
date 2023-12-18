@@ -1142,7 +1142,7 @@ class CostRecovery(BaseProject):
         if ftp_tax_regime is FTPTaxRegime.PDJP_20_2017:
             self._consolidated_tax_payment = self._oil_tax_payment + self._gas_tax_payment
 
-        else:
+        elif ftp_tax_regime is FTPTaxRegime.PRE_PDJP_20_2017:
             self._consolidated_tax_due = self._get_tax_payment(
                 ctr_share=self._consolidated_contractor_share,
                 taxable_income=self._consolidated_taxable_income,
@@ -1158,6 +1158,9 @@ class CostRecovery(BaseProject):
                 tax_payment=self._consolidated_tax_due,
                 ets_ctr=self._consolidated_contractor_share,
             )
+
+        else:
+            self._consolidated_tax_payment = self._oil_tax_payment + self._gas_tax_payment
 
         self._consolidated_ctr_net_share = (
                 self._consolidated_taxable_income - self._consolidated_tax_payment

@@ -225,12 +225,13 @@ psc2 = GrossSplit(
     gas_dmo_fee_portion=1.0,
     gas_dmo_holiday_duration=0)
 
-ftp_tax_regime = FTPTaxRegime.PRE_PDJP_20_2017
+ftp_tax_regime = FTPTaxRegime.DIRECT_MODE
 eff_tax_rate = 0.48
-tax_payment_method = TaxPaymentMode.TAX_DIRECT_MODE
-argument_contract1 = {'ftp_tax_regime': FTPTaxRegime.PRE_PDJP_20_2017,
+# tax_payment_method = TaxPaymentMode.TAX_DIRECT_MODE
+argument_contract1 = {'ftp_tax_regime': ftp_tax_regime,
                       'tax_rate': eff_tax_rate,
-                      'tax_payment_method': tax_payment_method}
+                      # 'tax_payment_method': tax_payment_method
+                      }
 
 argument_contract2 = {'tax_rate': 0.40}
 
