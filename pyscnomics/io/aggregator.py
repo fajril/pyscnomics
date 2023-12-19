@@ -974,6 +974,6 @@ class Aggregate(Spreadsheet):
         self.asr_cost_aggregate = self._get_asr_cost_aggregate()
 
         print('\t')
-        print(f'Filetype: {type(self.intangible_cost_aggregate)}')
-        print(f'Length: {len(self.intangible_cost_aggregate)}')
-        print('intangible_cost_aggregate = \n', self.intangible_cost_aggregate)
+        print(f'Filetype: {type(self.asr_cost_aggregate)}')
+        print(f'Length: {len(self.asr_cost_aggregate)}')
+        print('asr_cost_aggregate = \n', self.asr_cost_aggregate)

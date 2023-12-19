@@ -1659,8 +1659,8 @@ class Spreadsheet:
         print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
         print('\t')
-        print(f'Filetype: {type(self.intangible_cost_data)}')
-        print('intangible_cost_data = \n', self.intangible_cost_data)
+        print(f'Filetype: {type(self.asr_cost_data)}')
+        print('asr_cost_data = \n', self.asr_cost_data)
 
         print('\t')
         print('=========================================================================================')
