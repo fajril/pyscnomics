@@ -12,7 +12,7 @@ from pyscnomics.econ.selection import (
     TaxType,
     TaxSplitTypeCR,
     InflationAppliedTo,
-    TaxPaymentMode,
+    # TaxPaymentMode,
     FTPTaxRegime,
     NPVSelection,
     DiscountingMode,
@@ -633,7 +633,7 @@ def get_inflation_applied_converter(target: str) -> InflationAppliedTo:
     return None
 
 
-def get_tax_payment_converter(target: str) -> TaxPaymentMode:
+def get_tax_payment_converter(target: str) -> FTPTaxRegime:
     """
     Converts a string representing a tax payment mode to its corresponding
     enum value from the TaxPaymentMode class.
@@ -656,8 +656,7 @@ def get_tax_payment_converter(target: str) -> TaxPaymentMode:
     TaxPaymentMode.TAX_DIRECT_MODE
     """
     attrs = {
-        "Direct Mode": TaxPaymentMode.TAX_DIRECT_MODE,
-        "Due Mode": TaxPaymentMode.TAX_DUE_MODE,
+        "Direct Mode": FTPTaxRegime.DIRECT_MODE,
         "PDJP No.20 Tahun 2017": FTPTaxRegime.PDJP_20_2017,
         "Pre PDJP No.20 Tahun 2017": FTPTaxRegime.PRE_PDJP_20_2017,
     }
