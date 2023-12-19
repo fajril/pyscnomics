@@ -6,7 +6,6 @@ from enum import Enum
 
 
 class DeprMethod(Enum):
-
     """
     Enumeration of depreciation methods.
 
@@ -29,7 +28,6 @@ class DeprMethod(Enum):
 
 
 class FluidType(Enum):
-
     """
     Enumeration of fluid types for depreciation calculation.
 
@@ -130,7 +128,10 @@ class TaxRegime(Enum):
 
 
 class TaxPaymentMode(Enum):
-    TAX_DUE_MODE = "Calculation method where it treated like the unrecoverable cost, could be weighted on the next year"
+    TAX_DUE_MODE = (
+        f"Calculation method where it treated like the unrecoverable cost, "
+        f"could be weighted on the next year"
+    )
     TAX_DIRECT_MODE = "Calculation method where the tax calculated directly from taxable income"
 
 
@@ -143,11 +144,12 @@ class FTPTaxRegime(Enum):
     ----------
     PDJP_20_2017: str
         Manifests Peraturan DIRJEN PAJAK No. PER-20/PJ/2017
-    PRE_2017: str
+    PRE_PDJP_20_2017: str
         Manifests Pre Peraturan DIRJEN PAJAK No. PER-20/PJ/2017
     """
     PDJP_20_2017 = "Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
-    PRE_2017 = "Pre Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
+    PRE_PDJP_20_2017 = "Pre Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
+    DIRECT_MODE = "The tax will be paid directly"
 
 
 class GrossSplitRegime(Enum):
@@ -207,3 +209,22 @@ class InflationAppliedTo(Enum):
     OPEX = "Inflation rate will be applied to Operating Cost"
     CAPEX_AND_OPEX = "Inflation rate will be applied to Tangible, Intangible, Operating Cost"
 
+
+class OptimizationParameter(Enum):
+    OIL_CTR_PRETAX = 'Oil Contractor Pre Tax'
+    GAS_CTR_PRETAX = 'Gas Contractor Pre Tax'
+    OIL_FTP_PORTION = 'Oil FTP Portion'
+    GAS_FTP_PORTION = 'Gas FTP Portion'
+    OIL_IC = 'Oil IC'
+    GAS_IC = 'Gas IC'
+    OIL_DMO_FEE = 'Oil DMO Fee'
+    GAS_DMO_FEE = 'Gas Dmo Fee'
+    VAT_RATE = 'VAT Rate'
+    EFFECTIVE_TAX_RATE = 'Effective Tax Rate'
+    MINISTERIAL_DISCRETION = 'Ministerial Discretion'
+
+
+class OptimizationTarget(Enum):
+    IRR = 'IRR'
+    NPV = 'NPV'
+    PV_RATIO = 'PV_RATIO'

@@ -12,10 +12,10 @@ from pyscnomics.econ.selection import TaxSplitTypeCR
 from pyscnomics.tools.helper import (
     get_inflation_applied_converter,
     get_tax_payment_converter,
-    get_tax_regime_converter,
     get_npv_mode_converter,
     get_discounting_mode_converter,
     get_depreciation_method_converter,
+    get_other_revenue_converter,
     get_array_from_target,
     get_lifting_data_split_simple,
     get_lifting_data_split_advanced,
@@ -123,30 +123,30 @@ class GeneralConfigData:
 
     Attributes
     ----------
-    start_date_project: date
+    start_date_project: datetime
         The start date of the project.
-    end_date_project: date
+    end_date_project: datetime
         The end date of the project.
-    start_date_project_second: date
+    start_date_project_second: datetime
         The start date of the second project (for PSC transition).
-    end_date_project_second: date
+    end_date_project_second: datetime
         The end date of the second project (for PSC transition).
     type_of_contract: str
         The type of contract associated with the project.
-    oil_onstream_date: date, optional
-        The onstream date for oil production (defaults to None).
-    gas_onstream_date: date, optional
-        The onstream date for gas production (defaults to None).
+    oil_onstream_date: datetime
+        The onstream date for oil production - PSC First Contract (defaults to None).
+    gas_onstream_date: datetime
+        The onstream date for gas production - PSC First Contract (defaults to None).
+    oil_onstream_date_second: datetime
+        The onstream date for oil production - PSC Second Contract (defaults to None).
+    gas_onstream_date_second: datetime
+        The onstream date for gas production - PSC Second Contract (defaults to None).
     discount_rate_start_year: int, optional
         The start year for applying discount rate (defaults to None).
     discount_rate: float
         The discount rate applied to project cash flows (defaults to 0.1).
     inflation_rate_applied_to: str, optional
         The attribute to which inflation rate is applied (defaults to None).
-    vat_discount: float
-        The value-added tax discount (defaults to 0.0).
-    lbt_discount: float
-        The land and building tax discount (defaults to 0.0).
     gsa_number: int
         The number of GSA available.
     """
@@ -157,11 +157,11 @@ class GeneralConfigData:
     type_of_contract: str
     oil_onstream_date: datetime
     gas_onstream_date: datetime
+    oil_onstream_date_second: datetime
+    gas_onstream_date_second: datetime
     discount_rate_start_year: int
     discount_rate: float
     inflation_rate_applied_to: str
-    vat_discount: float
-    lbt_discount: float
     gsa_number: int
 
     # Attributes associated with duration of the project
@@ -169,16 +169,6 @@ class GeneralConfigData:
     project_years: np.ndarray = field(default=None, init=False)
 
     def __post_init__(self):
-        # Prepare attribute vat_discount
-        if self.vat_discount is None:
-            self.vat_discount = 0.0
-        self.vat_discount = float(self.vat_discount)
-
-        # Prepare attribute lbt_discount
-        if self.lbt_discount is None:
-            self.lbt_discount = 0.0
-        self.lbt_discount = float(self.lbt_discount)
-
         # Prepare attribute gsa_number
         self.gsa_number = int(self.gsa_number)
 
@@ -192,8 +182,15 @@ class GeneralConfigData:
             map(convert_date, [self.start_date_project, self.end_date_project])
         )
 
-        # Prepare attribute project_years and project_duration
+        # For PSC transition
         if "Transition" in self.type_of_contract:
+            if any([self.start_date_project_second is None, self.end_date_project_second is None]):
+                raise GeneralConfigDataException(
+                    f"Missing data for "
+                    f"Project Start Date (2nd Project) "
+                    f"and/or Project End Date (2nd Project)."
+                )
+
             self.start_date_project_second, self.end_date_project_second = list(
                 map(convert_date, [self.start_date_project_second, self.end_date_project_second])
             )
@@ -217,26 +214,32 @@ class GeneralConfigData:
                     f"({self.start_date_project_second.year})."
                 )
 
+            # Prepare attribute project_duration
             self.project_duration = (
                     self.end_date_project_second.year - self.start_date_project.year + 1
             )
+
+            # Prepare attribute project_years
             self.project_years = np.arange(
                 self.start_date_project.year, self.end_date_project_second.year + 1, 1
             )
 
+            # Prepare attribute onstream_date
             if self.oil_onstream_date is not None:
-                self.oil_onstream_date = {
-                    "PSC 1": convert_date(date=self.oil_onstream_date),
-                    "PSC 2": self.start_date_project_second,
-                }
+                self.oil_onstream_date = convert_date(date=self.oil_onstream_date)
+
+            if self.oil_onstream_date_second is not None:
+                self.oil_onstream_date_second = convert_date(date=self.oil_onstream_date_second)
 
             if self.gas_onstream_date is not None:
-                self.gas_onstream_date = {
-                    "PSC 1": convert_date(date=self.gas_onstream_date),
-                    "PSC 2": self.start_date_project_second,
-                }
+                self.gas_onstream_date = convert_date(date=self.gas_onstream_date)
 
+            if self.gas_onstream_date_second is not None:
+                self.gas_onstream_date_second = convert_date(date=self.gas_onstream_date_second)
+
+        # For single PSC
         else:
+            # Prepare attribute project_duration and project_years
             if self.end_date_project.year >= self.start_date_project.year:
                 self.project_duration = self.end_date_project.year - self.start_date_project.year + 1
                 self.project_years = np.arange(
@@ -249,6 +252,7 @@ class GeneralConfigData:
                     f"is after the end year: {self.end_date_project.year}"
                 )
 
+            # Prepare attribute onstream_date
             if self.oil_onstream_date is not None:
                 self.oil_onstream_date = convert_date(date=self.oil_onstream_date)
 
@@ -263,168 +267,302 @@ class FiscalConfigData:
 
     Attributes
     ----------
-    tax_payment_method: str
+    tax_mode: dict
+        The mode for tax calculation.
+    tax_rate_init: dict
+        Initial value for tax rate (used in User Input - Single Value mode).
+    multi_tax_init: dict
+        Dictionary for multi-year tax rates (used in User Input - Multi Value mode)
+    tax_payment_config: dict
         The method of tax payment.
-    tax_ftp_regime: str
-        The tax regime for FTP.
+    asr_future_rate: dict
+        The future rate for ASR.
+    depreciation_method: dict
+        The method of depreciation.
+    decline_factor: dict
+        The decline factor for economic analysis.
+    inflation_rate_mode: dict
+        The mode for inflation rate calculation.
+    inflation_rate_init: dict
+        Initial value for inflation rate (used in User Input - Single Value mode).
+    multi_inflation_init: dict
+        Dictionary for multi-year inflation rates (used in User Input - Multi Value mode)
+    vat_mode: dict
+        The mode for VAT calculation.
+    vat_rate_init: dict
+        Initial value for VAT rate (used in User Input - Single Value mode).
+    multi_vat_init: dict
+        Dictionary for multi-year VAT rates (used in User Input - Multi Value mode)
+    lbt_mode: dict
+        The mode for LBT calculation.
+    lbt_rate_init: dict
+        Initial value for LBT rate (used in User Input - Single Value mode).
+    multi_lbt_init: dict
+        Multi-year LBT rates (used in User Input - Multi Value mode)
+    vat_discount: dict
+        The value of VAT discount.
+    lbt_discount: dict
+        The value of LBT discount.
     npv_mode: str
         The mode for Net Present Value (NPV) calculation.
     discounting_mode: str
         The mode for discounting.
-    future_rate_asr: float
-        The future rate for ASR.
-    depreciation_method: str
-        The method of depreciation.
-    decline_factor: float | int
-        The decline factor for economic analysis.
+    sulfur_revenue_config: dict
+        Configuration for sulfur production.
+    electricity_revenue_config: dict
+        Configuration for electricity production.
+    co2_revenue_config: dict
+        Configuration for CO2 production.
     transferred_unrec_cost: float
         The transferred unrecoverable cost.
-    tax_rate_second_contract: float
-        The tax rate for the second contract
-    tax_mode: str
-        The mode for tax calculation.
-    tax_rate_init: float
-        Initial value for tax rate (used in User Input - Single Value mode).
-    multi_tax: dict
-        Dictionary for multi-year tax rates (used in User Input - Multi Value mode)
-    inflation_rate_mode: str
-        The mode for inflation rate calculation.
-    inflation_rate_init: float
-        Initial value for inflation rate (used in User Input - Single Value mode).
-    multi_inflation: dict
-        Dictionary for multi-year inflation rates (used in User Input - Multi Value mode)
-    vat_mode: str
-        The mode for VAT calculation.
-    vat_rate_init: float
-        Initial value for VAT rate (used in User Input - Single Value mode).
-    multi_vat: dict
-        Dictionary for multi-year VAT rates (used in User Input - Multi Value mode)
-    lbt_mode: str
-        The mode for LBT calculation.
-    lbt_rate_init: float
-        Initial value for LBT rate (used in User Input - Single Value mode).
-    multi_lbt: float
-        Multi-year LBT rates (used in User Input - Multi Value mode)
+    sunk_cost_reference_year: int
+        Reference year for sunk cost.
     project_years: np.ndarray
         Array representing project years
-    tax_rate: None | float | np.ndarray
+    type_of_contract: str = field(repr=False)
+    tax_rate: dict
         Calculated tax rate based on the specified mode.
-    inflation_rate: float | np.ndarray
+    inflation_rate: dict
         Calculated inflation rate based on the specified mode.
-    vat_rate: float | np.ndarray
+    vat_rate: dict
         Calculated VAT rate based on the specified mode.
-    lbt_rate: float | np.ndarray
+    lbt_rate: dict
         Calculated LBT rate based on the specified mode.
     """
-    tax_payment_method: str
-    tax_ftp_regime: str
+    # Attributes associated with tax config
+    tax_mode: dict
+    tax_rate_init: InitVar[dict] = field(repr=False)
+    multi_tax_init: InitVar[dict] = field(repr=False)
+    tax_payment_config: dict
+
+    # Attribute associated with ASR config
+    asr_future_rate: dict
+
+    # Attribute associated with depreciation config
+    depreciation_method: dict
+    decline_factor: dict
+
+    # Attributes associated with inflation config
+    inflation_rate_mode: dict
+    inflation_rate_init: InitVar[dict] = field(repr=False)
+    multi_inflation_init: InitVar[dict] = field(repr=False)
+
+    # Attributes associated with VAT config
+    vat_mode: dict
+    vat_rate_init: InitVar[dict] = field(repr=False)
+    multi_vat_init: InitVar[dict] = field(repr=False)
+
+    # Attributes associated with LBT config
+    lbt_mode: dict
+    lbt_rate_init: InitVar[dict] = field(repr=False)
+    multi_lbt_init: InitVar[dict] = field(repr=False)
+
+    # Attributes associated with discount config
+    vat_discount: dict
+    lbt_discount: dict
+
+    # Attributes associated with NPV config
     npv_mode: str
     discounting_mode: str
-    future_rate_asr: float
-    depreciation_method: str
-    decline_factor: float | int
+
+    # Attributes associated with other revenue config
+    sulfur_revenue_config: dict
+    electricity_revenue_config: dict
+    co2_revenue_config: dict
+
+    # Attribute associated with transition config
     transferred_unrec_cost: float
-    tax_rate_second_contract: float
 
-    # Attributes associated with tax
-    tax_mode: str
-    tax_rate_init: InitVar[float] = field(repr=False)
-    multi_tax: InitVar[dict] = field(repr=False)
-
-    # Attributes associated with inflation
-    inflation_rate_mode: str
-    inflation_rate_init: InitVar[float] = field(repr=False)
-    multi_inflation: InitVar[dict] = field(repr=False)
-
-    # Attributes associated with VAT
-    vat_mode: str
-    vat_rate_init: InitVar[float] = field(repr=False)
-    multi_vat: InitVar[dict] = field(repr=False)
-
-    # Attributes associated with LBT
-    lbt_mode: str
-    lbt_rate_init: InitVar[float] = field(repr=False)
-    multi_lbt: InitVar[float] = field(repr=False)
+    # Attribute associated with sunk cost config
+    sunk_cost_reference_year: int
 
     # Attributes associated with project duration
     project_years: np.ndarray
+    type_of_contract: str = field(repr=False)
 
     # Attributes to be defined later
-    tax_rate: None | float | np.ndarray = field(default=None, init=False)
-    inflation_rate: float | np.ndarray = field(default=None, init=False)
-    vat_rate: float | np.ndarray = field(default=None, init=False)
-    lbt_rate: float | np.ndarray = field(default=None, init=False)
+    tax_rate: dict = field(default=None, init=False)
+    inflation_rate: dict = field(default=None, init=False)
+    vat_rate: dict = field(default=None, init=False)
+    lbt_rate: dict = field(default=None, init=False)
+
+    # Attributes associated with PSC transition
+    psc_regimes: list = field(default=None, init=False, repr=False)
 
     def __post_init__(
         self,
         tax_rate_init,
-        multi_tax,
+        multi_tax_init,
         inflation_rate_init,
-        multi_inflation,
+        multi_inflation_init,
         vat_rate_init,
-        multi_vat,
+        multi_vat_init,
         lbt_rate_init,
-        multi_lbt,
+        multi_lbt_init,
     ):
-        # Prepare attribute tax_payment_method
-        self.tax_payment_method = get_tax_payment_converter(target=self.tax_payment_method)
+        # Prepare attribute associated with PSC transition
+        self.psc_regimes = ["PSC 1", "PSC 2"]
 
-        # Prepare attribute tax_ftp_regime
-        self.tax_ftp_regime = get_tax_regime_converter(target=self.tax_ftp_regime)
-
-        # Prepare attribute npv_mode
-        self.npv_mode = get_npv_mode_converter(target=self.npv_mode)
-
-        # Prepare attribute discounting_mode
-        self.discounting_mode = get_discounting_mode_converter(target=self.discounting_mode)
-
-        # Prepare attribute depreciation_method
-        self.depreciation_method = get_depreciation_method_converter(target=self.depreciation_method)
-
-        # Prepare attribute tax_rate
-        if self.tax_mode == "User Input - Single Value":
-            if pd.isna(tax_rate_init):
-                self.tax_rate = 0.44
-            else:
-                self.tax_rate = float(tax_rate_init)
-
-        elif self.tax_mode == "Nailed Down" or self.tax_mode == "Prevailing":
-            self.tax_rate = None
-
-        elif self.tax_mode == "User Input - Multi Value":
-            self.tax_rate = get_array_from_target(target=multi_tax, project_years=self.project_years)
-
-        # Prepare attribute inflation_rate
-        if self.inflation_rate_mode == "User Input - Single Value":
-            if pd.isna(inflation_rate_init):
-                self.inflation_rate = 0.02
-            else:
-                self.inflation_rate = float(inflation_rate_init)
-
-        elif self.inflation_rate_mode == "User Input - Multi Value":
-            self.inflation_rate = (
-                get_array_from_target(target=multi_inflation, project_years=self.project_years)
+        # Prepare attributes tax_payment_config
+        for psc in self.psc_regimes:
+            self.tax_payment_config[psc] = (
+                get_tax_payment_converter(target=self.tax_payment_config[psc])
             )
 
-        # Prepare attribute vat_rate
-        if self.vat_mode == "User Input - Single Value":
-            if pd.isna(vat_rate_init):
-                self.vat_rate = 0.12
-            else:
-                self.vat_rate = float(vat_rate_init)
+        # Prepare attribute tax_rate
+        self.tax_rate = {}
+        for psc in self.psc_regimes:
+            if self.tax_mode[psc] == "User Input - Single Value":
+                if pd.isna(tax_rate_init[psc]):
+                    self.tax_rate[psc] = 0.44
+                else:
+                    self.tax_rate[psc] = float(tax_rate_init[psc])
 
-        elif self.vat_mode == "User Input - Multi Value":
-            self.vat_rate = get_array_from_target(target=multi_vat, project_years=self.project_years)
+            elif self.tax_mode[psc] == "Nailed Down" or self.tax_mode[psc] == "Prevailing":
+                self.tax_rate[psc] = None
 
-        # Prepare attribute lbt_rate
-        if self.lbt_mode == "User Input - Single Value":
-            if pd.isna(lbt_rate_init):
-                self.lbt_rate = 0.02
-            else:
-                self.lbt_rate = float(lbt_rate_init)
+            elif self.tax_mode[psc] == "User Input - Multi Value":
+                self.tax_rate[psc] = (
+                    get_array_from_target(
+                        target=multi_tax_init[psc],
+                        project_years=self.project_years
+                    )
+                )
 
-        elif self.lbt_mode == "User Input - Multi Value":
-            self.lbt_rate = get_array_from_target(target=multi_lbt, project_years=self.project_years)
+        # Prepare attribute depreciation method
+        for psc in self.psc_regimes:
+            self.depreciation_method[psc] = (
+                get_depreciation_method_converter(target=self.depreciation_method[psc])
+            )
+
+        # Prepare attribute inflation rate
+        self.inflation_rate = {}
+        for psc in self.psc_regimes:
+            if self.inflation_rate_mode[psc] == "User Input - Single Value":
+                if pd.isna(inflation_rate_init[psc]):
+                    self.inflation_rate[psc] = 0.02
+                else:
+                    self.inflation_rate[psc] = float(inflation_rate_init[psc])
+
+            elif self.inflation_rate_mode[psc] == "User Input - Multi Value":
+                self.inflation_rate[psc] = (
+                    get_array_from_target(
+                        target=multi_inflation_init[psc],
+                        project_years=self.project_years,
+                    )
+                )
+
+        # Prepare attribute vat rate
+        self.vat_rate = {}
+        for psc in self.psc_regimes:
+            if self.vat_mode[psc] == "User Input - Single Value":
+                if pd.isna(vat_rate_init[psc]):
+                    self.vat_rate[psc] = 0.12
+                else:
+                    self.vat_rate[psc] = float(vat_rate_init[psc])
+
+            elif self.vat_mode[psc] == "User Input - Multi Value":
+                self.vat_rate[psc] = (
+                    get_array_from_target(
+                        target=multi_vat_init[psc],
+                        project_years=self.project_years,
+                    )
+                )
+
+        # Prepare attribute lbt rate
+        self.lbt_rate = {}
+        for psc in self.psc_regimes:
+            if self.lbt_mode[psc] == "User Input - Single Value":
+                if pd.isna(lbt_rate_init[psc]):
+                    self.lbt_rate[psc] = 0.02
+                else:
+                    self.lbt_rate[psc] = float(lbt_rate_init[psc])
+
+            elif self.lbt_mode[psc] == "User Input - Multi Value":
+                self.lbt_rate[psc] = (
+                    get_array_from_target(
+                        target=multi_lbt_init[psc],
+                        project_years=self.project_years,
+                    )
+                )
+
+        # Prepare attribute associated with vat discount
+        for psc in self.psc_regimes:
+            if pd.isna(self.vat_discount[psc]):
+                self.vat_discount[psc] = 0.0
+            self.vat_discount[psc] = float(self.vat_discount[psc])
+
+        # Prepare attribute associated with vat discount
+        for psc in self.psc_regimes:
+            if pd.isna((self.lbt_discount[psc])):
+                self.lbt_discount[psc] = 0.0
+            self.lbt_discount[psc] = float(self.lbt_discount[psc])
+
+        # Prepare attributes associated with NPV config
+        self.npv_mode = get_npv_mode_converter(target=self.npv_mode)
+        self.discounting_mode = get_discounting_mode_converter(target=self.discounting_mode)
+
+        # Attributes associated with other revenue config
+        for psc in self.psc_regimes:
+            self.sulfur_revenue_config[psc] = (
+                get_other_revenue_converter(target=self.sulfur_revenue_config[psc])
+            )
+            self.electricity_revenue_config[psc] = (
+                get_other_revenue_converter(target=self.electricity_revenue_config[psc])
+            )
+            self.co2_revenue_config[psc] = (
+                get_other_revenue_converter(target=self.co2_revenue_config[psc])
+            )
+
+        # For single PSC
+        if "Transition" not in self.type_of_contract:
+
+            def _get_single_psc(target):
+                target_new = target["PSC 1"]
+                return target_new
+
+            (
+                self.tax_mode,
+                self.tax_payment_config,
+                self.tax_rate,
+                self.asr_future_rate,
+                self.depreciation_method,
+                self.decline_factor,
+                self.inflation_rate_mode,
+                self.inflation_rate,
+                self.vat_mode,
+                self.vat_rate,
+                self.lbt_mode,
+                self.lbt_rate,
+                self.vat_discount,
+                self.lbt_discount,
+                self.sulfur_revenue_config,
+                self.electricity_revenue_config,
+                self.co2_revenue_config,
+            ) = list(
+                map(
+                    _get_single_psc,
+                    [
+                        self.tax_mode,
+                        self.tax_payment_config,
+                        self.tax_rate,
+                        self.asr_future_rate,
+                        self.depreciation_method,
+                        self.decline_factor,
+                        self.inflation_rate_mode,
+                        self.inflation_rate,
+                        self.vat_mode,
+                        self.vat_rate,
+                        self.lbt_mode,
+                        self.lbt_rate,
+                        self.vat_discount,
+                        self.lbt_discount,
+                        self.sulfur_revenue_config,
+                        self.electricity_revenue_config,
+                        self.co2_revenue_config,
+                    ]
+                )
+            )
 
 
 @dataclass

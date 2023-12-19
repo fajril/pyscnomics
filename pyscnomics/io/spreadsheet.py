@@ -189,9 +189,9 @@ class Spreadsheet:
         end_date_project_second = general_config_data_loaded.iloc[7, 2]
         oil_onstream_date = general_config_data_loaded.iloc[8, 2]
         gas_onstream_date = general_config_data_loaded.iloc[9, 2]
-        vat_discount = general_config_data_loaded.iloc[18, 2]
-        lbt_discount = general_config_data_loaded.iloc[19, 2]
-        gsa_number = general_config_data_loaded.iloc[11, 7]
+        oil_onstream_date_second = general_config_data_loaded.iloc[10, 2]
+        gas_onstream_date_second = general_config_data_loaded.iloc[11, 2]
+        gsa_number = general_config_data_loaded.iloc[13, 7]
 
         return GeneralConfigData(
             start_date_project=start_date_project,
@@ -201,11 +201,11 @@ class Spreadsheet:
             type_of_contract=type_of_contract,
             oil_onstream_date=oil_onstream_date,
             gas_onstream_date=gas_onstream_date,
+            oil_onstream_date_second=oil_onstream_date_second,
+            gas_onstream_date_second=gas_onstream_date_second,
             discount_rate_start_year=discount_rate_start_year,
             discount_rate=discount_rate,
             inflation_rate_applied_to=inflation_rate_applied_to,
-            vat_discount=vat_discount,
-            lbt_discount=lbt_discount,
             gsa_number=gsa_number,
         )
 
@@ -230,64 +230,182 @@ class Spreadsheet:
         fiscal_config_data_loaded = self.data_loaded["Fiscal Config"].iloc[:, 1:]
 
         # Step #2 (See 'Notes' section in the docstring)
-        tax_mode = fiscal_config_data_loaded.iloc[0, 1]
-        tax_rate_init = fiscal_config_data_loaded.iloc[1, 1]
-        tax_payment_method = fiscal_config_data_loaded.iloc[11, 1]
-        tax_ftp_regime = fiscal_config_data_loaded.iloc[14, 1]
-        npv_mode = fiscal_config_data_loaded.iloc[17, 1]
-        discounting_mode = fiscal_config_data_loaded.iloc[18, 1]
-        future_rate_asr = fiscal_config_data_loaded.iloc[21, 1]
-        depreciation_method = fiscal_config_data_loaded.iloc[24, 1]
-        decline_factor = fiscal_config_data_loaded.iloc[25, 1]
-        inflation_rate_mode = fiscal_config_data_loaded.iloc[28, 1]
-        inflation_rate_init = fiscal_config_data_loaded.iloc[29, 1]
-        multi_tax = {
-            "year": fiscal_config_data_loaded.iloc[4:10, 0].to_numpy(),
-            "rate": fiscal_config_data_loaded.iloc[4:10, 1].to_numpy(),
+        # Prepare attributes associated with tax
+        tax_mode = {
+            "PSC 1": fiscal_config_data_loaded.iloc[0, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[118, 1],
         }
-        multi_inflation = {
-            "year": fiscal_config_data_loaded.iloc[32:52, 0].to_numpy(),
-            "rate": fiscal_config_data_loaded.iloc[32:52, 1].to_numpy(),
+
+        tax_rate_init = {
+            "PSC 1": fiscal_config_data_loaded.iloc[1, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[119, 1],
         }
-        transferred_unrec_cost = fiscal_config_data_loaded.iloc[54, 1]
-        tax_rate_second_contract = fiscal_config_data_loaded.iloc[55, 1]
-        vat_mode = fiscal_config_data_loaded.iloc[58, 1]
-        vat_rate_init = fiscal_config_data_loaded.iloc[59, 1]
-        multi_vat = {
-            "year": fiscal_config_data_loaded.iloc[62:82, 0].to_numpy(),
-            "rate": fiscal_config_data_loaded.iloc[62:82, 1].to_numpy(),
+
+        multi_tax_init = {
+            "PSC 1": {
+                "year": fiscal_config_data_loaded.iloc[3:10, 0].to_numpy(),
+                "rate": fiscal_config_data_loaded.iloc[3:10, 1].to_numpy(),
+            },
+            "PSC 2": {
+                "year": fiscal_config_data_loaded.iloc[122:128, 0].to_numpy(),
+                "rate": fiscal_config_data_loaded.iloc[122:128, 1].to_numpy(),
+            }
         }
-        lbt_mode = fiscal_config_data_loaded.iloc[84, 1]
-        lbt_rate_init = fiscal_config_data_loaded.iloc[85, 1]
-        multi_lbt = {
-            "year": fiscal_config_data_loaded.iloc[87:108, 0].to_numpy(),
-            "rate": fiscal_config_data_loaded.iloc[87:108, 1].to_numpy(),
+
+        tax_payment_config = {
+            "PSC 1": fiscal_config_data_loaded.iloc[12, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[130, 1],
         }
+
+        # Prepare attribute associated with ASR config
+        asr_future_rate = {
+            "PSC 1": fiscal_config_data_loaded.iloc[15, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[133, 1],
+        }
+
+        # Prepare attributes associated with depreciation config
+        depreciation_method = {
+            "PSC 1": fiscal_config_data_loaded.iloc[18, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[136, 1],
+        }
+
+        decline_factor = {
+            "PSC 1": fiscal_config_data_loaded.iloc[19, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[137, 1],
+        }
+
+        # Prepare attributes associated with inflation config
+        inflation_rate_mode = {
+            "PSC 1": fiscal_config_data_loaded.iloc[22, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[140, 1],
+        }
+
+        inflation_rate_init = {
+            "PSC 1": fiscal_config_data_loaded.iloc[23, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[141, 1],
+        }
+
+        multi_inflation_init = {
+            "PSC 1": {
+                "year": fiscal_config_data_loaded.iloc[26:46, 0].to_numpy(),
+                "rate": fiscal_config_data_loaded.iloc[26:46, 1].to_numpy(),
+            },
+            "PSC 2": {
+                "year": fiscal_config_data_loaded.iloc[144:164, 0].to_numpy(),
+                "rate": fiscal_config_data_loaded.iloc[144:164, 1].to_numpy(),
+            }
+        }
+
+        # Prepare attributes associated with VAT config
+        vat_mode = {
+            "PSC 1": fiscal_config_data_loaded.iloc[48, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[166, 1],
+        }
+
+        vat_rate_init = {
+            "PSC 1": fiscal_config_data_loaded.iloc[49, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[167, 1],
+        }
+
+        multi_vat_init = {
+            "PSC 1": {
+                "year": fiscal_config_data_loaded.iloc[52:72, 0].to_numpy(),
+                "rate": fiscal_config_data_loaded.iloc[52:72, 1].to_numpy(),
+            },
+            "PSC 2": {
+                "year": fiscal_config_data_loaded.iloc[170:190, 0].to_numpy(),
+                "rate": fiscal_config_data_loaded.iloc[170:190, 1].to_numpy(),
+            }
+        }
+
+        # Prepare attributes associated with LBT config
+        lbt_mode = {
+            "PSC 1": fiscal_config_data_loaded.iloc[74, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[192, 1],
+        }
+
+        lbt_rate_init = {
+            "PSC 1": fiscal_config_data_loaded.iloc[75, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[193, 1],
+        }
+
+        multi_lbt_init = {
+            "PSC 1": {
+                "year": fiscal_config_data_loaded.iloc[78:98, 0].to_numpy(),
+                "rate": fiscal_config_data_loaded.iloc[78:98, 1].to_numpy(),
+            },
+            "PSC 2": {
+                "year": fiscal_config_data_loaded.iloc[196:216, 0].to_numpy(),
+                "rate": fiscal_config_data_loaded.iloc[196:216, 1].to_numpy(),
+            }
+        }
+
+        # Prepare attributes associated with discount config
+        vat_discount = {
+            "PSC 1": fiscal_config_data_loaded.iloc[100, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[218, 1],
+        }
+
+        lbt_discount = {
+            "PSC 1": fiscal_config_data_loaded.iloc[101, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[219, 1],
+        }
+
+        # Prepare attributes associated with NPV config
+        npv_mode = fiscal_config_data_loaded.iloc[104, 1]
+        discounting_mode = fiscal_config_data_loaded.iloc[105, 1]
+
+        # Prepare attributes associated with other revenue config
+        sulfur_revenue_config = {
+            "PSC 1": fiscal_config_data_loaded.iloc[108, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[222, 1],
+        }
+
+        electricity_revenue_config = {
+            "PSC 1": fiscal_config_data_loaded.iloc[109, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[223, 1],
+        }
+
+        co2_revenue_config = {
+            "PSC 1": fiscal_config_data_loaded.iloc[110, 1],
+            "PSC 2": fiscal_config_data_loaded.iloc[224, 1],
+        }
+
+        # Prepare attribute associated with transition config
+        transferred_unrec_cost = fiscal_config_data_loaded.iloc[115, 1]
+
+        # Prepare attribute associated with sunk cost config
+        sunk_cost_reference_year = fiscal_config_data_loaded.iloc[230, 1]
 
         # Step #3 (See 'Notes' section in the docstring)
         return FiscalConfigData(
-            tax_payment_method=tax_payment_method,
-            tax_ftp_regime=tax_ftp_regime,
-            npv_mode=npv_mode,
-            discounting_mode=discounting_mode,
-            future_rate_asr=float(future_rate_asr),
-            depreciation_method=depreciation_method,
-            decline_factor=float(decline_factor),
-            transferred_unrec_cost=float(transferred_unrec_cost),
-            tax_rate_second_contract=float(tax_rate_second_contract),
             tax_mode=tax_mode,
             tax_rate_init=tax_rate_init,
-            multi_tax=multi_tax,
+            multi_tax_init=multi_tax_init,
+            tax_payment_config=tax_payment_config,
+            asr_future_rate=asr_future_rate,
+            depreciation_method=depreciation_method,
+            decline_factor=decline_factor,
             inflation_rate_mode=inflation_rate_mode,
             inflation_rate_init=inflation_rate_init,
-            multi_inflation=multi_inflation,
+            multi_inflation_init=multi_inflation_init,
             vat_mode=vat_mode,
             vat_rate_init=vat_rate_init,
-            multi_vat=multi_vat,
+            multi_vat_init=multi_vat_init,
             lbt_mode=lbt_mode,
             lbt_rate_init=lbt_rate_init,
-            multi_lbt=multi_lbt,
+            multi_lbt_init=multi_lbt_init,
+            vat_discount=vat_discount,
+            lbt_discount=lbt_discount,
+            npv_mode=npv_mode,
+            discounting_mode=discounting_mode,
+            sulfur_revenue_config=sulfur_revenue_config,
+            electricity_revenue_config=electricity_revenue_config,
+            co2_revenue_config=co2_revenue_config,
+            transferred_unrec_cost=transferred_unrec_cost,
+            sunk_cost_reference_year=sunk_cost_reference_year,
             project_years=self.general_config_data.project_years,
+            type_of_contract=self.general_config_data.type_of_contract,
         )
 
     def _get_oil_lifting_data(self) -> OilLiftingData:
@@ -1632,20 +1750,20 @@ class Spreadsheet:
         self.general_config_data = self._get_general_config_data()
         self.fiscal_config_data = self._get_fiscal_config_data()
 
-        # Fill in the attributes associated with lifting data
-        self.oil_lifting_data = self._get_oil_lifting_data()
-        self.gas_lifting_data = self._get_gas_lifting_data()
-        self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
-        self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
-        self.sulfur_lifting_data = self._get_sulfur_lifting_data()
-        self.electricity_lifting_data = self._get_electricity_lifting_data()
-        self.co2_lifting_data = self._get_co2_lifting_data()
-
-        # Fill in the attributes associated with cost data
-        self.tangible_cost_data = self._get_tangible_cost_data()
-        self.intangible_cost_data = self._get_intangible_cost_data()
-        self.opex_data = self._get_opex_data()
-        self.asr_cost_data = self._get_asr_cost_data()
+        # # Fill in the attributes associated with lifting data
+        # self.oil_lifting_data = self._get_oil_lifting_data()
+        # self.gas_lifting_data = self._get_gas_lifting_data()
+        # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
+        # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
+        # self.sulfur_lifting_data = self._get_sulfur_lifting_data()
+        # self.electricity_lifting_data = self._get_electricity_lifting_data()
+        # self.co2_lifting_data = self._get_co2_lifting_data()
+        #
+        # # Fill in the attributes associated with cost data
+        # self.tangible_cost_data = self._get_tangible_cost_data()
+        # self.intangible_cost_data = self._get_intangible_cost_data()
+        # self.opex_data = self._get_opex_data()
+        # self.asr_cost_data = self._get_asr_cost_data()
 
         # # Fill in the attributes associated with contract data
         # self.psc_cr_data = self._get_psc_cr_data()
@@ -1658,9 +1776,9 @@ class Spreadsheet:
         print('\t')
         print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
-        # print('\t')
-        # print(f'Filetype: {type(self.asr_cost_data)}')
-        # print('asr_cost_data = \n', self.asr_cost_data)
+        print('\t')
+        print(f'Filetype: {type(self.fiscal_config_data)}')
+        print('general_config_data = \n', self.fiscal_config_data)
 
         print('\t')
         print('=========================================================================================')

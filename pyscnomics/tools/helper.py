@@ -17,6 +17,7 @@ from pyscnomics.econ.selection import (
     NPVSelection,
     DiscountingMode,
     DeprMethod,
+    OtherRevenue,
 )
 
 
@@ -657,6 +658,8 @@ def get_tax_payment_converter(target: str) -> TaxPaymentMode:
     attrs = {
         "Direct Mode": TaxPaymentMode.TAX_DIRECT_MODE,
         "Due Mode": TaxPaymentMode.TAX_DUE_MODE,
+        "PDJP No.20 Tahun 2017": FTPTaxRegime.PDJP_20_2017,
+        "Pre PDJP No.20 Tahun 2017": FTPTaxRegime.PRE_PDJP_20_2017,
     }
 
     for key in attrs.keys():
@@ -798,6 +801,21 @@ def get_depreciation_method_converter(target: str) -> DeprMethod:
         "Declining Balance": DeprMethod.DB,
         "Unit Of Production": DeprMethod.UOP,
         "Straight Line": DeprMethod.SL,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_other_revenue_converter(target: str):
+    attrs = {
+        "Addition to Oil Revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+        "Addition to Gas Revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        "Reduction to Oil OPEX": OtherRevenue.REDUCTION_TO_OIL_OPEX,
+        "Reduction to Gas OPEX": OtherRevenue.REDUCTION_TO_GAS_OPEX,
     }
 
     for key in attrs.keys():
