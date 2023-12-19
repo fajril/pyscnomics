@@ -266,6 +266,21 @@ class CostRecovery(BaseProject):
             self.gas_ctr_pretax_share
 
         """
+        # Conditioning the given dictionary
+        length_condition = len(self.condition_dict[list(self.condition_dict.keys())[0]])
+        enum_value = list(range(1, length_condition + 1))
+        condition_dict_new = {}
+        for index, step in enumerate(enum_value):
+            dict_isi = {'bot_limit': self.condition_dict['RC Bottom Limit'][index],
+                        'top_limit': self.condition_dict['RC Top Limit'][index],
+                        'ctr_oil': self.condition_dict['Pre Tax CTR Oil'][index],
+                        'ctr_gas': self.condition_dict['Pre Tax CTR Gas'][index]}
+
+            key_string = 'condition_' + str(step)
+            condition_dict_new[key_string] = dict_isi
+
+        self.condition_dict = condition_dict_new
+
         # Extract relevant values from the condition_dict dictionary
         bot_limits = np.array([self.condition_dict[c]['bot_limit'] for c in self.condition_dict])
         top_limits = np.array([self.condition_dict[c]['top_limit'] for c in self.condition_dict])

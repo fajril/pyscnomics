@@ -58,32 +58,32 @@ dict_summary = {'reference_year': reference_year,
                 'npv_mode': npv_mode,
                 'discounting_mode': discounting_mode}
 
-# Optimization 1
-optimized_params = [OptimizationParameter.OIL_CTR_PRETAX,
-                    OptimizationParameter.GAS_CTR_PRETAX,
-                    OptimizationParameter.OIL_FTP_PORTION,
-                    OptimizationParameter.GAS_FTP_PORTION,
-                    OptimizationParameter.OIL_IC,
-                    OptimizationParameter.GAS_IC,
-                    OptimizationParameter.OIL_DMO_FEE,
-                    OptimizationParameter.GAS_DMO_FEE,
-                    OptimizationParameter.VAT_RATE,
-                    OptimizationParameter.EFFECTIVE_TAX_RATE]
-
-params_priority = list(range(1, 11))
-
-base_parameter = np.array([0.34722220, 0.5208330, 0.20, 0.20, 0, 0, 0.25, 1, 0, 0.424])
-min_parameter = base_parameter * 0.7
-max_parameter = np.where(base_parameter == 1,
-                         1,
-                         base_parameter * 1.4)
-
-dict_of_optimization = {'parameters': optimized_params,
-                        'priority:': params_priority,
-                        'min': min_parameter,
-                        'max': max_parameter}
-
-target = 0.10
+# # Optimization 1
+# optimized_params = [OptimizationParameter.OIL_CTR_PRETAX,
+#                     OptimizationParameter.GAS_CTR_PRETAX,
+#                     OptimizationParameter.OIL_FTP_PORTION,
+#                     OptimizationParameter.GAS_FTP_PORTION,
+#                     OptimizationParameter.OIL_IC,
+#                     OptimizationParameter.GAS_IC,
+#                     OptimizationParameter.OIL_DMO_FEE,
+#                     OptimizationParameter.GAS_DMO_FEE,
+#                     OptimizationParameter.VAT_RATE,
+#                     OptimizationParameter.EFFECTIVE_TAX_RATE]
+#
+# params_priority = list(range(1, 11))
+#
+# base_parameter = np.array([0.34722220, 0.5208330, 0.20, 0.20, 0, 0, 0.25, 1, 0, 0.424])
+# min_parameter = base_parameter * 0.7
+# max_parameter = np.where(base_parameter == 1,
+#                          1,
+#                          base_parameter * 1.4)
+#
+# dict_of_optimization = {'parameters': optimized_params,
+#                         'priority:': params_priority,
+#                         'min': min_parameter,
+#                         'max': max_parameter}
+#
+# target = 0.10
 
 # # Optimization 2
 # optimized_params = [OptimizationParameter.OIL_CTR_PRETAX,
@@ -124,6 +124,35 @@ target = 0.10
 #
 # target = 0.08090382832197131
 
+# Optimization 4
+optimized_params = [
+    OptimizationParameter.VAT_RATE,
+    OptimizationParameter.EFFECTIVE_TAX_RATE,
+    OptimizationParameter.OIL_FTP_PORTION,
+    OptimizationParameter.GAS_FTP_PORTION,
+    OptimizationParameter.OIL_CTR_PRETAX,
+    OptimizationParameter.GAS_CTR_PRETAX,
+    OptimizationParameter.OIL_IC,
+    OptimizationParameter.GAS_IC,
+    OptimizationParameter.OIL_DMO_FEE,
+    OptimizationParameter.GAS_DMO_FEE,
+]
+
+params_priority = list(range(1, 11))
+
+base_parameter = np.array([0, 0.424, 0.20, 0.20, 0.34722220, 0.5208330, 0, 0, 0.25, 1])
+min_parameter = base_parameter * 0.7
+max_parameter = np.where(base_parameter == 1,
+                         1,
+                         base_parameter * 1.4)
+
+dict_of_optimization = {'parameters': optimized_params,
+                        'priority:': params_priority,
+                        'min': min_parameter,
+                        'max': max_parameter}
+
+target = 0.0
+
 
 start_time = time.time()
 optim_result = optimization.optimize_psc(dict_optimization=dict_of_optimization,
@@ -131,7 +160,7 @@ optim_result = optimization.optimize_psc(dict_optimization=dict_of_optimization,
                                          contract_arguments=argument_psc,
                                          target_optimization_value=target,
                                          summary_argument=dict_summary,
-                                         target_parameter=OptimizationTarget.IRR)
+                                         target_parameter=OptimizationTarget.NPV)
 end_time = time.time()
 print('Execution Time:', end_time - start_time, '\n')
 

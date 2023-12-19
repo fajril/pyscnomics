@@ -1569,21 +1569,33 @@ class BaseProject:
         )
 
         # Configure base cashflow
-        self._oil_cashflow = CashFlow(
-            start_date=self.start_date,
-            end_date=self.end_date,
-            cash=self._oil_revenue - oil_total_expenditures,
-            cashed_year=self.project_years,
-            cash_allocation=FluidType.OIL,
-        )
+        # self._oil_cashflow = CashFlow(
+        #     start_date=self.start_date,
+        #     end_date=self.end_date,
+        #     cash=self._oil_revenue - oil_total_expenditures,
+        #     cashed_year=self.project_years,
+        #     cash_allocation=FluidType.OIL,
+        # )
+        #
+        # self._gas_cashflow = CashFlow(
+        #     start_date=self.start_date,
+        #     end_date=self.end_date,
+        #     cash=self._gas_revenue - gas_total_expenditures,
+        #     cashed_year=self.project_years,
+        #     cash_allocation=FluidType.GAS,
+        # )
+        # Configure base cashflow
+        self._oil_cashflow = self._oil_revenue - (self._oil_tangible_expenditures +
+                                                  self._oil_intangible_expenditures +
+                                                  self._oil_opex_expenditures +
+                                                  self._oil_asr_expenditures)
 
-        self._gas_cashflow = CashFlow(
-            start_date=self.start_date,
-            end_date=self.end_date,
-            cash=self._gas_revenue - gas_total_expenditures,
-            cashed_year=self.project_years,
-            cash_allocation=FluidType.GAS,
-        )
+        self._gas_cashflow = self._gas_revenue - (self._gas_tangible_expenditures +
+                                                  self._gas_intangible_expenditures +
+                                                  self._gas_opex_expenditures +
+                                                  self._gas_asr_expenditures)
+
+        self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
 
     def __len__(self):
         return self.project_duration

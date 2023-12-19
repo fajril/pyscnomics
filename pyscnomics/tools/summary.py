@@ -1,5 +1,6 @@
 import numpy as np
 
+from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
@@ -581,3 +582,31 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                 'gov_take_npv': gov_take_npv,
                 'gov_ftp_share': gov_ftp
                 }
+
+    if isinstance(contract, BaseProject):
+        # Contractor POT
+        ctr_pot = pot_psc(cashflow=contract._consolidated_cashflow,
+                          cashflow_years=contract.project_years,
+                          reference_year=reference_year)
+
+        return {'lifting_oil': lifting_oil,
+                'oil_wap': oil_wap,
+                'lifting_gas': lifting_gas,
+                'gas_wap': gas_wap,
+                'gross_revenue': gross_revenue,
+                'gross_revenue_oil': gross_revenue_oil,
+                'gross_revenue_gas': gross_revenue_gas,
+                'investment': investment,
+                'oil_capex': oil_capex,
+                'gas_capex': gas_capex,
+                'sunk_cost': sunk_cost,
+                'tangible': tangible,
+                'intangible': intangible,
+                'opex_and_asr': opex + asr,
+                'opex': opex,
+                'asr': asr,
+                'ctr_npv': ctr_npv,
+                'ctr_irr': ctr_irr,
+                'ctr_pot': ctr_pot,
+                'ctr_pv_ratio': ctr_pv_ratio,
+                'ctr_pi': ctr_pi}

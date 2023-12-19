@@ -74,7 +74,7 @@ argument_summary = {'reference_year': reference_year,
 
 # Trialing the sengs
 start_time = time.time()
-result = sensitivity_psc(steps=5,
+result = sensitivity_psc(steps=2,
                          diff=0.5,
                          contract=psc,
                          contract_arguments=argument_psc,
