@@ -3,11 +3,7 @@ Create aggregate of Lifting and Cost instances to be passed on to the main execu
 """
 
 import os as os
-import numpy as np
-import pandas as pd
-import time as tm
 from dataclasses import dataclass, field
-from functools import reduce
 
 from pyscnomics.io.spreadsheet import Spreadsheet
 from pyscnomics.econ.selection import FluidType
@@ -16,7 +12,13 @@ from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 
 
 class SpreadsheetException(Exception):
-    """Exception to raise for a misuse of Spreadsheet class"""
+    """ Exception to raise for a misuse of Spreadsheet class """
+
+    pass
+
+
+class AggregateException(Exception):
+    """ Exception to raise for a misuse of Aggregate class """
 
     pass
 
@@ -44,6 +46,10 @@ class Aggregate(Spreadsheet):
     intangible_cost_aggregate: dict | tuple[Intangible] = field(default=None, init=False)
     opex_aggregate: dict | tuple[OPEX] = field(default=None, init=False)
     asr_cost_aggregate: dict | tuple[ASR] = field(default=None, init=False)
+
+    # Attributes associated with aggregate of total lifting data
+    oil_lifting_aggregate_total: dict | tuple[Lifting] = field(default=None, init=False)
+    gas_lifting_aggregate_total: dict | tuple[Lifting] = field(default=None, init=False)
 
     # Attributes associated with PSC transition
     psc_regimes: list = field(default=None, init=False, repr=False)
@@ -638,6 +644,117 @@ class Aggregate(Spreadsheet):
 
         return co2_lifting_aggr
 
+    def _get_oil_lifting_aggregate_total(
+        self,
+        oil_lifting_aggregate: dict | tuple,
+        condensate_lifting_aggregate: dict | tuple,
+    ) -> dict | tuple[Lifting]:
+        """
+        Calculate the total oil lifting aggregate for a Production Sharing Contract (PSC).
+
+        Parameters
+        ----------
+        oil_lifting_aggregate: dict | tuple
+            Dictionary or tuple containing oil lifting data.
+        condensate_lifting_aggregate: dict | tuple
+            Dictionary or tuple containing condensate lifting data.
+
+        Returns
+        -------
+        -   If the type_of_contract is 'Transition', returns a dictionary with
+            PSC regimes as keys and a tuple of Lifting instances as values.
+        -   If the type_of_contract is a single PSC (CR or GS), returns a tuple
+            of Lifting instances.
+
+        Notes
+        -----
+        -   For PSC transition, the function sums the oil and condensate lifting
+            aggregates for each PSC regime.
+        -   For a single PSC (CR or GS), the function simply concatenates the oil
+            and condensate lifting aggregates.
+        """
+        # For PSC transition
+        if "Transition" in self.oil_lifting_data.type_of_contract:
+            oil_lifting_aggr_tot = {
+                psc: oil_lifting_aggregate[psc] + condensate_lifting_aggregate[psc]
+                for psc in self.psc_regimes
+            }
+
+        # For single PSC (CR or GS)
+        else:
+            oil_lifting_aggr_tot = oil_lifting_aggregate + condensate_lifting_aggregate
+
+        return oil_lifting_aggr_tot
+
+    def _get_gas_lifting_aggregate_total(
+        self,
+        gas_lifting_aggregate: dict | tuple,
+        lpg_propane_lifting_aggregate: dict | tuple,
+        lpg_butane_lifting_aggregate: dict | tuple,
+    ) -> dict | tuple | AggregateException:
+        """
+        Calculate the total gas lifting aggregate for a Production Sharing Contract (PSC).
+
+        Parameters
+        ----------
+        gas_lifting_aggregate: dict | tuple
+            Dictionary or tuple containing gas lifting data.
+        lpg_propane_lifting_aggregate: dict | tuple
+            Dictionary or tuple containing LPG propane lifting data.
+        lpg_butane_lifting_aggregate: dict | tuple
+            Dictionary or tuple containing LPG butane lifting data.
+
+        Returns
+        -------
+        dict | tuple | AggregateException
+            -   If all contracts are transition (contain "Transition" in their type),
+                returns a dictionary representing the total gas lifting aggregate for
+                each PSC regime.
+            -   If all contracts are single PSCs (CR or GS, without "Transition" in their type),
+                returns a tuple containing the aggregated gas lifting data.
+            -   If contracts mix both transition and non-transition types,
+                returns an Exception.
+
+        Notes
+        -----
+        -   For PSC transition, the function sums the gas, LPG propane, and LPG butane
+            lifting aggregates for each PSC regime.
+        -   For a single PSC (CR or GS), the function simply concatenates the gas,
+            LPG propane, and LPG butane lifting aggregates.
+        """
+        contracts = [
+            self.gas_lifting_data.type_of_contract,
+            self.lpg_propane_lifting_data.type_of_contract,
+            self.lpg_butane_lifting_data.type_of_contract,
+        ]
+
+        # For PSC transition
+        if all(["Transition" in i for i in contracts]):
+            return {
+                psc: (
+                    gas_lifting_aggregate[psc]
+                    + lpg_propane_lifting_aggregate[psc]
+                    + lpg_butane_lifting_aggregate[psc]
+                )
+                for psc in self.psc_regimes
+            }
+
+        # For single PSC (CR or GS)
+        elif all(["Transition" not in i for i in contracts]):
+            return (
+                gas_lifting_aggregate
+                + lpg_propane_lifting_aggregate
+                + lpg_butane_lifting_aggregate
+            )
+
+        else:
+            return AggregateException(
+                f"Unequal type of PSC contracts for Gas, LPG propane, and LPG butane. "
+                f"Gas: {self.gas_lifting_data.type_of_contract}, "
+                f"LPG Propane: {self.lpg_propane_lifting_data.type_of_contract}, "
+                f"LPG Butane: {self.lpg_butane_lifting_data.type_of_contract}."
+            )
+
     def _get_tangible_cost_aggregate(self) -> dict | tuple[Tangible]:
         """
         Retrieves the tangible cost aggregate based on the Production
@@ -967,13 +1084,20 @@ class Aggregate(Spreadsheet):
         self.electricity_lifting_aggregate = self._get_electricity_lifting_aggregate()
         self.co2_lifting_aggregate = self._get_co2_lifting_aggregate()
 
+        # Aggregates associated with total lifting data
+        self.oil_lifting_aggregate_total = self._get_oil_lifting_aggregate_total(
+            oil_lifting_aggregate=self.oil_lifting_aggregate,
+            condensate_lifting_aggregate=self.condensate_lifting_aggregate,
+        )
+
+        self.gas_lifting_aggregate_total = self._get_gas_lifting_aggregate_total(
+            gas_lifting_aggregate=self.gas_lifting_aggregate,
+            lpg_propane_lifting_aggregate=self.lpg_propane_lifting_aggregate,
+            lpg_butane_lifting_aggregate=self.lpg_butane_lifting_aggregate,
+        )
+
         # Aggregates associated with costs data
         self.tangible_cost_aggregate = self._get_tangible_cost_aggregate()
         self.intangible_cost_aggregate = self._get_intangible_cost_aggregate()
         self.opex_aggregate = self._get_opex_aggregate()
         self.asr_cost_aggregate = self._get_asr_cost_aggregate()
-
-        print('\t')
-        print(f'Filetype: {type(self.asr_cost_aggregate)}')
-        print(f'Length: {len(self.asr_cost_aggregate)}')
-        print('asr_cost_aggregate = \n', self.asr_cost_aggregate)

@@ -1658,9 +1658,9 @@ class Spreadsheet:
         print('\t')
         print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
-        print('\t')
-        print(f'Filetype: {type(self.asr_cost_data)}')
-        print('asr_cost_data = \n', self.asr_cost_data)
+        # print('\t')
+        # print(f'Filetype: {type(self.asr_cost_data)}')
+        # print('asr_cost_data = \n', self.asr_cost_data)
 
         print('\t')
         print('=========================================================================================')
