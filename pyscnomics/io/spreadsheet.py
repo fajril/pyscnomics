@@ -918,58 +918,63 @@ class Spreadsheet:
 
         Returns
         -------
-        None or OPEXData
+        OPEXData
+            An instance of OPEXData class.
 
         Notes
         -----
         The core operations are as follows:
         (1) Capture opex data from attribute self.data_loaded, then perform the
             necessary adjustment,
-        (2) If 'opex_data_loaded' is an empty dataframe, then return None,
-        (3) If 'opex_data_loaded' is not an empty dataframe, then load and
-            arrange the attributes of interest from variable 'opex_data_loaded'.
-            Afterwards, create a new instance of OPEXData to store them.
+        (2) Undertake data cleansing: remove all rows which column 'expense_year' is NaN.
+            Store the results in a variable named 'opex_data_loaded',
+        (3) Create a dictionary named 'opex_data' to store the necessary data from
+            'opex_data_loaded',
+        (4) Return an instance of OPEXData to store the asr data appropriately
+            as its attributes.
         """
         # Step #1 (See 'Notes' section in the docstring)
-        opex_data_loaded = self.data_loaded["Cost OPEX"].dropna(axis=0, how="all")
+        opex_data_loaded_init = self.data_loaded["Cost OPEX"].dropna(axis=0, how="all")
 
         # Step #2 (See 'Notes' section in the docstring)
-        if opex_data_loaded.empty:
-            return None
+        opex_data_loaded = (
+            opex_data_loaded_init if opex_data_loaded_init.empty
+            else opex_data_loaded_init[~pd.isna(opex_data_loaded_init.iloc[:, 0])].copy()
+        )
 
         # Step #3 (See 'Notes' section in the docstring)
-        else:
-            opex_data_attrs = [
-                "expense_year",
-                "cost_allocation",
-                "fixed_cost",
-                "prod_rate",
-                "cost_per_volume",
-                "vat_portion",
-                "lbt_portion",
-                "description",
-            ]
+        opex_data_attrs = [
+            "expense_year",
+            "cost_allocation",
+            "fixed_cost",
+            "prod_rate",
+            "cost_per_volume",
+            "vat_portion",
+            "lbt_portion",
+            "description",
+        ]
 
-            opex_data = {
-                key: opex_data_loaded.iloc[:, i].to_numpy()
-                for i, key in enumerate(opex_data_attrs)
-            }
+        opex_data = {
+            key: None if opex_data_loaded.empty
+            else opex_data_loaded.iloc[:, i].to_numpy()
+            for i, key in enumerate(opex_data_attrs)
+        }
 
-            return OPEXData(
-                expense_year_init=opex_data["expense_year"],
-                cost_allocation=opex_data["cost_allocation"].tolist(),
-                fixed_cost=opex_data["fixed_cost"],
-                prod_rate=opex_data["prod_rate"],
-                cost_per_volume=opex_data["cost_per_volume"],
-                vat_portion=opex_data["vat_portion"],
-                lbt_portion=opex_data["lbt_portion"],
-                description=opex_data["description"].tolist(),
-                data_length=opex_data_loaded.shape[0],
-                project_years=self.general_config_data.project_years,
-                type_of_contract=self.general_config_data.type_of_contract,
-                end_date_project=self.general_config_data.end_date_project,
-                start_date_project_second=self.general_config_data.start_date_project_second,
-            )
+        # Step #4 (See 'Notes' section in the docstring)
+        return OPEXData(
+            expense_year_init=opex_data["expense_year"],
+            cost_allocation=opex_data["cost_allocation"],
+            fixed_cost=opex_data["fixed_cost"],
+            prod_rate=opex_data["prod_rate"],
+            cost_per_volume=opex_data["cost_per_volume"],
+            vat_portion=opex_data["vat_portion"],
+            lbt_portion=opex_data["lbt_portion"],
+            description=opex_data["description"],
+            project_years=self.general_config_data.project_years,
+            type_of_contract=self.general_config_data.type_of_contract,
+            end_date_project=self.general_config_data.end_date_project,
+            start_date_project_second=self.general_config_data.start_date_project_second,
+        )
 
     def _get_asr_cost_data(self) -> ASRCostData:
         """
@@ -1639,7 +1644,7 @@ class Spreadsheet:
         # Fill in the attributes associated with cost data
         self.tangible_cost_data = self._get_tangible_cost_data()
         self.intangible_cost_data = self._get_intangible_cost_data()
-        # self.opex_data = self._get_opex_data()
+        self.opex_data = self._get_opex_data()
         self.asr_cost_data = self._get_asr_cost_data()
 
         # # Fill in the attributes associated with contract data
@@ -1654,8 +1659,8 @@ class Spreadsheet:
         print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
         print('\t')
-        print(f'Filetype: {type(self.asr_cost_data)}')
-        print('asr_cost_data = \n', self.asr_cost_data)
+        print(f'Filetype: {type(self.intangible_cost_data)}')
+        print('intangible_cost_data = \n', self.intangible_cost_data)
 
         print('\t')
         print('=========================================================================================')

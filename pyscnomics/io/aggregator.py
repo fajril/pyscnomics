@@ -793,7 +793,80 @@ class Aggregate(Spreadsheet):
         return intangible_cost_aggr
 
     def _get_opex_aggregate(self) -> dict | tuple[OPEX]:
-        pass
+        """
+        Retrieves the OPEX aggregate based on the Production
+        Sharing Contract (PSC) type.
+
+        Returns
+        -------
+        -   If PSC transition: dict
+                A dictionary containing PSC regimes as keys and tuples of OPEX objects as values.
+        -   If single PSC (CR or GS): tuple[OPEX]
+                A tuple containing a single OPEX object.
+
+        Notes
+        -----
+        For a PSC transition case, the aggregate of OPEX data is stored in
+        a dictionary with keys: ['PSC 1', 'PSC 2']. The value of each key is a tuple
+        of OPEX data stored in parameter 'self.opex_data' for each
+        corresponding PSC regime.
+        """
+        # For PSC transition
+        if "Transition" in self.opex_data.type_of_contract:
+            start_year_combined = [
+                self.general_config_data.start_date_project.year,
+                self.general_config_data.start_date_project_second.year,
+            ]
+
+            end_year_combined = [
+                self.general_config_data.end_date_project.year,
+                self.general_config_data.end_date_project_second.year,
+            ]
+
+            opex_aggr = {
+                psc: tuple(
+                    [
+                        OPEX(
+                            start_year=start_year_combined[i],
+                            end_year=end_year_combined[i],
+                            expense_year=self.opex_data.expense_year[psc],
+                            cost_allocation=self.opex_data.cost_allocation[psc],
+                            description=self.opex_data.description[psc],
+                            vat_portion=self.opex_data.vat_portion[psc],
+                            vat_discount=self.general_config_data.vat_discount,
+                            lbt_portion=self.opex_data.lbt_portion[psc],
+                            lbt_discount=self.general_config_data.lbt_discount,
+                            fixed_cost=self.opex_data.fixed_cost[psc],
+                            prod_rate=self.opex_data.prod_rate[psc],
+                            cost_per_volume=self.opex_data.cost_per_volume[psc],
+                        )
+                    ]
+                )
+                for i, psc in enumerate(self.psc_regimes)
+            }
+
+        # For single PSC (CR or GS)
+        else:
+            opex_aggr = tuple(
+                [
+                    OPEX(
+                        start_year=self.general_config_data.start_date_project.year,
+                        end_year=self.general_config_data.end_date_project.year,
+                        expense_year=self.opex_data.expense_year,
+                        cost_allocation=self.opex_data.cost_allocation,
+                        description=self.opex_data.description,
+                        vat_portion=self.opex_data.vat_portion,
+                        vat_discount=self.general_config_data.vat_discount,
+                        lbt_portion=self.opex_data.lbt_portion,
+                        lbt_discount=self.general_config_data.lbt_discount,
+                        fixed_cost=self.opex_data.fixed_cost,
+                        prod_rate=self.opex_data.prod_rate,
+                        cost_per_volume=self.opex_data.cost_per_volume,
+                    )
+                ]
+            )
+
+        return opex_aggr
 
     def _get_asr_cost_aggregate(self) -> dict | tuple[ASR]:
         """
@@ -901,6 +974,6 @@ class Aggregate(Spreadsheet):
         self.asr_cost_aggregate = self._get_asr_cost_aggregate()
 
         print('\t')
-        print(f'Filetype: {type(self.opex_aggregate)}')
-        print(f'Length: {len(self.opex_aggregate)}')
-        print('opex_aggregate = \n', self.opex_aggregate)
+        print(f'Filetype: {type(self.intangible_cost_aggregate)}')
+        print(f'Length: {len(self.intangible_cost_aggregate)}')
+        print('intangible_cost_aggregate = \n', self.intangible_cost_aggregate)
