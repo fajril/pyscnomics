@@ -796,9 +796,9 @@ class Aggregate(Spreadsheet):
                             expense_year=self.tangible_cost_data.expense_year[psc],
                             cost_allocation=self.tangible_cost_data.cost_allocation[psc],
                             vat_portion=self.tangible_cost_data.vat_portion[psc],
-                            vat_discount=self.general_config_data.vat_discount,
+                            vat_discount=self.fiscal_config_data.vat_discount[psc],
                             lbt_portion=self.tangible_cost_data.lbt_portion[psc],
-                            lbt_discount=self.general_config_data.lbt_discount,
+                            lbt_discount=self.fiscal_config_data.lbt_discount[psc],
                             description=self.tangible_cost_data.description[psc],
                             pis_year=self.tangible_cost_data.pis_year[psc],
                             salvage_value=self.tangible_cost_data.salvage_value[psc],
@@ -822,9 +822,9 @@ class Aggregate(Spreadsheet):
                         expense_year=self.tangible_cost_data.expense_year,
                         cost_allocation=self.tangible_cost_data.cost_allocation,
                         vat_portion=self.tangible_cost_data.vat_portion,
-                        vat_discount=self.general_config_data.vat_discount,
+                        vat_discount=self.fiscal_config_data.vat_discount,
                         lbt_portion=self.tangible_cost_data.lbt_portion,
-                        lbt_discount=self.general_config_data.lbt_discount,
+                        lbt_discount=self.fiscal_config_data.lbt_discount,
                         description=self.tangible_cost_data.description,
                         pis_year=self.tangible_cost_data.pis_year,
                         salvage_value=self.tangible_cost_data.salvage_value,
@@ -879,9 +879,9 @@ class Aggregate(Spreadsheet):
                             cost_allocation=self.intangible_cost_data.cost_allocation[psc],
                             description=self.intangible_cost_data.description[psc],
                             vat_portion=self.intangible_cost_data.vat_portion[psc],
-                            vat_discount=self.general_config_data.vat_discount,
+                            vat_discount=self.fiscal_config_data.vat_discount[psc],
                             lbt_portion=self.intangible_cost_data.lbt_portion[psc],
-                            lbt_discount=self.general_config_data.lbt_discount,
+                            lbt_discount=self.fiscal_config_data.lbt_discount[psc],
                         )
                     ]
                 )
@@ -900,9 +900,9 @@ class Aggregate(Spreadsheet):
                         cost_allocation=self.intangible_cost_data.cost_allocation,
                         description=self.intangible_cost_data.description,
                         vat_portion=self.intangible_cost_data.vat_portion,
-                        vat_discount=self.general_config_data.vat_discount,
+                        vat_discount=self.fiscal_config_data.vat_discount,
                         lbt_portion=self.intangible_cost_data.lbt_portion,
-                        lbt_discount=self.general_config_data.lbt_discount,
+                        lbt_discount=self.fiscal_config_data.lbt_discount,
                     )
                 ]
             )
@@ -950,9 +950,9 @@ class Aggregate(Spreadsheet):
                             cost_allocation=self.opex_data.cost_allocation[psc],
                             description=self.opex_data.description[psc],
                             vat_portion=self.opex_data.vat_portion[psc],
-                            vat_discount=self.general_config_data.vat_discount,
+                            vat_discount=self.fiscal_config_data.vat_discount[psc],
                             lbt_portion=self.opex_data.lbt_portion[psc],
-                            lbt_discount=self.general_config_data.lbt_discount,
+                            lbt_discount=self.fiscal_config_data.lbt_discount[psc],
                             fixed_cost=self.opex_data.fixed_cost[psc],
                             prod_rate=self.opex_data.prod_rate[psc],
                             cost_per_volume=self.opex_data.cost_per_volume[psc],
@@ -973,9 +973,9 @@ class Aggregate(Spreadsheet):
                         cost_allocation=self.opex_data.cost_allocation,
                         description=self.opex_data.description,
                         vat_portion=self.opex_data.vat_portion,
-                        vat_discount=self.general_config_data.vat_discount,
+                        vat_discount=self.fiscal_config_data.vat_discount,
                         lbt_portion=self.opex_data.lbt_portion,
-                        lbt_discount=self.general_config_data.lbt_discount,
+                        lbt_discount=self.fiscal_config_data.lbt_discount,
                         fixed_cost=self.opex_data.fixed_cost,
                         prod_rate=self.opex_data.prod_rate,
                         cost_per_volume=self.opex_data.cost_per_volume,
@@ -1027,9 +1027,9 @@ class Aggregate(Spreadsheet):
                             cost_allocation=self.asr_cost_data.cost_allocation[psc],
                             description=self.asr_cost_data.description[psc],
                             vat_portion=self.asr_cost_data.vat_portion[psc],
-                            vat_discount=self.general_config_data.vat_discount,
+                            vat_discount=self.fiscal_config_data.vat_discount[psc],
                             lbt_portion=self.asr_cost_data.lbt_portion[psc],
-                            lbt_discount=self.general_config_data.lbt_discount,
+                            lbt_discount=self.fiscal_config_data.lbt_discount[psc],
                         )
                     ]
                 )
@@ -1048,9 +1048,9 @@ class Aggregate(Spreadsheet):
                         cost_allocation=self.asr_cost_data.cost_allocation,
                         description=self.asr_cost_data.description,
                         vat_portion=self.asr_cost_data.vat_portion,
-                        vat_discount=self.general_config_data.vat_discount,
+                        vat_discount=self.fiscal_config_data.vat_discount,
                         lbt_portion=self.asr_cost_data.lbt_portion,
-                        lbt_discount=self.general_config_data.lbt_discount,
+                        lbt_discount=self.fiscal_config_data.lbt_discount,
                     )
                 ]
             )

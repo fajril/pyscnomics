@@ -1750,35 +1750,25 @@ class Spreadsheet:
         self.general_config_data = self._get_general_config_data()
         self.fiscal_config_data = self._get_fiscal_config_data()
 
-        # # Fill in the attributes associated with lifting data
-        # self.oil_lifting_data = self._get_oil_lifting_data()
-        # self.gas_lifting_data = self._get_gas_lifting_data()
-        # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
-        # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
-        # self.sulfur_lifting_data = self._get_sulfur_lifting_data()
-        # self.electricity_lifting_data = self._get_electricity_lifting_data()
-        # self.co2_lifting_data = self._get_co2_lifting_data()
-        #
-        # # Fill in the attributes associated with cost data
-        # self.tangible_cost_data = self._get_tangible_cost_data()
-        # self.intangible_cost_data = self._get_intangible_cost_data()
-        # self.opex_data = self._get_opex_data()
-        # self.asr_cost_data = self._get_asr_cost_data()
+        # Fill in the attributes associated with lifting data
+        self.oil_lifting_data = self._get_oil_lifting_data()
+        self.gas_lifting_data = self._get_gas_lifting_data()
+        self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
+        self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
+        self.sulfur_lifting_data = self._get_sulfur_lifting_data()
+        self.electricity_lifting_data = self._get_electricity_lifting_data()
+        self.co2_lifting_data = self._get_co2_lifting_data()
 
-        # # Fill in the attributes associated with contract data
-        # self.psc_cr_data = self._get_psc_cr_data()
-        # self.psc_gs_data = self._get_psc_gs_data()
-        # self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
-        # self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
-        # self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
-        # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
+        # Fill in the attributes associated with cost data
+        self.tangible_cost_data = self._get_tangible_cost_data()
+        self.intangible_cost_data = self._get_intangible_cost_data()
+        self.opex_data = self._get_opex_data()
+        self.asr_cost_data = self._get_asr_cost_data()
 
-        print('\t')
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-
-        print('\t')
-        print(f'Filetype: {type(self.fiscal_config_data)}')
-        print('general_config_data = \n', self.fiscal_config_data)
-
-        print('\t')
-        print('=========================================================================================')
+        # Fill in the attributes associated with contract data
+        self.psc_cr_data = self._get_psc_cr_data()
+        self.psc_gs_data = self._get_psc_gs_data()
+        self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
+        self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
+        self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
+        self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()

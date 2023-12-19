@@ -516,8 +516,25 @@ class FiscalConfigData:
 
         # For single PSC
         if "Transition" not in self.type_of_contract:
-
             def _get_single_psc(target):
+                """
+                Retrieve data for a specific Production Sharing Contract (PSC).
+
+                Parameters
+                ----------
+                target: dict
+                    A dictionary containing data for different PSCs.
+
+                Returns
+                -------
+                The data corresponding to the specified PSC.
+
+                Notes
+                -----
+                -   The function assumes that the input dictionary (`target`) has keys
+                    representing different PSCs.
+                -   It extracts and returns the data associated with the "PSC 1" key.
+                """
                 target_new = target["PSC 1"]
                 return target_new
 
@@ -2711,6 +2728,10 @@ class PSCCostRecoveryData:
         # Prepare attribute split_type
         self.split_type = get_split_type_converter(target=self.split_type)
 
+        # Prepare attributes associated with datetime
+        self.oil_dmo_start_production = convert_date(date=self.oil_dmo_start_production)
+        self.gas_dmo_start_production = convert_date(date=self.gas_dmo_start_production)
+
         # Prepare attribute rc_split
         if self.split_type == TaxSplitTypeCR.R2C:
             rc_split_attrs = [
@@ -2867,6 +2888,10 @@ class PSCGrossSplitData:
         self.dmo_is_weighted = get_boolean_converter(target=self.dmo_is_weighted)
         self.oil_dmo_holiday = get_boolean_converter(target=self.oil_dmo_holiday)
         self.gas_dmo_holiday = get_boolean_converter(target=self.gas_dmo_holiday)
+
+        # Prepare attributes associated with datetime
+        self.oil_dmo_start_production = convert_date(date=self.oil_dmo_start_production)
+        self.gas_dmo_start_production = convert_date(date=self.gas_dmo_start_production)
 
 
 @dataclass

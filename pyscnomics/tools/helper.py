@@ -693,7 +693,7 @@ def get_tax_regime_converter(target: str) -> FTPTaxRegime:
     """
     attrs = {
         "PDJP No.20 Tahun 2017": FTPTaxRegime.PDJP_20_2017,
-        "Pre PDJP No.20 Tahun 2017": FTPTaxRegime.PRE_2017,
+        "Pre PDJP No.20 Tahun 2017": FTPTaxRegime.PRE_PDJP_20_2017,
     }
 
     for key in attrs.keys():
@@ -810,7 +810,27 @@ def get_depreciation_method_converter(target: str) -> DeprMethod:
     return None
 
 
-def get_other_revenue_converter(target: str):
+def get_other_revenue_converter(target: str) -> OtherRevenue:
+    """
+    Convert a string representation of other revenue types to the corresponding enum value.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the other revenue type.
+
+    Returns
+    -------
+    OtherRevenue or None
+        The enum value corresponding to the provided string representation of other revenue.
+        Returns None if the string does not match any known other revenue types.
+
+    Notes
+    -----
+    - The function uses a mapping of string representations to OtherRevenue enum values.
+    - If the target string matches a known other revenue type, the corresponding enum value is returned.
+    - If the target string does not match any known types, the function returns None.
+    """
     attrs = {
         "Addition to Oil Revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
         "Addition to Gas Revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
