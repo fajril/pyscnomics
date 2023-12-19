@@ -658,7 +658,7 @@ def get_tax_payment_converter(target: str) -> FTPTaxRegime:
     attrs = {
         "Direct Mode": FTPTaxRegime.DIRECT_MODE,
         "PDJP No.20 Tahun 2017": FTPTaxRegime.PDJP_20_2017,
-        "Pre PDJP No.20 Tahun 2017": FTPTaxRegime.PRE_PDJP_20_2017,
+        "Pre-PDJP No.20 Tahun 2017": FTPTaxRegime.PRE_PDJP_20_2017,
     }
 
     for key in attrs.keys():

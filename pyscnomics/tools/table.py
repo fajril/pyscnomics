@@ -64,6 +64,7 @@ def get_table(contract: CostRecovery | GrossSplit | Transition) -> tuple[pd.Data
         psc_table_oil['Cashflow'] = contract._oil_cashflow
         psc_table_oil['Cum_Cashflow'] = np.cumsum(contract._oil_cashflow)
         psc_table_oil['Government_Take'] = contract._oil_government_take
+        # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
 
         psc_table_gas = pd.DataFrame()
         psc_table_gas['Year'] = contract.project_years
@@ -100,6 +101,7 @@ def get_table(contract: CostRecovery | GrossSplit | Transition) -> tuple[pd.Data
         psc_table_gas['Cashflow'] = contract._gas_cashflow
         psc_table_gas['Cum_Cashflow'] = np.cumsum(contract._gas_cashflow)
         psc_table_gas['Government_Take'] = contract._gas_government_take
+        # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
 
         psc_table_consolidated = pd.DataFrame()
         psc_table_consolidated['Year'] = contract.project_years
@@ -139,6 +141,7 @@ def get_table(contract: CostRecovery | GrossSplit | Transition) -> tuple[pd.Data
         psc_table_consolidated['C_Cashflow'] = contract._consolidated_cashflow
         psc_table_consolidated['cum_C_Cashflow'] = np.cumsum(contract._consolidated_cashflow)
         psc_table_consolidated['C_Government_take'] = contract._consolidated_government_take
+        # psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
 
         return psc_table_oil, psc_table_gas, psc_table_consolidated
 
@@ -177,6 +180,7 @@ def get_table(contract: CostRecovery | GrossSplit | Transition) -> tuple[pd.Data
         psc_table_oil['CTR_Cash_Flow'] = contract._oil_ctr_cashflow
         psc_table_oil['Cum_CashFlow'] = np.cumsum(contract._oil_ctr_cashflow)
         psc_table_oil['Government_Take'] = contract._oil_government_take
+        # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
 
         psc_table_gas = pd.DataFrame()
         psc_table_gas['Years'] = contract.project_years
@@ -212,6 +216,7 @@ def get_table(contract: CostRecovery | GrossSplit | Transition) -> tuple[pd.Data
         psc_table_gas['CTR_CashFlow'] = contract._gas_ctr_cashflow
         psc_table_gas['Cum_Cashflow'] = np.cumsum(contract._gas_ctr_cashflow)
         psc_table_gas['Government_Take'] = contract._gas_government_take
+        # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
 
         psc_table_consolidated = pd.DataFrame()
         psc_table_consolidated['Years'] = contract.project_years
@@ -240,6 +245,7 @@ def get_table(contract: CostRecovery | GrossSplit | Transition) -> tuple[pd.Data
         psc_table_consolidated['C_CashFlow'] = contract._consolidated_cashflow
         psc_table_consolidated['C_Government_Take'] = contract._consolidated_government_take
         psc_table_consolidated['cum_C_CashFlow'] = np.cumsum(contract._consolidated_cashflow)
+        # psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
 
         return psc_table_oil, psc_table_gas, psc_table_consolidated
 
@@ -280,6 +286,7 @@ def get_table(contract: CostRecovery | GrossSplit | Transition) -> tuple[pd.Data
             psc_table_oil['Cashflow'] = contract._contract2_transitioned._oil_cashflow
             psc_table_oil['Cum._Cashflow'] = np.cumsum(contract._contract2_transitioned._oil_cashflow)
             psc_table_oil['Government_Take'] = contract._contract2_transitioned._oil_government_take
+            # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
 
             psc_table_gas = pd.DataFrame()
             psc_table_gas['Year'] = contract._contract2_transitioned.project_years
@@ -316,6 +323,7 @@ def get_table(contract: CostRecovery | GrossSplit | Transition) -> tuple[pd.Data
             psc_table_gas['Cashflow'] = contract._contract2_transitioned._gas_cashflow
             psc_table_gas['Cum._Cashflow'] = np.cumsum(contract._contract2_transitioned._gas_cashflow)
             psc_table_gas['Government_Take'] = contract._contract2_transitioned._gas_government_take
+            # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
 
             psc_table_consolidated = pd.DataFrame()
             psc_table_consolidated['Year'] = contract._contract2_transitioned.project_years
@@ -355,6 +363,7 @@ def get_table(contract: CostRecovery | GrossSplit | Transition) -> tuple[pd.Data
             psc_table_consolidated['C_Cashflow'] = contract._contract2_transitioned._consolidated_cashflow
             psc_table_consolidated['cum. C_Cashflow'] = np.cumsum(contract._contract2_transitioned._consolidated_cashflow)
             psc_table_consolidated['C_Government_take'] = contract._contract2_transitioned._consolidated_government_take
+            # psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
 
             return psc_table_oil, psc_table_gas, psc_table_consolidated
 
@@ -393,6 +402,7 @@ def get_table(contract: CostRecovery | GrossSplit | Transition) -> tuple[pd.Data
             psc_table_oil['CTR_Cash_Flow'] = contract._contract2_transitioned._oil_ctr_cashflow
             psc_table_oil['Cum_CashFlow'] = np.cumsum(contract._contract2_transitioned._oil_ctr_cashflow)
             psc_table_oil['Government_Take'] = contract._contract2_transitioned._oil_government_take
+            # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
 
             psc_table_gas = pd.DataFrame()
             psc_table_gas['Years'] = contract.project_years
@@ -428,6 +438,7 @@ def get_table(contract: CostRecovery | GrossSplit | Transition) -> tuple[pd.Data
             psc_table_gas['CTR_CashFlow'] = contract._contract2_transitioned._gas_ctr_cashflow
             psc_table_gas['Cum_Cashflow'] = np.cumsum(contract._contract2_transitioned._gas_ctr_cashflow)
             psc_table_gas['Government_Take'] = contract._contract2_transitioned._gas_government_take
+            # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
 
             psc_table_consolidated = pd.DataFrame()
             psc_table_consolidated['Years'] = contract.project_years
@@ -456,6 +467,7 @@ def get_table(contract: CostRecovery | GrossSplit | Transition) -> tuple[pd.Data
             psc_table_consolidated['C_CashFlow'] = contract._contract2_transitioned._consolidated_cashflow
             psc_table_consolidated['C_Government_Take'] = contract._contract2_transitioned._consolidated_government_take
             psc_table_consolidated['cum_C_CashFlow'] = np.cumsum(contract._contract2_transitioned._consolidated_cashflow)
+            # psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
 
             return psc_table_oil, psc_table_gas, psc_table_consolidated
 

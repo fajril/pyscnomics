@@ -26,9 +26,13 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
     oil_wap = np.divide(np.sum(contract._oil_revenue), np.sum(contract._oil_lifting.get_lifting_rate_arr()),
                         where= np.sum(contract._oil_lifting.get_lifting_rate_arr()) != 0)
     lifting_gas = np.sum(contract._gas_lifting.get_lifting_rate_arr(), dtype=float)
-    gas_wap = np.divide(np.sum(contract._gas_wap_price * contract._gas_lifting.get_lifting_rate_arr()), np.sum(
-        contract._gas_lifting.get_lifting_rate_arr()), where=np.sum(
-        contract._gas_lifting.get_lifting_rate_arr()) != 0)
+
+    if np.sum(contract._gas_lifting.get_lifting_rate_arr()) == 0:
+        gas_wap = 0.0
+    else:
+        gas_wap = np.divide(np.sum(contract._gas_wap_price * contract._gas_lifting.get_lifting_rate_arr()), np.sum(
+            contract._gas_lifting.get_lifting_rate_arr()), where=np.sum(
+            contract._gas_lifting.get_lifting_rate_arr()) != 0)
 
     # Gross Revenue
     gross_revenue = np.sum(contract._consolidated_revenue, dtype=float)

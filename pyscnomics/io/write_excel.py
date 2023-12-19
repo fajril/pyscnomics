@@ -42,13 +42,13 @@ def write_cashflow(workbook_path: str,
     ws = xw.Book(workbook_path).sheets(sheet_name)
 
     # Writing oil df_oil
-    ws.range(oil_starting_cell).value = df_oil.value
+    ws.range(oil_starting_cell).value = df_oil.values
 
     # Writing oil df_gas
-    ws.range(gas_starting_cell).value = df_gas.value
+    ws.range(gas_starting_cell).value = df_gas.values
 
     # Writing oil df_consolidated
-    ws.range(consolidated_starting_cell).value = df_consolidated.value
+    ws.range(consolidated_starting_cell).value = df_consolidated.values
 
 
 def write_summary(summary_dict: dict,

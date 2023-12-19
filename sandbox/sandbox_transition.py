@@ -212,7 +212,7 @@ psc2 = GrossSplit(
     res_type='Conventional',
     api_oil='>=25',
     domestic_use='70<=x<100',
-    prod_stage='Primer',
+    prod_stage='Primary',
     co2_content='<5',
     h2s_content='<100',
     base_split_ctr_oil=0.43,
@@ -456,7 +456,12 @@ psc_summary = get_summary(contract=psc_trans,
 for key, value in psc_summary.items():
     print(key, ":", value)
 
-
+# from pyscnomics.tools.table import get_table
+#
+# psc_table_oil, psc_table_gas, psc_table_consolidated = get_table(contract=psc_trans)
+# print(psc_table_oil, '\n')
+# print(psc_table_gas, '\n')
+# print(psc_table_consolidated, '\n')
 
 
 

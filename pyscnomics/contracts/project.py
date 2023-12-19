@@ -381,14 +381,7 @@ class BaseProject:
                 )
 
         else:
-            if self.oil_onstream_date is not None:
-                raise BaseProjectException(
-                    f"Oil onstream year is given ({self.oil_onstream_date.year}) "
-                    f"but oil lifting rate is missing or zero for the entire project duration"
-                )
-
-            else:
-                self.oil_onstream_date = self.end_date
+            self.oil_onstream_date = self.end_date
 
         # Configure gas_onstream_date: set default value and error message
         gas_revenue_index = np.argwhere(self._gas_revenue > 0).ravel()
@@ -1395,7 +1388,10 @@ class BaseProject:
                 vol_x_price = vol_x_price + lift.get_lifting_rate_arr() * lift.get_price_arr()
                 total_vol = total_vol + lift.get_lifting_rate_arr()
 
-        self._gas_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
+        if np.sum(vol_x_price) + np.sum(total_vol) == 0:
+            self._gas_wap_price = np.zeros_like(vol_x_price)
+        else:
+            self._gas_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
     def _get_sulfur_wap_price(self):
         """
