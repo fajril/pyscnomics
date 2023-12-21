@@ -18,6 +18,8 @@ from pyscnomics.econ.selection import (
     DiscountingMode,
     DeprMethod,
     OtherRevenue,
+    OptimizationTarget,
+    OptimizationParameter,
 )
 
 
@@ -1566,6 +1568,93 @@ def get_split_type_converter(target: str) -> TaxSplitTypeCR:
         "Conventional": TaxSplitTypeCR.CONVENTIONAL,
         "RC Split": TaxSplitTypeCR.R2C,
         "ICP Sliding Scale": TaxSplitTypeCR.SLIDING_SCALE,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_optimization_target_converter(target: str) -> OptimizationTarget | None:
+    """
+    Converts a string representation of an optimization target to the corresponding
+    OptimizationTarget enum value.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the optimization target.
+
+    Returns
+    -------
+    Union[OptimizationTarget, None]
+        The OptimizationTarget enum value if the target is valid, or None if the target is not found.
+
+    Example
+    -------
+    >>> get_optimization_target_converter("NPV")
+    OptimizationTarget.NPV
+    >>> get_optimization_target_converter("IRR")
+    OptimizationTarget.IRR
+    >>> get_optimization_target_converter("PI")
+    OptimizationTarget.PI
+    >>> get_optimization_target_converter("InvalidTarget")
+    None
+    """
+    attrs = {
+        "NPV": OptimizationTarget.NPV,
+        "IRR": OptimizationTarget.IRR,
+        "PI": OptimizationTarget.PI,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+    return None
+
+
+def get_optimization_parameter_converter(target: str) -> OptimizationParameter | None:
+    """
+    Converts a string representation of an optimization parameter to the corresponding
+    OptimizationParameter enum value.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the optimization parameter.
+
+    Returns
+    -------
+    Union[OptimizationParameter, None]
+        The OptimizationParameter enum value if the target is valid,
+        or None if the target is not found.
+
+    Example
+    -------
+    >>> get_optimization_parameter_converter("Oil Contractor Pre Tax")
+    OptimizationParameter.OIL_CTR_PRETAX
+    >>> get_optimization_parameter_converter("Gas FTP Portion")
+    OptimizationParameter.GAS_FTP_PORTION
+    >>> get_optimization_parameter_converter("VAT Rate")
+    OptimizationParameter.VAT_RATE
+    >>> get_optimization_parameter_converter("InvalidParameter")
+    None
+    """
+    attrs = {
+        "Oil Contractor Pre Tax": OptimizationParameter.OIL_CTR_PRETAX,
+        "Gas Contractor Pre Tax": OptimizationParameter.GAS_CTR_PRETAX,
+        "Oil FTP Portion": OptimizationParameter.OIL_FTP_PORTION,
+        "Gas FTP Portion": OptimizationParameter.GAS_FTP_PORTION,
+        "Oil IC": OptimizationParameter.OIL_IC,
+        "Gas IC": OptimizationParameter.GAS_IC,
+        "Oil DMO Fee": OptimizationParameter.OIL_DMO_FEE,
+        "Gas Dmo Fee": OptimizationParameter.GAS_DMO_FEE,
+        "VAT Rate": OptimizationParameter.VAT_RATE,
+        "Effective Tax Rate": OptimizationParameter.EFFECTIVE_TAX_RATE,
+        "Ministerial Discretion": OptimizationParameter.MINISTERIAL_DISCRETION,
     }
 
     for key in attrs.keys():

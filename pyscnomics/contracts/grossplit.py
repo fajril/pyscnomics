@@ -225,7 +225,7 @@ class GrossSplit(BaseProject):
                 '70<=x<100': 0.04,
             },
             'prod_stage': {
-                'Primer': 0,
+                'Primary': 0,
                 'Secondary': 0.03,
                 'Tertiary': 0.05,
             }

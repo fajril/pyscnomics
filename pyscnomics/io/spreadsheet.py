@@ -88,9 +88,9 @@ class Spreadsheet:
     psc_transition_gs_to_cr: dict = field(default=None, init=False)
 
     # Fill in the attributes associated with additional functionality
+    optimization_data: OptimizationData = field(default=None, init=False)
     sensitivity_data: SensitivityData = field(default=None, init=False)
     montecarlo_data: MonteCarloData = field(default=None, init=False)
-    optimization_data: OptimizationData = field(default=None, init=False)
 
     def __post_init__(self):
         # Configure attribute workbook_to_read
@@ -139,9 +139,15 @@ class Spreadsheet:
             if i not in [
                 "Cover",
                 "UserGuide",
+                "References",
+                "ChartDATA",
+                "ORETZS",
                 "Summary",
-                "Result Table CR",
-                "Result Table GS"
+                "Results Table CR",
+                "Results Table GS",
+                "Results Table Base Project",
+                "Results Table GS (2)",
+                "Results Table CR (2)",
             ]
         ]
 
@@ -1691,18 +1697,18 @@ class Spreadsheet:
         optimization_data_loaded = (
             self.data_loaded["Optimization"]
             .iloc[:, np.r_[1, 4, 6:8, 3, 5]]
-            .replace(np.nan, None)
+            # .replace(np.nan, None)
         )
 
         # Step #2 (See 'Notes' section in the docstring)
         data_cr_init = {
-            key: optimization_data_loaded.iloc[3:12, i].to_numpy()
+            key: optimization_data_loaded.iloc[3:13, i].to_numpy()
             for i, key in enumerate(["parameter", "priority", "min", "max"])
         }
 
         # Step #3 (See 'Notes' section in the docstring)
         data_gs_init = {
-            key: optimization_data_loaded.iloc[14:, i].to_numpy()
+            key: optimization_data_loaded.iloc[15:, i].to_numpy()
             for i, key in enumerate(["parameter", "priority", "min", "max"])
         }
 
@@ -1714,9 +1720,10 @@ class Spreadsheet:
 
         # Step #5 (See 'Notes' section in the docstring)
         return OptimizationData(
-            target=target,
+            target_init=target,
             data_cr_init=data_cr_init,
             data_gs_init=data_gs_init,
+            type_of_contract=self.general_config_data.type_of_contract,
         )
 
     def prepare_data(self) -> None:
@@ -1772,3 +1779,8 @@ class Spreadsheet:
         self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
         self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
         self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
+
+        # Fill in the attributes associated with sensitivity and optimization
+        self.optimization_data = self._get_optimization_data()
+        # self.sensitivity_data = self._get_sensitivity_data()
+        # self.montecarlo_data = self._get_montecarlo_data()

@@ -24,6 +24,8 @@ from pyscnomics.tools.helper import (
     get_fluidtype_converter,
     get_boolean_converter,
     get_split_type_converter,
+    get_optimization_target_converter,
+    get_optimization_parameter_converter,
 )
 
 
@@ -3025,62 +3027,122 @@ class OptimizationData:
 
     Attributes
     ----------
-    target: dict
+    target_init: dict
         The target data.
     data_cr_init: dict
         The initial cost recovery data.
     data_gs_init: dict
         The initial gross split data.
+    type_of_contract: str
+        A string depicting the type of PSC contract.
     """
-    target: dict
-    data_cr_init: dict = field(repr=False)
-    data_gs_init: dict = field(repr=False)
+    target_init: InitVar[dict] = field(repr=False)
+    data_cr_init: InitVar[dict] = field(repr=False)
+    data_gs_init: InitVar[dict] = field(repr=False)
+    type_of_contract: InitVar[str] = field(repr=False)
 
     # Attributes to be defined later
+    target: dict = field(default=None, init=False)
     data_cr: dict = field(default=None, init=False)
     data_gs: dict = field(default=None, init=False)
 
-    def __post_init__(self):
-        # Prepare attribute data_cr
-        # Step #1: raise exception for inappropriate data input
-        check_data_cr = [i <= j for i, j in zip(self.data_cr_init["max"], self.data_cr_init["min"])]
+    def __post_init__(
+        self,
+        target_init: dict,
+        data_cr_init: dict,
+        data_gs_init: dict,
+        type_of_contract: str,
+    ):
+        # Prepare attribute target
+        self.target = {}
+        for key in target_init.keys():
+            self.target[key] = target_init[key]
 
-        if True in check_data_cr:
-            raise OptimizationDataException(
-                f"Error in cost recovery data input. "
-                f"The maximum value(s) must be larger than the minimum value(s). "
-                f"Max: ({self.data_cr_init['max']}), "
-                f"Min: ({self.data_cr_init['min']})."
+        self.target["parameter"] = get_optimization_target_converter(target=self.target["parameter"])
+
+        # For PSC Cost Recovery, PSC Transition CR-CR, or PSC Transition GS-CR
+        if (
+            type_of_contract == "PSC Cost Recovery (CR)"
+            or type_of_contract == "Transition CR - CR"
+            or type_of_contract == "Transition GS - CR"
+        ):
+            # Prepare attribute data_cr
+            data_cr_available = np.argwhere(~pd.isna(data_cr_init["priority"])).ravel()
+            if len(data_cr_available) == 0:
+                raise OptimizationDataException(
+                    f"Insufficient data to undertake optimization study. "
+                    f"Please check the input data for optimization. "
+                    f"At least one parameter is required to undertake optimization study."
+                )
+            else:
+                for key in data_cr_init.keys():
+                    data_cr_init[key] = data_cr_init[key][data_cr_available].copy()
+
+            # Raise exception for missing values
+            for key in ["min", "max"]:
+                if any([pd.isna(i) for i in data_cr_init[key]]):
+                    raise OptimizationDataException(
+                        f"Missing data for 'min' and/or 'max' values."
+                    )
+
+            # Raise exception for incorrect data input
+            if any([i <= j for i, j in zip(data_cr_init["max"], data_cr_init["min"])]):
+                raise OptimizationDataException(
+                    f"Incorrect optimization data input. "
+                    f"The maximum value(s) must be larger than the minimum value(s). "
+                )
+
+            # Sort data_cr
+            self.data_cr = {}
+            for key in data_cr_init.keys():
+                self.data_cr[key] = data_cr_init[key][np.argsort(data_cr_init["priority"])].copy()
+
+            self.data_cr["parameter"] = self.data_cr["parameter"].tolist()
+            self.data_cr["parameter"] = (
+                [get_optimization_parameter_converter(target=i) for i in self.data_cr["parameter"]]
             )
 
-        # Step #2: filter out 'None' values
-        id_cr_unsorted = np.array(
-            [i for i, val in enumerate(self.data_cr_init["priority"]) if val is not None]
-        )
-        data_cr_unsorted = {key: self.data_cr_init[key][id_cr_unsorted] for key in self.data_cr_init}
+        # For PSC Gross Split, PSC Transition CR-GS, or PSC Transition GS-GS
+        elif (
+            type_of_contract == "PSC Gross Split (GS)"
+            or type_of_contract == "Transition CR - GS"
+            or type_of_contract == "Transition GS - GS"
+        ):
+            # Prepare attribute data_gs
+            data_gs_available = np.argwhere(~pd.isna(data_gs_init["priority"])).ravel()
+            if len(data_gs_available) == 0:
+                raise OptimizationDataException(
+                    f"Insufficient data to undertake optimization study. "
+                    f"Please check the input data for optimization. "
+                    f"At least one parameter is required to undertake optimization study."
+                )
+            else:
+                for key in data_gs_init.keys():
+                    data_gs_init[key] = data_gs_init[key][data_gs_available].copy()
 
-        # Step #3: sorted the data based on the values of "priority"
-        id_cr_sorted = np.argsort(data_cr_unsorted["priority"])
-        self.data_cr = {key: data_cr_unsorted[key][id_cr_sorted] for key in data_cr_unsorted}
+            # Raise exception for missing values
+            for key in ["min", "max"]:
+                if any([pd.isna(i) for i in data_gs_init[key]]):
+                    raise OptimizationDataException(
+                        f"Missing data for 'min' and/or 'max' values."
+                    )
 
-        # Prepare attribute data_gs
-        # Step #1: raise exception for inappropriate data input
-        check_data_gs = [i <= j for i, j in zip(self.data_gs_init["max"], self.data_gs_init["min"])]
+            # Raise exception for incorrect data input
+            if any([i <= j for i, j in zip(data_gs_init["max"], data_gs_init["min"])]):
+                raise OptimizationDataException(
+                    f"Incorrect optimization data input. "
+                    f"The maximum value(s) must be larger than the minimum value(s). "
+                )
 
-        if True in check_data_gs:
+            # Sort data_gs
+            self.data_gs = {}
+            for key in data_gs_init.keys():
+                self.data_gs[key] = data_gs_init[key][np.argsort(data_gs_init["priority"])].copy()
+
+            self.data_gs["parameter"] = self.data_gs["parameter"].tolist()
+
+        # For PSC Project
+        else:
             raise OptimizationDataException(
-                f"Error in cost recovery data input. "
-                f"The maximum value(s) must be larger than the minimum value(s). "
-                f"Max: ({self.data_gs_init['max']}), "
-                f"Min: ({self.data_gs_init['min']})."
+                f"Optimization assessment is not available for type of contract: Project. "
             )
-
-        # Step #2: filter out 'None' values
-        id_gs_unsorted = np.array(
-            [i for i, val in enumerate(self.data_gs_init["priority"]) if val is not None]
-        )
-        data_gs_unsorted = {key: self.data_gs_init[key][id_gs_unsorted] for key in self.data_gs_init}
-
-        # Step #3: sorted the data based on the values of "priority"
-        id_gs_sorted = np.argsort(data_gs_unsorted["priority"])
-        self.data_gs = {key: data_gs_unsorted[key][id_gs_sorted] for key in data_gs_unsorted}

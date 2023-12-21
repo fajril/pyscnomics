@@ -224,4 +224,4 @@ class OptimizationParameter(Enum):
 class OptimizationTarget(Enum):
     IRR = 'IRR'
     NPV = 'NPV'
-    PI = 'PV_RATIO'
+    PI = 'PI'
