@@ -10,7 +10,7 @@ from pyscnomics.contracts.transition import Transition
 from pyscnomics.tools.table import get_table
 
 
-def write_cashflow(workbook_path: str,
+def write_cashflow(workbook_object: xw.Book,
                    sheet_name: str,
                    contract: BaseProject | CostRecovery | GrossSplit | Transition,
                    oil_starting_cell: str = 'B5',
@@ -21,7 +21,7 @@ def write_cashflow(workbook_path: str,
 
     Parameters
     ----------
-    workbook_path: str
+    workbook_object: xw.Book
         The path of the Excel workbook
     sheet_name: str
         The sheet name of where the cashflow is located within the workbook
@@ -39,7 +39,7 @@ def write_cashflow(workbook_path: str,
     df_oil, df_gas, df_consolidated = get_table(contract=contract)
 
     # Defining the workbook and its sheet
-    ws = xw.Book(workbook_path).sheets(sheet_name)
+    ws = workbook_object.sheets(sheet_name)
 
     # Writing oil df_oil
     ws.range(oil_starting_cell).value = df_oil.values
@@ -52,7 +52,7 @@ def write_cashflow(workbook_path: str,
 
 
 def write_summary(summary_dict: dict,
-                  workbook_path: str,
+                  workbook_object: xw.Book,
                   sheet_name: str = 'Summary',
                   range_cell: str = 'E5'):
     """
@@ -62,7 +62,7 @@ def write_summary(summary_dict: dict,
     ----------
     summary_dict :  dict
         The dictionary containing the argument for generating the summary.
-    workbook_path : str
+    workbook_object : xw.Book
         The directory path of the Microsoft Excel file.
     sheet_name : str
         The name of the worksheet
@@ -122,28 +122,51 @@ def write_summary(summary_dict: dict,
     df_summary.fillna('---', inplace=True)
 
     # Selecting a sheet in Excel
-    ws = xw.Book(workbook_path).sheets(sheet_name)
+    ws = workbook_object.sheets(sheet_name)
 
     # Test Write
     ws.range(range_cell).value = df_summary.values
 
 
-def write_opt(list_str,
-              list_params_value,
-              result_optimization,
-              workbook_path: str,
+def write_opt(list_str: list,
+              list_params_value: list,
+              result_optimization: float,
+              workbook_object: xw.Book,
               sheet_name: str = 'Optimization',
               range_opt_result: str = 'P2',
               range_list_params: str = 'N5',
               range_list_value: str = 'P5',
               ):
+    """
+    The function to write optimization result into Excel workbook.
+
+    Parameters
+    ----------
+    list_str: list
+        The list of optimization parameter
+    list_params_value: list
+        The list of optimized parameter value
+    result_optimization: float
+        The value result of optimized target
+    workbook_object: xw.Book
+        The workbook object of the Excel file
+    sheet_name: str
+        The sheet name where the optimization result will be printed on
+    range_opt_result: str
+        The range cell where the optimization result will be printed on
+    range_list_params: str
+        The range cell where the optimized parameters will be printed on
+    range_list_value: str
+        The range cell where the optimized parameters value will be printed on
+
+    """
     # Making dataframe of the optimization parameter list, optimization parameter values
     df_optim = pd.DataFrame()
     df_optim['list_parameter'] = list_str
     df_optim['list_parameter_value'] = list_params_value
 
     # Defining the workbook and its sheet
-    ws = xw.Book(workbook_path).sheets(sheet_name)
+    ws = workbook_object.sheets(sheet_name)
 
     # Writing result of optimization
     ws.range(range_opt_result).value = result_optimization

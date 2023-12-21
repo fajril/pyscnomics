@@ -103,7 +103,7 @@ def optimize_psc(dict_optimization: dict,
                  target_optimization_value: float,
                  summary_argument: dict,
                  target_parameter: OptimizationTarget = OptimizationTarget.IRR,
-                 ) -> tuple:
+                 ) -> (list, list, float):
     """
     The function to get contract variable(s) that resulting the desired target or contract's economic target.
 
@@ -153,8 +153,8 @@ def optimize_psc(dict_optimization: dict,
     elif target_parameter is OptimizationTarget.NPV:
         target_parameter = 'ctr_npv'
 
-    elif target_parameter is OptimizationTarget.PV_RATIO:
-        target_parameter = 'ctr_pv_ratio'
+    elif target_parameter is OptimizationTarget.PI:
+        target_parameter = 'ctr_pi'
 
     else:
         raise OptimizationException(

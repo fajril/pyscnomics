@@ -10,7 +10,7 @@ from pyscnomics.io.spreadsheet import Spreadsheet
 from pyscnomics.io.aggregator import Aggregate
 
 
-def initiate_contract(workbook_path: str):
+def initiate_contract(workbook_path: str) -> (CostRecovery | GrossSplit | Transition, dict, dict, Aggregate):
     """
     The function to generate psc object, psc arguments and summary arguments.
 
@@ -96,7 +96,7 @@ def initiate_contract(workbook_path: str):
         # Filling the summary contract argument
         summary_arguments['contract'] = psc
 
-        return psc, psc_arguments, summary_arguments
+        return psc, psc_arguments, summary_arguments, data
 
     # Condition when the contract is Gross Split
     elif data.general_config_data.type_of_contract == 'PSC Gross Split (GS)':
@@ -155,7 +155,7 @@ def initiate_contract(workbook_path: str):
         # Filling the summary contract argument
         summary_arguments['contract'] = psc
 
-        return psc, psc_arguments, summary_arguments
+        return psc, psc_arguments, summary_arguments, data
 
     # Condition when the contract is Transition CR - GS
     elif data.general_config_data.type_of_contract == 'Transition CR - GS':
