@@ -165,7 +165,7 @@ if __name__ == '__main__':
 
     main(workbook_path=sys.argv[1], mode=sys.argv[2])
 
-    import time
+    # import time
 
     # workbook_path = "Workbook_Test Optimization_GS.xlsb"
     # run_mode = 'Optimization'
