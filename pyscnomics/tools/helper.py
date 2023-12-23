@@ -1651,7 +1651,7 @@ def get_optimization_parameter_converter(target: str) -> OptimizationParameter |
         "Oil IC": OptimizationParameter.OIL_IC,
         "Gas IC": OptimizationParameter.GAS_IC,
         "Oil DMO Fee": OptimizationParameter.OIL_DMO_FEE,
-        "Gas Dmo Fee": OptimizationParameter.GAS_DMO_FEE,
+        "Gas DMO Fee": OptimizationParameter.GAS_DMO_FEE,
         "VAT Rate": OptimizationParameter.VAT_RATE,
         "Effective Tax Rate": OptimizationParameter.EFFECTIVE_TAX_RATE,
         "Ministerial Discretion": OptimizationParameter.MINISTERIAL_DISCRETION,

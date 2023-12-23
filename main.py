@@ -108,18 +108,36 @@ def run_optimization(contract: CostRecovery | GrossSplit | Transition,
     # Running standard contract
     contract.run(**contract_arguments)
 
-    # Defining the data needed for optimization
-    dict_optimization = {}
-    target_optimization_value = float()
-    target_parameter = NotImplemented
+    # Condition to adjust the dict_optimization based on the contract type
+    if isinstance(contract, CostRecovery):
+        dict_optimization = data.optimization_data.data_cr
+        range_list_params = 'N5'
+        range_list_value = 'P5'
+    elif isinstance(contract, GrossSplit):
+        dict_optimization = data.optimization_data.data_gs
+        range_list_params = 'N17'
+        range_list_value = 'P17'
+    else:
+        if isinstance(contract.contract2, CostRecovery):
+            dict_optimization = data.optimization_data.data_cr
+            range_list_params = 'N5'
+            range_list_value = 'P5'
+        else:
+            dict_optimization = data.optimization_data.data_gs
+            range_list_params = 'N17'
+            range_list_value = 'P17'
+
+    # Defining the target_optimization_value and target_parameter
+    target_optimization_value = data.optimization_data.target['parameter']
+    target_parameter = data.optimization_data.target['value']
 
     # Running optimization
     optim_result = optimize_psc(dict_optimization=dict_optimization,
                                 contract=contract,
                                 contract_arguments=contract_arguments,
-                                target_optimization_value=target_optimization_value,
+                                target_optimization_value=target_parameter,
                                 summary_argument=summary_arguments,
-                                target_parameter=target_parameter)
+                                target_parameter=target_optimization_value)
 
     list_str = optim_result[0]
     list_params_value = optim_result[1]
@@ -135,7 +153,11 @@ def run_optimization(contract: CostRecovery | GrossSplit | Transition,
               list_params_value=list_params_value,
               result_optimization=result_optimization,
               workbook_object=workbook_object,
-              sheet_name='Optimization')
+              sheet_name='Optimization',
+              range_opt_result='P2',
+              range_list_params=range_list_params,
+              range_list_value=range_list_value,
+              )
 
 
 if __name__ == '__main__':
@@ -143,9 +165,9 @@ if __name__ == '__main__':
 
     main(workbook_path=sys.argv[1], mode=sys.argv[2])
 
-    # import time
-    #
-    # workbook_path = "Workbook.xlsb"
+    import time
+
+    # workbook_path = "Workbook_Test Optimization_GS.xlsb"
     # run_mode = 'Optimization'
     #
     # start_time = time.time()

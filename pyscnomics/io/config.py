@@ -3140,6 +3140,9 @@ class OptimizationData:
                 self.data_gs[key] = data_gs_init[key][np.argsort(data_gs_init["priority"])].copy()
 
             self.data_gs["parameter"] = self.data_gs["parameter"].tolist()
+            self.data_gs["parameter"] = (
+                [get_optimization_parameter_converter(target=i) for i in self.data_gs["parameter"]]
+            )
 
         # For PSC Project
         else:

@@ -163,7 +163,7 @@ def optimize_psc(dict_optimization: dict,
         )
 
     # Changing the parameters list[str] into list[OptimizationParameters(Enum)]
-    list_params = dict_optimization['parameters']
+    list_params = dict_optimization['parameter']
 
     # Defining empty list to contain value of optimized parameters and status of the optimization
     list_params_value = ['Base Value'] * len(list_params)

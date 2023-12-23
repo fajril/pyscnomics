@@ -161,9 +161,9 @@ def write_opt(list_str: list,
 
     """
     # Making dataframe of the optimization parameter list, optimization parameter values
-    df_optim = pd.DataFrame()
-    df_optim['list_parameter'] = list_str
-    df_optim['list_parameter_value'] = list_params_value
+    # df_optim = pd.DataFrame()
+    # df_optim['list_parameter'] = list_str
+    # df_optim['list_parameter_value'] = list_params_value
 
     # Defining the workbook and its sheet
     ws = workbook_object.sheets(sheet_name)
@@ -171,8 +171,12 @@ def write_opt(list_str: list,
     # Writing result of optimization
     ws.range(range_opt_result).value = result_optimization
 
-    # Writing list of parameter optimization
-    ws.range(range_list_params).value = df_optim['list_parameter'].values
+    # Deleting the row of the optimization result
+    ws.range(range_list_params).options(transpose=True).value = [''] * 10
+    ws.range(range_list_value).options(transpose=True).value = [''] * 10
 
-    # Writing list of parameter value of optimization
-    ws.range(range_list_value).value = df_optim['list_parameter_value'].values
+    # Writing list of parameter optimization and parameter value of optimization
+    ws.range(range_list_params).options(transpose=True).value = list_str
+    ws.range(range_list_value).options(transpose=True).value = list_params_value
+
+
