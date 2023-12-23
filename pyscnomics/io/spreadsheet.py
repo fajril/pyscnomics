@@ -1783,4 +1783,3 @@ class Spreadsheet:
         # Fill in the attributes associated with sensitivity and optimization
         self.optimization_data = self._get_optimization_data()
         # self.sensitivity_data = self._get_sensitivity_data()
-        # self.montecarlo_data = self._get_montecarlo_data()

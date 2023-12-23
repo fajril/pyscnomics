@@ -1,10 +1,11 @@
 Traceback (most recent call last):
-  File "C:\Users\Abdan\Documents\GitHub\pyscnomics\main.py", line 167, in <module>
+  File "C:\Users\Abdan\Documents\GitHub\pyscnomics\main.py", line 166, in <module>
     main(workbook_path=sys.argv[1], mode=sys.argv[2])
-  File "C:\Users\Abdan\Documents\GitHub\pyscnomics\main.py", line 33, in main
-    psc, psc_arguments, summary_arguments, data = initiate_contract(workbook_path)
-  File "C:\Users\Abdan\Documents\GitHub\pyscnomics\pyscnomics\io\parse.py", line 27, in initiate_contract
-    data = Aggregate(workbook_to_read=workbook_path)
+  File "C:\Users\Abdan\Documents\GitHub\pyscnomics\main.py", line 32, in main
+    psc, psc_arguments, summary_arguments, data = InitiateContract(workbook_path=workbook_path).activate()
+  File "<string>", line 4, in __init__
+  File "C:\Users\Abdan\Documents\GitHub\pyscnomics\pyscnomics\io\parse.py", line 64, in __post_init__
+    self.data = Aggregate(workbook_to_read=self.workbook_path)
   File "<string>", line 5, in __init__
   File "C:\Users\Abdan\Documents\GitHub\pyscnomics\pyscnomics\io\aggregator.py", line 78, in __post_init__
     self.prepare_data()
@@ -13,6 +14,6 @@ Traceback (most recent call last):
   File "C:\Users\Abdan\Documents\GitHub\pyscnomics\pyscnomics\io\spreadsheet.py", line 1722, in _get_optimization_data
     return OptimizationData(
   File "<string>", line 3, in __init__
-  File "C:\Users\Abdan\Documents\GitHub\pyscnomics\pyscnomics\io\config.py", line 3090, in __post_init__
+  File "C:\Users\Abdan\Documents\GitHub\pyscnomics\pyscnomics\io\config.py", line 3101, in __post_init__
     raise OptimizationDataException(
 pyscnomics.io.config.OptimizationDataException: Incorrect optimization data input. The maximum value(s) must be larger than the minimum value(s). 

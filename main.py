@@ -3,7 +3,7 @@ Python Script as the entry point of Excel Workbook
 """
 import xlwings as xw
 
-from pyscnomics.io.parse import initiate_contract
+from pyscnomics.io.parse import InitiateContract
 
 from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt
 from pyscnomics.Optimize.optimization import optimize_psc
@@ -29,7 +29,7 @@ def main(workbook_path, mode):
         The available mode are: 'Standard', 'Optimization', 'Sensitivity', 'Uncertainty'
     """
     # Initiate the contract object
-    psc, psc_arguments, summary_arguments, data = initiate_contract(workbook_path)
+    psc, psc_arguments, summary_arguments, data = InitiateContract(workbook_path=workbook_path).activate()
 
     # Defining the workbook object
     workbook_object = xw.Book(workbook_path)
@@ -166,9 +166,8 @@ if __name__ == '__main__':
     main(workbook_path=sys.argv[1], mode=sys.argv[2])
 
     # import time
-
-    # workbook_path = "Workbook_Test Optimization_GS.xlsb"
-    # run_mode = 'Optimization'
+    # workbook_path = "Workbook_Filled CR.xlsb"
+    # run_mode = 'Standard'
     #
     # start_time = time.time()
     # main(workbook_path=workbook_path, mode=run_mode)
