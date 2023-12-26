@@ -1,3 +1,6 @@
+"""
+Configuration to undertake optimization study.
+"""
 from scipy.optimize import minimize_scalar
 
 from pyscnomics.contracts.costrecovery import CostRecovery
@@ -19,7 +22,8 @@ def adjust_contract(contract: CostRecovery | GrossSplit,
                     summary_argument: dict,
                     target_parameter: str) -> (CostRecovery | GrossSplit, dict):
     """
-    The function used to adjust the variable within a psc contract object. This function will be used by optimize_psc().
+    The function used to adjust the variable within a psc contract object.
+    This function will be used by optimize_psc().
 
     Parameters
     ----------
