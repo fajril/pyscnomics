@@ -18,7 +18,12 @@ from pyscnomics.econ.results import CashFlow
 # from pyscnomics.tools.helper import summarizer
 from pyscnomics.io.parse import InitiateContract
 
-from pyscnomics.Optimize.sensitivity import Sensitivity
+from pyscnomics.optimize.sensitivity import (
+    get_multipliers,
+    get_oil_price_adjustment,
+    get_gas_price_adjustment,
+    get_opex_adjustment,
+)
 
 
 '----------------------------------------------- LIFTING DATA ----------------------------------------------'
@@ -259,19 +264,65 @@ asr_cost_data = (
 # print('\t')
 # print('timer end = ', timer_end)
 
-t1 = Sensitivity(
-    min_value=0.5,
-    max_value=0.5,
-)
-t1.get_multipliers()
+case = InitiateContract()
 
-t2 = t1.prepare_data(multipliers=t1.multipliers["Oil Price"][0, :])
+# Sensitivity data
+oil_lifting_aggregate_total = case.data.oil_lifting_aggregate_total
+gas_lifting_aggregate_total = case.data.gas_lifting_aggregate_total
+opex_aggregate = case.data.opex_aggregate
+
+# print('\t')
+# print(f'Filetype: {type(oil_lifting_aggregate_total)}')
+# print(f'Length: {len(oil_lifting_aggregate_total)}')
+# print('oil_lifting_aggregate_total = \n', oil_lifting_aggregate_total)
+
+# Multipliers
+multipliers = get_multipliers(
+    min_deviation=1.,
+    max_deviation=1.,
+)
+
+print('\t')
+print(f'Filetype: {type(multipliers)}')
+print(f'Shape: {multipliers.shape}')
+print('multipliers = \n', multipliers)
+
+print('\t')
+print('========================================================================================')
+
+oil_lifting_aggregate_total = get_oil_price_adjustment(
+    contract_type=case.contract_type,
+    oil_lifting_aggregate_total=oil_lifting_aggregate_total,
+    oil_price_multiplier=multipliers[0, 0, 0],
+)
+
+gas_lifting_aggregate_total = get_gas_price_adjustment(
+    contract_type=case.contract_type,
+    gas_lifting_aggregate_total=gas_lifting_aggregate_total,
+    gas_price_multiplier=multipliers[0, 0, 1],
+)
+
+opex_aggregate = get_opex_adjustment(
+    contract_type=case.contract_type,
+    opex_aggregate=opex_aggregate,
+    opex_multiplier=multipliers[0, 0, 2],
+)
+
+# print('\t')
+# print(f'Filetype: {type(opex_aggregate["PSC 2"][0].cost)}')
+# print(f'Length: {len(opex_aggregate["PSC 2"][0].cost)}')
+# print('opex_aggregate = \n', opex_aggregate["PSC 2"][0].cost)
+
+# print('\t')
+# print(f'Oil price after adjustment:')
+# for i, val in enumerate(t1):
+#     print(t1[i].price)
 
 # print('\t')
 # print(f'Filetype: {type(t1)}')
 # print(f'Length: {len(t1)}')
-# print('t1 = ', t1)
-#
+# print('t1 = \n', t1)
+
 # print('\t')
 # print(f'Filetype: {type(t2)}')
 # print(f'Length: {len(t2)}')

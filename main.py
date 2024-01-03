@@ -6,7 +6,7 @@ import xlwings as xw
 from pyscnomics.io.parse import InitiateContract
 
 from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt
-from pyscnomics.Optimize.optimization import optimize_psc
+from pyscnomics.optimize.optimization import optimize_psc
 
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit

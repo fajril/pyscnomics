@@ -14,115 +14,225 @@ from pyscnomics.econ.revenue import Lifting
 from pyscnomics.io.aggregator import Aggregate
 
 
-@dataclass
-class Sensitivity:
+def get_multipliers(
+    min_deviation: float,
+    max_deviation: float,
+    base_value: float = 1.0,
+    step: int = 2,
+    number_of_params: int = 5,
+) -> np.ndarray:
     """
-    Prepare configurations for sensitivity analysis.
+    Generate multipliers for different economic parameters within a specified range.
 
     Parameters
     ----------
-    min_value: float
-        Minimum multiplier value. Defaults to None.
-    max_value: float
-        Maximum multiplier value. Defaults to None.
+    min_deviation: float
+        The minimum deviation from the base value.
+    max_deviation: float
+        The maximum deviation from the base value.
+    base_value: float, optional
+        The base value for the multipliers. Default is 1.0.
+    step: int, optional
+        The number of steps to create multipliers. Default is 10.
+    number_of_params: int, optional
+        The number of parameters to vary in sensitivity analysis. Default is 5.
 
-    Notes
-    -----
-    -   If min_value is not provided, it defaults to base_value - 0.5.
-    -   If max_value is not provided, it defaults to base_value + 0.5.
+    Returns
+    -------
+    multipliers: np.ndarray
+        A 3D NumPy array containing multipliers for different economic factors.
     """
-    # Arguments
-    base_value: float = field(default=1.0, init=False, repr=False)
-    step: int = field(default=5, init=False, repr=False)
+    # Specify the minimum and maximum values
+    min_val = base_value - min_deviation
+    max_val = base_value + max_deviation
 
-    # Attributes
-    min_value: float = field(default=None)
-    max_value: float = field(default=None)
+    min_multipliers = np.linspace(min_val, base_value, step + 1)
+    max_multipliers = np.linspace(base_value, max_val, step + 1)
+    tot_multipliers = np.concatenate((min_multipliers, max_multipliers[1:]))
 
-    # Attributes to be defined later
-    multipliers: dict = field(default=None, init=False, repr=False)
-    data: Aggregate = field(default=None, init=False, repr=False)
+    # Specify array multipliers
+    multipliers = (
+        np.ones(
+            [number_of_params, len(tot_multipliers), number_of_params],
+            dtype=np.float_,
+        )
+    )
 
-    def __post_init__(self):
-        # Prepare attribute min_value
-        if self.min_value is None:
-            self.min_value = self.base_value - 0.5
+    for i in range(number_of_params):
+        multipliers[i, :, i] = tot_multipliers.copy()
 
-        # Prepare attribute max_value
-        if self.max_value is None:
-            self.max_value = self.base_value + 0.5
+    return multipliers
 
-        # Call the data
-        self.data = Aggregate()
-        self.data.fit()
 
-    def get_multipliers(self) -> dict:
-        """
-        Generate a dictionary of multipliers for various parameters within specified ranges.
+def get_oil_price_adjustment(
+    contract_type: str,
+    oil_lifting_aggregate_total: dict | tuple,
+    oil_price_multiplier: float,
+) -> tuple | dict:
+    """
+    Adjust oil and condensate prices for sensitivity analysis.
 
-        Returns
-        -------
-        dict
-            A dictionary containing multipliers for different parameters.
-        """
-        min_multipliers = np.linspace(self.base_value - self.min_value, self.base_value, self.step + 1)
-        max_multipliers = np.linspace(self.base_value, self.base_value + self.max_value, self.step + 1)
-        tot_multipliers = np.concatenate((min_multipliers, max_multipliers[1:]))
+    Parameters
+    ----------
+    contract_type: str
+        The type of contract.
+    oil_lifting_aggregate_total: dict or tuple
+        The aggregate of oil + condensate lifting data; organized either as a dictionary
+        for transition contracts or a tuple for regular contracts.
+    oil_price_multiplier: float
+        A scalar multiplier to adjust oil prices.
 
-        multipliers_name = [
-            "Oil Price",
-            "Gas Price",
-            "OPEX",
-            "CAPEX",
-            "Cum. Prod",
-        ]
+    Returns
+    -------
+    dict or tuple
+        The adjusted oil lifting aggregate total with updated prices.
+    """
+    # For single contract
+    if "Transition" not in contract_type:
+        oil_lifting_aggregate_total_prices = (
+            [
+                oil_lifting_aggregate_total[i].price
+                for i, val in enumerate(oil_lifting_aggregate_total)
+            ]
+        )
 
-        self.multipliers = {
-            key: np.ones([len(tot_multipliers), len(multipliers_name)], dtype=np.float_)
-            for key in multipliers_name
+        for i, val in enumerate(oil_lifting_aggregate_total):
+            oil_lifting_aggregate_total[i].price = (
+                oil_lifting_aggregate_total_prices[i] * oil_price_multiplier
+            ).copy()
+
+    # For transition contract
+    else:
+        oil_lifting_aggregate_total_prices = {
+            psc: (
+                [
+                    oil_lifting_aggregate_total[psc][i].price
+                    for i, val in enumerate(oil_lifting_aggregate_total[psc])
+                ]
+            )
+            for psc in ["PSC 1", "PSC 2"]
         }
 
-        for i, key in enumerate(multipliers_name):
-            self.multipliers[key][:, i] = tot_multipliers
+        for psc in ["PSC 1", "PSC 2"]:
+            for i, val in enumerate(oil_lifting_aggregate_total[psc]):
+                oil_lifting_aggregate_total[psc][i].price = (
+                    oil_lifting_aggregate_total_prices[psc][i] * oil_price_multiplier
+                ).copy()
 
-    def prepare_data(
-        self,
-        multipliers: np.ndarray,
-    ):
+    return oil_lifting_aggregate_total
 
-        params_name = [
-            "Oil Price",
-            "Gas Price",
-            "OPEX",
-            "CAPEX",
-            "Cum. Prod",
-        ]
 
-        params_value = [
-            self.data.oil_lifting_aggregate_total,
-            self.data.gas_lifting_aggregate_total,
-        ]
+def get_gas_price_adjustment(
+    contract_type: str,
+    gas_lifting_aggregate_total: dict | tuple,
+    gas_price_multiplier: float,
+) -> tuple | dict:
+    """
+    Adjust gas, lpg propane, and lpg butane prices for sensitivity analysis.
 
-        # # Modify oil price
-        # oil_price_adjusted = (
-        #     [
-        #         multipliers[0] * self.data.oil_lifting_aggregate_total[i].price
-        #         for i, oil_lft in enumerate(self.data.oil_lifting_aggregate_total)
-        #     ]
-        # )
-        #
-        # # Modify gas price
-        # gas_price_adjusted = (
-        #     [
-        #         multipliers[1] * self.data.gas_lifting_aggregate_total[i].price
-        #         for i, gas_lft in enumerate(self.data.gas_lifting_aggregate_total)
-        #     ]
-        # )
-        #
-        # print('\t')
-        # print(f'Filetype: {type(gas_price_adjusted)}')
-        # print(f'Length: {len(gas_price_adjusted)}')
-        # print('gas_price_adjusted = \n', gas_price_adjusted)
+    Parameters
+    ----------
+    contract_type: str
+        The type of contract.
+    gas_lifting_aggregate_total: dict or tuple
+        The aggregate of gas + lpg propane + lpg butane lifting data; organized either as
+        a dictionary for transition contracts or a tuple for regular contracts.
+    gas_price_multiplier: float
+        A scalar multiplier to adjust gas prices.
+
+    Returns
+    -------
+    dict or tuple
+        The adjusted gas lifting aggregate total with updated prices.
+    """
+    # For single contract
+    if "Transition" not in contract_type:
+        gas_lifting_aggregate_total_prices = (
+            [
+                gas_lifting_aggregate_total[i].price
+                for i, val in enumerate(gas_lifting_aggregate_total)
+            ]
+        )
+
+        for i, val in enumerate(gas_lifting_aggregate_total):
+            gas_lifting_aggregate_total[i].price = (
+                gas_lifting_aggregate_total_prices[i] * gas_price_multiplier
+            ).copy()
+
+    # For transition contract
+    else:
+        gas_lifting_aggregate_total_prices = {
+            psc: (
+                [
+                    gas_lifting_aggregate_total[psc][i].price
+                    for i, val in enumerate(gas_lifting_aggregate_total[psc])
+                ]
+            )
+            for psc in ["PSC 1", "PSC 2"]
+        }
+
+        for psc in ["PSC 1", "PSC 2"]:
+            for i, val in enumerate(gas_lifting_aggregate_total[psc]):
+                gas_lifting_aggregate_total[psc][i].price = (
+                    gas_lifting_aggregate_total_prices[psc][i] * gas_price_multiplier
+                ).copy()
+
+    return gas_lifting_aggregate_total
+
+
+def get_opex_adjustment(
+    contract_type: str,
+    opex_aggregate: dict | tuple,
+    opex_multiplier: float,
+) -> tuple | dict:
+    """
+    Adjust opex cost for sensitivity analysis.
+
+    Parameters
+    ----------
+    contract_type: str
+        The type of contract.
+    opex_aggregate: dict or tuple
+        The aggregate total of OPEX costs, organized either as a dictionary for
+        transition contracts or a tuple for regular contracts.
+    opex_multiplier: float
+        A scalar multiplier to adjust OPEX costs.
+
+    Returns
+    -------
+    dict or tuple
+        The adjusted OPEX aggregate with updated costs.
+    """
+    # For single contract
+    if "Transition" not in contract_type:
+        opex_aggregate_cost = (
+            [
+                opex_aggregate[i].cost
+                for i, val in enumerate(opex_aggregate)
+            ]
+        )
+
+        for i, val in enumerate(opex_aggregate):
+            opex_aggregate[i].cost = (opex_aggregate_cost[i] * opex_multiplier).copy()
+
+    # For transition contract
+    else:
+        opex_aggregate_cost = {
+            psc: (
+                [
+                    opex_aggregate[psc][i].cost
+                    for i, val in enumerate(opex_aggregate[psc])
+                ]
+            )
+            for psc in ["PSC 1", "PSC 2"]
+        }
+
+        for psc in ["PSC 1", "PSC 2"]:
+            for i, val in enumerate(opex_aggregate[psc]):
+                opex_aggregate[psc][i].cost = (opex_aggregate_cost[psc][i] * opex_multiplier).copy()
+
+    return opex_aggregate
+
 
 # def run_contract(contract: CostRecovery | GrossSplit,
 #                  contract_arguments: dict,

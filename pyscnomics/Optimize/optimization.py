@@ -15,12 +15,14 @@ class OptimizationException(Exception):
     pass
 
 
-def adjust_contract(contract: CostRecovery | GrossSplit,
-                    contract_arguments: dict,
-                    variable: OptimizationParameter,
-                    value: float,
-                    summary_argument: dict,
-                    target_parameter: str) -> (CostRecovery | GrossSplit, dict):
+def adjust_contract(
+    contract: CostRecovery | GrossSplit,
+    contract_arguments: dict,
+    variable: OptimizationParameter,
+    value: float,
+    summary_argument: dict,
+    target_parameter: str
+) -> (CostRecovery | GrossSplit, dict):
     """
     The function used to adjust the variable within a psc contract object.
     This function will be used by optimize_psc().
@@ -101,13 +103,14 @@ def adjust_contract(contract: CostRecovery | GrossSplit,
     return result_psc, contract
 
 
-def optimize_psc(dict_optimization: dict,
-                 contract: CostRecovery | GrossSplit,
-                 contract_arguments: dict,
-                 target_optimization_value: float,
-                 summary_argument: dict,
-                 target_parameter: OptimizationTarget = OptimizationTarget.IRR,
-                 ) -> (list, list, float):
+def optimize_psc(
+    dict_optimization: dict,
+    contract: CostRecovery | GrossSplit,
+    contract_arguments: dict,
+    target_optimization_value: float,
+    summary_argument: dict,
+    target_parameter: OptimizationTarget = OptimizationTarget.IRR,
+ ) -> (list, list, float):
     """
     The function to get contract variable(s) that resulting the desired target or contract's economic target.
 
@@ -150,7 +153,8 @@ def optimize_psc(dict_optimization: dict,
     result_optimization: float
         The value of the targeted parameter which the result of the optimization.
     """
-    # Changing the Optimization selection from Enum to string in order to retrieve the result from summary dictionary
+    # Changing the Optimization selection from Enum to string in order to retrieve
+    # the result from summary dictionary
     if target_parameter is OptimizationTarget.IRR:
         target_parameter = 'ctr_irr'
 
