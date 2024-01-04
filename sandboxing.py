@@ -18,11 +18,12 @@ from pyscnomics.econ.results import CashFlow
 # from pyscnomics.tools.helper import summarizer
 from pyscnomics.io.parse import InitiateContract
 
+from pyscnomics.optimize.sensitivity import SensitivityData
+
 from pyscnomics.optimize.sensitivity import (
     get_multipliers,
-    get_oil_price_adjustment,
-    get_gas_price_adjustment,
-    get_opex_adjustment,
+    get_price_and_rate_adjustment,
+    get_rate_adjustment,
 )
 
 
@@ -264,20 +265,21 @@ asr_cost_data = (
 # print('\t')
 # print('timer end = ', timer_end)
 
-case = InitiateContract()
+data = Aggregate()
+data.fit()
 
 # Sensitivity data
-oil_lifting_aggregate_total = case.data.oil_lifting_aggregate_total
-gas_lifting_aggregate_total = case.data.gas_lifting_aggregate_total
-opex_aggregate = case.data.opex_aggregate
-
-# print('\t')
-# print(f'Filetype: {type(oil_lifting_aggregate_total)}')
-# print(f'Length: {len(oil_lifting_aggregate_total)}')
-# print('oil_lifting_aggregate_total = \n', oil_lifting_aggregate_total)
+oil_lifting_aggregate_total = data.oil_lifting_aggregate_total
+gas_lifting_aggregate_total = data.gas_lifting_aggregate_total
+sulfur_lifting_aggregate = data.sulfur_lifting_aggregate
+electricity_lifting_aggregate = data.electricity_lifting_aggregate
+co2_lifting_aggregate = data.co2_lifting_aggregate
+opex_aggregate = data.opex_aggregate
+tangible_cost_aggregate = data.tangible_cost_aggregate
+intangible_cost_aggregate = data.intangible_cost_aggregate
 
 # Multipliers
-multipliers = get_multipliers(
+multipliers, total_run = get_multipliers(
     min_deviation=1.,
     max_deviation=1.,
 )
@@ -288,35 +290,18 @@ print(f'Shape: {multipliers.shape}')
 print('multipliers = \n', multipliers)
 
 print('\t')
-print('========================================================================================')
+print(f'Filetype: {type(total_run)}')
+print('total_run = ', total_run)
 
-oil_lifting_aggregate_total = get_oil_price_adjustment(
-    contract_type=case.contract_type,
-    oil_lifting_aggregate_total=oil_lifting_aggregate_total,
-    oil_price_multiplier=multipliers[0, 0, 0],
+print('\t')
+print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+
+sensitivity = SensitivityData(
+    contract_type=data.general_config_data.type_of_contract,
+    oil_lifting_aggr_tot_init=oil_lifting_aggregate_total,
+    gas_lifting_aggr_tot_init=gas_lifting_aggregate_total,
+    multipliers=multipliers[0, 0, :],
 )
-
-gas_lifting_aggregate_total = get_gas_price_adjustment(
-    contract_type=case.contract_type,
-    gas_lifting_aggregate_total=gas_lifting_aggregate_total,
-    gas_price_multiplier=multipliers[0, 0, 1],
-)
-
-opex_aggregate = get_opex_adjustment(
-    contract_type=case.contract_type,
-    opex_aggregate=opex_aggregate,
-    opex_multiplier=multipliers[0, 0, 2],
-)
-
-# print('\t')
-# print(f'Filetype: {type(opex_aggregate["PSC 2"][0].cost)}')
-# print(f'Length: {len(opex_aggregate["PSC 2"][0].cost)}')
-# print('opex_aggregate = \n', opex_aggregate["PSC 2"][0].cost)
-
-# print('\t')
-# print(f'Oil price after adjustment:')
-# for i, val in enumerate(t1):
-#     print(t1[i].price)
 
 # print('\t')
 # print(f'Filetype: {type(t1)}')

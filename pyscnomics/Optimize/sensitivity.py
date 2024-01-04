@@ -5,12 +5,6 @@ import numpy as np
 import pandas as pd
 from dataclasses import dataclass, field, InitVar
 
-from pyscnomics.contracts.costrecovery import CostRecovery
-from pyscnomics.contracts.grossplit import GrossSplit
-from pyscnomics.tools.summary import get_summary
-from pyscnomics.tools import table
-from pyscnomics.econ.selection import FluidType
-from pyscnomics.econ.revenue import Lifting
 from pyscnomics.io.aggregator import Aggregate
 
 
@@ -61,514 +55,417 @@ def get_multipliers(
     for i in range(number_of_params):
         multipliers[i, :, i] = tot_multipliers.copy()
 
-    return multipliers
+    # Specify total number of run
+    total_run = len(tot_multipliers) * number_of_params
+
+    return multipliers, total_run
 
 
-def get_oil_price_adjustment(
+def get_price_and_rate_adjustment(
     contract_type: str,
-    oil_lifting_aggregate_total: dict | tuple,
-    oil_price_multiplier: float,
+    lifting_aggregate: tuple | dict,
+    price_multiplier: float,
+    rate_multiplier: float,
 ) -> tuple | dict:
     """
-    Adjust oil and condensate prices for sensitivity analysis.
+    Adjust price and lifting rate for sensitivity analysis.
 
     Parameters
     ----------
     contract_type: str
         The type of contract.
-    oil_lifting_aggregate_total: dict or tuple
-        The aggregate of oil + condensate lifting data; organized either as a dictionary
-        for transition contracts or a tuple for regular contracts.
-    oil_price_multiplier: float
-        A scalar multiplier to adjust oil prices.
+    lifting_aggregate: tuple or dict
+        The aggregate of lifting data for a particular fluid type.
+    price_multiplier: float
+        Multiplier to adjust prices.
+    rate_multiplier: float
+        Multiplier to adjust lifting rates.
 
     Returns
     -------
-    dict or tuple
-        The adjusted oil lifting aggregate total with updated prices.
+    tuple or dict
+        The adjusted lifting aggregate with updated price and lifting rate.
     """
     # For single contract
     if "Transition" not in contract_type:
-        oil_lifting_aggregate_total_prices = (
-            [
-                oil_lifting_aggregate_total[i].price
-                for i, val in enumerate(oil_lifting_aggregate_total)
-            ]
-        )
+        lifting_aggregate_attrs = {
+            "price": (
+                [
+                    lifting_aggregate[i].price
+                    for i, val in enumerate(lifting_aggregate)
+                ]
+            ),
+            "rate": (
+                [
+                    lifting_aggregate[i].lifting_rate
+                    for i, val in enumerate(lifting_aggregate)
+                ]
+            ),
+        }
 
-        for i, val in enumerate(oil_lifting_aggregate_total):
-            oil_lifting_aggregate_total[i].price = (
-                oil_lifting_aggregate_total_prices[i] * oil_price_multiplier
+        for i, val in enumerate(lifting_aggregate):
+            # Adjust price
+            lifting_aggregate[i].price = (
+                lifting_aggregate_attrs["price"][i] * price_multiplier
+            ).copy()
+
+            # Adjust lifting rate
+            lifting_aggregate[i].lifting_rate = (
+                lifting_aggregate_attrs["rate"][i] * rate_multiplier
             ).copy()
 
     # For transition contract
     else:
-        oil_lifting_aggregate_total_prices = {
-            psc: (
-                [
-                    oil_lifting_aggregate_total[psc][i].price
-                    for i, val in enumerate(oil_lifting_aggregate_total[psc])
-                ]
-            )
-            for psc in ["PSC 1", "PSC 2"]
+        lifting_aggregate_attrs = {
+            "price": {
+                psc: (
+                    [
+                        lifting_aggregate[psc][i].price
+                        for i, val in enumerate(lifting_aggregate[psc])
+                    ]
+                )
+                for psc in ["PSC 1", "PSC 2"]
+            },
+            "rate": {
+                psc: (
+                    [
+                        lifting_aggregate[psc][i].lifting_rate
+                        for i, val in enumerate(lifting_aggregate[psc])
+                    ]
+                )
+                for psc in ["PSC 1", "PSC 2"]
+            },
         }
 
         for psc in ["PSC 1", "PSC 2"]:
-            for i, val in enumerate(oil_lifting_aggregate_total[psc]):
-                oil_lifting_aggregate_total[psc][i].price = (
-                    oil_lifting_aggregate_total_prices[psc][i] * oil_price_multiplier
+            for i, val in enumerate(lifting_aggregate[psc]):
+                # Adjust price
+                lifting_aggregate[psc][i].price = (
+                    lifting_aggregate_attrs["price"][psc][i] * price_multiplier
                 ).copy()
 
-    return oil_lifting_aggregate_total
+                # Adjust lifting rate
+                lifting_aggregate[psc][i].lifting_rate = (
+                    lifting_aggregate_attrs["rate"][psc][i] * rate_multiplier
+                ).copy()
+
+    return lifting_aggregate
 
 
-def get_gas_price_adjustment(
+def get_rate_adjustment(
     contract_type: str,
-    gas_lifting_aggregate_total: dict | tuple,
-    gas_price_multiplier: float,
+    lifting_aggregate: tuple | dict,
+    rate_multiplier: float,
 ) -> tuple | dict:
     """
-    Adjust gas, lpg propane, and lpg butane prices for sensitivity analysis.
+    Adjust lifting rate for sensitivity analysis.
 
     Parameters
     ----------
     contract_type: str
         The type of contract.
-    gas_lifting_aggregate_total: dict or tuple
-        The aggregate of gas + lpg propane + lpg butane lifting data; organized either as
-        a dictionary for transition contracts or a tuple for regular contracts.
-    gas_price_multiplier: float
-        A scalar multiplier to adjust gas prices.
+    lifting_aggregate: tuple or dict
+        The aggregate of lifting for a particular fluid type.
+    rate_multiplier: float
+        A scalar multiplier to adjust lifting rate.
 
     Returns
     -------
-    dict or tuple
-        The adjusted gas lifting aggregate total with updated prices.
+    tuple or dict
+        The adjusted lifting aggregate with updated lifting rate.
     """
     # For single contract
     if "Transition" not in contract_type:
-        gas_lifting_aggregate_total_prices = (
+        lifting_aggregate_rate = (
             [
-                gas_lifting_aggregate_total[i].price
-                for i, val in enumerate(gas_lifting_aggregate_total)
+                lifting_aggregate[i].lifting_rate
+                for i, val in enumerate(lifting_aggregate)
             ]
         )
 
-        for i, val in enumerate(gas_lifting_aggregate_total):
-            gas_lifting_aggregate_total[i].price = (
-                gas_lifting_aggregate_total_prices[i] * gas_price_multiplier
+        for i, val in enumerate(lifting_aggregate):
+            lifting_aggregate[i].lifting_rate = (
+                lifting_aggregate_rate[i] * rate_multiplier
             ).copy()
 
     # For transition contract
     else:
-        gas_lifting_aggregate_total_prices = {
+        lifting_aggregate_rate = {
             psc: (
                 [
-                    gas_lifting_aggregate_total[psc][i].price
-                    for i, val in enumerate(gas_lifting_aggregate_total[psc])
+                    lifting_aggregate[psc][i].lifting_rate
+                    for i, val in enumerate(lifting_aggregate[psc])
                 ]
             )
             for psc in ["PSC 1", "PSC 2"]
         }
 
         for psc in ["PSC 1", "PSC 2"]:
-            for i, val in enumerate(gas_lifting_aggregate_total[psc]):
-                gas_lifting_aggregate_total[psc][i].price = (
-                    gas_lifting_aggregate_total_prices[psc][i] * gas_price_multiplier
+            for i, val in enumerate(lifting_aggregate[psc]):
+                lifting_aggregate[psc][i].lifting_rate = (
+                    lifting_aggregate_rate[psc][i] * rate_multiplier
                 ).copy()
 
-    return gas_lifting_aggregate_total
+    return lifting_aggregate
 
 
-def get_opex_adjustment(
+def get_cost_adjustment(
     contract_type: str,
-    opex_aggregate: dict | tuple,
-    opex_multiplier: float,
+    cost_aggregate: tuple | dict,
+    cost_multiplier: float,
 ) -> tuple | dict:
     """
-    Adjust opex cost for sensitivity analysis.
+    Adjust costs for sensitivity analysis.
 
     Parameters
     ----------
     contract_type: str
         The type of contract.
-    opex_aggregate: dict or tuple
-        The aggregate total of OPEX costs, organized either as a dictionary for
-        transition contracts or a tuple for regular contracts.
-    opex_multiplier: float
-        A scalar multiplier to adjust OPEX costs.
+    cost_aggregate: tuple or dict
+        The aggregate of costs for a particular cost allocation.
+    cost_multiplier: float
+        A scalar multiplier to adjust costs.
 
     Returns
     -------
-    dict or tuple
-        The adjusted OPEX aggregate with updated costs.
+    tuple or dict
+        The adjusted cost aggregate with updated cost.
     """
     # For single contract
     if "Transition" not in contract_type:
-        opex_aggregate_cost = (
+        cost_aggregate_attr = (
             [
-                opex_aggregate[i].cost
-                for i, val in enumerate(opex_aggregate)
+                cost_aggregate[i].cost
+                for i, val in enumerate(cost_aggregate)
             ]
         )
 
-        for i, val in enumerate(opex_aggregate):
-            opex_aggregate[i].cost = (opex_aggregate_cost[i] * opex_multiplier).copy()
+        for i, val in enumerate(cost_aggregate):
+            cost_aggregate[i].cost = (cost_aggregate_attr[i] * cost_multiplier).copy()
 
     # For transition contract
     else:
-        opex_aggregate_cost = {
+        cost_aggregate_attr = {
             psc: (
                 [
-                    opex_aggregate[psc][i].cost
-                    for i, val in enumerate(opex_aggregate[psc])
+                    cost_aggregate[psc][i].cost
+                    for i, val in enumerate(cost_aggregate[psc])
                 ]
             )
             for psc in ["PSC 1", "PSC 2"]
         }
 
         for psc in ["PSC 1", "PSC 2"]:
-            for i, val in enumerate(opex_aggregate[psc]):
-                opex_aggregate[psc][i].cost = (opex_aggregate_cost[psc][i] * opex_multiplier).copy()
+            for i, val in enumerate(cost_aggregate[psc]):
+                cost_aggregate[psc][i].cost = (cost_aggregate_attr[psc][i] * cost_multiplier).copy()
 
-    return opex_aggregate
+    return cost_aggregate
 
 
-# def run_contract(contract: CostRecovery | GrossSplit,
-#                  contract_arguments: dict,
-#                  summary_arguments: dict):
-#     contract.run(**contract_arguments)
+class SensitivityException(Exception):
+    """ Exception to be raised for a misuse of SensitivityData class """
+
+    pass
+
+
+@dataclass
+class SensitivityData:
+    """ 123 """
+    # Parameters
+    contract_type: str
+    oil_lifting_aggr_tot_init: InitVar[tuple | dict] = field(repr=False)
+    gas_lifting_aggr_tot_init: InitVar[tuple | dict] = field(repr=False)
+    # sulfur_lifting_aggregate: dict | tuple = field(repr=False)
+    # electricity_lifting_aggregate: dict | tuple = field(repr=False)
+    # co2_lifting_aggregate: dict | tuple = field(repr=False)
+    # opex_aggregate: dict | tuple = field(repr=False)
+    # tangible_cost_aggregate: dict | tuple = field(repr=False)
+    # intangible_cost_aggregate: dict | tuple = field(repr=False)
+    multipliers: np.ndarray
+
+    # Attributes to be defined later
+    oil_lifting_aggregate_total: tuple | dict = field(init=False, repr=False)
+    gas_lifting_aggregate_total: tuple | dict = field(init=False, repr=False)
+
+    sensitivity_data: dict = field(init=False)
+
+    def __post_init__(
+        self,
+        oil_lifting_aggr_tot_init: tuple | dict,
+        gas_lifting_aggr_tot_init: tuple | dict,
+    ):
+        # Adjust oil and condensate lifting data
+        self.oil_lifting_aggregate_total = (
+            get_price_and_rate_adjustment(
+                contract_type=self.contract_type,
+                lifting_aggregate=oil_lifting_aggr_tot_init,
+                price_multiplier=self.multipliers[0],
+                rate_multiplier=self.multipliers[4],
+            )
+        )
+
+        # Adjust gas, lpg propane, and lpg_butane lifting data
+        self.gas_lifting_aggregate_total = (
+            get_price_and_rate_adjustment(
+                contract_type=self.contract_type,
+                lifting_aggregate=gas_lifting_aggr_tot_init,
+                price_multiplier=self.multipliers[1],
+                rate_multiplier=self.multipliers[4],
+            )
+        )
+
+        print('\t')
+        print(f'Filetype: {type(self.oil_lifting_aggregate_total)}')
+        print(f'Length: {len(self.oil_lifting_aggregate_total)}')
+        print('self.oil_lifting_aggregate_total = \n', self.oil_lifting_aggregate_total)
+
+        print('\t')
+        print(f'Filetype: {type(self.gas_lifting_aggregate_total)}')
+        print(f'Length: {len(self.gas_lifting_aggregate_total)}')
+        print('self.gas_lifting_aggregate_total = \n', self.gas_lifting_aggregate_total)
+
+        # # Adjust oil price
+        # oil_price_adjusted = get_oil_price_adjustment(
+        #     contract_type=self.contract_type,
+        #     oil_lifting_aggregate_total=self.oil_lifting_aggregate_total,
+        #     oil_price_multiplier=self.multipliers[0],
+        # )
+        #
+        # # Adjust gas price
+        # gas_price_adjusted = get_gas_price_adjustment(
+        #     contract_type=self.contract_type,
+        #     gas_lifting_aggregate_total=self.gas_lifting_aggregate_total,
+        #     gas_price_multiplier=self.multipliers[1],
+        # )
+        #
+        # # Adjust opex
+        # opex_adjusted = get_opex_adjustment(
+        #     contract_type=self.contract_type,
+        #     opex_aggregate=self.opex_aggregate,
+        #     opex_multiplier=self.multipliers[2],
+        # )
+        #
+        # # Adjust capex
+        # capex_aggregates = [self.tangible_cost_aggregate, self.intangible_cost_aggregate]
+        # capex_adjusted = {
+        #     key: get_capex_adjustment(
+        #         contract_type=self.contract_type,
+        #         capex_aggregate=capex_aggregates[i],
+        #         capex_multiplier=self.multipliers[3],
+        #     )
+        #     for i, key in enumerate(["tangible", "intangible"])
+        # }
+        #
+        # # Adjust lifting rate
+        # cum_prod_aggregates = [
+        #     self.oil_lifting_aggregate_total,
+        #     self.gas_lifting_aggregate_total,
+        #     self.sulfur_lifting_aggregate,
+        #     self.electricity_lifting_aggregate,
+        #     self.co2_lifting_aggregate,
+        # ]
+        # cum_prod_adjusted = {
+        #     key: get_lifting_adjustment(
+        #         contract_type=self.contract_type,
+        #         lifting_aggregate=cum_prod_aggregates[i],
+        #         lifting_multiplier=self.multipliers[4],
+        #     )
+        #     for i, key in enumerate(
+        #         [
+        #             "oil_total",
+        #             "gas_total",
+        #             "sulfur",
+        #             "electricity",
+        #             "co2",
+        #         ]
+        #     )
+        # }
+        #
+        # # Prepare sensitivity_data
+        # self.sensitivity_data = {
+        #     "oil_price": oil_price_adjusted,
+        #     "gas_price": gas_price_adjusted,
+        #     "opex": opex_adjusted,
+        #     "capex": capex_adjusted,
+        #     "cum_prod": cum_prod_adjusted,
+        # }
+
+# def get_sensitivity_data(
+#     contract_type: str,
+#     oil_lifting_aggregate_total: dict | tuple,
+#     gas_lifting_aggregate_total: dict | tuple,
+#     sulfur_lifting_aggregate: dict | tuple,
+#     electricity_lifting_aggregate: dict | tuple,
+#     co2_lifting_aggregate: dict | tuple,
+#     opex_aggregate: dict | tuple,
+#     tangible_cost_aggregate: dict | tuple,
+#     intangible_cost_aggregate: dict | tuple,
+#     multipliers: np.ndarray,
+# ):
+#     # Adjust oil price
+#     oil_price_adjusted = get_oil_price_adjustment(
+#         contract_type=contract_type,
+#         oil_lifting_aggregate_total=oil_lifting_aggregate_total,
+#         oil_price_multiplier=multipliers[0],
+#     )
 #
-#     summary_arguments['contract'] = contract
-#     summary = get_summary(**summary_arguments)
+#     # Adjust gas price
+#     gas_price_adjusted = get_gas_price_adjustment(
+#         contract_type=contract_type,
+#         gas_lifting_aggregate_total=gas_lifting_aggregate_total,
+#         gas_price_multiplier=multipliers[1],
+#     )
 #
-#     # # Printing for Debugging
-#     # psc_table_oil = pd.DataFrame()
-#     # psc_table_oil['Year'] = contract.project_years
-#     # psc_table_oil['Lifting'] = contract._oil_lifting.get_lifting_rate_arr()
-#     # psc_table_oil['Price'] = contract._oil_lifting.get_price_arr()
-#     # psc_table_oil['Revenue'] = contract._oil_revenue
-#     # psc_table_oil['Depreciable'] = contract._oil_tangible_expenditures
-#     # psc_table_oil['Opex'] = contract._oil_opex_expenditures
-#     # psc_table_oil['ASR'] = contract._oil_asr_expenditures
-#     # psc_table_oil['Depreciation'] = contract._oil_depreciation
-#     # psc_table_oil['Non Capital'] = contract._oil_non_capital
-#     # psc_table_oil['FTP'] = contract._oil_ftp
-#     # psc_table_oil['FTP - CTR'] = contract._oil_ftp_ctr
-#     # psc_table_oil['FTP - GOV'] = contract._oil_ftp_gov
-#     # psc_table_oil['Investment Credit'] = contract._oil_ic_paid
-#     # psc_table_oil['Unrecovered Cost'] = contract._oil_unrecovered_before_transfer
-#     # psc_table_oil['Cost to Be Recovered'] = contract._oil_cost_to_be_recovered
-#     # psc_table_oil['Cost Recovery'] = contract._oil_cost_recovery
-#     # psc_table_oil['ETS Before Transfer'] = contract._oil_ets_before_transfer
-#     # psc_table_oil['Transfer to Oil'] = contract._transfer_to_oil
-#     # psc_table_oil['Transfer to Gas'] = contract._transfer_to_gas
-#     # psc_table_oil['Unrec after Transfer'] = contract._oil_unrecovered_after_transfer
-#     # psc_table_oil['Cost To Be Recovered After TF'] = contract._oil_cost_to_be_recovered_after_tf
-#     # psc_table_oil['Cost Recovery After TF'] = contract._oil_cost_recovery_after_tf
-#     # psc_table_oil['ETS After Transfer'] = contract._oil_ets_after_transfer
-#     # psc_table_oil['Contractor Share Prior Tax'] = contract._oil_contractor_share
-#     # psc_table_oil['Government Share'] = contract._oil_government_share
-#     # psc_table_oil['DMO Volume'] = contract._oil_dmo_volume
-#     # psc_table_oil['DMO Fee'] = contract._oil_dmo_fee
-#     # psc_table_oil['DDMO'] = contract._oil_ddmo
-#     # psc_table_oil['Taxable Income'] = contract._oil_taxable_income
-#     # psc_table_oil['Tax'] = contract._oil_tax_payment
-#     # psc_table_oil['Contractor Share'] = contract._oil_ctr_net_share
-#     # psc_table_oil['Contractor Take'] = contract._gas_ctr_net_share
-#     # psc_table_oil['Cashflow'] = contract._oil_cashflow
-#     # psc_table_oil['Government Take'] = contract._oil_government_take
-#     # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
-#     # print(psc_table_oil, '\n')
-#     # input()
-#     return summary
+#     # Adjust opex
+#     opex_adjusted = get_opex_adjustment(
+#         contract_type=contract_type,
+#         opex_aggregate=opex_aggregate,
+#         opex_multiplier=multipliers[2],
+#     )
 #
+#     # Adjust capex
+#     capex_aggregates = [tangible_cost_aggregate, intangible_cost_aggregate]
+#     capex_adjusted = {
+#         key: get_capex_adjustment(
+#             contract_type=contract_type,
+#             capex_aggregate=capex_aggregates[i],
+#             capex_multiplier=multipliers[3],
+#         )
+#         for i, key in enumerate(["tangible", "intangible"])
+#     }
 #
-# def make_new_contract(contract):
-#     # Getting the attributes of the contract
-#     attr_contract = vars(contract)
+#     # Adjust lifting rate
+#     cum_prod_aggregates = [
+#         oil_lifting_aggregate_total,
+#         gas_lifting_aggregate_total,
+#         sulfur_lifting_aggregate,
+#         electricity_lifting_aggregate,
+#         co2_lifting_aggregate,
+#     ]
+#     cum_prod_adjusted = {
+#         key: get_lifting_adjustment(
+#             contract_type=contract_type,
+#             lifting_aggregate=cum_prod_aggregates[i],
+#             lifting_multiplier=multipliers[4],
+#         )
+#         for i, key in enumerate(
+#             [
+#                 "oil_total",
+#                 "gas_total",
+#                 "sulfur",
+#                 "electricity",
+#                 "co2",
+#             ]
+#         )
+#     }
 #
-#     # Condition where only one fluid is produced
-#     produced_fluid = [i.fluid_type for i in attr_contract['lifting']]
-#
-#     if FluidType.OIL not in produced_fluid:
-#         attr_contract['oil_onstream_date'] = None
-#     if FluidType.GAS not in produced_fluid:
-#         attr_contract['gas_onstream_date'] = None
-#
-#     if isinstance(contract, CostRecovery):
-#         new_contract = CostRecovery(
-#             start_date=attr_contract['start_date'],
-#             end_date=attr_contract['end_date'],
-#             oil_onstream_date=attr_contract['oil_onstream_date'],
-#             gas_onstream_date=attr_contract['gas_onstream_date'],
-#             lifting=attr_contract['lifting'],
-#             tangible_cost=attr_contract['tangible_cost'],
-#             intangible_cost=attr_contract['intangible_cost'],
-#             opex=attr_contract['opex'],
-#             asr_cost=attr_contract['asr_cost'],
-#             oil_ftp_is_available=attr_contract['oil_ftp_is_available'],
-#             oil_ftp_is_shared=attr_contract['oil_ftp_is_shared'],
-#             oil_ftp_portion=attr_contract['oil_ftp_portion'],
-#             gas_ftp_is_available=attr_contract['gas_ftp_is_available'],
-#             gas_ftp_is_shared=attr_contract['gas_ftp_is_shared'],
-#             gas_ftp_portion=attr_contract['gas_ftp_portion'],
-#             tax_split_type=attr_contract['tax_split_type'],
-#             condition_dict=attr_contract['condition_dict'],
-#             indicator_rc_icp_sliding=attr_contract['indicator_rc_icp_sliding'],
-#             oil_ctr_pretax_share=attr_contract['oil_ctr_pretax_share'],
-#             gas_ctr_pretax_share=attr_contract['gas_ctr_pretax_share'],
-#             oil_ic_rate=attr_contract['oil_ic_rate'],
-#             gas_ic_rate=attr_contract['gas_ic_rate'],
-#             ic_is_available=attr_contract['ic_is_available'],
-#             oil_cr_cap_rate=attr_contract['oil_cr_cap_rate'],
-#             gas_cr_cap_rate=attr_contract['gas_cr_cap_rate'],
-#             oil_dmo_volume_portion=attr_contract['oil_dmo_volume_portion'],
-#             oil_dmo_fee_portion=attr_contract['oil_dmo_fee_portion'],
-#             oil_dmo_holiday_duration=attr_contract['oil_dmo_holiday_duration'],
-#             gas_dmo_volume_portion=attr_contract['gas_dmo_volume_portion'],
-#             gas_dmo_fee_portion=attr_contract['gas_dmo_fee_portion'],
-#             gas_dmo_holiday_duration=attr_contract['gas_dmo_holiday_duration'])
-#     else:
-#         new_contract = GrossSplit(
-#             start_date=attr_contract['start_date'],
-#             end_date=attr_contract['end_date'],
-#             oil_onstream_date=attr_contract['oil_onstream_date'],
-#             gas_onstream_date=attr_contract['gas_onstream_date'],
-#             lifting=attr_contract['lifting'],
-#             tangible_cost=attr_contract['tangible_cost'],
-#             intangible_cost=attr_contract['intangible_cost'],
-#             opex=attr_contract['opex'],
-#             asr_cost=attr_contract['asr_cost'],
-#             field_status=attr_contract['field_status'],
-#             field_loc=attr_contract['field_loc'],
-#             res_depth=attr_contract['res_depth'],
-#             infra_avail=attr_contract['infra_avail'],
-#             res_type=attr_contract['res_type'],
-#             api_oil=attr_contract['api_oil'],
-#             domestic_use=attr_contract['domestic_use'],
-#             prod_stage=attr_contract['prod_stage'],
-#             co2_content=attr_contract['co2_content'],
-#             h2s_content=attr_contract['h2s_content'],
-#             base_split_ctr_oil=attr_contract['base_split_ctr_oil'],
-#             base_split_ctr_gas=attr_contract['base_split_ctr_gas'],
-#             split_ministry_disc=attr_contract['split_ministry_disc'],
-#             oil_dmo_volume_portion=attr_contract['oil_dmo_volume_portion'],
-#             oil_dmo_fee_portion=attr_contract['oil_dmo_fee_portion'],
-#             oil_dmo_holiday_duration=attr_contract['oil_dmo_holiday_duration'],
-#             gas_dmo_volume_portion=attr_contract['gas_dmo_volume_portion'],
-#             gas_dmo_fee_portion=attr_contract['gas_dmo_fee_portion'],
-#             gas_dmo_holiday_duration=attr_contract['gas_dmo_holiday_duration'],
-#             conversion_bboe2bscf=attr_contract['conversion_bboe2bscf'])
-#
-#     return new_contract
-#
-#
-# def adjust_contract(contract: CostRecovery | GrossSplit,
-#                     adjusted_variable: str,
-#                     multiply_factor: float,
-#                     contract_arguments: dict,
-#                     summary_arguments: dict):
-#     # Some attributes that have to be adjusted, they are OPEX, CAPEX, Oil Price, Gas Price, Prod Factor
-#
-#     # Modifying the OPEX if the chosen adjusted variable is OPEX
-#     new_opex = contract.opex
-#     if adjusted_variable == 'OPEX':
-#         list_opex = []
-#         for opx in contract.opex:
-#             opex = opx * multiply_factor
-#             list_opex.append(opex)
-#         new_opex = tuple(list_opex)
-#
-#     # Modifying the CAPEX if the chosen adjusted variable is CAPEX
-#     new_capex = contract.tangible_cost
-#     if adjusted_variable == 'CAPEX':
-#         list_capex = []
-#         for cpx in contract.tangible_cost:
-#             capex = cpx * multiply_factor
-#             list_capex.append(capex)
-#         new_capex = tuple(list_capex)
-#
-#     # Modifying the Price if the chosen adjusted variable is Oil Price or Gas Price
-#     # if adjusted_variable == 'Oil Price' or adjusted_variable == 'Gas Price':
-#     new_lifting = contract.lifting
-#
-#     if adjusted_variable == 'Oil Price':
-#         list_lifting = []
-#         for lft in contract.lifting:
-#             if lft.fluid_type == FluidType.OIL:
-#                 lifting_price = lft.price * multiply_factor
-#                 lift = Lifting(start_year=lft.start_year,
-#                                end_year=lft.end_year,
-#                                lifting_rate=lft.lifting_rate,
-#                                price=lifting_price,
-#                                prod_year=lft.prod_year,
-#                                fluid_type=lft.fluid_type,
-#                                ghv=lft.ghv,
-#                                prod_rate=lft.prod_rate)
-#                 list_lifting.append(lift)
-#             elif lft.fluid_type == FluidType.GAS:
-#                 lift = Lifting(start_year=lft.start_year,
-#                                end_year=lft.end_year,
-#                                lifting_rate=lft.lifting_rate,
-#                                price=lft.price,
-#                                prod_year=lft.prod_year,
-#                                fluid_type=lft.fluid_type,
-#                                ghv=lft.ghv,
-#                                prod_rate=lft.prod_rate)
-#                 list_lifting.append(lift)
-#         new_lifting = tuple(list_lifting)
-#
-#     # Modifying the Price if the chosen adjusted variable is Oil Price or Gas Price
-#     # if adjusted_variable == 'Oil Price' or adjusted_variable == 'Gas Price':
-#     if adjusted_variable == 'Gas Price':
-#         list_lifting = []
-#         for lft in contract.lifting:
-#             if lft.fluid_type == FluidType.GAS:
-#                 lifting_price = lft.price * multiply_factor
-#                 lift = Lifting(start_year=lft.start_year,
-#                                end_year=lft.end_year,
-#                                lifting_rate=lft.lifting_rate,
-#                                price=lifting_price,
-#                                prod_year=lft.prod_year,
-#                                fluid_type=lft.fluid_type,
-#                                ghv=lft.ghv,
-#                                prod_rate=lft.prod_rate)
-#                 list_lifting.append(lift)
-#             elif lft.fluid_type == FluidType.OIL:
-#                 lift = Lifting(start_year=lft.start_year,
-#                                end_year=lft.end_year,
-#                                lifting_rate=lft.lifting_rate,
-#                                price=lft.price,
-#                                prod_year=lft.prod_year,
-#                                fluid_type=lft.fluid_type,
-#                                ghv=lft.ghv,
-#                                prod_rate=lft.prod_rate)
-#                 list_lifting.append(lift)
-#         new_lifting = tuple(list_lifting)
-#
-#     # Modifying the Lifting Rate if the chosen adjusted variable is Prod Factor
-#     if adjusted_variable == 'Prod Factor':
-#         list_lifting = []
-#         for lft in contract.lifting:
-#             lifting_rate_adjusted = lft.lifting_rate * multiply_factor
-#             lift = Lifting(start_year=lft.start_year,
-#                            end_year=lft.end_year,
-#                            lifting_rate=lifting_rate_adjusted,
-#                            price=lft.price,
-#                            prod_year=lft.prod_year,
-#                            fluid_type=lft.fluid_type,
-#                            ghv=lft.ghv,
-#                            prod_rate=lft.prod_rate)
-#             list_lifting.append(lift)
-#
-#         new_lifting = tuple(list_lifting)
-#
-#     # Making new contract object that filled with adjusted attributes
-#     # Getting the attributes of the contract
-#     attr_contract = vars(contract)
-#
-#     # Condition where only one fluid is produced
-#     produced_fluid = [i.fluid_type for i in attr_contract['lifting']]
-#
-#     if FluidType.OIL not in produced_fluid:
-#         attr_contract['oil_onstream_date'] = None
-#     if FluidType.GAS not in produced_fluid:
-#         attr_contract['gas_onstream_date'] = None
-#
-#     new_contract = None
-#     if isinstance(contract, CostRecovery):
-#         new_contract = CostRecovery(
-#             start_date=attr_contract['start_date'],
-#             end_date=attr_contract['end_date'],
-#             oil_onstream_date=attr_contract['oil_onstream_date'],
-#             gas_onstream_date=attr_contract['gas_onstream_date'],
-#             lifting=new_lifting,
-#             tangible_cost=new_capex,
-#             intangible_cost=attr_contract['intangible_cost'],
-#             opex=new_opex,
-#             asr_cost=attr_contract['asr_cost'],
-#             oil_ftp_is_available=attr_contract['oil_ftp_is_available'],
-#             oil_ftp_is_shared=attr_contract['oil_ftp_is_shared'],
-#             oil_ftp_portion=attr_contract['oil_ftp_portion'],
-#             gas_ftp_is_available=attr_contract['gas_ftp_is_available'],
-#             gas_ftp_is_shared=attr_contract['gas_ftp_is_shared'],
-#             gas_ftp_portion=attr_contract['gas_ftp_portion'],
-#             tax_split_type=attr_contract['tax_split_type'],
-#             condition_dict=attr_contract['condition_dict'],
-#             indicator_rc_icp_sliding=attr_contract['indicator_rc_icp_sliding'],
-#             oil_ctr_pretax_share=attr_contract['oil_ctr_pretax_share'],
-#             gas_ctr_pretax_share=attr_contract['gas_ctr_pretax_share'],
-#             oil_ic_rate=attr_contract['oil_ic_rate'],
-#             gas_ic_rate=attr_contract['gas_ic_rate'],
-#             ic_is_available=attr_contract['ic_is_available'],
-#             oil_cr_cap_rate=attr_contract['oil_cr_cap_rate'],
-#             gas_cr_cap_rate=attr_contract['gas_cr_cap_rate'],
-#             oil_dmo_volume_portion=attr_contract['oil_dmo_volume_portion'],
-#             oil_dmo_fee_portion=attr_contract['oil_dmo_fee_portion'],
-#             oil_dmo_holiday_duration=attr_contract['oil_dmo_holiday_duration'],
-#             gas_dmo_volume_portion=attr_contract['gas_dmo_volume_portion'],
-#             gas_dmo_fee_portion=attr_contract['gas_dmo_fee_portion'],
-#             gas_dmo_holiday_duration=attr_contract['gas_dmo_holiday_duration'])
-#
-#     # Running the new contract
-#     new_contract.run(**contract_arguments)
-#     summary_arguments['contract'] = new_contract
-#     contract_summary = get_summary(**summary_arguments)
-#
-#     return contract_summary, new_contract
-#
-#
-# def sensitivity_psc(steps: int,
-#                     diff: float,
-#                     contract: CostRecovery | GrossSplit,
-#                     contract_arguments: dict,
-#                     summary_arguments: dict
-#                     ):
-#     # Defining the array named steps_arr that containing swings factor of the sens
-#     increment = diff / steps
-#     right_steps = np.arange(1 + increment, 1 + diff + increment, increment)
-#     left_steps = np.arange(1 - diff, 1, increment)
-#     steps_arr = np.concatenate((left_steps, np.array([1]), right_steps))
-#
-#     # Summary attributes that need to be recorded are NPV, IRR, P/I, Government Take, Contractor Take
-#
-#     # Defining the list to contain the result of the contract variance and running the contract along the steps_arr
-#     result_npv = np.empty(len(steps_arr))
-#     result_irr = np.empty(len(steps_arr))
-#     result_pi = np.empty(len(steps_arr))
-#     result_gov_take = np.empty(len(steps_arr))
-#     result_ctr_take = np.empty(len(steps_arr))
-#
-#     for index, mul_factor in enumerate(steps_arr):
-#         # Adjusting the contract
-#         result_psc, contract_new = adjust_contract(contract=contract,
-#                                                    adjusted_variable='OPEX',
-#                                                    multiply_factor=mul_factor,
-#                                                    contract_arguments=contract_arguments,
-#                                                    summary_arguments=summary_arguments)
-#
-#         # Filling the summary result to result list
-#         result_npv[index] = result_psc['ctr_npv']
-#         result_irr[index] = result_psc['ctr_irr']
-#         result_pi[index] = result_psc['ctr_pi']
-#         result_gov_take[index] = result_psc['gov_take']
-#         result_ctr_take[index] = result_psc['ctr_net_share']
-#
-#         dict_var_result = {'ctr_npv': result_npv,
-#                            'ctr_irr': result_irr,
-#                            'ctr_pi': result_pi,
-#                            'gov_take': result_gov_take,
-#                            'ctr_net_share': result_ctr_take,
-#                            }
-#
-#     df = pd.DataFrame()
-#     df['Steps'] = steps_arr
-#     df['result_npv'] = result_npv
-#     df['result_irr'] = result_irr
-#     df['result_pi'] = result_pi
-#     df['result_gov_take'] = result_gov_take
-#     df['result_ctr_take'] = result_ctr_take
-#     print(df)
-#
-#     return NotImplemented
+#     # Container to store the adjusted data
+#     sensitivity_data = {
+#         "oil_price": oil_price_adjusted,
+#         "gas_price": gas_price_adjusted,
+#         "opex": opex_adjusted,
+#         "capex": capex_adjusted,
+#         "cum_prod": cum_prod_adjusted,
+#     }
+
+

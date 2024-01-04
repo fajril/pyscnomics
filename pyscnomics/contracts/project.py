@@ -10,7 +10,7 @@ import numpy as np
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import FluidType, TaxType, TaxRegime, OtherRevenue, InflationAppliedTo
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
-from pyscnomics.econ.results import CashFlow
+# from pyscnomics.econ.results import CashFlow
 
 
 class BaseProjectException(Exception):
@@ -1324,11 +1324,18 @@ class BaseProject:
         )
 
     def _get_tax_by_regime(self, tax_regime):
-        tax_config = {2013: 0.44,
-                      2016: 0.42,
-                      2020: 0.40}
+        """
+        Specify tax by regime.
+        """
+        tax_config = {
+            2013: 0.44,
+            2016: 0.42,
+            2020: 0.40
+        }
 
-        tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[min(tax_config)], dtype=float)
+        tax_rate_arr = (
+            np.full_like(self.project_years, fill_value=tax_config[min(tax_config)], dtype=float)
+        )
 
         for year in tax_config:
             indices = np.array(np.where(self.project_years >= year)).ravel()
@@ -1342,15 +1349,27 @@ class BaseProject:
             tax_rate_arr = np.full_like(self.project_years, fill_value=0.44, dtype=float)
         if tax_regime == TaxRegime.NAILED_DOWN:
             if self.start_date.year >= max(tax_config):
-                tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[max(tax_config)], dtype=float)
+                tax_rate_arr = (
+                    np.full_like(
+                        self.project_years,
+                        fill_value=tax_config[max(tax_config)],
+                        dtype=float
+                    )
+                )
             else:
-                tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[min(tax_config)], dtype=float)
+                tax_rate_arr = (
+                    np.full_like(
+                        self.project_years,
+                        fill_value=tax_config[min(tax_config)],
+                        dtype=float
+                    )
+                )
         return tax_rate_arr
 
     def _get_wap_price(self):
         """
-        The function to wrap functions of getting the Weighted Average Price (WAP) of the produced products.
-
+        The function to wrap functions of getting the Weighted Average Price (WAP)
+        of the produced products.
         """
         self._get_oil_wap_price()
         self._get_gas_wap_price()
@@ -1361,7 +1380,6 @@ class BaseProject:
     def _get_oil_wap_price(self):
         """
         The function to fill the variable self._oil_wap_price.
-
         """
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
@@ -1376,9 +1394,6 @@ class BaseProject:
     def _get_gas_wap_price(self):
         """
         The function to fill the variable self._gas_wap_price.
-        Returns
-        -------
-
         """
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
@@ -1396,7 +1411,6 @@ class BaseProject:
     def _get_sulfur_wap_price(self):
         """
         The function to fill the variable self._sulfur_wap_price.
-
         """
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
@@ -1411,7 +1425,6 @@ class BaseProject:
     def _get_electricity_wap_price(self):
         """
         The function to fill the variable self._electricity_wap_price.
-
         """
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
@@ -1426,7 +1439,6 @@ class BaseProject:
     def _get_co2_wap_price(self):
         """
         The function to fill the variable self._co2_wap_price.
-
         """
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
@@ -1438,10 +1450,12 @@ class BaseProject:
 
         self._co2_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
-    def _get_other_revenue(self,
-                           sulfur_revenue: OtherRevenue,
-                           electricity_revenue: OtherRevenue,
-                           co2_revenue: OtherRevenue):
+    def _get_other_revenue(
+        self,
+        sulfur_revenue: OtherRevenue,
+        electricity_revenue: OtherRevenue,
+        co2_revenue: OtherRevenue
+    ):
         # Configure sulfur revenue
         if sulfur_revenue is OtherRevenue.ADDITION_TO_OIL_REVENUE:
             self._oil_revenue = self._oil_revenue + self._sulfur_revenue
