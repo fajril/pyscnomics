@@ -81,6 +81,14 @@ print(psc_table_gas, '\n')
 print(psc_table_consolidated, '\n')
 
 
+testing = np.asarray(load_testing(dataset_type='small_oil', key='oil_total_expenses'))
+calc = psc._oil_total_expenses
+# diff = testing - calc
+
+print(testing)
+print(calc)
+# print(diff)
+
 
 
 
