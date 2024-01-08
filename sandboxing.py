@@ -265,23 +265,32 @@ asr_cost_data = (
 # print('\t')
 # print('timer end = ', timer_end)
 
-data = Aggregate()
-data.fit()
-
-# Sensitivity data
-oil_lifting_aggregate_total = data.oil_lifting_aggregate_total
-gas_lifting_aggregate_total = data.gas_lifting_aggregate_total
-sulfur_lifting_aggregate = data.sulfur_lifting_aggregate
-electricity_lifting_aggregate = data.electricity_lifting_aggregate
-co2_lifting_aggregate = data.co2_lifting_aggregate
-opex_aggregate = data.opex_aggregate
-tangible_cost_aggregate = data.tangible_cost_aggregate
-intangible_cost_aggregate = data.intangible_cost_aggregate
+# data = Aggregate()
+# data.fit()
+#
+# # Sensitivity data
+# oil_lifting_aggregate_total = data.oil_lifting_aggregate_total
+# gas_lifting_aggregate_total = data.gas_lifting_aggregate_total
+# sulfur_lifting_aggregate = data.sulfur_lifting_aggregate
+# electricity_lifting_aggregate = data.electricity_lifting_aggregate
+# co2_lifting_aggregate = data.co2_lifting_aggregate
+# opex_aggregate = data.opex_aggregate
+# tangible_cost_aggregate = data.tangible_cost_aggregate
+# intangible_cost_aggregate = data.intangible_cost_aggregate
+#
+# # Summary arguments
+# summary_arguments = {
+#     "reference_year": data.general_config_data.discount_rate_start_year,
+#     "inflation_rate": data.fiscal_config_data.inflation_rate,
+#     "discount_rate": data.general_config_data.discount_rate,
+#     "npv_mode": data.fiscal_config_data.npv_mode,
+#     "discounting_mode": data.fiscal_config_data.discounting_mode,
+# }
 
 # Multipliers
 multipliers, total_run = get_multipliers(
-    min_deviation=1.,
-    max_deviation=1.,
+    min_deviation=0.5,
+    max_deviation=0.5,
 )
 
 print('\t')
@@ -294,14 +303,30 @@ print(f'Filetype: {type(total_run)}')
 print('total_run = ', total_run)
 
 print('\t')
-print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
-sensitivity = SensitivityData(
-    contract_type=data.general_config_data.type_of_contract,
-    oil_lifting_aggr_tot_init=oil_lifting_aggregate_total,
-    gas_lifting_aggr_tot_init=gas_lifting_aggregate_total,
-    multipliers=multipliers[0, 0, :],
-)
+# sensitivity = SensitivityData(
+#     multipliers=multipliers[0, 0, :],
+# )
+#
+# t1 = sensitivity.activate()
+#
+# print('\t')
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = \n', t1)
+
+sensitivity = []
+
+for j in range(multipliers.shape[1]):
+    sensitivity.append(SensitivityData(
+        multipliers=multipliers[0, j, :]
+    ))
+
+print('\t')
+print(f'Filetype: {type(sensitivity)}')
+print(f'Length: {len(sensitivity)}')
+print('sensitivity = \n', sensitivity)
 
 # print('\t')
 # print(f'Filetype: {type(t1)}')
