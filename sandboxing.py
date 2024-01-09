@@ -19,6 +19,10 @@ from pyscnomics.econ.results import CashFlow
 from pyscnomics.io.parse import InitiateContract
 
 from pyscnomics.optimize.sensitivity import SensitivityData
+from pyscnomics.contracts.costrecovery import CostRecovery
+from pyscnomics.contracts.grossplit import GrossSplit
+from pyscnomics.contracts.transition import Transition
+from pyscnomics.tools.summary import get_summary
 
 from pyscnomics.optimize.sensitivity import (
     get_multipliers,
@@ -224,23 +228,6 @@ asr_cost_data = (
     asr_apel,
 )
 
-'---------------------------------------------- COST RECOVERY ----------------------------------------------'
-
-# lifting_sawo = Lifting(
-#     start_year=2023,
-#     end_year=2030,
-#     prod_year=np.array([2026, 2023, 2029, 2023]),
-#     lifting_rate=np.array([37, 80, 59, 20]),
-#     price=np.array([10, 10, 10, 10]),
-#     fluid_type=FluidType.OIL,
-# )
-#
-# pr = BaseProject(
-#     start_date=date(year=2023, month=1, day=1),
-#     end_date=date(year=2030, month=12, day=31),
-#     lifting=tuple([lifting_sawo]),
-# )
-
 '------------------------------------------------- EXECUTE -------------------------------------------------'
 
 # timer_start = tm.time()
@@ -265,28 +252,6 @@ asr_cost_data = (
 # print('\t')
 # print('timer end = ', timer_end)
 
-# data = Aggregate()
-# data.fit()
-#
-# # Sensitivity data
-# oil_lifting_aggregate_total = data.oil_lifting_aggregate_total
-# gas_lifting_aggregate_total = data.gas_lifting_aggregate_total
-# sulfur_lifting_aggregate = data.sulfur_lifting_aggregate
-# electricity_lifting_aggregate = data.electricity_lifting_aggregate
-# co2_lifting_aggregate = data.co2_lifting_aggregate
-# opex_aggregate = data.opex_aggregate
-# tangible_cost_aggregate = data.tangible_cost_aggregate
-# intangible_cost_aggregate = data.intangible_cost_aggregate
-#
-# # Summary arguments
-# summary_arguments = {
-#     "reference_year": data.general_config_data.discount_rate_start_year,
-#     "inflation_rate": data.fiscal_config_data.inflation_rate,
-#     "discount_rate": data.general_config_data.discount_rate,
-#     "npv_mode": data.fiscal_config_data.npv_mode,
-#     "discounting_mode": data.fiscal_config_data.discounting_mode,
-# }
-
 # Multipliers
 multipliers, total_run = get_multipliers(
     min_deviation=0.5,
@@ -305,28 +270,109 @@ print('total_run = ', total_run)
 print('\t')
 print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
-# sensitivity = SensitivityData(
-#     multipliers=multipliers[0, 0, :],
-# )
-#
-# t1 = sensitivity.activate()
-#
-# print('\t')
-# print(f'Filetype: {type(t1)}')
-# print(f'Length: {len(t1)}')
-# print('t1 = \n', t1)
+def run_sensitivity(
+    contract: CostRecovery | GrossSplit | Transition,
+    contract_arguments: dict,
+    summary_argument: dict,
+):
+    # Running contract
+    contract.run(**contract_arguments)
+    contract_summary = get_summary(**summary_argument)
 
-sensitivity = []
+    # print('\t')
+    # print(f'Filetype: {type(contract_summary)}')
+    # print('contract_summary = \n', contract_summary)
 
-for j in range(multipliers.shape[1]):
-    sensitivity.append(SensitivityData(
-        multipliers=multipliers[0, j, :]
-    ))
+    sensitivity_attrs = [
+        "oil_price",
+        "gas_price",
+        "opex",
+        "capex",
+        "cum_prod",
+    ]
+
+    sensitivity_target = [
+        "npv",
+        "irr",
+        "pi",
+        "pot",
+        "gov_take",
+        "ctr_net_share",
+    ]
+
+    results = {
+        "npv": contract_summary["ctr_npv"],
+        "irr": contract_summary["ctr_irr"],
+        "pi": contract_summary["ctr_pi"],
+        "pot": contract_summary["ctr_pot"],
+        "gov_take": contract_summary["gov_take"],
+        "ctr_net_share": contract_summary["ctr_net_share"],
+    }
+
+    print('\t')
+    print(f'Filetype: {type(results)}')
+    print('results = \n', results)
+
+
+params = [
+    "psc",
+    "psc_arguments",
+    "summary_arguments",
+    "data",
+]
+
+sens = {
+    key: [0 for _ in range(multipliers.shape[1])]
+    for key in params
+}
+
+for i in range(multipliers.shape[1]):
+    (
+        sens["psc"][i],
+        sens["psc_arguments"][i],
+        sens["summary_arguments"][i],
+        sens["data"][i],
+    ) = SensitivityData(multipliers=multipliers[0, i, :]).activate()
 
 print('\t')
-print(f'Filetype: {type(sensitivity)}')
-print(f'Length: {len(sensitivity)}')
-print('sensitivity = \n', sensitivity)
+print(f'Filetype: {type(sens)}')
+print('sens = \n', sens)
+
+
+# psc = [0 for _ in range(multipliers.shape[1])]
+# psc_arguments = [0 for _ in range(multipliers.shape[1])]
+# summary_arguments = [0 for _ in range(multipliers.shape[1])]
+# data = [0 for _ in range(multipliers.shape[1])]
+#
+# for i in range(multipliers.shape[1]):
+#     (
+#         psc[i],
+#         psc_arguments[i],
+#         summary_arguments[i],
+#         data[i]
+#     ) = SensitivityData(multipliers=multipliers[0, i, :]).activate()
+#
+#     run_sensitivity(
+#         contract=psc[i],
+#         contract_arguments=psc_arguments[i],
+#         summary_argument=summary_arguments[i],
+#     )
+
+# (
+#     psc,
+#     psc_arguments,
+#     summary_arguments,
+#     data
+# ) = SensitivityData(
+#     multipliers=multipliers[0, 0, :],
+# ).activate()
+
+
+# run_sensitivity(
+#     contract=psc,
+#     contract_arguments=psc_arguments,
+#     summary_argument=summary_arguments,
+# )
 
 # print('\t')
 # print(f'Filetype: {type(t1)}')
