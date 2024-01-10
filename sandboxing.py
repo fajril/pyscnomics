@@ -252,127 +252,66 @@ asr_cost_data = (
 # print('\t')
 # print('timer end = ', timer_end)
 
-# Multipliers
-multipliers, total_run = get_multipliers(
-    min_deviation=0.5,
-    max_deviation=0.5,
-)
-
-print('\t')
-print(f'Filetype: {type(multipliers)}')
-print(f'Shape: {multipliers.shape}')
-print('multipliers = \n', multipliers)
-
-print('\t')
-print(f'Filetype: {type(total_run)}')
-print('total_run = ', total_run)
-
-print('\t')
-print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-
-def run_sensitivity(
-    contract: CostRecovery | GrossSplit | Transition,
-    contract_arguments: dict,
-    summary_argument: dict,
-):
-    # Running contract
-    contract.run(**contract_arguments)
-    contract_summary = get_summary(**summary_argument)
-
-    # print('\t')
-    # print(f'Filetype: {type(contract_summary)}')
-    # print('contract_summary = \n', contract_summary)
-
-    sensitivity_attrs = [
-        "oil_price",
-        "gas_price",
-        "opex",
-        "capex",
-        "cum_prod",
-    ]
-
-    sensitivity_target = [
-        "npv",
-        "irr",
-        "pi",
-        "pot",
-        "gov_take",
-        "ctr_net_share",
-    ]
-
-    results = {
-        "npv": contract_summary["ctr_npv"],
-        "irr": contract_summary["ctr_irr"],
-        "pi": contract_summary["ctr_pi"],
-        "pot": contract_summary["ctr_pot"],
-        "gov_take": contract_summary["gov_take"],
-        "ctr_net_share": contract_summary["ctr_net_share"],
-    }
-
-    print('\t')
-    print(f'Filetype: {type(results)}')
-    print('results = \n', results)
-
-
-params = [
-    "psc",
-    "psc_arguments",
-    "summary_arguments",
-    "data",
-]
-
-sens = {
-    key: [0 for _ in range(multipliers.shape[1])]
-    for key in params
-}
-
-for i in range(multipliers.shape[1]):
-    (
-        sens["psc"][i],
-        sens["psc_arguments"][i],
-        sens["summary_arguments"][i],
-        sens["data"][i],
-    ) = SensitivityData(multipliers=multipliers[0, i, :]).activate()
-
-print('\t')
-print(f'Filetype: {type(sens)}')
-print('sens = \n', sens)
-
-
-# psc = [0 for _ in range(multipliers.shape[1])]
-# psc_arguments = [0 for _ in range(multipliers.shape[1])]
-# summary_arguments = [0 for _ in range(multipliers.shape[1])]
-# data = [0 for _ in range(multipliers.shape[1])]
+# # Multipliers
+# multipliers, total_run = get_multipliers(
+#     min_deviation=0.5,
+#     max_deviation=0.5,
+# )
+#
+# print('\t')
+# print(f'Filetype: {type(multipliers)}')
+# print(f'Shape: {multipliers.shape}')
+# print('multipliers = \n', multipliers)
+#
+# print('\t')
+# print(f'Filetype: {type(total_run)}')
+# print('total_run = ', total_run)
+#
+# print('\t')
+# print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+#
+# def run_sensitivity(
+#     contract: CostRecovery | GrossSplit | Transition,
+#     contract_arguments: dict,
+#     summary_argument: dict,
+# ):
+#     # Running contract
+#     contract.run(**contract_arguments)
+#     contract_summary = get_summary(**summary_argument)
+#
+#     results = {
+#         "npv": contract_summary["ctr_npv"],
+#         "irr": contract_summary["ctr_irr"],
+#         "pi": contract_summary["ctr_pi"],
+#         "pot": contract_summary["ctr_pot"],
+#         "gov_take": contract_summary["gov_take"],
+#         "ctr_net_share": contract_summary["ctr_net_share"],
+#     }
+#
+#
+# params = [
+#     "psc",
+#     "psc_arguments",
+#     "summary_arguments",
+#     "data",
+# ]
+#
+# sens = {
+#     key: [0 for _ in range(multipliers.shape[1])]
+#     for key in params
+# }
 #
 # for i in range(multipliers.shape[1]):
 #     (
-#         psc[i],
-#         psc_arguments[i],
-#         summary_arguments[i],
-#         data[i]
+#         sens["psc"][i],
+#         sens["psc_arguments"][i],
+#         sens["summary_arguments"][i],
+#         sens["data"][i],
 #     ) = SensitivityData(multipliers=multipliers[0, i, :]).activate()
 #
-#     run_sensitivity(
-#         contract=psc[i],
-#         contract_arguments=psc_arguments[i],
-#         summary_argument=summary_arguments[i],
-#     )
-
-# (
-#     psc,
-#     psc_arguments,
-#     summary_arguments,
-#     data
-# ) = SensitivityData(
-#     multipliers=multipliers[0, 0, :],
-# ).activate()
-
-
-# run_sensitivity(
-#     contract=psc,
-#     contract_arguments=psc_arguments,
-#     summary_argument=summary_arguments,
-# )
+# print('\t')
+# print(f'Filetype: {type(sens)}')
+# print('sens = \n', sens)
 
 # print('\t')
 # print(f'Filetype: {type(t1)}')
