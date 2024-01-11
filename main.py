@@ -6,7 +6,7 @@ import xlwings as xw
 import threading as th
 
 from pyscnomics.io.parse import InitiateContract
-from pyscnomics.optimize.sensitivity import get_multipliers, SensitivityData
+from pyscnomics.optimize.sensitivity import get_multipliers, AdjustData
 
 from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt
 from pyscnomics.optimize.optimization import optimize_psc
@@ -69,12 +69,9 @@ def main(workbook_path, mode):
 
     # Run sensitivity study
     elif mode == "Sensitivity":
+        # Prepare the loaded data
         data = Aggregate(workbook_to_read=workbook_path)
         data.fit()
-
-        # print('\t')
-        # print(f'Filetype: {type(data.oil_lifting_aggregate_total)}')
-        # print('oil_lifting_aggregate_total = \n', data.oil_lifting_aggregate_total)
 
         # Specify the multipliers
         multipliers, total_run = get_multipliers(
@@ -84,129 +81,38 @@ def main(workbook_path, mode):
             number_of_params=len(data.sensitivity_data.parameter),
         )
 
-        t1 = SensitivityData(
-            data=data,
-            workbook_path=workbook_path,
-            multipliers=multipliers[3, 0, :],
-        )
+        print('\t')
+        print('total run = ', total_run)
+
+        params = {}
+        target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
+        results = {
+            key: np.zeros([multipliers.shape[1], len(target)], dtype=np.float_)
+            for key in data.sensitivity_data.parameter
+        }
+
+        for i, key in enumerate(data.sensitivity_data.parameter):
+            for j in range(multipliers.shape[1]):
+                (
+                    params["psc"],
+                    params["psc_arguments"],
+                    params["summary_arguments"],
+                ) = AdjustData(
+                    data=data,
+                    workbook_path=workbook_path,
+                    multipliers=multipliers[i, j, :],
+                ).activate()
+
+                results[key][j, :] = run_sensitivity(
+                    contract=params["psc"],
+                    contract_arguments=params["psc_arguments"],
+                    summary_arguments=params["summary_arguments"],
+                )
 
         print('\t')
-        print('===========================================================================================')
-
-        print('\t')
-        print(f'Filetype: {type(data.tangible_cost_aggregate)}')
-        print('tangible_cost_aggregate = \n', data.tangible_cost_aggregate)
-
-        # params1 = {}
-        # (
-        #     params1["psc"],
-        #     params1["psc_arguments"],
-        #     params1["summary_arguments"]
-        # ) = SensitivityData(
-        #     data=data,
-        #     oil_lifting_aggregate_total=data.oil_lifting_aggregate_total,
-        #     workbook_path=workbook_path,
-        #     multipliers=multipliers[4, 0, :]
-        # ).activate()
-        #
-        # results1 = run_sensitivity(
-        #     contract=params1["psc"],
-        #     contract_arguments=params1["psc_arguments"],
-        #     summary_arguments=params1["summary_arguments"],
-        # )
-        #
-        # print('\t')
-        # print(f'Filetype: {type(results1)}')
-        # print('results1 = \n', results1)
-        #
-        # print('\t')
-        # print('===========================================================================================')
-
-        # print('\t')
-        # print('data = \n', data.oil_lifting_aggregate)
-        #
-        # params2 = {}
-        # (
-        #     params2["psc"],
-        #     params2["psc_arguments"],
-        #     params2["summary_arguments"]
-        # ) = SensitivityData(
-        #     data=data,
-        #     oil_lifting_aggregate_total=data.oil_lifting_aggregate_total,
-        #     workbook_path=workbook_path,
-        #     multipliers=multipliers[4, 0, :]
-        # ).activate()
-        #
-        # results2 = run_sensitivity(
-        #     contract=params2["psc"],
-        #     contract_arguments=params2["psc_arguments"],
-        #     summary_arguments=params2["summary_arguments"],
-        # )
-        #
-        # print('\t')
-        # print(f'Filetype: {type(results2)}')
-        # print('results2 = \n', results2)
-
-        # params_name = ["psc", "psc_arguments", "summary_arguments"]
-        # target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
-        # params2 = {}
-        # results2 = np.zeros([multipliers.shape[1], len(target)], dtype=np.float_)
-        #
-        # for j in range(multipliers.shape[1]):
-        #     (
-        #         params2["psc"],
-        #         params2["psc_arguments"],
-        #         params2["summary_arguments"],
-        #     ) = SensitivityData(
-        #         data=data,
-        #         workbook_path=workbook_path,
-        #         multipliers=multipliers[4, j, :],
-        #     ).activate()
-        #
-        #     results2[j, :] = run_sensitivity(
-        #         contract=params2["psc"],
-        #         contract_arguments=params2["psc_arguments"],
-        #         summary_arguments=params2["summary_arguments"],
-        #     )
-        #
-        # print('\t')
-        # print(f'Filetype: {type(results2)}')
-        # print('results2 = \n', results2)
-
-        # print('\t')
-        # print(f'Filetype: {type(params)}')
-        # print(f'Keys: {params.keys()}')
-        # print('params = \n', params)
-
-        # params = {}
-        # results = {
-        #     key: np.zeros([multipliers.shape[1], len(target)], dtype=np.float_)
-        #     for key in data.sensitivity_data.parameter
-        # }
-
-        # for i, val in enumerate(data.sensitivity_data.parameter):
-        #     for j in range(multipliers.shape[1]):
-        #         # Prepare simulation parameters
-        #         (
-        #             params["psc"],
-        #             params["psc_arguments"],
-        #             params["summary_arguments"],
-        #         ) = SensitivityData(
-        #             multipliers=multipliers[i, j, :],
-        #             workbook_path=workbook_path,
-        #             data=data,
-        #         ).activate()
-        #
-        #         # Run the simulation
-        #         results[val][j, :] = run_sensitivity(
-        #             contract=params["psc"],
-        #             contract_arguments=params["psc_arguments"],
-        #             summary_arguments=params["summary_arguments"],
-        #         )
-        #
-        # print('\t')
-        # print(f'Filetype: {type(results)}')
-        # print('results = \n', results)
+        print(f'Filetype: {type(results)}')
+        print(f'Keys: {results.keys()}')
+        print('results = \n', results)
 
     # Giving the workbook execution status to show that execution is success
     # xw.Book(workbook_path).sheets("Cover").range("F17").value = "Success"
@@ -375,4 +281,6 @@ if __name__ == '__main__':
     start_time = time.time()
     main(workbook_path=workbook_path, mode=run_mode)
     end_time = time.time()
-    print('Execution Time:', end_time - start_time)
+
+    print('\t')
+    print(f'Execution time: {end_time - start_time} seconds')

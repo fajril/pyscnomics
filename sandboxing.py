@@ -18,7 +18,7 @@ from pyscnomics.econ.results import CashFlow
 # from pyscnomics.tools.helper import summarizer
 from pyscnomics.io.parse import InitiateContract
 
-from pyscnomics.optimize.sensitivity import SensitivityData
+from pyscnomics.optimize.sensitivity import AdjustData
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition

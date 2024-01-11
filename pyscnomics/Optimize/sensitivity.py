@@ -523,22 +523,122 @@ def get_intangible_adjustment(
     intangible_aggregate: tuple | dict,
     intangible_multiplier: float,
 ) -> tuple | dict:
+    """
+    Adjust intangible cost for sensitivity analysis.
+
+    Parameters
+    ----------
+    contract_type: str
+        The type of contract.
+    intangible_aggregate: tuple | dict
+        The aggregate of intangible.
+    intangible_multiplier: float
+        A scalar multiplier to adjust intangible cost.
+
+    Returns
+    -------
+    tuple or dict
+        A new instance of intangible cost aggregate with updated cost.
+    """
+    # For single contract
     if "Transition" not in contract_type:
-        pass
+        # Extract cost data from the original intangible_cost_aggregate
+        intangible_aggregate_cost = (
+            [
+                intangible_aggregate[i].cost
+                for i, val in enumerate(intangible_aggregate)
+            ]
+        )
 
+        # Modify cost data
+        updated_cost = [cst * intangible_multiplier for cst in intangible_aggregate_cost]
+
+        # Return a new tuple of Intangible with modified cost
+        return tuple(
+            [
+                Intangible(
+                    start_year=intangible_aggregate[i].start_year,
+                    end_year=intangible_aggregate[i].end_year,
+                    cost=updated_cost[i],
+                    expense_year=intangible_aggregate[i].expense_year,
+                    cost_allocation=intangible_aggregate[i].cost_allocation,
+                    description=intangible_aggregate[i].description,
+                    vat_portion=intangible_aggregate[i].vat_portion,
+                    vat_discount=intangible_aggregate[i].vat_discount,
+                    lbt_portion=intangible_aggregate[i].lbt_portion,
+                    lbt_discount=intangible_aggregate[i].lbt_discount,
+                )
+                for i, val in enumerate(intangible_aggregate)
+            ]
+        )
+
+    # For transition contract
     else:
-        pass
+        # Extract cost data from the original intangible_cost_aggregate
+        intangible_aggregate_cost = {
+            psc: (
+                [
+                    intangible_aggregate[psc][i].cost
+                    for i, val in enumerate(intangible_aggregate[psc])
+                ]
+            )
+            for psc in ["PSC 1", "PSC 2"]
+        }
+
+        # Modify cost data
+        updated_cost = {
+            psc: [cst * intangible_multiplier for cst in intangible_aggregate_cost[psc]]
+            for psc in ["PSC 1", "PSC 2"]
+        }
+
+        # Return a new dictionary of tuple of Intangible with modified cost
+        return {
+            psc: tuple(
+                [
+                    Intangible(
+                        start_year=intangible_aggregate[psc][i].start_year,
+                        end_year=intangible_aggregate[psc][i].end_year,
+                        cost=updated_cost[psc][i],
+                        expense_year=intangible_aggregate[psc][i].expense_year,
+                        cost_allocation=intangible_aggregate[psc][i].cost_allocation,
+                        description=intangible_aggregate[psc][i].description,
+                        vat_portion=intangible_aggregate[psc][i].vat_portion,
+                        vat_discount=intangible_aggregate[psc][i].vat_discount,
+                        lbt_portion=intangible_aggregate[psc][i].lbt_portion,
+                        lbt_discount=intangible_aggregate[psc][i].lbt_discount,
+                    )
+                    for i, val in enumerate(intangible_aggregate[psc])
+                ]
+            )
+            for psc in ["PSC 1", "PSC 2"]
+        }
 
 
-class SensitivityException(Exception):
-    """ Exception to be raised for a misuse of SensitivityData class """
+class AdjustDataException(Exception):
+    """ Exception to be raised for a misuse of AdjustData class """
 
     pass
 
 
 @dataclass
-class SensitivityData:
-    """ 123 """
+class AdjustData:
+    """
+    Class to adjust data for sensitivity study.
+
+    Parameters
+    ----------
+    workbook_path: str
+    data: Aggregate
+    multipliers: np.ndarray
+
+    Attributes
+    ----------
+    contract_type: str
+    summary_arguments: dict
+    sensitivity_data: dict
+    psc: CostRecovery
+    psc_arguments: dict
+    """
     # Parameters
     multipliers: np.ndarray
     workbook_path: str = field(default=None)
@@ -547,12 +647,11 @@ class SensitivityData:
     # Attributes to be defined later
     contract_type: str = field(default=None, init=False, repr=False)
     summary_arguments: dict = field(default=None, init=False, repr=False)
-    sensitivity_data: dict = field(default=None, init=False)
     psc: CostRecovery | GrossSplit | dict = field(default=None, init=False, repr=False)
     psc_arguments: dict = field(default=None, init=False, repr=False)
+    sensitivity_data: dict = field(default=None, init=False)
 
     def __post_init__(self):
-
         # Prepare attribute workbook_path
         if self.workbook_path is None:
             self.workbook_path = "Workbook.xlsb"
@@ -639,10 +738,6 @@ class SensitivityData:
             ),
         }
 
-        # print('\t')
-        # print(f'Filetype: {type(self.sensitivity_data["intangible_cost_aggregate"])}')
-        # print('sensitivity_data = \n', self.sensitivity_data["intangible_cost_aggregate"])
-
     def _get_single_contract_project(self):
         pass
 
@@ -655,6 +750,11 @@ class SensitivityData:
             + self.sensitivity_data["electricity_lifting_aggregate"]
             + self.sensitivity_data["co2_lifting_aggregate"]
         )
+
+        # print('\t')
+        # print(f'Filetype: {type(lifting_total)}')
+        # print(f'Length: {len(lifting_total)}')
+        # print('lifting_total = \n', lifting_total)
 
         # Create an instance of PSC CR
         self.psc = CostRecovery(
@@ -720,6 +820,18 @@ class SensitivityData:
     def _get_single_contract_gs(self):
         pass
 
+    def _get_transition_contract_cr_to_cr(self):
+        pass
+
+    def _get_transition_contract_cr_to_gs(self):
+        pass
+
+    def _get_transition_contract_gs_to_gs(self):
+        pass
+
+    def _get_transition_contract_gs_to_cr(self):
+        pass
+
     def activate(self):
         """
         123
@@ -732,3 +844,18 @@ class SensitivityData:
 
         elif self.contract_type == "PSC Gross Split (GS)":
             return self._get_single_contract_gs()
+
+        elif self.contract_type == "Transition CR - CR":
+            pass
+
+        elif self.contract_type == "Transition CR - GS":
+            pass
+
+        elif self.contract_type == "Transition GS - GS":
+            pass
+
+        elif self.contract_type == "Transition GS - CR":
+            pass
+
+        else:
+            raise AdjustDataException
