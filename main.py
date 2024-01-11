@@ -87,15 +87,15 @@ def main(workbook_path, mode):
         t1 = SensitivityData(
             data=data,
             workbook_path=workbook_path,
-            multipliers=multipliers[0, 0, :],
+            multipliers=multipliers[3, 0, :],
         )
 
         print('\t')
         print('===========================================================================================')
 
         print('\t')
-        print(f'Filetype: {type(data.oil_lifting_aggregate_total)}')
-        print('oil_lifting_aggregate_total = \n', data.oil_lifting_aggregate_total)
+        print(f'Filetype: {type(data.tangible_cost_aggregate)}')
+        print('tangible_cost_aggregate = \n', data.tangible_cost_aggregate)
 
         # params1 = {}
         # (

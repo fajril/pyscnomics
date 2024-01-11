@@ -2,10 +2,11 @@
 Configuration to undertake sensitivity analysis.
 """
 import numpy as np
-from dataclasses import dataclass, field, InitVar
+from dataclasses import dataclass, field
 
 from pyscnomics.io.aggregator import Aggregate
 from pyscnomics.econ.revenue import Lifting
+from pyscnomics.econ.costs import Tangible, Intangible, OPEX
 
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
@@ -87,7 +88,7 @@ def get_price_and_rate_adjustment(
     Returns
     -------
     tuple or dict
-        The adjusted lifting aggregate with updated price and lifting rate.
+        A new instance of lifting aggregate with updated price and lifting rate.
     """
     # For single contract
     if "Transition" not in contract_type:
@@ -107,7 +108,7 @@ def get_price_and_rate_adjustment(
             ),
         }
 
-        # Perform modification to price and lifting_rate data
+        # Modify price and lifting_rate data
         updated_attrs = {
             "price": [pr * price_multiplier for pr in lifting_aggregate_attrs["price"]],
             "rate": [rt * rate_multiplier for rt in lifting_aggregate_attrs["rate"]],
@@ -180,7 +181,7 @@ def get_price_and_rate_adjustment(
                         ghv=lifting_aggregate[psc][i].ghv,
                         prod_rate=lifting_aggregate[psc][i].prod_rate,
                     )
-                    for i, val in enumerate(lifting_aggregate)
+                    for i, val in enumerate(lifting_aggregate[psc])
                 ]
             )
             for psc in ["PSC 1", "PSC 2"]
@@ -207,10 +208,11 @@ def get_rate_adjustment(
     Returns
     -------
     tuple or dict
-        The adjusted lifting aggregate with updated lifting rate.
+        A new instance of lifting aggregate with updated lifting rate.
     """
     # For single contract
     if "Transition" not in contract_type:
+        # Extract lifting rate data from the original lifting_aggregate
         lifting_aggregate_rate = (
             [
                 lifting_aggregate[i].lifting_rate
@@ -218,13 +220,29 @@ def get_rate_adjustment(
             ]
         )
 
-        for i, val in enumerate(lifting_aggregate):
-            lifting_aggregate[i].lifting_rate = (
-                lifting_aggregate_rate[i] * rate_multiplier
-            ).copy()
+        # Modify lifting rate data
+        updated_rate = [rt * rate_multiplier for rt in lifting_aggregate_rate]
+
+        # Return a new tuple of modified lifting_aggregate
+        return tuple(
+            [
+                Lifting(
+                    start_year=lifting_aggregate[i].start_year,
+                    end_year=lifting_aggregate[i].end_year,
+                    lifting_rate=updated_rate[i],
+                    price=lifting_aggregate[i].price,
+                    prod_year=lifting_aggregate[i].prod_year,
+                    fluid_type=lifting_aggregate[i].fluid_type,
+                    ghv=lifting_aggregate[i].ghv,
+                    prod_rate=lifting_aggregate[i].prod_rate,
+                )
+                for i, val in enumerate(lifting_aggregate)
+            ]
+        )
 
     # For transition contract
     else:
+        # Extract lifting rate data from the original lifting_aggregate
         lifting_aggregate_rate = {
             psc: (
                 [
@@ -235,66 +253,281 @@ def get_rate_adjustment(
             for psc in ["PSC 1", "PSC 2"]
         }
 
-        for psc in ["PSC 1", "PSC 2"]:
-            for i, val in enumerate(lifting_aggregate[psc]):
-                lifting_aggregate[psc][i].lifting_rate = (
-                    lifting_aggregate_rate[psc][i] * rate_multiplier
-                ).copy()
+        # Modify lifting rate data
+        updated_rate = {
+            psc: [rt * rate_multiplier for rt in lifting_aggregate_rate[psc]]
+            for psc in ["PSC 1", "PSC 2"]
+        }
 
-    return lifting_aggregate
-
-
-def get_cost_adjustment(
-    contract_type: str,
-    cost_aggregate: tuple | dict,
-    cost_multiplier: float,
-) -> tuple | dict:
-    """
-    Adjust costs for sensitivity analysis.
-
-    Parameters
-    ----------
-    contract_type: str
-        The type of contract.
-    cost_aggregate: tuple or dict
-        The aggregate of costs for a particular cost allocation.
-    cost_multiplier: float
-        A scalar multiplier to adjust costs.
-
-    Returns
-    -------
-    tuple or dict
-        The adjusted cost aggregate with updated cost.
-    """
-    # For single contract
-    if "Transition" not in contract_type:
-        cost_aggregate_attr = (
-            [
-                cost_aggregate[i].cost
-                for i, val in enumerate(cost_aggregate)
-            ]
-        )
-
-        for i, val in enumerate(cost_aggregate):
-            cost_aggregate[i].cost = (cost_aggregate_attr[i] * cost_multiplier).copy()
-
-    # For transition contract
-    else:
-        cost_aggregate_attr = {
-            psc: (
+        # Return a new dictionary of modified lifting_aggregate
+        return {
+            psc: tuple(
                 [
-                    cost_aggregate[psc][i].cost
-                    for i, val in enumerate(cost_aggregate[psc])
+                    Lifting(
+                        start_year=lifting_aggregate[psc][i].start_year,
+                        end_year=lifting_aggregate[psc][i].end_year,
+                        lifting_rate=updated_rate[psc][i],
+                        price=lifting_aggregate[psc][i].price,
+                        prod_year=lifting_aggregate[psc][i].prod_year,
+                        fluid_type=lifting_aggregate[psc][i].fluid_type,
+                        ghv=lifting_aggregate[psc][i].ghv,
+                        prod_rate=lifting_aggregate[psc][i].prod_rate,
+                    )
+                    for i, val in enumerate(lifting_aggregate[psc])
                 ]
             )
             for psc in ["PSC 1", "PSC 2"]
         }
 
-        for psc in ["PSC 1", "PSC 2"]:
-            for i, val in enumerate(cost_aggregate[psc]):
-                cost_aggregate[psc][i].cost = (cost_aggregate_attr[psc][i] * cost_multiplier).copy()
 
-    return cost_aggregate
+def get_opex_adjustment(
+    contract_type: str,
+    opex_aggregate: tuple | dict,
+    opex_multiplier: float,
+) -> tuple | dict:
+    """
+    Adjust opex for sensitivity analysis.
+
+    Parameters
+    ----------
+    contract_type: str
+        The type of contract.
+    opex_aggregate: tuple or dict
+        The aggregate of opex.
+    opex_multiplier: float
+        A scalar multiplier to adjust opex fixed_cost and cost_per_volume.
+
+    Returns
+    -------
+    tuple or dict
+        A new instance of opex aggregate with updated fixed_cost and cost_per_volume.
+    """
+    # For single contract
+    if "Transition" not in contract_type:
+        # Extract fixed_cost and cost_per_volume data from the original opex_aggregate
+        opex_aggregate_attrs = {
+            "fixed_cost": (
+                [
+                    opex_aggregate[i].fixed_cost
+                    for i, val in enumerate(opex_aggregate)
+                ]
+            ),
+            "cost_per_volume": (
+                [
+                    opex_aggregate[i].cost_per_volume
+                    for i, val in enumerate(opex_aggregate)
+                ]
+            ),
+        }
+
+        # Modify fixed_cost and cost_per_volume
+        updated_attrs = {
+            "fixed_cost": (
+                [fc * opex_multiplier for fc in opex_aggregate_attrs["fixed_cost"]]
+            ),
+            "cost_per_volume": (
+                [cpv * opex_multiplier for cpv in opex_aggregate_attrs["cost_per_volume"]]
+            ),
+        }
+
+        # Return a new tuple of modified opex_aggregate
+        return tuple(
+            [
+                OPEX(
+                    start_year=opex_aggregate[i].start_year,
+                    end_year=opex_aggregate[i].end_year,
+                    expense_year=opex_aggregate[i].expense_year,
+                    cost_allocation=opex_aggregate[i].cost_allocation,
+                    description=opex_aggregate[i].description,
+                    vat_portion=opex_aggregate[i].vat_portion,
+                    vat_discount=opex_aggregate[i].vat_discount,
+                    lbt_portion=opex_aggregate[i].lbt_portion,
+                    lbt_discount=opex_aggregate[i].lbt_discount,
+                    fixed_cost=updated_attrs["fixed_cost"][i],
+                    prod_rate=opex_aggregate[i].prod_rate,
+                    cost_per_volume=updated_attrs["cost_per_volume"][i],
+                )
+                for i, val in enumerate(opex_aggregate)
+            ]
+        )
+
+    # For transition contract
+    else:
+        # Extract fixed_cost and cost_per_volume data from the original opex_aggregate
+        opex_aggregate_attrs = {
+            "fixed_cost": {
+                psc: (
+                    [
+                        opex_aggregate[psc][i].fixed_cost
+                        for i, val in enumerate(opex_aggregate[psc])
+                    ]
+                )
+                for psc in ["PSC 1", "PSC 2"]
+            },
+            "cost_per_volume": {
+                psc: (
+                    [
+                        opex_aggregate[psc][i].cost_per_volume
+                        for i, val in enumerate(opex_aggregate[psc])
+                    ]
+                )
+                for psc in ["PSC 1", "PSC 2"]
+            },
+        }
+
+        # Modify fixed_cost and cost_per_volume data
+        updated_attrs = {
+            "fixed_cost": {
+                psc: [fc * opex_multiplier for fc in opex_aggregate_attrs["fixed_cost"][psc]]
+                for psc in ["PSC 1", "PSC 2"]
+            },
+            "cost_per_volume": {
+                psc: [cpv * opex_multiplier for cpv in opex_aggregate_attrs["cost_per_volume"][psc]]
+                for psc in ["PSC 1", "PSC 2"]
+            },
+        }
+
+        # Return a new dictionary with modified fixed_cost and cost_per_volume
+        return {
+            psc: tuple(
+                [
+                    OPEX(
+                        start_year=opex_aggregate[psc][i].start_year,
+                        end_year=opex_aggregate[psc][i].end_year,
+                        expense_year=opex_aggregate[psc][i].expense_year,
+                        cost_allocation=opex_aggregate[psc][i].cost_allocation,
+                        description=opex_aggregate[psc][i].description,
+                        vat_portion=opex_aggregate[psc][i].vat_portion,
+                        vat_discount=opex_aggregate[psc][i].vat_discount,
+                        lbt_portion=opex_aggregate[psc][i].lbt_portion,
+                        lbt_discount=opex_aggregate[psc][i].lbt_discount,
+                        fixed_cost=updated_attrs["fixed_cost"][psc][i],
+                        prod_rate=opex_aggregate[psc][i].prod_rate,
+                        cost_per_volume=updated_attrs["cost_per_volume"][psc][i],
+                    )
+                    for i, val in enumerate(opex_aggregate[psc])
+                ]
+            )
+            for psc in ["PSC 1", "PSC 2"]
+        }
+
+
+def get_tangible_adjustment(
+    contract_type: str,
+    tangible_aggregate: tuple | dict,
+    tangible_multiplier: float,
+) -> tuple | dict:
+    """
+    Adjust tangible cost for sensitivity analysis.
+
+    Parameters
+    ----------
+    contract_type: str
+        The type of contract.
+    tangible_aggregate: tuple | dict
+        The aggregate of tangible.
+    tangible_multiplier: float
+        A scalar multiplier to adjust tangible cost.
+
+    Returns
+    -------
+    tuple or dict
+        A new instance of tangible cost aggregate with updated cost.
+    """
+    # For single contract
+    if "Transition" not in contract_type:
+        # Extract cost data from the original tangible_cost_aggregate
+        tangible_aggregate_cost = (
+            [
+                tangible_aggregate[i].cost
+                for i, val in enumerate(tangible_aggregate)
+            ]
+        )
+
+        # Modify cost data
+        updated_cost = [cst * tangible_multiplier for cst in tangible_aggregate_cost]
+
+        # Return a new tuple of Tangible with modified cost
+        return tuple(
+            [
+                Tangible(
+                    start_year=tangible_aggregate[i].start_year,
+                    end_year=tangible_aggregate[i].end_year,
+                    cost=updated_cost[i],
+                    expense_year=tangible_aggregate[i].expense_year,
+                    cost_allocation=tangible_aggregate[i].cost_allocation,
+                    description=tangible_aggregate[i].description,
+                    vat_portion=tangible_aggregate[i].vat_portion,
+                    vat_discount=tangible_aggregate[i].vat_discount,
+                    lbt_portion=tangible_aggregate[i].lbt_portion,
+                    lbt_discount=tangible_aggregate[i].lbt_discount,
+                    pis_year=tangible_aggregate[i].pis_year,
+                    salvage_value=tangible_aggregate[i].salvage_value,
+                    useful_life=tangible_aggregate[i].useful_life,
+                    depreciation_factor=tangible_aggregate[i].depreciation_factor,
+                    is_ic_applied=tangible_aggregate[i].is_ic_applied,
+                )
+                for i, val in enumerate(tangible_aggregate)
+            ]
+        )
+
+    # For transition contract
+    else:
+        # Extract cost data from the original tangible_cost_aggregate
+        tangible_aggregate_cost = {
+            psc: (
+                [
+                    tangible_aggregate[psc][i].cost
+                    for i, val in enumerate(tangible_aggregate[psc])
+                ]
+            )
+            for psc in ["PSC 1", "PSC 2"]
+        }
+
+        # Modify cost data
+        updated_cost = {
+            psc: [cst * tangible_multiplier for cst in tangible_aggregate_cost[psc]]
+            for psc in ["PSC 1", "PSC 2"]
+        }
+
+        # Return a new dictionary of tuple of Tangible with modified cost
+        return {
+            psc: tuple(
+                [
+                    Tangible(
+                        start_year=tangible_aggregate[psc][i].start_year,
+                        end_year=tangible_aggregate[psc][i].end_year,
+                        cost=updated_cost[psc][i],
+                        expense_year=tangible_aggregate[psc][i].expense_year,
+                        cost_allocation=tangible_aggregate[psc][i].cost_allocation,
+                        description=tangible_aggregate[psc][i].description,
+                        vat_portion=tangible_aggregate[psc][i].vat_portion,
+                        vat_discount=tangible_aggregate[psc][i].vat_discount,
+                        lbt_portion=tangible_aggregate[psc][i].lbt_portion,
+                        lbt_discount=tangible_aggregate[psc][i].lbt_discount,
+                        pis_year=tangible_aggregate[psc][i].pis_year,
+                        salvage_value=tangible_aggregate[psc][i].salvage_value,
+                        useful_life=tangible_aggregate[psc][i].useful_life,
+                        depreciation_factor=tangible_aggregate[psc][i].depreciation_factor,
+                        is_ic_applied=tangible_aggregate[psc][i].is_ic_applied,
+                    )
+                    for i, val in enumerate(tangible_aggregate[psc])
+                ]
+            )
+            for psc in ["PSC 1", "PSC 2"]
+        }
+
+
+def get_intangible_adjustment(
+    contract_type: str,
+    intangible_aggregate: tuple | dict,
+    intangible_multiplier: float,
+) -> tuple | dict:
+    if "Transition" not in contract_type:
+        pass
+
+    else:
+        pass
 
 
 class SensitivityException(Exception):
@@ -347,68 +580,68 @@ class SensitivityData:
                     rate_multiplier=self.multipliers[4],
                 )
             ),
-            # # Adjust gas, lpg proprane, and lpg butane lifting data
-            # "gas_lifting_aggregate_total": (
-            #     get_price_and_rate_adjustment(
-            #         contract_type=self.contract_type,
-            #         lifting_aggregate=self.data.gas_lifting_aggregate_total,
-            #         price_multiplier=self.multipliers[1],
-            #         rate_multiplier=self.multipliers[4],
-            #     )
-            # ),
-            # # Adjust sulfur lifting data
-            # "sulfur_lifting_aggregate": (
-            #     get_rate_adjustment(
-            #         contract_type=self.contract_type,
-            #         lifting_aggregate=self.data.sulfur_lifting_aggregate,
-            #         rate_multiplier=self.multipliers[4],
-            #     )
-            # ),
-            # # Adjust electricity lifting data
-            # "electricity_lifting_aggregate": (
-            #     get_rate_adjustment(
-            #         contract_type=self.contract_type,
-            #         lifting_aggregate=self.data.electricity_lifting_aggregate,
-            #         rate_multiplier=self.multipliers[4],
-            #     )
-            # ),
-            # # Adjust CO2 lifting data
-            # "co2_lifting_aggregate": (
-            #     get_rate_adjustment(
-            #         contract_type=self.contract_type,
-            #         lifting_aggregate=self.data.co2_lifting_aggregate,
-            #         rate_multiplier=self.multipliers[4],
-            #     )
-            # ),
-            # # Adjust OPEX data
-            # "opex_aggregate": (
-            #     get_cost_adjustment(
-            #         contract_type=self.contract_type,
-            #         cost_aggregate=self.data.opex_aggregate,
-            #         cost_multiplier=self.multipliers[2],
-            #     )
-            # ),
-            # # Adjust CAPEX data: tangible
-            # "tangible_cost_aggregate": (
-            #     get_cost_adjustment(
-            #         contract_type=self.contract_type,
-            #         cost_aggregate=self.data.tangible_cost_aggregate,
-            #         cost_multiplier=self.multipliers[3],
-            #     )
-            # ),
-            # # Adjust CAPEX data: intangible
-            # "intangible_cost_aggregate": (
-            #     get_cost_adjustment(
-            #         contract_type=self.contract_type,
-            #         cost_aggregate=self.data.intangible_cost_aggregate,
-            #         cost_multiplier=self.multipliers[3],
-            #     )
-            # )
+            # Adjust gas, lpg proprane, and lpg butane lifting data
+            "gas_lifting_aggregate_total": (
+                get_price_and_rate_adjustment(
+                    contract_type=self.contract_type,
+                    lifting_aggregate=self.data.gas_lifting_aggregate_total,
+                    price_multiplier=self.multipliers[1],
+                    rate_multiplier=self.multipliers[4],
+                )
+            ),
+            # Adjust sulfur lifting data
+            "sulfur_lifting_aggregate": (
+                get_rate_adjustment(
+                    contract_type=self.contract_type,
+                    lifting_aggregate=self.data.sulfur_lifting_aggregate,
+                    rate_multiplier=self.multipliers[4],
+                )
+            ),
+            # Adjust electricity lifting data
+            "electricity_lifting_aggregate": (
+                get_rate_adjustment(
+                    contract_type=self.contract_type,
+                    lifting_aggregate=self.data.electricity_lifting_aggregate,
+                    rate_multiplier=self.multipliers[4],
+                )
+            ),
+            # Adjust CO2 lifting data
+            "co2_lifting_aggregate": (
+                get_rate_adjustment(
+                    contract_type=self.contract_type,
+                    lifting_aggregate=self.data.co2_lifting_aggregate,
+                    rate_multiplier=self.multipliers[4],
+                )
+            ),
+            # Adjust OPEX data
+            "opex_aggregate": (
+                get_opex_adjustment(
+                    contract_type=self.contract_type,
+                    opex_aggregate=self.data.opex_aggregate,
+                    opex_multiplier=self.multipliers[2],
+                )
+            ),
+            # Adjust CAPEX data: tangible
+            "tangible_cost_aggregate": (
+                get_tangible_adjustment(
+                    contract_type=self.contract_type,
+                    tangible_aggregate=self.data.tangible_cost_aggregate,
+                    tangible_multiplier=self.multipliers[3],
+                )
+            ),
+            # Adjust CAPEX data: intangible
+            "intangible_cost_aggregate": (
+                get_intangible_adjustment(
+                    contract_type=self.contract_type,
+                    intangible_aggregate=self.data.intangible_cost_aggregate,
+                    intangible_multiplier=self.multipliers[3],
+                )
+            ),
         }
 
-        print('\t')
-        print(f'Filetype: {type(self.sensitivity_data)}')
-        print('sensitivity_data = \n', self.sensitivity_data)
+        # print('\t')
+        # print(f'Filetype: {type(self.sensitivity_data["intangible_cost_aggregate"])}')
+        # print('sensitivity_data = \n', self.sensitivity_data["intangible_cost_aggregate"])
 
     def _get_single_contract_project(self):
         pass
