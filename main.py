@@ -82,6 +82,9 @@ def main(workbook_path, mode):
         )
 
         print('\t')
+        print('multipliers = \n', multipliers)
+
+        print('\t')
         print('total run = ', total_run)
 
         params = {}
