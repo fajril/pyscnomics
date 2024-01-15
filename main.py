@@ -6,7 +6,7 @@ import xlwings as xw
 import threading as th
 
 from pyscnomics.io.parse import InitiateContract
-from pyscnomics.optimize.sensitivity import get_multipliers, AdjustData
+from pyscnomics.optimize.adjuster import get_multipliers, AdjustData
 
 from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt
 from pyscnomics.optimize.optimization import optimize_psc
