@@ -3,7 +3,7 @@ import pandas as pd
 import time
 
 from pyscnomics.dataset.sample import load_data
-from pyscnomics.Optimize import optimization
+from pyscnomics.optimize import optimization
 from pyscnomics.econ.selection import (NPVSelection, DiscountingMode, OptimizationTarget, FTPTaxRegime,
                                        OptimizationParameter)
 
