@@ -99,10 +99,10 @@ def main(workbook_path, mode):
             for j, param in enumerate(data.sensitivity_data.parameter):
                 results_arranged[econ][:, j] = results[param][:, i]
 
-        print('\t')
-        print(f'Filetype: {type(results_arranged)}')
-        print(f'Keys: {results_arranged.keys()}')
-        print('results_arranged = \n', results_arranged)
+        # print('\t')
+        # print(f'Filetype: {type(results_arranged)}')
+        # print(f'Keys: {results_arranged.keys()}')
+        # print('results_arranged = \n', results_arranged)
 
         print('\t')
         print("npv = \n", results_arranged["npv"])
