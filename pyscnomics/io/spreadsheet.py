@@ -1639,10 +1639,10 @@ class Spreadsheet:
         (2) Create a new instance of SensitivityData with the necessary information
             stored as the corresponding attributes.
         """
-        sensitivity_data_loaded = self.data_loaded["Sensitivity"].iloc[0:10, 1:3]
+        sensitivity_data_loaded = self.data_loaded["Sensitivity"].iloc[0:11, 1:3]
 
         return SensitivityData(
-            parameter=sensitivity_data_loaded.iloc[5:, 0].to_numpy().tolist(),
+            parameter=sensitivity_data_loaded.iloc[6:, 0].to_numpy().tolist(),
             percentage_min=sensitivity_data_loaded.iloc[0, 1],
             percentage_max=sensitivity_data_loaded.iloc[1, 1],
             step=sensitivity_data_loaded.iloc[2, 1],
@@ -1782,4 +1782,4 @@ class Spreadsheet:
 
         # Fill in the attributes associated with sensitivity and optimization
         self.optimization_data = self._get_optimization_data()
-        # self.sensitivity_data = self._get_sensitivity_data()
+        self.sensitivity_data = self._get_sensitivity_data()

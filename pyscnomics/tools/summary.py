@@ -5,18 +5,20 @@ from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.econ.selection import NPVSelection, DiscountingMode
-from pyscnomics.econ.indicator import (irr,
-                                       npv_nominal_terms,
-                                       npv_real_terms,
-                                       npv_skk_nominal_terms,
-                                       npv_skk_real_terms,
-                                       npv_point_forward,
-                                       pot_psc)
+from pyscnomics.econ.indicator import (
+    irr,
+    npv_nominal_terms,
+    npv_real_terms,
+    npv_skk_nominal_terms,
+    npv_skk_real_terms,
+    npv_point_forward,
+    pot_psc
+)
 
 
 def get_summary(contract: CostRecovery | GrossSplit | Transition,
                 reference_year: int,
-                inflation_rate: float = 0,
+                inflation_rate: float,
                 discount_rate: float = 0.1,
                 npv_mode: NPVSelection = NPVSelection.NPV_SKK_REAL_TERMS,
                 discounting_mode: DiscountingMode = DiscountingMode.END_YEAR) -> dict:
