@@ -11,6 +11,7 @@ from pyscnomics.optimize.adjuster import get_multipliers_sensitivity, AdjustData
 from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt
 from pyscnomics.optimize.optimization import optimize_psc
 
+from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
@@ -84,7 +85,7 @@ def main(workbook_path, mode):
         target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
         results = execute_sensitivity_serial(data=data, target=target, multipliers=multipliers)
 
-        # Arrange the results into the desired output
+        # Arrange the results into the desired output structure
         results_arranged = {
             key: (
                 np.zeros(
@@ -99,17 +100,28 @@ def main(workbook_path, mode):
             for j, param in enumerate(data.sensitivity_data.parameter):
                 results_arranged[econ][:, j] = results[param][:, i]
 
+        print('\t')
+        print(f'Filetype: {type(results_arranged)}')
+        print(f'Keys: {results_arranged.keys()}')
+        print('results_arranged = \n', results_arranged)
+
         # print('\t')
-        # print(f'Filetype: {type(results_arranged)}')
-        # print(f'Keys: {results_arranged.keys()}')
-        # print('results_arranged = \n', results_arranged)
-
-        print('\t')
-        print("npv = \n", results_arranged["npv"])
-
-        print('\t')
-        print("irr = \n", results_arranged["irr"])
-
+        # print("npv = \n", results_arranged["npv"])
+        #
+        # print('\t')
+        # print("irr = \n", results_arranged["irr"])
+        #
+        # print('\t')
+        # print("pi = \n", results_arranged["pi"])
+        #
+        # print('\t')
+        # print("pot = \n", results_arranged["pot"])
+        #
+        # print('\t')
+        # print("government take = \n", results_arranged["gov_take"])
+        #
+        # print('\t')
+        # print("ctr_net_share = \n", results_arranged["ctr_net_share"])
 
     # Giving the workbook execution status to show that execution is success
     # xw.Book(workbook_path).sheets("Cover").range("F17").value = "Success"
@@ -142,7 +154,10 @@ def run_standard(
     contract_summary = get_summary(**summary_argument)
 
     sheet_name = None
-    if isinstance(contract, CostRecovery):
+    if isinstance(contract, BaseProject):
+        sheet_name = "Result Table Base Project"
+
+    elif isinstance(contract, CostRecovery):
         sheet_name = 'Result Table CR'
 
     elif isinstance(contract, GrossSplit):
@@ -252,8 +267,13 @@ def run_sensitivity(
     summary_arguments: dict
         The dictionary of the summary arguments
     """
-    contract.run(**contract_arguments)
-    contract_summary = get_summary(**summary_arguments)
+    if isinstance(contract, BaseProject):
+        contract.run(**contract_arguments)
+        contract_summary = get_summary(**summary_arguments)
+
+    else:
+        contract.run(**contract_arguments)
+        contract_summary = get_summary(**summary_arguments)
 
     return (
         contract_summary["ctr_npv"],
@@ -322,7 +342,7 @@ if __name__ == '__main__':
 
     import time
     workbook_path = "Workbook.xlsb"
-    run_mode = "Sensitivity"
+    run_mode = "Standard"
     # workbook_path = "Workbook_Filled CR.xlsb"
     # run_mode = 'Standard'
 

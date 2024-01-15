@@ -8,6 +8,7 @@ from pyscnomics.io.aggregator import Aggregate
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX
 
+from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 
@@ -739,10 +740,67 @@ class AdjustData:
             ),
         }
 
-    def _get_single_contract_project(self):
-        pass
+    def _get_single_contract_project(self) -> tuple:
+        """
+        Get details for a single Production Sharing Contract with BaseProject.
 
-    def _get_single_contract_cr(self):
+        Returns
+        -------
+        psc: BaseProject
+            Object representing the BaseProject contract.
+        summary_arguments: dict
+            Arguments for the contract summary.
+
+        Notes
+        -----
+        This method creates an instance of BaseProject class.
+        It populates the attributes of BaseProject object with relevant data.
+        """
+        # Prepare total lifting data
+        lifting_total = (
+            self.sensitivity_data["oil_lifting_aggregate_total"]
+            + self.sensitivity_data["gas_lifting_aggregate_total"]
+            + self.sensitivity_data["sulfur_lifting_aggregate"]
+            + self.sensitivity_data["electricity_lifting_aggregate"]
+            + self.sensitivity_data["co2_lifting_aggregate"]
+        )
+
+        # Create an instance of Project
+        self.psc = BaseProject(
+            start_date=self.data.general_config_data.start_date_project,
+            end_date=self.data.general_config_data.end_date_project,
+            oil_onstream_date=self.data.general_config_data.oil_onstream_date,
+            gas_onstream_date=self.data.general_config_data.gas_onstream_date,
+            lifting=lifting_total,
+            tangible_cost=self.sensitivity_data["tangible_cost_aggregate"],
+            intangible_cost=self.sensitivity_data["intangible_cost_aggregate"],
+            opex=self.sensitivity_data["opex_aggregate"],
+            asr_cost=self.data.asr_cost_aggregate,
+        )
+
+        # Filling the summary contract argument
+        self.summary_arguments["contract"] = self.psc
+
+        return self.psc, None, self.summary_arguments
+
+    def _get_single_contract_cr(self) -> tuple:
+        """
+        Get details for a single Production Sharing Contract with Cost Recovery (PSC CR).
+
+        Returns
+        -------
+        psc: CostRecovery
+            Object representing the Cost Recovery contract.
+        psc_arguments: dict
+            Arguments specific to the Cost Recovery contract.
+        summary_arguments: dict
+            Arguments for the contract summary.
+
+        Notes
+        -----
+        This method creates an instance of the PSC CostRecovery class.
+        It populates the attributes of PSC CostRecovery object with relevant data.
+        """
         # Prepare total lifting data
         lifting_total = (
             self.sensitivity_data["oil_lifting_aggregate_total"]
@@ -813,8 +871,90 @@ class AdjustData:
 
         return self.psc, self.psc_arguments, self.summary_arguments
 
-    def _get_single_contract_gs(self):
-        pass
+    def _get_single_contract_gs(self) -> tuple:
+        """
+        Get details for a single Production Sharing Contract with Gross Split (PSC GS).
+
+        Returns
+        -------
+        psc: CostRecovery
+            Object representing the Gross Split contract.
+        psc_arguments: dict
+            Arguments specific to the Gross Split contract.
+        summary_arguments: dict
+            Arguments for the contract summary.
+
+        Notes
+        -----
+        This method creates an instance of the PSC GrossSplit class.
+        It populates the attributes of PSC GrossSplit object with relevant data.
+        """
+        # Prepare total lifting data
+        lifting_total = (
+            self.sensitivity_data["oil_lifting_aggregate_total"]
+            + self.sensitivity_data["gas_lifting_aggregate_total"]
+            + self.sensitivity_data["sulfur_lifting_aggregate"]
+            + self.sensitivity_data["electricity_lifting_aggregate"]
+            + self.sensitivity_data["co2_lifting_aggregate"]
+        )
+
+        # Create an instance of PSC GS
+        self.psc = GrossSplit(
+            start_date=self.data.general_config_data.start_date_project,
+            end_date=self.data.general_config_data.end_date_project,
+            oil_onstream_date=self.data.general_config_data.oil_onstream_date,
+            gas_onstream_date=self.data.general_config_data.gas_onstream_date,
+            lifting=lifting_total,
+            tangible_cost=self.sensitivity_data["tangible_cost_aggregate"],
+            intangible_cost=self.sensitivity_data["intangible_cost_aggregate"],
+            opex=self.sensitivity_data["opex_aggregate"],
+            asr_cost=self.data.asr_cost_aggregate,
+            field_status=self.data.psc_gs_data.field_status,
+            field_loc=self.data.psc_gs_data.field_location,
+            res_depth=self.data.psc_gs_data.reservoir_depth,
+            infra_avail=self.data.psc_gs_data.infrastructure_availability,
+            res_type=self.data.psc_gs_data.reservoir_type,
+            api_oil=self.data.psc_gs_data.oil_api,
+            domestic_use=self.data.psc_gs_data.domestic_content_use,
+            prod_stage=self.data.psc_gs_data.production_stage,
+            co2_content=self.data.psc_gs_data.co2_content,
+            h2s_content=self.data.psc_gs_data.h2s_content,
+            base_split_ctr_oil=self.data.psc_gs_data.oil_base_split,
+            base_split_ctr_gas=self.data.psc_gs_data.gas_base_split,
+            split_ministry_disc=self.data.psc_gs_data.ministry_discretion_split,
+            oil_dmo_volume_portion=self.data.psc_gs_data.oil_dmo_volume,
+            oil_dmo_fee_portion=self.data.psc_gs_data.oil_dmo_fee,
+            oil_dmo_holiday_duration=self.data.psc_gs_data.oil_dmo_period,
+            gas_dmo_volume_portion=self.data.psc_gs_data.gas_dmo_volume,
+            gas_dmo_fee_portion=self.data.psc_gs_data.gas_dmo_fee,
+            gas_dmo_holiday_duration=self.data.psc_gs_data.gas_dmo_period,
+        )
+
+        # Specify arguments for PSC GS
+        self.psc_arguments = {
+            "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config,
+            "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config,
+            "co2_revenue": self.data.fiscal_config_data.co2_revenue_config,
+            "is_dmo_end_weighted": self.data.psc_gs_data.dmo_is_weighted,
+            "tax_regime": self.data.fiscal_config_data.tax_mode,
+            "tax_rate": self.data.fiscal_config_data.tax_rate,
+            "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
+            "depr_method": self.data.fiscal_config_data.depreciation_method,
+            "decline_factor": self.data.fiscal_config_data.depreciation_method,
+            "vat_rate": self.data.fiscal_config_data.vat_rate,
+            "lbt_rate": self.data.fiscal_config_data.lbt_rate,
+            "inflation_rate": self.data.fiscal_config_data.inflation_rate,
+            "future_rate": float(self.data.fiscal_config_data.asr_future_rate),
+            "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
+            # "regime":,
+            # "year_ref":,
+            # "tax_type":,
+        }
+
+        # Filling the summary contract argument
+        self.summary_arguments["contract"] = self.psc
+
+        return self.psc, self.psc_arguments, self.summary_arguments
 
     def _get_transition_contract_cr_to_cr(self):
         pass

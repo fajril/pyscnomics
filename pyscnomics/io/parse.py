@@ -116,10 +116,23 @@ class InitiateContract:
             asr_cost=self.data.asr_cost_aggregate,
         )
 
+        self.psc_arguments = {
+            # "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config,
+            # "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config,
+            # "co2_revenue": self.data.fiscal_config_data.co2_revenue_config,
+            "vat_rate": self.data.fiscal_config_data.vat_rate,
+            "lbt_rate": self.data.fiscal_config_data.lbt_rate,
+            "inflation_rate": self.data.fiscal_config_data.inflation_rate,
+            "future_rate": float(self.data.fiscal_config_data.asr_future_rate),
+            # "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
+            # "year_ref":,
+            # "tax_type":,
+        }
+
         # Filling the summary contract argument
         self.summary_arguments["contract"] = self.psc
 
-        return self.psc, None, self.summary_arguments, self.data
+        return self.psc, self.psc_arguments, self.summary_arguments, self.data
 
     def _get_single_contract_cr(self) -> tuple:
         """

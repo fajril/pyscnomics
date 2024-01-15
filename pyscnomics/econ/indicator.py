@@ -143,12 +143,18 @@ def irr(
       is considered financially attractive.
     """
     # Condition where all the cashflow is positive
-    if np.all(cashflow >= 0):
-        result = None
-    elif np.all(cashflow <= 0):
-        result = None
+    if np.all(cashflow >= 0) or np.all(cashflow <= 0):
+        irr_result = 0
     else:
-        result = pyxirr.irr(cashflow)
+        irr_result = pyxirr.irr(cashflow)
+
+    # Condition where the irr resulting negative
+    result = irr_result
+    if irr_result is None:
+        result = 0
+    else:
+        if irr_result < 0:
+            result = 0
 
     return result
 

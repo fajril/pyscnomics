@@ -1518,6 +1518,7 @@ class BaseProject:
         lbt_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
         future_rate: float = 0.02,
+        sunk_cost_reference_year: int = None,
     ) -> None:
         """
         Run the economic analysis, calculating expenditures and configuring
@@ -1560,6 +1561,8 @@ class BaseProject:
             inflation_rate=inflation_rate,
             future_rate=future_rate,
         )
+
+        self._get_wap_price()
 
         # Configure total expenditures for OIL and GAS
         oil_total_expenditures = reduce(
