@@ -112,7 +112,7 @@ def main(workbook_path, mode):
 
 
     # Giving the workbook execution status to show that execution is success
-    xw.Book(workbook_path).sheets('Cover').range("F17").value = 'Success'
+    # xw.Book(workbook_path).sheets("Cover").range("F17").value = "Success"
 
 
 def run_standard(
@@ -317,15 +317,18 @@ def execute_sensitivity_serial(
 
 
 if __name__ == '__main__':
-    import sys
+    # import sys
+    # main(workbook_path=sys.argv[1], mode=sys.argv[2])
 
-    main(workbook_path=sys.argv[1], mode=sys.argv[2])
-
-    # import time
+    import time
+    workbook_path = "Workbook.xlsb"
+    run_mode = "Sensitivity"
     # workbook_path = "Workbook_Filled CR.xlsb"
     # run_mode = 'Standard'
-    #
-    # start_time = time.time()
-    # main(workbook_path=workbook_path, mode=run_mode)
-    # end_time = time.time()
-    # print('Execution Time:', end_time - start_time)
+
+    start_time = time.time()
+    main(workbook_path=workbook_path, mode=run_mode)
+    end_time = time.time()
+
+    print('\t')
+    print(f'Execution time: {end_time - start_time} seconds')
