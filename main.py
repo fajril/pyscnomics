@@ -6,7 +6,7 @@ import xlwings as xw
 import threading as th
 
 from pyscnomics.io.parse import InitiateContract
-from pyscnomics.optimize.adjuster import get_multipliers, AdjustData
+from pyscnomics.optimize.adjuster import get_multipliers_sensitivity, AdjustData
 
 from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt
 from pyscnomics.optimize.optimization import optimize_psc
@@ -74,48 +74,42 @@ def main(workbook_path, mode):
         data.fit()
 
         # Specify the multipliers
-        multipliers, total_run = get_multipliers(
+        multipliers, total_run = get_multipliers_sensitivity(
             min_deviation=data.sensitivity_data.percentage_min,
             max_deviation=data.sensitivity_data.percentage_max,
-            step=data.sensitivity_data.step,
             number_of_params=len(data.sensitivity_data.parameter),
         )
 
-        print('\t')
-        print('multipliers = \n', multipliers)
-
-        print('\t')
-        print('total run = ', total_run)
-
-        params = {}
+        # Run sensitivit(y study
         target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
-        results = {
-            key: np.zeros([multipliers.shape[1], len(target)], dtype=np.float_)
-            for key in data.sensitivity_data.parameter
+        results = execute_sensitivity_serial(data=data, target=target, multipliers=multipliers)
+
+        # Arrange the results into the desired output
+        results_arranged = {
+            key: (
+                np.zeros(
+                    [multipliers.shape[1], len(data.sensitivity_data.parameter)],
+                    dtype=np.float_
+                )
+            )
+            for key in target
         }
 
-        for i, key in enumerate(data.sensitivity_data.parameter):
-            for j in range(multipliers.shape[1]):
-                (
-                    params["psc"],
-                    params["psc_arguments"],
-                    params["summary_arguments"],
-                ) = AdjustData(
-                    data=data,
-                    workbook_path=workbook_path,
-                    multipliers=multipliers[i, j, :],
-                ).activate()
-
-                results[key][j, :] = run_sensitivity(
-                    contract=params["psc"],
-                    contract_arguments=params["psc_arguments"],
-                    summary_arguments=params["summary_arguments"],
-                )
+        for i, econ in enumerate(target):
+            for j, param in enumerate(data.sensitivity_data.parameter):
+                results_arranged[econ][:, j] = results[param][:, i]
 
         print('\t')
-        print(f'Filetype: {type(results)}')
-        print(f'Keys: {results.keys()}')
-        print('results = \n', results)
+        print(f'Filetype: {type(results_arranged)}')
+        print(f'Keys: {results_arranged.keys()}')
+        print('results_arranged = \n', results_arranged)
+
+        print('\t')
+        print("npv = \n", results_arranged["npv"])
+
+        print('\t')
+        print("irr = \n", results_arranged["irr"])
+
 
     # Giving the workbook execution status to show that execution is success
     # xw.Book(workbook_path).sheets("Cover").range("F17").value = "Success"
@@ -269,6 +263,57 @@ def run_sensitivity(
         contract_summary["gov_take"],
         contract_summary["ctr_net_share"],
     )
+
+
+def execute_sensitivity_serial(
+    data: Aggregate,
+    target: list,
+    multipliers: np.ndarray,
+) -> dict[str, np.ndarray]:
+    """
+    Perform sensitivity analysis in a serial manner.
+
+    Parameters
+    ----------
+    data: Aggregate
+        The aggregate data for the analysis.
+    target: list
+    multipliers: np.ndarray
+        A 3D array of multipliers for sensitivity analysis.
+
+    Returns
+    -------
+    dict[str, np.ndarray]
+        A dictionary containing sensitivity analysis results. The keys correspond to
+        different parameters, and the values are arrays of results for each multiplier.
+    """
+    params = {}
+    results = {
+        key: np.zeros([multipliers.shape[1], len(target)], dtype=np.float_)
+        for key in data.sensitivity_data.parameter
+    }
+
+    for i, key in enumerate(data.sensitivity_data.parameter):
+        for j in range(multipliers.shape[1]):
+            # Adjust data prior to simulation
+            (
+                params["psc"],
+                params["psc_arguments"],
+                params["summary_arguments"]
+            ) = AdjustData(
+                data=data,
+                workbook_path=workbook_path,
+                multipliers=multipliers[i, j, :],
+            ).activate()
+
+            # Collect the results
+            results[key][j, :] = run_sensitivity(
+                contract=params["psc"],
+                contract_arguments=params["psc_arguments"],
+                summary_arguments=params["summary_arguments"],
+            )
+
+    return results
 
 
 if __name__ == '__main__':

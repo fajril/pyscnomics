@@ -12,7 +12,7 @@ from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 
 
-def get_multipliers(
+def get_multipliers_sensitivity(
     min_deviation: float,
     max_deviation: float,
     base_value: float = 1.0,
@@ -20,7 +20,8 @@ def get_multipliers(
     number_of_params: int = 5,
 ) -> np.ndarray:
     """
-    Generate multipliers for different economic parameters within a specified range.
+    Generate multipliers for different economic parameters within a specified range
+    for sensitivity study.
 
     Parameters
     ----------
@@ -750,11 +751,6 @@ class AdjustData:
             + self.sensitivity_data["electricity_lifting_aggregate"]
             + self.sensitivity_data["co2_lifting_aggregate"]
         )
-
-        # print('\t')
-        # print(f'Filetype: {type(lifting_total)}')
-        # print(f'Length: {len(lifting_total)}')
-        # print('lifting_total = \n', lifting_total)
 
         # Create an instance of PSC CR
         self.psc = CostRecovery(
