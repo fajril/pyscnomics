@@ -26,8 +26,8 @@ psc.gas_ftp_is_shared = True
 psc.gas_ftp_portion = 0.05
 
 # Split Pre Tax
-psc.oil_ctr_pretax_share = 0.34722220
-psc.gas_ctr_pretax_share = 0.72083300
+psc.oil_ctr_pretax_share = 0.3472220
+psc.gas_ctr_pretax_share = 0.7208330
 
 # DMO
 psc.oil_dmo_volume_portion = 0.25
@@ -76,8 +76,8 @@ psc_table_oil['Unrec after Transfer'] = psc._oil_unrecovered_after_transfer
 psc_table_oil['Cost To Be Recovered After TF'] = psc._oil_cost_to_be_recovered_after_tf
 psc_table_oil['Cost Recovery After TF'] = psc._oil_cost_recovery_after_tf
 psc_table_oil['ETS After Transfer'] = psc._oil_ets_after_transfer
-psc_table_oil['ETS CTR Share'] = psc._oil_contractor_share
-psc_table_oil['ETS GOV Share'] = psc._oil_government_share
+psc_table_oil['Contractor Share Prior Tax'] = psc._oil_contractor_share
+psc_table_oil['Government Share'] = psc._oil_government_share
 psc_table_oil['DMO Volume'] = psc._oil_dmo_volume
 psc_table_oil['DMO Fee'] = psc._oil_dmo_fee
 psc_table_oil['DDMO'] = psc._oil_ddmo
@@ -94,7 +94,7 @@ print(psc_table_oil, '\n')
 psc_table_gas = pd.DataFrame()
 psc_table_gas['Year'] = psc.project_years
 psc_table_gas['Lifting'] = psc._gas_lifting.get_lifting_rate_arr()
-psc_table_gas['Price'] = psc._gas_lifting.get_price_arr()
+psc_table_gas['Price'] = psc._gas_wap_price
 psc_table_gas['Revenue'] = psc._gas_revenue
 psc_table_gas['Depreciable'] = psc._gas_tangible_expenditures
 psc_table_gas['Opex'] = psc._gas_opex_expenditures
@@ -115,8 +115,8 @@ psc_table_gas['Unrec after Transfer'] = psc._gas_unrecovered_after_transfer
 psc_table_gas['Cost To Be Recovered After TF'] = psc._gas_cost_to_be_recovered_after_tf
 psc_table_gas['Cost Recovery After TF'] = psc._gas_cost_recovery_after_tf
 psc_table_gas['ETS After Transfer'] = psc._gas_ets_after_transfer
-psc_table_gas['ETS CTR Share'] = psc._gas_contractor_share
-psc_table_gas['ETS GOV Share'] = psc._gas_government_share
+psc_table_gas['Contractor Share Prior Tax'] = psc._gas_contractor_share
+psc_table_gas['Government Share'] = psc._gas_government_share
 psc_table_gas['DMO Volume'] = psc._gas_dmo_volume
 psc_table_gas['DMO Fee'] = psc._gas_dmo_fee
 psc_table_gas['DDMO'] = psc._gas_ddmo

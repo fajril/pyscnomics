@@ -384,13 +384,13 @@ class GrossSplit(BaseProject):
         # Cumulative Progressive Split
         if np.less(cum, 30):
             px = 0.1
-        elif np.logical_and(np.less_equal(30, cum), cum < np.less(cum, 60)):
+        elif np.less(cum, 60):
             px = 0.09
-        elif np.logical_and(np.less_equal(60, cum), cum < np.less(cum, 90)):
+        elif np.less(cum, 90):
             px = 0.08
-        elif np.logical_and(np.less_equal(90, cum), cum < np.less(cum, 125)):
+        elif np.less(cum, 125):
             px = 0.06
-        elif np.logical_and(np.less_equal(125, cum), cum < np.less(cum, 175)):
+        elif np.less(cum, 175):
             px = 0.04
         elif np.greater(cum, 175):
             px = 0
