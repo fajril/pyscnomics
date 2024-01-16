@@ -137,94 +137,10 @@ def main(workbook_path, mode):
         # Prepare uncertainty data
         uncertainty_data = prepare_montecarlo_data(data=data)
 
-
-def prepare_montecarlo_data(data: Aggregate):
-
-    # Prepare a container to store all the necessary data
-    uncertainty_data = {}
-
-    # Prepare attribute run_number
-    if pd.isna(data.montecarlo_data.run_number):
-        raise MonteCarloException(
-            f"The data for run number is missing. Please check the input data."
-        )
-
-    uncertainty_data["run_number"] = int(data.montecarlo_data.run_number)
-
-    # Prepare attribute parameter
-    if not isinstance(data.montecarlo_data.parameter, list):
-        raise MonteCarloException(
-            f"Attribute parameter must be provided in a list datatype, "
-            f"not {data.montecarlo_data.parameter.__class__.__qualname__}"
-        )
-
-    uncertainty_data["parameter"] = data.montecarlo_data.parameter
-
-    # Prepare attribute distribution
-    if not isinstance(data.montecarlo_data.distribution, list):
-        raise MonteCarloException(
-            f"Attribute distribution must be provided in a list datatype, "
-            f"not {data.montecarlo_data.distribution.__class__.__qualname__}"
-        )
-
-    uncertainty_data["distribution"] = data.montecarlo_data.distribution
-
-    # Prepare attribute min_values
-    if not isinstance(data.montecarlo_data.min_values, np.ndarray):
-        raise MonteCarloException(
-            f"Attribute min_values must be provided in a numpy ndarray datatype, "
-            f"not {data.montecarlo_data.min_values.__class__.__qualname__}"
-        )
-
-    min_values_nan = list(filter(lambda i: pd.isna(i), data.montecarlo_data.min_values))
-    if len(min_values_nan) > 0:
-        raise MonteCarloException(
-            f"Minimum values data are incomplete. Please check the input data."
-        )
-
-    uncertainty_data["min_values"] = data.montecarlo_data.min_values.astype(np.float_)
-
-    # Prepare attribute mean_values
-    if not isinstance(data.montecarlo_data.mean_values, np.ndarray):
-        raise MonteCarloException(
-            f"Attribute mean_values must be provided in a numpy ndarray datatype, "
-            f"not {data.montecarlo_data.mean_values.__class__.__qualname__}"
-        )
-
-    mean_values_nan = list(filter(lambda i: pd.isna(i), data.montecarlo_data.mean_values))
-    if len(mean_values_nan) > 0:
-        raise MonteCarloException(
-            f"Mean values data are incomplete. Please check the input data."
-        )
-
-    uncertainty_data["mean_values"] = data.montecarlo_data.mean_values.astype(np.float_)
-
-    # Prepare attribute max_values
-    if not isinstance(data.montecarlo_data.max_values, np.ndarray):
-        raise MonteCarloException(
-            f"Attribute max_values must be provided in a numpy ndarray datatype, "
-            f"not {data.montecarlo_data.max_values.__class__.__qualname__}"
-        )
-
-    max_values_nan = list(filter(lambda i: pd.isna(i), data.montecarlo_data.max_values))
-    if len(max_values_nan) > 0:
-        raise MonteCarloException(
-            f"Maximum values data are incomplete. Please check the input data."
-        )
-
-    uncertainty_data["max_values"] = data.montecarlo_data.max_values.astype(np.float_)
-
-    # Prepare attribute standard deviation
-    if not isinstance(data.montecarlo_data.std_dev, np.ndarray):
-        raise MonteCarloException(
-            f"Attribute std_dev must be provided in a numpy ndarray datatype, "
-            f"not {data.montecarlo_data.std_dev.__class__.__qualname__}"
-        )
-
-    print('\t')
-    print(f'Filetype: {type(uncertainty_data)}')
-    print(f'Keys: {uncertainty_data.keys()}')
-    print('uncertainty_data = \n', uncertainty_data)
+        print('\t')
+        print(f'Filetype: {type(uncertainty_data)}')
+        print(f'Length: {len(uncertainty_data)}')
+        print('uncertainty_data = \n', uncertainty_data)
 
 
 def run_standard(
@@ -434,6 +350,133 @@ def execute_sensitivity_serial(
             )
 
     return results
+
+
+def prepare_montecarlo_data(data: Aggregate) -> dict:
+    """
+    Prepares Monte Carlo simulation data from the given Aggregate object.
+
+    Parameters
+    ----------
+    data: Aggregate
+        The input data containing Monte Carlo simulation data.
+
+    Returns
+    -------
+    dict
+        A dictionary containing the prepared Monte Carlo simulation data.
+
+    Raises
+    ------
+    MonteCarloException
+        If any of the required data is missing or inconsistent.
+    """
+    # Prepare a container to store all the necessary data
+    uncertainty_data = {}
+
+    # Prepare attribute run_number
+    if pd.isna(data.montecarlo_data.run_number):
+        raise MonteCarloException(
+            f"The data for run number is missing. Please check the input data."
+        )
+
+    uncertainty_data["run_number"] = int(data.montecarlo_data.run_number)
+
+    # Prepare attribute parameter
+    if not isinstance(data.montecarlo_data.parameter, list):
+        raise MonteCarloException(
+            f"Attribute parameter must be provided in a list datatype, "
+            f"not {data.montecarlo_data.parameter.__class__.__qualname__}"
+        )
+
+    uncertainty_data["parameter"] = data.montecarlo_data.parameter
+
+    # Prepare attribute distribution
+    if not isinstance(data.montecarlo_data.distribution, list):
+        raise MonteCarloException(
+            f"Attribute distribution must be provided in a list datatype, "
+            f"not {data.montecarlo_data.distribution.__class__.__qualname__}"
+        )
+
+    uncertainty_data["distribution"] = data.montecarlo_data.distribution
+
+    # Prepare attribute min_values
+    if not isinstance(data.montecarlo_data.min_values, np.ndarray):
+        raise MonteCarloException(
+            f"Attribute min_values must be provided in a numpy ndarray datatype, "
+            f"not {data.montecarlo_data.min_values.__class__.__qualname__}"
+        )
+
+    min_values_nan = list(filter(lambda i: pd.isna(i), data.montecarlo_data.min_values))
+    if len(min_values_nan) > 0:
+        raise MonteCarloException(
+            f"Minimum values data are incomplete. Please check the input data."
+        )
+
+    uncertainty_data["min_values"] = data.montecarlo_data.min_values.astype(np.float_)
+
+    # Prepare attribute mean_values
+    if not isinstance(data.montecarlo_data.mean_values, np.ndarray):
+        raise MonteCarloException(
+            f"Attribute mean_values must be provided in a numpy ndarray datatype, "
+            f"not {data.montecarlo_data.mean_values.__class__.__qualname__}"
+        )
+
+    mean_values_nan = list(filter(lambda i: pd.isna(i), data.montecarlo_data.mean_values))
+    if len(mean_values_nan) > 0:
+        raise MonteCarloException(
+            f"Mean values data are incomplete. Please check the input data."
+        )
+
+    uncertainty_data["mean_values"] = data.montecarlo_data.mean_values.astype(np.float_)
+
+    # Prepare attribute max_values
+    if not isinstance(data.montecarlo_data.max_values, np.ndarray):
+        raise MonteCarloException(
+            f"Attribute max_values must be provided in a numpy ndarray datatype, "
+            f"not {data.montecarlo_data.max_values.__class__.__qualname__}"
+        )
+
+    max_values_nan = list(filter(lambda i: pd.isna(i), data.montecarlo_data.max_values))
+    if len(max_values_nan) > 0:
+        raise MonteCarloException(
+            f"Maximum values data are incomplete. Please check the input data."
+        )
+
+    uncertainty_data["max_values"] = data.montecarlo_data.max_values.astype(np.float_)
+
+    # Prepare attribute standard deviation
+    if not isinstance(data.montecarlo_data.std_dev, np.ndarray):
+        raise MonteCarloException(
+            f"Attribute std_dev must be provided in a numpy ndarray datatype, "
+            f"not {data.montecarlo_data.std_dev.__class__.__qualname__}"
+        )
+
+    for i, val in enumerate(uncertainty_data["distribution"]):
+        if val == "Uniform" or val == "Triangular":
+            data.montecarlo_data.std_dev[i] = 0.0
+
+    std_dev_nan = list(filter(lambda i: pd.isna(i), data.montecarlo_data.std_dev))
+    if len(std_dev_nan) > 0:
+        raise MonteCarloException(
+            f"Std deviation data are incomplete. Please check the input data."
+        )
+
+    uncertainty_data["std_dev"] = data.montecarlo_data.std_dev.astype(np.float_)
+
+    # Throw exception for inappropriate conditions
+    for i, val in enumerate(uncertainty_data["min_values"]):
+        if (
+            uncertainty_data["min_values"][i] > uncertainty_data["max_values"][i]
+            or uncertainty_data["min_values"][i] > uncertainty_data["mean_values"][i]
+            or uncertainty_data["mean_values"][i] > uncertainty_data["max_values"][i]
+        ):
+            raise MonteCarloException(
+                f"Inappropriate minimum, mean, or maximum value data. "
+                f"Please check the input data."
+            )
+
+    return uncertainty_data
 
 
 if __name__ == '__main__':
