@@ -1664,15 +1664,16 @@ class Spreadsheet:
         (2) Create a new instance of MonteCarloData with the necessary information
             stored as the corresponding attributes.
         """
-        mc_data_loaded = self.data_loaded["Uncertainty"].iloc[1:6, np.r_[1:3, 4, 6:8]]
+        mc_data_loaded = self.data_loaded["Uncertainty"].iloc[1:10, np.r_[1:3, 4:8]]
 
         return MonteCarloData(
-            parameter=mc_data_loaded.iloc[:, 0].to_numpy(),
-            distribution=mc_data_loaded.iloc[:, 1].to_numpy(),
-            min_values=mc_data_loaded.iloc[:, 2].to_numpy(),
-            max_values=mc_data_loaded.iloc[:, 3].to_numpy(),
-            std_dev=mc_data_loaded.iloc[:, 4].to_numpy(),
-            data_length=mc_data_loaded.shape[0],
+            run_number=mc_data_loaded.iloc[0, 1],
+            parameter=mc_data_loaded.iloc[3:8, 0].to_numpy().tolist(),
+            distribution=mc_data_loaded.iloc[3:8, 1].to_numpy().tolist(),
+            min_values=mc_data_loaded.iloc[3:8, 2].to_numpy(),
+            mean_values=mc_data_loaded.iloc[3:8, 3].to_numpy(),
+            max_values=mc_data_loaded.iloc[3:8, 4].to_numpy(),
+            std_dev=mc_data_loaded.iloc[3:8, 5].to_numpy(),
         )
 
     def _get_optimization_data(self) -> OptimizationData:
@@ -1783,3 +1784,4 @@ class Spreadsheet:
         # Fill in the attributes associated with sensitivity and optimization
         self.optimization_data = self._get_optimization_data()
         self.sensitivity_data = self._get_sensitivity_data()
+        self.montecarlo_data = self._get_montecarlo_data()

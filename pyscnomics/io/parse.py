@@ -84,6 +84,8 @@ class InitiateContract:
         -------
         psc: BaseProject
             Object representing the BaseProject contract.
+        psc_arguments: dict
+            Arguments specific to the Cost Recovery contract.
         summary_arguments: dict
             Arguments for the contract summary.
         data: Aggregate
@@ -116,15 +118,12 @@ class InitiateContract:
             asr_cost=self.data.asr_cost_aggregate,
         )
 
+        # Specify arguments for Project
         self.psc_arguments = {
-            # "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config,
-            # "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config,
-            # "co2_revenue": self.data.fiscal_config_data.co2_revenue_config,
             "vat_rate": self.data.fiscal_config_data.vat_rate,
             "lbt_rate": self.data.fiscal_config_data.lbt_rate,
             "inflation_rate": self.data.fiscal_config_data.inflation_rate,
             "future_rate": float(self.data.fiscal_config_data.asr_future_rate),
-            # "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
             # "year_ref":,
             # "tax_type":,
         }
@@ -969,7 +968,7 @@ class InitiateContract:
 
         Returns
         -------
-        contract: CostRecovery | GrossSplit | Transition
+        contract: BaseProject | CostRecovery | GrossSplit | Transition
             Object representing the activated contract.
 
         Notes
@@ -978,17 +977,19 @@ class InitiateContract:
         the specified contract type. It selects the appropriate method to
         retrieve details for a single contract or a transition between contracts.
 
-        (1) If the contract type is "PSC Cost Recovery (CR)," the method returns
+        (1) If the contract type is "Project", the method returns objects to run
+            a single BaseProject contract case.
+        (2) If the contract type is "PSC Cost Recovery (CR)," the method returns
             objects to run a single Cost Recovery contract case.
-        (2) If the contract type is "PSC Gross Split (GS)," the method returns
+        (3) If the contract type is "PSC Gross Split (GS)," the method returns
             objects to run a single Gross Split contract case.
-        (3) If the contract type is "Transition CR - CR," the method returns
+        (4) If the contract type is "Transition CR - CR," the method returns
             objects to run a transition from Cost Recovery to Cost Recovery case.
-        (4) If the contract type is "Transition CR - GS," the method returns
+        (5) If the contract type is "Transition CR - GS," the method returns
             objects to run a transition from Cost Recovery to Gross Split case.
-        (5) If the contract type is "Transition GS - CR," the method returns
+        (6) If the contract type is "Transition GS - CR," the method returns
             objects to run a transition from Gross Split to Cost Recovery case.
-        (6) If the contract type is "Transition GS - GS," the method returns
+        (7) If the contract type is "Transition GS - GS," the method returns
             objects to run a transition from Gross Split to Gross Split case.
         """
         if self.contract_type == "Project":

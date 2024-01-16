@@ -11,6 +11,7 @@ from pyscnomics.econ.costs import Tangible, Intangible, OPEX
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
+from pyscnomics.contracts.transition import Transition
 
 
 def get_multipliers_sensitivity(
@@ -65,6 +66,17 @@ def get_multipliers_sensitivity(
     total_run = len(tot_multipliers) * number_of_params
 
     return multipliers, total_run
+
+
+def get_multipliers_montecarlo(
+    run_number: None | int,
+    distribution: list,
+    min_values: np.ndarray,
+    mean_values: np.ndarray,
+    max_values: np.ndarray,
+    std_dev: np.ndarray,
+):
+    pass
 
 
 def get_price_and_rate_adjustment(
@@ -748,6 +760,8 @@ class AdjustData:
         -------
         psc: BaseProject
             Object representing the BaseProject contract.
+        psc_arguments: dict
+            Arguments specific to the Cost Recovery contract.
         summary_arguments: dict
             Arguments for the contract summary.
 
@@ -777,6 +791,16 @@ class AdjustData:
             opex=self.sensitivity_data["opex_aggregate"],
             asr_cost=self.data.asr_cost_aggregate,
         )
+
+        # Specify arguments for Project
+        self.psc_arguments = {
+            "vat_rate": self.data.fiscal_config_data.vat_rate,
+            "lbt_rate": self.data.fiscal_config_data.lbt_rate,
+            "inflation_rate": self.data.fiscal_config_data.inflation_rate,
+            "future_rate": float(self.data.fiscal_config_data.asr_future_rate),
+            # "year_ref": None,
+            # "tax_type": None,
+        }
 
         # Filling the summary contract argument
         self.summary_arguments["contract"] = self.psc
@@ -970,7 +994,33 @@ class AdjustData:
 
     def activate(self):
         """
-        123
+        Activate the Production Sharing Contract based on its type.
+
+        Returns
+        -------
+        contract: BaseProject | CostRecovery | GrossSplit | Transition
+            Object representing the activated contract.
+
+        Notes
+        -----
+        This method activates the Production Sharing Contract (PSC) based on
+        the specified contract type. It selects the appropriate method to
+        retrieve details for a single contract or a transition between contracts.
+
+        (1) If the contract type is "Project", the method returns objects to run
+            a single BaseProject contract case.
+        (2) If the contract type is "PSC Cost Recovery (CR)," the method returns
+            objects to run a single Cost Recovery contract case.
+        (3) If the contract type is "PSC Gross Split (GS)," the method returns
+            objects to run a single Gross Split contract case.
+        (4) If the contract type is "Transition CR - CR," the method returns
+            objects to run a transition from Cost Recovery to Cost Recovery case.
+        (5) If the contract type is "Transition CR - GS," the method returns
+            objects to run a transition from Cost Recovery to Gross Split case.
+        (6) If the contract type is "Transition GS - CR," the method returns
+            objects to run a transition from Gross Split to Cost Recovery case.
+        (7) If the contract type is "Transition GS - GS," the method returns
+            objects to run a transition from Gross Split to Gross Split case.
         """
         if self.contract_type == "Project":
             return self._get_single_contract_project()
@@ -982,16 +1032,26 @@ class AdjustData:
             return self._get_single_contract_gs()
 
         elif self.contract_type == "Transition CR - CR":
-            pass
+            return self._get_transition_contract_cr_to_cr()
 
         elif self.contract_type == "Transition CR - GS":
-            pass
+            return self._get_transition_contract_cr_to_gs()
 
         elif self.contract_type == "Transition GS - GS":
-            pass
+            return self._get_transition_contract_gs_to_gs()
 
         elif self.contract_type == "Transition GS - CR":
-            pass
+            return self._get_transition_contract_gs_to_cr()
 
         else:
-            raise AdjustDataException
+            raise AdjustDataException(
+                f"The filled contract type ({self.contract_type}) is not available. "
+                f"The available contract types are: "
+                f"(1) Project, "
+                f"(2) PSC Cost Recovery (CR), "
+                f"(3) PSC Gross Split (GS), "
+                f"(4) Transition CR - CR, "
+                f"(5) Transition CR - GS, "
+                f"(6) Transition GS - GS, "
+                f"(7) Transition GS - CR."
+            )

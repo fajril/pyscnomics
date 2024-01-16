@@ -18,14 +18,14 @@ from pyscnomics.econ.results import CashFlow
 # from pyscnomics.tools.helper import summarizer
 from pyscnomics.io.parse import InitiateContract
 
-from pyscnomics.optimize.sensitivity import AdjustData
+from pyscnomics.optimize.adjuster import AdjustData
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.tools.summary import get_summary
 
-from pyscnomics.optimize.sensitivity import (
-    get_multipliers,
+from pyscnomics.optimize.adjuster import (
+    get_multipliers_sensitivity,
     get_price_and_rate_adjustment,
     get_rate_adjustment,
 )
@@ -230,15 +230,15 @@ asr_cost_data = (
 
 '------------------------------------------------- EXECUTE -------------------------------------------------'
 
-# timer_start = tm.time()
-#
-# data = Spreadsheet()
-# data.prepare_data()
-#
-# timer_end = tm.time() - timer_start
-#
-# print('\t')
-# print('timer end = ', timer_end)
+timer_start = tm.time()
+
+data = Spreadsheet()
+data.prepare_data()
+
+timer_end = tm.time() - timer_start
+
+print('\t')
+print('timer end = ', timer_end)
 
 # timer_start = tm.time()
 #

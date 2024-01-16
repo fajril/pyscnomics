@@ -2,6 +2,7 @@
 Python Script as the entry point of Excel Workbook
 """
 import numpy as np
+import pandas as pd
 import xlwings as xw
 import threading as th
 
@@ -18,6 +19,12 @@ from pyscnomics.contracts.transition import Transition
 
 from pyscnomics.tools.summary import get_summary
 from pyscnomics.io.aggregator import Aggregate
+
+
+class MonteCarloException(Exception):
+    """ Exception to be raised for a misuse of MonteCarlo class """
+
+    pass
 
 
 def main(workbook_path, mode):
@@ -100,11 +107,6 @@ def main(workbook_path, mode):
             for j, param in enumerate(data.sensitivity_data.parameter):
                 results_arranged[econ][:, j] = results[param][:, i]
 
-        print('\t')
-        print(f'Filetype: {type(results_arranged)}')
-        print(f'Keys: {results_arranged.keys()}')
-        print('results_arranged = \n', results_arranged)
-
         # print('\t')
         # print("npv = \n", results_arranged["npv"])
         #
@@ -125,6 +127,104 @@ def main(workbook_path, mode):
 
     # Giving the workbook execution status to show that execution is success
     # xw.Book(workbook_path).sheets("Cover").range("F17").value = "Success"
+
+    # Run montecarlo simulation
+    elif mode == "Uncertainty":
+        # Prepare the loaded data
+        data = Aggregate(workbook_to_read=workbook_path)
+        data.fit()
+
+        # Prepare uncertainty data
+        uncertainty_data = prepare_montecarlo_data(data=data)
+
+
+def prepare_montecarlo_data(data: Aggregate):
+
+    # Prepare a container to store all the necessary data
+    uncertainty_data = {}
+
+    # Prepare attribute run_number
+    if pd.isna(data.montecarlo_data.run_number):
+        raise MonteCarloException(
+            f"The data for run number is missing. Please check the input data."
+        )
+
+    uncertainty_data["run_number"] = int(data.montecarlo_data.run_number)
+
+    # Prepare attribute parameter
+    if not isinstance(data.montecarlo_data.parameter, list):
+        raise MonteCarloException(
+            f"Attribute parameter must be provided in a list datatype, "
+            f"not {data.montecarlo_data.parameter.__class__.__qualname__}"
+        )
+
+    uncertainty_data["parameter"] = data.montecarlo_data.parameter
+
+    # Prepare attribute distribution
+    if not isinstance(data.montecarlo_data.distribution, list):
+        raise MonteCarloException(
+            f"Attribute distribution must be provided in a list datatype, "
+            f"not {data.montecarlo_data.distribution.__class__.__qualname__}"
+        )
+
+    uncertainty_data["distribution"] = data.montecarlo_data.distribution
+
+    # Prepare attribute min_values
+    if not isinstance(data.montecarlo_data.min_values, np.ndarray):
+        raise MonteCarloException(
+            f"Attribute min_values must be provided in a numpy ndarray datatype, "
+            f"not {data.montecarlo_data.min_values.__class__.__qualname__}"
+        )
+
+    min_values_nan = list(filter(lambda i: pd.isna(i), data.montecarlo_data.min_values))
+    if len(min_values_nan) > 0:
+        raise MonteCarloException(
+            f"Minimum values data are incomplete. Please check the input data."
+        )
+
+    uncertainty_data["min_values"] = data.montecarlo_data.min_values.astype(np.float_)
+
+    # Prepare attribute mean_values
+    if not isinstance(data.montecarlo_data.mean_values, np.ndarray):
+        raise MonteCarloException(
+            f"Attribute mean_values must be provided in a numpy ndarray datatype, "
+            f"not {data.montecarlo_data.mean_values.__class__.__qualname__}"
+        )
+
+    mean_values_nan = list(filter(lambda i: pd.isna(i), data.montecarlo_data.mean_values))
+    if len(mean_values_nan) > 0:
+        raise MonteCarloException(
+            f"Mean values data are incomplete. Please check the input data."
+        )
+
+    uncertainty_data["mean_values"] = data.montecarlo_data.mean_values.astype(np.float_)
+
+    # Prepare attribute max_values
+    if not isinstance(data.montecarlo_data.max_values, np.ndarray):
+        raise MonteCarloException(
+            f"Attribute max_values must be provided in a numpy ndarray datatype, "
+            f"not {data.montecarlo_data.max_values.__class__.__qualname__}"
+        )
+
+    max_values_nan = list(filter(lambda i: pd.isna(i), data.montecarlo_data.max_values))
+    if len(max_values_nan) > 0:
+        raise MonteCarloException(
+            f"Maximum values data are incomplete. Please check the input data."
+        )
+
+    uncertainty_data["max_values"] = data.montecarlo_data.max_values.astype(np.float_)
+
+    # Prepare attribute standard deviation
+    if not isinstance(data.montecarlo_data.std_dev, np.ndarray):
+        raise MonteCarloException(
+            f"Attribute std_dev must be provided in a numpy ndarray datatype, "
+            f"not {data.montecarlo_data.std_dev.__class__.__qualname__}"
+        )
+
+    print('\t')
+    print(f'Filetype: {type(uncertainty_data)}')
+    print(f'Keys: {uncertainty_data.keys()}')
+    print('uncertainty_data = \n', uncertainty_data)
 
 
 def run_standard(
@@ -342,7 +442,7 @@ if __name__ == '__main__':
 
     import time
     workbook_path = "Workbook.xlsb"
-    run_mode = "Standard"
+    run_mode = "Uncertainty"
     # workbook_path = "Workbook_Filled CR.xlsb"
     # run_mode = 'Standard'
 
