@@ -76,6 +76,10 @@ for key, value in psc_summary.items():
 from pyscnomics.tools.table import get_table
 
 psc_table_oil, psc_table_gas, psc_table_consolidated = get_table(contract=psc)
+psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
+psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
+psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
+
 print(psc_table_oil, '\n')
 print(psc_table_gas, '\n')
 print(psc_table_consolidated, '\n')

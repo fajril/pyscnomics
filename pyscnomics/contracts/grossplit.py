@@ -367,9 +367,7 @@ class GrossSplit(BaseProject):
     def _get_prog_split_52_2017(fluid: FluidType, price: float, cum: float):
         # Indonesia's Ministry Regulations No.52 The Year of 2017. At Appendix B Progressive Component
         if fluid == FluidType.OIL:
-            ps = np.where(price > 0,
-                          (85 - price) * 0.25 / 100,
-                          0)
+            ps = (85 - price) * 0.25 / 100
 
         elif fluid == FluidType.GAS:
             if price < 7:
@@ -384,13 +382,13 @@ class GrossSplit(BaseProject):
         # Cumulative Progressive Split
         if np.less(cum, 30):
             px = 0.1
-        elif np.less(cum, 60):
+        elif np.logical_and(np.less_equal(30, cum), cum < np.less(cum, 60)):
             px = 0.09
-        elif np.less(cum, 90):
+        elif np.logical_and(np.less_equal(60, cum), cum < np.less(cum, 90)):
             px = 0.08
-        elif np.less(cum, 125):
+        elif np.logical_and(np.less_equal(90, cum), cum < np.less(cum, 125)):
             px = 0.06
-        elif np.less(cum, 175):
+        elif np.logical_and(np.less_equal(125, cum), cum < np.less(cum, 175)):
             px = 0.04
         elif np.greater(cum, 175):
             px = 0

@@ -10,6 +10,8 @@ import numpy as np
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import FluidType, TaxType, TaxRegime, OtherRevenue, InflationAppliedTo
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+
+
 # from pyscnomics.econ.results import CashFlow
 
 
@@ -21,6 +23,12 @@ class BaseProjectException(Exception):
 
 class OtherRevenueException(Exception):
     """Exception to raise for a misuse of Other Revenue"""
+
+    pass
+
+
+class SunkCostException(Exception):
+    """Exception to raise for a misuse of Sunk Cost Method"""
 
     pass
 
@@ -97,6 +105,8 @@ class BaseProject:
     _gas_opex: OPEX = field(default=None, init=False, repr=False)
     _oil_asr: ASR = field(default=None, init=False, repr=False)
     _gas_asr: ASR = field(default=None, init=False, repr=False)
+    _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
 
     # Private attributes associated with expenditures
     _oil_tangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
@@ -287,22 +297,22 @@ class BaseProject:
 
         # Raise an exception error if the start year of the project is inconsistent
         if not all(
-            i == self.start_date.year
-            for i in [
-                self._oil_lifting.start_year,
-                self._gas_lifting.start_year,
-                self._sulfur_lifting.start_year,
-                self._electricity_lifting.start_year,
-                self._co2_lifting.start_year,
-                self._oil_tangible.start_year,
-                self._gas_tangible.start_year,
-                self._oil_intangible.start_year,
-                self._gas_intangible.start_year,
-                self._oil_opex.start_year,
-                self._gas_opex.start_year,
-                self._oil_asr.start_year,
-                self._gas_asr.start_year,
-            ]
+                i == self.start_date.year
+                for i in [
+                    self._oil_lifting.start_year,
+                    self._gas_lifting.start_year,
+                    self._sulfur_lifting.start_year,
+                    self._electricity_lifting.start_year,
+                    self._co2_lifting.start_year,
+                    self._oil_tangible.start_year,
+                    self._gas_tangible.start_year,
+                    self._oil_intangible.start_year,
+                    self._gas_intangible.start_year,
+                    self._oil_opex.start_year,
+                    self._gas_opex.start_year,
+                    self._oil_asr.start_year,
+                    self._gas_asr.start_year,
+                ]
         ):
             raise BaseProjectException(
                 f"Inconsistent start project year: "
@@ -324,22 +334,22 @@ class BaseProject:
 
         # Raise an exception error if the end year of the project is inconsistent
         if not all(
-            i == self.end_date.year
-            for i in [
-                self._oil_lifting.end_year,
-                self._gas_lifting.end_year,
-                self._sulfur_lifting.end_year,
-                self._electricity_lifting.end_year,
-                self._co2_lifting.end_year,
-                self._oil_tangible.end_year,
-                self._gas_tangible.end_year,
-                self._oil_intangible.end_year,
-                self._gas_intangible.end_year,
-                self._oil_opex.end_year,
-                self._gas_opex.end_year,
-                self._oil_asr.end_year,
-                self._gas_asr.end_year,
-            ]
+                i == self.end_date.year
+                for i in [
+                    self._oil_lifting.end_year,
+                    self._gas_lifting.end_year,
+                    self._sulfur_lifting.end_year,
+                    self._electricity_lifting.end_year,
+                    self._co2_lifting.end_year,
+                    self._oil_tangible.end_year,
+                    self._gas_tangible.end_year,
+                    self._oil_intangible.end_year,
+                    self._gas_intangible.end_year,
+                    self._oil_opex.end_year,
+                    self._gas_opex.end_year,
+                    self._oil_asr.end_year,
+                    self._gas_asr.end_year,
+                ]
         ):
             raise BaseProjectException(
                 f"Inconsistent end project year: "
@@ -1133,14 +1143,14 @@ class BaseProject:
             )
 
     def _get_expenditures(
-        self,
-        year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
-        vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
-        inflation_rate: np.ndarray | float = 0.0,
-        future_rate: float = 0.02,
-        inflation_rate_applied_to: InflationAppliedTo | None = None,
+            self,
+            year_ref: int = None,
+            tax_type: TaxType = TaxType.VAT,
+            vat_rate: np.ndarray | float = 0.0,
+            lbt_rate: np.ndarray | float = 0.0,
+            inflation_rate: np.ndarray | float = 0.0,
+            future_rate: float = 0.02,
+            inflation_rate_applied_to: InflationAppliedTo | None = None,
     ) -> None:
         """
         Calculate and assign expenditures for various cost components.
@@ -1206,10 +1216,10 @@ class BaseProject:
             # Inflation rate applied to CAPEX only
             elif inflation_rate_applied_to == InflationAppliedTo.CAPEX:
                 if (
-                    target_attr is self._oil_tangible
-                    or target_attr is self._gas_tangible
-                    or target_attr is self._oil_intangible
-                    or target_attr is self._gas_intangible
+                        target_attr is self._oil_tangible
+                        or target_attr is self._gas_tangible
+                        or target_attr is self._oil_intangible
+                        or target_attr is self._gas_intangible
                 ):
                     return target_attr.expenditures(
                         year_ref=year_ref,
@@ -1273,12 +1283,12 @@ class BaseProject:
             # Inflation rate applied to CAPEX and OPEX
             elif inflation_rate_applied_to == InflationAppliedTo.CAPEX_AND_OPEX:
                 if (
-                    target_attr is self._oil_tangible
-                    or target_attr is self._gas_tangible
-                    or target_attr is self._oil_intangible
-                    or target_attr is self._gas_intangible
-                    or target_attr is self._oil_opex
-                    or target_attr is self._gas_opex
+                        target_attr is self._oil_tangible
+                        or target_attr is self._gas_tangible
+                        or target_attr is self._oil_intangible
+                        or target_attr is self._gas_intangible
+                        or target_attr is self._oil_opex
+                        or target_attr is self._gas_opex
                 ):
                     return target_attr.expenditures(
                         year_ref=year_ref,
@@ -1451,10 +1461,10 @@ class BaseProject:
         self._co2_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
     def _get_other_revenue(
-        self,
-        sulfur_revenue: OtherRevenue,
-        electricity_revenue: OtherRevenue,
-        co2_revenue: OtherRevenue
+            self,
+            sulfur_revenue: OtherRevenue,
+            electricity_revenue: OtherRevenue,
+            co2_revenue: OtherRevenue
     ):
         # Configure sulfur revenue
         if sulfur_revenue is OtherRevenue.ADDITION_TO_OIL_REVENUE:
@@ -1510,14 +1520,39 @@ class BaseProject:
                 f"Other Revenue Selection is not available {co2_revenue} "
             )
 
+    def _get_sunk_cost(self, sunk_cost_reference_year: int):
+        oil_cost_raw = (
+                self._oil_tangible_expenditures
+                + self._oil_non_capital
+        )
+        self._oil_sunk_cost = oil_cost_raw[
+                              : (sunk_cost_reference_year - self.start_date.year + 1)
+                              ]
+
+        gas_cost_raw = (
+                self._gas_tangible_expenditures
+                + self._gas_non_capital
+        )
+        self._gas_sunk_cost = gas_cost_raw[
+                              : (sunk_cost_reference_year - self.start_date.year + 1)
+                              ]
+
+        if sunk_cost_reference_year == self.start_date.year:
+            self._oil_sunk_cost = np.zeros(1)
+            self._gas_sunk_cost = np.zeros(1)
+
     def run(
-        self,
-        year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
-        vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
-        inflation_rate: np.ndarray | float = 0.0,
-        future_rate: float = 0.02,
+            self,
+            sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+            electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
+            co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+            sunk_cost_reference_year: int = None,
+            year_ref: int = None,
+            tax_type: TaxType = TaxType.VAT,
+            vat_rate: np.ndarray | float = 0.0,
+            lbt_rate: np.ndarray | float = 0.0,
+            inflation_rate: np.ndarray | float = 0.0,
+            future_rate: float = 0.02,
     ) -> None:
         """
         Run the economic analysis, calculating expenditures and configuring
@@ -1539,6 +1574,14 @@ class BaseProject:
             The inflation rate to apply. Can be a single value or an array (defaults to 0.0).
         future_rate : float, optional
             The future rate used in cost calculation (defaults to 0.02).
+        sulfur_revenue: np.ndarray
+            The selection of sulfur revenue treatment
+        electricity_revenue: np.ndarray
+            The selection of electricity revenue treatment
+        co2_revenue: np.ndarray
+            The selection of co2 revenue treatment
+        sunk_cost_reference_year: int
+            The sunk cost reference year
 
         Returns
         -------
@@ -1552,6 +1595,38 @@ class BaseProject:
         (3) Configure the cashflow for OIL and GAS.
         """
         # Prepare the data
+
+        # Configure Sunk Cost Reference Year
+        if sunk_cost_reference_year is None:
+            sunk_cost_reference_year = self.start_date.year
+
+        if sunk_cost_reference_year > self.oil_onstream_date.year:
+            raise SunkCostException(
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is after the on stream date: {self.oil_onstream_date}"
+            )
+
+        if sunk_cost_reference_year > self.gas_onstream_date.year:
+            raise SunkCostException(
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is after the on stream date: {self.gas_onstream_date}"
+            )
+
+        if sunk_cost_reference_year < self.start_date.year:
+            raise SunkCostException(
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is before the project start date: {self.start_date}"
+            )
+
+        if sunk_cost_reference_year > self.end_date.year:
+            raise SunkCostException(
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is after the project end date: {self.end_date}"
+            )
+        # Get the WAP Price
+        self._get_wap_price()
+
+        # Calculate expenditures for every cost components
         self._get_expenditures(
             year_ref=year_ref,
             tax_type=tax_type,
@@ -1560,6 +1635,14 @@ class BaseProject:
             inflation_rate=inflation_rate,
             future_rate=future_rate,
         )
+
+        # Get Sunk Cost
+        self._get_sunk_cost(sunk_cost_reference_year)
+
+        # Get the treatment of other product revenue
+        self._get_other_revenue(sulfur_revenue=sulfur_revenue,
+                                electricity_revenue=electricity_revenue,
+                                co2_revenue=co2_revenue)
 
         # Configure total expenditures for OIL and GAS
         oil_total_expenditures = reduce(
@@ -1578,22 +1661,6 @@ class BaseProject:
             ]
         )
 
-        # Configure base cashflow
-        # self._oil_cashflow = CashFlow(
-        #     start_date=self.start_date,
-        #     end_date=self.end_date,
-        #     cash=self._oil_revenue - oil_total_expenditures,
-        #     cashed_year=self.project_years,
-        #     cash_allocation=FluidType.OIL,
-        # )
-        #
-        # self._gas_cashflow = CashFlow(
-        #     start_date=self.start_date,
-        #     end_date=self.end_date,
-        #     cash=self._gas_revenue - gas_total_expenditures,
-        #     cashed_year=self.project_years,
-        #     cash_allocation=FluidType.GAS,
-        # )
         # Configure base cashflow
         self._oil_cashflow = self._oil_revenue - (self._oil_tangible_expenditures +
                                                   self._oil_intangible_expenditures +

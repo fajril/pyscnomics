@@ -18,7 +18,7 @@ from pyscnomics.econ.indicator import (
 
 def get_summary(contract: CostRecovery | GrossSplit | Transition,
                 reference_year: int,
-                inflation_rate: float,
+                inflation_rate: float = 0,
                 discount_rate: float = 0.1,
                 npv_mode: NPVSelection = NPVSelection.NPV_SKK_REAL_TERMS,
                 discounting_mode: DiscountingMode = DiscountingMode.END_YEAR) -> dict:
