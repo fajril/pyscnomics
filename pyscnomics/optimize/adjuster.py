@@ -14,68 +14,9 @@ from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 
 
-def get_multipliers_sensitivity(
-    min_deviation: float,
-    max_deviation: float,
-    base_value: float = 1.0,
-    step: int = 10,
-    number_of_params: int = 5,
-) -> np.ndarray:
-    """
-    Generate multipliers for different economic parameters within a specified range
-    for sensitivity study.
+class AdjustDataException(Exception):
+    """ Exception to be raised for a misuse of AdjustData class """
 
-    Parameters
-    ----------
-    min_deviation: float
-        The minimum deviation from the base value.
-    max_deviation: float
-        The maximum deviation from the base value.
-    base_value: float, optional
-        The base value for the multipliers. Default is 1.0.
-    step: int, optional
-        The number of steps to create multipliers. Default is 10.
-    number_of_params: int, optional
-        The number of parameters to vary in sensitivity analysis. Default is 5.
-
-    Returns
-    -------
-    multipliers: np.ndarray
-        A 3D NumPy array containing multipliers for different economic factors.
-    """
-    # Specify the minimum and maximum values
-    min_val = base_value - min_deviation
-    max_val = base_value + max_deviation
-
-    min_multipliers = np.linspace(min_val, base_value, step + 1)
-    max_multipliers = np.linspace(base_value, max_val, step + 1)
-    tot_multipliers = np.concatenate((min_multipliers, max_multipliers[1:]))
-
-    # Specify array multipliers
-    multipliers = (
-        np.ones(
-            [number_of_params, len(tot_multipliers), number_of_params],
-            dtype=np.float_,
-        )
-    )
-
-    for i in range(number_of_params):
-        multipliers[i, :, i] = tot_multipliers.copy()
-
-    # Specify total number of run
-    total_run = len(tot_multipliers) * number_of_params
-
-    return multipliers, total_run
-
-
-def get_multipliers_montecarlo(
-    run_number: None | int,
-    distribution: list,
-    min_values: np.ndarray,
-    mean_values: np.ndarray,
-    max_values: np.ndarray,
-    std_dev: np.ndarray,
-):
     pass
 
 
@@ -626,12 +567,6 @@ def get_intangible_adjustment(
             )
             for psc in ["PSC 1", "PSC 2"]
         }
-
-
-class AdjustDataException(Exception):
-    """ Exception to be raised for a misuse of AdjustData class """
-
-    pass
 
 
 @dataclass

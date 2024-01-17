@@ -7,8 +7,11 @@ import xlwings as xw
 import threading as th
 
 from pyscnomics.io.parse import InitiateContract
-from pyscnomics.optimize.adjuster import get_multipliers_sensitivity, AdjustData
+from pyscnomics.io.aggregator import Aggregate
 
+from pyscnomics.optimize.adjuster import AdjustData
+
+from pyscnomics.tools.summary import get_summary
 from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt
 from pyscnomics.optimize.optimization import optimize_psc
 
@@ -17,14 +20,12 @@ from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 
-from pyscnomics.tools.summary import get_summary
-from pyscnomics.io.aggregator import Aggregate
-
-
-class MonteCarloException(Exception):
-    """ Exception to be raised for a misuse of MonteCarlo class """
-
-    pass
+from pyscnomics.optimize.sensitivity import execute_sensitivity_serial, get_multipliers_sensitivity
+from pyscnomics.optimize.uncertainty import (
+    get_montecarlo_data,
+    get_multipliers_montecarlo,
+    run_montecarlo,
+)
 
 
 def main(workbook_path, mode):
@@ -88,9 +89,14 @@ def main(workbook_path, mode):
             number_of_params=len(data.sensitivity_data.parameter),
         )
 
-        # Run sensitivit(y study
+        # Run sensitivity study
         target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
-        results = execute_sensitivity_serial(data=data, target=target, multipliers=multipliers)
+        results = execute_sensitivity_serial(
+            data=data,
+            target=target,
+            multipliers=multipliers,
+            workbook_path=workbook_path,
+        )
 
         # Arrange the results into the desired output structure
         results_arranged = {
@@ -107,23 +113,23 @@ def main(workbook_path, mode):
             for j, param in enumerate(data.sensitivity_data.parameter):
                 results_arranged[econ][:, j] = results[param][:, i]
 
-        # print('\t')
-        # print("npv = \n", results_arranged["npv"])
-        #
-        # print('\t')
-        # print("irr = \n", results_arranged["irr"])
-        #
-        # print('\t')
-        # print("pi = \n", results_arranged["pi"])
-        #
-        # print('\t')
-        # print("pot = \n", results_arranged["pot"])
-        #
-        # print('\t')
-        # print("government take = \n", results_arranged["gov_take"])
-        #
-        # print('\t')
-        # print("ctr_net_share = \n", results_arranged["ctr_net_share"])
+        print('\t')
+        print("npv = \n", results_arranged["npv"])
+
+        print('\t')
+        print("irr = \n", results_arranged["irr"])
+
+        print('\t')
+        print("pi = \n", results_arranged["pi"])
+
+        print('\t')
+        print("pot = \n", results_arranged["pot"])
+
+        print('\t')
+        print("government take = \n", results_arranged["gov_take"])
+
+        print('\t')
+        print("ctr_net_share = \n", results_arranged["ctr_net_share"])
 
     # Giving the workbook execution status to show that execution is success
     # xw.Book(workbook_path).sheets("Cover").range("F17").value = "Success"
@@ -134,13 +140,61 @@ def main(workbook_path, mode):
         data = Aggregate(workbook_to_read=workbook_path)
         data.fit()
 
-        # Prepare uncertainty data
-        uncertainty_data = prepare_montecarlo_data(data=data)
+        # Prepare MonteCarlo data
+        uncertainty_data = get_montecarlo_data(data=data)
+
+        # Get multipliers
+        multipliers = np.zeros(
+            [uncertainty_data["run_number"], len(uncertainty_data["parameter"])],
+            dtype=np.float_
+        )
+
+        for i in range(multipliers.shape[1]):
+            multipliers[:, i] = get_multipliers_montecarlo(
+                run_number=uncertainty_data["run_number"],
+                distribution=uncertainty_data["distribution"][i],
+                min_value=uncertainty_data["min_values"][i],
+                mean_value=uncertainty_data["mean_values"][i],
+                max_value=uncertainty_data["max_values"][i],
+                std_dev=uncertainty_data["std_dev"][i],
+            )
 
         print('\t')
-        print(f'Filetype: {type(uncertainty_data)}')
-        print(f'Length: {len(uncertainty_data)}')
-        print('uncertainty_data = \n', uncertainty_data)
+        print(f'Filetype: {type(multipliers)}')
+        print(f'Shape: {multipliers.shape}')
+        # print('multipliers = \n', multipliers)
+
+        print('\t')
+        print('=========================================================================================')
+
+        # Run MonteCarlo simulation
+        params = {}
+        target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
+        results = np.zeros([multipliers.shape[0], len(target)], dtype=np.float_)
+
+        for i in range(multipliers.shape[0]):
+            # Adjust data prior to simulation
+            (
+                params["psc"],
+                params["psc_arguments"],
+                params["summary_arguments"],
+            ) = AdjustData(
+                multipliers=multipliers[i, :],
+                workbook_path=workbook_path,
+                data=data,
+            ).activate()
+
+            # Collect the results
+            results[i, :] = run_montecarlo(
+                contract=params["psc"],
+                contract_arguments=params["psc_arguments"],
+                summary_arguments=params["summary_arguments"],
+            )
+
+        print('\t')
+        print(f'Filetype: {type(results)}')
+        print(f'Shape: {results.shape}')
+        print('results = \n', results)
 
 
 def run_standard(
@@ -264,219 +318,6 @@ def run_optimization(
         range_list_params=range_list_params,
         range_list_value=range_list_value,
     )
-
-
-def run_sensitivity(
-    contract: CostRecovery | GrossSplit | Transition,
-    contract_arguments: dict,
-    summary_arguments: dict,
-):
-    """
-    Function to run simulation in Sensitivity mode.
-
-    Parameters
-    ----------
-    contract: CostRecovery | GrossSplit | Transition
-        The contract object that will be run
-    contract_arguments: dict
-        The contract arguments
-    summary_arguments: dict
-        The dictionary of the summary arguments
-    """
-    if isinstance(contract, BaseProject):
-        contract.run(**contract_arguments)
-        contract_summary = get_summary(**summary_arguments)
-
-    else:
-        contract.run(**contract_arguments)
-        contract_summary = get_summary(**summary_arguments)
-
-    return (
-        contract_summary["ctr_npv"],
-        contract_summary["ctr_irr"],
-        contract_summary["ctr_pi"],
-        contract_summary["ctr_pot"],
-        contract_summary["gov_take"],
-        contract_summary["ctr_net_share"],
-    )
-
-
-def execute_sensitivity_serial(
-    data: Aggregate,
-    target: list,
-    multipliers: np.ndarray,
-) -> dict[str, np.ndarray]:
-    """
-    Perform sensitivity analysis in a serial manner.
-
-    Parameters
-    ----------
-    data: Aggregate
-        The aggregate data for the analysis.
-    target: list
-    multipliers: np.ndarray
-        A 3D array of multipliers for sensitivity analysis.
-
-    Returns
-    -------
-    dict[str, np.ndarray]
-        A dictionary containing sensitivity analysis results. The keys correspond to
-        different parameters, and the values are arrays of results for each multiplier.
-    """
-    params = {}
-    results = {
-        key: np.zeros([multipliers.shape[1], len(target)], dtype=np.float_)
-        for key in data.sensitivity_data.parameter
-    }
-
-    for i, key in enumerate(data.sensitivity_data.parameter):
-        for j in range(multipliers.shape[1]):
-            # Adjust data prior to simulation
-            (
-                params["psc"],
-                params["psc_arguments"],
-                params["summary_arguments"]
-            ) = AdjustData(
-                data=data,
-                workbook_path=workbook_path,
-                multipliers=multipliers[i, j, :],
-            ).activate()
-
-            # Collect the results
-            results[key][j, :] = run_sensitivity(
-                contract=params["psc"],
-                contract_arguments=params["psc_arguments"],
-                summary_arguments=params["summary_arguments"],
-            )
-
-    return results
-
-
-def prepare_montecarlo_data(data: Aggregate) -> dict:
-    """
-    Prepares Monte Carlo simulation data from the given Aggregate object.
-
-    Parameters
-    ----------
-    data: Aggregate
-        The input data containing Monte Carlo simulation data.
-
-    Returns
-    -------
-    dict
-        A dictionary containing the prepared Monte Carlo simulation data.
-
-    Raises
-    ------
-    MonteCarloException
-        If any of the required data is missing or inconsistent.
-    """
-    # Prepare a container to store all the necessary data
-    uncertainty_data = {}
-
-    # Prepare attribute run_number
-    if pd.isna(data.montecarlo_data.run_number):
-        raise MonteCarloException(
-            f"The data for run number is missing. Please check the input data."
-        )
-
-    uncertainty_data["run_number"] = int(data.montecarlo_data.run_number)
-
-    # Prepare attribute parameter
-    if not isinstance(data.montecarlo_data.parameter, list):
-        raise MonteCarloException(
-            f"Attribute parameter must be provided in a list datatype, "
-            f"not {data.montecarlo_data.parameter.__class__.__qualname__}"
-        )
-
-    uncertainty_data["parameter"] = data.montecarlo_data.parameter
-
-    # Prepare attribute distribution
-    if not isinstance(data.montecarlo_data.distribution, list):
-        raise MonteCarloException(
-            f"Attribute distribution must be provided in a list datatype, "
-            f"not {data.montecarlo_data.distribution.__class__.__qualname__}"
-        )
-
-    uncertainty_data["distribution"] = data.montecarlo_data.distribution
-
-    # Prepare attribute min_values
-    if not isinstance(data.montecarlo_data.min_values, np.ndarray):
-        raise MonteCarloException(
-            f"Attribute min_values must be provided in a numpy ndarray datatype, "
-            f"not {data.montecarlo_data.min_values.__class__.__qualname__}"
-        )
-
-    min_values_nan = list(filter(lambda i: pd.isna(i), data.montecarlo_data.min_values))
-    if len(min_values_nan) > 0:
-        raise MonteCarloException(
-            f"Minimum values data are incomplete. Please check the input data."
-        )
-
-    uncertainty_data["min_values"] = data.montecarlo_data.min_values.astype(np.float_)
-
-    # Prepare attribute mean_values
-    if not isinstance(data.montecarlo_data.mean_values, np.ndarray):
-        raise MonteCarloException(
-            f"Attribute mean_values must be provided in a numpy ndarray datatype, "
-            f"not {data.montecarlo_data.mean_values.__class__.__qualname__}"
-        )
-
-    mean_values_nan = list(filter(lambda i: pd.isna(i), data.montecarlo_data.mean_values))
-    if len(mean_values_nan) > 0:
-        raise MonteCarloException(
-            f"Mean values data are incomplete. Please check the input data."
-        )
-
-    uncertainty_data["mean_values"] = data.montecarlo_data.mean_values.astype(np.float_)
-
-    # Prepare attribute max_values
-    if not isinstance(data.montecarlo_data.max_values, np.ndarray):
-        raise MonteCarloException(
-            f"Attribute max_values must be provided in a numpy ndarray datatype, "
-            f"not {data.montecarlo_data.max_values.__class__.__qualname__}"
-        )
-
-    max_values_nan = list(filter(lambda i: pd.isna(i), data.montecarlo_data.max_values))
-    if len(max_values_nan) > 0:
-        raise MonteCarloException(
-            f"Maximum values data are incomplete. Please check the input data."
-        )
-
-    uncertainty_data["max_values"] = data.montecarlo_data.max_values.astype(np.float_)
-
-    # Prepare attribute standard deviation
-    if not isinstance(data.montecarlo_data.std_dev, np.ndarray):
-        raise MonteCarloException(
-            f"Attribute std_dev must be provided in a numpy ndarray datatype, "
-            f"not {data.montecarlo_data.std_dev.__class__.__qualname__}"
-        )
-
-    for i, val in enumerate(uncertainty_data["distribution"]):
-        if val == "Uniform" or val == "Triangular":
-            data.montecarlo_data.std_dev[i] = 0.0
-
-    std_dev_nan = list(filter(lambda i: pd.isna(i), data.montecarlo_data.std_dev))
-    if len(std_dev_nan) > 0:
-        raise MonteCarloException(
-            f"Std deviation data are incomplete. Please check the input data."
-        )
-
-    uncertainty_data["std_dev"] = data.montecarlo_data.std_dev.astype(np.float_)
-
-    # Throw exception for inappropriate conditions
-    for i, val in enumerate(uncertainty_data["min_values"]):
-        if (
-            uncertainty_data["min_values"][i] > uncertainty_data["max_values"][i]
-            or uncertainty_data["min_values"][i] > uncertainty_data["mean_values"][i]
-            or uncertainty_data["mean_values"][i] > uncertainty_data["max_values"][i]
-        ):
-            raise MonteCarloException(
-                f"Inappropriate minimum, mean, or maximum value data. "
-                f"Please check the input data."
-            )
-
-    return uncertainty_data
 
 
 if __name__ == '__main__':
