@@ -2,15 +2,17 @@
 Python Script as the entry point of Excel Workbook
 """
 import numpy as np
+import pandas as pd
 import xlwings as xw
 import threading as th
 
 from pyscnomics.io.parse import InitiateContract
 from pyscnomics.optimize.adjuster import get_multipliers_sensitivity, AdjustData
 
-from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt
+from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt, write_table
 from pyscnomics.optimize.optimization import optimize_psc
 
+from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
@@ -80,9 +82,12 @@ def main(workbook_path, mode):
             number_of_params=len(data.sensitivity_data.parameter),
         )
 
-        # Run sensitivit(y study
+        # Run sensitivity study
         target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
-        results = execute_sensitivity_serial(data=data, target=target, multipliers=multipliers)
+        results = execute_sensitivity_serial(data=data,
+                                             target=target,
+                                             multipliers=multipliers,
+                                             workbook_path=workbook_path)
 
         # Arrange the results into the desired output
         results_arranged = {
@@ -99,20 +104,27 @@ def main(workbook_path, mode):
             for j, param in enumerate(data.sensitivity_data.parameter):
                 results_arranged[econ][:, j] = results[param][:, i]
 
-        print('\t')
-        print(f'Filetype: {type(results_arranged)}')
-        print(f'Keys: {results_arranged.keys()}')
-        print('results_arranged = \n', results_arranged)
+        # Grouping the sensitivity result
+        list_df = [pd.DataFrame] * len(target)
+        for index, key in enumerate(target):
+            df = pd.DataFrame()
+            df['oil_price'] = results_arranged[key][:, 0]
+            df['gas_price'] = results_arranged[key][:, 1]
+            df['opex'] = results_arranged[key][:, 2]
+            df['capex'] = results_arranged[key][:, 3]
+            df['prod'] = results_arranged[key][:, 4]
+            list_df[index] = df
 
-        print('\t')
-        print("npv = \n", results_arranged["npv"])
-
-        print('\t')
-        print("irr = \n", results_arranged["irr"])
-
+        # Writing the sensitivity result into the workbook
+        list_cell_sensitivity = ['M4', 'M29', 'M54', 'M79', 'M104']
+        for index, cell in enumerate(list_cell_sensitivity):
+            write_table(workbook_object=workbook_object,
+                        sheet_name='Sensitivity',
+                        starting_cell=cell,
+                        table=list_df[index],)
 
     # Giving the workbook execution status to show that execution is success
-    # xw.Book(workbook_path).sheets("Cover").range("F17").value = "Success"
+    xw.Book(workbook_path).sheets('Cover').range("F17").value = 'Success'
 
 
 def run_standard(
@@ -148,23 +160,22 @@ def run_standard(
     elif isinstance(contract, GrossSplit):
         sheet_name = 'Result Table GS'
 
+    elif isinstance(contract, BaseProject):
+        sheet_name = 'Result Table Base Project'
+
     elif isinstance(contract, Transition):
-        sheet_name = NotImplemented
+        sheet_name = 'Transition'
 
     # Writing the result of the contract
-    write_cashflow(
-        workbook_object=workbook_object,
-        sheet_name=sheet_name,
-        contract=contract,
-    )
+    write_cashflow(workbook_object=workbook_object,
+                   sheet_name=sheet_name,
+                   contract=contract, )
 
     # Writing the summary of the contract
-    write_summary(
-        summary_dict=contract_summary,
-        workbook_object=workbook_object,
-        sheet_name='Summary',
-        range_cell='E5',
-    )
+    write_summary(summary_dict=contract_summary,
+                  workbook_object=workbook_object,
+                  sheet_name='Summary',
+                  range_cell='E5', )
 
 
 def run_optimization(
@@ -269,6 +280,7 @@ def execute_sensitivity_serial(
     data: Aggregate,
     target: list,
     multipliers: np.ndarray,
+    workbook_path: str
 ) -> dict[str, np.ndarray]:
     """
     Perform sensitivity analysis in a serial manner.
@@ -280,6 +292,8 @@ def execute_sensitivity_serial(
     target: list
     multipliers: np.ndarray
         A 3D array of multipliers for sensitivity analysis.
+    workbook_path: str
+        The workbook path
 
     Returns
     -------

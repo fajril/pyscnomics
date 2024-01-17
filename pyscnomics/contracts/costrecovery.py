@@ -1005,6 +1005,15 @@ class CostRecovery(BaseProject):
             is_dmo_end_weighted=is_dmo_end_weighted,
         )
 
+        # Adjusting DDMO for Pre PDJP
+        if ftp_tax_regime is FTPTaxRegime.PRE_PDJP_20_2017:
+            self._oil_ddmo = np.where(self._oil_contractor_share > 0,
+                                      self._oil_ddmo,
+                                      0)
+            self._gas_ddmo = np.where(self._gas_contractor_share > 0,
+                                      self._gas_ddmo,
+                                      0)
+
         # Taxable income (also known as Net Contractor Share - NCS)
         self._oil_taxable_income = (
                 self._oil_ftp_ctr

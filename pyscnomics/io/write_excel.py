@@ -38,17 +38,53 @@ def write_cashflow(workbook_object: xw.Book,
     # Producing the table
     df_oil, df_gas, df_consolidated = get_table(contract=contract)
 
-    # Defining the workbook and its sheet
-    ws = workbook_object.sheets(sheet_name)
+    # Defining the workbook and its sheet when the contract is Transition
+    if sheet_name == 'Transition':
+        # Defining contract type for frst and second contract
+        if isinstance(contract.contract1, CostRecovery) and isinstance(contract.contract2, CostRecovery):
+            sheet_cf_1 = 'Result Table CR'
+            sheet_cf_2 = 'Result Table CR (2)'
 
-    # Writing oil df_oil
-    ws.range(oil_starting_cell).value = df_oil.values
+        elif isinstance(contract.contract1, CostRecovery) and isinstance(contract.contract2, GrossSplit):
+            sheet_cf_1 = 'Result Table CR'
+            sheet_cf_2 = 'Result Table GS'
 
-    # Writing oil df_gas
-    ws.range(gas_starting_cell).value = df_gas.values
+        elif isinstance(contract.contract1, GrossSplit) and isinstance(contract.contract2, GrossSplit):
+            sheet_cf_1 = 'Result Table GS'
+            sheet_cf_2 = 'Result Table GS (2)'
 
-    # Writing oil df_consolidated
-    ws.range(consolidated_starting_cell).value = df_consolidated.values
+        else:
+            sheet_cf_1 = 'Result Table GS'
+            sheet_cf_2 = 'Result Table CR'
+
+        # Looping the sheet name to write the cashflow into Excel file
+        lst_of_sheet = [sheet_cf_1, sheet_cf_2]
+        for index, sheet in enumerate(lst_of_sheet):
+            # Defining the workbook and its sheet
+            ws = workbook_object.sheets(sheet)
+
+            # Writing oil df_oil
+            ws.range(oil_starting_cell).value = df_oil[index].values
+
+            # Writing oil df_gas
+            ws.range(gas_starting_cell).value = df_gas[index].values
+
+            # Writing oil df_consolidated
+            ws.range(consolidated_starting_cell).value = df_consolidated[index].values
+
+    # When the contract is Cost Recovery or Gross Split
+    else:
+        # Defining the workbook and its sheet
+        ws = workbook_object.sheets(sheet_name)
+
+        # Writing oil df_oil
+        ws.range(oil_starting_cell).value = df_oil.values
+
+        # Writing oil df_gas
+        ws.range(gas_starting_cell).value = df_gas.values
+
+        # Writing oil df_consolidated
+        ws.range(consolidated_starting_cell).value = df_consolidated.values
 
 
 def write_summary(summary_dict: dict,
@@ -178,5 +214,35 @@ def write_opt(list_str: list,
     # Writing list of parameter optimization and parameter value of optimization
     ws.range(range_list_params).options(transpose=True).value = list_str
     ws.range(range_list_value).options(transpose=True).value = list_params_value
+
+
+def write_table(workbook_object: xw.Book,
+                sheet_name: str,
+                starting_cell: str,
+                table: pd.DataFrame | list[pd.DataFrame]):
+    """
+    The function to write a table into Excel file
+    Parameters
+    ----------
+    workbook_object: xw.Book
+        The workbook object of the Excel file
+    sheet_name: str
+        The sheet name where the table will be printed on
+    starting_cell: str
+        The starting cell range of where the table will be printed on
+    table: pd.Dataframe
+        The dataframe object of the table
+
+    """
+    # Defining the workbook and its sheet
+    ws = workbook_object.sheets(sheet_name)
+
+    # Writing the dataframe into workbook
+    ws.range(starting_cell).value = table.values
+
+
+
+
+
 
 

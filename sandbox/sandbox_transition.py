@@ -463,6 +463,17 @@ for key, value in psc_summary.items():
 # print(psc_table_gas, '\n')
 # print(psc_table_consolidated, '\n')
 
+from pyscnomics.tools.table import get_table
+
+psc_table_oil, psc_table_gas, psc_table_consolidated = get_table(contract=psc_trans)
+
+for index, table in enumerate(psc_table_consolidated):
+    print('Contract' + ' ' + str(index+1))
+    print(table)
+    print('\n')
+
+
+
 
 
 
