@@ -224,17 +224,17 @@ def run_standard(
     contract_summary = get_summary(**summary_argument)
 
     sheet_name = None
-    if isinstance(contract, BaseProject):
-        sheet_name = "Result Table Base Project"
-
-    elif isinstance(contract, CostRecovery):
+    if isinstance(contract, CostRecovery):
         sheet_name = 'Result Table CR'
 
     elif isinstance(contract, GrossSplit):
         sheet_name = 'Result Table GS'
 
+    elif isinstance(contract, BaseProject):
+        sheet_name = 'Result Table Base Project'
+
     elif isinstance(contract, Transition):
-        sheet_name = NotImplemented
+        sheet_name = 'Transition'
 
     # Writing the result of the contract
     write_cashflow(

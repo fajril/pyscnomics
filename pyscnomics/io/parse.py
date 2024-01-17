@@ -120,12 +120,17 @@ class InitiateContract:
 
         # Specify arguments for Project
         self.psc_arguments = {
+            "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config,
+            "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config,
+            "co2_revenue": self.data.fiscal_config_data.co2_revenue_config,
+            "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
+            # "year_ref": None,
+            # "tax_type": None,
             "vat_rate": self.data.fiscal_config_data.vat_rate,
             "lbt_rate": self.data.fiscal_config_data.lbt_rate,
             "inflation_rate": self.data.fiscal_config_data.inflation_rate,
             "future_rate": float(self.data.fiscal_config_data.asr_future_rate),
-            # "year_ref":,
-            # "tax_type":,
+            "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
         }
 
         # Filling the summary contract argument

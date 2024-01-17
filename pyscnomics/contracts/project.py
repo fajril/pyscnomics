@@ -10,8 +10,12 @@ import numpy as np
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import FluidType, TaxType, TaxRegime, OtherRevenue, InflationAppliedTo
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
-# from pyscnomics.econ.results import CashFlow
+from pyscnomics.econ.results import CashFlow
 
+class SunkCostException(Exception):
+    """Exception to raise for a misuse of Sunk Cost Method"""
+
+    pass
 
 class BaseProjectException(Exception):
     """Exception to raise for a misuse of BaseProject class"""
@@ -107,6 +111,9 @@ class BaseProject:
     _gas_opex_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     _oil_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     _gas_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
 
     # Private attributes associated with cashflow
     _oil_cashflow: np.ndarray = field(default=None, init=False, repr=False)
@@ -1324,18 +1331,11 @@ class BaseProject:
         )
 
     def _get_tax_by_regime(self, tax_regime):
-        """
-        Specify tax by regime.
-        """
-        tax_config = {
-            2013: 0.44,
-            2016: 0.42,
-            2020: 0.40
-        }
+        tax_config = {2013: 0.44,
+                      2016: 0.42,
+                      2020: 0.40}
 
-        tax_rate_arr = (
-            np.full_like(self.project_years, fill_value=tax_config[min(tax_config)], dtype=float)
-        )
+        tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[min(tax_config)], dtype=float)
 
         for year in tax_config:
             indices = np.array(np.where(self.project_years >= year)).ravel()
@@ -1349,27 +1349,15 @@ class BaseProject:
             tax_rate_arr = np.full_like(self.project_years, fill_value=0.44, dtype=float)
         if tax_regime == TaxRegime.NAILED_DOWN:
             if self.start_date.year >= max(tax_config):
-                tax_rate_arr = (
-                    np.full_like(
-                        self.project_years,
-                        fill_value=tax_config[max(tax_config)],
-                        dtype=float
-                    )
-                )
+                tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[max(tax_config)], dtype=float)
             else:
-                tax_rate_arr = (
-                    np.full_like(
-                        self.project_years,
-                        fill_value=tax_config[min(tax_config)],
-                        dtype=float
-                    )
-                )
+                tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[min(tax_config)], dtype=float)
         return tax_rate_arr
 
     def _get_wap_price(self):
         """
-        The function to wrap functions of getting the Weighted Average Price (WAP)
-        of the produced products.
+        The function to wrap functions of getting the Weighted Average Price (WAP) of the produced products.
+
         """
         self._get_oil_wap_price()
         self._get_gas_wap_price()
@@ -1380,6 +1368,7 @@ class BaseProject:
     def _get_oil_wap_price(self):
         """
         The function to fill the variable self._oil_wap_price.
+
         """
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
@@ -1394,6 +1383,9 @@ class BaseProject:
     def _get_gas_wap_price(self):
         """
         The function to fill the variable self._gas_wap_price.
+        Returns
+        -------
+
         """
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
@@ -1411,6 +1403,7 @@ class BaseProject:
     def _get_sulfur_wap_price(self):
         """
         The function to fill the variable self._sulfur_wap_price.
+
         """
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
@@ -1425,6 +1418,7 @@ class BaseProject:
     def _get_electricity_wap_price(self):
         """
         The function to fill the variable self._electricity_wap_price.
+
         """
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
@@ -1439,6 +1433,7 @@ class BaseProject:
     def _get_co2_wap_price(self):
         """
         The function to fill the variable self._co2_wap_price.
+
         """
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
@@ -1450,12 +1445,10 @@ class BaseProject:
 
         self._co2_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
-    def _get_other_revenue(
-        self,
-        sulfur_revenue: OtherRevenue,
-        electricity_revenue: OtherRevenue,
-        co2_revenue: OtherRevenue
-    ):
+    def _get_other_revenue(self,
+                           sulfur_revenue: OtherRevenue,
+                           electricity_revenue: OtherRevenue,
+                           co2_revenue: OtherRevenue):
         # Configure sulfur revenue
         if sulfur_revenue is OtherRevenue.ADDITION_TO_OIL_REVENUE:
             self._oil_revenue = self._oil_revenue + self._sulfur_revenue
@@ -1510,15 +1503,40 @@ class BaseProject:
                 f"Other Revenue Selection is not available {co2_revenue} "
             )
 
+    def _get_sunk_cost(self, sunk_cost_reference_year: int):
+        oil_cost_raw = (
+                self._oil_tangible_expenditures
+                + self._oil_non_capital
+        )
+        self._oil_sunk_cost = oil_cost_raw[
+                              : (sunk_cost_reference_year - self.start_date.year + 1)
+                              ]
+
+        gas_cost_raw = (
+                self._gas_tangible_expenditures
+                + self._gas_non_capital
+        )
+        self._gas_sunk_cost = gas_cost_raw[
+                              : (sunk_cost_reference_year - self.start_date.year + 1)
+                              ]
+
+        if sunk_cost_reference_year == self.start_date.year:
+            self._oil_sunk_cost = np.zeros(1)
+            self._gas_sunk_cost = np.zeros(1)
+
     def run(
         self,
+        sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
+        co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        sunk_cost_reference_year: int = None,
         year_ref: int = None,
         tax_type: TaxType = TaxType.VAT,
         vat_rate: np.ndarray | float = 0.0,
         lbt_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
         future_rate: float = 0.02,
-        sunk_cost_reference_year: int = None,
+        inflation_rate_applied_to: InflationAppliedTo = InflationAppliedTo.CAPEX
     ) -> None:
         """
         Run the economic analysis, calculating expenditures and configuring
@@ -1540,6 +1558,13 @@ class BaseProject:
             The inflation rate to apply. Can be a single value or an array (defaults to 0.0).
         future_rate : float, optional
             The future rate used in cost calculation (defaults to 0.02).
+        inflation_rate_applied_to
+            The selection of where the cost inflation will be applied to.
+
+        sulfur_revenue
+        electricity_revenue
+        co2_revenue
+        sunk_cost_reference_year
 
         Returns
         -------
@@ -1552,6 +1577,34 @@ class BaseProject:
         (2) Calculate total expenditures for OIL and GAS,
         (3) Configure the cashflow for OIL and GAS.
         """
+        # Configure Sunk Cost Reference Year
+        if sunk_cost_reference_year is None:
+            sunk_cost_reference_year = self.start_date.year
+
+        if sunk_cost_reference_year > self.oil_onstream_date.year:
+            raise SunkCostException(
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is after the on stream date: {self.oil_onstream_date}"
+            )
+
+        if sunk_cost_reference_year > self.gas_onstream_date.year:
+            raise SunkCostException(
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is after the on stream date: {self.gas_onstream_date}"
+            )
+
+        if sunk_cost_reference_year < self.start_date.year:
+            raise SunkCostException(
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is before the project start date: {self.start_date}"
+            )
+
+        if sunk_cost_reference_year > self.end_date.year:
+            raise SunkCostException(
+                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
+                f"is after the project end date: {self.end_date}"
+            )
+
         # Prepare the data
         self._get_expenditures(
             year_ref=year_ref,
@@ -1562,7 +1615,29 @@ class BaseProject:
             future_rate=future_rate,
         )
 
+        # Non-capital costs (intangible + opex + asr)
+        self._oil_non_capital = (
+                self._oil_intangible_expenditures
+                + self._oil_opex_expenditures
+                + self._oil_asr_expenditures
+        )
+
+        self._gas_non_capital = (
+                self._gas_intangible_expenditures
+                + self._gas_opex_expenditures
+                + self._gas_asr_expenditures
+        )
+
+        # Get Sunk Cost
+        self._get_sunk_cost(sunk_cost_reference_year)
+
+        # Get the wap of each produced fluid
         self._get_wap_price()
+
+        # Get the other revenue
+        self._get_other_revenue(sulfur_revenue=sulfur_revenue,
+                                electricity_revenue=electricity_revenue,
+                                co2_revenue=co2_revenue,)
 
         # Configure total expenditures for OIL and GAS
         oil_total_expenditures = reduce(
@@ -1582,22 +1657,6 @@ class BaseProject:
         )
 
         # Configure base cashflow
-        # self._oil_cashflow = CashFlow(
-        #     start_date=self.start_date,
-        #     end_date=self.end_date,
-        #     cash=self._oil_revenue - oil_total_expenditures,
-        #     cashed_year=self.project_years,
-        #     cash_allocation=FluidType.OIL,
-        # )
-        #
-        # self._gas_cashflow = CashFlow(
-        #     start_date=self.start_date,
-        #     end_date=self.end_date,
-        #     cash=self._gas_revenue - gas_total_expenditures,
-        #     cashed_year=self.project_years,
-        #     cash_allocation=FluidType.GAS,
-        # )
-        # Configure base cashflow
         self._oil_cashflow = self._oil_revenue - (self._oil_tangible_expenditures +
                                                   self._oil_intangible_expenditures +
                                                   self._oil_opex_expenditures +
@@ -1609,6 +1668,8 @@ class BaseProject:
                                                   self._gas_asr_expenditures)
 
         self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
+        self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
+        self._consolidated_government_take = np.zeros_like(self._consolidated_cashflow)
 
     def __len__(self):
         return self.project_duration

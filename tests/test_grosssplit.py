@@ -4,9 +4,16 @@ A unit testing for depreciation module.
 
 import numpy as np
 from pyscnomics.dataset.sample import load_data, load_testing
+from pyscnomics.econ.selection import InflationAppliedTo
 
 psc = load_data(dataset_type='small_oil', contract_type='gross_split')
-psc.run()
+tax_rate = np.array([0.11, 0.11, 0.11, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12])
+inflation_rate = np.array([0, 0, 0.0, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02])
+psc.run(tax_rate=0.22,
+        vat_rate=tax_rate,
+        inflation_rate=inflation_rate,
+        inflation_rate_applied_to=InflationAppliedTo.CAPEX)
+
 
 
 def test_tangible():

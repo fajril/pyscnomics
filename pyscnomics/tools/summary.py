@@ -5,30 +5,31 @@ from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.econ.selection import NPVSelection, DiscountingMode
-from pyscnomics.econ.indicator import (
-    irr,
-    npv_nominal_terms,
-    npv_real_terms,
-    npv_skk_nominal_terms,
-    npv_skk_real_terms,
-    npv_point_forward,
-    pot_psc
-)
+from pyscnomics.econ.indicator import (irr,
+                                       npv_nominal_terms,
+                                       npv_real_terms,
+                                       npv_skk_nominal_terms,
+                                       npv_skk_real_terms,
+                                       npv_point_forward,
+                                       pot_psc)
 
 
-def get_summary(contract: CostRecovery | GrossSplit | Transition,
+def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 reference_year: int,
-                inflation_rate: float,
+                inflation_rate: float = 0,
                 discount_rate: float = 0.1,
                 npv_mode: NPVSelection = NPVSelection.NPV_SKK_REAL_TERMS,
                 discounting_mode: DiscountingMode = DiscountingMode.END_YEAR) -> dict:
     # Defining the same summary parameters for any contract
     # Lifting
     lifting_oil = np.sum(contract._oil_lifting.get_lifting_rate_arr(), dtype=float)
-    oil_wap = np.divide(np.sum(contract._oil_revenue), np.sum(contract._oil_lifting.get_lifting_rate_arr()),
-                        where= np.sum(contract._oil_lifting.get_lifting_rate_arr()) != 0)
-    lifting_gas = np.sum(contract._gas_lifting.get_lifting_rate_arr(), dtype=float)
+    if np.sum(contract._oil_lifting.get_lifting_rate_arr()) == 0:
+        oil_wap = 0.0
+    else:
+        oil_wap = np.divide(np.sum(contract._oil_revenue), np.sum(contract._oil_lifting.get_lifting_rate_arr()),
+                            where=np.sum(contract._oil_lifting.get_lifting_rate_arr()) != 0)
 
+    lifting_gas = np.sum(contract._gas_lifting.get_lifting_rate_arr(), dtype=float)
     if np.sum(contract._gas_lifting.get_lifting_rate_arr()) == 0:
         gas_wap = 0.0
     else:
@@ -37,9 +38,9 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
             contract._gas_lifting.get_lifting_rate_arr()) != 0)
 
     # Gross Revenue
-    gross_revenue = np.sum(contract._consolidated_revenue, dtype=float)
     gross_revenue_oil = np.sum(contract._oil_revenue, dtype=float)
     gross_revenue_gas = np.sum(contract._gas_revenue, dtype=float)
+    gross_revenue = np.sum(gross_revenue_oil + gross_revenue_gas, dtype=float)
 
     # Sunk Cost
     sunk_cost = np.sum(contract._oil_sunk_cost + contract._gas_sunk_cost, dtype=float)
@@ -73,17 +74,24 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
     # Years sunk cost pooled
     years_sunk_cost_pooled = (contract.project_years[(len(contract.project_years) - len(cashflow_sunk_cost_pooled)):])
 
-    # Government DDMO
-    gov_ddmo = np.sum(contract._consolidated_ddmo)
+    if isinstance(contract, BaseProject):
+        gov_ddmo = 0
+        gov_tax_income = 0
+        gov_take = 0
+        gov_take_over_gross_rev = 0
 
-    # Government Take Income
-    gov_tax_income = np.sum(contract._consolidated_tax_payment)
+    if isinstance(contract, CostRecovery) or isinstance(contract, GrossSplit):
+        # Government DDMO
+        gov_ddmo = np.sum(contract._consolidated_ddmo)
 
-    # Government Take
-    gov_take = np.sum(contract._consolidated_government_take)
+        # Government Take Income
+        gov_tax_income = np.sum(contract._consolidated_tax_payment)
 
-    # Government Share
-    gov_take_over_gross_rev = gov_take / gross_revenue
+        # Government Take
+        gov_take = np.sum(contract._consolidated_government_take)
+
+        # Government Share
+        gov_take_over_gross_rev = gov_take / gross_revenue
 
     # Contractor IRR
     ctr_irr = irr(cashflow=contract._consolidated_cashflow)
@@ -595,6 +603,12 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                           cashflow_years=contract.project_years,
                           reference_year=reference_year)
 
+        ctr_net_share = gross_revenue - investment + opex + asr
+        ctr_net_share_over_gross_share = ctr_net_share / gross_revenue
+
+        ctr_net_cashflow = ctr_net_share
+        ctr_net_cashflow_over_gross_rev = ctr_net_share_over_gross_share
+
         return {'lifting_oil': lifting_oil,
                 'oil_wap': oil_wap,
                 'lifting_gas': lifting_gas,
@@ -615,4 +629,23 @@ def get_summary(contract: CostRecovery | GrossSplit | Transition,
                 'ctr_irr': ctr_irr,
                 'ctr_pot': ctr_pot,
                 'ctr_pv_ratio': ctr_pv_ratio,
-                'ctr_pi': ctr_pi}
+                'ctr_pi': ctr_pi,
+                'ctr_gross_share': gross_revenue,
+                'ctr_net_share': ctr_net_share,
+                'ctr_net_share_over_gross_share': ctr_net_share_over_gross_share,
+                'ctr_net_cashflow': ctr_net_cashflow,
+                'ctr_net_cashflow_over_gross_rev': ctr_net_cashflow_over_gross_rev,
+
+                # Zero value for the psc terms
+                'gov_gross_share': 0,
+                'cost_recovery / deductible_cost': 0,
+                'cost_recovery_over_gross_rev': 0,
+                'unrec_cost': 0,
+                'unrec_over_gross_rev': 0,
+                'gov_ftp_share': 0,
+                'gov_ddmo': 0,
+                'gov_tax_income': 0,
+                'gov_take': 0,
+                'gov_take_over_gross_rev': 0,
+                'gov_take_npv': 0,
+                }

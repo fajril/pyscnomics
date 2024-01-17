@@ -27,7 +27,7 @@ psc.gas_ftp_is_shared = True
 psc.gas_ftp_portion = 0.20
 
 # Split Pre Tax
-psc.oil_ctr_pretax_share = 0.34722220
+psc.oil_ctr_pretax_share = 0.3472220
 psc.gas_ctr_pretax_share = 0.5208330
 
 # DMO
