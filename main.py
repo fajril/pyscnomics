@@ -12,7 +12,7 @@ from pyscnomics.io.aggregator import Aggregate
 from pyscnomics.optimize.adjuster import AdjustData
 
 from pyscnomics.tools.summary import get_summary
-from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt
+from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt, write_table
 from pyscnomics.optimize.optimization import optimize_psc
 
 from pyscnomics.contracts.project import BaseProject
@@ -113,23 +113,24 @@ def main(workbook_path, mode):
             for j, param in enumerate(data.sensitivity_data.parameter):
                 results_arranged[econ][:, j] = results[param][:, i]
 
-        print('\t')
-        print("npv = \n", results_arranged["npv"])
+        # Grouping the sensitivity result
+        list_df = [pd.DataFrame] * len(target)
+        for index, key in enumerate(target):
+            df = pd.DataFrame()
+            df['oil_price'] = results_arranged[key][:, 0]
+            df['gas_price'] = results_arranged[key][:, 1]
+            df['opex'] = results_arranged[key][:, 2]
+            df['capex'] = results_arranged[key][:, 3]
+            df['prod'] = results_arranged[key][:, 4]
+            list_df[index] = df
 
-        print('\t')
-        print("irr = \n", results_arranged["irr"])
-
-        print('\t')
-        print("pi = \n", results_arranged["pi"])
-
-        print('\t')
-        print("pot = \n", results_arranged["pot"])
-
-        print('\t')
-        print("government take = \n", results_arranged["gov_take"])
-
-        print('\t')
-        print("ctr_net_share = \n", results_arranged["ctr_net_share"])
+        # Writing the sensitivity result into the workbook
+        list_cell_sensitivity = ['M4', 'M29', 'M54', 'M79', 'M104']
+        for index, cell in enumerate(list_cell_sensitivity):
+            write_table(workbook_object=workbook_object,
+                        sheet_name='Sensitivity',
+                        starting_cell=cell,
+                        table=list_df[index],)
 
     # Giving the workbook execution status to show that execution is success
     # xw.Book(workbook_path).sheets("Cover").range("F17").value = "Success"
@@ -325,8 +326,8 @@ if __name__ == '__main__':
     # main(workbook_path=sys.argv[1], mode=sys.argv[2])
 
     import time
-    workbook_path = "Workbook.xlsb"
-    run_mode = "Uncertainty"
+    workbook_path = r"D:\Adhim\pyscnomics_2023\Excel Template\With Ribbon\17_01_2024_ Adding The Sensitivity Module\Workbook_Filled CR.xlsb"
+    run_mode = "Standard"
     # workbook_path = "Workbook_Filled CR.xlsb"
     # run_mode = 'Standard'
 
