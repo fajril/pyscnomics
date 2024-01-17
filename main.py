@@ -7,9 +7,12 @@ import xlwings as xw
 import threading as th
 
 from pyscnomics.io.parse import InitiateContract
-from pyscnomics.optimize.adjuster import get_multipliers_sensitivity, AdjustData
+from pyscnomics.io.aggregator import Aggregate
 
-from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt, write_table
+from pyscnomics.optimize.adjuster import AdjustData
+
+from pyscnomics.tools.summary import get_summary
+from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt
 from pyscnomics.optimize.optimization import optimize_psc
 
 from pyscnomics.contracts.project import BaseProject
@@ -17,8 +20,12 @@ from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 
-from pyscnomics.tools.summary import get_summary
-from pyscnomics.io.aggregator import Aggregate
+from pyscnomics.optimize.sensitivity import execute_sensitivity_serial, get_multipliers_sensitivity
+from pyscnomics.optimize.uncertainty import (
+    get_montecarlo_data,
+    get_multipliers_montecarlo,
+    run_montecarlo,
+)
 
 
 def main(workbook_path, mode):
@@ -84,12 +91,14 @@ def main(workbook_path, mode):
 
         # Run sensitivity study
         target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
-        results = execute_sensitivity_serial(data=data,
-                                             target=target,
-                                             multipliers=multipliers,
-                                             workbook_path=workbook_path)
+        results = execute_sensitivity_serial(
+            data=data,
+            target=target,
+            multipliers=multipliers,
+            workbook_path=workbook_path,
+        )
 
-        # Arrange the results into the desired output
+        # Arrange the results into the desired output structure
         results_arranged = {
             key: (
                 np.zeros(
@@ -104,27 +113,88 @@ def main(workbook_path, mode):
             for j, param in enumerate(data.sensitivity_data.parameter):
                 results_arranged[econ][:, j] = results[param][:, i]
 
-        # Grouping the sensitivity result
-        list_df = [pd.DataFrame] * len(target)
-        for index, key in enumerate(target):
-            df = pd.DataFrame()
-            df['oil_price'] = results_arranged[key][:, 0]
-            df['gas_price'] = results_arranged[key][:, 1]
-            df['opex'] = results_arranged[key][:, 2]
-            df['capex'] = results_arranged[key][:, 3]
-            df['prod'] = results_arranged[key][:, 4]
-            list_df[index] = df
+        print('\t')
+        print("npv = \n", results_arranged["npv"])
 
-        # Writing the sensitivity result into the workbook
-        list_cell_sensitivity = ['M4', 'M29', 'M54', 'M79', 'M104']
-        for index, cell in enumerate(list_cell_sensitivity):
-            write_table(workbook_object=workbook_object,
-                        sheet_name='Sensitivity',
-                        starting_cell=cell,
-                        table=list_df[index],)
+        print('\t')
+        print("irr = \n", results_arranged["irr"])
+
+        print('\t')
+        print("pi = \n", results_arranged["pi"])
+
+        print('\t')
+        print("pot = \n", results_arranged["pot"])
+
+        print('\t')
+        print("government take = \n", results_arranged["gov_take"])
+
+        print('\t')
+        print("ctr_net_share = \n", results_arranged["ctr_net_share"])
 
     # Giving the workbook execution status to show that execution is success
-    xw.Book(workbook_path).sheets('Cover').range("F17").value = 'Success'
+    # xw.Book(workbook_path).sheets("Cover").range("F17").value = "Success"
+
+    # Run montecarlo simulation
+    elif mode == "Uncertainty":
+        # Prepare the loaded data
+        data = Aggregate(workbook_to_read=workbook_path)
+        data.fit()
+
+        # Prepare MonteCarlo data
+        uncertainty_data = get_montecarlo_data(data=data)
+
+        # Get multipliers
+        multipliers = np.zeros(
+            [uncertainty_data["run_number"], len(uncertainty_data["parameter"])],
+            dtype=np.float_
+        )
+
+        for i in range(multipliers.shape[1]):
+            multipliers[:, i] = get_multipliers_montecarlo(
+                run_number=uncertainty_data["run_number"],
+                distribution=uncertainty_data["distribution"][i],
+                min_value=uncertainty_data["min_values"][i],
+                mean_value=uncertainty_data["mean_values"][i],
+                max_value=uncertainty_data["max_values"][i],
+                std_dev=uncertainty_data["std_dev"][i],
+            )
+
+        print('\t')
+        print(f'Filetype: {type(multipliers)}')
+        print(f'Shape: {multipliers.shape}')
+        # print('multipliers = \n', multipliers)
+
+        print('\t')
+        print('=========================================================================================')
+
+        # Run MonteCarlo simulation
+        params = {}
+        target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
+        results = np.zeros([multipliers.shape[0], len(target)], dtype=np.float_)
+
+        for i in range(multipliers.shape[0]):
+            # Adjust data prior to simulation
+            (
+                params["psc"],
+                params["psc_arguments"],
+                params["summary_arguments"],
+            ) = AdjustData(
+                multipliers=multipliers[i, :],
+                workbook_path=workbook_path,
+                data=data,
+            ).activate()
+
+            # Collect the results
+            results[i, :] = run_montecarlo(
+                contract=params["psc"],
+                contract_arguments=params["psc_arguments"],
+                summary_arguments=params["summary_arguments"],
+            )
+
+        print('\t')
+        print(f'Filetype: {type(results)}')
+        print(f'Shape: {results.shape}')
+        print('results = \n', results)
 
 
 def run_standard(
@@ -167,15 +237,19 @@ def run_standard(
         sheet_name = 'Transition'
 
     # Writing the result of the contract
-    write_cashflow(workbook_object=workbook_object,
-                   sheet_name=sheet_name,
-                   contract=contract, )
+    write_cashflow(
+        workbook_object=workbook_object,
+        sheet_name=sheet_name,
+        contract=contract,
+    )
 
     # Writing the summary of the contract
-    write_summary(summary_dict=contract_summary,
-                  workbook_object=workbook_object,
-                  sheet_name='Summary',
-                  range_cell='E5', )
+    write_summary(
+        summary_dict=contract_summary,
+        workbook_object=workbook_object,
+        sheet_name='Summary',
+        range_cell='E5',
+    )
 
 
 def run_optimization(
@@ -246,97 +320,13 @@ def run_optimization(
     )
 
 
-def run_sensitivity(
-    contract: CostRecovery | GrossSplit | Transition,
-    contract_arguments: dict,
-    summary_arguments: dict,
-):
-    """
-    Function to run simulation in Sensitivity mode.
-
-    Parameters
-    ----------
-    contract: CostRecovery | GrossSplit | Transition
-        The contract object that will be run
-    contract_arguments: dict
-        The contract arguments
-    summary_arguments: dict
-        The dictionary of the summary arguments
-    """
-    contract.run(**contract_arguments)
-    contract_summary = get_summary(**summary_arguments)
-
-    return (
-        contract_summary["ctr_npv"],
-        contract_summary["ctr_irr"],
-        contract_summary["ctr_pi"],
-        contract_summary["ctr_pot"],
-        contract_summary["gov_take"],
-        contract_summary["ctr_net_share"],
-    )
-
-
-def execute_sensitivity_serial(
-    data: Aggregate,
-    target: list,
-    multipliers: np.ndarray,
-    workbook_path: str
-) -> dict[str, np.ndarray]:
-    """
-    Perform sensitivity analysis in a serial manner.
-
-    Parameters
-    ----------
-    data: Aggregate
-        The aggregate data for the analysis.
-    target: list
-    multipliers: np.ndarray
-        A 3D array of multipliers for sensitivity analysis.
-    workbook_path: str
-        The workbook path
-
-    Returns
-    -------
-    dict[str, np.ndarray]
-        A dictionary containing sensitivity analysis results. The keys correspond to
-        different parameters, and the values are arrays of results for each multiplier.
-    """
-    params = {}
-    results = {
-        key: np.zeros([multipliers.shape[1], len(target)], dtype=np.float_)
-        for key in data.sensitivity_data.parameter
-    }
-
-    for i, key in enumerate(data.sensitivity_data.parameter):
-        for j in range(multipliers.shape[1]):
-            # Adjust data prior to simulation
-            (
-                params["psc"],
-                params["psc_arguments"],
-                params["summary_arguments"]
-            ) = AdjustData(
-                data=data,
-                workbook_path=workbook_path,
-                multipliers=multipliers[i, j, :],
-            ).activate()
-
-            # Collect the results
-            results[key][j, :] = run_sensitivity(
-                contract=params["psc"],
-                contract_arguments=params["psc_arguments"],
-                summary_arguments=params["summary_arguments"],
-            )
-
-    return results
-
-
 if __name__ == '__main__':
     # import sys
     # main(workbook_path=sys.argv[1], mode=sys.argv[2])
 
     import time
     workbook_path = "Workbook.xlsb"
-    run_mode = "Sensitivity"
+    run_mode = "Uncertainty"
     # workbook_path = "Workbook_Filled CR.xlsb"
     # run_mode = 'Standard'
 

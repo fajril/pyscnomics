@@ -2925,99 +2925,28 @@ class MonteCarloData:
 
     Attributes
     ----------
+    run_number: int
+        The number of simulation run.
     parameter: list
         A list of parameters or variables for the simulation.
     distribution: list
         A list of probability distributions corresponding to each parameter.
     min_values: np.ndarray
         An array of minimum values for each parameter.
+    mean_values: np.ndarray
+        An array of average (mean) values for each parameter.
     max_values: np.ndarray
         An array of maximum values for each parameter.
     std_dev: np.ndarray
         An array of standard deviations for each parameter.
     """
+    run_number: None | int
     parameter: list
     distribution: list
     min_values: np.ndarray
+    mean_values: np.ndarray
     max_values: np.ndarray
     std_dev: np.ndarray
-
-    # Attribute associated with length of the captured data
-    data_length: int
-
-    def __post_init__(self):
-        # Prepare attribute min_values
-        if not isinstance(self.min_values, np.ndarray):
-            raise MonteCarloDataException(
-                f"Minimum values data must be given in the form of numpy.ndarray. "
-                f"The current min_values data is given in the form of: "
-                f"({self.min_values.__class__.__qualname__})."
-            )
-
-        min_values_nan = list(filter(lambda i: i is np.nan, self.min_values))
-
-        if len(min_values_nan) > 0:
-            raise MonteCarloDataException(
-                f"Minimum values data is incomplete. Please re-check the min_values data. "
-                f"The number of min_values data must be ({self.data_length}), "
-                f"not ({self.data_length - len(min_values_nan)})."
-            )
-
-        else:
-            self.min_values = self.min_values
-
-        # Prepare attribute max_values
-        if not isinstance(self.max_values, np.ndarray):
-            raise MonteCarloDataException(
-                f"Maximum values data must be given in the form of numpy.ndarray. "
-                f"The current max_values data is given in the form of: "
-                f"({self.max_values.__class__.__qualname__})."
-            )
-
-        max_values_nan = list(filter(lambda i: i is np.nan, self.max_values))
-
-        if len(max_values_nan) > 0:
-            raise MonteCarloDataException(
-                f"Maximum values data is incomplete. Please re-check the max_values data. "
-                f"The number of max_values data must be ({self.data_length}), "
-                f"not ({self.data_length - len(max_values_nan)})."
-            )
-
-        else:
-            self.max_values = self.max_values
-
-        # Prepare attribute std_dev
-        if not isinstance(self.std_dev, np.ndarray):
-            raise MonteCarloDataException(
-                f"Standard deviation data must be given in the form of numpy.ndarray. "
-                f"The current std_dev data is given in the form of: "
-                f"({self.std_dev.__class__.__qualname__})."
-            )
-
-        std_dev_nan = list(filter(lambda i: i is np.nan, self.std_dev))
-
-        if len(std_dev_nan) > 0:
-            raise MonteCarloDataException(
-                f"Standard deviation data is incomplete. Please re-check the std_dev data. "
-                f"The number of std_dev data must be ({self.data_length}), "
-                f"not ({self.data_length - len(std_dev_nan)})."
-            )
-
-        else:
-            self.std_dev = self.std_dev
-
-        # Conditions to raise exception
-        for i, val in enumerate(self.min_values):
-            if self.min_values[i] == self.max_values[i]:
-                raise MonteCarloDataException(
-                    f"Maximum and minimum value(s) are the same."
-                )
-
-            if self.min_values[i] > self.max_values[i]:
-                raise MonteCarloDataException(
-                    f"Maximum values of parameter(s) are less "
-                    f"than their corresponding minimum values."
-                )
 
 
 @dataclass

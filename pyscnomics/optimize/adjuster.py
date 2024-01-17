@@ -8,62 +8,16 @@ from pyscnomics.io.aggregator import Aggregate
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX
 
+from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
+from pyscnomics.contracts.transition import Transition
 
 
-def get_multipliers_sensitivity(
-    min_deviation: float,
-    max_deviation: float,
-    base_value: float = 1.0,
-    step: int = 10,
-    number_of_params: int = 5,
-) -> np.ndarray:
-    """
-    Generate multipliers for different economic parameters within a specified range
-    for sensitivity study.
+class AdjustDataException(Exception):
+    """ Exception to be raised for a misuse of AdjustData class """
 
-    Parameters
-    ----------
-    min_deviation: float
-        The minimum deviation from the base value.
-    max_deviation: float
-        The maximum deviation from the base value.
-    base_value: float, optional
-        The base value for the multipliers. Default is 1.0.
-    step: int, optional
-        The number of steps to create multipliers. Default is 10.
-    number_of_params: int, optional
-        The number of parameters to vary in sensitivity analysis. Default is 5.
-
-    Returns
-    -------
-    multipliers: np.ndarray
-        A 3D NumPy array containing multipliers for different economic factors.
-    """
-    # Specify the minimum and maximum values
-    min_val = base_value - min_deviation
-    max_val = base_value + max_deviation
-
-    min_multipliers = np.linspace(min_val, base_value, step + 1)
-    max_multipliers = np.linspace(base_value, max_val, step + 1)
-    tot_multipliers = np.concatenate((min_multipliers, max_multipliers[1:]))
-
-    # Specify array multipliers
-    multipliers = (
-        np.ones(
-            [number_of_params, len(tot_multipliers), number_of_params],
-            dtype=np.float_,
-        )
-    )
-
-    for i in range(number_of_params):
-        multipliers[i, :, i] = tot_multipliers.copy()
-
-    # Specify total number of run
-    total_run = len(tot_multipliers) * number_of_params
-
-    return multipliers, total_run
+    pass
 
 
 def get_price_and_rate_adjustment(
@@ -615,12 +569,6 @@ def get_intangible_adjustment(
         }
 
 
-class AdjustDataException(Exception):
-    """ Exception to be raised for a misuse of AdjustData class """
-
-    pass
-
-
 @dataclass
 class AdjustData:
     """
@@ -739,10 +687,79 @@ class AdjustData:
             ),
         }
 
-    def _get_single_contract_project(self):
-        pass
+    def _get_single_contract_project(self) -> tuple:
+        """
+        Get details for a single Production Sharing Contract with BaseProject.
 
-    def _get_single_contract_cr(self):
+        Returns
+        -------
+        psc: BaseProject
+            Object representing the BaseProject contract.
+        psc_arguments: dict
+            Arguments specific to the Cost Recovery contract.
+        summary_arguments: dict
+            Arguments for the contract summary.
+
+        Notes
+        -----
+        This method creates an instance of BaseProject class.
+        It populates the attributes of BaseProject object with relevant data.
+        """
+        # Prepare total lifting data
+        lifting_total = (
+            self.sensitivity_data["oil_lifting_aggregate_total"]
+            + self.sensitivity_data["gas_lifting_aggregate_total"]
+            + self.sensitivity_data["sulfur_lifting_aggregate"]
+            + self.sensitivity_data["electricity_lifting_aggregate"]
+            + self.sensitivity_data["co2_lifting_aggregate"]
+        )
+
+        # Create an instance of Project
+        self.psc = BaseProject(
+            start_date=self.data.general_config_data.start_date_project,
+            end_date=self.data.general_config_data.end_date_project,
+            oil_onstream_date=self.data.general_config_data.oil_onstream_date,
+            gas_onstream_date=self.data.general_config_data.gas_onstream_date,
+            lifting=lifting_total,
+            tangible_cost=self.sensitivity_data["tangible_cost_aggregate"],
+            intangible_cost=self.sensitivity_data["intangible_cost_aggregate"],
+            opex=self.sensitivity_data["opex_aggregate"],
+            asr_cost=self.data.asr_cost_aggregate,
+        )
+
+        # Specify arguments for Project
+        self.psc_arguments = {
+            "vat_rate": self.data.fiscal_config_data.vat_rate,
+            "lbt_rate": self.data.fiscal_config_data.lbt_rate,
+            "inflation_rate": self.data.fiscal_config_data.inflation_rate,
+            "future_rate": float(self.data.fiscal_config_data.asr_future_rate),
+            # "year_ref": None,
+            # "tax_type": None,
+        }
+
+        # Filling the summary contract argument
+        self.summary_arguments["contract"] = self.psc
+
+        return self.psc, None, self.summary_arguments
+
+    def _get_single_contract_cr(self) -> tuple:
+        """
+        Get details for a single Production Sharing Contract with Cost Recovery (PSC CR).
+
+        Returns
+        -------
+        psc: CostRecovery
+            Object representing the Cost Recovery contract.
+        psc_arguments: dict
+            Arguments specific to the Cost Recovery contract.
+        summary_arguments: dict
+            Arguments for the contract summary.
+
+        Notes
+        -----
+        This method creates an instance of the PSC CostRecovery class.
+        It populates the attributes of PSC CostRecovery object with relevant data.
+        """
         # Prepare total lifting data
         lifting_total = (
             self.sensitivity_data["oil_lifting_aggregate_total"]
@@ -813,8 +830,90 @@ class AdjustData:
 
         return self.psc, self.psc_arguments, self.summary_arguments
 
-    def _get_single_contract_gs(self):
-        pass
+    def _get_single_contract_gs(self) -> tuple:
+        """
+        Get details for a single Production Sharing Contract with Gross Split (PSC GS).
+
+        Returns
+        -------
+        psc: CostRecovery
+            Object representing the Gross Split contract.
+        psc_arguments: dict
+            Arguments specific to the Gross Split contract.
+        summary_arguments: dict
+            Arguments for the contract summary.
+
+        Notes
+        -----
+        This method creates an instance of the PSC GrossSplit class.
+        It populates the attributes of PSC GrossSplit object with relevant data.
+        """
+        # Prepare total lifting data
+        lifting_total = (
+            self.sensitivity_data["oil_lifting_aggregate_total"]
+            + self.sensitivity_data["gas_lifting_aggregate_total"]
+            + self.sensitivity_data["sulfur_lifting_aggregate"]
+            + self.sensitivity_data["electricity_lifting_aggregate"]
+            + self.sensitivity_data["co2_lifting_aggregate"]
+        )
+
+        # Create an instance of PSC GS
+        self.psc = GrossSplit(
+            start_date=self.data.general_config_data.start_date_project,
+            end_date=self.data.general_config_data.end_date_project,
+            oil_onstream_date=self.data.general_config_data.oil_onstream_date,
+            gas_onstream_date=self.data.general_config_data.gas_onstream_date,
+            lifting=lifting_total,
+            tangible_cost=self.sensitivity_data["tangible_cost_aggregate"],
+            intangible_cost=self.sensitivity_data["intangible_cost_aggregate"],
+            opex=self.sensitivity_data["opex_aggregate"],
+            asr_cost=self.data.asr_cost_aggregate,
+            field_status=self.data.psc_gs_data.field_status,
+            field_loc=self.data.psc_gs_data.field_location,
+            res_depth=self.data.psc_gs_data.reservoir_depth,
+            infra_avail=self.data.psc_gs_data.infrastructure_availability,
+            res_type=self.data.psc_gs_data.reservoir_type,
+            api_oil=self.data.psc_gs_data.oil_api,
+            domestic_use=self.data.psc_gs_data.domestic_content_use,
+            prod_stage=self.data.psc_gs_data.production_stage,
+            co2_content=self.data.psc_gs_data.co2_content,
+            h2s_content=self.data.psc_gs_data.h2s_content,
+            base_split_ctr_oil=self.data.psc_gs_data.oil_base_split,
+            base_split_ctr_gas=self.data.psc_gs_data.gas_base_split,
+            split_ministry_disc=self.data.psc_gs_data.ministry_discretion_split,
+            oil_dmo_volume_portion=self.data.psc_gs_data.oil_dmo_volume,
+            oil_dmo_fee_portion=self.data.psc_gs_data.oil_dmo_fee,
+            oil_dmo_holiday_duration=self.data.psc_gs_data.oil_dmo_period,
+            gas_dmo_volume_portion=self.data.psc_gs_data.gas_dmo_volume,
+            gas_dmo_fee_portion=self.data.psc_gs_data.gas_dmo_fee,
+            gas_dmo_holiday_duration=self.data.psc_gs_data.gas_dmo_period,
+        )
+
+        # Specify arguments for PSC GS
+        self.psc_arguments = {
+            "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config,
+            "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config,
+            "co2_revenue": self.data.fiscal_config_data.co2_revenue_config,
+            "is_dmo_end_weighted": self.data.psc_gs_data.dmo_is_weighted,
+            "tax_regime": self.data.fiscal_config_data.tax_mode,
+            "tax_rate": self.data.fiscal_config_data.tax_rate,
+            "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
+            "depr_method": self.data.fiscal_config_data.depreciation_method,
+            "decline_factor": self.data.fiscal_config_data.depreciation_method,
+            "vat_rate": self.data.fiscal_config_data.vat_rate,
+            "lbt_rate": self.data.fiscal_config_data.lbt_rate,
+            "inflation_rate": self.data.fiscal_config_data.inflation_rate,
+            "future_rate": float(self.data.fiscal_config_data.asr_future_rate),
+            "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
+            # "regime":,
+            # "year_ref":,
+            # "tax_type":,
+        }
+
+        # Filling the summary contract argument
+        self.summary_arguments["contract"] = self.psc
+
+        return self.psc, self.psc_arguments, self.summary_arguments
 
     def _get_transition_contract_cr_to_cr(self):
         pass
@@ -830,7 +929,33 @@ class AdjustData:
 
     def activate(self):
         """
-        123
+        Activate the Production Sharing Contract based on its type.
+
+        Returns
+        -------
+        contract: BaseProject | CostRecovery | GrossSplit | Transition
+            Object representing the activated contract.
+
+        Notes
+        -----
+        This method activates the Production Sharing Contract (PSC) based on
+        the specified contract type. It selects the appropriate method to
+        retrieve details for a single contract or a transition between contracts.
+
+        (1) If the contract type is "Project", the method returns objects to run
+            a single BaseProject contract case.
+        (2) If the contract type is "PSC Cost Recovery (CR)," the method returns
+            objects to run a single Cost Recovery contract case.
+        (3) If the contract type is "PSC Gross Split (GS)," the method returns
+            objects to run a single Gross Split contract case.
+        (4) If the contract type is "Transition CR - CR," the method returns
+            objects to run a transition from Cost Recovery to Cost Recovery case.
+        (5) If the contract type is "Transition CR - GS," the method returns
+            objects to run a transition from Cost Recovery to Gross Split case.
+        (6) If the contract type is "Transition GS - CR," the method returns
+            objects to run a transition from Gross Split to Cost Recovery case.
+        (7) If the contract type is "Transition GS - GS," the method returns
+            objects to run a transition from Gross Split to Gross Split case.
         """
         if self.contract_type == "Project":
             return self._get_single_contract_project()
@@ -842,16 +967,26 @@ class AdjustData:
             return self._get_single_contract_gs()
 
         elif self.contract_type == "Transition CR - CR":
-            pass
+            return self._get_transition_contract_cr_to_cr()
 
         elif self.contract_type == "Transition CR - GS":
-            pass
+            return self._get_transition_contract_cr_to_gs()
 
         elif self.contract_type == "Transition GS - GS":
-            pass
+            return self._get_transition_contract_gs_to_gs()
 
         elif self.contract_type == "Transition GS - CR":
-            pass
+            return self._get_transition_contract_gs_to_cr()
 
         else:
-            raise AdjustDataException
+            raise AdjustDataException(
+                f"The filled contract type ({self.contract_type}) is not available. "
+                f"The available contract types are: "
+                f"(1) Project, "
+                f"(2) PSC Cost Recovery (CR), "
+                f"(3) PSC Gross Split (GS), "
+                f"(4) Transition CR - CR, "
+                f"(5) Transition CR - GS, "
+                f"(6) Transition GS - GS, "
+                f"(7) Transition GS - CR."
+            )
