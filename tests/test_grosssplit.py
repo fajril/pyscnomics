@@ -18,31 +18,31 @@ psc.run(tax_rate=0.22,
 
 def test_tangible():
     base = np.asarray(load_testing(dataset_type='small_oil', key='oil_tangible'))
-    calc = psc._oil_tangible.expenditures()
+    calc = psc._oil_tangible_expenditures
     np.testing.assert_allclose(base, calc)
 
 
 def test_intangible():
     base = np.asarray(load_testing(dataset_type='small_oil', key='oil_intangible'))
-    calc = psc._oil_intangible.expenditures()
+    calc = psc._oil_intangible_expenditures
     np.testing.assert_allclose(base, calc)
 
 
 def test_opex():
     base = np.asarray(load_testing(dataset_type='small_oil', key='oil_opex'))
-    calc = psc._oil_opex.expenditures()
+    calc = psc._oil_opex_expenditures
     np.testing.assert_allclose(base, calc)
 
 
 def test_lifting():
     base = np.asarray(load_testing(dataset_type='small_oil', key='oil_lifting'))
-    calc = psc._oil_lifting.lifting_rate
+    calc = psc._oil_lifting.get_lifting_rate_arr()
     np.testing.assert_allclose(base, calc)
 
 
 def test_price():
     base = np.asarray(load_testing(dataset_type='small_oil', key='oil_price'))
-    calc = psc._oil_lifting.price
+    calc = psc._oil_lifting.get_price_arr()
     np.testing.assert_allclose(base, calc)
 
 
