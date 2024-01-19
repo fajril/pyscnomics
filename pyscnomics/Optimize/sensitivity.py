@@ -79,11 +79,22 @@ def run_sensitivity(
     Parameters
     ----------
     contract: BaseProject | CostRecovery | GrossSplit | Transition
-        The contract object that will be run
+        The contract object that will be run.
     contract_arguments: dict
-        The contract arguments
+        The contract arguments.
     summary_arguments: dict
-        The dictionary of the summary arguments
+        The dictionary of the summary arguments.
+
+    Returns
+    -------
+    tuple:
+        A tuple containing the following project metrics:
+        - NPV (Net Present Value)
+        - IRR (Internal Rate of Return)
+        - PI (Profitability Index)
+        - POT (Pay Out Time)
+        - Gov Take (Government Take)
+        - Net Share (Contractor's Net Share)
     """
     contract.run(**contract_arguments)
     contract_summary = get_summary(**summary_arguments)
@@ -105,14 +116,16 @@ def execute_sensitivity_serial(
     workbook_path: str,
 ) -> dict[str, np.ndarray]:
     """
-    Perform sensitivity analysis in a serial manner.
+    Run sensitivity analysis in a serial manner.
 
     Parameters
     ----------
     data: Aggregate
         The aggregate data for the analysis.
     target: list
+        The target objective variable.
     workbook_path: str
+        The path location of the associated Excel file.
     multipliers: np.ndarray
         A 3D array of multipliers for sensitivity analysis.
 

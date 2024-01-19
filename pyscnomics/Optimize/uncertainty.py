@@ -2,12 +2,15 @@
 Collection of functions to administer Monte Carlo simulation.
 """
 
+import os as os
 import numpy as np
 import pandas as pd
+import multiprocessing as mp
 from scipy.stats import uniform, triang, truncnorm
 
 from pyscnomics.tools.summary import get_summary
 from pyscnomics.io.aggregator import Aggregate
+from pyscnomics.optimize.adjuster import AdjustData
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
@@ -267,6 +270,29 @@ def run_montecarlo(
     contract_arguments: dict,
     summary_arguments: dict,
 ) -> tuple:
+    """
+    Function to run Monte Carlo simulation.
+
+    Parameters
+    ----------
+    contract: BaseProject | CostRecovery | GrossSplit | Transition
+        The contract type for the project.
+    contract_arguments: dict
+        Arguments required for running the specified contract.
+    summary_arguments: dict
+        Arguments for generating the project summary.
+
+    Returns
+    -------
+    tuple:
+        A tuple containing the following project metrics:
+        - NPV (Net Present Value)
+        - IRR (Internal Rate of Return)
+        - PI (Profitability Index)
+        - POT (Pay Out Time)
+        - Gov Take (Government Take)
+        - Net Share (Contractor's Net Share)
+    """
     contract.run(**contract_arguments)
     contract_summary = get_summary(**summary_arguments)
 
@@ -278,3 +304,135 @@ def run_montecarlo(
         contract_summary["gov_take"],
         contract_summary["ctr_net_share"],
     )
+
+
+def target_func(
+    data: Aggregate,
+    workbook_path: str,
+    mult: np.ndarray,
+) -> tuple:
+    """
+    A target function to run MonteCarlo simulation.
+
+    Parameters
+    ----------
+    data: Aggregate
+        The aggregate data for simulation.
+    workbook_path: str
+        The path to the workbook containing necessary information.
+    mult: np.ndarray
+        An array of multipliers for adjusting the data prior to simulation.
+
+    Returns
+    -------
+    SimulationResults: tuple
+        A named tuple containing the results of the Monte Carlo simulation.
+    """
+    # Adjust data prior to simulation
+    params = {}
+    (
+        params["psc"],
+        params["psc_arguments"],
+        params["summary_arguments"]
+    ) = AdjustData(
+        multipliers=mult,
+        workbook_path=workbook_path,
+        data=data,
+    ).activate()
+
+    # Run MonteCarlo simulation
+    return run_montecarlo(
+        contract=params["psc"],
+        contract_arguments=params["psc_arguments"],
+        summary_arguments=params["summary_arguments"],
+    )
+
+
+def execute_montecarlo_serial(
+    data: Aggregate,
+    target: list,
+    multipliers: np.ndarray,
+    workbook_path: str,
+) -> np.ndarray:
+    """
+    Run MonteCarlo simulation in a serial manner.
+
+    Parameters
+    ----------
+    data: Aggregate
+        The aggregate data for the analysis.
+    target: list
+        The target objective variable.
+    workbook_path: str
+        The path location of the associated Excel file.
+    multipliers: np.ndarray
+        A 3D array of multipliers for sensitivity analysis.
+
+    Returns
+    -------
+    results: np.ndarray
+        The results of MonteCarlo simulation.
+    """
+    results = np.zeros([multipliers.shape[0], len(target)], dtype=np.float_)
+
+    for i in range(multipliers.shape[0]):
+        results[i, :] = (
+            target_func(
+                data=data,
+                workbook_path=workbook_path,
+                mult=multipliers[i, :],
+            )
+        )
+
+    return results
+
+
+def execute_montecarlo_parallel(
+    data: Aggregate,
+    target: list,
+    multipliers: np.ndarray,
+    workbook_path: str,
+):
+    """
+    Run MonteCarlo simulation in a parallel manner.
+
+    Parameters
+    ----------
+    data: Aggregate
+        The aggregate data for the analysis.
+    target: list
+        The target objective variable.
+    workbook_path: str
+        The path location of the associated Excel file.
+    multipliers: np.ndarray
+        A 3D array of multipliers for sensitivity analysis.
+
+    Returns
+    -------
+    results: np.ndarray
+        The results of MonteCarlo simulation.
+    """
+    # Specify the iterable arguments to be used in the target function
+    combined_iters = []
+    for i in range(multipliers.shape[0]):
+        combined_iters.append(
+            (
+                data,
+                workbook_path,
+                multipliers[i, :],
+            )
+        )
+
+    # Execute parallel processing
+    pl = mp.Pool(processes=int(os.cpu_count() - 1))
+    results_init = pl.starmap(target_func, combined_iters)
+    pl.close()
+    pl.join()
+
+    # Arrange the results into the appointed structure
+    results = np.zeros([multipliers.shape[0], len(target)], dtype=np.float_)
+
+    for i in range(multipliers.shape[0]):
+        results[i, :] = results_init[i]
+
+    return results

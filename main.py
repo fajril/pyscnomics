@@ -1,15 +1,13 @@
 """
 Python Script as the entry point of Excel Workbook
 """
+
 import numpy as np
 import pandas as pd
 import xlwings as xw
-import threading as th
 
 from pyscnomics.io.parse import InitiateContract
 from pyscnomics.io.aggregator import Aggregate
-
-from pyscnomics.optimize.adjuster import AdjustData
 
 from pyscnomics.tools.summary import get_summary
 from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt, write_table
@@ -20,11 +18,16 @@ from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 
-from pyscnomics.optimize.sensitivity import execute_sensitivity_serial, get_multipliers_sensitivity
+from pyscnomics.optimize.sensitivity import (
+    get_multipliers_sensitivity,
+    execute_sensitivity_serial,
+)
+
 from pyscnomics.optimize.uncertainty import (
     get_montecarlo_data,
     get_multipliers_montecarlo,
-    run_montecarlo,
+    execute_montecarlo_serial,
+    execute_montecarlo_parallel,
 )
 
 
@@ -132,9 +135,6 @@ def main(workbook_path, mode):
                         starting_cell=cell,
                         table=list_df[index],)
 
-    # Giving the workbook execution status to show that execution is success
-    # xw.Book(workbook_path).sheets("Cover").range("F17").value = "Success"
-
     # Run montecarlo simulation
     elif mode == "Uncertainty":
         # Prepare the loaded data
@@ -160,42 +160,81 @@ def main(workbook_path, mode):
                 std_dev=uncertainty_data["std_dev"][i],
             )
 
-        print('\t')
-        print(f'Filetype: {type(multipliers)}')
-        print(f'Shape: {multipliers.shape}')
-        # print('multipliers = \n', multipliers)
-
-        print('\t')
-        print('=========================================================================================')
-
         # Run MonteCarlo simulation
-        params = {}
         target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
-        results = np.zeros([multipliers.shape[0], len(target)], dtype=np.float_)
 
-        for i in range(multipliers.shape[0]):
-            # Adjust data prior to simulation
-            (
-                params["psc"],
-                params["psc_arguments"],
-                params["summary_arguments"],
-            ) = AdjustData(
-                multipliers=multipliers[i, :],
-                workbook_path=workbook_path,
+        if uncertainty_data["run_number"] > int(1_000):
+            results = execute_montecarlo_parallel(
                 data=data,
-            ).activate()
-
-            # Collect the results
-            results[i, :] = run_montecarlo(
-                contract=params["psc"],
-                contract_arguments=params["psc_arguments"],
-                summary_arguments=params["summary_arguments"],
+                target=target,
+                multipliers=multipliers,
+                workbook_path=workbook_path,
             )
 
-        print('\t')
-        print(f'Filetype: {type(results)}')
-        print(f'Shape: {results.shape}')
-        print('results = \n', results)
+        else:
+            results = execute_montecarlo_serial(
+                data=data,
+                target=target,
+                multipliers=multipliers,
+                workbook_path=workbook_path,
+            )
+
+        # Sorted the results
+        results_sorted = np.take_along_axis(
+            arr=results,
+            indices=np.argsort(results, axis=0),
+            axis=0,
+        )
+
+        # Specify probability
+        prob = (
+           np.arange(1, uncertainty_data["run_number"] + 1, dtype=np.float_)
+           / uncertainty_data["run_number"]
+        )
+
+        # Arrange the results
+        results_arranged = np.concatenate((prob[:, np.newaxis], results_sorted), axis=1)
+
+        # Calculate P10, P50, P90
+        percentiles = np.percentile(
+            a=results_arranged,
+            q=[10, 50, 90],
+            method="lower",
+            axis=0,
+        )
+
+        # Determine indices of data to be captured to Excel
+        indices = (
+            np.linspace(0, uncertainty_data["run_number"], 101)
+        )[0:-1].astype(int)
+
+        # Final outcomes to be captured to Excel
+        outcomes = {
+            "results": results_arranged[indices, :],
+            "P10": percentiles[0, :],
+            "P50": percentiles[1, :],
+            "P90": percentiles[2, :],
+        }
+
+        # print('\t')
+        # print(f'Filetype: {type(outcomes)}')
+        # print(f'Keys: {outcomes.keys()}')
+        #
+        # print('\t')
+        # print('Shape: ', outcomes["results"].shape)
+        # print('results = \n', outcomes["results"])
+
+        # print('\t')
+        # print('P10 = \n', outcomes["P10"])
+        #
+        # print('\t')
+        # print('P50 = \n', outcomes["P50"])
+        #
+        # print('\t')
+        # print('P90 = \n', outcomes["P90"])
+
+    # Giving the workbook execution status to show that execution is success
+    xw.Book(workbook_path).sheets("Cover").range("F17").value = "Success"
 
 
 def run_standard(

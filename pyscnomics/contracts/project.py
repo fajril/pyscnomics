@@ -10,12 +10,14 @@ import numpy as np
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import FluidType, TaxType, TaxRegime, OtherRevenue, InflationAppliedTo
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
-from pyscnomics.econ.results import CashFlow
+# from pyscnomics.econ.results import CashFlow
+
 
 class SunkCostException(Exception):
     """Exception to raise for a misuse of Sunk Cost Method"""
 
     pass
+
 
 class BaseProjectException(Exception):
     """Exception to raise for a misuse of BaseProject class"""
