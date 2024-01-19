@@ -125,7 +125,7 @@ def main(workbook_path, mode):
             list_df[index] = df
 
         # Writing the sensitivity result into the workbook
-        list_cell_sensitivity = ['M4', 'M29', 'M54', 'M79', 'M104']
+        list_cell_sensitivity = ['M4', 'M29', 'M54', 'M79', 'M104', 'M129']
         for index, cell in enumerate(list_cell_sensitivity):
             write_table(workbook_object=workbook_object,
                         sheet_name='Sensitivity',
