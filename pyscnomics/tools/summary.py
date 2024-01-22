@@ -80,7 +80,7 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
         gov_take = 0
         gov_take_over_gross_rev = 0
 
-    if isinstance(contract, CostRecovery) or isinstance(contract, GrossSplit):
+    if isinstance(contract, CostRecovery) or isinstance(contract, GrossSplit) or isinstance(contract, Transition):
         # Government DDMO
         gov_ddmo = np.sum(contract._consolidated_ddmo)
 
