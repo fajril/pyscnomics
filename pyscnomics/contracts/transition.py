@@ -388,7 +388,12 @@ class Transition:
         contract2_new.run(**self.argument_contract2)
 
         # Defining the unrecoverable cost from the prior contract
-        latest_unrec = contract1_new._consolidated_unrecovered_after_transfer[-1]
+        # Condition if the contract is Cost Recovery
+        if isinstance(contract1_new, CostRecovery):
+            latest_unrec = contract1_new._consolidated_unrecovered_after_transfer[-1]
+        # Condition if the contract is Gross Split
+        else:
+            latest_unrec = contract1_new._consolidated_carward_cost_aftertf[-1]
         unrec_cost_prior = np.zeros_like(contract2_new.project_years, dtype=float)
         unrec_cost_prior[len(years_to_prior)] = latest_unrec
 
