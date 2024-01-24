@@ -365,8 +365,8 @@ if __name__ == '__main__':
     # main(workbook_path=sys.argv[1], mode=sys.argv[2])
 
     import time
-    workbook_path = r"D:\Adhim\pyscnomics_2023\Excel Template\With Ribbon\17_01_2024_ Adding The Sensitivity Module\Workbook_Filled Transition.xlsb"
-    run_mode = "Standard"
+    workbook_path = r"D:\Adhim\pyscnomics_2023\Excel Template\With Ribbon\17_01_2024_ Adding The Sensitivity Module\Workbook_Filled CR.xlsb"
+    run_mode = "Uncertainty"
     # workbook_path = "Workbook_Filled CR.xlsb"
     # run_mode = 'Standard'
 

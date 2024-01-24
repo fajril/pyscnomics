@@ -464,7 +464,7 @@ class CostRecovery(BaseProject):
         out: np.ndarray
             The array of ETS before transfer.
         """
-        ets_after_transfer = np.where(ets_before_tf > 0,
+        ets_after_transfer = np.where(ets_before_tf >= 0,
                                       revenue
                                       - (ftp_ctr + ftp_gov)
                                       - ic
@@ -473,7 +473,7 @@ class CostRecovery(BaseProject):
                                       + transferred_in,
                                       0)
 
-        tol = np.full_like(ets_after_transfer, fill_value=1.0e-14)
+        tol = np.full_like(ets_after_transfer, fill_value=1.0e-12)
         return np.where(ets_after_transfer < tol, 0, ets_after_transfer)
 
     @staticmethod
@@ -901,6 +901,17 @@ class CostRecovery(BaseProject):
             transferred_cost_in=self._transfer_to_gas,
             transferred_cost_out=self._transfer_to_oil,
         )
+
+        # Adjust Transfer
+        self._transfer_to_oil = psc_tools.transfer_treatment(
+            unrecovered_prior_to_cost=self._oil_unrecovered_before_transfer,
+            unrecovered_after_to_cost=self._oil_unrecovered_after_transfer,
+            transfer_prior=self._transfer_to_oil)
+
+        self._transfer_to_gas = psc_tools.transfer_treatment(
+            unrecovered_prior_to_cost=self._gas_unrecovered_before_transfer,
+            unrecovered_after_to_cost=self._gas_unrecovered_after_transfer,
+            transfer_prior=self._transfer_to_gas)
 
         # Cost to be recovered after transfer
         self._oil_cost_to_be_recovered_after_tf = (

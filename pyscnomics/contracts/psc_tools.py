@@ -330,3 +330,32 @@ def get_dmo(onstream_date: date,
     ddmo = (dmo_volume * price) - dmo_fee
 
     return dmo_volume, dmo_fee, ddmo
+
+
+def transfer_treatment(unrecovered_prior_to_cost: np.ndarray,
+                       unrecovered_after_to_cost: np.ndarray,
+                       transfer_prior: np.ndarray):
+    # Get the cumulative transferred cost
+    transfer_cum = np.cumsum(transfer_prior)
+
+    # Get the unrec - cumulative transferred_cost
+    difference = unrecovered_prior_to_cost - transfer_cum
+
+    abs_of_diff = np.absolute(np.where(unrecovered_after_to_cost == 0, difference, 0))
+
+    diff_to_prior = np.concatenate((np.zeros(1), np.diff(abs_of_diff)))
+
+    positive_diff_to_prior = np.where(diff_to_prior < 0,
+                                      0,
+                                      diff_to_prior)
+    transfer_adjusted = transfer_prior - positive_diff_to_prior
+    transfer_final = np.where(transfer_adjusted < 0, 0, transfer_adjusted)
+    #
+    # df = pd.DataFrame()
+    # df['Check'] = transfer_final
+    # df.loc['Column_Total'] = df.sum(numeric_only=True, axis=0)
+    # print(df)
+    # input()
+
+    return transfer_final
+
