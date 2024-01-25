@@ -5,9 +5,11 @@ Python Script as the entry point of Excel Workbook
 import numpy as np
 import pandas as pd
 import xlwings as xw
+import matplotlib.pyplot as plt
 
 from pyscnomics.io.parse import InitiateContract
 from pyscnomics.io.aggregator import Aggregate
+from pyscnomics.io.plot_generator import get_uncertainty_plot
 
 from pyscnomics.tools.summary import get_summary
 from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt, write_table
@@ -216,22 +218,40 @@ def main(workbook_path, mode):
             "P90": percentiles[2, :],
         }
 
-        # print('\t')
-        # print(f'Filetype: {type(outcomes)}')
-        # print(f'Keys: {outcomes.keys()}')
-        #
-        # print('\t')
-        # print('Shape: ', outcomes["results"].shape)
-        # print('results = \n', outcomes["results"])
+        # Making the dataframe to contain the result of percentile
+        df_uncertainty_percentile = pd.DataFrame()
+        df_uncertainty_percentile.index = ['Result',  'NPV', 'IRR', 'PI', 'POT', 'Gov_Take', 'CTR_Net_Share']
+        df_uncertainty_percentile['P10'] = outcomes['P10']
+        df_uncertainty_percentile['P50'] = outcomes['P50']
+        df_uncertainty_percentile['P90'] = outcomes['P90']
+        df_uncertainty_transposed = df_uncertainty_percentile.transpose()
+        df_uncertainty_transposed.drop(['Result'], axis=1, inplace=True)
 
-        # print('\t')
-        # print('P10 = \n', outcomes["P10"])
-        #
-        # print('\t')
-        # print('P50 = \n', outcomes["P50"])
-        #
-        # print('\t')
-        # print('P90 = \n', outcomes["P90"])
+        # Grouping the data into each category in a dataframe
+        df_uncertainty_result = pd.DataFrame()
+        df_uncertainty_result['frequency'] = outcomes['results'][:, 0]
+        df_uncertainty_result['npv'] = outcomes['results'][:, 1]
+        df_uncertainty_result['irr'] = outcomes['results'][:, 2]
+        df_uncertainty_result['pi'] = outcomes['results'][:, 3]
+        df_uncertainty_result['pot'] = outcomes['results'][:, 4]
+        df_uncertainty_result['gov_take'] = outcomes['results'][:, 5]
+        df_uncertainty_result['ctr_net_share'] = outcomes['results'][:, 6]
+
+        # Writing the percentile table into Excel workbook
+        write_table(workbook_object=workbook_object,
+                    sheet_name='Uncertainty',
+                    starting_cell='L6',
+                    table=df_uncertainty_transposed, )
+
+        # Writing the result table into Excel workbook
+        write_table(workbook_object=workbook_object,
+                    sheet_name='Uncertainty',
+                    starting_cell='K49',
+                    table=df_uncertainty_result, )
+
+        # Generating the uncertainty plot
+        get_uncertainty_plot(uncertainty_outcomes=outcomes,
+                             plot_type='Stairway')
 
     # Giving the workbook execution status to show that execution is success
     xw.Book(workbook_path).sheets("Cover").range("F17").value = "Success"
@@ -361,18 +381,18 @@ def run_optimization(
 
 
 if __name__ == '__main__':
-    # import sys
-    # main(workbook_path=sys.argv[1], mode=sys.argv[2])
+    import sys
+    main(workbook_path=sys.argv[1], mode=sys.argv[2])
 
-    import time
-    workbook_path = r"D:\Adhim\pyscnomics_2023\Excel Template\With Ribbon\17_01_2024_ Adding The Sensitivity Module\Workbook_Filled CR.xlsb"
-    run_mode = "Uncertainty"
-    # workbook_path = "Workbook_Filled CR.xlsb"
-    # run_mode = 'Standard'
-
-    start_time = time.time()
-    main(workbook_path=workbook_path, mode=run_mode)
-    end_time = time.time()
-
-    print('\t')
-    print(f'Execution time: {end_time - start_time} seconds')
+    # import time
+    # workbook_path = r"D:\Adhim\pyscnomics_2023\Excel Template\With Ribbon\17_01_2024_ Adding The Sensitivity Module\Workbook_Filled CR.xlsb"
+    # run_mode = "Uncertainty"
+    # # workbook_path = "Workbook_Filled CR.xlsb"
+    # # run_mode = 'Standard'
+    #
+    # start_time = time.time()
+    # main(workbook_path=workbook_path, mode=run_mode)
+    # end_time = time.time()
+    #
+    # print('\t')
+    # print(f'Execution time: {end_time - start_time} seconds')
