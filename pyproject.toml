@@ -4,17 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyscnomics"
-version = "0.9.9"
+version = "1.0.0"
 license = {file = "LICENCE"}
 description = "An economic engine for calculating PSC Scheme in Indonesia."
 authors = [
     {name = "Aditya Dewanto Hartono", email = "adityadewanto@gmail.com"},
     {name = "Fajril Ambia", email = "fambia@skkmigas.go.id"},
     {name = "Iskandar Fahmi", email = "ifahmi@bpma.go.id"},
+    {name = "Muhammad Adhim Mulia", email = "adhimmuliam@gmail.com"},
     {name = "Sudono", email = "sudono@gmail.com"},
-    {name = "Zuher Syihab", email = "zuher.syihab@itb.ac.id"}
+    {name = "Zuher Syihab", email = "zuher.syihab@itb.ac.id"},
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
