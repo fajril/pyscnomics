@@ -916,16 +916,16 @@ class AdjustData:
         return self.psc, self.psc_arguments, self.summary_arguments
 
     def _get_transition_contract_cr_to_cr(self):
-        pass
+        raise NotImplementedError
 
     def _get_transition_contract_cr_to_gs(self):
-        pass
+        raise NotImplementedError
 
     def _get_transition_contract_gs_to_gs(self):
-        pass
+        raise NotImplementedError
 
     def _get_transition_contract_gs_to_cr(self):
-        pass
+        raise NotImplementedError
 
     def activate(self):
         """
