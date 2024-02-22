@@ -498,16 +498,16 @@ def load_cost(filename: str,
 
     return tangible, intangible, opex, asr
 
-
-if __name__ == "__main__":
-    # Choosing the Dataset and contract type
-    import timeit
-    start_time = timeit.default_timer()
-    dataset = 'small_gas'
-    contract = 'project'
-
-    # Returning the load_data function
-    psc = load_data(dataset_type=dataset, contract_type=contract)
-    print('Output of the load_data function \n', psc, '\n')
-    end_time = timeit.default_timer()
-    print("The Execution Time:", end_time - start_time)
+#
+# if __name__ == "__main__":
+#     # Choosing the Dataset and contract type
+#     import timeit
+#     start_time = timeit.default_timer()
+#     dataset = 'small_gas'
+#     contract = 'project'
+#
+#     # Returning the load_data function
+#     psc = load_data(dataset_type=dataset, contract_type=contract)
+#     print('Output of the load_data function \n', psc, '\n')
+#     end_time = timeit.default_timer()
+#     print("The Execution Time:", end_time - start_time)
