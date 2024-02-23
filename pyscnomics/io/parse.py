@@ -762,7 +762,7 @@ class InitiateContract:
                 "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 1"],
                 "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 1"],
                 "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 1"],
-                "future_rate": float(self.data.fiscal_config_data.asr_future_rate["PSC 1"]) ,
+                "future_rate": float(self.data.fiscal_config_data.asr_future_rate["PSC 1"]),
                 "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
                 # "regime": None,
                 # "year_ref": None,

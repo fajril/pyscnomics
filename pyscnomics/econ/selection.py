@@ -111,7 +111,7 @@ class TaxRegime(Enum):
     """
     Enumeration class representing different tax regimes for oil and gas economic analysis.
 
-    Attributes:
+    Attributes
     ----------
     UU_36_2008 (str): Tax regime under "UU No.36 Tahun 2008"
     UU_02_2020 (str): Tax regime under "UU No.02 Tahun 2020"
@@ -119,7 +119,6 @@ class TaxRegime(Enum):
     NAILED_DOWN (str): Special tax regime designated as "nailed down"
     PREVAILING (str): General tax regime referred to as "prevailing"
     """
-
     NAILED_DOWN = "nailed down"
     PREVAILING = "prevailing"
     UU_36_2008 = "UU No.36 Tahun 2008"
@@ -128,8 +127,24 @@ class TaxRegime(Enum):
 
 
 class TaxPaymentMode(Enum):
-    TAX_DUE_MODE = "Calculation method where it treated like the unrecoverable cost, could be weighted on the next year"
-    TAX_DIRECT_MODE = "Calculation method where the tax calculated directly from taxable income"
+    """
+    Enumeration class representing different tax payment modes.
+
+    Attributes
+    ----------
+    TAX_DUE_MODE: str
+        Calculation method where it is treated like an unrecoverable cost,
+        and could be weighted on the next year.
+    TAX_DIRECT_MODE: str
+        Calculation method where the tax is calculated directly from taxable income.
+    """
+    TAX_DUE_MODE = (
+        "Calculation method where it treated like the unrecoverable cost, "
+        "could be weighted on the next year"
+    )
+    TAX_DIRECT_MODE = (
+        "Calculation method where the tax calculated directly from taxable income"
+    )
 
 
 class FTPTaxRegime(Enum):
@@ -173,11 +188,40 @@ class GrossSplitRegime(Enum):
 
 
 class DiscountingMode(Enum):
+    """
+    Enumeration class representing different discounting modes for financial calculations.
+
+    Attributes
+    ----------
+    END_YEAR: str
+        Discounting method where the cash flows are discounted to the end of each year.
+    MID_YEAR: str
+        Discounting method where the cash flows are discounted to the middle of each year.
+    """
     END_YEAR = "End Year Discounting"
     MID_YEAR = "Mid Year Discounting"
 
 
 class ContractType(Enum):
+    """
+    Enumeration class representing different types of production sharing contracts
+    (PSCs) in Indonesia.
+
+    Attributes
+    ----------
+    COST_RECOVERY: str
+        Cost Recovery (CR) contract type.
+    GROSS_SPLIT: str
+        Gross Split (GS) contract type.
+    TRANSITION_CR_CR: str
+        Transition contract type from Cost Recovery to Cost Recovery.
+    TRANSITION_CR_GS: str
+        Transition contract type from Cost Recovery to Gross Split.
+    TRANSITION_GS_GS: str
+        Transition contract type from Gross Split to Gross Split.
+    TRANSITION_GS_CR: str
+        Transition contract type from Gross Split to Cost Recovery.
+    """
     COST_RECOVERY = 'Cost Recovery (CR)'
     GROSS_SPLIT = 'Gross Split (GS)'
     TRANSITION_CR_CR = 'Transition CR - CR'
@@ -187,6 +231,23 @@ class ContractType(Enum):
 
 
 class NPVSelection(Enum):
+    """
+    Enumeration class representing different methods for calculating
+    Net Present Value (NPV) in economic analysis.
+
+    Attributes
+    ----------
+    NPV_REAL_TERMS: str
+        NPV Calculation using the real terms method.
+    NPV_NOMINAL_TERMS: str
+        NPV Calculation using the nominal terms method.
+    NPV_SKK_NOMINAL_TERMS: str
+        NPV Calculation using the SKK nominal terms method.
+    NPV_SKK_REAL_TERMS: str
+        NPV Calculation using the SKK real terms method.
+    NPV_POINT_FORWARD: str
+        NPV Calculation using the Point Forward method.
+    """
     NPV_REAL_TERMS = 'NPV Calculation using real terms method'
     NPV_NOMINAL_TERMS = 'NPV Calculation using nominal terms method'
     NPV_SKK_NOMINAL_TERMS = 'NPV Calculation using SKK Nominal terms method'
@@ -195,6 +256,21 @@ class NPVSelection(Enum):
 
 
 class OtherRevenue(Enum):
+    """
+    Enumeration class representing different types of other revenue
+    in oil and gas economic analysis.
+
+    Attributes
+    ----------
+    ADDITION_TO_OIL_REVENUE: str
+        Revenue treated as addition to oil revenue.
+    ADDITION_TO_GAS_REVENUE: str
+        Revenue treated as addition to gas revenue.
+    REDUCTION_TO_OIL_OPEX: str
+        Revenue treated as reduction to oil operational expenditure (OPEX).
+    REDUCTION_TO_GAS_OPEX: str
+        Revenue treated as reduction to gas operational expenditure (OPEX).
+    """
     ADDITION_TO_OIL_REVENUE = "The revenue will be treated as the Oil Revenue Addition"
     ADDITION_TO_GAS_REVENUE = "The revenue will be treated as the Gas Revenue Addition"
     REDUCTION_TO_OIL_OPEX = "The revenue will be treated as the Oil OPEX Reduction"
@@ -202,12 +278,54 @@ class OtherRevenue(Enum):
 
 
 class InflationAppliedTo(Enum):
-    CAPEX = "Inlflation rate will be applied to Tangible and Intangible Cost"
+    """
+    Enumeration class representing different aspects to which inflation rate
+    is applied in economic analysis.
+
+    Attributes
+    ----------
+    CAPEX: str
+        Inflation rate applied to Tangible and Intangible Costs (CAPEX).
+    OPEX: str
+        Inflation rate applied to Operating Costs (OPEX).
+    CAPEX_AND_OPEX: str
+        Inflation rate applied to Tangible, Intangible, and Operating Costs (CAPEX and OPEX).
+    """
+    CAPEX = "Inflation rate will be applied to Tangible and Intangible Cost"
     OPEX = "Inflation rate will be applied to Operating Cost"
     CAPEX_AND_OPEX = "Inflation rate will be applied to Tangible, Intangible, Operating Cost"
 
 
 class OptimizationParameter(Enum):
+    """
+    Enumeration class representing different optimization parameters in
+    oil and gas economic analysis.
+
+    Attributes
+    ----------
+    OIL_CTR_PRETAX: str
+        Optimization parameter for Oil Contractor Pre Tax.
+    GAS_CTR_PRETAX: str
+        Optimization parameter for Gas Contractor Pre Tax.
+    OIL_FTP_PORTION: str
+        Optimization parameter for Oil FTP Portion.
+    GAS_FTP_PORTION: str
+        Optimization parameter for Gas FTP Portion.
+    OIL_IC: str
+        Optimization parameter for Oil Investment Credit (IC).
+    GAS_IC: str
+        Optimization parameter for Gas Investment Credit (IC).
+    OIL_DMO_FEE: str
+        Optimization parameter for Oil Domestic Market Obligation (DMO) Fee.
+    GAS_DMO_FEE: str
+        Optimization parameter for Gas Domestic Market Obligation (DMO) Fee.
+    VAT_RATE: str
+        Optimization parameter for Value-Added Tax (VAT) Rate.
+    EFFECTIVE_TAX_RATE: str
+        Optimization parameter for Effective Tax Rate.
+    MINISTERIAL_DISCRETION: str
+        Optimization parameter for Ministerial Discretion.
+    """
     OIL_CTR_PRETAX = 'Oil Contractor Pre Tax'
     GAS_CTR_PRETAX = 'Gas Contractor Pre Tax'
     OIL_FTP_PORTION = 'Oil FTP Portion'
@@ -222,6 +340,18 @@ class OptimizationParameter(Enum):
 
 
 class OptimizationTarget(Enum):
+    """
+    Enumeration class representing different optimization targets in economic analysis.
+
+    Attributes
+    ----------
+    IRR: str
+        Optimization target for Internal Rate of Return (IRR).
+    NPV: str
+        Optimization target for Net Present Value (NPV).
+    PI: str
+        Optimization target for Profitability Index (PI).
+    """
     IRR = 'IRR'
     NPV = 'NPV'
     PI = 'PI'
