@@ -279,7 +279,7 @@ def main(workbook_path, mode):
                              plot_type='Stairway')
 
     # Giving the workbook execution status to show that execution is success
-    xw.Book(workbook_path).sheets("Cover").range("F17").value = "Success"
+    xw.Book(workbook_path).sheets("References").range("N17").value = "Success"
 
 
 def run_standard(
