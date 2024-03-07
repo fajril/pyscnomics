@@ -460,6 +460,7 @@ class InitiateContract:
                 "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 2"],
                 "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 2"],
                 "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 2"],
+
                 "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 2"],
                 "future_rate": float(self.data.fiscal_config_data.asr_future_rate["PSC 2"]),
                 "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
@@ -583,6 +584,7 @@ class InitiateContract:
                 oil_dmo_volume_portion=self.data.psc_transition_cr_to_gs[keys[1]].oil_dmo_volume,
                 oil_dmo_fee_portion=self.data.psc_transition_cr_to_gs[keys[1]].oil_dmo_fee,
                 oil_dmo_holiday_duration=self.data.psc_transition_cr_to_gs[keys[1]].oil_dmo_period,
+
                 gas_dmo_volume_portion=self.data.psc_transition_cr_to_gs[keys[1]].gas_dmo_volume,
                 gas_dmo_fee_portion=self.data.psc_transition_cr_to_gs[keys[1]].gas_dmo_fee,
                 gas_dmo_holiday_duration=self.data.psc_transition_cr_to_gs[keys[1]].gas_dmo_period,
@@ -602,10 +604,12 @@ class InitiateContract:
                 "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
                 "depr_method": self.data.fiscal_config_data.depreciation_method["PSC 1"],
                 "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 1"],
+
                 "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 1"],
                 "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 1"],
                 "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 1"],
                 "future_rate": float(self.data.fiscal_config_data.asr_future_rate["PSC 1"]),
+
                 "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
                 # "year_ref": None,
                 # "tax_type": None,
@@ -618,12 +622,15 @@ class InitiateContract:
                 "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 2"],
                 "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 2"],
                 "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
+
                 "depr_method": self.data.fiscal_config_data.depreciation_method["PSC 2"],
                 "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 2"],
+
                 "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 2"],
                 "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 2"],
                 "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 2"],
                 "future_rate": float(self.data.fiscal_config_data.asr_future_rate["PSC 2"]),
+
                 "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
                 # "regime": None,
                 # "year_ref": None,

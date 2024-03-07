@@ -35,9 +35,19 @@ from pyscnomics.optimize.uncertainty import (
 
 # Click command for generating CLI command
 @click.command()
-@click.option('-p', '--path', help='The path of the Microsoft Excel Workbook or the .pysc file')
-@click.option('-m', '--mode', default='Standard', help='The mode of the simulation. They are: Standard, Sensitivity, Optimization, Uncertainty')
+@click.option(
+    '-p',
+    '--path',
+    help='The path of the Microsoft Excel Workbook or the .pysc file'
+)
+@click.option(
+    '-m',
+    '--mode',
+    default='Standard',
+    help='The mode of the simulation. They are: Standard, Sensitivity, Optimization, Uncertainty'
+)
 def entry_point(**kwargs):
+    """ Manages CLI """
     # Defining the cli command for path
     if 'p' in kwargs:
         file_path = kwargs['p']
