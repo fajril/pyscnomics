@@ -279,7 +279,7 @@ def main(workbook_path, mode):
         )
 
         # Generating the uncertainty plot
-        get_uncertainty_plot(uncertainty_outcomes=outcomes, plot_type='Stairway')
+        # get_uncertainty_plot(uncertainty_outcomes=outcomes, plot_type='Stairway')
 
     # Giving the workbook execution status to show that execution is success
     xw.Book(workbook_path).sheets("References").range("N17").value = "Success"
@@ -409,14 +409,4 @@ def run_optimization(
 
 
 if __name__ == "__main__":
-    workbook_path = (
-        r"E:\1009_My Journal_PSC Migas\26_20230707_PSCEconomic\pyscnomics\Workbook_Filled Trans.xlsb"
-    )
-    running_mode = "Uncertainty"
-
-    main(workbook_path=workbook_path, mode=running_mode)
-
-    print('\t')
-    print('Done!!!')
-
-    # entry_point()
+    entry_point()
