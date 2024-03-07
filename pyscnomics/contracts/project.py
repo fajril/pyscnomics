@@ -352,7 +352,20 @@ class BaseProject:
         ):
             raise BaseProjectException(
                 f"Inconsistent end project year: "
-
+                f"Base project ({self.end_date.year}), "
+                f"Oil lifting ({self._oil_lifting.end_year}), "
+                f"Gas lifting ({self._gas_lifting.end_year}), "
+                f"Sulfur lifting ({self._sulfur_lifting.end_year}), "
+                f"Electricity lifting ({self._electricity_lifting.end_year}), "
+                f"CO2 lifting ({self._co2_lifting.end_year}), "
+                f"Oil tangible ({self._oil_tangible.end_year}), "
+                f"Gas tangible ({self._gas_tangible.end_year}), "
+                f"Oil intangible ({self._oil_intangible.end_year}), "
+                f"Gas intangible ({self._gas_intangible.end_year}), "
+                f"Oil opex ({self._oil_opex.end_year}), "
+                f"Gas opex ({self._gas_opex.end_year}), "
+                f"Oil asr ({self._oil_asr.end_year}), "
+                f"Gas asr ({self._gas_asr.end_year})."
             )
 
         # Configure oil_onstream_date: set default value and error message

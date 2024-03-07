@@ -148,7 +148,10 @@ def get_montecarlo_data(data: Aggregate) -> dict:
                 f"Please check the input data."
             )
 
-    return uncertainty_data
+    # Identify zero mean values
+    mean_values_not_zero = np.argwhere(uncertainty_data["mean_values"] != 0.0).ravel()
+
+    return uncertainty_data, mean_values_not_zero
 
 
 def get_multipliers_montecarlo(
@@ -306,133 +309,88 @@ def run_montecarlo(
     )
 
 
-def target_func(
+def execute_montecarlo(
     data: Aggregate,
     workbook_path: str,
+    uncertainty_data: dict,
+    target: list,
     mult: np.ndarray,
-) -> tuple:
+    threshold_parallel: int = 500,
+) -> np.ndarray:
     """
     A target function to run MonteCarlo simulation.
 
     Parameters
     ----------
     data: Aggregate
-        The aggregate data for simulation.
+        The aggregate data for the simulation.
     workbook_path: str
-        The path to the workbook containing necessary information.
+        The path to the workbook containing data.
+    uncertainty_data: dict
+        Data associated with uncertainty analysis.
+    target: list
+        A list of targets for the simulation.
     mult: np.ndarray
-        An array of multipliers for adjusting the data prior to simulation.
-
-    Returns
-    -------
-    SimulationResults: tuple
-        A named tuple containing the results of the Monte Carlo simulation.
-    """
-    # Adjust data prior to simulation
-    params = {}
-    (
-        params["psc"],
-        params["psc_arguments"],
-        params["summary_arguments"]
-    ) = AdjustData(
-        multipliers=mult,
-        workbook_path=workbook_path,
-        data=data,
-    ).activate()
-
-    # Run MonteCarlo simulation
-    return run_montecarlo(
-        contract=params["psc"],
-        contract_arguments=params["psc_arguments"],
-        summary_arguments=params["summary_arguments"],
-    )
-
-
-def execute_montecarlo_serial(
-    data: Aggregate,
-    target: list,
-    multipliers: np.ndarray,
-    workbook_path: str,
-) -> np.ndarray:
-    """
-    Run MonteCarlo simulation in a serial manner.
-
-    Parameters
-    ----------
-    data: Aggregate
-        The aggregate data for the analysis.
-    target: list
-        The target objective variable.
-    workbook_path: str
-        The path location of the associated Excel file.
-    multipliers: np.ndarray
-        A 3D array of multipliers for sensitivity analysis.
+        A numpy array containing multipliers.
+    threshold_parallel: int
+        A threshold value to activate parallel computation.
 
     Returns
     -------
     results: np.ndarray
-        The results of MonteCarlo simulation.
-    """
-    results = np.zeros([multipliers.shape[0], len(target)], dtype=np.float_)
+        Results of the Monte Carlo simulation as a numpy array.
 
-    for i in range(multipliers.shape[0]):
-        results[i, :] = (
-            target_func(
-                data=data,
-                workbook_path=workbook_path,
-                mult=multipliers[i, :],
+    Notes
+    -----
+    The engine executes parallel computing for number of simulation run larger than 1_000.
+    Instead, serial computing is adopted.
+    """
+    # Generate project instances to be run in the simulation
+    args = ["psc", "psc_arguments", "summary_arguments"]
+    params = {arg: [0] * uncertainty_data["run_number"] for arg in args}
+
+    for n in range(uncertainty_data["run_number"]):
+        (
+            params["psc"][n],
+            params["psc_arguments"][n],
+            params["summary_arguments"][n],
+        ) = AdjustData(
+            data=data,
+            workbook_path=workbook_path,
+            multipliers=mult[n, :],
+        ).activate()
+
+    # Execute MonteCarlo simulation
+    results = np.zeros([uncertainty_data["run_number"], len(target)], dtype=np.float_)
+
+    # Run serial for number of simulation less than 1000
+    if uncertainty_data["run_number"] <= threshold_parallel:
+        for n in range(uncertainty_data["run_number"]):
+            results[n, :] = run_montecarlo(
+                contract=params["psc"][n],
+                contract_arguments=params["psc_arguments"][n],
+                summary_arguments=params["summary_arguments"][n],
             )
-        )
 
-    return results
-
-
-def execute_montecarlo_parallel(
-    data: Aggregate,
-    target: list,
-    multipliers: np.ndarray,
-    workbook_path: str,
-):
-    """
-    Run MonteCarlo simulation in a parallel manner.
-
-    Parameters
-    ----------
-    data: Aggregate
-        The aggregate data for the analysis.
-    target: list
-        The target objective variable.
-    workbook_path: str
-        The path location of the associated Excel file.
-    multipliers: np.ndarray
-        A 3D array of multipliers for sensitivity analysis.
-
-    Returns
-    -------
-    results: np.ndarray
-        The results of MonteCarlo simulation.
-    """
-    # Specify the iterable arguments to be used in the target function
-    combined_iters = []
-    for i in range(multipliers.shape[0]):
-        combined_iters.append(
-            (
-                data,
-                workbook_path,
-                multipliers[i, :],
+    # Run parallel for number of simulation larger than 1000
+    else:
+        combined_iters = []
+        for n in range(uncertainty_data["run_number"]):
+            combined_iters.append(
+                (
+                    params["psc"][n],
+                    params["psc_arguments"][n],
+                    params["summary_arguments"][n],
+                )
             )
-        )
 
-    # Execute parallel processing
-    pl = mp.Pool(processes=int(os.cpu_count() - 1))
-    results_init = pl.starmap(target_func, combined_iters)
-    pl.close()
-    pl.join()
+        pl = mp.Pool(processes=int(os.cpu_count() - 1))
+        results_init = pl.starmap(run_montecarlo, combined_iters)
+        pl.close()
+        pl.join()
 
-    # Arrange the results into the appointed structure
-    results = np.zeros([multipliers.shape[0], len(target)], dtype=np.float_)
-
-    for i in range(multipliers.shape[0]):
-        results[i, :] = results_init[i]
+        # Arrange the results into the appointed data structure
+        for n in range(uncertainty_data["run_number"]):
+            results[n, :] = results_init[n]
 
     return results

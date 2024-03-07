@@ -1120,28 +1120,6 @@ class AdjustData:
         }
 
         # Create an instance of PSC transition CR-GS
-        print('Project End Date \n', self.data.general_config_data.end_date_project.year)
-        print('Lifting End Date')
-        for lift in lifting_total["PSC 1"]:
-            print(' ', lift.end_year)
-
-        print('Tangible End Date')
-        for tang in self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"]:
-            print(' ', tang.end_year)
-
-        print('Intangible End Date')
-        for intang in self.sensitivity_data["intangible_cost_aggregate"]["PSC 1"]:
-            print(' ', intang.end_year)
-
-        print('Opex End Date')
-        for opx in self.sensitivity_data["opex_aggregate"]["PSC 1"]:
-            print(' ', opx.end_year)
-
-        print('ASR End Date')
-        for asr in self.data.asr_cost_aggregate["PSC 1"]:
-            print(' ', asr.end_year)
-        input()
-
         self.psc = {
             "PSC 1": CostRecovery(
                 start_date=self.data.general_config_data.start_date_project,
