@@ -2,10 +2,10 @@
 Python Script as the entry point of Excel Workbook
 """
 
+import click
 import numpy as np
 import pandas as pd
 import xlwings as xw
-import matplotlib.pyplot as plt
 
 from pyscnomics.io.parse import InitiateContract
 from pyscnomics.io.aggregator import Aggregate
@@ -22,15 +22,49 @@ from pyscnomics.contracts.transition import Transition
 
 from pyscnomics.optimize.sensitivity import (
     get_multipliers_sensitivity,
-    execute_sensitivity_serial,
+    execute_sensitivity,
 )
 
 from pyscnomics.optimize.uncertainty import (
     get_montecarlo_data,
     get_multipliers_montecarlo,
-    execute_montecarlo_serial,
-    execute_montecarlo_parallel,
+    execute_montecarlo,
 )
+
+
+# Click command for generating CLI command
+@click.command()
+@click.option(
+    '-p',
+    '--path',
+    help='The path of the Microsoft Excel Workbook or the .pysc file'
+)
+@click.option(
+    '-m',
+    '--mode',
+    default='Standard',
+    help='The mode of the simulation. They are: Standard, Sensitivity, Optimization, Uncertainty'
+)
+def entry_point(**kwargs):
+    """ Manages CLI """
+    # Defining the cli command for path
+    if 'p' in kwargs:
+        file_path = kwargs['p']
+    elif 'path' in kwargs:
+        file_path = kwargs['path']
+    else:
+        file_path = None
+
+    # Defining the cli command for mode
+    if 'm' in kwargs:
+        mode = kwargs['m']
+    elif 'mode' in kwargs:
+        mode = kwargs['mode']
+    else:
+        mode = None
+
+    # Running the code based on the given CLI input
+    main(workbook_path=file_path, mode=mode)
 
 
 def main(workbook_path, mode):
@@ -96,7 +130,7 @@ def main(workbook_path, mode):
 
         # Run sensitivity study
         target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
-        results = execute_sensitivity_serial(
+        results = execute_sensitivity(
             data=data,
             target=target,
             multipliers=multipliers,
@@ -135,7 +169,7 @@ def main(workbook_path, mode):
             write_table(workbook_object=workbook_object,
                         sheet_name='Sensitivity',
                         starting_cell=cell,
-                        table=list_df[index],)
+                        table=list_df[index], )
 
     # Run montecarlo simulation
     elif mode == "Uncertainty":
@@ -144,15 +178,15 @@ def main(workbook_path, mode):
         data.fit()
 
         # Prepare MonteCarlo data
-        uncertainty_data = get_montecarlo_data(data=data)
+        uncertainty_data, mean_values_not_zero = get_montecarlo_data(data=data)
 
         # Get multipliers
-        multipliers = np.zeros(
+        multipliers = np.ones(
             [uncertainty_data["run_number"], len(uncertainty_data["parameter"])],
             dtype=np.float_
         )
 
-        for i in range(multipliers.shape[1]):
+        for i in mean_values_not_zero:
             multipliers[:, i] = get_multipliers_montecarlo(
                 run_number=uncertainty_data["run_number"],
                 distribution=uncertainty_data["distribution"][i],
@@ -164,22 +198,13 @@ def main(workbook_path, mode):
 
         # Run MonteCarlo simulation
         target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
-
-        if uncertainty_data["run_number"] > int(1_000):
-            results = execute_montecarlo_parallel(
-                data=data,
-                target=target,
-                multipliers=multipliers,
-                workbook_path=workbook_path,
-            )
-
-        else:
-            results = execute_montecarlo_serial(
-                data=data,
-                target=target,
-                multipliers=multipliers,
-                workbook_path=workbook_path,
-            )
+        results = execute_montecarlo(
+            data=data,
+            workbook_path=workbook_path,
+            uncertainty_data=uncertainty_data,
+            target=target,
+            mult=multipliers,
+        )
 
         # Sorted the results
         results_sorted = np.take_along_axis(
@@ -190,8 +215,8 @@ def main(workbook_path, mode):
 
         # Specify probability
         prob = (
-           np.arange(1, uncertainty_data["run_number"] + 1, dtype=np.float_)
-           / uncertainty_data["run_number"]
+            np.arange(1, uncertainty_data["run_number"] + 1, dtype=np.float_)
+            / uncertainty_data["run_number"]
         )
 
         # Arrange the results
@@ -207,8 +232,8 @@ def main(workbook_path, mode):
 
         # Determine indices of data to be captured to Excel
         indices = (
-            np.linspace(0, uncertainty_data["run_number"], 101)
-        )[0:-1].astype(int)
+            np.linspace(0, uncertainty_data["run_number"], 101)[0:-1].astype(int)
+        )
 
         # Final outcomes to be captured to Excel
         outcomes = {
@@ -220,7 +245,7 @@ def main(workbook_path, mode):
 
         # Making the dataframe to contain the result of percentile
         df_uncertainty_percentile = pd.DataFrame()
-        df_uncertainty_percentile.index = ['Result',  'NPV', 'IRR', 'PI', 'POT', 'Gov_Take', 'CTR_Net_Share']
+        df_uncertainty_percentile.index = ['Result', 'NPV', 'IRR', 'PI', 'POT', 'Gov_Take', 'CTR_Net_Share']
         df_uncertainty_percentile['P10'] = outcomes['P10']
         df_uncertainty_percentile['P50'] = outcomes['P50']
         df_uncertainty_percentile['P90'] = outcomes['P90']
@@ -238,30 +263,33 @@ def main(workbook_path, mode):
         df_uncertainty_result['ctr_net_share'] = outcomes['results'][:, 6]
 
         # Writing the percentile table into Excel workbook
-        write_table(workbook_object=workbook_object,
-                    sheet_name='Uncertainty',
-                    starting_cell='L6',
-                    table=df_uncertainty_transposed, )
+        write_table(
+            workbook_object=workbook_object,
+            sheet_name='Uncertainty',
+            starting_cell='L6',
+            table=df_uncertainty_transposed,
+        )
 
         # Writing the result table into Excel workbook
-        write_table(workbook_object=workbook_object,
-                    sheet_name='Uncertainty',
-                    starting_cell='K49',
-                    table=df_uncertainty_result, )
+        write_table(
+            workbook_object=workbook_object,
+            sheet_name='Uncertainty',
+            starting_cell='K49',
+            table=df_uncertainty_result,
+        )
 
         # Generating the uncertainty plot
-        get_uncertainty_plot(uncertainty_outcomes=outcomes,
-                             plot_type='Stairway')
+        # get_uncertainty_plot(uncertainty_outcomes=outcomes, plot_type='Stairway')
 
     # Giving the workbook execution status to show that execution is success
-    xw.Book(workbook_path).sheets("Cover").range("F17").value = "Success"
+    xw.Book(workbook_path).sheets("References").range("N17").value = "Success"
 
 
 def run_standard(
-    contract: CostRecovery | GrossSplit | Transition,
-    contract_arguments: dict,
-    workbook_object: xw.Book,
-    summary_argument: dict
+        contract: CostRecovery | GrossSplit | Transition,
+        contract_arguments: dict,
+        workbook_object: xw.Book,
+        summary_argument: dict
 ):
     """
     The function to run simulation in Standard mode.
@@ -313,11 +341,11 @@ def run_standard(
 
 
 def run_optimization(
-    contract: CostRecovery | GrossSplit | Transition,
-    data: Aggregate,
-    contract_arguments: dict,
-    summary_arguments: dict,
-    workbook_object: xw.Book,
+        contract: CostRecovery | GrossSplit | Transition,
+        data: Aggregate,
+        contract_arguments: dict,
+        summary_arguments: dict,
+        workbook_object: xw.Book,
 ):
     """
     The function to run simulation in Optimization mode.
@@ -380,19 +408,5 @@ def run_optimization(
     )
 
 
-if __name__ == '__main__':
-    import sys
-    main(workbook_path=sys.argv[1], mode=sys.argv[2])
-
-    # import time
-    # workbook_path = r"D:\Adhim\pyscnomics_2023\Excel Template\With Ribbon\17_01_2024_ Adding The Sensitivity Module\Workbook_Filled CR.xlsb"
-    # run_mode = "Uncertainty"
-    # # workbook_path = "Workbook_Filled CR.xlsb"
-    # # run_mode = 'Standard'
-    #
-    # start_time = time.time()
-    # main(workbook_path=workbook_path, mode=run_mode)
-    # end_time = time.time()
-    #
-    # print('\t')
-    # print(f'Execution time: {end_time - start_time} seconds')
+if __name__ == "__main__":
+    entry_point()

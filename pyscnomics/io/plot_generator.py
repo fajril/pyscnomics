@@ -6,6 +6,22 @@ import pandas as pd
 def get_uncertainty_plot(uncertainty_outcomes: dict,
                          plot_type: str = 'Stairway'
                          ):
+    """
+    Function to get the uncertainty plot.
+
+    Parameters
+    ----------
+    uncertainty_outcomes: dict
+        The result of an uncertainty analyis in form of a dictionary.
+    plot_type: str
+        The type of the plot that will be generated. the available options is
+        ['Stairway', 'Histogram']
+
+    Returns
+    -------
+    Generating an uncertainty plot.
+
+    """
     # Grouping the result
     result_freq = uncertainty_outcomes['results'][:, 0]
     result_npv = uncertainty_outcomes['results'][:, 1]

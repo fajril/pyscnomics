@@ -1,4 +1,5 @@
 """
+[EXPERIMENTAL]
 Configuration to undertake optimization study.
 """
 from scipy.optimize import minimize_scalar
@@ -188,9 +189,9 @@ def optimize_psc(
         elif param is OptimizationParameter.GAS_CTR_PRETAX:
             max_value = dict_optimization['max'][index]
         elif param is OptimizationParameter.OIL_FTP_PORTION:
-            max_value = dict_optimization['max'][index]
+            max_value = dict_optimization['min'][index]
         elif param is OptimizationParameter.GAS_FTP_PORTION:
-            max_value = dict_optimization['max'][index]
+            max_value = dict_optimization['min'][index]
         elif param is OptimizationParameter.OIL_IC:
             max_value = dict_optimization['max'][index]
         elif param is OptimizationParameter.GAS_IC:

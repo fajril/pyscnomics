@@ -87,7 +87,7 @@ class Aggregate(Spreadsheet):
         Returns
         -------
         Dict[str, Tuple[Lifting, ...]], Tuple[Lifting, ...]:
-            -   If the type_of_contract is "Transition," returns a dictionary with
+            -   If the type_of_contract is "Transition", returns a dictionary with
                 PSC regimes as keys and a tuple of Lifting instances as values.
             -   If the type_of_contract is a single PSC (CR or GS), returns a tuple
                 of Lifting instances.

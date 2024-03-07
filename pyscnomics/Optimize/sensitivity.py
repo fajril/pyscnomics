@@ -109,7 +109,7 @@ def run_sensitivity(
     )
 
 
-def execute_sensitivity_serial(
+def execute_sensitivity(
     data: Aggregate,
     target: list,
     multipliers: np.ndarray,
@@ -135,30 +135,42 @@ def execute_sensitivity_serial(
         A dictionary containing sensitivity analysis results. The keys correspond to
         different parameters, and the values are arrays of results for each multiplier.
     """
-    params = {}
-    results = {
-        key: np.zeros([multipliers.shape[1], len(target)], dtype=np.float_)
-        for key in data.sensitivity_data.parameter
+    args = ["psc", "psc_arguments", "summary_arguments"]
+
+    # Create containers for the generated project instances
+    params = {
+        par: {
+            arg: [0] * multipliers.shape[1] for arg in args
+        }
+        for par in data.sensitivity_data.parameter
     }
 
-    for i, key in enumerate(data.sensitivity_data.parameter):
+    # Fill "params" with the associated contract instances
+    for i, par in enumerate(data.sensitivity_data.parameter):
         for j in range(multipliers.shape[1]):
-            # Adjust data prior to simulation
             (
-                params["psc"],
-                params["psc_arguments"],
-                params["summary_arguments"]
+                params[par]["psc"][j],
+                params[par]["psc_arguments"][j],
+                params[par]["summary_arguments"][j],
             ) = AdjustData(
                 data=data,
                 workbook_path=workbook_path,
                 multipliers=multipliers[i, j, :],
             ).activate()
 
-            # Collect the results
-            results[key][j, :] = run_sensitivity(
-                contract=params["psc"],
-                contract_arguments=params["psc_arguments"],
-                summary_arguments=params["summary_arguments"],
+    # Create a container for calculation results
+    results = {
+        par: np.zeros([multipliers.shape[1], len(target)], dtype=np.float_)
+        for par in data.sensitivity_data.parameter
+    }
+
+    # Run the simulations to obtain the results (NPV, IRR, PI, POT, GOV_TAKE, CTR_NET_SHARE)
+    for par in data.sensitivity_data.parameter:
+        for j in range(multipliers.shape[1]):
+            results[par][j, :] = run_sensitivity(
+                contract=params[par]["psc"][j],
+                contract_arguments=params[par]["psc_arguments"][j],
+                summary_arguments=params[par]["summary_arguments"][j],
             )
 
     return results

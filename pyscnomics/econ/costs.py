@@ -156,6 +156,10 @@ class GeneralCost:
 
         return np.concatenate((expenses, zeros))
 
+    # TODO : Add the amortization method
+    def amortization(self):
+        raise NotImplementedError()
+
     def __len__(self):
         return self.project_duration
 
@@ -433,6 +437,7 @@ class Tangible(GeneralCost):
             inflation_rate=inflation_rate,
         )
 
+        # TODO : Refactoring the codes to implement the dictionary design pattern 
         # Straight line
         if depr_method == DeprMethod.SL:
             depreciation_charge = np.asarray(
@@ -487,6 +492,9 @@ class Tangible(GeneralCost):
                     )
                 ]
             )
+
+        else:
+            raise NotImplementedError()
 
         # The relative difference of pis_year and start_year
         shift_indices = self.pis_year - self.start_year
