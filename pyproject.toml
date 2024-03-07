@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyscnomics"
+version = "1.0.0"
+dependencies = [
+  "dateutils>=0.6.12",
+    "matplotlib>=3.4.3",
+    "pandas>=2.2.0",
+    "pytest>=7.1.2",
+    "pyxirr==0.9.2",
+    "pyxlsb>=1.0.10",
+    "scipy >=1.7.3",
+    "xlwings>=0.24.8",
+    "click==8.1.7"
+]
+requires-python = ">=3.11"
+authors = [
+    {name = "Aditya Dewanto", email = "adityadewanto@gmail.com"},
+    {name = "Muhammad Adhim Mulia", email = "adhimmuliam@gmail.com"},
+    {name = "Fajril Ambia", email = "fambia@skkmigas.go.id"},
+    {name = "Iskandar Fahmi", email = "ifahmi@bpma.go.id"},
+    {name = "Sudono", email = "sudono@gmail.com"},
+    {name = "Zuher Syihab", email = "zuher.syihab@itb.ac.id"},
+]
+description = "An economic engine for calculating PSC Scheme in Indonesia."
+readme = "README.md"
+license = {file = "LICENSE.txt"}
+keywords = ["Production Sharing Contract", "PSC", "Project Economic"]
+classifiers = [
+  "Programming Language :: Python"
+]
+
+[project.urls]
+Homepage = "https://github.com/fajril/pyscnomics"
+Documentation = "https://github.com/fajril/pyscnomics"
+
+[project.scripts]
+pyscnomics = "pyscnomics.pyscnomics_cli:entry_point"
