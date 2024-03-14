@@ -279,7 +279,7 @@ def main(workbook_path, mode):
         )
 
         # Generating the uncertainty plot
-        # get_uncertainty_plot(uncertainty_outcomes=outcomes, plot_type='Stairway')
+        get_uncertainty_plot(uncertainty_outcomes=outcomes, plot_type='Stairway')
 
     # Giving the workbook execution status to show that execution is success
     xw.Book(workbook_path).sheets("References").range("N17").value = "Success"
