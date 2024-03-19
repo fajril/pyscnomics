@@ -7,10 +7,46 @@ import numpy as np
 
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type
+from pyscnomics.econ.selection import TaxRegime, TaxType
+from pyscnomics.tools.helper import (get_inflation_applied_converter,
+                                     get_tax_regime_converter,
+                                     get_npv_mode_converter,
+                                     get_discounting_mode_converter,
+                                     get_depreciation_method_converter,
+                                     get_other_revenue_converter,
+                                     get_split_type_converter)
 
 
-def convert_str_to_date(str_object: str) -> date:
-    return datetime.strptime(str_object, '%Y/%m/%d').date()
+def convert_str_to_date(str_object: str) -> date | None:
+    if str_object is None:
+        return None
+    else:
+        return datetime.strptime(str_object, '%d/%m/%Y').date()
+
+
+def convert_list_to_array_float(data_list: list) -> np.ndarray:
+    return np.array(data_list, dtype=float)
+
+
+def convert_list_to_array_float_or_array(data_input: list | float) -> np.ndarray | float:
+    if isinstance(data_input, float):
+        return data_input
+
+    else:
+        return np.array(data_input, dtype=float)
+
+
+def convert_list_to_array_float_or_array_or_none(data_list: list | float | None) -> np.ndarray | float | None:
+    if isinstance(data_list, float):
+        return data_list
+    elif data_list is None:
+        return None
+    else:
+        return np.array(data_list, dtype=float)
+
+
+def convert_list_to_array_int(data_list: list) -> np.ndarray:
+    return np.array(data_list, dtype=int)
 
 
 def convert_dict_to_lifting(data_raw: dict) -> tuple:
@@ -23,7 +59,7 @@ def convert_dict_to_tangible(data_raw: dict) -> tuple:
             start_year=data_raw[key]['start_year'],
             end_year=data_raw[key]['end_year'],
             cost=np.array(data_raw[key]['cost']),
-            expense_year=np.array(data_raw[key]['expense_year']),
+            expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
             cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
             description=data_raw[key]['description'],
             vat_portion=np.array(data_raw[key]['vat_portion']),
@@ -47,14 +83,14 @@ def convert_dict_to_intangible(data_raw: dict) -> tuple:
         Intangible(
             start_year=data_raw[key]['start_year'],
             end_year=data_raw[key]['end_year'],
-            cost=data_raw[key]['cost'],
-            expense_year=data_raw[key]['expense_year'],
-            cost_allocation=data_raw[key]['cost_allocation'],
+            cost=np.array(data_raw[key]['cost'], dtype=float),
+            expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
+            cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
             description=data_raw[key]['description'],
-            vat_portion=data_raw[key]['vat_portion'],
-            vat_discount=data_raw[key]['vat_discount'],
-            lbt_portion=data_raw[key]['lbt_portion'],
-            lbt_discount=data_raw[key]['lbt_discount'],
+            vat_portion=np.array(data_raw[key]['vat_portion'], dtype=float),
+            vat_discount=np.array(data_raw[key]['vat_discount'], dtype=float),
+            lbt_portion=np.array(data_raw[key]['lbt_portion'], dtype=float),
+            lbt_discount=np.array(data_raw[key]['lbt_discount'], dtype=float),
         )
         for key in data_raw.keys()
     ]
@@ -67,16 +103,16 @@ def convert_dict_to_opex(data_raw: dict) -> tuple:
         OPEX(
             start_year=data_raw[key]['start_year'],
             end_year=data_raw[key]['end_year'],
-            expense_year=data_raw[key]['expense_year'],
-            cost_allocation=data_raw[key]['cost_allocation'],
+            expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
+            cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
             description=data_raw[key]['description'],
-            vat_portion=data_raw[key]['vat_portion'],
-            vat_discount=data_raw[key]['vat_discount'],
-            lbt_portion=data_raw[key]['lbt_portion'],
-            lbt_discount=data_raw[key]['lbt_discount'],
-            fixed_cost=data_raw[key]['fixed_cost'],
-            prod_rate=data_raw[key]['prod_rate'],
-            cost_per_volume=data_raw[key]['cost_per_volume'],
+            vat_portion=np.array(data_raw[key]['vat_portion'], dtype=float),
+            vat_discount=np.array(data_raw[key]['vat_discount'], dtype=float),
+            lbt_portion=np.array(data_raw[key]['lbt_portion'], dtype=float),
+            lbt_discount=np.array(data_raw[key]['lbt_discount'], dtype=float),
+            fixed_cost=np.array(data_raw[key]['fixed_cost'], dtype=float),
+            prod_rate=np.array(data_raw[key]['prod_rate'], dtype=float),
+            cost_per_volume=np.array(data_raw[key]['cost_per_volume'], dtype=float),
         )
         for key in data_raw.keys()
     ]
@@ -89,14 +125,14 @@ def convert_dict_to_asr(data_raw: dict) -> tuple:
         ASR(
             start_year=data_raw[key]['start_year'],
             end_year=data_raw[key]['end_year'],
-            cost=data_raw[key]['cost'],
-            expense_year=data_raw[key]['expense_year'],
-            cost_allocation=data_raw[key]['cost_allocation'],
+            cost=np.array(data_raw[key]['cost'],dtype=float),
+            expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
+            cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
             description=data_raw[key]['description'],
-            vat_portion=data_raw[key]['vat_portion'],
-            vat_discount=data_raw[key]['vat_discount'],
-            lbt_portion=data_raw[key]['lbt_portion'],
-            lbt_discount=data_raw[key]['lbt_discount'],
+            vat_portion=np.array(data_raw[key]['vat_portion'], dtype=float),
+            vat_discount=np.array(data_raw[key]['vat_discount'],dtype=float),
+            lbt_portion=np.array(data_raw[key]['lbt_portion'], dtype=float),
+            lbt_discount=np.array(data_raw[key]['lbt_discount'], dtype=float),
         )
         for key in data_raw.keys()
     ]
@@ -104,16 +140,50 @@ def convert_dict_to_asr(data_raw: dict) -> tuple:
     return tuple(asr_list)
 
 
-def convert_list_to_array_float(data_list: list) -> np.ndarray:
-    return np.array(data_list, dtype=float)
+def convert_str_to_taxsplit(str_object: str):
+    return get_split_type_converter(target=str_object)
 
 
-def convert_list_to_array_int(data_list: list) -> np.ndarray:
-    return np.array(data_list, dtype=int)
+def convert_str_to_npvmode(str_object: str):
+    return get_npv_mode_converter(target=str_object)
 
 
+def convert_str_to_discountingmode(str_object: str):
+    return get_discounting_mode_converter(target=str_object)
 
 
+def convert_str_to_otherrevenue(str_object: str):
+    return get_other_revenue_converter(target=str_object)
 
 
+def convert_str_to_taxregime(str_object: str):
+    dict_tax_regime = {i.value: i for i in TaxRegime}
+
+    for key in dict_tax_regime.keys():
+        if str_object == key:
+            return dict_tax_regime[key]
+        else:
+            return None
+
+
+def convert_str_to_ftptaxregime(str_object: str):
+    return get_tax_regime_converter(target=str_object)
+
+
+def convert_str_to_depremethod(str_object: str):
+    return get_depreciation_method_converter(target=str_object)
+
+
+def convert_str_to_taxtype(str_object: str):
+    dict_tax_regime = {i.value: i for i in TaxType}
+
+    for key in dict_tax_regime.keys():
+        if str_object == key:
+            return dict_tax_regime[key]
+        else:
+            return None
+
+
+def convert_str_to_inflationappliedto(str_object: str):
+    return get_inflation_applied_converter(target=str_object)
 

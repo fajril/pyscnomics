@@ -6,6 +6,14 @@
     "gas_onstream_date": "01/01/2024"
   },
 
+  "summary_setup": {
+    "reference_year": 2008,
+    "inflation_rate": 0.0,
+    "discount_rate": 0.1,
+    "npv_mode": "SKK Full Cycle Real Terms",
+    "discounting_mode": "End Year"
+  },
+
   "costrecovery": {
     "oil_ftp_is_available": true,
     "oil_ftp_is_shared": true,
@@ -13,6 +21,9 @@
     "gas_ftp_is_available": true,
     "gas_ftp_is_shared": true,
     "gas_ftp_portion": 0.2,
+    "tax_split_type": "Conventional",
+    "condition_dict": {},
+    "indicator_rc_icp_sliding": [],
     "oil_ctr_pretax_share": 0.4464,
     "gas_ctr_pretax_share":0.71428571 ,
     "oil_ic_rate": 0,
@@ -26,6 +37,24 @@
     "gas_dmo_volume_portion": 0.25,
     "gas_dmo_fee_portion": 1,
     "gas_dmo_holiday_duration": 60
+  },
+
+  "contract_setup": {
+    "sulfur_revenue": "Addition to Oil Revenue",
+    "electricity_revenue":"Addition to Oil Revenue",
+    "co2_revenue": "Addition to Oil Revenue",
+    "is_dmo_end_weighted": false,
+    "tax_regime": "nailed down",
+    "tax_rate": null,
+    "ftp_tax_regime": "PDJP No.20 Tahun 2017",
+    "sunk_cost_reference_year": null,
+    "depr_method": "PSC Declining Balance",
+    "decline_factor": 2,
+    "vat_rate": 0.0,
+    "lbt_rate": 0.0,
+    "inflation_rate": 0.0,
+    "future_rate": 0.00,
+    "inflation_rate_applied_to": "CAPEX"
   },
 
   "lifting": {
@@ -83,6 +112,8 @@
       "cost_allocation": ["Gas", "Gas", "Gas", "Gas", "Gas", "Gas", "Gas", "Gas", "Gas", "Gas", "Gas", "Gas", "Gas", "Gas", "Gas", "Gas", "Gas", "Gas"],
       "description": ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
       "fixed_cost": [0.340376609, 1.08014295, 0.984, 1.76522012, 1.809822265, 1.90117857, 1.998223628, 2.101334466, 2.210913868, 2.327392158, 2.451229106, 2.582915976, 2.7229777, 2.871975223, 3.030507994, 3.086740359, 3.381842358, 2.327554326],
+      "prod_rate":[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+      "cost_per_volume":[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
       "vat_portion":[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
       "vat_discount":[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
       "lbt_portion":[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -99,7 +130,9 @@
       "cost_allocation": ["Gas"],
       "description": ["-"],
       "vat_portion": [0.0],
-      "pdri_portion": [0.0]
-      }
+      "vat_discount": [0.0],
+      "lbt_portion": [0.0],
+      "lbt_discount": [0.0]
+    }
   }
 }

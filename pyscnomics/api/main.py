@@ -3,6 +3,8 @@ This file is utilized for routing the API.
 """
 from fastapi import FastAPI
 
+from pyscnomics.api.adapter import get_contract_costrecovery
+
 
 app = FastAPI()
 
@@ -19,9 +21,10 @@ async def calculate_baseproject():
 
 
 @app.post("/costrecovery")
-async def calculate_costrecovery():
+async def calculate_costrecovery(data: dict) -> dict:
+    result = get_contract_costrecovery(data=data)
 
-    return {" "}
+    return result
 
 
 @app.post("/costrecovery/sensitivity")
