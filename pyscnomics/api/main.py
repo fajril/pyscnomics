@@ -2,11 +2,22 @@
 This file is utilized for routing the API.
 """
 from fastapi import FastAPI
+import json
+from pyscnomics.api.adapter import get_costrecovery, get_contract_table, get_contract_optimization
 
-from pyscnomics.api.adapter import get_contract_costrecovery
+description = """
+## Description
+We welcome you to our economic toolkit. PySCnomics 🚀.
 
+This package contains tailored functionalities for assessing economic feasibility of oil and gas projects following the state-of-the-art Production Sharing Contract (PSC) schemes in Indonesia.
+PySCnomics is the product of join research between Indonesia's Special Task Force for Upstream Oil and Gas Business Activities (SKK Migas) and the Department of Petroleum Engineering, Institut Teknologi Bandung (ITB).
 
-app = FastAPI()
+"""
+
+app = FastAPI(
+    title="PySCnomics",
+    description=description,
+    version="1.0.0",)
 
 
 @app.get("/")
@@ -14,45 +25,23 @@ async def read_root():
     return {"Pyscnomics": "Version 1.0.0"}
 
 
-@app.post("/baseproject")
-async def calculate_baseproject():
-
-    return {" "}
-
-
 @app.post("/costrecovery")
 async def calculate_costrecovery(data: dict) -> dict:
-    result = get_contract_costrecovery(data=data)
-
-    return result
+    return get_costrecovery(data=data)[0]
 
 
-@app.post("/costrecovery/sensitivity")
-async def calculate_costrecovery_sensitivity():
-
-    return {" "}
+@app.post("/costrecovery/table")
+async def get_costrecovery_table(data: dict) -> dict:
+    return get_contract_table(data=data)
 
 
 @app.post("/costrecovery/optimization")
-async def calculate_costrecovery_optimization():
-
-    return {" "}
-
-
-@app.post("/costrecovery/uncertainty")
-async def calculate_costrecovery_uncertainty():
-
-    return {" "}
+async def calculate_costrecovery_optimization(data: dict) -> dict:
+    return get_contract_optimization(data=data)
 
 
 @app.post("/grosssplit")
 async def calculate_grosssplit():
-
-    return {" "}
-
-
-@app.post("/grosssplit/sensitivity")
-async def calculate_grosssplit_sensitivity():
 
     return {" "}
 
@@ -63,26 +52,10 @@ async def calculate_grosssplit_optimization():
     return {" "}
 
 
-@app.post("/grosssplit/uncertainty")
-async def calculate_grosssplit_uncertainty():
-
-    return {" "}
-
-
 @app.post("/tools/table")
 async def get_table():
 
     return {" "}
-
-
-@app.post("/tools/")
-async def get_table():
-
-    return {" "}
-
-
-
-
 
 
 

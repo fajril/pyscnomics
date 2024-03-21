@@ -14,7 +14,9 @@ from pyscnomics.tools.helper import (get_inflation_applied_converter,
                                      get_discounting_mode_converter,
                                      get_depreciation_method_converter,
                                      get_other_revenue_converter,
-                                     get_split_type_converter)
+                                     get_split_type_converter,
+                                     get_optimization_target_converter,
+                                     get_optimization_parameter_converter)
 
 
 def convert_str_to_date(str_object: str) -> date | None:
@@ -187,3 +189,49 @@ def convert_str_to_taxtype(str_object: str):
 def convert_str_to_inflationappliedto(str_object: str):
     return get_inflation_applied_converter(target=str_object)
 
+
+def convert_summary_to_dict(dict_object: dict):
+    summary_skk_format = {
+        'lifting_oil': dict_object['lifting_oil'],
+        'oil_wap': dict_object['oil_wap'],
+        'lifting_gas': dict_object['lifting_gas'],
+        'gas_wap': dict_object['gas_wap'],
+        'gross_revenue': dict_object['gross_revenue'],
+        'ctr_gross_share': dict_object['ctr_gross_share'],
+        'sunk_cost': dict_object['sunk_cost'],
+        'investment': dict_object['investment'],
+        'tangible': dict_object['tangible'],
+        'intangible': dict_object['intangible'],
+        'opex_and_asr': dict_object['opex_and_asr'],
+        'opex': dict_object['opex'],
+        'asr': dict_object['asr'],
+        'cost_recovery/deductible_cost': dict_object['cost_recovery / deductible_cost'],
+        'cost_recovery_over_gross_rev': dict_object['cost_recovery_over_gross_rev'],
+        'unrec_cost': dict_object['unrec_cost'],
+        'unrec_over_gross_rev': dict_object['unrec_over_gross_rev'],
+        'ctr_net_share': dict_object['ctr_net_share'],
+        'ctr_net_share_over_gross_share': dict_object['ctr_net_share_over_gross_share'],
+        'ctr_net_cashflow': dict_object['ctr_net_cashflow'],
+        'ctr_net_cashflow_over_gross_rev': dict_object['ctr_net_cashflow_over_gross_rev'],
+        'ctr_npv': dict_object['ctr_npv'],
+        'ctr_irr': dict_object['ctr_irr'],
+        'ctr_pot': dict_object['ctr_pot'],
+        'ctr_pv_ratio': dict_object['ctr_pv_ratio'],
+        'ctr_pi': dict_object['ctr_pi'],
+        'gov_gross_share': dict_object['gov_gross_share'],
+        'gov_ftp_share': dict_object['gov_ftp_share'],
+        'gov_ddmo': dict_object['gov_ddmo'],
+        'gov_tax_income': dict_object['gov_tax_income'],
+        'gov_take': dict_object['gov_take'],
+        'gov_take_over_gross_rev': dict_object['gov_take_over_gross_rev'],
+        'gov_take_npv': dict_object['gov_take_npv'],
+    }
+    return summary_skk_format
+
+
+def convert_str_to_optimization_targetparameter(str_object: str):
+    return get_optimization_target_converter(target=str_object)
+
+
+def convert_str_to_optimization_parameters(str_object: str):
+    return get_optimization_parameter_converter(target=str_object)
