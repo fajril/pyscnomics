@@ -134,18 +134,32 @@ def get_costrecovery(data: dict):
     return summary_skk, contract, contract_arguments_dict, summary_arguments_dict
 
 
-def get_contract_table(data: dict):
-    contract = get_costrecovery(data=data)[1]
+def get_contract_table(data: dict, contract_type: str = 'Cost Recovery'):
+    # Adjusting the variable to the corresponding contract type
+    if contract_type == 'Cost Recovery':
+        contract = get_costrecovery(data=data)[1]
+        year_column = 'Year'
+
+    elif contract_type == 'Gross Split':
+        contract = get_grosssplit(data=data)[1]
+        year_column = 'Years'
+
+    else:
+        contract = NotImplemented
+        year_column = 'Year'
+
+    # Retrieving the table
     table_oil, table_gas, table_consolidated = get_table(contract=contract)
 
-    table_all_dict = {'oil': table_oil.set_index('Year').to_dict(),
-                      'gas': table_oil.set_index('Year').to_dict(),
-                      'consolidated': table_oil.set_index('Year').to_dict()}
+    # Forming the table dictionary as the output
+    table_all_dict = {'oil': table_oil.set_index(year_column).to_dict(),
+                      'gas': table_gas.set_index(year_column).to_dict(),
+                      'consolidated': table_consolidated.set_index(year_column).to_dict()}
 
     return table_all_dict
 
 
-def get_contract_optimization(data: dict):
+def get_contract_optimization(data: dict, contract_type: str = 'Cost Recovery'):
     # Converting the parameters in dict_optimization to the corresponding enum
     optimization_parameters = [
             convert_str_to_optimization_parameters(str_object=i)
@@ -164,10 +178,21 @@ def get_contract_optimization(data: dict):
     target_parameter = convert_str_to_optimization_targetparameter(
         str_object=data['optimization_arguments']['target_parameter'])
 
-    # Retrieving the contract, contract_arguments_dict, summary_arguments_dict
-    contract = get_costrecovery(data=data)[1]
-    contract_arguments = get_costrecovery(data=data)[2]
-    summary_argument = get_costrecovery(data=data)[3]
+    # Retrieving the contract, contract_arguments_dict, summary_arguments_dict based on the contract type
+    if contract_type == 'Cost Recovery':
+        contract = get_costrecovery(data=data)[1]
+        contract_arguments = get_costrecovery(data=data)[2]
+        summary_argument = get_costrecovery(data=data)[3]
+
+    elif contract_type == 'Gross Split':
+        contract = get_grosssplit(data=data)[1]
+        contract_arguments = get_grosssplit(data=data)[2]
+        summary_argument = get_grosssplit(data=data)[3]
+
+    else:
+        contract = NotImplemented
+        contract_arguments = NotImplemented
+        summary_argument = NotImplemented
 
     list_str, list_params_value, result_optimization = optimize_psc(
         dict_optimization=dict_optimization,
@@ -215,7 +240,7 @@ def get_grosssplit(data: dict):
         "is_dmo_end_weighted": data['contract_arguments']['is_dmo_end_weighted'],
         "tax_regime": convert_str_to_taxregime(str_object=data['contract_arguments']['tax_regime']),
         "tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['tax_rate']),
-        # "ftp_tax_regime": convert_str_to_ftptaxregime(str_object=data['contract_arguments']['ftp_tax_regime']),
+        # "regime": convert_str_to_ftptaxregime(str_object=data['contract_arguments']['ftp_tax_regime']),
         "sunk_cost_reference_year": data['contract_arguments']['sunk_cost_reference_year'],
         "depr_method": convert_str_to_depremethod(str_object=data['contract_arguments']['depr_method']),
         "decline_factor": data['contract_arguments']['decline_factor'],
@@ -238,5 +263,3 @@ def get_grosssplit(data: dict):
     summary_skk = convert_summary_to_dict(dict_object=summary)
 
     return summary_skk, contract, contract_arguments_dict, summary_arguments_dict
-
-# Todo: Make the adapter for sensitivity -> get_multipliers_sensitivity (data input)

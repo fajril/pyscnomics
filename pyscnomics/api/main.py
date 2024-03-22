@@ -3,7 +3,7 @@ This file is utilized for routing the API.
 """
 from fastapi import FastAPI
 import json
-from pyscnomics.api.adapter import get_costrecovery, get_contract_table, get_contract_optimization
+from pyscnomics.api.adapter import get_costrecovery, get_contract_table, get_contract_optimization, get_grosssplit
 
 description = """
 ## Description
@@ -32,30 +32,24 @@ async def calculate_costrecovery(data: dict) -> dict:
 
 @app.post("/costrecovery/table")
 async def get_costrecovery_table(data: dict) -> dict:
-    return get_contract_table(data=data)
+    return get_contract_table(data=data, contract_type='Cost Recovery')
 
 
 @app.post("/costrecovery/optimization")
 async def calculate_costrecovery_optimization(data: dict) -> dict:
-    return get_contract_optimization(data=data)
+    return get_contract_optimization(data=data, contract_type='Cost Recovery')
 
 
 @app.post("/grosssplit")
-async def calculate_grosssplit():
+async def calculate_grosssplit(data: dict) -> dict:
+    return get_grosssplit(data=data)[0]
 
-    return {" "}
+
+@app.post("/grosssplit/table")
+async def get_grosssplit_table(data: dict) -> dict:
+    return get_contract_table(data=data, contract_type='Gross Split')
 
 
 @app.post("/grosssplit/optimization")
-async def calculate_grosssplit_optimization():
-
-    return {" "}
-
-
-@app.post("/tools/table")
-async def get_table():
-
-    return {" "}
-
-
-
+async def calculate_grosssplit_optimization(data: dict) -> dict:
+    return get_contract_optimization(data=data, contract_type='Gross Split')
