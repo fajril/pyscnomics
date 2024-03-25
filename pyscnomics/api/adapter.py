@@ -5,6 +5,7 @@ import pandas as pd
 
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
+from pyscnomics.contracts.transition import Transition
 from pyscnomics.tools.summary import get_summary
 from pyscnomics.tools.table import get_table
 from pyscnomics.optimize.optimization import optimize_psc
@@ -28,6 +29,12 @@ from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_summary_to_dict,
                                       convert_str_to_optimization_parameters,
                                       convert_str_to_optimization_targetparameter)
+
+
+class ContractException(Exception):
+    """Exception to be raised if contract type is misused"""
+
+    pass
 
 
 def get_setup_dict(data: dict):
@@ -63,7 +70,21 @@ def get_summary_dict(data: dict):
     return summary_arguments_dict
 
 
-def get_costrecovery(data: dict):
+def get_summary_object(data: dict, contract: CostRecovery | GrossSplit | Transition):
+    if contract is Transition:
+        summary_arguments_dict = get_summary_dict(data=data)
+        summary_arguments_dict['contract'] = contract
+        summary = get_summary(**summary_arguments_dict)
+
+    else:
+        summary_arguments_dict = get_summary_dict(data=data)
+        summary_arguments_dict['contract'] = contract
+        summary = get_summary(**summary_arguments_dict)
+
+    return summary, summary_arguments_dict
+
+
+def get_costrecovery(data: dict, summary_result: bool = True):
     start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr = (
         get_setup_dict(data=data))
 
@@ -123,13 +144,19 @@ def get_costrecovery(data: dict):
     # Running the contract
     contract.run(**contract_arguments_dict)
 
-    # Filling the summary arguments
-    summary_arguments_dict = get_summary_dict(data=data)
-    summary_arguments_dict['contract'] = contract
-    summary = get_summary(**summary_arguments_dict)
+    # Condition when summary is needed
+    if summary_result is True:
+        # Filling the summary arguments
+        summary_arguments_dict = get_summary_dict(data=data)
+        summary_arguments_dict['contract'] = contract
+        summary = get_summary(**summary_arguments_dict)
 
-    # Converting the summary format to skk summary format
-    summary_skk = convert_summary_to_dict(dict_object=summary)
+        # Converting the summary format to skk summary format
+        summary_skk = convert_summary_to_dict(dict_object=summary)
+
+    else:
+        summary_skk = None
+        summary_arguments_dict = None
 
     return summary_skk, contract, contract_arguments_dict, summary_arguments_dict
 
@@ -145,16 +172,37 @@ def get_contract_table(data: dict, contract_type: str = 'Cost Recovery'):
         year_column = 'Years'
 
     else:
-        contract = NotImplemented
+        contract = get_transition(data=data)[1]
         year_column = 'Year'
 
-    # Retrieving the table
-    table_oil, table_gas, table_consolidated = get_table(contract=contract)
+    # Condition when the contract is Transition
+    if contract_type is 'Transition':
+        # Retrieving the table
+        table_oil, table_gas, table_consolidated = get_table(contract=contract)
 
-    # Forming the table dictionary as the output
-    table_all_dict = {'oil': table_oil.set_index(year_column).to_dict(),
-                      'gas': table_gas.set_index(year_column).to_dict(),
-                      'consolidated': table_consolidated.set_index(year_column).to_dict()}
+        # Forming the table dictionary as the output
+        table_all_dict = {
+            'contract_1': {
+                'oil': table_oil[0].set_index(table_oil[0].columns[0]).to_dict(),
+                'gas': table_gas[0].set_index(table_gas[0].columns[0]).to_dict(),
+                'consolidated': table_consolidated[0].set_index(table_consolidated[0].columns[0]).to_dict()
+            },
+
+            'contract_2': {
+                'oil': table_oil[1].set_index(table_oil[1].columns[0]).to_dict(),
+                'gas': table_gas[1].set_index(table_gas[1].columns[0]).to_dict(),
+                'consolidated': table_consolidated[1].set_index(table_consolidated[1].columns[0]).to_dict()
+            }
+        }
+
+    else:
+        # Retrieving the table
+        table_oil, table_gas, table_consolidated = get_table(contract=contract)
+
+        # Forming the table dictionary as the output
+        table_all_dict = {'oil': table_oil.set_index(year_column).to_dict(),
+                          'gas': table_gas.set_index(year_column).to_dict(),
+                          'consolidated': table_consolidated.set_index(year_column).to_dict()}
 
     return table_all_dict
 
@@ -216,7 +264,7 @@ def get_contract_optimization(data: dict, contract_type: str = 'Cost Recovery'):
     return result_parameters
 
 
-def get_grosssplit(data: dict):
+def get_grosssplit(data: dict, summary_result: bool = True):
     start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr = (
         get_setup_dict(data=data))
 
@@ -230,6 +278,26 @@ def get_grosssplit(data: dict):
         intangible_cost=intangible,
         opex=opex,
         asr_cost=asr,
+        field_status=data['grosssplit']['field_status'],
+        field_loc=data['grosssplit']['field_loc'],
+        res_depth=data['grosssplit']['res_depth'],
+        infra_avail=data['grosssplit']['infra_avail'],
+        res_type=data['grosssplit']['res_type'],
+        api_oil=data['grosssplit']['api_oil'],
+        domestic_use=data['grosssplit']['domestic_use'],
+        prod_stage=data['grosssplit']['prod_stage'],
+        co2_content=data['grosssplit']['co2_content'],
+        h2s_content=data['grosssplit']['h2s_content'],
+        base_split_ctr_oil=data['grosssplit']['base_split_ctr_oil'],
+        base_split_ctr_gas=data['grosssplit']['base_split_ctr_gas'],
+        split_ministry_disc=data['grosssplit']['split_ministry_disc'],
+        oil_dmo_volume_portion=data['grosssplit']['oil_dmo_volume_portion'],
+        oil_dmo_fee_portion=data['grosssplit']['oil_dmo_fee_portion'],
+        oil_dmo_holiday_duration=data['grosssplit']['oil_dmo_holiday_duration'],
+        gas_dmo_volume_portion=data['grosssplit']['gas_dmo_volume_portion'],
+        gas_dmo_fee_portion=data['grosssplit']['gas_dmo_fee_portion'],
+        gas_dmo_holiday_duration=data['grosssplit']['gas_dmo_holiday_duration'],
+
     )
 
     # Filling the arguments of the contract with the data input
@@ -254,9 +322,60 @@ def get_grosssplit(data: dict):
     # Running the contract
     contract.run(**contract_arguments_dict)
 
+    # Condition when summary is needed
+    if summary_result is True:
+        # Filling the summary arguments
+        summary_arguments_dict = get_summary_dict(data=data)
+        summary_arguments_dict['contract'] = contract
+        summary = get_summary(**summary_arguments_dict)
+
+        # Converting the summary format to skk summary format
+        summary_skk = convert_summary_to_dict(dict_object=summary)
+
+    else:
+        summary_skk = None
+        summary_arguments_dict = None
+
+    return summary_skk, contract, contract_arguments_dict, summary_arguments_dict
+
+
+def get_transition(data: dict):
+    # Defining contract_1
+    if 'costrecovery' in data['contract_1'].keys():
+        _, contract_1, contract_arguments_1, _ = get_costrecovery(data=data['contract_1'], summary_result=False)
+
+    elif 'grosssplit' in data['contract_1'].keys():
+        _, contract_1, contract_arguments_1, _ = get_grosssplit(data=data['contract_1'], summary_result=False)
+
+    else:
+        raise ContractException("Contract type is not recognized")
+
+    # Defining contract_2
+    if 'costrecovery' in data['contract_2'].keys():
+        _, contract_2, contract_arguments_2, _ = get_costrecovery(data=data['contract_2'], summary_result=False)
+
+    elif 'grosssplit' in data['contract_2'].keys():
+        _, contract_2, contract_arguments_2, _ = get_grosssplit(data=data['contract_2'], summary_result=False)
+
+    else:
+        raise ContractException("Contract type is not recognized")
+
+    # generating the transition contract object
+    contract = Transition(contract1=contract_1,
+                          contract2=contract_2,
+                          argument_contract1=contract_arguments_1,
+                          argument_contract2=contract_arguments_2,)
+
+    # Generating the transition contract arguments
+    contract_arguments_dict = data['contract_arguments']
+
+    # Running the transition contract
+    contract.run(**contract_arguments_dict)
+
     # Filling the summary arguments
     summary_arguments_dict = get_summary_dict(data=data)
     summary_arguments_dict['contract'] = contract
+
     summary = get_summary(**summary_arguments_dict)
 
     # Converting the summary format to skk summary format

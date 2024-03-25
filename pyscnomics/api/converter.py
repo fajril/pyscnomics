@@ -7,9 +7,8 @@ import numpy as np
 
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type
-from pyscnomics.econ.selection import TaxRegime, TaxType
+from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime
 from pyscnomics.tools.helper import (get_inflation_applied_converter,
-                                     get_tax_regime_converter,
                                      get_npv_mode_converter,
                                      get_discounting_mode_converter,
                                      get_depreciation_method_converter,
@@ -169,7 +168,15 @@ def convert_str_to_taxregime(str_object: str):
 
 
 def convert_str_to_ftptaxregime(str_object: str):
-    return get_tax_regime_converter(target=str_object)
+    attrs = {
+        "PDJP No.20 Tahun 2017": FTPTaxRegime.PDJP_20_2017,
+        "Pre PDJP No.20 Tahun 2017": FTPTaxRegime.PRE_PDJP_20_2017,
+        "Direct": FTPTaxRegime.DIRECT_MODE
+    }
+
+    for key in attrs.keys():
+        if str_object == key:
+            return attrs[key]
 
 
 def convert_str_to_depremethod(str_object: str):
