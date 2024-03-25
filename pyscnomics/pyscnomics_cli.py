@@ -425,29 +425,20 @@ if __name__ == "__main__":
         unit_of_production_book_value,
     )
 
-    # t1 = declining_balance_depreciation_rate(
-    #     cost=100,
-    #     salvage_value=0,
-    #     useful_life=5,
-    #     decline_factor=1,
-    #     depreciation_len=10,
-    # )
+    from pyscnomics.econ.costs import Tangible
+    from pyscnomics.econ.selection import FluidType, DeprMethod
 
-    t1 = unit_of_production_book_value(
-        cost=100.,
-        reserve=50.,
-        yearly_production=np.array([10, 20, 10, 5, 5]),
-        production_period=5,
-        salvage_value=0.,
+    t1 = Tangible(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([100, 100, 100]),
+        expense_year=np.array([2023, 2024, 2029]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
-    # t1 = unit_of_production_rate(
-    #     cost=100,
-    #     reserve=50,
-    #     production_period=5,
-    #     yearly_production=np.array([10, 20, 10, 5, 5]),
-    #     amortization_len=10,
-    # )
+    t1.total_depreciation_rate(
+        depr_method=DeprMethod.PSC_DB
+    )
 
     # print('\t')
     # print(f'Filetype: {type(t1)}, length: {len(t1)}')
