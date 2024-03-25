@@ -11,6 +11,12 @@ class DepreciationException(Exception):
     pass
 
 
+class UnitOfProductionException(Exception):
+    """Exception to be raised for a misuse of unit of production method"""
+
+    pass
+
+
 def straight_line_depreciation_rate(
     cost: float, salvage_value: float, useful_life: int, depreciation_len: int = 0
 ) -> np.ndarray:
@@ -120,16 +126,16 @@ def declining_balance_depreciation_rate(
 
     Parameters
     ----------
-    cost : float
+    cost: float
         Cost of the asset.
-    salvage_value : float
+    salvage_value: float
         Remaining value after depreciation.
-    useful_life : int
+    useful_life: int
         Duration for depreciation.
-    decline_factor : float, optional
+    decline_factor: float, optional
         Depreciation factor. Usually the value is between 1 and 2.
         When the value is set as 2, it is called DDB (default: 1)
-    depreciation_len : int, optional
+    depreciation_len: int, optional
         Length of the net book value array beyond its useful life.
         The extended values will be set as zero. (default: 0)
 
@@ -168,7 +174,8 @@ def declining_balance_depreciation_rate(
         )
     )
 
-    # Extend the depreciation charge array beyond useful life if project duration is longer than useful life
+    # Extend the depreciation charge array beyond useful life if project duration
+    # is longer than useful life
     if depreciation_len > useful_life:
         extension = np.zeros(int(depreciation_len - useful_life))
         depreciation_charge = np.concatenate((depreciation_charge, extension))
@@ -188,22 +195,22 @@ def declining_balance_book_value(
 
     Parameters
     ----------
-    cost : float
+    cost: float
         Cost of the asset.
-    salvage_value : float
+    salvage_value: float
         Remaining value after depreciation.
-    useful_life : int
+    useful_life: int
         Duration for depreciation.
-    decline_factor : int, optional
+    decline_factor: int, optional
         Depreciation factor. Set to 1 for Decline Balance or 2 for Double Decline Balance.
         (default: 1)
-    depreciation_len : int, optional
+    depreciation_len: int, optional
         Length of the net book value array beyond its useful life.
         The extended values will be set using the salvage value. (default: 0)
 
     Returns
     -------
-    book_value : numpy.ndarray
+    book_value: numpy.ndarray
         The book value of the depreciated asset.
 
     Notes
@@ -358,77 +365,89 @@ def psc_declining_balance_book_value(
 
 def unit_of_production_rate(
     cost: float,
-    salvage_value: float,
-    resources: float,
+    reserve: float,
     yearly_production: np.ndarray,
-    decline_factor: float = 2,
+    production_period: int,
+    salvage_value: float = 0.,
     amortization_len: int = 0,
 ) -> np.ndarray:
     """
-    Calculates the amortization charge for each unit of production based on the unit of production method.
+    Calculate amortization charge based on the unit of production method.
 
-    Parameters
-    ----------
-    cost : float
-        Cost of the resource or asset.
-    salvage_value : float
-        Estimated value of the resource or asset at the end of its useful life.
-    resources : float
-        Total amount of resources available.
-    yearly_production : numpy.ndarray
-        Array containing yearly production quantities.
-    decline_factor : float, optional
-        Factor determining the rate of decline in production. Default is 2.
-    amortization_len : int, optional
-        Length of the amortization charge array. Default is 0.
+    Parameters:
+    -----------
+    cost: float
+        Total cost of the project.
+    reserve: float
+        Total reserve of the project.
+    yearly_production: np.ndarray
+        Array containing yearly production data.
+    production_period: int
+        Total production period of the project.
+    salvage_value: float, optional
+        Salvage value of the project (default is 0.).
+    amortization_len: int, optional
+        Length of amortization period (default is 0).
 
-    Returns
+    Returns:
+    --------
+    np.ndarray
+        Array containing yearly amortization charge.
+
+    Raises:
     -------
-    amortization_charge : numpy.ndarray
-        Array of amortization charges corresponding to each unit of production.
-
-    Notes
-    -----
-    The amortization charge for each unit of production is calculated using the following steps:
-    1. Calculate the resources remaining over time
-       based on the cumulative sum of yearly production quantities.
-    2. Compute the amortization charge using the formula:
-       amortization_charge = decline_factor * cost * yearly_production / resources_over_time.
-    3. Adjust the amortization charges if the sum exceeds the cost minus salvage value
-       to ensure the total amortization matches the cost minus salvage value.
-    4. If the amortization charge array is shorter than the specified amortization length,
-       extend the array with zeros.
+    UnitOfProductionException
+        If 'yearly_production' is not given as a numpy.ndarray datatype,
+        or if the number of production data listed in 'yearly_production'
+        does not match the prescribed production period,
+        or if the sum of production data in 'yearly_production'
+        exceeds the prescribed reserve.
     """
-    # TODO: fix the doctest with real result
 
-    resources_over_time = resources - np.cumsum(yearly_production)
-    amortization_charge = (
-        decline_factor * cost * yearly_production / resources_over_time
-    )
-
-    if amortization_charge.sum() > (cost - salvage_value):
-        remaining_amortization = cost - salvage_value - np.cumsum(amortization_charge)
-        remaining_amortization = np.where(
-            remaining_amortization > 0, remaining_amortization, 0
+    # Raise exception if 'yearly_production' is not given as a numpy.array datatype
+    if not isinstance(yearly_production, np.ndarray):
+        raise UnitOfProductionException(
+            f"Parameter yearly_production must be given as a numpy.ndarray datatype."
         )
-        idx = np.argmin(remaining_amortization)
-        amortization_charge[idx] = (
-            cost - salvage_value - np.cumsum(amortization_charge)[idx - 1]
-        )
-        amortization_charge[idx + 1:] = 0
 
-    if amortization_charge.size < amortization_len:
-        extension = np.zeros(amortization_len - amortization_charge.size)
-        amortization_charge = np.concatenate(amortization_charge, extension)
+    # Raise exception if the number of production data listed in 'yearly_production'
+    # does not match the prescribed production_period
+    if len(yearly_production) != production_period:
+        raise UnitOfProductionException(
+            f"The number of production data in 'yearly_production' "
+            f"does not match the (prescribed) production period."
+        )
+
+    # Raise an exception if the sum of production data in 'yearly_production'
+    # exceeds the (prescribed) value of reserve
+    if (yearly_production.sum() - reserve) > 1E-5:
+        raise UnitOfProductionException(
+            f"Production data in 'yearly_production' exceeds the (prescribed) reserve."
+        )
+
+    # Calculate amortization charge
+    amortization_charge = (yearly_production / reserve) * (cost - salvage_value)
+
+    # When the sum of amortization charge is less than (cost - salvage_value)
+    if amortization_charge.sum() < (cost - salvage_value):
+        remaining_amortization = cost - salvage_value - amortization_charge.sum()
+        amortization_charge[-1] = amortization_charge[-1] + remaining_amortization
+
+    # Extend the amortization charge array beyond useful life if project duration
+    # is longer than production_period
+    if amortization_len > production_period:
+        extension = np.zeros(int(amortization_len - production_period))
+        amortization_charge = np.concatenate((amortization_charge, extension))
+
     return amortization_charge
 
 
 def unit_of_production_book_value(
     cost: float,
-    salvage_value: float,
-    resources: float,
+    reserve: float,
     yearly_production: np.ndarray,
-    decline_factor: float = 2,
+    production_period: int,
+    salvage_value: float = 0.,
     amortization_len: int = 0,
 ) -> np.ndarray:
     """
@@ -436,16 +455,16 @@ def unit_of_production_book_value(
 
     Parameters
     ----------
-    cost : float
+    cost: float
         Cost of the resource or asset.
-    salvage_value : float
-        Estimated value of the resource or asset at the end of its useful life.
-    resources : float
-        Total amount of resources available.
+    reserve: float
+        Total reserve of the project.
     yearly_production : numpy.ndarray
         Array containing yearly production quantities.
-    decline_factor : float, optional
-        Factor determining the rate of decline in production. Default is 2.
+    production_period: int
+        Total production period of the project.
+    salvage_value : float
+        Estimated value of the resource or asset at the end of its useful life. Default is 0.
     amortization_len : int, optional
         Length of the amortization charge array. Default is 0.
 
@@ -461,14 +480,14 @@ def unit_of_production_book_value(
        using the unit_of_production_rate function.
     2. Subtract the cumulative sum of amortization charges from the cost to get the net book value.
     """
-    # TODO: fix the doctest with real result
     amortization_charge = unit_of_production_rate(
         cost=cost,
-        salvage_value=salvage_value,
-        resources=resources,
+        reserve=reserve,
         yearly_production=yearly_production,
-        decline_factor=decline_factor,
+        production_period=production_period,
+        salvage_value=salvage_value,
         amortization_len=amortization_len,
     )
     book_value = cost - np.cumsum(amortization_charge)
+
     return book_value

@@ -279,7 +279,7 @@ def main(workbook_path, mode):
         )
 
         # Generating the uncertainty plot
-        # get_uncertainty_plot(uncertainty_outcomes=outcomes, plot_type='Stairway')
+        get_uncertainty_plot(uncertainty_outcomes=outcomes, plot_type='Stairway')
 
     # Giving the workbook execution status to show that execution is success
     xw.Book(workbook_path).sheets("References").range("N17").value = "Success"
@@ -409,4 +409,47 @@ def run_optimization(
 
 
 if __name__ == "__main__":
-    entry_point()
+    # workbook_path = (
+    #     r"E:\1009_My Journal_PSC Migas\26_20230707_PSCEconomic\pyscnomics\Workbook_Filled CR.xlsb"
+    # )
+    # mode = "Standard"
+    #
+    # main(workbook_path=workbook_path, mode=mode)
+
+    # entry_point()
+
+    from pyscnomics.econ.depreciation import (
+        declining_balance_depreciation_rate,
+        declining_balance_book_value,
+        unit_of_production_rate,
+        unit_of_production_book_value,
+    )
+
+    # t1 = declining_balance_depreciation_rate(
+    #     cost=100,
+    #     salvage_value=0,
+    #     useful_life=5,
+    #     decline_factor=1,
+    #     depreciation_len=10,
+    # )
+
+    t1 = unit_of_production_book_value(
+        cost=100.,
+        reserve=50.,
+        yearly_production=np.array([10, 20, 10, 5, 5]),
+        production_period=5,
+        salvage_value=0.,
+    )
+
+    # t1 = unit_of_production_rate(
+    #     cost=100,
+    #     reserve=50,
+    #     production_period=5,
+    #     yearly_production=np.array([10, 20, 10, 5, 5]),
+    #     amortization_len=10,
+    # )
+
+    # print('\t')
+    # print(f'Filetype: {type(t1)}, length: {len(t1)}')
+    # print('t1 = \n', t1)
+
