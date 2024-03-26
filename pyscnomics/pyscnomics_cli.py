@@ -279,7 +279,7 @@ def main(workbook_path, mode):
         )
 
         # Generating the uncertainty plot
-        # get_uncertainty_plot(uncertainty_outcomes=outcomes, plot_type='Stairway')
+        get_uncertainty_plot(uncertainty_outcomes=outcomes, plot_type='Stairway')
 
     # Giving the workbook execution status to show that execution is success
     xw.Book(workbook_path).sheets("References").range("N17").value = "Success"
@@ -394,6 +394,7 @@ def run_optimization(
     list_str = optim_result[0]
     list_params_value = optim_result[1]
     result_optimization = optim_result[2]
+    optimized_contract = optim_result[3][-1]
 
     # Writing optimization result
     write_opt(
@@ -405,6 +406,18 @@ def run_optimization(
         range_opt_result='P2',
         range_list_params=range_list_params,
         range_list_value=range_list_value,
+    )
+
+    # Generating the summary of the optimized contract
+    summary_arguments['contract'] = optimized_contract
+    optimized_contract_summary = get_summary(**summary_arguments)
+
+    # Writing optimized contract summary
+    write_summary(
+        summary_dict=optimized_contract_summary,
+        workbook_object=workbook_object,
+        sheet_name='Optimization Comparison',
+        range_cell='J6',
     )
 
 

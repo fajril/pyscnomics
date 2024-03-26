@@ -33,7 +33,7 @@ def get_uncertainty_plot(uncertainty_outcomes: dict,
 
     if plot_type == 'Stairway':
         # Create a figure and a grid of 2x3 subplots
-        fig, axs = plt.subplots(2, 3, figsize=(18, 10))
+        fig, axs = plt.subplots(2, 3, figsize=(18, 11))
 
         # plot each subplot individually
         # Configuring NPV
@@ -42,8 +42,8 @@ def get_uncertainty_plot(uncertainty_outcomes: dict,
         axs[0, 0].set_xlabel("MUSD", fontsize=10, labelpad=0)
         axs[0, 0].set_ylabel("Frequency", fontsize=10, labelpad=0)
 
-        locator = mticker.MultipleLocator(5)
-        axs[0, 0].xaxis.set_major_locator(locator)
+        locator_npv = mticker.MaxNLocator(nbins='auto')
+        axs[0, 0].xaxis.set_major_locator(locator_npv)
         axs[0, 0].grid(which="major", linewidth=1)
         axs[0, 0].grid(which="minor", linewidth=0.2)
         axs[0, 0].minorticks_on()
@@ -55,8 +55,8 @@ def get_uncertainty_plot(uncertainty_outcomes: dict,
         axs[0, 1].set_xlabel("Fraction", fontsize=10, labelpad=0)
         axs[0, 1].set_ylabel("Frequency", fontsize=14, labelpad=8)
 
-        locator = mticker.MultipleLocator(0.05)
-        axs[0, 1].xaxis.set_major_locator(locator)
+        locator_irr = mticker.MaxNLocator(nbins='auto')
+        axs[0, 1].xaxis.set_major_locator(locator_irr)
 
         axs[0, 1].grid(which="major", linewidth=1)
         axs[0, 1].grid(which="minor", linewidth=0.2)
@@ -69,8 +69,8 @@ def get_uncertainty_plot(uncertainty_outcomes: dict,
         axs[0, 2].set_xlabel("Fraction", fontsize=10, labelpad=0)
         axs[0, 2].set_ylabel("Frequency", fontsize=14, labelpad=8)
 
-        locator = mticker.MultipleLocator(0.5)
-        axs[0, 2].xaxis.set_major_locator(locator)
+        locator_pi = mticker.MaxNLocator(nbins='auto')
+        axs[0, 2].xaxis.set_major_locator(locator_pi)
 
         axs[0, 2].grid(which="major", linewidth=1)
         axs[0, 2].grid(which="minor", linewidth=0.2)
@@ -83,8 +83,8 @@ def get_uncertainty_plot(uncertainty_outcomes: dict,
         axs[1, 0].set_xlabel("Years", fontsize=10, labelpad=0)
         axs[1, 0].set_ylabel("Frequency", fontsize=14, labelpad=8)
 
-        locator = mticker.MultipleLocator(2)
-        axs[1, 0].xaxis.set_major_locator(locator)
+        locator_pot = mticker.MaxNLocator(nbins='auto')
+        axs[1, 0].xaxis.set_major_locator(locator_pot)
 
         axs[1, 0].grid(which="major", linewidth=1)
         axs[1, 0].grid(which="minor", linewidth=0.2)
@@ -97,8 +97,8 @@ def get_uncertainty_plot(uncertainty_outcomes: dict,
         axs[1, 1].set_xlabel("MUSD", fontsize=10, labelpad=0)
         axs[1, 1].set_ylabel("Frequency", fontsize=14, labelpad=8)
 
-        locator = mticker.MultipleLocator(100)
-        axs[1, 1].xaxis.set_major_locator(locator)
+        locator_govtake = mticker.MaxNLocator('auto')
+        axs[1, 1].xaxis.set_major_locator(locator_govtake)
 
         axs[1, 1].grid(which="major", linewidth=1)
         axs[1, 1].grid(which="minor", linewidth=0.2)
@@ -111,8 +111,8 @@ def get_uncertainty_plot(uncertainty_outcomes: dict,
         axs[1, 2].set_xlabel("MUSD", fontsize=10, labelpad=0)
         axs[1, 2].set_ylabel("Frequency", fontsize=14, labelpad=8)
 
-        locator = mticker.MultipleLocator(20)
-        axs[1, 2].xaxis.set_major_locator(locator)
+        locator_netshare = mticker.MaxNLocator('auto')
+        axs[1, 2].xaxis.set_major_locator(locator_netshare)
 
         axs[1, 2].grid(which="major", linewidth=1)
         axs[1, 2].grid(which="minor", linewidth=0.2)
@@ -120,7 +120,7 @@ def get_uncertainty_plot(uncertainty_outcomes: dict,
 
         # Adjust layout to prevent clipping of titles
         fig.subplots_adjust(wspace=10)
-        plt.tight_layout()
+        plt.tight_layout(pad=5)
         plt.savefig('uncertainty_plot.png')
         # plt.show()
 
