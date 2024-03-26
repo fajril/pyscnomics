@@ -425,22 +425,59 @@ if __name__ == "__main__":
         unit_of_production_book_value,
     )
 
-    from pyscnomics.econ.costs import Tangible
+    from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
     from pyscnomics.econ.selection import FluidType, DeprMethod
 
     t1 = Tangible(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 100, 100]),
+        useful_life=np.array([6, 6, 6]),
         expense_year=np.array([2023, 2024, 2029]),
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
-    t1.total_depreciation_rate(
-        depr_method=DeprMethod.PSC_DB
+    # t2 = Intangible(
+    #     start_year=2023,
+    #     end_year=2030,
+    #     cost=np.array([100, 100, 100]),
+    #     expense_year=np.array([2023, 2024, 2029]),
+    #     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+    # )
+
+    # t3 = ASR(
+    #     start_year=2023,
+    #     end_year=2030,
+    #     cost=np.array([100, 100, 100]),
+    #     expense_year=np.array([2023, 2024, 2029]),
+    #     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+    # )
+
+    # t4 = OPEX(
+    #     start_year=2023,
+    #     end_year=2030,
+    #     fixed_cost=np.array([100, 100, 100]),
+    #     prod_rate=np.array([1000, 1000, 1000]),
+    #     cost_per_volume=np.array([0.1, 0.1, 0.1]),
+    #     expense_year=np.array([2023, 2024, 2029]),
+    #     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+    # )
+
+    amortization = t1.total_amortization_rate(
+        reserve=np.array([50, 50, 50]),
+        yearly_production=np.array([10, 20, 10, 5, 5]),
+        production_period=np.array([5, 5, 5]),
+        salvage_value=np.array([0, 0, 0]),
+    )
+
+    bv = t1.total_amortization_book_value(
+        reserve=np.array([50, 50, 50]),
+        yearly_production=np.array([10, 20, 10, 5, 5]),
+        production_period=np.array([5, 5, 5]),
+        salvage_value=np.array([0, 0, 0]),
     )
 
     # print('\t')
-    # print(f'Filetype: {type(t1)}, length: {len(t1)}')
-    # print('t1 = \n', t1)
+    # print(f'Filetype: {type(amortization)}, length: {len(amortization)}')
+    # print('amortization = \n', amortization)
 

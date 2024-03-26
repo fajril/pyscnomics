@@ -156,9 +156,181 @@ class GeneralCost:
 
         return np.concatenate((expenses, zeros))
 
-    # TODO : Add the amortization method
-    def amortization(self):
-        raise NotImplementedError()
+    def total_amortization_rate(
+        self,
+        reserve: np.ndarray,
+        yearly_production: np.ndarray,
+        production_period: np.ndarray,
+        salvage_value: np.ndarray,
+        year_ref: int = None,
+        tax_type: TaxType = TaxType.VAT,
+        vat_rate: np.ndarray | float = 0.0,
+        lbt_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
+    ) -> tuple:
+        """
+        Calculate the total amortization charge and unamortized asset
+        based on unit of production method.
+
+        Parameters
+        ----------
+        reserve: np.ndarray
+            Array containing reserve values.
+        yearly_production: np.ndarray
+            Array containing yearly production values.
+        production_period: np.ndarray
+            Array containing production period values.
+        salvage_value: np.ndarray
+            Array containing salvage value values.
+        year_ref: int, optional
+            Reference year. Defaults to None.
+        tax_type: TaxType, optional
+            Type of tax. Defaults to TaxType.VAT.
+        vat_rate: np.ndarray or float, optional
+            Value-added tax rate. Defaults to 0.0.
+        lbt_rate: np.ndarray or float, optional
+            Local business tax rate. Defaults to 0.0.
+        inflation_rate: np.ndarray or float, optional
+            Inflation rate. Defaults to 0.0.
+
+        Returns
+        -------
+        tuple
+            A tuple containing total amortization charge and unamortized asset.
+
+        The method calculates the amortization charge for each period using
+        the unit of production method, then adjusts the charges based on expense years.
+        It returns the total amortization charge for each period and the unamortized asset value.
+        """
+        if year_ref is None:
+            year_ref = self.start_year
+
+        cost_adjusted = apply_cost_adjustment(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            year_ref=year_ref,
+            tax_type=tax_type,
+            vat_portion=self.vat_portion,
+            vat_rate=vat_rate,
+            vat_discount=self.vat_discount,
+            lbt_portion=self.lbt_portion,
+            lbt_rate=lbt_rate,
+            lbt_discount=self.lbt_discount,
+            inflation_rate=inflation_rate,
+        )
+
+        # Configure amortization charge
+        amortization_charge = np.array(
+            [
+                depr.unit_of_production_rate(
+                    cost=c,
+                    reserve=rs,
+                    yearly_production=yearly_production,
+                    production_period=pp,
+                    salvage_value=sv,
+                    amortization_len=self.project_duration,
+                )
+                for c, rs, pp, sv in zip(
+                    cost_adjusted,
+                    reserve,
+                    production_period,
+                    salvage_value,
+                )
+            ]
+        )
+
+        # The relative difference of expense_year and start_year
+        shift_indices = self.expense_year - self.start_year
+
+        # Modify amortization_charge so that expenditures are aligned with
+        # the corresponding expense_year
+        amortization_charge = np.array(
+            [
+                np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
+                for row, i in zip(amortization_charge, shift_indices)
+            ]
+        )
+
+        total_amortization_charge = amortization_charge.sum(axis=0)
+        unamortized_asset = np.sum(cost_adjusted) - np.sum(total_amortization_charge)
+
+        return total_amortization_charge, unamortized_asset
+
+    def total_amortization_book_value(
+        self,
+        reserve: np.ndarray,
+        yearly_production: np.ndarray,
+        production_period: np.ndarray,
+        salvage_value: np.ndarray,
+        year_ref: int = None,
+        tax_type: TaxType = TaxType.VAT,
+        vat_rate: np.ndarray | float = 0.0,
+        lbt_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
+    ) -> np.ndarray:
+        """
+        Calculate the total amortization book value.
+
+        Parameters
+        ----------
+        reserve: np.ndarray
+            Array containing reserve values.
+        yearly_production: np.ndarray
+            Array containing yearly production values.
+        production_period: np.ndarray
+            Array containing production period values.
+        salvage_value: np.ndarray
+            Array containing salvage value values.
+        year_ref: int, optional
+            Reference year. Defaults to None.
+        tax_type: TaxType, optional
+            Type of tax. Defaults to TaxType.VAT.
+        vat_rate: np.ndarray or float, optional
+            Value-added tax rate. Defaults to 0.0.
+        lbt_rate: np.ndarray or float, optional
+            Local business tax rate. Defaults to 0.0.
+        inflation_rate: np.ndarray or float, optional
+            Inflation rate. Defaults to 0.0.
+
+        Returns
+        -------
+        np.ndarray
+            Array containing the total amortization book value.
+
+        The method calculates the total amortization book value by subtracting
+        the cumulative total amortization charge from the cumulative total expenditures.
+        It relies on the total_amortization_rate method to compute the total amortization charge.
+        """
+        if year_ref is None:
+            year_ref = self.start_year
+
+        # Calculate total amortization charge from method total_amortization_charge
+        total_amortization_charge = self.total_amortization_rate(
+            reserve=reserve,
+            yearly_production=yearly_production,
+            production_period=production_period,
+            salvage_value=salvage_value,
+            year_ref=year_ref,
+            tax_type=tax_type,
+            vat_rate=vat_rate,
+            lbt_rate=lbt_rate,
+            inflation_rate=inflation_rate,
+        )[0]
+
+        return (
+            np.cumsum(
+                self.expenditures(
+                    year_ref=year_ref,
+                    tax_type=tax_type,
+                    vat_rate=vat_rate,
+                    lbt_rate=lbt_rate,
+                    inflation_rate=inflation_rate,
+                )
+            ) - np.cumsum(total_amortization_charge)
+        )
 
     def __len__(self):
         return self.project_duration
@@ -509,14 +681,7 @@ class Tangible(GeneralCost):
         total_depreciation_charge = depreciation_charge.sum(axis=0)
         undepreciated_asset = np.sum(cost_adjusted) - np.sum(total_depreciation_charge)
 
-        print('\t')
-        print(f'Length: {len(total_depreciation_charge)}')
-        print('total_depreciation_charge = \n', total_depreciation_charge)
-
-        print('\t')
-        print('undepreciated_asset = ', undepreciated_asset)
-
-        # return total_depreciation_charge, undepreciated_asset
+        return total_depreciation_charge, undepreciated_asset
 
     def total_depreciation_book_value(
         self,
