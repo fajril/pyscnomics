@@ -148,9 +148,9 @@ def optimize_psc(
     out : tuple
 
     list_str: list
-        The list of parameter that passed to has been optimized.
+        The list of parameter that passed and has been optimized.
     list_params_value: list
-        The list of parameter's value that passed has been optimized.
+        The list of parameter's value that passed and has been optimized.
     result_optimization: float
         The value of the targeted parameter which the result of the optimization.
     """
@@ -174,11 +174,14 @@ def optimize_psc(
     # Changing the parameters list[str] into list[OptimizationParameters(Enum)]
     list_params = dict_optimization['parameter']
 
-    # Defining empty list to contain value of optimized parameters and status of the optimization
+    # Defining Base Value list to contain value of optimized parameters and status of the optimization
     list_params_value = ['Base Value'] * len(list_params)
 
     # Defining the empty result of optimization target, will be defined later
     result_optimization = None
+
+    # Defining the executed contract list
+    list_executed_contract = [None] * len(list_params)
 
     psc = contract
     for index, param in enumerate(list_params):
@@ -222,13 +225,16 @@ def optimize_psc(
             bounds = (dict_optimization['min'][index],
                       dict_optimization['max'][index])
 
+            # Defining the executed contract
+            executed_contract = None
+
             def objective_run(new_value):
-                result_psc_obj, _ = adjust_contract(contract=psc,
-                                                    contract_arguments=contract_arguments,
-                                                    variable=param,
-                                                    value=new_value,
-                                                    summary_argument=summary_argument,
-                                                    target_parameter=target_parameter)
+                result_psc_obj, executed_contract = adjust_contract(contract=psc,
+                                                                    contract_arguments=contract_arguments,
+                                                                    variable=param,
+                                                                    value=new_value,
+                                                                    summary_argument=summary_argument,
+                                                                    target_parameter=target_parameter)
 
                 result_obj = abs(result_psc_obj - target_optimization_value)
                 return result_obj
@@ -251,6 +257,9 @@ def optimize_psc(
             # Defining the result_optimization
             result_optimization = function_result
 
+            # Filling the list with executed contract
+            list_executed_contract[index] = executed_contract
+
             # # Printing for debugging
             # print('Parameter:', param)
             # print('Optimized Parameter Value:', optimized_parameter)
@@ -268,6 +277,8 @@ def optimize_psc(
             # Defining the result_optimization
             result_optimization = result_psc
 
+            list_executed_contract[index] = psc
+
     # Converting the list of enum into list of str enum value
     list_str = [enum_value.value for enum_value in list_params]
 
@@ -276,4 +287,4 @@ def optimize_psc(
     # print(list_params_value)
     # print(result_optimization)
 
-    return list_str, list_params_value, result_optimization
+    return list_str, list_params_value, result_optimization, list_executed_contract
