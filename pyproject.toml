@@ -37,5 +37,5 @@ classifiers = [
 Homepage = "https://github.com/fajril/pyscnomics"
 Documentation = "https://github.com/fajril/pyscnomics"
 
-[project.scripts]
+[project.entry-points.console_scripts]
 pyscnomics = "pyscnomics.pyscnomics_cli:entry_point"
