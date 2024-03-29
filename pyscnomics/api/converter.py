@@ -2,7 +2,9 @@
 This file containing the tools which utilized by API adapter.
 """
 from datetime import datetime, date
+from typing import Mapping
 
+from pydantic import BaseModel
 import numpy as np
 
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
@@ -16,6 +18,208 @@ from pyscnomics.tools.helper import (get_inflation_applied_converter,
                                      get_split_type_converter,
                                      get_optimization_target_converter,
                                      get_optimization_parameter_converter)
+
+
+class SetupBM(BaseModel):
+    start_date: str = "01/01/2010"
+    end_date: str = "31/12/2045"
+    oil_onstream_date: str = "01/01/2023"
+    gas_onstream_date: str = "01/01/2023"
+
+
+class SummaryArgumentsBM(BaseModel):
+    reference_year: int = 2022
+    inflation_rate: float = 0.1
+    discount_rate: float = 0.1
+    npv_mode: str = "SKK Full Cycle Nominal Terms"
+    discounting_mode: str = "End Year"
+
+
+class CostRecoveryBM(BaseModel):
+    oil_ftp_is_available: bool = True
+    oil_ftp_is_shared: bool = True
+    oil_ftp_portion: float = 0.2
+    gas_ftp_is_available: bool = True
+    gas_ftp_is_shared: bool = True
+    gas_ftp_portion: float = 0.2
+    tax_split_type: str = "Conventional"
+    condition_dict: dict = {}
+    indicator_rc_icp_sliding: list[float] = []
+    oil_ctr_pretax_share: float = 0.34722220
+    gas_ctr_pretax_share: float = 0.5208330
+    oil_ic_rate: float = 0
+    gas_ic_rate: float = 0
+    ic_is_available: bool = False
+    oil_cr_cap_rate: float = 1
+    gas_cr_cap_rate: float = 1
+    oil_dmo_volume_portion: float = 0.25
+    oil_dmo_fee_portion: float = 0.25
+    oil_dmo_holiday_duration: float = 60
+    gas_dmo_volume_portion: float = 0.25
+    gas_dmo_fee_portion: float = 1
+    gas_dmo_holiday_duration: float = 60
+
+
+class GrossSplitBM(BaseModel):
+    field_status: str = "No POD"
+    field_loc: str = "Onshore"
+    res_depth: str = "<=2500"
+    infra_avail: str = "Well Developed"
+    res_type: str = "Conventional"
+    api_oil: str = "<25"
+    domestic_use: str = "50<=x<70"
+    prod_stage: str = "Secondary"
+    co2_content: str = "<5"
+    h2s_content: str = "<100"
+    base_split_ctr_oil: float = 0.43
+    base_split_ctr_gas: float = 0.48
+    split_ministry_disc: float = 0.08
+    oil_dmo_volume_portion: float = 0.25
+    oil_dmo_fee_portion: float = 1.0
+    oil_dmo_holiday_duration: float = 60
+    gas_dmo_volume_portion: float = 1.0
+    gas_dmo_fee_portion: float = 1.0
+    gas_dmo_holiday_duration: float = 60
+
+
+class ContractArgumentsBM(BaseModel):
+    sulfur_revenue: str
+    electricity_revenue: str
+    co2_revenue: str
+    is_dmo_end_weighted: bool
+    tax_regime: str
+    tax_rate: float
+    ftp_tax_regime: str
+    sunk_cost_reference_year: int
+    depr_method: str
+    decline_factor: int
+    vat_rate: float
+    lbt_rate: float
+    inflation_rate: float
+    future_rate: float
+    inflation_rate_applied_to: str
+
+
+class ContractArgumentsTransitionBM(BaseModel):
+    unrec_portion: float
+
+
+class LiftingBM(BaseModel):
+    start_year: int
+    end_year: int
+    lifting_rate: list[float]
+    price: list[float]
+    prod_year: list[int]
+    fluid_type: str
+    ghv: list[float]
+
+
+class TangibleBM(BaseModel):
+    start_year: int
+    end_year: int
+    cost: list[float]
+    expense_year: list[int]
+    cost_allocation: list[str]
+    description: list[str]
+    vat_portion: list[float]
+    vat_discount: list[float]
+    lbt_portion: list[float]
+    lbt_discount: list[float]
+    pis_year: list[int]
+    salvage_value: list[float]
+    useful_life: list[int]
+    depreciation_factor: list[float]
+    is_ic_applied: list[bool]
+
+
+class IntangibleBM(BaseModel):
+    start_year: int
+    end_year: int
+    cost: list[float]
+    expense_year: list[int]
+    cost_allocation: list[str]
+    description: list[str]
+    vat_portion: list[float]
+    vat_discount: list[float]
+    lbt_portion: list[float]
+    lbt_discount: list[float]
+
+
+class OpexBM(BaseModel):
+    start_year: int
+    end_year: int
+    expense_year: list[int]
+    cost_allocation: list[str]
+    description: list[str]
+    fixed_cost: list[float]
+    prod_rate: list[float]
+    cost_per_volume: list[float]
+    vat_portion: list[float]
+    vat_discount: list[float]
+    lbt_portion: list[float]
+    lbt_discount: list[float]
+
+
+class AsrBM(BaseModel):
+    start_year: int
+    end_year: int
+    cost: list[float]
+    expense_year: list[int]
+    cost_allocation: list[str]
+    description: list[str]
+    vat_portion: list[float]
+    vat_discount: list[float]
+    lbt_portion: list[float]
+    lbt_discount: list[float]
+
+
+class OptimizationDictBM(BaseModel):
+    parameter: list[str]
+    min: list[float]
+    max: list[float]
+
+
+class OptimizationBM(BaseModel):
+    dict_optimization: OptimizationDictBM
+    target_optimization: float
+    target_parameter: str
+
+
+class SensitivityBM(BaseModel):
+    min: float
+    max: float
+
+
+class UncertaintyBM(BaseModel):
+    number_of_simulation: int
+    min: list[float]
+    max: list[float]
+    std_dev: list[float]
+
+
+class Data(BaseModel):
+    setup: SetupBM
+    summary_arguments: SummaryArgumentsBM
+    contract_arguments: ContractArgumentsBM
+    lifting: Mapping[str, LiftingBM]
+    tangible: Mapping[str, TangibleBM]
+    intangible: Mapping[str, IntangibleBM]
+    opex: Mapping[str, OpexBM]
+    asr: Mapping[str, AsrBM]
+    optimization_arguments: OptimizationBM
+    sensitivity_arguments: SensitivityBM
+    uncertainty_arguments: UncertaintyBM
+    costrecovery: CostRecoveryBM = None
+    grosssplit: GrossSplitBM = None
+    result: dict = None
+
+
+class DataTransition(BaseModel):
+    contract_1: CostRecoveryBM | GrossSplitBM
+    contract_2: CostRecoveryBM | GrossSplitBM
+    contract_arguments: ContractArgumentsTransitionBM
+    summary_arguments: SummaryArgumentsBM
+    result: dict = None
 
 
 def convert_str_to_date(str_object: str) -> date | None:
@@ -126,12 +330,12 @@ def convert_dict_to_asr(data_raw: dict) -> tuple:
         ASR(
             start_year=data_raw[key]['start_year'],
             end_year=data_raw[key]['end_year'],
-            cost=np.array(data_raw[key]['cost'],dtype=float),
+            cost=np.array(data_raw[key]['cost'], dtype=float),
             expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
             cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
             description=data_raw[key]['description'],
             vat_portion=np.array(data_raw[key]['vat_portion'], dtype=float),
-            vat_discount=np.array(data_raw[key]['vat_discount'],dtype=float),
+            vat_discount=np.array(data_raw[key]['vat_discount'], dtype=float),
             lbt_portion=np.array(data_raw[key]['lbt_portion'], dtype=float),
             lbt_discount=np.array(data_raw[key]['lbt_discount'], dtype=float),
         )

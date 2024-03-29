@@ -154,6 +154,7 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         # Converting the summary format to skk summary format
         summary_skk = convert_summary_to_dict(dict_object=summary)
 
+    # Since the required object is only the contract, it will return None for the summary
     else:
         summary_skk = None
         summary_arguments_dict = None
@@ -176,7 +177,7 @@ def get_contract_table(data: dict, contract_type: str = 'Cost Recovery'):
         year_column = 'Year'
 
     # Condition when the contract is Transition
-    if contract_type is 'Transition':
+    if contract_type == 'Transition':
         # Retrieving the table
         table_oil, table_gas, table_consolidated = get_table(contract=contract)
 
