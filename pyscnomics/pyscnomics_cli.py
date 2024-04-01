@@ -425,6 +425,7 @@ if __name__ == "__main__":
         unit_of_production_book_value,
     )
 
+    from pyscnomics.econ.costs import GeneralCost
     from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
     from pyscnomics.econ.selection import FluidType, DeprMethod
 
@@ -432,9 +433,10 @@ if __name__ == "__main__":
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 100, 100]),
-        useful_life=np.array([6, 6, 6]),
+        useful_life=np.array([5, 5, 5]),
         expense_year=np.array([2023, 2024, 2029]),
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+        depreciation_factor=np.array([0.5, 0.5, 0.5, 0.5]),
     )
 
     # t2 = Intangible(
@@ -463,21 +465,24 @@ if __name__ == "__main__":
     #     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
     # )
 
-    amortization = t1.total_amortization_rate(
-        reserve=np.array([50, 50, 50]),
-        yearly_production=np.array([10, 20, 10, 5, 5]),
-        production_period=np.array([5, 5, 5]),
-        salvage_value=np.array([0, 0, 0]),
-    )
-
-    bv = t1.total_amortization_book_value(
-        reserve=np.array([50, 50, 50]),
-        yearly_production=np.array([10, 20, 10, 5, 5]),
-        production_period=np.array([5, 5, 5]),
-        salvage_value=np.array([0, 0, 0]),
-    )
-
+    # amor = t1.total_amortization_rate(
+    #     reserve=np.array([50, 50, 50]),
+    #     yearly_production=np.array([10, 20, 10, 5, 5]),
+    #     production_period=np.array([5, 5, 5]),
+    #     salvage_value=np.array([0, 0, 0]),
+    # )
+    #
+    # bv = t1.total_amortization_book_value(
+    #     reserve=np.array([50, 50, 50]),
+    #     yearly_production=np.array([10, 20, 10, 5, 5]),
+    #     production_period=np.array([5, 5, 5]),
+    #     salvage_value=np.array([0, 0, 0]),
+    # )
+    #
     # print('\t')
-    # print(f'Filetype: {type(amortization)}, length: {len(amortization)}')
-    # print('amortization = \n', amortization)
-
+    # print(f'Filetype: {type(amor)}, length: {len(amor)}')
+    # print('amor = \n', amor)
+    #
+    # print('\t')
+    # print(f'Filetype: {type(bv)}, length: {len(bv)}')
+    # print('bv = \n', bv)

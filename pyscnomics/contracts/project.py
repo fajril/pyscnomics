@@ -1364,9 +1364,13 @@ class BaseProject:
             tax_rate_arr = np.full_like(self.project_years, fill_value=0.44, dtype=float)
         if tax_regime == TaxRegime.NAILED_DOWN:
             if self.start_date.year >= max(tax_config):
-                tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[max(tax_config)], dtype=float)
+                tax_rate_arr = np.full_like(
+                    self.project_years, fill_value=tax_config[max(tax_config)], dtype=float
+                )
             else:
-                tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[min(tax_config)], dtype=float)
+                tax_rate_arr = np.full_like(
+                    self.project_years, fill_value=tax_config[min(tax_config)], dtype=float
+                )
         return tax_rate_arr
 
     def _get_wap_price(self):

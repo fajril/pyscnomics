@@ -365,8 +365,8 @@ def psc_declining_balance_book_value(
 
 def unit_of_production_rate(
     cost: float,
-    reserve: float,
-    yearly_production: np.ndarray,
+    cum_prod: float,
+    yearly_prod: np.ndarray,
     production_period: int,
     salvage_value: float = 0.,
     amortization_len: int = 0,
@@ -403,30 +403,29 @@ def unit_of_production_rate(
         or if the sum of production data in 'yearly_production'
         exceeds the prescribed reserve.
     """
-
-    # Raise exception if 'yearly_production' is not given as a numpy.array datatype
-    if not isinstance(yearly_production, np.ndarray):
+    # Raise exception if 'yearly_prod' is not given as a numpy.array datatype
+    if not isinstance(yearly_prod, np.ndarray):
         raise UnitOfProductionException(
             f"Parameter yearly_production must be given as a numpy.ndarray datatype."
         )
 
-    # Raise exception if the number of production data listed in 'yearly_production'
+    # Raise exception if the number of production data listed in 'yearly_prod'
     # does not match the prescribed production_period
-    if len(yearly_production) != production_period:
+    if len(yearly_prod) != production_period:
         raise UnitOfProductionException(
             f"The number of production data in 'yearly_production' "
             f"does not match the (prescribed) production period."
         )
 
-    # Raise an exception if the sum of production data in 'yearly_production'
+    # Raise an exception if the sum of production data in 'yearly_prod'
     # exceeds the (prescribed) value of reserve
-    if (yearly_production.sum() - reserve) > 1E-5:
+    if (yearly_prod.sum() - cum_prod) > 1E-5:
         raise UnitOfProductionException(
             f"Production data in 'yearly_production' exceeds the (prescribed) reserve."
         )
 
     # Calculate amortization charge
-    amortization_charge = (yearly_production / reserve) * (cost - salvage_value)
+    amortization_charge = (yearly_prod / cum_prod) * (cost - salvage_value)
 
     # When the sum of amortization charge is less than (cost - salvage_value)
     if amortization_charge.sum() < (cost - salvage_value):
@@ -482,8 +481,8 @@ def unit_of_production_book_value(
     """
     amortization_charge = unit_of_production_rate(
         cost=cost,
-        reserve=reserve,
-        yearly_production=yearly_production,
+        cum_prod=reserve,
+        yearly_prod=yearly_production,
         production_period=production_period,
         salvage_value=salvage_value,
         amortization_len=amortization_len,
