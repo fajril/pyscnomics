@@ -491,60 +491,56 @@ class Tangible(GeneralCost):
                     f"is not a list."
                 )
 
-        print('\t')
-        print(f'Filetype: {type(self.is_ic_applied)}')
-        print('is_ic_applied = \n', self.is_ic_applied)
+        # Check input data for unequal length
+        arr_length = len(self.cost)
 
-        # # Check input data for unequal length
-        # arr_length = len(self.cost)
-        #
-        # if not all(
-        #     len(arr) == arr_length
-        #     for arr in [
-        #         self.expense_year,
-        #         self.cost_allocation,
-        #         self.description,
-        #         self.vat_portion,
-        #         self.vat_discount,
-        #         self.lbt_portion,
-        #         self.lbt_discount,
-        #         self.pis_year,
-        #         self.salvage_value,
-        #         self.useful_life,
-        #         self.depreciation_factor,
-        #         self.is_ic_applied,
-        #     ]
-        # ):
-        #     raise TangibleException(
-        #         f"Unequal length of array: "
-        #         f"cost: {len(self.cost)}, "
-        #         f"expense_year: {len(self.expense_year)}, "
-        #         f"cost_allocation: {len(self.cost_allocation)}, "
-        #         f"description: {len(self.description)}, "
-        #         f"vat_portion: {len(self.vat_portion)}, "
-        #         f"vat_discount: {len(self.vat_discount)}, "
-        #         f"lbt_portion: {len(self.lbt_portion)}, "
-        #         f"lbt_discount: {len(self.lbt_discount)}, "
-        #         f"pis_year: {len(self.pis_year)}, "
-        #         f"salvage_value: {len(self.salvage_value)}, "
-        #         f"useful_life: {len(self.useful_life)}, "
-        #         f"depreciation_factor: {len(self.depreciation_factor)}, "
-        #         f"is_ic_applied: {len(self.is_ic_applied)}."
-        #     )
-        #
-        # # Raise an error message: expense year is after the end year of the project
-        # if np.max(self.expense_year) > self.end_year:
-        #     raise TangibleException(
-        #         f"Expense year ({np.max(self.expense_year)}) "
-        #         f"is after the end year of the project ({self.end_year})"
-        #     )
-        #
-        # # Raise an error message: expense year is before the start year of the project
-        # if np.min(self.expense_year) < self.start_year:
-        #     raise TangibleException(
-        #         f"Expense year ({np.min(self.expense_year)}) "
-        #         f"is before the start year of the project ({self.start_year})"
-        #     )
+        if not all(
+            len(arr) == arr_length
+            for arr in [
+                self.expense_year,
+                self.cost_allocation,
+                self.description,
+                self.vat_portion,
+                self.vat_discount,
+                self.lbt_portion,
+                self.lbt_discount,
+                self.pis_year,
+                self.salvage_value,
+                self.useful_life,
+                self.depreciation_factor,
+                self.is_ic_applied,
+            ]
+        ):
+            raise TangibleException(
+                f"Unequal length of array: "
+                f"cost: {len(self.cost)}, "
+                f"expense_year: {len(self.expense_year)}, "
+                f"cost_allocation: {len(self.cost_allocation)}, "
+                f"description: {len(self.description)}, "
+                f"vat_portion: {len(self.vat_portion)}, "
+                f"vat_discount: {len(self.vat_discount)}, "
+                f"lbt_portion: {len(self.lbt_portion)}, "
+                f"lbt_discount: {len(self.lbt_discount)}, "
+                f"pis_year: {len(self.pis_year)}, "
+                f"salvage_value: {len(self.salvage_value)}, "
+                f"useful_life: {len(self.useful_life)}, "
+                f"depreciation_factor: {len(self.depreciation_factor)}, "
+                f"is_ic_applied: {len(self.is_ic_applied)}."
+            )
+
+        # Raise an error message: expense year is after the end year of the project
+        if np.max(self.expense_year) > self.end_year:
+            raise TangibleException(
+                f"Expense year ({np.max(self.expense_year)}) "
+                f"is after the end year of the project ({self.end_year})"
+            )
+
+        # Raise an error message: expense year is before the start year of the project
+        if np.min(self.expense_year) < self.start_year:
+            raise TangibleException(
+                f"Expense year ({np.min(self.expense_year)}) "
+                f"is before the start year of the project ({self.start_year})"
+            )
 
     def total_depreciation_rate(
         self,

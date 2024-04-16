@@ -427,7 +427,7 @@ if __name__ == "__main__":
 
     from pyscnomics.econ.costs import GeneralCost
     from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
-    from pyscnomics.econ.selection import FluidType, DeprMethod
+    from pyscnomics.econ.selection import FluidType, DeprMethod, TaxType
 
     t1 = Tangible(
         start_year=2023,
@@ -436,7 +436,16 @@ if __name__ == "__main__":
         useful_life=np.array([5, 5, 5]),
         expense_year=np.array([2023, 2024, 2029]),
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
-        depreciation_factor=np.array([0.5, 0.5, 0.5, 0.5]),
+        depreciation_factor=np.array([0.5, 0.5, 0.5]),
+    )
+
+    t1.total_depreciation_rate(
+        depr_method=DeprMethod.PSC_DB,
+        decline_factor=2,
+        tax_type=TaxType.VAT,
+        # vat_rate=0,
+        vat_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
+        inflation_rate=0.01,
     )
 
     # t2 = Intangible(
