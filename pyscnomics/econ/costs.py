@@ -1139,6 +1139,117 @@ class Intangible(GeneralCost):
                 f"is before the start year of the project ({self.start_year})"
             )
 
+    def total_amortization_rate(
+        self,
+        cum_prod: float,
+        yearly_prod: np.ndarray,
+        production_period: int = None,
+        salvage_value: np.ndarray = None,
+        year_ref: int = None,
+        tax_type: TaxType = TaxType.VAT,
+        vat_rate: np.ndarray | float = 0.0,
+        lbt_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
+    ) -> tuple:
+        """
+        Calculate the total amortization charge and unamortized asset
+        based on unit of production method.
+
+        Parameters
+        ----------
+        cum_prod: float
+            Hydrocarbon cumulative production (or reserve) value.
+        yearly_prod: np.ndarray
+            Array containing yearly production values.
+        production_period: int
+            The period of hydrocarbon production. Defaults to None.
+        salvage_value: np.ndarray
+            Array containing salvage values. Defaults to None.
+        year_ref: int, optional
+            Reference year. Defaults to None.
+        tax_type: TaxType, optional
+            Type of tax. Defaults to TaxType.VAT.
+        vat_rate: np.ndarray or float, optional
+            Value-added tax rate. Defaults to 0.0.
+        lbt_rate: np.ndarray or float, optional
+            Local business tax rate. Defaults to 0.0.
+        inflation_rate: np.ndarray or float, optional
+            Inflation rate. Defaults to 0.0.
+
+        Returns
+        -------
+        tuple
+            A tuple containing total amortization charge and unamortized asset.
+
+        The method calculates the amortization charge for each period using
+        the unit of production method, then adjusts the charges based on expense years.
+        It returns the total amortization charge for each period and the unamortized asset value.
+        """
+        # Specify default value for salvage_value
+        if salvage_value is None:
+            salvage_value = np.zeros(len(yearly_prod))
+
+        # Specify default value for production_period
+        if production_period is None:
+            production_period = len(yearly_prod)
+
+        # Specify default value for year_ref
+        if year_ref is None:
+            year_ref = self.start_year
+
+        # Apply cost adjustment (by VAT/LBT and inflation)
+        cost_adjusted = apply_cost_adjustment(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            year_ref=year_ref,
+            tax_type=tax_type,
+            vat_portion=self.vat_portion,
+            vat_rate=vat_rate,
+            vat_discount=self.vat_discount,
+            lbt_portion=self.lbt_portion,
+            lbt_rate=lbt_rate,
+            lbt_discount=self.lbt_discount,
+            inflation_rate=inflation_rate,
+        )
+
+        # Configure amortization charge
+        amortization_charge = np.array(
+            [
+                depr.unit_of_production_rate(
+                    cost=c,
+                    cum_prod=cum_prod,
+                    yearly_prod=yearly_prod,
+                    production_period=production_period,
+                    salvage_value=sv,
+                    amortization_len=self.project_duration,
+                )
+                for c, sv in zip(
+                    cost_adjusted,
+                    salvage_value
+                )
+            ]
+        )
+
+        # The relative difference between expense_year and start_year
+        shift_indices = self.expense_year - self.start_year
+
+        # Modify amortization_charge so that expenditures are aligned with
+        # the corresponding expense_year
+        amortization_charge = np.array(
+            [
+                np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
+                for row, i in zip(amortization_charge, shift_indices)
+            ]
+        )
+
+        total_amortization_charge = amortization_charge.sum(axis=0)
+        unamortized_asset = np.sum(cost_adjusted) - np.sum(total_amortization_charge)
+
+        return total_amortization_charge, unamortized_asset
+
     def __eq__(self, other):
         # Between two instances of Intangible
         if isinstance(other, Intangible):
