@@ -2,7 +2,7 @@
 This file containing the tools which utilized by API adapter.
 """
 from datetime import datetime, date
-from typing import Mapping
+from typing import Dict
 
 from pydantic import BaseModel
 import numpy as np
@@ -83,21 +83,21 @@ class GrossSplitBM(BaseModel):
 
 
 class ContractArgumentsBM(BaseModel):
-    sulfur_revenue: str
-    electricity_revenue: str
-    co2_revenue: str
-    is_dmo_end_weighted: bool
-    tax_regime: str
-    tax_rate: float
-    ftp_tax_regime: str
-    sunk_cost_reference_year: int
-    depr_method: str
-    decline_factor: int
-    vat_rate: float
-    lbt_rate: float
-    inflation_rate: float
-    future_rate: float
-    inflation_rate_applied_to: str
+    sulfur_revenue: str = "Addition to Oil Revenue"
+    electricity_revenue: str = "Addition to Oil Revenue"
+    co2_revenue: str = "Addition to Oil Revenue"
+    is_dmo_end_weighted: bool = False
+    tax_regime: str = "nailed down"
+    tax_rate: float | list | None = 0.424
+    ftp_tax_regime: str = "Pre PDJP No.20 Tahun 2017"
+    sunk_cost_reference_year: int = 2021
+    depr_method: str = "PSC Declining Balance"
+    decline_factor: float | int = 2
+    vat_rate: list | float = 0.0
+    lbt_rate: list | float = 0.0
+    inflation_rate: list | float = 0.0
+    future_rate: float = 0.02
+    inflation_rate_applied_to: str = "CAPEX"
 
 
 class ContractArgumentsTransitionBM(BaseModel):
@@ -111,7 +111,8 @@ class LiftingBM(BaseModel):
     price: list[float]
     prod_year: list[int]
     fluid_type: str
-    ghv: list[float]
+    ghv: list[float] | None
+    prod_rate: list[float] | None
 
 
 class TangibleBM(BaseModel):
@@ -201,11 +202,11 @@ class Data(BaseModel):
     setup: SetupBM
     summary_arguments: SummaryArgumentsBM
     contract_arguments: ContractArgumentsBM
-    lifting: Mapping[str, LiftingBM]
-    tangible: Mapping[str, TangibleBM]
-    intangible: Mapping[str, IntangibleBM]
-    opex: Mapping[str, OpexBM]
-    asr: Mapping[str, AsrBM]
+    lifting: Dict[str, LiftingBM]
+    tangible: Dict[str, TangibleBM]
+    intangible: Dict[str, IntangibleBM]
+    opex: Dict[str, OpexBM]
+    asr: Dict[str, AsrBM]
     optimization_arguments: OptimizationBM
     sensitivity_arguments: SensitivityBM
     uncertainty_arguments: UncertaintyBM
