@@ -342,20 +342,20 @@ def get_grosssplit(data: dict, summary_result: bool = True):
 
 def get_transition(data: dict):
     # Defining contract_1
-    if 'costrecovery' in data['contract_1'].keys():
+    if data['contract_1']['costrecovery'] is not None and data['contract_1']['grosssplit'] is None:
         _, contract_1, contract_arguments_1, _ = get_costrecovery(data=data['contract_1'], summary_result=False)
 
-    elif 'grosssplit' in data['contract_1'].keys():
+    elif data['contract_1']['grosssplit'] is not None and data['contract_1']['costrecovery'] is None:
         _, contract_1, contract_arguments_1, _ = get_grosssplit(data=data['contract_1'], summary_result=False)
 
     else:
         raise ContractException("Contract type is not recognized")
 
     # Defining contract_2
-    if 'costrecovery' in data['contract_2'].keys():
+    if data['contract_2']['costrecovery'] is not None and data['contract_2']['grosssplit'] is None:
         _, contract_2, contract_arguments_2, _ = get_costrecovery(data=data['contract_2'], summary_result=False)
 
-    elif 'grosssplit' in data['contract_2'].keys():
+    elif data['contract_2']['grosssplit'] is not None and data['contract_2']['costrecovery'] is None:
         _, contract_2, contract_arguments_2, _ = get_grosssplit(data=data['contract_2'], summary_result=False)
 
     else:

@@ -153,14 +153,14 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
     elif isinstance(contract, GrossSplit):
         psc_table_oil = pd.DataFrame()
         psc_table_oil['Years'] = contract.project_years
-        psc_table_oil['lifting'] = contract._oil_lifting.get_lifting_rate_arr()
+        psc_table_oil['Lifting'] = contract._oil_lifting.get_lifting_rate_arr()
         psc_table_oil['Price'] = contract._oil_wap_price
         psc_table_oil['Depreciable'] = contract._oil_tangible_expenditures
         psc_table_oil['Intangible'] = contract._oil_intangible_expenditures
         psc_table_oil['Opex'] = contract._oil_opex_expenditures
         psc_table_oil['ASR'] = contract._oil_asr_expenditures
         psc_table_oil['Revenue'] = contract._oil_revenue
-        psc_table_oil['BaseSplit'] = contract._oil_base_split
+        psc_table_oil['Base_Split'] = contract._oil_base_split
         psc_table_oil['Variable_Split'] = contract._var_split_array
         psc_table_oil['Progressive_Split'] = contract._oil_prog_split
         psc_table_oil['Contractor_Split'] = contract._oil_ctr_split
@@ -183,7 +183,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_oil['Tax'] = contract._oil_tax
         psc_table_oil['Net_CTR_Share'] = contract._oil_ctr_net_share
         psc_table_oil['CTR_Cash_Flow'] = contract._oil_ctr_cashflow
-        psc_table_oil['Cum_CashFlow'] = np.cumsum(contract._oil_ctr_cashflow)
+        psc_table_oil['Cum_Cash_Flow'] = np.cumsum(contract._oil_ctr_cashflow)
         psc_table_oil['Government_Take'] = contract._oil_government_take
         # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
 
@@ -208,8 +208,8 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_gas['Cost_To_Be_Deducted'] = contract._gas_cost_tobe_deducted
         psc_table_gas['Carry_Forward_Cost'] = contract._gas_carward_deduct_cost
         psc_table_gas['Deductible_Cost'] = contract._gas_deductible_cost
-        psc_table_gas['Transfer_To_Oil'] = contract._transfer_to_oil
-        psc_table_gas['Carry_Forward_CostafterTF'] = contract._gas_carward_cost_aftertf
+        psc_table_gas['Transfer_to_Oil'] = contract._transfer_to_oil
+        psc_table_gas['Carry_Forward_Cost_after_TF'] = contract._gas_carward_cost_aftertf
         psc_table_gas['CTR_Share_After_TF'] = contract._gas_ctr_share_after_transfer
         psc_table_gas['CTR_Net_Operating_Profit'] = contract._gas_net_operating_profit
         psc_table_gas['DMO_Volume'] = contract._gas_dmo_volume
@@ -218,7 +218,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_gas['Taxable_Income'] = contract._gas_taxable_income
         psc_table_gas['Tax'] = contract._gas_tax
         psc_table_gas['Net_CTR_Share'] = contract._gas_ctr_net_share
-        psc_table_gas['CTR_CashFlow'] = contract._gas_ctr_cashflow
+        psc_table_gas['CTR_Cash_Flow'] = contract._gas_ctr_cashflow
         psc_table_gas['Cum_Cashflow'] = np.cumsum(contract._gas_ctr_cashflow)
         psc_table_gas['Government_Take'] = contract._gas_government_take
         # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
@@ -391,14 +391,14 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
 
         elif isinstance(contract.contract1, GrossSplit):
             psc_table_oil_1['Years'] = contract._contract1_transitioned.project_years
-            psc_table_oil_1['lifting'] = contract._contract1_transitioned._oil_lifting.get_lifting_rate_arr()
+            psc_table_oil_1['Lifting'] = contract._contract1_transitioned._oil_lifting.get_lifting_rate_arr()
             psc_table_oil_1['Price'] = contract._contract1_transitioned._oil_wap_price
             psc_table_oil_1['Depreciable'] = contract._contract1_transitioned._oil_tangible_expenditures
             psc_table_oil_1['Intangible'] = contract._contract1_transitioned._oil_intangible_expenditures
             psc_table_oil_1['Opex'] = contract._contract1_transitioned._oil_opex_expenditures
             psc_table_oil_1['ASR'] = contract._contract1_transitioned._oil_asr_expenditures
             psc_table_oil_1['Revenue'] = contract._contract1_transitioned._oil_revenue
-            psc_table_oil_1['BaseSplit'] = contract._contract1_transitioned._oil_base_split
+            psc_table_oil_1['Base_Split'] = contract._contract1_transitioned._oil_base_split
             psc_table_oil_1['Variable_Split'] = contract._contract1_transitioned._var_split_array
             psc_table_oil_1['Progressive_Split'] = contract._contract1_transitioned._oil_prog_split
             psc_table_oil_1['Contractor_Split'] = contract._contract1_transitioned._oil_ctr_split
@@ -421,7 +421,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_oil_1['Tax'] = contract._contract1_transitioned._oil_tax
             psc_table_oil_1['Net_CTR_Share'] = contract._contract1_transitioned._oil_ctr_net_share
             psc_table_oil_1['CTR_Cash_Flow'] = contract._contract1_transitioned._oil_ctr_cashflow
-            psc_table_oil_1['Cum_CashFlow'] = np.cumsum(contract._contract1_transitioned._oil_ctr_cashflow)
+            psc_table_oil_1['Cum_Cash_Flow'] = np.cumsum(contract._contract1_transitioned._oil_ctr_cashflow)
             psc_table_oil_1['Government_Take'] = contract._contract1_transitioned._oil_government_take
             # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
 
@@ -445,8 +445,8 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_1['Cost_To_Be_Deducted'] = contract._contract1_transitioned._gas_cost_tobe_deducted
             psc_table_gas_1['Carry_Forward_Cost'] = contract._contract1_transitioned._gas_carward_deduct_cost
             psc_table_gas_1['Deductible_Cost'] = contract._contract1_transitioned._gas_deductible_cost
-            psc_table_gas_1['Transfer_To_Oil'] = contract._contract1_transitioned._transfer_to_oil
-            psc_table_gas_1['Carry_Forward_CostafterTF'] = contract._contract1_transitioned._gas_carward_cost_aftertf
+            psc_table_gas_1['Transfer_to_Oil'] = contract._contract1_transitioned._transfer_to_oil
+            psc_table_gas_1['Carry_Forward_Cost_after_TF'] = contract._contract1_transitioned._gas_carward_cost_aftertf
             psc_table_gas_1['CTR_Share_After_TF'] = contract._contract1_transitioned._gas_ctr_share_after_transfer
             psc_table_gas_1['CTR_Net_Operating_Profit'] = contract._contract1_transitioned._gas_net_operating_profit
             psc_table_gas_1['DMO_Volume'] = contract._contract1_transitioned._gas_dmo_volume
@@ -455,8 +455,8 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_1['Taxable_Income'] = contract._contract1_transitioned._gas_taxable_income
             psc_table_gas_1['Tax'] = contract._contract1_transitioned._gas_tax
             psc_table_gas_1['Net_CTR_Share'] = contract._contract1_transitioned._gas_ctr_net_share
-            psc_table_gas_1['CTR_CashFlow'] = contract._contract1_transitioned._gas_ctr_cashflow
-            psc_table_gas_1['Cum_Cashflow'] = np.cumsum(contract._contract2_transitioned._gas_ctr_cashflow)
+            psc_table_gas_1['CTR_Cash_Flow'] = contract._contract1_transitioned._gas_ctr_cashflow
+            psc_table_gas_1['Cum_Cash_Flow'] = np.cumsum(contract._contract2_transitioned._gas_ctr_cashflow)
             psc_table_gas_1['Government_Take'] = contract._contract2_transitioned._gas_government_take
             # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
 
@@ -618,14 +618,14 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
 
         elif isinstance(contract.contract2, GrossSplit):
             psc_table_oil_2['Years'] = contract._contract2_transitioned.project_years
-            psc_table_oil_2['lifting'] = contract._contract2_transitioned._oil_lifting.get_lifting_rate_arr()
+            psc_table_oil_2['Lifting'] = contract._contract2_transitioned._oil_lifting.get_lifting_rate_arr()
             psc_table_oil_2['Price'] = contract._contract2_transitioned._oil_wap_price
             psc_table_oil_2['Depreciable'] = contract._contract2_transitioned._oil_tangible_expenditures
             psc_table_oil_2['Intangible'] = contract._contract2_transitioned._oil_intangible_expenditures
             psc_table_oil_2['Opex'] = contract._contract2_transitioned._oil_opex_expenditures
             psc_table_oil_2['ASR'] = contract._contract2_transitioned._oil_asr_expenditures
             psc_table_oil_2['Revenue'] = contract._contract2_transitioned._oil_revenue
-            psc_table_oil_2['BaseSplit'] = contract._contract2_transitioned._oil_base_split
+            psc_table_oil_2['Base_Split'] = contract._contract2_transitioned._oil_base_split
             psc_table_oil_2['Variable_Split'] = contract._contract2_transitioned._var_split_array
             psc_table_oil_2['Progressive_Split'] = contract._contract2_transitioned._oil_prog_split
             psc_table_oil_2['Contractor_Split'] = contract._contract2_transitioned._oil_ctr_split
@@ -648,7 +648,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_oil_2['Tax'] = contract._contract2_transitioned._oil_tax
             psc_table_oil_2['Net_CTR_Share'] = contract._contract2_transitioned._oil_ctr_net_share
             psc_table_oil_2['CTR_Cash_Flow'] = contract._contract2_transitioned._oil_ctr_cashflow
-            psc_table_oil_2['Cum_CashFlow'] = np.cumsum(contract._contract2_transitioned._oil_ctr_cashflow)
+            psc_table_oil_2['Cum_Cash_Flow'] = np.cumsum(contract._contract2_transitioned._oil_ctr_cashflow)
             psc_table_oil_2['Government_Take'] = contract._contract2_transitioned._oil_government_take
             # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
 
@@ -672,8 +672,8 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_2['Cost_To_Be_Deducted'] = contract._contract2_transitioned._gas_cost_tobe_deducted
             psc_table_gas_2['Carry_Forward_Cost'] = contract._contract2_transitioned._gas_carward_deduct_cost
             psc_table_gas_2['Deductible_Cost'] = contract._contract2_transitioned._gas_deductible_cost
-            psc_table_gas_2['Transfer_To_Oil'] = contract._contract2_transitioned._transfer_to_oil
-            psc_table_gas_2['Carry_Forward_CostafterTF'] = contract._contract2_transitioned._gas_carward_cost_aftertf
+            psc_table_gas_2['Transfer_to_Oil'] = contract._contract2_transitioned._transfer_to_oil
+            psc_table_gas_2['Carry_Forward_Cost_after_TF'] = contract._contract2_transitioned._gas_carward_cost_aftertf
             psc_table_gas_2['CTR_Share_After_TF'] = contract._contract2_transitioned._gas_ctr_share_after_transfer
             psc_table_gas_2['CTR_Net_Operating_Profit'] = contract._contract2_transitioned._gas_net_operating_profit
             psc_table_gas_2['DMO_Volume'] = contract._contract2_transitioned._gas_dmo_volume
@@ -682,8 +682,8 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_2['Taxable_Income'] = contract._contract2_transitioned._gas_taxable_income
             psc_table_gas_2['Tax'] = contract._contract2_transitioned._gas_tax
             psc_table_gas_2['Net_CTR_Share'] = contract._contract2_transitioned._gas_ctr_net_share
-            psc_table_gas_2['CTR_CashFlow'] = contract._contract2_transitioned._gas_ctr_cashflow
-            psc_table_gas_2['Cum_Cashflow'] = np.cumsum(contract._contract2_transitioned._gas_ctr_cashflow)
+            psc_table_gas_2['CTR_Cash_Flow'] = contract._contract2_transitioned._gas_ctr_cashflow
+            psc_table_gas_2['Cum_Cash_Flow'] = np.cumsum(contract._contract2_transitioned._gas_ctr_cashflow)
             psc_table_gas_2['Government_Take'] = contract._contract2_transitioned._gas_government_take
             # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
 
@@ -736,7 +736,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
     elif isinstance(contract, BaseProject):
         psc_table_oil = pd.DataFrame()
         psc_table_oil['Years'] = contract.project_years
-        psc_table_oil['lifting'] = contract._oil_lifting.get_lifting_rate_arr()
+        psc_table_oil['Lifting'] = contract._oil_lifting.get_lifting_rate_arr()
         psc_table_oil['Price'] = contract._oil_wap_price
         psc_table_oil['Revenue'] = contract._oil_revenue
         psc_table_oil['Tangible'] = contract._oil_tangible_expenditures
@@ -747,7 +747,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
 
         psc_table_gas = pd.DataFrame()
         psc_table_gas['Years'] = contract.project_years
-        psc_table_gas['lifting'] = contract._gas_lifting.get_lifting_rate_arr()
+        psc_table_gas['Lifting'] = contract._gas_lifting.get_lifting_rate_arr()
         psc_table_gas['Price'] = contract._gas_wap_price
         psc_table_gas['Revenue'] = contract._gas_revenue
         psc_table_gas['Tangible'] = contract._gas_tangible_expenditures
@@ -758,7 +758,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
 
         psc_table_consolidated = pd.DataFrame()
         psc_table_consolidated['Years'] = contract.project_years
-        psc_table_consolidated['lifting'] = (contract._oil_lifting.get_lifting_rate_arr() +
+        psc_table_consolidated['Lifting'] = (contract._oil_lifting.get_lifting_rate_arr() +
                                              contract._gas_lifting.get_lifting_rate_arr())
         psc_table_consolidated['Price'] = (contract._oil_wap_price +
                                            contract._gas_wap_price)

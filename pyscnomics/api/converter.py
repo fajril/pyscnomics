@@ -23,8 +23,8 @@ from pyscnomics.tools.helper import (get_inflation_applied_converter,
 class SetupBM(BaseModel):
     start_date: str = "01/01/2010"
     end_date: str = "31/12/2045"
-    oil_onstream_date: str = "01/01/2023"
-    gas_onstream_date: str = "01/01/2023"
+    oil_onstream_date: str | None = "01/01/2023"
+    gas_onstream_date: str | None = "01/01/2023"
 
 
 class SummaryArgumentsBM(BaseModel):
@@ -90,7 +90,7 @@ class ContractArgumentsBM(BaseModel):
     tax_regime: str = "nailed down"
     tax_rate: float | list | None = 0.424
     ftp_tax_regime: str = "Pre PDJP No.20 Tahun 2017"
-    sunk_cost_reference_year: int = 2021
+    sunk_cost_reference_year: int | None = 2021
     depr_method: str = "PSC Declining Balance"
     decline_factor: float | int = 2
     vat_rate: list | float = 0.0
@@ -215,9 +215,21 @@ class Data(BaseModel):
     result: dict = None
 
 
+class TransitionBM(BaseModel):
+    setup: SetupBM
+    contract_arguments: ContractArgumentsBM
+    lifting: Dict[str, LiftingBM]
+    tangible: Dict[str, TangibleBM]
+    intangible: Dict[str, IntangibleBM]
+    opex: Dict[str, OpexBM]
+    asr: Dict[str, AsrBM]
+    costrecovery: CostRecoveryBM = None
+    grosssplit: GrossSplitBM = None
+
+
 class DataTransition(BaseModel):
-    contract_1: CostRecoveryBM | GrossSplitBM
-    contract_2: CostRecoveryBM | GrossSplitBM
+    contract_1: TransitionBM
+    contract_2: TransitionBM
     contract_arguments: ContractArgumentsTransitionBM
     summary_arguments: SummaryArgumentsBM
     result: dict = None

@@ -5,6 +5,7 @@ from pyscnomics.api.adapter import (get_costrecovery,
                                     get_grosssplit,
                                     get_transition)
 from pyscnomics.api.converter import Data
+from pyscnomics.api.converter import DataTransition
 
 
 router = APIRouter(prefix='/api')
@@ -49,11 +50,11 @@ async def calculate_grosssplit_optimization(data: Data) -> dict:
 
 
 @router.post("/transition")
-async def calculate_transition(data: Data) -> dict:
+async def calculate_transition(data: DataTransition) -> dict:
     return get_transition(data=data.dict())[0]
 
 
 @router.post("/transition/table")
-async def get_transition_table(data: Data) -> dict:
-    return get_contract_table(data=data, contract_type='Transition')
+async def get_transition_table(data: DataTransition) -> dict:
+    return get_contract_table(data=data.dict(), contract_type='Transition')
 
