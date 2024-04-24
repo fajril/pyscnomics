@@ -21,10 +21,10 @@ from pyscnomics.tools.helper import (get_inflation_applied_converter,
 
 
 class SetupBM(BaseModel):
-    start_date: str = "01/01/2010"
-    end_date: str = "31/12/2045"
-    oil_onstream_date: str | None = "01/01/2023"
-    gas_onstream_date: str | None = "01/01/2023"
+    start_date: str | int = "01/01/2010"
+    end_date: str | int = "31/12/2045"
+    oil_onstream_date: str | int | None = "01/01/2023"
+    gas_onstream_date: str | int | None = "01/01/2023"
 
 
 class SummaryArgumentsBM(BaseModel):
@@ -235,11 +235,16 @@ class DataTransition(BaseModel):
     result: dict = None
 
 
-def convert_str_to_date(str_object: str) -> date | None:
+def convert_str_to_date(str_object: str | int) -> date | None:
     if str_object is None:
         return None
     else:
-        return datetime.strptime(str_object, '%d/%m/%Y').date()
+        if isinstance(str_object, str):
+            return datetime.strptime(str_object, '%d/%m/%Y').date()
+        elif isinstance(str_object, int):
+            value = datetime.fromtimestamp(str_object)
+            date_value = value.strftime('%d/%m/%Y')
+            return datetime.strptime(date_value, '%d/%m/%Y').date()
 
 
 def convert_list_to_array_float(data_list: list) -> np.ndarray:
