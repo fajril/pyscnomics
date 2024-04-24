@@ -37,7 +37,37 @@ class ContractException(Exception):
     pass
 
 
-def get_setup_dict(data: dict):
+def get_setup_dict(data: dict) -> tuple:
+    """
+    Function to get conversion of the setup input from dictionary into acceptable core engine data format.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input
+
+    Returns
+    -------
+    start_date: date
+        The start date of the project.
+    end_date: date
+        The end date of the project.
+    oil_onstream_date: date
+        The oil onstream date.
+    gas_onstream_date: date
+        The gas onstream date.
+    lifting: Lifting
+        The lifting of the project, in Lifting Dataclass format.
+    tangible: Tangible
+        The tangible cost of the project, in Tangible Dataclass format.
+    intangible: Intangible
+        The intangible cost of the project, in Intangible Dataclass format.
+    opex: OPEX
+        The opex cost of the project, in OPEX Dataclass format.
+    asr: ASR
+        The asr cost of the project, in ASR Dataclass format.
+
+    """
     # Parsing the contract setup into each corresponding variables
     start_date = convert_str_to_date(str_object=data['setup']['start_date'])
     end_date = convert_str_to_date(str_object=data['setup']['end_date'])
@@ -51,7 +81,22 @@ def get_setup_dict(data: dict):
     return start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr
 
 
-def get_summary_dict(data: dict):
+def get_summary_dict(data: dict) -> dict:
+    """
+    Function to get the summary arguments from the dictionary data input.
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input
+
+    Returns
+    -------
+    summary_arguments_dict: dict
+        The summary argument in the core engine acceptable format.
+
+
+
+    """
     # Filling the argument with the input data
     reference_year = data['summary_arguments']['reference_year']
     inflation_rate = data['summary_arguments']['inflation_rate']
@@ -70,7 +115,26 @@ def get_summary_dict(data: dict):
     return summary_arguments_dict
 
 
-def get_summary_object(data: dict, contract: CostRecovery | GrossSplit | Transition):
+def get_summary_object(data: dict, contract: CostRecovery | GrossSplit | Transition) -> (dict, dict):
+    """
+    The function to get the summary dictionary object from the data and contract input.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input
+    contract: CostRecovery | GrossSplit | Transition
+        The contract object.
+
+    Returns
+    -------
+    summary: dict
+        The summary of the contract ini dictionary format.
+
+    summary_arguments_dict: dict
+        The summary arguments used in retrieving the summary of the contract.
+
+    """
     if contract is Transition:
         summary_arguments_dict = get_summary_dict(data=data)
         summary_arguments_dict['contract'] = contract
@@ -85,6 +149,28 @@ def get_summary_object(data: dict, contract: CostRecovery | GrossSplit | Transit
 
 
 def get_costrecovery(data: dict, summary_result: bool = True):
+    """
+    The function to get the Summary, Cost Recovery object, contract arguments, and summary arguments used.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+    summary_result: bool
+        The condition if the summary result will be generated or not.
+
+    Returns
+    -------
+    summary_skk: dict
+        The executive summary of the contract.
+    contract:
+        The Cost Recovery contract object.
+    contract_arguments_dict: dict
+        The contract arguments used in running the contract calculation.
+    summary_arguments_dic: dict
+        The summary arguments used in retrieving the executive summary of the contract.
+
+    """
     start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr = (
         get_setup_dict(data=data))
 
@@ -106,7 +192,8 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         gas_ftp_portion=data['costrecovery']['gas_ftp_portion'],
         tax_split_type=convert_str_to_taxsplit(str_object=data['costrecovery']['tax_split_type']),
         condition_dict=data['costrecovery']['condition_dict'],
-        indicator_rc_icp_sliding=convert_list_to_array_float(data_list=data['costrecovery']['indicator_rc_icp_sliding']),
+        indicator_rc_icp_sliding=convert_list_to_array_float(
+            data_list=data['costrecovery']['indicator_rc_icp_sliding']),
         oil_ctr_pretax_share=data['costrecovery']['oil_ctr_pretax_share'],
         gas_ctr_pretax_share=data['costrecovery']['gas_ctr_pretax_share'],
         oil_ic_rate=data['costrecovery']['oil_ic_rate'],
@@ -125,7 +212,8 @@ def get_costrecovery(data: dict, summary_result: bool = True):
     # Filling the arguments of the contract with the data input
     contract_arguments_dict = {
         "sulfur_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['sulfur_revenue']),
-        "electricity_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['electricity_revenue']),
+        "electricity_revenue": convert_str_to_otherrevenue(
+            str_object=data['contract_arguments']['electricity_revenue']),
         "co2_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['co2_revenue']),
         "is_dmo_end_weighted": data['contract_arguments']['is_dmo_end_weighted'],
         "tax_regime": convert_str_to_taxregime(str_object=data['contract_arguments']['tax_regime']),
@@ -138,7 +226,8 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         "lbt_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['lbt_rate']),
         "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
         "future_rate": data['contract_arguments']['future_rate'],
-        "inflation_rate_applied_to": convert_str_to_inflationappliedto(str_object=data['contract_arguments']['inflation_rate_applied_to']),
+        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
+            str_object=data['contract_arguments']['inflation_rate_applied_to']),
     }
 
     # Running the contract
@@ -162,7 +251,22 @@ def get_costrecovery(data: dict, summary_result: bool = True):
     return summary_skk, contract, contract_arguments_dict, summary_arguments_dict
 
 
-def get_contract_table(data: dict, contract_type: str = 'Cost Recovery'):
+def get_contract_table(data: dict, contract_type: str = 'Cost Recovery') -> dict:
+    """
+    Function to get the cash flow table of the contract that has been run.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+    contract_type: str
+        The option for the contract type. The available option are: ['Cost Recovery', 'Gross Split']
+
+    Returns
+    -------
+    table_all_dict: dict
+        The dictionary containing the oil, gas and consolidated cash flow table.
+    """
     # Adjusting the variable to the corresponding contract type
     if contract_type == 'Cost Recovery':
         contract = get_costrecovery(data=data)[1]
@@ -208,7 +312,23 @@ def get_contract_table(data: dict, contract_type: str = 'Cost Recovery'):
     return table_all_dict
 
 
-def get_contract_optimization(data: dict, contract_type: str = 'Cost Recovery'):
+def get_contract_optimization(data: dict, contract_type: str = 'Cost Recovery') -> dict:
+    """
+    The function to run contract optimization. Resulting optimization result in dictionary format.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+    contract_type: str
+        The option for the contract type. The available option are: ['Cost Recovery', 'Gross Split']
+
+    Returns
+    -------
+    result_parameters: dict
+        The result of the optimization in dictionary format
+
+    """
     # Converting the parameters in dict_optimization to the corresponding enum
     optimization_parameters = [
             convert_str_to_optimization_parameters(str_object=i)
@@ -266,6 +386,28 @@ def get_contract_optimization(data: dict, contract_type: str = 'Cost Recovery'):
 
 
 def get_grosssplit(data: dict, summary_result: bool = True):
+    """
+    The function to get the Summary, Gross Split object, contract arguments, and summary arguments used.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+    summary_result: bool
+        The condition if the summary result will be generated or not.
+
+    Returns
+    -------
+    summary_skk: dict
+        The executive summary of the contract.
+    contract:
+        The Gross Split contract object.
+    contract_arguments_dict: dict
+        The contract arguments used in running the contract calculation.
+    summary_arguments_dic: dict
+        The summary arguments used in retrieving the executive summary of the contract.
+
+    """
     start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr = (
         get_setup_dict(data=data))
 
@@ -304,7 +446,8 @@ def get_grosssplit(data: dict, summary_result: bool = True):
     # Filling the arguments of the contract with the data input
     contract_arguments_dict = {
         "sulfur_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['sulfur_revenue']),
-        "electricity_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['electricity_revenue']),
+        "electricity_revenue": convert_str_to_otherrevenue(
+            str_object=data['contract_arguments']['electricity_revenue']),
         "co2_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['co2_revenue']),
         "is_dmo_end_weighted": data['contract_arguments']['is_dmo_end_weighted'],
         "tax_regime": convert_str_to_taxregime(str_object=data['contract_arguments']['tax_regime']),
@@ -317,7 +460,8 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         "lbt_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['lbt_rate']),
         "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
         "future_rate": data['contract_arguments']['future_rate'],
-        "inflation_rate_applied_to": convert_str_to_inflationappliedto(str_object=data['contract_arguments']['inflation_rate_applied_to']),
+        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
+            str_object=data['contract_arguments']['inflation_rate_applied_to']),
     }
 
     # Running the contract
@@ -341,6 +485,26 @@ def get_grosssplit(data: dict, summary_result: bool = True):
 
 
 def get_transition(data: dict):
+    """
+    The function to get the Summary, Transition object, contract arguments, and summary arguments used.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+
+    Returns
+    -------
+    summary_skk: dict
+        The executive summary of the contract.
+    contract:
+        The Transition contract object.
+    contract_arguments_dict: dict
+        The contract arguments used in running the contract calculation.
+    summary_arguments_dic: dict
+        The summary arguments used in retrieving the executive summary of the contract.
+
+    """
     # Defining contract_1
     if data['contract_1']['costrecovery'] is not None and data['contract_1']['grosssplit'] is None:
         _, contract_1, contract_arguments_1, _ = get_costrecovery(data=data['contract_1'], summary_result=False)
