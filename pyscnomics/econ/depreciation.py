@@ -367,8 +367,8 @@ def unit_of_production_rate(
     cost: float,
     cum_prod: float,
     yearly_prod: np.ndarray,
-    production_period: int,
-    salvage_value: float = 0.,
+    production_period: int = None,
+    salvage_value: float = 0.0,
     amortization_len: int = 0,
 ) -> np.ndarray:
     """
@@ -378,8 +378,8 @@ def unit_of_production_rate(
     -----------
     cost: float
         Total cost of the project.
-    reserve: float
-        Total reserve of the project.
+    cum_prod: float
+        Cumulative production of the project.
     yearly_production: np.ndarray
         Array containing yearly production data.
     production_period: int
@@ -409,13 +409,18 @@ def unit_of_production_rate(
             f"Parameter yearly_production must be given as a numpy.ndarray datatype."
         )
 
-    # Raise exception if the number of production data listed in 'yearly_prod'
-    # does not match the prescribed production_period
-    if len(yearly_prod) != production_period:
-        raise UnitOfProductionException(
-            f"The number of production data in 'yearly_production' "
-            f"does not match the (prescribed) production period."
-        )
+    # Specify default value for production_period
+    if production_period is None:
+        production_period = len(yearly_prod)
+
+    else:
+        # Raise exception if the number of production data listed in 'yearly_prod'
+        # does not match the prescribed production_period
+        if len(yearly_prod) != production_period:
+            raise UnitOfProductionException(
+                f"The number of production data in 'yearly_production' "
+                f"does not match the (prescribed) production period."
+            )
 
     # Raise an exception if the sum of production data in 'yearly_prod'
     # exceeds the (prescribed) value of reserve
@@ -443,10 +448,10 @@ def unit_of_production_rate(
 
 def unit_of_production_book_value(
     cost: float,
-    reserve: float,
-    yearly_production: np.ndarray,
-    production_period: int,
-    salvage_value: float = 0.,
+    cum_prod: float,
+    yearly_prod: np.ndarray,
+    production_period: int = None,
+    salvage_value: float = 0.0,
     amortization_len: int = 0,
 ) -> np.ndarray:
     """
@@ -456,9 +461,9 @@ def unit_of_production_book_value(
     ----------
     cost: float
         Cost of the resource or asset.
-    reserve: float
-        Total reserve of the project.
-    yearly_production : numpy.ndarray
+    cum_prod: float
+        Cumulative production of the project.
+    yearly_prod : numpy.ndarray
         Array containing yearly production quantities.
     production_period: int
         Total production period of the project.
@@ -481,12 +486,13 @@ def unit_of_production_book_value(
     """
     amortization_charge = unit_of_production_rate(
         cost=cost,
-        cum_prod=reserve,
-        yearly_prod=yearly_production,
+        cum_prod=cum_prod,
+        yearly_prod=yearly_prod,
         production_period=production_period,
         salvage_value=salvage_value,
         amortization_len=amortization_len,
     )
+
     book_value = cost - np.cumsum(amortization_charge)
 
     return book_value

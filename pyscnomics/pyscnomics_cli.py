@@ -428,6 +428,7 @@ if __name__ == "__main__":
     from pyscnomics.econ.costs import GeneralCost
     from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
     from pyscnomics.econ.selection import FluidType, DeprMethod, TaxType
+    from pyscnomics.econ.depreciation import unit_of_production_rate, unit_of_production_book_value
 
     t1 = Intangible(
         start_year=2023,
@@ -437,10 +438,19 @@ if __name__ == "__main__":
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
-    t1.total_amortization_rate(
-        cum_prod=50,
+    amor_bv = t1.total_amortization_book_value(
+        cum_prod=50.,
         yearly_prod=np.array([10, 20, 10, 5, 5]),
     )
+
+    # amor = t1.total_amortization_rate(
+    #     cum_prod=50,
+    #     yearly_prod=np.array([10, 20, 10, 5, 5]),
+    # )
+
+    print('\t')
+    print(f'Filetype: {type(amor_bv)}, length: {len(amor_bv)}')
+    print('amor_bv = \n', amor_bv)
 
     # t1 = Tangible(
     #     start_year=2023,
@@ -491,11 +501,7 @@ if __name__ == "__main__":
     #     production_period=np.array([5, 5, 5]),
     #     salvage_value=np.array([0, 0, 0]),
     # )
-    #
-    # print('\t')
-    # print(f'Filetype: {type(amor)}, length: {len(amor)}')
-    # print('amor = \n', amor)
-    #
+
     # print('\t')
     # print(f'Filetype: {type(bv)}, length: {len(bv)}')
     # print('bv = \n', bv)
