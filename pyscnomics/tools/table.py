@@ -10,12 +10,10 @@ from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 
 
-def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) -> tuple[
-                                                                                     pd.DataFrame,
-                                                                                     pd.DataFrame,
-                                                                                     pd.DataFrame] | \
-                                                                                 tuple[list[pd.DataFrame],list[
-                                                                                     pd.DataFrame], list[pd.DataFrame]]:
+def get_table(
+    contract: BaseProject | CostRecovery | GrossSplit | Transition
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame] | \
+     tuple[list[pd.DataFrame], list[pd.DataFrame], list[pd.DataFrame]]:
     """
     A function to get the dataframe of the executed PSC object.
 
@@ -30,8 +28,6 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         Dataframe of Oil Cashflow
         Dataframe of Gas Cashflow
         Dataframe of Consolidated Cashflow
-
-
     """
     if isinstance(contract, CostRecovery):
         psc_table_oil = pd.DataFrame()

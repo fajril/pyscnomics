@@ -6,6 +6,7 @@ import click
 import numpy as np
 import pandas as pd
 import xlwings as xw
+from dataclasses import asdict
 
 from pyscnomics.io.parse import InitiateContract
 from pyscnomics.io.aggregator import Aggregate
@@ -91,12 +92,14 @@ def main(workbook_path, mode):
             data
         ) = InitiateContract(workbook_path=workbook_path).activate()
 
-        run_standard(
+        result = run_standard(
             contract=psc,
             contract_arguments=psc_arguments,
             workbook_object=workbook_object,
             summary_argument=summary_arguments,
         )
+
+        return result
 
     # Run optimization study
     elif mode == "Optimization":
@@ -286,10 +289,10 @@ def main(workbook_path, mode):
 
 
 def run_standard(
-        contract: CostRecovery | GrossSplit | Transition,
-        contract_arguments: dict,
-        workbook_object: xw.Book,
-        summary_argument: dict
+    contract: CostRecovery | GrossSplit | Transition,
+    contract_arguments: dict,
+    workbook_object: xw.Book,
+    summary_argument: dict
 ):
     """
     The function to run simulation in Standard mode.
@@ -338,6 +341,8 @@ def run_standard(
         sheet_name='Summary',
         range_cell='E5',
     )
+
+    return asdict(contract)
 
 
 def run_optimization(
