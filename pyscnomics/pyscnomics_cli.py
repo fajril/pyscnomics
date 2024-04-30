@@ -438,19 +438,11 @@ if __name__ == "__main__":
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
-    amor_bv = t1.total_amortization_book_value(
-        cum_prod=50.,
-        yearly_prod=np.array([10, 20, 10, 5, 5]),
-    )
-
-    # amor = t1.total_amortization_rate(
-    #     cum_prod=50,
-    #     yearly_prod=np.array([10, 20, 10, 5, 5]),
-    # )
+    t1_expenses = t1.expenditures()
 
     print('\t')
-    print(f'Filetype: {type(amor_bv)}, length: {len(amor_bv)}')
-    print('amor_bv = \n', amor_bv)
+    print(f'Filetype: {type(t1_expenses)}, length: {len(t1_expenses)}')
+    print('t1_expenses = \n', t1_expenses)
 
     # t1 = Tangible(
     #     start_year=2023,
