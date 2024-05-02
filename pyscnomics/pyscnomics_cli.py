@@ -342,7 +342,7 @@ def run_standard(
         range_cell='E5',
     )
 
-    return asdict(contract)
+    return contract
 
 
 def run_optimization(
