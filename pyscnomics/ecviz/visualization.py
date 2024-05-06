@@ -55,10 +55,10 @@ def _get_bar_plot(
     xdata: np.ndarray,
     ydata: np.ndarray,
     title: str,
-    xlabel: str,
     ylabel: str,
     legend_label: str,
     bar_color: str,
+    xlabel: str = "Project Years (Year)",
 ):
     """
     Generate a bar plot.
@@ -152,7 +152,6 @@ def plot_oil_lifting(
         xdata=results.project_years,
         ydata=results._oil_lifting.get_lifting_rate_arr(),
         title="Profile of Oil and Condensate Lifting",
-        xlabel="Project Years (Year)",
         ylabel="Oil + Condensate Lifting (MMSTB)",
         legend_label="Oil and Condensate Lifting",
         bar_color="tab:green",
@@ -179,7 +178,6 @@ def plot_gas_lifting(
         xdata=results.project_years,
         ydata=results._gas_lifting.get_lifting_rate_arr(),
         title="Gas and LPG Lifting Profile",
-        xlabel="Project Years (Year)",
         ylabel="Gas and LPG Lifting (MMSCF)",
         legend_label="Gas Lifting",
         bar_color="tab:red",
@@ -189,37 +187,235 @@ def plot_gas_lifting(
 def plot_sulfur_lifting(
     results: BaseProject | CostRecovery | GrossSplit | Transition
 ) -> tuple[plt.Figure, plt.Axes]:
+    """
+    Plot sulfur lifting profile.
+
+    Parameters
+    ----------
+    results: Union[BaseProject, CostRecovery, GrossSplit, Transition]
+        An instance of BaseProject, CostRecovery, GrossSplit, or Transition containing project results.
+
+    Returns
+    -------
+    Tuple[plt.Figure, plt.Axes]
+        A tuple containing matplotlib Figure and Axes objects representing the generated plot.
+    """
     return _get_bar_plot(
         xdata=results.project_years,
         ydata=results._sulfur_lifting.get_lifting_rate_arr(),
         title="Sulfur Lifting Profile",
-        xlabel="Project Years (Year)",
         ylabel="Sulfur Lifting (Ton)",
         legend_label="Sulfur Lifting",
-        bar_color="purple",
+        bar_color="magenta",
     )
 
+
+def plot_electricity_lifting(
+    results: BaseProject | CostRecovery | GrossSplit | Transition
+) -> tuple[plt.Figure, plt.Axes]:
+    """
+    Plot electricity lifting profile.
+
+    Parameters
+    ----------
+    results: Union[BaseProject, CostRecovery, GrossSplit, Transition]
+        An instance of BaseProject, CostRecovery, GrossSplit, or Transition containing project results.
+
+    Returns
+    -------
+    Tuple[plt.Figure, plt.Axes]
+        A tuple containing matplotlib Figure and Axes objects representing the generated plot.
+    """
+    return _get_bar_plot(
+        xdata=results.project_years,
+        ydata=results._electricity_lifting.get_lifting_rate_arr(),
+        title="Electricity Lifting Profile",
+        ylabel="Electricity Lifting",
+        legend_label="Electricity Lifting",
+        bar_color="magenta",
+    )
+
+
+def plot_co2_lifting(
+    results: BaseProject | CostRecovery | GrossSplit | Transition
+) -> tuple[plt.Figure, plt.Axes]:
+    """
+    Plot CO2 lifting profile.
+
+    Parameters
+    ----------
+    results: Union[BaseProject, CostRecovery, GrossSplit, Transition]
+        An instance of BaseProject, CostRecovery, GrossSplit, or Transition containing project results.
+
+    Returns
+    -------
+    Tuple[plt.Figure, plt.Axes]
+        A tuple containing matplotlib Figure and Axes objects representing the generated plot.
+    """
+    return _get_bar_plot(
+        xdata=results.project_years,
+        ydata=results._co2_lifting.get_lifting_rate_arr(),
+        title="CO2 Lifting Profile",
+        ylabel="CO2 Lifting",
+        legend_label="CO2 Lifting",
+        bar_color="magenta",
+    )
+
+
+def plot_oil_revenue(
+    results: BaseProject | CostRecovery | GrossSplit | Transition
+) -> tuple[plt.Figure, plt.Axes]:
+    """
+    Plot oil and condensate revenue over project years.
+
+    Parameters
+    ----------
+    results: Union[BaseProject, CostRecovery, GrossSplit, Transition]
+        An instance of BaseProject, CostRecovery, GrossSplit, or Transition containing project results.
+
+    Returns
+    -------
+    Tuple[plt.Figure, plt.Axes]
+        A tuple containing matplotlib Figure and Axes objects representing the generated plot.
+    """
+    return _get_bar_plot(
+        xdata=results.project_years,
+        ydata=results._oil_revenue,
+        title="Oil and Condensate Revenue Profile",
+        ylabel="Oil + Condensate Revenue (MMUSD)",
+        legend_label="Oil and Condensate Revenue",
+        bar_color="tab:green",
+    )
+
+
+def plot_gas_revenue(
+    results: BaseProject | CostRecovery | GrossSplit | Transition
+) -> tuple[plt.Figure, plt.Axes]:
+    """
+    Plot gas and LPG revenue over project years.
+
+    Parameters
+    ----------
+    results: Union[BaseProject, CostRecovery, GrossSplit, Transition]
+        An instance of BaseProject, CostRecovery, GrossSplit, or Transition containing project results.
+
+    Returns
+    -------
+    Tuple[plt.Figure, plt.Axes]
+        A tuple containing matplotlib Figure and Axes objects representing the generated plot.
+    """
+    return _get_bar_plot(
+        xdata=results.project_years,
+        ydata=results._gas_revenue,
+        title="Gas and LPG Revenue Profile",
+        ylabel="Gas + LPG Revenue",
+        legend_label="Gas and LPG Revenue",
+        bar_color="tab:red",
+    )
+
+
+def plot_sulfur_revenue(
+    results: BaseProject | CostRecovery | GrossSplit | Transition
+) -> tuple[plt.Figure, plt.Axes]:
+    """
+    Plot sulfur revenue over project years.
+
+    Parameters
+    ----------
+    results: Union[BaseProject, CostRecovery, GrossSplit, Transition]
+        An instance of BaseProject, CostRecovery, GrossSplit, or Transition containing project results.
+
+    Returns
+    -------
+    Tuple[plt.Figure, plt.Axes]
+        A tuple containing matplotlib Figure and Axes objects representing the generated plot.
+    """
+    return _get_bar_plot(
+        xdata=results.project_years,
+        ydata=results._sulfur_revenue,
+        title="Sulfur Revenue Profile",
+        ylabel="Sulfur Revenue",
+        legend_label="Sulfur Revenue",
+        bar_color="magenta",
+    )
+
+
+def plot_electricity_revenue(
+    results: BaseProject | CostRecovery | GrossSplit | Transition
+) -> tuple[plt.Figure, plt.Axes]:
+    """
+    Plot electricity revenue over project years.
+
+    Parameters
+    ----------
+    results: Union[BaseProject, CostRecovery, GrossSplit, Transition]
+        An instance of BaseProject, CostRecovery, GrossSplit, or Transition containing project results.
+
+    Returns
+    -------
+    Tuple[plt.Figure, plt.Axes]
+        A tuple containing matplotlib Figure and Axes objects representing the generated plot.
+    """
+    return _get_bar_plot(
+        xdata=results.project_years,
+        ydata=results._electricity_revenue,
+        title="Electricity Revenue Profile",
+        ylabel="Electricity Revenue",
+        legend_label="Electricity Revenue",
+        bar_color="magenta",
+    )
+
+
+def plot_co2_revenue(
+    results: BaseProject | CostRecovery | GrossSplit | Transition
+) -> tuple[plt.Figure, plt.Axes]:
+    """
+    Plot CO2 revenue over project years.
+
+    Parameters
+    ----------
+    results: Union[BaseProject, CostRecovery, GrossSplit, Transition]
+        An instance of BaseProject, CostRecovery, GrossSplit, or Transition containing project results.
+
+    Returns
+    -------
+    Tuple[plt.Figure, plt.Axes]
+        A tuple containing matplotlib Figure and Axes objects representing the generated plot.
+    """
+    return _get_bar_plot(
+        xdata=results.project_years,
+        ydata=results._co2_revenue,
+        title="CO2 Revenue Profile",
+        ylabel="CO2 Revenue",
+        legend_label="CO2 Revenue",
+        bar_color="magenta",
+    )
 
 
 # Run the calculation to obtain results
 results = _get_results(
-    workbook_path=r"E:\1009_My Journal_PSC Migas\26_20230707_PSCEconomic\pyscnomics\Workbook_Filled CR.xlsb"
+    workbook_path=(
+        r"E:\1009_My Journal_PSC Migas\26_20230707_PSCEconomic\pyscnomics\Workbook_Filled CR.xlsb"
+    )
 )
 
 print('\t')
 print(f'Filetype: {type(results)}')
 
-print('\t')
-print(f'Filetype: {type(results._sulfur_lifting)}')
-print('oil lifting = \n', results._sulfur_lifting)
+# t1 = results._oil_revenue
+#
+# print('\t')
+# print(f'Filetype: {type(t1)}')
+# print('oil revenue = \n', t1)
+
+t2 = results._co2_revenue
 
 print('\t')
-print(f'Filetype: {type(results._sulfur_lifting.get_lifting_rate_arr())}')
-print(f'Shape: {results._sulfur_lifting.get_lifting_rate_arr().shape}')
-print('oil lifting = \n', results._sulfur_lifting.get_lifting_rate_arr())
+print(f'Filetype: {type(t2)}, Shape: {t2.shape}')
+print('oil revenue = \n', t2)
 
 # Plot data
-plot_sulfur_lifting(results=results)
+plot_co2_revenue(results=results)
 # plot_oil_lifting(results=results)
 # plot_gas_lifting(results=results)
 
