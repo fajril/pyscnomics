@@ -1,5 +1,5 @@
 """
-Prepares lifting data and calculate the revenue.
+Prepares lifting data and calculate the associated revenue.
 """
 
 import numpy as np
@@ -30,6 +30,8 @@ class Lifting:
         The lifting data of a particular fluid type.
     price: np.ndarray
         The associated price of a particular fluid type.
+    prod_year: np.ndarray
+        The production year of a particular fluid type.
     fluid_type: FluidType
         The fluid type.
     ghv: np.ndarray
@@ -141,7 +143,6 @@ class Lifting:
         The function np.bincount() is used to align the revenue elements with its
         correponding year.
         """
-
         rev = self.lifting_rate * self.price * self.ghv
         rev_update = np.bincount(self.prod_year - self.start_year, weights=rev)
 

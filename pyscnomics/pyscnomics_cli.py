@@ -423,82 +423,22 @@ if __name__ == "__main__":
 
     # entry_point()
 
-    from pyscnomics.econ.depreciation import (
-        declining_balance_depreciation_rate,
-        declining_balance_book_value,
-        unit_of_production_rate,
-        unit_of_production_book_value,
-    )
+    from pyscnomics.econ.revenue import Lifting
+    from pyscnomics.econ.selection import FluidType
 
-    from pyscnomics.econ.costs import GeneralCost
-    from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
-    from pyscnomics.econ.selection import FluidType, DeprMethod, TaxType
-    from pyscnomics.econ.depreciation import unit_of_production_rate, unit_of_production_book_value
-
-    t1 = Intangible(
+    jeruk = Lifting(
         start_year=2023,
         end_year=2030,
-        cost=np.array([100, 100, 100]),
-        expense_year=np.array([2023, 2024, 2029]),
-        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+        prod_year=np.array([2025, 2026, 2029]),
+        lifting_rate=np.array([100, 100, 50]),
+        price=np.array([10, 10, 10]),
+        fluid_type=FluidType.OIL,
     )
 
-    t1_expenses = t1.expenditures()
+    t1 = jeruk.get_lifting_ghv_arr()
 
     print('\t')
-    print(f'Filetype: {type(t1_expenses)}, length: {len(t1_expenses)}')
-    print('t1_expenses = \n', t1_expenses)
+    print(f'Filetype: {type(t1)}, Length: {len(t1)}')
+    print('t1 = \n', t1)
 
-    # t1 = Tangible(
-    #     start_year=2023,
-    #     end_year=2030,
-    #     cost=np.array([100, 100, 100]),
-    #     useful_life=np.array([5, 5, 5]),
-    #     expense_year=np.array([2023, 2024, 2029]),
-    #     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
-    #     depreciation_factor=np.array([0.5, 0.5, 0.5]),
-    # )
 
-    # t2 = Intangible(
-    #     start_year=2023,
-    #     end_year=2030,
-    #     cost=np.array([100, 100, 100]),
-    #     expense_year=np.array([2023, 2024, 2029]),
-    #     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
-    # )
-
-    # t3 = ASR(
-    #     start_year=2023,
-    #     end_year=2030,
-    #     cost=np.array([100, 100, 100]),
-    #     expense_year=np.array([2023, 2024, 2029]),
-    #     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
-    # )
-
-    # t4 = OPEX(
-    #     start_year=2023,
-    #     end_year=2030,
-    #     fixed_cost=np.array([100, 100, 100]),
-    #     prod_rate=np.array([1000, 1000, 1000]),
-    #     cost_per_volume=np.array([0.1, 0.1, 0.1]),
-    #     expense_year=np.array([2023, 2024, 2029]),
-    #     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
-    # )
-
-    # amor = t1.total_amortization_rate(
-    #     reserve=np.array([50, 50, 50]),
-    #     yearly_production=np.array([10, 20, 10, 5, 5]),
-    #     production_period=np.array([5, 5, 5]),
-    #     salvage_value=np.array([0, 0, 0]),
-    # )
-    #
-    # bv = t1.total_amortization_book_value(
-    #     reserve=np.array([50, 50, 50]),
-    #     yearly_production=np.array([10, 20, 10, 5, 5]),
-    #     production_period=np.array([5, 5, 5]),
-    #     salvage_value=np.array([0, 0, 0]),
-    # )
-
-    # print('\t')
-    # print(f'Filetype: {type(bv)}, length: {len(bv)}')
-    # print('bv = \n', bv)
