@@ -423,22 +423,34 @@ if __name__ == "__main__":
 
     # entry_point()
 
-    from pyscnomics.econ.revenue import Lifting
+    from pyscnomics.econ.depreciation import (
+        unit_of_production_rate,
+        unit_of_production_book_value,
+    )
+    from pyscnomics.econ.costs import Tangible
     from pyscnomics.econ.selection import FluidType
 
-    jeruk = Lifting(
-        start_year=2023,
-        end_year=2030,
-        prod_year=np.array([2025, 2026, 2029]),
-        lifting_rate=np.array([100, 100, 50]),
-        price=np.array([10, 10, 10]),
-        fluid_type=FluidType.OIL,
+    t1 = unit_of_production_rate(
+        cost=1000,
+        yearly_prod=np.array([100, 30, 20, 10, 100]),
+        salvage_value=0,
+        amortization_len=8,
     )
 
-    t1 = jeruk.get_lifting_ghv_arr()
+    # jeruk = Tangible(
+    #     start_year=2023,
+    #     end_year=2030,
+    #     cost=np.array([100, 100, 100]),
+    #     expense_year=np.array([2023, 2024, 2029]),
+    #     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+    #     useful_life=np.array([5, 5, 5]),
+    #     depreciation_factor=np.array([0.5, 0.5, 0.5]),
+    # )
+    #
+    # t1 = jeruk.total_depreciation_rate()
 
-    print('\t')
-    print(f'Filetype: {type(t1)}, Length: {len(t1)}')
-    print('t1 = \n', t1)
+    # print('\t')
+    # print(f'Filetype: {type(jeruk)}')
+    # print('jeruk = \n', jeruk)
 
 

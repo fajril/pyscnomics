@@ -18,7 +18,10 @@ class UnitOfProductionException(Exception):
 
 
 def straight_line_depreciation_rate(
-    cost: float, salvage_value: float, useful_life: int, depreciation_len: int = 0
+    cost: float,
+    salvage_value: float,
+    useful_life: int,
+    depreciation_len: int = 0
 ) -> np.ndarray:
     """
     Calculate the straight-line depreciation charge for each period.
@@ -65,7 +68,10 @@ def straight_line_depreciation_rate(
 
 
 def straight_line_book_value(
-    cost: float, salvage_value: float, useful_life: int, depreciation_len: int = 0
+    cost: float,
+    salvage_value: float,
+    useful_life: int,
+    depreciation_len: int = 0
 ) -> np.ndarray:
     """
     Calculate the book value of an asset over time using the straight-line depreciation method.
@@ -365,9 +371,7 @@ def psc_declining_balance_book_value(
 
 def unit_of_production_rate(
     cost: float,
-    cum_prod: float,
     yearly_prod: np.ndarray,
-    production_period: int = None,
     salvage_value: float = 0.0,
     amortization_len: int = 0,
 ) -> np.ndarray:
@@ -378,12 +382,8 @@ def unit_of_production_rate(
     -----------
     cost: float
         Total cost of the project.
-    cum_prod: float
-        Cumulative production of the project.
-    yearly_production: np.ndarray
+    yearly_prod: np.ndarray
         Array containing yearly production data.
-    production_period: int
-        Total production period of the project.
     salvage_value: float, optional
         Salvage value of the project (default is 0.).
     amortization_len: int, optional
@@ -403,39 +403,55 @@ def unit_of_production_rate(
         or if the sum of production data in 'yearly_production'
         exceeds the prescribed reserve.
     """
-    # Raise exception if 'yearly_prod' is not given as a numpy.array datatype
+    # Raise an exception if 'yearly_prod' is not given as a numpy.array datatype
     if not isinstance(yearly_prod, np.ndarray):
         raise UnitOfProductionException(
             f"Parameter yearly_production must be given as a numpy.ndarray datatype."
         )
 
-    # Specify default value for production_period
-    if production_period is None:
-        production_period = len(yearly_prod)
-
-    else:
-        # Raise exception if the number of production data listed in 'yearly_prod'
-        # does not match the prescribed production_period
-        if len(yearly_prod) != production_period:
-            raise UnitOfProductionException(
-                f"The number of production data in 'yearly_production' "
-                f"does not match the (prescribed) production period."
-            )
-
-    # Raise an exception if the sum of production data in 'yearly_prod'
-    # exceeds the (prescribed) value of reserve
-    if (yearly_prod.sum() - cum_prod) > 1E-5:
+    # Raise an exception if salvage_value is larger than the associated cost
+    if salvage_value > cost:
         raise UnitOfProductionException(
-            f"Production data in 'yearly_production' exceeds the (prescribed) reserve."
+            f"Salvage value ({salvage_value}) is larger than the associated cost ({cost})."
         )
+
+    # Specify cumulative production and production_period
+    cum_prod = np.sum(yearly_prod, dtype=np.float_)
+    production_period = len(yearly_prod)
+
+    # Raise an exception for zero or negative value of cum_prod
+    if cum_prod == 0.0 or cum_prod < 0:
+        raise UnitOfProductionException(
+            f"Inappropriate value of production data. "
+            f"The sum of yearly_prod ({yearly_prod}) is {cum_prod}."
+        )
+
+    print('\t')
+    print(f'Filetype: {type(cum_prod)}')
+    print('cum_prod = ', cum_prod)
+
+    print('\t')
+    print(f'Filetype: {type(production_period)}')
+    print('production_period = ', production_period)
 
     # Calculate amortization charge
     amortization_charge = (yearly_prod / cum_prod) * (cost - salvage_value)
 
-    # When the sum of amortization charge is less than (cost - salvage_value)
-    if amortization_charge.sum() < (cost - salvage_value):
-        remaining_amortization = cost - salvage_value - amortization_charge.sum()
-        amortization_charge[-1] = amortization_charge[-1] + remaining_amortization
+    print('\t')
+    print(f'Length: {len(amortization_charge)}')
+    print('amortization_charge = \n', amortization_charge)
+    print('sum amortization charge = ', amortization_charge.sum())
+
+    # remaining_amortization = cost - salvage_value - np.cumsum(amortization_charge)
+    #
+    # print('\t')
+    # print(f'Filetype: {type(remaining_amortization)}, Length: {len(remaining_amortization)}')
+    # print('remaining_amortization = ', remaining_amortization)
+
+    # # When the sum of amortization charge is less than (cost - salvage_value)
+    # if amortization_charge.sum() < (cost - salvage_value):
+    #     remaining_amortization = cost - salvage_value - amortization_charge.sum()
+    #     amortization_charge[-1] = amortization_charge[-1] + remaining_amortization
 
     # Extend the amortization charge array beyond useful life if project duration
     # is longer than production_period
@@ -443,7 +459,12 @@ def unit_of_production_rate(
         extension = np.zeros(int(amortization_len - production_period))
         amortization_charge = np.concatenate((amortization_charge, extension))
 
-    return amortization_charge
+    print('\t')
+    print(f'Length: {len(amortization_charge)}')
+    print('amortization_charge = \n', amortization_charge)
+    print('sum amortization charge = ', amortization_charge.sum())
+
+    # return amortization_charge
 
 
 def unit_of_production_book_value(

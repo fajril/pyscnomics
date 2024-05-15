@@ -433,79 +433,83 @@ class Tangible(GeneralCost):
             inflation_rate=inflation_rate,
         )
 
-        # Configure depreciation charge
-        depreciation_charge_pool = {
-            # Straight line
-            DeprMethod.SL: np.asarray(
-                [
-                    depr.straight_line_depreciation_rate(
-                        cost=c,
-                        salvage_value=sv,
-                        useful_life=ul,
-                        depreciation_len=self.project_duration,
-                    )
-                    for c, sv, ul in zip(
-                        cost_adjusted,
-                        self.salvage_value,
-                        self.useful_life,
-                    )
-                ]
-            ),
-            # Declining Balance / Double Declining Balance
-            DeprMethod.DB: np.asarray(
-                [
-                    depr.declining_balance_depreciation_rate(
-                        cost=c,
-                        salvage_value=sv,
-                        useful_life=ul,
-                        decline_factor=decline_factor,
-                        depreciation_len=self.project_duration,
-                    )
-                    for c, sv, ul in zip(
-                        cost_adjusted,
-                        self.salvage_value,
-                        self.useful_life,
-                    )
-                ]
-            ),
-            # PSC DB
-            DeprMethod.PSC_DB: np.asarray(
-                [
-                    depr.psc_declining_balance_depreciation_rate(
-                        cost=c,
-                        depreciation_factor=dr,
-                        useful_life=ul,
-                        depreciation_len=self.project_duration,
-                    )
-                    for c, dr, ul in zip(
-                        cost_adjusted,
-                        self.depreciation_factor,
-                        self.useful_life,
-                    )
-                ]
-            )
-        }
+        print('\t')
+        print(f'Filetype: {type(cost_adjusted)}, Length: {len(cost_adjusted)}')
+        print('cost_adjusted = ', cost_adjusted)
 
-        for key in depreciation_charge_pool.keys():
-            if depr_method == key:
-                depreciation_charge = depreciation_charge_pool[key]
-
-        # The relative difference of pis_year and start_year
-        shift_indices = self.pis_year - self.start_year
-
-        # Modify depreciation_charge so that expenditures are aligned with
-        # the corresponding pis_year (or expense_year)
-        depreciation_charge = np.asarray(
-            [
-                np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
-                for row, i in zip(depreciation_charge, shift_indices)
-            ]
-        )
-
-        total_depreciation_charge = depreciation_charge.sum(axis=0)
-        undepreciated_asset = np.sum(cost_adjusted) - np.sum(total_depreciation_charge)
-
-        return total_depreciation_charge, undepreciated_asset
+        # # Configure depreciation charge
+        # depreciation_charge_pool = {
+        #     # Straight line
+        #     DeprMethod.SL: np.asarray(
+        #         [
+        #             depr.straight_line_depreciation_rate(
+        #                 cost=c,
+        #                 salvage_value=sv,
+        #                 useful_life=ul,
+        #                 depreciation_len=self.project_duration,
+        #             )
+        #             for c, sv, ul in zip(
+        #                 cost_adjusted,
+        #                 self.salvage_value,
+        #                 self.useful_life,
+        #             )
+        #         ]
+        #     ),
+        #     # Declining Balance / Double Declining Balance
+        #     DeprMethod.DB: np.asarray(
+        #         [
+        #             depr.declining_balance_depreciation_rate(
+        #                 cost=c,
+        #                 salvage_value=sv,
+        #                 useful_life=ul,
+        #                 decline_factor=decline_factor,
+        #                 depreciation_len=self.project_duration,
+        #             )
+        #             for c, sv, ul in zip(
+        #                 cost_adjusted,
+        #                 self.salvage_value,
+        #                 self.useful_life,
+        #             )
+        #         ]
+        #     ),
+        #     # PSC DB
+        #     DeprMethod.PSC_DB: np.asarray(
+        #         [
+        #             depr.psc_declining_balance_depreciation_rate(
+        #                 cost=c,
+        #                 depreciation_factor=dr,
+        #                 useful_life=ul,
+        #                 depreciation_len=self.project_duration,
+        #             )
+        #             for c, dr, ul in zip(
+        #                 cost_adjusted,
+        #                 self.depreciation_factor,
+        #                 self.useful_life,
+        #             )
+        #         ]
+        #     )
+        # }
+        #
+        # for key in depreciation_charge_pool.keys():
+        #     if depr_method == key:
+        #         depreciation_charge = depreciation_charge_pool[key]
+        #
+        # # The relative difference of pis_year and start_year
+        # shift_indices = self.pis_year - self.start_year
+        #
+        # # Modify depreciation_charge so that expenditures are aligned with
+        # # the corresponding pis_year (or expense_year)
+        # depreciation_charge = np.asarray(
+        #     [
+        #         np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
+        #         for row, i in zip(depreciation_charge, shift_indices)
+        #     ]
+        # )
+        #
+        # total_depreciation_charge = depreciation_charge.sum(axis=0)
+        # undepreciated_asset = np.sum(cost_adjusted) - np.sum(total_depreciation_charge)
+        #
+        # return total_depreciation_charge, undepreciated_asset
 
     def total_depreciation_book_value(
         self,
