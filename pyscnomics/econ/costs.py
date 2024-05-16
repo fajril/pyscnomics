@@ -1057,7 +1057,7 @@ class Intangible(GeneralCost):
                 depr.unit_of_production_rate(
                     cost=c,
                     cum_prod=cum_prod,
-                    yearly_prod=yearly_prod,
+                    prod=yearly_prod,
                     production_period=production_period,
                     salvage_value=sv,
                     amortization_len=self.project_duration,

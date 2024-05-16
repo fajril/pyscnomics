@@ -370,43 +370,31 @@ def psc_declining_balance_book_value(
 
 
 def unit_of_production_rate(
+    start_year_project: int,
     cost: float,
-    yearly_prod: np.ndarray,
+    prod: np.ndarray,
+    prod_year: np.ndarray,
     salvage_value: float = 0.0,
     amortization_len: int = 0,
 ) -> np.ndarray:
-    """
-    Calculate amortization charge based on the unit of production method.
-
-    Parameters:
-    -----------
-    cost: float
-        Total cost of the project.
-    yearly_prod: np.ndarray
-        Array containing yearly production data.
-    salvage_value: float, optional
-        Salvage value of the project (default is 0.).
-    amortization_len: int, optional
-        Length of amortization period (default is 0).
-
-    Returns:
-    --------
-    np.ndarray
-        Array containing yearly amortization charge.
-
-    Raises:
-    -------
-    UnitOfProductionException
-        If 'yearly_production' is not given as a numpy.ndarray datatype,
-        or if the number of production data listed in 'yearly_production'
-        does not match the prescribed production period,
-        or if the sum of production data in 'yearly_production'
-        exceeds the prescribed reserve.
-    """
-    # Raise an exception if 'yearly_prod' is not given as a numpy.array datatype
-    if not isinstance(yearly_prod, np.ndarray):
+    # Raise an exception if 'prod' is not given as a numpy.ndarray datatype
+    if not isinstance(prod, np.ndarray):
         raise UnitOfProductionException(
-            f"Parameter yearly_production must be given as a numpy.ndarray datatype."
+            f"Parameter prod must be given as a numpy.ndarray datatype."
+        )
+
+    # Raise an exception if 'prod_year' is not given as a numpy.ndarray datatype
+    if not isinstance(prod_year, np.ndarray):
+        raise UnitOfProductionException(
+            f"Parameter prod_year must be given as a numpy.ndarray datatype."
+        )
+
+    # Raise an exception for unequal length of arrays: prod and prod_year
+    if len(prod) != len(prod_year):
+        raise UnitOfProductionException(
+            f"Unequal number of arrays: "
+            f"prod: {len(prod)}, "
+            f"prod_year: {len(prod_year)}."
         )
 
     # Raise an exception if salvage_value is larger than the associated cost
@@ -415,56 +403,52 @@ def unit_of_production_rate(
             f"Salvage value ({salvage_value}) is larger than the associated cost ({cost})."
         )
 
-    # Specify cumulative production and production_period
-    cum_prod = np.sum(yearly_prod, dtype=np.float_)
-    production_period = len(yearly_prod)
+    # Raise an exception if prod_year is before the start year of the project
+    if min(prod_year) < start_year_project:
+        raise UnitOfProductionException(
+            f"Production year ({min(prod_year)}) is before the start year "
+            f"of the project ({start_year_project})."
+        )
+
+    # Raise an exception if prod_year is after the end year of the project
+    if max(prod_year) > int(start_year_project + amortization_len - 1):
+        raise UnitOfProductionException(
+            f"Production year ({max(prod_year)}) is after the end year "
+            f"of the project ({int(start_year_project + amortization_len - 1)})"
+        )
+
+    # Specify cumulative production
+    cum_prod = np.sum(prod, dtype=np.float_)
 
     # Raise an exception for zero or negative value of cum_prod
     if cum_prod == 0.0 or cum_prod < 0:
         raise UnitOfProductionException(
             f"Inappropriate value of production data. "
-            f"The sum of yearly_prod ({yearly_prod}) is {cum_prod}."
+            f"The sum of yearly_prod ({prod}) is {cum_prod}."
         )
 
-    print('\t')
-    print(f'Filetype: {type(cum_prod)}')
-    print('cum_prod = ', cum_prod)
+    # Calculate amortization charge (1 * UOP); place it in order of project years
+    amortization_charge = (prod / cum_prod) * (cost - salvage_value)
+    amortization_charge = np.bincount(prod_year - start_year_project, weights=amortization_charge)
 
-    print('\t')
-    print(f'Filetype: {type(production_period)}')
-    print('production_period = ', production_period)
+    # Calculate amortization charge (2 * UOP); place it in order of project years
+    amortization_charge = 2.0 * amortization_charge
 
-    # Calculate amortization charge
-    amortization_charge = (yearly_prod / cum_prod) * (cost - salvage_value)
+    # Calculate the remaining amortization
+    remaining_amortization = cost - salvage_value - np.cumsum(amortization_charge)
+    remaining_amortization = np.where(remaining_amortization > 0, remaining_amortization, 0)
+    idx = np.argmin(remaining_amortization)
 
-    print('\t')
-    print(f'Length: {len(amortization_charge)}')
-    print('amortization_charge = \n', amortization_charge)
-    print('sum amortization charge = ', amortization_charge.sum())
+    # Modify amortization charge, accounting for the remaining amortization after 2 * UOP
+    amortization_charge[idx] = remaining_amortization[int(idx - 1)]
+    amortization_charge[idx + 1:] = 0.0
 
-    # remaining_amortization = cost - salvage_value - np.cumsum(amortization_charge)
-    #
-    # print('\t')
-    # print(f'Filetype: {type(remaining_amortization)}, Length: {len(remaining_amortization)}')
-    # print('remaining_amortization = ', remaining_amortization)
-
-    # # When the sum of amortization charge is less than (cost - salvage_value)
-    # if amortization_charge.sum() < (cost - salvage_value):
-    #     remaining_amortization = cost - salvage_value - amortization_charge.sum()
-    #     amortization_charge[-1] = amortization_charge[-1] + remaining_amortization
-
-    # Extend the amortization charge array beyond useful life if project duration
-    # is longer than production_period
-    if amortization_len > production_period:
-        extension = np.zeros(int(amortization_len - production_period))
+    # Modify amortization charge, accounting for project duration
+    if amortization_len > len(amortization_charge):
+        extension = np.zeros(int(amortization_len - len(amortization_charge)))
         amortization_charge = np.concatenate((amortization_charge, extension))
 
-    print('\t')
-    print(f'Length: {len(amortization_charge)}')
-    print('amortization_charge = \n', amortization_charge)
-    print('sum amortization charge = ', amortization_charge.sum())
-
-    # return amortization_charge
+    return amortization_charge
 
 
 def unit_of_production_book_value(
@@ -508,7 +492,7 @@ def unit_of_production_book_value(
     amortization_charge = unit_of_production_rate(
         cost=cost,
         cum_prod=cum_prod,
-        yearly_prod=yearly_prod,
+        prod=yearly_prod,
         production_period=production_period,
         salvage_value=salvage_value,
         amortization_len=amortization_len,

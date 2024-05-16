@@ -431,10 +431,22 @@ if __name__ == "__main__":
     from pyscnomics.econ.selection import FluidType
 
     t1 = unit_of_production_rate(
-        cost=1000,
-        yearly_prod=np.array([100, 30, 20, 10, 100]),
+        start_year_project=2023,
+        cost=500,
+        prod=np.array(
+            [
+                1, 0, 1, 1, 0,
+                2, 2, 0, 1, 0,
+            ]
+        ),
+        prod_year=np.array(
+            [
+                2030, 2031, 2032, 2033, 2034,
+                2035, 2036, 2037, 2038, 2039,
+            ]
+        ),
         salvage_value=0,
-        amortization_len=8,
+        amortization_len=21,
     )
 
     # jeruk = Tangible(
@@ -449,8 +461,8 @@ if __name__ == "__main__":
     #
     # t1 = jeruk.total_depreciation_rate()
 
-    # print('\t')
-    # print(f'Filetype: {type(jeruk)}')
-    # print('jeruk = \n', jeruk)
+    print('\t')
+    print(f'Filetype: {type(t1)}, Length: {len(t1)}')
+    print('amortization = \n', t1)
 
 
