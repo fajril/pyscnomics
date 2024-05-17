@@ -255,8 +255,8 @@ def psc_declining_balance_depreciation_rate(
     Calculate the declining balance depreciation charges following
     psc declining balance method.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     cost : float
         Initial cost of the asset.
 
@@ -270,13 +270,13 @@ def psc_declining_balance_depreciation_rate(
         Length of the resulting depreciation charge array (default is 0).
         If specified and greater than the calculated length, the array will be extended with zeros.
 
-    Returns:
-    --------
+    Returns
+    -------
     depreciation_charge: np.ndarray
         An array containing the calculated depreciation charges for each period.
 
-    Notes:
-    ------
+    Notes
+    -----
     The value of depreciation_factor must fall within the following interval:
     0 <= depreciation_factor <= 1.
 
@@ -377,16 +377,47 @@ def unit_of_production_rate(
     salvage_value: float = 0.0,
     amortization_len: int = 0,
 ) -> np.ndarray:
+    """
+    Calculate amortization charge following unit of production method.
+
+    Parameters
+    ----------
+    start_year_project : int
+        The starting year of the project.
+    cost : float
+        Initial cost of the asset.
+    prod : np.ndarray
+        Hydrocarbon production starting from onstream year.
+    prod_year : np.ndarray
+        An array of years corresponding to the hydrocarbon production.
+    salvage_value : float, optional
+        The salvage value of the project at the end of its life (default is 0.0).
+    amortization_len : int, optional
+        The length of the amortization charge array (default is 0).
+        If specified and greater than the calculated length, the array will be extended with zeros.
+
+    Returns
+    -------
+    amortization_charge: no.ndarray
+        An array representing the amortization charge following 2 * unit_of_production.
+
+    Notes
+    -----
+    The function calculates the amortization charge using 2 * unit of production method.
+    This method spreads the cost of the asset over its useful life based on the amount of production.
+    """
     # Raise an exception if 'prod' is not given as a numpy.ndarray datatype
     if not isinstance(prod, np.ndarray):
         raise UnitOfProductionException(
-            f"Parameter prod must be given as a numpy.ndarray datatype."
+            f"Parameter prod must be given as a numpy.ndarray datatype, not "
+            f"{prod.__class__.__qualname__}."
         )
 
     # Raise an exception if 'prod_year' is not given as a numpy.ndarray datatype
     if not isinstance(prod_year, np.ndarray):
         raise UnitOfProductionException(
-            f"Parameter prod_year must be given as a numpy.ndarray datatype."
+            f"Parameter prod_year must be given as a numpy.ndarray datatype, not "
+            f"{prod_year.__class__.__qualname__}"
         )
 
     # Raise an exception for unequal length of arrays: prod and prod_year
@@ -452,48 +483,43 @@ def unit_of_production_rate(
 
 
 def unit_of_production_book_value(
+    start_year_project: int,
     cost: float,
-    cum_prod: float,
-    yearly_prod: np.ndarray,
-    production_period: int = None,
+    prod: np.ndarray,
+    prod_year: np.ndarray,
     salvage_value: float = 0.0,
     amortization_len: int = 0,
 ) -> np.ndarray:
     """
-    Calculates the net book value of a resource or asset based on the unit of production method.
+    Calculate the book value of an asset over time using unit of production method.
 
     Parameters
     ----------
-    cost: float
-        Cost of the resource or asset.
-    cum_prod: float
-        Cumulative production of the project.
-    yearly_prod : numpy.ndarray
-        Array containing yearly production quantities.
-    production_period: int
-        Total production period of the project.
-    salvage_value : float
-        Estimated value of the resource or asset at the end of its useful life. Default is 0.
+    start_year_project : int
+        The starting year of the project.
+    cost : float
+        Initial cost of the asset.
+    prod : np.ndarray
+        Hydrocarbon production starting from onstream year.
+    prod_year : np.ndarray
+        An array of years corresponding to the hydrocarbon production.
+    salvage_value : float, optional
+        The salvage value of the project at the end of its life (default is 0.0).
     amortization_len : int, optional
-        Length of the amortization charge array. Default is 0.
+        The length of the amortization charge array (default is 0).
+        If specified and greater than the calculated length, the array will be extended with zeros.
 
     Returns
-    -------
-    book_value : numpy.ndarray
-        Array of net book values corresponding to each unit of production.
-
-    Notes
-    -----
-    The net book value for each unit of production is calculated using the following steps:
-    1. Calculate the amortization charge for each unit of production
-       using the unit_of_production_rate function.
-    2. Subtract the cumulative sum of amortization charges from the cost to get the net book value.
+    --------
+    book_value: np.ndarray
+        An array containing the calculated book values of the asset over time.
     """
+
     amortization_charge = unit_of_production_rate(
+        start_year_project=start_year_project,
         cost=cost,
-        cum_prod=cum_prod,
-        prod=yearly_prod,
-        production_period=production_period,
+        prod=prod,
+        prod_year=prod_year,
         salvage_value=salvage_value,
         amortization_len=amortization_len,
     )
