@@ -3,7 +3,8 @@ from pyscnomics.api.adapter import (get_costrecovery,
                                     get_contract_table,
                                     get_contract_optimization,
                                     get_grosssplit,
-                                    get_transition)
+                                    get_transition,
+                                    get_detailed_summary)
 from pyscnomics.api.converter import Data
 from pyscnomics.api.converter import DataTransition
 
@@ -41,6 +42,32 @@ async def calculate_costrecovery(data: Data) -> dict:
 
     """
     return get_costrecovery(data=data.dict())[0]
+
+
+@router.post("/costrecovery/detailed_summary")
+async def get_costrecovery_detailed(data: Data) -> dict:
+    """
+    ## Cost Recovery Detailed Summary
+    Route to get a contract detailed summary using Cost Recovery Scheme.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - costrecovery
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+    - optimization_arguments
+    - sensitivity_arguments
+
+    """
+
+    return get_detailed_summary(data=data.dict(),
+                                contract_type='Cost Recovery')
 
 
 @router.post("/costrecovery/table")
@@ -113,6 +140,32 @@ async def calculate_grosssplit(data: Data) -> dict:
 
     """
     return get_grosssplit(data=data.dict())[0]
+
+
+@router.post("/grosssplit/detailed_summary")
+async def get_grosssplit_detailed(data: Data) -> dict:
+    """
+    ## Gross Split Detailed Summary
+    Route to get a contract detailed summary using Gross Split Scheme.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - costrecovery
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+    - optimization_arguments
+    - sensitivity_arguments
+
+    """
+
+    return get_detailed_summary(data=data.dict(),
+                                contract_type='Gross Split')
 
 
 @router.post("/grosssplit/table")
@@ -195,6 +248,32 @@ async def calculate_transition(data: DataTransition) -> dict:
 
     """
     return get_transition(data=data.dict())[0]
+
+
+@router.post("/transition/detailed_summary")
+async def get_transition_detailed(data: DataTransition) -> dict:
+    """
+    ## Transition Detailed Summary
+    Route to get a contract detailed summary using Transition Scheme.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - costrecovery
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+    - optimization_arguments
+    - sensitivity_arguments
+
+    """
+
+    return get_detailed_summary(data=data.dict(),
+                                contract_type='Transition')
 
 
 @router.post("/transition/table")

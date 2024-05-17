@@ -14,7 +14,9 @@ dependencies = [
     "pyxlsb>=1.0.10",
     "scipy >=1.7.3",
     "xlwings>=0.24.8",
-    "click==8.1.7"
+    "click==8.1.7",
+    "uvicorn==0.28.0",
+    "fastapi==0.110.0"
 ]
 requires-python = ">=3.11"
 authors = [

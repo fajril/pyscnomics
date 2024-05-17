@@ -2,7 +2,9 @@
 This file is utilized to be the adapter of the router into the core codes.
 """
 import pandas as pd
+from datetime import datetime
 
+from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
@@ -243,6 +245,9 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         # Converting the summary format to skk summary format
         summary_skk = convert_summary_to_dict(dict_object=summary)
 
+        # Adding the execution info
+        summary_skk = add_execution_info(data=summary_skk)
+
     # Since the required object is only the contract, it will return None for the summary
     else:
         summary_skk = None
@@ -309,6 +314,9 @@ def get_contract_table(data: dict, contract_type: str = 'Cost Recovery') -> dict
                           'gas': table_gas.set_index(year_column).to_dict(),
                           'consolidated': table_consolidated.set_index(year_column).to_dict()}
 
+    # Adding the execution info
+    table_all_dict = add_execution_info(data=table_all_dict)
+
     return table_all_dict
 
 
@@ -331,8 +339,8 @@ def get_contract_optimization(data: dict, contract_type: str = 'Cost Recovery') 
     """
     # Converting the parameters in dict_optimization to the corresponding enum
     optimization_parameters = [
-            convert_str_to_optimization_parameters(str_object=i)
-            for i in data['optimization_arguments']['dict_optimization']['parameter']
+        convert_str_to_optimization_parameters(str_object=i)
+        for i in data['optimization_arguments']['dict_optimization']['parameter']
     ]
 
     # Generating the dictionary of the optimization arguments
@@ -381,6 +389,9 @@ def get_contract_optimization(data: dict, contract_type: str = 'Cost Recovery') 
     # Converting the result into dictionary format
     result_parameters = pd.DataFrame(optimization_result).set_index('list_str').to_dict()
     result_parameters['optimization_result'] = result_optimization
+
+    # Adding the execution info
+    result_parameters = add_execution_info(data=result_parameters)
 
     return result_parameters
 
@@ -477,6 +488,9 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         # Converting the summary format to skk summary format
         summary_skk = convert_summary_to_dict(dict_object=summary)
 
+        # Adding the execution info
+        summary_skk = add_execution_info(data=summary_skk)
+
     else:
         summary_skk = None
         summary_arguments_dict = None
@@ -529,7 +543,7 @@ def get_transition(data: dict):
     contract = Transition(contract1=contract_1,
                           contract2=contract_2,
                           argument_contract1=contract_arguments_1,
-                          argument_contract2=contract_arguments_2,)
+                          argument_contract2=contract_arguments_2, )
 
     # Generating the transition contract arguments
     contract_arguments_dict = data['contract_arguments']
@@ -546,4 +560,66 @@ def get_transition(data: dict):
     # Converting the summary format to skk summary format
     summary_skk = convert_summary_to_dict(dict_object=summary)
 
+    # Adding the execution info
+    summary_skk = add_execution_info(data=summary_skk)
+
     return summary_skk, contract, contract_arguments_dict, summary_arguments_dict
+
+
+def add_execution_info(data: dict) -> dict:
+    """
+    Function to adding the execution info into a dictionary.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary which will added with execution info
+
+    Returns
+    -------
+    out: dict
+        Dictionary containing the execution info
+    """
+    # Defining the execution date
+    execution_date = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+    # Defining the PySCnomics Version
+    package_version = " "
+    try:
+        from importlib.metadata import version
+        package_version = version('pyscnomics')
+
+    except:
+        pass
+
+    # Parsing the data into the data output
+    execution_info = {'execution_datetime': execution_date,
+                      'package_version': package_version, }
+
+    data['execution_info'] = execution_info
+    return data
+
+
+def get_detailed_summary(data: dict, contract_type: str):
+
+    if contract_type == 'Cost Recovery':
+        summary_args = get_costrecovery(data=data, summary_result=True)[3]
+
+    elif contract_type == 'Gross Split':
+        summary_args = get_grosssplit(data=data, summary_result=True)[3]
+
+    elif contract_type == 'Transition':
+        summary_args = get_transition(data=data)[3]
+
+    else:
+        summary_args = None
+
+    return get_summary(**summary_args)
+
+
+
+
+
+
+
+

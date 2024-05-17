@@ -154,6 +154,25 @@ class Transition:
 
         return new_contract
 
+    def adjust_rows(
+            self,
+            data_origin: np.ndarray | float | int | None,
+            data_adjustment: np.ndarray,
+            first_contract: bool,
+            project_years: np.ndarray):
+
+        # Checking the type of the data
+        if isinstance(data_origin, float) or isinstance(data_origin, int):
+            result = np.full_like(project_years, fill_value=data_origin, dtype=float)
+        elif data_origin is None:
+            result = np.zeros_like(self.project_years)
+        elif first_contract:
+            result = np.concatenate((data_origin, data_adjustment))
+        else:
+            result = np.concatenate((data_adjustment, data_origin))
+
+        return result
+
     def run(self, unrec_portion: float = 0.0):
         # Defining the transition start date and end date
         start_date_trans = min([self.contract1.start_date, self.contract2.start_date])
