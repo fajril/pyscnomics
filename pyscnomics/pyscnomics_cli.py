@@ -430,15 +430,6 @@ if __name__ == "__main__":
     from pyscnomics.econ.costs import Tangible
     from pyscnomics.econ.selection import FluidType
 
-    t1 = unit_of_production_book_value(
-        start_year_project=2023,
-        cost=1000,
-        prod=np.array([1, 2, 2, 5]),
-        prod_year=np.array([2026, 2027, 2028, 2029]),
-        salvage_value=0,
-        amortization_len=8,
-    )
-
     # t1 = unit_of_production_rate(
     #     start_year_project=2023,
     #     cost=1000,
@@ -448,20 +439,18 @@ if __name__ == "__main__":
     #     amortization_len=8,
     # )
 
-    # jeruk = Tangible(
-    #     start_year=2023,
-    #     end_year=2030,
-    #     cost=np.array([100, 100, 100]),
-    #     expense_year=np.array([2023, 2024, 2029]),
-    #     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
-    #     useful_life=np.array([5, 5, 5]),
-    #     depreciation_factor=np.array([0.5, 0.5, 0.5]),
-    # )
-    #
-    # t1 = jeruk.total_depreciation_rate()
+    jeruk = Tangible(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([100, 100, 100]),
+        expense_year=np.array([2023, 2024, 2029]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+        useful_life=np.array([5, 5, 5]),
+        depreciation_factor=np.array([0.5, 0.5, 0.5]),
+    )
 
-    # print('\t')
-    # print(f'Filetype: {type(t1)}, Length: {len(t1)}')
-    # print('amortization = \n', t1)
+    t1 = jeruk.expenditures()
 
-
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print('t1 = \n', t1)

@@ -433,83 +433,79 @@ class Tangible(GeneralCost):
             inflation_rate=inflation_rate,
         )
 
-        print('\t')
-        print(f'Filetype: {type(cost_adjusted)}, Length: {len(cost_adjusted)}')
-        print('cost_adjusted = ', cost_adjusted)
+        # Configure depreciation charge
+        depreciation_charge_pool = {
+            # Straight line
+            DeprMethod.SL: np.asarray(
+                [
+                    depr.straight_line_depreciation_rate(
+                        cost=c,
+                        salvage_value=sv,
+                        useful_life=ul,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, sv, ul in zip(
+                        cost_adjusted,
+                        self.salvage_value,
+                        self.useful_life,
+                    )
+                ]
+            ),
+            # Declining Balance / Double Declining Balance
+            DeprMethod.DB: np.asarray(
+                [
+                    depr.declining_balance_depreciation_rate(
+                        cost=c,
+                        salvage_value=sv,
+                        useful_life=ul,
+                        decline_factor=decline_factor,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, sv, ul in zip(
+                        cost_adjusted,
+                        self.salvage_value,
+                        self.useful_life,
+                    )
+                ]
+            ),
+            # PSC DB
+            DeprMethod.PSC_DB: np.asarray(
+                [
+                    depr.psc_declining_balance_depreciation_rate(
+                        cost=c,
+                        depreciation_factor=dr,
+                        useful_life=ul,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, dr, ul in zip(
+                        cost_adjusted,
+                        self.depreciation_factor,
+                        self.useful_life,
+                    )
+                ]
+            )
+        }
 
-        # # Configure depreciation charge
-        # depreciation_charge_pool = {
-        #     # Straight line
-        #     DeprMethod.SL: np.asarray(
-        #         [
-        #             depr.straight_line_depreciation_rate(
-        #                 cost=c,
-        #                 salvage_value=sv,
-        #                 useful_life=ul,
-        #                 depreciation_len=self.project_duration,
-        #             )
-        #             for c, sv, ul in zip(
-        #                 cost_adjusted,
-        #                 self.salvage_value,
-        #                 self.useful_life,
-        #             )
-        #         ]
-        #     ),
-        #     # Declining Balance / Double Declining Balance
-        #     DeprMethod.DB: np.asarray(
-        #         [
-        #             depr.declining_balance_depreciation_rate(
-        #                 cost=c,
-        #                 salvage_value=sv,
-        #                 useful_life=ul,
-        #                 decline_factor=decline_factor,
-        #                 depreciation_len=self.project_duration,
-        #             )
-        #             for c, sv, ul in zip(
-        #                 cost_adjusted,
-        #                 self.salvage_value,
-        #                 self.useful_life,
-        #             )
-        #         ]
-        #     ),
-        #     # PSC DB
-        #     DeprMethod.PSC_DB: np.asarray(
-        #         [
-        #             depr.psc_declining_balance_depreciation_rate(
-        #                 cost=c,
-        #                 depreciation_factor=dr,
-        #                 useful_life=ul,
-        #                 depreciation_len=self.project_duration,
-        #             )
-        #             for c, dr, ul in zip(
-        #                 cost_adjusted,
-        #                 self.depreciation_factor,
-        #                 self.useful_life,
-        #             )
-        #         ]
-        #     )
-        # }
-        #
-        # for key in depreciation_charge_pool.keys():
-        #     if depr_method == key:
-        #         depreciation_charge = depreciation_charge_pool[key]
-        #
-        # # The relative difference of pis_year and start_year
-        # shift_indices = self.pis_year - self.start_year
-        #
-        # # Modify depreciation_charge so that expenditures are aligned with
-        # # the corresponding pis_year (or expense_year)
-        # depreciation_charge = np.asarray(
-        #     [
-        #         np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
-        #         for row, i in zip(depreciation_charge, shift_indices)
-        #     ]
-        # )
-        #
-        # total_depreciation_charge = depreciation_charge.sum(axis=0)
-        # undepreciated_asset = np.sum(cost_adjusted) - np.sum(total_depreciation_charge)
-        #
-        # return total_depreciation_charge, undepreciated_asset
+        for key in depreciation_charge_pool.keys():
+            if depr_method == key:
+                depreciation_charge = depreciation_charge_pool[key]
+
+        # The relative difference of pis_year and start_year
+        shift_indices = self.pis_year - self.start_year
+
+        # Modify depreciation_charge so that expenditures are aligned with
+        # the corresponding pis_year (or expense_year)
+        depreciation_charge = np.asarray(
+            [
+                np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
+                for row, i in zip(depreciation_charge, shift_indices)
+            ]
+        )
+
+        total_depreciation_charge = depreciation_charge.sum(axis=0)
+        undepreciated_asset = np.sum(cost_adjusted) - np.sum(total_depreciation_charge)
+
+        return total_depreciation_charge, undepreciated_asset
 
     def total_depreciation_book_value(
         self,
@@ -966,194 +962,6 @@ class Intangible(GeneralCost):
                 f"Expense year ({np.min(self.expense_year)}) "
                 f"is before the start year of the project ({self.start_year})"
             )
-
-    def total_amortization_rate(
-        self,
-        cum_prod: float,
-        yearly_prod: np.ndarray,
-        production_period: int = None,
-        salvage_value: np.ndarray = None,
-        year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
-        vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
-        inflation_rate: np.ndarray | float = 0.0,
-    ) -> tuple:
-        """
-        Calculate the total amortization charge and unamortized asset
-        based on unit of production method.
-
-        Parameters
-        ----------
-        cum_prod: float
-            Hydrocarbon cumulative production (or reserve) value.
-        yearly_prod: np.ndarray
-            Array containing yearly production values.
-        production_period: int
-            The period of hydrocarbon production. Defaults to None.
-        salvage_value: np.ndarray
-            Array containing salvage values. Defaults to None.
-        year_ref: int, optional
-            Reference year. Defaults to None.
-        tax_type: TaxType, optional
-            Type of tax. Defaults to TaxType.VAT.
-        vat_rate: np.ndarray or float, optional
-            Value-added tax rate. Defaults to 0.0.
-        lbt_rate: np.ndarray or float, optional
-            Local business tax rate. Defaults to 0.0.
-        inflation_rate: np.ndarray or float, optional
-            Inflation rate. Defaults to 0.0.
-
-        Returns
-        -------
-        tuple
-            A tuple containing total amortization charge and unamortized asset.
-
-        The method calculates the amortization charge for each period using
-        the unit of production method, then adjusts the charges based on expense years.
-        It returns the total amortization charge for each period and the unamortized asset value.
-        """
-        # Specify default value for salvage_value
-        if salvage_value is None:
-            salvage_value = np.zeros(len(self.cost))
-
-        # Specify default value for production_period
-        if production_period is None:
-            production_period = len(yearly_prod)
-
-        # Specify default value for year_ref
-        if year_ref is None:
-            year_ref = self.start_year
-
-        # Raise an exception for an unequal length of arrays salvage_value and cost
-        if len(salvage_value) != len(self.cost):
-            raise IntangibleException(
-                f"Unequal length of arrays: "
-                f"cost: {len(self.cost)}, "
-                f"salvage_value: {len(salvage_value)}."
-            )
-
-        # Apply cost adjustment (by VAT/LBT and inflation)
-        cost_adjusted = apply_cost_adjustment(
-            start_year=self.start_year,
-            end_year=self.end_year,
-            cost=self.cost,
-            expense_year=self.expense_year,
-            project_years=self.project_years,
-            year_ref=year_ref,
-            tax_type=tax_type,
-            vat_portion=self.vat_portion,
-            vat_rate=vat_rate,
-            vat_discount=self.vat_discount,
-            lbt_portion=self.lbt_portion,
-            lbt_rate=lbt_rate,
-            lbt_discount=self.lbt_discount,
-            inflation_rate=inflation_rate,
-        )
-
-        # Configure amortization charge
-        amortization_charge = np.array(
-            [
-                depr.unit_of_production_rate(
-                    cost=c,
-                    cum_prod=cum_prod,
-                    prod=yearly_prod,
-                    production_period=production_period,
-                    salvage_value=sv,
-                    amortization_len=self.project_duration,
-                )
-                for c, sv in zip(
-                    cost_adjusted,
-                    salvage_value
-                )
-            ]
-        )
-
-        # The relative difference between expense_year and start_year
-        shift_indices = self.expense_year - self.start_year
-
-        # Modify amortization_charge so that expenditures are aligned with
-        # the corresponding expense_year
-        amortization_charge = np.array(
-            [
-                np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
-                for row, i in zip(amortization_charge, shift_indices)
-            ]
-        )
-
-        total_amortization_charge = amortization_charge.sum(axis=0)
-        unamortized_asset = np.sum(cost_adjusted) - np.sum(total_amortization_charge)
-
-        return total_amortization_charge, unamortized_asset
-
-    def total_amortization_book_value(
-        self,
-        cum_prod: float,
-        yearly_prod: np.ndarray,
-        production_period: int = None,
-        salvage_value: np.ndarray = None,
-        year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
-        vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
-        inflation_rate: np.ndarray | float = 0.0,
-    ) -> np.ndarray:
-        """
-        Calculate total amortization book value.
-
-        Parameters
-        ----------
-        cum_prod: float
-            Cumulative production.
-        yearly_prod: np.ndarray
-            Array of yearly production.
-        production_period: int, optional
-            Production period. Defaults to None.
-        salvage_value: np.ndarray, optional
-            Array of salvage values. Defaults to None.
-        year_ref: int, optional
-            Reference year. Defaults to None.
-        tax_type: TaxType, optional
-            Type of tax. Defaults to TaxType.VAT.
-        vat_rate: np.ndarray | float, optional
-            Value Added Tax (VAT) rate. Defaults to 0.0.
-        lbt_rate: np.ndarray | float, optional
-            Land and Building Tax (LBT) rate. Defaults to 0.0.
-        inflation_rate: np.ndarray | float, optional
-            Inflation rate. Defaults to 0.0.
-
-        Returns
-        -------
-        np.ndarray
-            Array containing the total amortization book value.
-
-        The method calculates the total amortization book value by subtracting
-        the cumulative total amortization charge from the cumulative total expenditures.
-        """
-        # Calculate total amortization charge from method total_amortization_rate
-        total_amortization_charge = self.total_amortization_rate(
-            cum_prod=cum_prod,
-            yearly_prod=yearly_prod,
-            production_period=production_period,
-            salvage_value=salvage_value,
-            year_ref=year_ref,
-            tax_type=tax_type,
-            vat_rate=vat_rate,
-            lbt_rate=lbt_rate,
-            inflation_rate=inflation_rate,
-        )[0]
-
-        return (
-            np.cumsum(
-                self.expenditures(
-                    year_ref=year_ref,
-                    tax_type=tax_type,
-                    vat_rate=vat_rate,
-                    lbt_rate=lbt_rate,
-                    inflation_rate=inflation_rate,
-                )
-            ) - np.cumsum(total_amortization_charge)
-        )
 
     def __eq__(self, other):
         # Between two instances of Intangible
