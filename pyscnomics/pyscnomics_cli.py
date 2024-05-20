@@ -427,7 +427,7 @@ if __name__ == "__main__":
         unit_of_production_rate,
         unit_of_production_book_value,
     )
-    from pyscnomics.econ.costs import Tangible
+    from pyscnomics.econ.costs import Intangible
     from pyscnomics.econ.selection import FluidType
 
     # t1 = unit_of_production_rate(
@@ -439,14 +439,12 @@ if __name__ == "__main__":
     #     amortization_len=8,
     # )
 
-    jeruk = Tangible(
+    jeruk = Intangible(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 100, 100]),
         expense_year=np.array([2023, 2024, 2029]),
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
-        useful_life=np.array([5, 5, 5]),
-        depreciation_factor=np.array([0.5, 0.5, 0.5]),
     )
 
     t1 = jeruk.expenditures()
