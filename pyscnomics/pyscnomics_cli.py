@@ -427,7 +427,7 @@ if __name__ == "__main__":
         unit_of_production_rate,
         unit_of_production_book_value,
     )
-    from pyscnomics.econ.costs import Intangible
+    from pyscnomics.econ.costs import ASR
     from pyscnomics.econ.selection import FluidType
 
     # t1 = unit_of_production_rate(
@@ -439,7 +439,7 @@ if __name__ == "__main__":
     #     amortization_len=8,
     # )
 
-    jeruk = Intangible(
+    jeruk = ASR(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 100, 100]),
@@ -447,7 +447,7 @@ if __name__ == "__main__":
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
-    t1 = jeruk.expenditures()
+    t1 = jeruk.proportion()
 
     print('\t')
     print(f'Filetype: {type(t1)}')

@@ -408,15 +408,15 @@ print(f'Filetype: {type(results)}')
 # print(f'Filetype: {type(t1)}')
 # print('oil revenue = \n', t1)
 
-t2 = results._co2_revenue
-
-print('\t')
-print(f'Filetype: {type(t2)}, Shape: {t2.shape}')
-print('oil revenue = \n', t2)
+# t2 = results.
+#
+# print('\t')
+# print(f'Filetype: {type(t2)}, Shape: {t2.shape}')
+# print('oil revenue = \n', t2)
 
 # Plot data
-plot_co2_revenue(results=results)
+# plot_co2_revenue(results=results)
 # plot_oil_lifting(results=results)
-# plot_gas_lifting(results=results)
+plot_gas_lifting(results=results)
 
 
