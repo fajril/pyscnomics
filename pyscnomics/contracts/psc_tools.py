@@ -264,7 +264,11 @@ def get_dmo(onstream_date: date,
             price: np.ndarray,
             ctr_pretax_share: float,
             unrecovered_cost: np.ndarray,
-            is_dmo_end_weighted) -> tuple:
+            is_dmo_end_weighted: bool,
+            ets: np.ndarray | None = None,
+            ctr_ets: np.ndarray | None = None,
+            ctr_ftp: np.ndarray | None = None,
+            post_uu_22_year2001: bool = True,) -> tuple:
     """
     A function to get the array of Domestic Market Obligation (DMO).
 
@@ -292,6 +296,14 @@ def get_dmo(onstream_date: date,
         The array containing the Unrecovered Cost.
     is_dmo_end_weighted: bool
         The condition of whether DMO is weighted or not.
+    ets: np.ndarray | None
+        The array of Equity to be Split (ETS).
+    ctr_ets: np.ndarray | None
+        The array contractor Equity to be Split (ETS).
+    ctr_ftp: np.ndarray | None
+        The array contractor First Tranche Petroleum (FTP).
+    post_uu_22_year2001: bool
+        The condition when the DMO is calculated using the DMO scheme pre or post UU No.21 Year 2001.
 
     Returns
     -------
@@ -314,7 +326,16 @@ def get_dmo(onstream_date: date,
 
     # Calculate DMO volume
     dmo_holiday = np.where(project_years >= dmo_end_date.year, False, True)
-    dmo_volume = dmo_volume_portion * lifting.get_lifting_rate_arr() * ctr_pretax_share
+
+    # Condition when the DMO scheme is using pre UU No.22 Year 2001
+    if post_uu_22_year2001 is False:
+        dmo_volume = np.where(ets > 0,
+                           np.minimum((dmo_volume_portion * lifting.get_lifting_rate_arr() * ctr_pretax_share),
+                                      np.divide(ctr_ets, lifting.get_price_arr(), where=lifting.get_price_arr() != 0) + np.divide(ctr_ftp, lifting.get_price_arr(), where=lifting.get_price_arr() != 0)),
+                           0)
+    else:
+        dmo_volume = dmo_volume_portion * lifting.get_lifting_rate_arr() * ctr_pretax_share
+
     dmo_fee = np.where(np.logical_and(unrecovered_cost == 0, ~dmo_holiday),
                        dmo_fee_portion * price * dmo_volume,
                        dmo_volume * price)

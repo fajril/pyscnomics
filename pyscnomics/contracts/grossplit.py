@@ -48,7 +48,7 @@ class GrossSplit(BaseProject):
     gas_dmo_fee_portion: float = field(default=1.0)
     gas_dmo_holiday_duration: int = field(default=60)
 
-    conversion_bboe2bscf: float = field(default=5.6)
+    conversion_boe_to_scf: float = field(default=5.615, init=False, repr=False)
 
     _oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
@@ -558,8 +558,12 @@ class GrossSplit(BaseProject):
         # self._cumulative_prod = np.cumsum(self._oil_lifting.lifting_rate +
         #                                   (self._gas_lifting.lifting_rate / self.conversion_bboe2bscf))
 
-        self._cumulative_prod = np.cumsum(np.divide(self._oil_lifting.get_lifting_rate_arr(), self._oil_lifting.get_lifting_ghv_arr(), where=self._oil_lifting.get_lifting_ghv_arr()!=0) +
-                                          (np.divide(self._gas_lifting.get_lifting_rate_arr(), self._gas_lifting.get_lifting_ghv_arr(), where=self._gas_lifting.get_lifting_ghv_arr()!=0) / self.conversion_bboe2bscf))
+        # self._cumulative_prod = np.cumsum(np.divide(self._oil_lifting.get_lifting_rate_arr(), self._oil_lifting.get_lifting_ghv_arr(), where=self._oil_lifting.get_lifting_ghv_arr()!=0) +
+        #                                   (np.divide(self._gas_lifting.get_lifting_rate_arr(), self._gas_lifting.get_lifting_ghv_arr(), where=self._gas_lifting.get_lifting_ghv_arr()!=0) / self.conversion_bboe2bscf))
+
+        # Calculating the cumulative production
+        prod_gas_boe = self._gas_lifting.prod_rate / self.conversion_boe_to_scf
+        self._cumulative_prod = np.cumsum(self._oil_lifting.get_lifting_rate_arr() + prod_gas_boe)
 
         # Progressive Split
         vectorized_get_prog_split = np.vectorize(self._wrapper_progressive_split)

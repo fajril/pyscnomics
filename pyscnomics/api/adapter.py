@@ -228,8 +228,8 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         "lbt_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['lbt_rate']),
         "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
         "future_rate": data['contract_arguments']['future_rate'],
-        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
-            str_object=data['contract_arguments']['inflation_rate_applied_to']),
+        "inflation_rate_applied_to": convert_str_to_inflationappliedto(str_object=data['contract_arguments']['inflation_rate_applied_to']),
+        "post_uu_22_year2001": data['contract_arguments']['post_uu_22_year2001']
     }
 
     # Running the contract
