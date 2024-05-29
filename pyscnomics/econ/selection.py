@@ -325,6 +325,10 @@ class OptimizationParameter(Enum):
         Optimization parameter for Effective Tax Rate.
     MINISTERIAL_DISCRETION: str
         Optimization parameter for Ministerial Discretion.
+    VAT_DISCOUNT: str
+        Optimization parameter for VAT Discount.
+    LBT_DISCOUNT: str
+        Optimization parameter for LBT Discount.
     """
     OIL_CTR_PRETAX = 'Oil Contractor Pre Tax'
     GAS_CTR_PRETAX = 'Gas Contractor Pre Tax'
@@ -337,6 +341,8 @@ class OptimizationParameter(Enum):
     VAT_RATE = 'VAT Rate'
     EFFECTIVE_TAX_RATE = 'Effective Tax Rate'
     MINISTERIAL_DISCRETION = 'Ministerial Discretion'
+    VAT_DISCOUNT = 'VAT Discount'
+    LBT_DISCOUNT = 'LBT Discount'
 
 
 class OptimizationTarget(Enum):
