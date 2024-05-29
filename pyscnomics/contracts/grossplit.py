@@ -562,7 +562,7 @@ class GrossSplit(BaseProject):
         #                                   (np.divide(self._gas_lifting.get_lifting_rate_arr(), self._gas_lifting.get_lifting_ghv_arr(), where=self._gas_lifting.get_lifting_ghv_arr()!=0) / self.conversion_bboe2bscf))
 
         # Calculating the cumulative production
-        prod_gas_boe = self._gas_lifting.prod_rate / self.conversion_boe_to_scf
+        prod_gas_boe = self._gas_lifting.get_prod_rate_arr() / self.conversion_boe_to_scf
         self._cumulative_prod = np.cumsum(self._oil_lifting.get_lifting_rate_arr() + prod_gas_boe)
 
         # Progressive Split
@@ -692,7 +692,7 @@ class GrossSplit(BaseProject):
 
         # Tax Payment
         # Generating Tax array if tax_rate argument is a single value not array
-        if isinstance(tax_rate, float):
+        if isinstance(tax_rate, float) or isinstance(tax_rate, int):
             self._tax_rate_arr = np.full_like(self.project_years, tax_rate, dtype=float)
 
         # Generating Tax array based on the tax regime if tax_rate argument is None

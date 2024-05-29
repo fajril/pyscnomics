@@ -8,6 +8,102 @@ from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts import psc_tools
 
 
+def adjust_rows(original_value: float | np.ndarray,
+                project_years: np.ndarray,
+                first_contract: bool,
+                prior_rows: np.ndarray,
+                post_rows: np.ndarray, ):
+    """
+    Function to adjust an array based on the given condition, tailored for transition contract.
+    Parameters
+    ----------
+    original_value: float | np.ndarray
+        The original value of the data.
+    project_years: np.ndarray
+        The array of project years.
+    first_contract: bool
+        The condition whether the row is existed in first or second contract in Transition scheme.
+    prior_rows: np.ndarray
+        The array that will be placed before the given value.
+    post_rows:
+        The array that will be placed after the given value.
+    Returns
+    -------
+    adjusted_values: np.ndarray
+        The array containin the adjusted value.
+
+    """
+    if isinstance(original_value, float):
+        adjusted_values = np.full_like(project_years, fill_value=original_value, dtype=float)
+
+    elif isinstance(original_value, np.ndarray) and first_contract:
+        adjusted_values = np.concatenate((original_value, post_rows))
+
+    elif isinstance(original_value, np.ndarray) and not first_contract:
+        adjusted_values = np.concatenate((prior_rows, original_value))
+
+    else:
+        adjusted_values = original_value
+
+    return adjusted_values
+
+
+def adjusting_contract_arguments(arguments_dict: dict,
+                                 project_years: np.ndarray,
+                                 first_contract: bool,
+                                 prior_rows: np.ndarray,
+                                 post_rows: np.ndarray,
+                                 ):
+    """
+    The function used to adjust the contract arguments before parsed to the transition contract.
+    Parameters
+    ----------
+    arguments_dict: dict
+        The dictionary containing the arguments of a contract.
+    project_years: np.ndarray
+        The array of the project years.
+    first_contract: bool
+        The condition whether the row is existed in first or second contract in Transition scheme.
+    prior_rows: np.ndarray
+        The array that will be placed before the given value.
+    post_rows:
+        The array that will be placed after the given value.
+    Returns
+    -------
+    arguments_dict: dict
+        The dictionary containing adjusted arguments.
+    """
+    if 'tax_rate' in arguments_dict.keys():
+        arguments_dict['tax_rate'] = adjust_rows(original_value=arguments_dict['tax_rate'],
+                                                 project_years=project_years,
+                                                 first_contract=first_contract,
+                                                 prior_rows=prior_rows,
+                                                 post_rows=post_rows, )
+
+    if 'vat_rate' in arguments_dict.keys():
+        arguments_dict['vat_rate'] = adjust_rows(original_value=arguments_dict['vat_rate'],
+                                                 project_years=project_years,
+                                                 first_contract=first_contract,
+                                                 prior_rows=prior_rows,
+                                                 post_rows=post_rows, )
+
+    if 'lbt_rate' in arguments_dict.keys():
+        arguments_dict['lbt_rate'] = adjust_rows(original_value=arguments_dict['lbt_rate'],
+                                                 project_years=project_years,
+                                                 first_contract=first_contract,
+                                                 prior_rows=prior_rows,
+                                                 post_rows=post_rows, )
+
+    if 'inflation_rate' in arguments_dict.keys():
+        arguments_dict['inflation_rate'] = adjust_rows(original_value=arguments_dict['inflation_rate'],
+                                                       project_years=project_years,
+                                                       first_contract=first_contract,
+                                                       prior_rows=prior_rows,
+                                                       post_rows=post_rows, )
+
+    return arguments_dict
+
+
 @dataclass
 class Transition:
     contract1: CostRecovery | GrossSplit
@@ -150,28 +246,9 @@ class Transition:
                 gas_dmo_volume_portion=attr_contract['gas_dmo_volume_portion'],
                 gas_dmo_fee_portion=attr_contract['gas_dmo_fee_portion'],
                 gas_dmo_holiday_duration=attr_contract['gas_dmo_holiday_duration'],
-                conversion_bboe2bscf=attr_contract['conversion_bboe2bscf'])
+            )
 
         return new_contract
-
-    def adjust_rows(
-            self,
-            data_origin: np.ndarray | float | int | None,
-            data_adjustment: np.ndarray,
-            first_contract: bool,
-            project_years: np.ndarray):
-
-        # Checking the type of the data
-        if isinstance(data_origin, float) or isinstance(data_origin, int):
-            result = np.full_like(project_years, fill_value=data_origin, dtype=float)
-        elif data_origin is None:
-            result = np.zeros_like(self.project_years)
-        elif first_contract:
-            result = np.concatenate((data_origin, data_adjustment))
-        else:
-            result = np.concatenate((data_adjustment, data_origin))
-
-        return result
 
     def run(self, unrec_portion: float = 0.0):
         # Defining the transition start date and end date
@@ -402,7 +479,24 @@ class Transition:
         contract1_new = self._parse_dataclass(contract=self.contract1)
         contract2_new = self._parse_dataclass(contract=self.contract2)
 
+        # Adjusting the contract arguments
+        self.argument_contract1 = adjusting_contract_arguments(arguments_dict=self.argument_contract1,
+                                                               project_years=project_years_trans,
+                                                               first_contract=True,
+                                                               prior_rows=zeros_to_prior,
+                                                               post_rows=zeros_to_new,)
+
+        self.argument_contract2 = adjusting_contract_arguments(arguments_dict=self.argument_contract2,
+                                                               project_years=project_years_trans,
+                                                               first_contract=False,
+                                                               prior_rows=zeros_to_prior,
+                                                               post_rows=zeros_to_new,)
+
         # Executing the new contract
+        # for i in self.argument_contract1.keys():
+        #     print(i, ': ', self.argument_contract1[i])
+        # input()
+
         contract1_new.run(**self.argument_contract1)
         contract2_new.run(**self.argument_contract2)
 
@@ -685,23 +779,3 @@ class Transition:
 
         # Project Years
         self.project_years = np.copy(self._contract1_transitioned.project_years)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

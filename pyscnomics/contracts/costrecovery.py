@@ -1054,8 +1054,12 @@ class CostRecovery(BaseProject):
             self._tax_rate_arr = np.full_like(self.project_years, tax_rate, dtype=float)
 
         # Generating Tax array based on the tax regime if tax_rate argument is None
-        if tax_rate is None:
+        elif tax_rate is None:
             self._tax_rate_arr = self._get_tax_by_regime(tax_regime=tax_regime)
+        elif isinstance(tax_rate, np.ndarray):
+            self._tax_rate_arr = tax_rate
+        else:
+            self._tax_rate_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
 
         self._oil_tax_payment = self._get_tax_payment(
             ctr_share=self._oil_contractor_share,

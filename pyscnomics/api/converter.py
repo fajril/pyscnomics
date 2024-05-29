@@ -62,8 +62,8 @@ class SummaryArgumentsBM(BaseModel):
 
     """
     reference_year: int = 2022
-    inflation_rate: float = 0.1
-    discount_rate: float = 0.1
+    inflation_rate: float | int = 0.1
+    discount_rate: float | int = 0.1
     npv_mode: str = "SKK Full Cycle Nominal Terms"
     discounting_mode: str = "End Year"
 
@@ -121,26 +121,26 @@ class CostRecoveryBM(BaseModel):
     """
     oil_ftp_is_available: bool = True
     oil_ftp_is_shared: bool = True
-    oil_ftp_portion: float = 0.2
+    oil_ftp_portion: float | int = 0.2
     gas_ftp_is_available: bool = True
     gas_ftp_is_shared: bool = True
-    gas_ftp_portion: float = 0.2
+    gas_ftp_portion: float | int = 0.2
     tax_split_type: str = "Conventional"
     condition_dict: dict = {}
     indicator_rc_icp_sliding: list[float] = []
-    oil_ctr_pretax_share: float = 0.34722220
-    gas_ctr_pretax_share: float = 0.5208330
-    oil_ic_rate: float = 0
-    gas_ic_rate: float = 0
+    oil_ctr_pretax_share: float| int = 0.34722220
+    gas_ctr_pretax_share: float| int = 0.5208330
+    oil_ic_rate: float | int = 0
+    gas_ic_rate: float | int = 0
     ic_is_available: bool = False
-    oil_cr_cap_rate: float = 1
-    gas_cr_cap_rate: float = 1
-    oil_dmo_volume_portion: float = 0.25
-    oil_dmo_fee_portion: float = 0.25
-    oil_dmo_holiday_duration: float = 60
-    gas_dmo_volume_portion: float = 0.25
-    gas_dmo_fee_portion: float = 1
-    gas_dmo_holiday_duration: float = 60
+    oil_cr_cap_rate: float | int = 1
+    gas_cr_cap_rate: float | int = 1
+    oil_dmo_volume_portion: float | int = 0.25
+    oil_dmo_fee_portion: float | int = 0.25
+    oil_dmo_holiday_duration: float | int = 60
+    gas_dmo_volume_portion: float | int = 0.25
+    gas_dmo_fee_portion: float | int = 1
+    gas_dmo_holiday_duration: float | int = 60
 
 
 class GrossSplitBM(BaseModel):
@@ -210,15 +210,15 @@ class GrossSplitBM(BaseModel):
     prod_stage: str = "Secondary"
     co2_content: str = "<5"
     h2s_content: str = "<100"
-    base_split_ctr_oil: float = 0.43
-    base_split_ctr_gas: float = 0.48
-    split_ministry_disc: float = 0.08
-    oil_dmo_volume_portion: float = 0.25
-    oil_dmo_fee_portion: float = 1.0
-    oil_dmo_holiday_duration: float = 60
-    gas_dmo_volume_portion: float = 1.0
-    gas_dmo_fee_portion: float = 1.0
-    gas_dmo_holiday_duration: float = 60
+    base_split_ctr_oil: float | int = 0.43
+    base_split_ctr_gas: float | int = 0.48
+    split_ministry_disc: float | int = 0.08
+    oil_dmo_volume_portion: float | int = 0.25
+    oil_dmo_fee_portion: float | int = 1.0
+    oil_dmo_holiday_duration: float | int = 60
+    gas_dmo_volume_portion: float | int = 1.0
+    gas_dmo_fee_portion: float | int = 1.0
+    gas_dmo_holiday_duration: float | int = 60
 
 
 class ContractArgumentsBM(BaseModel):
@@ -271,16 +271,17 @@ class ContractArgumentsBM(BaseModel):
     co2_revenue: str = "Addition to Oil Revenue"
     is_dmo_end_weighted: bool = False
     tax_regime: str = "nailed down"
-    tax_rate: float | list | None = 0.424
+    tax_rate: float | list | int | None = 0.424
     ftp_tax_regime: str = "Pre PDJP No.20 Tahun 2017"
     sunk_cost_reference_year: int | None = 2021
     depr_method: str = "PSC Declining Balance"
     decline_factor: float | int = 2
-    vat_rate: list | float = 0.0
-    lbt_rate: list | float = 0.0
-    inflation_rate: list | float = 0.0
+    vat_rate: list | float | int = 0.0
+    lbt_rate: list | float | int = 0.0
+    inflation_rate: list | float | int = 0.0
     future_rate: float = 0.02
     inflation_rate_applied_to: str = "CAPEX"
+    post_uu_22_year2001: bool = True
 
 
 class ContractArgumentsTransitionBM(BaseModel):
@@ -292,7 +293,7 @@ class ContractArgumentsTransitionBM(BaseModel):
     unrec_portion: float
         The unrec portion that will be transferred into second contract.
     """
-    unrec_portion: float
+    unrec_portion: float | int
 
 
 class LiftingBM(BaseModel):
@@ -320,12 +321,12 @@ class LiftingBM(BaseModel):
     """
     start_year: int
     end_year: int
-    lifting_rate: list[float]
-    price: list[float]
+    lifting_rate: list[float] | list[int]
+    price: list[float] | list[int]
     prod_year: list[int]
     fluid_type: str
-    ghv: list[float] | None
-    prod_rate: list[float] | None
+    ghv: list[float] | list[int] | None
+    prod_rate: list[float] | list[int] | None
 
 
 class TangibleBM(BaseModel):
@@ -371,18 +372,18 @@ class TangibleBM(BaseModel):
 
     start_year: int
     end_year: int
-    cost: list[float]
+    cost: list[float] | list[int]
     expense_year: list[int]
     cost_allocation: list[str]
     description: list[str]
-    vat_portion: list[float]
-    vat_discount: list[float]
-    lbt_portion: list[float]
-    lbt_discount: list[float]
+    vat_portion: list[float] | list[int]
+    vat_discount: list[float] | list[int]
+    lbt_portion: list[float] | list[int]
+    lbt_discount: list[float] | list[int]
     pis_year: list[int]
-    salvage_value: list[float]
+    salvage_value: list[float] | list[int]
     useful_life: list[int]
-    depreciation_factor: list[float]
+    depreciation_factor: list[float] | list[int]
     is_ic_applied: list[bool]
 
 
@@ -417,14 +418,14 @@ class IntangibleBM(BaseModel):
     """
     start_year: int
     end_year: int
-    cost: list[float]
+    cost: list[float] | list[int]
     expense_year: list[int]
     cost_allocation: list[str]
     description: list[str]
-    vat_portion: list[float]
-    vat_discount: list[float]
-    lbt_portion: list[float]
-    lbt_discount: list[float]
+    vat_portion: list[float] | list[int]
+    vat_discount: list[float] | list[int]
+    lbt_portion: list[float] | list[int]
+    lbt_discount: list[float] | list[int]
 
 
 class OpexBM(BaseModel):
@@ -465,13 +466,13 @@ class OpexBM(BaseModel):
     expense_year: list[int]
     cost_allocation: list[str]
     description: list[str]
-    fixed_cost: list[float]
-    prod_rate: list[float]
-    cost_per_volume: list[float]
-    vat_portion: list[float]
-    vat_discount: list[float]
-    lbt_portion: list[float]
-    lbt_discount: list[float]
+    fixed_cost: list[float] | list[int]
+    prod_rate: list[float] | list[int]
+    cost_per_volume: list[float] | list[int]
+    vat_portion: list[float] | list[int]
+    vat_discount: list[float] | list[int]
+    lbt_portion: list[float] | list[int]
+    lbt_discount: list[float] | list[int]
 
 
 class AsrBM(BaseModel):
@@ -505,14 +506,14 @@ class AsrBM(BaseModel):
     """
     start_year: int
     end_year: int
-    cost: list[float]
+    cost: list[float] | list[int]
     expense_year: list[int]
     cost_allocation: list[str]
     description: list[str]
-    vat_portion: list[float]
-    vat_discount: list[float]
-    lbt_portion: list[float]
-    lbt_discount: list[float]
+    vat_portion: list[float] | list[int]
+    vat_discount: list[float] | list[int]
+    lbt_portion: list[float] | list[int]
+    lbt_discount: list[float] | list[int]
 
 
 class OptimizationDictBM(BaseModel):
@@ -530,8 +531,8 @@ class OptimizationDictBM(BaseModel):
 
     """
     parameter: list[str]
-    min: list[float]
-    max: list[float]
+    min: list[float] | list[int]
+    max: list[float] | list[int]
 
 
 class OptimizationBM(BaseModel):
@@ -548,7 +549,7 @@ class OptimizationBM(BaseModel):
         The targeted optimization parameter.
     """
     dict_optimization: OptimizationDictBM
-    target_optimization: float
+    target_optimization: float | int
     target_parameter: str
 
 
@@ -563,8 +564,8 @@ class SensitivityBM(BaseModel):
     max: float
         The maximum value for the sensitivity
     """
-    min: float
-    max: float
+    min: float | int
+    max: float | int
 
 
 class UncertaintyBM(BaseModel):
@@ -583,9 +584,9 @@ class UncertaintyBM(BaseModel):
         The standard deviation for the uncertainty model
     """
     number_of_simulation: int
-    min: list[float]
-    max: list[float]
-    std_dev: list[float]
+    min: list[float] | list[int]
+    max: list[float] | list[int]
+    std_dev: list[float] | list[int]
 
 
 class Data(BaseModel):
@@ -740,7 +741,7 @@ def convert_list_to_array_float(data_list: list) -> np.ndarray:
     return np.array(data_list, dtype=float)
 
 
-def convert_list_to_array_float_or_array(data_input: list | float) -> np.ndarray | float:
+def convert_list_to_array_float_or_array(data_input: list | float | int | str) -> np.ndarray | float:
     """
     The function to convert list or float into float or array of float.
 
@@ -757,11 +758,19 @@ def convert_list_to_array_float_or_array(data_input: list | float) -> np.ndarray
     if isinstance(data_input, float):
         return data_input
 
+    elif isinstance(data_input, int) or isinstance(data_input, str):
+        return (
+            float(data_input)
+            if isinstance(data_input, int)
+               or (isinstance(data_input, str) and data_input.strip() != "")
+            else 0
+        )
     else:
         return np.array(data_input, dtype=float)
 
 
-def convert_list_to_array_float_or_array_or_none(data_list: list | float | None) -> np.ndarray | float | None:
+def convert_list_to_array_float_or_array_or_none(data_list: list | float | int | str | None
+                                                 ) -> np.ndarray | float | None:
     """
     Function to convert list into array of float, None or array.
 
@@ -778,6 +787,13 @@ def convert_list_to_array_float_or_array_or_none(data_list: list | float | None)
     """
     if isinstance(data_list, float):
         return data_list
+    elif isinstance(data_list, int) or isinstance(data_list, str):
+        return (
+            float(data_list)
+            if isinstance(data_list, int)
+               or (isinstance(data_list, str) and data_list.strip() != "")
+            else None
+        )
     elif data_list is None:
         return None
     else:
@@ -1103,7 +1119,7 @@ def convert_str_to_ftptaxregime(str_object: str):
     attrs = {
         "PDJP No.20 Tahun 2017": FTPTaxRegime.PDJP_20_2017,
         "Pre PDJP No.20 Tahun 2017": FTPTaxRegime.PRE_PDJP_20_2017,
-        "Direct": FTPTaxRegime.DIRECT_MODE
+        "Direct Mode": FTPTaxRegime.DIRECT_MODE
     }
 
     for key in attrs.keys():
