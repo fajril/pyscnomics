@@ -23,6 +23,12 @@ class SunkCostException(Exception):
     pass
 
 
+class CumulativeProductionSplitException(Exception):
+    """Exception to raise for a misuse of Cumulative Production Split Offset"""
+
+    pass
+
+
 @dataclass
 class GrossSplit(BaseProject):
     field_status: str = field(default='No POD')
@@ -447,7 +453,8 @@ class GrossSplit(BaseProject):
             lbt_rate: np.ndarray | float = 0.0,
             inflation_rate: np.ndarray | float = 0.0,
             future_rate: float = 0.02,
-            inflation_rate_applied_to: InflationAppliedTo = InflationAppliedTo.CAPEX
+            inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
+            cum_production_split_offset: float | np.ndarray | None = 0.0
             ):
 
         # Configure Sunk Cost Reference Year
@@ -481,6 +488,14 @@ class GrossSplit(BaseProject):
         # Configure year reference
         if year_ref is None:
             year_ref = self.start_date.year
+
+        # Checking if the Cumulative Production Split Offset length is same with the project years
+        if isinstance(cum_production_split_offset, np.ndarray):
+            if len(cum_production_split_offset) != len(self.project_years):
+                raise CumulativeProductionSplitException(
+                    f"Length of the cum_production_split_offset: {len(cum_production_split_offset)} "
+                    f"is not the same with Length of the project years: {len(self.project_years)}"
+                )
 
         # Get the WAP Price
         self._get_wap_price()
@@ -554,33 +569,56 @@ class GrossSplit(BaseProject):
         # Variable Split
         self._var_split_array = np.full_like(self.project_years, fill_value=self._variable_split, dtype=float)
 
-        # Cumulative Production
-        # self._cumulative_prod = np.cumsum(self._oil_lifting.lifting_rate +
-        #                                   (self._gas_lifting.lifting_rate / self.conversion_bboe2bscf))
+        # Calculating the gas production in MMBOE
+        prod_gas_boe = self._gas_lifting.get_prod_rate_arr() / self.conversion_boe_to_scf
 
-        # self._cumulative_prod = np.cumsum(np.divide(self._oil_lifting.get_lifting_rate_arr(), self._oil_lifting.get_lifting_ghv_arr(), where=self._oil_lifting.get_lifting_ghv_arr()!=0) +
-        #                                   (np.divide(self._gas_lifting.get_lifting_rate_arr(), self._gas_lifting.get_lifting_ghv_arr(), where=self._gas_lifting.get_lifting_ghv_arr()!=0) / self.conversion_bboe2bscf))
+        # Condition when the offset cumulative production array when user input is float
+        if isinstance(cum_production_split_offset, float) or isinstance(cum_production_split_offset, int):
+            offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
+            offset_arr[0] = cum_production_split_offset
+
+        else:
+            offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
 
         # Calculating the cumulative production
-        prod_gas_boe = self._gas_lifting.get_prod_rate_arr() / self.conversion_boe_to_scf
-        self._cumulative_prod = np.cumsum(self._oil_lifting.get_lifting_rate_arr() + prod_gas_boe)
+        self._cumulative_prod = np.cumsum(self._oil_lifting.get_lifting_rate_arr() + prod_gas_boe + offset_arr)
 
         # Progressive Split
         vectorized_get_prog_split = np.vectorize(self._wrapper_progressive_split)
 
-        self._oil_prog_split = vectorized_get_prog_split(
-            fluid=self._oil_lifting.fluid_type,
-            price=self._oil_lifting.get_price_arr(),
-            cum=self._cumulative_prod,
-            regime=regime
-        )
+        # Condition when the cum_production_split_offset is filled with np.ndarray
+        if isinstance(cum_production_split_offset, np.ndarray) and len(cum_production_split_offset) > 1:
+            self._oil_prog_split = vectorized_get_prog_split(
+                fluid=self._oil_lifting.fluid_type,
+                price=self._oil_lifting.get_price_arr(),
+                cum=np.full_like(self.project_years, fill_value=175, dtype=float),
+                regime=regime
+            )
+            self._oil_prog_split += cum_production_split_offset
 
-        self._gas_prog_split = vectorized_get_prog_split(
-            fluid=self._gas_lifting.fluid_type,
-            price=self._gas_lifting.get_price_arr(),
-            cum=self._cumulative_prod,
-            regime=regime
-        )
+            self._gas_prog_split = vectorized_get_prog_split(
+                fluid=self._gas_lifting.fluid_type,
+                price=self._gas_lifting.get_price_arr(),
+                cum=np.full_like(self.project_years, fill_value=175, dtype=float),
+                regime=regime
+            )
+            self._gas_prog_split += cum_production_split_offset
+
+        # Condition when the cum_production_split_offset is not filled
+        else:
+            self._oil_prog_split = vectorized_get_prog_split(
+                fluid=self._oil_lifting.fluid_type,
+                price=self._oil_lifting.get_price_arr(),
+                cum=self._cumulative_prod,
+                regime=regime
+            )
+
+            self._gas_prog_split = vectorized_get_prog_split(
+                fluid=self._gas_lifting.fluid_type,
+                price=self._gas_lifting.get_price_arr(),
+                cum=self._cumulative_prod,
+                regime=regime
+            )
 
         # Ministerial Discretion
         minis_disc_array = np.full_like(self.project_years, fill_value=self.split_ministry_disc, dtype=float)

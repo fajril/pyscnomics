@@ -101,6 +101,14 @@ def adjusting_contract_arguments(arguments_dict: dict,
                                                        prior_rows=prior_rows,
                                                        post_rows=post_rows, )
 
+    if 'cum_production_split_offset' in arguments_dict.keys():
+        arguments_dict['cum_production_split_offset'] = adjust_rows(
+            original_value=arguments_dict['cum_production_split_offset'],
+            project_years=project_years,
+            first_contract=first_contract,
+            prior_rows=prior_rows,
+            post_rows=post_rows, )
+
     return arguments_dict
 
 

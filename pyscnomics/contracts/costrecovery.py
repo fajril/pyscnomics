@@ -680,7 +680,7 @@ class CostRecovery(BaseProject):
             lbt_rate: np.ndarray | float = 0.0,
             inflation_rate: np.ndarray | float = 0.0,
             future_rate: float = 0.02,
-            inflation_rate_applied_to: InflationAppliedTo = InflationAppliedTo.CAPEX,
+            inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
             post_uu_22_year2001: bool = True
     ):
 
