@@ -151,6 +151,8 @@ class GeneralConfigData:
         The attribute to which inflation rate is applied (defaults to None).
     gsa_number: int
         The number of GSA available.
+    number_active_fluid: dict
+        A dictionary depicting the number of active fluid in the project.
     """
     start_date_project: datetime
     end_date_project: datetime
@@ -165,6 +167,7 @@ class GeneralConfigData:
     discount_rate: float
     inflation_rate_applied_to: str
     gsa_number: int
+    number_active_fluid: dict
 
     # Attributes associated with duration of the project
     project_duration: int = field(default=None, init=False)
@@ -218,7 +221,7 @@ class GeneralConfigData:
 
             # Prepare attribute project_duration
             self.project_duration = (
-                    self.end_date_project_second.year - self.start_date_project.year + 1
+                self.end_date_project_second.year - self.start_date_project.year + 1
             )
 
             # Prepare attribute project_years

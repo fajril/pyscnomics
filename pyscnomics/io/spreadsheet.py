@@ -133,7 +133,7 @@ class Spreadsheet:
         excel = pd.ExcelFile(self.load_dir)
         self.sheets_name = excel.sheet_names
 
-        # # self.sheets_name = [sh.title for sh in sheets]
+        # Identify the loaded sheets
         self.sheets_loaded = [
             i for i in self.sheets_name
             if i not in [
@@ -143,11 +143,12 @@ class Spreadsheet:
                 "ChartDATA",
                 "ORETZS",
                 "Summary",
-                "Results Table CR",
-                "Results Table GS",
-                "Results Table Base Project",
-                "Results Table GS (2)",
-                "Results Table CR (2)",
+                "Monte Carlo",
+                "Result Table CR",
+                "Result Table GS",
+                "Result Table Base Project",
+                "Result Table GS (2)",
+                "Result Table CR (2)",
             ]
         ]
 
@@ -198,6 +199,15 @@ class Spreadsheet:
         oil_onstream_date_second = general_config_data_loaded.iloc[10, 2]
         gas_onstream_date_second = general_config_data_loaded.iloc[11, 2]
         gsa_number = general_config_data_loaded.iloc[13, 7]
+        number_active_fluid = {
+            "Oil": int(general_config_data_loaded.iloc[12, 3]),
+            "Gas": int(general_config_data_loaded.iloc[13, 3]),
+            "LPG Propane": int(general_config_data_loaded.iloc[14, 3]),
+            "LPG Butane": int(general_config_data_loaded.iloc[15, 3]),
+            "CO2": int(general_config_data_loaded.iloc[16, 3]),
+            "Sulfur": int(general_config_data_loaded.iloc[17, 3]),
+            "Electricity": int(general_config_data_loaded.iloc[18, 3]),
+        }
 
         return GeneralConfigData(
             start_date_project=start_date_project,
@@ -213,6 +223,7 @@ class Spreadsheet:
             discount_rate=discount_rate,
             inflation_rate_applied_to=inflation_rate_applied_to,
             gsa_number=gsa_number,
+            number_active_fluid=number_active_fluid,
         )
 
     def _get_fiscal_config_data(self) -> FiscalConfigData:
