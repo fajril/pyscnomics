@@ -519,72 +519,88 @@ class FiscalConfigData:
                 get_other_revenue_converter(target=self.co2_revenue_config[psc])
             )
 
-        # For single PSC
-        if "Transition" not in self.type_of_contract:
-            def _get_single_psc(target):
-                """
-                Retrieve data for a specific Production Sharing Contract (PSC).
+        print('\t')
+        print('===============================================================================')
 
-                Parameters
-                ----------
-                target: dict
-                    A dictionary containing data for different PSCs.
+        print('\t')
+        print(f'Filetype: {type(self.sulfur_revenue_config)}')
+        print('sulfur_revenue_config = \n', self.sulfur_revenue_config)
 
-                Returns
-                -------
-                The data corresponding to the specified PSC.
+        print('\t')
+        print(f'Filetype: {type(self.electricity_revenue_config)}')
+        print('electricity_revenue_config = \n', self.electricity_revenue_config)
 
-                Notes
-                -----
-                -   The function assumes that the input dictionary (`target`) has keys
-                    representing different PSCs.
-                -   It extracts and returns the data associated with the "PSC 1" key.
-                """
-                target_new = target["PSC 1"]
-                return target_new
+        print('\t')
+        print(f'Filetype: {type(self.co2_revenue_config)}')
+        print('co2_revenue_config = \n', self.co2_revenue_config)
 
-            (
-                self.tax_mode,
-                self.tax_payment_config,
-                self.tax_rate,
-                self.asr_future_rate,
-                self.depreciation_method,
-                self.decline_factor,
-                self.inflation_rate_mode,
-                self.inflation_rate,
-                self.vat_mode,
-                self.vat_rate,
-                self.lbt_mode,
-                self.lbt_rate,
-                self.vat_discount,
-                self.lbt_discount,
-                self.sulfur_revenue_config,
-                self.electricity_revenue_config,
-                self.co2_revenue_config,
-            ) = list(
-                map(
-                    _get_single_psc,
-                    [
-                        self.tax_mode,
-                        self.tax_payment_config,
-                        self.tax_rate,
-                        self.asr_future_rate,
-                        self.depreciation_method,
-                        self.decline_factor,
-                        self.inflation_rate_mode,
-                        self.inflation_rate,
-                        self.vat_mode,
-                        self.vat_rate,
-                        self.lbt_mode,
-                        self.lbt_rate,
-                        self.vat_discount,
-                        self.lbt_discount,
-                        self.sulfur_revenue_config,
-                        self.electricity_revenue_config,
-                        self.co2_revenue_config,
-                    ]
-                )
-            )
+
+        # # For single PSC
+        # if "Transition" not in self.type_of_contract:
+        #     def _get_single_psc(target):
+        #         """
+        #         Retrieve data for a specific Production Sharing Contract (PSC).
+        #
+        #         Parameters
+        #         ----------
+        #         target: dict
+        #             A dictionary containing data for different PSCs.
+        #
+        #         Returns
+        #         -------
+        #         The data corresponding to the specified PSC.
+        #
+        #         Notes
+        #         -----
+        #         -   The function assumes that the input dictionary (`target`) has keys
+        #             representing different PSCs.
+        #         -   It extracts and returns the data associated with the "PSC 1" key.
+        #         """
+        #         target_new = target["PSC 1"]
+        #         return target_new
+        #
+        #     (
+        #         self.tax_mode,
+        #         self.tax_payment_config,
+        #         self.tax_rate,
+        #         self.asr_future_rate,
+        #         self.depreciation_method,
+        #         self.decline_factor,
+        #         self.inflation_rate_mode,
+        #         self.inflation_rate,
+        #         self.vat_mode,
+        #         self.vat_rate,
+        #         self.lbt_mode,
+        #         self.lbt_rate,
+        #         self.vat_discount,
+        #         self.lbt_discount,
+        #         self.sulfur_revenue_config,
+        #         self.electricity_revenue_config,
+        #         self.co2_revenue_config,
+        #     ) = list(
+        #         map(
+        #             _get_single_psc,
+        #             [
+        #                 self.tax_mode,
+        #                 self.tax_payment_config,
+        #                 self.tax_rate,
+        #                 self.asr_future_rate,
+        #                 self.depreciation_method,
+        #                 self.decline_factor,
+        #                 self.inflation_rate_mode,
+        #                 self.inflation_rate,
+        #                 self.vat_mode,
+        #                 self.vat_rate,
+        #                 self.lbt_mode,
+        #                 self.lbt_rate,
+        #                 self.vat_discount,
+        #                 self.lbt_discount,
+        #                 self.sulfur_revenue_config,
+        #                 self.electricity_revenue_config,
+        #                 self.co2_revenue_config,
+        #             ]
+        #         )
+        #     )
 
 
 @dataclass

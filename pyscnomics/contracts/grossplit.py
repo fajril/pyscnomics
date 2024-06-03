@@ -6,8 +6,14 @@ import numpy as np
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
-from pyscnomics.econ.selection import (FluidType, GrossSplitRegime, TaxRegime, TaxType, DeprMethod, OtherRevenue,
-                                       InflationAppliedTo)
+from pyscnomics.econ.selection import (
+    FluidType,
+    GrossSplitRegime,
+    TaxRegime,
+    TaxType,
+    DeprMethod,
+    OtherRevenue,
+    InflationAppliedTo)
 from pyscnomics.econ.results import CashFlow
 
 
