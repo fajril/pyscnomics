@@ -388,20 +388,6 @@ class Spreadsheet:
             "PSC 2": fiscal_config_data_loaded.iloc[224, 1],
         }
 
-        print('\t')
-        print(f'Filetype: {type(sulfur_revenue_config)}')
-        print('sulfur_revenue_config = \n', sulfur_revenue_config)
-
-        print('\t')
-        print(f'Filetype: {type(electricity_revenue_config)}')
-        print('electricity_revenue_config = \n', electricity_revenue_config)
-
-        print('\t')
-        print(f'Filetype: {type(co2_revenue_config)}')
-        print('co2_revenue_config = \n', co2_revenue_config)
-
-
-
         # Prepare attribute associated with transition config
         transferred_unrec_cost = fiscal_config_data_loaded.iloc[115, 1]
 
