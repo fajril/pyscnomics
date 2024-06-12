@@ -440,7 +440,8 @@ class Spreadsheet:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod Oil' data,
             then assigned it as local variable named 'oil_data_available',
         (2) Load the data associated with oil_data, then store it in the variable
-            named 'oil_data_loaded_init',
+            named 'oil_data_loaded_init'. Undertake adjustment if the number of active oil
+            is zero,
         (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
             Store the results in the variable named 'oil_data_loaded',
         (4) Create a dictionary named 'oil_data' to store the necessary data from 'oil_data_loaded',
@@ -452,6 +453,10 @@ class Spreadsheet:
 
         # Step #2 (See 'Notes' section in the docstring)
         oil_data_loaded_init = {ws: self.data_loaded[ws] for ws in oil_data_available}
+
+        if self.general_config_data.number_active_fluid["Oil"] == int(0):
+            for ws in oil_data_available:
+                oil_data_loaded_init[ws].iloc[:, 1:] = 0.0
 
         # Step #3 (See 'Notes' section in the docstring)
         oil_data_loaded = {
@@ -477,6 +482,10 @@ class Spreadsheet:
             }
             for i, key in enumerate(oil_attrs)
         }
+
+        print('\t')
+        print(f'Keys: {oil_data.keys()}')
+        print('oil_data = \n', oil_data)
 
         # Step #5 (See 'Notes' section in the docstring)
         return OilLiftingData(
@@ -1769,8 +1778,8 @@ class Spreadsheet:
         self.general_config_data = self._get_general_config_data()
         self.fiscal_config_data = self._get_fiscal_config_data()
 
-        # # Fill in the attributes associated with lifting data
-        # self.oil_lifting_data = self._get_oil_lifting_data()
+        # Fill in the attributes associated with lifting data
+        self.oil_lifting_data = self._get_oil_lifting_data()
         # self.gas_lifting_data = self._get_gas_lifting_data()
         # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
         # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
