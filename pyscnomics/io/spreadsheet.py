@@ -483,10 +483,6 @@ class Spreadsheet:
             for i, key in enumerate(oil_attrs)
         }
 
-        print('\t')
-        print(f'Keys: {oil_data.keys()}')
-        print('oil_data = \n', oil_data)
-
         # Step #5 (See 'Notes' section in the docstring)
         return OilLiftingData(
             prod_year_init=oil_data["prod_year"],
@@ -516,7 +512,8 @@ class Spreadsheet:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod Gas' data,
             then assigned it as local variable named 'gas_data_available',
         (2) Load the data associated with gas, then store it in the variable
-            named 'gas_data_loaded_init',
+            named 'gas_data_loaded_init'. Undertake adjustment if the number of active
+            gas is zero,
         (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
             Store the results in the variable named 'gas_data_loaded',
         (4) Create a dictionary named 'gas_data_general' to store information related to
@@ -536,6 +533,10 @@ class Spreadsheet:
 
         # Step #2 (See 'Notes' section in the docstring)
         gas_data_loaded_init = {ws: self.data_loaded[ws] for ws in gas_data_available}
+
+        if self.general_config_data.number_active_fluid["Gas"] == int(0):
+            for ws in gas_data_available:
+                gas_data_loaded_init[ws].iloc[:, 1:] = 0.0
 
         # Step #3 (See 'Notes' section in the docstring)
         gas_data_loaded = {
@@ -580,6 +581,14 @@ class Spreadsheet:
             }
             for i, key in enumerate(gas_attrs_gsa)
         }
+
+        print('\t')
+        print(f'Filetype: {type(gas_data_general)}')
+        print('gas_data_general = \n', gas_data_general)
+
+        print('\t')
+        print(f'Filetype: {type(gas_data_gsa)}')
+        print('gas_data_gsa = \n', gas_data_gsa)
 
         # Step #6 (See 'Notes' section in the docstring)
         return GasLiftingData(
@@ -1780,7 +1789,7 @@ class Spreadsheet:
 
         # Fill in the attributes associated with lifting data
         self.oil_lifting_data = self._get_oil_lifting_data()
-        # self.gas_lifting_data = self._get_gas_lifting_data()
+        self.gas_lifting_data = self._get_gas_lifting_data()
         # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
         # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
         # self.sulfur_lifting_data = self._get_sulfur_lifting_data()
