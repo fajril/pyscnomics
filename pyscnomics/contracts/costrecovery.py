@@ -328,7 +328,7 @@ class CostRecovery(BaseProject):
             tangible_class = self._oil_tangible
 
         # Applying the IC calculation to only true value
-        ic_arr = np.where(np.asarray(tangible_class.is_ic_applied) is True,
+        ic_arr = np.where(np.asarray(tangible_class.is_ic_applied) == True,
                           tangible_class.cost * ic_rate,
                           0)
 
