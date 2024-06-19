@@ -25,6 +25,12 @@ class SunkCostException(Exception):
     pass
 
 
+class CostRecoveryException(Exception):
+    """Exception to raise for a misuse of Cost Recovery attributes"""
+
+    pass
+
+
 @dataclass
 class CostRecovery(BaseProject):
     oil_ftp_is_available: bool = field(default=True)
@@ -215,6 +221,48 @@ class CostRecovery(BaseProject):
         default=None, init=False, repr=False
     )
     _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
+
+    def _check_attributes(self):
+        """
+        Function to check the Cost Recovery input.
+        -------
+
+        """
+        # Defining any attributes that in the form of fraction
+        fraction_attributes = (
+            ('oil_ftp_portion', self.oil_ftp_portion),
+            ('gas_ftp_portion', self.gas_ftp_portion),
+            ('oil_ctr_pretax_share', self.oil_ctr_pretax_share),
+            ('gas_ctr_pretax_share', self.gas_ctr_pretax_share),
+            ('oil_ic_rate', self.oil_ic_rate),
+            ('gas_ic_rate', self.gas_ic_rate),
+            ('oil_cr_cap_rate', self.oil_cr_cap_rate),
+            ('gas_cr_cap_rate', self.gas_cr_cap_rate),
+            ('oil_dmo_volume_portion', self.oil_dmo_volume_portion),
+            ('oil_dmo_fee_portion', self.oil_dmo_fee_portion),
+            ('gas_dmo_volume_portion', self.gas_dmo_volume_portion),
+            ('gas_dmo_fee_portion', self.gas_dmo_fee_portion)
+        )
+
+        for attr_name, attr in fraction_attributes:
+            if attr > 1.0 or attr < 0.0:
+                range_type = 'exceeding 1.0' if attr > 1.0 else 'below 0.0'
+                raise CostRecoveryException(
+                    f"The {attr_name} value, {attr}, is {range_type}. "
+                    f"The allowed range for this attribute is between 0.0 and 1.0."
+                )
+
+        discrete_attributes = (
+            ('oil_dmo_holiday_duration', self.oil_dmo_holiday_duration),
+            ('gas_dmo_holiday_duration', self.gas_dmo_holiday_duration)
+        )
+
+        for attr_name, attr in discrete_attributes:
+            if attr < 0:
+                raise CostRecoveryException(
+                    f"The {attr_name} value, {attr}, is below 0. "
+                    f"The minimum value for this attribute is 0."
+                )
 
     def _get_rc_icp_pretax(self):
         """

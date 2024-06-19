@@ -154,6 +154,43 @@ class GrossSplit(BaseProject):
     _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_government_take: np.ndarray = field(default=None, init=False, repr=False)
 
+    def _check_attributes(self):
+        """
+        Function to check the Gross Split input.
+        -------
+
+        """
+        # Defining any attributes that in the form of fraction
+        fraction_attributes = (
+            ('base_split_ctr_oil', self.base_split_ctr_oil),
+            ('base_split_ctr_gas', self.base_split_ctr_gas),
+            ('split_ministry_disc', self.split_ministry_disc),
+            ('oil_dmo_volume_portion', self.oil_dmo_volume_portion),
+            ('oil_dmo_fee_portion', self.oil_dmo_fee_portion),
+            ('gas_dmo_volume_portion', self.gas_dmo_volume_portion),
+            ('gas_dmo_fee_portion', self.gas_dmo_fee_portion)
+        )
+
+        for attr_name, attr in fraction_attributes:
+            if attr > 1.0 or attr < 0.0:
+                range_type = 'exceeding 1.0' if attr > 1.0 else 'below 0.0'
+                raise GrossSplitException(
+                    f"The {attr_name} value, {attr}, is {range_type}. "
+                    f"The allowed range for this attribute is between 0.0 and 1.0."
+                )
+
+        discrete_attributes = (
+            ('oil_dmo_holiday_duration', self.oil_dmo_holiday_duration),
+            ('gas_dmo_holiday_duration', self.gas_dmo_holiday_duration)
+        )
+
+        for attr_name, attr in discrete_attributes:
+            if attr < 0:
+                raise GrossSplitException(
+                    f"The {attr_name} value, {attr}, is below 0. "
+                    f"The minimum value for this attribute is 0."
+                )
+
     def _wrapper_variable_split(self,
                                 regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
 

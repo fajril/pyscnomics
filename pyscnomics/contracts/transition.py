@@ -266,9 +266,12 @@ class Transition:
         # Condition where the first contract end on the 31 December and new contract start on  1 January
         condition = np.logical_and(self.contract1.end_date.day == 31, self.contract1.end_date.month == 12)
         if condition:
-            additional_year = 1
+            # additional_year = 1
+            additional_year = 0
+            end_date_condition = 1
         else:
             additional_year = 0
+            end_date_condition = 0
 
         project_years_trans = np.arange(start_date_trans.year, end_date_trans.year + 1 + additional_year)
         project_duration_trans = end_date_trans.year - start_date_trans.year + 1 + additional_year
@@ -284,8 +287,8 @@ class Transition:
         ic_to_prior = [False] * (self.contract1.project_duration - 1 + additional_year)
 
         # Defining the array of years between the prior contract to the new contract
-        years_to_new = np.arange(self.contract1.end_date.year + 1, self.contract2.end_date.year + 1 + additional_year)
-        years_to_prior = np.arange(self.contract1.start_date.year, self.contract2.start_date.year + additional_year)
+        years_to_new = np.arange(self.contract1.end_date.year + 1, self.contract2.end_date.year + 1 + additional_year - end_date_condition)
+        years_to_prior = np.arange(self.contract1.start_date.year, self.contract2.start_date.year + additional_year - end_date_condition)
 
         # Modifying the contract1
         # Changing the start_date and end_date of contract1
