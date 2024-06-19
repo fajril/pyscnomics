@@ -36,6 +36,29 @@ class Lifting:
         The value of ghv of a particular fluid type (default value = 1).
     prod_rate: np.ndarray
         The production rate of a particular fluid type.
+
+    Notes
+    -----
+    (1) The unit used in the lifting rate should be in M unit, where the M is stands for 1000.
+        While the price should be in US Dollar (USD).
+
+    (2) The corresponding lifting unit for each fluid type are as the following:
+        - Oil: MBBL
+        - Gas: BSCF
+        - LPG Propane: M-Ton (MT)
+        - LPG Butane: M-Ton (MT)
+        - Sulfur: M-Ton (MT)
+        - CO2: M-Ton (MT)
+        - Electricity: M-Unit
+
+    (3) The corresponding price unit for each fluid type are as the following:
+        - Oil: USD/BBL
+        - Gas: USD/MM-British Thermal Unit (MMBTU), while the GHV will be: M-BTU/Standard Cubic Feet (SCF)
+        - LPG Propane: USD/MT
+        - LPG Butane: USD/MT
+        - Sulfur: USD/MT
+        - CO2: USD/MT
+        - Electricity: USD/MT
     """
 
     start_year: int

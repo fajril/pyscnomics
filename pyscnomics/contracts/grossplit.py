@@ -31,6 +31,50 @@ class CumulativeProductionSplitException(Exception):
 
 @dataclass
 class GrossSplit(BaseProject):
+    """
+    Dataclass that represents Gross Split (GS) contract.
+
+    Parameters
+    ----------
+    field_status: str
+        The field status of the corresponding contract.
+    field_loc: str
+        The field location of the corresponding contract.
+    res_depth: str
+        The reservoir depth of the corresponding contract
+    infra_avail: str
+        The infrastructure availability of the corresponding contract.
+    res_type: str
+        The reservoir type of the corresponding contract.
+    api_oil: str
+        The Oil's API of the corresponding contract.
+    domestic_use: str
+        The domestic use or local content of the corresponding contract.
+    prod_stage: str
+        The production stage of the corresponding contract.
+    co2_content: str
+        The CO2 content of the corresponding contract.
+    h2s_content: str
+        The H2S content of the corresponding contract.
+    base_split_ctr_oil: float
+        The contractor base split for oil of the corresponding contract.
+    base_split_ctr_gas: float
+        The contractor base split for gas of the corresponding contract.
+    split_ministry_disc: float
+        The ministerial discretion split of the corresponding contract.
+    oil_dmo_volume_portion: float
+        The Oil's Domestic Market Obligation (DMO) volume portion.
+    oil_dmo_fee_portion: float
+        The Oil's DMO fee portion.
+    oil_dmo_holiday_duration: int
+        The duration of the Oil DMO Holiday in month unit.
+    gas_dmo_volume_portion: float
+        The Gas's Domestic Market Obligation (DMO) volume portion.
+    gas_dmo_fee_portion: float
+        The Gas's DMO fee portion.
+    gas_dmo_holiday_duration: int
+        The duration of the Gas's DMO Holiday in month unit.
+    """
     field_status: str = field(default='No POD')
     field_loc: str = field(default='Onshore')
     res_depth: str = field(default='<=2500')
@@ -388,17 +432,17 @@ class GrossSplit(BaseProject):
             ps = 0
 
         # Cumulative Progressive Split
-        if 0 < cum < 1:
+        if 0 < cum < 1_000:
             px = 0.05
-        elif 1 <= cum < 10:
+        elif 1_000 <= cum < 10_000:
             px = 0.04
-        elif 10 <= cum < 20:
+        elif 10_000 <= cum < 20_000:
             px = 0.03
-        elif 20 <= cum < 50:
+        elif 20_000 <= cum < 50_000:
             px = 0.02
-        elif 50 <= cum < 150:
+        elif 50_000 <= cum < 150_000:
             px = 0.01
-        elif 150 <= cum:
+        elif 150_000 <= cum:
             px = 0
         else:
             raise ValueError('No Regulation exist regarding the cumulative value')
@@ -425,17 +469,17 @@ class GrossSplit(BaseProject):
             raise ValueError('Unknown fluid type')
 
         # Cumulative Progressive Split
-        if np.logical_and(np.greater_equal(cum, 0), np.less(cum, 30)):
+        if np.logical_and(np.greater_equal(cum, 0), np.less(cum, 30_000)):
             px = 0.1
-        elif np.logical_and(np.greater_equal(cum, 30), np.less(cum, 60)):
+        elif np.logical_and(np.greater_equal(cum, 30_000), np.less(cum, 60_000)):
             px = 0.09
-        elif np.logical_and(np.greater_equal(cum, 60), np.less(cum, 90)):
+        elif np.logical_and(np.greater_equal(cum, 60_000), np.less(cum, 90_000)):
             px = 0.08
-        elif np.logical_and(np.greater_equal(cum, 90), np.less(cum, 125)):
+        elif np.logical_and(np.greater_equal(cum, 90_000), np.less(cum, 125_000)):
             px = 0.06
-        elif np.logical_and(np.greater_equal(cum, 125), np.less(cum, 175)):
+        elif np.logical_and(np.greater_equal(cum, 125_000), np.less(cum, 175_000)):
             px = 0.04
-        elif np.greater_equal(cum, 175):
+        elif np.greater_equal(cum, 175_000):
             px = 0
         else:
             raise ValueError('No Regulation exist regarding the cumulative value')
@@ -628,7 +672,7 @@ class GrossSplit(BaseProject):
             self._oil_prog_split = vectorized_get_prog_split(
                 fluid=self._oil_lifting.fluid_type,
                 price=self._oil_lifting.get_price_arr(),
-                cum=np.full_like(self.project_years, fill_value=175, dtype=float),
+                cum=np.full_like(self.project_years, fill_value=999_000, dtype=float),
                 regime=regime
             )
             self._oil_prog_split += cum_production_split_offset
@@ -636,7 +680,7 @@ class GrossSplit(BaseProject):
             self._gas_prog_split = vectorized_get_prog_split(
                 fluid=self._gas_lifting.fluid_type,
                 price=self._gas_lifting.get_price_arr(),
-                cum=np.full_like(self.project_years, fill_value=175, dtype=float),
+                cum=np.full_like(self.project_years, fill_value=999_000, dtype=float),
                 regime=regime
             )
             self._gas_prog_split += cum_production_split_offset

@@ -114,6 +114,20 @@ def adjusting_contract_arguments(arguments_dict: dict,
 
 @dataclass
 class Transition:
+    """
+    Dataclass that represents Transition contract.
+
+    Parameters
+    ----------
+    contract1: CostRecovery | GrossSplit
+        The object of the first contract.
+    contract2: CostRecovery | GrossSplit
+        The object of the second contract.
+    argument_contract1: dict
+        The argument of the first contract.
+    argument_contract2: dict
+        The argument of the second contract.
+    """
     contract1: CostRecovery | GrossSplit
     contract2: CostRecovery | GrossSplit
     argument_contract1: dict

@@ -33,6 +33,56 @@ class CostRecoveryException(Exception):
 
 @dataclass
 class CostRecovery(BaseProject):
+    """
+    Dataclass that represents Cost Recovery (CR) contract.
+
+    Parameters
+    ----------
+    oil_ftp_is_available: bool
+        The availability of the Oil's First Tranche Petroleum (FTP).
+    oil_ftp_is_shared: bool
+        The condition whether the Oil FTP will be shared to the contractor or not.
+    oil_ftp_portion: float
+        The portion of the Oil FTP in fraction.
+    gas_ftp_is_available: bool
+        The availability of the Gas's First Tranche Petroleum (FTP).
+    gas_ftp_is_shared: bool
+        The condition whether the Gas FTP will be shared to the contractor or not.
+    gas_ftp_portion: float
+        The portion of the Gas FTP in fraction.
+    tax_split_type: TaxSplitTypeCR
+        The type of the contractor split.
+    condition_dict: dict
+        The condition dictionary of the split when the tax_split_type is not Conventional.
+    indicator_rc_icp_sliding: np.ndarray
+        The indicator used in the SLIDING_SCALE or R2C tax_split_type.
+    oil_ctr_pretax_share: float | np.ndarray
+        The Oil Contractor Pre-Tax Split or Oil Contractor Pre-Tax Split Share.
+    gas_ctr_pretax_share: float | np.ndarray
+        The Gas Contractor Pre-Tax Split or Oil Contractor Pre-Tax Split Share.
+    oil_ic_rate: float
+        The Oil's Investment Credit (IC) rate of the contract.
+    gas_ic_rate: float
+        The Gas's Investment Credit (IC) rate of the contract.
+    ic_is_available: bool
+        The condition whether if IC is available or not.
+    oil_cr_cap_rate: float
+        The Oil Cost Recovery cap rate.
+    gas_cr_cap_rate: float
+        The Gas Cost Recovery cap rate.
+    oil_dmo_volume_portion: float
+        The Oil's Domestic Market Obligation (DMO) volume portion.
+    oil_dmo_fee_portion: float
+        The Oil's DMO fee portion.
+    oil_dmo_holiday_duration: int
+        The duration of the Oil DMO Holiday in month unit.
+    gas_dmo_volume_portion: float
+        The Gas's Domestic Market Obligation (DMO) volume portion.
+    gas_dmo_fee_portion: float
+        The Gas's DMO fee portion.
+    gas_dmo_holiday_duration: int
+        The duration of the Gas's DMO Holiday in month unit.
+    """
     oil_ftp_is_available: bool = field(default=True)
     oil_ftp_is_shared: bool = field(default=True)
     oil_ftp_portion: float = field(default=0.2)

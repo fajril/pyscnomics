@@ -67,6 +67,12 @@ class GeneralCost:
         Must be an array of length equals to the length of 'cost' array.
     lbt_discount: float
         The LBT discount to apply.
+
+    Notes
+    -----
+    (1) The unit used in the cost should be in M unit of United States Dollar (USD), where the M is stands for 1000.
+        Thus, the unit cost should be: M-USD.
+
     """
 
     start_year: int
@@ -1202,6 +1208,11 @@ class OPEX(GeneralCost):
         The production rate of a particular fluid type.
     cost_per_volume: np.ndarray
         Cost associated with production of a particular fluid type.
+
+    Notes
+    -----
+    (1) The unit used in the fixed_cost should be in M unit of United States Dollar (USD),
+        where the M is stands for 1000. Thus, the unit cost should be: M-USD.
     """
 
     fixed_cost: np.ndarray = field(default=None)
