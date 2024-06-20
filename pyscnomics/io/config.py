@@ -870,7 +870,7 @@ class GasLiftingData:
                         np.zeros(len(prod_rate_nan[ws]), dtype=np.float_)
                     )
                 else:
-                    self.prod_rate[ws] = np.float_(self.prod_rate[ws])
+                    self.prod_rate[ws] = self.prod_rate[ws].astype(np.float_)
 
         # Prepare attribute lifting_rate
         if not isinstance(self.lifting_rate, dict):
@@ -894,7 +894,7 @@ class GasLiftingData:
                             np.zeros(len(lifting_rate_nan[ws][gsa]), dtype=np.float_)
                         )
                     else:
-                        self.lifting_rate[ws][gsa] = np.float_(self.lifting_rate[ws][gsa])
+                        self.lifting_rate[ws][gsa] = self.lifting_rate[ws][gsa].astype(np.float_)
 
         # Prepare attribute ghv
         if not isinstance(self.ghv, dict):
@@ -918,7 +918,7 @@ class GasLiftingData:
                             np.zeros(len(ghv_nan[ws][gsa]), dtype=np.float_)
                         )
                     else:
-                        self.ghv[ws][gsa] = np.float_(self.ghv[ws][gsa])
+                        self.ghv[ws][gsa] = self.ghv[ws][gsa].astype(np.float_)
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
@@ -942,7 +942,7 @@ class GasLiftingData:
                             np.zeros(len(price_nan[ws][gsa]), dtype=np.float_)
                         )
                     else:
-                        self.price[ws][gsa] = np.float_(self.price[ws][gsa])
+                        self.price[ws][gsa] = self.price[ws][gsa].astype(np.float_)
 
         # Adjust data for PSC transition case
         if "Transition" in self.type_of_contract:
@@ -1066,7 +1066,7 @@ class LPGPropaneLiftingData:
                         np.zeros(len(lifting_rate_nan[ws]), dtype=np.float_)
                     )
                 else:
-                    self.lifting_rate[ws] = np.float_(self.lifting_rate[ws])
+                    self.lifting_rate[ws] = self.lifting_rate[ws].astype(np.float_)
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
@@ -1086,7 +1086,7 @@ class LPGPropaneLiftingData:
                 if len(price_nan[ws]) > 0:
                     self.price[ws][price_nan[ws]] = np.zeros(len(price_nan[ws]), dtype=np.float_)
                 else:
-                    self.price[ws] = np.float_(self.price[ws])
+                    self.price[ws] = self.price[ws].astype(np.float_)
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
@@ -1189,7 +1189,7 @@ class LPGButaneLiftingData:
                         np.zeros(len(lifting_rate_nan[ws]), dtype=np.float_)
                     )
                 else:
-                    self.lifting_rate[ws] = np.float_(self.lifting_rate[ws])
+                    self.lifting_rate[ws] = self.lifting_rate[ws].astype(np.float_)
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
@@ -1209,7 +1209,7 @@ class LPGButaneLiftingData:
                 if len(price_nan[ws]) > 0:
                     self.price[ws][price_nan[ws]] = np.zeros(len(price_nan[ws]), dtype=np.float_)
                 else:
-                    self.price[ws] = np.float_(self.price[ws])
+                    self.price[ws] = self.price[ws].astype(np.float_)
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
@@ -1311,7 +1311,7 @@ class SulfurLiftingData:
                         np.zeros(len(lifting_rate_nan[ws]), dtype=np.float_)
                     )
                 else:
-                    self.lifting_rate[ws] = np.float_(self.lifting_rate[ws])
+                    self.lifting_rate[ws] = self.lifting_rate[ws].astype(np.float_)
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
@@ -1331,7 +1331,7 @@ class SulfurLiftingData:
                 if len(price_nan[ws]) > 0:
                     self.price[ws][price_nan[ws]] = np.zeros(len(price_nan[ws]), dtype=np.float_)
                 else:
-                    self.price[ws] = np.float_(self.price[ws])
+                    self.price[ws] = self.price[ws].astype(np.float_)
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
@@ -1433,7 +1433,7 @@ class ElectricityLiftingData:
                         np.zeros(len(lifting_rate_nan[ws]), dtype=np.float_)
                     )
                 else:
-                    self.lifting_rate[ws] = np.float_(self.lifting_rate[ws])
+                    self.lifting_rate[ws] = self.lifting_rate[ws].astype(np.float_)
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
@@ -1453,7 +1453,7 @@ class ElectricityLiftingData:
                 if len(price_nan[ws]) > 0:
                     self.price[ws][price_nan[ws]] = np.zeros(len(price_nan[ws]), dtype=np.float_)
                 else:
-                    self.price[ws] = np.float_(self.price[ws])
+                    self.price[ws] = self.price[ws].astype(np.float_)
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
@@ -1555,7 +1555,7 @@ class CO2LiftingData:
                         np.zeros(len(lifting_rate_nan[ws]), dtype=np.float_)
                     )
                 else:
-                    self.lifting_rate[ws] = np.float_(self.lifting_rate[ws])
+                    self.lifting_rate[ws] = self.lifting_rate[ws].astype(np.float_)
 
         # Prepare attribute price
         if not isinstance(self.price, dict):
@@ -1575,7 +1575,7 @@ class CO2LiftingData:
                 if len(price_nan[ws]) > 0:
                     self.price[ws][price_nan[ws]] = np.zeros(len(price_nan[ws]), dtype=np.float_)
                 else:
-                    self.price[ws] = np.float_(self.price[ws])
+                    self.price[ws] = self.price[ws].astype(np.float_)
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:

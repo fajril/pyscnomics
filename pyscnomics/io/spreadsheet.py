@@ -582,14 +582,6 @@ class Spreadsheet:
             for i, key in enumerate(gas_attrs_gsa)
         }
 
-        print('\t')
-        print(f'Filetype: {type(gas_data_general)}')
-        print('gas_data_general = \n', gas_data_general)
-
-        print('\t')
-        print(f'Filetype: {type(gas_data_gsa)}')
-        print('gas_data_gsa = \n', gas_data_gsa)
-
         # Step #6 (See 'Notes' section in the docstring)
         return GasLiftingData(
             gsa_number=gsa_number,
@@ -620,7 +612,8 @@ class Spreadsheet:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod LPG Propane'
             data, then assigned it as local variable named 'lpg_propane_data_available',
         (2) Load the data associated with lpg_propane_data, then store it in the variable
-            named 'lpg_propane_data_loaded_init',
+            named 'lpg_propane_data_loaded_init'. Undertake adjustment if the number of
+            active lpg propane is zero,
         (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
             Store the results in the variable named 'lpg_propane_data_loaded',
         (4) Create a dictionary named 'lpg_propane_data' to store the necessary data from
@@ -637,6 +630,10 @@ class Spreadsheet:
         lpg_propane_data_loaded_init = {
             ws: self.data_loaded[ws] for ws in lpg_propane_data_available
         }
+
+        if self.general_config_data.number_active_fluid["LPG Propane"] == int(0):
+            for ws in lpg_propane_data_available:
+                lpg_propane_data_loaded_init[ws].iloc[:, 1:] = 0.0
 
         # Step #3 (See 'Notes' section in the docstring)
         lpg_propane_data_loaded = {
@@ -688,7 +685,8 @@ class Spreadsheet:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod LPG Butane'
             data, then assigned it as local variable named 'lpg_butane_data_available',
         (2) Load the data associated with lpg_butane_data, then store it in the variable
-            named 'lpg_butane_data_loaded_init',
+            named 'lpg_butane_data_loaded_init'. Undertake adjustment if the number of
+            active lpg butane is zero,
         (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
             Store the results in the variable named 'lpg_butane_data_loaded',
         (4) Create a dictionary named 'lpg_butane_data' to store the necessary data from
@@ -705,6 +703,10 @@ class Spreadsheet:
         lpg_butane_data_loaded_init = {
             ws: self.data_loaded[ws] for ws in lpg_butane_data_available
         }
+
+        if self.general_config_data.number_active_fluid["LPG Butane"] == int(0):
+            for ws in lpg_butane_data_available:
+                lpg_butane_data_loaded_init[ws].iloc[:, 1:] = 0.0
 
         # Step #3 (See 'Notes' section in the docstring)
         lpg_butane_data_loaded = {
@@ -756,7 +758,8 @@ class Spreadsheet:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod Sulfur'
             data, then assigned it as local variable named 'sulfur_data_available',
         (2) Load the data associated with sulfur data, then store it in the variable
-            named 'sulfur_data_loaded_init',
+            named 'sulfur_data_loaded_init'. Undertake adjustment if the number of active
+            sulfur is zero,
         (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
             Store the results in the variable named 'sulfur_data_loaded',
         (4) Create a dictionary named 'sulfur_data' to store the necessary data from
@@ -769,6 +772,10 @@ class Spreadsheet:
 
         # Step #2 (See 'Notes' section in the docstring)
         sulfur_data_loaded_init = {ws: self.data_loaded[ws] for ws in sulfur_data_available}
+
+        if self.general_config_data.number_active_fluid["Sulfur"] == int(0):
+            for ws in sulfur_data_available:
+                sulfur_data_loaded_init[ws].iloc[:, 1:] = 0.0
 
         # Step #3 (See 'Notes' section in the docstring)
         sulfur_data_loaded = {
@@ -820,7 +827,8 @@ class Spreadsheet:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod Electricity'
             data, then assigned it as local variable named 'electricity_data_available',
         (2) Load the data associated with electricity data, then store it in the variable
-            named 'electricity_data_loaded_init',
+            named 'electricity_data_loaded_init'. Undertake adjustment if the number of
+            active electricity is zero,
         (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
             Store the results in the variable named 'electricity_data_loaded',
         (4) Create a dictionary named 'electricity_data' to store the necessary data from
@@ -835,6 +843,10 @@ class Spreadsheet:
         electricity_data_loaded_init = {
             ws: self.data_loaded[ws] for ws in electricity_data_available
         }
+
+        if self.general_config_data.number_active_fluid["Electricity"] == int(0):
+            for ws in electricity_data_available:
+                electricity_data_loaded_init[ws].iloc[:, 1:] = 0.0
 
         # Step #3 (See 'Notes' section in the docstring)
         electricity_data_loaded = {
@@ -886,7 +898,8 @@ class Spreadsheet:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod CO2'
             data, then assigned it as local variable named 'co2_data_available',
         (2) Load the data associated with co2 data, then store it in the variable
-            named 'co2_data_loaded_init',
+            named 'co2_data_loaded_init'. Undertake adjustment if the number of
+            active CO2 is zero,
         (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
             Store the results in the variable named 'co2_data_loaded',
         (4) Create a dictionary named 'co2_data' to store the necessary data from
@@ -899,6 +912,10 @@ class Spreadsheet:
 
         # Step #2 (See 'Notes' section in the docstring)
         co2_data_loaded_init = {ws: self.data_loaded[ws] for ws in co2_data_available}
+
+        if self.general_config_data.number_active_fluid["CO2"] == int(0):
+            for ws in co2_data_available:
+                co2_data_loaded_init[ws].iloc[:, 1:] = 0.0
 
         # Step #3 (See 'Notes' section in the docstring)
         co2_data_loaded = {
@@ -1790,12 +1807,12 @@ class Spreadsheet:
         # Fill in the attributes associated with lifting data
         self.oil_lifting_data = self._get_oil_lifting_data()
         self.gas_lifting_data = self._get_gas_lifting_data()
-        # self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
-        # self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
-        # self.sulfur_lifting_data = self._get_sulfur_lifting_data()
-        # self.electricity_lifting_data = self._get_electricity_lifting_data()
-        # self.co2_lifting_data = self._get_co2_lifting_data()
-        #
+        self.lpg_propane_lifting_data = self._get_lpg_propane_lifting_data()
+        self.lpg_butane_lifting_data = self._get_lpg_butane_lifting_data()
+        self.sulfur_lifting_data = self._get_sulfur_lifting_data()
+        self.electricity_lifting_data = self._get_electricity_lifting_data()
+        self.co2_lifting_data = self._get_co2_lifting_data()
+
         # # Fill in the attributes associated with cost data
         # self.tangible_cost_data = self._get_tangible_cost_data()
         # self.intangible_cost_data = self._get_intangible_cost_data()
