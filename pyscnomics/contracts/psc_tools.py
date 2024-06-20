@@ -46,7 +46,18 @@ def get_unrecovered_cost(depreciation: np.ndarray,
     left_cost = np.where(np.logical_and((revenue - ftp_ctr - ftp_gov - ic) < depreciation + non_capital,
                                         unrecovered_cost == 0),
                          (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic), 0)
-    unrecovered_cost_final = unrecovered_cost + np.cumsum(left_cost)
+
+    unrecovered_cost_final = unrecovered_cost + left_cost
+
+    # Adding the trailing unrecoverable cost into the array
+    if np.sum(revenue) == 0:
+        pass
+    else:
+        last_non_zero_indices = max(np.nonzero(revenue)[0])
+        trailing_cost = np.cumsum(left_cost[last_non_zero_indices:])
+
+        unrecovered_cost_final[last_non_zero_indices:] = trailing_cost
+
     return unrecovered_cost_final
 
 
@@ -187,7 +198,17 @@ def get_unrec_cost_after_tf(depreciation,
                                         unrecovered_cost == 0),
                          (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic) - transferred_cost_in + transferred_cost_out, 0)
     left_cost = np.where(left_cost >= 0, left_cost, 0)
-    unrecovered_cost_final = unrecovered_cost + np.cumsum(left_cost)
+
+    unrecovered_cost_final = unrecovered_cost + left_cost
+
+    # Adding the trailing unrecoverable cost into the array
+    if np.sum(revenue) == 0:
+        pass
+    else:
+        last_non_zero_indices = max(np.nonzero(revenue)[0])
+        trailing_cost = np.cumsum(left_cost[last_non_zero_indices:])
+
+        unrecovered_cost_final[last_non_zero_indices:] = trailing_cost
     return unrecovered_cost_final
 
 

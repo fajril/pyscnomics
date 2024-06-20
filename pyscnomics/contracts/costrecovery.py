@@ -522,7 +522,7 @@ class CostRecovery(BaseProject):
         """
 
         result = revenue - (ftp_ctr + ftp_gov) - ic - cost_recovery
-        tol = np.full_like(result, fill_value=1.0e-12)
+        tol = np.full_like(result, fill_value=1.0e-10)
         return np.where(result < tol, 0, result)
 
     @staticmethod
@@ -571,7 +571,7 @@ class CostRecovery(BaseProject):
                                       + transferred_in,
                                       0)
 
-        tol = np.full_like(ets_after_transfer, fill_value=1.0e-12)
+        tol = np.full_like(ets_after_transfer, fill_value=1.0e-10)
         return np.where(ets_after_transfer < tol, 0, ets_after_transfer)
 
     @staticmethod
