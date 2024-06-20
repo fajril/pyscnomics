@@ -53,11 +53,13 @@ def get_unrecovered_cost(depreciation: np.ndarray,
     if np.sum(revenue) == 0:
         pass
     else:
-        last_non_zero_indices = max(np.nonzero(revenue)[0])
-        trailing_cost = np.cumsum(left_cost[last_non_zero_indices:])
+        if np.sum(left_cost) == 0:
+            pass
+        else:
+            last_non_zero_indices = max(np.nonzero(revenue)[0])
+            trailing_cost = np.cumsum(left_cost[last_non_zero_indices:])
 
-        unrecovered_cost_final[last_non_zero_indices:] = trailing_cost
-
+            unrecovered_cost_final[last_non_zero_indices:] = trailing_cost
     return unrecovered_cost_final
 
 
@@ -205,10 +207,13 @@ def get_unrec_cost_after_tf(depreciation,
     if np.sum(revenue) == 0:
         pass
     else:
-        last_non_zero_indices = max(np.nonzero(revenue)[0])
-        trailing_cost = np.cumsum(left_cost[last_non_zero_indices:])
+        if np.sum(left_cost) == 0:
+            pass
+        else:
+            last_non_zero_indices = max(np.nonzero(revenue)[0])
+            trailing_cost = np.cumsum(left_cost[last_non_zero_indices:])
 
-        unrecovered_cost_final[last_non_zero_indices:] = trailing_cost
+            unrecovered_cost_final[last_non_zero_indices:] = trailing_cost
     return unrecovered_cost_final
 
 
