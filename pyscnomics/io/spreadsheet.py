@@ -827,8 +827,7 @@ class Spreadsheet:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod Electricity'
             data, then assigned it as local variable named 'electricity_data_available',
         (2) Load the data associated with electricity data, then store it in the variable
-            named 'electricity_data_loaded_init'. Undertake adjustment if the number of
-            active electricity is zero,
+            named 'electricity_data_loaded_init',
         (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
             Store the results in the variable named 'electricity_data_loaded',
         (4) Create a dictionary named 'electricity_data' to store the necessary data from
@@ -843,10 +842,6 @@ class Spreadsheet:
         electricity_data_loaded_init = {
             ws: self.data_loaded[ws] for ws in electricity_data_available
         }
-
-        if self.general_config_data.number_active_fluid["Electricity"] == int(0):
-            for ws in electricity_data_available:
-                electricity_data_loaded_init[ws].iloc[:, 1:] = 0.0
 
         # Step #3 (See 'Notes' section in the docstring)
         electricity_data_loaded = {
@@ -898,8 +893,7 @@ class Spreadsheet:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod CO2'
             data, then assigned it as local variable named 'co2_data_available',
         (2) Load the data associated with co2 data, then store it in the variable
-            named 'co2_data_loaded_init'. Undertake adjustment if the number of
-            active CO2 is zero,
+            named 'co2_data_loaded_init',
         (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
             Store the results in the variable named 'co2_data_loaded',
         (4) Create a dictionary named 'co2_data' to store the necessary data from
@@ -912,10 +906,6 @@ class Spreadsheet:
 
         # Step #2 (See 'Notes' section in the docstring)
         co2_data_loaded_init = {ws: self.data_loaded[ws] for ws in co2_data_available}
-
-        if self.general_config_data.number_active_fluid["CO2"] == int(0):
-            for ws in co2_data_available:
-                co2_data_loaded_init[ws].iloc[:, 1:] = 0.0
 
         # Step #3 (See 'Notes' section in the docstring)
         co2_data_loaded = {
@@ -943,8 +933,9 @@ class Spreadsheet:
         # Step #5 (See 'Notes' section in the docstring)
         return CO2LiftingData(
             prod_year_init=co2_data["prod_year"],
-            lifting_rate=co2_data["lifting_rate"],
-            price=co2_data["price"],
+            lifting_rate_init=co2_data["lifting_rate"],
+            price_init=co2_data["price"],
+            active_co2=self.general_config_data.number_active_fluid["CO2"],
             project_duration=self.general_config_data.project_duration,
             project_years=self.general_config_data.project_years,
             type_of_contract=self.general_config_data.type_of_contract,
@@ -1813,8 +1804,8 @@ class Spreadsheet:
         self.electricity_lifting_data = self._get_electricity_lifting_data()
         self.co2_lifting_data = self._get_co2_lifting_data()
 
-        # # Fill in the attributes associated with cost data
-        # self.tangible_cost_data = self._get_tangible_cost_data()
+        # Fill in the attributes associated with cost data
+        self.tangible_cost_data = self._get_tangible_cost_data()
         # self.intangible_cost_data = self._get_intangible_cost_data()
         # self.opex_data = self._get_opex_data()
         # self.asr_cost_data = self._get_asr_cost_data()
