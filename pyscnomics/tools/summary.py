@@ -291,7 +291,7 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
         ctr_net_cashflow_over_gross_rev = ctr_net_cashflow / gross_revenue_point_forward
 
     # Contractor Present Value ratio to the investment npv
-    ctr_pv_ratio = ctr_npv / investment_npv
+    ctr_pv_ratio = np.divide(ctr_npv, investment_npv, where=investment_npv != 0)
     ctr_pi = 1 + ctr_pv_ratio
 
     # Condition where the contract is Cost Recovery
