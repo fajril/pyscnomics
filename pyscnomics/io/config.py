@@ -994,14 +994,16 @@ class LPGPropaneLiftingData:
     """
     A dataclass representing LPG Propane lifting information for an oil and gas economic project.
 
-    Attributes
+    Parameters
     ----------
     prod_year_init: dict
-        Dictionary containing production years data.
-    lifting_rate: dict
-        Dictionary containing LPG Propane lifting rate data.
-    price: dict
-        Dictionary containing LPG Propane price data.
+        Initial production years data. Must be provided as a dictionary.
+    lifting_rate_init: dict
+        Initial lifting rate data. Must be provided as a dictionary.
+    price_init: dict
+        Initial price data. Must be provided as a dictionary.
+    active_lpgpropane: int
+        Indicator of whether LPG propane is active or not.
     project_duration: int
         The duration of the project.
     project_years: numpy.ndarray
@@ -1012,10 +1014,30 @@ class LPGPropaneLiftingData:
         The end date of the project.
     start_date_project_second: date
         The start date of the second project (for PSC transition).
+
+    Attributes
+    ----------
+    prod_year: dict
+        Dictionary of production years data.
+    lifting_rate: dict
+        Dictionary of lifting rate data.
+    price: dict
+        Dictionary of price data.
+
+    Methods
+    -------
+    __post_init__(prod_year_init, lifting_rate_init, price_init)
+        Initializes the production year, lifting rate, and price data after the object is created.
+
+    Raises
+    ------
+    LPGPropaneLiftingDataException
+        If the input data types are not as expected.
     """
     prod_year_init: InitVar[dict] = field(repr=False)
-    lifting_rate: dict
-    price: dict
+    lifting_rate_init: InitVar[dict] = field(repr=False)
+    price_init: InitVar[dict] = field(repr=False)
+    active_lpgpropane: int
 
     # Attributes associated with project duration
     project_duration: int = field(repr=False)
@@ -1028,8 +1050,15 @@ class LPGPropaneLiftingData:
 
     # Attributes to be defined later
     prod_year: dict = field(default=None, init=False)
+    lifting_rate: dict = field(default=None, init=False)
+    price: dict = field(default=None, init=False)
 
-    def __post_init__(self, prod_year_init):
+    def __post_init__(
+        self,
+        prod_year_init,
+        lifting_rate_init,
+        price_init,
+    ):
         # Prepare attribute prod_year
         if not isinstance(prod_year_init, dict):
             raise LPGPropaneLiftingDataException(
@@ -1040,53 +1069,73 @@ class LPGPropaneLiftingData:
 
         for ws in prod_year_init.keys():
             if prod_year_init[ws] is None:
-                prod_year_init[ws] = np.int_(self.project_years)
+                prod_year_init[ws] = self.project_years.astype(np.int_)
             else:
-                prod_year_init[ws] = np.int_(prod_year_init[ws])
+                prod_year_init[ws] = prod_year_init[ws].astype(np.int_)
 
-        self.prod_year = prod_year_init.copy()
+        if self.active_lpgpropane == 0:
+            self.prod_year = {
+                ws: self.project_years.copy().astype(np.int_)
+                for ws in prod_year_init.keys()
+            }
+        else:
+            self.prod_year = prod_year_init.copy()
 
         # Prepare attribute lifting_rate
-        if not isinstance(self.lifting_rate, dict):
+        if not isinstance(lifting_rate_init, dict):
             raise LPGPropaneLiftingDataException(
                 f"Attribute lifting_rate must be provided in the form of dictionary. "
                 f"The current datatype of lifting_rate is "
-                f"{self.lifting_rate.__class__.__qualname__}"
+                f"{lifting_rate_init.__class__.__qualname__}"
             )
 
-        lifting_rate_nan = {}
-        for ws in self.lifting_rate.keys():
-            if self.lifting_rate[ws] is None:
-                self.lifting_rate[ws] = np.zeros_like(self.project_years, dtype=np.float_)
-                lifting_rate_nan[ws] = None
-            else:
-                lifting_rate_nan[ws] = np.argwhere(pd.isna(self.lifting_rate[ws])).ravel()
-                if len(lifting_rate_nan[ws]) > 0:
-                    self.lifting_rate[ws][lifting_rate_nan[ws]] = (
-                        np.zeros(len(lifting_rate_nan[ws]), dtype=np.float_)
-                    )
+        if self.active_lpgpropane == 0:
+            self.lifting_rate = {
+                ws: np.zeros_like(self.project_years, dtype=np.float_)
+                for ws in lifting_rate_init.keys()
+            }
+        else:
+            self.lifting_rate = {}
+            for ws, data in lifting_rate_init.items():
+                if data is None:
+                    self.lifting_rate[ws] = np.zeros_like(self.project_years, dtype=np.float_)
                 else:
-                    self.lifting_rate[ws] = self.lifting_rate[ws].astype(np.float_)
+                    lifting_rate_nan_indices = np.argwhere(pd.isna(data)).ravel()
+                    if len(lifting_rate_nan_indices) > 0:
+                        self.lifting_rate[ws] = data.copy()
+                        self.lifting_rate[ws][lifting_rate_nan_indices] = (
+                            np.zeros(len(lifting_rate_nan_indices), dtype=np.float_)
+                        )
+                    else:
+                        self.lifting_rate[ws] = data.copy().astype(np.float_)
 
         # Prepare attribute price
-        if not isinstance(self.price, dict):
+        if not isinstance(price_init, dict):
             raise LPGPropaneLiftingDataException(
                 f"Attribute price must be provided in the form of dictionary. "
                 f"The current datatype of price is "
-                f"{self.price.__class__.__qualname__}"
+                f"{price_init.__class__.__qualname__}"
             )
 
-        price_nan = {}
-        for ws in self.price.keys():
-            if self.price[ws] is None:
-                self.price[ws] = np.zeros_like(self.project_years, dtype=np.float_)
-                price_nan[ws] = None
-            else:
-                price_nan[ws] = np.argwhere(pd.isna(self.price[ws])).ravel()
-                if len(price_nan[ws]) > 0:
-                    self.price[ws][price_nan[ws]] = np.zeros(len(price_nan[ws]), dtype=np.float_)
+        if self.active_lpgpropane == 0:
+            self.price = {
+                ws: np.zeros_like(self.project_years, dtype=np.float_)
+                for ws in price_init.keys()
+            }
+        else:
+            self.price = {}
+            for ws, data in price_init.items():
+                if data is None:
+                    self.price[ws] = np.zeros_like(self.project_years, dtype=np.float_)
                 else:
-                    self.price[ws] = self.price[ws].astype(np.float_)
+                    price_nan_indices = np.argwhere(pd.isna(data)).ravel()
+                    if len(price_nan_indices) > 0:
+                        self.price[ws] = data.copy()
+                        self.price[ws][price_nan_indices] = (
+                            np.zeros(len(price_nan_indices), dtype=np.float_)
+                        )
+                    else:
+                        self.price[ws] = data.copy().astype(np.float_)
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
@@ -1126,7 +1175,7 @@ class LPGButaneLiftingData:
     price_init: dict
         Initial price data. Must be provided as a dictionary.
     active_lpgbutane: int
-        Indicator of whether sulfur is active or not.
+        Indicator of whether LPG butane is active or not.
     project_duration: int
         The duration of the project.
     project_years: numpy.ndarray
@@ -1368,9 +1417,10 @@ class SulfurLiftingData:
                 prod_year_init[ws] = prod_year_init[ws].astype(np.int_)
 
         if self.active_sulfur == 0:
-            self.prod_year = {}
-            for ws in prod_year_init.keys():
-                self.prod_year[ws] = self.project_years.copy().astype(np.int_)
+            self.prod_year = {
+                ws: self.project_years.copy().astype(np.int_)
+                for ws in prod_year_init.keys()
+            }
         else:
             self.prod_year = prod_year_init.copy()
 
@@ -1383,25 +1433,24 @@ class SulfurLiftingData:
             )
 
         if self.active_sulfur == 0:
-            self.lifting_rate = {}
-            for ws in lifting_rate_init.keys():
-                self.lifting_rate[ws] = np.zeros_like(self.project_years, dtype=np.float_)
+            self.lifting_rate = {
+                ws: np.zeros_like(self.project_years, dtype=np.float_)
+                for ws in lifting_rate_init.keys()
+            }
         else:
-            lifting_rate_nan = {}
-            for ws in lifting_rate_init.keys():
-                self.lifting_rate = {}
-                if lifting_rate_init[ws] is None:
+            self.lifting_rate = {}
+            for ws, data in lifting_rate_init.items():
+                if data is None:
                     self.lifting_rate[ws] = np.zeros_like(self.project_years, dtype=np.float_)
-                    lifting_rate_nan[ws] = None
                 else:
-                    self.lifting_rate[ws] = lifting_rate_init[ws].copy()
-                    lifting_rate_nan[ws] = np.argwhere(pd.isna(lifting_rate_init[ws])).ravel()
-                    if len(lifting_rate_nan[ws]) > 0:
-                        self.lifting_rate[ws][lifting_rate_nan[ws]] = (
-                            np.zeros(len(lifting_rate_nan[ws]), dtype=np.float_)
+                    lifting_rate_nan_indices = np.argwhere(pd.isna(data)).ravel()
+                    if len(lifting_rate_nan_indices) > 0:
+                        self.lifting_rate[ws] = data.copy()
+                        self.lifting_rate[ws][lifting_rate_nan_indices] = (
+                            np.zeros(len(lifting_rate_nan_indices), dtype=np.float_)
                         )
                     else:
-                        self.lifting_rate[ws] = self.lifting_rate[ws].astype(np.float_)
+                        self.lifting_rate[ws] = data.copy().astype(np.float_)
 
         # Prepare attribute price
         if not isinstance(price_init, dict):
@@ -1412,23 +1461,24 @@ class SulfurLiftingData:
             )
 
         if self.active_sulfur == 0:
-            self.price = {}
-            for ws in price_init.keys():
-                self.price[ws] = np.zeros_like(self.project_years, dtype=np.float_)
+            self.price = {
+                ws: np.zeros_like(self.project_years, dtype=np.float_)
+                for ws in price_init.keys()
+            }
         else:
-            price_nan = {}
-            for ws in price_init.keys():
-                self.price = {}
-                if price_init[ws] is None:
+            self.price = {}
+            for ws, data in price_init.items():
+                if data is None:
                     self.price[ws] = np.zeros_like(self.project_years, dtype=np.float_)
-                    price_nan[ws] = None
                 else:
-                    self.price[ws] = price_init[ws].copy()
-                    price_nan[ws] = np.argwhere(pd.isna(price_init[ws])).ravel()
-                    if len(price_nan[ws]) > 0:
-                        self.price[ws][price_nan[ws]] = np.zeros(len(price_nan[ws]), dtype=np.float_)
+                    price_nan_indices = np.argwhere(pd.isna(data)).ravel()
+                    if len(price_nan_indices) > 0:
+                        self.price[ws] = data.copy()
+                        self.price[ws][price_nan_indices] = (
+                            np.zeros(len(price_nan_indices), dtype=np.float_)
+                        )
                     else:
-                        self.price[ws] = self.price[ws].astype(np.float_)
+                        self.price[ws] = data.copy().astype(np.float_)
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
@@ -1538,9 +1588,10 @@ class ElectricityLiftingData:
                 prod_year_init[ws] = prod_year_init[ws].astype(np.int_)
 
         if self.active_electricity == 0:
-            self.prod_year = {}
-            for ws in prod_year_init.keys():
-                self.prod_year[ws] = self.project_years.copy().astype(np.int_)
+            self.prod_year = {
+                ws: self.project_years.copy().astype(np.int_)
+                for ws in prod_year_init.keys()
+            }
         else:
             self.prod_year = prod_year_init.copy()
 
@@ -1553,25 +1604,24 @@ class ElectricityLiftingData:
             )
 
         if self.active_electricity == 0:
-            self.lifting_rate = {}
-            for ws in lifting_rate_init.keys():
-                self.lifting_rate[ws] = np.zeros_like(self.project_years, dtype=np.float_)
+            self.lifting_rate = {
+                ws: np.zeros_like(self.project_years, dtype=np.float_)
+                for ws in lifting_rate_init.keys()
+            }
         else:
-            lifting_rate_nan = {}
-            for ws in lifting_rate_init.keys():
-                self.lifting_rate = {}
-                if lifting_rate_init[ws] is None:
+            self.lifting_rate = {}
+            for ws, data in lifting_rate_init.items():
+                if data is None:
                     self.lifting_rate[ws] = np.zeros_like(self.project_years, dtype=np.float_)
-                    lifting_rate_nan[ws] = None
                 else:
-                    self.lifting_rate[ws] = lifting_rate_init[ws].copy()
-                    lifting_rate_nan[ws] = np.argwhere(pd.isna(lifting_rate_init[ws])).ravel()
-                    if len(lifting_rate_nan[ws]) > 0:
-                        self.lifting_rate[ws][lifting_rate_nan[ws]] = (
-                            np.zeros(len(lifting_rate_nan[ws]), dtype=np.float_)
+                    lifting_rate_nan_indices = np.argwhere(pd.isna(data)).ravel()
+                    if len(lifting_rate_nan_indices) > 0:
+                        self.lifting_rate[ws] = data.copy()
+                        self.lifting_rate[ws][lifting_rate_nan_indices] = (
+                            np.zeros(len(lifting_rate_nan_indices), dtype=np.float_)
                         )
                     else:
-                        self.lifting_rate[ws] = self.lifting_rate[ws].astype(np.float_)
+                        self.lifting_rate[ws] = data.copy().astype(np.float_)
 
         # Prepare attribute price
         if not isinstance(price_init, dict):
@@ -1582,23 +1632,24 @@ class ElectricityLiftingData:
             )
 
         if self.active_electricity == 0:
-            self.price = {}
-            for ws in price_init.keys():
-                self.price[ws] = np.zeros_like(self.project_years, dtype=np.float_)
+            self.price = {
+                ws: np.zeros_like(self.project_years, dtype=np.float_)
+                for ws in price_init.keys()
+            }
         else:
-            price_nan = {}
-            for ws in price_init.keys():
-                self.price = {}
-                if price_init[ws] is None:
+            self.price = {}
+            for ws, data in price_init.items():
+                if data is None:
                     self.price[ws] = np.zeros_like(self.project_years, dtype=np.float_)
-                    price_nan[ws] = None
                 else:
-                    self.price[ws] = price_init[ws].copy()
-                    price_nan[ws] = np.argwhere(pd.isna(price_init[ws])).ravel()
-                    if len(price_nan[ws]) > 0:
-                        self.price[ws][price_nan[ws]] = np.zeros(len(price_nan[ws]), dtype=np.float_)
+                    price_nan_indices = np.argwhere(pd.isna(data)).ravel()
+                    if len(price_nan_indices) > 0:
+                        self.price[ws] = data.copy()
+                        self.price[ws][price_nan_indices] = (
+                            np.zeros(len(price_nan_indices), dtype=np.float_)
+                        )
                     else:
-                        self.price[ws] = self.price[ws].astype(np.float_)
+                        self.price[ws] = data.copy().astype(np.float_)
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:
@@ -1708,9 +1759,10 @@ class CO2LiftingData:
                 prod_year_init[ws] = prod_year_init[ws].astype(np.int_)
 
         if self.active_co2 == 0:
-            self.prod_year = {}
-            for ws in prod_year_init.keys():
-                self.prod_year[ws] = self.project_years.copy().astype(np.int_)
+            self.prod_year = {
+                ws: self.project_years.copy().astype(np.int_)
+                for ws in prod_year_init.keys()
+            }
         else:
             self.prod_year = prod_year_init.copy()
 
@@ -1723,25 +1775,24 @@ class CO2LiftingData:
             )
 
         if self.active_co2 == 0:
-            self.lifting_rate = {}
-            for ws in lifting_rate_init.keys():
-                self.lifting_rate[ws] = np.zeros_like(self.project_years, dtype=np.float_)
+            self.lifting_rate = {
+                ws: np.zeros_like(self.project_years, dtype=np.float_)
+                for ws in lifting_rate_init.keys()
+            }
         else:
-            lifting_rate_nan = {}
-            for ws in lifting_rate_init.keys():
-                self.lifting_rate = {}
-                if lifting_rate_init[ws] is None:
+            self.lifting_rate = {}
+            for ws, data in lifting_rate_init.items():
+                if data is None:
                     self.lifting_rate[ws] = np.zeros_like(self.project_years, dtype=np.float_)
-                    lifting_rate_nan[ws] = None
                 else:
-                    self.lifting_rate[ws] = lifting_rate_init[ws].copy()
-                    lifting_rate_nan[ws] = np.argwhere(pd.isna(lifting_rate_init[ws])).ravel()
-                    if len(lifting_rate_nan[ws]) > 0:
-                        self.lifting_rate[ws][lifting_rate_nan[ws]] = (
-                            np.zeros(len(lifting_rate_nan[ws]), dtype=np.float_)
+                    lifting_rate_nan_indices = np.argwhere(pd.isna(data)).ravel()
+                    if len(lifting_rate_nan_indices) > 0:
+                        self.lifting_rate[ws] = data.copy()
+                        self.lifting_rate[ws][lifting_rate_nan_indices] = (
+                            np.zeros(len(lifting_rate_nan_indices), dtype=np.float_)
                         )
                     else:
-                        self.lifting_rate[ws] = self.lifting_rate[ws].astype(np.float_)
+                        self.lifting_rate[ws] = data.copy().astype(np.float_)
 
         # Prepare attribute price
         if not isinstance(price_init, dict):
@@ -1752,23 +1803,24 @@ class CO2LiftingData:
             )
 
         if self.active_co2 == 0:
-            self.price = {}
-            for ws in price_init.keys():
-                self.price[ws] = np.zeros_like(self.project_years, dtype=np.float_)
+            self.price = {
+                ws: np.zeros_like(self.project_years, dtype=np.float_)
+                for ws in price_init.keys()
+            }
         else:
-            price_nan = {}
-            for ws in price_init.keys():
-                self.price = {}
-                if price_init[ws] is None:
+            self.price = {}
+            for ws, data in price_init.items():
+                if data is None:
                     self.price[ws] = np.zeros_like(self.project_years, dtype=np.float_)
-                    price_nan[ws] = None
                 else:
-                    self.price[ws] = price_init[ws].copy()
-                    price_nan[ws] = np.argwhere(pd.isna(price_init[ws])).ravel()
-                    if len(price_nan[ws]) > 0:
-                        self.price[ws][price_nan[ws]] = np.zeros(len(price_nan[ws]), dtype=np.float_)
+                    price_nan_indices = np.argwhere(pd.isna(data)).ravel()
+                    if len(price_nan_indices) > 0:
+                        self.price[ws] = data.copy()
+                        self.price[ws][price_nan_indices] = (
+                            np.zeros(len(price_nan_indices), dtype=np.float_)
+                        )
                     else:
-                        self.price[ws] = self.price[ws].astype(np.float_)
+                        self.price[ws] = data.copy().astype(np.float_)
 
         # Adjust data for transition case
         if "Transition" in self.type_of_contract:

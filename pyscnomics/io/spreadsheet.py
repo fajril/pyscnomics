@@ -612,8 +612,7 @@ class Spreadsheet:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod LPG Propane'
             data, then assigned it as local variable named 'lpg_propane_data_available',
         (2) Load the data associated with lpg_propane_data, then store it in the variable
-            named 'lpg_propane_data_loaded_init'. Undertake adjustment if the number of
-            active lpg propane is zero,
+            named 'lpg_propane_data_loaded_init',
         (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
             Store the results in the variable named 'lpg_propane_data_loaded',
         (4) Create a dictionary named 'lpg_propane_data' to store the necessary data from
@@ -630,10 +629,6 @@ class Spreadsheet:
         lpg_propane_data_loaded_init = {
             ws: self.data_loaded[ws] for ws in lpg_propane_data_available
         }
-
-        if self.general_config_data.number_active_fluid["LPG Propane"] == int(0):
-            for ws in lpg_propane_data_available:
-                lpg_propane_data_loaded_init[ws].iloc[:, 1:] = 0.0
 
         # Step #3 (See 'Notes' section in the docstring)
         lpg_propane_data_loaded = {
@@ -661,8 +656,9 @@ class Spreadsheet:
         # Step #5 (See 'Notes' section in the docstring)
         return LPGPropaneLiftingData(
             prod_year_init=lpg_propane_data["prod_year"],
-            lifting_rate=lpg_propane_data["lifting_rate"],
-            price=lpg_propane_data["price"],
+            lifting_rate_init=lpg_propane_data["lifting_rate"],
+            price_init=lpg_propane_data["price"],
+            active_lpgpropane=self.general_config_data.number_active_fluid["LPG Propane"],
             project_duration=self.general_config_data.project_duration,
             project_years=self.general_config_data.project_years,
             type_of_contract=self.general_config_data.type_of_contract,
