@@ -415,22 +415,18 @@ class GrossSplit(BaseProject):
                         cost_tobe_deducted + carward_deduct_cost,
                         ctr_gross_share)
 
-    def _get_sunk_cost(self, sunk_cost_reference_year: int):
-        oil_cost_raw = (
-                self._oil_tangible_expenditures
-                + self._oil_non_capital
-        )
-        self._oil_sunk_cost = oil_cost_raw[
-                              : (sunk_cost_reference_year - self.start_date.year + 1)
-                              ]
+    def _get_sunk_cost(
+        self,
+        sunk_cost_reference_year: int,
+        is_amortization_applied: bool,
+    ):
+        # Oil
+        oil_cost_raw = self._oil_tangible_expenditures + self._oil_non_capital
+        self._oil_sunk_cost = oil_cost_raw[:(sunk_cost_reference_year - self.start_date.year + 1)]
 
-        gas_cost_raw = (
-                self._gas_tangible_expenditures
-                + self._gas_non_capital
-        )
-        self._gas_sunk_cost = gas_cost_raw[
-                              : (sunk_cost_reference_year - self.start_date.year + 1)
-                              ]
+        # Gas
+        gas_cost_raw = self._gas_tangible_expenditures + self._gas_non_capital
+        self._gas_sunk_cost = gas_cost_raw[:(sunk_cost_reference_year - self.start_date.year + 1)]
 
         if sunk_cost_reference_year == self.start_date.year:
             self._oil_sunk_cost = np.zeros(1)
