@@ -685,8 +685,7 @@ class Spreadsheet:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod LPG Butane'
             data, then assigned it as local variable named 'lpg_butane_data_available',
         (2) Load the data associated with lpg_butane_data, then store it in the variable
-            named 'lpg_butane_data_loaded_init'. Undertake adjustment if the number of
-            active lpg butane is zero,
+            named 'lpg_butane_data_loaded_init',
         (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
             Store the results in the variable named 'lpg_butane_data_loaded',
         (4) Create a dictionary named 'lpg_butane_data' to store the necessary data from
@@ -703,10 +702,6 @@ class Spreadsheet:
         lpg_butane_data_loaded_init = {
             ws: self.data_loaded[ws] for ws in lpg_butane_data_available
         }
-
-        if self.general_config_data.number_active_fluid["LPG Butane"] == int(0):
-            for ws in lpg_butane_data_available:
-                lpg_butane_data_loaded_init[ws].iloc[:, 1:] = 0.0
 
         # Step #3 (See 'Notes' section in the docstring)
         lpg_butane_data_loaded = {
@@ -734,8 +729,9 @@ class Spreadsheet:
         # Step #5 (See 'Notes' section in the docstring)
         return LPGButaneLiftingData(
             prod_year_init=lpg_butane_data["prod_year"],
-            lifting_rate=lpg_butane_data["lifting_rate"],
-            price=lpg_butane_data["price"],
+            lifting_rate_init=lpg_butane_data["lifting_rate"],
+            price_init=lpg_butane_data["price"],
+            active_lpgbutane=self.general_config_data.number_active_fluid["LPG Butane"],
             project_duration=self.general_config_data.project_duration,
             project_years=self.general_config_data.project_years,
             type_of_contract=self.general_config_data.type_of_contract,
@@ -758,8 +754,7 @@ class Spreadsheet:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod Sulfur'
             data, then assigned it as local variable named 'sulfur_data_available',
         (2) Load the data associated with sulfur data, then store it in the variable
-            named 'sulfur_data_loaded_init'. Undertake adjustment if the number of active
-            sulfur is zero,
+            named 'sulfur_data_loaded_init',
         (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
             Store the results in the variable named 'sulfur_data_loaded',
         (4) Create a dictionary named 'sulfur_data' to store the necessary data from
@@ -772,10 +767,6 @@ class Spreadsheet:
 
         # Step #2 (See 'Notes' section in the docstring)
         sulfur_data_loaded_init = {ws: self.data_loaded[ws] for ws in sulfur_data_available}
-
-        if self.general_config_data.number_active_fluid["Sulfur"] == int(0):
-            for ws in sulfur_data_available:
-                sulfur_data_loaded_init[ws].iloc[:, 1:] = 0.0
 
         # Step #3 (See 'Notes' section in the docstring)
         sulfur_data_loaded = {
@@ -803,8 +794,9 @@ class Spreadsheet:
         # Step #5 (See 'Notes' section in the docstring)
         return SulfurLiftingData(
             prod_year_init=sulfur_data["prod_year"],
-            lifting_rate=sulfur_data["lifting_rate"],
-            price=sulfur_data["price"],
+            lifting_rate_init=sulfur_data["lifting_rate"],
+            price_init=sulfur_data["price"],
+            active_sulfur=self.general_config_data.number_active_fluid["Sulfur"],
             project_duration=self.general_config_data.project_duration,
             project_years=self.general_config_data.project_years,
             type_of_contract=self.general_config_data.type_of_contract,
@@ -869,8 +861,9 @@ class Spreadsheet:
         # Step #5 (See 'Notes' section in the docstring)
         return ElectricityLiftingData(
             prod_year_init=electricity_data["prod_year"],
-            lifting_rate=electricity_data["lifting_rate"],
-            price=electricity_data["price"],
+            lifting_rate_init=electricity_data["lifting_rate"],
+            price_init=electricity_data["price"],
+            active_electricity=self.general_config_data.number_active_fluid["Electricity"],
             project_duration=self.general_config_data.project_duration,
             project_years=self.general_config_data.project_years,
             type_of_contract=self.general_config_data.type_of_contract,
