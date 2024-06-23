@@ -440,8 +440,7 @@ class Spreadsheet:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod Oil' data,
             then assigned it as local variable named 'oil_data_available',
         (2) Load the data associated with oil_data, then store it in the variable
-            named 'oil_data_loaded_init'. Undertake adjustment if the number of active oil
-            is zero,
+            named 'oil_data_loaded_init',
         (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
             Store the results in the variable named 'oil_data_loaded',
         (4) Create a dictionary named 'oil_data' to store the necessary data from 'oil_data_loaded',
@@ -453,10 +452,6 @@ class Spreadsheet:
 
         # Step #2 (See 'Notes' section in the docstring)
         oil_data_loaded_init = {ws: self.data_loaded[ws] for ws in oil_data_available}
-
-        if self.general_config_data.number_active_fluid["Oil"] == int(0):
-            for ws in oil_data_available:
-                oil_data_loaded_init[ws].iloc[:, 1:] = 0.0
 
         # Step #3 (See 'Notes' section in the docstring)
         oil_data_loaded = {
@@ -486,10 +481,11 @@ class Spreadsheet:
         # Step #5 (See 'Notes' section in the docstring)
         return OilLiftingData(
             prod_year_init=oil_data["prod_year"],
-            oil_lifting_rate=oil_data["oil_lifting_rate"],
-            oil_price=oil_data["oil_price"],
-            condensate_lifting_rate=oil_data["condensate_lifting_rate"],
-            condensate_price=oil_data["condensate_price"],
+            oil_lifting_rate_init=oil_data["oil_lifting_rate"],
+            oil_price_init=oil_data["oil_price"],
+            condensate_lifting_rate_init=oil_data["condensate_lifting_rate"],
+            condensate_price_init=oil_data["condensate_price"],
+            active_oil=self.general_config_data.number_active_fluid["Oil"],
             project_duration=self.general_config_data.project_duration,
             project_years=self.general_config_data.project_years,
             type_of_contract=self.general_config_data.type_of_contract,
