@@ -508,8 +508,7 @@ class Spreadsheet:
         (1) Filter attribute self.sheets_loaded for sheets that contain 'Prod Gas' data,
             then assigned it as local variable named 'gas_data_available',
         (2) Load the data associated with gas, then store it in the variable
-            named 'gas_data_loaded_init'. Undertake adjustment if the number of active
-            gas is zero,
+            named 'gas_data_loaded_init',
         (3) Undertake data cleansing: remove all rows which column 'prod_year' is NaN.
             Store the results in the variable named 'gas_data_loaded',
         (4) Create a dictionary named 'gas_data_general' to store information related to
@@ -529,10 +528,6 @@ class Spreadsheet:
 
         # Step #2 (See 'Notes' section in the docstring)
         gas_data_loaded_init = {ws: self.data_loaded[ws] for ws in gas_data_available}
-
-        if self.general_config_data.number_active_fluid["Gas"] == int(0):
-            for ws in gas_data_available:
-                gas_data_loaded_init[ws].iloc[:, 1:] = 0.0
 
         # Step #3 (See 'Notes' section in the docstring)
         gas_data_loaded = {
@@ -581,9 +576,13 @@ class Spreadsheet:
         # Step #6 (See 'Notes' section in the docstring)
         return GasLiftingData(
             gsa_number=gsa_number,
+            active_gas=self.general_config_data.number_active_fluid["Gas"],
             prod_year_init=gas_data_general["prod_year"],
-            prod_rate=gas_data_general["prod_rate"],
-            lifting_rate=gas_data_gsa["lifting_rate"],
+            prod_rate_init=gas_data_general["prod_rate"],
+            lifting_rate_init=gas_data_gsa["lifting_rate"],
+
+            # prod_rate=gas_data_general["prod_rate"],
+            # lifting_rate=gas_data_gsa["lifting_rate"],
             ghv=gas_data_gsa["ghv"],
             price=gas_data_gsa["price"],
             project_duration=self.general_config_data.project_duration,
