@@ -424,17 +424,18 @@ if __name__ == "__main__":
     # entry_point()
 
     from pyscnomics.io.spreadsheet import Spreadsheet
+    from pyscnomics.io.aggregator import Aggregate
 
     workbook_to_read = "Workbook_Filled CR_Test.xlsb"
     # workbook_to_read = "Workbook_Filled Trans.xlsb"
     directory_location = r"E:\1009_My Journal_PSC Migas\26_20230707_PSCEconomic\pyscnomics"
 
-    data = Spreadsheet(
+    data = Aggregate(
         workbook_to_read=workbook_to_read,
         directory_location=directory_location,
     )
 
-    data.prepare_data()
+    data.fit()
 
     # print('\t')
     # print(f'Filetype: {type(t1)}')
