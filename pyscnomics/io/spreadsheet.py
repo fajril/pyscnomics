@@ -1787,19 +1787,19 @@ class Spreadsheet:
 
         # Fill in the attributes associated with cost data
         self.tangible_cost_data = self._get_tangible_cost_data()
-        # self.intangible_cost_data = self._get_intangible_cost_data()
-        # self.opex_data = self._get_opex_data()
-        # self.asr_cost_data = self._get_asr_cost_data()
-        #
-        # # Fill in the attributes associated with contract data
-        # self.psc_cr_data = self._get_psc_cr_data()
-        # self.psc_gs_data = self._get_psc_gs_data()
-        # self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
-        # self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
-        # self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
-        # self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
-        #
-        # # Fill in the attributes associated with sensitivity and optimization
-        # self.optimization_data = self._get_optimization_data()
-        # self.sensitivity_data = self._get_sensitivity_data()
-        # self.montecarlo_data = self._get_montecarlo_data()
+        self.intangible_cost_data = self._get_intangible_cost_data()
+        self.opex_data = self._get_opex_data()
+        self.asr_cost_data = self._get_asr_cost_data()
+
+        # Fill in the attributes associated with contract data
+        self.psc_cr_data = self._get_psc_cr_data()
+        self.psc_gs_data = self._get_psc_gs_data()
+        self.psc_transition_cr_to_cr = self._get_psc_transition_cr_to_cr()
+        self.psc_transition_cr_to_gs = self._get_psc_transition_cr_to_gs()
+        self.psc_transition_gs_to_gs = self._get_psc_transition_gs_to_gs()
+        self.psc_transition_gs_to_cr = self._get_psc_transition_gs_to_cr()
+
+        # Fill in the attributes associated with sensitivity and optimization
+        self.optimization_data = self._get_optimization_data()
+        self.sensitivity_data = self._get_sensitivity_data()
+        self.montecarlo_data = self._get_montecarlo_data()

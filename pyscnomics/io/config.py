@@ -2076,7 +2076,7 @@ class TangibleCostData:
                     f"({expense_year_init.__class__.__qualname__})."
                 )
 
-        expense_year_init = np.int_(expense_year_init)
+        expense_year_init = expense_year_init.astype(np.int_)
         self.expense_year = expense_year_init.copy()
 
         # Prepare attribute cost_allocation
@@ -2394,7 +2394,7 @@ class IntangibleCostData:
                     f"({expense_year_init.__class__.__qualname__})."
                 )
 
-        expense_year_init = np.int_(expense_year_init)
+        expense_year_init = expense_year_init.astype(np.int_)
         self.expense_year = expense_year_init.copy()
 
         # Prepare attribute cost_allocation
@@ -2433,7 +2433,7 @@ class IntangibleCostData:
             if len(cost_nan) > 0:
                 self.cost[cost_nan] = np.zeros(len(cost_nan), dtype=np.float_)
 
-        self.cost = np.float_(self.cost)
+        self.cost = self.cost.astype(np.float_)
 
         # Prepare attribute vat_portion
         if self.vat_portion is None:
@@ -2451,7 +2451,7 @@ class IntangibleCostData:
             if len(vat_portion_nan) > 0:
                 self.vat_portion[vat_portion_nan] = np.zeros(len(vat_portion_nan), dtype=np.float_)
 
-        self.vat_portion = np.float_(self.vat_portion)
+        self.vat_portion = self.vat_portion.astype(np.float_)
 
         # Prepare attribute lbt_portion
         if self.lbt_portion is None:
@@ -2469,7 +2469,7 @@ class IntangibleCostData:
             if len(lbt_portion_nan) > 0:
                 self.lbt_portion[lbt_portion_nan] = np.zeros(len(lbt_portion_nan), dtype=np.float_)
 
-        self.lbt_portion = np.float_(self.lbt_portion)
+        self.lbt_portion = self.lbt_portion.astype(np.float_)
 
         # Prepare attribute description
         if self.description is None:
@@ -2602,7 +2602,7 @@ class OPEXData:
                     f"({expense_year_init.__class__.__qualname__})."
                 )
 
-        expense_year_init = np.int_(expense_year_init)
+        expense_year_init = expense_year_init.astype(np.int_)
         self.expense_year = expense_year_init.copy()
 
         # Prepare attribute cost_allocation
@@ -2641,7 +2641,7 @@ class OPEXData:
             if len(fixed_cost_nan) > 0:
                 self.fixed_cost[fixed_cost_nan] = np.zeros(len(fixed_cost_nan), dtype=np.float_)
 
-        self.fixed_cost = np.float_(self.fixed_cost)
+        self.fixed_cost = self.fixed_cost.astype(np.float_)
 
         # Prepare attribute prod_rate
         if self.prod_rate is None:
@@ -2659,7 +2659,7 @@ class OPEXData:
             if len(prod_rate_nan) > 0:
                 self.prod_rate[prod_rate_nan] = np.zeros(len(prod_rate_nan), dtype=np.float_)
 
-        self.prod_rate = np.float_(self.prod_rate)
+        self.prod_rate = self.prod_rate.astype(np.float_)
 
         # Prepare attribute cost_per_volume
         if self.cost_per_volume is None:
@@ -2679,7 +2679,7 @@ class OPEXData:
                     np.zeros(len(cost_per_volume_nan), dtype=np.float_)
                 )
 
-        self.cost_per_volume = np.float_(self.cost_per_volume)
+        self.cost_per_volume = self.cost_per_volume.astype(np.float_)
 
         # Prepare attribute vat_portion
         if self.vat_portion is None:
@@ -2697,7 +2697,7 @@ class OPEXData:
             if len(vat_portion_nan) > 0:
                 self.vat_portion[vat_portion_nan] = np.zeros(len(vat_portion_nan), dtype=np.float_)
 
-        self.vat_portion = np.float_(self.vat_portion)
+        self.vat_portion = self.vat_portion.astype(np.float_)
 
         # Prepare attribute lbt_portion
         if self.lbt_portion is None:
@@ -2715,7 +2715,7 @@ class OPEXData:
             if len(lbt_portion_nan) > 0:
                 self.lbt_portion[lbt_portion_nan] = np.zeros(len(lbt_portion_nan), dtype=np.float_)
 
-        self.lbt_portion = np.float_(self.lbt_portion)
+        self.lbt_portion = self.lbt_portion.astype(np.float_)
 
         # Prepare attribute description
         if self.description is None:
@@ -2848,7 +2848,7 @@ class ASRCostData:
                     f"({expense_year_init.__class__.__qualname__})."
                 )
 
-        expense_year_init = np.int_(expense_year_init)
+        expense_year_init = expense_year_init.astype(np.int_)
         self.expense_year = expense_year_init.copy()
 
         # Prepare attribute cost_allocation
@@ -2887,7 +2887,7 @@ class ASRCostData:
             if len(cost_nan) > 0:
                 self.cost[cost_nan] = np.zeros(len(cost_nan), dtype=np.float_)
 
-        self.cost = np.float_(self.cost)
+        self.cost = self.cost.astype(np.float_)
 
         # Prepare attribute vat_portion
         if self.vat_portion is None:
@@ -2905,7 +2905,7 @@ class ASRCostData:
             if len(vat_portion_nan) > 0:
                 self.vat_portion[vat_portion_nan] = np.zeros(len(vat_portion_nan), dtype=np.float_)
 
-        self.vat_portion = np.float_(self.vat_portion)
+        self.vat_portion = self.vat_portion.astype(np.float_)
 
         # Prepare attribute lbt_portion
         if self.lbt_portion is None:
@@ -2923,7 +2923,7 @@ class ASRCostData:
             if len(lbt_portion_nan) > 0:
                 self.lbt_portion[lbt_portion_nan] = np.zeros(len(lbt_portion_nan), dtype=np.float_)
 
-        self.lbt_portion = np.float_(self.lbt_portion)
+        self.lbt_portion = self.lbt_portion.astype(np.float_)
 
         # Prepare attribute description
         if self.description is None:
