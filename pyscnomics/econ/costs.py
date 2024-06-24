@@ -162,10 +162,6 @@ class GeneralCost:
 
         return np.concatenate((expenses, zeros))
 
-    # TODO : Add the amortization method
-    def amortization(self):
-        raise NotImplementedError()
-
     def __len__(self):
         return self.project_duration
 
