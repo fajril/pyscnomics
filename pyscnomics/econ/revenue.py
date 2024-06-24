@@ -30,6 +30,8 @@ class Lifting:
         The lifting data of a particular fluid type.
     price: np.ndarray
         The associated price of a particular fluid type.
+    prod_year: np.ndarray
+        The production year of a particular fluid type.
     fluid_type: FluidType
         The fluid type.
     ghv: np.ndarray

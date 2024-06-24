@@ -439,10 +439,10 @@ class Tangible(GeneralCost):
             inflation_rate=inflation_rate,
         )
 
-        # TODO : Refactoring the codes to implement the dictionary design pattern 
-        # Straight line
-        if depr_method == DeprMethod.SL:
-            depreciation_charge = np.asarray(
+        # Configure depreciation charge
+        depreciation_charge_pool = {
+            # Straight line
+            DeprMethod.SL: np.asarray(
                 [
                     depr.straight_line_depreciation_rate(
                         cost=c,
@@ -456,11 +456,9 @@ class Tangible(GeneralCost):
                         self.useful_life,
                     )
                 ]
-            )
-
-        # Declining balance/double declining balance
-        if depr_method == DeprMethod.DB:
-            depreciation_charge = np.asarray(
+            ),
+            # Declining Balance / Double Declining Balance
+            DeprMethod.DB: np.asarray(
                 [
                     depr.declining_balance_depreciation_rate(
                         cost=c,
@@ -475,11 +473,9 @@ class Tangible(GeneralCost):
                         self.useful_life,
                     )
                 ]
-            )
-
-        # PSC_DB
-        if depr_method == DeprMethod.PSC_DB:
-            depreciation_charge = np.asarray(
+            ),
+            # PSC DB
+            DeprMethod.PSC_DB: np.asarray(
                 [
                     depr.psc_declining_balance_depreciation_rate(
                         cost=c,
@@ -494,9 +490,11 @@ class Tangible(GeneralCost):
                     )
                 ]
             )
+        }
 
-        else:
-            raise NotImplementedError()
+        for key in depreciation_charge_pool.keys():
+            if depr_method == key:
+                depreciation_charge = depreciation_charge_pool[key]
 
         # The relative difference of pis_year and start_year
         shift_indices = self.pis_year - self.start_year
