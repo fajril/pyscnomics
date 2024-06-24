@@ -9,6 +9,7 @@ from pyscnomics.contracts import psc_tools
 from pyscnomics.econ.selection import (FluidType, GrossSplitRegime, TaxRegime, TaxType, DeprMethod, OtherRevenue,
                                        InflationAppliedTo)
 from pyscnomics.econ.results import CashFlow
+from pyscnomics.econ.depreciation import unit_of_production_rate
 
 
 class GrossSplitException(Exception):
@@ -535,7 +536,8 @@ class GrossSplit(BaseProject):
             inflation_rate: np.ndarray | float = 0.0,
             future_rate: float = 0.02,
             inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
-            cum_production_split_offset: float | np.ndarray | None = 0.0
+            cum_production_split_offset: float | np.ndarray | None = 0.0,
+            amortization: bool = False
             ):
 
         # Configure Sunk Cost Reference Year
@@ -639,6 +641,27 @@ class GrossSplit(BaseProject):
 
         # Get Sunk Cost
         self._get_sunk_cost(sunk_cost_reference_year)
+
+        # Amortization Cost
+        if amortization is True:
+            self._oil_depreciation += unit_of_production_rate(
+                start_year_project=self.start_date.year,
+                cost=float(np.sum(self._oil_sunk_cost)),
+                prod=self._oil_lifting.get_lifting_rate_arr(),
+                prod_year=self.project_years,
+                salvage_value=0.0,
+                amortization_len=self.project_duration,)
+
+            self._gas_depreciation += unit_of_production_rate(
+                start_year_project=self.start_date.year,
+                cost=float(np.sum(self._gas_sunk_cost)),
+                prod=self._gas_lifting.get_lifting_rate_arr(),
+                prod_year=self.project_years,
+                salvage_value=0.0,
+                amortization_len=self.project_duration,)
+
+        else:
+            pass
 
         # Variable Split. -> Will set the value of _variable_split
         self._wrapper_variable_split(regime=regime)

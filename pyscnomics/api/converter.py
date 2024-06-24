@@ -282,6 +282,8 @@ class ContractArgumentsBM(BaseModel):
     future_rate: float = 0.02
     inflation_rate_applied_to: str = "CAPEX"
     post_uu_22_year2001: bool = True
+    cum_production_split_offset: list | float | int
+    amortization: bool
 
 
 class ContractArgumentsTransitionBM(BaseModel):

@@ -371,7 +371,7 @@ def get_contract_optimization(data: dict, contract_type: str = 'Cost Recovery') 
         contract_arguments = NotImplemented
         summary_argument = NotImplemented
 
-    list_str, list_params_value, result_optimization = optimize_psc(
+    list_str, list_params_value, result_optimization, list_executed_contract = optimize_psc(
         dict_optimization=dict_optimization,
         contract=contract,
         contract_arguments=contract_arguments,
@@ -473,6 +473,8 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         "future_rate": data['contract_arguments']['future_rate'],
         "inflation_rate_applied_to": convert_str_to_inflationappliedto(
             str_object=data['contract_arguments']['inflation_rate_applied_to']),
+        "cum_production_split_offset": convert_list_to_array_float_or_array(data_input=data["contract_arguments"]["cum_production_split_offset"]),
+        "amortization": data["contract_arguments"]["amortization"]
     }
 
     # Running the contract

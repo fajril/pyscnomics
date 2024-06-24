@@ -630,7 +630,12 @@ def optimize_psc(
 
     # Checking the existence of the multi-values optimization parameter
     for key, selection in zip(pseudo_dict['key'], pseudo_dict['selection']):
-        if key in contract_arguments.keys() and isinstance(contract_arguments[key], np.ndarray):
+        if (
+            key in contract_arguments.keys()
+            and isinstance(contract_arguments[key], np.ndarray)
+            and selection in dict_optimization["parameter"]
+        ):
+
             # Get the index of the min and max of the selection values and store it in the pseudo_dict
             index_pseudo = dict_optimization['parameter'].index(selection)
             pseudo_dict['index_in_parameter'].append(index_pseudo)
