@@ -425,8 +425,8 @@ if __name__ == "__main__":
 
     from pyscnomics.io.spreadsheet import Spreadsheet
 
-    workbook_to_read = "Workbook_Filled CR_Test.xlsb"
-    # workbook_to_read = "Workbook_Filled Trans.xlsb"
+    # workbook_to_read = "Workbook_Filled CR_Test.xlsb"
+    workbook_to_read = "Workbook_Filled Trans.xlsb"
     directory_location = r"E:\1009_My Journal_PSC Migas\26_20230707_PSCEconomic\pyscnomics"
 
     data = Spreadsheet(

@@ -580,11 +580,8 @@ class Spreadsheet:
             prod_year_init=gas_data_general["prod_year"],
             prod_rate_init=gas_data_general["prod_rate"],
             lifting_rate_init=gas_data_gsa["lifting_rate"],
-
-            # prod_rate=gas_data_general["prod_rate"],
-            # lifting_rate=gas_data_gsa["lifting_rate"],
-            ghv=gas_data_gsa["ghv"],
-            price=gas_data_gsa["price"],
+            ghv_init=gas_data_gsa["ghv"],
+            price_init=gas_data_gsa["price"],
             project_duration=self.general_config_data.project_duration,
             project_years=self.general_config_data.project_years,
             type_of_contract=self.general_config_data.type_of_contract,
