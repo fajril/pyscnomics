@@ -70,8 +70,8 @@ class GeneralCost:
 
     Notes
     -----
-    (1) The unit used in the cost should be in M unit of United States Dollar (USD), where the M is stands for 1000.
-        Thus, the unit cost should be: M-USD.
+    (1) The unit used in the cost should be in M unit of United States Dollar (USD),
+    where the M is stands for 1000. Thus, the unit cost should be: M-USD.
 
     """
 
@@ -439,10 +439,9 @@ class Tangible(GeneralCost):
             inflation_rate=inflation_rate,
         )
 
-        # Configure depreciation charge
-        depreciation_charge_pool = {
-            # Straight line
-            DeprMethod.SL: np.asarray(
+        # Straight line
+        if depr_method == DeprMethod.SL:
+            depreciation_charge = np.asarray(
                 [
                     depr.straight_line_depreciation_rate(
                         cost=c,
@@ -456,9 +455,11 @@ class Tangible(GeneralCost):
                         self.useful_life,
                     )
                 ]
-            ),
-            # Declining Balance / Double Declining Balance
-            DeprMethod.DB: np.asarray(
+            )
+
+        # Declining balance/double declining balance
+        elif depr_method == DeprMethod.DB:
+            depreciation_charge = np.asarray(
                 [
                     depr.declining_balance_depreciation_rate(
                         cost=c,
@@ -473,9 +474,11 @@ class Tangible(GeneralCost):
                         self.useful_life,
                     )
                 ]
-            ),
-            # PSC DB
-            DeprMethod.PSC_DB: np.asarray(
+            )
+
+        # PSC_DB
+        elif depr_method == DeprMethod.PSC_DB:
+            depreciation_charge = np.asarray(
                 [
                     depr.psc_declining_balance_depreciation_rate(
                         cost=c,
@@ -490,11 +493,9 @@ class Tangible(GeneralCost):
                     )
                 ]
             )
-        }
 
-        for key in depreciation_charge_pool.keys():
-            if depr_method == key:
-                depreciation_charge = depreciation_charge_pool[key]
+        else:
+            raise NotImplementedError()
 
         # The relative difference of pis_year and start_year
         shift_indices = self.pis_year - self.start_year
