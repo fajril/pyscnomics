@@ -69,24 +69,65 @@ class Lifting:
     price: np.ndarray
     prod_year: np.ndarray
     fluid_type: FluidType = field(default=FluidType.OIL)
-    ghv: np.ndarray = field(default=None, repr=False)
-    prod_rate: np.ndarray = field(default=None, repr=False)
+    ghv: np.ndarray = field(default=None)
+    prod_rate: np.ndarray = field(default=None)
+    prod_rate_baseline: np.ndarray = field(default=None)
 
     # Attribute to be defined later on
     project_duration: int = field(default=None, init=False)
     project_years: np.ndarray = field(default=None, init=False, repr=False)
+    prod_rate_total: np.ndarray = field(default=None, init=False)
 
     def __post_init__(self):
-        # When user does not insert production rate data
+        # Prepare attribute lifting rate
+        if not isinstance(self.lifting_rate, np.ndarray):
+            raise LiftingException(
+                f"Attribute lifting rate must be provided as numpy ndarray, "
+                f"not as {self.lifting_rate.__class__.__qualname__}."
+            )
+
+        self.lifting_rate = self.lifting_rate.astype(np.float64)
+
+        # Prepare attribute prod rate
         if self.prod_rate is None:
             self.prod_rate = self.lifting_rate.copy()
+        else:
+            if not isinstance(self.prod_rate, np.ndarray):
+                raise LiftingException(
+                    f"Attribute prod rate must be provided as numpy ndarray, "
+                    f"not as {self.prod_rate.__class__.__qualname__}."
+                )
 
-        # When user does not insert GHV data
+        self.prod_rate = self.prod_rate.astype(np.float64)
+
+        # Prepare attribute prod_rate_baseline
+        if self.prod_rate_baseline is None:
+            self.prod_rate_baseline = np.zeros_like(self.lifting_rate, dtype=np.float64)
+        else:
+            if not isinstance(self.prod_rate_baseline, np.ndarray):
+                raise LiftingException(
+                    f"Attribute prod_rate_baseline must be provided as numpy ndarray, "
+                    f"not as {self.prod_rate_baseline.__class__.__qualname__}."
+                )
+
+        # Prepare attribute ghv
         if self.ghv is None:
-            self.ghv = np.ones(len(self.lifting_rate))
+            self.ghv = np.ones_like(self.lifting_rate, dtype=np.float64)
+        else:
+            if not isinstance(self.ghv, np.ndarray):
+                raise LiftingException(
+                    f"Attribute ghv must be provided as numpy ndarray, "
+                    f"not as {self.ghv.__class__.__qualname__}."
+                )
 
-        # Check for inappropriate input data
+        # Check for unequal length of array data
         arr_length = self.lifting_rate.shape[0]
+
+        print('\t')
+        print('==============================================================================')
+
+        if not all():
+            pass
 
         if not all(
             len(arr) == arr_length
