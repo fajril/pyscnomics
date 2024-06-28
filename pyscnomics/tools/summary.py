@@ -14,6 +14,12 @@ from pyscnomics.econ.indicator import (irr,
                                        pot_psc)
 
 
+class SummaryException(Exception):
+    """Exception to raise for a misuse of Summary Method"""
+
+    pass
+
+
 def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 reference_year: int,
                 inflation_rate: float = 0,
@@ -21,6 +27,20 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 npv_mode: NPVSelection = NPVSelection.NPV_SKK_REAL_TERMS,
                 discounting_mode: DiscountingMode = DiscountingMode.END_YEAR,
                 profitability_discounted: bool = False) -> dict:
+    # Condition when the reference year is less than project start date year
+    if reference_year < contract.start_date.year:
+        raise SummaryException(
+            f"The Discounting Reference Year {reference_year} "
+            f"is before the project years: {contract.start_date.year}"
+        )
+
+    # Condition when the reference year is after than project end date year
+    if reference_year > contract.end_date.year:
+        raise SummaryException(
+            f"The Discounting Reference Year {reference_year} "
+            f"is after the project years: {contract.end_date.year}"
+        )
+
     # Defining the same summary parameters for any contract
     # Lifting
     lifting_oil = np.sum(contract._oil_lifting.get_lifting_rate_arr(), dtype=float)
