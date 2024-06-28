@@ -14,12 +14,33 @@ from pyscnomics.econ.indicator import (irr,
                                        pot_psc)
 
 
+class SummaryException(Exception):
+    """Exception to raise for a misuse of Summary Method"""
+
+    pass
+
+
 def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 reference_year: int,
                 inflation_rate: float = 0,
                 discount_rate: float = 0.1,
                 npv_mode: NPVSelection = NPVSelection.NPV_SKK_REAL_TERMS,
-                discounting_mode: DiscountingMode = DiscountingMode.END_YEAR) -> dict:
+                discounting_mode: DiscountingMode = DiscountingMode.END_YEAR,
+                profitability_discounted: bool = False) -> dict:
+    # Condition when the reference year is less than project start date year
+    if reference_year < contract.start_date.year:
+        raise SummaryException(
+            f"The Discounting Reference Year {reference_year} "
+            f"is before the project years: {contract.start_date.year}"
+        )
+
+    # Condition when the reference year is after than project end date year
+    if reference_year > contract.end_date.year:
+        raise SummaryException(
+            f"The Discounting Reference Year {reference_year} "
+            f"is after the project years: {contract.end_date.year}"
+        )
+
     # Defining the same summary parameters for any contract
     # Lifting
     lifting_oil = np.sum(contract._oil_lifting.get_lifting_rate_arr(), dtype=float)
@@ -80,7 +101,7 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
         gov_take = 0
         gov_take_over_gross_rev = 0
 
-    if isinstance(contract, CostRecovery) or isinstance(contract, GrossSplit) or isinstance(contract, Transition):
+    elif isinstance(contract, CostRecovery) or isinstance(contract, GrossSplit) or isinstance(contract, Transition):
         # Government DDMO
         gov_ddmo = np.sum(contract._consolidated_ddmo)
 
@@ -92,6 +113,12 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
         # Government Share
         gov_take_over_gross_rev = gov_take / gross_revenue
+
+    else:
+        gov_ddmo = 0
+        gov_tax_income = 0
+        gov_take = 0
+        gov_take_over_gross_rev = 0
 
     # Contractor IRR
     ctr_irr = irr(cashflow=contract._consolidated_cashflow)
@@ -291,7 +318,21 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
         ctr_net_cashflow_over_gross_rev = ctr_net_cashflow / gross_revenue_point_forward
 
     # Contractor Present Value ratio to the investment npv
-    ctr_pv_ratio = ctr_npv / investment_npv
+    # Condition when the Profitability Index is calculated using discounted investment
+    if profitability_discounted:
+        ctr_pv_ratio = np.divide(ctr_npv, investment_npv, where=investment_npv != 0)
+
+    # Condition when the Profitability Index is calculated using un-discounted investment
+    else:
+        investment_pi = np.sum(
+                contract._oil_tangible_expenditures +
+                contract._gas_tangible_expenditures +
+                contract._oil_intangible_expenditures +
+                contract._gas_intangible_expenditures -
+                sunk_cost_extended
+        )
+        ctr_pv_ratio = np.divide(ctr_npv, investment_pi, where=investment_pi != 0)
+
     ctr_pi = 1 + ctr_pv_ratio
 
     # Condition where the contract is Cost Recovery

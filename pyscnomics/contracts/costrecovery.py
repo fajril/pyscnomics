@@ -25,8 +25,64 @@ class SunkCostException(Exception):
     pass
 
 
+class CostRecoveryException(Exception):
+    """Exception to raise for a misuse of Cost Recovery attributes"""
+
+    pass
+
+
 @dataclass
 class CostRecovery(BaseProject):
+    """
+    Dataclass that represents Cost Recovery (CR) contract.
+
+    Parameters
+    ----------
+    oil_ftp_is_available: bool
+        The availability of the Oil's First Tranche Petroleum (FTP).
+    oil_ftp_is_shared: bool
+        The condition whether the Oil FTP will be shared to the contractor or not.
+    oil_ftp_portion: float
+        The portion of the Oil FTP in fraction.
+    gas_ftp_is_available: bool
+        The availability of the Gas's First Tranche Petroleum (FTP).
+    gas_ftp_is_shared: bool
+        The condition whether the Gas FTP will be shared to the contractor or not.
+    gas_ftp_portion: float
+        The portion of the Gas FTP in fraction.
+    tax_split_type: TaxSplitTypeCR
+        The type of the contractor split.
+    condition_dict: dict
+        The condition dictionary of the split when the tax_split_type is not Conventional.
+    indicator_rc_icp_sliding: np.ndarray
+        The indicator used in the SLIDING_SCALE or R2C tax_split_type.
+    oil_ctr_pretax_share: float | np.ndarray
+        The Oil Contractor Pre-Tax Split or Oil Contractor Pre-Tax Split Share.
+    gas_ctr_pretax_share: float | np.ndarray
+        The Gas Contractor Pre-Tax Split or Oil Contractor Pre-Tax Split Share.
+    oil_ic_rate: float
+        The Oil's Investment Credit (IC) rate of the contract.
+    gas_ic_rate: float
+        The Gas's Investment Credit (IC) rate of the contract.
+    ic_is_available: bool
+        The condition whether if IC is available or not.
+    oil_cr_cap_rate: float
+        The Oil Cost Recovery cap rate.
+    gas_cr_cap_rate: float
+        The Gas Cost Recovery cap rate.
+    oil_dmo_volume_portion: float
+        The Oil's Domestic Market Obligation (DMO) volume portion.
+    oil_dmo_fee_portion: float
+        The Oil's DMO fee portion.
+    oil_dmo_holiday_duration: int
+        The duration of the Oil DMO Holiday in month unit.
+    gas_dmo_volume_portion: float
+        The Gas's Domestic Market Obligation (DMO) volume portion.
+    gas_dmo_fee_portion: float
+        The Gas's DMO fee portion.
+    gas_dmo_holiday_duration: int
+        The duration of the Gas's DMO Holiday in month unit.
+    """
     oil_ftp_is_available: bool = field(default=True)
     oil_ftp_is_shared: bool = field(default=True)
     oil_ftp_portion: float = field(default=0.2)
@@ -216,6 +272,48 @@ class CostRecovery(BaseProject):
     )
     _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
 
+    def _check_attributes(self):
+        """
+        Function to check the Cost Recovery input.
+        -------
+
+        """
+        # Defining any attributes that in the form of fraction
+        fraction_attributes = (
+            ('oil_ftp_portion', self.oil_ftp_portion),
+            ('gas_ftp_portion', self.gas_ftp_portion),
+            ('oil_ctr_pretax_share', self.oil_ctr_pretax_share),
+            ('gas_ctr_pretax_share', self.gas_ctr_pretax_share),
+            ('oil_ic_rate', self.oil_ic_rate),
+            ('gas_ic_rate', self.gas_ic_rate),
+            ('oil_cr_cap_rate', self.oil_cr_cap_rate),
+            ('gas_cr_cap_rate', self.gas_cr_cap_rate),
+            ('oil_dmo_volume_portion', self.oil_dmo_volume_portion),
+            ('oil_dmo_fee_portion', self.oil_dmo_fee_portion),
+            ('gas_dmo_volume_portion', self.gas_dmo_volume_portion),
+            ('gas_dmo_fee_portion', self.gas_dmo_fee_portion)
+        )
+
+        for attr_name, attr in fraction_attributes:
+            if attr > 1.0 or attr < 0.0:
+                range_type = 'exceeding 1.0' if attr > 1.0 else 'below 0.0'
+                raise CostRecoveryException(
+                    f"The {attr_name} value, {attr}, is {range_type}. "
+                    f"The allowed range for this attribute is between 0.0 and 1.0."
+                )
+
+        discrete_attributes = (
+            ('oil_dmo_holiday_duration', self.oil_dmo_holiday_duration),
+            ('gas_dmo_holiday_duration', self.gas_dmo_holiday_duration)
+        )
+
+        for attr_name, attr in discrete_attributes:
+            if attr < 0:
+                raise CostRecoveryException(
+                    f"The {attr_name} value, {attr}, is below 0. "
+                    f"The minimum value for this attribute is 0."
+                )
+
     def _get_rc_icp_pretax(self):
         """
         A Function to get the value of PreTax using Revenue over Cost (RC) or Indonesian Crude Price (ICP) sliding scale.
@@ -328,7 +426,7 @@ class CostRecovery(BaseProject):
             tangible_class = self._oil_tangible
 
         # Applying the IC calculation to only true value
-        ic_arr = np.where(np.asarray(tangible_class.is_ic_applied) is True,
+        ic_arr = np.where(np.asarray(tangible_class.is_ic_applied) == True,
                           tangible_class.cost * ic_rate,
                           0)
 
@@ -424,7 +522,7 @@ class CostRecovery(BaseProject):
         """
 
         result = revenue - (ftp_ctr + ftp_gov) - ic - cost_recovery
-        tol = np.full_like(result, fill_value=1.0e-12)
+        tol = np.full_like(result, fill_value=1.0e-10)
         return np.where(result < tol, 0, result)
 
     @staticmethod
@@ -473,7 +571,7 @@ class CostRecovery(BaseProject):
                                       + transferred_in,
                                       0)
 
-        tol = np.full_like(ets_after_transfer, fill_value=1.0e-12)
+        tol = np.full_like(ets_after_transfer, fill_value=1.0e-10)
         return np.where(ets_after_transfer < tol, 0, ets_after_transfer)
 
     @staticmethod
@@ -680,7 +778,8 @@ class CostRecovery(BaseProject):
             lbt_rate: np.ndarray | float = 0.0,
             inflation_rate: np.ndarray | float = 0.0,
             future_rate: float = 0.02,
-            inflation_rate_applied_to: InflationAppliedTo = InflationAppliedTo.CAPEX
+            inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
+            post_uu_22_year2001: bool = True
     ):
 
         # Configure Sunk Cost Reference Year
@@ -1000,6 +1099,10 @@ class CostRecovery(BaseProject):
             ctr_pretax_share=self.oil_ctr_pretax_share,
             unrecovered_cost=self._oil_unrecovered_after_transfer,
             is_dmo_end_weighted=is_dmo_end_weighted,
+            ets=self._oil_ets_after_transfer,
+            ctr_ets=self._oil_contractor_share,
+            ctr_ftp=self._oil_ftp_ctr,
+            post_uu_22_year2001=post_uu_22_year2001,
         )
 
         self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo(
@@ -1014,6 +1117,10 @@ class CostRecovery(BaseProject):
             ctr_pretax_share=self.gas_ctr_pretax_share,
             unrecovered_cost=self._gas_unrecovered_after_transfer,
             is_dmo_end_weighted=is_dmo_end_weighted,
+            ets=self._gas_ets_after_transfer,
+            ctr_ets=self._gas_contractor_share,
+            ctr_ftp=self._gas_ftp_ctr,
+            post_uu_22_year2001=post_uu_22_year2001,
         )
 
         # Adjusting DDMO for Pre PDJP
@@ -1045,8 +1152,12 @@ class CostRecovery(BaseProject):
             self._tax_rate_arr = np.full_like(self.project_years, tax_rate, dtype=float)
 
         # Generating Tax array based on the tax regime if tax_rate argument is None
-        if tax_rate is None:
+        elif tax_rate is None:
             self._tax_rate_arr = self._get_tax_by_regime(tax_regime=tax_regime)
+        elif isinstance(tax_rate, np.ndarray):
+            self._tax_rate_arr = tax_rate
+        else:
+            self._tax_rate_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
 
         self._oil_tax_payment = self._get_tax_payment(
             ctr_share=self._oil_contractor_share,

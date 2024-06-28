@@ -9,6 +9,7 @@ from pyscnomics.contracts import psc_tools
 from pyscnomics.econ.selection import (FluidType, GrossSplitRegime, TaxRegime, TaxType, DeprMethod, OtherRevenue,
                                        InflationAppliedTo)
 from pyscnomics.econ.results import CashFlow
+from pyscnomics.econ.depreciation import unit_of_production_rate
 
 
 class GrossSplitException(Exception):
@@ -23,8 +24,58 @@ class SunkCostException(Exception):
     pass
 
 
+class CumulativeProductionSplitException(Exception):
+    """Exception to raise for a misuse of Cumulative Production Split Offset"""
+
+    pass
+
+
 @dataclass
 class GrossSplit(BaseProject):
+    """
+    Dataclass that represents Gross Split (GS) contract.
+
+    Parameters
+    ----------
+    field_status: str
+        The field status of the corresponding contract.
+    field_loc: str
+        The field location of the corresponding contract.
+    res_depth: str
+        The reservoir depth of the corresponding contract
+    infra_avail: str
+        The infrastructure availability of the corresponding contract.
+    res_type: str
+        The reservoir type of the corresponding contract.
+    api_oil: str
+        The Oil's API of the corresponding contract.
+    domestic_use: str
+        The domestic use or local content of the corresponding contract.
+    prod_stage: str
+        The production stage of the corresponding contract.
+    co2_content: str
+        The CO2 content of the corresponding contract.
+    h2s_content: str
+        The H2S content of the corresponding contract.
+    base_split_ctr_oil: float
+        The contractor base split for oil of the corresponding contract.
+    base_split_ctr_gas: float
+        The contractor base split for gas of the corresponding contract.
+    split_ministry_disc: float
+        The ministerial discretion split of the corresponding contract.
+    oil_dmo_volume_portion: float
+        The Oil's Domestic Market Obligation (DMO) volume portion.
+    oil_dmo_fee_portion: float
+        The Oil's DMO fee portion.
+    oil_dmo_holiday_duration: int
+        The duration of the Oil DMO Holiday in month unit.
+    gas_dmo_volume_portion: float
+        The Gas's Domestic Market Obligation (DMO) volume portion.
+    gas_dmo_fee_portion: float
+        The Gas's DMO fee portion.
+    gas_dmo_holiday_duration: int
+        The duration of the Gas's DMO Holiday in month unit.
+    """
     field_status: str = field(default='No POD')
     field_loc: str = field(default='Onshore')
     res_depth: str = field(default='<=2500')
@@ -48,7 +99,7 @@ class GrossSplit(BaseProject):
     gas_dmo_fee_portion: float = field(default=1.0)
     gas_dmo_holiday_duration: int = field(default=60)
 
-    conversion_bboe2bscf: float = field(default=5.6)
+    conversion_boe_to_scf: float = field(default=5.615, init=False, repr=False)
 
     _oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
@@ -147,6 +198,43 @@ class GrossSplit(BaseProject):
     _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_government_take: np.ndarray = field(default=None, init=False, repr=False)
+
+    def _check_attributes(self):
+        """
+        Function to check the Gross Split input.
+        -------
+
+        """
+        # Defining any attributes that in the form of fraction
+        fraction_attributes = (
+            ('base_split_ctr_oil', self.base_split_ctr_oil),
+            ('base_split_ctr_gas', self.base_split_ctr_gas),
+            ('split_ministry_disc', self.split_ministry_disc),
+            ('oil_dmo_volume_portion', self.oil_dmo_volume_portion),
+            ('oil_dmo_fee_portion', self.oil_dmo_fee_portion),
+            ('gas_dmo_volume_portion', self.gas_dmo_volume_portion),
+            ('gas_dmo_fee_portion', self.gas_dmo_fee_portion)
+        )
+
+        for attr_name, attr in fraction_attributes:
+            if attr > 1.0 or attr < 0.0:
+                range_type = 'exceeding 1.0' if attr > 1.0 else 'below 0.0'
+                raise GrossSplitException(
+                    f"The {attr_name} value, {attr}, is {range_type}. "
+                    f"The allowed range for this attribute is between 0.0 and 1.0."
+                )
+
+        discrete_attributes = (
+            ('oil_dmo_holiday_duration', self.oil_dmo_holiday_duration),
+            ('gas_dmo_holiday_duration', self.gas_dmo_holiday_duration)
+        )
+
+        for attr_name, attr in discrete_attributes:
+            if attr < 0:
+                raise GrossSplitException(
+                    f"The {attr_name} value, {attr}, is below 0. "
+                    f"The minimum value for this attribute is 0."
+                )
 
     def _wrapper_variable_split(self,
                                 regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
@@ -345,17 +433,17 @@ class GrossSplit(BaseProject):
             ps = 0
 
         # Cumulative Progressive Split
-        if 0 < cum < 1:
+        if 0 < cum < 1_000:
             px = 0.05
-        elif 1 <= cum < 10:
+        elif 1_000 <= cum < 10_000:
             px = 0.04
-        elif 10 <= cum < 20:
+        elif 10_000 <= cum < 20_000:
             px = 0.03
-        elif 20 <= cum < 50:
+        elif 20_000 <= cum < 50_000:
             px = 0.02
-        elif 50 <= cum < 150:
+        elif 50_000 <= cum < 150_000:
             px = 0.01
-        elif 150 <= cum:
+        elif 150_000 <= cum:
             px = 0
         else:
             raise ValueError('No Regulation exist regarding the cumulative value')
@@ -382,17 +470,17 @@ class GrossSplit(BaseProject):
             raise ValueError('Unknown fluid type')
 
         # Cumulative Progressive Split
-        if np.logical_and(np.greater_equal(cum, 0), np.less(cum, 30)):
+        if np.logical_and(np.greater_equal(cum, 0), np.less(cum, 30_000)):
             px = 0.1
-        elif np.logical_and(np.greater_equal(cum, 30), np.less(cum, 60)):
+        elif np.logical_and(np.greater_equal(cum, 30_000), np.less(cum, 60_000)):
             px = 0.09
-        elif np.logical_and(np.greater_equal(cum, 60), np.less(cum, 90)):
+        elif np.logical_and(np.greater_equal(cum, 60_000), np.less(cum, 90_000)):
             px = 0.08
-        elif np.logical_and(np.greater_equal(cum, 90), np.less(cum, 125)):
+        elif np.logical_and(np.greater_equal(cum, 90_000), np.less(cum, 125_000)):
             px = 0.06
-        elif np.logical_and(np.greater_equal(cum, 125), np.less(cum, 175)):
+        elif np.logical_and(np.greater_equal(cum, 125_000), np.less(cum, 175_000)):
             px = 0.04
-        elif np.greater_equal(cum, 175):
+        elif np.greater_equal(cum, 175_000):
             px = 0
         else:
             raise ValueError('No Regulation exist regarding the cumulative value')
@@ -447,7 +535,9 @@ class GrossSplit(BaseProject):
             lbt_rate: np.ndarray | float = 0.0,
             inflation_rate: np.ndarray | float = 0.0,
             future_rate: float = 0.02,
-            inflation_rate_applied_to: InflationAppliedTo = InflationAppliedTo.CAPEX
+            inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
+            cum_production_split_offset: float | np.ndarray | None = 0.0,
+            amortization: bool = False
             ):
 
         # Configure Sunk Cost Reference Year
@@ -481,6 +571,14 @@ class GrossSplit(BaseProject):
         # Configure year reference
         if year_ref is None:
             year_ref = self.start_date.year
+
+        # Checking if the Cumulative Production Split Offset length is same with the project years
+        if isinstance(cum_production_split_offset, np.ndarray):
+            if len(cum_production_split_offset) != len(self.project_years):
+                raise CumulativeProductionSplitException(
+                    f"Length of the cum_production_split_offset: {len(cum_production_split_offset)} "
+                    f"is not the same with Length of the project years: {len(self.project_years)}"
+                )
 
         # Get the WAP Price
         self._get_wap_price()
@@ -544,6 +642,27 @@ class GrossSplit(BaseProject):
         # Get Sunk Cost
         self._get_sunk_cost(sunk_cost_reference_year)
 
+        # Amortization Cost
+        if amortization is True:
+            self._oil_depreciation += unit_of_production_rate(
+                start_year_project=self.start_date.year,
+                cost=float(np.sum(self._oil_sunk_cost)),
+                prod=self._oil_lifting.get_lifting_rate_arr(),
+                prod_year=self.project_years,
+                salvage_value=0.0,
+                amortization_len=self.project_duration,)
+
+            self._gas_depreciation += unit_of_production_rate(
+                start_year_project=self.start_date.year,
+                cost=float(np.sum(self._gas_sunk_cost)),
+                prod=self._gas_lifting.get_lifting_rate_arr(),
+                prod_year=self.project_years,
+                salvage_value=0.0,
+                amortization_len=self.project_duration,)
+
+        else:
+            pass
+
         # Variable Split. -> Will set the value of _variable_split
         self._wrapper_variable_split(regime=regime)
 
@@ -554,29 +673,56 @@ class GrossSplit(BaseProject):
         # Variable Split
         self._var_split_array = np.full_like(self.project_years, fill_value=self._variable_split, dtype=float)
 
-        # Cumulative Production
-        # self._cumulative_prod = np.cumsum(self._oil_lifting.lifting_rate +
-        #                                   (self._gas_lifting.lifting_rate / self.conversion_bboe2bscf))
+        # Calculating the gas production in MMBOE
+        prod_gas_boe = self._gas_lifting.get_prod_rate_arr() / self.conversion_boe_to_scf
 
-        self._cumulative_prod = np.cumsum(np.divide(self._oil_lifting.get_lifting_rate_arr(), self._oil_lifting.get_lifting_ghv_arr(), where=self._oil_lifting.get_lifting_ghv_arr()!=0) +
-                                          (np.divide(self._gas_lifting.get_lifting_rate_arr(), self._gas_lifting.get_lifting_ghv_arr(), where=self._gas_lifting.get_lifting_ghv_arr()!=0) / self.conversion_bboe2bscf))
+        # Condition when the offset cumulative production array when user input is float
+        if isinstance(cum_production_split_offset, float) or isinstance(cum_production_split_offset, int):
+            offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
+            offset_arr[0] = cum_production_split_offset
+
+        else:
+            offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
+
+        # Calculating the cumulative production
+        self._cumulative_prod = np.cumsum(self._oil_lifting.get_lifting_rate_arr() + prod_gas_boe + offset_arr)
 
         # Progressive Split
         vectorized_get_prog_split = np.vectorize(self._wrapper_progressive_split)
 
-        self._oil_prog_split = vectorized_get_prog_split(
-            fluid=self._oil_lifting.fluid_type,
-            price=self._oil_lifting.get_price_arr(),
-            cum=self._cumulative_prod,
-            regime=regime
-        )
+        # Condition when the cum_production_split_offset is filled with np.ndarray
+        if isinstance(cum_production_split_offset, np.ndarray) and len(cum_production_split_offset) > 1:
+            self._oil_prog_split = vectorized_get_prog_split(
+                fluid=self._oil_lifting.fluid_type,
+                price=self._oil_lifting.get_price_arr(),
+                cum=np.full_like(self.project_years, fill_value=999_000, dtype=float),
+                regime=regime
+            )
+            self._oil_prog_split += cum_production_split_offset
 
-        self._gas_prog_split = vectorized_get_prog_split(
-            fluid=self._gas_lifting.fluid_type,
-            price=self._gas_lifting.get_price_arr(),
-            cum=self._cumulative_prod,
-            regime=regime
-        )
+            self._gas_prog_split = vectorized_get_prog_split(
+                fluid=self._gas_lifting.fluid_type,
+                price=self._gas_lifting.get_price_arr(),
+                cum=np.full_like(self.project_years, fill_value=999_000, dtype=float),
+                regime=regime
+            )
+            self._gas_prog_split += cum_production_split_offset
+
+        # Condition when the cum_production_split_offset is not filled
+        else:
+            self._oil_prog_split = vectorized_get_prog_split(
+                fluid=self._oil_lifting.fluid_type,
+                price=self._oil_lifting.get_price_arr(),
+                cum=self._cumulative_prod,
+                regime=regime
+            )
+
+            self._gas_prog_split = vectorized_get_prog_split(
+                fluid=self._gas_lifting.fluid_type,
+                price=self._gas_lifting.get_price_arr(),
+                cum=self._cumulative_prod,
+                regime=regime
+            )
 
         # Ministerial Discretion
         minis_disc_array = np.full_like(self.project_years, fill_value=self.split_ministry_disc, dtype=float)
@@ -688,7 +834,7 @@ class GrossSplit(BaseProject):
 
         # Tax Payment
         # Generating Tax array if tax_rate argument is a single value not array
-        if isinstance(tax_rate, float):
+        if isinstance(tax_rate, float) or isinstance(tax_rate, int):
             self._tax_rate_arr = np.full_like(self.project_years, tax_rate, dtype=float)
 
         # Generating Tax array based on the tax regime if tax_rate argument is None
