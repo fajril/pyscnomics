@@ -88,6 +88,36 @@ class Lifting:
 
         self.lifting_rate = self.lifting_rate.astype(np.float64)
 
+        # Prepare attribute price
+        if not isinstance(self.price, np.ndarray):
+            raise LiftingException(
+                f"Attribute price must be provided as numpy ndarray, "
+                f"not as {self.price.__class__.__qualname__}."
+            )
+
+        self.price = self.price.astype(np.float64)
+
+        # Prepare attribute prod_year
+        if not isinstance(self.prod_year, np.ndarray):
+            raise LiftingException(
+                f"Attribute prod_year must be provided as numpy ndarray, "
+                f"not as {self.prod_year.__class__.__qualname__}."
+            )
+
+        self.prod_year = self.prod_year.astype(np.int64)
+
+        # Prepare attribute ghv
+        if self.ghv is None:
+            self.ghv = np.ones_like(self.lifting_rate, dtype=np.float64)
+        else:
+            if not isinstance(self.ghv, np.ndarray):
+                raise LiftingException(
+                    f"Attribute ghv must be provided as numpy ndarray, "
+                    f"not as {self.ghv.__class__.__qualname__}."
+                )
+
+        self.ghv = self.ghv.astype(np.float64)
+
         # Prepare attribute prod rate
         if self.prod_rate is None:
             self.prod_rate = self.lifting_rate.copy()
@@ -110,37 +140,29 @@ class Lifting:
                     f"not as {self.prod_rate_baseline.__class__.__qualname__}."
                 )
 
-        # Prepare attribute ghv
-        if self.ghv is None:
-            self.ghv = np.ones_like(self.lifting_rate, dtype=np.float64)
-        else:
-            if not isinstance(self.ghv, np.ndarray):
-                raise LiftingException(
-                    f"Attribute ghv must be provided as numpy ndarray, "
-                    f"not as {self.ghv.__class__.__qualname__}."
-                )
+        self.prod_rate_baseline = self.prod_rate_baseline.astype(np.float64)
 
         # Check for unequal length of array data
-        arr_length = self.lifting_rate.shape[0]
-
-        print('\t')
-        print('==============================================================================')
-
-        if not all():
-            pass
+        arr_length = len(self.lifting_rate)
 
         if not all(
             len(arr) == arr_length
-            for arr in [self.price, self.ghv, self.prod_rate, self.prod_year]
+            for arr in [self.price, self.ghv, self.prod_year, self.prod_rate, self.prod_rate_baseline]
         ):
             raise LiftingException(
-                f"Inequal length of array: lifting_rate: {len(self.lifting_rate)}, "
+                f"Unequal length of array: "
+                f"lifting_rate: {len(self.lifting_rate)}, "
                 f"price: {len(self.price)}, "
-                f"ghv: {len(self.ghv)}, "
-                f"production: {len(self.prod_rate)}, "
                 f"prod_year: {len(self.prod_year)}, "
+                f"ghv: {len(self.ghv)}, "
+                f"prod_rate: {len(self.prod_rate)}, "
+                f"prod_rate_baseline: {len(self.prod_rate_baseline)}."
             )
 
+        # Prepare attribute prod_rate_total
+        self.prod_rate_total = self.prod_rate + self.prod_rate_baseline
+
+        # Prepare attribute project_years and project_duration
         # Raise an error message: start_year is after end_year
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1

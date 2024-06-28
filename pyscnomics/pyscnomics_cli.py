@@ -456,20 +456,17 @@ if __name__ == "__main__":
     from pyscnomics.econ.revenue import Lifting
     from pyscnomics.econ.selection import FluidType
 
-    start_year = 2023
-    end_year = 2030
-    price = [10, 10, 10, 10, 10, 10, 10, 10]
-    prod_year = []
-
     lifting_jeruk = Lifting(
         start_year=2023,
         end_year=2030,
         lifting_rate=np.array([5, 5, 5, 5, 5, 5, 5, 5]),
         price=np.array([10, 10, 10, 10, 10, 10, 10, 10]),
         prod_year=np.array([2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]),
+        prod_rate=np.array([25, 25, 25, 25, 25, 25, 25, 25]),
+        prod_rate_baseline=np.array([25, 25, 25, 25, 25, 25, 25, 25]),
         fluid_type=FluidType.OIL,
     )
 
     print('\t')
     print(f'Filetype: {type(lifting_jeruk)}')
-    print(lifting_jeruk)
+    print(lifting_jeruk.prod_rate_total)
