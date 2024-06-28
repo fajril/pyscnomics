@@ -282,9 +282,9 @@ def optimize_psc(
     # Converting the list of enum into list of str enum value
     list_str = [enum_value.value for enum_value in list_params]
 
-    #### # Printing for debugging
-    #### print(list_str)
-    #### print(list_params_value)
-    #### print(result_optimization)
+    # # Printing for debugging
+    # print(list_str)
+    # print(list_params_value)
+    # print(result_optimization)
 
     return list_str, list_params_value, result_optimization, list_executed_contract
