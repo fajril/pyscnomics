@@ -133,7 +133,7 @@ class Spreadsheet:
         excel = pd.ExcelFile(self.load_dir)
         self.sheets_name = excel.sheet_names
 
-        # # self.sheets_name = [sh.title for sh in sheets]
+        # Identify the loaded sheets
         self.sheets_loaded = [
             i for i in self.sheets_name
             if i not in [
@@ -143,11 +143,12 @@ class Spreadsheet:
                 "ChartDATA",
                 "ORETZS",
                 "Summary",
-                "Results Table CR",
-                "Results Table GS",
-                "Results Table Base Project",
-                "Results Table GS (2)",
-                "Results Table CR (2)",
+                "Monte Carlo",
+                "Result Table CR",
+                "Result Table GS",
+                "Result Table Base Project",
+                "Result Table GS (2)",
+                "Result Table CR (2)",
             ]
         ]
 
@@ -198,6 +199,15 @@ class Spreadsheet:
         oil_onstream_date_second = general_config_data_loaded.iloc[10, 2]
         gas_onstream_date_second = general_config_data_loaded.iloc[11, 2]
         gsa_number = general_config_data_loaded.iloc[13, 7]
+        number_active_fluid = {
+            "Oil": int(general_config_data_loaded.iloc[12, 3]),
+            "Gas": int(general_config_data_loaded.iloc[13, 3]),
+            "LPG Propane": int(general_config_data_loaded.iloc[14, 3]),
+            "LPG Butane": int(general_config_data_loaded.iloc[15, 3]),
+            "CO2": int(general_config_data_loaded.iloc[16, 3]),
+            "Sulfur": int(general_config_data_loaded.iloc[17, 3]),
+            "Electricity": int(general_config_data_loaded.iloc[18, 3]),
+        }
 
         return GeneralConfigData(
             start_date_project=start_date_project,
@@ -213,6 +223,7 @@ class Spreadsheet:
             discount_rate=discount_rate,
             inflation_rate_applied_to=inflation_rate_applied_to,
             gsa_number=gsa_number,
+            number_active_fluid=number_active_fluid,
         )
 
     def _get_fiscal_config_data(self) -> FiscalConfigData:
@@ -470,10 +481,11 @@ class Spreadsheet:
         # Step #5 (See 'Notes' section in the docstring)
         return OilLiftingData(
             prod_year_init=oil_data["prod_year"],
-            oil_lifting_rate=oil_data["oil_lifting_rate"],
-            oil_price=oil_data["oil_price"],
-            condensate_lifting_rate=oil_data["condensate_lifting_rate"],
-            condensate_price=oil_data["condensate_price"],
+            oil_lifting_rate_init=oil_data["oil_lifting_rate"],
+            oil_price_init=oil_data["oil_price"],
+            condensate_lifting_rate_init=oil_data["condensate_lifting_rate"],
+            condensate_price_init=oil_data["condensate_price"],
+            active_oil=self.general_config_data.number_active_fluid["Oil"],
             project_duration=self.general_config_data.project_duration,
             project_years=self.general_config_data.project_years,
             type_of_contract=self.general_config_data.type_of_contract,
@@ -564,11 +576,12 @@ class Spreadsheet:
         # Step #6 (See 'Notes' section in the docstring)
         return GasLiftingData(
             gsa_number=gsa_number,
+            active_gas=self.general_config_data.number_active_fluid["Gas"],
             prod_year_init=gas_data_general["prod_year"],
-            prod_rate=gas_data_general["prod_rate"],
-            lifting_rate=gas_data_gsa["lifting_rate"],
-            ghv=gas_data_gsa["ghv"],
-            price=gas_data_gsa["price"],
+            prod_rate_init=gas_data_general["prod_rate"],
+            lifting_rate_init=gas_data_gsa["lifting_rate"],
+            ghv_init=gas_data_gsa["ghv"],
+            price_init=gas_data_gsa["price"],
             project_duration=self.general_config_data.project_duration,
             project_years=self.general_config_data.project_years,
             type_of_contract=self.general_config_data.type_of_contract,
@@ -635,8 +648,9 @@ class Spreadsheet:
         # Step #5 (See 'Notes' section in the docstring)
         return LPGPropaneLiftingData(
             prod_year_init=lpg_propane_data["prod_year"],
-            lifting_rate=lpg_propane_data["lifting_rate"],
-            price=lpg_propane_data["price"],
+            lifting_rate_init=lpg_propane_data["lifting_rate"],
+            price_init=lpg_propane_data["price"],
+            active_lpgpropane=self.general_config_data.number_active_fluid["LPG Propane"],
             project_duration=self.general_config_data.project_duration,
             project_years=self.general_config_data.project_years,
             type_of_contract=self.general_config_data.type_of_contract,
@@ -703,8 +717,9 @@ class Spreadsheet:
         # Step #5 (See 'Notes' section in the docstring)
         return LPGButaneLiftingData(
             prod_year_init=lpg_butane_data["prod_year"],
-            lifting_rate=lpg_butane_data["lifting_rate"],
-            price=lpg_butane_data["price"],
+            lifting_rate_init=lpg_butane_data["lifting_rate"],
+            price_init=lpg_butane_data["price"],
+            active_lpgbutane=self.general_config_data.number_active_fluid["LPG Butane"],
             project_duration=self.general_config_data.project_duration,
             project_years=self.general_config_data.project_years,
             type_of_contract=self.general_config_data.type_of_contract,
@@ -767,8 +782,9 @@ class Spreadsheet:
         # Step #5 (See 'Notes' section in the docstring)
         return SulfurLiftingData(
             prod_year_init=sulfur_data["prod_year"],
-            lifting_rate=sulfur_data["lifting_rate"],
-            price=sulfur_data["price"],
+            lifting_rate_init=sulfur_data["lifting_rate"],
+            price_init=sulfur_data["price"],
+            active_sulfur=self.general_config_data.number_active_fluid["Sulfur"],
             project_duration=self.general_config_data.project_duration,
             project_years=self.general_config_data.project_years,
             type_of_contract=self.general_config_data.type_of_contract,
@@ -833,8 +849,9 @@ class Spreadsheet:
         # Step #5 (See 'Notes' section in the docstring)
         return ElectricityLiftingData(
             prod_year_init=electricity_data["prod_year"],
-            lifting_rate=electricity_data["lifting_rate"],
-            price=electricity_data["price"],
+            lifting_rate_init=electricity_data["lifting_rate"],
+            price_init=electricity_data["price"],
+            active_electricity=self.general_config_data.number_active_fluid["Electricity"],
             project_duration=self.general_config_data.project_duration,
             project_years=self.general_config_data.project_years,
             type_of_contract=self.general_config_data.type_of_contract,
@@ -897,8 +914,9 @@ class Spreadsheet:
         # Step #5 (See 'Notes' section in the docstring)
         return CO2LiftingData(
             prod_year_init=co2_data["prod_year"],
-            lifting_rate=co2_data["lifting_rate"],
-            price=co2_data["price"],
+            lifting_rate_init=co2_data["lifting_rate"],
+            price_init=co2_data["price"],
+            active_co2=self.general_config_data.number_active_fluid["CO2"],
             project_duration=self.general_config_data.project_duration,
             project_years=self.general_config_data.project_years,
             type_of_contract=self.general_config_data.type_of_contract,

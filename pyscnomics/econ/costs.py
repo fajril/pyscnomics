@@ -67,6 +67,12 @@ class GeneralCost:
         Must be an array of length equals to the length of 'cost' array.
     lbt_discount: float
         The LBT discount to apply.
+
+    Notes
+    -----
+    (1) The unit used in the cost should be in M unit of United States Dollar (USD), where the M is stands for 1000.
+        Thus, the unit cost should be: M-USD.
+
     """
 
     start_year: int
@@ -155,10 +161,6 @@ class GeneralCost:
         zeros = np.zeros(self.project_duration - len(expenses))
 
         return np.concatenate((expenses, zeros))
-
-    # TODO : Add the amortization method
-    def amortization(self):
-        raise NotImplementedError()
 
     def __len__(self):
         return self.project_duration
@@ -437,7 +439,6 @@ class Tangible(GeneralCost):
             inflation_rate=inflation_rate,
         )
 
-        # TODO : Refactoring the codes to implement the dictionary design pattern 
         # Straight line
         if depr_method == DeprMethod.SL:
             depreciation_charge = np.asarray(
@@ -457,7 +458,7 @@ class Tangible(GeneralCost):
             )
 
         # Declining balance/double declining balance
-        if depr_method == DeprMethod.DB:
+        elif depr_method == DeprMethod.DB:
             depreciation_charge = np.asarray(
                 [
                     depr.declining_balance_depreciation_rate(
@@ -476,7 +477,7 @@ class Tangible(GeneralCost):
             )
 
         # PSC_DB
-        if depr_method == DeprMethod.PSC_DB:
+        elif depr_method == DeprMethod.PSC_DB:
             depreciation_charge = np.asarray(
                 [
                     depr.psc_declining_balance_depreciation_rate(
@@ -1202,6 +1203,11 @@ class OPEX(GeneralCost):
         The production rate of a particular fluid type.
     cost_per_volume: np.ndarray
         Cost associated with production of a particular fluid type.
+
+    Notes
+    -----
+    (1) The unit used in the fixed_cost should be in M unit of United States Dollar (USD),
+        where the M is stands for 1000. Thus, the unit cost should be: M-USD.
     """
 
     fixed_cost: np.ndarray = field(default=None)
