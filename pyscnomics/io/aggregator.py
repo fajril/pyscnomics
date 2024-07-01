@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pyscnomics.io.spreadsheet import Spreadsheet
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
 
 
 class SpreadsheetException(Exception):
@@ -42,7 +42,7 @@ class Aggregate(Spreadsheet):
     co2_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
 
     # Attributes associated with aggregates of cost data
-    tangible_cost_aggregate: dict | tuple[Tangible] = field(default=None, init=False)
+    tangible_cost_aggregate: dict | tuple[CapitalCost] = field(default=None, init=False)
     intangible_cost_aggregate: dict | tuple[Intangible] = field(default=None, init=False)
     opex_aggregate: dict | tuple[OPEX] = field(default=None, init=False)
     asr_cost_aggregate: dict | tuple[ASR] = field(default=None, init=False)
@@ -755,7 +755,7 @@ class Aggregate(Spreadsheet):
                 f"LPG Butane: {self.lpg_butane_lifting_data.type_of_contract}."
             )
 
-    def _get_tangible_cost_aggregate(self) -> dict | tuple[Tangible]:
+    def _get_tangible_cost_aggregate(self) -> dict | tuple[CapitalCost]:
         """
         Retrieves the tangible cost aggregate based on the Production
         Sharing Contract (PSC) type.
@@ -789,7 +789,7 @@ class Aggregate(Spreadsheet):
             tangible_cost_aggr = {
                 psc: tuple(
                     [
-                        Tangible(
+                        CapitalCost(
                             start_year=start_year_combined[i],
                             end_year=end_year_combined[i],
                             cost=self.tangible_cost_data.cost[psc],
@@ -815,7 +815,7 @@ class Aggregate(Spreadsheet):
         else:
             tangible_cost_aggr = tuple(
                 [
-                    Tangible(
+                    CapitalCost(
                         start_year=self.general_config_data.start_date_project.year,
                         end_year=self.general_config_data.end_date_project.year,
                         cost=self.tangible_cost_data.cost,

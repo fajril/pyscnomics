@@ -5,7 +5,7 @@ A collection of unit testing for Intangible class.
 import pytest
 import numpy as np
 from pyscnomics.econ.selection import FluidType, TaxType
-from pyscnomics.econ.costs import Tangible, Intangible, IntangibleException
+from pyscnomics.econ.costs import CapitalCost, Intangible, IntangibleException
 
 
 def test_intangible_incorrect_year_input():
@@ -59,7 +59,7 @@ def test_intangible_incorrect_expense_year_input():
 def test_intangible_comparison_error():
     """ A unit testing for misuse of Intangible: comparing different instances/objects """
 
-    mangga_tangible = Tangible(
+    mangga_tangible = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 50]),
@@ -85,7 +85,7 @@ def test_intangible_comparison_error():
 def test_intangible_comparison():
     """ A unit testing for comparison between Intangible instances """
 
-    mangga_tangible = Tangible(
+    mangga_tangible = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([50, 50]),
@@ -129,7 +129,7 @@ def test_intangible_comparison():
 def test_intangible_arithmetics_incorrect():
     """ A unit testing for misuse of arithmetic operations upon an instance of Intangible """
 
-    mangga_tangible = Tangible(
+    mangga_tangible = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 50]),

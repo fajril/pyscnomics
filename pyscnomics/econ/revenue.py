@@ -6,7 +6,7 @@ import numpy as np
 from dataclasses import dataclass, field
 
 from pyscnomics.econ.selection import FluidType
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
 
 
 class LiftingException(Exception):
@@ -534,7 +534,7 @@ class Lifting:
             return np.sum(self.revenue()) / np.sum(other.revenue())
 
         # Between an instance of Lifting and an instance of Tangible/Intangible/OPEX/ASR
-        elif isinstance(other, (Tangible, Intangible, OPEX, ASR)):
+        elif isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.revenue()) / np.sum(other.expenditures())
 
         # Between an instance of Lifting and an integer/float

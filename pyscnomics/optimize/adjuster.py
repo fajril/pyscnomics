@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 from pyscnomics.io.aggregator import Aggregate
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
@@ -405,7 +405,7 @@ def get_tangible_adjustment(
         # Return a new tuple of Tangible with modified cost
         return tuple(
             [
-                Tangible(
+                CapitalCost(
                     start_year=tangible_aggregate[i].start_year,
                     end_year=tangible_aggregate[i].end_year,
                     cost=updated_cost[i],
@@ -449,7 +449,7 @@ def get_tangible_adjustment(
         return {
             psc: tuple(
                 [
-                    Tangible(
+                    CapitalCost(
                         start_year=tangible_aggregate[psc][i].start_year,
                         end_year=tangible_aggregate[psc][i].end_year,
                         cost=updated_cost[psc][i],

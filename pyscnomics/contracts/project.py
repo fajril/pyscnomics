@@ -9,7 +9,7 @@ import numpy as np
 
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import FluidType, TaxType, TaxRegime, OtherRevenue, InflationAppliedTo
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
 # from pyscnomics.econ.results import CashFlow
 
 
@@ -49,7 +49,7 @@ class BaseProject:
         The start date of gas production.
     lifting : tuple[Lifting]
         A tuple of lifting information objects.
-    tangible_cost : tuple[Tangible]
+    tangible_cost : tuple[CapitalCost]
         A tuple of tangible cost objects.
     intangible_cost : tuple[Intangible], optional
         A tuple of intangible cost objects. Defaults to None.
@@ -65,7 +65,7 @@ class BaseProject:
     oil_onstream_date: date = field(default=None)
     gas_onstream_date: date = field(default=None)
     lifting: tuple[Lifting] = field(default=None)
-    tangible_cost: tuple[Tangible] = field(default=None)
+    tangible_cost: tuple[CapitalCost] = field(default=None)
     intangible_cost: tuple[Intangible] = field(default=None)
     opex: tuple[OPEX] = field(default=None)
     asr_cost: tuple[ASR] = field(default=None)
@@ -75,7 +75,7 @@ class BaseProject:
     project_years: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes associated with total cost per component
-    tangible_cost_total: Tangible = field(default=None, init=False, repr=False)
+    tangible_cost_total: CapitalCost = field(default=None, init=False, repr=False)
     intangible_cost_total: Intangible = field(default=None, init=False, repr=False)
     opex_total: OPEX = field(default=None, init=False, repr=False)
     asr_cost_total: ASR = field(default=None, init=False, repr=False)
@@ -95,8 +95,8 @@ class BaseProject:
     _co2_revenue: np.ndarray = field(default=None, init=False, repr=False)
 
     # Private attributes (associated with cost)
-    _oil_tangible: Tangible = field(default=None, init=False, repr=False)
-    _gas_tangible: Tangible = field(default=None, init=False, repr=False)
+    _oil_tangible: CapitalCost = field(default=None, init=False, repr=False)
+    _gas_tangible: CapitalCost = field(default=None, init=False, repr=False)
     _oil_intangible: Intangible = field(default=None, init=False, repr=False)
     _gas_intangible: Intangible = field(default=None, init=False, repr=False)
     _oil_opex: OPEX = field(default=None, init=False, repr=False)
@@ -191,14 +191,14 @@ class BaseProject:
         # User does not provide tangible_cost data (both OIL and GAS)
         if self.tangible_cost is None:
             self.tangible_cost = (
-                Tangible(
+                CapitalCost(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
                     cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
                     cost_allocation=[FluidType.OIL],
                 ),
-                Tangible(
+                CapitalCost(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
                     cost=np.array([0]),
@@ -654,14 +654,14 @@ class BaseProject:
             (lft for lft in self.lifting if lft.fluid_type == FluidType.CO2),
         )
 
-    def _get_oil_tangible(self) -> Tangible:
+    def _get_oil_tangible(self) -> CapitalCost:
         """
         Determines total oil Tangible from the number of oil Tangible instances in
         attribute self.tangible_cost_total.
 
         Returns
         -------
-        Tangible
+        CapitalCost
             An instance of Tangible that only includes FluidType.OIL as the associated
             cost_allocation that has been combined altogether following the rules prescribed
             in the dunder method __add__() of Tangible class.
@@ -678,7 +678,7 @@ class BaseProject:
         (4) Create a new instance of Tangible with only FluidType.OIL as its cost_allocation.
         """
         if FluidType.OIL not in self.tangible_cost_total.cost_allocation:
-            return Tangible(
+            return CapitalCost(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
                 cost=np.array([0]),
@@ -706,7 +706,7 @@ class BaseProject:
             depreciation_factor = self.tangible_cost_total.depreciation_factor[oil_tangible_id]
             is_ic_applied = np.array(self.tangible_cost_total.is_ic_applied)[oil_tangible_id]
 
-            return Tangible(
+            return CapitalCost(
                 start_year=start_year,
                 end_year=end_year,
                 cost=cost,
@@ -723,14 +723,14 @@ class BaseProject:
                 is_ic_applied=is_ic_applied.tolist(),
             )
 
-    def _get_gas_tangible(self) -> Tangible:
+    def _get_gas_tangible(self) -> CapitalCost:
         """
         Determines total gas Tangible from the number of gas Tangible instances in
         attribute self.tangible_cost_total.
 
         Returns
         -------
-        Tangible
+        CapitalCost
             An instance of Tangible that only includes FluidType.GAS as the associated
             cost_allocation that has been combined altogether following the rules prescribed
             in the dunder method __add__() of Tangible class.
@@ -747,7 +747,7 @@ class BaseProject:
         (4) Create a new instance of Tangible with only FluidType.GAS as its cost_allocation.
         """
         if FluidType.GAS not in self.tangible_cost_total.cost_allocation:
-            return Tangible(
+            return CapitalCost(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
                 cost=np.array([0]),
@@ -775,7 +775,7 @@ class BaseProject:
             depreciation_factor = self.tangible_cost_total.depreciation_factor[gas_tangible_id]
             is_ic_applied = np.array(self.tangible_cost_total.is_ic_applied)[gas_tangible_id]
 
-            return Tangible(
+            return CapitalCost(
                 start_year=start_year,
                 end_year=end_year,
                 cost=cost,

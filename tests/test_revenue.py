@@ -158,3 +158,42 @@ def test_lifting_arithmetics():
 
     np.testing.assert_allclose(div1, calc_div1.revenue())
     np.testing.assert_allclose(div2, calc_div2.revenue())
+
+
+def test_lifting_lifting_rate():
+
+    # Raise an exception for an inappropriate data
+    with pytest.raises(LiftingException):
+        Lifting(
+            start_year=2023,
+            end_year=2030,
+            lifting_rate=100,
+            price=np.array([10, 10, 10]),
+            prod_year=np.array([2024, 2025, 2026]),
+            fluid_type=FluidType.OIL,
+            ghv=np.array([1, 1, 1]),
+            prod_rate=np.array([200, 200, 200]),
+            prod_rate_baseline=np.array([50, 50, 50]),
+        )
+
+    # Correct result
+    lifting_rate_mangga = np.array([100., 100., 100.])
+
+    lifting_mangga = Lifting(
+        start_year=2023,
+        end_year=2030,
+        lifting_rate=np.array([100, 100, 100]),
+        price=np.array([10, 10, 10]),
+        prod_year=np.array([2024, 2025, 2026]),
+        fluid_type=FluidType.OIL,
+        ghv=np.array([1, 1, 1]),
+        prod_rate=np.array([200, 200, 200]),
+        prod_rate_baseline=np.array([50, 50, 50]),
+    )
+
+    lifting_rate_mangga_calc = lifting_mangga.lifting_rate
+
+    # Test whether expected == calculated
+    np.testing.assert_allclose(lifting_rate_mangga, lifting_rate_mangga_calc)
+
+

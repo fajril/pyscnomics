@@ -8,7 +8,7 @@ from datetime import date
 
 from pyscnomics.econ.selection import FluidType, TaxType
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
 from pyscnomics.contracts.project import BaseProject, BaseProjectException
 
 
@@ -131,7 +131,7 @@ def test_base_project_tangible_expenditures():
     gas_tangible_expenditures = np.array([0, 10, 20, 20, 0, 0, 0, 0])
 
     # Calculated results
-    oil_mangga_tangible = Tangible(
+    oil_mangga_tangible = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([25, 25, 25, 25]),
@@ -139,7 +139,7 @@ def test_base_project_tangible_expenditures():
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
-    oil_apel_tangible = Tangible(
+    oil_apel_tangible = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([25, 25, 25]),
@@ -147,7 +147,7 @@ def test_base_project_tangible_expenditures():
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
-    gas_mangga_tangible = Tangible(
+    gas_mangga_tangible = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([10, 10, 10]),
@@ -155,7 +155,7 @@ def test_base_project_tangible_expenditures():
         cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS],
     )
 
-    gas_apel_tangible = Tangible(
+    gas_apel_tangible = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([10, 10]),
