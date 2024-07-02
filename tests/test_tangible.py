@@ -8,7 +8,7 @@ from pyscnomics.econ.selection import DeprMethod, FluidType, TaxType
 from pyscnomics.econ.costs import CapitalException, CapitalCost
 
 
-def test_tangible_incorrect_year_input():
+def test_capital_incorrect_year_input():
     """A unit testing for incorrect data input: start year is after end year"""
 
     with pytest.raises(CapitalException):
@@ -23,7 +23,7 @@ def test_tangible_incorrect_year_input():
         )
 
 
-def test_tangible_unequal_length_of_data_input():
+def test_capital_unequal_length_of_data_input():
     """A unit testing for incorrect data input: unequal length of data input"""
 
     with pytest.raises(CapitalException):
@@ -38,7 +38,7 @@ def test_tangible_unequal_length_of_data_input():
         )
 
 
-def test_tangible_incorrect_expense_year_input():
+def test_capital_incorrect_expense_year_input():
     """A unit testing for incorrect data input: expense year is after end year of the project"""
 
     with pytest.raises(CapitalException):
@@ -62,10 +62,10 @@ def test_tangible_incorrect_expense_year_input():
         )
 
 
-def test_tangible_comparison():
+def test_capital_comparison():
     """Units testing for comparison operation"""
 
-    mangga_tangible = CapitalCost(
+    mangga_capital = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([200, 200]),
@@ -75,7 +75,7 @@ def test_tangible_comparison():
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    jeruk_tangible = CapitalCost(
+    jeruk_capital = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([200, 200]),
@@ -85,7 +85,7 @@ def test_tangible_comparison():
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    hiu_tangible = CapitalCost(
+    hiu_capital = CapitalCost(
         start_year=2025,
         end_year=2030,
         cost=np.array([100, 100]),
@@ -94,17 +94,17 @@ def test_tangible_comparison():
     )
 
     # Execute comparison operations
-    assert mangga_tangible == jeruk_tangible
-    assert mangga_tangible != hiu_tangible
-    assert mangga_tangible == 400
-    assert mangga_tangible >= hiu_tangible
-    assert hiu_tangible <= jeruk_tangible
+    assert mangga_capital == jeruk_capital
+    assert mangga_capital != hiu_capital
+    assert mangga_capital == 400
+    assert mangga_capital >= hiu_capital
+    assert hiu_capital <= jeruk_capital
 
 
-def test_tangible_arithmetics_misuse():
+def test_capital_arithmetics_misuse():
     """A unit testing for incorrect arithmetic operations"""
 
-    mangga_tangible = CapitalCost(
+    mangga_capital = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 100]),
@@ -113,19 +113,19 @@ def test_tangible_arithmetics_misuse():
     )
 
     with pytest.raises(CapitalException):
-        assert mangga_tangible + 500
+        assert mangga_capital + 500
 
     with pytest.raises(CapitalException):
-        assert mangga_tangible - 100
+        assert mangga_capital - 100
 
     with pytest.raises(CapitalException):
-        assert mangga_tangible / 0
+        assert mangga_capital / 0
 
 
-def test_tangible_arithmetics():
-    """A unit testing for mathematical operations (associated with an instance of Tangible class)"""
+def test_capital_arithmetics():
+    """A unit testing for mathematical operations (associated with an instance of Capital class)"""
 
-    mangga_tangible = CapitalCost(
+    mangga_capital = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 100]),
@@ -133,7 +133,7 @@ def test_tangible_arithmetics():
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    apel_tangible = CapitalCost(
+    apel_capital = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([50, 50]),
@@ -141,7 +141,7 @@ def test_tangible_arithmetics():
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    jeruk_tangible = CapitalCost(
+    jeruk_capital = CapitalCost(
         start_year=2023,
         end_year=2032,
         cost=np.array([200]),
@@ -158,12 +158,12 @@ def test_tangible_arithmetics():
     div2 = 0.5
 
     # Calculated results
-    calc_add1 = mangga_tangible + apel_tangible
-    calc_add2 = mangga_tangible + apel_tangible + jeruk_tangible
-    calc_mul1 = mangga_tangible * 2
-    calc_mul2 = -0.5 * apel_tangible
-    calc_div1 = jeruk_tangible / 20
-    calc_div2 = apel_tangible / mangga_tangible
+    calc_add1 = mangga_capital + apel_capital
+    calc_add2 = mangga_capital + apel_capital + jeruk_capital
+    calc_mul1 = mangga_capital * 2
+    calc_mul2 = -0.5 * apel_capital
+    calc_div1 = jeruk_capital / 20
+    calc_div2 = apel_capital / mangga_capital
 
     # Execute tests
     np.testing.assert_allclose(add1, calc_add1.cost)
@@ -174,14 +174,14 @@ def test_tangible_arithmetics():
     assert div2 == calc_div2
 
 
-def test_tangible_expenditures():
-    """A unit testing for expenditures method in Tangible class"""
+def test_capital_expenditures():
+    """A unit testing for expenditures method in Capital class"""
 
     # Expected result
     expenses = [100, 100, 150, 0, 0, 0, 0, 0, 0, 0]
 
     # Calculated result
-    mangga_tangible = CapitalCost(
+    mangga_capital = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 100, 100]),
@@ -190,7 +190,7 @@ def test_tangible_expenditures():
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
-    jeruk_tangible = CapitalCost(
+    jeruk_capital = CapitalCost(
         start_year=2025,
         end_year=2032,
         cost=np.array([50]),
@@ -199,16 +199,16 @@ def test_tangible_expenditures():
         cost_allocation=[FluidType.OIL],
     )
 
-    total_tangible = mangga_tangible + jeruk_tangible
-    calc_expenses = total_tangible.expenditures()
+    total_capital = mangga_capital + jeruk_capital
+    calc_expenses = total_capital.expenditures()
 
     # Execute testing (expected == calculated)
     np.testing.assert_allclose(expenses, calc_expenses)
 
 
-def test_tangible_expenditures_with_tax_and_inflation():
+def test_capital_expenditures_with_tax_and_inflation():
     """
-    A unit testing for expenditures method in Tangible class,
+    A unit testing for expenditures method in Capital class,
     taking into account tax and inflation schemes.
     """
 
@@ -219,7 +219,7 @@ def test_tangible_expenditures_with_tax_and_inflation():
     case4 = np.array([0, 102.24, 101.92, 101.6, 107.688, 0, 0, 0])
 
     # Calculated results
-    tangible_mangga = CapitalCost(
+    mangga_capital = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 100, 100, 50]),
@@ -227,7 +227,7 @@ def test_tangible_expenditures_with_tax_and_inflation():
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
-    tangible_jeruk = CapitalCost(
+    jeruk_capital = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([50]),
@@ -235,7 +235,7 @@ def test_tangible_expenditures_with_tax_and_inflation():
         cost_allocation=[FluidType.OIL],
     )
 
-    tangible_apel = CapitalCost(
+    apel_capital = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 100, 100, 100]),
@@ -246,22 +246,22 @@ def test_tangible_expenditures_with_tax_and_inflation():
 
     )
 
-    tangible_add = tangible_mangga + tangible_jeruk
+    capital_add = mangga_capital + jeruk_capital
 
-    case1_calc = tangible_add.expenditures(
+    case1_calc = capital_add.expenditures(
         year_ref=2023,
         inflation_rate=0.02
     )
-    case2_calc = tangible_add.expenditures(
+    case2_calc = capital_add.expenditures(
         year_ref=2023,
         inflation_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
     )
-    case3_calc = tangible_add.expenditures(
+    case3_calc = capital_add.expenditures(
         year_ref=2023,
         tax_type=TaxType.VAT,
         vat_rate=0.05,
     )
-    case4_calc = tangible_apel.expenditures(
+    case4_calc = apel_capital.expenditures(
         year_ref=2026,
         tax_type=TaxType.LBT,
         lbt_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
@@ -275,8 +275,8 @@ def test_tangible_expenditures_with_tax_and_inflation():
     np.testing.assert_allclose(case4, case4_calc)
 
 
-def test_tangible_depreciation():
-    """A unit testing for total depreciation rate of Tangible object"""
+def test_capital_depreciation():
+    """A unit testing for total depreciation rate of Capital object"""
 
     # Expected results: depreciation_charge, undepreciated asset
     depreSL = [0, 0, 20, 30, 30, 30, 30, 10]
@@ -290,7 +290,7 @@ def test_tangible_depreciation():
     undeprePSC = 12.5
 
     # Calculated results: depreciation_charge, undepreciated asset
-    mangga_tangible = CapitalCost(
+    mangga_capital = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 50]),
@@ -299,7 +299,7 @@ def test_tangible_depreciation():
         useful_life=np.array([5, 5]),
     )
 
-    apel_tangible = CapitalCost(
+    apel_capital = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 50]),
@@ -308,7 +308,7 @@ def test_tangible_depreciation():
         useful_life=np.array([5, 5]),
     )
 
-    nanas_tangible = CapitalCost(
+    nanas_capital = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 50]),
@@ -317,19 +317,19 @@ def test_tangible_depreciation():
         useful_life=np.array([5, 5]),
     )
 
-    calc_depreSL, calc_undepreSL = mangga_tangible.total_depreciation_rate(
+    calc_depreSL, calc_undepreSL = mangga_capital.total_depreciation_rate(
         depr_method=DeprMethod.SL
     )
 
-    calc_depreDB, calc_undepreDB = mangga_tangible.total_depreciation_rate(
+    calc_depreDB, calc_undepreDB = mangga_capital.total_depreciation_rate(
         depr_method=DeprMethod.DB, decline_factor=1
     )
 
-    calc_depreDDB, calc_undepreDDB = apel_tangible.total_depreciation_rate(
+    calc_depreDDB, calc_undepreDDB = apel_capital.total_depreciation_rate(
         depr_method=DeprMethod.DB, decline_factor=2
     )
 
-    calc_deprePSC, calc_undeprePSC = nanas_tangible.total_depreciation_rate(
+    calc_deprePSC, calc_undeprePSC = nanas_capital.total_depreciation_rate(
         depr_method=DeprMethod.PSC_DB
     )
 
@@ -345,8 +345,8 @@ def test_tangible_depreciation():
     np.testing.assert_allclose(np.array([undeprePSC]), np.array([calc_undeprePSC]))
 
 
-def test_tangible_depreciation_with_tax_and_inflation():
-    """A unit testing for total depreciation rate of Tangible object"""
+def test_capital_depreciation_with_tax_and_inflation():
+    """A unit testing for total depreciation rate of Capital object"""
 
     # Expected results: depreciation_charge, undepreciated asset
     depreCase1 = [
@@ -375,7 +375,7 @@ def test_tangible_depreciation_with_tax_and_inflation():
     undepreCase2 = 3.7285794
 
     # Calculated results
-    tangible_mangga = CapitalCost(
+    capital_mangga = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 100, 100, 50, 50, 0, 0, 0]),
@@ -392,11 +392,11 @@ def test_tangible_depreciation_with_tax_and_inflation():
         ],
     )
 
-    depreCase1_calc, undepreCase1_calc = tangible_mangga.total_depreciation_rate(
+    depreCase1_calc, undepreCase1_calc = capital_mangga.total_depreciation_rate(
         inflation_rate=0.05
     )
 
-    depreCase2_calc, undepreCase2_calc = tangible_mangga.total_depreciation_rate(
+    depreCase2_calc, undepreCase2_calc = capital_mangga.total_depreciation_rate(
         tax_type=TaxType.VAT,
         vat_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
         inflation_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
@@ -409,8 +409,8 @@ def test_tangible_depreciation_with_tax_and_inflation():
     np.testing.assert_allclose(undepreCase2, undepreCase2_calc)
 
 
-def test_tangible_book_value():
-    """A unit testing for total depreciation book value of Tangible object"""
+def test_capital_book_value():
+    """A unit testing for total depreciation book value of Capital object"""
 
     # Expected results: depreciation book value
     bookSL = [0, 0, 80, 100, 70, 40, 10, 0]
@@ -419,7 +419,7 @@ def test_tangible_book_value():
     bookPSC = [0, 0, 50, 25, 12.5, 6.25, 25, 12.5]
 
     # Calculated results: depreciation book value
-    mangga_tangible = CapitalCost(
+    mangga_capital = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 50]),
@@ -428,7 +428,7 @@ def test_tangible_book_value():
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    apel_tangible = CapitalCost(
+    apel_capital = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 50]),
@@ -437,7 +437,7 @@ def test_tangible_book_value():
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    nanas_tangible = CapitalCost(
+    nanas_capital = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 50]),
@@ -446,19 +446,19 @@ def test_tangible_book_value():
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    calc_bookSL = mangga_tangible.total_depreciation_book_value(
+    calc_bookSL = mangga_capital.total_depreciation_book_value(
         depr_method=DeprMethod.SL
     )
 
-    calc_bookDB = mangga_tangible.total_depreciation_book_value(
+    calc_bookDB = mangga_capital.total_depreciation_book_value(
         depr_method=DeprMethod.DB, decline_factor=1
     )
 
-    calc_bookDDB = apel_tangible.total_depreciation_book_value(
+    calc_bookDDB = apel_capital.total_depreciation_book_value(
         depr_method=DeprMethod.DB, decline_factor=2
     )
 
-    calc_bookPSC = nanas_tangible.total_depreciation_book_value(
+    calc_bookPSC = nanas_capital.total_depreciation_book_value(
         depr_method=DeprMethod.PSC_DB
     )
 

@@ -497,7 +497,9 @@ class CapitalCost(GeneralCost):
             )
 
         else:
-            raise NotImplementedError()
+            raise CapitalException(
+                f"Depreciation method ({depr_method}) is unrecognized."
+            )
 
         # The relative difference of pis_year and start_year
         shift_indices = self.pis_year - self.start_year
@@ -585,7 +587,7 @@ class CapitalCost(GeneralCost):
         ) - np.cumsum(total_depreciation_charge)
 
     def __eq__(self, other):
-        # Between two instances of Tangible
+        # Between two instances of CapitalCost
         if isinstance(other, CapitalCost):
             return all(
                 (
@@ -603,7 +605,7 @@ class CapitalCost(GeneralCost):
                 )
             )
 
-        # Between an instance of Tangible and an integer/float
+        # Between an instance of CapitalCost and an integer/float
         elif isinstance(other, (int, float)):
             return np.sum(self.cost) == other
 
@@ -611,67 +613,67 @@ class CapitalCost(GeneralCost):
             return False
 
     def __lt__(self, other):
-        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) < np.sum(other.cost)
 
-        # Between an instance of Tangible and an integer/float
+        # Between an instance of CapitalCost and an integer/float
         elif isinstance(other, (int, float)):
             return np.sum(self.cost) < other
 
         else:
             raise CapitalException(
-                f"Must compare an instance of Tangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"Must compare an instance of CapitalCost with another instance of "
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __le__(self, other):
-        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) <= np.sum(other.cost)
 
-        # Between an instance of Tangible and an integer/float
+        # Between an instance of CapitalCost and an integer/float
         elif isinstance(other, (int, float)):
             return np.sum(self.cost) <= other
 
         else:
             raise CapitalException(
-                f"Must compare an instance of Tangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"Must compare an instance of CapitalCost with another instance of "
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __gt__(self, other):
-        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) > np.sum(other.cost)
 
-        # Between an instance of Tangible and an integer/float
+        # Between an instance of CapitalCost and an integer/float
         elif isinstance(other, (int, float)):
             return np.sum(self.cost) > other
 
         else:
             raise CapitalException(
-                f"Must compare an instance of Tangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"Must compare an instance of CapitalCost with another instance of "
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __ge__(self, other):
-        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) >= np.sum(other.cost)
 
-        # Between an instance of Tangible and an integer/float
+        # Between an instance of CapitalCost and an integer/float
         elif isinstance(other, (int, float)):
             return np.sum(self.cost) >= other
 
         else:
             raise CapitalException(
-                f"Must compare an instance of Tangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"Must compare an instance of CapitalCost with another instance of "
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __add__(self, other):
-        # Only allows addition between an instance of Tangible and another instance of Tangible
+        # Only allows addition between an instance of CapitalCost and another instance of CapitalCost
         if isinstance(other, CapitalCost):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
@@ -719,15 +721,15 @@ class CapitalCost(GeneralCost):
 
         else:
             raise CapitalException(
-                f"Must add an instance of Tangible with another instance of Tangible. "
-                f"{other}({other.__class__.__qualname__}) is not an instance of Tangible."
+                f"Must add an instance of CapitalCost with another instance of CapitalCost. "
+                f"{other}({other.__class__.__qualname__}) is not an instance of CapitalCost."
             )
 
     def __iadd__(self, other):
         return self.__add__(other)
 
     def __sub__(self, other):
-        # Only allows subtraction between an instance of Tangible and another instance of Tangible
+        # Only allows subtraction between an instance of CapitalCost and another instance of CapitalCost
         if isinstance(other, CapitalCost):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
@@ -775,10 +777,10 @@ class CapitalCost(GeneralCost):
 
         else:
             raise CapitalException(
-                f"Must subtract between an instance of Tangible "
-                f"with another instance of Tangible. "
+                f"Must subtract between an instance of CapitalCost "
+                f"with another instance of CapitalCost. "
                 f"{other}({other.__class__.__qualname__}) is not "
-                f"an instance of Tangible."
+                f"an instance of CapitalCost."
             )
 
     def __rsub__(self, other):
@@ -816,11 +818,11 @@ class CapitalCost(GeneralCost):
         return self.__mul__(other)
 
     def __truediv__(self, other):
-        # Between an instance of Tangible with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) / np.sum(other.cost)
 
-        # Between an instance of Tangible and an integer/float
+        # Between an instance of CapitalCost and an integer/float
         elif isinstance(other, (int, float)):
             # Cannot divide with zero
             if other == 0:
@@ -847,10 +849,10 @@ class CapitalCost(GeneralCost):
 
         else:
             raise CapitalException(
-                f"Must divide with an instance of Tangible/Intangible/OPEX/ASR, "
+                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR, "
                 f"integer or a float; "
                 f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of Tangible/Intangible/OPEX/ASR nor an integer nor a float."
+                f"of CapitalCost/Intangible/OPEX/ASR nor an integer nor a float."
             )
 
 
@@ -995,7 +997,7 @@ class Intangible(GeneralCost):
             return False
 
     def __lt__(self, other):
-        # Between an instance of Intangible with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) < np.sum(other.cost)
 
@@ -1006,11 +1008,11 @@ class Intangible(GeneralCost):
         else:
             raise IntangibleException(
                 f"Must compare an instance of Intangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __le__(self, other):
-        # Between an instance of Intangible with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) <= np.sum(other.cost)
 
@@ -1021,11 +1023,11 @@ class Intangible(GeneralCost):
         else:
             raise IntangibleException(
                 f"Must compare an instance of Intangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __gt__(self, other):
-        # Between an instance of Intangible with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) > np.sum(other.cost)
 
@@ -1036,11 +1038,11 @@ class Intangible(GeneralCost):
         else:
             raise IntangibleException(
                 f"Must compare an instance of Intangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __ge__(self, other):
-        # Between an instance of Intangible with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) >= np.sum(other.cost)
 
@@ -1051,7 +1053,7 @@ class Intangible(GeneralCost):
         else:
             raise IntangibleException(
                 f"Must compare an instance of Intangible with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -1156,7 +1158,7 @@ class Intangible(GeneralCost):
         return self.__mul__(other)
 
     def __truediv__(self, other):
-        # Between an instance of Intangible with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) / np.sum(other.cost)
 
@@ -1182,10 +1184,10 @@ class Intangible(GeneralCost):
 
         else:
             raise IntangibleException(
-                f"Must divide with an instance of Tangible/Intangible/OPEX/ASR, "
+                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR, "
                 f"integer or a float; "
                 f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of Tangible/Intangible/OPEX/ASR nor an integer nor a float."
+                f"of CapitalCost/Intangible/OPEX/ASR nor an integer nor a float."
             )
 
 
@@ -1380,7 +1382,7 @@ class OPEX(GeneralCost):
             return False
 
     def __lt__(self, other):
-        # Between an instance of OPEX with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of OPEX with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) < np.sum(other.cost)
 
@@ -1391,11 +1393,11 @@ class OPEX(GeneralCost):
         else:
             raise OPEXException(
                 f"Must compare an instance of OPEX with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __le__(self, other):
-        # Between an instance of OPEX with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of OPEX with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) <= np.sum(other.cost)
 
@@ -1406,11 +1408,11 @@ class OPEX(GeneralCost):
         else:
             raise OPEXException(
                 f"Must compare an instance of OPEX with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __gt__(self, other):
-        # Between an instance of OPEX with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of OPEX with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) > np.sum(other.cost)
 
@@ -1421,11 +1423,11 @@ class OPEX(GeneralCost):
         else:
             raise OPEXException(
                 f"Must compare an instance of OPEX with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __ge__(self, other):
-        # Between an instance of OPEX with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of OPEX with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) >= np.sum(other.cost)
 
@@ -1436,7 +1438,7 @@ class OPEX(GeneralCost):
         else:
             raise OPEXException(
                 f"Must compare an instance of OPEX with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -1551,7 +1553,7 @@ class OPEX(GeneralCost):
         return self.__mul__(other)
 
     def __truediv__(self, other):
-        # Between an instance of OPEX with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of OPEX with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) / np.sum(other.cost)
 
@@ -1579,9 +1581,9 @@ class OPEX(GeneralCost):
 
         else:
             raise OPEXException(
-                f"Must divide with an instance of Tangible/Intangible/OPEX/ASR, integer or a float; "
+                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR, integer or a float; "
                 f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of Tangible/Intangible/OPEX/ASR nor an integer nor a float."
+                f"of CapitalCost/Intangible/OPEX/ASR nor an integer nor a float."
             )
 
 
@@ -1947,7 +1949,7 @@ class ASR(GeneralCost):
             return False
 
     def __lt__(self, other):
-        # Between an instance of ASR with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of ASR with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) < np.sum(other.cost)
 
@@ -1958,11 +1960,11 @@ class ASR(GeneralCost):
         else:
             raise ASRException(
                 f"Must compare an instance of ASR with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __le__(self, other):
-        # Between an instance of ASR with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of ASR with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) <= np.sum(other.cost)
 
@@ -1973,11 +1975,11 @@ class ASR(GeneralCost):
         else:
             raise ASRException(
                 f"Must compare an instance of ASR with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __gt__(self, other):
-        # Between an instance of ASR with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of ASR with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) > np.sum(other.cost)
 
@@ -1988,11 +1990,11 @@ class ASR(GeneralCost):
         else:
             raise ASRException(
                 f"Must compare an instance of ASR with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __ge__(self, other):
-        # Between an instance of ASR with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of ASR with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) >= np.sum(other.cost)
 
@@ -2003,7 +2005,7 @@ class ASR(GeneralCost):
         else:
             raise ASRException(
                 f"Must compare an instance of ASR with another instance of "
-                f"Tangible/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -2108,7 +2110,7 @@ class ASR(GeneralCost):
         return self.__mul__(other)
 
     def __truediv__(self, other):
-        # Between an instance of ASR with another instance of Tangible/Intangible/OPEX/ASR
+        # Between an instance of ASR with another instance of CapitalCost/Intangible/OPEX/ASR
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
             return np.sum(self.cost) / np.sum(other.cost)
 
@@ -2134,8 +2136,8 @@ class ASR(GeneralCost):
 
         else:
             raise ASRException(
-                f"Must divide with an instance of Tangible/Intangible/OPEX/ASR, "
+                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR, "
                 f"integer or a float; "
                 f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of Tangible/Intangible/OPEX/ASR nor an integer nor a float."
+                f"of CapitalCost/Intangible/OPEX/ASR nor an integer nor a float."
             )

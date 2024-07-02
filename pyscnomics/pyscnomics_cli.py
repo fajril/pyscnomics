@@ -453,31 +453,20 @@ def run_optimization(
 
 if __name__ == "__main__":
 
-    from pyscnomics.econ.revenue import Lifting
+    from pyscnomics.econ.costs import Intangible
     from pyscnomics.econ.selection import FluidType
 
-    lifting_jeruk = Lifting(
+    intangible_apel = Intangible(
         start_year=2023,
         end_year=2030,
-        lifting_rate=np.array([5, 5, 5, 5]),
-        price=np.array([10, 10, 10, 10]),
-        prod_year=np.array([2025, 2026, 2027, 2028]),
-        prod_rate=np.array([25, 25, 25, 25]),
-        prod_rate_baseline=np.array([25, 25, 25, 25]),
-        fluid_type=FluidType.OIL,
+        cost=np.array([100, 100, 100]),
+        expense_year=np.array([2023, 2024, 2026]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
     print('\t')
-    print(f'Filetype: {type(lifting_jeruk)}')
-    print(lifting_jeruk)
+    print('============================================================================')
 
-    # project_years_jeruk = lifting_jeruk.project_years
-    # total_prod_rate_jeruk = lifting_jeruk.get_prod_rate_total_arr()
-    #
-    # print('\t')
-    # print(f'Filetype: {type(total_prod_rate_jeruk)}')
-    # print('total_prod_rate_jeruk = \n', total_prod_rate_jeruk)
-    #
-    # print('\t')
-    # print(f'Filetype: {type(project_years_jeruk)}')
-    # print('project_years_jeruk = \n', project_years_jeruk)
+    print('\t')
+    print(f'Filetype: {type(intangible_apel)}')
+    print(intangible_apel)
