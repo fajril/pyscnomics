@@ -7,7 +7,7 @@ from typing import Dict
 from pydantic import BaseModel
 import numpy as np
 
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type
 from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime
 from pyscnomics.tools.helper import (get_inflation_applied_converter,
@@ -853,7 +853,7 @@ def convert_dict_to_tangible(data_raw: dict) -> tuple:
         tuple[Tangible]
     """
     tangible_list = [
-        Tangible(
+        CapitalCost(
             start_year=data_raw[key]['start_year'],
             end_year=data_raw[key]['end_year'],
             cost=np.array(data_raw[key]['cost']),

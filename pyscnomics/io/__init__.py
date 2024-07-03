@@ -15,7 +15,7 @@ from .config import (
     SulfurLiftingData,
     ElectricityLiftingData,
     CO2LiftingData,
-    TangibleCostData,
+    CapitalCostData,
     IntangibleCostData,
     OPEXData,
     ASRCostData,

@@ -10,7 +10,7 @@ from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.econ.selection import OptimizationParameter, OptimizationTarget
 from pyscnomics.tools.summary import get_summary
 
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
 
 
 class OptimizationException(Exception):
@@ -343,22 +343,22 @@ def adjust_cost_element(contract: CostRecovery | GrossSplit,
     if adjustment_variable == 'VAT':
         # Adjusting the Tangible cost of the contract
         tangible_adjusted = tuple([
-            Tangible(start_year=tan.start_year,
-                     end_year=tan.end_year,
-                     cost=tan.cost,
-                     expense_year=tan.expense_year,
-                     cost_allocation=tan.cost_allocation,
-                     description=tan.description,
-                     vat_portion=tan.vat_portion,
-                     vat_discount=adjustment_value,
-                     lbt_portion=tan.lbt_portion,
-                     lbt_discount=tan.lbt_discount,
-                     pis_year=tan.pis_year,
-                     salvage_value=tan.salvage_value,
-                     useful_life=tan.useful_life,
-                     depreciation_factor=tan.depreciation_factor,
-                     is_ic_applied=tan.is_ic_applied,
-                     ) for tan in contract.tangible_cost
+            CapitalCost(start_year=tan.start_year,
+                        end_year=tan.end_year,
+                        cost=tan.cost,
+                        expense_year=tan.expense_year,
+                        cost_allocation=tan.cost_allocation,
+                        description=tan.description,
+                        vat_portion=tan.vat_portion,
+                        vat_discount=adjustment_value,
+                        lbt_portion=tan.lbt_portion,
+                        lbt_discount=tan.lbt_discount,
+                        pis_year=tan.pis_year,
+                        salvage_value=tan.salvage_value,
+                        useful_life=tan.useful_life,
+                        depreciation_factor=tan.depreciation_factor,
+                        is_ic_applied=tan.is_ic_applied,
+                        ) for tan in contract.tangible_cost
         ])
 
         # Adjusting the Intangible cost of the contract
@@ -408,22 +408,22 @@ def adjust_cost_element(contract: CostRecovery | GrossSplit,
     elif adjustment_variable == 'LBT':
         # Adjusting the Tangible cost of the contract
         tangible_adjusted = tuple([
-            Tangible(start_year=tan.start_year,
-                     end_year=tan.end_year,
-                     cost=tan.cost,
-                     expense_year=tan.expense_year,
-                     cost_allocation=tan.cost_allocation,
-                     description=tan.description,
-                     vat_portion=tan.vat_portion,
-                     vat_discount=tan.vat_discount,
-                     lbt_portion=tan.lbt_portion,
-                     lbt_discount=adjustment_value,
-                     pis_year=tan.pis_year,
-                     salvage_value=tan.salvage_value,
-                     useful_life=tan.useful_life,
-                     depreciation_factor=tan.depreciation_factor,
-                     is_ic_applied=tan.is_ic_applied,
-                     ) for tan in contract.tangible_cost
+            CapitalCost(start_year=tan.start_year,
+                        end_year=tan.end_year,
+                        cost=tan.cost,
+                        expense_year=tan.expense_year,
+                        cost_allocation=tan.cost_allocation,
+                        description=tan.description,
+                        vat_portion=tan.vat_portion,
+                        vat_discount=tan.vat_discount,
+                        lbt_portion=tan.lbt_portion,
+                        lbt_discount=adjustment_value,
+                        pis_year=tan.pis_year,
+                        salvage_value=tan.salvage_value,
+                        useful_life=tan.useful_life,
+                        depreciation_factor=tan.depreciation_factor,
+                        is_ic_applied=tan.is_ic_applied,
+                        ) for tan in contract.tangible_cost
         ])
 
         # Adjusting the Intangible cost of the contract

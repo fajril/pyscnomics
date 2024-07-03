@@ -601,7 +601,7 @@ def get_datetime(ordinal_date) -> datetime:
     return date_time
 
 
-def get_inflation_applied_converter(target: str | None) -> InflationAppliedTo | None:
+def get_inflation_applied_converter(target: str) -> InflationAppliedTo:
     """
     Converts a string representing the application of inflation to its
     corresponding enum value from the InflationAppliedTo class.

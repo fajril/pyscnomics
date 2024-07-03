@@ -305,8 +305,12 @@ def entry_point(**kwargs):
 
     else:
         body = """
-        We welcome you to our library, PySCnomics. This package contains tailored functionalities for assessing economic feasibility of oil and gas projects following the state-of-the-art Production Sharing Contract (PSC) schemes in Indonesia.
-        PySCnomics is the product of join research between Indonesia's Special Task Force for Upstream Oil and Gas Business Activities (SKK Migas) and the Department of Petroleum Engineering, Institut Teknologi Bandung (ITB)
+        We welcome you to our library, PySCnomics. This package contains tailored functionalities for 
+        assessing economic feasibility of oil and gas projects following the state-of-the-art Production 
+        Sharing Contract (PSC) schemes in Indonesia.
+        PySCnomics is the product of join research between Indonesia's Special Task Force for Upstream Oil 
+        and Gas Business Activities (SKK Migas) and the Department of Petroleum Engineering, 
+        Institut Teknologi Bandung (ITB)
         """
         print(body)
 
@@ -361,7 +365,7 @@ def run_standard(
     write_summary(
         summary_dict=contract_summary,
         workbook_object=workbook_object,
-        sheet_name='Executive Summary',
+        sheet_name='Summary',
         range_cell='E5',
     )
 
@@ -448,4 +452,22 @@ def run_optimization(
 
 
 if __name__ == "__main__":
-    entry_point()
+    # entry_point()
+
+    from pyscnomics.econ.costs import Intangible
+    from pyscnomics.econ.selection import FluidType
+
+    intangible_apel = Intangible(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([100, 100, 100]),
+        expense_year=np.array([2023, 2024, 2026]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+    )
+
+    print('\t')
+    print('============================================================================')
+
+    print('\t')
+    print(f'Filetype: {type(intangible_apel)}')
+    print(intangible_apel)
