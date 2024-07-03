@@ -358,7 +358,7 @@ def adjust_cost_element(contract: CostRecovery | GrossSplit,
                         useful_life=tan.useful_life,
                         depreciation_factor=tan.depreciation_factor,
                         is_ic_applied=tan.is_ic_applied,
-                        ) for tan in contract.tangible_cost
+                        ) for tan in contract.capital_cost
         ])
 
         # Adjusting the Intangible cost of the contract
@@ -423,7 +423,7 @@ def adjust_cost_element(contract: CostRecovery | GrossSplit,
                         useful_life=tan.useful_life,
                         depreciation_factor=tan.depreciation_factor,
                         is_ic_applied=tan.is_ic_applied,
-                        ) for tan in contract.tangible_cost
+                        ) for tan in contract.capital_cost
         ])
 
         # Adjusting the Intangible cost of the contract
@@ -482,7 +482,7 @@ def adjust_cost_element(contract: CostRecovery | GrossSplit,
                                          oil_onstream_date=contract.oil_onstream_date,
                                          gas_onstream_date=contract.gas_onstream_date,
                                          lifting=contract.lifting,
-                                         tangible_cost=tangible_adjusted,
+                                         capital_cost=tangible_adjusted,
                                          intangible_cost=intangible_adjusted,
                                          opex=opex_adjusted,
                                          asr_cost=asr_adjusted,
@@ -516,7 +516,7 @@ def adjust_cost_element(contract: CostRecovery | GrossSplit,
                                        oil_onstream_date=contract.oil_onstream_date,
                                        gas_onstream_date=contract.gas_onstream_date,
                                        lifting=contract.lifting,
-                                       tangible_cost=tangible_adjusted,
+                                       capital_cost=tangible_adjusted,
                                        intangible_cost=intangible_adjusted,
                                        opex=opex_adjusted,
                                        asr_cost=asr_adjusted,
@@ -538,7 +538,7 @@ def adjust_cost_element(contract: CostRecovery | GrossSplit,
                                        oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
                                        gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
                                        gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
-                                       gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration,)
+                                       gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration, )
 
     # When the contract is not recognized, raise an exception
     else:

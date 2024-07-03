@@ -499,7 +499,7 @@ class GrossSplit(BaseProject):
 
     def _get_sunk_cost(self, sunk_cost_reference_year: int):
         oil_cost_raw = (
-                self._oil_tangible_expenditures
+                self._oil_capital_expenditures
                 + self._oil_non_capital
         )
         self._oil_sunk_cost = oil_cost_raw[
@@ -507,7 +507,7 @@ class GrossSplit(BaseProject):
                               ]
 
         gas_cost_raw = (
-                self._gas_tangible_expenditures
+                self._gas_capital_expenditures
                 + self._gas_non_capital
         )
         self._gas_sunk_cost = gas_cost_raw[
@@ -603,7 +603,7 @@ class GrossSplit(BaseProject):
         (
             self._oil_depreciation,
             self._oil_undepreciated_asset,
-        ) = self._oil_tangible.total_depreciation_rate(
+        ) = self._oil_capital.total_depreciation_rate(
             depr_method=depr_method,
             decline_factor=decline_factor,
             year_ref=year_ref,
@@ -616,7 +616,7 @@ class GrossSplit(BaseProject):
         (
             self._gas_depreciation,
             self._gas_undepreciated_asset,
-        ) = self._gas_tangible.total_depreciation_rate(
+        ) = self._gas_capital.total_depreciation_rate(
             depr_method=depr_method,
             decline_factor=decline_factor,
             year_ref=year_ref,
@@ -742,9 +742,9 @@ class GrossSplit(BaseProject):
         self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
 
         # Total Investment
-        self._oil_total_expenses = (self._oil_tangible_expenditures + self._oil_intangible_expenditures +
+        self._oil_total_expenses = (self._oil_capital_expenditures + self._oil_intangible_expenditures +
                                     self._oil_opex_expenditures + self._oil_asr_expenditures)
-        self._gas_total_expenses = (self._gas_tangible_expenditures + self._gas_intangible_expenditures +
+        self._gas_total_expenses = (self._gas_capital_expenditures + self._gas_intangible_expenditures +
                                     self._gas_opex_expenditures + self._gas_asr_expenditures)
 
         # Cost to be Deducted
@@ -863,7 +863,7 @@ class GrossSplit(BaseProject):
 
         # Consolidated attributes
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue
-        self._consolidated_tangible = self._oil_tangible_expenditures + self._gas_tangible_expenditures
+        self._consolidated_tangible = self._oil_capital_expenditures + self._gas_capital_expenditures
         self._consolidated_intangible = self._oil_intangible_expenditures + self._gas_intangible_expenditures
         self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
         self._consolidated_opex = self._oil_opex_expenditures + self._gas_opex_expenditures
@@ -901,8 +901,8 @@ class GrossSplit(BaseProject):
                     np.allclose(self._gas_lifting.lifting_rate, other._gas_lifting.lifting_rate),
                     np.allclose(self._oil_revenue, other._oil_revenue),
                     np.allclose(self._gas_revenue, other._gas_revenue),
-                    np.allclose(self._oil_tangible_expenditures, other._oil_tangible_expenditures),
-                    np.allclose(self._gas_tangible_expenditures, other._gas_tangible_expenditures),
+                    np.allclose(self._oil_capital_expenditures, other._oil_capital_expenditures),
+                    np.allclose(self._gas_capital_expenditures, other._gas_capital_expenditures),
                     np.allclose(self._oil_intangible_expenditures, other._oil_intangible_expenditures),
                     np.allclose(self._gas_intangible_expenditures, other._gas_intangible_expenditures),
                     np.allclose(self._oil_opex_expenditures, other._oil_opex_expenditures),

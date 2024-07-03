@@ -166,7 +166,7 @@ def test_base_project_tangible_expenditures():
     base_case = BaseProject(
         start_date=date(2023, 1, 1),
         end_date=date(2030, 1, 1),
-        tangible_cost=(
+        capital_cost=(
             oil_mangga_tangible,
             oil_apel_tangible,
             gas_mangga_tangible,
