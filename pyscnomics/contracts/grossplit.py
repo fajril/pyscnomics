@@ -6,8 +6,15 @@ import numpy as np
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
-from pyscnomics.econ.selection import (FluidType, GrossSplitRegime, TaxRegime, TaxType, DeprMethod, OtherRevenue,
-                                       InflationAppliedTo)
+from pyscnomics.econ.selection import (FluidType,
+                                       GrossSplitRegime,
+                                       TaxRegime,
+                                       TaxType,
+                                       DeprMethod,
+                                       OtherRevenue,
+                                       InflationAppliedTo,
+                                       VariableSplit522017,
+                                       VariableSplit082017)
 from pyscnomics.econ.results import CashFlow
 from pyscnomics.econ.depreciation import unit_of_production_rate
 
@@ -37,25 +44,25 @@ class GrossSplit(BaseProject):
 
     Parameters
     ----------
-    field_status: str
+    field_status: str | VariableSplit522017.FieldStatus | VariableSplit082017.FieldStatus
         The field status of the corresponding contract.
-    field_loc: str
+    field_loc: str | VariableSplit522017.FieldLocation | VariableSplit082017.FieldLocation
         The field location of the corresponding contract.
-    res_depth: str
+    res_depth: str | VariableSplit522017.ReservoirDepth | VariableSplit082017.ReservoirDepth
         The reservoir depth of the corresponding contract
-    infra_avail: str
+    infra_avail: str | VariableSplit522017.InfrastructureAvailability | VariableSplit082017.InfrastructureAvailability
         The infrastructure availability of the corresponding contract.
-    res_type: str
+    res_type: str | VariableSplit522017.ReservoirType | VariableSplit082017.ReservoirType
         The reservoir type of the corresponding contract.
-    api_oil: str
+    api_oil: str | VariableSplit522017.APIOil | VariableSplit082017.APIOil
         The Oil's API of the corresponding contract.
-    domestic_use: str
+    domestic_use: str | VariableSplit522017.DomesticUse | VariableSplit082017.DomesticUse
         The domestic use or local content of the corresponding contract.
-    prod_stage: str
+    prod_stage: str | VariableSplit522017.ProductionStage | VariableSplit082017.ProductionStage
         The production stage of the corresponding contract.
-    co2_content: str
+    co2_content: str | VariableSplit522017.CO2Content | VariableSplit082017.CO2Content
         The CO2 content of the corresponding contract.
-    h2s_content: str
+    h2s_content: str | VariableSplit522017.H2SContent | VariableSplit082017.H2SContent
         The H2S content of the corresponding contract.
     base_split_ctr_oil: float
         The contractor base split for oil of the corresponding contract.
@@ -76,16 +83,16 @@ class GrossSplit(BaseProject):
     gas_dmo_holiday_duration: int
         The duration of the Gas's DMO Holiday in month unit.
     """
-    field_status: str = field(default='No POD')
-    field_loc: str = field(default='Onshore')
-    res_depth: str = field(default='<=2500')
-    infra_avail: str = field(default='Well Developed')
-    res_type: str = field(default='Conventional')
-    api_oil: str = field(default='<25')
-    domestic_use: str = field(default='50<=x<70')
-    prod_stage: str = field(default='Secondary')
-    co2_content: str = field(default='<5')
-    h2s_content: str = field(default='<100')
+    field_status: str | VariableSplit522017.FieldStatus | VariableSplit082017.FieldStatus = field(default='No POD')
+    field_loc: str | VariableSplit522017.FieldLocation | VariableSplit082017.FieldLocation = field(default='Onshore')
+    res_depth: str | VariableSplit522017.ReservoirDepth | VariableSplit082017.ReservoirDepth = field(default='<=2500')
+    infra_avail: str | VariableSplit522017.InfrastructureAvailability | VariableSplit082017.InfrastructureAvailability = field(default='Well Developed')
+    res_type: str | VariableSplit522017.ReservoirType | VariableSplit082017.ReservoirType = field(default='Conventional')
+    api_oil: str | VariableSplit522017.APIOil | VariableSplit082017.APIOil = field(default='<25')
+    domestic_use: str | VariableSplit522017.DomesticUse | VariableSplit082017.DomesticUse = field(default='50<=x<70')
+    prod_stage: str | VariableSplit522017.ProductionStage | VariableSplit082017.ProductionStage = field(default='Secondary')
+    co2_content: str | VariableSplit522017.CO2Content | VariableSplit082017.CO2Content = field(default='<5')
+    h2s_content: str | VariableSplit522017.H2SContent | VariableSplit082017.H2SContent = field(default='<100')
 
     base_split_ctr_oil: float = field(default=0.43)
     base_split_ctr_gas: float = field(default=0.48)
@@ -248,7 +255,9 @@ class GrossSplit(BaseProject):
             variable_split_func = self._get_var_split_52_2017()
 
         else:
-            variable_split_func = ValueError('Not Recognized Gross Split Regime')
+            raise GrossSplitException(
+                f"The Gross Split regime, {regime}, is not recognized"
+            )
 
         return variable_split_func
 
@@ -261,15 +270,16 @@ class GrossSplit(BaseProject):
         _variable_split: float
             The value of variable split.
         """
-        params = {
+        # The string parameters is being keep to backward compatibility
+        params_str = {
             'field_status': {
                 'POD I': 0.05,
-                'POD II': 0,
-                'POFD': 0,
+                'POD II': 0.0,
+                'POFD': 0.0,
                 'No POD': -0.05,
             },
             'field_loc': {
-                'Onshore': 0,
+                'Onshore': 0.0,
                 'Offshore (0<h<=20)': 0.08,
                 'Offshore (20<h<=50)': 0.1,
                 'Offshore (50<h<=150)': 0.12,
@@ -277,19 +287,19 @@ class GrossSplit(BaseProject):
                 'Offshore (h>1000)': 0.16,
             },
             'res_depth': {
-                '<=2500': 0,
+                '<=2500': 0.0,
                 '>2500': 0.01,
             },
             'infra_avail': {
-                'Well Developed': 0,
+                'Well Developed': 0.0,
                 'New Frontier': 0.02,
             },
             'res_type': {
-                'Conventional': 0,
+                'Conventional': 0.0,
                 'Non Conventional': 0.16,
             },
             'co2_content': {
-                '<5': 0,
+                '<5': 0.0,
                 '5<=x<10': 0.005,
                 '10<=x<20': 0.01,
                 '20<=x<40': 0.015,
@@ -297,29 +307,104 @@ class GrossSplit(BaseProject):
                 'x>=60': 0.04,
             },
             'h2s_content': {
-                '<100': 0,
+                '<100': 0.0,
                 '100<=x<300': 0.005,
                 '300<=x<500': 0.0075,
                 'x>=500': 0.01,
             },
             'api_oil': {
                 '<25': 0.01,
-                '>=25': 0,
+                '>=25': 0.0,
             },
             'domestic_use': {
-                '<30': 0,
+                '<30': 0.0,
                 '30<=x<50': 0.02,
                 '50<=x<70': 0.03,
                 '70<=x<100': 0.04,
             },
             'prod_stage': {
-                'Primary': 0,
+                'Primary': 0.0,
                 'Secondary': 0.03,
                 'Tertiary': 0.05,
             }
         }
 
-        self._variable_split = sum(params[param][getattr(self, param)] for param in params)
+        params_enum = {
+            'field_status': {
+                VariableSplit082017.FieldStatus.POD_I: 0.05,
+                VariableSplit082017.FieldStatus.POD_II: 0.0,
+                VariableSplit082017.FieldStatus.POFD: 0.0,
+                VariableSplit082017.FieldStatus.NO_POD: -0.05,
+            },
+            'field_loc': {
+                VariableSplit082017.FieldLocation.ONSHORE: 0.0,
+                VariableSplit082017.FieldLocation.OFFSHORE_0_UNTIL_LESSEQUAL_20: 0.08,
+                VariableSplit082017.FieldLocation.OFFSHORE_20_UNTIL_LESSEQUAL_50: 0.1,
+                VariableSplit082017.FieldLocation.OFFSHORE_50_UNTIL_LESSEQUAL_150: 0.12,
+                VariableSplit082017.FieldLocation.OFFSHORE_150_UNTIL_LESSEQUAL_1000: 0.14,
+                VariableSplit082017.FieldLocation.OFFSHORE_GREATERTHAN_1000: 0.16,
+            },
+            'res_depth': {
+                VariableSplit082017.ReservoirDepth.LESSEQUAL_2500: 0.0,
+                VariableSplit082017.ReservoirDepth.GREATERTHAN_2500: 0.01,
+            },
+            'infra_avail': {
+                VariableSplit082017.InfrastructureAvailability.WELL_DEVELOPED: 0.0,
+                VariableSplit082017.InfrastructureAvailability.NEW_FRONTIER: 0.02,
+            },
+            'res_type': {
+                VariableSplit082017.ReservoirType.CONVENTIONAL: 0.0,
+                VariableSplit082017.ReservoirType.NON_CONVENTIONAL: 0.16,
+            },
+            'co2_content': {
+                VariableSplit082017.CO2Content.LESSTHAN_5: 0.0,
+                VariableSplit082017.CO2Content.EQUAL_5_UNTIL_LESSTHAN_10: 0.005,
+                VariableSplit082017.CO2Content.EQUAL_10_UNTIL_LESSTHAN_20: 0.01,
+                VariableSplit082017.CO2Content.EQUAL_20_UNTIL_LESSTHAN_40: 0.015,
+                VariableSplit082017.CO2Content.EQUAL_40_UNTIL_LESSTHAN_60: 0.02,
+                VariableSplit082017.CO2Content.EQUALGREATERTHAN_60: 0.04,
+            },
+            'h2s_content': {
+                VariableSplit082017.H2SContent.LESSTHAN_100: 0.0,
+                VariableSplit082017.H2SContent.EQUAL_100_UNTIL_LESSTHAN_300: 0.005,
+                VariableSplit082017.H2SContent.EQUAL_300_UNTIL_LESSTHAN_500: 0.0075,
+                VariableSplit082017.H2SContent.EQUALGREATERTHAN_500: 0.01,
+            },
+            'api_oil': {
+                VariableSplit082017.APIOil.LESSTHAN_25: 0.01,
+                VariableSplit082017.APIOil.EQUALGREATERTHAN_25: 0.0,
+            },
+            'domestic_use': {
+                VariableSplit082017.DomesticUse.LESSTHAN_30: 0.0,
+                VariableSplit082017.DomesticUse.EQUAL_30_UNTIL_LESSTHAN_50: 0.02,
+                VariableSplit082017.DomesticUse.EQUAL_50_UNTIL_LESSTHAN_70: 0.03,
+                VariableSplit082017.DomesticUse.EQUAL_70_UNTIL_LESSTHAN_100: 0.04,
+            },
+            'prod_stage': {
+                VariableSplit082017.ProductionStage.PRIMARY: 0.0,
+                VariableSplit082017.ProductionStage.SECONDARY: 0.03,
+                VariableSplit082017.ProductionStage.TERTIARY: 0.05,
+            }
+        }
+        source_dict = {
+            'field_status': self.field_status,
+            'field_loc': self.field_loc,
+            'res_depth': self.res_depth,
+            'infra_avail': self.infra_avail,
+            'res_type': self.res_type,
+            'api_oil': self.api_oil,
+            'domestic_use': self.domestic_use,
+            'prod_stage': self.prod_stage,
+            'co2_content': self.co2_content,
+            'h2s_content': self.h2s_content,
+        }
+
+        variable_split = np.array([
+            params_str[key][param] if isinstance(param, str) else params_enum[key][param]
+            for key, param in source_dict.items()
+        ], dtype=float)
+
+        self._variable_split = float(np.sum(variable_split))
 
     def _get_var_split_52_2017(self):
         """
@@ -330,7 +415,7 @@ class GrossSplit(BaseProject):
         _variable_split: float
             The value of variable split.
         """
-        params = {
+        params_str = {
             'field_status': {
                 'POD I': 0.05,
                 'POD II': 0.03,
@@ -378,7 +463,6 @@ class GrossSplit(BaseProject):
                 '>=25': 0,
             },
             'domestic_use': {
-                'x<30': 0,
                 '30<=x<50': 0.02,
                 '50<=x<70': 0.03,
                 '70<=x<100': 0.04,
@@ -390,7 +474,84 @@ class GrossSplit(BaseProject):
             }
         }
 
-        self._variable_split = sum(params[param][getattr(self, param)] for param in params)
+        params_enum = {
+            'field_status': {
+                VariableSplit522017.FieldStatus.POD_I: 0.05,
+                VariableSplit522017.FieldStatus.POD_II: 0.03,
+                VariableSplit522017.FieldStatus.NO_POD: 0.0,
+            },
+            'field_loc': {
+                VariableSplit522017.FieldLocation.ONSHORE: 0.0,
+                VariableSplit522017.FieldLocation.OFFSHORE_0_UNTIL_LESSEQUAL_20: 0.08,
+                VariableSplit522017.FieldLocation.OFFSHORE_20_UNTIL_LESSEQUAL_50: 0.1,
+                VariableSplit522017.FieldLocation.OFFSHORE_50_UNTIL_LESSEQUAL_150: 0.12,
+                VariableSplit522017.FieldLocation.OFFSHORE_150_UNTIL_LESSEQUAL_1000: 0.14,
+                VariableSplit522017.FieldLocation.OFFSHORE_GREATERTHAN_1000: 0.16,
+            },
+            'res_depth': {
+                VariableSplit522017.ReservoirDepth.LESSEQUAL_2500: 0.0,
+                VariableSplit522017.ReservoirDepth.GREATERTHAN_2500: 0.01,
+            },
+            'infra_avail': {
+                VariableSplit522017.InfrastructureAvailability.WELL_DEVELOPED: 0.0,
+                VariableSplit522017.InfrastructureAvailability.NEW_FRONTIER_OFFSHORE: 0.02,
+                VariableSplit522017.InfrastructureAvailability.NEW_FRONTIER_ONSHORE: 0.04,
+            },
+            'res_type': {
+                VariableSplit522017.ReservoirType.CONVENTIONAL: 0.0,
+                VariableSplit522017.ReservoirType.NON_CONVENTIONAL: 0.16,
+            },
+            'co2_content': {
+                VariableSplit522017.CO2Content.LESSTHAN_5: 0.0,
+                VariableSplit522017.CO2Content.EQUAL_5_UNTIL_LESSTHAN_10: 0.005,
+                VariableSplit522017.CO2Content.EQUAL_10_UNTIL_LESSTHAN_20: 0.01,
+                VariableSplit522017.CO2Content.EQUAL_20_UNTIL_LESSTHAN_40: 0.015,
+                VariableSplit522017.CO2Content.EQUAL_40_UNTIL_LESSTHAN_60: 0.02,
+                VariableSplit522017.CO2Content.EQUALGREATERTHAN_60: 0.04,
+            },
+            'h2s_content': {
+                VariableSplit522017.H2SContent.LESSTHAN_100: 0.0,
+                VariableSplit522017.H2SContent.EQUAL_100_UNTIL_LESSTHAN_1000: 0.01,
+                VariableSplit522017.H2SContent.EQUAL_1000_UNTIL_LESSTHAN_2000: 0.02,
+                VariableSplit522017.H2SContent.EQUAL_2000_UNTIL_LESSTHAN_3000: 0.03,
+                VariableSplit522017.H2SContent.EQUAL_3000_UNTIL_LESSTHAN_4000: 0.04,
+                VariableSplit522017.H2SContent.EQUALGREATERTHAN_4000: 0.05,
+            },
+            'api_oil': {
+                VariableSplit522017.APIOil.LESSTHAN_25: 0.01,
+                VariableSplit522017.APIOil.EQUALGREATERTHAN_25: 0.0,
+            },
+            'domestic_use': {
+                VariableSplit522017.DomesticUse.EQUAL_30_UNTIL_LESSTHAN_50: 0.02,
+                VariableSplit522017.DomesticUse.EQUAL_50_UNTIL_LESSTHAN_70: 0.03,
+                VariableSplit522017.DomesticUse.EQUAL_70_UNTIL_LESSTHAN_100: 0.04,
+            },
+            'prod_stage': {
+                VariableSplit522017.ProductionStage.PRIMARY: 0.0,
+                VariableSplit522017.ProductionStage.SECONDARY: 0.06,
+                VariableSplit522017.ProductionStage.TERTIARY: 0.1,
+            }
+        }
+
+        source_dict = {
+            'field_status': self.field_status,
+            'field_loc': self.field_loc,
+            'res_depth': self.res_depth,
+            'infra_avail': self.infra_avail,
+            'res_type': self.res_type,
+            'api_oil': self.api_oil,
+            'domestic_use': self.domestic_use,
+            'prod_stage': self.prod_stage,
+            'co2_content': self.co2_content,
+            'h2s_content': self.h2s_content,
+        }
+
+        variable_split = np.array([
+            params_str[key][param] if isinstance(param, str) else params_enum[key][param]
+            for key, param in source_dict.items()
+        ], dtype=float)
+
+        self._variable_split = float(np.sum(variable_split))
 
     def _wrapper_progressive_split(self,
                                    fluid: FluidType,
