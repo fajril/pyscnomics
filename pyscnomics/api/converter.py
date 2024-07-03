@@ -9,7 +9,7 @@ import numpy as np
 
 from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type
-from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime
+from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime, GrossSplitRegime
 from pyscnomics.tools.helper import (get_inflation_applied_converter,
                                      get_npv_mode_converter,
                                      get_discounting_mode_converter,
@@ -284,6 +284,7 @@ class ContractArgumentsBM(BaseModel):
     post_uu_22_year2001: bool = True
     cum_production_split_offset: list | float | int
     amortization: bool
+    regime: str = "PERMEN_ESDM_12_2020"
 
 
 class ContractArgumentsTransitionBM(BaseModel):
@@ -1201,6 +1202,32 @@ def convert_str_to_inflationappliedto(str_object: str):
 
     """
     return get_inflation_applied_converter(target=str_object)
+
+
+def convert_grosssplitregime_to_enum(target: str) -> GrossSplitRegime:
+    """
+    Converts a string representing the Gross Split Regime to its
+    corresponding enum value from the GrossSplitRegime enum class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the gross split regime.
+
+    Returns
+    -------
+
+    """
+    attrs = {
+        "PERMEN_ESDM_8_2017": GrossSplitRegime.PERMEN_ESDM_8_2017,
+        "PERMEN_ESDM_52_2017": GrossSplitRegime.PERMEN_ESDM_52_2017,
+        "PERMEN_ESDM_20_2019": GrossSplitRegime.PERMEN_ESDM_20_2019,
+        "PERMEN_ESDM_12_2020": GrossSplitRegime.PERMEN_ESDM_12_2020,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
 
 
 def convert_summary_to_dict(dict_object: dict):
