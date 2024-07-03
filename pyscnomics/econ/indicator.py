@@ -150,7 +150,7 @@ def irr(
         irr_result = npf.irr(cashflow)
 
     # Condition where the irr resulting negative
-    if irr_result is None:
+    if irr_result is None or np.isnan(irr_result):
         irr_result = 0
     elif irr_result < 0:
         irr_result = 0
