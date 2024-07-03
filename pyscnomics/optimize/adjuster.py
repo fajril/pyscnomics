@@ -675,7 +675,7 @@ class AdjustData:
             "tangible_cost_aggregate": (
                 get_tangible_adjustment(
                     contract_type=self.contract_type,
-                    tangible_aggregate=self.data.tangible_cost_aggregate,
+                    tangible_aggregate=self.data.capital_cost_aggregate,
                     tangible_multiplier=self.multipliers[3],
                 )
             ),

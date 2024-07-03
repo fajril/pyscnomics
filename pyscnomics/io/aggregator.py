@@ -42,7 +42,7 @@ class Aggregate(Spreadsheet):
     co2_lifting_aggregate: dict | tuple[Lifting] = field(default=None, init=False)
 
     # Attributes associated with aggregates of cost data
-    tangible_cost_aggregate: dict | tuple[CapitalCost] = field(default=None, init=False)
+    capital_cost_aggregate: dict | tuple[CapitalCost] = field(default=None, init=False)
     intangible_cost_aggregate: dict | tuple[Intangible] = field(default=None, init=False)
     opex_aggregate: dict | tuple[OPEX] = field(default=None, init=False)
     asr_cost_aggregate: dict | tuple[ASR] = field(default=None, init=False)
@@ -755,27 +755,27 @@ class Aggregate(Spreadsheet):
                 f"LPG Butane: {self.lpg_butane_lifting_data.type_of_contract}."
             )
 
-    def _get_tangible_cost_aggregate(self) -> dict | tuple[CapitalCost]:
+    def _get_capital_cost_aggregate(self) -> dict | tuple[CapitalCost]:
         """
-        Retrieves the tangible cost aggregate based on the Production
+        Retrieves the capital cost aggregate based on the Production
         Sharing Contract (PSC) type.
 
         Returns
         -------
         -   If PSC transition: dict
-                A dictionary containing PSC regimes as keys and tuples of Tangible objects as values.
-        -   If single PSC (CR or GS): tuple[Tangible]
-                A tuple containing a single Tangible object.
+                A dictionary containing PSC regimes as keys and tuples of CapitalCost objects as values.
+        -   If single PSC (CR or GS): tuple[CapitalCost]
+                A tuple containing a single CapitalCost object.
 
         Notes
         -----
-        For a PSC transition case, the aggregate of tangible cost data is stored in
+        For a PSC transition case, the aggregate of capital cost data is stored in
         a dictionary with keys: ['PSC 1', 'PSC 2']. The value of each key is a tuple
-        of tangible cost data stored in parameter 'self.tangible_cost_data' for each
+        of capital cost data stored in parameter 'self.capital_cost_data' for each
         corresponding PSC regime.
         """
         # For PSC transition
-        if "Transition" in self.tangible_cost_data.type_of_contract:
+        if "Transition" in self.capital_cost_data.type_of_contract:
             start_year_combined = [
                 self.general_config_data.start_date_project.year,
                 self.general_config_data.start_date_project_second.year,
@@ -786,25 +786,25 @@ class Aggregate(Spreadsheet):
                 self.general_config_data.end_date_project_second.year,
             ]
 
-            tangible_cost_aggr = {
+            capital_cost_aggr = {
                 psc: tuple(
                     [
                         CapitalCost(
                             start_year=start_year_combined[i],
                             end_year=end_year_combined[i],
-                            cost=self.tangible_cost_data.cost[psc],
-                            expense_year=self.tangible_cost_data.expense_year[psc],
-                            cost_allocation=self.tangible_cost_data.cost_allocation[psc],
-                            vat_portion=self.tangible_cost_data.vat_portion[psc],
+                            cost=self.capital_cost_data.cost[psc],
+                            expense_year=self.capital_cost_data.expense_year[psc],
+                            cost_allocation=self.capital_cost_data.cost_allocation[psc],
+                            vat_portion=self.capital_cost_data.vat_portion[psc],
                             vat_discount=self.fiscal_config_data.vat_discount[psc],
-                            lbt_portion=self.tangible_cost_data.lbt_portion[psc],
+                            lbt_portion=self.capital_cost_data.lbt_portion[psc],
                             lbt_discount=self.fiscal_config_data.lbt_discount[psc],
-                            description=self.tangible_cost_data.description[psc],
-                            pis_year=self.tangible_cost_data.pis_year[psc],
-                            salvage_value=self.tangible_cost_data.salvage_value[psc],
-                            useful_life=self.tangible_cost_data.useful_life[psc],
-                            depreciation_factor=self.tangible_cost_data.depreciation_factor[psc],
-                            is_ic_applied=self.tangible_cost_data.is_ic_applied[psc],
+                            description=self.capital_cost_data.description[psc],
+                            pis_year=self.capital_cost_data.pis_year[psc],
+                            salvage_value=self.capital_cost_data.salvage_value[psc],
+                            useful_life=self.capital_cost_data.useful_life[psc],
+                            depreciation_factor=self.capital_cost_data.depreciation_factor[psc],
+                            is_ic_applied=self.capital_cost_data.is_ic_applied[psc],
                         )
                     ]
                 )
@@ -813,29 +813,29 @@ class Aggregate(Spreadsheet):
 
         # For single PSC (CR or GS)
         else:
-            tangible_cost_aggr = tuple(
+            capital_cost_aggr = tuple(
                 [
                     CapitalCost(
                         start_year=self.general_config_data.start_date_project.year,
                         end_year=self.general_config_data.end_date_project.year,
-                        cost=self.tangible_cost_data.cost,
-                        expense_year=self.tangible_cost_data.expense_year,
-                        cost_allocation=self.tangible_cost_data.cost_allocation,
-                        vat_portion=self.tangible_cost_data.vat_portion,
+                        cost=self.capital_cost_data.cost,
+                        expense_year=self.capital_cost_data.expense_year,
+                        cost_allocation=self.capital_cost_data.cost_allocation,
+                        vat_portion=self.capital_cost_data.vat_portion,
                         vat_discount=self.fiscal_config_data.vat_discount,
-                        lbt_portion=self.tangible_cost_data.lbt_portion,
+                        lbt_portion=self.capital_cost_data.lbt_portion,
                         lbt_discount=self.fiscal_config_data.lbt_discount,
-                        description=self.tangible_cost_data.description,
-                        pis_year=self.tangible_cost_data.pis_year,
-                        salvage_value=self.tangible_cost_data.salvage_value,
-                        useful_life=self.tangible_cost_data.useful_life,
-                        depreciation_factor=self.tangible_cost_data.depreciation_factor,
-                        is_ic_applied=self.tangible_cost_data.is_ic_applied,
+                        description=self.capital_cost_data.description,
+                        pis_year=self.capital_cost_data.pis_year,
+                        salvage_value=self.capital_cost_data.salvage_value,
+                        useful_life=self.capital_cost_data.useful_life,
+                        depreciation_factor=self.capital_cost_data.depreciation_factor,
+                        is_ic_applied=self.capital_cost_data.is_ic_applied,
                     )
                 ]
             )
 
-        return tangible_cost_aggr
+        return capital_cost_aggr
 
     def _get_intangible_cost_aggregate(self) -> dict | tuple[Intangible]:
         """
@@ -1097,7 +1097,7 @@ class Aggregate(Spreadsheet):
         )
 
         # Aggregates associated with costs data
-        self.tangible_cost_aggregate = self._get_tangible_cost_aggregate()
+        self.capital_cost_aggregate = self._get_capital_cost_aggregate()
         self.intangible_cost_aggregate = self._get_intangible_cost_aggregate()
         self.opex_aggregate = self._get_opex_aggregate()
         self.asr_cost_aggregate = self._get_asr_cost_aggregate()
