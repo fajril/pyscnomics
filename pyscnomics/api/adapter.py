@@ -474,7 +474,8 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         "inflation_rate_applied_to": convert_str_to_inflationappliedto(
             str_object=data['contract_arguments']['inflation_rate_applied_to']),
         "cum_production_split_offset": convert_list_to_array_float_or_array(data_input=data["contract_arguments"]["cum_production_split_offset"]),
-        "amortization": data["contract_arguments"]["amortization"]
+        "amortization": data["contract_arguments"]["amortization"],
+        "regime": data["contract_arguments"]["regime"]
     }
 
     # Running the contract
