@@ -343,6 +343,7 @@ class OptimizationParameter(Enum):
     MINISTERIAL_DISCRETION = 'Ministerial Discretion'
     VAT_DISCOUNT = 'VAT Discount'
     LBT_DISCOUNT = 'LBT Discount'
+    DEPRECIATION_ACCELERATION = 'Depreciation Acceleration'
 
 
 class OptimizationTarget(Enum):
