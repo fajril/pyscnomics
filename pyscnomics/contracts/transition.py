@@ -151,8 +151,8 @@ class Transition:
     _electricity_revenue: np.ndarray = field(default=None, init=False, repr=False)
     _co2_revenue: np.ndarray = field(default=None, init=False, repr=False)
 
-    _oil_tangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_tangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_capital_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_capital_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     _oil_intangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     _gas_intangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     _oil_opex_expenditures: np.ndarray = field(default=None, init=False, repr=False)
@@ -212,7 +212,7 @@ class Transition:
                 oil_onstream_date=attr_contract['oil_onstream_date'],
                 gas_onstream_date=attr_contract['gas_onstream_date'],
                 lifting=attr_contract['lifting'],
-                tangible_cost=attr_contract['tangible_cost'],
+                capital_cost=attr_contract['capital_cost'],
                 intangible_cost=attr_contract['intangible_cost'],
                 opex=attr_contract['opex'],
                 asr_cost=attr_contract['asr_cost'],
@@ -245,7 +245,7 @@ class Transition:
                 oil_onstream_date=attr_contract['oil_onstream_date'],
                 gas_onstream_date=attr_contract['gas_onstream_date'],
                 lifting=attr_contract['lifting'],
-                tangible_cost=attr_contract['tangible_cost'],
+                capital_cost=attr_contract['capital_cost'],
                 intangible_cost=attr_contract['intangible_cost'],
                 opex=attr_contract['opex'],
                 asr_cost=attr_contract['asr_cost'],
@@ -320,13 +320,14 @@ class Transition:
             lift.price = np.concatenate((lift.price, zeros_to_new))
             lift.ghv = np.concatenate((lift.ghv, zeros_to_new))
             lift.prod_rate = np.concatenate((lift.prod_rate, zeros_to_new))
+            lift.prod_rate_baseline = np.concatenate((lift.prod_rate_baseline, zeros_to_new))
             lift.prod_year = np.concatenate((lift.prod_year, years_to_new))
 
             lift.project_duration = project_duration_trans
             lift.project_years = project_years_trans
 
         # Concatenating the zeros_to_new and years_to_new to the contract1 tangible
-        for tang in self.contract1.tangible_cost:
+        for tang in self.contract1.capital_cost:
             tang.start_year = start_date_trans.year
             tang.end_year = end_date_trans.year
 
@@ -418,13 +419,14 @@ class Transition:
             lift.price = np.concatenate((zeros_to_prior, lift.price))
             lift.ghv = np.concatenate((zeros_to_prior, lift.ghv))
             lift.prod_rate = np.concatenate((zeros_to_prior, lift.prod_rate))
+            lift.prod_rate_baseline = np.concatenate((zeros_to_prior, lift.prod_rate_baseline))
             lift.prod_year = np.concatenate((years_to_prior, lift.prod_year)).astype(int)
 
             lift.project_duration = project_duration_trans
             lift.project_years = project_years_trans
 
         # Concatenating the zeros_to_new and years_to_new to the contract2 tangible
-        for tang in self.contract2.tangible_cost:
+        for tang in self.contract2.capital_cost:
             tang.start_year = start_date_trans.year
             tang.end_year = end_date_trans.year
 
@@ -624,11 +626,11 @@ class Transition:
                              self._contract2_transitioned._co2_revenue)
 
         # Tangible
-        self._oil_tangible_expenditures = (self._contract1_transitioned._oil_tangible_expenditures +
-                                           self._contract2_transitioned._oil_tangible_expenditures)
+        self._oil_capital_expenditures = (self._contract1_transitioned._oil_capital_expenditures +
+                                          self._contract2_transitioned._oil_capital_expenditures)
 
-        self._gas_tangible_expenditures = (self._contract1_transitioned._gas_tangible_expenditures +
-                                           self._contract2_transitioned._gas_tangible_expenditures)
+        self._gas_capital_expenditures = (self._contract1_transitioned._gas_capital_expenditures +
+                                          self._contract2_transitioned._gas_capital_expenditures)
 
         # Intangible
         self._oil_intangible_expenditures = (self._contract1_transitioned._oil_intangible_expenditures +

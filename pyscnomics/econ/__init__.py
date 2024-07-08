@@ -3,7 +3,7 @@
 from .revenue import Lifting
 from .costs import (
     GeneralCost,
-    Tangible,
+    CapitalCost,
     Intangible,
     OPEX,
     ASR,

@@ -7,9 +7,9 @@ from typing import Dict
 from pydantic import BaseModel
 import numpy as np
 
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type
-from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime, GrossSplitRegime
+from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime
 from pyscnomics.tools.helper import (get_inflation_applied_converter,
                                      get_npv_mode_converter,
                                      get_discounting_mode_converter,
@@ -839,7 +839,7 @@ def convert_dict_to_lifting(data_raw: dict) -> tuple:
     return assign_lifting(data_raw=data_raw)
 
 
-def convert_dict_to_tangible(data_raw: dict) -> tuple:
+def convert_dict_to_capital(data_raw: dict) -> tuple:
     """
     The function to convert a dictionary into tuple of Tangible dataclass.
 
@@ -854,7 +854,7 @@ def convert_dict_to_tangible(data_raw: dict) -> tuple:
         tuple[Tangible]
     """
     tangible_list = [
-        Tangible(
+        CapitalCost(
             start_year=data_raw[key]['start_year'],
             end_year=data_raw[key]['end_year'],
             cost=np.array(data_raw[key]['cost']),
