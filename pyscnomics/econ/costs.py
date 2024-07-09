@@ -2160,12 +2160,15 @@ class CostOfSales(GeneralCost):
 
     Notes
     -----
-    The inherited attributes are overridden in this class, except for
-    start_year and end_year.
+    The inherited attributes (from class GeneralCost) are overridden in this class,
+    except for start_year and end_year.
     """
+    # Inherited attributes with the modified initialization
     cost: np.ndarray = field(default=None)
     expense_year: np.ndarray = field(default=None)
+    cost_allocation: list[FluidType] = field(default=None)
 
+    # Inherited attributes which are being excluded
     description: list[str] = field(default=None, init=False, repr=False)
     vat_portion: np.ndarray = field(default=None, init=False, repr=False)
     vat_discount: float | np.ndarray = field(default=None, init=False, repr=False)
