@@ -38,6 +38,12 @@ class ASRException(Exception):
     pass
 
 
+class CostOfSalesException(Exception):
+    """Exception to be raised if class CostOfSales is misused"""
+
+    pass
+
+
 @dataclass
 class GeneralCost:
     """
@@ -2141,3 +2147,96 @@ class ASR(GeneralCost):
                 f"{other}({other.__class__.__qualname__}) is not an instance "
                 f"of CapitalCost/Intangible/OPEX/ASR nor an integer nor a float."
             )
+
+
+@dataclass
+class CostOfSales(GeneralCost):
+    """
+    Manages a cost of sales.
+
+    Parameters
+    ----------
+    The attributes are inherited from class GeneralCost.
+
+    Notes
+    -----
+    The inherited attributes are overridden in this class, except for
+    start_year and end_year.
+    """
+    cost: np.ndarray = field(default=None)
+    expense_year: np.ndarray = field(default=None)
+
+    description: list[str] = field(default=None, init=False, repr=False)
+    vat_portion: np.ndarray = field(default=None, init=False, repr=False)
+    vat_discount: float | np.ndarray = field(default=None, init=False, repr=False)
+    lbt_portion: np.ndarray = field(default=None, init=False, repr=False)
+    lbt_discount: float | np.ndarray = field(default=None, init=False, repr=False)
+
+    def __post_init__(self):
+        # Prepare attributes project_duration and project_years
+        if self.end_year >= self.start_year:
+            self.project_duration = self.end_year - self.start_year + 1
+            self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
+
+        else:
+            raise CostOfSalesException(
+                f"Project start year {self.start_year} "
+                f"is after project's end year {self.end_year}"
+            )
+
+        print('\t')
+        print(f'Filetype: {type(self.project_years)}')
+        print('project_years = \n', self.project_years)
+
+        print('\t')
+        print(f'Filetype: {type(self.project_duration)}')
+        print('project_duration = ', self.project_duration)
+
+        # Prepare attribute expense_year
+        if self.expense_year is None:
+            self.expense_year = self.project_years.copy()
+
+        else:
+            if not isinstance(self.expense_year, np.ndarray):
+                raise CostOfSalesException(
+                    f"Attribute expense_year must be given as a numpy.ndarray datatype, "
+                    f"not a ({self.expense_year.__class__.__qualname__})"
+                )
+
+        print('\t')
+        print(f'Filetype: {type(self.expense_year)}')
+        print('expense_year = ', self.expense_year)
+
+        # Prepare attribute cost
+        if self.cost is None:
+            self.cost = np.zeros_like(self.project_years, dtype=np.float64)
+
+        else:
+            if not isinstance(self.cost, np.ndarray):
+                raise CostOfSalesException(
+                    f"Attribute cost must be given as a numpy.ndarray datatype, "
+                    f"not a ({self.cost.__class__.__qualname__})"
+                )
+
+        print('\t')
+        print(f'Filetype: {type(self.cost)}')
+        print('cost = \n', self.cost)
+
+        # Prepare attribute cost_allocation
+        if self.cost_allocation is None:
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
+
+        else:
+            if not isinstance(self.cost_allocation, list):
+                raise CostOfSalesException(
+                    f"Attribute cost_allocation must be given as a list, "
+                    f"not a ({self.cost_allocation.__class__.__qualname__})"
+                )
+
+        print('\t')
+        print(f'Filetype: {type(self.cost_allocation)}')
+        print('cost_allocation = \n', self.cost_allocation)
+
+        # Check input data for unequal length
+
+

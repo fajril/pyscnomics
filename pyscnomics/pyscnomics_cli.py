@@ -454,20 +454,20 @@ def run_optimization(
 if __name__ == "__main__":
     # entry_point()
 
-    from pyscnomics.econ.costs import Intangible
+    from pyscnomics.econ.costs import CostOfSales
     from pyscnomics.econ.selection import FluidType
 
-    intangible_apel = Intangible(
+    cs_mangga = CostOfSales(
         start_year=2023,
         end_year=2030,
-        cost=np.array([100, 100, 100]),
-        expense_year=np.array([2023, 2024, 2026]),
-        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+        # cost=np.array([100, 100, 100]),
+        # expense_year=np.array([2024, 2025, 2027]),
+        # cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
     print('\t')
     print('============================================================================')
 
     print('\t')
-    print(f'Filetype: {type(intangible_apel)}')
-    print(intangible_apel)
+    print(f'Filetype: {type(cs_mangga)}')
+    print(cs_mangga)
