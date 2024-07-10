@@ -9,7 +9,7 @@ import numpy as np
 
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type
-from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime
+from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime, GrossSplitRegime
 from pyscnomics.tools.helper import (get_inflation_applied_converter,
                                      get_npv_mode_converter,
                                      get_discounting_mode_converter,
@@ -321,6 +321,8 @@ class LiftingBM(BaseModel):
         The list containing the Gross Heating Value (GHV) of the corresponding fluid.
     prod_rate: list[float] | None
         The list containing the production rate of the corresponding lifting.
+    prod_rate_baseline: list[float] | list[int] | None
+        The list containing the production rate baseline of the corresponding lifting.
     """
     start_year: int
     end_year: int
@@ -330,6 +332,7 @@ class LiftingBM(BaseModel):
     fluid_type: str
     ghv: list[float] | list[int] | None
     prod_rate: list[float] | list[int] | None
+    prod_rate_baseline: list[float] | list[int] | None
 
 
 class TangibleBM(BaseModel):

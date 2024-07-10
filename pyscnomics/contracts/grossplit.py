@@ -245,6 +245,25 @@ class GrossSplit(BaseProject):
 
     def _wrapper_variable_split(self,
                                 regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
+        """
+        Function to wrap the variable split function.
+
+        Parameters
+        ----------
+        regime: GrossSplitRegime
+         The selection of the Gross Split Regime
+
+        Returns
+        -------
+        variable_split_func
+            The function of the variable split
+
+        Notes
+        -------
+        (1) Gross Split Regime PERMEN ESDM No. 52 Tahun 2017, PERMEN ESDM No. 20 Tahun 2019,
+        and PERMEN ESDM No. 12 Tahun 2020 are having the same variable split value. The complete differences
+        could be seen in official documents.
+        """
 
         if regime == GrossSplitRegime.PERMEN_ESDM_8_2017:
             variable_split_func = self._get_var_split_08_2017()
