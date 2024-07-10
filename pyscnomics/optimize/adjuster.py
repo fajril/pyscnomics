@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 from pyscnomics.io.aggregator import Aggregate
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
@@ -405,7 +405,7 @@ def get_tangible_adjustment(
         # Return a new tuple of Tangible with modified cost
         return tuple(
             [
-                Tangible(
+                CapitalCost(
                     start_year=tangible_aggregate[i].start_year,
                     end_year=tangible_aggregate[i].end_year,
                     cost=updated_cost[i],
@@ -449,7 +449,7 @@ def get_tangible_adjustment(
         return {
             psc: tuple(
                 [
-                    Tangible(
+                    CapitalCost(
                         start_year=tangible_aggregate[psc][i].start_year,
                         end_year=tangible_aggregate[psc][i].end_year,
                         cost=updated_cost[psc][i],
@@ -675,7 +675,7 @@ class AdjustData:
             "tangible_cost_aggregate": (
                 get_tangible_adjustment(
                     contract_type=self.contract_type,
-                    tangible_aggregate=self.data.tangible_cost_aggregate,
+                    tangible_aggregate=self.data.capital_cost_aggregate,
                     tangible_multiplier=self.multipliers[3],
                 )
             ),
@@ -723,7 +723,7 @@ class AdjustData:
             oil_onstream_date=self.data.general_config_data.oil_onstream_date,
             gas_onstream_date=self.data.general_config_data.gas_onstream_date,
             lifting=lifting_total,
-            tangible_cost=self.sensitivity_data["tangible_cost_aggregate"],
+            capital_cost=self.sensitivity_data["tangible_cost_aggregate"],
             intangible_cost=self.sensitivity_data["intangible_cost_aggregate"],
             opex=self.sensitivity_data["opex_aggregate"],
             asr_cost=self.data.asr_cost_aggregate,
@@ -778,7 +778,7 @@ class AdjustData:
             oil_onstream_date=self.data.general_config_data.oil_onstream_date,
             gas_onstream_date=self.data.general_config_data.gas_onstream_date,
             lifting=lifting_total,
-            tangible_cost=self.sensitivity_data["tangible_cost_aggregate"],
+            capital_cost=self.sensitivity_data["tangible_cost_aggregate"],
             intangible_cost=self.sensitivity_data["intangible_cost_aggregate"],
             opex=self.sensitivity_data["opex_aggregate"],
             asr_cost=self.data.asr_cost_aggregate,
@@ -866,7 +866,7 @@ class AdjustData:
             oil_onstream_date=self.data.general_config_data.oil_onstream_date,
             gas_onstream_date=self.data.general_config_data.gas_onstream_date,
             lifting=lifting_total,
-            tangible_cost=self.sensitivity_data["tangible_cost_aggregate"],
+            capital_cost=self.sensitivity_data["tangible_cost_aggregate"],
             intangible_cost=self.sensitivity_data["intangible_cost_aggregate"],
             opex=self.sensitivity_data["opex_aggregate"],
             asr_cost=self.data.asr_cost_aggregate,
@@ -960,7 +960,7 @@ class AdjustData:
                 oil_onstream_date=self.data.general_config_data.oil_onstream_date,
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date,
                 lifting=lifting_total["PSC 1"],
-                tangible_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
+                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
                 intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 1"],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 1"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 1"],
@@ -996,7 +996,7 @@ class AdjustData:
                 oil_onstream_date=self.data.general_config_data.oil_onstream_date_second,
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date_second,
                 lifting=lifting_total["PSC 2"],
-                tangible_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
+                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
                 intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 2"],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 2"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 2"],
@@ -1127,7 +1127,7 @@ class AdjustData:
                 oil_onstream_date=self.data.general_config_data.oil_onstream_date,
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date,
                 lifting=lifting_total["PSC 1"],
-                tangible_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
+                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
                 intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 1"],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 1"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 1"],
@@ -1162,7 +1162,7 @@ class AdjustData:
                 oil_onstream_date=self.data.general_config_data.oil_onstream_date_second,
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date_second,
                 lifting=lifting_total["PSC 2"],
-                tangible_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
+                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
                 intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 2"],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 2"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 2"],
@@ -1288,7 +1288,7 @@ class AdjustData:
                 oil_onstream_date=self.data.general_config_data.oil_onstream_date,
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date,
                 lifting=lifting_total["PSC 1"],
-                tangible_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
+                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
                 intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 1"],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 1"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 1"],
@@ -1318,7 +1318,7 @@ class AdjustData:
                 oil_onstream_date=self.data.general_config_data.oil_onstream_date_second,
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date_second,
                 lifting=lifting_total["PSC 2"],
-                tangible_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
+                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
                 intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 2"],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 2"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 2"],
@@ -1444,7 +1444,7 @@ class AdjustData:
                 oil_onstream_date=self.data.general_config_data.oil_onstream_date,
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date,
                 lifting=lifting_total["PSC 1"],
-                tangible_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
+                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
                 intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 1"],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 1"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 1"],
@@ -1474,7 +1474,7 @@ class AdjustData:
                 oil_onstream_date=self.data.general_config_data.oil_onstream_date_second,
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date_second,
                 lifting=lifting_total["PSC 2"],
-                tangible_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
+                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
                 intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 2"],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 2"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 2"],

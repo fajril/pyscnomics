@@ -14,7 +14,7 @@ from pyscnomics.optimize.optimization import optimize_psc
 from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_list_to_array_float_or_array,
                                       convert_dict_to_lifting,
-                                      convert_dict_to_tangible,
+                                      convert_dict_to_capital,
                                       convert_dict_to_intangible,
                                       convert_dict_to_opex,
                                       convert_dict_to_asr,
@@ -76,7 +76,7 @@ def get_setup_dict(data: dict) -> tuple:
     oil_onstream_date = convert_str_to_date(str_object=data['setup']['oil_onstream_date'])
     gas_onstream_date = convert_str_to_date(str_object=data['setup']['gas_onstream_date'])
     lifting = convert_dict_to_lifting(data_raw=data)
-    tangible = convert_dict_to_tangible(data_raw=data['tangible'])
+    tangible = convert_dict_to_capital(data_raw=data['tangible'])
     intangible = convert_dict_to_intangible(data_raw=data['intangible'])
     opex = convert_dict_to_opex(data_raw=data['opex'])
     asr = convert_dict_to_asr(data_raw=data['asr'])
@@ -182,7 +182,7 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         oil_onstream_date=oil_onstream_date,
         gas_onstream_date=gas_onstream_date,
         lifting=lifting,
-        tangible_cost=tangible,
+        capital_cost=tangible,
         intangible_cost=intangible,
         opex=opex,
         asr_cost=asr,
@@ -428,7 +428,7 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         oil_onstream_date=oil_onstream_date,
         gas_onstream_date=gas_onstream_date,
         lifting=lifting,
-        tangible_cost=tangible,
+        capital_cost=tangible,
         intangible_cost=intangible,
         opex=opex,
         asr_cost=asr,

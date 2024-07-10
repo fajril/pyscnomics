@@ -10,7 +10,7 @@ from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.econ.selection import OptimizationParameter, OptimizationTarget
 from pyscnomics.tools.summary import get_summary
 
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
 
 
 class OptimizationException(Exception):
@@ -353,22 +353,22 @@ def adjust_cost_element(
     if adjustment_variable == OptimizationParameter.VAT_DISCOUNT:
         # Adjusting the Tangible cost of the contract
         tangible_adjusted = tuple([
-            Tangible(start_year=tan.start_year,
-                     end_year=tan.end_year,
-                     cost=tan.cost,
-                     expense_year=tan.expense_year,
-                     cost_allocation=tan.cost_allocation,
-                     description=tan.description,
-                     vat_portion=tan.vat_portion,
-                     vat_discount=adjustment_value,
-                     lbt_portion=tan.lbt_portion,
-                     lbt_discount=tan.lbt_discount,
-                     pis_year=tan.pis_year,
-                     salvage_value=tan.salvage_value,
-                     useful_life=tan.useful_life,
-                     depreciation_factor=tan.depreciation_factor,
-                     is_ic_applied=tan.is_ic_applied,
-                     ) for tan in contract.tangible_cost
+            CapitalCost(start_year=tan.start_year,
+                        end_year=tan.end_year,
+                        cost=tan.cost,
+                        expense_year=tan.expense_year,
+                        cost_allocation=tan.cost_allocation,
+                        description=tan.description,
+                        vat_portion=tan.vat_portion,
+                        vat_discount=adjustment_value,
+                        lbt_portion=tan.lbt_portion,
+                        lbt_discount=tan.lbt_discount,
+                        pis_year=tan.pis_year,
+                        salvage_value=tan.salvage_value,
+                        useful_life=tan.useful_life,
+                        depreciation_factor=tan.depreciation_factor,
+                        is_ic_applied=tan.is_ic_applied,
+                        ) for tan in contract.capital_cost
         ])
 
         # Adjusting the Intangible cost of the contract
@@ -418,22 +418,22 @@ def adjust_cost_element(
     elif adjustment_variable == OptimizationParameter.LBT_DISCOUNT:
         # Adjusting the Tangible cost of the contract
         tangible_adjusted = tuple([
-            Tangible(start_year=tan.start_year,
-                     end_year=tan.end_year,
-                     cost=tan.cost,
-                     expense_year=tan.expense_year,
-                     cost_allocation=tan.cost_allocation,
-                     description=tan.description,
-                     vat_portion=tan.vat_portion,
-                     vat_discount=tan.vat_discount,
-                     lbt_portion=tan.lbt_portion,
-                     lbt_discount=adjustment_value,
-                     pis_year=tan.pis_year,
-                     salvage_value=tan.salvage_value,
-                     useful_life=tan.useful_life,
-                     depreciation_factor=tan.depreciation_factor,
-                     is_ic_applied=tan.is_ic_applied,
-                     ) for tan in contract.tangible_cost
+            CapitalCost(start_year=tan.start_year,
+                        end_year=tan.end_year,
+                        cost=tan.cost,
+                        expense_year=tan.expense_year,
+                        cost_allocation=tan.cost_allocation,
+                        description=tan.description,
+                        vat_portion=tan.vat_portion,
+                        vat_discount=tan.vat_discount,
+                        lbt_portion=tan.lbt_portion,
+                        lbt_discount=adjustment_value,
+                        pis_year=tan.pis_year,
+                        salvage_value=tan.salvage_value,
+                        useful_life=tan.useful_life,
+                        depreciation_factor=tan.depreciation_factor,
+                        is_ic_applied=tan.is_ic_applied,
+                        ) for tan in contract.capital_cost
         ])
 
         # Adjusting the Intangible cost of the contract
@@ -500,7 +500,7 @@ def adjust_cost_element(
                          useful_life_array=tan.useful_life),
                      depreciation_factor=tan.depreciation_factor,
                      is_ic_applied=tan.is_ic_applied,
-                     ) for tan in contract.tangible_cost
+                     ) for tan in contract.capital_cost
         ])
         intangible_adjusted = contract.intangible_cost
         opex_adjusted = contract.opex
@@ -518,7 +518,7 @@ def adjust_cost_element(
                                          oil_onstream_date=contract.oil_onstream_date,
                                          gas_onstream_date=contract.gas_onstream_date,
                                          lifting=contract.lifting,
-                                         tangible_cost=tangible_adjusted,
+                                         capital_cost=tangible_adjusted,
                                          intangible_cost=intangible_adjusted,
                                          opex=opex_adjusted,
                                          asr_cost=asr_adjusted,
@@ -552,7 +552,7 @@ def adjust_cost_element(
                                        oil_onstream_date=contract.oil_onstream_date,
                                        gas_onstream_date=contract.gas_onstream_date,
                                        lifting=contract.lifting,
-                                       tangible_cost=tangible_adjusted,
+                                       capital_cost=tangible_adjusted,
                                        intangible_cost=intangible_adjusted,
                                        opex=opex_adjusted,
                                        asr_cost=asr_adjusted,
@@ -574,7 +574,7 @@ def adjust_cost_element(
                                        oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
                                        gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
                                        gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
-                                       gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration,)
+                                       gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration, )
 
     # When the contract is not recognized, raise an exception
     else:

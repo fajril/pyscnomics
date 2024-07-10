@@ -17,7 +17,7 @@ from pyscnomics.io.config import (
     SulfurLiftingData,
     ElectricityLiftingData,
     CO2LiftingData,
-    TangibleCostData,
+    CapitalCostData,
     IntangibleCostData,
     OPEXData,
     ASRCostData,
@@ -74,7 +74,7 @@ class Spreadsheet:
     co2_lifting_data: CO2LiftingData = field(default=None, init=False)
 
     # Attributes associated with cost data
-    tangible_cost_data: TangibleCostData = field(default=None, init=False)
+    capital_cost_data: CapitalCostData = field(default=None, init=False)
     intangible_cost_data: IntangibleCostData = field(default=None, init=False)
     opex_data: OPEXData = field(default=None, init=False)
     asr_cost_data: ASRCostData = field(default=None, init=False)
@@ -924,38 +924,38 @@ class Spreadsheet:
             start_date_project_second=self.general_config_data.start_date_project_second,
         )
 
-    def _get_tangible_cost_data(self) -> TangibleCostData:
+    def _get_capital_cost_data(self) -> CapitalCostData:
         """
-        Retrieves tangible cost data based on available sheets.
+        Retrieves capital cost data based on available sheets.
 
         Returns
         -------
-        TangibleCostData
-            An instance of TangibleCostData class.
+        CapitalCostData
+            An instance of CapitalCostData class.
 
         Notes
         -----
         The core operations are as follows:
-        (1) Capture tangible cost data from attribute self.data_loaded, then perform the
+        (1) Capture capital cost data from attribute self.data_loaded, then perform the
             necessary adjustment,
         (2) Undertake data cleansing: remove all rows which column 'expense_year' is NaN.
-            Store the results in a variable named 'tangible_data_loaded',
-        (3) Create a dictionary named 'tangible_data' to store the necessary data from
-            'tangible_data_loaded',
-        (4) Return an instance of TangibleCostData to store the tangible data appropriately
+            Store the results in a variable named 'capital_data_loaded',
+        (3) Create a dictionary named 'capital_data' to store the necessary data from
+            'capital_data_loaded',
+        (4) Return an instance of CapitalCostData to store the capital data appropriately
             as its attributes.
         """
         # Step #1 (See 'Notes' section in the docstring)
-        tangible_data_loaded_init = self.data_loaded["Cost Tangible"].dropna(axis=0, how="all")
+        capital_data_loaded_init = self.data_loaded["Cost Tangible"].dropna(axis=0, how="all")
 
         # Step #2 (See 'Notes' section in the docstring)
-        tangible_data_loaded = (
-            tangible_data_loaded_init if tangible_data_loaded_init.empty
-            else tangible_data_loaded_init[~pd.isna(tangible_data_loaded_init.iloc[:, 0])].copy()
+        capital_data_loaded = (
+            capital_data_loaded_init if capital_data_loaded_init.empty
+            else capital_data_loaded_init[~pd.isna(capital_data_loaded_init.iloc[:, 0])].copy()
         )
 
         # Step #3 (See 'Notes' section in the docstring)
-        tangible_data_attrs = [
+        capital_data_attrs = [
             "expense_year",
             "cost_allocation",
             "cost",
@@ -969,25 +969,25 @@ class Spreadsheet:
             "description",
         ]
 
-        tangible_data = {
-            key: None if tangible_data_loaded.empty
-            else tangible_data_loaded.iloc[:, i].to_numpy()
-            for i, key in enumerate(tangible_data_attrs)
+        capital_data = {
+            key: None if capital_data_loaded.empty
+            else capital_data_loaded.iloc[:, i].to_numpy()
+            for i, key in enumerate(capital_data_attrs)
         }
 
         # Step #4 (See 'Notes' section in the docstring)
-        return TangibleCostData(
-            expense_year_init=tangible_data["expense_year"],
-            cost_allocation=tangible_data["cost_allocation"],
-            cost=tangible_data["cost"],
-            pis_year=tangible_data["pis_year"],
-            useful_life=tangible_data["useful_life"],
-            depreciation_factor=tangible_data["depreciation_factor"],
-            salvage_value=tangible_data["salvage_value"],
-            is_ic_applied=tangible_data["is_ic_applied"],
-            vat_portion=tangible_data["vat_portion"],
-            lbt_portion=tangible_data["lbt_portion"],
-            description=tangible_data["description"],
+        return CapitalCostData(
+            expense_year_init=capital_data["expense_year"],
+            cost_allocation=capital_data["cost_allocation"],
+            cost=capital_data["cost"],
+            pis_year=capital_data["pis_year"],
+            useful_life=capital_data["useful_life"],
+            depreciation_factor=capital_data["depreciation_factor"],
+            salvage_value=capital_data["salvage_value"],
+            is_ic_applied=capital_data["is_ic_applied"],
+            vat_portion=capital_data["vat_portion"],
+            lbt_portion=capital_data["lbt_portion"],
+            description=capital_data["description"],
             project_years=self.general_config_data.project_years,
             type_of_contract=self.general_config_data.type_of_contract,
             end_date_project=self.general_config_data.end_date_project,
@@ -1786,7 +1786,7 @@ class Spreadsheet:
         self.co2_lifting_data = self._get_co2_lifting_data()
 
         # Fill in the attributes associated with cost data
-        self.tangible_cost_data = self._get_tangible_cost_data()
+        self.capital_cost_data = self._get_capital_cost_data()
         self.intangible_cost_data = self._get_intangible_cost_data()
         self.opex_data = self._get_opex_data()
         self.asr_cost_data = self._get_asr_cost_data()

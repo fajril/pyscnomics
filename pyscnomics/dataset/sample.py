@@ -8,7 +8,7 @@ import pandas as pd
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
 from pyscnomics.econ.revenue import Lifting, FluidType
 
 
@@ -154,10 +154,13 @@ def assign_lifting(data_raw: dict) -> tuple:
                               end_year=lifting_data[key]["end_year"],
                               lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
                               price=np.array(lifting_data[key]["price"]),
+                              prod_year=np.array(lifting_data[key]["prod_year"]),
                               fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
                               ghv=np.array(lifting_data[key]["ghv"]),
-                              prod_year=np.array(lifting_data[key]["prod_year"])
+                              prod_rate=np.array(lifting_data[key]["prod_rate"]),
+                              prod_rate_baseline=np.array(lifting_data[key]["prod_rate_baseline"]),
                               )
+
             lifting_list.append(lifting)
 
         else:
@@ -165,8 +168,10 @@ def assign_lifting(data_raw: dict) -> tuple:
                               end_year=lifting_data[key]["end_year"],
                               lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
                               price=np.array(lifting_data[key]["price"]),
+                              prod_year=np.array(lifting_data[key]["prod_year"]),
                               fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
-                              prod_year=np.array(lifting_data[key]["prod_year"])
+                              prod_rate=np.array(lifting_data[key]["prod_rate"]),
+                              prod_rate_baseline=np.array(lifting_data[key]["prod_rate_baseline"]),
                               )
             lifting_list.append(lifting)
 
@@ -197,22 +202,22 @@ def assign_cost(data_raw: dict) -> tuple:
     tangible_data = data_raw['tangible']
     tangible_list = []
     for key in tangible_data.keys():
-        tangible = Tangible(start_year=tangible_data[key]['start_year'],
-                            end_year=tangible_data[key]['end_year'],
-                            cost=np.array(tangible_data[key]['cost']),
-                            expense_year=np.array(tangible_data[key]['expense_year']),
-                            cost_allocation=read_fluid_type(fluid=tangible_data[key]['cost_allocation']),
-                            description=tangible_data[key]['description'],
-                            vat_portion=np.array(tangible_data[key]['vat_portion']),
-                            vat_discount=np.array(tangible_data[key]['vat_discount']),
-                            lbt_portion=np.array(tangible_data[key]['lbt_portion']),
-                            lbt_discount=np.array(tangible_data[key]['lbt_discount']),
-                            pis_year=np.array(tangible_data[key]['pis_year']),
-                            salvage_value=np.array(tangible_data[key]['salvage_value']),
-                            useful_life=np.array(tangible_data[key]['useful_life']),
-                            depreciation_factor=np.array(tangible_data[key]['depreciation_factor']),
-                            is_ic_applied=tangible_data[key]['is_ic_applied'],
-                            )
+        tangible = CapitalCost(start_year=tangible_data[key]['start_year'],
+                               end_year=tangible_data[key]['end_year'],
+                               cost=np.array(tangible_data[key]['cost']),
+                               expense_year=np.array(tangible_data[key]['expense_year']),
+                               cost_allocation=read_fluid_type(fluid=tangible_data[key]['cost_allocation']),
+                               description=tangible_data[key]['description'],
+                               vat_portion=np.array(tangible_data[key]['vat_portion']),
+                               vat_discount=np.array(tangible_data[key]['vat_discount']),
+                               lbt_portion=np.array(tangible_data[key]['lbt_portion']),
+                               lbt_discount=np.array(tangible_data[key]['lbt_discount']),
+                               pis_year=np.array(tangible_data[key]['pis_year']),
+                               salvage_value=np.array(tangible_data[key]['salvage_value']),
+                               useful_life=np.array(tangible_data[key]['useful_life']),
+                               depreciation_factor=np.array(tangible_data[key]['depreciation_factor']),
+                               is_ic_applied=tangible_data[key]['is_ic_applied'],
+                               )
         tangible_list.append(tangible)
 
     # Defining the data source and the list container for Intangible. Then, assign them based on their fluid type
@@ -329,7 +334,7 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
                            oil_onstream_date=oil_onstream_date,
                            gas_onstream_date=gas_onstream_date,
                            lifting=lifting_list,
-                           tangible_cost=tangible_list,
+                           capital_cost=tangible_list,
                            intangible_cost=intangible_list,
                            opex=opex_list,
                            asr_cost=asr_list)
@@ -341,7 +346,7 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
                             oil_onstream_date=oil_onstream_date,
                             gas_onstream_date=gas_onstream_date,
                             lifting=lifting_list,
-                            tangible_cost=tangible_list,
+                            capital_cost=tangible_list,
                             intangible_cost=intangible_list,
                             opex=opex_list,
                             asr_cost=asr_list,
@@ -372,7 +377,7 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
                           oil_onstream_date=oil_onstream_date,
                           gas_onstream_date=gas_onstream_date,
                           lifting=lifting_list,
-                          tangible_cost=tangible_list,
+                          capital_cost=tangible_list,
                           intangible_cost=intangible_list,
                           opex=opex_list,
                           asr_cost=asr_list,
@@ -401,7 +406,7 @@ def load_cost(filename: str,
               start_year: int = 2023,
               end_year: int = 2043,
               cost_allocation: FluidType = FluidType.OIL,
-              template: str = "pyscnomics") -> tuple[Tangible, Intangible, OPEX, ASR] | ValueError:
+              template: str = "pyscnomics") -> tuple[CapitalCost, Intangible, OPEX, ASR] | ValueError:
     """
     Function to load the cost data from Excel file.
 
@@ -443,11 +448,11 @@ def load_cost(filename: str,
 
     # Assigning the Tangible data
     tangible_arr = np.array(df[[5, 7, 8, 9, 10, 11, 12]].sum(axis=1).to_numpy(dtype=float))
-    tangible = Tangible(start_year=start_year,
-                        end_year=end_year,
-                        cost=tangible_arr,
-                        expense_year=years_arr,
-                        cost_allocation=cost_allocation)
+    tangible = CapitalCost(start_year=start_year,
+                           end_year=end_year,
+                           cost=tangible_arr,
+                           expense_year=years_arr,
+                           cost_allocation=cost_allocation)
 
     # Assigning the Intangible data
     intangible_arr = df[6].to_numpy(dtype=float)

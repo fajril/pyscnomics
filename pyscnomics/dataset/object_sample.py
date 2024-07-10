@@ -4,7 +4,7 @@ from datetime import datetime
 from pyscnomics.dataset.sample import load_data
 from pyscnomics.econ.selection import FTPTaxRegime, FluidType, InflationAppliedTo
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
@@ -141,7 +141,7 @@ def generate_contract_sample(case: str) -> CostRecovery | GrossSplit | Transitio
             fluid_type=FluidType.GAS)
 
         # Defining the Gas Tangible Data - Drilling Tangible
-        psc1_gas_tangible = Tangible(
+        psc1_gas_tangible = CapitalCost(
             start_year=2018,
             end_year=2020,
             cost=np.array([3363.67743703704000, 802.73224043715800]),
@@ -188,7 +188,7 @@ def generate_contract_sample(case: str) -> CostRecovery | GrossSplit | Transitio
             start_date=psc_1_start_date,
             end_date=psc_1_end_date,
             lifting=tuple([psc1_gas_lifting]),
-            tangible_cost=tuple([psc1_gas_tangible]),
+            capital_cost=tuple([psc1_gas_tangible]),
             intangible_cost=tuple([psc1_gas_intang]),
             opex=tuple([psc1_gas_opex_cost, psc1_gas_asr_cost_opx]),
             asr_cost=tuple([psc1_gas_asr_cost]),
@@ -227,7 +227,7 @@ def generate_contract_sample(case: str) -> CostRecovery | GrossSplit | Transitio
             fluid_type=FluidType.GAS)
 
         # Defining the Gas Tangible Data - Drilling Tangible
-        psc2_gas_tangible = Tangible(
+        psc2_gas_tangible = CapitalCost(
             start_year=2020,
             end_year=2030,
             cost=np.array([1959.561038251370, 2834.780000000000]),
@@ -303,7 +303,7 @@ def generate_contract_sample(case: str) -> CostRecovery | GrossSplit | Transitio
             start_date=psc_2_start_date,
             end_date=psc_2_end_date,
             lifting=tuple([psc2_gas_lifting]),
-            tangible_cost=tuple([psc2_gas_tangible]),
+            capital_cost=tuple([psc2_gas_tangible]),
             intangible_cost=tuple([psc2_gas_intang]),
             opex=tuple([psc2_gas_opex_cost, psc2_gas_asr_cost_opx, psc2_gas_lbt_cost]),
             asr_cost=tuple([psc2_gas_asr_cost]),
