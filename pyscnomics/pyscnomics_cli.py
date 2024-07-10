@@ -465,9 +465,15 @@ if __name__ == "__main__":
         # cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
+    cs_mangga_arr = cs_mangga.get_cost_of_sales_arr()
+
     print('\t')
     print('============================================================================')
 
     print('\t')
     print(f'Filetype: {type(cs_mangga)}')
-    print(cs_mangga)
+    print('cs_mangga = \n', cs_mangga)
+
+    print('\t')
+    print(f'Filetype: {type(cs_mangga_arr)}')
+    print('cs_mangga_arr = \n', cs_mangga_arr)
