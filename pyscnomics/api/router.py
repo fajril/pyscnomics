@@ -1,5 +1,6 @@
 from fastapi import APIRouter
-from pyscnomics.api.adapter import (get_costrecovery,
+from pyscnomics.api.adapter import (get_baseproject,
+                                    get_costrecovery,
                                     get_contract_table,
                                     get_contract_optimization,
                                     get_grosssplit,
@@ -308,3 +309,44 @@ async def get_transition_table(data: DataTransition) -> dict:
     """
     return get_contract_table(data=data.dict(), contract_type='Transition')
 
+
+@router.post("/baseproject")
+async def calculate_baseproject(data: Data) -> dict:
+    """
+    ## Base Project
+    Route to calculate a contract using Base Project Scheme and get its executive summary.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+
+    """
+    return get_baseproject(data=data.dict())[0]
+
+
+@router.post("/baseproject/table")
+async def get_baseproject_table(data: Data) -> dict:
+    """
+    ## Base Project Table
+    Route to calculate a contract using Base Project Scheme and get its cashflow table.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+
+    """
+    return get_contract_table(data=data.dict(), contract_type='Base Project')

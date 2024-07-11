@@ -686,7 +686,7 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                           cashflow_years=contract.project_years,
                           reference_year=reference_year)
 
-        ctr_net_share = gross_revenue - investment + opex + asr
+        ctr_net_share = gross_revenue - investment - opex - asr
         ctr_net_share_over_gross_share = ctr_net_share / gross_revenue
 
         ctr_net_cashflow = ctr_net_share

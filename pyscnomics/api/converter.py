@@ -282,8 +282,8 @@ class ContractArgumentsBM(BaseModel):
     future_rate: float = 0.02
     inflation_rate_applied_to: str = "CAPEX"
     post_uu_22_year2001: bool = True
-    cum_production_split_offset: list | float | int
-    amortization: bool
+    cum_production_split_offset: list | float | int | None = None
+    amortization: bool = False
     regime: str = "PERMEN_ESDM_12_2020"
 
 
@@ -330,9 +330,9 @@ class LiftingBM(BaseModel):
     price: list[float] | list[int]
     prod_year: list[int]
     fluid_type: str
-    ghv: list[float] | list[int] | None
-    prod_rate: list[float] | list[int] | None
-    prod_rate_baseline: list[float] | list[int] | None
+    ghv: list[float] | list[int] | None = None
+    prod_rate: list[float] | list[int] | None = None
+    prod_rate_baseline: list[float] | list[int] | None = None
 
 
 class TangibleBM(BaseModel):
@@ -1343,3 +1343,19 @@ def convert_str_to_optimization_parameters(str_object: str):
 
     """
     return get_optimization_parameter_converter(target=str_object)
+
+
+def convert_to_float(target=int):
+    """
+    Function to convert integer into float.
+
+    Parameters
+    ----------
+    target: int
+        The target that will be converted.
+
+    Returns
+    -------
+    float
+    """
+    return float(target)
