@@ -30,7 +30,8 @@ from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_str_to_inflationappliedto,
                                       convert_summary_to_dict,
                                       convert_str_to_optimization_parameters,
-                                      convert_str_to_optimization_targetparameter)
+                                      convert_str_to_optimization_targetparameter,
+                                      convert_grosssplitregime_to_enum)
 
 
 class ContractException(Exception):
@@ -463,7 +464,6 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         "is_dmo_end_weighted": data['contract_arguments']['is_dmo_end_weighted'],
         "tax_regime": convert_str_to_taxregime(str_object=data['contract_arguments']['tax_regime']),
         "tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['tax_rate']),
-        # "regime": convert_str_to_ftptaxregime(str_object=data['contract_arguments']['ftp_tax_regime']),
         "sunk_cost_reference_year": data['contract_arguments']['sunk_cost_reference_year'],
         "depr_method": convert_str_to_depremethod(str_object=data['contract_arguments']['depr_method']),
         "decline_factor": data['contract_arguments']['decline_factor'],
@@ -475,7 +475,7 @@ def get_grosssplit(data: dict, summary_result: bool = True):
             str_object=data['contract_arguments']['inflation_rate_applied_to']),
         "cum_production_split_offset": convert_list_to_array_float_or_array(data_input=data["contract_arguments"]["cum_production_split_offset"]),
         "amortization": data["contract_arguments"]["amortization"],
-        "regime": data["contract_arguments"]["regime"]
+        "regime": convert_grosssplitregime_to_enum(target=data["contract_arguments"]["regime"])
     }
 
     # Running the contract

@@ -62,7 +62,7 @@ class SummaryArgumentsBM(BaseModel):
 
     """
     reference_year: int = 2022
-    inflation_rate: float | int = 0.1
+    inflation_rate: float | int | list = 0.1
     discount_rate: float | int = 0.1
     npv_mode: str = "SKK Full Cycle Nominal Terms"
     discounting_mode: str = "End Year"
@@ -128,8 +128,8 @@ class CostRecoveryBM(BaseModel):
     tax_split_type: str = "Conventional"
     condition_dict: dict = {}
     indicator_rc_icp_sliding: list[float] = []
-    oil_ctr_pretax_share: float| int = 0.34722220
-    gas_ctr_pretax_share: float| int = 0.5208330
+    oil_ctr_pretax_share: float | int = 0.34722220
+    gas_ctr_pretax_share: float | int = 0.5208330
     oil_ic_rate: float | int = 0
     gas_ic_rate: float | int = 0
     ic_is_available: bool = False

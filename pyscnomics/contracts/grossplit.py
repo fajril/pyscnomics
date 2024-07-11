@@ -578,7 +578,9 @@ class GrossSplit(BaseProject):
                                    cum: float,
                                    regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
 
-        if regime == GrossSplitRegime.PERMEN_ESDM_20_2019:
+        if (regime == GrossSplitRegime.PERMEN_ESDM_52_2017 or
+                regime == GrossSplitRegime.PERMEN_ESDM_20_2019 or
+                regime == GrossSplitRegime.PERMEN_ESDM_12_2020):
             prog_split = self._get_prog_split_52_2017(fluid, price, cum)
 
         elif regime == GrossSplitRegime.PERMEN_ESDM_8_2017:
