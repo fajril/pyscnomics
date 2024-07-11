@@ -454,26 +454,58 @@ def run_optimization(
 if __name__ == "__main__":
     # entry_point()
 
-    from pyscnomics.econ.costs import CostOfSales
-    from pyscnomics.econ.selection import FluidType
+    from datetime import date
 
-    cs_mangga = CostOfSales(
+    from pyscnomics.econ.costs import Intangible, CostOfSales
+    from pyscnomics.econ.selection import FluidType
+    from pyscnomics.contracts.project import BaseProject
+
+    intangible_mangga = Intangible(
         start_year=2023,
         end_year=2030,
-        # cost=np.array([100, 100, 100]),
-        # expense_year=np.array([2024, 2025, 2027]),
-        # cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+        cost=np.array([100, 100, 100]),
+        expense_year=np.array([2023, 2024, 2025]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
-    cs_mangga_arr = cs_mangga.get_cost_of_sales_arr()
+    intangible_apel = Intangible(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([50, 50, 50]),
+        expense_year=np.array([2026, 2027, 2028]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+    )
+
+    project_buah = BaseProject(
+        start_date=date(year=2023, month=1, day=1),
+        end_date=date(year=2030, month=12, day=31),
+    )
+
+    # cs_mangga = CostOfSales(
+    #     start_year=2023,
+    #     end_year=2030,
+    #     # cost=np.array([100, 100, 100]),
+    #     # expense_year=np.array([2024, 2025, 2027]),
+    #     # cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+    # )
+    #
+    # cs_mangga_arr = cs_mangga.get_cost_of_sales_arr()
 
     print('\t')
     print('============================================================================')
 
     print('\t')
-    print(f'Filetype: {type(cs_mangga)}')
-    print('cs_mangga = \n', cs_mangga)
+    print(f'Filetype: {type(project_buah._oil_cost_of_sales)}')
+    print('_oil_cost_of_sales = \n', project_buah._oil_cost_of_sales)
 
-    print('\t')
-    print(f'Filetype: {type(cs_mangga_arr)}')
-    print('cs_mangga_arr = \n', cs_mangga_arr)
+    # print('\t')
+    # print(f'Filetype: {type(intangible_mangga)}')
+    # print('intangible_mangga = \n', intangible_mangga)
+
+    # print('\t')
+    # print(f'Filetype: {type(cs_mangga)}')
+    # print('cs_mangga = \n', cs_mangga)
+    #
+    # print('\t')
+    # print(f'Filetype: {type(cs_mangga_arr)}')
+    # print('cs_mangga_arr = \n', cs_mangga_arr)
