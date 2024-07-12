@@ -856,7 +856,10 @@ class GrossSplit(BaseProject):
         self._var_split_array = np.full_like(self.project_years, fill_value=self._variable_split, dtype=float)
 
         # Calculating the gas production in MMBOE
-        prod_gas_boe = self._gas_lifting.get_prod_rate_arr() / self.conversion_boe_to_scf
+        # Based on the discussion on 28 of June 2024, with YRA in Whatsapp,
+        # The cum. production used for progressive cum. production split is the sum of production rate and baseline
+
+        prod_gas_boe = self._gas_lifting.get_prod_rate_total_arr() / self.conversion_boe_to_scf
 
         # Condition when the offset cumulative production array when user input is float
         if isinstance(cum_production_split_offset, float) or isinstance(cum_production_split_offset, int):
@@ -867,7 +870,7 @@ class GrossSplit(BaseProject):
             offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
 
         # Calculating the cumulative production
-        self._cumulative_prod = np.cumsum(self._oil_lifting.get_lifting_rate_arr() + prod_gas_boe + offset_arr)
+        self._cumulative_prod = np.cumsum(self._oil_lifting.get_prod_rate_total_arr() + prod_gas_boe + offset_arr)
 
         # Progressive Split
         vectorized_get_prog_split = np.vectorize(self._wrapper_progressive_split)
