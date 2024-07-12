@@ -464,7 +464,7 @@ if __name__ == "__main__":
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 100, 100]),
-        expense_year=np.array([2023, 2024, 2025]),
+        expense_year=np.array([2023, 2024, 2029]),
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
@@ -472,31 +472,48 @@ if __name__ == "__main__":
         start_year=2023,
         end_year=2030,
         cost=np.array([50, 50, 50]),
-        expense_year=np.array([2026, 2027, 2028]),
+        expense_year=np.array([2025, 2026, 2030]),
+        cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS],
+    )
+
+    cos_mangga = CostOfSales(
+        start_year=2023,
+        end_year=2030,
+        expense_year=np.array([2023, 2024, 2029]),
+        cost=np.array([150, 150, 150]),
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+    )
+
+    cos_apel = CostOfSales(
+        start_year=2023,
+        end_year=2030,
+        expense_year=np.array([2025, 2026, 2030]),
+        cost=np.array([25, 25, 25]),
+        cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS],
     )
 
     project_buah = BaseProject(
         start_date=date(year=2023, month=1, day=1),
         end_date=date(year=2030, month=12, day=31),
+        intangible_cost=(intangible_mangga, intangible_apel),
+        cost_of_sales=(cos_mangga, cos_apel),
     )
-
-    # cs_mangga = CostOfSales(
-    #     start_year=2023,
-    #     end_year=2030,
-    #     # cost=np.array([100, 100, 100]),
-    #     # expense_year=np.array([2024, 2025, 2027]),
-    #     # cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
-    # )
-    #
-    # cs_mangga_arr = cs_mangga.get_cost_of_sales_arr()
 
     print('\t')
     print('============================================================================')
 
+    cos_oil = project_buah._oil_cost_of_sales
+    cos_gas = project_buah._gas_cost_of_sales
+
     print('\t')
-    print(f'Filetype: {type(project_buah._oil_cost_of_sales)}')
-    print('_oil_cost_of_sales = \n', project_buah._oil_cost_of_sales)
+    print(f'Filetype: {type(cos_oil)}')
+    print('cos_oil = \n', cos_oil)
+    print(cos_oil.get_cost_of_sales_arr())
+
+    print('\t')
+    print(f'Filetype: {type(cos_gas)}')
+    print('cos_gas = \n', cos_gas)
+    print(cos_gas.get_cost_of_sales_arr())
 
     # print('\t')
     # print(f'Filetype: {type(intangible_mangga)}')

@@ -68,6 +68,7 @@ def test_incorrect_data_input():
             start_date=date(2023, 1, 1),
             end_date=date(2030, 12, 31),
             oil_onstream_date=date(2031, 1, 1),
+            lifting=(lifting_mangga, lifting_apel),
         )
 
     # Oil onstream year is before the start year of the project
@@ -76,6 +77,7 @@ def test_incorrect_data_input():
             start_date=date(2023, 1, 1),
             end_date=date(2030, 12, 31),
             oil_onstream_date=date(2020, 1, 1),
+            lifting=(lifting_mangga, lifting_apel),
         )
 
     # Oil onstream year is inconsistent with prod_year
@@ -177,8 +179,8 @@ def test_base_project_tangible_expenditures():
     base_case._get_expenditures()
     results = vars(base_case)
 
-    oil_tangible_expenditures_calc = results["_oil_tangible_expenditures"]
-    gas_tangible_expenditures_calc = results["_gas_tangible_expenditures"]
+    oil_tangible_expenditures_calc = results["_oil_capital_expenditures"]
+    gas_tangible_expenditures_calc = results["_gas_capital_expenditures"]
 
     # Execute testing (expected == calculated)
     np.testing.assert_allclose(oil_tangible_expenditures, oil_tangible_expenditures_calc)
