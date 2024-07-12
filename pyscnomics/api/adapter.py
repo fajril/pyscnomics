@@ -665,6 +665,9 @@ def get_detailed_summary(data: dict, contract_type: str):
     elif contract_type == 'Transition':
         summary_args = get_transition(data=data)[3]
 
+    elif contract_type == 'Base Project':
+        summary_args = get_baseproject(data=data, summary_result=True)[3]
+
     else:
         summary_args = None
 

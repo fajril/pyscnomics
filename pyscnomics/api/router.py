@@ -350,3 +350,26 @@ async def get_baseproject_table(data: Data) -> dict:
 
     """
     return get_contract_table(data=data.dict(), contract_type='Base Project')
+
+
+@router.post("/baseproject/detailed_summary")
+async def get_baseproject_detailed(data: Data) -> dict:
+    """
+    ## Base Project Detailed Summary
+    Route to get a contract detailed summary using Base Project Scheme.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+
+    """
+
+    return get_detailed_summary(data=data.dict(),
+                                contract_type='Base Project')
