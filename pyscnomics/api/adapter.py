@@ -343,6 +343,9 @@ def get_contract_optimization(data: dict, contract_type: str = 'Cost Recovery') 
         The result of the optimization in dictionary format
 
     """
+    if data['optimization_arguments'] is None:
+        raise ContractException("The payload does not have the optimization_arguments key")
+
     # Converting the parameters in dict_optimization to the corresponding enum
     optimization_parameters = [
         convert_str_to_optimization_parameters(str_object=i)
@@ -385,6 +388,49 @@ def get_contract_optimization(data: dict, contract_type: str = 'Cost Recovery') 
         summary_argument=summary_argument,
         target_parameter=target_parameter,
     )
+
+    # Treatment to add the useful life of optimization into the result
+    def get_enum_index(enum_list: list, element: any) -> int | None:
+        """
+        Function to get the index of the OptimizationParameter.DEPRECIATION_ACCELERATION.
+
+        Parameters
+        ----------
+        enum_list: list
+            The source of list.
+        element: any
+            The corresponding element
+        Returns
+        -------
+        out : int | None
+        """
+        try:
+            return enum_list.index(element)
+        except ValueError:
+            return None
+
+    # Get the index of the depreciation optimization parameter
+    from pyscnomics.econ.selection import OptimizationParameter
+    index_depreciation = get_enum_index(
+        enum_list=optimization_parameters,
+        element=OptimizationParameter.DEPRECIATION_ACCELERATION)
+
+    # Adding the information of optimized useful life into the list_params_value
+    if index_depreciation is not None:
+        optimized_capital_cost = {
+            "year": list_executed_contract[-1].capital_cost_total.project_years.tolist(),
+            "cost_allocation": list_executed_contract[-1].capital_cost_total.cost_allocation,
+            "cost": list_executed_contract[-1].capital_cost_total.cost.tolist(),
+            "pis_year": list_executed_contract[-1].capital_cost_total.pis_year.tolist(),
+            "useful_life": list_executed_contract[-1].capital_cost_total.useful_life.tolist(),
+            "description": list_executed_contract[-1].capital_cost_total.description
+        }
+
+        # Adding optimized_capital_cost into the result of the optimization
+        list_params_value[index_depreciation] = {
+            "depreciation acceleration": list_params_value[index_depreciation],
+            "optimized_useful_life": optimized_capital_cost
+        }
 
     # Forming the optimization result into a dictionary object
     optimization_result = {
