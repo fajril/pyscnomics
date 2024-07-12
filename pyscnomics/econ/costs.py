@@ -2380,9 +2380,11 @@ class CostOfSales(GeneralCost):
             )
 
     def __ge__(self, other):
+        # Between an instance of CostOfSales with another instance of CostOfSales
         if isinstance(other, CostOfSales):
             return np.sum(self.cost) >= np.sum(other.cost)
 
+        # Between an instance of CostOfSales and an integer/float
         elif isinstance(other, (int, float)):
             return np.sum(self.cost) >= other
 
@@ -2391,4 +2393,3 @@ class CostOfSales(GeneralCost):
                 f"Must compare an instance of CostOfSales with another instance "
                 f"of CostOfSales, an integer, or a float."
             )
-        
