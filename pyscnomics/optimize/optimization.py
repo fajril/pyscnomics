@@ -10,7 +10,7 @@ from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.econ.selection import OptimizationParameter, OptimizationTarget
 from pyscnomics.tools.summary import get_summary
 
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
 
 
 class OptimizationException(Exception):
@@ -353,22 +353,22 @@ def adjust_cost_element(
     if adjustment_variable == OptimizationParameter.VAT_DISCOUNT:
         # Adjusting the Tangible cost of the contract
         tangible_adjusted = tuple([
-            Tangible(start_year=tan.start_year,
-                     end_year=tan.end_year,
-                     cost=tan.cost,
-                     expense_year=tan.expense_year,
-                     cost_allocation=tan.cost_allocation,
-                     description=tan.description,
-                     vat_portion=tan.vat_portion,
-                     vat_discount=adjustment_value,
-                     lbt_portion=tan.lbt_portion,
-                     lbt_discount=tan.lbt_discount,
-                     pis_year=tan.pis_year,
-                     salvage_value=tan.salvage_value,
-                     useful_life=tan.useful_life,
-                     depreciation_factor=tan.depreciation_factor,
-                     is_ic_applied=tan.is_ic_applied,
-                     ) for tan in contract.tangible_cost
+            CapitalCost(start_year=tan.start_year,
+                        end_year=tan.end_year,
+                        cost=tan.cost,
+                        expense_year=tan.expense_year,
+                        cost_allocation=tan.cost_allocation,
+                        description=tan.description,
+                        vat_portion=tan.vat_portion,
+                        vat_discount=adjustment_value,
+                        lbt_portion=tan.lbt_portion,
+                        lbt_discount=tan.lbt_discount,
+                        pis_year=tan.pis_year,
+                        salvage_value=tan.salvage_value,
+                        useful_life=tan.useful_life,
+                        depreciation_factor=tan.depreciation_factor,
+                        is_ic_applied=tan.is_ic_applied,
+                        ) for tan in contract.capital_cost
         ])
 
         # Adjusting the Intangible cost of the contract
@@ -418,22 +418,22 @@ def adjust_cost_element(
     elif adjustment_variable == OptimizationParameter.LBT_DISCOUNT:
         # Adjusting the Tangible cost of the contract
         tangible_adjusted = tuple([
-            Tangible(start_year=tan.start_year,
-                     end_year=tan.end_year,
-                     cost=tan.cost,
-                     expense_year=tan.expense_year,
-                     cost_allocation=tan.cost_allocation,
-                     description=tan.description,
-                     vat_portion=tan.vat_portion,
-                     vat_discount=tan.vat_discount,
-                     lbt_portion=tan.lbt_portion,
-                     lbt_discount=adjustment_value,
-                     pis_year=tan.pis_year,
-                     salvage_value=tan.salvage_value,
-                     useful_life=tan.useful_life,
-                     depreciation_factor=tan.depreciation_factor,
-                     is_ic_applied=tan.is_ic_applied,
-                     ) for tan in contract.tangible_cost
+            CapitalCost(start_year=tan.start_year,
+                        end_year=tan.end_year,
+                        cost=tan.cost,
+                        expense_year=tan.expense_year,
+                        cost_allocation=tan.cost_allocation,
+                        description=tan.description,
+                        vat_portion=tan.vat_portion,
+                        vat_discount=tan.vat_discount,
+                        lbt_portion=tan.lbt_portion,
+                        lbt_discount=adjustment_value,
+                        pis_year=tan.pis_year,
+                        salvage_value=tan.salvage_value,
+                        useful_life=tan.useful_life,
+                        depreciation_factor=tan.depreciation_factor,
+                        is_ic_applied=tan.is_ic_applied,
+                        ) for tan in contract.capital_cost
         ])
 
         # Adjusting the Intangible cost of the contract
@@ -483,24 +483,24 @@ def adjust_cost_element(
     elif adjustment_variable == OptimizationParameter.DEPRECIATION_ACCELERATION:
         # Adjusting the useful life of the capital cost of the contract
         tangible_adjusted = tuple([
-            Tangible(start_year=tan.start_year,
-                     end_year=tan.end_year,
-                     cost=tan.cost,
-                     expense_year=tan.expense_year,
-                     cost_allocation=tan.cost_allocation,
-                     description=tan.description,
-                     vat_portion=tan.vat_portion,
-                     vat_discount=tan.vat_discount,
-                     lbt_portion=tan.lbt_portion,
-                     lbt_discount=tan.lbt_discount,
-                     pis_year=tan.pis_year,
-                     salvage_value=tan.salvage_value,
-                     useful_life=adjust_useful_life_years(
+            CapitalCost(start_year=tan.start_year,
+                        end_year=tan.end_year,
+                        cost=tan.cost,
+                        expense_year=tan.expense_year,
+                        cost_allocation=tan.cost_allocation,
+                        description=tan.description,
+                        vat_portion=tan.vat_portion,
+                        vat_discount=tan.vat_discount,
+                        lbt_portion=tan.lbt_portion,
+                        lbt_discount=tan.lbt_discount,
+                        pis_year=tan.pis_year,
+                        salvage_value=tan.salvage_value,
+                        useful_life=adjust_useful_life_years(
                          adjustment_value=adjustment_value,
                          useful_life_array=tan.useful_life),
-                     depreciation_factor=tan.depreciation_factor,
-                     is_ic_applied=tan.is_ic_applied,
-                     ) for tan in contract.tangible_cost
+                        depreciation_factor=tan.depreciation_factor,
+                        is_ic_applied=tan.is_ic_applied,
+                        ) for tan in contract.capital_cost
         ])
         intangible_adjusted = contract.intangible_cost
         opex_adjusted = contract.opex
@@ -511,14 +511,25 @@ def adjust_cost_element(
         raise OptimizationException(f"Adjustment Variable {adjustment_variable} "
                                     f"do not exist. It should be VAT or LBT in string data type")
 
+    # On stream date treatment
+    if np.sum(contract._oil_revenue) == 0:
+        oil_onstream_date = None
+    else:
+        oil_onstream_date = contract.oil_onstream_date
+
+    if np.sum(contract._gas_revenue) == 0:
+        gas_onstream_date = None
+    else:
+        gas_onstream_date = contract.gas_onstream_date
+
     # When the contract is CostRecovery, parsing back the adjusted cost elements to the cost recovery contract
     if isinstance(contract, CostRecovery):
         contract_adjusted = CostRecovery(start_date=contract.start_date,
                                          end_date=contract.end_date,
-                                         oil_onstream_date=contract.oil_onstream_date,
-                                         gas_onstream_date=contract.gas_onstream_date,
+                                         oil_onstream_date=oil_onstream_date,
+                                         gas_onstream_date=gas_onstream_date,
                                          lifting=contract.lifting,
-                                         tangible_cost=tangible_adjusted,
+                                         capital_cost=tangible_adjusted,
                                          intangible_cost=intangible_adjusted,
                                          opex=opex_adjusted,
                                          asr_cost=asr_adjusted,
@@ -549,10 +560,10 @@ def adjust_cost_element(
     elif isinstance(contract, GrossSplit):
         contract_adjusted = GrossSplit(start_date=contract.start_date,
                                        end_date=contract.end_date,
-                                       oil_onstream_date=contract.oil_onstream_date,
-                                       gas_onstream_date=contract.gas_onstream_date,
+                                       oil_onstream_date=oil_onstream_date,
+                                       gas_onstream_date=gas_onstream_date,
                                        lifting=contract.lifting,
-                                       tangible_cost=tangible_adjusted,
+                                       capital_cost=tangible_adjusted,
                                        intangible_cost=intangible_adjusted,
                                        opex=opex_adjusted,
                                        asr_cost=asr_adjusted,
@@ -574,7 +585,7 @@ def adjust_cost_element(
                                        oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
                                        gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
                                        gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
-                                       gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration,)
+                                       gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration, )
 
     # When the contract is not recognized, raise an exception
     else:
@@ -674,15 +685,14 @@ def optimize_psc(
     Returns
     -------
     out : tuple
-
-    list_str: list
-        The list of parameter that passed and has been optimized.
-    list_params_value: list
-        The list of parameter's value that passed and has been optimized.
-    result_optimization: float
-        The value of the targeted parameter which the result of the optimization.
-    list_executed_contract: list
-        The list of executed contracts.
+        list_str: list
+            The list of parameter that passed and has been optimized.
+        list_params_value: list
+            The list of parameter's value that passed and has been optimized.
+        result_optimization: float
+            The value of the targeted parameter which the result of the optimization.
+        list_executed_contract: list
+            The list of executed contracts.
     """
 
     # Get the summary of the base case
@@ -794,26 +804,27 @@ def optimize_psc(
         else:
             pass
 
-    # Running the contract using the adjusted contract argument
-    contract.run(**contract_arguments_adjusted)
+    # Running the contract using the adjusted contract argument when the VAT is multi values
+    if len(pseudo_dict["index_in_parameter"]) > 0:
+        contract.run(**contract_arguments_adjusted)
 
-    #  Replacing the executed contract from the optimization function into the adjusted contract
-    list_executed_contract[-1] = contract
+        #  Replacing the executed contract from the optimization function into the adjusted contract
+        list_executed_contract[-1] = contract
 
-    # Retrieving the summary of the contract
-    summary_argument['contract'] = contract
-    summary_optimized = get_summary(**summary_argument)
+        # Retrieving the summary of the contract
+        summary_argument['contract'] = contract
+        summary_optimized = get_summary(**summary_argument)
 
-    #  Retrieving the corresponding target value
-    if target_parameter == OptimizationTarget.IRR:
-        result_optimization = summary_optimized['ctr_irr']
-    elif target_parameter == OptimizationTarget.NPV:
-        result_optimization = summary_optimized['ctr_npv']
-    elif target_parameter == OptimizationTarget.PI:
-        result_optimization = summary_optimized['ctr_pi']
-    else:
-        raise OptimizationException(
-            f"Optimization Target {target_parameter} is not recognized"
-        )
+        #  Retrieving the corresponding target value
+        if target_parameter == OptimizationTarget.IRR:
+            result_optimization = summary_optimized['ctr_irr']
+        elif target_parameter == OptimizationTarget.NPV:
+            result_optimization = summary_optimized['ctr_npv']
+        elif target_parameter == OptimizationTarget.PI:
+            result_optimization = summary_optimized['ctr_pi']
+        else:
+            raise OptimizationException(
+                f"Optimization Target {target_parameter} is not recognized"
+            )
 
     return list_str, list_params_value, result_optimization, list_executed_contract

@@ -1655,6 +1655,7 @@ def get_optimization_parameter_converter(target: str) -> OptimizationParameter |
         "VAT Rate": OptimizationParameter.VAT_RATE,
         "Effective Tax Rate": OptimizationParameter.EFFECTIVE_TAX_RATE,
         "Ministerial Discretion": OptimizationParameter.MINISTERIAL_DISCRETION,
+        "Depreciation Acceleration": OptimizationParameter.DEPRECIATION_ACCELERATION
     }
 
     for key in attrs.keys():

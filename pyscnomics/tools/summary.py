@@ -78,15 +78,15 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
     sunk_cost_extended = np.concatenate((contract._consolidated_sunk_cost,
                                          np.zeros(len(contract.project_years) - len(contract._consolidated_sunk_cost))))
 
-    tangible = np.sum(contract._oil_tangible_expenditures + contract._gas_tangible_expenditures)
+    tangible = np.sum(contract._oil_capital_expenditures + contract._gas_capital_expenditures)
 
     intangible = np.sum(contract._oil_intangible_expenditures + contract._gas_intangible_expenditures - sunk_cost_extended,
                         dtype=float)
     investment = tangible + intangible
 
     # Capex
-    oil_capex = np.sum(contract._oil_tangible_expenditures)
-    gas_capex = np.sum(contract._gas_tangible_expenditures)
+    oil_capex = np.sum(contract._oil_capital_expenditures)
+    gas_capex = np.sum(contract._gas_capital_expenditures)
 
     # OPEX and ASR (Non-Capital Cost)
     opex = np.sum(contract._oil_opex_expenditures + contract._gas_opex_expenditures, dtype=float)
@@ -103,13 +103,7 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
     # Years sunk cost pooled
     years_sunk_cost_pooled = (contract.project_years[(len(contract.project_years) - len(cashflow_sunk_cost_pooled)):])
 
-    if isinstance(contract, BaseProject):
-        gov_ddmo = 0
-        gov_tax_income = 0
-        gov_take = 0
-        gov_take_over_gross_rev = 0
-
-    elif isinstance(contract, CostRecovery) or isinstance(contract, GrossSplit) or isinstance(contract, Transition):
+    if isinstance(contract, CostRecovery) or isinstance(contract, GrossSplit) or isinstance(contract, Transition):
         # Government DDMO
         gov_ddmo = np.sum(contract._consolidated_ddmo)
 
@@ -121,6 +115,12 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
         # Government Share
         gov_take_over_gross_rev = gov_take / gross_revenue
+
+    elif isinstance(contract, BaseProject):
+        gov_ddmo = 0
+        gov_tax_income = 0
+        gov_take = 0
+        gov_take_over_gross_rev = 0
 
     else:
         gov_ddmo = 0
@@ -151,8 +151,8 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
         # Contractor Investment NPV
         investment_npv = npv_skk_real_terms(cashflow=(
-                contract._oil_tangible_expenditures +
-                contract._gas_tangible_expenditures +
+                contract._oil_capital_expenditures +
+                contract._gas_capital_expenditures +
                 contract._oil_intangible_expenditures +
                 contract._gas_intangible_expenditures -
                 sunk_cost_extended
@@ -185,8 +185,8 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
         # Contractor Investment NPV
         investment_npv = npv_skk_nominal_terms(cashflow=(
-                contract._oil_tangible_expenditures +
-                contract._gas_tangible_expenditures +
+                contract._oil_capital_expenditures +
+                contract._gas_capital_expenditures +
                 contract._oil_intangible_expenditures +
                 contract._gas_intangible_expenditures -
                 sunk_cost_extended
@@ -219,8 +219,8 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
         # Contractor Investment NPV
         investment_npv = npv_nominal_terms(cashflow=(
-                contract._oil_tangible_expenditures +
-                contract._gas_tangible_expenditures +
+                contract._oil_capital_expenditures +
+                contract._gas_capital_expenditures +
                 contract._oil_intangible_expenditures +
                 contract._gas_intangible_expenditures -
                 sunk_cost_extended
@@ -257,8 +257,8 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
         # Contractor Investment NPV
         investment_npv = npv_real_terms(cashflow=(
-                contract._oil_tangible_expenditures +
-                contract._gas_tangible_expenditures +
+                contract._oil_capital_expenditures +
+                contract._gas_capital_expenditures +
                 contract._oil_intangible_expenditures +
                 contract._gas_intangible_expenditures -
                 sunk_cost_extended
@@ -295,8 +295,8 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
         # Contractor Investment NPV
         investment_npv = npv_point_forward(cashflow=(
-                contract._oil_tangible_expenditures +
-                contract._gas_tangible_expenditures +
+                contract._oil_capital_expenditures +
+                contract._gas_capital_expenditures +
                 contract._oil_intangible_expenditures +
                 contract._gas_intangible_expenditures -
                 sunk_cost_extended
@@ -333,11 +333,11 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
     # Condition when the Profitability Index is calculated using un-discounted investment
     else:
         investment_pi = np.sum(
-                contract._oil_tangible_expenditures +
-                contract._gas_tangible_expenditures +
-                contract._oil_intangible_expenditures +
-                contract._gas_intangible_expenditures -
-                sunk_cost_extended
+            contract._oil_capital_expenditures +
+            contract._gas_capital_expenditures +
+            contract._oil_intangible_expenditures +
+            contract._gas_intangible_expenditures -
+            sunk_cost_extended
         )
         ctr_pv_ratio = np.divide(ctr_npv, investment_pi, where=investment_pi != 0)
 
@@ -686,7 +686,7 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                           cashflow_years=contract.project_years,
                           reference_year=reference_year)
 
-        ctr_net_share = gross_revenue - investment + opex + asr
+        ctr_net_share = gross_revenue - investment - opex - asr
         ctr_net_share_over_gross_share = ctr_net_share / gross_revenue
 
         ctr_net_cashflow = ctr_net_share

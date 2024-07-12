@@ -205,7 +205,7 @@ class CostRecovery(BaseProject):
 
     # Consolidated Attributes
     _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_tangible: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_capital_cost: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_intangible: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_opex: np.ndarray = field(default=None, init=False, repr=False)
@@ -421,17 +421,17 @@ class CostRecovery(BaseProject):
 
         # Condition where fluid is Oil:
         if cost_alloc == FluidType.GAS:
-            tangible_class = self._gas_tangible
+            capital_class = self._gas_capital_cost
         else:
-            tangible_class = self._oil_tangible
+            capital_class = self._oil_capital_cost
 
         # Applying the IC calculation to only true value
-        ic_arr = np.where(np.asarray(tangible_class.is_ic_applied) == True,
-                          tangible_class.cost * ic_rate,
+        ic_arr = np.where(np.asarray(capital_class.is_ic_applied) == True,
+                          capital_class.cost * ic_rate,
                           0)
 
         ic_expenses = np.bincount(
-            tangible_class.expense_year - tangible_class.start_year, weights=ic_arr
+            capital_class.expense_year - capital_class.start_year, weights=ic_arr
         )
         zeros = np.zeros(self.project_duration - len(ic_expenses))
         ic_total = np.concatenate((ic_expenses, zeros))
@@ -522,7 +522,7 @@ class CostRecovery(BaseProject):
         """
 
         result = revenue - (ftp_ctr + ftp_gov) - ic - cost_recovery
-        tol = np.full_like(result, fill_value=1.0e-10)
+        tol = np.full_like(result, fill_value=1.0e-5)
         return np.where(result < tol, 0, result)
 
     @staticmethod
@@ -571,7 +571,7 @@ class CostRecovery(BaseProject):
                                       + transferred_in,
                                       0)
 
-        tol = np.full_like(ets_after_transfer, fill_value=1.0e-10)
+        tol = np.full_like(ets_after_transfer, fill_value=1.0e-5)
         return np.where(ets_after_transfer < tol, 0, ets_after_transfer)
 
     @staticmethod
@@ -741,7 +741,7 @@ class CostRecovery(BaseProject):
 
     def _get_sunk_cost(self, sunk_cost_reference_year: int):
         oil_cost_raw = (
-                self._oil_tangible_expenditures
+                self._oil_capital_expenditures
                 + self._oil_non_capital
         )
         self._oil_sunk_cost = oil_cost_raw[
@@ -749,7 +749,7 @@ class CostRecovery(BaseProject):
                               ]
 
         gas_cost_raw = (
-                self._gas_tangible_expenditures
+                self._gas_capital_expenditures
                 + self._gas_non_capital
         )
         self._gas_sunk_cost = gas_cost_raw[
@@ -844,7 +844,7 @@ class CostRecovery(BaseProject):
         (
             self._oil_depreciation,
             self._oil_undepreciated_asset,
-        ) = self._oil_tangible.total_depreciation_rate(
+        ) = self._oil_capital_cost.total_depreciation_rate(
             depr_method=depr_method,
             decline_factor=decline_factor,
             year_ref=year_ref,
@@ -857,7 +857,7 @@ class CostRecovery(BaseProject):
         (
             self._gas_depreciation,
             self._gas_undepreciated_asset,
-        ) = self._gas_tangible.total_depreciation_rate(
+        ) = self._gas_capital_cost.total_depreciation_rate(
             depr_method=depr_method,
             decline_factor=decline_factor,
             year_ref=year_ref,
@@ -1196,10 +1196,10 @@ class CostRecovery(BaseProject):
 
         # Contractor CashFlow
         self._oil_cashflow = self._oil_contractor_take - (
-                self._oil_tangible_expenditures + self._oil_non_capital
+                self._oil_capital_expenditures + self._oil_non_capital
         )
         self._gas_cashflow = self._gas_contractor_take - (
-                self._gas_tangible_expenditures + self._gas_non_capital
+                self._gas_capital_expenditures + self._gas_non_capital
         )
 
         # Government Take by Fluid
@@ -1219,8 +1219,8 @@ class CostRecovery(BaseProject):
 
         # Consolidated attributes
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue
-        self._consolidated_tangible = (
-                self._oil_tangible_expenditures + self._gas_tangible_expenditures
+        self._consolidated_capital_cost = (
+                self._oil_capital_expenditures + self._gas_capital_expenditures
         )
         self._consolidated_intangible = (
                 self._oil_intangible_expenditures + self._gas_intangible_expenditures
@@ -1326,5 +1326,5 @@ class CostRecovery(BaseProject):
         )
 
         self._consolidated_cashflow = self._consolidated_contractor_take - (
-                self._consolidated_tangible + self._consolidated_non_capital
+                self._consolidated_capital_cost + self._consolidated_non_capital
         )
