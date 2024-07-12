@@ -2315,3 +2315,80 @@ class CostOfSales(GeneralCost):
 
     def __iadd__(self, other):
         return self.__add__(other)
+
+    def __eq__(self, other):
+        # Between two instances of CostOfSales
+        if isinstance(other, CostOfSales):
+            return all(
+                (
+                    np.allclose(self.expense_year, other.expense_year),
+                    np.allclose(self.cost, other.cost),
+                    self.cost_allocation == other.cost_allocation,
+                )
+            )
+
+        # Between an instance of CostOfSales and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) == other
+
+        else:
+            return False
+
+    def __lt__(self, other):
+        # Between an instance of CostOfSales with another instance of CostOfSales
+        if isinstance(other, CostOfSales):
+            return np.sum(self.cost) < np.sum(other.cost)
+
+        # Between an instance of CostOfSales and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) < other
+
+        else:
+            raise CostOfSalesException(
+                f"Must compare an instance of CostOfSales with another instance "
+                f"of CostOfSales, an integer, or a float."
+            )
+
+    def __le__(self, other):
+        # Between an instance of CostOfSales with another instance of CostOfSales
+        if isinstance(other, CostOfSales):
+            return np.sum(self.cost) <= np.sum(other.cost)
+
+        # Between an instance of CostOfSales and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) <= other
+
+        else:
+            raise CostOfSalesException(
+                f"Must compare an instance of CostOfSales with another instance "
+                f"of CostOfSales, an integer, or a float."
+            )
+
+    def __gt__(self, other):
+        # Between an instance of CostOfSales with another instance of CostOfSales
+        if isinstance(other, CostOfSales):
+            return np.sum(self.cost) > np.sum(other.cost)
+
+        # Between an instance of CostOfSales and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) > other
+
+        else:
+            raise CostOfSalesException(
+                f"Must compare an instance of CostOfSales with another instance "
+                f"of CostOfSales, an integer, or a float."
+            )
+
+    def __ge__(self, other):
+        if isinstance(other, CostOfSales):
+            return np.sum(self.cost) >= np.sum(other.cost)
+
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) >= other
+
+        else:
+            raise CostOfSalesException(
+                f"Must compare an instance of CostOfSales with another instance "
+                f"of CostOfSales, an integer, or a float."
+            )
+        
