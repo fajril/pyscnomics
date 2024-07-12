@@ -103,13 +103,7 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
     # Years sunk cost pooled
     years_sunk_cost_pooled = (contract.project_years[(len(contract.project_years) - len(cashflow_sunk_cost_pooled)):])
 
-    if isinstance(contract, BaseProject):
-        gov_ddmo = 0
-        gov_tax_income = 0
-        gov_take = 0
-        gov_take_over_gross_rev = 0
-
-    elif isinstance(contract, CostRecovery) or isinstance(contract, GrossSplit) or isinstance(contract, Transition):
+    if isinstance(contract, CostRecovery) or isinstance(contract, GrossSplit) or isinstance(contract, Transition):
         # Government DDMO
         gov_ddmo = np.sum(contract._consolidated_ddmo)
 
@@ -121,6 +115,12 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
         # Government Share
         gov_take_over_gross_rev = gov_take / gross_revenue
+
+    elif isinstance(contract, BaseProject):
+        gov_ddmo = 0
+        gov_tax_income = 0
+        gov_take = 0
+        gov_take_over_gross_rev = 0
 
     else:
         gov_ddmo = 0
