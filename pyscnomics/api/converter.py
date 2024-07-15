@@ -66,6 +66,7 @@ class SummaryArgumentsBM(BaseModel):
     discount_rate: float | int = 0.1
     npv_mode: str = "SKK Full Cycle Nominal Terms"
     discounting_mode: str = "End Year"
+    profitability_discounted: bool = False
 
 
 class CostRecoveryBM(BaseModel):
