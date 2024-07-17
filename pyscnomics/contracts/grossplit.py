@@ -987,31 +987,31 @@ class GrossSplit(BaseProject):
         self._gas_net_operating_profit = self._gas_ctr_share_after_transfer - self._gas_deductible_cost
 
         # DMO
-        self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo(
+        self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo_gross_split(
             onstream_date=self.oil_onstream_date,
             start_date=self.start_date,
             project_years=self.project_years,
             dmo_holiday_duration=self.oil_dmo_holiday_duration,
             dmo_volume_portion=self.oil_dmo_volume_portion,
             dmo_fee_portion=self.oil_dmo_fee_portion,
-            lifting=self._oil_lifting,
             price=self._oil_wap_price,
-            ctr_pretax_share=1.0,
             unrecovered_cost=self._oil_carward_cost_aftertf,
-            is_dmo_end_weighted=is_dmo_end_weighted)
+            is_dmo_end_weighted=is_dmo_end_weighted,
+            net_operating_profit=self._oil_net_operating_profit,
+            contractor_share=self._oil_ctr_share_after_transfer,)
 
-        self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo(
+        self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo_gross_split(
             onstream_date=self.gas_onstream_date,
             start_date=self.start_date,
             project_years=self.project_years,
             dmo_holiday_duration=self.gas_dmo_holiday_duration,
             dmo_volume_portion=self.gas_dmo_volume_portion,
             dmo_fee_portion=self.gas_dmo_fee_portion,
-            lifting=self._gas_lifting,
             price=self._gas_wap_price,
-            ctr_pretax_share=1.0,
             unrecovered_cost=self._gas_carward_cost_aftertf,
-            is_dmo_end_weighted=is_dmo_end_weighted)
+            is_dmo_end_weighted=is_dmo_end_weighted,
+            net_operating_profit=self._gas_net_operating_profit,
+            contractor_share=self._gas_ctr_share_after_transfer,)
 
         # Taxable Income
         self._oil_taxable_income = self._oil_net_operating_profit - self._oil_ddmo
