@@ -679,8 +679,8 @@ class TransitionBM(BaseModel):
     intangible: Dict[str, IntangibleBM]
     opex: Dict[str, OpexBM]
     asr: Dict[str, AsrBM]
-    costrecovery: CostRecoveryBM = None
-    grosssplit: GrossSplitBM = None
+    costrecovery: CostRecoveryBM | None = None
+    grosssplit: GrossSplitBM | None = None
 
 
 class DataTransition(BaseModel):
