@@ -128,6 +128,8 @@ class BaseProject:
     _electricity_wap_price: np.ndarray = field(default=None, init=False, repr=False)
     _co2_wap_price: np.ndarray = field(default=None, init=False, repr=False)
 
+    _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
+
     def __post_init__(self):
 
         # Specify project duration and project years, raise error for inappropriate start date
@@ -1691,6 +1693,7 @@ class BaseProject:
         self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
         self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
         self._consolidated_government_take = np.zeros_like(self._consolidated_cashflow)
+        self._consolidated_revenue = self._oil_revenue + self._gas_revenue
 
     def __len__(self):
         return self.project_duration

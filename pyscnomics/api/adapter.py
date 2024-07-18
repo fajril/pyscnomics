@@ -107,6 +107,7 @@ def get_summary_dict(data: dict) -> dict:
     discount_rate = data['summary_arguments']['discount_rate']
     npv_mode = convert_str_to_npvmode(str_object=data['summary_arguments']['npv_mode'])
     discounting_mode = convert_str_to_discountingmode(str_object=data['summary_arguments']['discounting_mode'])
+    profitability_discounted = data['summary_arguments']['profitability_discounted']
 
     summary_arguments_dict = {
         'reference_year': reference_year,
@@ -114,6 +115,7 @@ def get_summary_dict(data: dict) -> dict:
         'discount_rate': discount_rate,
         'npv_mode': npv_mode,
         'discounting_mode': discounting_mode,
+        'profitability_discounted': profitability_discounted
     }
 
     return summary_arguments_dict
