@@ -280,7 +280,7 @@ async def get_transition_detailed(data: DataTransition) -> dict:
 @router.post("/transition/table")
 async def get_transition_table(data: DataTransition) -> dict:
     """
-    ## Gross Split Table
+    ## Transition Table
     Route to calculate a contract using Transition Scheme and get its cashflow table.
 
     ### Data Input Structure
@@ -308,6 +308,30 @@ async def get_transition_table(data: DataTransition) -> dict:
 
     """
     return get_contract_table(data=data.dict(), contract_type='Transition')
+
+
+@router.post("/transition/optimization")
+async def calculate_transition_optimization(data: DataTransition) -> dict:
+    """
+    ## Transition Optimization
+    Route to calculate the optimization of a contract using Transition Scheme.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - grosssplit
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+    - optimization_arguments
+    - sensitivity_arguments
+
+    """
+    return get_contract_optimization(data=data.dict(), contract_type='Transition')
 
 
 @router.post("/baseproject")
