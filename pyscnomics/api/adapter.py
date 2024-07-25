@@ -442,16 +442,22 @@ def get_contract_optimization(data: dict, contract_type: str = 'Cost Recovery') 
         enum_list=optimization_parameters,
         element=OptimizationParameter.DEPRECIATION_ACCELERATION)
 
+    # Adding condition of the contract type for retrieving the optimized contract
+    if contract_type == 'Transition':
+        contract_optimized = list_executed_contract[-1].contract2
+    else:
+        contract_optimized = list_executed_contract[-1]
+
     # Adding the information of optimized useful life into the list_params_value
     if index_depreciation is not None:
         optimized_capital_cost = {
-            "year": list_executed_contract[-1].contract2.capital_cost_total.expense_year.tolist(),
-            "cost_allocation": list_executed_contract[-1].contract2.capital_cost_total.cost_allocation,
-            "cost": list_executed_contract[-1].contract2.capital_cost_total.cost.tolist(),
-            "pis_year": list_executed_contract[-1].contract2.capital_cost_total.pis_year.tolist(),
+            "year": contract_optimized.capital_cost_total.expense_year.tolist(),
+            "cost_allocation": contract_optimized.capital_cost_total.cost_allocation,
+            "cost": contract_optimized.capital_cost_total.cost.tolist(),
+            "pis_year": contract_optimized.capital_cost_total.pis_year.tolist(),
             "useful_life_original": useful_life_original,
-            "useful_life_optimized": list_executed_contract[-1].contract2.capital_cost_total.useful_life.tolist(),
-            "description": list_executed_contract[-1].contract2.capital_cost_total.description
+            "useful_life_optimized": contract_optimized.capital_cost_total.useful_life.tolist(),
+            "description": contract_optimized.capital_cost_total.description
         }
 
         # Adding optimized_capital_cost into the result of the optimization
