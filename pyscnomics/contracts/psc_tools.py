@@ -46,7 +46,20 @@ def get_unrecovered_cost(depreciation: np.ndarray,
     left_cost = np.where(np.logical_and((revenue - ftp_ctr - ftp_gov - ic) < depreciation + non_capital,
                                         unrecovered_cost == 0),
                          (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic), 0)
-    unrecovered_cost_final = unrecovered_cost + np.cumsum(left_cost)
+
+    unrecovered_cost_final = unrecovered_cost + left_cost
+
+    # Adding the trailing unrecoverable cost into the array
+    if np.sum(revenue) == 0:
+        pass
+    else:
+        if np.sum(left_cost) == 0:
+            pass
+        else:
+            last_non_zero_indices = max(np.nonzero(revenue)[0])
+            trailing_cost = np.cumsum(left_cost[last_non_zero_indices:])
+
+            unrecovered_cost_final[last_non_zero_indices:] = trailing_cost
     return unrecovered_cost_final
 
 
@@ -187,7 +200,20 @@ def get_unrec_cost_after_tf(depreciation,
                                         unrecovered_cost == 0),
                          (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic) - transferred_cost_in + transferred_cost_out, 0)
     left_cost = np.where(left_cost >= 0, left_cost, 0)
-    unrecovered_cost_final = unrecovered_cost + np.cumsum(left_cost)
+
+    unrecovered_cost_final = unrecovered_cost + left_cost
+
+    # Adding the trailing unrecoverable cost into the array
+    if np.sum(revenue) == 0:
+        pass
+    else:
+        if np.sum(left_cost) == 0:
+            pass
+        else:
+            last_non_zero_indices = max(np.nonzero(revenue)[0])
+            trailing_cost = np.cumsum(left_cost[last_non_zero_indices:])
+
+            unrecovered_cost_final[last_non_zero_indices:] = trailing_cost
     return unrecovered_cost_final
 
 
@@ -264,7 +290,11 @@ def get_dmo(onstream_date: date,
             price: np.ndarray,
             ctr_pretax_share: float,
             unrecovered_cost: np.ndarray,
-            is_dmo_end_weighted) -> tuple:
+            is_dmo_end_weighted: bool,
+            ets: np.ndarray | None = None,
+            ctr_ets: np.ndarray | None = None,
+            ctr_ftp: np.ndarray | None = None,
+            post_uu_22_year2001: bool = True,) -> tuple:
     """
     A function to get the array of Domestic Market Obligation (DMO).
 
@@ -292,6 +322,14 @@ def get_dmo(onstream_date: date,
         The array containing the Unrecovered Cost.
     is_dmo_end_weighted: bool
         The condition of whether DMO is weighted or not.
+    ets: np.ndarray | None
+        The array of Equity to be Split (ETS).
+    ctr_ets: np.ndarray | None
+        The array contractor Equity to be Split (ETS).
+    ctr_ftp: np.ndarray | None
+        The array contractor First Tranche Petroleum (FTP).
+    post_uu_22_year2001: bool
+        The condition when the DMO is calculated using the DMO scheme pre or post UU No.21 Year 2001.
 
     Returns
     -------
@@ -314,13 +352,112 @@ def get_dmo(onstream_date: date,
 
     # Calculate DMO volume
     dmo_holiday = np.where(project_years >= dmo_end_date.year, False, True)
-    dmo_volume = dmo_volume_portion * lifting.get_lifting_rate_arr() * ctr_pretax_share
+
+    # Condition when the DMO scheme is using pre UU No.22 Year 2001
+    if post_uu_22_year2001 is False:
+        dmo_volume = np.where(ets > 0,
+                           np.minimum((dmo_volume_portion * lifting.get_lifting_rate_arr() * ctr_pretax_share),
+                                      np.divide(ctr_ets, lifting.get_price_arr(), where=lifting.get_price_arr() != 0) + np.divide(ctr_ftp, lifting.get_price_arr(), where=lifting.get_price_arr() != 0)),
+                           0)
+    else:
+        dmo_volume = dmo_volume_portion * lifting.get_lifting_rate_arr() * ctr_pretax_share
+
     dmo_fee = np.where(np.logical_and(unrecovered_cost == 0, ~dmo_holiday),
                        dmo_fee_portion * price * dmo_volume,
                        dmo_volume * price)
 
     # Weighted dmo fee condition if the period of dmo is ended in the middle of the year
-    if unrecovered_cost[dmo_indices] > 0 and is_dmo_end_weighted:
+    if unrecovered_cost[dmo_indices] > 0 and is_dmo_end_weighted and dmo_holiday[dmo_indices] == False:
+        dmo_fee[dmo_indices] = (
+                    dmo_end_date.month / 12 * price[dmo_indices] * dmo_volume[dmo_indices] +
+                    (1 - dmo_end_date.month / 12) * dmo_volume[dmo_indices] *
+                    dmo_fee_portion * price[dmo_indices])
+
+    # Calculate Net DMO
+    ddmo = (dmo_volume * price) - dmo_fee
+
+    return dmo_volume, dmo_fee, ddmo
+
+
+def get_dmo_gross_split(
+        onstream_date: date,
+        start_date: date,
+        project_years: np.ndarray,
+        dmo_holiday_duration: int,
+        dmo_volume_portion: float,
+        dmo_fee_portion: float,
+        price: np.ndarray,
+        unrecovered_cost: np.ndarray,
+        is_dmo_end_weighted: bool,
+        net_operating_profit: np.ndarray,
+        contractor_share: np.ndarray) -> tuple:
+    """
+    A function to get the array of Domestic Market Obligation (DMO) in Gross Split contract.
+
+    Parameters
+    ----------
+    onstream_date: date
+        The onstream date.
+    start_date: date
+        The start date of the contract.
+    project_years: np.ndarray
+        The array containing the contract years from the beginning until the end of the contract.
+    dmo_holiday_duration: int
+        The duration of the DMO holiday.
+    dmo_volume_portion: float
+        The DMO volume portion.
+    dmo_fee_portion: float
+        The DMO fee portion.
+    price: np.ndarray
+        The Weighted Average Price (WAP) price of the produced fluid.
+    unrecovered_cost: np.ndarray
+        The array containing the Unrecovered Cost.
+    is_dmo_end_weighted: bool
+        The condition of whether DMO is weighted or not.
+    net_operating_profit: np.ndarray
+        The Net Operating Profit of the contractor.
+    contractor_share: np.ndarray
+        The contractor share.
+
+    Returns
+    -------
+    out: tuple
+        dmo_volume: np.ndarray
+            The array of DMO Volume.
+        dmo_fee: np.ndarray
+            The array of DMO Fee Volume.
+        ddmo: np.ndarray
+            The array of Difference DMO Fee.
+
+    Notes
+    -------
+    The difference with Cost Recovery DMO is that the DMO in Gross Split is using the following formula:
+    DMO Gross Split = IF(net_operating_profit > 0; MIN(DMO Volume Portion * Contractor Share; net_operating_profit); 0)
+    """
+
+    # DMO end date
+    dmo_end_date = onstream_date + dateutils.relativedelta(
+        months=dmo_holiday_duration
+    )
+
+    # Identify position of dmo start year in project years array
+    dmo_indices = onstream_date.year - start_date.year
+
+    # Calculate DMO volume
+    dmo_holiday = np.where(project_years >= dmo_end_date.year, False, True)
+
+    # Calculate the Gross Split DMO
+    dmo_volume = np.where(net_operating_profit > 0,
+                          np.minimum(dmo_volume_portion * contractor_share, net_operating_profit),
+                          0)
+    dmo_volume = np.divide(dmo_volume, price, out=np.zeros_like(dmo_volume, dtype=float), where=price != 0)
+
+    dmo_fee = np.where(np.logical_and(unrecovered_cost == 0, ~dmo_holiday),
+                       dmo_fee_portion * price * dmo_volume,
+                       dmo_volume * price)
+
+    # Weighted dmo fee condition if the period of dmo is ended in the middle of the year
+    if unrecovered_cost[dmo_indices] > 0 and is_dmo_end_weighted and dmo_holiday[dmo_indices] == False:
         dmo_fee[dmo_indices] = (
                     dmo_end_date.month / 12 * price[dmo_indices] * dmo_volume[dmo_indices] +
                     (1 - dmo_end_date.month / 12) * dmo_volume[dmo_indices] *

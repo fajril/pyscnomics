@@ -601,7 +601,7 @@ def get_datetime(ordinal_date) -> datetime:
     return date_time
 
 
-def get_inflation_applied_converter(target: str) -> InflationAppliedTo:
+def get_inflation_applied_converter(target: str | None) -> InflationAppliedTo | None:
     """
     Converts a string representing the application of inflation to its
     corresponding enum value from the InflationAppliedTo class.
@@ -1655,6 +1655,7 @@ def get_optimization_parameter_converter(target: str) -> OptimizationParameter |
         "VAT Rate": OptimizationParameter.VAT_RATE,
         "Effective Tax Rate": OptimizationParameter.EFFECTIVE_TAX_RATE,
         "Ministerial Discretion": OptimizationParameter.MINISTERIAL_DISCRETION,
+        "Depreciation Acceleration": OptimizationParameter.DEPRECIATION_ACCELERATION
     }
 
     for key in attrs.keys():

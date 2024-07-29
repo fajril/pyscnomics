@@ -325,6 +325,10 @@ class OptimizationParameter(Enum):
         Optimization parameter for Effective Tax Rate.
     MINISTERIAL_DISCRETION: str
         Optimization parameter for Ministerial Discretion.
+    VAT_DISCOUNT: str
+        Optimization parameter for VAT Discount.
+    LBT_DISCOUNT: str
+        Optimization parameter for LBT Discount.
     """
     OIL_CTR_PRETAX = 'Oil Contractor Pre Tax'
     GAS_CTR_PRETAX = 'Gas Contractor Pre Tax'
@@ -337,6 +341,9 @@ class OptimizationParameter(Enum):
     VAT_RATE = 'VAT Rate'
     EFFECTIVE_TAX_RATE = 'Effective Tax Rate'
     MINISTERIAL_DISCRETION = 'Ministerial Discretion'
+    VAT_DISCOUNT = 'VAT Discount'
+    LBT_DISCOUNT = 'LBT Discount'
+    DEPRECIATION_ACCELERATION = 'Depreciation Acceleration'
 
 
 class OptimizationTarget(Enum):
@@ -355,3 +362,187 @@ class OptimizationTarget(Enum):
     IRR = 'IRR'
     NPV = 'NPV'
     PI = 'PI'
+
+
+class VariableSplit522017:
+    """
+    Variable Spilt Component for Gross Split No.20 Year 2019 Regime.
+    """
+    class FieldStatus(Enum):
+        """
+        Field Status variable split component.
+        """
+        POD_I = 'Plan of Development I'
+        POD_II = 'Plan of Development II'
+        NO_POD = 'No Plan of Development'
+
+    class FieldLocation(Enum):
+        """
+        Field Location variable split component.
+        """
+        ONSHORE = 'On Shore'
+        OFFSHORE_0_UNTIL_LESSEQUAL_20 = 'Offshore 0 < h <= 20'
+        OFFSHORE_20_UNTIL_LESSEQUAL_50 = 'Offshore 20 < h <= 50'
+        OFFSHORE_50_UNTIL_LESSEQUAL_150 = 'Offshore 50 < h <= 150'
+        OFFSHORE_150_UNTIL_LESSEQUAL_1000 = 'Offshore 150 < h <= 1000'
+        OFFSHORE_GREATERTHAN_1000 = 'Offshore h > 1000'
+
+    class ReservoirDepth(Enum):
+        """
+        Reservoir Depth variable split component.
+        """
+        LESSEQUAL_2500 = 'Reservoir Depth <=2500'
+        GREATERTHAN_2500 = 'Reservoir Depth >2500'
+
+    class InfrastructureAvailability(Enum):
+        """
+        Infrastructure Availability variable split component.
+        """
+        WELL_DEVELOPED = 'Well Developed'
+        NEW_FRONTIER_OFFSHORE = 'New Frontier Offshore'
+        NEW_FRONTIER_ONSHORE = 'New Frontier Onshore'
+
+    class ReservoirType(Enum):
+        """
+        Reservoir Type variable split component.
+        """
+        CONVENTIONAL = 'Conventional'
+        NON_CONVENTIONAL = 'Non Conventional'
+
+    class CO2Content(Enum):
+        """
+        CO2 Content variable split component.
+        """
+        LESSTHAN_5 = '< 5'
+        EQUAL_5_UNTIL_LESSTHAN_10 = '5 <= x < 10'
+        EQUAL_10_UNTIL_LESSTHAN_20 = '10 <= x < 20'
+        EQUAL_20_UNTIL_LESSTHAN_40 = '20 <= x < 40'
+        EQUAL_40_UNTIL_LESSTHAN_60 = '40 <= x < 60'
+        EQUALGREATERTHAN_60 = '60 <= x'
+
+    class H2SContent(Enum):
+        """
+        H2S Content variable split component.
+        """
+        LESSTHAN_100 = '<100'
+        EQUAL_100_UNTIL_LESSTHAN_1000 = '100 <= x < 1000'
+        EQUAL_1000_UNTIL_LESSTHAN_2000 = '1000 <= x < 2000'
+        EQUAL_2000_UNTIL_LESSTHAN_3000 = '2000 <= x < 3000'
+        EQUAL_3000_UNTIL_LESSTHAN_4000 = '3000 <= x < 4000'
+        EQUALGREATERTHAN_4000 = '4000 <= x'
+
+    class APIOil(Enum):
+        """
+        API Density variable split component.
+        """
+        LESSTHAN_25 = '< 25'
+        EQUALGREATERTHAN_25 = '25 <= x'
+
+    class DomesticUse(Enum):
+        """
+        Domestic Use variable split component.
+        """
+        EQUAL_30_UNTIL_LESSTHAN_50 = '30 <= x < 50'
+        EQUAL_50_UNTIL_LESSTHAN_70 = '50 <= x < 70'
+        EQUAL_70_UNTIL_LESSTHAN_100 = '70 <= x < 100'
+
+    class ProductionStage(Enum):
+        """
+        Production Stage variable split component.
+        """
+        PRIMARY = 'Primary'
+        SECONDARY = 'Secondary'
+        TERTIARY = 'Tertiary'
+
+
+class VariableSplit082017:
+    """
+    Variable Spilt Component for Gross Split No.08 Year 2017 Regime.
+    """
+    class FieldStatus(Enum):
+        """
+        Field Status variable split component.
+        """
+        POD_I = 'Plan of Development I'
+        POD_II = 'Plan of Development II'
+        POFD = 'Plan of Further Development'
+        NO_POD = 'No Plan of Development'
+
+    class FieldLocation(Enum):
+        """
+        Field Location variable split component.
+        """
+        ONSHORE = 'On Shore'
+        OFFSHORE_0_UNTIL_LESSEQUAL_20 = 'Offshore 0 < h <= 20'
+        OFFSHORE_20_UNTIL_LESSEQUAL_50 = 'Offshore 20 < h <= 50'
+        OFFSHORE_50_UNTIL_LESSEQUAL_150 = 'Offshore 50 < h <= 150'
+        OFFSHORE_150_UNTIL_LESSEQUAL_1000 = 'Offshore 150 < h <= 1000'
+        OFFSHORE_GREATERTHAN_1000 = 'Offshore h > 1000'
+
+    class ReservoirDepth(Enum):
+        """
+        Reservoir Depth variable split component.
+        """
+        LESSEQUAL_2500 = 'Reservoir Depth <=2500'
+        GREATERTHAN_2500 = 'Reservoir Depth >2500'
+
+    class InfrastructureAvailability(Enum):
+        """
+        Infrastructure Availability variable split component.
+        """
+        WELL_DEVELOPED = 'Well Developed'
+        NEW_FRONTIER = 'New Frontier'
+
+    class ReservoirType(Enum):
+        """
+        Reservoir Type variable split component.
+        """
+        CONVENTIONAL = 'Conventional'
+        NON_CONVENTIONAL = 'Non Conventional'
+
+    class CO2Content(Enum):
+        """
+        CO2 Content variable split component.
+        """
+        LESSTHAN_5 = '< 5'
+        EQUAL_5_UNTIL_LESSTHAN_10 = '5 <= x < 10'
+        EQUAL_10_UNTIL_LESSTHAN_20 = '10 <= x < 20'
+        EQUAL_20_UNTIL_LESSTHAN_40 = '20 <= x < 40'
+        EQUAL_40_UNTIL_LESSTHAN_60 = '40 <= x < 60'
+        EQUALGREATERTHAN_60 = '60 <= x'
+
+    class H2SContent(Enum):
+        """
+        H2S Content variable split component.
+        """
+        LESSTHAN_100 = '<100'
+        EQUAL_100_UNTIL_LESSTHAN_300 = '100 <= x < 300'
+        EQUAL_300_UNTIL_LESSTHAN_500 = '1000 <= x < 500'
+        EQUALGREATERTHAN_500 = '500 <= x'
+
+    class APIOil(Enum):
+        """
+        API Density variable split component.
+        """
+        LESSTHAN_25 = '< 25'
+        EQUALGREATERTHAN_25 = '25 <= x'
+
+    class DomesticUse(Enum):
+        """
+        Domestic Use variable split component.
+        """
+        LESSTHAN_30 = '< 30'
+        EQUAL_30_UNTIL_LESSTHAN_50 = '30 <= x < 50'
+        EQUAL_50_UNTIL_LESSTHAN_70 = '50 <= x < 70'
+        EQUAL_70_UNTIL_LESSTHAN_100 = '70 <= x < 100'
+
+    class ProductionStage(Enum):
+        """
+        Production Stage variable split component.
+        """
+        PRIMARY = 'Primary'
+        SECONDARY = 'Secondary'
+        TERTIARY = 'Tertiary'
+
+
+
