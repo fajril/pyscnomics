@@ -4,7 +4,6 @@ Handles calculations associated with the economic indicators of the project.
 from datetime import date
 import numpy as np
 import pyxirr
-import numpy_financial as npf
 
 from pyscnomics.econ.selection import DiscountingMode
 
@@ -147,10 +146,10 @@ def irr(
     if np.all(cashflow >= 0) or np.all(cashflow <= 0):
         irr_result = 0
     else:
-        irr_result = npf.irr(cashflow)
+        irr_result = pyxirr.irr(cashflow)
 
     # Condition where the irr resulting negative
-    if irr_result is None:
+    if irr_result is None or np.isnan(irr_result):
         irr_result = 0
     elif irr_result < 0:
         irr_result = 0

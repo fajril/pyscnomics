@@ -7,9 +7,9 @@ from typing import Dict
 from pydantic import BaseModel
 import numpy as np
 
-from pyscnomics.econ.costs import Tangible, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type
-from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime
+from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime, GrossSplitRegime
 from pyscnomics.tools.helper import (get_inflation_applied_converter,
                                      get_npv_mode_converter,
                                      get_discounting_mode_converter,
@@ -62,10 +62,11 @@ class SummaryArgumentsBM(BaseModel):
 
     """
     reference_year: int = 2022
-    inflation_rate: float | int = 0.1
+    inflation_rate: float | int | list = 0.1
     discount_rate: float | int = 0.1
     npv_mode: str = "SKK Full Cycle Nominal Terms"
     discounting_mode: str = "End Year"
+    profitability_discounted: bool = False
 
 
 class CostRecoveryBM(BaseModel):
@@ -128,8 +129,8 @@ class CostRecoveryBM(BaseModel):
     tax_split_type: str = "Conventional"
     condition_dict: dict = {}
     indicator_rc_icp_sliding: list[float] = []
-    oil_ctr_pretax_share: float| int = 0.34722220
-    gas_ctr_pretax_share: float| int = 0.5208330
+    oil_ctr_pretax_share: float | int = 0.34722220
+    gas_ctr_pretax_share: float | int = 0.5208330
     oil_ic_rate: float | int = 0
     gas_ic_rate: float | int = 0
     ic_is_available: bool = False
@@ -282,8 +283,9 @@ class ContractArgumentsBM(BaseModel):
     future_rate: float = 0.02
     inflation_rate_applied_to: str = "CAPEX"
     post_uu_22_year2001: bool = True
-    cum_production_split_offset: list | float | int
-    amortization: bool
+    cum_production_split_offset: list | float | int | None = None
+    amortization: bool = False
+    regime: str = "PERMEN_ESDM_12_2020"
 
 
 class ContractArgumentsTransitionBM(BaseModel):
@@ -320,6 +322,8 @@ class LiftingBM(BaseModel):
         The list containing the Gross Heating Value (GHV) of the corresponding fluid.
     prod_rate: list[float] | None
         The list containing the production rate of the corresponding lifting.
+    prod_rate_baseline: list[float] | list[int] | None
+        The list containing the production rate baseline of the corresponding lifting.
     """
     start_year: int
     end_year: int
@@ -327,8 +331,9 @@ class LiftingBM(BaseModel):
     price: list[float] | list[int]
     prod_year: list[int]
     fluid_type: str
-    ghv: list[float] | list[int] | None
-    prod_rate: list[float] | list[int] | None
+    ghv: list[float] | list[int] | None = None
+    prod_rate: list[float] | list[int] | None = None
+    prod_rate_baseline: list[float] | list[int] | None = None
 
 
 class TangibleBM(BaseModel):
@@ -674,8 +679,8 @@ class TransitionBM(BaseModel):
     intangible: Dict[str, IntangibleBM]
     opex: Dict[str, OpexBM]
     asr: Dict[str, AsrBM]
-    costrecovery: CostRecoveryBM = None
-    grosssplit: GrossSplitBM = None
+    costrecovery: CostRecoveryBM | None = None
+    grosssplit: GrossSplitBM | None = None
 
 
 class DataTransition(BaseModel):
@@ -700,6 +705,7 @@ class DataTransition(BaseModel):
     contract_arguments: ContractArgumentsTransitionBM
     summary_arguments: SummaryArgumentsBM
     result: dict = None
+    optimization_arguments: OptimizationBM = None
 
 
 def convert_str_to_date(str_object: str | int) -> date | None:
@@ -838,7 +844,7 @@ def convert_dict_to_lifting(data_raw: dict) -> tuple:
     return assign_lifting(data_raw=data_raw)
 
 
-def convert_dict_to_tangible(data_raw: dict) -> tuple:
+def convert_dict_to_capital(data_raw: dict) -> tuple:
     """
     The function to convert a dictionary into tuple of Tangible dataclass.
 
@@ -853,7 +859,7 @@ def convert_dict_to_tangible(data_raw: dict) -> tuple:
         tuple[Tangible]
     """
     tangible_list = [
-        Tangible(
+        CapitalCost(
             start_year=data_raw[key]['start_year'],
             end_year=data_raw[key]['end_year'],
             cost=np.array(data_raw[key]['cost']),
@@ -1203,6 +1209,32 @@ def convert_str_to_inflationappliedto(str_object: str):
     return get_inflation_applied_converter(target=str_object)
 
 
+def convert_grosssplitregime_to_enum(target: str) -> GrossSplitRegime:
+    """
+    Converts a string representing the Gross Split Regime to its
+    corresponding enum value from the GrossSplitRegime enum class.
+
+    Parameters
+    ----------
+    target: str
+        The string representation of the gross split regime.
+
+    Returns
+    -------
+
+    """
+    attrs = {
+        "PERMEN_ESDM_8_2017": GrossSplitRegime.PERMEN_ESDM_8_2017,
+        "PERMEN_ESDM_52_2017": GrossSplitRegime.PERMEN_ESDM_52_2017,
+        "PERMEN_ESDM_20_2019": GrossSplitRegime.PERMEN_ESDM_20_2019,
+        "PERMEN_ESDM_12_2020": GrossSplitRegime.PERMEN_ESDM_12_2020,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
+
 def convert_summary_to_dict(dict_object: dict):
     """
     The function to convert the summary into skk executive summary format.
@@ -1313,3 +1345,19 @@ def convert_str_to_optimization_parameters(str_object: str):
 
     """
     return get_optimization_parameter_converter(target=str_object)
+
+
+def convert_to_float(target=int):
+    """
+    Function to convert integer into float.
+
+    Parameters
+    ----------
+    target: int
+        The target that will be converted.
+
+    Returns
+    -------
+    float
+    """
+    return float(target)

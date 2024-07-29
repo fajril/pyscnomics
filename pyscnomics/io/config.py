@@ -83,8 +83,8 @@ class CO2LiftingDataException(Exception):
     pass
 
 
-class TangibleCostDataException(Exception):
-    """ Exception to be raised for an inappropriate use of TangibleCostData class """
+class CapitalCostDataException(Exception):
+    """ Exception to be raised for an inappropriate use of CapitalCostData class """
 
     pass
 
@@ -2001,9 +2001,9 @@ class CO2LiftingData:
 
 
 @dataclass
-class TangibleCostData:
+class CapitalCostData:
     """
-    A dataclass representing tangible cost information for an oil and gas economic project.
+    A dataclass representing capital cost information for an oil and gas economic project.
 
     Attributes
     ----------
@@ -2070,7 +2070,7 @@ class TangibleCostData:
 
         else:
             if not isinstance(expense_year_init, np.ndarray):
-                raise TangibleCostDataException(
+                raise CapitalCostDataException(
                     f"Expense year data must be given in the form of numpy.ndarray. "
                     f"The current expense_year data is given in the form of: "
                     f"({expense_year_init.__class__.__qualname__})."
@@ -2085,7 +2085,7 @@ class TangibleCostData:
 
         else:
             if not isinstance(self.cost_allocation, np.ndarray):
-                raise TangibleCostDataException(
+                raise CapitalCostDataException(
                     f"Cost allocation data must be given in the form of np.ndarray. "
                     f"The current cost_allocation data is given in the form of: "
                     f"({self.cost_allocation.__class__.__qualname__})."
@@ -2105,7 +2105,7 @@ class TangibleCostData:
 
         else:
             if not isinstance(self.cost, np.ndarray):
-                raise TangibleCostDataException(
+                raise CapitalCostDataException(
                     f"Cost data must be given in the form of numpy.ndarray. "
                     f"The current cost data is given in the form of: "
                     f"({self.cost.__class__.__qualname__})."
@@ -2123,7 +2123,7 @@ class TangibleCostData:
 
         else:
             if not isinstance(self.pis_year, np.ndarray):
-                raise TangibleCostDataException(
+                raise CapitalCostDataException(
                     f"PIS year data must be given in the form of numpy.ndarray. "
                     f"The current pis_year data is given in the form of: "
                     f"({self.pis_year.__class__.__qualname__})."
@@ -2141,7 +2141,7 @@ class TangibleCostData:
 
         else:
             if not isinstance(self.useful_life, np.ndarray):
-                raise TangibleCostDataException(
+                raise CapitalCostDataException(
                     f"Useful life data must be given in the form of numpy.ndarray. "
                     f"The current useful_life data is given in the form of: "
                     f"({self.useful_life.__class__.__qualname__})."
@@ -2159,7 +2159,7 @@ class TangibleCostData:
 
         else:
             if not isinstance(self.depreciation_factor, np.ndarray):
-                raise TangibleCostDataException(
+                raise CapitalCostDataException(
                     f"Depreciation factor data must be given in the form of numpy.ndarray. "
                     f"The current depreciation_factor data is given in the form of: "
                     f"({self.depreciation_factor.__class__.__qualname__})."
@@ -2179,7 +2179,7 @@ class TangibleCostData:
 
         else:
             if not isinstance(self.salvage_value, np.ndarray):
-                raise TangibleCostDataException(
+                raise CapitalCostDataException(
                     f"Salvage value data must be given in the form of numpy.ndarray. "
                     f"The current salvage_value data is given in the form of: "
                     f"({self.salvage_value.__class__.__qualname__})."
@@ -2197,7 +2197,7 @@ class TangibleCostData:
 
         else:
             if not isinstance(self.is_ic_applied, np.ndarray):
-                raise TangibleCostDataException(
+                raise CapitalCostDataException(
                     f"Is IC applied data must be given in the form of np.ndarray. "
                     f"The current is_ic_applied data is given in the form of: "
                     f"({self.is_ic_applied.__class__.__qualname__})."
@@ -2217,7 +2217,7 @@ class TangibleCostData:
 
         else:
             if not isinstance(self.vat_portion, np.ndarray):
-                raise TangibleCostDataException(
+                raise CapitalCostDataException(
                     f"VAT portion data must be given in the form of numpy.ndarray. "
                     f"The current vat_portion data is given in the form of: "
                     f"({self.vat_portion.__class__.__qualname__})."
@@ -2235,7 +2235,7 @@ class TangibleCostData:
 
         else:
             if not isinstance(self.lbt_portion, np.ndarray):
-                raise TangibleCostDataException(
+                raise CapitalCostDataException(
                     f"LBT portion data must be given in the form of numpy.ndarray. "
                     f"The current lbt_portion data is given in the form of: "
                     f"({self.lbt_portion.__class__.__qualname__})."
@@ -2253,7 +2253,7 @@ class TangibleCostData:
 
         else:
             if not isinstance(self.description, np.ndarray):
-                raise TangibleCostDataException(
+                raise CapitalCostDataException(
                     f"Description data must be given in the form of np.ndarray. "
                     f"The current description data is given in the form of: "
                     f"({self.description.__class__.__qualname__})."

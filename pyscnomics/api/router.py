@@ -1,5 +1,6 @@
 from fastapi import APIRouter
-from pyscnomics.api.adapter import (get_costrecovery,
+from pyscnomics.api.adapter import (get_baseproject,
+                                    get_costrecovery,
                                     get_contract_table,
                                     get_contract_optimization,
                                     get_grosssplit,
@@ -279,7 +280,7 @@ async def get_transition_detailed(data: DataTransition) -> dict:
 @router.post("/transition/table")
 async def get_transition_table(data: DataTransition) -> dict:
     """
-    ## Gross Split Table
+    ## Transition Table
     Route to calculate a contract using Transition Scheme and get its cashflow table.
 
     ### Data Input Structure
@@ -308,3 +309,91 @@ async def get_transition_table(data: DataTransition) -> dict:
     """
     return get_contract_table(data=data.dict(), contract_type='Transition')
 
+
+@router.post("/transition/optimization")
+async def calculate_transition_optimization(data: DataTransition) -> dict:
+    """
+    ## Transition Optimization
+    Route to calculate the optimization of a contract using Transition Scheme.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - grosssplit
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+    - optimization_arguments
+    - sensitivity_arguments
+
+    """
+    return get_contract_optimization(data=data.dict(), contract_type='Transition')
+
+
+@router.post("/baseproject")
+async def calculate_baseproject(data: Data) -> dict:
+    """
+    ## Base Project
+    Route to calculate a contract using Base Project Scheme and get its executive summary.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+
+    """
+    return get_baseproject(data=data.dict())[0]
+
+
+@router.post("/baseproject/table")
+async def get_baseproject_table(data: Data) -> dict:
+    """
+    ## Base Project Table
+    Route to calculate a contract using Base Project Scheme and get its cashflow table.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+
+    """
+    return get_contract_table(data=data.dict(), contract_type='Base Project')
+
+
+@router.post("/baseproject/detailed_summary")
+async def get_baseproject_detailed(data: Data) -> dict:
+    """
+    ## Base Project Detailed Summary
+    Route to get a contract detailed summary using Base Project Scheme.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+
+    """
+
+    return get_detailed_summary(data=data.dict(),
+                                contract_type='Base Project')

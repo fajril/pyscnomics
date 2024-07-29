@@ -18,7 +18,7 @@ psc.run(tax_rate=0.22,
 
 def test_tangible():
     base = np.asarray(load_testing(dataset_type='small_oil', key='oil_tangible'))
-    calc = psc._oil_tangible_expenditures
+    calc = psc._oil_capital_expenditures
     np.testing.assert_allclose(base, calc)
 
 
