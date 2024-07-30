@@ -97,7 +97,8 @@ def get_cost_to_be_recovered_after_tf(unrecovered_cost: np.ndarray,
     out: np.ndarray
         The array of cost to be recovered.
     """
-    ctr = np.concatenate((np.zeros(1), -np.diff(unrecovered_cost - np.cumsum(transferred_cost))))
+    unrecovered_cost = unrecovered_cost - transferred_cost
+    ctr = np.concatenate((np.zeros(1), -np.diff(unrecovered_cost)))
     result = np.where(ctr > 0, ctr, 0)
 
     return result
@@ -486,7 +487,7 @@ def transfer_treatment(unrecovered_prior_to_cost: np.ndarray,
                                       0,
                                       diff_to_prior)
     transfer_adjusted = transfer_prior - positive_diff_to_prior
-    transfer_final = np.where(transfer_adjusted < 0, 0, transfer_adjusted)
+    transfer_final = np.where(transfer_adjusted < 0, transfer_prior, transfer_adjusted)
     #
     # df = pd.DataFrame()
     # df['Check'] = transfer_final
