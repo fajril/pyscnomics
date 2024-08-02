@@ -906,52 +906,33 @@ class CostRecovery(BaseProject):
             ic_rate=self.gas_ic_rate,
         )
 
-        # Unrecovered cost before transfer/consolidation
-        self._oil_unrecovered_before_transfer = psc_tools.get_unrecovered_cost(
+        (
+            self._oil_unrecovered_before_transfer,
+            self._oil_cost_to_be_recovered,
+            self._oil_cost_recovery
+        ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
+            project_years=self.project_years,
             depreciation=self._oil_depreciation,
             non_capital=self._oil_non_capital,
             revenue=self._oil_revenue,
             ftp_ctr=self._oil_ftp_ctr,
             ftp_gov=self._oil_ftp_gov,
             ic=self._oil_ic_paid,
+            cr_cap_rate=self.oil_cr_cap_rate,
         )
 
-        self._gas_unrecovered_before_transfer = psc_tools.get_unrecovered_cost(
+        (
+            self._gas_unrecovered_before_transfer,
+            self._gas_cost_to_be_recovered,
+            self._gas_cost_recovery
+        ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
+            project_years=self.project_years,
             depreciation=self._gas_depreciation,
             non_capital=self._gas_non_capital,
             revenue=self._gas_revenue,
             ftp_ctr=self._gas_ftp_ctr,
             ftp_gov=self._gas_ftp_gov,
             ic=self._gas_ic_paid,
-        )
-
-        # Cost to be recovered
-        self._oil_cost_to_be_recovered = psc_tools.get_cost_to_be_recovered(
-            unrecovered_cost=self._oil_unrecovered_before_transfer,
-        )
-
-        self._gas_cost_to_be_recovered = psc_tools.get_cost_to_be_recovered(
-            unrecovered_cost=self._gas_unrecovered_before_transfer,
-        )
-
-        # Cost recovery
-        self._oil_cost_recovery = self._get_cost_recovery(
-            revenue=self._oil_revenue,
-            ftp=self._oil_ftp,
-            ic=self._oil_ic_paid,
-            depreciation=self._oil_depreciation,
-            non_capital=self._oil_non_capital,
-            cost_to_be_recovered=self._oil_cost_to_be_recovered,
-            cr_cap_rate=self.oil_cr_cap_rate,
-        )
-
-        self._gas_cost_recovery = self._get_cost_recovery(
-            revenue=self._gas_revenue,
-            ftp=self._gas_ftp,
-            ic=self._gas_ic_paid,
-            depreciation=self._gas_depreciation,
-            non_capital=self._gas_non_capital,
-            cost_to_be_recovered=self._gas_cost_to_be_recovered,
             cr_cap_rate=self.gas_cr_cap_rate,
         )
 
@@ -979,79 +960,34 @@ class CostRecovery(BaseProject):
             oil_ets_pretransfer=self._oil_ets_before_transfer,
         )
 
-        self._oil_unrecovered_after_transfer = psc_tools.get_unrec_cost_after_tf(
+        (
+            self._oil_unrecovered_after_transfer,
+            self._oil_cost_to_be_recovered_after_tf,
+            self._oil_cost_recovery_after_tf
+        ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
+            project_years=self.project_years,
             depreciation=self._oil_depreciation,
             non_capital=self._oil_non_capital,
-            revenue=self._oil_revenue,
+            revenue=self._oil_revenue + self._transfer_to_oil,
             ftp_ctr=self._oil_ftp_ctr,
             ftp_gov=self._oil_ftp_gov,
             ic=self._oil_ic_paid,
-            transferred_cost_in=self._transfer_to_oil,
-            transferred_cost_out=self._transfer_to_gas,
+            cr_cap_rate=self.oil_cr_cap_rate,
         )
 
-        self._gas_unrecovered_after_transfer = psc_tools.get_unrec_cost_after_tf(
+        (
+            self._gas_unrecovered_after_transfer,
+            self._gas_cost_to_be_recovered_after_tf,
+            self._gas_cost_recovery_after_tf
+        ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
+            project_years=self.project_years,
             depreciation=self._gas_depreciation,
             non_capital=self._gas_non_capital,
-            revenue=self._gas_revenue,
+            revenue=self._gas_revenue + self._transfer_to_gas,
             ftp_ctr=self._gas_ftp_ctr,
             ftp_gov=self._gas_ftp_gov,
             ic=self._gas_ic_paid,
-            transferred_cost_in=self._transfer_to_gas,
-            transferred_cost_out=self._transfer_to_oil,
-        )
-
-        # Adjust Transfer
-        self._transfer_to_oil = psc_tools.transfer_treatment(
-            unrecovered_prior_to_cost=self._oil_unrecovered_before_transfer,
-            unrecovered_after_to_cost=self._oil_unrecovered_after_transfer,
-            transfer_prior=self._transfer_to_oil)
-
-        self._transfer_to_gas = psc_tools.transfer_treatment(
-            unrecovered_prior_to_cost=self._gas_unrecovered_before_transfer,
-            unrecovered_after_to_cost=self._gas_unrecovered_after_transfer,
-            transfer_prior=self._transfer_to_gas)
-
-        # Cost to be recovered after transfer
-        self._oil_cost_to_be_recovered_after_tf = (
-            psc_tools.get_cost_to_be_recovered_after_tf(
-                unrecovered_cost=self._oil_unrecovered_after_transfer,
-                transferred_cost=self._transfer_to_oil,
-            )
-        )
-
-        self._gas_cost_to_be_recovered_after_tf = (
-            psc_tools.get_cost_to_be_recovered_after_tf(
-                unrecovered_cost=self._gas_unrecovered_after_transfer,
-                transferred_cost=self._transfer_to_gas,
-            )
-        )
-
-        # Cost recovery after transfer
-        self._oil_cost_recovery_after_tf = (
-                self._get_cost_recovery(
-                    revenue=self._oil_revenue,
-                    ftp=self._oil_ftp,
-                    ic=self._oil_ic_paid,
-                    depreciation=self._oil_depreciation,
-                    non_capital=self._oil_non_capital,
-                    cost_to_be_recovered=self._oil_cost_to_be_recovered_after_tf,
-                    cr_cap_rate=self.oil_cr_cap_rate,
-                )
-                + self._transfer_to_oil
-        )
-
-        self._gas_cost_recovery_after_tf = (
-                self._get_cost_recovery(
-                    revenue=self._gas_revenue,
-                    ftp=self._gas_ftp,
-                    ic=self._gas_ic_paid,
-                    depreciation=self._gas_depreciation,
-                    non_capital=self._gas_non_capital,
-                    cost_to_be_recovered=self._gas_cost_to_be_recovered_after_tf,
-                    cr_cap_rate=self.gas_cr_cap_rate,
-                )
-                + self._transfer_to_gas
+            cr_cap_rate=self.gas_cr_cap_rate,
         )
 
         # ETS after Transfer
