@@ -11,6 +11,8 @@ from pyscnomics.contracts.transition import Transition
 from pyscnomics.tools.summary import get_summary
 from pyscnomics.tools.table import get_table
 from pyscnomics.optimize.optimization import optimize_psc
+from pyscnomics.optimize.optimization_transition import optimize_psc_core as optimize_psc_trans
+from pyscnomics.econ.selection import OptimizationParameter
 from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_list_to_array_float_or_array,
                                       convert_dict_to_lifting,
@@ -345,8 +347,11 @@ def get_contract_optimization(data: dict, contract_type: str = 'Cost Recovery') 
         The result of the optimization in dictionary format
 
     """
-    if data['optimization_arguments'] is None:
+    if 'optimization_arguments' not in data:
         raise ContractException("The payload does not have the optimization_arguments key")
+
+    if data['optimization_arguments'] is None:
+        raise ContractException("The payload optimization_arguments does not have any values")
 
     # Converting the parameters in dict_optimization to the corresponding enum
     optimization_parameters = [
@@ -377,19 +382,40 @@ def get_contract_optimization(data: dict, contract_type: str = 'Cost Recovery') 
         contract_arguments = get_grosssplit(data=data)[2]
         summary_argument = get_grosssplit(data=data)[3]
 
+    elif contract_type == 'Transition':
+        contract = get_transition(data=data)[1]
+        contract_arguments = get_transition(data=data)[2]
+        summary_argument = get_transition(data=data)[3]
+
     else:
         contract = NotImplemented
         contract_arguments = NotImplemented
         summary_argument = NotImplemented
 
-    list_str, list_params_value, result_optimization, list_executed_contract = optimize_psc(
-        dict_optimization=dict_optimization,
-        contract=contract,
-        contract_arguments=contract_arguments,
-        target_optimization_value=target_optimization_value,
-        summary_argument=summary_argument,
-        target_parameter=target_parameter,
-    )
+    if contract_type == 'Transition':
+        # Retrieve the original useful life of the capital cost
+        useful_life_original = contract.contract2.capital_cost_total.useful_life.tolist()
+
+        list_str, list_params_value, result_optimization, list_executed_contract = optimize_psc_trans(
+            dict_optimization=dict_optimization,
+            contract=contract,
+            contract_arguments=contract_arguments,
+            target_optimization_value=target_optimization_value,
+            summary_argument=summary_argument,
+            target_parameter=target_parameter,
+        )
+
+    else:
+        # Retrieve the original useful life of the capital cost
+        useful_life_original = contract.capital_cost_total.useful_life.tolist()
+        list_str, list_params_value, result_optimization, list_executed_contract = optimize_psc(
+            dict_optimization=dict_optimization,
+            contract=contract,
+            contract_arguments=contract_arguments,
+            target_optimization_value=target_optimization_value,
+            summary_argument=summary_argument,
+            target_parameter=target_parameter,
+        )
 
     # Treatment to add the useful life of optimization into the result
     def get_enum_index(enum_list: list, element: any) -> int | None:
@@ -412,20 +438,26 @@ def get_contract_optimization(data: dict, contract_type: str = 'Cost Recovery') 
             return None
 
     # Get the index of the depreciation optimization parameter
-    from pyscnomics.econ.selection import OptimizationParameter
     index_depreciation = get_enum_index(
         enum_list=optimization_parameters,
         element=OptimizationParameter.DEPRECIATION_ACCELERATION)
 
+    # Adding condition of the contract type for retrieving the optimized contract
+    if contract_type == 'Transition':
+        contract_optimized = list_executed_contract[-1].contract2
+    else:
+        contract_optimized = list_executed_contract[-1]
+
     # Adding the information of optimized useful life into the list_params_value
     if index_depreciation is not None:
         optimized_capital_cost = {
-            "year": list_executed_contract[-1].capital_cost_total.project_years.tolist(),
-            "cost_allocation": list_executed_contract[-1].capital_cost_total.cost_allocation,
-            "cost": list_executed_contract[-1].capital_cost_total.cost.tolist(),
-            "pis_year": list_executed_contract[-1].capital_cost_total.pis_year.tolist(),
-            "useful_life": list_executed_contract[-1].capital_cost_total.useful_life.tolist(),
-            "description": list_executed_contract[-1].capital_cost_total.description
+            "year": contract_optimized.capital_cost_total.expense_year.tolist(),
+            "cost_allocation": contract_optimized.capital_cost_total.cost_allocation,
+            "cost": contract_optimized.capital_cost_total.cost.tolist(),
+            "pis_year": contract_optimized.capital_cost_total.pis_year.tolist(),
+            "useful_life_original": useful_life_original,
+            "useful_life_optimized": contract_optimized.capital_cost_total.useful_life.tolist(),
+            "description": contract_optimized.capital_cost_total.description
         }
 
         # Adding optimized_capital_cost into the result of the optimization

@@ -705,6 +705,7 @@ class DataTransition(BaseModel):
     contract_arguments: ContractArgumentsTransitionBM
     summary_arguments: SummaryArgumentsBM
     result: dict = None
+    optimization_arguments: OptimizationBM = None
 
 
 def convert_str_to_date(str_object: str | int) -> date | None:
