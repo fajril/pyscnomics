@@ -867,6 +867,10 @@ class CostRecovery(BaseProject):
             inflation_rate=inflation_rate,
         )
 
+        # Treatment of the undepreciated asset to be summed up in the last year of the contract
+        self._oil_depreciation[-1] = self._oil_depreciation[-1] + self._oil_undepreciated_asset
+        self._gas_depreciation[-1] = self._gas_depreciation[-1] + self._gas_undepreciated_asset
+
         # Non-capital costs (intangible + opex + asr)
         self._oil_non_capital = (
                 self._oil_intangible_expenditures
