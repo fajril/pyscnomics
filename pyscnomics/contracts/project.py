@@ -138,7 +138,10 @@ class BaseProject:
     _electricity_wap_price: np.ndarray = field(default=None, init=False, repr=False)
     _co2_wap_price: np.ndarray = field(default=None, init=False, repr=False)
 
+    _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
+
     def __post_init__(self):
+
         # Specify project duration and project years, raise error for inappropriate start date
         if self.start_date <= self.end_date:
             self.project_duration = self.end_date.year - self.start_date.year + 1
