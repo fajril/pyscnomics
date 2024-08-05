@@ -555,7 +555,7 @@ def transfer_treatment(unrecovered_prior_to_cost: np.ndarray,
                                       0,
                                       diff_to_prior)
     transfer_adjusted = transfer_prior - positive_diff_to_prior
-    transfer_final = np.where(transfer_adjusted < 0, 0, transfer_adjusted)
+    transfer_final = np.where(transfer_adjusted < 0, transfer_prior, transfer_adjusted)
     #
     # df = pd.DataFrame()
     # df['Check'] = transfer_final

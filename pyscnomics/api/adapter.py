@@ -20,6 +20,7 @@ from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_dict_to_intangible,
                                       convert_dict_to_opex,
                                       convert_dict_to_asr,
+                                      convert_dict_to_cost_of_sales,
                                       convert_list_to_array_float,
                                       convert_list_to_array_float_or_array_or_none,
                                       convert_str_to_taxsplit,
@@ -70,6 +71,8 @@ def get_setup_dict(data: dict) -> tuple:
         The intangible cost of the project, in Intangible Dataclass format.
     opex: OPEX
         The opex cost of the project, in OPEX Dataclass format.
+    cost_of_sales: CostOfSales
+        The opex cost of the project, in CostOfSales Dataclass format.
     asr: ASR
         The asr cost of the project, in ASR Dataclass format.
 
@@ -84,7 +87,8 @@ def get_setup_dict(data: dict) -> tuple:
     intangible = convert_dict_to_intangible(data_raw=data['intangible'])
     opex = convert_dict_to_opex(data_raw=data['opex'])
     asr = convert_dict_to_asr(data_raw=data['asr'])
-    return start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr
+    cost_of_sales = convert_dict_to_cost_of_sales(data_raw=data['cost_of_sales'])
+    return start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales
 
 
 def get_summary_dict(data: dict) -> dict:
@@ -179,7 +183,7 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         The summary arguments used in retrieving the executive summary of the contract.
 
     """
-    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr = (
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
         get_setup_dict(data=data))
 
     contract = CostRecovery(
@@ -192,6 +196,7 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         intangible_cost=intangible,
         opex=opex,
         asr_cost=asr,
+        cost_of_sales=cost_of_sales,
         oil_ftp_is_available=data['costrecovery']['oil_ftp_is_available'],
         oil_ftp_is_shared=data['costrecovery']['oil_ftp_is_shared'],
         oil_ftp_portion=convert_to_float(target=data['costrecovery']['oil_ftp_portion']),
@@ -235,7 +240,9 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
         "future_rate": convert_to_float(target=data['contract_arguments']['future_rate']),
         "inflation_rate_applied_to": convert_str_to_inflationappliedto(str_object=data['contract_arguments']['inflation_rate_applied_to']),
-        "post_uu_22_year2001": data['contract_arguments']['post_uu_22_year2001']
+        "post_uu_22_year2001": data['contract_arguments']['post_uu_22_year2001'],
+        "oil_cost_of_sales_applied": data["contract_arguments"]["oil_cost_of_sales_applied"],
+        "gas_cost_of_sales_applied": data["contract_arguments"]["gas_cost_of_sales_applied"]
     }
 
     # Running the contract
@@ -505,7 +512,7 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         The summary arguments used in retrieving the executive summary of the contract.
 
     """
-    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr = (
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
         get_setup_dict(data=data))
 
     contract = GrossSplit(
@@ -731,7 +738,7 @@ def get_baseproject(data: dict, summary_result: bool = True):
         The summary arguments used in retrieving the executive summary of the contract.
 
     """
-    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr = (
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
         get_setup_dict(data=data))
 
     contract = BaseProject(start_date=start_date,

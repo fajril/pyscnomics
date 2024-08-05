@@ -7,7 +7,7 @@ from typing import Dict
 from pydantic import BaseModel
 import numpy as np
 
-from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type
 from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime, GrossSplitRegime
 from pyscnomics.tools.helper import (get_inflation_applied_converter,
@@ -286,6 +286,8 @@ class ContractArgumentsBM(BaseModel):
     cum_production_split_offset: list | float | int | None = None
     amortization: bool = False
     regime: str = "PERMEN_ESDM_12_2020"
+    oil_cost_of_sales_applied: bool = False
+    gas_cost_of_sales_applied: bool = False
 
 
 class ContractArgumentsTransitionBM(BaseModel):
@@ -523,6 +525,30 @@ class AsrBM(BaseModel):
     lbt_discount: list[float] | list[int]
 
 
+class CostOfSalesBM(BaseModel):
+    """
+    The BaseModel to validate the Intangible input data.
+
+    Parameters
+    ----------
+    start_year: int
+        The start year of the project.
+    end_year: int
+        The end year of the project.
+    cost: list[float]
+        An list representing the cost of an intangible asset.
+    expense_year: list[int]
+        An list representing the expense year of an intangible asset.
+    cost_allocation: list[str]
+        A list representing the cost allocation of an intangible asset.
+    """
+    start_year: int
+    end_year: int
+    cost: list[float] | list[int]
+    expense_year: list[int]
+    cost_allocation: list[str]
+
+
 class OptimizationDictBM(BaseModel):
     """
     The BaseModel to validate the Optimization Dictionary input data.
@@ -639,6 +665,7 @@ class Data(BaseModel):
     intangible: Dict[str, IntangibleBM]
     opex: Dict[str, OpexBM]
     asr: Dict[str, AsrBM]
+    cost_of_sales: Dict[str, CostOfSalesBM] = None
     optimization_arguments: OptimizationBM = None
     sensitivity_arguments: SensitivityBM = None
     uncertainty_arguments: UncertaintyBM = None
@@ -981,6 +1008,33 @@ def convert_dict_to_asr(data_raw: dict) -> tuple:
     ]
 
     return tuple(asr_list)
+
+
+def convert_dict_to_cost_of_sales(data_raw: dict) -> tuple:
+    """
+    The function to convert dictionary into tuple of CostOfSales dataclass.
+
+    Parameters
+    ----------
+    data_raw: dict
+        The dictionary which will be converted into tuple of Cost Of Sales
+
+    Returns
+    -------
+    out:
+        tuple[ASR]
+    """
+    cos_list = [
+        CostOfSales(
+            start_year=data_raw[key]['start_year'],
+            end_year=data_raw[key]['end_year'],
+            cost=np.array(data_raw[key]['cost'], dtype=float),
+            expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
+            cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),)
+        for key in data_raw.keys()
+    ]
+
+    return tuple(cos_list)
 
 
 def convert_str_to_taxsplit(str_object: str):

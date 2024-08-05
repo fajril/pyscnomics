@@ -205,6 +205,7 @@ class CostRecovery(BaseProject):
 
     # Consolidated Attributes
     _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_cost_of_sales: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_capital_cost: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_intangible: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
@@ -689,7 +690,7 @@ class CostRecovery(BaseProject):
 
                 ftp_prior_b3[i] = ftp_prior_b3[i - 1] + ftp_considered_b5[i - 1]
 
-                ftp_diff_b4[i] = np.where(ftp_cum_b2[i] > unrec_cost[i],
+                ftp_diff_b4[i] = np.where(ftp_cum_b2[i] > ftp_prior_b3[i],
                                           ftp_cum_b2[i] - ftp_prior_b3[i],
                                           0)
                 ftp_considered_b5[i] = np.where(ftp_diff_b4[i] > unrec_cost[i],
@@ -709,6 +710,80 @@ class CostRecovery(BaseProject):
             ctr_tax = taxable_income * tax_rate
 
         return ctr_tax
+
+    @staticmethod
+    def _get_tax_payment_pdjp(
+            ftp_ctr: np.ndarray,
+            unrec_cost: np.ndarray,
+            tax_rate: np.ndarray,
+            taxable_income: np.ndarray,
+            ctr_share: np.ndarray,
+            ddmo: np.ndarray,
+    ):
+        # Defining the array used in calculation of ftp tax payment
+        ftp_cum_b2 = np.cumsum(ftp_ctr)
+        ftp_prior_b3 = np.zeros_like(ftp_ctr, dtype=float)
+        ftp_diff_b4 = np.zeros_like(ftp_ctr, dtype=float)
+        ftp_considered_b5 = np.zeros_like(ftp_ctr, dtype=float)
+
+        # Looping throughout the ftp array
+        for i, value in enumerate(ftp_ctr):
+            if i == 0:
+                ftp_prior_b3[i] = 0
+
+            ftp_prior_b3[i] = ftp_prior_b3[i - 1] + ftp_considered_b5[i - 1]
+
+            ftp_diff_b4[i] = np.where(ftp_cum_b2[i] > ftp_prior_b3[i],
+                                      ftp_cum_b2[i] - ftp_prior_b3[i],
+                                      0)
+            ftp_considered_b5[i] = np.where(ftp_diff_b4[i] > unrec_cost[i],
+                                            ftp_diff_b4[i] - unrec_cost[i],
+                                            0)
+
+        # Calculating the ftp tax payment
+        ftp_tax_paid = ftp_considered_b5 * tax_rate
+
+        # Calculating the taxable income without ftp
+        taxable_income_wo_ftp = taxable_income - ftp_ctr
+
+        # Defining Taxing flag
+        applied_tax = np.where(ctr_share > 0, 1, 0)
+        cum_ti = np.cumsum(taxable_income_wo_ftp)
+
+        applied_tax_prior = np.concatenate((np.zeros(1), applied_tax))[0:-1]
+
+        ctr_ets_tax = np.where(
+            np.logical_and(applied_tax == 1, applied_tax_prior == 0),
+            cum_ti * tax_rate,
+            np.where(
+                np.logical_and(applied_tax == 1, applied_tax_prior == 1),
+                taxable_income_wo_ftp * tax_rate,
+                0,
+            ),
+        )
+
+        # Tax from FTP and Contractor Equity
+        ctr_tax = ftp_tax_paid + ctr_ets_tax
+
+        # Contractor Share without FTP
+        ets_and_ftp_ctr = ctr_share + ftp_ctr
+
+        # Initiating the array of unpaid_tax and tax_paid
+        unpaid_tax = np.zeros_like(taxable_income,dtype=float)
+        tax_paid = np.zeros_like(taxable_income,dtype=float)
+
+        for index, i in enumerate(taxable_income):
+            if index == 0:
+                pass
+            else:
+                tax_paid[index] = np.where(taxable_income[index] > ctr_tax[index] + unpaid_tax[index - 1],
+                                           ctr_tax[index] + unpaid_tax[index - 1],
+                                           ets_and_ftp_ctr[index] - ddmo[index])
+                unpaid_tax[index] = np.where(ctr_tax[index] + unpaid_tax[index-1] > tax_paid[index],
+                                             ctr_tax[index] + unpaid_tax[index-1] - tax_paid[index],
+                                             0)
+
+        return tax_paid, unpaid_tax
 
     @staticmethod
     def _unpaid_and_tax_balance(tax_payment: np.ndarray, ets_ctr: np.ndarray):
@@ -760,6 +835,42 @@ class CostRecovery(BaseProject):
             self._oil_sunk_cost = np.zeros(1)
             self._gas_sunk_cost = np.zeros(1)
 
+    def _apply_cost_of_sales(self,
+                             oil_applied: bool = False,
+                             gas_applied: bool = False):
+        """
+        The function to apply the cost of sales.
+
+        Parameters
+        ----------
+        oil_applied: bool
+            The condition when oil is being applied by cost of sales.
+        gas_applied: bool
+            The condition when gas is being applied by cost of sales.
+
+        """
+        # Condition while the oil cost of sales is applied while there is no oil revenue
+        if oil_applied is True and np.sum(self._oil_revenue) <= 0:
+            raise CostRecoveryException(
+                f"The oil revenue is zero or below zero throughout the project years. "
+            )
+        # Condition when the oil cost of sales is applied while there are oil revenues
+        elif oil_applied is True and np.sum(self._oil_revenue) > 0:
+            self._oil_revenue = self._oil_revenue - self._oil_cost_of_sales_expenditures
+        else:
+            pass
+
+        # Condition while the gas cost of sales is applied while there is no gas revenue
+        if gas_applied is True and np.sum(self._gas_revenue) <= 0:
+            raise CostRecoveryException(
+                f"The gas revenue is zero or below zero throughout the project years."
+            )
+        # Condition when the gas cost of sales is applied while there are gas revenues
+        elif gas_applied is True and np.sum(self._gas_revenue) > 0:
+            self._gas_revenue = self._gas_revenue - self._gas_cost_of_sales_expenditures
+        else:
+            pass
+
     def run(
             self,
             sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
@@ -779,7 +890,9 @@ class CostRecovery(BaseProject):
             inflation_rate: np.ndarray | float = 0.0,
             future_rate: float = 0.02,
             inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
-            post_uu_22_year2001: bool = True
+            post_uu_22_year2001: bool = True,
+            oil_cost_of_sales_applied: bool = False,
+            gas_cost_of_sales_applied: bool = False
     ):
 
         # Configure Sunk Cost Reference Year
@@ -835,6 +948,12 @@ class CostRecovery(BaseProject):
 
         # Calculate FTP
         self._get_ftp()
+
+        # Condition when the Cost of Sales for Oil is being applied, which will modify oil or gas revenue
+        self._apply_cost_of_sales(
+            oil_applied=oil_cost_of_sales_applied,
+            gas_applied=gas_cost_of_sales_applied
+        )
 
         # Defining the PreTax Split, whether using conventional PreTax or Sliding
         if self.tax_split_type is not TaxSplitTypeCR.CONVENTIONAL:
@@ -1157,11 +1276,17 @@ class CostRecovery(BaseProject):
                 + self._gas_ddmo
         )
 
+        # Returning the gross revenue
+        self._oil_revenue = self._oil_revenue + self._oil_cost_of_sales_expenditures
+        self._gas_revenue = self._gas_revenue + self._gas_cost_of_sales_expenditures
+
         # Consolidated attributes
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue
         self._consolidated_capital_cost = (
                 self._oil_capital_expenditures + self._gas_capital_expenditures
         )
+        self._consolidated_cost_of_sales = (self._oil_cost_of_sales_expenditures +
+                                            self._gas_cost_of_sales_expenditures)
         self._consolidated_intangible = (
                 self._oil_intangible_expenditures + self._gas_intangible_expenditures
         )
@@ -1226,7 +1351,14 @@ class CostRecovery(BaseProject):
 
         # Calculating the consolidated tax based on the ftp tax payment regime
         if ftp_tax_regime is FTPTaxRegime.PDJP_20_2017:
-            self._consolidated_tax_payment = self._oil_tax_payment + self._gas_tax_payment
+            self._consolidated_tax_payment, self._consolidated_unpaid_tax_balance = self._get_tax_payment_pdjp(
+                ftp_ctr=self._oil_ftp_ctr + self._gas_ftp_ctr,
+                unrec_cost=self._oil_unrecovered_after_transfer + self._gas_unrecovered_after_transfer,
+                tax_rate=self._tax_rate_arr,
+                taxable_income=self._consolidated_taxable_income,
+                ctr_share=self._consolidated_contractor_share,
+                ddmo=self._consolidated_ddmo
+            )
 
         elif ftp_tax_regime is FTPTaxRegime.PRE_PDJP_20_2017:
             self._consolidated_tax_due = self._get_tax_payment(
@@ -1266,5 +1398,5 @@ class CostRecovery(BaseProject):
         )
 
         self._consolidated_cashflow = self._consolidated_contractor_take - (
-                self._consolidated_capital_cost + self._consolidated_non_capital
+                self._consolidated_capital_cost + self._consolidated_non_capital + self._consolidated_cost_of_sales
         )
