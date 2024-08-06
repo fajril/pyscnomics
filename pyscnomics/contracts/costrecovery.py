@@ -744,7 +744,9 @@ class CostRecovery(BaseProject):
         ftp_tax_paid = ftp_considered_b5 * tax_rate
 
         # Calculating the taxable income without ftp
-        taxable_income_wo_ftp = taxable_income - ftp_ctr
+        taxable_income_wo_ftp = np.where(taxable_income - ftp_ctr < 0,
+                                         taxable_income - ftp_ctr + ddmo,
+                                         taxable_income - ftp_ctr)
 
         # Defining Taxing flag
         applied_tax = np.where(ctr_share > 0, 1, 0)

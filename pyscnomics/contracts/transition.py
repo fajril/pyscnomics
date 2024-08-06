@@ -3,7 +3,7 @@ import numpy as np
 from datetime import date
 
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
@@ -196,6 +196,7 @@ class Transition:
             intangible: tuple,
             opex: tuple,
             asr: tuple,
+            cost_of_sales: tuple,
     ):
 
         # Condition where only one fluid is produced
@@ -221,6 +222,7 @@ class Transition:
                 intangible_cost=intangible,
                 opex=opex,
                 asr_cost=asr,
+                cost_of_sales=cost_of_sales,
                 oil_ftp_is_available=contract.oil_ftp_is_available,
                 oil_ftp_is_shared=contract.oil_ftp_is_shared,
                 oil_ftp_portion=contract.oil_ftp_portion,
@@ -254,6 +256,7 @@ class Transition:
                 intangible_cost=intangible,
                 opex=opex,
                 asr_cost=asr,
+                cost_of_sales=cost_of_sales,
                 field_status=contract.field_status,
                 field_loc=contract.field_loc,
                 res_depth=contract.res_depth,
@@ -396,6 +399,16 @@ class Transition:
             for asr in self.contract1.asr_cost
         ]
 
+        # Concatenating the zeros_to_new and years_to_new to the contract1 Cost of Sales
+        new_cost_of_sales_1st = [
+            CostOfSales(start_year=start_date_trans.year,
+                        end_year=end_date_trans.year,
+                        cost=np.concatenate((cos.cost, zeros_to_new)),
+                        expense_year=np.concatenate((cos.expense_year, years_to_new)).astype(int),
+                        cost_allocation=cos.cost_allocation + fluid_to_new,)
+            for cos in self.contract1.cost_of_sales
+        ]
+
         # Modifying the contract2
         # Changing the start_date and end_date of contract2
 
@@ -479,6 +492,16 @@ class Transition:
             for asr in self.contract2.asr_cost
         ]
 
+        # Concatenating the zeros_to_new and years_to_new to the contract2 Cost Of Sales
+        new_cost_of_sales_2nd = [
+            CostOfSales(start_year=start_date_trans.year,
+                        end_year=end_date_trans.year,
+                        cost=np.concatenate((zeros_to_prior, cos.cost)),
+                        expense_year=np.concatenate((years_to_prior, cos.expense_year)).astype(int),
+                        cost_allocation=fluid_to_prior + cos.cost_allocation,)
+            for cos in self.contract2.asr_cost
+        ]
+
         # Parsing the attributes to the new object of contract
         contract1_new = self._parse_dataclass(
             contract=self.contract1,
@@ -489,6 +512,7 @@ class Transition:
             intangible=tuple(new_intang_1st),
             opex=tuple(new_opex_1st),
             asr=tuple(new_asr_1st),
+            cost_of_sales=tuple(new_cost_of_sales_1st),
         )
 
         contract2_new = self._parse_dataclass(
@@ -500,6 +524,7 @@ class Transition:
             intangible=tuple(new_intang_2nd),
             opex=tuple(new_opex_2nd),
             asr=tuple(new_asr_2nd),
+            cost_of_sales=tuple(new_cost_of_sales_2nd),
         )
 
         # Adjusting the contract arguments
@@ -648,6 +673,13 @@ class Transition:
 
         self._gas_asr_expenditures = (self._contract1_transitioned._gas_asr_expenditures +
                                       self._contract2_transitioned._gas_asr_expenditures)
+
+        # Cost Of Sales
+        self._oil_cost_of_sales_expenditures = (self._contract1_transitioned._oil_cost_of_sales_expenditures +
+                                                self._contract2_transitioned._oil_cost_of_sales_expenditures)
+
+        self._gas_cost_of_sales_expenditures = (self._contract1_transitioned._gas_cost_of_sales_expenditures +
+                                                self._contract2_transitioned._gas_cost_of_sales_expenditures)
 
         # WAP Price
         self._oil_wap_price = self._contract2_transitioned._oil_wap_price
