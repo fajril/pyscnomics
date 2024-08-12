@@ -153,6 +153,8 @@ class Transition:
     _gas_opex_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     _oil_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     _gas_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_cost_of_sales_expenditures: np.ndarray = field(default=None, init=False, repr=False)
 
     _oil_wap_price: np.ndarray = field(default=None, init=False, repr=False)
     _gas_wap_price: np.ndarray = field(default=None, init=False, repr=False)

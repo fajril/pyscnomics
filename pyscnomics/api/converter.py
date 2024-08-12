@@ -706,6 +706,7 @@ class TransitionBM(BaseModel):
     intangible: Dict[str, IntangibleBM]
     opex: Dict[str, OpexBM]
     asr: Dict[str, AsrBM]
+    cost_of_sales: Dict[str, CostOfSalesBM] = None
     costrecovery: CostRecoveryBM | None = None
     grosssplit: GrossSplitBM | None = None
 
