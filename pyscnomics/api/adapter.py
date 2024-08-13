@@ -942,9 +942,9 @@ def get_rdp(
     return rate_adjusted
 
 
-def get_rdp_dict(data: dict):
+def get_rpd_dict(data: dict):
     """
-    The function to get the list of RDP from the given reserves volume.
+    The function to get the list of RPD from the given reserves volume.
 
     Parameters
     ----------

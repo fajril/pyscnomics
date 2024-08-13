@@ -7,10 +7,10 @@ from pyscnomics.api.adapter import (get_baseproject,
                                     get_transition,
                                     get_detailed_summary,
                                     get_ltp_dict,
-                                    get_rdp_dict)
+                                    get_rpd_dict)
 from pyscnomics.api.converter import Data
 from pyscnomics.api.converter import DataTransition
-from pyscnomics.api.converter import LtpBM, RdpBM
+from pyscnomics.api.converter import LtpBM, RpdBM
 
 
 router = APIRouter(prefix='/api')
@@ -418,10 +418,10 @@ async def calculate_ltp(data: LtpBM) -> dict:
     return get_ltp_dict(data=data.dict())
 
 
-@router.post("/rdp")
-async def calculate_rdp(data: RdpBM) -> dict:
+@router.post("/rpd")
+async def calculate_rdp(data: RpdBM) -> dict:
     """
-    ## Calculate RDP model
+    ## Calculate RPD model
     Route to calculate a rdp model.
 
     ### Data Input Structure
@@ -433,5 +433,5 @@ async def calculate_rdp(data: RdpBM) -> dict:
     start_year: int
     end_year: int
     """
-    return get_rdp_dict(data=data.dict())
+    return get_rpd_dict(data=data.dict())
 

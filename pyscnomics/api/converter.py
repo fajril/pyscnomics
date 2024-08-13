@@ -644,9 +644,9 @@ class LtpBM(BaseModel):
     fluid_type: str
 
 
-class RdpBM(BaseModel):
+class RpdBM(BaseModel):
     """
-    The BaseModel to validate the LTP data input .
+    The BaseModel to validate the RPD data input .
 
     Parameters
     ----------
