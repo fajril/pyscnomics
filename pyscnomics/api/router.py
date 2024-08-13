@@ -5,9 +5,12 @@ from pyscnomics.api.adapter import (get_baseproject,
                                     get_contract_optimization,
                                     get_grosssplit,
                                     get_transition,
-                                    get_detailed_summary)
+                                    get_detailed_summary,
+                                    get_ltp_dict,
+                                    get_rdp_dict)
 from pyscnomics.api.converter import Data
 from pyscnomics.api.converter import DataTransition
+from pyscnomics.api.converter import LtpBM, RdpBM
 
 
 router = APIRouter(prefix='/api')
@@ -397,3 +400,38 @@ async def get_baseproject_detailed(data: Data) -> dict:
 
     return get_detailed_summary(data=data.dict(),
                                 contract_type='Base Project')
+
+
+@router.post("/ltp")
+async def calculate_ltp(data: LtpBM) -> dict:
+    """
+    ## Calculate LTP model
+    Route to calculate a ltp model.
+
+    ### Data Input Structure
+    volume: float | int
+    start_year: int
+    end_year: int
+    fluid_type: str
+
+    """
+    return get_ltp_dict(data=data.dict())
+
+
+@router.post("/rdp")
+async def calculate_rdp(data: RdpBM) -> dict:
+    """
+    ## Calculate RDP model
+    Route to calculate a rdp model.
+
+    ### Data Input Structure
+    year_rampup: int
+    drate: float | int
+    q_plateau_ratio: float | int
+    q_min_ratio: float | int
+    volume: float | int
+    start_year: int
+    end_year: int
+    """
+    return get_rdp_dict(data=data.dict())
+

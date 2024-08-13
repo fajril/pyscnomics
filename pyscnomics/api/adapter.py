@@ -1,6 +1,7 @@
 """
 This file is utilized to be the adapter of the router into the core codes.
 """
+import numpy as np
 import pandas as pd
 from datetime import datetime
 
@@ -12,7 +13,9 @@ from pyscnomics.tools.summary import get_summary
 from pyscnomics.tools.table import get_table
 from pyscnomics.optimize.optimization import optimize_psc
 from pyscnomics.optimize.optimization_transition import optimize_psc_core as optimize_psc_trans
-from pyscnomics.econ.selection import OptimizationParameter
+from pyscnomics.econ.selection import OptimizationParameter, FluidType
+from pyscnomics.tools.ltp import oil_ltp_predict, gas_ltp_predict
+from pyscnomics.tools.rpd import RPDModel
 from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_list_to_array_float_or_array,
                                       convert_dict_to_lifting,
@@ -35,11 +38,24 @@ from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_str_to_optimization_parameters,
                                       convert_str_to_optimization_targetparameter,
                                       convert_grosssplitregime_to_enum,
-                                      convert_to_float)
+                                      convert_to_float,
+                                      read_fluid_type)
 
 
 class ContractException(Exception):
     """Exception to be raised if contract type is misused"""
+
+    pass
+
+
+class LTPModelException(Exception):
+    """ Exception to be raised for an incorrect LTP configurations """
+
+    pass
+
+
+class RDPModelException(Exception):
+    """ Exception to be raised for an incorrect RDP configurations """
 
     pass
 
@@ -787,13 +803,183 @@ def get_baseproject(data: dict, summary_result: bool = True):
     return summary_skk, contract, contract_arguments_dict, summary_arguments_dict
 
 
+def get_ltp(
+        volume: float,
+        start_year: int,
+        end_year: int,
+        fluid_type: FluidType
+) -> np.ndarray:
+    """
+    Function to get the ltp array.
+
+    Parameters
+    ----------
+    volume:float
+        The volume of the reserves.
+    start_year:int
+        The start year.
+    end_year:int
+        The end year.
+    fluid_type: FluidType
+        The FluidType of the corresponding volume.
+
+    Returns
+    -------
+    out: np.ndarray
+        The array of ltp
+
+    """
+    # Condition checking for the fluid type for initiating the array of ltp
+    if fluid_type == FluidType.OIL:
+        rate_ltp = oil_ltp_predict(volume=volume)
+    elif fluid_type == FluidType.GAS:
+        rate_ltp = gas_ltp_predict(volume=volume)
+    else:
+        raise LTPModelException(
+            f"Unsupported Fluid Type {fluid_type} "
+        )
+
+    # Initiating the array of years
+    year_arr = np.arange(start_year, end_year + 1)
+    gap = len(year_arr) - len(rate_ltp)
+
+    # Checking condition for the given years gap
+    if gap < 0:
+        raise LTPModelException(
+            f"Forecast years from {start_year} to {end_year} is too short. "
+            f"Please set the end_year at least until {end_year + (-1 * gap)}"
+        )
+
+    rate_gap = np.zeros(gap)
+    rate_adjusted = np.concatenate([rate_gap, rate_ltp])
+
+    return rate_adjusted
 
 
+def get_ltp_dict(data: dict):
+    """
+    The function to get the list of LTP from the given reserves volume.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+
+    Returns
+    -------
+    """
+    volume = data['volume']
+    start_year = data['start_year']
+    end_year = data['end_year']
+    fluid_type = read_fluid_type(fluid=data['fluid_type'])
+
+    ltp_array = get_ltp(
+        volume=volume,
+        start_year=start_year,
+        end_year=end_year,
+        fluid_type=fluid_type,)
+
+    return pd.DataFrame(
+        {
+            'year': np.arange(start_year, end_year + 1).tolist(),
+            'ltp': ltp_array.tolist()
+        }
+    ).set_index('year').to_dict()
 
 
+def get_rdp(
+        start_year: int,
+        end_year: int,
+        year_rampup: int,
+        drate: float,
+        q_plateau_ratio: float,
+        q_min_ratio: float,
+        volume: float
+) -> np.ndarray:
+    """
+    The function to get the RDP array.
+
+    Parameters
+    ----------
+    start_year
+    end_year
+    year_rampup
+    drate
+    q_plateau_ratio
+    q_min_ratio
+    volume
+
+    Returns
+    -------
+    out: np.ndarray
+        The array of rdp
+    """
+
+    # Initiating Model
+    model = RPDModel(
+        year_rampup=year_rampup,
+        drate=drate,
+        q_plateau_ratio=q_plateau_ratio,
+        q_min_ratio=q_min_ratio,
+    )
+
+    rate_rdp = model.predict(volume)
+
+    # Initiating the array of years
+    year_arr = np.arange(start_year, end_year + 1)
+    gap = len(year_arr) - len(rate_rdp)
+
+    # Checking condition for the given years gap
+    if gap < 0:
+        raise RDPModelException(
+            f"Forecast years from {start_year} to {end_year} is too short. "
+            f"Please set the end_year at least until {end_year + (-1 * gap)}"
+        )
+
+    rate_gap = np.zeros(gap)
+    rate_adjusted = np.concatenate([rate_gap, rate_rdp])
+
+    return rate_adjusted
 
 
+def get_rdp_dict(data: dict):
+    """
+    The function to get the list of RDP from the given reserves volume.
 
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+
+    Returns
+    -------
+    """
+    # Initiating the data input
+    year_rampup = data['year_rampup']
+    drate = data['drate']
+    q_plateau_ratio = data['q_plateau_ratio']
+    q_min_ratio = data['q_min_ratio']
+    volume = data['volume']
+    start_year = data['start_year']
+    end_year = data['end_year']
+
+    # Get the array of rdp
+    rdp_array = get_rdp(
+        start_year=start_year,
+        end_year=end_year,
+        year_rampup=year_rampup,
+        drate=drate,
+        q_plateau_ratio=q_plateau_ratio,
+        q_min_ratio=q_min_ratio,
+        volume=volume,
+    )
+
+    return pd.DataFrame(
+        {
+            'year': np.arange(start_year, end_year + 1).tolist(),
+            'rdp': rdp_array.tolist()
+        }
+    ).set_index('year').to_dict()
 
 
 

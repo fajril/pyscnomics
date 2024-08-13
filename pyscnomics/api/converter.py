@@ -622,6 +622,58 @@ class UncertaintyBM(BaseModel):
     std_dev: list[float] | list[int]
 
 
+class LtpBM(BaseModel):
+    """
+    The BaseModel to validate the LTP data input .
+
+    Parameters
+    ----------
+    volume: float | int
+        The volume of the reserves.
+    start_year: int
+        The start year.
+    end_year: int
+        The end year.
+    fluid_type: str
+        The fluid type of the corresponding volume. Should be "Oil" or "Gas".
+
+    """
+    volume: float | int
+    start_year: int
+    end_year: int
+    fluid_type: str
+
+
+class RdpBM(BaseModel):
+    """
+    The BaseModel to validate the LTP data input .
+
+    Parameters
+    ----------
+    year_rampup: int
+        Number of year from onstream to peak/plateau rate (yr).
+    drate: float
+        Arps yearly decline rate (1/yr).
+    q_plateau_ratio: float
+        Ratio of plateau rate and volume (1/yr).
+    q_min_ratio: float
+        Ratio of minimum rate at abandoned year and volume (1/yr).
+    volume: float | int
+        The volume of the reserves.
+    start_year: int
+        The start year.
+    end_year: int
+        The end year.
+    """
+    year_rampup: int
+    drate: float | int
+    q_plateau_ratio: float | int
+    q_min_ratio: float | int
+    volume: float | int
+    start_year: int
+    end_year: int
+
+
 class Data(BaseModel):
     """
     The BaseModel to validate the Data input.
