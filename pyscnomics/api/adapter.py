@@ -977,7 +977,7 @@ def get_rpd_dict(data: dict):
     return pd.DataFrame(
         {
             'year': np.arange(start_year, end_year + 1).tolist(),
-            'rdp': rdp_array.tolist()
+            'rpd': rdp_array.tolist()
         }
     ).set_index('year').to_dict()
 
