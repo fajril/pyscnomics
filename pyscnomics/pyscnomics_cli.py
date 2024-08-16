@@ -256,7 +256,7 @@ def main(workbook_path, mode):
 @click.option(
     '-p',
     '--path',
-    help='The path of the Microsoft Excel Workbook'
+    help='The path of the Microsoft Excel Workbook with PySCnomics template'
 )
 @click.option(
     '-m',
@@ -280,6 +280,15 @@ def main(workbook_path, mode):
 def entry_point(**kwargs):
     """ Manages CLI """
     if kwargs['api'] == 1:
+        body = """
+                We welcome you to our library, PySCnomics. This package contains tailored functionalities for 
+                assessing economic feasibility of oil and gas projects following the state-of-the-art Production 
+                Sharing Contract (PSC) schemes in Indonesia.
+                PySCnomics is the product of join research between Indonesia's Special Task Force for Upstream Oil 
+                and Gas Business Activities (SKK Migas) and the Department of Petroleum Engineering, 
+                Institut Teknologi Bandung (ITB)
+                """
+        print(body)
         port_number = kwargs['port']
         uvicorn.run("pyscnomics.api.main:app", port=int(port_number), reload=False)
 
@@ -302,17 +311,6 @@ def entry_point(**kwargs):
 
         # Running the code based on the given CLI input
         main(workbook_path=file_path, mode=mode)
-
-    else:
-        body = """
-        We welcome you to our library, PySCnomics. This package contains tailored functionalities for 
-        assessing economic feasibility of oil and gas projects following the state-of-the-art Production 
-        Sharing Contract (PSC) schemes in Indonesia.
-        PySCnomics is the product of join research between Indonesia's Special Task Force for Upstream Oil 
-        and Gas Business Activities (SKK Migas) and the Department of Petroleum Engineering, 
-        Institut Teknologi Bandung (ITB)
-        """
-        print(body)
 
 
 def run_standard(
@@ -365,7 +363,7 @@ def run_standard(
     write_summary(
         summary_dict=contract_summary,
         workbook_object=workbook_object,
-        sheet_name='Summary',
+        sheet_name='Executive Summary',
         range_cell='E5',
     )
 
@@ -452,77 +450,4 @@ def run_optimization(
 
 
 if __name__ == "__main__":
-    # entry_point()
-
-    from datetime import date
-
-    from pyscnomics.econ.costs import Intangible, CostOfSales
-    from pyscnomics.econ.selection import FluidType
-    from pyscnomics.contracts.project import BaseProject
-
-    intangible_mangga = Intangible(
-        start_year=2023,
-        end_year=2030,
-        cost=np.array([100, 100, 100]),
-        expense_year=np.array([2023, 2024, 2029]),
-        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
-    )
-
-    intangible_apel = Intangible(
-        start_year=2023,
-        end_year=2030,
-        cost=np.array([50, 50, 50]),
-        expense_year=np.array([2025, 2026, 2030]),
-        cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS],
-    )
-
-    cos_mangga = CostOfSales(
-        start_year=2023,
-        end_year=2030,
-        expense_year=np.array([2023, 2024, 2029]),
-        cost=np.array([150, 150, 150]),
-        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
-    )
-
-    cos_apel = CostOfSales(
-        start_year=2023,
-        end_year=2030,
-        expense_year=np.array([2025, 2026, 2030]),
-        cost=np.array([25, 25, 25]),
-        cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS],
-    )
-
-    project_buah = BaseProject(
-        start_date=date(year=2023, month=1, day=1),
-        end_date=date(year=2030, month=12, day=31),
-        intangible_cost=(intangible_mangga, intangible_apel),
-        cost_of_sales=(cos_mangga, cos_apel),
-    )
-
-    print('\t')
-    print('============================================================================')
-
-    cos_oil = project_buah._oil_cost_of_sales
-    cos_gas = project_buah._gas_cost_of_sales
-
-    print('\t')
-    print(f'Filetype: {type(cos_oil)}')
-    print('cos_oil = \n', cos_oil)
-    print(cos_oil.get_cost_of_sales_arr())
-
-    print('\t')
-    print(f'Filetype: {type(cos_gas)}')
-    print('cos_gas = \n', cos_gas)
-    print(cos_gas.get_cost_of_sales_arr())
-
-    # print('\t')
-    # print(f'Filetype: {type(intangible_mangga)}')
-    # print('intangible_mangga = \n', intangible_mangga)
-
-    # print('\t')
-    # print(f'Filetype: {type(cs_mangga)}')
-    # print('cs_mangga = \n', cs_mangga)
-    #
-    # print('\t')
-    # print(f'Filetype: {type(cs_mangga_arr)}')
-    # print('cs_mangga_arr = \n', cs_mangga_arr)
+    entry_point()

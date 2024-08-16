@@ -113,7 +113,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_consolidated['Lifting_oil'] = contract._oil_lifting.get_lifting_rate_arr()
         psc_table_consolidated['Lifting_gas'] = contract._gas_lifting.get_lifting_rate_arr()
         psc_table_consolidated['C_Revenue'] = contract._consolidated_revenue
-        psc_table_consolidated['C_Depreciable'] = contract._consolidated_capital
+        psc_table_consolidated['C_Depreciable'] = contract._consolidated_capital_cost
         psc_table_consolidated['C_Intangible'] = contract._consolidated_intangible
         psc_table_consolidated['C_Opex'] = contract._consolidated_opex
         psc_table_consolidated['C_ASR'] = contract._consolidated_asr
@@ -343,7 +343,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_consolidated_1[
                 'Lifting_gas'] = contract._contract1_transitioned._gas_lifting.get_lifting_rate_arr()
             psc_table_consolidated_1['C_Revenue'] = contract._contract1_transitioned._consolidated_revenue
-            psc_table_consolidated_1['C_Depreciable'] = contract._contract1_transitioned._consolidated_capital
+            psc_table_consolidated_1['C_Depreciable'] = contract._contract1_transitioned._consolidated_capital_cost
             psc_table_consolidated_1['C_Intangible'] = contract._contract1_transitioned._consolidated_intangible
             psc_table_consolidated_1['C_Opex'] = contract._contract1_transitioned._consolidated_opex
             psc_table_consolidated_1['C_ASR'] = contract._contract1_transitioned._consolidated_asr
@@ -570,7 +570,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_consolidated_2[
                 'Lifting_gas'] = contract._contract2_transitioned._gas_lifting.get_lifting_rate_arr()
             psc_table_consolidated_2['C_Revenue'] = contract._contract2_transitioned._consolidated_revenue
-            psc_table_consolidated_2['C_Depreciable'] = contract._contract2_transitioned._consolidated_capital
+            psc_table_consolidated_2['C_Depreciable'] = contract._contract2_transitioned._consolidated_capital_cost
             psc_table_consolidated_2['C_Intangible'] = contract._contract2_transitioned._consolidated_intangible
             psc_table_consolidated_2['C_Opex'] = contract._contract2_transitioned._consolidated_opex
             psc_table_consolidated_2['C_ASR'] = contract._contract2_transitioned._consolidated_asr

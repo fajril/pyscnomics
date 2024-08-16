@@ -56,13 +56,18 @@ def adjust_contract(
     if variable is OptimizationParameter.VAT_DISCOUNT:
         contract = adjust_cost_element(contract=contract,
                                        adjustment_value=value,
-                                       adjustment_variable='VAT', )
+                                       adjustment_variable=OptimizationParameter.VAT_DISCOUNT, )
 
     # When the optimization is LBT
     elif variable is OptimizationParameter.LBT_DISCOUNT:
         contract = adjust_cost_element(contract=contract,
                                        adjustment_value=value,
-                                       adjustment_variable='LBT', )
+                                       adjustment_variable=OptimizationParameter.LBT_DISCOUNT, )
+
+    elif variable is OptimizationParameter.DEPRECIATION_ACCELERATION:
+        contract = adjust_cost_element(contract=contract,
+                                       adjustment_value=value,
+                                       adjustment_variable=OptimizationParameter.DEPRECIATION_ACCELERATION, )
 
     # The condition when contract is Cost Recovery
     if isinstance(contract, CostRecovery):
@@ -228,9 +233,13 @@ def optimize_psc_core(
             max_value = dict_optimization['max'][index]
         elif param is OptimizationParameter.LBT_DISCOUNT:
             max_value = dict_optimization['max'][index]
-        else:
-            # Ministerial Discretion
+        elif param is OptimizationParameter.DEPRECIATION_ACCELERATION:
             max_value = dict_optimization['max'][index]
+        elif param is OptimizationParameter.MINISTERIAL_DISCRETION:
+            max_value = dict_optimization['max'][index]
+        else:
+            raise OptimizationException(f" Optimization parameter, {param}, is not recognized."
+                                        f" Optimization parameter should be chosen from OptimizationParameter enum.")
 
         # Changing the Contract parameter value based on the given input
         result_psc, psc = adjust_contract(contract=psc,
@@ -316,9 +325,10 @@ def optimize_psc_core(
     return list_str, list_params_value, result_optimization, list_executed_contract
 
 
-def adjust_cost_element(contract: CostRecovery | GrossSplit,
-                        adjustment_value: float = 1,
-                        adjustment_variable: str = 'VAT') -> CostRecovery | GrossSplit:
+def adjust_cost_element(
+        contract: CostRecovery | GrossSplit,
+        adjustment_value: float = 1,
+        adjustment_variable: OptimizationParameter = OptimizationParameter.VAT_DISCOUNT) -> CostRecovery | GrossSplit:
     """
     Function to adjust the vat discount or lbt discount of the cost element
     by multiplying them with the adjustment factor.
@@ -340,7 +350,7 @@ def adjust_cost_element(contract: CostRecovery | GrossSplit,
     """
 
     # Condition when the VAT of each cost element will be adjusted
-    if adjustment_variable == 'VAT':
+    if adjustment_variable == OptimizationParameter.VAT_DISCOUNT:
         # Adjusting the Tangible cost of the contract
         tangible_adjusted = tuple([
             CapitalCost(start_year=tan.start_year,
@@ -405,7 +415,7 @@ def adjust_cost_element(contract: CostRecovery | GrossSplit,
                 lbt_discount=asr.lbt_discount, ) for asr in contract.asr_cost
         ])
 
-    elif adjustment_variable == 'LBT':
+    elif adjustment_variable == OptimizationParameter.LBT_DISCOUNT:
         # Adjusting the Tangible cost of the contract
         tangible_adjusted = tuple([
             CapitalCost(start_year=tan.start_year,
@@ -470,17 +480,54 @@ def adjust_cost_element(contract: CostRecovery | GrossSplit,
                 lbt_discount=adjustment_value, ) for asr in contract.asr_cost
         ])
 
-        # Condition when the chosen option is not recognized
+    elif adjustment_variable == OptimizationParameter.DEPRECIATION_ACCELERATION:
+        # Adjusting the useful life of the capital cost of the contract
+        tangible_adjusted = tuple([
+            CapitalCost(start_year=tan.start_year,
+                        end_year=tan.end_year,
+                        cost=tan.cost,
+                        expense_year=tan.expense_year,
+                        cost_allocation=tan.cost_allocation,
+                        description=tan.description,
+                        vat_portion=tan.vat_portion,
+                        vat_discount=tan.vat_discount,
+                        lbt_portion=tan.lbt_portion,
+                        lbt_discount=tan.lbt_discount,
+                        pis_year=tan.pis_year,
+                        salvage_value=tan.salvage_value,
+                        useful_life=adjust_useful_life_years(
+                         adjustment_value=adjustment_value,
+                         useful_life_array=tan.useful_life),
+                        depreciation_factor=tan.depreciation_factor,
+                        is_ic_applied=tan.is_ic_applied,
+                        ) for tan in contract.capital_cost
+        ])
+        intangible_adjusted = contract.intangible_cost
+        opex_adjusted = contract.opex
+        asr_adjusted = contract.asr_cost
+
+    # Condition when the chosen option is not recognized
     else:
         raise OptimizationException(f"Adjustment Variable {adjustment_variable} "
                                     f"do not exist. It should be VAT or LBT in string data type")
+
+    # On stream date treatment
+    if np.sum(contract._oil_revenue) == 0:
+        oil_onstream_date = None
+    else:
+        oil_onstream_date = contract.oil_onstream_date
+
+    if np.sum(contract._gas_revenue) == 0:
+        gas_onstream_date = None
+    else:
+        gas_onstream_date = contract.gas_onstream_date
 
     # When the contract is CostRecovery, parsing back the adjusted cost elements to the cost recovery contract
     if isinstance(contract, CostRecovery):
         contract_adjusted = CostRecovery(start_date=contract.start_date,
                                          end_date=contract.end_date,
-                                         oil_onstream_date=contract.oil_onstream_date,
-                                         gas_onstream_date=contract.gas_onstream_date,
+                                         oil_onstream_date=oil_onstream_date,
+                                         gas_onstream_date=gas_onstream_date,
                                          lifting=contract.lifting,
                                          capital_cost=tangible_adjusted,
                                          intangible_cost=intangible_adjusted,
@@ -513,8 +560,8 @@ def adjust_cost_element(contract: CostRecovery | GrossSplit,
     elif isinstance(contract, GrossSplit):
         contract_adjusted = GrossSplit(start_date=contract.start_date,
                                        end_date=contract.end_date,
-                                       oil_onstream_date=contract.oil_onstream_date,
-                                       gas_onstream_date=contract.gas_onstream_date,
+                                       oil_onstream_date=oil_onstream_date,
+                                       gas_onstream_date=gas_onstream_date,
                                        lifting=contract.lifting,
                                        capital_cost=tangible_adjusted,
                                        intangible_cost=intangible_adjusted,
@@ -545,6 +592,54 @@ def adjust_cost_element(contract: CostRecovery | GrossSplit,
         raise OptimizationException(f"Contract Type {type(contract)} , is not recognized for optimization module")
 
     return contract_adjusted
+
+
+def adjust_useful_life_years(adjustment_value: float,
+                             useful_life_array: np.ndarray):
+    """
+    Function to adjust the use full life of a capital cost.
+
+    Parameters
+    ----------
+    adjustment_value: float
+        The factor of depreciation adjustment.
+    useful_life_array: np.ndarray
+        The array of the useful life.
+
+    Returns
+    -------
+    adjusted_useful_life: np.ndarray
+        The array of use full life that has been adjusted.
+
+    Notes
+    -------
+    The minimum useful life is 2 years.
+    """
+    # Catch the useful life below 2 years
+    index_below = np.argwhere(useful_life_array < 2).ravel()
+    if len(index_below) > 0:
+        raise OptimizationException(f"Useful life at index {index_below} , is/are below 2 years")
+
+    # Defining the acceleration rate
+    accel_rate = 1 - adjustment_value
+
+    # Defining the maximum accelerated useful life years
+    maximum_useful_life = np.full_like(useful_life_array, fill_value=2, dtype=int)
+
+    # Multiplying the useful life with the acceleration rate
+    adjusted_useful_life = np.where(useful_life_array == maximum_useful_life,
+                                    maximum_useful_life,
+                                    useful_life_array * accel_rate)
+
+    # Rounding up the adjusted use full life
+    adjusted_useful_life = np.ceil(adjusted_useful_life)
+
+    # Catch the useful life below 2 years
+    adjusted_useful_life = np.where(adjusted_useful_life < maximum_useful_life,
+                                    maximum_useful_life,
+                                    adjusted_useful_life)
+
+    return adjusted_useful_life.astype(int)
 
 
 def optimize_psc(
@@ -590,15 +685,14 @@ def optimize_psc(
     Returns
     -------
     out : tuple
-
-    list_str: list
-        The list of parameter that passed and has been optimized.
-    list_params_value: list
-        The list of parameter's value that passed and has been optimized.
-    result_optimization: float
-        The value of the targeted parameter which the result of the optimization.
-    list_executed_contract: list
-        The list of executed contracts.
+        list_str: list
+            The list of parameter that passed and has been optimized.
+        list_params_value: list
+            The list of parameter's value that passed and has been optimized.
+        result_optimization: float
+            The value of the targeted parameter which the result of the optimization.
+        list_executed_contract: list
+            The list of executed contracts.
     """
 
     # Get the summary of the base case
@@ -681,6 +775,8 @@ def optimize_psc(
     result_optimization = result[2]
     list_executed_contract = result[3]
 
+    contract = list_executed_contract[-1]
+
     # Initiating the adjusted contract arguments
     contract_arguments_adjusted = contract_arguments.copy()
 
@@ -708,26 +804,27 @@ def optimize_psc(
         else:
             pass
 
-    # Running the contract using the adjusted contract argument
-    contract.run(**contract_arguments_adjusted)
+    # Running the contract using the adjusted contract argument when the VAT is multi values
+    if len(pseudo_dict["index_in_parameter"]) > 0:
+        contract.run(**contract_arguments_adjusted)
 
-    #  Replacing the executed contract from the optimization function into the adjusted contract
-    list_executed_contract[-1] = contract
+        #  Replacing the executed contract from the optimization function into the adjusted contract
+        list_executed_contract[-1] = contract
 
-    # Retrieving the summary of the contract
-    summary_argument['contract'] = contract
-    summary_optimized = get_summary(**summary_argument)
+        # Retrieving the summary of the contract
+        summary_argument['contract'] = contract
+        summary_optimized = get_summary(**summary_argument)
 
-    #  Retrieving the corresponding target value
-    if target_parameter == OptimizationTarget.IRR:
-        result_optimization = summary_optimized['ctr_irr']
-    elif target_parameter == OptimizationTarget.NPV:
-        result_optimization = summary_optimized['ctr_npv']
-    elif target_parameter == OptimizationTarget.PI:
-        result_optimization = summary_optimized['ctr_pi']
-    else:
-        raise OptimizationException(
-            f"Optimization Target {target_parameter} is not recognized"
-        )
+        #  Retrieving the corresponding target value
+        if target_parameter == OptimizationTarget.IRR:
+            result_optimization = summary_optimized['ctr_irr']
+        elif target_parameter == OptimizationTarget.NPV:
+            result_optimization = summary_optimized['ctr_npv']
+        elif target_parameter == OptimizationTarget.PI:
+            result_optimization = summary_optimized['ctr_pi']
+        else:
+            raise OptimizationException(
+                f"Optimization Target {target_parameter} is not recognized"
+            )
 
     return list_str, list_params_value, result_optimization, list_executed_contract

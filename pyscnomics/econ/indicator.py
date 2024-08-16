@@ -149,14 +149,14 @@ def irr(
         irr_result = pyxirr.irr(cashflow)
 
     # Condition where the irr resulting negative
-    result = irr_result
-    if irr_result is None:
-        result = 0
+    if irr_result is None or np.isnan(irr_result):
+        irr_result = 0
+    elif irr_result < 0:
+        irr_result = 0
     else:
-        if irr_result < 0:
-            result = 0
+        pass
 
-    return result
+    return irr_result
 
 
 def xirr(

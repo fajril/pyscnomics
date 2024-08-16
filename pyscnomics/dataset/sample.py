@@ -154,10 +154,16 @@ def assign_lifting(data_raw: dict) -> tuple:
                               end_year=lifting_data[key]["end_year"],
                               lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
                               price=np.array(lifting_data[key]["price"]),
+                              prod_year=np.array(lifting_data[key]["prod_year"]),
                               fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
-                              ghv=np.array(lifting_data[key]["ghv"]),
-                              prod_year=np.array(lifting_data[key]["prod_year"])
+                              ghv=None if lifting_data[key]["ghv"] is None else
+                              np.array(lifting_data[key]["ghv"]),
+                              prod_rate=None if lifting_data[key]["prod_rate"] is None
+                              else np.array(lifting_data[key]["prod_rate"]),
+                              prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None
+                              else np.array(lifting_data[key]["prod_rate_baseline"]),
                               )
+
             lifting_list.append(lifting)
 
         else:
@@ -165,8 +171,12 @@ def assign_lifting(data_raw: dict) -> tuple:
                               end_year=lifting_data[key]["end_year"],
                               lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
                               price=np.array(lifting_data[key]["price"]),
+                              prod_year=np.array(lifting_data[key]["prod_year"]),
                               fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
-                              prod_year=np.array(lifting_data[key]["prod_year"])
+                              prod_rate=None if lifting_data[key]["prod_rate"] is None
+                              else np.array(lifting_data[key]["prod_rate"]),
+                              prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None
+                              else np.array(lifting_data[key]["prod_rate_baseline"]),
                               )
             lifting_list.append(lifting)
 

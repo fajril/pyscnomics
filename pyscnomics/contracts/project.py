@@ -99,8 +99,8 @@ class BaseProject:
     _co2_revenue: np.ndarray = field(default=None, init=False, repr=False)
 
     # Private attributes (associated with cost)
-    _oil_capital: CapitalCost = field(default=None, init=False, repr=False)
-    _gas_capital: CapitalCost = field(default=None, init=False, repr=False)
+    _oil_capital_cost: CapitalCost = field(default=None, init=False, repr=False)
+    _gas_capital_cost: CapitalCost = field(default=None, init=False, repr=False)
     _oil_intangible: Intangible = field(default=None, init=False, repr=False)
     _gas_intangible: Intangible = field(default=None, init=False, repr=False)
     _oil_opex: OPEX = field(default=None, init=False, repr=False)
@@ -120,6 +120,10 @@ class BaseProject:
     _oil_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     _gas_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Private attributes associated with cost of sales
+    _oil_cost_of_sales_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_cost_of_sales_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+
     _oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _gas_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -134,7 +138,10 @@ class BaseProject:
     _electricity_wap_price: np.ndarray = field(default=None, init=False, repr=False)
     _co2_wap_price: np.ndarray = field(default=None, init=False, repr=False)
 
+    _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
+
     def __post_init__(self):
+
         # Specify project duration and project years, raise error for inappropriate start date
         if self.start_date <= self.end_date:
             self.project_duration = self.end_date.year - self.start_date.year + 1
@@ -310,16 +317,22 @@ class BaseProject:
         self._co2_revenue = self._co2_lifting.revenue()
 
         # Specify cost data
-        self._oil_capital = self._get_oil_capital()
-        self._gas_capital = self._get_gas_capital()
+        self._oil_capital_cost = self._get_oil_tangible()
+        self._gas_capital_cost = self._get_gas_tangible()
         self._oil_intangible = self._get_oil_intangible()
         self._gas_intangible = self._get_gas_intangible()
         self._oil_opex = self._get_oil_opex()
         self._gas_opex = self._get_gas_opex()
         self._oil_asr = self._get_oil_asr()
         self._gas_asr = self._get_gas_asr()
+
+        # Specify Cost of Sales data
         self._oil_cost_of_sales = self._get_oil_cost_of_sales()
         self._gas_cost_of_sales = self._get_gas_cost_of_sales()
+
+        # Retrieving the Cost of Sales array
+        self._oil_cost_of_sales_expenditures = self._oil_cost_of_sales.get_cost_of_sales_arr()
+        self._gas_cost_of_sales_expenditures = self._gas_cost_of_sales.get_cost_of_sales_arr()
 
         # Raise an exception error if the start year of the project is inconsistent
         if not all(
@@ -330,8 +343,8 @@ class BaseProject:
                 self._sulfur_lifting.start_year,
                 self._electricity_lifting.start_year,
                 self._co2_lifting.start_year,
-                self._oil_capital.start_year,
-                self._gas_capital.start_year,
+                self._oil_capital_cost.start_year,
+                self._gas_capital_cost.start_year,
                 self._oil_intangible.start_year,
                 self._gas_intangible.start_year,
                 self._oil_opex.start_year,
@@ -350,8 +363,8 @@ class BaseProject:
                 f"Sulfur lifting ({self._sulfur_lifting.start_year}), "
                 f"Electricity lifting ({self._electricity_lifting.start_year}), "
                 f"CO2 lifting ({self._co2_lifting.start_year}), "
-                f"Oil capital ({self._oil_capital.start_year}), "
-                f"Gas capital ({self._gas_capital.start_year}), "
+                f"Oil tangible ({self._oil_capital_cost.start_year}), "
+                f"Gas tangible ({self._gas_capital_cost.start_year}), "
                 f"Oil intangible ({self._oil_intangible.start_year}), "
                 f"Gas intangible ({self._gas_intangible.start_year}), "
                 f"Oil opex ({self._oil_opex.start_year}), "
@@ -371,8 +384,8 @@ class BaseProject:
                 self._sulfur_lifting.end_year,
                 self._electricity_lifting.end_year,
                 self._co2_lifting.end_year,
-                self._oil_capital.end_year,
-                self._gas_capital.end_year,
+                self._oil_capital_cost.end_year,
+                self._gas_capital_cost.end_year,
                 self._oil_intangible.end_year,
                 self._gas_intangible.end_year,
                 self._oil_opex.end_year,
@@ -391,8 +404,8 @@ class BaseProject:
                 f"Sulfur lifting ({self._sulfur_lifting.end_year}), "
                 f"Electricity lifting ({self._electricity_lifting.end_year}), "
                 f"CO2 lifting ({self._co2_lifting.end_year}), "
-                f"Oil capital ({self._oil_capital.end_year}), "
-                f"Gas capital ({self._gas_capital.end_year}), "
+                f"Oil tangible ({self._oil_capital_cost.end_year}), "
+                f"Gas tangible ({self._gas_capital_cost.end_year}), "
                 f"Oil intangible ({self._oil_intangible.end_year}), "
                 f"Gas intangible ({self._gas_intangible.end_year}), "
                 f"Oil opex ({self._oil_opex.end_year}), "
@@ -518,6 +531,9 @@ class BaseProject:
                 price=np.zeros(self.project_duration),
                 prod_year=self.project_years,
                 fluid_type=FluidType.OIL,
+                prod_rate=np.zeros(self.project_duration),
+                prod_rate_baseline=np.zeros(self.project_duration),
+
             )
 
         return reduce(
@@ -559,6 +575,9 @@ class BaseProject:
                 price=np.zeros(self.project_duration),
                 prod_year=self.project_years,
                 fluid_type=FluidType.GAS,
+                ghv=np.zeros(self.project_duration),
+                prod_rate=np.zeros(self.project_duration),
+                prod_rate_baseline=np.zeros(self.project_duration),
             )
 
         return reduce(
@@ -689,28 +708,28 @@ class BaseProject:
             (lft for lft in self.lifting if lft.fluid_type == FluidType.CO2),
         )
 
-    def _get_oil_capital(self) -> CapitalCost:
+    def _get_oil_tangible(self) -> CapitalCost:
         """
-        Determines total oil capital from the number of oil capital instances in
-        attribute self.capital_cost_total.
+        Determines total oil Tangible from the number of oil Tangible instances in
+        attribute self.tangible_cost_total.
 
         Returns
         -------
         CapitalCost
-            An instance of CapitalCost that only includes FluidType.OIL as the associated
+            An instance of Tangible that only includes FluidType.OIL as the associated
             cost_allocation that has been combined altogether following the rules prescribed
-            in the dunder method __add__() of CapitalCost class.
+            in the dunder method __add__() of Tangible class.
 
         Notes
         -----
         The core operations are as follows:
-        (1) Check the attribute cost_allocation in attribute self.capital_cost_total,
-        (2) If OIL is not available as an instance in attribute self.capital_cost_total,
-            then establish a new instance of OIL capital with the following attribute set
+        (1) Check the attribute cost_allocation in attribute self.tangible_cost_total,
+        (2) If OIL is not available as an instance in attribute self.tangible_cost_total,
+            then establish a new instance of OIL Tangible with the following attribute set
             to zero: cost.
         (3) Identify index location where cost_allocation is FluidType.OIL in attribute
-            self.capital_cost_total,
-        (4) Create a new instance of capital with only FluidType.OIL as its cost_allocation.
+            self.tangible_cost_total,
+        (4) Create a new instance of Tangible with only FluidType.OIL as its cost_allocation.
         """
         if FluidType.OIL not in self.capital_cost_total.cost_allocation:
             return CapitalCost(
@@ -758,28 +777,28 @@ class BaseProject:
                 is_ic_applied=is_ic_applied.tolist(),
             )
 
-    def _get_gas_capital(self) -> CapitalCost:
+    def _get_gas_tangible(self) -> CapitalCost:
         """
-        Determines total gas capital from the number of gas capital instances in
-        attribute self.capital_cost_total.
+        Determines total gas Tangible from the number of gas Tangible instances in
+        attribute self.tangible_cost_total.
 
         Returns
         -------
         CapitalCost
-            An instance of capital that only includes FluidType.GAS as the associated
+            An instance of Tangible that only includes FluidType.GAS as the associated
             cost_allocation that has been combined altogether following the rules prescribed
-            in the dunder method __add__() of capital class.
+            in the dunder method __add__() of Tangible class.
 
         Notes
         -----
         The core operations are as follows:
-        (1) Check the attribute cost_allocation in attribute self.capital_cost_total,
-        (2) If GAS is not available as an instance in attribute self.capital_cost_total,
-            then establish a new instance of GAS capital with the following attribute set
+        (1) Check the attribute cost_allocation in attribute self.tangible_cost_total,
+        (2) If GAS is not available as an instance in attribute self.tangible_cost_total,
+            then establish a new instance of GAS Tangible with the following attribute set
             to zero: cost.
         (3) Identify index location where cost_allocation is FluidType.GAS in attribute
-            self.capital_cost_total,
-        (4) Create a new instance of capital with only FluidType.GAS as its cost_allocation.
+            self.tangible_cost_total,
+        (4) Create a new instance of Tangible with only FluidType.GAS as its cost_allocation.
         """
         if FluidType.GAS not in self.capital_cost_total.cost_allocation:
             return CapitalCost(
@@ -1363,8 +1382,8 @@ class BaseProject:
             # Inflation rate applied to CAPEX only
             elif inflation_rate_applied_to == InflationAppliedTo.CAPEX:
                 if (
-                    target_attr is self._oil_capital
-                    or target_attr is self._gas_capital
+                    target_attr is self._oil_capital_cost
+                    or target_attr is self._gas_capital_cost
                     or target_attr is self._oil_intangible
                     or target_attr is self._gas_intangible
                 ):
@@ -1430,8 +1449,8 @@ class BaseProject:
             # Inflation rate applied to CAPEX and OPEX
             elif inflation_rate_applied_to == InflationAppliedTo.CAPEX_AND_OPEX:
                 if (
-                    target_attr is self._oil_capital
-                    or target_attr is self._gas_capital
+                    target_attr is self._oil_capital_cost
+                    or target_attr is self._gas_capital_cost
                     or target_attr is self._oil_intangible
                     or target_attr is self._gas_intangible
                     or target_attr is self._oil_opex
@@ -1474,7 +1493,7 @@ class BaseProject:
         ) = list(
             map(
                 calc_expenses,
-                [self._oil_capital, self._gas_capital, self._oil_intangible,
+                [self._oil_capital_cost, self._gas_capital_cost, self._oil_intangible,
                  self._gas_intangible, self._oil_opex, self._gas_opex,
                  self._oil_asr, self._gas_asr]
             )
@@ -1499,13 +1518,9 @@ class BaseProject:
             tax_rate_arr = np.full_like(self.project_years, fill_value=0.44, dtype=float)
         if tax_regime == TaxRegime.NAILED_DOWN:
             if self.start_date.year >= max(tax_config):
-                tax_rate_arr = np.full_like(
-                    self.project_years, fill_value=tax_config[max(tax_config)], dtype=float
-                )
+                tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[max(tax_config)], dtype=float)
             else:
-                tax_rate_arr = np.full_like(
-                    self.project_years, fill_value=tax_config[min(tax_config)], dtype=float
-                )
+                tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[min(tax_config)], dtype=float)
         return tax_rate_arr
 
     def _get_wap_price(self):
@@ -1824,6 +1839,7 @@ class BaseProject:
         self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
         self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
         self._consolidated_government_take = np.zeros_like(self._consolidated_cashflow)
+        self._consolidated_revenue = self._oil_revenue + self._gas_revenue
 
     def __len__(self):
         return self.project_duration
@@ -1833,8 +1849,8 @@ class BaseProject:
         if isinstance(other, BaseProject):
             revenue_self = np.sum(self._oil_revenue + self._gas_revenue)
             revenue_other = np.sum(other._oil_revenue + other._gas_revenue)
-            tangible_self = sum(self._oil_capital.cost) + sum(self._gas_capital.cost)
-            tangible_other = sum(other._oil_capital.cost) + sum(other._gas_capital.cost)
+            tangible_self = sum(self._oil_capital_cost.cost) + sum(self._gas_capital_cost.cost)
+            tangible_other = sum(other._oil_capital_cost.cost) + sum(other._gas_capital_cost.cost)
             intangible_self = sum(self._oil_intangible.cost) + sum(self._gas_intangible.cost)
             intangible_other = sum(other._oil_intangible.cost) + sum(other._gas_intangible.cost)
             opex_self = sum(self._oil_opex.cost) + sum(self._gas_opex.cost)
@@ -1872,8 +1888,8 @@ class BaseProject:
         if isinstance(other, BaseProject):
             revenue_self = np.sum(self._oil_revenue + self._gas_revenue)
             revenue_other = np.sum(other._oil_revenue + other._gas_revenue)
-            tangible_self = sum(self._oil_capital.cost) + sum(self._gas_capital.cost)
-            tangible_other = sum(other._oil_capital.cost) + sum(other._gas_capital.cost)
+            tangible_self = sum(self._oil_capital_cost.cost) + sum(self._gas_capital_cost.cost)
+            tangible_other = sum(other._oil_capital_cost.cost) + sum(other._gas_capital_cost.cost)
             intangible_self = sum(self._oil_intangible.cost) + sum(self._gas_intangible.cost)
             intangible_other = sum(other._oil_intangible.cost) + sum(other._gas_intangible.cost)
             opex_self = sum(self._oil_opex.cost) + sum(self._gas_opex.cost)
@@ -1909,8 +1925,8 @@ class BaseProject:
         if isinstance(other, BaseProject):
             revenue_self = np.sum(self._oil_revenue + self._gas_revenue)
             revenue_other = np.sum(other._oil_revenue + other._gas_revenue)
-            tangible_self = sum(self._oil_capital.cost) + sum(self._gas_capital.cost)
-            tangible_other = sum(other._oil_capital.cost) + sum(other._gas_capital.cost)
+            tangible_self = sum(self._oil_capital_cost.cost) + sum(self._gas_capital_cost.cost)
+            tangible_other = sum(other._oil_capital_cost.cost) + sum(other._gas_capital_cost.cost)
             intangible_self = sum(self._oil_intangible.cost) + sum(self._gas_intangible.cost)
             intangible_other = sum(other._oil_intangible.cost) + sum(other._gas_intangible.cost)
             opex_self = sum(self._oil_opex.cost) + sum(self._gas_opex.cost)
@@ -1946,8 +1962,8 @@ class BaseProject:
         if isinstance(other, BaseProject):
             revenue_self = np.sum(self._oil_revenue + self._gas_revenue)
             revenue_other = np.sum(other._oil_revenue + other._gas_revenue)
-            tangible_self = sum(self._oil_capital.cost) + sum(self._gas_capital.cost)
-            tangible_other = sum(other._oil_capital.cost) + sum(other._gas_capital.cost)
+            tangible_self = sum(self._oil_capital_cost.cost) + sum(self._gas_capital_cost.cost)
+            tangible_other = sum(other._oil_capital_cost.cost) + sum(other._gas_capital_cost.cost)
             intangible_self = sum(self._oil_intangible.cost) + sum(self._gas_intangible.cost)
             intangible_other = sum(other._oil_intangible.cost) + sum(other._gas_intangible.cost)
             opex_self = sum(self._oil_opex.cost) + sum(self._gas_opex.cost)
@@ -1983,8 +1999,8 @@ class BaseProject:
         if isinstance(other, BaseProject):
             revenue_self = np.sum(self._oil_revenue + self._gas_revenue)
             revenue_other = np.sum(other._oil_revenue + other._gas_revenue)
-            tangible_self = sum(self._oil_capital.cost) + sum(self._gas_capital.cost)
-            tangible_other = sum(other._oil_capital.cost) + sum(other._gas_capital.cost)
+            tangible_self = sum(self._oil_capital_cost.cost) + sum(self._gas_capital_cost.cost)
+            tangible_other = sum(other._oil_capital_cost.cost) + sum(other._gas_capital_cost.cost)
             intangible_self = sum(self._oil_intangible.cost) + sum(self._gas_intangible.cost)
             intangible_other = sum(other._oil_intangible.cost) + sum(other._gas_intangible.cost)
             opex_self = sum(self._oil_opex.cost) + sum(self._gas_opex.cost)

@@ -1,12 +1,16 @@
 from fastapi import APIRouter
-from pyscnomics.api.adapter import (get_costrecovery,
+from pyscnomics.api.adapter import (get_baseproject,
+                                    get_costrecovery,
                                     get_contract_table,
                                     get_contract_optimization,
                                     get_grosssplit,
                                     get_transition,
-                                    get_detailed_summary)
+                                    get_detailed_summary,
+                                    get_ltp_dict,
+                                    get_rpd_dict)
 from pyscnomics.api.converter import Data
 from pyscnomics.api.converter import DataTransition
+from pyscnomics.api.converter import LtpBM, RpdBM
 
 
 router = APIRouter(prefix='/api')
@@ -279,7 +283,7 @@ async def get_transition_detailed(data: DataTransition) -> dict:
 @router.post("/transition/table")
 async def get_transition_table(data: DataTransition) -> dict:
     """
-    ## Gross Split Table
+    ## Transition Table
     Route to calculate a contract using Transition Scheme and get its cashflow table.
 
     ### Data Input Structure
@@ -307,4 +311,127 @@ async def get_transition_table(data: DataTransition) -> dict:
 
     """
     return get_contract_table(data=data.dict(), contract_type='Transition')
+
+
+@router.post("/transition/optimization")
+async def calculate_transition_optimization(data: DataTransition) -> dict:
+    """
+    ## Transition Optimization
+    Route to calculate the optimization of a contract using Transition Scheme.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - grosssplit
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+    - optimization_arguments
+    - sensitivity_arguments
+
+    """
+    return get_contract_optimization(data=data.dict(), contract_type='Transition')
+
+
+@router.post("/baseproject")
+async def calculate_baseproject(data: Data) -> dict:
+    """
+    ## Base Project
+    Route to calculate a contract using Base Project Scheme and get its executive summary.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+
+    """
+    return get_baseproject(data=data.dict())[0]
+
+
+@router.post("/baseproject/table")
+async def get_baseproject_table(data: Data) -> dict:
+    """
+    ## Base Project Table
+    Route to calculate a contract using Base Project Scheme and get its cashflow table.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+
+    """
+    return get_contract_table(data=data.dict(), contract_type='Base Project')
+
+
+@router.post("/baseproject/detailed_summary")
+async def get_baseproject_detailed(data: Data) -> dict:
+    """
+    ## Base Project Detailed Summary
+    Route to get a contract detailed summary using Base Project Scheme.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+
+    """
+
+    return get_detailed_summary(data=data.dict(),
+                                contract_type='Base Project')
+
+
+@router.post("/ltp")
+async def calculate_ltp(data: LtpBM) -> dict:
+    """
+    ## Calculate LTP model
+    Route to calculate a ltp model.
+
+    ### Data Input Structure
+    volume: float | int
+    start_year: int
+    end_year: int
+    fluid_type: str
+
+    """
+    return get_ltp_dict(data=data.dict())
+
+
+@router.post("/rpd")
+async def calculate_rdp(data: RpdBM) -> dict:
+    """
+    ## Calculate RPD model
+    Route to calculate a rdp model.
+
+    ### Data Input Structure
+    year_rampup: int
+    drate: float | int
+    q_plateau_ratio: float | int
+    q_min_ratio: float | int
+    volume: float | int
+    start_year: int
+    end_year: int
+    """
+    return get_rpd_dict(data=data.dict())
 
