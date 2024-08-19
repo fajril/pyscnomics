@@ -1,5 +1,6 @@
 import json
 import os
+import pkg_resources
 from datetime import datetime
 
 import numpy as np
@@ -53,13 +54,22 @@ def read_json_file(file_name: str) -> dict:
         The dictionary of the json file.
 
     """
-    if 'pyscnomics\\pyscnomics' in os.path.dirname(os.getcwd()):
-        directory = (os.path.dirname(os.getcwd())) + '/dataset/' + file_name + '.json'
+    # if 'pyscnomics\\pyscnomics' in os.path.dirname(os.getcwd()):
+    #     directory = (os.path.dirname(os.getcwd())) + '/dataset/' + file_name + '.json'
+    #
+    # else:
+    #     directory = (os.path.dirname(os.getcwd())) + '/pyscnomics/dataset/' + file_name + '.json'
+    #
+    # final_dir = os.path.abspath(directory)
+    # with open(final_dir) as user_file:
+    #     file_contents = user_file.read()
 
-    else:
-        directory = (os.path.dirname(os.getcwd())) + '/pyscnomics/dataset/' + file_name + '.json'
+    # return json.loads(file_contents)
 
-    final_dir = os.path.abspath(directory)
+    # Get the full path to the JSON file within the package
+    final_dir = pkg_resources.resource_filename('pyscnomics', 'dataset/' + file_name + '.json')
+
+    # Open and read the JSON file, returning its contents as a dictionary
     with open(final_dir) as user_file:
         file_contents = user_file.read()
 
@@ -313,11 +323,11 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
 
     """
     # Checking the availability of the dataset, if not available raise a Value Error
-    dataset_list = get_json_file_names()
-    contract_list = ['project', 'cost_recovery', 'gross_split']
-    if dataset_type not in dataset_list or contract_type not in contract_list:
-        raise ValueError('Unknown dataset: "{0}", please check the Dataset and Contract Type that available.'
-                         .format(dataset_type))
+    # dataset_list = get_json_file_names()
+    # contract_list = ['project', 'cost_recovery', 'gross_split']
+    # if dataset_type not in dataset_list or contract_type not in contract_list:
+    #     raise ValueError('Unknown dataset: "{0}", please check the Dataset and Contract Type that available.'
+    #                      .format(dataset_type))
 
     # Reading the project json file
     data_raw = read_json_file(file_name=dataset_type)

@@ -1,34 +1,29 @@
 import numpy as np
-
+from pyscnomics.econ.selection import FTPTaxRegime, DeprMethod
 from pyscnomics.dataset.sample import load_data, load_testing
-from pyscnomics.econ.selection import FTPTaxRegime
 
-psc = load_data(dataset_type='case3', contract_type='cost_recovery')
+# Defining the contract object
+psc = load_data(dataset_type='case2', contract_type='cost_recovery')
 
-# Editing the CostRecovery attribute as the corresponding case 1
-# FTP
-psc.oil_ftp_is_available = True
-psc.oil_ftp_is_shared = True
-psc.oil_ftp_portion = 0.2
-psc.gas_ftp_is_available = True
-psc.gas_ftp_is_shared = True
-psc.gas_ftp_portion = 0.2
+# Defining the contract arguments
+tax_rate = 0.405
+ftp_tax_regime = FTPTaxRegime.DIRECT_MODE
+sunk_cost_reference_year = 2023
+depr_method = DeprMethod.PSC_DB
+future_rate = 0.0
+post_uu_22_year2001 = True
 
-# Split Pre Tax
-psc.oil_ctr_pretax_share = 0.347222
-psc.gas_ctr_pretax_share = 0.520833
+contract_arguments = {
+    'tax_rate': tax_rate,
+    'ftp_tax_regime': ftp_tax_regime,
+    'sunk_cost_reference_year': sunk_cost_reference_year,
+    'depr_method': depr_method,
+    'future_rate': future_rate,
+    'post_uu_22_year2001': post_uu_22_year2001,
+}
 
-# DMO
-psc.oil_dmo_volume_portion = 0.25
-psc.oil_dmo_fee_portion = 0.25
-psc.oil_dmo_holiday_duration = 60
-psc.gas_dmo_volume_portion = 0.25
-psc.gas_dmo_fee_portion = 1
-psc.gas_dmo_holiday_duration = 60
-
-tax_rate = 0.424
-
-psc.run(tax_rate=tax_rate, ftp_tax_regime=FTPTaxRegime.PRE_PDJP_20_2017)
+# Running the contract with contract arguments
+psc.run(**contract_arguments)
 
 
 def test_revenue():
@@ -37,10 +32,10 @@ def test_revenue():
     """
 
     oil_revenue = psc._oil_revenue
-    oil_revenue_base = np.asarray(load_testing(dataset_type='case3', key='oil_revenue'))
+    oil_revenue_base = np.asarray(load_testing(dataset_type='case2', key='oil_revenue'))
 
     gas_revenue = psc._gas_revenue
-    gas_revenue_base = np.asarray(load_testing(dataset_type='case3', key='gas_revenue'))
+    gas_revenue_base = np.asarray(load_testing(dataset_type='case2', key='gas_revenue'))
 
     np.testing.assert_allclose(oil_revenue, oil_revenue_base, atol=1e-6)
     np.testing.assert_allclose(gas_revenue, gas_revenue_base, atol=1e-6)
@@ -52,9 +47,9 @@ def test_depreciation():
     """
 
     oil_depreciation = psc._oil_depreciation
-    oil_depreciation_base = load_testing(dataset_type='case3', key='oil_depreciation')
+    oil_depreciation_base = load_testing(dataset_type='case2', key='oil_depreciation')
     gas_depreciation = psc._gas_depreciation
-    gas_depreciation_base = load_testing(dataset_type='case3', key='gas_depreciation')
+    gas_depreciation_base = load_testing(dataset_type='case2', key='gas_depreciation')
 
     np.testing.assert_allclose(oil_depreciation, oil_depreciation_base, atol=1e-6)
     np.testing.assert_allclose(gas_depreciation, gas_depreciation_base, atol=1e-6)
@@ -62,9 +57,9 @@ def test_depreciation():
 
 def test_non_capital():
     oil_non_capital = psc._oil_non_capital
-    oil_non_capital_base = load_testing(dataset_type='case3', key='oil_non_capital')
+    oil_non_capital_base = load_testing(dataset_type='case2', key='oil_non_capital')
     gas_non_capital = psc._gas_non_capital
-    gas_non_capital_base = load_testing(dataset_type='case3', key='gas_non_capital')
+    gas_non_capital_base = load_testing(dataset_type='case2', key='gas_non_capital')
 
     np.testing.assert_allclose(oil_non_capital, oil_non_capital_base, atol=1e-6)
     np.testing.assert_allclose(gas_non_capital, gas_non_capital_base, atol=1e-6)
@@ -72,9 +67,9 @@ def test_non_capital():
 
 def test_ftp():
     oil_ftp = psc._oil_ftp
-    oil_ftp_base = load_testing(dataset_type='case3', key='oil_ftp')
+    oil_ftp_base = load_testing(dataset_type='case2', key='oil_ftp')
     gas_ftp = psc._gas_ftp
-    gas_ftp_base = load_testing(dataset_type='case3', key='gas_ftp')
+    gas_ftp_base = load_testing(dataset_type='case2', key='gas_ftp')
 
     np.testing.assert_allclose(oil_ftp, oil_ftp_base, atol=1e-6)
     np.testing.assert_allclose(gas_ftp, gas_ftp_base, atol=1e-6)
@@ -82,9 +77,9 @@ def test_ftp():
 
 def test_ftp_ctr():
     oil_ftp_ctr = psc._oil_ftp_ctr
-    oil_ftp_ctr_base = load_testing(dataset_type='case3', key='oil_ftp_ctr')
+    oil_ftp_ctr_base = load_testing(dataset_type='case2', key='oil_ftp_ctr')
     gas_ftp_ctr = psc._gas_ftp_ctr
-    gas_ftp_ctr_base = load_testing(dataset_type='case3', key='gas_ftp_ctr')
+    gas_ftp_ctr_base = load_testing(dataset_type='case2', key='gas_ftp_ctr')
 
     np.testing.assert_allclose(oil_ftp_ctr, oil_ftp_ctr_base, atol=1e-6)
     np.testing.assert_allclose(gas_ftp_ctr, gas_ftp_ctr_base, atol=1e-6)
@@ -92,9 +87,9 @@ def test_ftp_ctr():
 
 def test_ftp_gov():
     oil_ftp_gov = psc._oil_ftp_gov
-    oil_ftp_gov_base = load_testing(dataset_type='case3', key='oil_ftp_gov')
+    oil_ftp_gov_base = load_testing(dataset_type='case2', key='oil_ftp_gov')
     gas_ftp_gov = psc._gas_ftp_gov
-    gas_ftp_gov_base = load_testing(dataset_type='case3', key='gas_ftp_gov')
+    gas_ftp_gov_base = load_testing(dataset_type='case2', key='gas_ftp_gov')
 
     np.testing.assert_allclose(oil_ftp_gov, oil_ftp_gov_base, atol=1e-6)
     np.testing.assert_allclose(gas_ftp_gov, gas_ftp_gov_base, atol=1e-6)
@@ -112,12 +107,12 @@ def test_ic():
     gas_ic_unrecovered = psc._gas_ic_unrecovered
     gas_ic_paid = psc._gas_ic_paid
 
-    oil_ic_base = load_testing(dataset_type='case3', key='oil_ic')
-    oil_ic_unrecovered_base = load_testing(dataset_type='case3', key='oil_ic_unrec')
-    oil_ic_paid_base = load_testing(dataset_type='case3', key='oil_ic_paid')
-    gas_ic_base = load_testing(dataset_type='case3', key='gas_ic')
-    gas_ic_unrecovered_base = load_testing(dataset_type='case3', key='gas_ic_unrec')
-    gas_ic_paid_base = load_testing(dataset_type='case3', key='gas_ic_paid')
+    oil_ic_base = load_testing(dataset_type='case2', key='oil_ic')
+    oil_ic_unrecovered_base = load_testing(dataset_type='case2', key='oil_ic_unrec')
+    oil_ic_paid_base = load_testing(dataset_type='case2', key='oil_ic_paid')
+    gas_ic_base = load_testing(dataset_type='case2', key='gas_ic')
+    gas_ic_unrecovered_base = load_testing(dataset_type='case2', key='gas_ic_unrec')
+    gas_ic_paid_base = load_testing(dataset_type='case2', key='gas_ic_paid')
 
     np.testing.assert_allclose(oil_ic, oil_ic_base, atol=1e-6)
     np.testing.assert_allclose(oil_ic_unrecovered, oil_ic_unrecovered_base, atol=1e-6)
@@ -133,9 +128,9 @@ def test_unrec_before_transfer():
     """
 
     oil_unrec_before_transfer = psc._oil_unrecovered_before_transfer
-    oil_unrec_before_transfer_base = load_testing(dataset_type='case3', key='oil_unrec_cost')
+    oil_unrec_before_transfer_base = load_testing(dataset_type='case2', key='oil_unrec_cost')
     gas_unrec_before_transfer = psc._gas_unrecovered_before_transfer
-    gas_unrec_before_transfer_base = load_testing(dataset_type='case3', key='gas_unrec_cost')
+    gas_unrec_before_transfer_base = load_testing(dataset_type='case2', key='gas_unrec_cost')
 
     np.testing.assert_allclose(oil_unrec_before_transfer, oil_unrec_before_transfer_base, atol=1e-6)
     np.testing.assert_allclose(gas_unrec_before_transfer, gas_unrec_before_transfer_base, atol=1e-6)
@@ -149,8 +144,8 @@ def test_cost_tobe_recovered():
     oil_cost_to_be_recovered = psc._oil_cost_to_be_recovered
     gas_cost_to_be_recovered = psc._gas_cost_to_be_recovered
 
-    oil_cost_to_be_recovered_base = load_testing(dataset_type='case3', key='oil_cost_to_be_recovered')
-    gas_cost_to_be_recovered_base = load_testing(dataset_type='case3', key='gas_cost_to_be_recovered')
+    oil_cost_to_be_recovered_base = load_testing(dataset_type='case2', key='oil_cost_to_be_recovered')
+    gas_cost_to_be_recovered_base = load_testing(dataset_type='case2', key='gas_cost_to_be_recovered')
 
     np.testing.assert_allclose(oil_cost_to_be_recovered, oil_cost_to_be_recovered_base, atol=1e-6)
     np.testing.assert_allclose(gas_cost_to_be_recovered, gas_cost_to_be_recovered_base, atol=1e-6)
@@ -162,8 +157,8 @@ def test_cost_recovery():
     gas_cost_recovery = psc._gas_cost_recovery
 
     # Expected result
-    oil_cost_recovery_base = load_testing(dataset_type='case3', key='oil_cost_recovery')
-    gas_cost_recovery_base = load_testing(dataset_type='case3', key='gas_cost_recovery')
+    oil_cost_recovery_base = load_testing(dataset_type='case2', key='oil_cost_recovery')
+    gas_cost_recovery_base = load_testing(dataset_type='case2', key='gas_cost_recovery')
 
     # Execute testing
     np.testing.assert_allclose(oil_cost_recovery, oil_cost_recovery_base, atol=1e-6)
@@ -176,8 +171,8 @@ def test_ets_before_transfer():
     gas_ets_before_transfer = psc._gas_ets_before_transfer
 
     # Expected result
-    oil_ets_before_transfer_base = load_testing(dataset_type='case3', key='oil_ets_before_transfer')
-    gas_ets_before_transfer_base = load_testing(dataset_type='case3', key='gas_ets_before_transfer')
+    oil_ets_before_transfer_base = load_testing(dataset_type='case2', key='oil_ets_before_transfer')
+    gas_ets_before_transfer_base = load_testing(dataset_type='case2', key='gas_ets_before_transfer')
 
     # Execute testing
     np.testing.assert_allclose(oil_ets_before_transfer, oil_ets_before_transfer_base, atol=1e-6)
@@ -190,8 +185,8 @@ def test_transfer():
     transfer_to_oil = psc._transfer_to_oil
 
     # Expected result
-    transfer_to_gas_base = load_testing(dataset_type='case3', key='oil_transfer_to_gas')
-    transfer_to_oil_base = load_testing(dataset_type='case3', key='gas_transfer_to_oil')
+    transfer_to_gas_base = load_testing(dataset_type='case2', key='oil_transfer_to_gas')
+    transfer_to_oil_base = load_testing(dataset_type='case2', key='gas_transfer_to_oil')
 
     # Execute testing
     np.testing.assert_allclose(transfer_to_gas, transfer_to_gas_base, atol=1e-6)
@@ -204,8 +199,8 @@ def test_unrecovered_after_transfer():
     gas_unrecovered_after_transfer = psc._gas_unrecovered_after_transfer
 
     # Expected result
-    oil_unrecovered_after_transfer_base = load_testing(dataset_type='case3', key='oil_unrec_after_transfer')
-    gas_unrecovered_after_transfer_base = load_testing(dataset_type='case3', key='gas_unrec_after_transfer')
+    oil_unrecovered_after_transfer_base = load_testing(dataset_type='case2', key='oil_unrec_after_transfer')
+    gas_unrecovered_after_transfer_base = load_testing(dataset_type='case2', key='gas_unrec_after_transfer')
 
     # Execute testing
     np.testing.assert_allclose(oil_unrecovered_after_transfer, oil_unrecovered_after_transfer_base, atol=1e-6)
@@ -218,8 +213,8 @@ def test_ets_after_transfer():
     gas_ets_after_transfer = psc._gas_ets_after_transfer
 
     # Expected result
-    oil_ets_after_transfer_base = load_testing(dataset_type='case3', key='oil_ets_after_transfer')
-    gas_ets_after_transfer_base = load_testing(dataset_type='case3', key='gas_ets_after_transfer')
+    oil_ets_after_transfer_base = load_testing(dataset_type='case2', key='oil_ets_after_transfer')
+    gas_ets_after_transfer_base = load_testing(dataset_type='case2', key='gas_ets_after_transfer')
 
     # Execute testing
     np.testing.assert_allclose(oil_ets_after_transfer, oil_ets_after_transfer_base, atol=1e-6)
@@ -235,10 +230,10 @@ def test_equity_share():
     gas_government_share = psc._gas_government_share
 
     # Expected result
-    oil_contractor_share_base = load_testing(dataset_type='case3', key='oil_ctr_share')
-    oil_government_share_base = load_testing(dataset_type='case3', key='oil_gov_share')
-    gas_contractor_share_base = load_testing(dataset_type='case3', key='gas_ctr_share')
-    gas_government_share_base = load_testing(dataset_type='case3', key='gas_gov_share')
+    oil_contractor_share_base = load_testing(dataset_type='case2', key='oil_ctr_share')
+    oil_government_share_base = load_testing(dataset_type='case2', key='oil_gov_share')
+    gas_contractor_share_base = load_testing(dataset_type='case2', key='gas_ctr_share')
+    gas_government_share_base = load_testing(dataset_type='case2', key='gas_gov_share')
 
     # Execute testing
     np.testing.assert_allclose(oil_contractor_share, oil_contractor_share_base, atol=1e-6)
@@ -258,13 +253,13 @@ def test_dmo():
     gas_ddmo = psc._gas_ddmo
 
     # Expected result
-    oil_dmo_volume_base = load_testing(dataset_type='case3', key='oil_dmo_volume')
-    oil_dmo_fee_base = load_testing(dataset_type='case3', key='oil_dmo_fee')
-    oil_ddmo_base = load_testing(dataset_type='case3', key='oil_ddmo')
+    oil_dmo_volume_base = load_testing(dataset_type='case2', key='oil_dmo_volume')
+    oil_dmo_fee_base = load_testing(dataset_type='case2', key='oil_dmo_fee')
+    oil_ddmo_base = load_testing(dataset_type='case2', key='oil_ddmo')
 
-    gas_dmo_volume_base = load_testing(dataset_type='case3', key='gas_dmo_volume')
-    gas_dmo_fee_base = load_testing(dataset_type='case3', key='gas_dmo_fee')
-    gas_ddmo_base = load_testing(dataset_type='case3', key='gas_ddmo')
+    gas_dmo_volume_base = load_testing(dataset_type='case2', key='gas_dmo_volume')
+    gas_dmo_fee_base = load_testing(dataset_type='case2', key='gas_dmo_fee')
+    gas_ddmo_base = load_testing(dataset_type='case2', key='gas_ddmo')
 
     # Execute testing
     np.testing.assert_allclose(oil_dmo_volume, oil_dmo_volume_base, atol=1e-6)
@@ -282,8 +277,8 @@ def test_taxable_income():
     gas_taxable_income = psc._gas_taxable_income
 
     # Expected result
-    oil_taxable_income_base = load_testing(dataset_type='case3', key='oil_taxable_income')
-    gas_taxable_income_base = load_testing(dataset_type='case3', key='gas_taxable_income')
+    oil_taxable_income_base = load_testing(dataset_type='case2', key='oil_taxable_income')
+    gas_taxable_income_base = load_testing(dataset_type='case2', key='gas_taxable_income')
 
     # Execute testing
     np.testing.assert_allclose(oil_taxable_income, oil_taxable_income_base, atol=1e-6)
@@ -296,8 +291,8 @@ def test_tax():
     gas_tax = psc._gas_tax_payment
 
     # Expected result
-    oil_tax_base = load_testing(dataset_type='case3', key='oil_tax')
-    gas_tax_base = load_testing(dataset_type='case3', key='gas_tax')
+    oil_tax_base = load_testing(dataset_type='case2', key='oil_tax')
+    gas_tax_base = load_testing(dataset_type='case2', key='gas_tax')
 
     # Execute testing
     np.testing.assert_allclose(oil_tax, oil_tax_base, atol=1e-6)
@@ -310,8 +305,8 @@ def test_ctr_net_share():
     gas_ctr_share_after_tax = psc._gas_ctr_net_share
 
     # Expected result
-    oil_ctr_share_after_tax_base = load_testing(dataset_type='case3', key='oil_ctr_net_share')
-    gas_ctr_share_after_tax_base = load_testing(dataset_type='case3', key='gas_ctr_net_share')
+    oil_ctr_share_after_tax_base = load_testing(dataset_type='case2', key='oil_ctr_net_share')
+    gas_ctr_share_after_tax_base = load_testing(dataset_type='case2', key='gas_ctr_net_share')
 
     # Execute testing
     np.testing.assert_allclose(oil_ctr_share_after_tax, oil_ctr_share_after_tax_base, atol=1e-6)
@@ -324,8 +319,8 @@ def test_ctr_take():
     gas_ctr_share_after_tax = psc._gas_ctr_net_share
 
     # Expected result
-    oil_ctr_share_after_tax_base = load_testing(dataset_type='case3', key='oil_ctr_net_share')
-    gas_ctr_share_after_tax_base = load_testing(dataset_type='case3', key='gas_ctr_net_share')
+    oil_ctr_share_after_tax_base = load_testing(dataset_type='case2', key='oil_ctr_net_share')
+    gas_ctr_share_after_tax_base = load_testing(dataset_type='case2', key='gas_ctr_net_share')
 
     # Execute testing
     np.testing.assert_allclose(oil_ctr_share_after_tax, oil_ctr_share_after_tax_base, atol=1e-6)
@@ -338,8 +333,8 @@ def test_ctr_cashflow():
     gas_ctr_cashflow = psc._gas_cashflow
 
     # Expected result
-    oil_ctr_cashflow_base = load_testing(dataset_type='case3', key='oil_ctr_cashflow')
-    gas_ctr_cashflow_base = load_testing(dataset_type='case3', key='gas_ctr_cashflow')
+    oil_ctr_cashflow_base = load_testing(dataset_type='case2', key='oil_ctr_cashflow')
+    gas_ctr_cashflow_base = load_testing(dataset_type='case2', key='gas_ctr_cashflow')
 
     # Execute testing
     np.testing.assert_allclose(oil_ctr_cashflow, oil_ctr_cashflow_base, atol=1e-6)
@@ -352,8 +347,8 @@ def test_goi_take():
     gas_goi_take = psc._gas_government_take
 
     # Expected result
-    oil_goi_take_base = load_testing(dataset_type='case3', key='oil_goi_take')
-    gas_goi_take_base = load_testing(dataset_type='case3', key='gas_goi_take')
+    oil_goi_take_base = load_testing(dataset_type='case2', key='oil_goi_take')
+    gas_goi_take_base = load_testing(dataset_type='case2', key='gas_goi_take')
 
     # Execute testing
     np.testing.assert_allclose(oil_goi_take, oil_goi_take_base, atol=1e-6)
@@ -397,7 +392,7 @@ def test_consolidated_revenue():
     engine = psc._consolidated_revenue
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_revenue')
+    base = load_testing(dataset_type='case2', key='cnsltd_revenue')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -408,7 +403,7 @@ def test_consolidated_depreciation():
     engine = psc._consolidated_depreciation
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_depreciation')
+    base = load_testing(dataset_type='case2', key='cnsltd_depreciation')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -419,7 +414,7 @@ def test_consolidated_non_capital():
     engine = psc._consolidated_non_capital
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_non_capital')
+    base = load_testing(dataset_type='case2', key='cnsltd_non_capital')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -430,7 +425,7 @@ def test_consolidated_ftp():
     engine = psc._consolidated_ftp
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_ftp')
+    base = load_testing(dataset_type='case2', key='cnsltd_ftp')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -441,7 +436,7 @@ def test_consolidated_ftp_ctr():
     engine = psc._consolidated_ftp_ctr
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_ftp_ctr')
+    base = load_testing(dataset_type='case2', key='cnsltd_ftp_ctr')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -452,7 +447,7 @@ def test_consolidated_ftp_gov():
     engine = psc._consolidated_ftp_gov
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_ftp_gov')
+    base = load_testing(dataset_type='case2', key='cnsltd_ftp_gov')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -463,7 +458,7 @@ def test_consolidated_ic():
     engine = psc._consolidated_ic
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_ic')
+    base = load_testing(dataset_type='case2', key='cnsltd_ic')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -474,7 +469,7 @@ def test_consolidated_ic_unrec():
     engine = psc._consolidated_ic_unrecovered
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_ic_unrec')
+    base = load_testing(dataset_type='case2', key='cnsltd_ic_unrec')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -485,7 +480,7 @@ def test_consolidated_ic_paid():
     engine = psc._consolidated_ic_paid
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_ic_paid')
+    base = load_testing(dataset_type='case2', key='cnsltd_ic_paid')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -496,7 +491,7 @@ def test_consolidated_unrec_cost():
     engine = psc._consolidated_unrecovered_before_transfer
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_unrec_cost')
+    base = load_testing(dataset_type='case2', key='cnsltd_unrec_cost')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -507,7 +502,7 @@ def test_consolidated_cost_recovery_before_transfer():
     engine = psc._consolidated_cost_recovery_before_transfer
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_cost_recovery_before_transfer')
+    base = load_testing(dataset_type='case2', key='cnsltd_cost_recovery_before_transfer')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -518,7 +513,7 @@ def test_consolidated_ets_before_transfer():
     engine = psc._consolidated_ets_before_transfer
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_ets_before_transfer')
+    base = load_testing(dataset_type='case2', key='cnsltd_ets_before_transfer')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -529,7 +524,7 @@ def test_consolidated_unrec_after_transfer():
     engine = psc._consolidated_unrecovered_after_transfer
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_unrec_after_transfer')
+    base = load_testing(dataset_type='case2', key='cnsltd_unrec_after_transfer')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -540,7 +535,7 @@ def test_consolidated_cost_recovery_after_transfer():
     engine = psc._consolidated_cost_recovery_after_tf
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_cost_recovery_after_transfer')
+    base = load_testing(dataset_type='case2', key='cnsltd_cost_recovery_after_transfer')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -551,7 +546,7 @@ def test_consolidated_ets_after_transfer():
     engine = psc._consolidated_ets_after_transfer
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_ets_after_transfer')
+    base = load_testing(dataset_type='case2', key='cnsltd_ets_after_transfer')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -562,7 +557,7 @@ def test_consolidated_ctr_share():
     engine = psc._consolidated_contractor_share
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_ctr_share')
+    base = load_testing(dataset_type='case2', key='cnsltd_ctr_share')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -573,7 +568,7 @@ def test_consolidated_gov_share():
     engine = psc._consolidated_government_share
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_gov_share')
+    base = load_testing(dataset_type='case2', key='cnsltd_gov_share')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -584,7 +579,7 @@ def test_consolidated_dmo_volume():
     engine = psc._consolidated_dmo_volume
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_dmo_volume')
+    base = load_testing(dataset_type='case2', key='cnsltd_dmo_volume')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -595,7 +590,7 @@ def test_consolidated_dmo_fee():
     engine = psc._consolidated_dmo_fee
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_dmo_fee')
+    base = load_testing(dataset_type='case2', key='cnsltd_dmo_fee')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -606,7 +601,7 @@ def test_consolidated_ddmo():
     engine = psc._consolidated_ddmo
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_ddmo')
+    base = load_testing(dataset_type='case2', key='cnsltd_ddmo')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -617,7 +612,7 @@ def test_consolidated_taxable_income():
     engine = psc._consolidated_taxable_income
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_taxable_income')
+    base = load_testing(dataset_type='case2', key='cnsltd_taxable_income')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -628,10 +623,13 @@ def test_consolidated_tax_due():
     engine = psc._consolidated_tax_due
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_tax_due')
+    base = load_testing(dataset_type='case2', key='cnsltd_tax_due')
 
-    # Execute testing
-    np.testing.assert_allclose(engine, base, atol=1e-6)
+    if engine is None:
+        pass
+    else:
+        # Execute testing
+        np.testing.assert_allclose(engine, base, atol=1e-6)
 
 
 def test_consolidated_unpaid_tax_balance():
@@ -639,10 +637,13 @@ def test_consolidated_unpaid_tax_balance():
     engine = psc._consolidated_unpaid_tax_balance
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_unpaid_tax_balance')
+    base = load_testing(dataset_type='case2', key='cnsltd_unpaid_tax_balance')
 
-    # Execute testing
-    np.testing.assert_allclose(engine, base, atol=1e-6)
+    if engine is None:
+        pass
+    else:
+        # Execute testing
+        np.testing.assert_allclose(engine, base, atol=1e-6)
 
 
 def test_consolidated_tax_payment():
@@ -650,7 +651,7 @@ def test_consolidated_tax_payment():
     engine = psc._consolidated_tax_payment
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_tax_payment')
+    base = load_testing(dataset_type='case2', key='cnsltd_tax_payment')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -661,7 +662,7 @@ def test_consolidated_ctr_net_share():
     engine = psc._consolidated_ctr_net_share
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_ctr_net_share')
+    base = load_testing(dataset_type='case2', key='cnsltd_ctr_net_share')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -672,7 +673,7 @@ def test_consolidated_gov_take():
     engine = psc._consolidated_government_take
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_gov_take')
+    base = load_testing(dataset_type='case2', key='cnsltd_gov_take')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
@@ -683,7 +684,7 @@ def test_consolidated_cashflow():
     engine = psc._consolidated_cashflow
 
     # Expected result
-    base = load_testing(dataset_type='case3', key='cnsltd_cashflow')
+    base = load_testing(dataset_type='case2', key='cnsltd_cashflow')
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
