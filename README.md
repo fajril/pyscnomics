@@ -50,6 +50,11 @@ tables = get_table(contract=psc)
 print(tables)
 ```
 
+## Resources
+- Explore our [docs](https://docs.readthedocs.io/en/stable/) to learn how PySCnomics works.
+- Deep dive into our [books](https://isbn.perpusnas.go.id/) about PSC  
+
+
 ## License
 This project is licensed under the terms of the Apache Software license. See the [License](https://github.com/fajril/pyscnomics/blob/main/LICENSE) file for details.
 
