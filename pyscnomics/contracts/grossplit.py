@@ -918,6 +918,19 @@ class GrossSplit(BaseProject):
         self._gas_ctr_split = (self._gas_base_split + self._var_split_array + self._gas_prog_split +
                                minis_disc_array)
 
+        # Condition to limit the contractor split is 1.0 at maximum
+        self._oil_ctr_split = np.where(
+            self._oil_ctr_split > np.full_like(self._oil_ctr_split, 1.0),
+            np.full_like(self._oil_ctr_split, 1.0),
+            self._oil_ctr_split
+        )
+
+        self._gas_ctr_split = np.where(
+            self._gas_ctr_split > np.full_like(self._gas_ctr_split, 1.0),
+            np.full_like(self._gas_ctr_split, 1.0),
+            self._gas_ctr_split
+        )
+
         # Contractor Share
         self._oil_ctr_share_before_transfer = self._oil_revenue * self._oil_ctr_split
         self._gas_ctr_share_before_transfer = self._gas_revenue * self._gas_ctr_split
