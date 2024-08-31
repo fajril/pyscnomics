@@ -329,6 +329,68 @@ class OptimizationParameter(Enum):
         Optimization parameter for VAT Discount.
     LBT_DISCOUNT: str
         Optimization parameter for LBT Discount.
+
+
+    Notes
+    -----
+    The impact of the optimization of each parameter into the **contractor** economic indicator are as the following:
+
+    OIL_CTR_PRETAX
+        A higher value of this optimization parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    GAS_CTR_PRETAX
+        A higher value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    OIL_FTP_PORTION
+        A lower value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    GAS_FTP_PORTION
+        A lower value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    OIL_IC
+        A higher value of this parameter typically enhances the contractor's economic indicator while
+        diminishing the government's. However, under certain conditions, the opposite effect may occur.
+
+    GAS_IC
+        A higher value of this parameter typically enhances the contractor's economic indicator while
+        diminishing the government's. However, under certain conditions, the opposite effect may occur.
+
+    OIL_DMO_FEE
+        A higher value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    GAS_DMO_FEE
+        A higher value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    VAT_RATE
+        A lower value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    EFFECTIVE_TAX_RATE
+        A lower value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    MINISTERIAL_DISCRETION
+        A higher value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    VAT_DISCOUNT
+        A higher value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    LBT_DISCOUNT
+        A higher value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    DEPRECIATION_ACCELERATION
+        A higher value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
     """
     OIL_CTR_PRETAX = 'Oil Contractor Pre Tax'
     GAS_CTR_PRETAX = 'Gas Contractor Pre Tax'
