@@ -982,4 +982,103 @@ def get_rpd_dict(data: dict):
     ).set_index('year').to_dict()
 
 
+def get_indirect_taxes(data: dict)-> float:
+    """
+    Function to retrieve the indirect taxes indicator from given contract data.
 
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+
+    Returns
+    -------
+    out:float
+        The value of indirect tax indicator.
+
+    """
+    def get_contract_indirect_taxes(
+            contract_object: CostRecovery | GrossSplit | Transition,
+            contract_args: dict,
+    ):
+        # Retrieving the information of the expenditures for the inflation and VAT value is from the given data
+        contract_object.run(**contract_args)
+        oil_capital_original = np.sum(contract_object._oil_capital_expenditures)
+        gas_capital_original = np.sum(contract_object._gas_capital_expenditures)
+        oil_intangible_original = np.sum(contract_object._oil_intangible_expenditures)
+        gas_intangible_original = np.sum(contract_object._gas_intangible_expenditures)
+        oil_opex_original = np.sum(contract_object._oil_opex_expenditures)
+        gas_opex_original = np.sum(contract_object._gas_opex_expenditures)
+        oil_asr_original = np.sum(contract_object._oil_asr_expenditures)
+        gas_asr_original = np.sum(contract_object._gas_asr_expenditures)
+
+        # Set the value of VAT and Inflation to 0 and run the contract using these values
+        contract_args_zeros = contract_args.copy()
+        contract_args_zeros['vat_rate'] = 0.0
+        contract_args_zeros['inflation_rate'] = 0.0
+        contract_object.run(**contract_args_zeros)
+
+        # Retrieving the information of the expenditures for the inflation and VAT value is zero
+        oil_capital_alter = np.sum(contract_object._oil_capital_expenditures)
+        gas_capital_alter = np.sum(contract_object._gas_capital_expenditures)
+        oil_intangible_alter = np.sum(contract_object._oil_intangible_expenditures)
+        gas_intangible_alter = np.sum(contract_object._gas_intangible_expenditures)
+        oil_opex_alter = np.sum(contract_object._oil_opex_expenditures)
+        gas_opex_alter = np.sum(contract_object._gas_opex_expenditures)
+        oil_asr_alter = np.sum(contract_object._oil_asr_expenditures)
+        gas_asr_alter = np.sum(contract_object._gas_asr_expenditures)
+
+        # Get the value of the original indirect taxes from given data and indirect taxes from altered zeros contract
+        indirect_taxes_original = (
+                oil_capital_original +
+                gas_capital_original +
+                oil_intangible_original +
+                gas_intangible_original +
+                oil_opex_original +
+                gas_opex_original +
+                oil_asr_original +
+                gas_asr_original
+        )
+
+        indirect_taxes_alter = (
+            oil_capital_alter +
+            gas_capital_alter +
+            oil_intangible_alter +
+            gas_intangible_alter +
+            oil_opex_alter +
+            gas_opex_alter +
+            oil_asr_alter +
+            gas_asr_alter
+        )
+
+        return indirect_taxes_original, indirect_taxes_alter
+
+    if 'contract_1' in data or 'contract_2' in data:
+        # Retrieving the baseproject
+        project = get_transition(data=data)
+        contract = project[1]
+        contract_arguments_original = project[2]
+        in_tax_ori_1, in_tax_alter_1 = get_contract_indirect_taxes(
+            contract_object=contract.contract1,
+            contract_args=contract.argument_contract1
+        )
+
+        in_tax_ori_2, in_tax_alter_2 = get_contract_indirect_taxes(
+            contract_object=contract.contract2,
+            contract_args=contract.argument_contract2
+        )
+
+        indirect_taxes = in_tax_ori_1 + in_tax_ori_2 - in_tax_alter_1 - in_tax_alter_2
+
+    else:
+        # Retrieving the baseproject
+        project = get_baseproject(data=data)
+        contract = project[1]
+        contract_arguments_original = project[2]
+        in_tax_ori, in_tax_alter = get_contract_indirect_taxes(
+            contract_object=contract,
+            contract_args=contract_arguments_original,
+        )
+        indirect_taxes = in_tax_ori - in_tax_alter
+
+    return indirect_taxes
