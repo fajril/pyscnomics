@@ -1082,3 +1082,197 @@ def get_indirect_taxes(data: dict)-> float:
         indirect_taxes = in_tax_ori - in_tax_alter
 
     return indirect_taxes
+
+
+def get_grosssplit_split(data: dict):
+    """
+    The function to get the contractor split information from Gross Split Contract Scheme.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+
+    Returns
+    -------
+    dict
+        The dictionary containing the information of the contractor split.
+
+
+    """
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
+        get_setup_dict(data=data))
+
+    contract = GrossSplit(
+        start_date=start_date,
+        end_date=end_date,
+        oil_onstream_date=oil_onstream_date,
+        gas_onstream_date=gas_onstream_date,
+        lifting=lifting,
+        capital_cost=tangible,
+        intangible_cost=intangible,
+        opex=opex,
+        asr_cost=asr,
+        field_status=data['grosssplit']['field_status'],
+        field_loc=data['grosssplit']['field_loc'],
+        res_depth=data['grosssplit']['res_depth'],
+        infra_avail=data['grosssplit']['infra_avail'],
+        res_type=data['grosssplit']['res_type'],
+        api_oil=data['grosssplit']['api_oil'],
+        domestic_use=data['grosssplit']['domestic_use'],
+        prod_stage=data['grosssplit']['prod_stage'],
+        co2_content=data['grosssplit']['co2_content'],
+        h2s_content=data['grosssplit']['h2s_content'],
+        base_split_ctr_oil=convert_to_float(target=data['grosssplit']['base_split_ctr_oil']),
+        base_split_ctr_gas=convert_to_float(target=data['grosssplit']['base_split_ctr_gas']),
+        split_ministry_disc=convert_to_float(target=data['grosssplit']['split_ministry_disc']),
+        oil_dmo_volume_portion=convert_to_float(target=data['grosssplit']['oil_dmo_volume_portion']),
+        oil_dmo_fee_portion=convert_to_float(target=data['grosssplit']['oil_dmo_fee_portion']),
+        oil_dmo_holiday_duration=data['grosssplit']['oil_dmo_holiday_duration'],
+        gas_dmo_volume_portion=convert_to_float(target=data['grosssplit']['gas_dmo_volume_portion']),
+        gas_dmo_fee_portion=convert_to_float(target=data['grosssplit']['gas_dmo_fee_portion']),
+        gas_dmo_holiday_duration=data['grosssplit']['gas_dmo_holiday_duration'],
+
+    )
+
+    # Filling the arguments of the contract with the data input
+    contract_arguments_dict = {
+        "sulfur_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['sulfur_revenue']),
+        "electricity_revenue": convert_str_to_otherrevenue(
+            str_object=data['contract_arguments']['electricity_revenue']),
+        "co2_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['co2_revenue']),
+        "is_dmo_end_weighted": data['contract_arguments']['is_dmo_end_weighted'],
+        "tax_regime": convert_str_to_taxregime(str_object=data['contract_arguments']['tax_regime']),
+        "tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['tax_rate']),
+        "sunk_cost_reference_year": data['contract_arguments']['sunk_cost_reference_year'],
+        "depr_method": convert_str_to_depremethod(str_object=data['contract_arguments']['depr_method']),
+        "decline_factor": data['contract_arguments']['decline_factor'],
+        "vat_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['vat_rate']),
+        "lbt_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['lbt_rate']),
+        "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
+        "future_rate": convert_to_float(target=data['contract_arguments']['future_rate']),
+        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
+            str_object=data['contract_arguments']['inflation_rate_applied_to']),
+        "cum_production_split_offset": convert_list_to_array_float_or_array(data_input=data["contract_arguments"]["cum_production_split_offset"]),
+        "amortization": data["contract_arguments"]["amortization"],
+        "regime": convert_grosssplitregime_to_enum(target=data["contract_arguments"]["regime"])
+    }
+
+    # Running the contract
+    contract.run(**contract_arguments_dict)
+
+    # Retrieving the split information
+    contractor_split = pd.DataFrame({
+        'project_years': contract.project_years.tolist(),
+        'oil_base_split': contract._oil_base_split.tolist(),
+        'gas_base_split': contract._gas_base_split.tolist(),
+        'var_split_array': contract._var_split_array.tolist(),
+        'oil_prog_split': contract._oil_prog_split.tolist(),
+        'gas_prog_split': contract._gas_prog_split.tolist(),
+        'oil_ctr_split': contract._oil_ctr_split_prior_bracket.tolist(),
+        'gas_ctr_split': contract._gas_ctr_split_prior_bracket.tolist(),
+    }).set_index('project_years').to_dict()
+
+    years_of_maximum_split = {
+        'oil': contract._oil_year_maximum_ctr_split.tolist(),
+        'gas': contract._gas_year_maximum_ctr_split.tolist(),
+    }
+
+    return {
+        'contractor_split': contractor_split,
+        'years_of_maximum_split': years_of_maximum_split
+    }
+
+
+def get_transition_split(data: dict):
+    """
+    The function to get the contractor split information from Transition Contract Scheme.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+
+    Returns
+    -------
+    summary_skk: dict
+        The executive summary of the contract.
+    contract:
+        The Transition contract object.
+    contract_arguments_dict: dict
+        The contract arguments used in running the contract calculation.
+    summary_arguments_dic: dict
+        The summary arguments used in retrieving the executive summary of the contract.
+
+    """
+    # Defining contract_1
+    if data['contract_1']['costrecovery'] is not None and data['contract_1']['grosssplit'] is None:
+        _, contract_1, contract_arguments_1, _ = get_costrecovery(data=data['contract_1'], summary_result=False)
+
+    elif data['contract_1']['grosssplit'] is not None and data['contract_1']['costrecovery'] is None:
+        _, contract_1, contract_arguments_1, _ = get_grosssplit(data=data['contract_1'], summary_result=False)
+
+    else:
+        raise ContractException("Contract type is not recognized")
+
+    # Defining contract_2
+    if data['contract_2']['costrecovery'] is not None and data['contract_2']['grosssplit'] is None:
+        _, contract_2, contract_arguments_2, _ = get_costrecovery(data=data['contract_2'], summary_result=False)
+
+    elif data['contract_2']['grosssplit'] is not None and data['contract_2']['costrecovery'] is None:
+        _, contract_2, contract_arguments_2, _ = get_grosssplit(data=data['contract_2'], summary_result=False)
+
+    else:
+        raise ContractException("Contract type is not recognized")
+
+    # generating the transition contract object
+    contract = Transition(contract1=contract_1,
+                          contract2=contract_2,
+                          argument_contract1=contract_arguments_1,
+                          argument_contract2=contract_arguments_2, )
+
+    # Generating the transition contract arguments
+    contract_arguments_dict = data['contract_arguments']
+
+    # Running the transition contract
+    contract.run(**contract_arguments_dict)
+
+    # Making the base for the loops and container of the result
+    result = {}
+
+    # Retrieving the split information from first contract
+    for index, contract in enumerate([contract_1, contract_2]):
+        if isinstance(contract, GrossSplit):
+            # Retrieving the split information
+            contractor_split = pd.DataFrame({
+                'project_years': contract.project_years.tolist(),
+                'oil_base_split': contract._oil_base_split.tolist(),
+                'gas_base_split': contract._gas_base_split.tolist(),
+                'var_split_array': contract._var_split_array.tolist(),
+                'oil_prog_split': contract._oil_prog_split.tolist(),
+                'gas_prog_split': contract._gas_prog_split.tolist(),
+                'oil_ctr_split': contract._oil_ctr_split_prior_bracket.tolist(),
+                'gas_ctr_split': contract._gas_ctr_split_prior_bracket.tolist(),
+            }).set_index('project_years').to_dict()
+
+            years_of_maximum_split = {
+                'oil': contract._oil_year_maximum_ctr_split.tolist(),
+                'gas': contract._gas_year_maximum_ctr_split.tolist(),
+            }
+
+            result['contract_' + str(index+1)] = {
+                'contractor_split': contractor_split,
+                'years_of_maximum_split': years_of_maximum_split
+            }
+        else:
+            result['contract_' + str(index + 1)] = {}
+            pass
+
+    return result
+
+
+        
+
+
+
+

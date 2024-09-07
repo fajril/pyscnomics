@@ -1,6 +1,7 @@
 """
 Handles calculations associated with PSC Gross Split.
 """
+import warnings
 from dataclasses import dataclass, field
 import numpy as np
 
@@ -205,6 +206,13 @@ class GrossSplit(BaseProject):
     _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_government_take: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes fof containing the 100% contractor split warning
+    _oil_ctr_split_prior_bracket: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ctr_split_prior_bracket: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_year_maximum_ctr_split: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_year_maximum_ctr_split: np.ndarray = field(default=None, init=False, repr=False)
+
 
     def _check_attributes(self):
         """
@@ -700,6 +708,40 @@ class GrossSplit(BaseProject):
             self._oil_sunk_cost = np.zeros(1)
             self._gas_sunk_cost = np.zeros(1)
 
+    def _get_year_maximum_split(
+            self,
+            ctr_split: np.ndarray,
+            fluid: str
+    ):
+        """
+        Function to get the years of when the contractor have maximum split 100%.
+
+        Parameters
+        ----------
+        ctr_split: np.ndarray
+            The array of the contractor split
+        fluid: str
+            The fluid type that the contractor split being observed.
+
+        Returns
+        -------
+        out: np.ndarray
+            The array of the years when the contractor have the maximum split 100%.
+
+        """
+
+        indices = (np.argwhere(ctr_split >= 1.0)).flatten()
+        years_of_max = self.project_years[indices]
+        if len(years_of_max)>0:
+            warnings.warn(
+                f"The {fluid} contractor split equal more than 100% are in the following years {years_of_max} ",
+                UserWarning)
+            warnings.simplefilter("default", UserWarning)
+        else:
+            pass
+
+        return years_of_max
+
     def run(self,
             sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
             electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
@@ -917,6 +959,20 @@ class GrossSplit(BaseProject):
                                minis_disc_array)
         self._gas_ctr_split = (self._gas_base_split + self._var_split_array + self._gas_prog_split +
                                minis_disc_array)
+
+        self._oil_ctr_split_prior_bracket = np.copy(self._oil_ctr_split)
+        self._gas_ctr_split_prior_bracket = np.copy(self._gas_ctr_split)
+
+        # Add the condition to show the contractor split more than 100%
+        self._oil_year_maximum_ctr_split = self._get_year_maximum_split(
+            ctr_split=self._oil_ctr_split,
+            fluid="Oil"
+        )
+
+        self._gas_year_maximum_ctr_split = self._get_year_maximum_split(
+            ctr_split=self._gas_ctr_split,
+            fluid="Gas"
+        )
 
         # Condition to limit the contractor split is 1.0 at maximum
         self._oil_ctr_split = np.where(

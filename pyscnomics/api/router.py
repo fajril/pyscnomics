@@ -8,7 +8,9 @@ from pyscnomics.api.adapter import (get_baseproject,
                                     get_detailed_summary,
                                     get_ltp_dict,
                                     get_rpd_dict,
-                                    get_indirect_taxes)
+                                    get_indirect_taxes,
+                                    get_grosssplit_split,
+                                    get_transition_split)
 from pyscnomics.api.converter import Data
 from pyscnomics.api.converter import DataTransition
 from pyscnomics.api.converter import LtpBM, RpdBM
@@ -452,3 +454,62 @@ async def calculate_rdp(data: RpdBM) -> dict:
     """
     return get_rpd_dict(data=data.dict())
 
+
+@router.post("/grosssplit/split")
+async def get_grosssplit_split_information(data: Data) -> dict:
+    """
+    ## The Split Information
+    Route to retrieve the information of contractor split in Gross Split contract scheme.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - grosssplit
+    - contract_arguments
+    - lifting
+    - tangible
+    - intangible
+    - opex
+    - asr
+    - optimization_arguments
+    - sensitivity_arguments
+
+    """
+    return get_grosssplit_split(data=data.dict())
+
+
+@router.post("/transition/split")
+async def get_transition_split_information(data: DataTransition) -> dict:
+    """
+    ## The Split Information
+    Route to retrieve the information of contractor split in Transition contract scheme
+    if the transition contracts is consisting one or two gross split contracts.
+
+    ### Data Input Structure
+    data:
+    - contract_1
+        -- setup
+        -- costrecovery or grosssplit
+        -- contract_arguments
+        -- lifting
+        -- tangible
+        -- intangible
+        -- opex
+        -- asr
+    - contract_2
+        -- setup
+        -- costrecovery or grosssplit
+        -- contract_arguments
+        -- lifting
+        -- tangible
+        -- intangible
+        -- opex
+        -- asr
+    - contract_arguments
+    - summary_arguments
+
+
+    """
+    result = get_transition_split(data=data.dict())
+    return result
