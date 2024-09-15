@@ -450,4 +450,21 @@ def run_optimization(
 
 
 if __name__ == "__main__":
-    entry_point()
+    # entry_point()
+
+    from pyscnomics.econ.costs import CapitalCost
+    from pyscnomics.econ.selection import FluidType
+
+    capital1 = CapitalCost(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([100, 100, 100]),
+        expense_year=np.array([2023, 2024, 2029]),
+        vat_portion=np.array([1, 1, 1]),
+    )
+
+    capital1.expenditures(
+        vat_rate=0.03,
+        inflation_rate=0.0,
+    )
+

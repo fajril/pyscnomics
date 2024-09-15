@@ -38,6 +38,12 @@ class ASRException(Exception):
     pass
 
 
+class LBTException(Exception):
+    """Exception to be raised when LBT class is misused"""
+
+    pass
+
+
 class CostOfSalesException(Exception):
     """Exception to be raised if class CostOfSales is misused"""
 
@@ -63,11 +69,6 @@ class GeneralCost:
         A list representing the cost allocation of a tangible asset.
     description: list[str]
         A list of string description regarding the associated tangible cost.
-    vat_portion: np.ndarray
-        The portion of 'cost' that is subject to VAT.
-        Must be an array of length equals to the length of 'cost' array.
-    vat_discount: float
-        The VAT discount to apply.
     lbt_portion: np.ndarray
         The portion of 'cost' that is subject to LBT.
         Must be an array of length equals to the length of 'cost' array.
@@ -86,21 +87,308 @@ class GeneralCost:
     expense_year: np.ndarray
     cost_allocation: list[FluidType] = field(default=None)
     description: list[str] = field(default=None)
-    vat_portion: np.ndarray = field(default=None)
-    vat_discount: float | np.ndarray = field(default=0.0)
-    lbt_portion: np.ndarray = field(default=None)
-    lbt_discount: float | np.ndarray = field(default=0.0)
+
+    # vat_portion: np.ndarray = field(default=None)
+    # vat_discount: float | np.ndarray = field(default=0.0)
+    # lbt_portion: np.ndarray = field(default=None)
+    # lbt_discount: float | np.ndarray = field(default=0.0)
 
     # Attribute to be defined later on
     project_duration: int = field(default=None, init=False, repr=False)
     project_years: np.ndarray = field(default=None, init=False, repr=False)
 
+    # def expenditures(
+    #     self,
+    #     year_ref: int = None,
+    #     tax_type: TaxType = TaxType.VAT,
+    #     vat_rate: np.ndarray | float = 0.0,
+    #     lbt_rate: np.ndarray | float = 0.0,
+    #     inflation_rate: np.ndarray | float = 0.0,
+    # ) -> np.ndarray:
+    #     """
+    #     Calculate expenditures per year.
+    #
+    #     This method calculates the expenditures per year based on the expense year
+    #     and cost data provided.
+    #
+    #     Parameters
+    #     ----------
+    #     year_ref : int
+    #         The reference year for inflation calculation.
+    #     tax_type: TaxType
+    #         The type of tax applied to the corresponding asset.
+    #         Available options: TaxType.VAT or TaxType.LBT
+    #     vat_rate: np.ndarray | float
+    #         The VAT rate to apply. Can be a single value or an array (default is 0.0).
+    #     lbt_rate: np.ndarray | float
+    #         The LBT rate to apply. Can be a single value or an array (default is 0.0).
+    #     inflation_rate: np.ndarray | float
+    #         The inflation rate to apply. Can be a single value or an array (default is 0.0).
+    #
+    #     Returns
+    #     -------
+    #     np.ndarray
+    #         An array depicting the expenditures each year, adjusted by tax
+    #         and inflation schemes (if any).
+    #
+    #     Notes
+    #     -----
+    #     This method calculates expenditures while considering tax and inflation schemes.
+    #     The core calculations are as follows:
+    #     (1) Apply adjustment to cost due to tax and inflation (if any), by calling
+    #         'apply_cost_adjustment()' function,
+    #     (2) Function np.bincount() is used to align the 'cost_adjusted' elements
+    #         according to its corresponding expense year,
+    #     (3) If len(expenses) < project_duration, then add the remaining elements
+    #         with zeros.
+    #     """
+    #     if year_ref is None:
+    #         year_ref = self.start_year
+    #
+    #     cost_adjusted = apply_cost_adjustment(
+    #         start_year=self.start_year,
+    #         end_year=self.end_year,
+    #         cost=self.cost,
+    #         expense_year=self.expense_year,
+    #         project_years=self.project_years,
+    #         year_ref=year_ref,
+    #         tax_type=tax_type,
+    #         vat_portion=self.vat_portion,
+    #         vat_rate=vat_rate,
+    #         vat_discount=self.vat_discount,
+    #         lbt_portion=self.lbt_portion,
+    #         lbt_rate=lbt_rate,
+    #         lbt_discount=self.lbt_discount,
+    #         inflation_rate=inflation_rate,
+    #     )
+    #
+    #     expenses = np.bincount(
+    #         self.expense_year - self.start_year, weights=cost_adjusted
+    #     )
+    #     zeros = np.zeros(self.project_duration - len(expenses))
+    #
+    #     return np.concatenate((expenses, zeros))
+
+    def __len__(self):
+        return self.project_duration
+
+
+@dataclass
+class CapitalCost(GeneralCost):
+    """
+    Manages a capital asset.
+
+    Parameters
+    ----------
+    The attributes are inherited from class GeneralCost. Local attributes associated
+    with class CapitalCost are:
+
+    pis_year : numpy.ndarray, optional
+        An array representing the PIS year of a capital asset.
+    salvage_value : numpy.ndarray, optional
+        An array representing the salvage value of a capital asset.
+    useful_life : numpy.ndarray, optional
+        An array representing the useful life of a capital asset.
+    depreciation_factor: np.ndarray, optional
+        The value of depreciation factor to be used in PSC_DB depreciation method.
+        Default value is 0.5 for the entire project duration.
+    is_ic_applied: list
+        Whether investment credit is applied for each corresponding capital assets.
+    vat_portion: np.ndarray
+        The portion of 'cost' that is subject to VAT.
+        Must be an array of length equals to the length of 'cost' array.
+    vat_discount: float
+        The VAT discount to apply.
+    """
+
+    pis_year: np.ndarray = field(default=None)
+    salvage_value: np.ndarray = field(default=None)
+    useful_life: np.ndarray = field(default=None)
+    depreciation_factor: np.ndarray = field(default=None)
+    is_ic_applied: list[bool] = field(default=None)
+    vat_portion: np.ndarray = field(default=None)
+    vat_discount: float | np.ndarray = field(default=0.0)
+
+    def __post_init__(self):
+        # Prepare attribute project_duration and project_years
+        if self.end_year >= self.start_year:
+            self.project_duration = self.end_year - self.start_year + 1
+            self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
+
+        else:
+            raise CapitalException(
+                f"start year {self.start_year} "
+                f"is after the end year: {self.end_year}"
+            )
+
+        # Prepare attribute VAT portion
+        if self.vat_portion is None:
+            self.vat_portion = np.zeros_like(self.cost)
+
+        elif self.vat_portion is not None:
+            if not isinstance(self.vat_portion, np.ndarray):
+                raise CapitalException(
+                    f"Attribute VAT portion must be a numpy ndarray; "
+                    f"VAT portion ({self.vat_portion}) is of datatype "
+                    f"{self.vat_portion.__class__.__qualname__}."
+                )
+
+        self.vat_portion = self.vat_portion.astype(np.float64)
+
+        # Prepare attribute VAT discount
+        if not isinstance(self.vat_discount, (float, np.ndarray)):
+            raise CapitalException(
+                f"Attribute VAT discount must be given as a float (for single value) "
+                f"or a numpy array (for an array). The inserted VAT discount is given "
+                f"as a {self.vat_discount.__class__.__qualname__}."
+            )
+
+        if isinstance(self.vat_discount, float):
+            self.vat_discount = np.repeat(self.vat_discount, len(self.cost))
+
+        self.vat_discount = self.vat_discount.astype(np.float64)
+
+        # Prepare attribute description
+        if self.description is None:
+            self.description = [" " for _ in range(len(self.cost))]
+
+        elif self.description is not None:
+            if not isinstance(self.description, list):
+                raise CapitalException(
+                    f"Attribute description must be given as a list; "
+                    f"description (datatype: {self.description.__class__.__qualname__}) "
+                    f"is not a list."
+                )
+
+        # Prepare attribute cost_allocation
+        if self.cost_allocation is None:
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
+
+        elif self.cost_allocation is not None:
+            if not isinstance(self.cost_allocation, list):
+                raise CapitalException(
+                    f"Attribute cost_allocation must be given as a list; "
+                    f"cost_allocation (datatype: {self.cost_allocation.__class__.__qualname__}) "
+                    f"is not a list."
+                )
+
+        # Prepare attribute pis_year
+        if self.pis_year is None:
+            self.pis_year = self.expense_year.copy()
+
+        elif self.pis_year is not None:
+            if not isinstance(self.pis_year, np.ndarray):
+                raise CapitalException(
+                    f"Attribute pis_year must be given as a numpy.ndarray; "
+                    f"pis_year (datatype: {self.pis_year.__class__.__qualname__}) "
+                    f"is not a numpy.ndarray."
+                )
+
+        # Prepare attribute salvage_value
+        if self.salvage_value is None:
+            self.salvage_value = np.zeros_like(self.cost)
+
+        elif self.salvage_value is not None:
+            if not isinstance(self.salvage_value, np.ndarray):
+                raise CapitalException(
+                    f"Attribute salvage_value must be given as a numpy.ndarray; "
+                    f"salvage_value (datatype: {self.salvage_value.__class__.__qualname__}) "
+                    f"is not a numpy.ndarray."
+                )
+
+        self.salvage_value = self.salvage_value.astype(np.float64)
+
+        # Prepare attribute useful_life
+        if self.useful_life is None:
+            self.useful_life = np.repeat(5.0, len(self.cost))
+
+        elif self.useful_life is not None:
+            if not isinstance(self.useful_life, np.ndarray):
+                raise CapitalException(
+                    f"Attribute useful_life must be given as a numpy.ndarray; "
+                    f"useful_life (datatype: {self.useful_life.__class__.__qualname__}) "
+                    f"is not a numpy.ndarray."
+                )
+
+        self.useful_life = self.useful_life.astype(np.float64)
+
+        # Prepare attribute depreciation_factor
+        if self.depreciation_factor is None:
+            self.depreciation_factor = np.repeat(0.5, len(self.cost))
+
+        elif self.depreciation_factor is not None:
+            if not isinstance(self.depreciation_factor, np.ndarray):
+                raise CapitalException(
+                    f"Attribute depreciation_factor must be given as a numpy.ndarray; "
+                    f"depreciation_factor (datatype: {self.depreciation_factor.__class__.__qualname__}) "
+                    f"is not a numpy.ndarray."
+                )
+
+        self.depreciation_factor = self.depreciation_factor.astype(np.float64)
+
+        # Prepare attribute is_ic_applied
+        if self.is_ic_applied is None:
+            self.is_ic_applied = [False for _ in range(len(self.cost))]
+
+        elif self.is_ic_applied is not None:
+            if not isinstance(self.is_ic_applied, list):
+                raise CapitalException(
+                    f"Attribute is_ic_applied must be given as a list; "
+                    f"is_ic_applied (datatype: {self.is_ic_applied.__class__.__qualname__}) "
+                    f"is not a list."
+                )
+
+        # Check input data for unequal length
+        arr_length = len(self.cost)
+
+        if not all(
+            len(arr) == arr_length
+            for arr in [
+                self.expense_year,
+                self.cost_allocation,
+                self.description,
+                self.vat_portion,
+                self.vat_discount,
+                self.pis_year,
+                self.salvage_value,
+                self.useful_life,
+                self.depreciation_factor,
+                self.is_ic_applied,
+            ]
+        ):
+            raise CapitalException(
+                f"Unequal length of array: "
+                f"cost: {len(self.cost)}, "
+                f"expense_year: {len(self.expense_year)}, "
+                f"cost_allocation: {len(self.cost_allocation)}, "
+                f"description: {len(self.description)}, "
+                f"vat_portion: {len(self.vat_portion)}, "
+                f"vat_discount: {len(self.vat_discount)}, "
+                f"pis_year: {len(self.pis_year)}, "
+                f"salvage_value: {len(self.salvage_value)}, "
+                f"useful_life: {len(self.useful_life)}, "
+                f"depreciation_factor: {len(self.depreciation_factor)}, "
+                f"is_ic_applied: {len(self.is_ic_applied)}."
+            )
+
+        # Raise an error message: expense year is after the end year of the project
+        if np.max(self.expense_year) > self.end_year:
+            raise CapitalException(
+                f"Expense year ({np.max(self.expense_year)}) "
+                f"is after the end year of the project ({self.end_year})"
+            )
+
+        # Raise an error message: expense year is before the start year of the project
+        if np.min(self.expense_year) < self.start_year:
+            raise CapitalException(
+                f"Expense year ({np.min(self.expense_year)}) "
+                f"is before the start year of the project ({self.start_year})"
+            )
+
     def expenditures(
         self,
         year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
         vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
         """
@@ -113,13 +401,8 @@ class GeneralCost:
         ----------
         year_ref : int
             The reference year for inflation calculation.
-        tax_type: TaxType
-            The type of tax applied to the corresponding asset.
-            Available options: TaxType.VAT or TaxType.LBT
         vat_rate: np.ndarray | float
             The VAT rate to apply. Can be a single value or an array (default is 0.0).
-        lbt_rate: np.ndarray | float
-            The LBT rate to apply. Can be a single value or an array (default is 0.0).
         inflation_rate: np.ndarray | float
             The inflation rate to apply. Can be a single value or an array (default is 0.0).
 
@@ -150,13 +433,9 @@ class GeneralCost:
             expense_year=self.expense_year,
             project_years=self.project_years,
             year_ref=year_ref,
-            tax_type=tax_type,
-            vat_portion=self.vat_portion,
-            vat_rate=vat_rate,
-            vat_discount=self.vat_discount,
-            lbt_portion=self.lbt_portion,
-            lbt_rate=lbt_rate,
-            lbt_discount=self.lbt_discount,
+            tax_portion=self.vat_portion,
+            tax_rate=vat_rate,
+            tax_discount=self.vat_discount,
             inflation_rate=inflation_rate,
         )
 
@@ -166,218 +445,6 @@ class GeneralCost:
         zeros = np.zeros(self.project_duration - len(expenses))
 
         return np.concatenate((expenses, zeros))
-
-    def __len__(self):
-        return self.project_duration
-
-
-@dataclass
-class CapitalCost(GeneralCost):
-    """
-    Manages a capital asset.
-
-    Parameters
-    ----------
-    The attributes are inherited from class GeneralCost. Local attributes associated
-    with class CapitalCost are:
-
-    pis_year : numpy.ndarray, optional
-        An array representing the PIS year of a capital asset.
-    salvage_value : numpy.ndarray, optional
-        An array representing the salvage value of a capital asset.
-    useful_life : numpy.ndarray, optional
-        An array representing the useful life of a capital asset.
-    depreciation_factor: np.ndarray, optional
-        The value of depreciation factor to be used in PSC_DB depreciation method.
-        Default value is 0.5 for the entire project duration.
-    is_ic_applied: list
-        Whether investment credit is applied for each corresponding capital assets.
-    """
-
-    pis_year: np.ndarray = field(default=None)
-    salvage_value: np.ndarray = field(default=None)
-    useful_life: np.ndarray = field(default=None)
-    depreciation_factor: np.ndarray = field(default=None)
-    is_ic_applied: list[bool] = field(default=None)
-
-    def __post_init__(self):
-        # Check for inappropriate start and end year project
-        if self.end_year >= self.start_year:
-            self.project_duration = self.end_year - self.start_year + 1
-            self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
-
-        else:
-            raise CapitalException(
-                f"start year {self.start_year} "
-                f"is after the end year: {self.end_year}"
-            )
-
-        # Configure VAT portion
-        if self.vat_portion is None:
-            self.vat_portion = np.ones_like(self.cost)
-
-        if self.vat_portion is not None:
-            if not isinstance(self.vat_portion, np.ndarray):
-                raise CapitalException(
-                    f"Attribute VAT portion must be a numpy ndarray; "
-                    f"VAT portion ({self.vat_portion}) is of datatype "
-                    f"{self.vat_portion.__class__.__qualname__}."
-                )
-
-        # Configure LBT portion
-        if self.lbt_portion is None:
-            self.lbt_portion = np.ones_like(self.cost)
-
-        if self.lbt_portion is not None:
-            if not isinstance(self.lbt_portion, np.ndarray):
-                raise CapitalException(
-                    f"Attribute LBT portion must be a numpy ndarray; "
-                    f"LBT portion ({self.lbt_portion}) is of datatype "
-                    f"{self.lbt_portion.__class__.__qualname__}."
-                )
-
-        # Configure VAT discount
-        if isinstance(self.vat_discount, float):
-            self.vat_discount = np.repeat(self.vat_discount, len(self.cost))
-
-        # Configure LBT discount
-        if isinstance(self.lbt_discount, float):
-            self.lbt_discount = np.repeat(self.lbt_discount, len(self.cost))
-
-        # Configure description data
-        if self.description is None:
-            self.description = [" " for _ in range(len(self.cost))]
-
-        if self.description is not None:
-            if not isinstance(self.description, list):
-                raise CapitalException(
-                    f"Attribute description must be a list; "
-                    f"description (datatype: {self.description.__class__.__qualname__}) "
-                    f"is not a list."
-                )
-
-        # Configure cost_allocation data
-        if self.cost_allocation is None:
-            self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
-
-        if self.cost_allocation is not None:
-            if not isinstance(self.cost_allocation, list):
-                raise CapitalException(
-                    f"Attribute cost_allocation must be a list. "
-                    f"cost_allocation (datatype: {self.cost_allocation.__class__.__qualname__}) "
-                    f"is not a list."
-                )
-
-        # Configure pis_year data
-        if self.pis_year is None:
-            self.pis_year = self.expense_year
-
-        if self.pis_year is not None:
-            if not isinstance(self.pis_year, np.ndarray):
-                raise CapitalException(
-                    f"Attribute pis_year must be a numpy.ndarray; "
-                    f"pis_year (datatype: {self.description.__class__.__qualname__}) "
-                    f"is not a numpy.ndarray."
-                )
-
-        # Configure salvage_value data
-        if self.salvage_value is None:
-            self.salvage_value = np.zeros(len(self.cost))
-
-        if self.salvage_value is not None:
-            if not isinstance(self.salvage_value, np.ndarray):
-                raise CapitalException(
-                    f"Attribute salvage_value must be a numpy.ndarray; "
-                    f"salvage_value (datatype: {self.description.__class__.__qualname__}) "
-                    f"is not a numpy.ndarray."
-                )
-
-        # Configure useful_life data
-        if self.useful_life is None:
-            self.useful_life = np.repeat(5.0, len(self.cost))
-
-        if self.useful_life is not None:
-            if not isinstance(self.useful_life, np.ndarray):
-                raise CapitalException(
-                    f"Attribute useful_life must be a numpy.ndarray; "
-                    f"useful_life (datatype: {self.description.__class__.__qualname__}) "
-                    f"is not a numpy.ndarray."
-                )
-
-        # Configure depreciation_factor data
-        if self.depreciation_factor is None:
-            self.depreciation_factor = np.repeat(0.5, len(self.cost))
-
-        if self.depreciation_factor is not None:
-            if not isinstance(self.depreciation_factor, np.ndarray):
-                raise CapitalException(
-                    f"Attribute depreciation_factor must be a numpy.ndarray; "
-                    f"depreciation_factor (datatype: {self.description.__class__.__qualname__}) "
-                    f"is not a numpy.ndarray."
-                )
-
-        # Configure is_ic_applied data
-        if self.is_ic_applied is None:
-            self.is_ic_applied = [False for _ in range(len(self.cost))]
-
-        if self.is_ic_applied is not None:
-            if not isinstance(self.is_ic_applied, list):
-                raise CapitalException(
-                    f"Attribute is_ic_applied must be a list; "
-                    f"is_ic_applied (datatype: {self.is_ic_applied.__class__.__qualname__}) "
-                    f"is not a list."
-                )
-
-        # Check input data for unequal length
-        arr_length = len(self.cost)
-
-        if not all(
-            len(arr) == arr_length
-            for arr in [
-                self.expense_year,
-                self.cost_allocation,
-                self.description,
-                self.vat_portion,
-                self.vat_discount,
-                self.lbt_portion,
-                self.lbt_discount,
-                self.pis_year,
-                self.salvage_value,
-                self.useful_life,
-                self.depreciation_factor,
-                self.is_ic_applied,
-            ]
-        ):
-            raise CapitalException(
-                f"Unequal length of array: "
-                f"cost: {len(self.cost)}, "
-                f"expense_year: {len(self.expense_year)}, "
-                f"cost_allocation: {len(self.cost_allocation)}, "
-                f"description: {len(self.description)}, "
-                f"vat_portion: {len(self.vat_portion)}, "
-                f"vat_discount: {len(self.vat_discount)}, "
-                f"lbt_portion: {len(self.lbt_portion)}, "
-                f"lbt_discount: {len(self.lbt_discount)}, "
-                f"pis_year: {len(self.pis_year)}, "
-                f"salvage_value: {len(self.salvage_value)}, "
-                f"useful_life: {len(self.useful_life)}, "
-                f"depreciation_factor: {len(self.depreciation_factor)}, "
-                f"is_ic_applied: {len(self.is_ic_applied)}."
-            )
-
-        # Raise an error message: expense year is after the end year of the project
-        if np.max(self.expense_year) > self.end_year:
-            raise CapitalException(
-                f"Expense year ({np.max(self.expense_year)}) "
-                f"is after the end year of the project ({self.end_year})"
-            )
-
-        # Raise an error message: expense year is before the start year of the project
-        if np.min(self.expense_year) < self.start_year:
-            raise CapitalException(
-                f"Expense year ({np.min(self.expense_year)}) "
-                f"is before the start year of the project ({self.start_year})"
-            )
 
     def total_depreciation_rate(
         self,

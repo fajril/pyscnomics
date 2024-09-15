@@ -9,7 +9,7 @@ from typing import Dict
 
 from pyscnomics.econ.selection import (
     FluidType,
-    TaxType,
+    # TaxType,
     TaxSplitTypeCR,
     InflationAppliedTo,
     # TaxPaymentMode,
@@ -151,13 +151,9 @@ def apply_cost_adjustment(
     expense_year: np.ndarray,
     project_years: np.ndarray,
     year_ref: int,
-    tax_type: TaxType,
-    vat_portion: np.ndarray,
-    vat_rate: np.ndarray | float,
-    vat_discount: float,
-    lbt_portion: np.ndarray,
-    lbt_rate: np.ndarray | float,
-    lbt_discount: float,
+    tax_portion: np.ndarray,
+    tax_rate: np.ndarray | float,
+    tax_discount: float,
     inflation_rate: np.ndarray | float,
 ) -> np.ndarray:
     """
@@ -177,24 +173,14 @@ def apply_cost_adjustment(
         An array of project years.
     year_ref : int
         The reference year for inflation calculation.
-    tax_type: TaxType
-        The type of tax used for calculation.
-        The options are TaxType.VAT and TaxType.LBT
-    vat_portion: np.ndarray
-        The portion of 'cost' that is subject to VAT.
+    tax_portion: np.ndarray
+        The portion of 'cost' that is subject to tax (VAT or LBT).
         Must be an array of length equals to the length of 'cost' array.
-    vat_rate: np.ndarray | float
-        The VAT rate to apply. Can be a single value or an array.
-    vat_discount: float
-        The VAT discount to apply.
-    lbt_portion: np.ndarray
-        The portion of 'cost' that is subject to LBT.
-        Must be an array of length equals to the length of 'cost' array.
-    lbt_rate: np.ndarray | float
-        The LBT rate to apply. Can be a single value or an array.
-    lbt_discount: float
-        The LBT discount to apply.
-    inflation_rate : np.ndarray | float
+    tax_rate: np.ndarray | float
+        The tax rate to apply (VAT or LBT). Can be a single value or an array.
+    tax_discount: float
+        The tax discount to apply (VAT or LBT).
+    inflation_rate: np.ndarray | float
         The inflation rate to apply. Can be a single value or an array.
 
     Returns
@@ -222,27 +208,15 @@ def apply_cost_adjustment(
     (5) Cost adjustment is undertaken by multiplication: 'cost_adjusted_by_tax' * 'mult'.
     """
     # Cost adjustment due to tax
-    if tax_type == TaxType.VAT:
-        cost_adjusted = get_cost_adjustment_by_tax(
-            start_year=start_year,
-            cost=cost,
-            expense_year=expense_year,
-            project_years=project_years,
-            tax_portion=vat_portion,
-            tax_rate=vat_rate,
-            tax_discount=vat_discount,
-        )
-
-    if tax_type == TaxType.LBT:
-        cost_adjusted = get_cost_adjustment_by_tax(
-            start_year=start_year,
-            cost=cost,
-            expense_year=expense_year,
-            project_years=project_years,
-            tax_portion=lbt_portion,
-            tax_rate=lbt_rate,
-            tax_discount=lbt_discount,
-        )
+    cost_adjusted = get_cost_adjustment_by_tax(
+        start_year=start_year,
+        cost=cost,
+        expense_year=expense_year,
+        project_years=project_years,
+        tax_portion=tax_portion,
+        tax_rate=tax_rate,
+        tax_discount=tax_discount,
+    )
 
     # Cost adjustment due to inflation
     if year_ref < start_year:
