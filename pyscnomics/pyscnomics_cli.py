@@ -463,8 +463,9 @@ if __name__ == "__main__":
         vat_portion=np.array([1, 1, 1]),
     )
 
-    capital1.expenditures(
-        vat_rate=0.03,
-        inflation_rate=0.0,
-    )
+    bv1 = capital1.total_depreciation_book_value()
+
+    print('\t')
+    print(f'Filetype: {type(bv1)}')
+    print(bv1)
 

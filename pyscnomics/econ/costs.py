@@ -3,7 +3,8 @@ Prepare and classify cost data based on its components. The associated cost comp
 (1) Tangible,
 (2) Intangible,
 (3) OPEX,
-(4) ASR
+(4) ASR,
+(5) LBT
 """
 
 import numpy as np
@@ -69,18 +70,12 @@ class GeneralCost:
         A list representing the cost allocation of a tangible asset.
     description: list[str]
         A list of string description regarding the associated tangible cost.
-    lbt_portion: np.ndarray
-        The portion of 'cost' that is subject to LBT.
-        Must be an array of length equals to the length of 'cost' array.
-    lbt_discount: float
-        The LBT discount to apply.
 
     Notes
     -----
-    (1) The unit used in the cost should be in M unit of United States Dollar (USD),
+    The unit used in the cost should be in M unit of United States Dollar (USD),
     where the M is stands for 1000. Thus, the unit cost should be: M-USD.
     """
-
     start_year: int
     end_year: int
     cost: np.ndarray
@@ -88,86 +83,9 @@ class GeneralCost:
     cost_allocation: list[FluidType] = field(default=None)
     description: list[str] = field(default=None)
 
-    # vat_portion: np.ndarray = field(default=None)
-    # vat_discount: float | np.ndarray = field(default=0.0)
-    # lbt_portion: np.ndarray = field(default=None)
-    # lbt_discount: float | np.ndarray = field(default=0.0)
-
     # Attribute to be defined later on
     project_duration: int = field(default=None, init=False, repr=False)
     project_years: np.ndarray = field(default=None, init=False, repr=False)
-
-    # def expenditures(
-    #     self,
-    #     year_ref: int = None,
-    #     tax_type: TaxType = TaxType.VAT,
-    #     vat_rate: np.ndarray | float = 0.0,
-    #     lbt_rate: np.ndarray | float = 0.0,
-    #     inflation_rate: np.ndarray | float = 0.0,
-    # ) -> np.ndarray:
-    #     """
-    #     Calculate expenditures per year.
-    #
-    #     This method calculates the expenditures per year based on the expense year
-    #     and cost data provided.
-    #
-    #     Parameters
-    #     ----------
-    #     year_ref : int
-    #         The reference year for inflation calculation.
-    #     tax_type: TaxType
-    #         The type of tax applied to the corresponding asset.
-    #         Available options: TaxType.VAT or TaxType.LBT
-    #     vat_rate: np.ndarray | float
-    #         The VAT rate to apply. Can be a single value or an array (default is 0.0).
-    #     lbt_rate: np.ndarray | float
-    #         The LBT rate to apply. Can be a single value or an array (default is 0.0).
-    #     inflation_rate: np.ndarray | float
-    #         The inflation rate to apply. Can be a single value or an array (default is 0.0).
-    #
-    #     Returns
-    #     -------
-    #     np.ndarray
-    #         An array depicting the expenditures each year, adjusted by tax
-    #         and inflation schemes (if any).
-    #
-    #     Notes
-    #     -----
-    #     This method calculates expenditures while considering tax and inflation schemes.
-    #     The core calculations are as follows:
-    #     (1) Apply adjustment to cost due to tax and inflation (if any), by calling
-    #         'apply_cost_adjustment()' function,
-    #     (2) Function np.bincount() is used to align the 'cost_adjusted' elements
-    #         according to its corresponding expense year,
-    #     (3) If len(expenses) < project_duration, then add the remaining elements
-    #         with zeros.
-    #     """
-    #     if year_ref is None:
-    #         year_ref = self.start_year
-    #
-    #     cost_adjusted = apply_cost_adjustment(
-    #         start_year=self.start_year,
-    #         end_year=self.end_year,
-    #         cost=self.cost,
-    #         expense_year=self.expense_year,
-    #         project_years=self.project_years,
-    #         year_ref=year_ref,
-    #         tax_type=tax_type,
-    #         vat_portion=self.vat_portion,
-    #         vat_rate=vat_rate,
-    #         vat_discount=self.vat_discount,
-    #         lbt_portion=self.lbt_portion,
-    #         lbt_rate=lbt_rate,
-    #         lbt_discount=self.lbt_discount,
-    #         inflation_rate=inflation_rate,
-    #     )
-    #
-    #     expenses = np.bincount(
-    #         self.expense_year - self.start_year, weights=cost_adjusted
-    #     )
-    #     zeros = np.zeros(self.project_duration - len(expenses))
-    #
-    #     return np.concatenate((expenses, zeros))
 
     def __len__(self):
         return self.project_duration
@@ -451,9 +369,7 @@ class CapitalCost(GeneralCost):
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
         year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
         vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
     ) -> tuple:
         """
@@ -467,13 +383,8 @@ class CapitalCost(GeneralCost):
             The decline factor used for declining balance depreciation (default is 2).
         year_ref : int
             The reference year for inflation calculation.
-        tax_type: TaxType
-            The type of tax applied to the corresponding asset.
-            Available options: TaxType.VAT or TaxType.LBT (default is TaxType.VAT).
         vat_rate: np.ndarray | float
             The VAT rate to apply. Can be a single value or an array (default is 0.0).
-        lbt_rate: np.ndarray | float
-            The LBT rate to apply. Can be a single value or an array (default is 0.0).
         inflation_rate: np.ndarray | float
             The inflation rate to apply. Can be a single value or an array (default is 0.0).
 
@@ -503,13 +414,9 @@ class CapitalCost(GeneralCost):
             expense_year=self.expense_year,
             project_years=self.project_years,
             year_ref=year_ref,
-            tax_type=tax_type,
-            vat_portion=self.vat_portion,
-            vat_rate=vat_rate,
-            vat_discount=self.vat_discount,
-            lbt_portion=self.lbt_portion,
-            lbt_rate=lbt_rate,
-            lbt_discount=self.lbt_discount,
+            tax_portion=self.vat_portion,
+            tax_rate=vat_rate,
+            tax_discount=self.vat_discount,
             inflation_rate=inflation_rate,
         )
 
@@ -595,9 +502,7 @@ class CapitalCost(GeneralCost):
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
         year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
         vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
         """
@@ -611,13 +516,8 @@ class CapitalCost(GeneralCost):
             The decline factor used for declining balance depreciation (default is 2).
         year_ref : int
             The reference year for inflation calculation.
-        tax_type: TaxType
-            The type of tax applied to the corresponding asset.
-            Available options: TaxType.VAT or TaxType.LBT (default is TaxType.VAT).
         vat_rate: np.ndarray | float
             The VAT rate to apply. Can be a single value or an array (default is 0.0).
-        lbt_rate: np.ndarray | float
-            The LBT rate to apply. Can be a single value or an array (default is 0.0).
         inflation_rate: np.ndarray | float
             The inflation rate to apply. Can be a single value or an array (default is 0.0).
 
@@ -642,18 +542,14 @@ class CapitalCost(GeneralCost):
             depr_method=depr_method,
             decline_factor=decline_factor,
             year_ref=year_ref,
-            tax_type=tax_type,
             vat_rate=vat_rate,
-            lbt_rate=lbt_rate,
             inflation_rate=inflation_rate,
         )[0]
 
         return np.cumsum(
             self.expenditures(
                 year_ref=year_ref,
-                tax_type=tax_type,
                 vat_rate=vat_rate,
-                lbt_rate=lbt_rate,
                 inflation_rate=inflation_rate,
             )
         ) - np.cumsum(total_depreciation_charge)
@@ -671,8 +567,6 @@ class CapitalCost(GeneralCost):
                     np.allclose(self.depreciation_factor, other.depreciation_factor),
                     np.allclose(self.vat_portion, other.vat_portion),
                     np.allclose(self.vat_discount, other.vat_discount),
-                    np.allclose(self.lbt_portion, other.lbt_portion),
-                    np.allclose(self.lbt_discount, other.lbt_discount),
                     self.cost_allocation == other.cost_allocation,
                 )
             )
@@ -750,23 +644,13 @@ class CapitalCost(GeneralCost):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
             cost_combined = np.concatenate((self.cost, other.cost))
-            expense_year_combined = np.concatenate(
-                (self.expense_year, other.expense_year)
-            )
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
             vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
-            vat_discount_combined = np.concatenate(
-                (self.vat_discount, other.vat_discount)
-            )
-            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
-            lbt_discount_combined = np.concatenate(
-                (self.lbt_discount, other.lbt_discount)
-            )
+            vat_discount_combined = np.concatenate((self.vat_discount, other.vat_discount))
             pis_year_combined = np.concatenate((self.pis_year, other.pis_year))
-            salvage_value_combined = np.concatenate(
-                (self.salvage_value, other.salvage_value)
-            )
+            salvage_value_combined = np.concatenate((self.salvage_value, other.salvage_value))
             useful_life_combined = np.concatenate((self.useful_life, other.useful_life))
             depreciation_factor_combined = np.concatenate(
                 (self.depreciation_factor, other.depreciation_factor)
@@ -782,8 +666,6 @@ class CapitalCost(GeneralCost):
                 description=description_combined,
                 vat_portion=vat_portion_combined,
                 vat_discount=vat_discount_combined,
-                lbt_portion=lbt_portion_combined,
-                lbt_discount=lbt_discount_combined,
                 pis_year=pis_year_combined,
                 salvage_value=salvage_value_combined,
                 useful_life=useful_life_combined,
@@ -806,23 +688,13 @@ class CapitalCost(GeneralCost):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
             cost_combined = np.concatenate((self.cost, -other.cost))
-            expense_year_combined = np.concatenate(
-                (self.expense_year, other.expense_year)
-            )
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
             vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
-            vat_discount_combined = np.concatenate(
-                (self.vat_discount, other.vat_discount)
-            )
-            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
-            lbt_discount_combined = np.concatenate(
-                (self.lbt_discount, other.lbt_discount)
-            )
+            vat_discount_combined = np.concatenate((self.vat_discount, other.vat_discount))
             pis_year_combined = np.concatenate((self.pis_year, other.pis_year))
-            salvage_value_combined = np.concatenate(
-                (self.salvage_value, other.salvage_value)
-            )
+            salvage_value_combined = np.concatenate((self.salvage_value, other.salvage_value))
             useful_life_combined = np.concatenate((self.useful_life, other.useful_life))
             depreciation_factor_combined = np.concatenate(
                 (self.depreciation_factor, other.depreciation_factor)
@@ -838,8 +710,6 @@ class CapitalCost(GeneralCost):
                 description=description_combined,
                 vat_portion=vat_portion_combined,
                 vat_discount=vat_discount_combined,
-                lbt_portion=lbt_portion_combined,
-                lbt_discount=lbt_discount_combined,
                 pis_year=pis_year_combined,
                 salvage_value=salvage_value_combined,
                 useful_life=useful_life_combined,
@@ -870,8 +740,6 @@ class CapitalCost(GeneralCost):
                 description=self.description,
                 vat_portion=self.vat_portion,
                 vat_discount=self.vat_discount,
-                lbt_portion=self.lbt_portion,
-                lbt_discount=self.lbt_discount,
                 pis_year=self.pis_year,
                 salvage_value=self.salvage_value,
                 useful_life=self.useful_life,
@@ -910,8 +778,6 @@ class CapitalCost(GeneralCost):
                     description=self.description,
                     vat_portion=self.vat_portion,
                     vat_discount=self.vat_discount,
-                    lbt_portion=self.lbt_portion,
-                    lbt_discount=self.lbt_discount,
                     pis_year=self.pis_year,
                     salvage_value=self.salvage_value,
                     useful_life=self.useful_life,
