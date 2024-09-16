@@ -897,7 +897,7 @@ class Intangible(GeneralCost):
                 f"cost_allocation: {len(self.cost_allocation)}, "
                 f"description: {len(self.description)}, "
                 f"vat_portion: {len(self.vat_portion)}, "
-                f"vat_discount: {len(self.vat_discount)}, "
+                f"vat_discount: {len(self.vat_discount)}. "
             )
 
         # Raise an error message: expense year is after the end year of the project
@@ -1175,6 +1175,390 @@ class Intangible(GeneralCost):
                 f"integer or a float; "
                 f"{other}({other.__class__.__qualname__}) is not an instance "
                 f"of CapitalCost/Intangible/OPEX/ASR nor an integer nor a float."
+            )
+
+
+@dataclass
+class LBT(GeneralCost):
+    """
+    Manages an LBT asset.
+
+    Parameters
+    ----------
+    The attributes are inherited from class GeneralCost.
+    Local attributes associated with class LBT are:
+
+    lbt_portion: np.ndarray
+        The portion of 'cost' that is subject to LBT.
+        Must be an array of length equals to the length of 'cost' array.
+    lbt_discount: float
+        The LBT discount to apply.
+    """
+
+    lbt_portion: np.ndarray = field(default=None)
+    lbt_discount: float | np.ndarray = field(default=0.0)
+
+    def __post_init__(self):
+        # Prepare attribute project_duration and project_years
+        if self.end_year >= self.start_year:
+            self.project_duration = self.end_year - self.start_year + 1
+            self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
+
+        else:
+            raise LBTException(
+                f"start year {self.start_year} "
+                f"is after the end year {self.end_year}"
+            )
+
+        # Prepare attribute LBT portion
+        if self.lbt_portion is None:
+            self.lbt_portion = np.zeros_like(self.cost)
+
+        elif self.lbt_portion is not None:
+            if not isinstance(self.lbt_portion, np.ndarray):
+                raise LBTException(
+                    f"Attribute lbt_portion must be given as a numpy.ndarray; "
+                    f"lbt_portion (datatype: {self.lbt_portion.__class__.__qualname__}) "
+                    f"is not a numpy.ndarray."
+                )
+
+        self.lbt_portion = self.lbt_portion.astype(np.float64)
+
+        # Prepare attribute LBT discount
+        if not isinstance(self.lbt_discount, (float, np.ndarray)):
+            raise LBTException(
+                f"Attribute LBT discount must be given as a float (for a single value) "
+                f"or a numpy array (for an array). The inserted LBT discount is given "
+                f"as a {self.lbt_discount.__class__.__qualname__}."
+            )
+
+        if isinstance(self.lbt_discount, float):
+            self.lbt_discount = np.repeat(self.lbt_discount, len(self.cost))
+
+        self.lbt_discount = self.lbt_discount.astype(np.float64)
+
+        # Prepare attribute description
+        if self.description is None:
+            self.description = [" " for _ in range(len(self.cost))]
+
+        elif self.description is not None:
+            if not isinstance(self.description, list):
+                raise LBTException(
+                    f"Attribute description must be given as a list; "
+                    f"desription (datatype: {self.description.__class__.__qualname__}) "
+                    f"is not a list."
+                )
+
+        # Prepare attribute cost_allocation
+        if self.cost_allocation is None:
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
+
+        elif self.cost_allocation is not None:
+            if not isinstance(self.cost_allocation, list):
+                raise LBTException(
+                    f"Attribute cost_allocation must be given as a list; "
+                    f"cost_allocation (datatype: {self.cost_allocation.__class__.__qualname__}) "
+                    f"is not a list."
+                )
+
+        # Check input data for unequal length
+        arr_length = len(self.cost)
+
+        if not all(
+            len(arr) == arr_length
+            for arr in [
+                self.expense_year,
+                self.cost_allocation,
+                self.description,
+                self.lbt_portion,
+                self.lbt_discount,
+            ]
+        ):
+            raise LBTException(
+                f"Unequal length of array: "
+                f"cost: {len(self.cost)}, "
+                f"expense_year: {len(self.expense_year)}, "
+                f"cost_allocation: {len(self.cost_allocation)}, "
+                f"description: {len(self.description)}, "
+                f"lbt_portion: {len(self.lbt_portion)}, "
+                f"lbt_discount: {len(self.lbt_discount)}."
+            )
+
+        # Raise an error message: expense year is after the end year of the project
+        if np.max(self.expense_year) > self.end_year:
+            raise LBTException(
+                f"Expense year ({np.max(self.expense_year)}) "
+                f"is after the end year of the project ({self.end_year})"
+            )
+
+        # Raise an error message: expense year is before the start year of the project
+        if np.min(self.expense_year) < self.start_year:
+            raise LBTException(
+                f"Expense year ({np.min(self.expense_year)}) "
+                f"is before the start year of the project ({self.start_year})"
+            )
+
+    def expenditures(
+        self,
+        year_ref: int = None,
+        lbt_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
+    ) -> np.ndarray:
+        """
+        Calculate expenditures per year.
+
+        This method calculates the expenditures per year based on the expense year
+        and cost data provided.
+
+        Parameters
+        ----------
+        year_ref : int
+            The reference year for inflation calculation.
+        lbt_rate: np.ndarray | float
+            The LBT rate to apply. Can be a single value or an array (default is 0.0).
+        inflation_rate: np.ndarray | float
+            The inflation rate to apply. Can be a single value or an array (default is 0.0).
+
+        Returns
+        -------
+        np.ndarray
+            An array depicting the expenditures each year, adjusted by tax
+            and inflation schemes (if any).
+
+        Notes
+        -----
+        This method calculates expenditures while considering tax and inflation schemes.
+        The core calculations are as follows:
+        (1) Apply adjustment to cost due to tax and inflation (if any), by calling
+            'apply_cost_adjustment()' function,
+        (2) Function np.bincount() is used to align the 'cost_adjusted' elements
+            according to its corresponding expense year,
+        (3) If len(expenses) < project_duration, then add the remaining elements
+            with zeros.
+        """
+        if year_ref is None:
+            year_ref = self.start_year
+
+        cost_adjusted = apply_cost_adjustment(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            year_ref=year_ref,
+            tax_portion=self.lbt_portion,
+            tax_rate=lbt_rate,
+            tax_discount=self.lbt_discount,
+            inflation_rate=inflation_rate,
+        )
+
+        expenses = np.bincount(
+            self.expense_year - self.start_year, weights=cost_adjusted
+        )
+        zeros = np.zeros(self.project_duration - len(expenses))
+
+        return np.concatenate((expenses, zeros))
+
+    def __eq__(self, other):
+        # Between two instances of LBT
+        if isinstance(other, LBT):
+            return all(
+                (
+                    np.allclose(self.cost, other.cost),
+                    np.allclose(self.expense_year, other.expense_year),
+                    np.allclose(self.lbt_portion, other.lbt_portion),
+                    np.allclose(self.lbt_discount, other.lbt_discount),
+                    self.cost_allocation == other.cost_allocation,
+                )
+            )
+
+        # Between an instance of LBT and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) == other
+
+        else:
+            return False
+
+    def __lt__(self, other):
+        # Between an instance of LBT with another instance of LBT/CapitalCost/Intangible/OPEX/ASR
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+            return np.sum(self.cost) < np.sum(other.cost)
+
+        # Between an instance of LBT and an integer/a float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) < other
+
+        else:
+            raise LBTException(
+                f"Must compare an instance of LBT with another instance of "
+                f"LBT/CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __le__(self, other):
+        # Between an instance of LBT with another instance of LBT/CapitalCost/Intangible/OPEX/ASR
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+            return np.sum(self.cost) <= np.sum(other.cost)
+
+        # Between an instance of LBT and an integer/a float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) <= other
+
+        else:
+            raise LBTException(
+                f"Must compare an instance of LBT with another instance of "
+                f"LBT/CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __gt__(self, other):
+        # Between an instance of LBT with another instance of LBT/CapitalCost/Intangible/OPEX/ASR
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+            return np.sum(self.cost) > np.sum(other.cost)
+
+        # Between an instance of LBT and an integer/a float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) > other
+
+        else:
+            raise LBTException(
+                f"Must compare an instance of LBT with another instance of "
+                f"LBT/CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __ge__(self, other):
+        # Between an instance of LBT with another instance of LBT/CapitalCost/Intangible/OPEX/ASR
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+            return np.sum(self.cost) >= np.sum(other.cost)
+
+        # Between an instance of LBT and an integer/a float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) >= other
+
+        else:
+            raise LBTException(
+                f"Must compare an instance of LBT with another instance of "
+                f"LBT/CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+            )
+
+    def __add__(self, other):
+        # Only allows addition between an instance of LBT and another instance of LBT
+        if isinstance(other, LBT):
+            start_year_combined = min(self.start_year, other.start_year)
+            end_year_combined = max(self.end_year, other.end_year)
+            cost_combined = np.concatenate((self.cost, other.cost))
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            description_combined = self.description + other.description
+            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
+            lbt_discount_combined = np.concatenate((self.lbt_discount, other.lbt_discount))
+
+            return LBT(
+                start_year=start_year_combined,
+                end_year=end_year_combined,
+                cost=cost_combined,
+                expense_year=expense_year_combined,
+                cost_allocation=cost_allocation_combined,
+                description=description_combined,
+                lbt_portion=lbt_portion_combined,
+                lbt_discount=lbt_discount_combined,
+            )
+
+        else:
+            raise LBTException(
+                f"Must add between an instance of LBT "
+                f"with another instance of LBT. "
+                f"{other}({other.__class__.__qualname__}) is not "
+                f"an instance of LBT."
+            )
+
+    def __iadd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        # Only allows subtraction between an instance of LBT and another instance of LBT
+        if isinstance(other, LBT):
+            start_year_combined = min(self.start_year, other.start_year)
+            end_year_combined = max(self.end_year, other.end_year)
+            cost_combined = np.concatenate((self.cost, -other.cost))
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            description_combined = self.description + other.description
+            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
+            lbt_discount_combined = np.concatenate((self.lbt_discount, other.lbt_discount))
+
+            return LBT(
+                start_year=start_year_combined,
+                end_year=end_year_combined,
+                cost=cost_combined,
+                expense_year=expense_year_combined,
+                cost_allocation=cost_allocation_combined,
+                description=description_combined,
+                lbt_portion=lbt_portion_combined,
+                lbt_discount=lbt_discount_combined,
+            )
+
+        else:
+            raise LBTException(
+                f"Must subtract between an instance of LBT "
+                f"with another instance of LBT. "
+                f"{other}({other.__class__.__qualname__}) is not "
+                f"an instance of LBT."
+            )
+
+    def __rsub__(self, other):
+        return self.__sub__(other)
+
+    def __mul__(self, other):
+        # Multiplication is allowed only with an integer/a float
+        if isinstance(other, (int, float)):
+            return LBT(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                cost=self.cost * other,
+                expense_year=self.expense_year,
+                cost_allocation=self.cost_allocation,
+                description=self.description,
+                lbt_portion=self.lbt_portion,
+                lbt_discount=self.lbt_discount,
+            )
+
+        else:
+            raise LBTException(
+                f"Must multiply with an integer of a float; "
+                f"{other}({other.__class__.__qualname__}) is not an integer nor a float."
+            )
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        # Between an instance of LBT with another instance of LBT/CapitalCost/Intangible/OPEX/ASR
+        if isinstance(other, (LBT, CapitalCost, Intangible, OPEX, ASR)):
+            return np.sum(self.cost) / np.sum(other.cost)
+
+        # Between an instance of LBT and an integer/float
+        elif isinstance(other, (int, float)):
+            # Cannot divide with zero
+            if other == 0:
+                raise LBTException(f"Cannot divide with zero")
+
+            else:
+                return LBT(
+                    start_year=self.start_year,
+                    end_year=self.end_year,
+                    cost=self.cost / other,
+                    expense_year=self.expense_year,
+                    cost_allocation=self.cost_allocation,
+                    description=self.description,
+                    lbt_portion=self.lbt_portion,
+                    lbt_discount=self.lbt_discount,
+                )
+
+        else:
+            raise LBTException(
+                f"Must divide with an instance of LBT/CapitalCost/Intangible/OPEX/ASR, "
+                f"integer or a float; "
+                f"{other}({other.__class__.__qualname__}) is not an instance "
+                f"of LBT/CapitalCost/Intangible/OPEX/ASR nor an integer nor a float."
             )
 
 
