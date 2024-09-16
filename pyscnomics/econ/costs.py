@@ -2013,9 +2013,20 @@ class ASR(GeneralCost):
     Parameters
     ----------
     The attributes are inherited from class GeneralCost.
+    Local attributes associated with class ASR are:
+
+    vat_portion: np.ndarray
+        The portion of 'cost' that is subject to VAT.
+        Must be an array of length equals to the length of 'cost' array.
+    vat_discount: float
+        The VAT discount to apply.
     """
+
+    vat_portion: np.ndarray = field(default=None)
+    vat_discount: float | np.ndarray = field(default=0.0)
+
     def __post_init__(self):
-        # Check for inappropriate start and end year project
+        # Prepare attributes project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
             self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
@@ -2026,59 +2037,54 @@ class ASR(GeneralCost):
                 f"is after the end year {self.end_year}"
             )
 
-        # Configure VAT portion
+        # Prepare attribute VAT portion
         if self.vat_portion is None:
-            self.vat_portion = np.ones_like(self.cost)
+            self.vat_portion = np.zeros_like(self.cost)
 
-        if self.vat_portion is not None:
+        elif self.vat_portion is not None:
             if not isinstance(self.vat_portion, np.ndarray):
                 raise ASRException(
-                    f"Attribute VAT portion must be a numpy ndarray; "
-                    f"VAT portion ({self.vat_portion}) is of datatype "
-                    f"{self.vat_portion.__class__.__qualname__}."
+                    f"Attribute vat_portion must be given as a numpy.ndarray; "
+                    f"vat_portion (datatype: {self.vat_portion.__class__.__qualname__}) "
+                    f"is not a numpy.ndarray."
                 )
 
-        # Configure LBT portion
-        if self.lbt_portion is None:
-            self.lbt_portion = np.ones_like(self.cost)
+        self.vat_portion = self.vat_portion.astype(np.float64)
 
-        if self.lbt_portion is not None:
-            if not isinstance(self.lbt_portion, np.ndarray):
-                raise ASRException(
-                    f"Attribute LBT portion must be a numpy ndarray; "
-                    f"LBT portion ({self.lbt_portion}) is of datatype "
-                    f"{self.lbt_portion.__class__.__qualname__}."
-                )
+        # Prepare attribute VAT discount
+        if not isinstance(self.vat_discount, (float, np.ndarray)):
+            raise ASRException(
+                f"Attribute VAT discount must be given as a float (for single value) "
+                f"or a numpy array (for an array). The inserted VAT discount is given "
+                f"as a {self.vat_discount.__class__.__qualname__}."
+            )
 
-        # Configure VAT discount
         if isinstance(self.vat_discount, float):
             self.vat_discount = np.repeat(self.vat_discount, len(self.cost))
 
-        # Configure LBT discount
-        if isinstance(self.lbt_discount, float):
-            self.lbt_discount = np.repeat(self.lbt_discount, len(self.cost))
+        self.vat_discount = self.vat_discount.astype(np.float64)
 
-        # Configure description data
+        # Prepare attribute description
         if self.description is None:
             self.description = [" " for _ in range(len(self.cost))]
 
-        if self.description is not None:
+        elif self.description is not None:
             if not isinstance(self.description, list):
                 raise ASRException(
-                    f"Attribute description must be a list; "
+                    f"Attribute description must be given as a list; "
                     f"description (datatype: {self.description.__class__.__qualname__}) "
                     f"is not a list."
                 )
 
-        # Configure cost_allocation data
+        # Prepare attribute cost_allocation
         if self.cost_allocation is None:
             self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
 
-        if self.cost_allocation is not None:
+        elif self.cost_allocation is not None:
             if not isinstance(self.cost_allocation, list):
                 raise ASRException(
-                    f"Attribute cost_allocation must be a list. "
-                    f"cost_allocation ({self.cost_allocation.__class__.__qualname__}) "
+                    f"Attribute cost_allocation must be given as a list; "
+                    f"cost_allocation (datatype: {self.cost_allocation.__class__.__qualname__}) "
                     f"is not a list."
                 )
 
@@ -2093,8 +2099,6 @@ class ASR(GeneralCost):
                 self.description,
                 self.vat_portion,
                 self.vat_discount,
-                self.lbt_portion,
-                self.lbt_discount,
             ]
         ):
             raise ASRException(
@@ -2104,9 +2108,7 @@ class ASR(GeneralCost):
                 f"cost_allocation: {len(self.cost_allocation)}, "
                 f"description: {len(self.description)}, "
                 f"vat_portion: {len(self.vat_portion)}, "
-                f"vat_discount: {len(self.vat_discount)}, "
-                f"lbt_portion: {len(self.lbt_portion)}, "
-                f"lbt_discount: {len(self.lbt_discount)}."
+                f"vat_discount: {len(self.vat_discount)}."
             )
 
         # Raise an error message: expense year is after the end year of the project
@@ -2123,85 +2125,14 @@ class ASR(GeneralCost):
                 f"is before the start year of the project ({self.start_year})"
             )
 
-    def future_cost(
-        self,
-        year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
-        vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
-        inflation_rate: np.ndarray | float = 0.0,
-        future_rate: float = 0.02,
-    ) -> np.ndarray:
-        """
-        Calculate the future cost of an asset.
-
-        Parameters
-        ----------
-        year_ref : int
-            The reference year for inflation calculation.
-        tax_type: TaxType
-            The type of tax applied to the corresponding asset.
-            Available options: TaxType.VAT or TaxType.LBT
-        vat_rate: np.ndarray | float
-            The VAT rate to apply. Can be a single value or an array (default is 0.0).
-        lbt_rate: np.ndarray | float
-            The LBT rate to apply. Can be a single value or an array (default is 0.0).
-        inflation_rate : np.ndarray or float or int, optional
-            The inflation rate to apply. Can be a single value or an array (default is 0).
-        future_rate : float, optional
-            The future rate used in cost calculation (default is 0.02).
-
-        Returns
-        -------
-        np.ndarray
-            An array containing the future cost of the asset.
-
-        Notes
-        -----
-        This function calculates the future cost of an asset, taking into
-        account tax and inflation schemes.
-        """
-        if year_ref is None:
-            year_ref = self.start_year
-
-        if not isinstance(future_rate, float):
-            raise ASRException(
-                f"Future rate must be a float, not a "
-                f"{future_rate.__class__.__qualname__}"
-            )
-
-        cost_adjusted = apply_cost_adjustment(
-            start_year=self.start_year,
-            end_year=self.end_year,
-            cost=self.cost,
-            expense_year=self.expense_year,
-            project_years=self.project_years,
-            year_ref=year_ref,
-            tax_type=tax_type,
-            vat_portion=self.vat_portion,
-            vat_rate=vat_rate,
-            vat_discount=self.vat_discount,
-            lbt_portion=self.lbt_portion,
-            lbt_rate=lbt_rate,
-            lbt_discount=self.lbt_discount,
-            inflation_rate=inflation_rate,
-        )
-
-        return cost_adjusted * np.power(
-            (1 + future_rate), self.end_year - self.expense_year + 1
-        )
-
     def expenditures(
         self,
         year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
         vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
-        future_rate: float = 0.02,
-    ):
+    ) -> np.ndarray:
         """
-        Calculate ASR expenditures per year.
+        Calculate expenditures per year.
 
         This method calculates the expenditures per year based on the expense year
         and cost data provided.
@@ -2210,17 +2141,10 @@ class ASR(GeneralCost):
         ----------
         year_ref : int
             The reference year for inflation calculation.
-        tax_type: TaxType
-            The type of tax applied to the corresponding asset.
-            Available options: TaxType.VAT or TaxType.LBT
         vat_rate: np.ndarray | float
             The VAT rate to apply. Can be a single value or an array (default is 0.0).
-        lbt_rate: np.ndarray | float
-            The LBT rate to apply. Can be a single value or an array (default is 0.0).
         inflation_rate: np.ndarray | float
             The inflation rate to apply. Can be a single value or an array (default is 0.0).
-        future_rate : float, optional
-            The future rate used in cost calculation (default is 0.02).
 
         Returns
         -------
@@ -2234,20 +2158,13 @@ class ASR(GeneralCost):
         The core calculations are as follows:
         (1) Apply adjustment to cost due to tax and inflation (if any), by calling
             'apply_cost_adjustment()' function,
-        (2) Apply further adjustment to cost due to future_rate,
-        (3) Function np.bincount() is used to align the 'cost_adjusted' elements
+        (2) Function np.bincount() is used to align the 'cost_adjusted' elements
             according to its corresponding expense year,
-        (4) If len(expenses) < project_duration, then add the remaining elements
+        (3) If len(expenses) < project_duration, then add the remaining elements
             with zeros.
         """
         if year_ref is None:
             year_ref = self.start_year
-
-        if not isinstance(future_rate, float):
-            raise ASRException(
-                f"Future rate must be a float, not a "
-                f"{future_rate.__class__.__qualname__}"
-            )
 
         cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
@@ -2256,21 +2173,97 @@ class ASR(GeneralCost):
             expense_year=self.expense_year,
             project_years=self.project_years,
             year_ref=year_ref,
-            tax_type=tax_type,
-            vat_portion=self.vat_portion,
-            vat_rate=vat_rate,
-            vat_discount=self.vat_discount,
-            lbt_portion=self.lbt_portion,
-            lbt_rate=lbt_rate,
-            lbt_discount=self.lbt_discount,
+            tax_portion=self.vat_portion,
+            tax_rate=vat_rate,
+            tax_discount=self.vat_discount,
             inflation_rate=inflation_rate,
         )
 
-        cost_adjusted *= np.power((1 + future_rate), self.end_year - self.expense_year + 1)
-        expenses = np.bincount(self.expense_year - self.start_year, weights=cost_adjusted)
+        expenses = np.bincount(
+            self.expense_year - self.start_year, weights=cost_adjusted
+        )
         zeros = np.zeros(self.project_duration - len(expenses))
 
         return np.concatenate((expenses, zeros))
+
+    def future_cost(
+        self,
+        cost_sv: float,
+        vat_portion_sv: int | float = 0.0,
+        vat_rate_sv: float = 0.0,
+        vat_discount_sv: float = 0.0,
+        inflation_rate_sv: float = 0.0,
+        future_rate: float = 0.02,
+    ):
+        pass
+
+    # def future_cost(
+    #     self,
+    #     year_ref: int = None,
+    #     tax_type: TaxType = TaxType.VAT,
+    #     vat_rate: np.ndarray | float = 0.0,
+    #     lbt_rate: np.ndarray | float = 0.0,
+    #     inflation_rate: np.ndarray | float = 0.0,
+    #     future_rate: float = 0.02,
+    # ) -> np.ndarray:
+    #     """
+    #     Calculate the future cost of an asset.
+    #
+    #     Parameters
+    #     ----------
+    #     year_ref : int
+    #         The reference year for inflation calculation.
+    #     tax_type: TaxType
+    #         The type of tax applied to the corresponding asset.
+    #         Available options: TaxType.VAT or TaxType.LBT
+    #     vat_rate: np.ndarray | float
+    #         The VAT rate to apply. Can be a single value or an array (default is 0.0).
+    #     lbt_rate: np.ndarray | float
+    #         The LBT rate to apply. Can be a single value or an array (default is 0.0).
+    #     inflation_rate : np.ndarray or float or int, optional
+    #         The inflation rate to apply. Can be a single value or an array (default is 0).
+    #     future_rate : float, optional
+    #         The future rate used in cost calculation (default is 0.02).
+    #
+    #     Returns
+    #     -------
+    #     np.ndarray
+    #         An array containing the future cost of the asset.
+    #
+    #     Notes
+    #     -----
+    #     This function calculates the future cost of an asset, taking into
+    #     account tax and inflation schemes.
+    #     """
+    #     if year_ref is None:
+    #         year_ref = self.start_year
+    #
+    #     if not isinstance(future_rate, float):
+    #         raise ASRException(
+    #             f"Future rate must be a float, not a "
+    #             f"{future_rate.__class__.__qualname__}"
+    #         )
+    #
+    #     cost_adjusted = apply_cost_adjustment(
+    #         start_year=self.start_year,
+    #         end_year=self.end_year,
+    #         cost=self.cost,
+    #         expense_year=self.expense_year,
+    #         project_years=self.project_years,
+    #         year_ref=year_ref,
+    #         tax_type=tax_type,
+    #         vat_portion=self.vat_portion,
+    #         vat_rate=vat_rate,
+    #         vat_discount=self.vat_discount,
+    #         lbt_portion=self.lbt_portion,
+    #         lbt_rate=lbt_rate,
+    #         lbt_discount=self.lbt_discount,
+    #         inflation_rate=inflation_rate,
+    #     )
+    #
+    #     return cost_adjusted * np.power(
+    #         (1 + future_rate), self.end_year - self.expense_year + 1
+    #     )
 
     def proportion(
         self,
