@@ -452,28 +452,17 @@ def run_optimization(
 if __name__ == "__main__":
     # entry_point()
 
-    from pyscnomics.econ.costs import CapitalCost, Intangible, LBT
+    from pyscnomics.econ.costs import CapitalCost, Intangible, LBT, OPEX
     from pyscnomics.econ.selection import FluidType
 
-    lbt1 = LBT(
+    opex1 = OPEX(
         start_year=2023,
         end_year=2030,
-        cost=np.array([100, 100, 100]),
+        fixed_cost=np.array([100, 100, 100]),
         expense_year=np.array([2023, 2024, 2029]),
+        prod_rate=np.array([100, 100, 100]),
+        cost_per_volume=np.array([1, 1, 1]),
     )
-
-    lbt2 = LBT(
-        start_year=2023,
-        end_year=2030,
-        cost=np.array([100, 100, 100]),
-        expense_year=np.array([2027, 2028, 2030]),
-    )
-
-    lbt_total = lbt1 + lbt2
-
-    # ex1 = lbt1.expenditures(
-    #     lbt_rate=0.03
-    # )
 
     # capital1 = CapitalCost(
     #     start_year=2023,
@@ -483,7 +472,7 @@ if __name__ == "__main__":
     #     vat_portion=np.array([1, 1, 1]),
     # )
 
-    print('\t')
-    print(f'Filetype: {type(lbt_total)}')
-    print(lbt_total)
+    # print('\t')
+    # print(f'Filetype: {type(lbt_total)}')
+    # print(lbt_total)
 

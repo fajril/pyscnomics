@@ -579,8 +579,8 @@ class CapitalCost(GeneralCost):
             return False
 
     def __lt__(self, other):
-        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) < np.sum(other.cost)
 
         # Between an instance of CapitalCost and an integer/float
@@ -590,12 +590,12 @@ class CapitalCost(GeneralCost):
         else:
             raise CapitalException(
                 f"Must compare an instance of CapitalCost with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __le__(self, other):
-        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) <= np.sum(other.cost)
 
         # Between an instance of CapitalCost and an integer/float
@@ -605,12 +605,12 @@ class CapitalCost(GeneralCost):
         else:
             raise CapitalException(
                 f"Must compare an instance of CapitalCost with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __gt__(self, other):
-        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) > np.sum(other.cost)
 
         # Between an instance of CapitalCost and an integer/float
@@ -620,12 +620,12 @@ class CapitalCost(GeneralCost):
         else:
             raise CapitalException(
                 f"Must compare an instance of CapitalCost with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __ge__(self, other):
-        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) >= np.sum(other.cost)
 
         # Between an instance of CapitalCost and an integer/float
@@ -635,7 +635,7 @@ class CapitalCost(GeneralCost):
         else:
             raise CapitalException(
                 f"Must compare an instance of CapitalCost with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -996,8 +996,8 @@ class Intangible(GeneralCost):
             return False
 
     def __lt__(self, other):
-        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) < np.sum(other.cost)
 
         # Between an instance of Intangible and an integer/float
@@ -1007,12 +1007,12 @@ class Intangible(GeneralCost):
         else:
             raise IntangibleException(
                 f"Must compare an instance of Intangible with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __le__(self, other):
-        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) <= np.sum(other.cost)
 
         # Between an instance of Intangible and an integer/float
@@ -1022,12 +1022,12 @@ class Intangible(GeneralCost):
         else:
             raise IntangibleException(
                 f"Must compare an instance of Intangible with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __gt__(self, other):
-        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) > np.sum(other.cost)
 
         # Between an instance of Intangible and an integer/float
@@ -1037,12 +1037,12 @@ class Intangible(GeneralCost):
         else:
             raise IntangibleException(
                 f"Must compare an instance of Intangible with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __ge__(self, other):
-        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) >= np.sum(other.cost)
 
         # Between an instance of Intangible and an integer/float
@@ -1052,7 +1052,7 @@ class Intangible(GeneralCost):
         else:
             raise IntangibleException(
                 f"Must compare an instance of Intangible with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -1578,23 +1578,30 @@ class OPEX(GeneralCost):
         The production rate of a particular fluid type.
     cost_per_volume: np.ndarray
         Cost associated with production of a particular fluid type.
+    vat_portion: np.ndarray
+        The portion of 'cost' that is subject to VAT.
+        Must be an array of length equals to the length of 'cost' array.
+    vat_discount: float
+        The VAT discount to apply.
 
     Notes
     -----
-    (1) The unit used in the fixed_cost should be in M unit of United States Dollar (USD),
-        where the M is stands for 1000. Thus, the unit cost should be: M-USD.
+    The unit used in the fixed_cost should be in M unit of United States Dollar (USD),
+    where the M is stands for 1000. Thus, the unit cost should be: M-USD.
     """
 
     fixed_cost: np.ndarray = field(default=None)
     prod_rate: np.ndarray = field(default=None)
     cost_per_volume: np.ndarray = field(default=None)
+    vat_portion: np.ndarray = field(default=None)
+    vat_discount: float | np.ndarray = field(default=0.0)
 
     # Attribute to be defined later on
     variable_cost: np.ndarray = field(default=None, init=False)
     cost: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
-        # Check for inappropriate start and end year project
+        # Prepare attribute project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
             self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
@@ -1605,59 +1612,54 @@ class OPEX(GeneralCost):
                 f"is after the end year {self.end_year}"
             )
 
-        # Configure VAT portion
+        # Prepare attribute VAT portion
         if self.vat_portion is None:
-            self.vat_portion = np.ones_like(self.fixed_cost)
+            self.vat_portion = np.zeros_like(self.fixed_cost)
 
-        if self.vat_portion is not None:
+        elif self.vat_portion is not None:
             if not isinstance(self.vat_portion, np.ndarray):
                 raise OPEXException(
-                    f"Attribute VAT portion must be a numpy ndarray; "
-                    f"VAT portion ({self.vat_portion}) is of datatype "
-                    f"{self.vat_portion.__class__.__qualname__}."
+                    f"Attribute vat_portion must be given as a numpy.ndarray; "
+                    f"vat_portion (datatype: {self.vat_portion.__class__.__qualname__}) "
+                    f"is not a numpy.ndarray."
                 )
 
-        # Configure LBT portion
-        if self.lbt_portion is None:
-            self.lbt_portion = np.ones_like(self.fixed_cost)
+        self.vat_portion = self.vat_portion.astype(np.float64)
 
-        if self.lbt_portion is not None:
-            if not isinstance(self.lbt_portion, np.ndarray):
-                raise OPEXException(
-                    f"Attribute LBT portion must be a numpy ndarray; "
-                    f"LBT portion ({self.lbt_portion}) is of datatype "
-                    f"{self.lbt_portion.__class__.__qualname__}."
-                )
+        # Prepare attribute VAT discount
+        if not isinstance(self.vat_discount, (float, np.ndarray)):
+            raise OPEXException(
+                f"Attribute VAT discount must be given as a float (for single value) "
+                f"or a numpy.ndarray (for an array). The inserted VAT discount is given "
+                f"as a {self.vat_discount.__class__.__qualname__}."
+            )
 
-        # Configure VAT discount
         if isinstance(self.vat_discount, float):
             self.vat_discount = np.repeat(self.vat_discount, len(self.fixed_cost))
 
-        # Configure LBT discount
-        if isinstance(self.lbt_discount, float):
-            self.lbt_discount = np.repeat(self.lbt_discount, len(self.fixed_cost))
+        self.vat_discount = self.vat_discount.astype(np.float64)
 
-        # Configure description data
+        # Prepare attribute description
         if self.description is None:
             self.description = [" " for _ in range(len(self.fixed_cost))]
 
-        if self.description is not None:
+        elif self.description is not None:
             if not isinstance(self.description, list):
                 raise OPEXException(
-                    f"Attribute description must be a list; "
-                    f"description ({self.description.__class__.__qualname__}) "
+                    f"Attribute description must be given as a list; "
+                    f"description (datatype: {self.description.__class__.__qualname__}) "
                     f"is not a list."
                 )
 
-        # Configure cost_allocation data
+        # Prepare attribute cost_allocation
         if self.cost_allocation is None:
             self.cost_allocation = [FluidType.OIL for _ in range(len(self.fixed_cost))]
 
-        if self.cost_allocation is not None:
+        elif self.cost_allocation is not None:
             if not isinstance(self.cost_allocation, list):
                 raise OPEXException(
-                    f"Attribute cost_allocation must be a list. "
-                    f"cost_allocation ({self.cost_allocation.__class__.__qualname__}) "
+                    f"Attribute cost_allocation must be given as a list; "
+                    f"cost_allocation (datatype: {self.cost_allocation.__class__.__qualname__}) "
                     f"is not a list."
                 )
 
@@ -1675,8 +1677,6 @@ class OPEX(GeneralCost):
                     self.description,
                     self.vat_portion,
                     self.vat_discount,
-                    self.lbt_portion,
-                    self.lbt_discount,
                     self.prod_rate,
                     self.cost_per_volume,
                 ]
@@ -1689,8 +1689,6 @@ class OPEX(GeneralCost):
                     f"description: {len(self.description)}, "
                     f"vat_portion: {len(self.vat_portion)}, "
                     f"vat_discount: {len(self.vat_discount)}, "
-                    f"lbt_portion: {len(self.lbt_portion)}, "
-                    f"lbt_discount: {len(self.lbt_discount)}, "
                     f"prod_rate: {len(self.prod_rate)}, "
                     f"cost_per_volume: {len(self.cost_per_volume)}."
                 )
@@ -1712,22 +1710,38 @@ class OPEX(GeneralCost):
             self.cost_per_volume = np.zeros_like(self.fixed_cost)
             self.variable_cost = np.zeros_like(self.fixed_cost)
 
-        # Define cost
-        self.cost = self.fixed_cost + self.variable_cost
+        self.prod_rate = self.prod_rate.astype(np.float64)
+        self.cost_per_volume = self.cost_per_volume.astype(np.float64)
+        self.variable_cost = self.variable_cost.astype(np.float64)
 
-        # Raise an error message: expense year is after the end year of the project
-        if np.max(self.expense_year) > self.end_year:
-            raise OPEXException(
-                f"Expense year ({np.max(self.expense_year)}) "
-                f"is after the end year of the project ({self.end_year})"
-            )
+        print('\t')
+        print(f'Filetype: {type(self.prod_rate)}')
+        print('self.prod_rate = ', self.prod_rate)
 
-        # Raise an error message: expense year is before the start year of the project
-        if np.min(self.expense_year) < self.start_year:
-            raise OPEXException(
-                f"Expense year ({np.min(self.expense_year)}) "
-                f"is before the start year of the project ({self.start_year})"
-            )
+        print('\t')
+        print(f'Filetype: {type(self.cost_per_volume)}')
+        print('self.cost_per_volume = ', self.cost_per_volume)
+
+        print('\t')
+        print(f'Filetype: {type(self.variable_cost)}')
+        print('self.variable_cost = ', self.variable_cost)
+
+        # # Define cost
+        # self.cost = self.fixed_cost + self.variable_cost
+        #
+        # # Raise an error message: expense year is after the end year of the project
+        # if np.max(self.expense_year) > self.end_year:
+        #     raise OPEXException(
+        #         f"Expense year ({np.max(self.expense_year)}) "
+        #         f"is after the end year of the project ({self.end_year})"
+        #     )
+        #
+        # # Raise an error message: expense year is before the start year of the project
+        # if np.min(self.expense_year) < self.start_year:
+        #     raise OPEXException(
+        #         f"Expense year ({np.min(self.expense_year)}) "
+        #         f"is before the start year of the project ({self.start_year})"
+        #     )
 
     def __eq__(self, other):
         # Between two instances of OPEX
