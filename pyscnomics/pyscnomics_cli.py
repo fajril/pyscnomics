@@ -452,10 +452,10 @@ def run_optimization(
 if __name__ == "__main__":
     # entry_point()
 
-    from pyscnomics.econ.costs import CapitalCost
+    from pyscnomics.econ.costs import CapitalCost, Intangible
     from pyscnomics.econ.selection import FluidType
 
-    capital1 = CapitalCost(
+    intang1 = Intangible(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 100, 100]),
@@ -463,9 +463,19 @@ if __name__ == "__main__":
         vat_portion=np.array([1, 1, 1]),
     )
 
-    bv1 = capital1.total_depreciation_book_value()
+    ex1 = intang1.expenditures(
+        vat_rate=0.03
+    )
+
+    # capital1 = CapitalCost(
+    #     start_year=2023,
+    #     end_year=2030,
+    #     cost=np.array([100, 100, 100]),
+    #     expense_year=np.array([2023, 2024, 2029]),
+    #     vat_portion=np.array([1, 1, 1]),
+    # )
 
     print('\t')
-    print(f'Filetype: {type(bv1)}')
-    print(bv1)
+    print(f'Filetype: {type(ex1)}')
+    print(ex1)
 

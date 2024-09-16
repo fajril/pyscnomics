@@ -802,9 +802,20 @@ class Intangible(GeneralCost):
     Parameters
     ----------
     The attributes are inherited from class GeneralCost.
+    Local attributes associated with class Intangible are:
+
+    vat_portion: np.ndarray
+        The portion of 'cost' that is subject to VAT.
+        Must be an array of length equals to the length of 'cost' array.
+    vat_discount: float
+        The VAT discount to apply.
     """
+
+    vat_portion: np.ndarray = field(default=None)
+    vat_discount: float | np.ndarray = field(default=0.0)
+
     def __post_init__(self):
-        # Check for inappropriate start and end year project
+        # Prepare attribute project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
             self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
@@ -815,59 +826,54 @@ class Intangible(GeneralCost):
                 f"is after the end year {self.end_year}"
             )
 
-        # Configure VAT portion
+        # Prepare attribute VAT portion
         if self.vat_portion is None:
-            self.vat_portion = np.ones_like(self.cost)
+            self.vat_portion = np.zeros_like(self.cost)
 
-        if self.vat_portion is not None:
+        elif self.vat_portion is not None:
             if not isinstance(self.vat_portion, np.ndarray):
                 raise IntangibleException(
-                    f"Attribute VAT portion must be a numpy ndarray; "
-                    f"VAT portion ({self.vat_portion}) is of datatype "
-                    f"{self.vat_portion.__class__.__qualname__}."
+                    f"Attribute vat_portion must be given as a numpy.ndarray; "
+                    f"vat_portion (datatype: {self.vat_portion.__class__.__qualname__}) "
+                    f"is not a numpy.ndarray."
                 )
 
-        # Configure LBT portion
-        if self.lbt_portion is None:
-            self.lbt_portion = np.ones_like(self.cost)
+        self.vat_portion = self.vat_portion.astype(np.float64)
 
-        if self.lbt_portion is not None:
-            if not isinstance(self.lbt_portion, np.ndarray):
-                raise IntangibleException(
-                    f"Attribute LBT portion must be a numpy ndarray; "
-                    f"LBT portion ({self.lbt_portion}) is of datatype "
-                    f"{self.lbt_portion.__class__.__qualname__}."
-                )
+        # Prepare attribute VAT discount
+        if not isinstance(self.vat_discount, (float, np.ndarray)):
+            raise IntangibleException(
+                f"Attribute VAT discount must be given as a float (for single value) "
+                f"or a numpy array (for an array). The inserted VAT discount is given "
+                f"as a {self.vat_discount.__class__.__qualname__}."
+            )
 
-        # Configure VAT discount
         if isinstance(self.vat_discount, float):
             self.vat_discount = np.repeat(self.vat_discount, len(self.cost))
 
-        # Configure LBT discount
-        if isinstance(self.lbt_discount, float):
-            self.lbt_discount = np.repeat(self.lbt_discount, len(self.cost))
+        self.vat_discount = self.vat_discount.astype(np.float64)
 
-        # Configure description data
+        # Prepare attribute description
         if self.description is None:
             self.description = [" " for _ in range(len(self.cost))]
 
-        if self.description is not None:
+        elif self.description is not None:
             if not isinstance(self.description, list):
                 raise IntangibleException(
-                    f"Attribute description must be a list; "
+                    f"Attribute description must be given as a list; "
                     f"description (datatype: {self.description.__class__.__qualname__}) "
                     f"is not a list."
                 )
 
-        # Configure cost_allocation data
+        # Prepare attribute cost_allocation
         if self.cost_allocation is None:
             self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
 
-        if self.cost_allocation is not None:
+        elif self.cost_allocation is not None:
             if not isinstance(self.cost_allocation, list):
                 raise IntangibleException(
-                    f"Attribute cost_allocation must be a list. "
-                    f"cost_allocation ({self.cost_allocation.__class__.__qualname__}) "
+                    f"Attribute cost_allocation must be given as a list; "
+                    f"cost_allocation (datatype: {self.cost_allocation.__class__.__qualname__}) "
                     f"is not a list."
                 )
 
@@ -882,8 +888,6 @@ class Intangible(GeneralCost):
                 self.description,
                 self.vat_portion,
                 self.vat_discount,
-                self.lbt_portion,
-                self.lbt_discount,
             ]
         ):
             raise IntangibleException(
@@ -894,8 +898,6 @@ class Intangible(GeneralCost):
                 f"description: {len(self.description)}, "
                 f"vat_portion: {len(self.vat_portion)}, "
                 f"vat_discount: {len(self.vat_discount)}, "
-                f"lbt_portion: {len(self.lbt_portion)}, "
-                f"lbt_discount: {len(self.lbt_discount)}."
             )
 
         # Raise an error message: expense year is after the end year of the project
@@ -912,6 +914,67 @@ class Intangible(GeneralCost):
                 f"is before the start year of the project ({self.start_year})"
             )
 
+    def expenditures(
+        self,
+        year_ref: int = None,
+        vat_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
+    ) -> np.ndarray:
+        """
+        Calculate expenditures per year.
+
+        This method calculates the expenditures per year based on the expense year
+        and cost data provided.
+
+        Parameters
+        ----------
+        year_ref : int
+            The reference year for inflation calculation.
+        vat_rate: np.ndarray | float
+            The VAT rate to apply. Can be a single value or an array (default is 0.0).
+        inflation_rate: np.ndarray | float
+            The inflation rate to apply. Can be a single value or an array (default is 0.0).
+
+        Returns
+        -------
+        np.ndarray
+            An array depicting the expenditures each year, adjusted by tax
+            and inflation schemes (if any).
+
+        Notes
+        -----
+        This method calculates expenditures while considering tax and inflation schemes.
+        The core calculations are as follows:
+        (1) Apply adjustment to cost due to tax and inflation (if any), by calling
+            'apply_cost_adjustment()' function,
+        (2) Function np.bincount() is used to align the 'cost_adjusted' elements
+            according to its corresponding expense year,
+        (3) If len(expenses) < project_duration, then add the remaining elements
+            with zeros.
+        """
+        if year_ref is None:
+            year_ref = self.start_year
+
+        cost_adjusted = apply_cost_adjustment(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            year_ref=year_ref,
+            tax_portion=self.vat_portion,
+            tax_rate=vat_rate,
+            tax_discount=self.vat_discount,
+            inflation_rate=inflation_rate,
+        )
+
+        expenses = np.bincount(
+            self.expense_year - self.start_year, weights=cost_adjusted
+        )
+        zeros = np.zeros(self.project_duration - len(expenses))
+
+        return np.concatenate((expenses, zeros))
+
     def __eq__(self, other):
         # Between two instances of Intangible
         if isinstance(other, Intangible):
@@ -921,8 +984,6 @@ class Intangible(GeneralCost):
                     np.allclose(self.expense_year, other.expense_year),
                     np.allclose(self.vat_portion, other.vat_portion),
                     np.allclose(self.vat_discount, other.vat_discount),
-                    np.allclose(self.lbt_portion, other.lbt_portion),
-                    np.allclose(self.lbt_discount, other.lbt_discount),
                     self.cost_allocation == other.cost_allocation,
                 )
             )
@@ -1005,8 +1066,6 @@ class Intangible(GeneralCost):
             description_combined = self.description + other.description
             vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
             vat_discount_combined = np.concatenate((self.vat_discount, other.vat_discount))
-            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
-            lbt_discount_combined = np.concatenate((self.lbt_discount, other.lbt_discount))
 
             return Intangible(
                 start_year=start_year_combined,
@@ -1017,8 +1076,6 @@ class Intangible(GeneralCost):
                 description=description_combined,
                 vat_portion=vat_portion_combined,
                 vat_discount=vat_discount_combined,
-                lbt_portion=lbt_portion_combined,
-                lbt_discount=lbt_discount_combined,
             )
 
         else:
@@ -1043,8 +1100,6 @@ class Intangible(GeneralCost):
             description_combined = self.description + other.description
             vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
             vat_discount_combined = np.concatenate((self.vat_discount, other.vat_discount))
-            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
-            lbt_discount_combined = np.concatenate((self.lbt_discount, other.lbt_discount))
 
             return Intangible(
                 start_year=start_year_combined,
@@ -1055,8 +1110,6 @@ class Intangible(GeneralCost):
                 description=description_combined,
                 vat_portion=vat_portion_combined,
                 vat_discount=vat_discount_combined,
-                lbt_portion=lbt_portion_combined,
-                lbt_discount=lbt_discount_combined,
             )
 
         else:
@@ -1082,8 +1135,6 @@ class Intangible(GeneralCost):
                 description=self.description,
                 vat_portion=self.vat_portion,
                 vat_discount=self.vat_discount,
-                lbt_portion=self.lbt_portion,
-                lbt_discount=self.lbt_discount,
             )
 
         else:
@@ -1116,8 +1167,6 @@ class Intangible(GeneralCost):
                     description=self.description,
                     vat_portion=self.vat_portion,
                     vat_discount=self.vat_discount,
-                    lbt_portion=self.lbt_portion,
-                    lbt_discount=self.lbt_discount,
                 )
 
         else:
