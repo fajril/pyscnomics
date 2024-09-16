@@ -460,9 +460,12 @@ if __name__ == "__main__":
         end_year=2030,
         fixed_cost=np.array([100, 100, 100]),
         expense_year=np.array([2023, 2024, 2029]),
-        prod_rate=np.array([100, 100, 100]),
-        cost_per_volume=np.array([1, 1, 1]),
+        vat_portion=np.array([1, 1, 1]),
+        # prod_rate=np.array([100, 100, 100]),
+        # cost_per_volume=np.array([1, 1, 1]),
     )
+
+    t1 = opex1.expenditures(vat_rate=0.05)
 
     # capital1 = CapitalCost(
     #     start_year=2023,
@@ -472,7 +475,7 @@ if __name__ == "__main__":
     #     vat_portion=np.array([1, 1, 1]),
     # )
 
-    # print('\t')
-    # print(f'Filetype: {type(lbt_total)}')
-    # print(lbt_total)
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(t1)
 

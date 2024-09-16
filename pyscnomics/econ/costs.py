@@ -758,8 +758,8 @@ class CapitalCost(GeneralCost):
         return self.__mul__(other)
 
     def __truediv__(self, other):
-        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) / np.sum(other.cost)
 
         # Between an instance of CapitalCost and an integer/float
@@ -787,10 +787,9 @@ class CapitalCost(GeneralCost):
 
         else:
             raise CapitalException(
-                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR, "
-                f"integer or a float; "
-                f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of CapitalCost/Intangible/OPEX/ASR nor an integer nor a float."
+                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT, "
+                f"integer or a float; {other}({other.__class__.__qualname__}) is not an instance "
+                f"of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer nor a float."
             )
 
 
@@ -1147,8 +1146,8 @@ class Intangible(GeneralCost):
         return self.__mul__(other)
 
     def __truediv__(self, other):
-        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) / np.sum(other.cost)
 
         # Between an instance of Intangible and an integer/float
@@ -1171,10 +1170,9 @@ class Intangible(GeneralCost):
 
         else:
             raise IntangibleException(
-                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR, "
-                f"integer or a float; "
-                f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of CapitalCost/Intangible/OPEX/ASR nor an integer nor a float."
+                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT, "
+                f"integer or a float; {other}({other.__class__.__qualname__}) is not an instance "
+                f"of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer nor a float."
             )
 
 
@@ -1714,34 +1712,83 @@ class OPEX(GeneralCost):
         self.cost_per_volume = self.cost_per_volume.astype(np.float64)
         self.variable_cost = self.variable_cost.astype(np.float64)
 
-        print('\t')
-        print(f'Filetype: {type(self.prod_rate)}')
-        print('self.prod_rate = ', self.prod_rate)
+        # Define cost
+        self.cost = self.fixed_cost + self.variable_cost
 
-        print('\t')
-        print(f'Filetype: {type(self.cost_per_volume)}')
-        print('self.cost_per_volume = ', self.cost_per_volume)
+        # Raise an error message: expense year is after the end year of the project
+        if np.max(self.expense_year) > self.end_year:
+            raise OPEXException(
+                f"Expense year ({np.max(self.expense_year)}) "
+                f"is after the end year of the project ({self.end_year})"
+            )
 
-        print('\t')
-        print(f'Filetype: {type(self.variable_cost)}')
-        print('self.variable_cost = ', self.variable_cost)
+        # Raise an error message: expense year is before the start year of the project
+        if np.min(self.expense_year) < self.start_year:
+            raise OPEXException(
+                f"Expense year ({np.min(self.expense_year)}) "
+                f"is before the start year of the project ({self.start_year})"
+            )
 
-        # # Define cost
-        # self.cost = self.fixed_cost + self.variable_cost
-        #
-        # # Raise an error message: expense year is after the end year of the project
-        # if np.max(self.expense_year) > self.end_year:
-        #     raise OPEXException(
-        #         f"Expense year ({np.max(self.expense_year)}) "
-        #         f"is after the end year of the project ({self.end_year})"
-        #     )
-        #
-        # # Raise an error message: expense year is before the start year of the project
-        # if np.min(self.expense_year) < self.start_year:
-        #     raise OPEXException(
-        #         f"Expense year ({np.min(self.expense_year)}) "
-        #         f"is before the start year of the project ({self.start_year})"
-        #     )
+    def expenditures(
+        self,
+        year_ref: int = None,
+        vat_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
+    ) -> np.ndarray:
+        """
+        Calculate expenditures per year.
+
+        This method calculates the expenditures per year based on the expense year
+        and cost data provided.
+
+        Parameters
+        ----------
+        year_ref : int
+            The reference year for inflation calculation.
+        vat_rate: np.ndarray | float
+            The VAT rate to apply. Can be a single value or an array (default is 0.0).
+        inflation_rate: np.ndarray | float
+            The inflation rate to apply. Can be a single value or an array (default is 0.0).
+
+        Returns
+        -------
+        np.ndarray
+            An array depicting the expenditures each year, adjusted by tax
+            and inflation schemes (if any).
+
+        Notes
+        -----
+        This method calculates expenditures while considering tax and inflation schemes.
+        The core calculations are as follows:
+        (1) Apply adjustment to cost due to tax and inflation (if any), by calling
+            'apply_cost_adjustment()' function,
+        (2) Function np.bincount() is used to align the 'cost_adjusted' elements
+            according to its corresponding expense year,
+        (3) If len(expenses) < project_duration, then add the remaining elements
+            with zeros.
+        """
+        if year_ref is None:
+            year_ref = self.start_year
+
+        cost_adjusted = apply_cost_adjustment(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            year_ref=year_ref,
+            tax_portion=self.vat_portion,
+            tax_rate=vat_rate,
+            tax_discount=self.vat_discount,
+            inflation_rate=inflation_rate,
+        )
+
+        expenses = np.bincount(
+            self.expense_year - self.start_year, weights=cost_adjusted
+        )
+        zeros = np.zeros(self.project_duration - len(expenses))
+
+        return np.concatenate((expenses, zeros))
 
     def __eq__(self, other):
         # Between two instances of OPEX
@@ -1753,8 +1800,6 @@ class OPEX(GeneralCost):
                     np.allclose(self.expense_year, other.expense_year),
                     np.allclose(self.vat_portion, other.vat_portion),
                     np.allclose(self.vat_discount, other.vat_discount),
-                    np.allclose(self.lbt_portion, other.lbt_portion),
-                    np.allclose(self.lbt_discount, other.lbt_discount),
                     self.cost_allocation == other.cost_allocation,
                 )
             )
@@ -1767,8 +1812,8 @@ class OPEX(GeneralCost):
             return False
 
     def __lt__(self, other):
-        # Between an instance of OPEX with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of OPEX with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) < np.sum(other.cost)
 
         # Between an instance of OPEX and an integer/float
@@ -1778,12 +1823,12 @@ class OPEX(GeneralCost):
         else:
             raise OPEXException(
                 f"Must compare an instance of OPEX with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __le__(self, other):
-        # Between an instance of OPEX with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of OPEX with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) <= np.sum(other.cost)
 
         # Between an instance of OPEX and an integer/float
@@ -1793,12 +1838,12 @@ class OPEX(GeneralCost):
         else:
             raise OPEXException(
                 f"Must compare an instance of OPEX with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __gt__(self, other):
-        # Between an instance of OPEX with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of OPEX with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) > np.sum(other.cost)
 
         # Between an instance of OPEX and an integer/float
@@ -1808,12 +1853,12 @@ class OPEX(GeneralCost):
         else:
             raise OPEXException(
                 f"Must compare an instance of OPEX with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __ge__(self, other):
-        # Between an instance of OPEX with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of OPEX with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) >= np.sum(other.cost)
 
         # Between an instance of OPEX and an integer/float
@@ -1823,7 +1868,7 @@ class OPEX(GeneralCost):
         else:
             raise OPEXException(
                 f"Must compare an instance of OPEX with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -1836,8 +1881,6 @@ class OPEX(GeneralCost):
             description_combined = self.description + other.description
             vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
             vat_discount_combined = np.concatenate((self.vat_discount, other.vat_discount))
-            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
-            lbt_discount_combined = np.concatenate((self.lbt_discount, other.lbt_discount))
             fixed_cost_combined = np.concatenate((self.fixed_cost, other.fixed_cost))
             prod_rate_combined = np.concatenate((self.prod_rate, other.prod_rate))
             cost_per_volume_combined = np.concatenate((self.cost_per_volume, other.cost_per_volume))
@@ -1850,8 +1893,6 @@ class OPEX(GeneralCost):
                 description=description_combined,
                 vat_portion=vat_portion_combined,
                 vat_discount=vat_discount_combined,
-                lbt_portion=lbt_portion_combined,
-                lbt_discount=lbt_discount_combined,
                 fixed_cost=fixed_cost_combined,
                 prod_rate=prod_rate_combined,
                 cost_per_volume=cost_per_volume_combined,
@@ -1878,8 +1919,6 @@ class OPEX(GeneralCost):
             description_combined = self.description + other.description
             vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
             vat_discount_combined = np.concatenate((self.vat_discount, other.vat_discount))
-            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
-            lbt_discount_combined = np.concatenate((self.lbt_discount, other.lbt_discount))
             fixed_cost_combined = np.concatenate((self.fixed_cost, -other.fixed_cost))
             prod_rate_combined = np.concatenate((self.prod_rate, -other.prod_rate))
             cost_per_volume_combined = np.concatenate((self.cost_per_volume, other.cost_per_volume))
@@ -1892,8 +1931,6 @@ class OPEX(GeneralCost):
                 description=description_combined,
                 vat_portion=vat_portion_combined,
                 vat_discount=vat_discount_combined,
-                lbt_portion=lbt_portion_combined,
-                lbt_discount=lbt_discount_combined,
                 fixed_cost=fixed_cost_combined,
                 prod_rate=prod_rate_combined,
                 cost_per_volume=cost_per_volume_combined,
@@ -1921,8 +1958,6 @@ class OPEX(GeneralCost):
                 description=self.description,
                 vat_portion=self.vat_portion,
                 vat_discount=self.vat_discount,
-                lbt_portion=self.lbt_portion,
-                lbt_discount=self.lbt_discount,
                 fixed_cost=self.fixed_cost * other,
                 prod_rate=self.prod_rate * other,
                 cost_per_volume=self.cost_per_volume,
@@ -1938,8 +1973,8 @@ class OPEX(GeneralCost):
         return self.__mul__(other)
 
     def __truediv__(self, other):
-        # Between an instance of OPEX with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of OPEX with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) / np.sum(other.cost)
 
         # Between an instance of OPEX and an integer/float
@@ -1957,8 +1992,6 @@ class OPEX(GeneralCost):
                     description=self.description,
                     vat_portion=self.vat_portion,
                     vat_discount=self.vat_discount,
-                    lbt_portion=self.lbt_portion,
-                    lbt_discount=self.lbt_discount,
                     fixed_cost=self.fixed_cost / other,
                     prod_rate=self.prod_rate / other,
                     cost_per_volume=self.cost_per_volume,
@@ -1966,9 +1999,9 @@ class OPEX(GeneralCost):
 
         else:
             raise OPEXException(
-                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR, integer or a float; "
-                f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of CapitalCost/Intangible/OPEX/ASR nor an integer nor a float."
+                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/lBT, "
+                f"integer or a float; {other}({other.__class__.__qualname__}) is not an instance "
+                f"of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer nor a float."
             )
 
 
