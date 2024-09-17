@@ -452,22 +452,25 @@ def run_optimization(
 if __name__ == "__main__":
     # entry_point()
 
-    from pyscnomics.econ.costs import CapitalCost, Intangible, LBT, OPEX, ASR
+    from pyscnomics.econ.costs import CapitalCost, Intangible, LBT, OPEX, ASR, ASRCalculator
     from pyscnomics.econ.selection import FluidType
+    from pyscnomics.econ.calculator import calculator_cost_adjustment_by_tax
 
-    asr1 = ASR(
-        start_year=2023,
-        end_year=2030,
-        cost=np.array([100, 100, 100]),
-        expense_year=np.array([2023, 2024, 2029]),
-        vat_portion=np.array([1, 1, 1]),
+    asr1 = ASRCalculator(
+        start_year_project=2023,
+        end_year_project=2030,
+        cost_total=np.array([500, 500]),
+        begin_year_split=np.array([2025, 2027]),
+        final_year_split=np.array([2027, 2029]),
     )
 
-    t1 = asr1.expenditures(
-        vat_rate=0.05,
-    )
+    future1 = asr1.calc_future_value()
 
-    # capital1 = CapitalCost(
+    print('\t')
+    print(f'Filetype: {type(future1)}, Length: {len(future1)}')
+    print('future1 = ', future1)
+
+    # asr1 = ASR(
     #     start_year=2023,
     #     end_year=2030,
     #     cost=np.array([100, 100, 100]),
@@ -476,6 +479,15 @@ if __name__ == "__main__":
     # )
 
     print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(t1)
+    print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+
+    # t2 = calculator_cost_adjustment_by_tax(
+    #     cost=100,
+    #     tax_portion=0.5,
+    #     tax_rate=0.05,
+    # )
+    #
+    # print('\t')
+    # print(f'Filetype: {type(t2)}')
+    # print('t2 = ', t2)
 

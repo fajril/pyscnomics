@@ -12,7 +12,8 @@ from dataclasses import dataclass, field
 
 import pyscnomics.econ.depreciation as depr
 from pyscnomics.tools.helper import apply_cost_adjustment
-from pyscnomics.econ.selection import FluidType, DeprMethod, TaxType
+from pyscnomics.econ.selection import FluidType, DeprMethod
+# from pyscnomics.econ.selection import TaxType
 
 
 class CapitalException(Exception):
@@ -41,6 +42,12 @@ class ASRException(Exception):
 
 class LBTException(Exception):
     """Exception to be raised when LBT class is misused"""
+
+    pass
+
+
+class ASRCalculatorException(Exception):
+    """Exception to be raised for an incorrect use of class ASRCalculator"""
 
     pass
 
@@ -2188,89 +2195,69 @@ class ASR(GeneralCost):
 
     def future_cost(
         self,
-        cost_sv: float,
-        vat_portion_sv: int | float = 0.0,
-        vat_rate_sv: float = 0.0,
-        vat_discount_sv: float = 0.0,
-        inflation_rate_sv: float = 0.0,
+        year_ref: int = None,
+        vat_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
         future_rate: float = 0.02,
-    ):
-        pass
+    ) -> np.ndarray:
+        """
+        Calculate the future cost of an asset.
 
-    # def future_cost(
-    #     self,
-    #     year_ref: int = None,
-    #     tax_type: TaxType = TaxType.VAT,
-    #     vat_rate: np.ndarray | float = 0.0,
-    #     lbt_rate: np.ndarray | float = 0.0,
-    #     inflation_rate: np.ndarray | float = 0.0,
-    #     future_rate: float = 0.02,
-    # ) -> np.ndarray:
-    #     """
-    #     Calculate the future cost of an asset.
-    #
-    #     Parameters
-    #     ----------
-    #     year_ref : int
-    #         The reference year for inflation calculation.
-    #     tax_type: TaxType
-    #         The type of tax applied to the corresponding asset.
-    #         Available options: TaxType.VAT or TaxType.LBT
-    #     vat_rate: np.ndarray | float
-    #         The VAT rate to apply. Can be a single value or an array (default is 0.0).
-    #     lbt_rate: np.ndarray | float
-    #         The LBT rate to apply. Can be a single value or an array (default is 0.0).
-    #     inflation_rate : np.ndarray or float or int, optional
-    #         The inflation rate to apply. Can be a single value or an array (default is 0).
-    #     future_rate : float, optional
-    #         The future rate used in cost calculation (default is 0.02).
-    #
-    #     Returns
-    #     -------
-    #     np.ndarray
-    #         An array containing the future cost of the asset.
-    #
-    #     Notes
-    #     -----
-    #     This function calculates the future cost of an asset, taking into
-    #     account tax and inflation schemes.
-    #     """
-    #     if year_ref is None:
-    #         year_ref = self.start_year
-    #
-    #     if not isinstance(future_rate, float):
-    #         raise ASRException(
-    #             f"Future rate must be a float, not a "
-    #             f"{future_rate.__class__.__qualname__}"
-    #         )
-    #
-    #     cost_adjusted = apply_cost_adjustment(
-    #         start_year=self.start_year,
-    #         end_year=self.end_year,
-    #         cost=self.cost,
-    #         expense_year=self.expense_year,
-    #         project_years=self.project_years,
-    #         year_ref=year_ref,
-    #         tax_type=tax_type,
-    #         vat_portion=self.vat_portion,
-    #         vat_rate=vat_rate,
-    #         vat_discount=self.vat_discount,
-    #         lbt_portion=self.lbt_portion,
-    #         lbt_rate=lbt_rate,
-    #         lbt_discount=self.lbt_discount,
-    #         inflation_rate=inflation_rate,
-    #     )
-    #
-    #     return cost_adjusted * np.power(
-    #         (1 + future_rate), self.end_year - self.expense_year + 1
-    #     )
+        Parameters
+        ----------
+        year_ref : int
+            The reference year for inflation calculation.
+        vat_rate: np.ndarray | float
+            The VAT rate to apply. Can be a single value or an array (default is 0.0).
+        inflation_rate : np.ndarray or float or int, optional
+            The inflation rate to apply. Can be a single value or an array (default is 0).
+        future_rate : float, optional
+            The future rate used in cost calculation (default is 0.02).
+
+        Returns
+        -------
+        np.ndarray
+            An array containing the future cost of the asset.
+
+        Notes
+        -----
+        This function calculates the future cost of an asset, taking into
+        account tax and inflation schemes.
+        """
+        # Only allows float datatype as an input for future_rate
+        if not isinstance(future_rate, float):
+            raise ASRException(
+                f"Argument future_rate must be given as a float, not a "
+                f"{future_rate.__class__.__qualname__}."
+            )
+
+        # Default value for year_ref
+        if year_ref is None:
+            year_ref = self.start_year
+
+        # Cost adjustment due to VAT and inflation schemes
+        cost_adjusted = apply_cost_adjustment(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            year_ref=year_ref,
+            tax_portion=self.vat_portion,
+            tax_rate=vat_rate,
+            tax_discount=self.vat_discount,
+            inflation_rate=inflation_rate,
+        )
+
+        # Cost adjustment due to future_rate
+        return cost_adjusted * np.power(
+            (1.0 + future_rate), self.end_year - self.expense_year + 1
+        )
 
     def proportion(
         self,
         year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
         vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
         future_rate: float = 0.02,
     ) -> np.ndarray:
@@ -2281,13 +2268,8 @@ class ASR(GeneralCost):
         ----------
         year_ref : int
             The reference year for inflation calculation.
-        tax_type: TaxType
-            The type of tax applied to the corresponding asset.
-            Available options: TaxType.VAT or TaxType.LBT
         vat_rate: np.ndarray | float
             The VAT rate to apply. Can be a single value or an array (default is 0.0).
-        lbt_rate: np.ndarray | float
-            The LBT rate to apply. Can be a single value or an array (default is 0.0).
         inflation_rate : np.ndarray or float or int, optional
             The inflation rate to apply. Can be a single value or an array (default is 0).
         future_rate : float, optional
@@ -2299,14 +2281,16 @@ class ASR(GeneralCost):
             An array depicting allocation of ASR expenditures each year, adjusted by
             tax and inflation (if any).
         """
-        if year_ref is None:
-            year_ref = self.start_year
-
+        # Only allows float datatype as an input for future_rate
         if not isinstance(future_rate, float):
             raise ASRException(
-                f"Future rate must be a float, not a "
+                f"Argument future_rate must be given as a float, not a "
                 f"{future_rate.__class__.__qualname__}"
             )
+
+        # Default value for year_ref
+        if year_ref is None:
+            year_ref = self.start_year
 
         # Distance of expense year from the end year of the project
         cost_duration = self.end_year - self.expense_year + 1
@@ -2314,9 +2298,7 @@ class ASR(GeneralCost):
         # Configure future cost
         cost_future = self.future_cost(
             year_ref=year_ref,
-            tax_type=tax_type,
             vat_rate=vat_rate,
-            lbt_rate=lbt_rate,
             inflation_rate=inflation_rate,
             future_rate=future_rate,
         )
@@ -2346,8 +2328,6 @@ class ASR(GeneralCost):
                     np.allclose(self.expense_year, other.expense_year),
                     np.allclose(self.vat_portion, other.vat_portion),
                     np.allclose(self.vat_discount, other.vat_discount),
-                    np.allclose(self.lbt_portion, other.lbt_portion),
-                    np.allclose(self.lbt_discount, other.lbt_discount),
                     self.cost_allocation == other.cost_allocation,
                 )
             )
@@ -2360,8 +2340,8 @@ class ASR(GeneralCost):
             return False
 
     def __lt__(self, other):
-        # Between an instance of ASR with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of ASR with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) < np.sum(other.cost)
 
         # Between an instance of ASR and an integer/float
@@ -2371,12 +2351,12 @@ class ASR(GeneralCost):
         else:
             raise ASRException(
                 f"Must compare an instance of ASR with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __le__(self, other):
-        # Between an instance of ASR with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of ASR with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) <= np.sum(other.cost)
 
         # Between an instance of ASR and an integer/float
@@ -2386,12 +2366,12 @@ class ASR(GeneralCost):
         else:
             raise ASRException(
                 f"Must compare an instance of ASR with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __gt__(self, other):
-        # Between an instance of ASR with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of ASR with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) > np.sum(other.cost)
 
         # Between an instance of ASR and an integer/float
@@ -2401,12 +2381,12 @@ class ASR(GeneralCost):
         else:
             raise ASRException(
                 f"Must compare an instance of ASR with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __ge__(self, other):
-        # Between an instance of ASR with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of ASR with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) >= np.sum(other.cost)
 
         # Between an instance of ASR and an integer/float
@@ -2416,7 +2396,7 @@ class ASR(GeneralCost):
         else:
             raise ASRException(
                 f"Must compare an instance of ASR with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -2430,8 +2410,6 @@ class ASR(GeneralCost):
             description_combined = self.description + other.description
             vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
             vat_discount_combined = np.concatenate((self.vat_discount, other.vat_discount))
-            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
-            lbt_discount_combined = np.concatenate((self.lbt_discount, other.lbt_discount))
 
             return ASR(
                 start_year=start_year_combined,
@@ -2442,8 +2420,6 @@ class ASR(GeneralCost):
                 description=description_combined,
                 vat_portion=vat_portion_combined,
                 vat_discount=vat_discount_combined,
-                lbt_portion=lbt_portion_combined,
-                lbt_discount=lbt_discount_combined,
             )
 
         else:
@@ -2468,8 +2444,6 @@ class ASR(GeneralCost):
             description_combined = self.description + other.description
             vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
             vat_discount_combined = np.concatenate((self.vat_discount, other.vat_discount))
-            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
-            lbt_discount_combined = np.concatenate((self.lbt_discount, other.lbt_discount))
 
             return ASR(
                 start_year=start_year_combined,
@@ -2480,8 +2454,6 @@ class ASR(GeneralCost):
                 description=description_combined,
                 vat_portion=vat_portion_combined,
                 vat_discount=vat_discount_combined,
-                lbt_portion=lbt_portion_combined,
-                lbt_discount=lbt_discount_combined,
             )
 
         else:
@@ -2507,8 +2479,6 @@ class ASR(GeneralCost):
                 description=self.description,
                 vat_portion=self.vat_portion,
                 vat_discount=self.vat_discount,
-                lbt_portion=self.lbt_portion,
-                lbt_discount=self.lbt_discount,
             )
 
         else:
@@ -2521,8 +2491,8 @@ class ASR(GeneralCost):
         return self.__mul__(other)
 
     def __truediv__(self, other):
-        # Between an instance of ASR with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of ASR with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) / np.sum(other.cost)
 
         # Between an instance of ASR and an integer/float
@@ -2541,16 +2511,14 @@ class ASR(GeneralCost):
                     description=self.description,
                     vat_portion=self.vat_portion,
                     vat_discount=self.vat_discount,
-                    lbt_portion=self.lbt_portion,
-                    lbt_discount=self.lbt_discount,
                 )
 
         else:
             raise ASRException(
-                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR, "
+                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT, "
                 f"integer or a float; "
                 f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of CapitalCost/Intangible/OPEX/ASR nor an integer nor a float."
+                f"of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer nor a float."
             )
 
 
@@ -2799,3 +2767,168 @@ class CostOfSales(GeneralCost):
                 f"Must compare an instance of CostOfSales with another instance "
                 f"of CostOfSales, an integer, or a float."
             )
+
+
+@dataclass
+class ASRCalculator:
+    start_year_project: int
+    end_year_project: int
+    cost_total: np.ndarray
+    begin_year_split: np.ndarray
+    final_year_split: np.ndarray
+    future_rate: np.ndarray = field(default=None)
+    year_ref: np.ndarray = field(default=None)
+
+    # Attribute to be defined later on
+    project_duration: int = field(default=None, init=False)
+    project_years: np.ndarray = field(default=None, init=False)
+
+    def __post_init__(self):
+        # Prepare attribute project_duration and project_years
+        if self.end_year_project >= self.start_year_project:
+            self.project_duration = self.end_year_project - self.start_year_project + 1
+            self.project_years = np.arange(self.start_year_project, self.end_year_project + 1, 1)
+
+        else:
+            raise ASRCalculatorException(
+                f"start year of the project {self.start_year_project} "
+                f"is after the end year {self.end_year_project}"
+            )
+
+        # Prepare attribute year_ref
+        if self.year_ref is None:
+            self.year_ref = self.begin_year_split.copy()
+
+        self.year_ref = self.year_ref.astype(int)
+
+        print('\t')
+        print(f'Filetype: {type(self.year_ref)}, Length: {len(self.year_ref)}')
+        print('year_ref = ', self.year_ref)
+
+        # Prepare attribute future rate
+        if self.future_rate is None:
+            self.future_rate = np.repeat(0.02, len(self.cost_total))
+
+        elif self.future_rate is not None:
+            if not isinstance(self.future_rate, np.ndarray):
+                raise ASRCalculatorException(
+                    f"Attribute future_rate must be given as a numpy.ndarray, "
+                    f"not as {self.future_rate.__class__.__qualname__}"
+                )
+
+        self.future_rate = self.future_rate.astype(np.float64)
+
+        # Prepare attribute cost_total
+        if not isinstance(self.cost_total, np.ndarray):
+            raise ASRCalculatorException(
+                f"Attribute cost_total must be given as a numpy.ndarray, "
+                f"not as {self.cost_total.__class__.__qualname__}"
+            )
+
+        self.cost_total = self.cost_total.astype(np.float64)
+
+        # Prepare attribute begin_year_split
+        if not isinstance(self.begin_year_split, np.ndarray):
+            raise ASRCalculatorException(
+                f"Attribute begin_year_split must be given as a numpy.ndarray, "
+                f"not as {self.begin_year_split.__class__.__qualname__}"
+            )
+
+        self.begin_year_split = self.begin_year_split.astype(int)
+
+        # Prepare attribute final_year_split
+        if not isinstance(self.final_year_split, np.ndarray):
+            raise ASRCalculatorException(
+                f"Attribute final_year_split must be given as a numpy.ndarray, "
+                f"not as {self.final_year_split.__class__.__qualname__}"
+            )
+
+        self.final_year_split = self.final_year_split.astype(int)
+
+        # Check input data for unequal length
+        arr_length = len(self.cost_total)
+
+        if not all(
+            len(arr) == arr_length
+            for arr in [
+                self.begin_year_split,
+                self.final_year_split,
+                self.future_rate,
+            ]
+        ):
+            raise ASRCalculatorException(
+                f"Unequal length of array: "
+                f"cost_total: {len(self.cost_total)}, "
+                f"begin_year_split: {len(self.begin_year_split)}, "
+                f"final_year_split: {len(self.final_year_split)}, "
+            )
+
+        # Raise error: final_year_split is after the end year of the project
+        if np.max(self.final_year_split) > self.end_year_project:
+            raise ASRCalculatorException(
+                f"Final year split ({np.max(self.final_year_split)}) "
+                f"is after the end year of the project ({self.end_year_project})"
+            )
+
+        # Raise error: begin_year_split is before the start year of the project
+        if np.min(self.begin_year_split) < self.start_year_project:
+            raise ASRCalculatorException(
+                f"Begin year split ({np.min(self.begin_year_split)}) "
+                f"is before the start year of the project"
+            )
+
+        for i, val in enumerate(self.begin_year_split):
+            if self.final_year_split[i] < self.begin_year_split[i]:
+                raise ASRCalculatorException(
+                    f"Attribute final_year_split ({self.final_year_split[i]}) "
+                    f"is before begin_year_split ({self.begin_year_split[i]}) "
+                )
+
+    def get_future_values(self) -> np.ndarray:
+        """
+        Calculate the future value of adjusted costs based on
+        a future growth rate and time period.
+
+        This method adjusts the total cost for VAT and inflation schemes,
+        and projects it into the future using a specified rate.
+
+        Returns
+        -------
+        np.ndarray
+            The future adjusted cost as a NumPy array, considering
+            the growth rate over the time period.
+
+        Notes
+        -----
+        The future value is calculated using the formula:
+
+            future_value = cost_adjusted * (1.0 + future_rate) ** year_diff
+
+        Where:
+        - `cost_adjusted` is the total cost after VAT and/or inflation adjustments.
+        - `future_rate` is the annual growth rate for future projections.
+        - `year_diff` is the difference between the `end_year_project` and
+            the `begin_year_split`, plus 1 to include the starting year in the calculation.
+
+        Examples
+        --------
+        >>> self.cost_total = 1000
+        >>> self.future_rate = 0.05  # 5% annual growth rate
+        >>> self.begin_year_split = 2020
+        >>> self.end_year_project = 2025
+        >>> get_future_values()
+        array([1340.095])
+        """
+        # Cost adjustment due to VAT and inflation schemes
+        cost_adjusted = self.cost_total
+
+        # Distance between the end year of project with the begin year split
+        year_diff = self.end_year_project - self.begin_year_split + 1
+
+        return cost_adjusted * np.power((1.0 + self.future_rate), year_diff)
+
+    def get_split_values(self) -> np.ndarray:
+        pass
+
+    def expenditures(self) -> np.ndarray:
+        pass
