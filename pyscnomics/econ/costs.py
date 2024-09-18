@@ -2904,8 +2904,8 @@ class ASRCalculator:
     def _get_future_values(
         self,
         year_ref: np.ndarray = None,
-        vat_rate: np.ndarray = None,
-        inflation_rate: np.ndarray = None,
+        vat_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
         """
         Calculate future adjusted cost values accounting for VAT and inflation schemes.
@@ -2919,12 +2919,10 @@ class ASRCalculator:
         year_ref : np.ndarray, optional
             A reference year for each cost element. If not provided, the `begin_year_split`
             will be used. Must be a numpy array of the same length as `cost_total`.
-        vat_rate : np.ndarray, optional
-            VAT rates applied to each cost element. If not provided, a zero array is used
-            (i.e., no VAT). Must be a numpy array of the same length as `cost_total`.
-        inflation_rate : np.ndarray, optional
-            Inflation rates applied to each cost element. If not provided, a zero array is used
-            (i.e., no inflation). Must be a numpy array of the same length as `cost_total`.
+        vat_rate: np.ndarray | float
+            The VAT rate to apply. Can be a single value or an array (default is 0.0).
+        inflation_rate: np.ndarray | float
+            The inflation rate to apply. Can be a single value or an array (default is 0.0).
 
         Returns
         -------
@@ -2934,9 +2932,6 @@ class ASRCalculator:
 
         Notes
         -----
-        - The method first checks the validity of input arrays (`year_ref`, `vat_rate`,
-          and `inflation_rate`), ensuring they are either `None` or valid numpy arrays
-          of the same length as `cost_total`.
         - Costs are adjusted using a custom function `apply_cost_adjustment` for VAT and inflation.
         - The final cost is further adjusted using the future rate applied over the difference
           between the project end year and the `begin_year_split`.
@@ -2952,63 +2947,19 @@ class ASRCalculator:
                     f"not a/an {year_ref.__class__.__qualname__}"
                 )
 
-        # Prepare parameter vat_rate
-        if vat_rate is None:
-            vat_rate = np.zeros_like(self.cost_total, dtype=np.float64)
-
-        elif vat_rate is not None:
-            if not isinstance(vat_rate, np.ndarray):
-                raise ASRCalculatorException(
-                    f"Parameter vat_rate must be provided as a numpy.ndarray, "
-                    f"not a/an {vat_rate.__class__.__qualname__}"
-                )
-
-        # Prepare parameter inflation_rate
-        if inflation_rate is None:
-            inflation_rate = np.zeros_like(self.cost_total, dtype=np.float64)
-
-        elif inflation_rate is not None:
-            if not isinstance(inflation_rate, np.ndarray):
-                raise ASRCalculatorException(
-                    f"Parameter inflation_rate must be provided as a numpy.ndarray, "
-                    f"not a/an {inflation_rate.__class__.__qualname__}"
-                )
-
-        # Check for unequal length of arrays
-        if not all(
-            len(arr) == len(self.cost_total)
-            for arr in [
-                year_ref,
-                vat_rate,
-                inflation_rate,
-            ]
-        ):
-            raise ASRCalculatorException(
-                f"Unequal length of arrays. "
-                f"cost_total: {len(self.cost_total)}, "
-                f"year_ref: {len(year_ref)}, "
-                f"vat_rate: {len(vat_rate)}, "
-                f"inflation_rate: {len(inflation_rate)}"
-            )
-
         # Cost adjustment due to VAT and inflation schemes
-        cost_adjusted = np.array(
-            [
-                apply_cost_adjustment(
-                    start_year=self.start_year_project,
-                    end_year=self.end_year_project,
-                    cost=self.cost_total[i],
-                    expense_year=self.begin_year_split[i],
-                    project_years=self.project_years,
-                    year_ref=year_ref[i],
-                    tax_portion=self.vat_portion[i],
-                    tax_rate=vat_rate[i],
-                    tax_discount=self.vat_discount[i],
-                    inflation_rate=inflation_rate[i],
-                )
-                for i, val in enumerate(self.cost_total)
-            ]
-        ).ravel()
+        cost_adjusted = apply_cost_adjustment(
+            start_year=self.start_year_project,
+            end_year=self.end_year_project,
+            cost=self.cost_total,
+            expense_year=self.begin_year_split,
+            project_years=self.project_years,
+            tax_portion=self.vat_portion,
+            tax_rate=vat_rate,
+            tax_discount=self.vat_discount,
+            inflation_rate=inflation_rate,
+            year_ref=year_ref,
+        )
 
         # Distance between the end year of project with the begin year split
         year_diff = self.end_year_project - self.begin_year_split + 1
@@ -3018,8 +2969,8 @@ class ASRCalculator:
     def get_distributed_cost(
         self,
         year_ref: np.ndarray = None,
-        vat_rate: np.ndarray = None,
-        inflation_rate: np.ndarray = None,
+        vat_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
         """
         Calculate and distribute future costs over the project duration.
@@ -3029,6 +2980,16 @@ class ASRCalculator:
 
         The costs are evenly distributed across the corresponding years
         and summed for each project year.
+
+        Parameters
+        ----------
+        year_ref : np.ndarray, optional
+            A reference year for each cost element. If not provided, the `begin_year_split`
+            will be used. Must be a numpy array of the same length as `cost_total`.
+        vat_rate: np.ndarray | float
+            The VAT rate to apply. Can be a single value or an array (default is 0.0).
+        inflation_rate: np.ndarray | float
+            The inflation rate to apply. Can be a single value or an array (default is 0.0).
 
         Returns
         -------
