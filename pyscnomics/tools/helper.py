@@ -150,11 +150,11 @@ def apply_cost_adjustment(
     cost: np.ndarray,
     expense_year: np.ndarray,
     project_years: np.ndarray,
-    year_ref: int,
     tax_portion: np.ndarray,
     tax_rate: np.ndarray | float,
     tax_discount: float,
     inflation_rate: np.ndarray | float,
+    year_ref: np.ndarray,
 ) -> np.ndarray:
     """
     Adjusts cost based on inflation and tax scheme over the specified time period.
@@ -171,8 +171,6 @@ def apply_cost_adjustment(
         An array specifying the expense years for each cost element.
     project_years : np.ndarray
         An array of project years.
-    year_ref : int
-        The reference year for inflation calculation.
     tax_portion: np.ndarray
         The portion of 'cost' that is subject to tax (VAT or LBT).
         Must be an array of length equals to the length of 'cost' array.
@@ -182,6 +180,8 @@ def apply_cost_adjustment(
         The tax discount to apply (VAT or LBT).
     inflation_rate: np.ndarray | float
         The inflation rate to apply. Can be a single value or an array.
+    year_ref : np.ndarray
+        An array of reference year for inflation calculation.
 
     Returns
     -------
@@ -197,16 +197,46 @@ def apply_cost_adjustment(
         duration of the project. If it is given as a single value, then create an array
         of length equal to project duration with all elements set equal to the single
         value.
-    (3) Parameter 'id_year_ref' identify the index location of 'year_ref' in array
+    (3) Parameter 'id_start' identify the index location of 'year_ref' in array
         'project_years'. The result is then added by unity. This parameter sets up
         the first index to slice the 'inflation_rate_arr',
-    (4) Parameter 'id_rate_arr' configure the index location of 'expense_year' in array
+    (4) Parameter 'id_end' configure the index location of 'expense_year' in array
         'project_years' based on the associated 'year_ref'. The result is then added by unity.
         This parameter sets up the second index to slice the 'inflation_rate_arr',
-    (5) Slice 'inflation_rate_arr' according to 'id_year_ref' and 'id_rate_arr'. Add the results
+    (5) Slice 'inflation_rate_arr' according to 'id_start' and 'id_end'. Add the results
         by unity, then multiple the associated elements.
-    (5) Cost adjustment is undertaken by multiplication: 'cost_adjusted_by_tax' * 'mult'.
+    (6) Cost adjustment is undertaken by multiplication: 'cost_adjusted_by_tax' * 'mult'.
     """
+    # Prepare attribute year_ref
+    if year_ref is None:
+        year_ref = np.repeat(start_year, len(cost))
+
+    elif year_ref is not None:
+        if not isinstance(year_ref, np.ndarray):
+            raise TaxInflationException(
+                f"Variable year_ref must be provided as a numpy.ndarray; "
+                f"not a {year_ref.__class__.__qualname__}"
+            )
+
+        if len(year_ref) != len(cost):
+            raise TaxInflationException(
+                f"Unequal length of arrays: "
+                f"cost: {len(cost)}, "
+                f"year_ref: {len(year_ref)}"
+            )
+
+    year_ref = year_ref.astype(int)
+
+    if np.min(year_ref) < start_year:
+        raise TaxInflationException(
+            f"year_ref ({np.min(year_ref)}) is before the start year of the project ({start_year})"
+        )
+
+    if np.max(year_ref) > end_year:
+        raise TaxInflationException(
+            f"year_ref ({np.max(year_ref)}) is after the end_year of the project ({end_year})"
+        )
+
     # Cost adjustment due to tax
     cost_adjusted = get_cost_adjustment_by_tax(
         start_year=start_year,
@@ -218,25 +248,28 @@ def apply_cost_adjustment(
         tax_discount=tax_discount,
     )
 
-    # Cost adjustment due to inflation
-    if year_ref < start_year:
-        raise TaxInflationException(
-            f"year_ref ({year_ref}) is before start_year of the project ({start_year})."
-        )
-
-    if year_ref > end_year:
-        raise TaxInflationException(
-            f"year_ref ({year_ref}) is after end_year of the project ({end_year})."
-        )
-
+    # Create array of inflation_rate
     inflation_rate_arr = check_input(target_func=project_years, param=inflation_rate)
-    id_year_ref = int(np.argwhere(year_ref == project_years).ravel()[0] + 1)
-    id_rate_arr = ((expense_year - year_ref) + (year_ref - start_year) + 1).astype("int")
 
-    if isinstance(id_rate_arr, np.int32):
-        id_rate_arr = [id_rate_arr]
+    # Specify the start and end indices to slice the inflation_rate array
+    id_start = np.array(
+        [
+            np.argwhere(year_ref[i] == project_years).ravel()[0] + 1
+            for i, val in enumerate(year_ref)
+        ]
+    )
 
-    mult = np.array([np.prod(1.0 + inflation_rate_arr[id_year_ref:i]) for i in id_rate_arr])
+    id_end = (
+        (expense_year - year_ref) + (year_ref - start_year) + 1
+    ).astype("int")
+
+    # Multipliers to adjust cost by inflation
+    mult = np.array(
+        [
+            np.prod(1.0 + inflation_rate_arr[id_start[i]:id_end[i]])
+            for i, val in enumerate(id_start)
+        ]
+    )
 
     return cost_adjusted * mult
 

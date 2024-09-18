@@ -312,7 +312,7 @@ class CapitalCost(GeneralCost):
 
     def expenditures(
         self,
-        year_ref: int = None,
+        year_ref: np.ndarray = None,
         vat_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
@@ -324,7 +324,7 @@ class CapitalCost(GeneralCost):
 
         Parameters
         ----------
-        year_ref : int
+        year_ref : np.ndarray
             The reference year for inflation calculation.
         vat_rate: np.ndarray | float
             The VAT rate to apply. Can be a single value or an array (default is 0.0).
@@ -348,9 +348,6 @@ class CapitalCost(GeneralCost):
         (3) If len(expenses) < project_duration, then add the remaining elements
             with zeros.
         """
-        if year_ref is None:
-            year_ref = self.start_year
-
         cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
             end_year=self.end_year,
@@ -375,7 +372,7 @@ class CapitalCost(GeneralCost):
         self,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
-        year_ref: int = None,
+        year_ref: np.ndarray = None,
         vat_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
     ) -> tuple:
@@ -388,7 +385,7 @@ class CapitalCost(GeneralCost):
             The depreciation method to use (default is DeprMethod.PSC_DB).
         decline_factor : float | int, optional
             The decline factor used for declining balance depreciation (default is 2).
-        year_ref : int
+        year_ref : np.ndarray
             The reference year for inflation calculation.
         vat_rate: np.ndarray | float
             The VAT rate to apply. Can be a single value or an array (default is 0.0).
@@ -411,9 +408,6 @@ class CapitalCost(GeneralCost):
         (3) The depreciation charges are aligned with the corresponding periods
             based on pis_year.
         """
-        if year_ref is None:
-            year_ref = self.start_year
-
         cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
             end_year=self.end_year,
@@ -508,7 +502,7 @@ class CapitalCost(GeneralCost):
         self,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
-        year_ref: int = None,
+        year_ref: np.ndarray = None,
         vat_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
@@ -521,7 +515,7 @@ class CapitalCost(GeneralCost):
             The depreciation method to use (default is DeprMethod.PSC_DB).
         decline_factor : float, optional
             The decline factor used for declining balance depreciation (default is 2).
-        year_ref : int
+        year_ref : np.ndarray
             The reference year for inflation calculation.
         vat_rate: np.ndarray | float
             The VAT rate to apply. Can be a single value or an array (default is 0.0).
@@ -541,9 +535,6 @@ class CapitalCost(GeneralCost):
         (2) The cumulative book value is obtained by subtracting the cumulative
             depreciation charges from the cumulative expenditures.
         """
-        if year_ref is None:
-            year_ref = self.start_year
-
         # Calculate total depreciation charge from method total_depreciation_rate
         total_depreciation_charge = self.total_depreciation_rate(
             depr_method=depr_method,
@@ -922,7 +913,7 @@ class Intangible(GeneralCost):
 
     def expenditures(
         self,
-        year_ref: int = None,
+        year_ref: np.ndarray = None,
         vat_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
@@ -934,7 +925,7 @@ class Intangible(GeneralCost):
 
         Parameters
         ----------
-        year_ref : int
+        year_ref : np.ndarray
             The reference year for inflation calculation.
         vat_rate: np.ndarray | float
             The VAT rate to apply. Can be a single value or an array (default is 0.0).
@@ -958,9 +949,6 @@ class Intangible(GeneralCost):
         (3) If len(expenses) < project_duration, then add the remaining elements
             with zeros.
         """
-        if year_ref is None:
-            year_ref = self.start_year
-
         cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
             end_year=self.end_year,
@@ -1305,7 +1293,7 @@ class LBT(GeneralCost):
 
     def expenditures(
         self,
-        year_ref: int = None,
+        year_ref: np.ndarray = None,
         lbt_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
@@ -1317,7 +1305,7 @@ class LBT(GeneralCost):
 
         Parameters
         ----------
-        year_ref : int
+        year_ref : np.ndarray
             The reference year for inflation calculation.
         lbt_rate: np.ndarray | float
             The LBT rate to apply. Can be a single value or an array (default is 0.0).
@@ -1341,9 +1329,6 @@ class LBT(GeneralCost):
         (3) If len(expenses) < project_duration, then add the remaining elements
             with zeros.
         """
-        if year_ref is None:
-            year_ref = self.start_year
-
         cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
             end_year=self.end_year,
@@ -1738,7 +1723,7 @@ class OPEX(GeneralCost):
 
     def expenditures(
         self,
-        year_ref: int = None,
+        year_ref: np.ndarray = None,
         vat_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
@@ -1750,7 +1735,7 @@ class OPEX(GeneralCost):
 
         Parameters
         ----------
-        year_ref : int
+        year_ref : np.ndarray
             The reference year for inflation calculation.
         vat_rate: np.ndarray | float
             The VAT rate to apply. Can be a single value or an array (default is 0.0).
@@ -1774,9 +1759,6 @@ class OPEX(GeneralCost):
         (3) If len(expenses) < project_duration, then add the remaining elements
             with zeros.
         """
-        if year_ref is None:
-            year_ref = self.start_year
-
         cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
             end_year=self.end_year,
@@ -2134,7 +2116,7 @@ class ASR(GeneralCost):
 
     def expenditures(
         self,
-        year_ref: int = None,
+        year_ref: np.ndarray = None,
         vat_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
@@ -2146,7 +2128,7 @@ class ASR(GeneralCost):
 
         Parameters
         ----------
-        year_ref : int
+        year_ref : np.ndarray
             The reference year for inflation calculation.
         vat_rate: np.ndarray | float
             The VAT rate to apply. Can be a single value or an array (default is 0.0).
@@ -2170,9 +2152,6 @@ class ASR(GeneralCost):
         (3) If len(expenses) < project_duration, then add the remaining elements
             with zeros.
         """
-        if year_ref is None:
-            year_ref = self.start_year
-
         cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
             end_year=self.end_year,
@@ -2195,7 +2174,7 @@ class ASR(GeneralCost):
 
     def future_cost(
         self,
-        year_ref: int = None,
+        year_ref: np.ndarray = None,
         vat_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
         future_rate: float = 0.02,
@@ -2205,7 +2184,7 @@ class ASR(GeneralCost):
 
         Parameters
         ----------
-        year_ref : int
+        year_ref : np.ndarray
             The reference year for inflation calculation.
         vat_rate: np.ndarray | float
             The VAT rate to apply. Can be a single value or an array (default is 0.0).
@@ -2231,10 +2210,6 @@ class ASR(GeneralCost):
                 f"{future_rate.__class__.__qualname__}."
             )
 
-        # Default value for year_ref
-        if year_ref is None:
-            year_ref = self.start_year
-
         # Cost adjustment due to VAT and inflation schemes
         cost_adjusted = apply_cost_adjustment(
             start_year=self.start_year,
@@ -2256,7 +2231,7 @@ class ASR(GeneralCost):
 
     def proportion(
         self,
-        year_ref: int = None,
+        year_ref: np.ndarray = None,
         vat_rate: np.ndarray | float = 0.0,
         inflation_rate: np.ndarray | float = 0.0,
         future_rate: float = 0.02,
@@ -2266,7 +2241,7 @@ class ASR(GeneralCost):
 
         Parameters
         ----------
-        year_ref : int
+        year_ref : np.ndarray
             The reference year for inflation calculation.
         vat_rate: np.ndarray | float
             The VAT rate to apply. Can be a single value or an array (default is 0.0).
@@ -2287,10 +2262,6 @@ class ASR(GeneralCost):
                 f"Argument future_rate must be given as a float, not a "
                 f"{future_rate.__class__.__qualname__}"
             )
-
-        # Default value for year_ref
-        if year_ref is None:
-            year_ref = self.start_year
 
         # Distance of expense year from the end year of the project
         cost_duration = self.end_year - self.expense_year + 1
@@ -3106,3 +3077,8 @@ class ASRCalculator:
 
         # Return the summation of distributed cost for each corresponding project years
         return np.sum(distributed_cost, axis=1, keepdims=False)
+
+
+@dataclass
+class LBTCalculator:
+    pass
