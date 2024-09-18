@@ -454,21 +454,27 @@ if __name__ == "__main__":
 
     from pyscnomics.econ.costs import CapitalCost, Intangible, LBT, OPEX, ASR, ASRCalculator
     from pyscnomics.econ.selection import FluidType
-    from pyscnomics.econ.calculator import calculator_cost_adjustment_by_tax
 
     asr1 = ASRCalculator(
         start_year_project=2023,
         end_year_project=2030,
-        cost_total=np.array([500, 500]),
-        begin_year_split=np.array([2025, 2027]),
-        final_year_split=np.array([2027, 2029]),
+        cost_total=np.array([100]),
+        begin_year_split=np.array([2025]),
+        final_year_split=np.array([2028]),
+        future_rate=np.array([0.02]),
     )
 
-    future1 = asr1.calc_future_value()
+    # future1 = asr1.get_future_values(
+    #     year_ref=np.array([2025, 2027]),
+    #     vat_rate=np.array([0.05, 0.0]),
+    #     inflation_rate=np.array([0.0, 0.01]),
+    # )
+
+    split1 = asr1.get_distributed_cost()
 
     print('\t')
-    print(f'Filetype: {type(future1)}, Length: {len(future1)}')
-    print('future1 = ', future1)
+    print(f'Filetype: {type(split1)}, Length: {len(split1)}')
+    print('split1 = \n', split1)
 
     # asr1 = ASR(
     #     start_year=2023,
@@ -477,6 +483,12 @@ if __name__ == "__main__":
     #     expense_year=np.array([2023, 2024, 2029]),
     #     vat_portion=np.array([1, 1, 1]),
     # )
+    #
+    # t1 = asr1.expenditures()
+    #
+    # print('\t')
+    # print(f'Filetype: {type(t1)}')
+    # print('t1 = ', t1)
 
     print('\t')
     print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')

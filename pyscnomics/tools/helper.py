@@ -232,6 +232,10 @@ def apply_cost_adjustment(
     inflation_rate_arr = check_input(target_func=project_years, param=inflation_rate)
     id_year_ref = int(np.argwhere(year_ref == project_years).ravel()[0] + 1)
     id_rate_arr = ((expense_year - year_ref) + (year_ref - start_year) + 1).astype("int")
+
+    if isinstance(id_rate_arr, np.int32):
+        id_rate_arr = [id_rate_arr]
+
     mult = np.array([np.prod(1.0 + inflation_rate_arr[id_year_ref:i]) for i in id_rate_arr])
 
     return cost_adjusted * mult

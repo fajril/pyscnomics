@@ -2771,13 +2771,37 @@ class CostOfSales(GeneralCost):
 
 @dataclass
 class ASRCalculator:
+    """
+    Carry out ASR calculator funcionality.
+
+    Parameters
+    ----------
+    start_year_project : int
+        The start year of the project.
+    end_year_project : int
+        The end year of the project.
+    cost_total : np.ndarray
+        An array representing the total costs for each cost element.
+    begin_year_split : np.ndarray
+        The year in which cost distribution begins for each cost element.
+    final_year_split : np.ndarray
+        The year in which cost distribution ends for each cost element.
+    future_rate : np.ndarray, optional
+        Future rates applied to costs for each year, defaulting to a rate of 2%.
+    vat_portion : np.ndarray, optional
+        VAT portion applied to each cost element, defaulting to zero.
+    vat_discount : float or np.ndarray, optional
+        VAT discount as a float (for a uniform discount) or an array (for element-wise discounts),
+        defaulting to zero.
+    """
     start_year_project: int
     end_year_project: int
     cost_total: np.ndarray
     begin_year_split: np.ndarray
     final_year_split: np.ndarray
     future_rate: np.ndarray = field(default=None)
-    year_ref: np.ndarray = field(default=None)
+    vat_portion: np.ndarray = field(default=None)
+    vat_discount: float | np.ndarray = field(default=0.0)
 
     # Attribute to be defined later on
     project_duration: int = field(default=None, init=False)
@@ -2794,29 +2818,6 @@ class ASRCalculator:
                 f"start year of the project {self.start_year_project} "
                 f"is after the end year {self.end_year_project}"
             )
-
-        # Prepare attribute year_ref
-        if self.year_ref is None:
-            self.year_ref = self.begin_year_split.copy()
-
-        self.year_ref = self.year_ref.astype(int)
-
-        print('\t')
-        print(f'Filetype: {type(self.year_ref)}, Length: {len(self.year_ref)}')
-        print('year_ref = ', self.year_ref)
-
-        # Prepare attribute future rate
-        if self.future_rate is None:
-            self.future_rate = np.repeat(0.02, len(self.cost_total))
-
-        elif self.future_rate is not None:
-            if not isinstance(self.future_rate, np.ndarray):
-                raise ASRCalculatorException(
-                    f"Attribute future_rate must be given as a numpy.ndarray, "
-                    f"not as {self.future_rate.__class__.__qualname__}"
-                )
-
-        self.future_rate = self.future_rate.astype(np.float64)
 
         # Prepare attribute cost_total
         if not isinstance(self.cost_total, np.ndarray):
@@ -2845,6 +2846,45 @@ class ASRCalculator:
 
         self.final_year_split = self.final_year_split.astype(int)
 
+        # Prepare attribute future rate
+        if self.future_rate is None:
+            self.future_rate = np.repeat(0.02, len(self.cost_total))
+
+        elif self.future_rate is not None:
+            if not isinstance(self.future_rate, np.ndarray):
+                raise ASRCalculatorException(
+                    f"Attribute future_rate must be given as a numpy.ndarray, "
+                    f"not as {self.future_rate.__class__.__qualname__}"
+                )
+
+        self.future_rate = self.future_rate.astype(np.float64)
+
+        # Prepare attribute VAT portion
+        if self.vat_portion is None:
+            self.vat_portion = np.zeros_like(self.cost_total)
+
+        elif self.vat_portion is not None:
+            if not isinstance(self.vat_portion, np.ndarray):
+                raise ASRCalculatorException(
+                    f"Attribute vat_portion must be given as a numpy.ndarray,  "
+                    f"not {self.vat_portion.__class__.__qualname__}"
+                )
+
+        self.vat_portion = self.vat_portion.astype(np.float64)
+
+        # Prepare attribute VAT discount
+        if not isinstance(self.vat_discount, (float, np.ndarray)):
+            raise ASRCalculatorException(
+                f"Attribute VAT discount must be given as a float (for single value) "
+                f"or a numpy.ndarray (for an array), not a "
+                f"{self.vat_discount.__class__.__qualname__}"
+            )
+
+        if isinstance(self.vat_discount, float):
+            self.vat_discount = np.repeat(self.vat_discount, len(self.cost_total))
+
+        self.vat_discount = self.vat_discount.astype(np.float64)
+
         # Check input data for unequal length
         arr_length = len(self.cost_total)
 
@@ -2854,6 +2894,8 @@ class ASRCalculator:
                 self.begin_year_split,
                 self.final_year_split,
                 self.future_rate,
+                self.vat_portion,
+                self.vat_discount,
             ]
         ):
             raise ASRCalculatorException(
@@ -2861,6 +2903,9 @@ class ASRCalculator:
                 f"cost_total: {len(self.cost_total)}, "
                 f"begin_year_split: {len(self.begin_year_split)}, "
                 f"final_year_split: {len(self.final_year_split)}, "
+                f"future_rate: {len(self.future_rate)}, "
+                f"vat_portion: {len(self.vat_portion)}, "
+                f"vat_discount: {len(self.vat_discount)}, "
             )
 
         # Raise error: final_year_split is after the end year of the project
@@ -2877,6 +2922,7 @@ class ASRCalculator:
                 f"is before the start year of the project"
             )
 
+        # Raise error: incorrect input for final_year_split
         for i, val in enumerate(self.begin_year_split):
             if self.final_year_split[i] < self.begin_year_split[i]:
                 raise ASRCalculatorException(
@@ -2884,51 +2930,179 @@ class ASRCalculator:
                     f"is before begin_year_split ({self.begin_year_split[i]}) "
                 )
 
-    def get_future_values(self) -> np.ndarray:
+    def _get_future_values(
+        self,
+        year_ref: np.ndarray = None,
+        vat_rate: np.ndarray = None,
+        inflation_rate: np.ndarray = None,
+    ) -> np.ndarray:
         """
-        Calculate the future value of adjusted costs based on
-        a future growth rate and time period.
+        Calculate future adjusted cost values accounting for VAT and inflation schemes.
 
-        This method adjusts the total cost for VAT and inflation schemes,
-        and projects it into the future using a specified rate.
+        This method adjusts the `cost_total` array based on value-added tax (VAT) and
+        inflation rates. The costs are further adjusted using a future rate over
+        the duration of the project.
+
+        Parameters
+        ----------
+        year_ref : np.ndarray, optional
+            A reference year for each cost element. If not provided, the `begin_year_split`
+            will be used. Must be a numpy array of the same length as `cost_total`.
+        vat_rate : np.ndarray, optional
+            VAT rates applied to each cost element. If not provided, a zero array is used
+            (i.e., no VAT). Must be a numpy array of the same length as `cost_total`.
+        inflation_rate : np.ndarray, optional
+            Inflation rates applied to each cost element. If not provided, a zero array is used
+            (i.e., no inflation). Must be a numpy array of the same length as `cost_total`.
 
         Returns
         -------
         np.ndarray
-            The future adjusted cost as a NumPy array, considering
-            the growth rate over the time period.
+            A 1D array representing the future-adjusted costs for each cost element over
+            the project duration.
 
         Notes
         -----
-        The future value is calculated using the formula:
-
-            future_value = cost_adjusted * (1.0 + future_rate) ** year_diff
-
-        Where:
-        - `cost_adjusted` is the total cost after VAT and/or inflation adjustments.
-        - `future_rate` is the annual growth rate for future projections.
-        - `year_diff` is the difference between the `end_year_project` and
-            the `begin_year_split`, plus 1 to include the starting year in the calculation.
-
-        Examples
-        --------
-        >>> self.cost_total = 1000
-        >>> self.future_rate = 0.05  # 5% annual growth rate
-        >>> self.begin_year_split = 2020
-        >>> self.end_year_project = 2025
-        >>> get_future_values()
-        array([1340.095])
+        - The method first checks the validity of input arrays (`year_ref`, `vat_rate`,
+          and `inflation_rate`), ensuring they are either `None` or valid numpy arrays
+          of the same length as `cost_total`.
+        - Costs are adjusted using a custom function `apply_cost_adjustment` for VAT and inflation.
+        - The final cost is further adjusted using the future rate applied over the difference
+          between the project end year and the `begin_year_split`.
         """
+        # Prepare parameter year_ref
+        if year_ref is None:
+            year_ref = self.begin_year_split.copy()
+
+        elif year_ref is not None:
+            if not isinstance(year_ref, np.ndarray):
+                raise ASRCalculatorException(
+                    f"Parameter year_ref must be provided as a numpy.ndarray, "
+                    f"not a/an {year_ref.__class__.__qualname__}"
+                )
+
+        # Prepare parameter vat_rate
+        if vat_rate is None:
+            vat_rate = np.zeros_like(self.cost_total, dtype=np.float64)
+
+        elif vat_rate is not None:
+            if not isinstance(vat_rate, np.ndarray):
+                raise ASRCalculatorException(
+                    f"Parameter vat_rate must be provided as a numpy.ndarray, "
+                    f"not a/an {vat_rate.__class__.__qualname__}"
+                )
+
+        # Prepare parameter inflation_rate
+        if inflation_rate is None:
+            inflation_rate = np.zeros_like(self.cost_total, dtype=np.float64)
+
+        elif inflation_rate is not None:
+            if not isinstance(inflation_rate, np.ndarray):
+                raise ASRCalculatorException(
+                    f"Parameter inflation_rate must be provided as a numpy.ndarray, "
+                    f"not a/an {inflation_rate.__class__.__qualname__}"
+                )
+
+        # Check for unequal length of arrays
+        if not all(
+            len(arr) == len(self.cost_total)
+            for arr in [
+                year_ref,
+                vat_rate,
+                inflation_rate,
+            ]
+        ):
+            raise ASRCalculatorException(
+                f"Unequal length of arrays. "
+                f"cost_total: {len(self.cost_total)}, "
+                f"year_ref: {len(year_ref)}, "
+                f"vat_rate: {len(vat_rate)}, "
+                f"inflation_rate: {len(inflation_rate)}"
+            )
+
         # Cost adjustment due to VAT and inflation schemes
-        cost_adjusted = self.cost_total
+        cost_adjusted = np.array(
+            [
+                apply_cost_adjustment(
+                    start_year=self.start_year_project,
+                    end_year=self.end_year_project,
+                    cost=self.cost_total[i],
+                    expense_year=self.begin_year_split[i],
+                    project_years=self.project_years,
+                    year_ref=year_ref[i],
+                    tax_portion=self.vat_portion[i],
+                    tax_rate=vat_rate[i],
+                    tax_discount=self.vat_discount[i],
+                    inflation_rate=inflation_rate[i],
+                )
+                for i, val in enumerate(self.cost_total)
+            ]
+        ).ravel()
 
         # Distance between the end year of project with the begin year split
         year_diff = self.end_year_project - self.begin_year_split + 1
 
         return cost_adjusted * np.power((1.0 + self.future_rate), year_diff)
 
-    def get_split_values(self) -> np.ndarray:
-        pass
+    def get_distributed_cost(
+        self,
+        year_ref: np.ndarray = None,
+        vat_rate: np.ndarray = None,
+        inflation_rate: np.ndarray = None,
+    ) -> np.ndarray:
+        """
+        Calculate and distribute future costs over the project duration.
 
-    def expenditures(self) -> np.ndarray:
-        pass
+        This method splits future costs over a specified number of years for each cost element,
+        based on the `begin_year_split` and `final_year_split` values.
+
+        The costs are evenly distributed across the corresponding years
+        and summed for each project year.
+
+        Returns
+        -------
+        np.ndarray
+            A 1D array representing the sum of distributed costs for each year of the project duration.
+
+        Notes
+        -----
+        - The `begin_year_split` defines the start of cost distribution for each cost element.
+        - The `final_year_split` defines the end of cost distribution for each cost element.
+        - The future values (costs) are obtained from `self.get_future_values()` and divided evenly over
+          the number of years in the split period.
+        - The costs are distributed for each year between `begin_year_split` and `final_year_split`
+          (inclusive) and summed for each year.
+        """
+
+        # Total years to decompose each cost elements
+        years_to_split = (self.final_year_split - self.begin_year_split + 1).astype(int)
+
+        # Decomposed future value for each cost elements
+        future_cost_split = (
+            self._get_future_values(
+                year_ref=year_ref,
+                vat_rate=vat_rate,
+                inflation_rate=inflation_rate,
+            ) / years_to_split
+        )
+
+        # Start and end indices to slice the array 'distributed_cost'
+        ids_start = np.array(
+            [
+                np.argwhere(val == self.project_years).ravel()[0]
+                for i, val in enumerate(self.begin_year_split)
+            ]
+        )
+
+        ids_end = (ids_start + years_to_split).astype(int)
+
+        # Distributed value for each cost elements
+        distributed_cost = np.zeros(
+            [self.project_duration, len(self.cost_total)], dtype=np.float64
+        )
+
+        for i, val in enumerate(self.cost_total):
+            distributed_cost[ids_start[i]:ids_end[i], i] = future_cost_split[i]
+
+        # Return the summation of distributed cost for each corresponding project years
+        return np.sum(distributed_cost, axis=1, keepdims=False)
