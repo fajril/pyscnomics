@@ -317,7 +317,8 @@ class CostRecovery(BaseProject):
 
     def _get_rc_icp_pretax(self):
         """
-        A Function to get the value of PreTax using Revenue over Cost (RC) or Indonesian Crude Price (ICP) sliding scale.
+        A Function to get the value of PreTax using Revenue over Cost (RC) or
+        Indonesian Crude Price (ICP) sliding scale.
 
         Notes
         -------

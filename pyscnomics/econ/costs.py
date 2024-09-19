@@ -52,6 +52,12 @@ class ASRCalculatorException(Exception):
     pass
 
 
+class LBTCalculatorException(Exception):
+    """Exception to be raised for an incorrect use of class LBTCalculator"""
+
+    pass
+
+
 class CostOfSalesException(Exception):
     """Exception to be raised if class CostOfSales is misused"""
 
@@ -2786,8 +2792,8 @@ class ASRCalculator:
 
         else:
             raise ASRCalculatorException(
-                f"start year of the project {self.start_year_project} "
-                f"is after the end year {self.end_year_project}"
+                f"start year of the project ({self.start_year_project}) "
+                f"is after the end year of the project ({self.end_year_project})"
             )
 
         # Prepare attribute cost_total
@@ -2890,7 +2896,7 @@ class ASRCalculator:
         if np.min(self.begin_year_split) < self.start_year_project:
             raise ASRCalculatorException(
                 f"Begin year split ({np.min(self.begin_year_split)}) "
-                f"is before the start year of the project"
+                f"is before the start year of the project ({self.start_year_project})"
             )
 
         # Raise error: incorrect input for final_year_split
@@ -3042,4 +3048,424 @@ class ASRCalculator:
 
 @dataclass
 class LBTCalculator:
-    pass
+    """
+    Carry out LBT calculator functionality.
+
+    Parameters
+    ----------
+    start_year_project : int
+        The start year of the project.
+    end_year_project : int
+        The end year of the project.
+    utilized_land_area : np.ndarray
+        The utilized land area.
+    utilized_building_area : np.ndarray
+        The utilized building area.
+    njop_land : np.ndarray
+        NJOP related to land.
+    njop_building : np.ndarray
+        NJOP related to building.
+    gross_revenue : np.ndarray
+        The array of gross revenues.
+    begin_year_split : np.ndarray
+        The year in which cost distribution begins for each cost element.
+    final_year_split : np.ndarray
+        The year in which cost distribution ends for each cost element.
+    cost_allocation : list[FluidType]
+        A list representing the cost allocation of a tangible asset.
+    lbt_portion: np.ndarray
+        The portion of 'cost' that is subject to LBT.
+        Must be an array of length equals to the length of 'cost' array.
+    lbt_discount: float
+        The LBT discount to apply.
+    """
+    start_year_project: int
+    end_year_project: int
+    utilized_land_area: np.ndarray
+    utilized_building_area: np.ndarray
+    njop_land: np.ndarray
+    njop_building: np.ndarray
+    gross_revenue: np.ndarray
+    begin_year_split: np.ndarray
+    final_year_split: np.ndarray
+    cost_allocation: list[FluidType] = field(default=None)
+    lbt_portion: np.ndarray = field(default=None)
+    lbt_discount: float | np.ndarray = field(default=0.0)
+
+    # Attributes to be defined later on: associated with years and duration
+    project_duration: int = field(default=None, init=False)
+    project_years: np.ndarray = field(default=None, init=False)
+
+    # Attributes to be defined later on: indices for oil and gas
+    _oil_id: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_id: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes to be defined later on: associated with surface and subsurface lbt components
+    _surface_lbt_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _subsurface_lbt_cost: np.ndarray = field(default=None, init=False, repr=False)
+
+    def __post_init__(self):
+        """
+        Handles the following operations/procedures:
+        -   Prepare attributes project_duration and project_years,
+        -   Prepare attribute utilized_land_area,
+        -   Prepare attribute utilized_building_area,
+        -   Prepare attribute njop_land,
+        -   Prepare attribute njop_building,
+        -   Prepare attribute gross_revenue,
+        -   Prepare attribute begin_year_split,
+        -   Prepare attribute final_year_split,
+        -   Prepare attribute cost_allocation,
+        -   Prepare attribute lbt_portion,
+        -   Prepare attribute lbt_discount,
+        -   Prepare attribute _oil_id,
+        -   Prepare attribute _gas_id,
+        -   Initial check for unequal length of arrays,
+        -   Raise an error: final_year_split is after the end year of the project,
+        -   Raise an error: begin_year_split is before the start year of the project,
+        -   Raise an error: final_year_split is before begin_year_split,
+        -   Prepare attribute _surface_lbt_cost,
+        -   Prepare attribute _subsurface_lbt_cost,
+        """
+        # Prepare attributes project_duration and project_years
+        if self.end_year_project >= self.start_year_project:
+            self.project_duration = self.end_year_project - self.start_year_project + 1
+            self.project_years = np.arange(self.start_year_project, self.end_year_project + 1, 1)
+
+        else:
+            raise LBTCalculatorException(
+                f"start year of the project ({self.start_year_project}) "
+                f"is after the end year of the project ({self.end_year_project})"
+            )
+
+        # Prepare attribute utilized_land_area
+        if not isinstance(self.utilized_land_area, np.ndarray):
+            raise LBTCalculatorException(
+                f"Attribute utilized_land_area must be given as a numpy.ndarray, "
+                f"not as a/an {self.utilized_land_area.__class__.__qualname__}"
+            )
+
+        self.utilized_land_area = self.utilized_land_area.astype(np.float64)
+
+        # Prepare attribute utilized_building_area
+        if not isinstance(self.utilized_building_area, np.ndarray):
+            raise LBTCalculatorException(
+                f"Attribute utilized_building_area must be given as a numpy.ndarray, "
+                f"not as a/an {self.utilized_building_area.__class__.__qualname__}"
+            )
+
+        self.utilized_building_area = self.utilized_building_area.astype(np.float64)
+
+        # Prepare attribute njop_land
+        if not isinstance(self.njop_land, np.ndarray):
+            raise LBTCalculatorException(
+                f"Attribute njop_land must be given as a numpy.ndarray, "
+                f"not as a/an {self.njop_land.__class__.__qualname__}"
+            )
+
+        self.njop_land = self.njop_land.astype(np.float64)
+
+        # Prepare attribute njop_building
+        if not isinstance(self.njop_building, np.ndarray):
+            raise LBTCalculatorException(
+                f"Attribute njop_building must be given as a numpy.ndarray, "
+                f"not as a/an {self.njop_building.__class__.__qualname__}"
+            )
+
+        self.njop_building = self.njop_building.astype(np.float64)
+
+        # Prepare attribute gross_revenue
+        if not isinstance(self.gross_revenue, np.ndarray):
+            raise LBTCalculatorException(
+                f"Attribute gross_revenue must be given as a numpy.ndarray, "
+                f"not as a/an {self.gross_revenue.__class__.__qualname__}"
+            )
+
+        self.gross_revenue = self.gross_revenue.astype(np.float64)
+
+        # Prepare attribute begin_year_split
+        if not isinstance(self.begin_year_split, np.ndarray):
+            raise LBTCalculatorException(
+                f"Attribute begin_year_split must be given as a numpy.ndarray, "
+                f"not as a/an {self.begin_year_split.__class__.__qualname__}"
+            )
+
+        self.begin_year_split = self.begin_year_split.astype(np.int64)
+
+        # Prepare attribute final_year_split
+        if not isinstance(self.final_year_split, np.ndarray):
+            raise LBTCalculatorException(
+                f"Attribute final_year_split must be given as a numpy.ndarray, "
+                f"not as a/an {self.final_year_split.__class__.__qualname__}"
+            )
+
+        self.final_year_split = self.final_year_split.astype(np.int64)
+
+        # Prepare attribute cost_allocation
+        if self.cost_allocation is None:
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.utilized_land_area))]
+
+        elif self.cost_allocation is not None:
+            if not isinstance(self.cost_allocation, list):
+                raise LBTCalculatorException(
+                    f"Attribute cost_allocation must be given as a list, "
+                    f"not as a/an {self.cost_allocation.__class__.__qualname__}"
+                )
+
+        self.cost_allocation = np.array(self.cost_allocation)
+
+        # Prepare attribute LBT portion
+        if self.lbt_portion is None:
+            self.lbt_portion = np.zeros_like(self.utilized_land_area)
+
+        elif self.lbt_portion is not None:
+            if not isinstance(self.lbt_portion, np.ndarray):
+                raise LBTCalculatorException(
+                    f"Attribute lbt_portion must be given as a numpy.ndarray, "
+                    f"not as a/an {self.lbt_portion.__class__.__qualname__}"
+                )
+
+        self.lbt_portion = self.lbt_portion.astype(np.float64)
+
+        # Prepare attribute LBT discount
+        if not isinstance(self.lbt_discount, (float, np.ndarray)):
+            raise LBTCalculatorException(
+                f"Attribute LBT discount must be given as a float (for a single value) "
+                f"or a numpy.ndarray (for an array); not as a/an "
+                f"{self.lbt_discount.__class__.__qualname__}"
+            )
+
+        if isinstance(self.lbt_discount, float):
+            self.lbt_discount = np.repeat(self.lbt_discount, len(self.utilized_land_area))
+
+        self.lbt_discount = self.lbt_discount.astype(np.float64)
+
+        # Check input data for unequal length
+        arr_length = len(self.utilized_land_area)
+
+        if not all(
+            len(arr) == arr_length
+            for arr in [
+                self.utilized_building_area,
+                self.njop_land,
+                self.njop_building,
+                self.gross_revenue,
+                self.begin_year_split,
+                self.final_year_split,
+                self.cost_allocation,
+                self.lbt_portion,
+                self.lbt_discount,
+            ]
+        ):
+            raise LBTCalculatorException(
+                f"Unequal length of arrays: "
+                f"utilized_land_area: {len(self.utilized_land_area)}, "
+                f"utilized_building_area: {len(self.utilized_building_area)}, "
+                f"njop_land: {len(self.njop_land)}, "
+                f"njop_building: {len(self.njop_building)}, "
+                f"gross_revenue: {len(self.gross_revenue)}, "
+                f"begin_year_split: {len(self.begin_year_split)}, "
+                f"final_year_split: {len(self.final_year_split)}, "
+                f"cost_allocation: {len(self.cost_allocation)}, "
+                f"lbt_portion: {len(self.lbt_portion)}, "
+                f"lbt_discount: {len(self.lbt_discount)}, "
+            )
+
+        # Raise an error: final_year_split is after the end year of the project
+        if np.max(self.final_year_split) > self.end_year_project:
+            raise LBTCalculatorException(
+                f"Final year split ({np.max(self.final_year_split)}) "
+                f"is after the end year of the project ({self.end_year_project})"
+            )
+
+        # Raise an error: begin_year_split is before the start year of the project
+        if np.min(self.begin_year_split) < self.start_year_project:
+            raise LBTCalculatorException(
+                f"Begin year split ({np.min(self.begin_year_split)}) "
+                f"is before the start year of the project ({self.start_year_project})"
+            )
+
+        # Raise an error: final_year_split is before begin_year_split
+        for i, val in enumerate(self.begin_year_split):
+            if self.final_year_split[i] < self.begin_year_split[i]:
+                raise LBTCalculatorException(
+                    f"Attribute final_year_split ({self.final_year_split[i]}) "
+                    f"is before begin_year_split ({self.begin_year_split[i]})"
+                )
+
+        # Prepare attributes _oil_id and _gas_id
+        self._oil_id = np.argwhere(self.cost_allocation == FluidType.OIL).ravel()
+        self._gas_id = np.argwhere(self.cost_allocation == FluidType.GAS).ravel()
+
+        # Prepare attribute _surface_lbt_cost
+        surface_land = self.utilized_land_area * self.njop_land
+        surface_building = self.utilized_building_area * self.njop_building
+        self._surface_lbt_cost = (0.5 / 100) * (40 / 100) * 1.0 * (surface_land + surface_building)
+
+        # Prepare attribute _subsurface_lbt_cost
+        self._subsurface_lbt_cost = (0.5 / 100) * (40 / 100) * 10.04 * self.gross_revenue
+
+    def _get_cost_adjustment(
+        self,
+        year_ref: np.ndarray = None,
+        lbt_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
+    ) -> np.ndarray:
+        """
+        Calculate the adjusted Land and Building Tax (LBT) cost based on
+        the reference year, LBT rate, and inflation rate.
+
+        This method computes the total LBT cost (surface and subsurface) and
+        applies cost adjustments over the project's timeline using the specified
+        LBT rate and inflation rate.
+
+        Parameters
+        ----------
+        year_ref : np.ndarray, optional
+            An array specifying the reference years for cost adjustment.
+            If None (default), `self.begin_year_split` is used.
+            Must be provided as a `numpy.ndarray`.
+        lbt_rate : np.ndarray or float, optional
+            The LBT rate to be applied in the adjustment calculation. Default is 0.0.
+        inflation_rate : np.ndarray or float, optional
+            The inflation rate to be applied to the costs. Default is 0.0.
+
+        Returns
+        -------
+        np.ndarray
+            The adjusted LBT cost for the project over the specified years,
+            after applying the LBT and inflation schemes.
+
+        Notes
+        -----
+        The total LBT cost is computed by summing the surface and subsurface LBT costs.
+        """
+        # Prepare parameter year_ref
+        if year_ref is None:
+            year_ref = self.begin_year_split.copy()
+
+        elif year_ref is not None:
+            if not isinstance(year_ref, np.ndarray):
+                raise LBTCalculatorException(
+                    f"Parameter year_ref must be provided as a numpy.ndarray, "
+                    f"not a/an {year_ref.__class__.__qualname__}"
+                )
+
+        # Total LBT cost = surface LBT + subsurface LBT
+        lbt_cost = self._surface_lbt_cost + self._subsurface_lbt_cost
+
+        return apply_cost_adjustment(
+            start_year=self.start_year_project,
+            end_year=self.end_year_project,
+            cost=lbt_cost,
+            expense_year=self.begin_year_split,
+            project_years=self.project_years,
+            tax_portion=self.lbt_portion,
+            tax_rate=lbt_rate,
+            tax_discount=self.lbt_discount,
+            inflation_rate=inflation_rate,
+            year_ref=year_ref,
+        )
+
+    def get_distributed_lbt(
+        self,
+        year_ref: np.ndarray = None,
+        lbt_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
+    ) -> dict:
+        """
+        Calculate the distributed Land and Building Tax (LBT) costs for
+        oil and gas over the project's duration.
+
+        It returns the distributed costs associated with both oil and gas.
+
+        Parameters
+        ----------
+        year_ref : np.ndarray, optional
+            An array specifying the reference years for cost adjustment.
+            If None (default), `self.begin_year_split` is used.
+            Must be provided as a `numpy.ndarray`.
+        lbt_rate : np.ndarray or float, optional
+            The LBT rate to be applied in the adjustment calculation. Default is 0.0.
+        inflation_rate : np.ndarray or float, optional
+            The inflation rate to be applied to the costs. Default is 0.0.
+
+        Returns
+        -------
+        dict
+            A dictionary containing:
+            - "year" : np.ndarray
+                An array of project years, representing both oil and gas periods.
+            - "associated_with" : list of FluidType
+                A list indicating whether the cost is associated with oil or gas for each year.
+            - "cost" : np.ndarray
+                The distributed LBT costs for oil and gas across the project years.
+
+        Notes
+        -----
+        -   The method splits the total LBT cost over the years between
+            `self.begin_year_split` and `self.final_year_split`.
+        -   Costs are adjusted using the `_get_cost_adjustment` method, then distributed
+            evenly across the years for both oil and gas.
+        -   The LBT costs for oil and gas are summed separately before being combined
+            into the final result.
+        """
+        # Total years to decompose each cost elements
+        years_to_split = (self.final_year_split - self.begin_year_split + 1).astype(int)
+
+        # Decomposed cost value for each elements
+        cost_split = (
+            self._get_cost_adjustment(
+                year_ref=year_ref,
+                lbt_rate=lbt_rate,
+                inflation_rate=inflation_rate,
+            ) / years_to_split
+        )
+
+        # Start and end indices to slice the array 'distributed_cost'
+        ids_start = np.array(
+            [
+                np.argwhere(val == self.project_years).ravel()[0]
+                for i, val in enumerate(self.begin_year_split)
+            ]
+        )
+
+        ids_end = (ids_start + years_to_split).astype(int)
+
+        # Distributed value for each cost elements
+        distributed_cost = np.zeros(
+            [self.project_duration, len(self.begin_year_split)], dtype=np.float64
+        )
+
+        for i, val in enumerate(self.begin_year_split):
+            distributed_cost[ids_start[i]:ids_end[i], i] = cost_split[i]
+
+        # Distributed lbt values for OIL
+        if len(self._oil_id) > 0:
+            total_oil_distributed_cost = np.sum(
+                distributed_cost[:, self._oil_id], axis=1, keepdims=False
+            )
+        else:
+            total_oil_distributed_cost = np.zeros(self.project_duration, dtype=np.float64)
+
+        # Distributed lbt values for GAS
+        if len(self._gas_id) > 0:
+            total_gas_distributed_cost = np.sum(
+                distributed_cost[:, self._gas_id], axis=1, keepdims=False
+            )
+        else:
+            total_gas_distributed_cost = np.zeros(self.project_duration, dtype=np.float64)
+
+        # Output parameters
+        project_years_combined = np.concatenate((self.project_years, self.project_years))
+        cost_allocation_combined = (
+            [FluidType.OIL for _ in range(self.project_duration)]
+            + [FluidType.GAS for _ in range(self.project_duration)]
+        )
+        cost_lbt_combined = np.concatenate((total_oil_distributed_cost, total_gas_distributed_cost))
+
+        return {
+            "year": project_years_combined,
+            "associated_with": cost_allocation_combined,
+            "cost": cost_lbt_combined,
+        }

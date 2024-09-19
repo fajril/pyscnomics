@@ -452,24 +452,58 @@ def run_optimization(
 if __name__ == "__main__":
     # entry_point()
 
-    from pyscnomics.econ.costs import CapitalCost, Intangible, LBT, OPEX, ASR, ASRCalculator
-    from pyscnomics.econ.selection import FluidType
-
-    asrcalc = ASRCalculator(
-        start_year_project=2023,
-        end_year_project=2040,
-        cost_total=np.array([100, 100, 100]),
-        begin_year_split=np.array([2025, 2027, 2030]),
-        final_year_split=np.array([2028, 2030, 2033]),
-        future_rate=np.array([0, 0, 0]),
-        vat_portion=np.array([1, 1, 1]),
+    from pyscnomics.econ.costs import (
+        CapitalCost,
+        Intangible,
+        LBT,
+        OPEX,
+        ASR,
+        ASRCalculator,
+        LBTCalculator,
     )
 
-    t1 = asrcalc.get_distributed_cost()
+    from pyscnomics.econ.selection import FluidType
+
+    lbtcalc = LBTCalculator(
+        start_year_project=2023,
+        end_year_project=2030,
+        utilized_land_area=np.array([10, 9, 10]),
+        utilized_building_area=np.array([5, 4, 5]),
+        njop_land=np.array([10, 9, 10]),
+        njop_building=np.array([5, 4, 5]),
+        gross_revenue=np.array([100, 50, 100]),
+        begin_year_split=np.array([2025, 2028, 2025]),
+        final_year_split=np.array([2028, 2030, 2027]),
+        cost_allocation=[FluidType.OIL, FluidType.GAS, FluidType.GAS],
+        lbt_portion=np.array([1, 0, 1]),
+    )
+
+    t1 = lbtcalc.get_distributed_lbt()
 
     print('\t')
     print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
     print('t1 = ', t1)
+
+    # print('\t')
+    # print(f'Filetype: {type(cost_lbt_combined)}')
+    # print(f'Length: {len(cost_lbt_combined)}')
+    # print('cost_lbt_combined = \n', cost_lbt_combined)
+
+    # asrcalc = ASRCalculator(
+    #     start_year_project=2023,
+    #     end_year_project=2040,
+    #     cost_total=np.array([300]),
+    #     begin_year_split=np.array([2025]),
+    #     final_year_split=np.array([2027]),
+    #     future_rate=np.array([0]),
+    # )
+    #
+    # case = asrcalc.get_distributed_cost()
+    #
+    # print('\t')
+    # print(f'Filetype: {type(case)}')
+    # print('case = \n', case)
 
     # future1 = asr1.get_future_values(
     #     year_ref=np.array([2025, 2027]),
