@@ -32,8 +32,8 @@ class RPDModel:
         self._drate = drate
         self._q_plateau_ratio = q_plateau_ratio
         self._q_min_ratio = q_min_ratio
-        self._q_plateau = 0
-        self._q_min = 0
+        self._q_plateau = 0.0
+        self._q_min = 0.0
 
     def predict(self, volume: float) -> np.ndarray:
         """Predict the forecast based on RPD Model
