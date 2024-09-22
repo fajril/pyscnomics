@@ -545,4 +545,10 @@ class VariableSplit082017:
         TERTIARY = 'Tertiary'
 
 
-
+class LimitMethod(Enum):
+    """
+    Economic limit method.
+    """
+    MAX_CUM_CASHFLOW = "Maximum Cumulative Cashflow"
+    NEGATIVE_CASHFLOW = "Negative Cashflow"
+    MAX_NPV = "Maximum NPV"
