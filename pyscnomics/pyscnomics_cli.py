@@ -464,31 +464,28 @@ if __name__ == "__main__":
 
     from pyscnomics.econ.selection import FluidType
 
-    lbtcalc = LBTCalculator(
+    asrcalc = ASRCalculator(
         start_year_project=2023,
         end_year_project=2030,
-        utilized_land_area=np.array([10, 9, 10]),
-        utilized_building_area=np.array([5, 4, 5]),
-        njop_land=np.array([10, 9, 10]),
-        njop_building=np.array([5, 4, 5]),
-        gross_revenue=np.array([100, 50, 100]),
-        begin_year_split=np.array([2025, 2028, 2025]),
-        final_year_split=np.array([2028, 2030, 2027]),
-        cost_allocation=[FluidType.OIL, FluidType.GAS, FluidType.GAS],
-        lbt_portion=np.array([1, 0, 1]),
+        cost_total=np.array([300, 500, 300]),
+        begin_year_split=np.array([2025, 2024, 2025]),
+        final_year_split=np.array([2027, 2028, 2027]),
+        future_rate=np.array([0, 0, 0]),
+        cost_allocation=[FluidType.OIL, FluidType.GAS, FluidType.OIL],
+        vat_portion=np.array([1, 1, 1]),
+        vat_rate=np.array([0, 0, 0]),
+        inflation_rate=np.array([0, 0, 0]),
     )
 
-    t1 = lbtcalc.get_distributed_lbt()
+    t1 = asrcalc.get_distributed_asr()
+
+    print('\t')
+    print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')
-    print('t1 = ', t1)
-
-    # print('\t')
-    # print(f'Filetype: {type(cost_lbt_combined)}')
-    # print(f'Length: {len(cost_lbt_combined)}')
-    # print('cost_lbt_combined = \n', cost_lbt_combined)
+    print('t1 = \n', t1)
 
     # asrcalc = ASRCalculator(
     #     start_year_project=2023,
@@ -517,5 +514,5 @@ if __name__ == "__main__":
     # print(f'Filetype: {type(split1)}, Length: {len(split1)}')
     # print('split1 = \n', split1)
 
-    print('\t')
-    print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+    # print('\t')
+    # print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')

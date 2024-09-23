@@ -2749,7 +2749,7 @@ class CostOfSales(GeneralCost):
 @dataclass
 class ASRCalculator:
     """
-    Carry out ASR calculator funcionality.
+    Carry out ASR calculator functionality.
 
     Parameters
     ----------
@@ -2765,11 +2765,20 @@ class ASRCalculator:
         The year in which cost distribution ends for each cost element.
     future_rate : np.ndarray, optional
         Future rates applied to costs for each year, defaulting to a rate of 2%.
+    cost_allocation : list[FluidType]
+        A list representing the cost allocation of an ASR asset.
     vat_portion : np.ndarray, optional
         VAT portion applied to each cost element, defaulting to zero.
     vat_discount : float or np.ndarray, optional
         VAT discount as a float (for a uniform discount) or an array (for element-wise discounts),
         defaulting to zero.
+    vat_rate: np.ndarray
+        The VAT rate to apply.
+    inflation_rate: np.ndarray
+        The inflation rate to apply.
+    year_ref : np.ndarray
+        A reference year for each cost element. If not provided, the `begin_year_split`
+        will be used. Must be a numpy array of the same length as `cost_total`.
     """
     start_year_project: int
     end_year_project: int
@@ -2777,14 +2786,44 @@ class ASRCalculator:
     begin_year_split: np.ndarray
     final_year_split: np.ndarray
     future_rate: np.ndarray = field(default=None)
+    cost_allocation: list[FluidType] = field(default=None)
     vat_portion: np.ndarray = field(default=None)
-    vat_discount: float | np.ndarray = field(default=0.0)
+    vat_discount: np.ndarray = field(default=None)
+    vat_rate: np.ndarray = field(default=None)
+    inflation_rate: np.ndarray = field(default=None)
+    year_ref: np.ndarray = field(default=None)
 
-    # Attribute to be defined later on
+    # Attributes to be defined later on (associated with years and duration)
     project_duration: int = field(default=None, init=False)
     project_years: np.ndarray = field(default=None, init=False)
 
+    # Attributes to be defined later on (indices for oil and gas)
+    _oil_id: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_id: np.ndarray = field(default=None, init=False, repr=False)
+
     def __post_init__(self):
+        """
+        Handles the following operations/procedures:
+        -   Prepare attributes project_duration and project_years,
+        -   Prepare attribute cost_total,
+        -   Prepate attribute begin_year_split,
+        -   Prepare attribute final_year_split,
+        -   Prepare attribute future_rate,
+        -   Prepare attribute cost_allocation,
+        -   Prepare attribute vat_portion,
+        -   Prepare attribute vat_discount,
+        -   Prepare attribute vat_rate,
+        -   Prepare attribute inflation_rate,
+        -   Prepare attribute year_ref,
+        -   Initial check for unequal length of input arrays,
+        -   Raise an error: final_year_split is after the end year of the project,
+        -   Raise an error: begin_year_split is before the start year of the project,
+        -   Raise an error: final_year_split is before begin_year_split,
+        -   Raise an error: year_ref is after the end year of the project,
+        -   Raise an error: year_ref is before the start year of the project,
+        -   Prepare attribute _oil_id,
+        -   Prepare attribute _gas_id,
+        """
         # Prepare attribute project_duration and project_years
         if self.end_year_project >= self.start_year_project:
             self.project_duration = self.end_year_project - self.start_year_project + 1
@@ -2800,7 +2839,7 @@ class ASRCalculator:
         if not isinstance(self.cost_total, np.ndarray):
             raise ASRCalculatorException(
                 f"Attribute cost_total must be given as a numpy.ndarray, "
-                f"not as {self.cost_total.__class__.__qualname__}"
+                f"not as a/an {self.cost_total.__class__.__qualname__}"
             )
 
         self.cost_total = self.cost_total.astype(np.float64)
@@ -2809,19 +2848,19 @@ class ASRCalculator:
         if not isinstance(self.begin_year_split, np.ndarray):
             raise ASRCalculatorException(
                 f"Attribute begin_year_split must be given as a numpy.ndarray, "
-                f"not as {self.begin_year_split.__class__.__qualname__}"
+                f"not as a/an {self.begin_year_split.__class__.__qualname__}"
             )
 
-        self.begin_year_split = self.begin_year_split.astype(int)
+        self.begin_year_split = self.begin_year_split.astype(np.int64)
 
         # Prepare attribute final_year_split
         if not isinstance(self.final_year_split, np.ndarray):
             raise ASRCalculatorException(
                 f"Attribute final_year_split must be given as a numpy.ndarray, "
-                f"not as {self.final_year_split.__class__.__qualname__}"
+                f"not as a/an {self.final_year_split.__class__.__qualname__}"
             )
 
-        self.final_year_split = self.final_year_split.astype(int)
+        self.final_year_split = self.final_year_split.astype(np.int64)
 
         # Prepare attribute future rate
         if self.future_rate is None:
@@ -2831,10 +2870,23 @@ class ASRCalculator:
             if not isinstance(self.future_rate, np.ndarray):
                 raise ASRCalculatorException(
                     f"Attribute future_rate must be given as a numpy.ndarray, "
-                    f"not as {self.future_rate.__class__.__qualname__}"
+                    f"not as a/an {self.future_rate.__class__.__qualname__}"
                 )
 
         self.future_rate = self.future_rate.astype(np.float64)
+
+        # Prepare attribute cost_allocation
+        if self.cost_allocation is None:
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost_total))]
+
+        elif self.cost_allocation is not None:
+            if not isinstance(self.cost_allocation, list):
+                raise ASRCalculatorException(
+                    f"Attribute cost_allocation must be given as a list, "
+                    f"not as a/an {self.cost_allocation.__class__.__qualname__}"
+                )
+
+        self.cost_allocation = np.array(self.cost_allocation)
 
         # Prepare attribute VAT portion
         if self.vat_portion is None:
@@ -2844,23 +2896,62 @@ class ASRCalculator:
             if not isinstance(self.vat_portion, np.ndarray):
                 raise ASRCalculatorException(
                     f"Attribute vat_portion must be given as a numpy.ndarray,  "
-                    f"not {self.vat_portion.__class__.__qualname__}"
+                    f"not as a/an {self.vat_portion.__class__.__qualname__}"
                 )
 
         self.vat_portion = self.vat_portion.astype(np.float64)
 
         # Prepare attribute VAT discount
-        if not isinstance(self.vat_discount, (float, np.ndarray)):
-            raise ASRCalculatorException(
-                f"Attribute VAT discount must be given as a float (for single value) "
-                f"or a numpy.ndarray (for an array), not a "
-                f"{self.vat_discount.__class__.__qualname__}"
-            )
+        if self.vat_discount is None:
+            self.vat_discount = np.zeros_like(self.cost_total)
 
-        if isinstance(self.vat_discount, float):
-            self.vat_discount = np.repeat(self.vat_discount, len(self.cost_total))
+        elif self.vat_discount is not None:
+            if not isinstance(self.vat_discount, np.ndarray):
+                raise ASRCalculatorException(
+                    f"Attribute vat_discount must be given as a numpy.ndarray, "
+                    f"not as a/an {self.vat_discount.__class__.__qualname__}"
+                )
 
         self.vat_discount = self.vat_discount.astype(np.float64)
+
+        # Prepare attribute VAT rate
+        if self.vat_rate is None:
+            self.vat_rate = np.zeros_like(self.cost_total)
+
+        elif self.vat_rate is not None:
+            if not isinstance(self.vat_rate, np.ndarray):
+                raise ASRCalculatorException(
+                    f"Attribute vat_rate must be given as a numpy.ndarray, "
+                    f"not as a/an {self.vat_rate.__class__.__qualname__}"
+                )
+
+        self.vat_rate = self.vat_rate.astype(np.float64)
+
+        # Prepare attribute inflation rate
+        if self.inflation_rate is None:
+            self.inflation_rate = np.zeros_like(self.cost_total)
+
+        elif self.inflation_rate is not None:
+            if not isinstance(self.inflation_rate, np.ndarray):
+                raise ASRCalculatorException(
+                    f"Attribute inflation_rate must be given as a numpy.ndarray, "
+                    f"not as a/an {self.inflation_rate.__class__.__qualname__}"
+                )
+
+        self.inflation_rate = self.inflation_rate.astype(np.float64)
+
+        # Prepare attribute year_ref
+        if self.year_ref is None:
+            self.year_ref = self.begin_year_split.copy()
+
+        elif self.year_ref is not None:
+            if not isinstance(self.year_ref, np.ndarray):
+                raise ASRCalculatorException(
+                    f"Attribute year_ref must be given as a numpy.ndarray, "
+                    f"not as a/an {self.year_ref.__class__.__qualname__}"
+                )
+
+        self.year_ref = self.year_ref.astype(np.int64)
 
         # Check input data for unequal length
         arr_length = len(self.cost_total)
@@ -2871,8 +2962,12 @@ class ASRCalculator:
                 self.begin_year_split,
                 self.final_year_split,
                 self.future_rate,
+                self.cost_allocation,
                 self.vat_portion,
                 self.vat_discount,
+                self.vat_rate,
+                self.inflation_rate,
+                self.year_ref,
             ]
         ):
             raise ASRCalculatorException(
@@ -2881,8 +2976,12 @@ class ASRCalculator:
                 f"begin_year_split: {len(self.begin_year_split)}, "
                 f"final_year_split: {len(self.final_year_split)}, "
                 f"future_rate: {len(self.future_rate)}, "
+                f"cost_allocation: {len(self.cost_allocation)}, "
                 f"vat_portion: {len(self.vat_portion)}, "
                 f"vat_discount: {len(self.vat_discount)}, "
+                f"vat_rate: {len(self.vat_rate)}, "
+                f"inflation_rate: {len(self.inflation_rate)}, "
+                f"year_ref: {len(self.year_ref)}, "
             )
 
         # Raise error: final_year_split is after the end year of the project
@@ -2907,28 +3006,31 @@ class ASRCalculator:
                     f"is before begin_year_split ({self.begin_year_split[i]}) "
                 )
 
-    def _get_future_values(
-        self,
-        year_ref: np.ndarray = None,
-        vat_rate: np.ndarray | float = 0.0,
-        inflation_rate: np.ndarray | float = 0.0,
-    ) -> np.ndarray:
+        # Raise error: year_ref is after the end_year of the project
+        if np.max(self.year_ref) > self.end_year_project:
+            raise ASRCalculatorException(
+                f"year_ref ({np.max(self.year_ref)}) is after "
+                f"the end year of the project ({self.end_year_project})"
+            )
+
+        # Raise error: year_ref is before the start year of the project
+        if np.min(self.year_ref) < self.start_year_project:
+            raise ASRCalculatorException(
+                f"year_ref ({np.min(self.year_ref)}) is before "
+                f"the start year of the project ({self.start_year_project})"
+            )
+
+        # Prepare attribute _oil_id and _gas_id
+        self._oil_id = np.argwhere(self.cost_allocation == FluidType.OIL).ravel()
+        self._gas_id = np.argwhere(self.cost_allocation == FluidType.GAS).ravel()
+
+    def _get_future_values(self) -> np.ndarray:
         """
         Calculate future adjusted cost values accounting for VAT and inflation schemes.
 
         This method adjusts the `cost_total` array based on value-added tax (VAT) and
         inflation rates. The costs are further adjusted using a future rate over
         the duration of the project.
-
-        Parameters
-        ----------
-        year_ref : np.ndarray, optional
-            A reference year for each cost element. If not provided, the `begin_year_split`
-            will be used. Must be a numpy array of the same length as `cost_total`.
-        vat_rate: np.ndarray | float
-            The VAT rate to apply. Can be a single value or an array (default is 0.0).
-        inflation_rate: np.ndarray | float
-            The inflation rate to apply. Can be a single value or an array (default is 0.0).
 
         Returns
         -------
@@ -2942,87 +3044,68 @@ class ASRCalculator:
         - The final cost is further adjusted using the future rate applied over the difference
           between the project end year and the `begin_year_split`.
         """
-        # Prepare parameter year_ref
-        if year_ref is None:
-            year_ref = self.begin_year_split.copy()
-
-        elif year_ref is not None:
-            if not isinstance(year_ref, np.ndarray):
-                raise ASRCalculatorException(
-                    f"Parameter year_ref must be provided as a numpy.ndarray, "
-                    f"not a/an {year_ref.__class__.__qualname__}"
-                )
-
         # Cost adjustment due to VAT and inflation schemes
-        cost_adjusted = apply_cost_adjustment(
-            start_year=self.start_year_project,
-            end_year=self.end_year_project,
-            cost=self.cost_total,
-            expense_year=self.begin_year_split,
-            project_years=self.project_years,
-            tax_portion=self.vat_portion,
-            tax_rate=vat_rate,
-            tax_discount=self.vat_discount,
-            inflation_rate=inflation_rate,
-            year_ref=year_ref,
-        )
+        cost_adjusted = np.array(
+            [
+                apply_cost_adjustment(
+                    start_year=self.start_year_project,
+                    end_year=self.end_year_project,
+                    cost=np.array([self.cost_total[i]]) ,
+                    expense_year=np.array([self.begin_year_split[i]]),
+                    project_years=self.project_years,
+                    tax_portion=np.array([self.vat_portion[i]]),
+                    tax_rate=self.vat_rate[i],
+                    tax_discount=np.array([self.vat_discount[i]]),
+                    inflation_rate=self.inflation_rate[i],
+                    year_ref=np.array([self.year_ref[i]]),
+                )
+                for i, val in enumerate(self.cost_total)
+            ]
+        ).ravel()
 
         # Distance between the end year of project with the begin year split
         year_diff = self.end_year_project - self.begin_year_split + 1
 
         return cost_adjusted * np.power((1.0 + self.future_rate), year_diff)
 
-    def get_distributed_cost(
-        self,
-        year_ref: np.ndarray = None,
-        vat_rate: np.ndarray | float = 0.0,
-        inflation_rate: np.ndarray | float = 0.0,
-    ) -> np.ndarray:
+    def get_distributed_asr(self) -> dict:
         """
-        Calculate and distribute future costs over the project duration.
+        Distribute the future adjusted ASR (Abandonment and Site Restoration) costs
+        for oil and gas over the project's timeline.
 
-        This method splits future costs over a specified number of years for each cost element,
-        based on the `begin_year_split` and `final_year_split` values.
+        This method calculates and distributes the future ASR costs across the duration
+        of the project for both oil and gas.
 
-        The costs are evenly distributed across the corresponding years
-        and summed for each project year.
-
-        Parameters
-        ----------
-        year_ref : np.ndarray, optional
-            A reference year for each cost element. If not provided, the `begin_year_split`
-            will be used. Must be a numpy array of the same length as `cost_total`.
-        vat_rate: np.ndarray | float
-            The VAT rate to apply. Can be a single value or an array (default is 0.0).
-        inflation_rate: np.ndarray | float
-            The inflation rate to apply. Can be a single value or an array (default is 0.0).
+        The total cost is split evenly over the years between `self.begin_year_split`
+        and `self.final_year_split`, and the distributed costs for oil and gas are
+        returned in a combined format.
 
         Returns
         -------
-        np.ndarray
-            A 1D array representing the sum of distributed costs for each year of the project duration.
+        dict
+            A dictionary containing:
+            - "year" : np.ndarray
+                An array of project years representing both oil and gas periods.
+            - "cost_allocation" : list of FluidType
+                A list indicating whether the cost is associated with oil or gas for each year.
+            - "cost_asr" : np.ndarray
+                The distributed ASR costs for both oil and gas combined over the project years.
 
         Notes
         -----
-        - The `begin_year_split` defines the start of cost distribution for each cost element.
-        - The `final_year_split` defines the end of cost distribution for each cost element.
-        - The future values (costs) are obtained from `self.get_future_values()` and divided evenly over
-          the number of years in the split period.
-        - The costs are distributed for each year between `begin_year_split` and `final_year_split`
-          (inclusive) and summed for each year.
+        -   The total future ASR cost for each element is split evenly over the years between
+            `self.begin_year_split` and `self.final_year_split`.
+        -   The future ASR costs are computed using the `_get_future_values` method.
+        -   After splitting the costs, the method sums the distributed ASR costs separately
+            for oil and gas.
+        -   If no oil or gas elements are found (`self._oil_id` or `self._gas_id`),
+            the respective ASR costs are prescribed as zeros.
         """
-
         # Total years to decompose each cost elements
         years_to_split = (self.final_year_split - self.begin_year_split + 1).astype(int)
 
         # Decomposed future value for each cost elements
-        future_cost_split = (
-            self._get_future_values(
-                year_ref=year_ref,
-                vat_rate=vat_rate,
-                inflation_rate=inflation_rate,
-            ) / years_to_split
-        )
+        future_cost_split = self._get_future_values() / years_to_split
 
         # Start and end indices to slice the array 'distributed_cost'
         ids_start = np.array(
@@ -3042,8 +3125,37 @@ class ASRCalculator:
         for i, val in enumerate(self.cost_total):
             distributed_cost[ids_start[i]:ids_end[i], i] = future_cost_split[i]
 
-        # Return the summation of distributed cost for each corresponding project years
-        return np.sum(distributed_cost, axis=1, keepdims=False)
+        # Distributed ASR cost for OIL
+        if len(self._oil_id) > 0:
+            total_oil_distributed_asr = np.sum(
+                distributed_cost[:, self._oil_id], axis=1, keepdims=False
+            )
+        else:
+            total_oil_distributed_asr = np.zeros(self.project_duration, dtype=np.float64)
+
+        # Distributed ASR cost for GAS
+        if len(self._gas_id) > 0:
+            total_gas_distributed_asr = np.sum(
+                distributed_cost[:, self._gas_id], axis=1, keepdims=False
+            )
+        else:
+            total_gas_distributed_asr = np.zeros(self.project_duration, dtype=np.float64)
+
+        # Output parameters
+        project_years_combined = np.concatenate((self.project_years, self.project_years))
+        cost_allocation_combined = (
+            [FluidType.OIL for _ in range(self.project_duration)]
+            + [FluidType.GAS for _ in range(self.project_duration)]
+        )
+        distributed_cost_asr_combined = np.concatenate(
+            (total_oil_distributed_asr, total_gas_distributed_asr)
+        )
+
+        return {
+            "year": project_years_combined,
+            "cost_allocation": cost_allocation_combined,
+            "cost_asr": distributed_cost_asr_combined,
+        }
 
 
 @dataclass
@@ -3072,7 +3184,7 @@ class LBTCalculator:
     final_year_split : np.ndarray
         The year in which cost distribution ends for each cost element.
     cost_allocation : list[FluidType]
-        A list representing the cost allocation of a tangible asset.
+        A list representing the cost allocation of an LBT asset.
     lbt_portion: np.ndarray
         The portion of 'cost' that is subject to LBT.
         Must be an array of length equals to the length of 'cost' array.
@@ -3092,15 +3204,15 @@ class LBTCalculator:
     lbt_portion: np.ndarray = field(default=None)
     lbt_discount: float | np.ndarray = field(default=0.0)
 
-    # Attributes to be defined later on: associated with years and duration
+    # Attributes to be defined later on (associated with years and duration)
     project_duration: int = field(default=None, init=False)
     project_years: np.ndarray = field(default=None, init=False)
 
-    # Attributes to be defined later on: indices for oil and gas
+    # Attributes to be defined later on (indices for oil and gas)
     _oil_id: np.ndarray = field(default=None, init=False, repr=False)
     _gas_id: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later on: associated with surface and subsurface lbt components
+    # Attributes to be defined later on (associated with surface and subsurface lbt components)
     _surface_lbt_cost: np.ndarray = field(default=None, init=False, repr=False)
     _subsurface_lbt_cost: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -3118,12 +3230,12 @@ class LBTCalculator:
         -   Prepare attribute cost_allocation,
         -   Prepare attribute lbt_portion,
         -   Prepare attribute lbt_discount,
-        -   Prepare attribute _oil_id,
-        -   Prepare attribute _gas_id,
         -   Initial check for unequal length of arrays,
         -   Raise an error: final_year_split is after the end year of the project,
         -   Raise an error: begin_year_split is before the start year of the project,
         -   Raise an error: final_year_split is before begin_year_split,
+        -   Prepare attribute _oil_id,
+        -   Prepare attribute _gas_id,
         -   Prepare attribute _surface_lbt_cost,
         -   Prepare attribute _subsurface_lbt_cost,
         """
