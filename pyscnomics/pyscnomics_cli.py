@@ -464,55 +464,43 @@ if __name__ == "__main__":
 
     from pyscnomics.econ.selection import FluidType
 
-    asrcalc = ASRCalculator(
+    lbtcalc = LBTCalculator(
         start_year_project=2023,
         end_year_project=2030,
-        cost_total=np.array([300, 500, 300]),
-        begin_year_split=np.array([2025, 2024, 2025]),
-        final_year_split=np.array([2027, 2028, 2027]),
-        future_rate=np.array([0, 0, 0]),
-        cost_allocation=[FluidType.OIL, FluidType.GAS, FluidType.OIL],
-        vat_portion=np.array([1, 1, 1]),
-        vat_rate=np.array([0, 0, 0]),
-        inflation_rate=np.array([0, 0, 0]),
+        utilized_land_area=np.array([600]),
+        utilized_building_area=np.array([300]),
+        njop_land=np.array([1]),
+        njop_building=np.array([1]),
+        gross_revenue=np.array([1000]),
+        begin_year_split=np.array([2025]),
+        final_year_split=np.array([2027]),
+        cost_allocation=[FluidType.OIL],
+        lbt_portion=np.array([1]),
+        lbt_rate=np.array([0]),
     )
 
-    t1 = asrcalc.get_distributed_asr()
+    # asrcalc = ASRCalculator(
+    #     start_year_project=2023,
+    #     end_year_project=2030,
+    #     cost_total=np.array([300, 500, 300]),
+    #     begin_year_split=np.array([2025, 2024, 2025]),
+    #     final_year_split=np.array([2027, 2028, 2027]),
+    #     future_rate=np.array([0, 0, 0]),
+    #     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
+    #     vat_portion=np.array([1, 1, 1]),
+    #     vat_rate=np.array([0, 0, 0]),
+    #     inflation_rate=np.array([0, 0, 0]),
+    # )
+    #
+    # t1 = asrcalc.get_distributed_asr()
 
     print('\t')
     print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
-
-    # asrcalc = ASRCalculator(
-    #     start_year_project=2023,
-    #     end_year_project=2040,
-    #     cost_total=np.array([300]),
-    #     begin_year_split=np.array([2025]),
-    #     final_year_split=np.array([2027]),
-    #     future_rate=np.array([0]),
-    # )
-    #
-    # case = asrcalc.get_distributed_cost()
-    #
     # print('\t')
-    # print(f'Filetype: {type(case)}')
-    # print('case = \n', case)
-
-    # future1 = asr1.get_future_values(
-    #     year_ref=np.array([2025, 2027]),
-    #     vat_rate=np.array([0.05, 0.0]),
-    #     inflation_rate=np.array([0.0, 0.01]),
-    # )
-
-    # split1 = asr1.get_distributed_cost()
-    #
-    # print('\t')
-    # print(f'Filetype: {type(split1)}, Length: {len(split1)}')
-    # print('split1 = \n', split1)
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
+    # print('t1 = \n', t1)
 
     # print('\t')
     # print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
