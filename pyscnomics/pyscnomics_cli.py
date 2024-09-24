@@ -467,17 +467,19 @@ if __name__ == "__main__":
     lbtcalc = LBTCalculator(
         start_year_project=2023,
         end_year_project=2030,
-        utilized_land_area=np.array([600]),
-        utilized_building_area=np.array([300]),
-        njop_land=np.array([1]),
-        njop_building=np.array([1]),
-        gross_revenue=np.array([1000]),
-        begin_year_split=np.array([2025]),
-        final_year_split=np.array([2027]),
-        cost_allocation=[FluidType.OIL],
-        lbt_portion=np.array([1]),
-        lbt_rate=np.array([0]),
+        utilized_land_area=np.array([600, 600]),
+        utilized_building_area=np.array([300, 400]),
+        njop_land=np.array([1, 1]),
+        njop_building=np.array([1, 1]),
+        gross_revenue=np.array([1000, 1000]),
+        begin_year_split=np.array([2025, 2025]),
+        final_year_split=np.array([2027, 2027]),
+        cost_allocation=[FluidType.OIL, FluidType.GAS],
+        lbt_portion=np.array([1, 1]),
+        lbt_rate=np.array([0, 0]),
     )
+
+    t1 = lbtcalc.get_distributed_lbt()
 
     # asrcalc = ASRCalculator(
     #     start_year_project=2023,
@@ -497,10 +499,10 @@ if __name__ == "__main__":
     print('\t')
     print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
-    # print('\t')
-    # print(f'Filetype: {type(t1)}')
-    # print(f'Length: {len(t1)}')
-    # print('t1 = \n', t1)
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
 
     # print('\t')
     # print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
