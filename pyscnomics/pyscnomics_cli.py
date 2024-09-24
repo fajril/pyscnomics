@@ -464,20 +464,14 @@ if __name__ == "__main__":
 
     from pyscnomics.econ.selection import FluidType
 
-    cap = CapitalCost(
-        start_year=2023,
-        end_year=2030,
-        cost=np.array([100]),
-        expense_year=np.array([2025]),
-        cost_allocation=[FluidType.OIL],
-        vat_portion=np.array([1]),
-    )
-
-    t1 = cap.total_depreciation_rate(
-        vat_rate=0.01,
-        # vat_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
-        # inflation_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
-    )
+    # cap = CapitalCost(
+    #     start_year=2023,
+    #     end_year=2030,
+    #     cost=np.array([100]),
+    #     expense_year=np.array([2025]),
+    #     cost_allocation=[FluidType.OIL],
+    #     vat_portion=np.array([1]),
+    # )
 
     # lbtcalc = LBTCalculator(
     #     start_year_project=2023,
@@ -496,20 +490,20 @@ if __name__ == "__main__":
     #
     # t1 = lbtcalc.get_distributed_lbt()
 
-    # asrcalc = ASRCalculator(
-    #     start_year_project=2023,
-    #     end_year_project=2030,
-    #     cost_total=np.array([300, 500, 300]),
-    #     begin_year_split=np.array([2025, 2024, 2025]),
-    #     final_year_split=np.array([2027, 2028, 2027]),
-    #     future_rate=np.array([0, 0, 0]),
-    #     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL],
-    #     vat_portion=np.array([1, 1, 1]),
-    #     vat_rate=np.array([0, 0, 0]),
-    #     inflation_rate=np.array([0, 0, 0]),
-    # )
-    #
-    # t1 = asrcalc.get_distributed_asr()
+    asrcalc = ASRCalculator(
+        start_year_project=2023,
+        end_year_project=2030,
+        cost_total=np.array([300, 400]),
+        begin_year_split=np.array([2025, 2026]),
+        final_year_split=np.array([2027, 2029]),
+        future_rate=np.array([0, 0.02]),
+        cost_allocation=[FluidType.GAS, FluidType.GAS],
+        # vat_portion=np.array([1, 1, 1]),
+        # vat_rate=np.array([0, 0, 0]),
+        # inflation_rate=np.array([0, 0, 0]),
+    )
+
+    t1 = asrcalc.get_distributed_asr()
 
     print('\t')
     print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
