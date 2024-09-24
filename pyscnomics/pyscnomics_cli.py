@@ -464,22 +464,37 @@ if __name__ == "__main__":
 
     from pyscnomics.econ.selection import FluidType
 
-    lbtcalc = LBTCalculator(
-        start_year_project=2023,
-        end_year_project=2030,
-        utilized_land_area=np.array([600, 600]),
-        utilized_building_area=np.array([300, 400]),
-        njop_land=np.array([1, 1]),
-        njop_building=np.array([1, 1]),
-        gross_revenue=np.array([1000, 1000]),
-        begin_year_split=np.array([2025, 2025]),
-        final_year_split=np.array([2027, 2027]),
-        cost_allocation=[FluidType.OIL, FluidType.GAS],
-        lbt_portion=np.array([1, 1]),
-        lbt_rate=np.array([0, 0]),
+    cap = CapitalCost(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([100]),
+        expense_year=np.array([2025]),
+        cost_allocation=[FluidType.OIL],
+        vat_portion=np.array([1]),
     )
 
-    t1 = lbtcalc.get_distributed_lbt()
+    t1 = cap.total_depreciation_rate(
+        vat_rate=0.01,
+        # vat_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
+        # inflation_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
+    )
+
+    # lbtcalc = LBTCalculator(
+    #     start_year_project=2023,
+    #     end_year_project=2030,
+    #     utilized_land_area=np.array([600, 600]),
+    #     utilized_building_area=np.array([300, 400]),
+    #     njop_land=np.array([1, 1]),
+    #     njop_building=np.array([1, 1]),
+    #     gross_revenue=np.array([1000, 1000]),
+    #     begin_year_split=np.array([2025, 2025]),
+    #     final_year_split=np.array([2027, 2027]),
+    #     cost_allocation=[FluidType.OIL, FluidType.GAS],
+    #     lbt_portion=np.array([1, 1]),
+    #     lbt_rate=np.array([0, 0]),
+    # )
+    #
+    # t1 = lbtcalc.get_distributed_lbt()
 
     # asrcalc = ASRCalculator(
     #     start_year_project=2023,

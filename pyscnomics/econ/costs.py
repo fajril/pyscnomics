@@ -141,6 +141,22 @@ class CapitalCost(GeneralCost):
     vat_discount: float | np.ndarray = field(default=0.0)
 
     def __post_init__(self):
+        """
+        Handles the following operations/procedures:
+        -   Prepare attributes project_duration and project_years,
+        -   Prepare attribute vat_portion,
+        -   Prepare attribute vat_discount,
+        -   Prepare attribute description,
+        -   Prepare attribute cost_allocation,
+        -   Prepare attribute pis_year,
+        -   Prepare attribute salvage_value,
+        -   Prepare attribute useful_life,
+        -   Prepare attribute depreciation_factor,
+        -   Prepare attribute is_ic_applied,
+        -   Initial check for unequal length of input arrays,
+        -   Raise an error: expense_year is after the end year of the project,
+        -   Raise an error: expense_year is before the start year of the project,
+        """
         # Prepare attribute project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -818,6 +834,17 @@ class Intangible(GeneralCost):
     vat_discount: float | np.ndarray = field(default=0.0)
 
     def __post_init__(self):
+        """
+        Handles the following operations/procedures:
+        -   Prepare attributes project_duration and project_years,
+        -   Prepare attribute vat_portion,
+        -   Prepare attribute vat_discount,
+        -   Prepare attribute description,
+        -   Prepare attribute cost_allocation,
+        -   Initial check for unequal length of input arrays,
+        -   Raise an error: expense_year is after the end year of the project,
+        -   Raise an error: expense_year is before the start year of the project,
+        """
         # Prepare attribute project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -1198,6 +1225,17 @@ class LBT(GeneralCost):
     lbt_discount: float | np.ndarray = field(default=0.0)
 
     def __post_init__(self):
+        """
+        Handles the following operations/procedures:
+        -   Prepare attributes project_duration and project_years,
+        -   Prepare attribute lbt_portion,
+        -   Prepare attribute lbt_discount,
+        -   Prepare attribute description,
+        -   Prepare attribute cost_allocation,
+        -   Initial check for unequal length of input arrays,
+        -   Raise an error: expense_year is after the end year of the project,
+        -   Raise an error: expense_year is before the start year of the project,
+        """
         # Prepare attribute project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
