@@ -458,11 +458,22 @@ if __name__ == "__main__":
         LBT,
         OPEX,
         ASR,
+        CostOfSales,
         ASRCalculator,
         LBTCalculator,
     )
 
     from pyscnomics.econ.selection import FluidType
+
+    csales = CostOfSales(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([100]),
+        expense_year=np.array([2026]),
+        cost_allocation=[FluidType.OIL],
+    )
+
+    t1 = csales.expenditures()
 
     # cap = CapitalCost(
     #     start_year=2023,
@@ -484,26 +495,21 @@ if __name__ == "__main__":
     #     begin_year_split=np.array([2025, 2025]),
     #     final_year_split=np.array([2027, 2027]),
     #     cost_allocation=[FluidType.OIL, FluidType.GAS],
-    #     lbt_portion=np.array([1, 1]),
-    #     lbt_rate=np.array([0, 0]),
     # )
     #
     # t1 = lbtcalc.get_distributed_lbt()
-
-    asrcalc = ASRCalculator(
-        start_year_project=2023,
-        end_year_project=2030,
-        cost_total=np.array([300, 400]),
-        begin_year_split=np.array([2025, 2026]),
-        final_year_split=np.array([2027, 2029]),
-        future_rate=np.array([0, 0.02]),
-        cost_allocation=[FluidType.GAS, FluidType.GAS],
-        # vat_portion=np.array([1, 1, 1]),
-        # vat_rate=np.array([0, 0, 0]),
-        # inflation_rate=np.array([0, 0, 0]),
-    )
-
-    t1 = asrcalc.get_distributed_asr()
+    #
+    # asrcalc = ASRCalculator(
+    #     start_year_project=2023,
+    #     end_year_project=2030,
+    #     cost_total=np.array([300, 400]),
+    #     begin_year_split=np.array([2025, 2026]),
+    #     final_year_split=np.array([2027, 2029]),
+    #     future_rate=np.array([0, 0.02]),
+    #     cost_allocation=[FluidType.GAS, FluidType.GAS],
+    # )
+    #
+    # t1 = asrcalc.get_distributed_asr()
 
     print('\t')
     print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
