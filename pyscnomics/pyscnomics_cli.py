@@ -452,6 +452,8 @@ def run_optimization(
 if __name__ == "__main__":
     # entry_point()
 
+    from datetime import date
+    from pyscnomics.contracts.project import BaseProject
     from pyscnomics.econ.costs import (
         CapitalCost,
         Intangible,
@@ -462,27 +464,31 @@ if __name__ == "__main__":
         ASRCalculator,
         LBTCalculator,
     )
-
     from pyscnomics.econ.selection import FluidType
 
-    csales = CostOfSales(
-        start_year=2023,
-        end_year=2030,
-        cost=np.array([100]),
-        expense_year=np.array([2026]),
-        cost_allocation=[FluidType.OIL],
-    )
+    # project = BaseProject(
+    #     start_date=date(year=2023, month=1, day=1),
+    #     end_date=date(year=2030, month=12, day=31),
+    # )
 
-    t1 = csales.expenditures()
-
-    # cap = CapitalCost(
+    # csales = CostOfSales(
     #     start_year=2023,
     #     end_year=2030,
     #     cost=np.array([100]),
-    #     expense_year=np.array([2025]),
+    #     expense_year=np.array([2026]),
     #     cost_allocation=[FluidType.OIL],
-    #     vat_portion=np.array([1]),
     # )
+    #
+    # t1 = csales.expenditures()
+
+    cap = CapitalCost(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([100]),
+        expense_year=np.array([2025]),
+        cost_allocation=[FluidType.OIL],
+        vat_portion=np.array([1]),
+    )
 
     # lbtcalc = LBTCalculator(
     #     start_year_project=2023,
@@ -498,7 +504,7 @@ if __name__ == "__main__":
     # )
     #
     # t1 = lbtcalc.get_distributed_lbt()
-    #
+
     # asrcalc = ASRCalculator(
     #     start_year_project=2023,
     #     end_year_project=2030,
@@ -515,9 +521,14 @@ if __name__ == "__main__":
     print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
     print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    print(f'Filetype: {type(cap)}')
+    print(f'Length: {len(cap)}')
+    print('cap = \n', cap)
+
+    # print('\t')
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
+    # print('t1 = \n', t1)
 
     # print('\t')
     # print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
