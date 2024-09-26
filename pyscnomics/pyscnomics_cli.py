@@ -452,10 +452,58 @@ def run_optimization(
 if __name__ == "__main__":
     # entry_point()
 
-    from pyscnomics.econ.costs import Intangible
+    from pyscnomics.econ.costs import CapitalCost, Intangible
     from pyscnomics.econ.selection import FluidType
 
-    intang = Intangible(
+    # intang = Intangible(
+    #     start_year=2023,
+    #     end_year=2030,
+    #     cost=np.array([100, 100]),
+    #     expense_year=np.array([2025, 2027]),
+    #     cost_allocation=[FluidType.OIL, FluidType.OIL],
+    # )
+    #
+    # intang_exp_pretax = intang.expenditures_pre_tax()
+    # intang_indirect_tax_arr = intang.indirect_tax(
+    #     tax_portion=np.array([1, 1]),
+    #     tax_rate=0.01,
+    # )
+    # intang_exp_posttax = intang.expenditures_post_tax(
+    #     tax_portion=np.array([1, 1]),
+    #     tax_rate=0.01,
+    # )
+    # intang_cost_adjusted_inflation = intang.get_cost_adjusted_by_inflation()
+    # intang_indirect_tax = intang.get_indirect_tax(
+    #     tax_portion=np.array([1, 1]),
+    #     tax_rate=0.01,
+    # )
+    #
+    # print('\t')
+    # print(f'Filetype: {type(intang_exp_pretax)}')
+    # print(f'Length: {len(intang_exp_pretax)}')
+    # print('intang_exp_pretax = \n', intang_exp_pretax)
+    #
+    # print('\t')
+    # print(f'Filetype: {type(intang_indirect_tax_arr)}')
+    # print(f'Length: {len(intang_indirect_tax_arr)}')
+    # print('intang_indirect_tax_arr = \n', intang_indirect_tax_arr)
+    #
+    # print('\t')
+    # print(f'Filetype: {type(intang_exp_posttax)}')
+    # print(f'Length: {len(intang_exp_posttax)}')
+    # print('intang_exp_posttax = \n', intang_exp_posttax)
+    #
+    # print('\t')
+    # print(f'Filetype: {type(intang_cost_adjusted_inflation)}')
+    # print(f'Length: {len(intang_cost_adjusted_inflation)}')
+    # print('intang_cost_adjusted_inflation = \n', intang_cost_adjusted_inflation)
+    #
+    # print('\t')
+    # print(f'Filetype: {type(intang_indirect_tax)}')
+    # print(f'Length: {len(intang_indirect_tax)}')
+    # print('intang_indirect_tax = \n', intang_indirect_tax)
+
+    cap = CapitalCost(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 100]),
@@ -463,27 +511,12 @@ if __name__ == "__main__":
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    intang_exp_pretax = intang.expenditures_pre_tax()
-    intang_indirect_tax = intang.indirect_tax(
-        tax_portion=np.array([1, 1]),
-        tax_rate=0.01,
-    )
-    intang_exp_posttax = intang.expenditures_post_tax(
+    t1 = cap.total_depreciation_rate(
         tax_portion=np.array([1, 1]),
         tax_rate=0.01,
     )
 
     print('\t')
-    print(f'Filetype: {type(intang_exp_pretax)}')
-    print(f'Length: {len(intang_exp_pretax)}')
-    print('intang_exp_pretax = \n', intang_exp_pretax)
-
-    print('\t')
-    print(f'Filetype: {type(intang_indirect_tax)}')
-    print(f'Length: {len(intang_indirect_tax)}')
-    print('intang_indirect_tax = \n', intang_indirect_tax)
-
-    print('\t')
-    print(f'Filetype: {type(intang_exp_posttax)}')
-    print(f'Length: {len(intang_exp_posttax)}')
-    print('intang_exp_posttax = \n', intang_exp_posttax)
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)

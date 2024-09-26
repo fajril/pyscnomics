@@ -94,11 +94,11 @@ class GeneralCost:
     project_duration: int = field(default=None, init=False)
     project_years: np.ndarray = field(default=None, init=False)
 
-    def expenditures_pre_tax(
+    def _prepare_expenditures_pre_tax(
         self,
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
-    ) -> np.ndarray:
+    ) -> tuple:
         """
         Calculate the pre-tax expenditures, adjusted for inflation, across the project duration.
 
@@ -118,10 +118,13 @@ class GeneralCost:
 
         Returns
         -------
-        np.ndarray
-            An array representing the adjusted expenditures for each project year, adjusted for
-            inflation, and allocated by the associated expense year. The length of the returned
-            array matches the project duration.
+        tuple
+            A tuple containing two elements:
+            - `cost_adjusted_by_inflation` : np.ndarray
+                The array of costs adjusted for inflation.
+            - `expenses` : np.ndarray
+                The allocated expenses by the corresponding expense year, padded with zeros if
+                necessary to match the project duration.
 
         Notes
         -----
@@ -184,14 +187,17 @@ class GeneralCost:
         )
         zeros = np.zeros(self.project_duration - len(expenses))
 
-        return np.concatenate((expenses, zeros))
+        return (
+            cost_adjusted_by_inflation,
+            np.concatenate((expenses, zeros))
+        )
 
-    def indirect_tax(
+    def _prepare_indirect_tax(
         self,
         tax_portion: np.ndarray = None,
         tax_rate: np.ndarray | float = 0.0,
         tax_discount: float = 0.0,
-    ) -> np.ndarray:
+    ) -> tuple:
         """
         Calculate the indirect tax for the project costs based on tax portions, rates,
         and discounts.
@@ -217,8 +223,11 @@ class GeneralCost:
 
         Returns
         -------
-        np.ndarray
-            A NumPy array representing the indirect tax applied to each cost entry.
+        tuple
+            A tuple containing:
+            - indirect_tax (np.ndarray): The calculated indirect tax for each cost.
+            - allocated_tax (np.ndarray): The indirect tax allocated by the corresponding
+              expense year. The result is padded with zeros to match the total project duration.
 
         Notes
         -----
@@ -272,7 +281,187 @@ class GeneralCost:
         )
         zeros = np.zeros(self.project_duration - len(expenses))
 
-        return np.concatenate((expenses, zeros))
+        return (
+            indirect_tax,
+            np.concatenate((expenses, zeros))
+        )
+
+    def get_cost_adjusted_by_inflation(
+        self,
+        year_inflation: np.ndarray = None,
+        inflation_rate: np.ndarray | float = 0.0,
+    ) -> np.ndarray:
+        """
+        Get project costs adjusted for inflation.
+
+        This function calculates and returns the costs after adjusting for inflation
+        based on the specified `year_inflation` and `inflation_rate`. It utilizes the
+        `_prepare_expenditures_pre_tax` method to perform the inflation adjustment.
+
+        Parameters
+        ----------
+        year_inflation : np.ndarray, optional
+            An array of years representing when inflation impacts each cost. If not provided,
+            it defaults to the `start_year` of the project for all costs. The array must have
+            the same length as `self.cost`.
+        inflation_rate : np.ndarray or float, optional
+            The inflation rate(s) to apply. If a single float is provided, it is applied uniformly
+            across all years. If an array is provided, each inflation rate corresponds to a specific
+            project year (default is 0.0).
+
+        Returns
+        -------
+        np.ndarray
+            The array of costs adjusted for inflation.
+
+        Notes
+        -----
+        This function extracts the inflation-adjusted costs from the first element of
+        the tuple returned by the `_prepare_expenditures_pre_tax` method.
+        """
+
+        return self._prepare_expenditures_pre_tax(
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+        )[0]
+
+    def expenditures_pre_tax(
+        self,
+        year_inflation: np.ndarray = None,
+        inflation_rate: np.ndarray | float = 0.0,
+    ) -> np.ndarray:
+        """
+        Get pre-tax expenditures after adjusting for inflation.
+
+        This function calculates the pre-tax expenditures, which are adjusted based on
+        the given inflation scheme. It uses the `_prepare_expenditures_pre_tax` method
+        to adjust costs for inflation and allocate them to the appropriate expense years.
+
+        Parameters
+        ----------
+        year_inflation : np.ndarray, optional
+            An array of years representing when inflation impacts each cost. If not provided,
+            it defaults to the `start_year` of the project for all costs. The array must have
+            the same length as `self.cost`.
+        inflation_rate : np.ndarray or float, optional
+            The inflation rate(s) to apply. If a single float is provided, it is applied uniformly
+            across all years. If an array is provided, each inflation rate corresponds to a specific
+            project year (default is 0.0).
+
+        Returns
+        -------
+        np.ndarray
+            The array of pre-tax expenditures, allocated by the corresponding expense
+            year and adjusted for inflation. The result is padded with zeros if necessary
+            to match the total project duration.
+
+        Notes
+        -----
+        This function returns the second element from the tuple produced by the
+        `_prepare_expenditures_pre_tax` method, which represents the pre-tax expenditures
+        allocated by expense year.
+        """
+
+        return self._prepare_expenditures_pre_tax(
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+        )[1]
+
+    def get_indirect_tax(
+        self,
+        tax_portion: np.ndarray = None,
+        tax_rate: np.ndarray | float = 0.0,
+        tax_discount: float = 0.0,
+    ) -> np.ndarray:
+        """
+        Calculate and return the indirect tax for each cost.
+
+        This function computes the indirect tax for the project based on the tax portion,
+        tax rate, and tax discount. The calculation is performed using the
+        `_prepare_indirect_tax` method, and only the indirect tax (without allocation)
+        is returned.
+
+        Parameters
+        ----------
+        tax_portion : np.ndarray, optional
+            A NumPy array representing the portion of the cost subject to taxation for each cost entry.
+            If not provided, it defaults to an array of zeros, implying no portion of the costs
+            is subject to tax.
+        tax_rate : np.ndarray or float, optional
+            The tax rate to apply. If provided as a float, the same rate is applied uniformly
+            across all years. If provided as an array, it should correspond to the project years
+            (default is 0.0).
+        tax_discount : float, optional
+            A discount on the tax rate, applied uniformly across all costs. This should be a
+            decimal fraction representing the percentage of discount, where 1.0 corresponds to
+            a 100% discount (default is 0.0).
+
+        Returns
+        -------
+        np.ndarray
+            The calculated indirect tax for each cost in the project.
+
+        Notes
+        -----
+        This function retrieves the first element from the tuple returned by
+        `_prepare_indirect_tax`, which represents the computed indirect tax for each cost
+        without considering the allocation by expense year.
+        """
+
+        return self._prepare_indirect_tax(
+            tax_portion=tax_portion,
+            tax_rate=tax_rate,
+            tax_discount=tax_discount,
+        )[0]
+
+    def indirect_tax(
+        self,
+        tax_portion: np.ndarray = None,
+        tax_rate: np.ndarray | float = 0.0,
+        tax_discount: float = 0.0,
+    ) -> np.ndarray:
+        """
+        Calculate and allocate indirect tax by expense year.
+
+        This function computes the indirect tax for the project, adjusts the costs
+        based on tax portion, tax rate, and tax discount, and allocates the indirect tax
+        to the corresponding expense year. The calculation is performed using
+        the `_prepare_indirect_tax` method, and the allocated tax (including padding
+        for project duration) is returned.
+
+        Parameters
+        ----------
+        tax_portion : np.ndarray, optional
+            A NumPy array representing the portion of the cost subject to taxation for each cost entry.
+            If not provided, it defaults to an array of zeros, implying no portion of the costs
+            is subject to tax.
+        tax_rate : np.ndarray or float, optional
+            The tax rate to apply. If provided as a float, the same rate is applied uniformly
+            across all years. If provided as an array, it should correspond to the project years
+            (default is 0.0).
+        tax_discount : float, optional
+            A discount on the tax rate, applied uniformly across all costs. This should be a
+            decimal fraction representing the percentage of discount, where 1.0 corresponds to
+            a 100% discount (default is 0.0).
+
+        Returns
+        -------
+        np.ndarray
+            The indirect tax allocated by the corresponding expense year, padded with zeros
+            to match the total project duration.
+
+        Notes
+        -----
+        - This function returns the second element of the tuple from `_prepare_indirect_tax`,
+          which represents the indirect tax allocated by expense year.
+        - The output includes padding with zeros to match the total project duration.
+        """
+
+        return self._prepare_indirect_tax(
+            tax_portion=tax_portion,
+            tax_rate=tax_rate,
+            tax_discount=tax_discount,
+        )[1]
 
     def expenditures_post_tax(
         self,
@@ -336,281 +525,6 @@ class GeneralCost:
 
 
 @dataclass
-class Intangible(GeneralCost):
-    """
-    Manages an intangible asset.
-
-    Parameters
-    ----------
-    The attributes are inherited from class GeneralCost.
-    """
-
-    def __post_init__(self):
-        """
-        Handles the following operations/procedures:
-        -   Prepare attributes project_duration and project_years,
-        -   Prepare attribute description,
-        -   Prepare attribute cost_allocation,
-        -   Initial check for unequal length of input arrays,
-        -   Raise an error: expense_year is after the end year of the project,
-        -   Raise an error: expense_year is before the start year of the project,
-        """
-
-        # Prepare attributes project_duration and project_years
-        if self.end_year >= self.start_year:
-            self.project_duration = self.end_year - self.start_year + 1
-            self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
-
-        else:
-            raise IntangibleException(
-                f"start year {self.start_year} "
-                f"is after the end year {self.end_year}"
-            )
-
-        # Prepare attribute description
-        if self.description is None:
-            self.description = [" " for _ in range(len(self.cost))]
-
-        else:
-            if not isinstance(self.description, list):
-                raise IntangibleException(
-                    f"Attribute description must be given as a list, "
-                    f"not as a/an {self.description.__class__.__qualname__}"
-                )
-
-        # Configure cost_allocation data
-        if self.cost_allocation is None:
-            self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
-
-        else:
-            if not isinstance(self.cost_allocation, list):
-                raise IntangibleException(
-                    f"Attribute cost_allocation must be given as a list, "
-                    f"not as a/an {self.cost_allocation.__class__.__qualname__}"
-                )
-
-        # Check input data for unequal length
-        arr_length = len(self.cost)
-
-        if not all(
-            len(arr) == arr_length
-            for arr in [
-                self.expense_year,
-                self.cost_allocation,
-                self.description,
-            ]
-        ):
-            raise IntangibleException(
-                f"Unequal length of array: "
-                f"cost: {len(self.cost)}, "
-                f"expense_year: {len(self.expense_year)}, "
-                f"cost_allocation: {len(self.cost_allocation)}, "
-                f"description: {len(self.description)}, "
-            )
-
-        # Raise an error message: expense year is after the end year of the project
-        if np.max(self.expense_year) > self.end_year:
-            raise IntangibleException(
-                f"Expense year ({np.max(self.expense_year)}) "
-                f"is after the end year of the project ({self.end_year})"
-            )
-
-        # Raise an error message: expense year is before the start year of the project
-        if np.min(self.expense_year) < self.start_year:
-            raise IntangibleException(
-                f"Expense year ({np.min(self.expense_year)}) "
-                f"is before the start year of the project ({self.start_year})"
-            )
-
-    def __eq__(self, other):
-        # Between two instances of Intangible
-        if isinstance(other, Intangible):
-            return all(
-                (
-                    np.allclose(self.cost, other.cost),
-                    np.allclose(self.expense_year, other.expense_year),
-                    self.cost_allocation == other.cost_allocation,
-                )
-            )
-
-        # Between an instance of Intangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) == other
-
-        else:
-            return False
-
-    def __lt__(self, other):
-        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
-            return np.sum(self.cost) < np.sum(other.cost)
-
-        # Between an instance of Intangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) < other
-
-        else:
-            raise IntangibleException(
-                f"Must compare an instance of Intangible with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
-            )
-
-    def __le__(self, other):
-        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
-            return np.sum(self.cost) <= np.sum(other.cost)
-
-        # Between an instance of Intangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) <= other
-
-        else:
-            raise IntangibleException(
-                f"Must compare an instance of Intangible with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
-            )
-
-    def __gt__(self, other):
-        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
-            return np.sum(self.cost) > np.sum(other.cost)
-
-        # Between an instance of Intangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) > other
-
-        else:
-            raise IntangibleException(
-                f"Must compare an instance of Intangible with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
-            )
-
-    def __ge__(self, other):
-        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
-            return np.sum(self.cost) >= np.sum(other.cost)
-
-        # Between an instance of Intangible and an integer/float
-        elif isinstance(other, (int, float)):
-            return np.sum(self.cost) >= other
-
-        else:
-            raise IntangibleException(
-                f"Must compare an instance of Intangible with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
-            )
-
-    def __add__(self, other):
-        # Only allows addition between an instance of Intangible and another instance of Intangible
-        if isinstance(other, Intangible):
-            start_year_combined = min(self.start_year, other.start_year)
-            end_year_combined = max(self.end_year, other.end_year)
-            cost_combined = np.concatenate((self.cost, other.cost))
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
-            cost_allocation_combined = self.cost_allocation + other.cost_allocation
-            description_combined = self.description + other.description
-
-            return Intangible(
-                start_year=start_year_combined,
-                end_year=end_year_combined,
-                cost=cost_combined,
-                expense_year=expense_year_combined,
-                cost_allocation=cost_allocation_combined,
-                description=description_combined,
-            )
-
-        else:
-            raise IntangibleException(
-                f"Must add between an instance of Intangible "
-                f"with another instance of Intangible. "
-                f"{other}({other.__class__.__qualname__}) is not "
-                f"an instance of Intangible."
-            )
-
-    def __iadd__(self, other):
-        return self.__add__(other)
-
-    def __sub__(self, other):
-        # Only allows subtraction between an instance of Intangible and another instance of Intangible
-        if isinstance(other, Intangible):
-            start_year_combined = min(self.start_year, other.start_year)
-            end_year_combined = max(self.end_year, other.end_year)
-            cost_combined = np.concatenate((self.cost, -other.cost))
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
-            cost_allocation_combined = self.cost_allocation + other.cost_allocation
-            description_combined = self.description + other.description
-
-            return Intangible(
-                start_year=start_year_combined,
-                end_year=end_year_combined,
-                cost=cost_combined,
-                expense_year=expense_year_combined,
-                cost_allocation=cost_allocation_combined,
-                description=description_combined,
-            )
-
-        else:
-            raise IntangibleException(
-                f"Must subtract between an instance of Intangible "
-                f"with another instance of Intangible. "
-                f"{other}({other.__class__.__qualname__}) is not "
-                f"an instance of Intangible."
-            )
-
-    def __rsub__(self, other):
-        return self.__sub__(other)
-
-    def __mul__(self, other):
-        # Multiplication is allowed only with an integer/a float
-        if isinstance(other, (int, float)):
-            return Intangible(
-                start_year=self.start_year,
-                end_year=self.end_year,
-                cost=self.cost * other,
-                expense_year=self.expense_year,
-                cost_allocation=self.cost_allocation,
-                description=self.description,
-            )
-
-        else:
-            raise IntangibleException(
-                f"Must multiply with an integer or a float; "
-                f"{other}({other.__class__.__qualname__}) is not an integer nor a float."
-            )
-
-    def __rmul__(self, other):
-        return self.__mul__(other)
-
-    def __truediv__(self, other):
-        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
-            return np.sum(self.cost) / np.sum(other.cost)
-
-        # Between an instance of Intangible and an integer/float
-        elif isinstance(other, (int, float)):
-            # Cannot divide with zero
-            if other == 0:
-                raise IntangibleException(f"Cannot divide with zero")
-
-            else:
-                return Intangible(
-                    start_year=self.start_year,
-                    end_year=self.end_year,
-                    cost=self.cost / other,
-                    expense_year=self.expense_year,
-                    cost_allocation=self.cost_allocation,
-                    description=self.description,
-                )
-
-        else:
-            raise IntangibleException(
-                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT, "
-                f"integer or a float; {other}({other.__class__.__qualname__}) is not an "
-                f"instance of CapitalCost/Intangible/OPEX/ASR nor an integer nor a float."
-            )
-
-
-@dataclass
 class CapitalCost(GeneralCost):
     """
     Manages a capital asset.
@@ -640,7 +554,22 @@ class CapitalCost(GeneralCost):
     is_ic_applied: list[bool] = field(default=None)
 
     def __post_init__(self):
-        # Check for inappropriate start and end year project
+        """
+        Handles the following operations/procedures:
+        -   Prepare attributes project_duration and project_years,
+        -   Prepare attribute description,
+        -   Prepare attribute cost_allocation,
+        -   Prepare attribute pis_year,
+        -   Prepare attribute salvage_value,
+        -   Prepare attribute useful_life,
+        -   Prepare attribute depreciation_factor,
+        -   Prepare attribute is_ic_applied,
+        -   Initial check for unequal length of input arrays,
+        -   Raise an error: expense_year is after the end year of the project,
+        -   Raise an error: expense_year is before the start year of the project,
+        """
+
+        # Prepare attributes project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
             self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
@@ -651,120 +580,89 @@ class CapitalCost(GeneralCost):
                 f"is after the end year: {self.end_year}"
             )
 
-        # Configure VAT portion
-        if self.vat_portion is None:
-            self.vat_portion = np.ones_like(self.cost)
-
-        if self.vat_portion is not None:
-            if not isinstance(self.vat_portion, np.ndarray):
-                raise CapitalException(
-                    f"Attribute VAT portion must be a numpy ndarray; "
-                    f"VAT portion ({self.vat_portion}) is of datatype "
-                    f"{self.vat_portion.__class__.__qualname__}."
-                )
-
-        # Configure LBT portion
-        if self.lbt_portion is None:
-            self.lbt_portion = np.ones_like(self.cost)
-
-        if self.lbt_portion is not None:
-            if not isinstance(self.lbt_portion, np.ndarray):
-                raise CapitalException(
-                    f"Attribute LBT portion must be a numpy ndarray; "
-                    f"LBT portion ({self.lbt_portion}) is of datatype "
-                    f"{self.lbt_portion.__class__.__qualname__}."
-                )
-
-        # Configure VAT discount
-        if isinstance(self.vat_discount, float):
-            self.vat_discount = np.repeat(self.vat_discount, len(self.cost))
-
-        # Configure LBT discount
-        if isinstance(self.lbt_discount, float):
-            self.lbt_discount = np.repeat(self.lbt_discount, len(self.cost))
-
-        # Configure description data
+        # Prepare attribute description
         if self.description is None:
             self.description = [" " for _ in range(len(self.cost))]
 
-        if self.description is not None:
+        else:
             if not isinstance(self.description, list):
                 raise CapitalException(
-                    f"Attribute description must be a list; "
-                    f"description (datatype: {self.description.__class__.__qualname__}) "
-                    f"is not a list."
+                    f"Attribute description must be given as a list, "
+                    f"not as a/an {self.description.__class__.__qualname__}"
                 )
 
-        # Configure cost_allocation data
+        # Prepare attribute cost_allocation
         if self.cost_allocation is None:
             self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
 
-        if self.cost_allocation is not None:
+        else:
             if not isinstance(self.cost_allocation, list):
                 raise CapitalException(
-                    f"Attribute cost_allocation must be a list. "
-                    f"cost_allocation (datatype: {self.cost_allocation.__class__.__qualname__}) "
-                    f"is not a list."
+                    f"Attribute cost_allocation must be given as a list, "
+                    f"not as a/an {self.cost_allocation.__class__.__qualname__}"
                 )
 
-        # Configure pis_year data
+        # Prepare attribute pis_year
         if self.pis_year is None:
-            self.pis_year = self.expense_year
+            self.pis_year = self.expense_year.copy()
 
-        if self.pis_year is not None:
+        else:
             if not isinstance(self.pis_year, np.ndarray):
                 raise CapitalException(
-                    f"Attribute pis_year must be a numpy.ndarray; "
-                    f"pis_year (datatype: {self.description.__class__.__qualname__}) "
-                    f"is not a numpy.ndarray."
+                    f"Attribute pis_year must be given as a numpy.ndarray, "
+                    f"not as a/an {self.pis_year.__class__.__qualname__}"
                 )
 
-        # Configure salvage_value data
-        if self.salvage_value is None:
-            self.salvage_value = np.zeros(len(self.cost))
+        self.pis_year = self.pis_year.astype(np.int64)
 
-        if self.salvage_value is not None:
+        # Prepare attribute salvage_value
+        if self.salvage_value is None:
+            self.salvage_value = np.zeros_like(self.cost)
+
+        else:
             if not isinstance(self.salvage_value, np.ndarray):
                 raise CapitalException(
-                    f"Attribute salvage_value must be a numpy.ndarray; "
-                    f"salvage_value (datatype: {self.description.__class__.__qualname__}) "
-                    f"is not a numpy.ndarray."
+                    f"Attribute salvage_value must be given as a numpy.ndarray, "
+                    f"not as a/an {self.salvage_value.__class__.__qualname__}"
                 )
 
-        # Configure useful_life data
+        self.salvage_value = self.salvage_value.astype(np.float64)
+
+        # Prepare attribute useful_life
         if self.useful_life is None:
             self.useful_life = np.repeat(5.0, len(self.cost))
 
-        if self.useful_life is not None:
+        else:
             if not isinstance(self.useful_life, np.ndarray):
                 raise CapitalException(
-                    f"Attribute useful_life must be a numpy.ndarray; "
-                    f"useful_life (datatype: {self.description.__class__.__qualname__}) "
-                    f"is not a numpy.ndarray."
+                    f"Attribute useful_life must be given as a numpy.ndarray, "
+                    f"not as a/an {self.useful_life.__class__.__qualname__}"
                 )
 
-        # Configure depreciation_factor data
+        self.useful_life = self.useful_life.astype(np.float64)
+
+        # Prepare attribute depreciation_factor
         if self.depreciation_factor is None:
             self.depreciation_factor = np.repeat(0.5, len(self.cost))
 
-        if self.depreciation_factor is not None:
+        else:
             if not isinstance(self.depreciation_factor, np.ndarray):
                 raise CapitalException(
-                    f"Attribute depreciation_factor must be a numpy.ndarray; "
-                    f"depreciation_factor (datatype: {self.description.__class__.__qualname__}) "
-                    f"is not a numpy.ndarray."
+                    f"Attribute depreciation_factor must be given as a numpy.ndarray, "
+                    f"not as a/an {self.depreciation_factor.__class__.__qualname__}"
                 )
 
-        # Configure is_ic_applied data
+        self.depreciation_factor = self.depreciation_factor.astype(np.float64)
+
+        # Prepare attribute is_ic_applied
         if self.is_ic_applied is None:
             self.is_ic_applied = [False for _ in range(len(self.cost))]
 
-        if self.is_ic_applied is not None:
+        else:
             if not isinstance(self.is_ic_applied, list):
                 raise CapitalException(
-                    f"Attribute is_ic_applied must be a list; "
-                    f"is_ic_applied (datatype: {self.is_ic_applied.__class__.__qualname__}) "
-                    f"is not a list."
+                    f"Attribute is_ic_applied must be given as a list, "
+                    f"not as a/an {self.is_ic_applied.__class__.__qualname__}"
                 )
 
         # Check input data for unequal length
@@ -776,10 +674,6 @@ class CapitalCost(GeneralCost):
                 self.expense_year,
                 self.cost_allocation,
                 self.description,
-                self.vat_portion,
-                self.vat_discount,
-                self.lbt_portion,
-                self.lbt_discount,
                 self.pis_year,
                 self.salvage_value,
                 self.useful_life,
@@ -793,10 +687,6 @@ class CapitalCost(GeneralCost):
                 f"expense_year: {len(self.expense_year)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
                 f"description: {len(self.description)}, "
-                f"vat_portion: {len(self.vat_portion)}, "
-                f"vat_discount: {len(self.vat_discount)}, "
-                f"lbt_portion: {len(self.lbt_portion)}, "
-                f"lbt_discount: {len(self.lbt_discount)}, "
                 f"pis_year: {len(self.pis_year)}, "
                 f"salvage_value: {len(self.salvage_value)}, "
                 f"useful_life: {len(self.useful_life)}, "
@@ -804,14 +694,14 @@ class CapitalCost(GeneralCost):
                 f"is_ic_applied: {len(self.is_ic_applied)}."
             )
 
-        # Raise an error message: expense year is after the end year of the project
+        # Raise an error: expense year is after the end year of the project
         if np.max(self.expense_year) > self.end_year:
             raise CapitalException(
                 f"Expense year ({np.max(self.expense_year)}) "
                 f"is after the end year of the project ({self.end_year})"
             )
 
-        # Raise an error message: expense year is before the start year of the project
+        # Raise an error: expense year is before the start year of the project
         if np.min(self.expense_year) < self.start_year:
             raise CapitalException(
                 f"Expense year ({np.min(self.expense_year)}) "
@@ -822,32 +712,18 @@ class CapitalCost(GeneralCost):
         self,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
-        year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
-        vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
+        year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
+        tax_portion: np.ndarray = None,
+        tax_rate: np.ndarray | float = 0.0,
+        tax_discount: float = 0.0,
     ) -> tuple:
         """
         Calculate total depreciation charge and undepreciated asset value based on various parameters.
 
         Parameters
         ----------
-        depr_method : DeprMethod, optional
-            The depreciation method to use (default is DeprMethod.PSC_DB).
-        decline_factor : float | int, optional
-            The decline factor used for declining balance depreciation (default is 2).
-        year_ref : int
-            The reference year for inflation calculation.
-        tax_type: TaxType
-            The type of tax applied to the corresponding asset.
-            Available options: TaxType.VAT or TaxType.LBT (default is TaxType.VAT).
-        vat_rate: np.ndarray | float
-            The VAT rate to apply. Can be a single value or an array (default is 0.0).
-        lbt_rate: np.ndarray | float
-            The LBT rate to apply. Can be a single value or an array (default is 0.0).
-        inflation_rate: np.ndarray | float
-            The inflation rate to apply. Can be a single value or an array (default is 0.0).
+
 
         Returns
         -------
@@ -865,24 +741,18 @@ class CapitalCost(GeneralCost):
         (3) The depreciation charges are aligned with the corresponding periods
             based on pis_year.
         """
-        if year_ref is None:
-            year_ref = self.start_year
 
-        cost_adjusted = apply_cost_adjustment(
-            start_year=self.start_year,
-            end_year=self.end_year,
-            cost=self.cost,
-            expense_year=self.expense_year,
-            project_years=self.project_years,
-            year_ref=year_ref,
-            tax_type=tax_type,
-            vat_portion=self.vat_portion,
-            vat_rate=vat_rate,
-            vat_discount=self.vat_discount,
-            lbt_portion=self.lbt_portion,
-            lbt_rate=lbt_rate,
-            lbt_discount=self.lbt_discount,
-            inflation_rate=inflation_rate,
+        # Cost adjustment
+        cost_adjusted = (
+            self.get_cost_adjusted_by_inflation(
+                year_inflation=year_inflation,
+                inflation_rate=inflation_rate,
+            ) +
+            self.get_indirect_tax(
+                tax_portion=tax_portion,
+                tax_rate=tax_rate,
+                tax_discount=tax_discount,
+            )
         )
 
         # Straight line
@@ -1298,6 +1168,284 @@ class CapitalCost(GeneralCost):
                 f"{other}({other.__class__.__qualname__}) is not an instance "
                 f"of CapitalCost/Intangible/OPEX/ASR nor an integer nor a float."
             )
+
+
+@dataclass
+class Intangible(GeneralCost):
+    """
+    Manages an intangible asset.
+
+    Parameters
+    ----------
+    The attributes are inherited from class GeneralCost.
+    """
+
+    def __post_init__(self):
+        """
+        Handles the following operations/procedures:
+        -   Prepare attributes project_duration and project_years,
+        -   Prepare attribute description,
+        -   Prepare attribute cost_allocation,
+        -   Initial check for unequal length of input arrays,
+        -   Raise an error: expense_year is after the end year of the project,
+        -   Raise an error: expense_year is before the start year of the project,
+        """
+
+        # Prepare attributes project_duration and project_years
+        if self.end_year >= self.start_year:
+            self.project_duration = self.end_year - self.start_year + 1
+            self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
+
+        else:
+            raise IntangibleException(
+                f"start year {self.start_year} "
+                f"is after the end year {self.end_year}"
+            )
+
+        # Prepare attribute description
+        if self.description is None:
+            self.description = [" " for _ in range(len(self.cost))]
+
+        else:
+            if not isinstance(self.description, list):
+                raise IntangibleException(
+                    f"Attribute description must be given as a list, "
+                    f"not as a/an {self.description.__class__.__qualname__}"
+                )
+
+        # Prepare attribute cost_allocation
+        if self.cost_allocation is None:
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
+
+        else:
+            if not isinstance(self.cost_allocation, list):
+                raise IntangibleException(
+                    f"Attribute cost_allocation must be given as a list, "
+                    f"not as a/an {self.cost_allocation.__class__.__qualname__}"
+                )
+
+        # Check input data for unequal length
+        arr_length = len(self.cost)
+
+        if not all(
+            len(arr) == arr_length
+            for arr in [
+                self.expense_year,
+                self.cost_allocation,
+                self.description,
+            ]
+        ):
+            raise IntangibleException(
+                f"Unequal length of array: "
+                f"cost: {len(self.cost)}, "
+                f"expense_year: {len(self.expense_year)}, "
+                f"cost_allocation: {len(self.cost_allocation)}, "
+                f"description: {len(self.description)}, "
+            )
+
+        # Raise an error message: expense year is after the end year of the project
+        if np.max(self.expense_year) > self.end_year:
+            raise IntangibleException(
+                f"Expense year ({np.max(self.expense_year)}) "
+                f"is after the end year of the project ({self.end_year})"
+            )
+
+        # Raise an error message: expense year is before the start year of the project
+        if np.min(self.expense_year) < self.start_year:
+            raise IntangibleException(
+                f"Expense year ({np.min(self.expense_year)}) "
+                f"is before the start year of the project ({self.start_year})"
+            )
+
+    def __eq__(self, other):
+        # Between two instances of Intangible
+        if isinstance(other, Intangible):
+            return all(
+                (
+                    np.allclose(self.cost, other.cost),
+                    np.allclose(self.expense_year, other.expense_year),
+                    self.cost_allocation == other.cost_allocation,
+                )
+            )
+
+        # Between an instance of Intangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) == other
+
+        else:
+            return False
+
+    def __lt__(self, other):
+        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+            return np.sum(self.cost) < np.sum(other.cost)
+
+        # Between an instance of Intangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) < other
+
+        else:
+            raise IntangibleException(
+                f"Must compare an instance of Intangible with another instance of "
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+            )
+
+    def __le__(self, other):
+        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+            return np.sum(self.cost) <= np.sum(other.cost)
+
+        # Between an instance of Intangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) <= other
+
+        else:
+            raise IntangibleException(
+                f"Must compare an instance of Intangible with another instance of "
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+            )
+
+    def __gt__(self, other):
+        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+            return np.sum(self.cost) > np.sum(other.cost)
+
+        # Between an instance of Intangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) > other
+
+        else:
+            raise IntangibleException(
+                f"Must compare an instance of Intangible with another instance of "
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+            )
+
+    def __ge__(self, other):
+        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+            return np.sum(self.cost) >= np.sum(other.cost)
+
+        # Between an instance of Intangible and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) >= other
+
+        else:
+            raise IntangibleException(
+                f"Must compare an instance of Intangible with another instance of "
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+            )
+
+    def __add__(self, other):
+        # Only allows addition between an instance of Intangible and another instance of Intangible
+        if isinstance(other, Intangible):
+            start_year_combined = min(self.start_year, other.start_year)
+            end_year_combined = max(self.end_year, other.end_year)
+            cost_combined = np.concatenate((self.cost, other.cost))
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            description_combined = self.description + other.description
+
+            return Intangible(
+                start_year=start_year_combined,
+                end_year=end_year_combined,
+                cost=cost_combined,
+                expense_year=expense_year_combined,
+                cost_allocation=cost_allocation_combined,
+                description=description_combined,
+            )
+
+        else:
+            raise IntangibleException(
+                f"Must add between an instance of Intangible "
+                f"with another instance of Intangible. "
+                f"{other}({other.__class__.__qualname__}) is not "
+                f"an instance of Intangible."
+            )
+
+    def __iadd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        # Only allows subtraction between an instance of Intangible and another instance of Intangible
+        if isinstance(other, Intangible):
+            start_year_combined = min(self.start_year, other.start_year)
+            end_year_combined = max(self.end_year, other.end_year)
+            cost_combined = np.concatenate((self.cost, -other.cost))
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            description_combined = self.description + other.description
+
+            return Intangible(
+                start_year=start_year_combined,
+                end_year=end_year_combined,
+                cost=cost_combined,
+                expense_year=expense_year_combined,
+                cost_allocation=cost_allocation_combined,
+                description=description_combined,
+            )
+
+        else:
+            raise IntangibleException(
+                f"Must subtract between an instance of Intangible "
+                f"with another instance of Intangible. "
+                f"{other}({other.__class__.__qualname__}) is not "
+                f"an instance of Intangible."
+            )
+
+    def __rsub__(self, other):
+        return self.__sub__(other)
+
+    def __mul__(self, other):
+        # Multiplication is allowed only with an integer/a float
+        if isinstance(other, (int, float)):
+            return Intangible(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                cost=self.cost * other,
+                expense_year=self.expense_year,
+                cost_allocation=self.cost_allocation,
+                description=self.description,
+            )
+
+        else:
+            raise IntangibleException(
+                f"Must multiply with an integer or a float; "
+                f"{other}({other.__class__.__qualname__}) is not an integer nor a float."
+            )
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        # Between an instance of Intangible with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+            return np.sum(self.cost) / np.sum(other.cost)
+
+        # Between an instance of Intangible and an integer/float
+        elif isinstance(other, (int, float)):
+            # Cannot divide with zero
+            if other == 0:
+                raise IntangibleException(f"Cannot divide with zero")
+
+            else:
+                return Intangible(
+                    start_year=self.start_year,
+                    end_year=self.end_year,
+                    cost=self.cost / other,
+                    expense_year=self.expense_year,
+                    cost_allocation=self.cost_allocation,
+                    description=self.description,
+                )
+
+        else:
+            raise IntangibleException(
+                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT, "
+                f"integer or a float; {other}({other.__class__.__qualname__}) is not an "
+                f"instance of CapitalCost/Intangible/OPEX/ASR nor an integer nor a float."
+            )
+
+
+
 
 
 @dataclass
