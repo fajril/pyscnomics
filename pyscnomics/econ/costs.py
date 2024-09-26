@@ -95,6 +95,18 @@ class GeneralCost:
     project_duration: int = field(default=None, init=False, repr=False)
     project_years: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Todo add indirect taxes. This function will resulting the array of VAT values of each cost.
+    def indirect_taxes(self,
+                       year_inflation_ref: int,
+                       vat_rate: float | np.ndarray,
+                       vat_portion: np.ndarray,
+                       vat_discount: float
+                       ):
+        # Calculate Inflation
+        # Calculate Value Added Tax
+        return NotImplementedError
+
+    # ToDo: Refactor and add the routine for retrieving the cost prior to indirect tax and post of indirect tax.
     def expenditures(
         self,
         year_ref: int = None,

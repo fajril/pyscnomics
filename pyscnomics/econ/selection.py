@@ -255,6 +255,7 @@ class NPVSelection(Enum):
     NPV_POINT_FORWARD = 'NPV Calculation using Point Forward method'
 
 
+# Refactor: OtherRevenue into OtherRevenueTreatment
 class OtherRevenue(Enum):
     """
     Enumeration class representing different types of other revenue

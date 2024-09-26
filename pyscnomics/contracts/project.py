@@ -66,12 +66,12 @@ class BaseProject:
     end_date: date
     oil_onstream_date: date = field(default=None)
     gas_onstream_date: date = field(default=None)
-    lifting: tuple[Lifting] = field(default=None)
-    capital_cost: tuple[CapitalCost] = field(default=None)
-    intangible_cost: tuple[Intangible] = field(default=None)
-    opex: tuple[OPEX] = field(default=None)
-    asr_cost: tuple[ASR] = field(default=None)
-    cost_of_sales: tuple[CostOfSales] = field(default=None)
+    lifting: tuple[Lifting, ...] = field(default=None)
+    capital_cost: tuple[CapitalCost, ...] = field(default=None)
+    intangible_cost: tuple[Intangible, ...] = field(default=None)
+    opex: tuple[OPEX, ...] = field(default=None)
+    asr_cost: tuple[ASR, ...] = field(default=None)
+    cost_of_sales: tuple[CostOfSales, ...] = field(default=None)
 
     # Attributes associated with project duration
     project_duration: int = field(default=None, init=False, repr=False)
@@ -119,6 +119,9 @@ class BaseProject:
     _gas_opex_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     _oil_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     _gas_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
 
     # Private attributes associated with cost of sales
     _oil_cost_of_sales_expenditures: np.ndarray = field(default=None, init=False, repr=False)
@@ -446,8 +449,9 @@ class BaseProject:
                     )
 
             else:
+                # If there is no oil onstream date, it will be set to 1st January.
                 self.oil_onstream_date = date(
-                    year=self.project_years[oil_revenue_index[0]], month=1, day=1
+                    year=int(self.project_years[oil_revenue_index[0]]), month=1, day=1
                 )
 
         else:
@@ -483,8 +487,9 @@ class BaseProject:
                     )
 
             else:
+                # If there is no gas onstream date, it will be set to 1st January.
                 self.gas_onstream_date = date(
-                    year=self.project_years[gas_revenue_index[0]], month=1, day=1
+                    year=int(self.project_years[gas_revenue_index[0]]), month=1, day=1
                 )
 
         else:
@@ -708,6 +713,7 @@ class BaseProject:
             (lft for lft in self.lifting if lft.fluid_type == FluidType.CO2),
         )
 
+    # Todo: Refactor the tangible into capitalcost
     def _get_oil_tangible(self) -> CapitalCost:
         """
         Determines total oil Tangible from the number of oil Tangible instances in
@@ -1500,6 +1506,7 @@ class BaseProject:
         )
 
     def _get_tax_by_regime(self, tax_regime):
+        # ToDo: Refactor the taxing config, deprecated the prevailing and nailed down effective taxing mode
         tax_config = {2013: 0.44,
                       2016: 0.42,
                       2020: 0.40}
@@ -1534,6 +1541,7 @@ class BaseProject:
         self._get_electricity_wap_price()
         self._get_co2_wap_price()
 
+    # ToDo: Deprecated
     def _get_oil_wap_price(self):
         """
         The function to fill the variable self._oil_wap_price.
@@ -1549,6 +1557,7 @@ class BaseProject:
 
         self._oil_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
+    # ToDo: Deprecated
     def _get_gas_wap_price(self):
         """
         The function to fill the variable self._gas_wap_price.
@@ -1569,6 +1578,7 @@ class BaseProject:
         else:
             self._gas_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
+    # ToDo: Deprecated
     def _get_sulfur_wap_price(self):
         """
         The function to fill the variable self._sulfur_wap_price.
@@ -1584,6 +1594,7 @@ class BaseProject:
 
         self._sulfur_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
+    # ToDo: Deprecated
     def _get_electricity_wap_price(self):
         """
         The function to fill the variable self._electricity_wap_price.
@@ -1599,6 +1610,7 @@ class BaseProject:
 
         self._electricity_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
+    # ToDo: Deprecated
     def _get_co2_wap_price(self):
         """
         The function to fill the variable self._co2_wap_price.
@@ -1614,6 +1626,7 @@ class BaseProject:
 
         self._co2_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
+    # Todo: Refactor sulfur_revenue, electricity_revenue, co2_revenue by adding "selected"
     def _get_other_revenue(self,
                            sulfur_revenue: OtherRevenue,
                            electricity_revenue: OtherRevenue,
