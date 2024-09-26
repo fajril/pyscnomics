@@ -463,12 +463,12 @@ if __name__ == "__main__":
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    t1 = intang.indirect_tax(
+    t1 = intang.expenditures_post_tax(
         tax_portion=np.array([1, 1]),
         tax_rate=0.01,
     )
 
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = ', t1)
+    # print('\t')
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
+    # print('t1 = ', t1)

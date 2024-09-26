@@ -76,20 +76,10 @@ class GeneralCost:
         A list representing the cost allocation of a tangible asset.
     description: list[str]
         A list of string description regarding the associated tangible cost.
-    vat_portion: np.ndarray
-        The portion of 'cost' that is subject to VAT.
-        Must be an array of length equals to the length of 'cost' array.
-    vat_discount: float
-        The VAT discount to apply.
-    lbt_portion: np.ndarray
-        The portion of 'cost' that is subject to LBT.
-        Must be an array of length equals to the length of 'cost' array.
-    lbt_discount: float
-        The LBT discount to apply.
 
     Notes
     -----
-    (1) The unit used in the cost should be in M unit of United States Dollar (USD),
+    The unit for cost should be in M unit of United States Dollar (USD),
     where the M is stands for 1000. Thus, the unit cost should be: M-USD.
     """
 
@@ -99,10 +89,6 @@ class GeneralCost:
     expense_year: np.ndarray
     cost_allocation: list[FluidType] = field(default=None)
     description: list[str] = field(default=None)
-    # vat_portion: np.ndarray = field(default=None)
-    # vat_discount: float | np.ndarray = field(default=0.0)
-    # lbt_portion: np.ndarray = field(default=None)
-    # lbt_discount: float | np.ndarray = field(default=0.0)
 
     # Attribute to be defined later on
     project_duration: int = field(default=None, init=False)
@@ -125,7 +111,6 @@ class GeneralCost:
             An array of years representing when inflation impacts each cost. If not provided,
             it defaults to the `start_year` of the project for all costs. The array must have
             the same length as `self.cost`.
-
         inflation_rate : np.ndarray or float, optional
             The inflation rate(s) to apply. If a single float is provided, it is applied uniformly
             across all years. If an array is provided, each inflation rate corresponds to a specific
@@ -279,81 +264,72 @@ class GeneralCost:
 
         # Calculate indirect tax
         tax_rate_ids = (self.expense_year - self.start_year).astype(np.int64)
+        indirect_tax = self.cost * (tax_portion * tax_rate_arr[tax_rate_ids] * (1.0 - tax_discount))
 
-        # Caclulate indirect tax
-        return self.cost * (tax_portion * tax_rate_arr[tax_rate_ids] * (1.0 - tax_discount))
-
-    def expenditures_post_tax(
-        self,
-        year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
-        vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
-        inflation_rate: np.ndarray | float = 0.0,
-    ) -> np.ndarray:
-        """
-        Calculate expenditures per year.
-
-        This method calculates the expenditures per year based on the expense year
-        and cost data provided.
-
-        Parameters
-        ----------
-        year_ref : int
-            The reference year for inflation calculation.
-        tax_type: TaxType
-            The type of tax applied to the corresponding asset.
-            Available options: TaxType.VAT or TaxType.LBT
-        vat_rate: np.ndarray | float
-            The VAT rate to apply. Can be a single value or an array (default is 0.0).
-        lbt_rate: np.ndarray | float
-            The LBT rate to apply. Can be a single value or an array (default is 0.0).
-        inflation_rate: np.ndarray | float
-            The inflation rate to apply. Can be a single value or an array (default is 0.0).
-
-        Returns
-        -------
-        np.ndarray
-            An array depicting the expenditures each year, adjusted by tax
-            and inflation schemes (if any).
-
-        Notes
-        -----
-        This method calculates expenditures while considering tax and inflation schemes.
-        The core calculations are as follows:
-        (1) Apply adjustment to cost due to tax and inflation (if any), by calling
-            'apply_cost_adjustment()' function,
-        (2) Function np.bincount() is used to align the 'cost_adjusted' elements
-            according to its corresponding expense year,
-        (3) If len(expenses) < project_duration, then add the remaining elements
-            with zeros.
-        """
-        if year_ref is None:
-            year_ref = self.start_year
-
-        cost_adjusted = apply_cost_adjustment(
-            start_year=self.start_year,
-            end_year=self.end_year,
-            cost=self.cost,
-            expense_year=self.expense_year,
-            project_years=self.project_years,
-            year_ref=year_ref,
-            tax_type=tax_type,
-            vat_portion=self.vat_portion,
-            vat_rate=vat_rate,
-            vat_discount=self.vat_discount,
-            lbt_portion=self.lbt_portion,
-            lbt_rate=lbt_rate,
-            lbt_discount=self.lbt_discount,
-            inflation_rate=inflation_rate,
-        )
-
+        # Allocate indirect tax by their associated expense year
         expenses = np.bincount(
-            self.expense_year - self.start_year, weights=cost_adjusted
+            self.expense_year - self.start_year, weights=indirect_tax
         )
         zeros = np.zeros(self.project_duration - len(expenses))
 
         return np.concatenate((expenses, zeros))
+
+    def expenditures_post_tax(
+        self,
+        year_inflation: np.ndarray = None,
+        inflation_rate: np.ndarray | float = 0.0,
+        tax_portion: np.ndarray = None,
+        tax_rate: np.ndarray | float = 0.0,
+        tax_discount: float = 0.0,
+    ) -> np.ndarray:
+        """
+        Calculate post-tax expenditures, adjusted for inflation and indirect taxes.
+
+        This function computes the total project expenditures after adjusting for inflation and
+        applying indirect taxes. It first calculates pre-tax expenditures adjusted for inflation,
+        and then adds the indirect taxes based on the tax portion, rate, and discount.
+
+        Parameters
+        ----------
+        year_inflation : np.ndarray, optional
+            An array of years representing when inflation impacts each cost. If not provided,
+            it defaults to the `start_year` of the project for all costs. The array must have
+            the same length as `self.cost`.
+        inflation_rate : np.ndarray or float, optional
+            The inflation rate(s) to apply. If a single float is provided, it is applied uniformly
+            across all years. If an array is provided, each inflation rate corresponds to a specific
+            project year (default is 0.0).
+        tax_portion : np.ndarray, optional
+            A NumPy array representing the portion of each cost subject to taxation. If not provided,
+            defaults to an array of zeros, implying no taxation.
+        tax_rate : np.ndarray or float, optional
+            The tax rate to apply to the costs. If a float is provided, it applies uniformly across all
+            project years. If a NumPy array is provided, the rate can vary by year (default is 0.0).
+        tax_discount : float, optional
+            A discount applied to the tax rate, represented as a decimal fraction (e.g., 0.1 for 10%).
+            Default is 0.0, meaning no discount is applied.
+
+        Returns
+        -------
+        np.ndarray
+            An array representing the post-tax expenditures for each project year, adjusted for
+            inflation and indirect taxes.
+
+        Notes
+        -----
+        This function combines two steps:
+        1.  Calls `expenditures_pre_tax` to adjust the costs for inflation.
+        2.  Calls `indirect_tax` to compute indirect taxes on the costs based on the specified
+            tax portion, rate, and discount.
+
+        The formula used to calculate post-tax expenditures is:
+            expenditures_post_tax = expenditures_pre_tax + indirect_tax
+        """
+
+        return (
+            self.expenditures_pre_tax(year_inflation=year_inflation, inflation_rate=inflation_rate)
+            + self.indirect_tax(tax_portion=tax_portion, tax_rate=tax_rate, tax_discount=tax_discount)
+        )
 
     def __len__(self):
         return self.project_duration
