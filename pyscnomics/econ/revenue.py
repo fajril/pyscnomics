@@ -535,7 +535,7 @@ class Lifting:
 
         # Between an instance of Lifting and an instance of Tangible/Intangible/OPEX/ASR
         elif isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
-            return np.sum(self.revenue()) / np.sum(other.expenditures())
+            return np.sum(self.revenue()) / np.sum(other.expenditures_post_tax())
 
         # Between an instance of Lifting and an integer/float
         elif isinstance(other, (int, float)):

@@ -3,43 +3,56 @@ Prepare and classify cost data based on its components. The associated cost comp
 (1) Tangible,
 (2) Intangible,
 (3) OPEX,
-(4) ASR
+(4) ASR,
+(5) LBT,
 """
 
 import numpy as np
 from dataclasses import dataclass, field
 
 import pyscnomics.econ.depreciation as depr
-from pyscnomics.tools.helper import apply_cost_adjustment
+from pyscnomics.tools.helper import apply_cost_adjustment, check_input, get_cost_adjustment_by_inflation
 from pyscnomics.econ.selection import FluidType, DeprMethod, TaxType
 
 
+class GeneralCostException(Exception):
+    """Exception to be raised for an incorrect use of class GeneralCost"""
+
+    pass
+
+
 class CapitalException(Exception):
-    """Exception to be raised if class Capital Cost is misused"""
+    """Exception to be raised for an incorrect use of class CapitalCost"""
 
     pass
 
 
 class IntangibleException(Exception):
-    """Exception to be raised if class Intangible is misused"""
+    """Exception to be raised for an incorrect use of class Intangible"""
 
     pass
 
 
 class OPEXException(Exception):
-    """Exception to be raised if class OPEX is misused"""
+    """Exception to be raised for an incorrect use of class OPEX"""
 
     pass
 
 
 class ASRException(Exception):
-    """Exception to be raised if class ASR is misused"""
+    """Exception to be raised for an incorrect use of class ASR"""
+
+    pass
+
+
+class LBTException(Exception):
+    """Exception to be raised for an incorrect use of class LBT"""
 
     pass
 
 
 class CostOfSalesException(Exception):
-    """Exception to be raised if class CostOfSales is misused"""
+    """Exception to be raised for an incorrect use of class CostOfSales"""
 
     pass
 
@@ -86,16 +99,191 @@ class GeneralCost:
     expense_year: np.ndarray
     cost_allocation: list[FluidType] = field(default=None)
     description: list[str] = field(default=None)
-    vat_portion: np.ndarray = field(default=None)
-    vat_discount: float | np.ndarray = field(default=0.0)
-    lbt_portion: np.ndarray = field(default=None)
-    lbt_discount: float | np.ndarray = field(default=0.0)
+    # vat_portion: np.ndarray = field(default=None)
+    # vat_discount: float | np.ndarray = field(default=0.0)
+    # lbt_portion: np.ndarray = field(default=None)
+    # lbt_discount: float | np.ndarray = field(default=0.0)
 
     # Attribute to be defined later on
-    project_duration: int = field(default=None, init=False, repr=False)
-    project_years: np.ndarray = field(default=None, init=False, repr=False)
+    project_duration: int = field(default=None, init=False)
+    project_years: np.ndarray = field(default=None, init=False)
 
-    def expenditures(
+    def expenditures_pre_tax(
+        self,
+        year_inflation: np.ndarray = None,
+        inflation_rate: np.ndarray | float = 0.0,
+    ) -> np.ndarray:
+        """
+        Calculate the pre-tax expenditures, adjusted for inflation, across the project duration.
+
+        This function adjusts the project costs for inflation based on the specified inflation
+        rates and years, then allocates the costs to the corresponding expense years.
+
+        Parameters
+        ----------
+        year_inflation : np.ndarray, optional
+            An array of years representing when inflation impacts each cost. If not provided,
+            it defaults to the `start_year` of the project for all costs. The array must have
+            the same length as `self.cost`.
+
+        inflation_rate : np.ndarray or float, optional
+            The inflation rate(s) to apply. If a single float is provided, it is applied uniformly
+            across all years. If an array is provided, each inflation rate corresponds to a specific
+            project year (default is 0.0).
+
+        Returns
+        -------
+        np.ndarray
+            An array representing the adjusted expenditures for each project year, adjusted for
+            inflation, and allocated by the associated expense year. The length of the returned
+            array matches the project duration.
+
+        Notes
+        -----
+        The function performs the following steps:
+        1. Checks the validity of `year_inflation`, ensuring it is a NumPy array and within the valid
+           range of project years (`start_year` to `end_year`).
+        2. Adjusts costs based on the inflation scheme using the `get_cost_adjustment_by_inflation`
+           function, which applies the inflation rates for the given `year_inflation`.
+        3. Allocates the adjusted costs to the associated expense years and returns the result as a
+           NumPy array, padded with zeros if necessary to match the project duration.
+        """
+
+        # Prepare attribute year_inflation
+        if year_inflation is None:
+            year_inflation = np.repeat(self.start_year, len(self.cost))
+
+        else:
+            if not isinstance(year_inflation, np.ndarray):
+                raise GeneralCostException(
+                    f"Attribute year_inflation must be given as a numpy.ndarray, "
+                    f"not as a/an {year_inflation.__class__.__qualname__}"
+                )
+
+            if len(year_inflation) != len(self.cost):
+                raise GeneralCostException(
+                    f"Unequal length of arrays: "
+                    f"cost: {len(self.cost)}, "
+                    f"year_inflation: {len(year_inflation)}"
+                )
+
+        year_inflation = year_inflation.astype(np.int64)
+
+        # Raise an error: year_inflation is before the start year of the project
+        if np.min(year_inflation) < self.start_year:
+            raise GeneralCostException(
+                f"year_inflation ({np.min(year_inflation)}) is before the start year "
+                f"of the project ({self.start_year})"
+            )
+
+        # Raise an error: year_inflation is after the end year of the project
+        if np.max(year_inflation) > self.end_year:
+            raise GeneralCostException(
+                f"year_inflation ({np.max(year_inflation)}) is after the end year "
+                f"of the project ({self.end_year})"
+            )
+
+        # Cost adjustment by inflation scheme
+        cost_adjusted_by_inflation = get_cost_adjustment_by_inflation(
+            start_year=self.start_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+        )
+
+        # Allocate costs by their associated expense year
+        expenses = np.bincount(
+            self.expense_year - self.start_year, weights=cost_adjusted_by_inflation
+        )
+        zeros = np.zeros(self.project_duration - len(expenses))
+
+        return np.concatenate((expenses, zeros))
+
+    def indirect_tax(
+        self,
+        tax_portion: np.ndarray = None,
+        tax_rate: np.ndarray | float = 0.0,
+        tax_discount: float = 0.0,
+    ) -> np.ndarray:
+        """
+        Calculate the indirect tax for the project costs based on tax portions, rates,
+        and discounts.
+
+        This function applies indirect tax calculations on the project costs by considering
+        a specified portion of costs subject to tax, tax rates, and any applicable tax discounts.
+        If no tax portion is provided, it defaults to zero (i.e., no tax).
+
+        Parameters
+        ----------
+        tax_portion : np.ndarray, optional
+            A NumPy array representing the portion of the cost subject to taxation for each cost entry.
+            If not provided, it defaults to an array of zeros, implying no portion of the costs
+            is subject to tax.
+        tax_rate : np.ndarray or float, optional
+            The tax rate to apply. If provided as a float, the same rate is applied uniformly
+            across all years. If provided as an array, it should correspond to the project years
+            (default is 0.0).
+        tax_discount : float, optional
+            A discount on the tax rate, applied uniformly across all costs. This should be a
+            decimal fraction representing the percentage of discount, where 1.0 corresponds to
+            a 100% discount (default is 0.0).
+
+        Returns
+        -------
+        np.ndarray
+            A NumPy array representing the indirect tax applied to each cost entry.
+
+        Notes
+        -----
+        The function calculates the indirect tax using the formula:
+
+            indirect_tax = cost * (tax_portion * tax_rate * (1.0 - tax_discount))
+        """
+
+        # Prepare attribute tax portion
+        if tax_portion is None:
+            tax_portion = np.zeros_like(self.cost)
+
+        else:
+            if not isinstance(tax_portion, np.ndarray):
+                raise GeneralCostException(
+                    f"Attribute tax portion must be given as a numpy.ndarray, "
+                    f"not as a/an {tax_portion.__class__.__qualname__}"
+                )
+
+        tax_portion = tax_portion.astype(np.float64)
+
+        # Prepare attribute tax rate
+        if not isinstance(tax_rate, (np.ndarray, float)):
+            raise GeneralCostException(
+                f"Attribute tax rate must be given as a float or as a numpy.ndarray, "
+                f"not as a/an {tax_rate.__class__.__qualname__}"
+            )
+
+        else:
+            tax_rate_arr = check_input(target_func=self.project_years, param=tax_rate)
+
+        # Prepare attribute tax discount
+        if not isinstance(tax_discount, float):
+            raise GeneralCostException(
+                f"Attribute tax discount must be given as a numpy.ndarray, "
+                f"not as a/an {tax_discount.__class__.__qualname__}"
+            )
+
+        else:
+            tax_discount = np.repeat(tax_discount, len(self.cost))
+
+        tax_discount = tax_discount.astype(np.float64)
+
+        # Calculate indirect tax
+        tax_rate_ids = (self.expense_year - self.start_year).astype(np.int64)
+
+        # Caclulate indirect tax
+        return self.cost * (tax_portion * tax_rate_arr[tax_rate_ids] * (1.0 - tax_discount))
+
+    def expenditures_post_tax(
         self,
         year_ref: int = None,
         tax_type: TaxType = TaxType.VAT,
@@ -582,7 +770,7 @@ class CapitalCost(GeneralCost):
         )[0]
 
         return np.cumsum(
-            self.expenditures(
+            self.expenditures_post_tax(
                 year_ref=year_ref,
                 tax_type=tax_type,
                 vat_rate=vat_rate,
@@ -870,8 +1058,9 @@ class Intangible(GeneralCost):
     ----------
     The attributes are inherited from class GeneralCost.
     """
+
     def __post_init__(self):
-        # Check for inappropriate start and end year project
+        # Prepare attributes project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
             self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
@@ -882,102 +1071,102 @@ class Intangible(GeneralCost):
                 f"is after the end year {self.end_year}"
             )
 
-        # Configure VAT portion
-        if self.vat_portion is None:
-            self.vat_portion = np.ones_like(self.cost)
-
-        if self.vat_portion is not None:
-            if not isinstance(self.vat_portion, np.ndarray):
-                raise IntangibleException(
-                    f"Attribute VAT portion must be a numpy ndarray; "
-                    f"VAT portion ({self.vat_portion}) is of datatype "
-                    f"{self.vat_portion.__class__.__qualname__}."
-                )
-
-        # Configure LBT portion
-        if self.lbt_portion is None:
-            self.lbt_portion = np.ones_like(self.cost)
-
-        if self.lbt_portion is not None:
-            if not isinstance(self.lbt_portion, np.ndarray):
-                raise IntangibleException(
-                    f"Attribute LBT portion must be a numpy ndarray; "
-                    f"LBT portion ({self.lbt_portion}) is of datatype "
-                    f"{self.lbt_portion.__class__.__qualname__}."
-                )
-
-        # Configure VAT discount
-        if isinstance(self.vat_discount, float):
-            self.vat_discount = np.repeat(self.vat_discount, len(self.cost))
-
-        # Configure LBT discount
-        if isinstance(self.lbt_discount, float):
-            self.lbt_discount = np.repeat(self.lbt_discount, len(self.cost))
-
-        # Configure description data
-        if self.description is None:
-            self.description = [" " for _ in range(len(self.cost))]
-
-        if self.description is not None:
-            if not isinstance(self.description, list):
-                raise IntangibleException(
-                    f"Attribute description must be a list; "
-                    f"description (datatype: {self.description.__class__.__qualname__}) "
-                    f"is not a list."
-                )
-
-        # Configure cost_allocation data
-        if self.cost_allocation is None:
-            self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
-
-        if self.cost_allocation is not None:
-            if not isinstance(self.cost_allocation, list):
-                raise IntangibleException(
-                    f"Attribute cost_allocation must be a list. "
-                    f"cost_allocation ({self.cost_allocation.__class__.__qualname__}) "
-                    f"is not a list."
-                )
-
-        # Check input data for unequal length
-        arr_length = len(self.cost)
-
-        if not all(
-            len(arr) == arr_length
-            for arr in [
-                self.expense_year,
-                self.cost_allocation,
-                self.description,
-                self.vat_portion,
-                self.vat_discount,
-                self.lbt_portion,
-                self.lbt_discount,
-            ]
-        ):
-            raise IntangibleException(
-                f"Unequal length of array: "
-                f"cost: {len(self.cost)}, "
-                f"expense_year: {len(self.expense_year)}, "
-                f"cost_allocation: {len(self.cost_allocation)}, "
-                f"description: {len(self.description)}, "
-                f"vat_portion: {len(self.vat_portion)}, "
-                f"vat_discount: {len(self.vat_discount)}, "
-                f"lbt_portion: {len(self.lbt_portion)}, "
-                f"lbt_discount: {len(self.lbt_discount)}."
-            )
-
-        # Raise an error message: expense year is after the end year of the project
-        if np.max(self.expense_year) > self.end_year:
-            raise IntangibleException(
-                f"Expense year ({np.max(self.expense_year)}) "
-                f"is after the end year of the project ({self.end_year})"
-            )
-
-        # Raise an error message: expense year is before the start year of the project
-        if np.min(self.expense_year) < self.start_year:
-            raise IntangibleException(
-                f"Expense year ({np.min(self.expense_year)}) "
-                f"is before the start year of the project ({self.start_year})"
-            )
+        # # Configure VAT portion
+        # if self.vat_portion is None:
+        #     self.vat_portion = np.ones_like(self.cost)
+        #
+        # if self.vat_portion is not None:
+        #     if not isinstance(self.vat_portion, np.ndarray):
+        #         raise IntangibleException(
+        #             f"Attribute VAT portion must be a numpy ndarray; "
+        #             f"VAT portion ({self.vat_portion}) is of datatype "
+        #             f"{self.vat_portion.__class__.__qualname__}."
+        #         )
+        #
+        # # Configure LBT portion
+        # if self.lbt_portion is None:
+        #     self.lbt_portion = np.ones_like(self.cost)
+        #
+        # if self.lbt_portion is not None:
+        #     if not isinstance(self.lbt_portion, np.ndarray):
+        #         raise IntangibleException(
+        #             f"Attribute LBT portion must be a numpy ndarray; "
+        #             f"LBT portion ({self.lbt_portion}) is of datatype "
+        #             f"{self.lbt_portion.__class__.__qualname__}."
+        #         )
+        #
+        # # Configure VAT discount
+        # if isinstance(self.vat_discount, float):
+        #     self.vat_discount = np.repeat(self.vat_discount, len(self.cost))
+        #
+        # # Configure LBT discount
+        # if isinstance(self.lbt_discount, float):
+        #     self.lbt_discount = np.repeat(self.lbt_discount, len(self.cost))
+        #
+        # # Configure description data
+        # if self.description is None:
+        #     self.description = [" " for _ in range(len(self.cost))]
+        #
+        # if self.description is not None:
+        #     if not isinstance(self.description, list):
+        #         raise IntangibleException(
+        #             f"Attribute description must be a list; "
+        #             f"description (datatype: {self.description.__class__.__qualname__}) "
+        #             f"is not a list."
+        #         )
+        #
+        # # Configure cost_allocation data
+        # if self.cost_allocation is None:
+        #     self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
+        #
+        # if self.cost_allocation is not None:
+        #     if not isinstance(self.cost_allocation, list):
+        #         raise IntangibleException(
+        #             f"Attribute cost_allocation must be a list. "
+        #             f"cost_allocation ({self.cost_allocation.__class__.__qualname__}) "
+        #             f"is not a list."
+        #         )
+        #
+        # # Check input data for unequal length
+        # arr_length = len(self.cost)
+        #
+        # if not all(
+        #     len(arr) == arr_length
+        #     for arr in [
+        #         self.expense_year,
+        #         self.cost_allocation,
+        #         self.description,
+        #         self.vat_portion,
+        #         self.vat_discount,
+        #         self.lbt_portion,
+        #         self.lbt_discount,
+        #     ]
+        # ):
+        #     raise IntangibleException(
+        #         f"Unequal length of array: "
+        #         f"cost: {len(self.cost)}, "
+        #         f"expense_year: {len(self.expense_year)}, "
+        #         f"cost_allocation: {len(self.cost_allocation)}, "
+        #         f"description: {len(self.description)}, "
+        #         f"vat_portion: {len(self.vat_portion)}, "
+        #         f"vat_discount: {len(self.vat_discount)}, "
+        #         f"lbt_portion: {len(self.lbt_portion)}, "
+        #         f"lbt_discount: {len(self.lbt_discount)}."
+        #     )
+        #
+        # # Raise an error message: expense year is after the end year of the project
+        # if np.max(self.expense_year) > self.end_year:
+        #     raise IntangibleException(
+        #         f"Expense year ({np.max(self.expense_year)}) "
+        #         f"is after the end year of the project ({self.end_year})"
+        #     )
+        #
+        # # Raise an error message: expense year is before the start year of the project
+        # if np.min(self.expense_year) < self.start_year:
+        #     raise IntangibleException(
+        #         f"Expense year ({np.min(self.expense_year)}) "
+        #         f"is before the start year of the project ({self.start_year})"
+        #     )
 
     def __eq__(self, other):
         # Between two instances of Intangible
@@ -1778,7 +1967,7 @@ class ASR(GeneralCost):
             (1 + future_rate), self.end_year - self.expense_year + 1
         )
 
-    def expenditures(
+    def expenditures_post_tax(
         self,
         year_ref: int = None,
         tax_type: TaxType = TaxType.VAT,

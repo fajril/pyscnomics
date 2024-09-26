@@ -1361,7 +1361,7 @@ class BaseProject:
             # No inflation rate
             if inflation_rate_applied_to is None:
                 if target_attr is self._oil_asr or target_attr is self._gas_asr:
-                    return target_attr.expenditures(
+                    return target_attr.expenditures_post_tax(
                         year_ref=year_ref,
                         tax_type=tax_type,
                         vat_rate=vat_rate,
@@ -1371,7 +1371,7 @@ class BaseProject:
                     )
 
                 else:
-                    return target_attr.expenditures(
+                    return target_attr.expenditures_post_tax(
                         year_ref=year_ref,
                         tax_type=tax_type,
                         vat_rate=vat_rate,
@@ -1387,7 +1387,7 @@ class BaseProject:
                     or target_attr is self._oil_intangible
                     or target_attr is self._gas_intangible
                 ):
-                    return target_attr.expenditures(
+                    return target_attr.expenditures_post_tax(
                         year_ref=year_ref,
                         tax_type=tax_type,
                         vat_rate=vat_rate,
@@ -1397,7 +1397,7 @@ class BaseProject:
 
                 else:
                     if target_attr is self._oil_asr or target_attr is self._gas_asr:
-                        return target_attr.expenditures(
+                        return target_attr.expenditures_post_tax(
                             year_ref=year_ref,
                             tax_type=tax_type,
                             vat_rate=vat_rate,
@@ -1407,7 +1407,7 @@ class BaseProject:
                         )
 
                     else:
-                        return target_attr.expenditures(
+                        return target_attr.expenditures_post_tax(
                             year_ref=year_ref,
                             tax_type=tax_type,
                             vat_rate=vat_rate,
@@ -1418,7 +1418,7 @@ class BaseProject:
             # Inflation rate applied to OPEX only
             elif inflation_rate_applied_to == InflationAppliedTo.OPEX:
                 if target_attr is self._oil_opex or target_attr is self._gas_opex:
-                    return target_attr.expenditures(
+                    return target_attr.expenditures_post_tax(
                         year_ref=year_ref,
                         tax_type=tax_type,
                         vat_rate=vat_rate,
@@ -1428,7 +1428,7 @@ class BaseProject:
 
                 else:
                     if target_attr is self._oil_asr or target_attr is self._gas_asr:
-                        return target_attr.expenditures(
+                        return target_attr.expenditures_post_tax(
                             year_ref=year_ref,
                             tax_type=tax_type,
                             vat_rate=vat_rate,
@@ -1438,7 +1438,7 @@ class BaseProject:
                         )
 
                     else:
-                        return target_attr.expenditures(
+                        return target_attr.expenditures_post_tax(
                             year_ref=year_ref,
                             tax_type=tax_type,
                             vat_rate=vat_rate,
@@ -1456,7 +1456,7 @@ class BaseProject:
                     or target_attr is self._oil_opex
                     or target_attr is self._gas_opex
                 ):
-                    return target_attr.expenditures(
+                    return target_attr.expenditures_post_tax(
                         year_ref=year_ref,
                         tax_type=tax_type,
                         vat_rate=vat_rate,
@@ -1465,7 +1465,7 @@ class BaseProject:
                     )
 
                 else:
-                    return target_attr.expenditures(
+                    return target_attr.expenditures_post_tax(
                         year_ref=year_ref,
                         tax_type=tax_type,
                         vat_rate=vat_rate,
