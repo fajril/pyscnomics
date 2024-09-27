@@ -455,29 +455,28 @@ if __name__ == "__main__":
     from pyscnomics.econ.costs import CapitalCost, Intangible
     from pyscnomics.econ.selection import FluidType
 
-    # intang = Intangible(
-    #     start_year=2023,
-    #     end_year=2030,
-    #     cost=np.array([100, 100]),
-    #     expense_year=np.array([2025, 2027]),
-    #     cost_allocation=[FluidType.OIL, FluidType.OIL],
-    # )
-    #
-    # intang_exp_pretax = intang.expenditures_pre_tax()
-    # intang_indirect_tax_arr = intang.indirect_tax(
-    #     tax_portion=np.array([1, 1]),
-    #     tax_rate=0.01,
-    # )
-    # intang_exp_posttax = intang.expenditures_post_tax(
-    #     tax_portion=np.array([1, 1]),
-    #     tax_rate=0.01,
-    # )
-    # intang_cost_adjusted_inflation = intang.get_cost_adjusted_by_inflation()
-    # intang_indirect_tax = intang.get_indirect_tax(
-    #     tax_portion=np.array([1, 1]),
-    #     tax_rate=0.01,
-    # )
-    #
+    cap = CapitalCost(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([100, 100]),
+        expense_year=np.array([2025, 2027]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
+    )
+
+    t2 = cap.total_depreciation_rate(
+        year_inflation=np.array([2023, 2027]),
+        inflation_rate=0.01,
+        tax_portion=np.array([1, 1]),
+        tax_rate=0.01
+    )
+
+    t1 = cap.total_depreciation_book_value(
+        year_inflation=np.array([2023, 2027]),
+        inflation_rate=0.01,
+        tax_portion=np.array([1, 1]),
+        tax_rate=0.01
+    )
+
     # print('\t')
     # print(f'Filetype: {type(intang_exp_pretax)}')
     # print(f'Length: {len(intang_exp_pretax)}')
@@ -503,18 +502,18 @@ if __name__ == "__main__":
     # print(f'Length: {len(intang_indirect_tax)}')
     # print('intang_indirect_tax = \n', intang_indirect_tax)
 
-    cap = CapitalCost(
-        start_year=2023,
-        end_year=2030,
-        cost=np.array([100, 100]),
-        expense_year=np.array([2025, 2027]),
-        cost_allocation=[FluidType.OIL, FluidType.OIL],
-    )
-
-    t1 = cap.total_depreciation_rate(
-        tax_portion=np.array([1, 1]),
-        tax_rate=0.01,
-    )
+    # cap = CapitalCost(
+    #     start_year=2023,
+    #     end_year=2030,
+    #     cost=np.array([100, 100]),
+    #     expense_year=np.array([2025, 2027]),
+    #     cost_allocation=[FluidType.OIL, FluidType.OIL],
+    # )
+    #
+    # t1 = cap.total_depreciation_rate(
+    #     tax_portion=np.array([1, 1]),
+    #     tax_rate=0.01,
+    # )
 
     print('\t')
     print(f'Filetype: {type(t1)}')

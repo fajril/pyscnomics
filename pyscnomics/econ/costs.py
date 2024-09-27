@@ -11,8 +11,13 @@ import numpy as np
 from dataclasses import dataclass, field
 
 import pyscnomics.econ.depreciation as depr
-from pyscnomics.tools.helper import apply_cost_adjustment, check_input, get_cost_adjustment_by_inflation
 from pyscnomics.econ.selection import FluidType, DeprMethod, TaxType
+from pyscnomics.econ.costs_tools import (
+    check_input,
+    get_cost_adjustment_by_inflation,
+    apply_cost_adjustment,
+    calc_indirect_tax,
+)
 
 
 class GeneralCostException(Exception):
@@ -94,86 +99,49 @@ class GeneralCost:
     project_duration: int = field(default=None, init=False)
     project_years: np.ndarray = field(default=None, init=False)
 
-    def _prepare_expenditures_pre_tax(
+    def expenditures_pre_tax(
         self,
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
-    ) -> tuple:
+    ) -> np.ndarray:
         """
-        Calculate the pre-tax expenditures, adjusted for inflation, across the project duration.
+        Calculate pre-tax expenditures adjusted by inflation.
 
-        This function adjusts the project costs for inflation based on the specified inflation
-        rates and years, then allocates the costs to the corresponding expense years.
+        This function adjusts the project costs based on inflation rates and allocates
+        the costs to their respective expense years, returning the pre-tax expenditures
+        for the entire project duration. The function performs cost adjustments using
+        inflation rates and expense years, ensuring that costs are properly distributed
+        across project years.
 
         Parameters
         ----------
         year_inflation : np.ndarray, optional
-            An array of years representing when inflation impacts each cost. If not provided,
-            it defaults to the `start_year` of the project for all costs. The array must have
-            the same length as `self.cost`.
+            A NumPy array representing the years during which inflation is applied to the costs.
+            If not provided, defaults to repeating the `start_year` for all costs.
         inflation_rate : np.ndarray or float, optional
-            The inflation rate(s) to apply. If a single float is provided, it is applied uniformly
-            across all years. If an array is provided, each inflation rate corresponds to a specific
-            project year (default is 0.0).
+            The inflation rate(s) to apply to the project costs. If provided as a float,
+            a uniform inflation rate is applied. If provided as a NumPy array, different
+            rates are applied based on the corresponding project years. Default is 0.0.
 
         Returns
         -------
-        tuple
-            A tuple containing two elements:
-            - `cost_adjusted_by_inflation` : np.ndarray
-                The array of costs adjusted for inflation.
-            - `expenses` : np.ndarray
-                The allocated expenses by the corresponding expense year, padded with zeros if
-                necessary to match the project duration.
+        np.ndarray
+            A NumPy array representing the pre-tax expenditures adjusted by inflation,
+            allocated to the expense years, and extended to the full project duration.
 
         Notes
         -----
-        The function performs the following steps:
-        1. Checks the validity of `year_inflation`, ensuring it is a NumPy array and within the valid
-           range of project years (`start_year` to `end_year`).
-        2. Adjusts costs based on the inflation scheme using the `get_cost_adjustment_by_inflation`
-           function, which applies the inflation rates for the given `year_inflation`.
-        3. Allocates the adjusted costs to the associated expense years and returns the result as a
-           NumPy array, padded with zeros if necessary to match the project duration.
+        -   The inflation adjustment is performed using the `calc_inflation` function,
+            which computes the inflation-adjusted costs.
+        -   Costs are allocated by their associated expense years, and any missing years
+            are filled with zeros to match the total project duration.
+        -   The indirect tax is allocated across expense years using `np.bincount`.
         """
-
-        # Prepare attribute year_inflation
-        if year_inflation is None:
-            year_inflation = np.repeat(self.start_year, len(self.cost))
-
-        else:
-            if not isinstance(year_inflation, np.ndarray):
-                raise GeneralCostException(
-                    f"Attribute year_inflation must be given as a numpy.ndarray, "
-                    f"not as a/an {year_inflation.__class__.__qualname__}"
-                )
-
-            if len(year_inflation) != len(self.cost):
-                raise GeneralCostException(
-                    f"Unequal length of arrays: "
-                    f"cost: {len(self.cost)}, "
-                    f"year_inflation: {len(year_inflation)}"
-                )
-
-        year_inflation = year_inflation.astype(np.int64)
-
-        # Raise an error: year_inflation is before the start year of the project
-        if np.min(year_inflation) < self.start_year:
-            raise GeneralCostException(
-                f"year_inflation ({np.min(year_inflation)}) is before the start year "
-                f"of the project ({self.start_year})"
-            )
-
-        # Raise an error: year_inflation is after the end year of the project
-        if np.max(year_inflation) > self.end_year:
-            raise GeneralCostException(
-                f"year_inflation ({np.max(year_inflation)}) is after the end year "
-                f"of the project ({self.end_year})"
-            )
 
         # Cost adjustment by inflation scheme
         cost_adjusted_by_inflation = get_cost_adjustment_by_inflation(
             start_year=self.start_year,
+            end_year=self.end_year,
             cost=self.cost,
             expense_year=self.expense_year,
             project_years=self.project_years,
@@ -187,93 +155,57 @@ class GeneralCost:
         )
         zeros = np.zeros(self.project_duration - len(expenses))
 
-        return (
-            cost_adjusted_by_inflation,
-            np.concatenate((expenses, zeros))
-        )
+        return np.concatenate((expenses, zeros))
 
-    def _prepare_indirect_tax(
+    def indirect_taxes(
         self,
         tax_portion: np.ndarray = None,
         tax_rate: np.ndarray | float = 0.0,
         tax_discount: float = 0.0,
-    ) -> tuple:
+    ) -> np.ndarray:
         """
-        Calculate the indirect tax for the project costs based on tax portions, rates,
-        and discounts.
+        Calculate and allocate indirect taxes on project costs.
 
-        This function applies indirect tax calculations on the project costs by considering
-        a specified portion of costs subject to tax, tax rates, and any applicable tax discounts.
-        If no tax portion is provided, it defaults to zero (i.e., no tax).
+        This function calculates the indirect tax by applying the specified tax portion,
+        tax rates, and tax discount to the project costs. The calculated tax is then allocated
+        by the associated expense year.
 
         Parameters
         ----------
         tax_portion : np.ndarray, optional
-            A NumPy array representing the portion of the cost subject to taxation for each cost entry.
-            If not provided, it defaults to an array of zeros, implying no portion of the costs
-            is subject to tax.
+            A NumPy array representing the portion of the cost subject to tax. If not provided,
+            an array of zeros with the same shape as the project cost will be used.
         tax_rate : np.ndarray or float, optional
-            The tax rate to apply. If provided as a float, the same rate is applied uniformly
-            across all years. If provided as an array, it should correspond to the project years
-            (default is 0.0).
+            A NumPy array or float representing the tax rate applied to the costs. If not provided,
+            a default rate of 0.0 will be used. When provided as an array, it should match
+            the project years.
         tax_discount : float, optional
-            A discount on the tax rate, applied uniformly across all costs. This should be a
-            decimal fraction representing the percentage of discount, where 1.0 corresponds to
-            a 100% discount (default is 0.0).
+            A discount factor applied to the tax, reducing the overall tax impact. The default is 0.0.
 
         Returns
         -------
-        tuple
-            A tuple containing:
-            - indirect_tax (np.ndarray): The calculated indirect tax for each cost.
-            - allocated_tax (np.ndarray): The indirect tax allocated by the corresponding
-              expense year. The result is padded with zeros to match the total project duration.
+        np.ndarray
+            A NumPy array containing the allocated indirect taxes per year, adjusted by
+            the tax portion, tax rates, and tax discount. The array has the length equal to
+            the project duration.
 
         Notes
         -----
-        The function calculates the indirect tax using the formula:
-
-            indirect_tax = cost * (tax_portion * tax_rate * (1.0 - tax_discount))
+        -   The function computes the tax rate based on the expense year and `start_year`,
+            and then applies the tax rate, portion, and discount to the project costs.
+        -   The indirect tax is allocated across expense years using `np.bincount`.
         """
 
-        # Prepare attribute tax portion
-        if tax_portion is None:
-            tax_portion = np.zeros_like(self.cost)
-
-        else:
-            if not isinstance(tax_portion, np.ndarray):
-                raise GeneralCostException(
-                    f"Attribute tax portion must be given as a numpy.ndarray, "
-                    f"not as a/an {tax_portion.__class__.__qualname__}"
-                )
-
-        tax_portion = tax_portion.astype(np.float64)
-
-        # Prepare attribute tax rate
-        if not isinstance(tax_rate, (np.ndarray, float)):
-            raise GeneralCostException(
-                f"Attribute tax rate must be given as a float or as a numpy.ndarray, "
-                f"not as a/an {tax_rate.__class__.__qualname__}"
-            )
-
-        else:
-            tax_rate_arr = check_input(target_func=self.project_years, param=tax_rate)
-
-        # Prepare attribute tax discount
-        if not isinstance(tax_discount, float):
-            raise GeneralCostException(
-                f"Attribute tax discount must be given as a numpy.ndarray, "
-                f"not as a/an {tax_discount.__class__.__qualname__}"
-            )
-
-        else:
-            tax_discount = np.repeat(tax_discount, len(self.cost))
-
-        tax_discount = tax_discount.astype(np.float64)
-
         # Calculate indirect tax
-        tax_rate_ids = (self.expense_year - self.start_year).astype(np.int64)
-        indirect_tax = self.cost * (tax_portion * tax_rate_arr[tax_rate_ids] * (1.0 - tax_discount))
+        indirect_tax = calc_indirect_tax(
+            start_year=self.start_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            tax_portion=tax_portion,
+            tax_rate=tax_rate,
+            tax_discount=tax_discount,
+        )
 
         # Allocate indirect tax by their associated expense year
         expenses = np.bincount(
@@ -281,187 +213,7 @@ class GeneralCost:
         )
         zeros = np.zeros(self.project_duration - len(expenses))
 
-        return (
-            indirect_tax,
-            np.concatenate((expenses, zeros))
-        )
-
-    def get_cost_adjusted_by_inflation(
-        self,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | float = 0.0,
-    ) -> np.ndarray:
-        """
-        Get project costs adjusted for inflation.
-
-        This function calculates and returns the costs after adjusting for inflation
-        based on the specified `year_inflation` and `inflation_rate`. It utilizes the
-        `_prepare_expenditures_pre_tax` method to perform the inflation adjustment.
-
-        Parameters
-        ----------
-        year_inflation : np.ndarray, optional
-            An array of years representing when inflation impacts each cost. If not provided,
-            it defaults to the `start_year` of the project for all costs. The array must have
-            the same length as `self.cost`.
-        inflation_rate : np.ndarray or float, optional
-            The inflation rate(s) to apply. If a single float is provided, it is applied uniformly
-            across all years. If an array is provided, each inflation rate corresponds to a specific
-            project year (default is 0.0).
-
-        Returns
-        -------
-        np.ndarray
-            The array of costs adjusted for inflation.
-
-        Notes
-        -----
-        This function extracts the inflation-adjusted costs from the first element of
-        the tuple returned by the `_prepare_expenditures_pre_tax` method.
-        """
-
-        return self._prepare_expenditures_pre_tax(
-            year_inflation=year_inflation,
-            inflation_rate=inflation_rate,
-        )[0]
-
-    def expenditures_pre_tax(
-        self,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | float = 0.0,
-    ) -> np.ndarray:
-        """
-        Get pre-tax expenditures after adjusting for inflation.
-
-        This function calculates the pre-tax expenditures, which are adjusted based on
-        the given inflation scheme. It uses the `_prepare_expenditures_pre_tax` method
-        to adjust costs for inflation and allocate them to the appropriate expense years.
-
-        Parameters
-        ----------
-        year_inflation : np.ndarray, optional
-            An array of years representing when inflation impacts each cost. If not provided,
-            it defaults to the `start_year` of the project for all costs. The array must have
-            the same length as `self.cost`.
-        inflation_rate : np.ndarray or float, optional
-            The inflation rate(s) to apply. If a single float is provided, it is applied uniformly
-            across all years. If an array is provided, each inflation rate corresponds to a specific
-            project year (default is 0.0).
-
-        Returns
-        -------
-        np.ndarray
-            The array of pre-tax expenditures, allocated by the corresponding expense
-            year and adjusted for inflation. The result is padded with zeros if necessary
-            to match the total project duration.
-
-        Notes
-        -----
-        This function returns the second element from the tuple produced by the
-        `_prepare_expenditures_pre_tax` method, which represents the pre-tax expenditures
-        allocated by expense year.
-        """
-
-        return self._prepare_expenditures_pre_tax(
-            year_inflation=year_inflation,
-            inflation_rate=inflation_rate,
-        )[1]
-
-    def get_indirect_tax(
-        self,
-        tax_portion: np.ndarray = None,
-        tax_rate: np.ndarray | float = 0.0,
-        tax_discount: float = 0.0,
-    ) -> np.ndarray:
-        """
-        Calculate and return the indirect tax for each cost.
-
-        This function computes the indirect tax for the project based on the tax portion,
-        tax rate, and tax discount. The calculation is performed using the
-        `_prepare_indirect_tax` method, and only the indirect tax (without allocation)
-        is returned.
-
-        Parameters
-        ----------
-        tax_portion : np.ndarray, optional
-            A NumPy array representing the portion of the cost subject to taxation for each cost entry.
-            If not provided, it defaults to an array of zeros, implying no portion of the costs
-            is subject to tax.
-        tax_rate : np.ndarray or float, optional
-            The tax rate to apply. If provided as a float, the same rate is applied uniformly
-            across all years. If provided as an array, it should correspond to the project years
-            (default is 0.0).
-        tax_discount : float, optional
-            A discount on the tax rate, applied uniformly across all costs. This should be a
-            decimal fraction representing the percentage of discount, where 1.0 corresponds to
-            a 100% discount (default is 0.0).
-
-        Returns
-        -------
-        np.ndarray
-            The calculated indirect tax for each cost in the project.
-
-        Notes
-        -----
-        This function retrieves the first element from the tuple returned by
-        `_prepare_indirect_tax`, which represents the computed indirect tax for each cost
-        without considering the allocation by expense year.
-        """
-
-        return self._prepare_indirect_tax(
-            tax_portion=tax_portion,
-            tax_rate=tax_rate,
-            tax_discount=tax_discount,
-        )[0]
-
-    def indirect_tax(
-        self,
-        tax_portion: np.ndarray = None,
-        tax_rate: np.ndarray | float = 0.0,
-        tax_discount: float = 0.0,
-    ) -> np.ndarray:
-        """
-        Calculate and allocate indirect tax by expense year.
-
-        This function computes the indirect tax for the project, adjusts the costs
-        based on tax portion, tax rate, and tax discount, and allocates the indirect tax
-        to the corresponding expense year. The calculation is performed using
-        the `_prepare_indirect_tax` method, and the allocated tax (including padding
-        for project duration) is returned.
-
-        Parameters
-        ----------
-        tax_portion : np.ndarray, optional
-            A NumPy array representing the portion of the cost subject to taxation for each cost entry.
-            If not provided, it defaults to an array of zeros, implying no portion of the costs
-            is subject to tax.
-        tax_rate : np.ndarray or float, optional
-            The tax rate to apply. If provided as a float, the same rate is applied uniformly
-            across all years. If provided as an array, it should correspond to the project years
-            (default is 0.0).
-        tax_discount : float, optional
-            A discount on the tax rate, applied uniformly across all costs. This should be a
-            decimal fraction representing the percentage of discount, where 1.0 corresponds to
-            a 100% discount (default is 0.0).
-
-        Returns
-        -------
-        np.ndarray
-            The indirect tax allocated by the corresponding expense year, padded with zeros
-            to match the total project duration.
-
-        Notes
-        -----
-        - This function returns the second element of the tuple from `_prepare_indirect_tax`,
-          which represents the indirect tax allocated by expense year.
-        - The output includes padding with zeros to match the total project duration.
-        """
-
-        return self._prepare_indirect_tax(
-            tax_portion=tax_portion,
-            tax_rate=tax_rate,
-            tax_discount=tax_discount,
-        )[1]
+        return np.concatenate((expenses, zeros))
 
     def expenditures_post_tax(
         self,
@@ -508,7 +260,7 @@ class GeneralCost:
         -----
         This function combines two steps:
         1.  Calls `expenditures_pre_tax` to adjust the costs for inflation.
-        2.  Calls `indirect_tax` to compute indirect taxes on the costs based on the specified
+        2.  Calls `indirect_taxes` to compute indirect taxes on the costs based on the specified
             tax portion, rate, and discount.
 
         The formula used to calculate post-tax expenditures is:
@@ -516,8 +268,12 @@ class GeneralCost:
         """
 
         return (
-            self.expenditures_pre_tax(year_inflation=year_inflation, inflation_rate=inflation_rate)
-            + self.indirect_tax(tax_portion=tax_portion, tax_rate=tax_rate, tax_discount=tax_discount)
+            self.expenditures_pre_tax(
+                year_inflation=year_inflation, inflation_rate=inflation_rate
+            ) +
+            self.indirect_taxes(
+                tax_portion=tax_portion, tax_rate=tax_rate, tax_discount=tax_discount,
+            )
         )
 
     def __len__(self):
@@ -719,11 +475,37 @@ class CapitalCost(GeneralCost):
         tax_discount: float = 0.0,
     ) -> tuple:
         """
-        Calculate total depreciation charge and undepreciated asset value based on various parameters.
+        This function calculates the total depreciation for a project based on the specified
+        depreciation method, inflation rates, tax portions, and tax discounts. It also returns
+        the undepreciated asset value at the end of the depreciation period.
 
         Parameters
         ----------
-
+        depr_method : DeprMethod, optional
+            The depreciation method to be applied. Available methods include:
+            - `DeprMethod.SL` for straight-line depreciation,
+            - `DeprMethod.DB` for declining balance,
+            - `DeprMethod.PSC_DB` for PSC declining balance.
+            Default is `DeprMethod.PSC_DB`.
+        decline_factor : float or int, optional
+            The decline factor used in the declining balance depreciation method.
+            Default is 2, which corresponds to double-declining balance.
+        year_inflation : np.ndarray, optional
+            A NumPy array representing the years during which inflation is applied to the costs.
+            If not provided, defaults to repeating the `start_year` for all costs.
+        inflation_rate : np.ndarray or float, optional
+            The inflation rate(s) to apply to the project costs. If provided as a float,
+            a uniform inflation rate is applied. If provided as a NumPy array, different
+            rates are applied based on the corresponding project years. Default is 0.0.
+        tax_portion : np.ndarray, optional
+            A NumPy array representing the portion of the cost subject to tax. If not provided,
+            an array of zeros with the same shape as the project cost will be used.
+        tax_rate : np.ndarray or float, optional
+            A NumPy array or float representing the tax rate applied to the costs. If not provided,
+            a default rate of 0.0 will be used. When provided as an array, it should match
+            the project years.
+        tax_discount : float, optional
+            A discount factor applied to the tax, reducing the overall tax impact. The default is 0.0.
 
         Returns
         -------
@@ -744,11 +526,20 @@ class CapitalCost(GeneralCost):
 
         # Cost adjustment
         cost_adjusted = (
-            self.get_cost_adjusted_by_inflation(
+            get_cost_adjustment_by_inflation(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                cost=self.cost,
+                expense_year=self.expense_year,
+                project_years=self.project_years,
                 year_inflation=year_inflation,
                 inflation_rate=inflation_rate,
             ) +
-            self.get_indirect_tax(
+            calc_indirect_tax(
+                start_year=self.start_year,
+                cost=self.cost,
+                expense_year=self.expense_year,
+                project_years=self.project_years,
                 tax_portion=tax_portion,
                 tax_rate=tax_rate,
                 tax_discount=tax_discount,
@@ -836,11 +627,11 @@ class CapitalCost(GeneralCost):
         self,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
-        year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
-        vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
+        year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
+        tax_portion: np.ndarray = None,
+        tax_rate: np.ndarray | float = 0.0,
+        tax_discount: float = 0.0,
     ) -> np.ndarray:
         """
         Calculate the total book value of depreciation for the asset.
@@ -848,20 +639,30 @@ class CapitalCost(GeneralCost):
         Parameters
         ----------
         depr_method : DeprMethod, optional
-            The depreciation method to use (default is DeprMethod.PSC_DB).
-        decline_factor : float, optional
-            The decline factor used for declining balance depreciation (default is 2).
-        year_ref : int
-            The reference year for inflation calculation.
-        tax_type: TaxType
-            The type of tax applied to the corresponding asset.
-            Available options: TaxType.VAT or TaxType.LBT (default is TaxType.VAT).
-        vat_rate: np.ndarray | float
-            The VAT rate to apply. Can be a single value or an array (default is 0.0).
-        lbt_rate: np.ndarray | float
-            The LBT rate to apply. Can be a single value or an array (default is 0.0).
-        inflation_rate: np.ndarray | float
-            The inflation rate to apply. Can be a single value or an array (default is 0.0).
+            The depreciation method to be applied. Available methods include:
+            - `DeprMethod.SL` for straight-line depreciation,
+            - `DeprMethod.DB` for declining balance,
+            - `DeprMethod.PSC_DB` for PSC declining balance.
+            Default is `DeprMethod.PSC_DB`.
+        decline_factor : float or int, optional
+            The decline factor used in the declining balance depreciation method.
+            Default is 2, which corresponds to double-declining balance.
+        year_inflation : np.ndarray, optional
+            A NumPy array representing the years during which inflation is applied to the costs.
+            If not provided, defaults to repeating the `start_year` for all costs.
+        inflation_rate : np.ndarray or float, optional
+            The inflation rate(s) to apply to the project costs. If provided as a float,
+            a uniform inflation rate is applied. If provided as a NumPy array, different
+            rates are applied based on the corresponding project years. Default is 0.0.
+        tax_portion : np.ndarray, optional
+            A NumPy array representing the portion of the cost subject to tax. If not provided,
+            an array of zeros with the same shape as the project cost will be used.
+        tax_rate : np.ndarray or float, optional
+            A NumPy array or float representing the tax rate applied to the costs. If not provided,
+            a default rate of 0.0 will be used. When provided as an array, it should match
+            the project years.
+        tax_discount : float, optional
+            A discount factor applied to the tax, reducing the overall tax impact. The default is 0.0.
 
         Returns
         -------
@@ -876,27 +677,25 @@ class CapitalCost(GeneralCost):
         (2) The cumulative book value is obtained by subtracting the cumulative
             depreciation charges from the cumulative expenditures.
         """
-        if year_ref is None:
-            year_ref = self.start_year
 
         # Calculate total depreciation charge from method total_depreciation_rate
         total_depreciation_charge = self.total_depreciation_rate(
             depr_method=depr_method,
             decline_factor=decline_factor,
-            year_ref=year_ref,
-            tax_type=tax_type,
-            vat_rate=vat_rate,
-            lbt_rate=lbt_rate,
+            year_inflation=year_inflation,
             inflation_rate=inflation_rate,
+            tax_portion=tax_portion,
+            tax_rate=tax_rate,
+            tax_discount=tax_discount,
         )[0]
 
         return np.cumsum(
             self.expenditures_post_tax(
-                year_ref=year_ref,
-                tax_type=tax_type,
-                vat_rate=vat_rate,
-                lbt_rate=lbt_rate,
+                year_inflation=year_inflation,
                 inflation_rate=inflation_rate,
+                tax_portion=tax_portion,
+                tax_rate=tax_rate,
+                tax_discount=tax_discount,
             )
         ) - np.cumsum(total_depreciation_charge)
 
@@ -911,10 +710,6 @@ class CapitalCost(GeneralCost):
                     np.allclose(self.salvage_value, other.salvage_value),
                     np.allclose(self.useful_life, other.useful_life),
                     np.allclose(self.depreciation_factor, other.depreciation_factor),
-                    np.allclose(self.vat_portion, other.vat_portion),
-                    np.allclose(self.vat_discount, other.vat_discount),
-                    np.allclose(self.lbt_portion, other.lbt_portion),
-                    np.allclose(self.lbt_discount, other.lbt_discount),
                     self.cost_allocation == other.cost_allocation,
                 )
             )
@@ -927,8 +722,8 @@ class CapitalCost(GeneralCost):
             return False
 
     def __lt__(self, other):
-        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) < np.sum(other.cost)
 
         # Between an instance of CapitalCost and an integer/float
@@ -938,12 +733,12 @@ class CapitalCost(GeneralCost):
         else:
             raise CapitalException(
                 f"Must compare an instance of CapitalCost with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __le__(self, other):
-        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) <= np.sum(other.cost)
 
         # Between an instance of CapitalCost and an integer/float
@@ -953,12 +748,12 @@ class CapitalCost(GeneralCost):
         else:
             raise CapitalException(
                 f"Must compare an instance of CapitalCost with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __gt__(self, other):
-        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) > np.sum(other.cost)
 
         # Between an instance of CapitalCost and an integer/float
@@ -968,12 +763,12 @@ class CapitalCost(GeneralCost):
         else:
             raise CapitalException(
                 f"Must compare an instance of CapitalCost with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __ge__(self, other):
-        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) >= np.sum(other.cost)
 
         # Between an instance of CapitalCost and an integer/float
@@ -983,7 +778,7 @@ class CapitalCost(GeneralCost):
         else:
             raise CapitalException(
                 f"Must compare an instance of CapitalCost with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -992,23 +787,11 @@ class CapitalCost(GeneralCost):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
             cost_combined = np.concatenate((self.cost, other.cost))
-            expense_year_combined = np.concatenate(
-                (self.expense_year, other.expense_year)
-            )
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
-            vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
-            vat_discount_combined = np.concatenate(
-                (self.vat_discount, other.vat_discount)
-            )
-            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
-            lbt_discount_combined = np.concatenate(
-                (self.lbt_discount, other.lbt_discount)
-            )
             pis_year_combined = np.concatenate((self.pis_year, other.pis_year))
-            salvage_value_combined = np.concatenate(
-                (self.salvage_value, other.salvage_value)
-            )
+            salvage_value_combined = np.concatenate((self.salvage_value, other.salvage_value))
             useful_life_combined = np.concatenate((self.useful_life, other.useful_life))
             depreciation_factor_combined = np.concatenate(
                 (self.depreciation_factor, other.depreciation_factor)
@@ -1022,10 +805,6 @@ class CapitalCost(GeneralCost):
                 expense_year=expense_year_combined,
                 cost_allocation=cost_allocation_combined,
                 description=description_combined,
-                vat_portion=vat_portion_combined,
-                vat_discount=vat_discount_combined,
-                lbt_portion=lbt_portion_combined,
-                lbt_discount=lbt_discount_combined,
                 pis_year=pis_year_combined,
                 salvage_value=salvage_value_combined,
                 useful_life=useful_life_combined,
@@ -1048,23 +827,11 @@ class CapitalCost(GeneralCost):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
             cost_combined = np.concatenate((self.cost, -other.cost))
-            expense_year_combined = np.concatenate(
-                (self.expense_year, other.expense_year)
-            )
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
-            vat_portion_combined = np.concatenate((self.vat_portion, other.vat_portion))
-            vat_discount_combined = np.concatenate(
-                (self.vat_discount, other.vat_discount)
-            )
-            lbt_portion_combined = np.concatenate((self.lbt_portion, other.lbt_portion))
-            lbt_discount_combined = np.concatenate(
-                (self.lbt_discount, other.lbt_discount)
-            )
             pis_year_combined = np.concatenate((self.pis_year, other.pis_year))
-            salvage_value_combined = np.concatenate(
-                (self.salvage_value, other.salvage_value)
-            )
+            salvage_value_combined = np.concatenate((self.salvage_value, other.salvage_value))
             useful_life_combined = np.concatenate((self.useful_life, other.useful_life))
             depreciation_factor_combined = np.concatenate(
                 (self.depreciation_factor, other.depreciation_factor)
@@ -1078,10 +845,6 @@ class CapitalCost(GeneralCost):
                 expense_year=expense_year_combined,
                 cost_allocation=cost_allocation_combined,
                 description=description_combined,
-                vat_portion=vat_portion_combined,
-                vat_discount=vat_discount_combined,
-                lbt_portion=lbt_portion_combined,
-                lbt_discount=lbt_discount_combined,
                 pis_year=pis_year_combined,
                 salvage_value=salvage_value_combined,
                 useful_life=useful_life_combined,
@@ -1110,10 +873,6 @@ class CapitalCost(GeneralCost):
                 expense_year=self.expense_year,
                 cost_allocation=self.cost_allocation,
                 description=self.description,
-                vat_portion=self.vat_portion,
-                vat_discount=self.vat_discount,
-                lbt_portion=self.lbt_portion,
-                lbt_discount=self.lbt_discount,
                 pis_year=self.pis_year,
                 salvage_value=self.salvage_value,
                 useful_life=self.useful_life,
@@ -1132,8 +891,8 @@ class CapitalCost(GeneralCost):
         return self.__mul__(other)
 
     def __truediv__(self, other):
-        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
+        # Between an instance of CapitalCost with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
             return np.sum(self.cost) / np.sum(other.cost)
 
         # Between an instance of CapitalCost and an integer/float
@@ -1150,10 +909,6 @@ class CapitalCost(GeneralCost):
                     expense_year=self.expense_year,
                     cost_allocation=self.cost_allocation,
                     description=self.description,
-                    vat_portion=self.vat_portion,
-                    vat_discount=self.vat_discount,
-                    lbt_portion=self.lbt_portion,
-                    lbt_discount=self.lbt_discount,
                     pis_year=self.pis_year,
                     salvage_value=self.salvage_value,
                     useful_life=self.useful_life,
