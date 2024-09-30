@@ -452,88 +452,50 @@ def run_optimization(
 if __name__ == "__main__":
     # entry_point()
 
-    from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX
+    from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
     from pyscnomics.econ.selection import FluidType
 
-    opex = OPEX(
+    asr = ASR(
         start_year=2023,
         end_year=2030,
-        fixed_cost=np.array([100, 100]),
-        expense_year=np.array([2025, 2027]),
-        cost_allocation=[FluidType.OIL, FluidType.OIL],
+        cost=np.array([100, 150]),
+        expense_year=np.array([2024, 2025]),
+        cost_allocation=[FluidType.OIL, FluidType.GAS],
+        final_year=np.array([2024, 2027]),
+        future_rate=0.0,
     )
+
+    asr.expenditures_pre_tax(
+        inflation_rate=0.0,
+    )
+
+    # intang = Intangible(
+    #     start_year=2023,
+    #     end_year=2030,
+    #     cost=np.array([100, 50, 50]),
+    #     expense_year=np.array([2024, 2024, 2024]),
+    #     cost_allocation=[FluidType.OIL, FluidType.GAS, FluidType.GAS],
+    # )
+
+    # opex = OPEX(
+    #     start_year=2023,
+    #     end_year=2030,
+    #     fixed_cost=np.array([100, 100]),
+    #     expense_year=np.array([2025, 2027]),
+    #     cost_allocation=[FluidType.OIL, FluidType.OIL],
+    # )
 
     # t1 = opex.indirect_taxes(
     #     tax_portion=np.array([1, 1]),
     #     tax_rate=0.01,
     # )
 
-    t1 = opex.expenditures_post_tax(
-        tax_portion=np.array([1, 1]),
-        tax_rate=0.01,
-    )
-
-    # cap = CapitalCost(
-    #     start_year=2023,
-    #     end_year=2030,
-    #     cost=np.array([100, 100]),
-    #     expense_year=np.array([2025, 2027]),
-    #     cost_allocation=[FluidType.OIL, FluidType.OIL],
-    # )
-    #
-    # t2 = cap.total_depreciation_rate(
-    #     year_inflation=np.array([2023, 2027]),
-    #     inflation_rate=0.01,
-    #     tax_portion=np.array([1, 1]),
-    #     tax_rate=0.01
-    # )
-    #
-    # t1 = cap.total_depreciation_book_value(
-    #     year_inflation=np.array([2023, 2027]),
-    #     inflation_rate=0.01,
-    #     tax_portion=np.array([1, 1]),
-    #     tax_rate=0.01
-    # )
-
-    # print('\t')
-    # print(f'Filetype: {type(intang_exp_pretax)}')
-    # print(f'Length: {len(intang_exp_pretax)}')
-    # print('intang_exp_pretax = \n', intang_exp_pretax)
-    #
-    # print('\t')
-    # print(f'Filetype: {type(intang_indirect_tax_arr)}')
-    # print(f'Length: {len(intang_indirect_tax_arr)}')
-    # print('intang_indirect_tax_arr = \n', intang_indirect_tax_arr)
-    #
-    # print('\t')
-    # print(f'Filetype: {type(intang_exp_posttax)}')
-    # print(f'Length: {len(intang_exp_posttax)}')
-    # print('intang_exp_posttax = \n', intang_exp_posttax)
-    #
-    # print('\t')
-    # print(f'Filetype: {type(intang_cost_adjusted_inflation)}')
-    # print(f'Length: {len(intang_cost_adjusted_inflation)}')
-    # print('intang_cost_adjusted_inflation = \n', intang_cost_adjusted_inflation)
-    #
-    # print('\t')
-    # print(f'Filetype: {type(intang_indirect_tax)}')
-    # print(f'Length: {len(intang_indirect_tax)}')
-    # print('intang_indirect_tax = \n', intang_indirect_tax)
-
-    # cap = CapitalCost(
-    #     start_year=2023,
-    #     end_year=2030,
-    #     cost=np.array([100, 100]),
-    #     expense_year=np.array([2025, 2027]),
-    #     cost_allocation=[FluidType.OIL, FluidType.OIL],
-    # )
-    #
-    # t1 = cap.total_depreciation_rate(
+    # t1 = opex.expenditures_post_tax(
     #     tax_portion=np.array([1, 1]),
     #     tax_rate=0.01,
     # )
-
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    #
+    # print('\t')
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
+    # print('t1 = \n', t1)
