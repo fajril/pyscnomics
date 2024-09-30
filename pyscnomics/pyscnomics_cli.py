@@ -459,15 +459,21 @@ if __name__ == "__main__":
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 150]),
-        expense_year=np.array([2024, 2025]),
+        expense_year=np.array([2024, 2026]),
         cost_allocation=[FluidType.OIL, FluidType.GAS],
-        final_year=np.array([2024, 2027]),
+        final_year=np.array([2024, 2028]),
         future_rate=0.0,
     )
 
-    asr.expenditures_pre_tax(
-        inflation_rate=0.0,
+    t1 = asr.expenditures_post_tax(
+        tax_portion=np.array([1, 1]),
+        tax_rate=0.01,
     )
+
+    # asr.indirect_taxes(
+    #     tax_portion=np.array([1, 1]),
+    #     tax_rate=0.01,
+    # )
 
     # intang = Intangible(
     #     start_year=2023,
@@ -494,8 +500,8 @@ if __name__ == "__main__":
     #     tax_portion=np.array([1, 1]),
     #     tax_rate=0.01,
     # )
-    #
-    # print('\t')
-    # print(f'Filetype: {type(t1)}')
-    # print(f'Length: {len(t1)}')
-    # print('t1 = \n', t1)
+
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)

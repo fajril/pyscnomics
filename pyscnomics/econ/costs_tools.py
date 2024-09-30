@@ -396,6 +396,13 @@ def calc_indirect_tax(
                 f"not as a/an {tax_portion.__class__.__qualname__}"
             )
 
+        if len(tax_portion) != len(cost):
+            raise TaxInflationException(
+                f"Unequal length of arrays: "
+                f"Expected: {len(cost)}, "
+                f"Given: {len(tax_portion)}"
+            )
+
     tax_portion = tax_portion.astype(np.float64)
 
     # Prepare attribute tax rate
@@ -409,19 +416,79 @@ def calc_indirect_tax(
         tax_rate_arr = check_input(target_func=project_years, param=tax_rate)
 
     # Prepare attribute tax discount
-    if not isinstance(tax_discount, float):
+    if not isinstance(tax_discount, (float, int)):
         raise TaxInflationException(
-            f"Attribute tax discount must be given as a numpy.ndarray, "
+            f"Argument tax discount must be given as a float or an integer, "
             f"not as a/an {tax_discount.__class__.__qualname__}"
         )
 
     else:
-        tax_discount = np.repeat(tax_discount, len(cost))
+        if tax_discount < 0 or tax_discount > 1:
+            raise TaxInflationException(
+                f"Argument tax discount must be between 0 and 1"
+            )
 
-    tax_discount = tax_discount.astype(np.float64)
+        tax_discount = np.repeat(tax_discount, len(cost)).astype(np.float64)
 
     # Specify tax rate id
     tax_rate_ids = (expense_year - start_year).astype(np.int64)
 
     # Calculate indirect tax
     return cost * (tax_portion * tax_rate_arr[tax_rate_ids] * (1.0 - tax_discount))
+
+
+def calc_distributed_cost(
+    cost: np.ndarray,
+    expense_year: np.ndarray,
+    final_year: np.ndarray,
+    project_years: np.ndarray,
+    project_duration: int,
+) -> np.ndarray:
+
+    # Prepare attribute cost
+    if not isinstance(cost, np.ndarray):
+        raise TaxInflationException(
+            f"Argument cost must be given as a numpy.ndarray, "
+            f"not as a/an {cost.__class__.__qualname__}"
+        )
+
+    # Prepare attribute expense_year
+    if not isinstance(expense_year, np.ndarray):
+        raise TaxInflationException(
+            f"Argument expense_year must be given as a numpy.ndarray, "
+            f"not as a/an {expense_year.__class__.__qualname__}"
+        )
+
+    # Unequal length of arrays
+    if len(cost) != len(expense_year):
+        raise TaxInflationException(
+            f"Unequal length of arrays: "
+            f"Expected: {len(expense_year)}, "
+            f"Given: {len(cost)}"
+        )
+
+    cost = cost.astype(np.float64)
+
+    # Total number of years to split/decompose each cost elements
+    years_to_split = (final_year - expense_year + 1).astype(int)
+
+    # Decomposed values for each cost elements
+    cost_split = cost / years_to_split
+
+    # The start and end indices to distribute each cost elements
+    id_start = np.array(
+        [
+            np.argwhere(expense_year[i] == project_years).ravel()
+            for i, _ in enumerate(expense_year)
+        ]
+    ).ravel()
+
+    id_end = (id_start + years_to_split).astype(int)
+
+    # Distributed values for each cost elements
+    distributed_cost = np.zeros([project_duration, len(expense_year)], dtype=np.float64)
+
+    for i, _ in enumerate(expense_year):
+        distributed_cost[id_start[i]:id_end[i], i] = cost_split[i]
+
+    return distributed_cost

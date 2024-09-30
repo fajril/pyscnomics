@@ -17,6 +17,7 @@ from pyscnomics.econ.costs_tools import (
     get_cost_adjustment_by_inflation,
     apply_cost_adjustment,
     calc_indirect_tax,
+    calc_distributed_cost,
 )
 
 
@@ -1543,6 +1544,20 @@ class OPEX(GeneralCost):
 
 @dataclass
 class ASR(GeneralCost):
+    """
+    Manages an ASR asset.
+
+    Parameters
+    ----------
+    The attributes are inherited from class GeneralCost.
+    Local attributes associated with class ASR are:
+
+    final_year : np.ndarray
+        The year in which cost distribution ends for each cost element.
+    future_rate : float, optional
+        Future rates applied to costs for each year, defaulting to a rate of 2%.
+    """
+
     final_year: np.ndarray = field(default=None)
     future_rate: float = field(default=None)
 
@@ -1677,55 +1692,6 @@ class ASR(GeneralCost):
 
         return self.cost * np.power((1.0 + self.future_rate), year_diff)
 
-    def _calc_distributed_asr(
-        self,
-        cost: np.ndarray = None
-    ) -> np.ndarray:
-
-        # Prepare attribute cost
-        if cost is None:
-            cost = self.cost.copy()
-
-        else:
-            if not isinstance(cost, np.ndarray):
-                raise ASRException(
-                    f"Argument cost must be given as a numpy.ndarray, "
-                    f"not as a/an {cost.__class__.__qualname__}"
-                )
-
-            if len(cost) != len(self.cost):
-                raise ASRException(
-                    f"Unequal length of arrays: "
-                    f"Expected: {len(self.cost)}, "
-                    f"Given: {len(cost)}"
-                )
-
-        cost = cost.astype(np.float64)
-
-        # Total number of years to split/decompose each cost elements
-        years_to_split = (self.final_year - self.expense_year + 1).astype(int)
-
-        # Decomposed values for each cost elements
-        cost_split = cost / years_to_split
-
-        # The start and end indices to distribute each cost elements
-        id_start = np.array(
-            [
-                np.argwhere(self.expense_year[i] == self.project_years).ravel()
-                for i, _ in enumerate(self.cost)
-            ]
-        ).ravel()
-
-        id_end = (id_start + years_to_split).astype(int)
-
-        # Distributed values for each cost elements
-        distributed_cost = np.zeros([self.project_duration, len(self.cost)], dtype=np.float64)
-
-        for i, _ in enumerate(self.cost):
-            distributed_cost[id_start[i]:id_end[i], i] = cost_split[i]
-
-        return distributed_cost
-
     def expenditures_pre_tax(
         self,
         year_inflation: np.ndarray = None,
@@ -1747,9 +1713,67 @@ class ASR(GeneralCost):
         )
 
         # Calculate distributed cost
-        distributed_cost = self._calc_distributed_asr(cost=cost_adjusted_by_inflation)
+        distributed_cost = calc_distributed_cost(
+            cost=cost_adjusted_by_inflation,
+            expense_year=self.expense_year,
+            final_year=self.final_year,
+            project_years=self.project_years,
+            project_duration=self.project_duration,
+        )
 
         return np.sum(distributed_cost, axis=1, keepdims=False)
+
+    def indirect_taxes(
+        self,
+        tax_portion: np.ndarray = None,
+        tax_rate: np.ndarray | float = 0.0,
+        tax_discount: float = 0.0,
+    ) -> np.ndarray:
+
+        # Calculate future cost
+        cost_future = self._calc_future_cost()
+
+        # Calculate indirect tax
+        indirect_tax = calc_indirect_tax(
+            start_year=self.start_year,
+            cost=cost_future,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            tax_portion=tax_portion,
+            tax_rate=tax_rate,
+            tax_discount=tax_discount,
+        )
+
+        # Calculate distributed indirect taxes
+        distributed_taxes = calc_distributed_cost(
+            cost=indirect_tax,
+            expense_year=self.expense_year,
+            final_year=self.final_year,
+            project_years=self.project_years,
+            project_duration=self.project_duration,
+        )
+
+        return np.sum(distributed_taxes, axis=1, keepdims=False)
+
+    def expenditures_post_tax(
+        self,
+        year_inflation: np.ndarray = None,
+        inflation_rate: np.ndarray | float = 0.0,
+        tax_portion: np.ndarray = None,
+        tax_rate: np.ndarray | float = 0.0,
+        tax_discount: float = 0.0,
+    ) -> np.ndarray:
+        return (
+            self.expenditures_pre_tax(
+                year_inflation=year_inflation,
+                inflation_rate=inflation_rate,
+            ) +
+            self.indirect_taxes(
+                tax_portion=tax_portion,
+                tax_rate=tax_rate,
+                tax_discount=tax_discount,
+            )
+        )
 
 
 
