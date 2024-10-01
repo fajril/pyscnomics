@@ -12,11 +12,9 @@ import numpy as np
 from dataclasses import dataclass, field
 
 import pyscnomics.econ.depreciation as depr
-from pyscnomics.econ.selection import FluidType, DeprMethod, TaxType
+from pyscnomics.econ.selection import FluidType, DeprMethod
 from pyscnomics.econ.costs_tools import (
-    check_input,
     get_cost_adjustment_by_inflation,
-    apply_cost_adjustment,
     calc_indirect_tax,
     calc_distributed_cost,
 )
@@ -92,8 +90,8 @@ class GeneralCost:
 
     start_year: int
     end_year: int
-    cost: np.ndarray
     expense_year: np.ndarray
+    cost: np.ndarray
     cost_allocation: list[FluidType] = field(default=None)
     description: list[str] = field(default=None)
 
@@ -2098,7 +2096,199 @@ class ASR(GeneralCost):
 
 @dataclass
 class LBT(GeneralCost):
-    pass
+    """
+    Manages LBT asset.
+
+    Parameters
+    ----------
+    final_year : np.ndarray
+        The year in which cost distribution ends for each cost element.
+    utilized_land_area : np.ndarray
+        The utilized land area.
+    utilized_building_area : np.ndarray
+        The utilized building area.
+    njop_land : np.ndarray
+        NJOP related to land.
+    njop_building : np.ndarray
+        NJOP related to building.
+    gross_revenue : np.ndarray
+        The array of gross revenues.
+    """
+
+    final_year: np.ndarray = field(default=None)
+    utilized_land_area: np.ndarray = field(default=None)
+    utilized_building_area: np.ndarray = field(default=None)
+    njop_land: np.ndarray = field(default=None)
+    njop_building: np.ndarray = field(default=None)
+    gross_revenue: np.ndarray = field(default=None)
+
+    # Override attribute cost
+    cost: np.ndarray = field(default=None)
+
+    # Attributes to be defined later on (associated with surface and subsurface lbt components)
+    _surface_lbt_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _subsurface_lbt_cost: np.ndarray = field(default=None, init=False, repr=False)
+
+    def __post_init__(self):
+        """
+        Handles the following operations/procedures:
+        -   Prepare attributes project_duration and project_years,
+        -   Prepare attribute description,
+        -   Prepare attribute cost_allocation,
+        -   Prepare attribute final_year,
+        -   Prepare attribute utilized_land_area,
+        -   Prepare attribute utilized_building_area,
+        -   Prepare attribute njop_land,
+        -   Prepare attribute njop_building,
+        -   Prepare attribute gross_revenue,
+
+        """
+
+        # Prepare attributes project_duration and project_years
+        if self.end_year >= self.start_year:
+            self.project_duration = self.end_year - self.start_year + 1
+            self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
+
+        else:
+            raise LBTException(
+                f"The start year of the project ({self.start_year}) is after "
+                f"the end year of the project ({self.end_year})"
+            )
+
+        # Prepare attribute description
+        if self.description is None:
+            self.description = [" " for _ in range(len(self.expense_year))]
+
+        else:
+            if not isinstance(self.description, list):
+                raise LBTException(
+                    f"Attribute description must be given as a list, "
+                    f"not as a/an {self.description.__class__.__qualname__}"
+                )
+
+        # Prepare attribute cost_allocation
+        if self.cost_allocation is None:
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
+
+        else:
+            if not isinstance(self.cost_allocation, list):
+                raise LBTException(
+                    f"Attribute cost_allocation must be given as a list, "
+                    f"not as a/an {self.cost_allocation.__class__.__qualname__}"
+                )
+
+        # Prepare attribute final_year
+        if self.final_year is None:
+            self.final_year = self.expense_year.copy()
+
+        else:
+            if not isinstance(self.final_year, np.ndarray):
+                raise LBTException(
+                    f"Attribute final_year must be given as a numpy.ndarray, "
+                    f"not as a/an {self.final_year.__class__.__qualname__}"
+                )
+
+        self.final_year = self.final_year.astype(np.int64)
+
+        # Prepare attribute utilized_land_area
+        if self.utilized_land_area is None:
+            self.utilized_land_area = np.zeros_like(self.expense_year)
+
+        else:
+            if not isinstance(self.utilized_land_area, np.ndarray):
+                raise LBTException(
+                    f"Attribute utilized_land_area must be given as a numpy.ndarray, "
+                    f"not as a/an {self.utilized_land_area.__class__.__qualname__}"
+                )
+
+        self.utilized_land_area = self.utilized_land_area.astype(np.float64)
+
+        # Prepare attribute utilized_building_area
+        if self.utilized_building_area is None:
+            self.utilized_building_area = np.zeros_like(self.expense_year)
+
+        else:
+            if not isinstance(self.utilized_building_area, np.ndarray):
+                raise LBTException(
+                    f"Attribute utilized_building_area must be given as a numpy.ndarray, "
+                    f"not as a/an {self.utilized_building_area.__class__.__qualname__}"
+                )
+
+        self.utilized_building_area = self.utilized_building_area.astype(np.float64)
+
+        # Prepare attribute njop_land
+        if self.njop_land is None:
+            self.njop_land = np.zeros_like(self.expense_year)
+
+        else:
+            if not isinstance(self.njop_land, np.ndarray):
+                raise LBTException(
+                    f"Attribute njop_land must be given as a numpy.ndarray, "
+                    f"not as a/an {self.njop_land.__class__.__qualname__}"
+                )
+
+        self.njop_land = self.njop_land.astype(np.float64)
+
+        # Prepare attribute njop_building
+        if self.njop_building is None:
+            self.njop_building = np.zeros_like(self.expense_year)
+
+        else:
+            if not isinstance(self.njop_building, np.ndarray):
+                raise LBTException(
+                    f"Attribute njop_building must be given as a numpy.ndarray, "
+                    f"not as a/an {self.njop_building.__class__.__qualname__}"
+                )
+
+        self.njop_building = self.njop_building.astype(np.float64)
+
+        # Prepare attribute gross_revenue
+        if self.gross_revenue is None:
+            self.gross_revenue = np.zeros_like(self.expense_year)
+
+        else:
+            if not isinstance(self.gross_revenue, np.ndarray):
+                raise LBTException(
+                    f"Attribute gross_revenue must be given as a numpy.ndarray, "
+                    f"not as a/an {self.gross_revenue.__class__.__qualname__}"
+                )
+
+        self.gross_revenue = self.gross_revenue.astype(np.float64)
+
+        print('\t')
+        print(f'Filetype: {type(self.gross_revenue)}')
+        print(f'Length: {len(self.gross_revenue)}')
+        print('gross_revenue = ', self.gross_revenue)
+
+
+
+    def expenditures_pre_tax(
+        self,
+        year_inflation: np.ndarray = None,
+        inflation_rate: np.ndarray | float = 0.0,
+    ) -> np.ndarray:
+        pass
+
+    def indirect_taxes(
+        self,
+        tax_portion: np.ndarray = None,
+        tax_rate: np.ndarray | float = 0.0,
+        tax_discount: float = 0.0,
+    ) -> np.ndarray:
+        pass
+
+    def expenditures_post_tax(
+        self,
+        year_inflation: np.ndarray = None,
+        inflation_rate: np.ndarray | float = 0.0,
+        tax_portion: np.ndarray = None,
+        tax_rate: np.ndarray | float = 0.0,
+        tax_discount: float = 0.0,
+    ) -> np.ndarray:
+        pass
+
+
+
 
 
 @dataclass
