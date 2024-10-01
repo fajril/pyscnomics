@@ -465,10 +465,12 @@ if __name__ == "__main__":
         future_rate=0.0,
     )
 
-    t1 = asr.expenditures_post_tax(
-        tax_portion=np.array([1, 1]),
-        tax_rate=0.01,
-    )
+    t1 = asr.future_rate
+
+    # t1 = asr.expenditures_post_tax(
+    #     tax_portion=np.array([1, 1]),
+    #     tax_rate=0.01,
+    # )
 
     # asr.indirect_taxes(
     #     tax_portion=np.array([1, 1]),

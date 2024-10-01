@@ -444,6 +444,41 @@ def calc_distributed_cost(
     project_years: np.ndarray,
     project_duration: int,
 ) -> np.ndarray:
+    """
+    Distribute the cost evenly over the project duration based on the expense and final years.
+
+    This function decomposes the total cost of each element across multiple years,
+    from the expense year to the final year. It then distributes the decomposed values
+    over the specified project years.
+
+    Parameters
+    ----------
+    cost : np.ndarray
+        The total cost for each element. Must be a 1D array of floats.
+    expense_year : np.ndarray
+        The year in which each cost element is incurred. Must be a 1D array of integers.
+    final_year : np.ndarray
+        The final year for each cost element to be distributed. Must be a 1D array of integers.
+    project_years : np.ndarray
+        The array of project years used to index the distribution. Must be a 1D array of integers.
+    project_duration : int
+        The total duration of the project in years.
+
+    Returns
+    -------
+    np.ndarray
+        A 2D array where each column represents the distributed cost of an element over
+        the project duration, with rows representing years.
+
+    Notes
+    -----
+    -   The total cost for each element is split evenly across the number of years from
+        `expense_year` to `final_year`.
+    -   The cost is distributed across the range of `project_years` starting at `expense_year`
+        and ending at `final_year`.
+    -   The function returns a zero-filled matrix for years before the expense year or after
+        the final year for each element.
+    """
 
     # Prepare attribute cost
     if not isinstance(cost, np.ndarray):
