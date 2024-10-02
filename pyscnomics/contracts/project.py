@@ -1626,7 +1626,7 @@ class BaseProject:
 
         self._co2_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
-    # Todo: Refactor sulfur_revenue, electricity_revenue, co2_revenue by adding "selected"
+    # Todo: Refactor selection of sulfur_revenue, electricity_revenue, co2_revenue by adding "selected"
     def _get_other_revenue(self,
                            sulfur_revenue: OtherRevenue,
                            electricity_revenue: OtherRevenue,

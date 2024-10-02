@@ -95,6 +95,7 @@ class GrossSplit(BaseProject):
     co2_content: str | VariableSplit522017.CO2Content | VariableSplit082017.CO2Content = field(default='<5')
     h2s_content: str | VariableSplit522017.H2SContent | VariableSplit082017.H2SContent = field(default='<100')
 
+    # Todo: Refactor to use  capital and locked
     base_split_ctr_oil: float = field(default=0.43)
     base_split_ctr_gas: float = field(default=0.48)
     split_ministry_disc: float = field(default=0.08)
@@ -740,7 +741,7 @@ class GrossSplit(BaseProject):
             fluid: str
     ):
         """
-        Function to get the years of when the contractor have maximum split 100%.
+        Function to get the years of when the contractor have maximum split 100% or more.
 
         Parameters
         ----------

@@ -317,7 +317,7 @@ class CostRecovery(BaseProject):
 
     def _get_rc_icp_pretax(self):
         """
-        A Function to get the value of PreTax using Revenue over Cost (RC) or Indonesian Crude Price (ICP) sliding scale.
+        A Function to get the value of PreTax Split using Revenue over Cost (RC) or Indonesian Crude Price (ICP) sliding scale.
 
         Notes
         -------
@@ -412,6 +412,8 @@ class CostRecovery(BaseProject):
                 self._gas_ftp_ctr = self.gas_ctr_pretax_share * self._gas_ftp
             self._gas_ftp_gov = self._gas_ftp - self._gas_ftp_ctr
 
+    # Todo: Refactor the ic rate thus could accepting ndarray
+    # Todo: Refactor try to not writing the type of variable into the name of variable
     def _get_ic(
             self,
             revenue: np.ndarray,
@@ -447,6 +449,8 @@ class CostRecovery(BaseProject):
 
         return ic_total, ic_unrecovered, ic_paid
 
+    # Todo: Add the point of view of the established contract definition to the docstring.
+    #  Thus, the component that resulted by the code will be referring to the contract.
     @staticmethod
     def _get_cost_recovery(
             revenue: np.ndarray,

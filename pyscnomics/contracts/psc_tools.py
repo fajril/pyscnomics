@@ -5,6 +5,7 @@ from datetime import date
 from pyscnomics.econ.revenue import Lifting
 
 
+# Todo: Approach with test driven development where the test is made first, refactor the code later.
 def get_unrec_cost_2b_recovered_costrec(
         project_years: np.ndarray,
         depreciation: np.ndarray,
