@@ -1670,6 +1670,13 @@ class ASR(GeneralCost):
                     f"is before the start expense year ({self.expense_year[i]})"
                 )
 
+        # Raise an error: final_year is after the end year of the project
+        if np.max(self.final_year) > self.end_year:
+            raise ASRException(
+                f"Final year ({np.max(self.final_year)}) "
+                f"is after the end year of the project ({self.end_year})"
+            )
+
         # Raise an error message: expense year is after the end year of the project
         if np.max(self.expense_year) > self.end_year:
             raise ASRException(
@@ -2141,7 +2148,14 @@ class LBT(GeneralCost):
         -   Prepare attribute njop_land,
         -   Prepare attribute njop_building,
         -   Prepare attribute gross_revenue,
-
+        -   Prepare attribute _surface_lbt_cost,
+        -   Prepare attribute _subsurface_lbt_cost,
+        -   Prepare attribute cost,
+        -   Check for unequal length of input arrays,
+        -   Raise an error: final_year is before expense_year,
+        -   Raise an error: final_year is after the end year of the project,
+        -   Raise an error: expense_year is after the end year of the project,
+        -   Raise an error: expense_year is before the start year of the project,
         """
 
         # Prepare attributes project_duration and project_years
@@ -2255,19 +2269,145 @@ class LBT(GeneralCost):
 
         self.gross_revenue = self.gross_revenue.astype(np.float64)
 
-        print('\t')
-        print(f'Filetype: {type(self.gross_revenue)}')
-        print(f'Length: {len(self.gross_revenue)}')
-        print('gross_revenue = ', self.gross_revenue)
+        # Prepare attribute _surface_lbt_cost
+        surface_land = self.utilized_land_area * self.njop_land
+        surface_building = self.utilized_building_area * self.njop_building
+        self._surface_lbt_cost = (0.5 / 100) * (40 / 100) * 1.0 * (surface_land + surface_building)
 
+        # Prepare attribute _subsurface_lbt_cost
+        self._subsurface_lbt_cost = (0.5 / 100) * (40 / 100) * 10.04 * self.gross_revenue
 
+        # Prepare attribute cost
+        if self.cost is None:
+            self.cost = self._surface_lbt_cost + self._subsurface_lbt_cost
+
+        else:
+            if not isinstance(self.cost, np.ndarray):
+                raise LBTException(
+                    f"Attribute cost must be given as a numpy.ndarray, "
+                    f"not as a/an {self.cost.__class__.__qualname__}"
+                )
+
+        self.cost = self.cost.astype(np.float64)
+
+        # Check for unequal length of arrays
+        arr_length = len(self.expense_year)
+
+        if not all(
+            len(arr) == arr_length
+            for arr in [
+                self.description,
+                self.cost_allocation,
+                self.final_year,
+                self.utilized_land_area,
+                self.utilized_building_area,
+                self.njop_land,
+                self.njop_building,
+                self.gross_revenue,
+                self.cost,
+            ]
+        ):
+            raise LBTException(
+                f"Unequal length of arrays: "
+                f"expense_year: {len(self.expense_year)}, "
+                f"description: {len(self.description)}, "
+                f"cost_allocation: {len(self.cost_allocation)}, "
+                f"final_year: {len(self.final_year)}, "
+                f"utilized_land_area: {len(self.utilized_land_area)}, "
+                f"utilized_building_area: {len(self.utilized_building_area)}, "
+                f"njop_land: {len(self.njop_land)}, "
+                f"njop_building: {len(self.njop_building)}, "
+                f"gross_revenue: {len(self.gross_revenue)}, "
+                f"cost: {len(self.cost)}"
+            )
+
+        # Raise an error: final_year is before expense_year
+        for i, _ in enumerate(self.expense_year):
+            if self.final_year[i] < self.expense_year[i]:
+                raise LBTException(
+                    f"Attribute final_year ({self.final_year[i]}) "
+                    f"is before the start expense year ({self.expense_year[i]})"
+                )
+
+        # Raise an error: final_year is after the end year of the project
+        if np.max(self.final_year) > self.end_year:
+            raise LBTException(
+                f"Final year ({np.max(self.final_year)}) "
+                f"is after the end year of the project ({self.end_year})"
+            )
+
+        # Raise an error: expense year is after the end year of the project
+        if np.max(self.expense_year) > self.end_year:
+            raise LBTException(
+                f"Expense year ({np.max(self.expense_year)}) "
+                f"is after the end year of the project ({self.end_year})"
+            )
+
+        # Raise an error: expense_year is before the start year of the project
+        if np.min(self.expense_year) < self.start_year:
+            raise LBTException(
+                f"Expense year ({np.min(self.expense_year)}) "
+                f"is before the start year of the project ({self.start_year})"
+            )
 
     def expenditures_pre_tax(
         self,
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
-        pass
+        """
+        Calculate pre-tax expenditures adjusted for inflation.
+
+        This method calculates the total pre-tax expenditures for each project year
+        by adjusting the cost for inflation and distributing the adjusted costs
+        over the project's timeline.
+
+        Parameters
+        ----------
+        year_inflation : np.ndarray, optional
+            A NumPy array representing the years during which inflation is applied to the costs.
+            If not provided, defaults to repeating the `start_year` for all costs.
+        inflation_rate : np.ndarray or float, optional
+            The inflation rate(s) to apply to the project costs. If provided as a float,
+            a uniform inflation rate is applied. If provided as a NumPy array, different
+            rates are applied based on the corresponding project years. Default is 0.0.
+
+        Returns
+        -------
+        np.ndarray
+            A 1D array representing the total pre-tax expenditures for each project year,
+            adjusted for inflation.
+
+        Notes
+        -----
+        -   The method first adjusts future costs using the `get_cost_adjustment_by_inflation`
+            function, which applies inflation rates based on the provided parameters.
+        -   It then calculates the distributed costs across the project's timeline using
+            `calc_distributed_cost`.
+        -   The final result is the sum of the distributed costs for each project year.
+        """
+
+        # Cost adjustment due to inflation
+        cost_adjusted_by_inflation = get_cost_adjustment_by_inflation(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+        )
+
+        # Calculate distributed cost
+        distributed_cost = calc_distributed_cost(
+            cost=cost_adjusted_by_inflation,
+            expense_year=self.expense_year,
+            final_year=self.final_year,
+            project_years=self.project_years,
+            project_duration=self.project_duration,
+        )
+
+        return np.sum(distributed_cost, axis=1, keepdims=False)
 
     def indirect_taxes(
         self,

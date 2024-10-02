@@ -460,7 +460,18 @@ if __name__ == "__main__":
         end_year=2030,
         expense_year=np.array([2024, 2026]),
         cost_allocation=[FluidType.OIL, FluidType.GAS],
-        final_year=np.array([2024, 2028]),
+        final_year=np.array([2024, 2026]),
+        # cost=np.array([100, 100]),
+
+    )
+
+    print('\t')
+    print(f'Filetype: {type(lbt)}')
+    print(f'Length: {len(lbt)}')
+    print('lbt = \n', lbt)
+
+    t1 = lbt.expenditures_pre_tax(
+        inflation_rate=0
     )
 
     # asr = ASR(
@@ -509,7 +520,7 @@ if __name__ == "__main__":
     #     tax_rate=0.01,
     # )
 
-    # print('\t')
-    # print(f'Filetype: {type(t1)}')
-    # print(f'Length: {len(t1)}')
-    # print('t1 = \n', t1)
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
