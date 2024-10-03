@@ -2658,22 +2658,22 @@ class CostOfSales(GeneralCost):
 
     Notes
     -----
-    The inherited attributes (from class GeneralCost) are overridden in this class,
-    except for start_year and end_year.
+    The inherited attributes (expense_year and cost) are overridden in this class.
     """
-    # Inherited attributes with the modified initialization
-    cost: np.ndarray = field(default=None)
-    expense_year: np.ndarray = field(default=None)
-    cost_allocation: list[FluidType] = field(default=None)
 
-    # Inherited attributes which are being excluded
-    description: list[str] = field(default=None, init=False, repr=False)
-    vat_portion: np.ndarray = field(default=None, init=False, repr=False)
-    vat_discount: float | np.ndarray = field(default=None, init=False, repr=False)
-    lbt_portion: np.ndarray = field(default=None, init=False, repr=False)
-    lbt_discount: float | np.ndarray = field(default=None, init=False, repr=False)
+    # Inherited attributes with the modified initialization
+    expense_year: np.ndarray = field(default=None)
+    cost: np.ndarray = field(default=None)
 
     def __post_init__(self):
+        """
+        Handles the following operations/procedures:
+        -   Prepare attributes project_duration and project_years,
+        -   Prepare attribute expense_year,
+
+
+        """
+
         # Prepare attributes project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -2692,20 +2692,32 @@ class CostOfSales(GeneralCost):
         else:
             if not isinstance(self.expense_year, np.ndarray):
                 raise CostOfSalesException(
-                    f"Attribute expense_year must be given as a numpy.ndarray datatype, "
-                    f"not a ({self.expense_year.__class__.__qualname__})"
+                    f"Attribute expense_year must be given as a numpy.ndarray, "
+                    f"not as a/an ({self.expense_year.__class__.__qualname__})"
                 )
+
+        print('\t')
+        print(f'Filetype: {type(self.expense_year)}')
+        print(f'Length: {len(self.expense_year)}')
+        print('expense_year = ', self.expense_year)
 
         # Prepare attribute cost
         if self.cost is None:
-            self.cost = np.zeros_like(self.expense_year, dtype=np.float64)
+            self.cost = np.zeros_like(self.expense_year)
 
         else:
             if not isinstance(self.cost, np.ndarray):
                 raise CostOfSalesException(
-                    f"Attribute cost must be given as a numpy.ndarray datatype, "
-                    f"not a ({self.cost.__class__.__qualname__})"
+                    f"Attribute cost must be given as a numpy.ndarray, "
+                    f"not as a/an ({self.cost.__class__.__qualname__})"
                 )
+
+        self.cost = self.cost.astype(np.float64)
+
+        print('\t')
+        print(f'Filetype: {type(self.cost)}')
+        print(f'Length: {len(self.cost)}')
+        print('cost = ', self.cost)
 
         # Prepare attribute cost_allocation
         if self.cost_allocation is None:
@@ -2715,36 +2727,57 @@ class CostOfSales(GeneralCost):
             if not isinstance(self.cost_allocation, list):
                 raise CostOfSalesException(
                     f"Attribute cost_allocation must be given as a list, "
-                    f"not a ({self.cost_allocation.__class__.__qualname__})"
+                    f"not as a/an ({self.cost_allocation.__class__.__qualname__})"
                 )
 
-        # Check input data for unequal length
-        arr_length = len(self.cost)
+        print('\t')
+        print(f'Filetype: {type(self.cost_allocation)}')
+        print(f'Length: {len(self.cost_allocation)}')
+        print('cost_allocation = ', self.cost_allocation)
 
-        if not all(
-            len(arr) == arr_length
-            for arr in [self.expense_year, self.cost_allocation]
-        ):
-            raise CostOfSalesException(
-                f"Unequal length of array: "
-                f"cost: {len(self.cost)}, "
-                f"expense_year: {len(self.expense_year)}, "
-                f"cost_allocation: {len(self.cost_allocation)}."
-            )
+        # Prepare attribute description
+        if self.description is None:
+            self.description = [" " for _ in range(len(self.expense_year))]
 
-        # Raise an error message: expense_year is after the end year of the project
-        if np.max(self.expense_year) > self.end_year:
-            raise CostOfSalesException(
-                f"Expense year ({np.max(self.expense_year)}) "
-                f"is after the end year of the project ({self.end_year})"
-            )
+        else:
+            if not isinstance(self.description, list):
+                raise CostOfSalesException(
+                    f"Attribute description must be given as a list, "
+                    f"not as a/an {self.description.__class__.__qualname__}"
+                )
 
-        # Raise an error message: expense_year is before the start year of the project
-        if np.min(self.expense_year) < self.start_year:
-            raise CostOfSalesException(
-                f"Expense year ({np.min(self.expense_year)}) "
-                f"is before the start year of the project ({self.start_year})"
-            )
+        print('\t')
+        print(f'Filetype: {type(self.description)}')
+        print(f'Length: {len(self.description)}')
+        print('description = ', self.description)
+
+        # # Check input data for unequal length
+        # arr_length = len(self.cost)
+        #
+        # if not all(
+        #     len(arr) == arr_length
+        #     for arr in [self.expense_year, self.cost_allocation]
+        # ):
+        #     raise CostOfSalesException(
+        #         f"Unequal length of array: "
+        #         f"cost: {len(self.cost)}, "
+        #         f"expense_year: {len(self.expense_year)}, "
+        #         f"cost_allocation: {len(self.cost_allocation)}."
+        #     )
+        #
+        # # Raise an error message: expense_year is after the end year of the project
+        # if np.max(self.expense_year) > self.end_year:
+        #     raise CostOfSalesException(
+        #         f"Expense year ({np.max(self.expense_year)}) "
+        #         f"is after the end year of the project ({self.end_year})"
+        #     )
+        #
+        # # Raise an error message: expense_year is before the start year of the project
+        # if np.min(self.expense_year) < self.start_year:
+        #     raise CostOfSalesException(
+        #         f"Expense year ({np.min(self.expense_year)}) "
+        #         f"is before the start year of the project ({self.start_year})"
+        #     )
 
     def _get_array(self, target_param: np.ndarray) -> np.ndarray:
         """
