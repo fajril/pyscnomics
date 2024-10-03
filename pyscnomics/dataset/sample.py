@@ -1,5 +1,6 @@
 import json
 import os
+import pkg_resources
 from datetime import datetime
 
 import numpy as np
@@ -53,13 +54,22 @@ def read_json_file(file_name: str) -> dict:
         The dictionary of the json file.
 
     """
-    if 'pyscnomics\\pyscnomics' in os.path.dirname(os.getcwd()):
-        directory = (os.path.dirname(os.getcwd())) + '/dataset/' + file_name + '.json'
+    # if 'pyscnomics\\pyscnomics' in os.path.dirname(os.getcwd()):
+    #     directory = (os.path.dirname(os.getcwd())) + '/dataset/' + file_name + '.json'
+    #
+    # else:
+    #     directory = (os.path.dirname(os.getcwd())) + '/pyscnomics/dataset/' + file_name + '.json'
+    #
+    # final_dir = os.path.abspath(directory)
+    # with open(final_dir) as user_file:
+    #     file_contents = user_file.read()
 
-    else:
-        directory = (os.path.dirname(os.getcwd())) + '/pyscnomics/dataset/' + file_name + '.json'
+    # return json.loads(file_contents)
 
-    final_dir = os.path.abspath(directory)
+    # Get the full path to the JSON file within the package
+    final_dir = pkg_resources.resource_filename('pyscnomics', 'dataset/' + file_name + '.json')
+
+    # Open and read the JSON file, returning its contents as a dictionary
     with open(final_dir) as user_file:
         file_contents = user_file.read()
 
@@ -205,71 +215,73 @@ def assign_cost(data_raw: dict) -> tuple:
     """
     # Defining the data source and the list container for Tangible. Then, assign them based on their fluid type
     tangible_data = data_raw['tangible']
-    tangible_list = []
-    for key in tangible_data.keys():
-        tangible = CapitalCost(start_year=tangible_data[key]['start_year'],
-                               end_year=tangible_data[key]['end_year'],
-                               cost=np.array(tangible_data[key]['cost']),
-                               expense_year=np.array(tangible_data[key]['expense_year']),
-                               cost_allocation=read_fluid_type(fluid=tangible_data[key]['cost_allocation']),
-                               description=tangible_data[key]['description'],
-                               vat_portion=np.array(tangible_data[key]['vat_portion']),
-                               vat_discount=np.array(tangible_data[key]['vat_discount']),
-                               lbt_portion=np.array(tangible_data[key]['lbt_portion']),
-                               lbt_discount=np.array(tangible_data[key]['lbt_discount']),
-                               pis_year=np.array(tangible_data[key]['pis_year']),
-                               salvage_value=np.array(tangible_data[key]['salvage_value']),
-                               useful_life=np.array(tangible_data[key]['useful_life']),
-                               depreciation_factor=np.array(tangible_data[key]['depreciation_factor']),
-                               is_ic_applied=tangible_data[key]['is_ic_applied'],
-                               )
-        tangible_list.append(tangible)
+    tangible_list = [
+        CapitalCost(
+            start_year=tangible_data[key]['start_year'],
+            end_year=tangible_data[key]['end_year'],
+            cost=np.array(tangible_data[key]['cost']),
+            expense_year=np.array(tangible_data[key]['expense_year']),
+            cost_allocation=read_fluid_type(fluid=tangible_data[key]['cost_allocation']),
+            description=tangible_data[key]['description'],
+            vat_portion=np.array(tangible_data[key]['vat_portion']),
+            vat_discount=np.array(tangible_data[key]['vat_discount']),
+            lbt_portion=np.array(tangible_data[key]['lbt_portion']),
+            lbt_discount=np.array(tangible_data[key]['lbt_discount']),
+            pis_year=np.array(tangible_data[key]['pis_year']),
+            salvage_value=np.array(tangible_data[key]['salvage_value']),
+            useful_life=np.array(tangible_data[key]['useful_life']),
+            depreciation_factor=np.array(tangible_data[key]['depreciation_factor']),
+            is_ic_applied=tangible_data[key]['is_ic_applied'],
+        ) for key in tangible_data.keys()
+    ]
 
     # Defining the data source and the list container for Intangible. Then, assign them based on their fluid type
     intangible_data = data_raw['intangible']
-    intangible_list = []
-    for key in intangible_data.keys():
-        intangible = Intangible(start_year=intangible_data[key]['start_year'],
-                                end_year=intangible_data[key]['end_year'],
-                                cost=np.array(intangible_data[key]['cost']),
-                                expense_year=np.array(intangible_data[key]['expense_year']),
-                                cost_allocation=read_fluid_type(fluid=intangible_data[key]['cost_allocation']),
-                                description=intangible_data[key]['description'],
-                                vat_portion=np.array(intangible_data[key]['vat_portion']),
-                                vat_discount=np.array(intangible_data[key]['vat_discount']),
-                                lbt_portion=np.array(intangible_data[key]['lbt_portion']),
-                                lbt_discount=np.array(intangible_data[key]['lbt_discount']),
-                                )
-        intangible_list.append(intangible)
+    intangible_list = [
+        Intangible(
+            start_year=intangible_data[key]['start_year'],
+            end_year=intangible_data[key]['end_year'],
+            cost=np.array(intangible_data[key]['cost']),
+            expense_year=np.array(intangible_data[key]['expense_year']),
+            cost_allocation=read_fluid_type(fluid=intangible_data[key]['cost_allocation']),
+            description=intangible_data[key]['description'],
+            vat_portion=np.array(intangible_data[key]['vat_portion']),
+            vat_discount=np.array(intangible_data[key]['vat_discount']),
+            lbt_portion=np.array(intangible_data[key]['lbt_portion']),
+            lbt_discount=np.array(intangible_data[key]['lbt_discount']),
+        ) for key in intangible_data.keys()
+    ]
 
     # Defining the data source and the list container for Intangible. Then, them based on their fluid type
     opex_data = data_raw['opex']
-    opex_list = []
-    for key in opex_data.keys():
-        opex = OPEX(start_year=opex_data[key]['start_year'],
-                    end_year=opex_data[key]['end_year'],
-                    expense_year=np.array(opex_data[key]['expense_year']),
-                    cost_allocation=read_fluid_type(fluid=opex_data[key]['cost_allocation']),
-                    description=opex_data[key]['description'],
-                    vat_portion=np.array(opex_data[key]['vat_portion']),
-                    vat_discount=np.array(opex_data[key]['vat_discount']),
-                    lbt_portion=np.array(opex_data[key]['lbt_portion']),
-                    lbt_discount=np.array(opex_data[key]['lbt_discount']),
-                    fixed_cost=np.array(opex_data[key]['fixed_cost']))
-        opex_list.append(opex)
+    opex_list = [
+        OPEX(
+            start_year=opex_data[key]['start_year'],
+            end_year=opex_data[key]['end_year'],
+            expense_year=np.array(opex_data[key]['expense_year']),
+            cost_allocation=read_fluid_type(fluid=opex_data[key]['cost_allocation']),
+            description=opex_data[key]['description'],
+            vat_portion=np.array(opex_data[key]['vat_portion']),
+            vat_discount=np.array(opex_data[key]['vat_discount']),
+            lbt_portion=np.array(opex_data[key]['lbt_portion']),
+            lbt_discount=np.array(opex_data[key]['lbt_discount']),
+            fixed_cost=np.array(opex_data[key]['fixed_cost'])
+        ) for key in opex_data.keys()
+    ]
 
     # Defining the data source and the list container for ASR. Then, them based on their fluid type
     asr_data = data_raw['asr']
-    asr_list = []
-    for key in asr_data.keys():
-        asr = ASR(start_year=asr_data[key]['start_year'],
-                  end_year=asr_data[key]['end_year'],
-                  cost=np.array(asr_data[key]['cost']),
-                  expense_year=np.array(asr_data[key]['expense_year']),
-                  cost_allocation=read_fluid_type(fluid=asr_data[key]['cost_allocation']),
-                  description=asr_data[key]['description'],
-                  vat_portion=np.array(asr_data[key]['vat_portion']))
-        asr_list.append(asr)
+    asr_list = [
+        ASR(
+            start_year=asr_data[key]['start_year'],
+            end_year=asr_data[key]['end_year'],
+            cost=np.array(asr_data[key]['cost']),
+            expense_year=np.array(asr_data[key]['expense_year']),
+            cost_allocation=read_fluid_type(fluid=asr_data[key]['cost_allocation']),
+            description=asr_data[key]['description'],
+            vat_portion=np.array(asr_data[key]['vat_portion'])
+        ) for key in asr_data.keys()
+    ]
 
     return tangible_list, intangible_list, opex_list, asr_list
 
@@ -313,11 +325,11 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
 
     """
     # Checking the availability of the dataset, if not available raise a Value Error
-    dataset_list = get_json_file_names()
-    contract_list = ['project', 'cost_recovery', 'gross_split']
-    if dataset_type not in dataset_list or contract_type not in contract_list:
-        raise ValueError('Unknown dataset: "{0}", please check the Dataset and Contract Type that available.'
-                         .format(dataset_type))
+    # dataset_list = get_json_file_names()
+    # contract_list = ['project', 'cost_recovery', 'gross_split']
+    # if dataset_type not in dataset_list or contract_type not in contract_list:
+    #     raise ValueError('Unknown dataset: "{0}", please check the Dataset and Contract Type that available.'
+    #                      .format(dataset_type))
 
     # Reading the project json file
     data_raw = read_json_file(file_name=dataset_type)

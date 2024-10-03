@@ -1271,7 +1271,7 @@ def get_transition_split(data: dict):
     return result
 
 
-        
+
 
 
 

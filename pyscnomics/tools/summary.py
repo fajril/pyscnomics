@@ -1025,7 +1025,7 @@ class Summary:
             self.gov_ddmo = 0.0
         else:
             self.gov_ddmo = 0.0
-    
+
     def _get_gov_tax_income(self):
         """
         Function to retrieve the Government Tax indicator into the corresponding class attributes.
@@ -1044,7 +1044,7 @@ class Summary:
             self.gov_tax_income = 0.0
         else:
             self.gov_tax_income = 0.0
-        
+
     def _get_gov_take(self):
         """
         Function to retrieve the Government Take indicator into the corresponding class attributes.
@@ -1078,7 +1078,7 @@ class Summary:
         """
         self.ctr_irr = irr(cashflow=self.contract._consolidated_cashflow)
         self.ctr_irr_sunk_cost_pooled = irr(cashflow=self.cashflow_sunk_cost_pooled)
-    
+
     def _npv_skk_real_terms(self):
         """
         Function to retrieve the NPV related indicator into the corresponding class attributes.
