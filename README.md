@@ -58,7 +58,4 @@ print(tables)
 ## License
 This project is licensed under the terms of the Apache Software license. See the [License](https://github.com/fajril/pyscnomics/blob/main/LICENSE) file for details.
 
-
-
-
-
+An economic engine for calculating PSC Scheme in Indonesia.
