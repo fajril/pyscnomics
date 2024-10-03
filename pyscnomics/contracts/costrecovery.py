@@ -898,7 +898,8 @@ class CostRecovery(BaseProject):
             inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
             post_uu_22_year2001: bool = True,
             oil_cost_of_sales_applied: bool = False,
-            gas_cost_of_sales_applied: bool = False
+            gas_cost_of_sales_applied: bool = False,
+            sum_undepreciated_cost:bool=False
     ):
 
         # Configure Sunk Cost Reference Year
@@ -992,9 +993,12 @@ class CostRecovery(BaseProject):
             inflation_rate=inflation_rate,
         )
 
-        # Treatment of the undepreciated asset to be summed up in the last year of the contract
-        self._oil_depreciation[-1] = self._oil_depreciation[-1] + self._oil_undepreciated_asset
-        self._gas_depreciation[-1] = self._gas_depreciation[-1] + self._gas_undepreciated_asset
+        # Treatment of the un-depreciated asset to be summed up in the last year of the contract or not
+        if sum_undepreciated_cost is True:
+            self._oil_depreciation[-1] = self._oil_depreciation[-1] + self._oil_undepreciated_asset
+            self._gas_depreciation[-1] = self._gas_depreciation[-1] + self._gas_undepreciated_asset
+        else:
+            pass
 
         # Non-capital costs (intangible + opex + asr)
         self._oil_non_capital = (

@@ -788,7 +788,8 @@ class GrossSplit(BaseProject):
             future_rate: float = 0.02,
             inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
             cum_production_split_offset: float | np.ndarray | None = 0.0,
-            amortization: bool = False
+            amortization: bool = False,
+            sum_undepreciated_cost: bool = False
             ):
 
         # Configure Sunk Cost Reference Year
@@ -876,6 +877,13 @@ class GrossSplit(BaseProject):
             lbt_rate=lbt_rate,
             inflation_rate=inflation_rate,
         )
+
+        # Treatment of the un-depreciated asset to be summed up in the last year of the contract or not
+        if sum_undepreciated_cost is True:
+            self._oil_depreciation[-1] = self._oil_depreciation[-1] + self._oil_undepreciated_asset
+            self._gas_depreciation[-1] = self._gas_depreciation[-1] + self._gas_undepreciated_asset
+        else:
+            pass
 
         # Non Capital Cost
         self._oil_non_capital = (
