@@ -460,9 +460,13 @@ if __name__ == "__main__":
         end_year=2030,
         expense_year=np.array([2024, 2026]),
         cost_allocation=[FluidType.OIL, FluidType.GAS],
-        final_year=np.array([2024, 2026]),
-        # cost=np.array([100, 100]),
-
+        final_year=np.array([2024, 2027]),
+        cost=np.array([100, 100]),
+        utilized_land_area=np.array([100, 100]),
+        njop_land=np.array([100, 100]),
+        utilized_building_area=np.array([100, 100]),
+        njop_building=np.array([100, 100]),
+        gross_revenue=np.array([100, 100]),
     )
 
     print('\t')
@@ -470,8 +474,10 @@ if __name__ == "__main__":
     print(f'Length: {len(lbt)}')
     print('lbt = \n', lbt)
 
-    t1 = lbt.expenditures_pre_tax(
-        inflation_rate=0
+    t1 = lbt.expenditures_post_tax(
+        inflation_rate=0.01,
+        tax_portion=np.array([1, 1]),
+        tax_rate=0.01
     )
 
     # asr = ASR(
@@ -500,24 +506,6 @@ if __name__ == "__main__":
     #     cost=np.array([100, 50, 50]),
     #     expense_year=np.array([2024, 2024, 2024]),
     #     cost_allocation=[FluidType.OIL, FluidType.GAS, FluidType.GAS],
-    # )
-
-    # opex = OPEX(
-    #     start_year=2023,
-    #     end_year=2030,
-    #     fixed_cost=np.array([100, 100]),
-    #     expense_year=np.array([2025, 2027]),
-    #     cost_allocation=[FluidType.OIL, FluidType.OIL],
-    # )
-
-    # t1 = opex.indirect_taxes(
-    #     tax_portion=np.array([1, 1]),
-    #     tax_rate=0.01,
-    # )
-
-    # t1 = opex.expenditures_post_tax(
-    #     tax_portion=np.array([1, 1]),
-    #     tax_rate=0.01,
     # )
 
     print('\t')

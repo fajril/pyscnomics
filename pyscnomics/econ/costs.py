@@ -2415,7 +2415,62 @@ class LBT(GeneralCost):
         tax_rate: np.ndarray | float = 0.0,
         tax_discount: float = 0.0,
     ) -> np.ndarray:
-        pass
+        """
+        Calculate and distribute indirect taxes over the project duration.
+
+        This method computes indirect taxes by applying the provided tax rates, portions, and
+        discounts to the associated costs. The calculated taxes are then distributed over the
+        project's timeline, and the total indirect taxes are summed for each project year.
+
+        Parameters
+        ----------
+        tax_portion : np.ndarray, optional
+            A NumPy array representing the portion of the cost subject to tax. If not provided,
+            an array of zeros with the same shape as the project cost will be used.
+        tax_rate : np.ndarray or float, optional
+            A NumPy array or float representing the tax rate applied to the costs. If not provided,
+            a default rate of 0.0 will be used. When provided as an array, it should match
+            the project years.
+        tax_discount : float, optional
+            A discount factor applied to the tax, reducing the overall tax impact.
+            The default is 0.0.
+
+        Returns
+        -------
+        np.ndarray
+            A 1D array representing the total distributed indirect taxes for each project year.
+
+        Notes
+        -----
+        -   The indirect tax is first calculated using the `calc_indirect_tax` function, which
+            applies the specified tax rate, portion, and discount to the project's costs.
+        -   The calculated taxes are then distributed over the project timeline using the
+            `calc_distributed_cost` function.
+        -   The final result is the sum of distributed indirect taxes for each year in
+            the project timeline.
+        """
+
+        # Calculate indirect tax
+        indirect_tax = calc_indirect_tax(
+            start_year=self.start_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            tax_portion=tax_portion,
+            tax_rate=tax_rate,
+            tax_discount=tax_discount,
+        )
+
+        # Calculate distributed indirect taxes
+        distributed_taxes = calc_distributed_cost(
+            cost=indirect_tax,
+            expense_year=self.expense_year,
+            final_year=self.final_year,
+            project_years=self.project_years,
+            project_duration=self.project_duration,
+        )
+
+        return np.sum(distributed_taxes, axis=1, keepdims=False)
 
     def expenditures_post_tax(
         self,
@@ -2425,7 +2480,15 @@ class LBT(GeneralCost):
         tax_rate: np.ndarray | float = 0.0,
         tax_discount: float = 0.0,
     ) -> np.ndarray:
-        pass
+
+        return (
+            self.expenditures_pre_tax(
+                year_inflation=year_inflation, inflation_rate=inflation_rate
+            ) +
+            self.indirect_taxes(
+                tax_portion=tax_portion, tax_rate=tax_rate, tax_discount=tax_discount
+            )
+        )
 
 
 
