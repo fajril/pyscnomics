@@ -36,9 +36,6 @@ from .selection import (
     InflationAppliedTo,
     OptimizationParameter,
     OptimizationTarget,
-    VariableSplit522017,
-    VariableSplit082017,
-    ContractSample
 )
 from .indicator import (
     pot,
