@@ -455,50 +455,34 @@ if __name__ == "__main__":
     from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT
     from pyscnomics.econ.selection import FluidType
 
-    lbt = LBT(
-        start_year=2023,
-        end_year=2030,
-        expense_year=np.array([2024, 2026]),
-        cost_allocation=[FluidType.OIL, FluidType.GAS],
-        final_year=np.array([2024, 2027]),
-        cost=np.array([100, 100]),
-        utilized_land_area=np.array([100, 100]),
-        njop_land=np.array([100, 100]),
-        utilized_building_area=np.array([100, 100]),
-        njop_building=np.array([100, 100]),
-        gross_revenue=np.array([100, 100]),
-    )
-
-    print('\t')
-    print(f'Filetype: {type(lbt)}')
-    print(f'Length: {len(lbt)}')
-    print('lbt = \n', lbt)
-
-    t1 = lbt.expenditures_post_tax(
-        inflation_rate=0.01,
-        tax_portion=np.array([1, 1]),
-        tax_rate=0.01
-    )
-
-    # asr = ASR(
+    # lbt = LBT(
     #     start_year=2023,
     #     end_year=2030,
-    #     cost=np.array([100, 150]),
     #     expense_year=np.array([2024, 2026]),
     #     cost_allocation=[FluidType.OIL, FluidType.GAS],
-    #     final_year=np.array([2024, 2028]),
-    #     future_rate=0.0,
-    # )
-    #
-    # t1 = asr.expenditures_post_tax(
-    #     tax_portion=np.array([1, 1]),
-    #     tax_rate=0.01,
+    #     final_year=np.array([2024, 2027]),
+    #     cost=np.array([100, 100]),
+    #     utilized_land_area=np.array([100, 100]),
+    #     njop_land=np.array([100, 100]),
+    #     utilized_building_area=np.array([100, 100]),
+    #     njop_building=np.array([100, 100]),
+    #     gross_revenue=np.array([100, 100]),
     # )
 
-    # asr.indirect_taxes(
-    #     tax_portion=np.array([1, 1]),
-    #     tax_rate=0.01,
-    # )
+    asr = ASR(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([100, 150]),
+        expense_year=np.array([2024, 2026]),
+        cost_allocation=[FluidType.OIL, FluidType.GAS],
+        final_year=np.array([2024, 2028]),
+        future_rate=0.0,
+    )
+
+    t1 = asr.expenditures_post_tax(
+        tax_portion=np.array([1, 1]),
+        tax_rate=0.01,
+    )
 
     # intang = Intangible(
     #     start_year=2023,

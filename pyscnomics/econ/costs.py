@@ -1846,63 +1846,6 @@ class ASR(GeneralCost):
 
         return np.sum(distributed_taxes, axis=1, keepdims=False)
 
-    def expenditures_post_tax(
-        self,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | float = 0.0,
-        tax_portion: np.ndarray = None,
-        tax_rate: np.ndarray | float = 0.0,
-        tax_discount: float = 0.0,
-    ) -> np.ndarray:
-        """
-        Calculate post-tax expenditures by adjusting for inflation and adding indirect taxes.
-
-        This method calculates the total post-tax expenditures for each project year by
-        summing the pre-tax expenditures (adjusted for inflation) and the distributed indirect taxes.
-
-        Parameters
-        ----------
-        year_inflation : np.ndarray, optional
-            An array of years representing when inflation impacts each cost. If not provided,
-            it defaults to the `start_year` of the project for all costs. The array must have
-            the same length as `self.cost`.
-        inflation_rate : np.ndarray or float, optional
-            The inflation rate(s) to apply. If a single float is provided, it is applied uniformly
-            across all years. If an array is provided, each inflation rate corresponds to a specific
-            project year (default is 0.0).
-        tax_portion : np.ndarray, optional
-            A NumPy array representing the portion of each cost subject to taxation. If not provided,
-            defaults to an array of zeros, implying no taxation.
-        tax_rate : np.ndarray or float, optional
-            The tax rate to apply to the costs. If a float is provided, it applies uniformly across all
-            project years. If a NumPy array is provided, the rate can vary by year (default is 0.0).
-        tax_discount : float, optional
-            A discount applied to the tax rate, represented as a decimal fraction (e.g., 0.1 for 10%).
-            Default is 0.0, meaning no discount is applied.
-
-        Returns
-        -------
-        np.ndarray
-            A 1D array representing the total post-tax expenditures for each project year,
-            after accounting for inflation and indirect taxes.
-
-        Notes
-        -----
-        -   The pre-tax expenditures are calculated using the `expenditures_pre_tax` method,
-            which adjusts future costs for inflation.
-        -   The indirect taxes are calculated and distributed using the `indirect_taxes` method.
-        -   The final result is the sum of pre-tax expenditures and indirect taxes for each project year.
-        """
-
-        return (
-            self.expenditures_pre_tax(
-                year_inflation=year_inflation, inflation_rate=inflation_rate
-            ) +
-            self.indirect_taxes(
-                tax_portion=tax_portion, tax_rate=tax_rate, tax_discount=tax_discount
-            )
-        )
-
     def __eq__(self, other):
         # Between two instances of ASR
         if isinstance(other, ASR):
@@ -2472,26 +2415,236 @@ class LBT(GeneralCost):
 
         return np.sum(distributed_taxes, axis=1, keepdims=False)
 
-    def expenditures_post_tax(
-        self,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | float = 0.0,
-        tax_portion: np.ndarray = None,
-        tax_rate: np.ndarray | float = 0.0,
-        tax_discount: float = 0.0,
-    ) -> np.ndarray:
-
-        return (
-            self.expenditures_pre_tax(
-                year_inflation=year_inflation, inflation_rate=inflation_rate
-            ) +
-            self.indirect_taxes(
-                tax_portion=tax_portion, tax_rate=tax_rate, tax_discount=tax_discount
+    def __eq__(self, other):
+        # Between two instances of LBT
+        if isinstance(other, LBT):
+            return all(
+                (
+                    np.allclose(self.cost, other.cost),
+                    np.allclose(self.expense_year, other.expense_year),
+                    np.allclose(self.final_year, other.final_year),
+                    np.allclose(self.utilized_land_area, other.utilized_land_area),
+                    np.allclose(self.utilized_building_area, other.utilized_building_area),
+                    np.allclose(self.njop_land, other.njop_land),
+                    np.allclose(self.njop_building, other.njop_building),
+                    np.allclose(self.gross_revenue, other.gross_revenue),
+                    self.cost_allocation == other.cost_allocation,
+                )
             )
-        )
 
+        # Between an instance of LBT and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) == other
 
+        else:
+            return False
 
+    def __lt__(self, other):
+        # Between an instance of LBT with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+            return np.sum(self.cost) < np.sum(other.cost)
+
+        # Between an instance of LBT and an integer/ a float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) < other
+
+        else:
+            raise LBTException(
+                f"Must compare an instance of LBT with another instance of "
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+            )
+
+    def __le__(self, other):
+        # Between an instance of LBT with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+            return np.sum(self.cost) <= np.sum(other.cost)
+
+        # Between an instance of LBT and an integer/ a float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) <= other
+
+        else:
+            raise LBTException(
+                f"Must compare an instance of LBT with another instance of "
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+            )
+
+    def __gt__(self, other):
+        # Between an instance of LBT with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+            return np.sum(self.cost) > np.sum(other.cost)
+
+        # Between an instance of LBT and an integer/ a float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) > other
+
+        else:
+            raise LBTException(
+                f"Must compare an instance of LBT with another instance of "
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+            )
+
+    def __ge__(self, other):
+        # Between an instance of LBT with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+            return np.sum(self.cost) >= np.sum(other.cost)
+
+        # Between an instance of LBT and an integer/ a float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) >= other
+
+        else:
+            raise LBTException(
+                f"Must compare an instance of LBT with another instance of "
+                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+            )
+
+    def __add__(self, other):
+        # Only allows addition between an instance of LBT and another instance of LBT
+        if isinstance(other, LBT):
+            start_year_combined = min(self.start_year, other.start_year)
+            end_year_combined = max(self.end_year, other.end_year)
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            final_year_combined = np.concatenate((self.final_year, other.final_year))
+            utilized_land_area_combined = np.concatenate(
+                (self.utilized_land_area, other.utilized_land_area)
+            )
+            utilized_building_area_combined = np.concatenate(
+                (self.utilized_building_area, other.utilized_building_area)
+            )
+            njop_land_combined = np.concatenate((self.njop_land, other.njop_land))
+            njop_building_combined = np.concatenate((self.njop_building, other.njop_building))
+            gross_revenue_combined = np.concatenate((self.gross_revenue, other.gross_revenue))
+            cost_combined = np.concatenate((self.cost, other.cost))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            description_combined = self.description + other.description
+
+            return LBT(
+                start_year=start_year_combined,
+                end_year=end_year_combined,
+                expense_year=expense_year_combined,
+                cost_allocation=cost_allocation_combined,
+                description=description_combined,
+                final_year=final_year_combined,
+                utilized_land_area=utilized_land_area_combined,
+                utilized_building_area=utilized_building_area_combined,
+                njop_land=njop_land_combined,
+                njop_building=njop_building_combined,
+                gross_revenue=gross_revenue_combined,
+                cost=cost_combined,
+            )
+
+        else:
+            raise LBTException(
+                f"Must add between an instance of LBT with another instance of LBT. "
+                f"{other}({other.__class__.__qualname__}) is not an instance of LBT."
+            )
+
+    def __iadd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        # Only allows subtraction between an instance of LBT and another instance of LBT
+        if isinstance(other, LBT):
+            start_year_combined = min(self.start_year, other.start_year)
+            end_year_combined = max(self.end_year, other.end_year)
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            final_year_combined = np.concatenate((self.final_year, other.final_year))
+            utilized_land_area_combined = np.concatenate(
+                (self.utilized_land_area, other.utilized_land_area)
+            )
+            utilized_building_area_combined = np.concatenate(
+                (self.utilized_building_area, other.utilized_building_area)
+            )
+            njop_land_combined = np.concatenate((self.njop_land, -other.njop_land))
+            njop_building_combined = np.concatenate((self.njop_building, -other.njop_building))
+            gross_revenue_combined = np.concatenate((self.gross_revenue, -other.gross_revenue))
+            cost_combined = np.concatenate((self.cost, -other.cost))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            description_combined = self.description + other.description
+
+            return LBT(
+                start_year=start_year_combined,
+                end_year=end_year_combined,
+                expense_year=expense_year_combined,
+                cost_allocation=cost_allocation_combined,
+                description=description_combined,
+                final_year=final_year_combined,
+                utilized_land_area=utilized_land_area_combined,
+                utilized_building_area=utilized_building_area_combined,
+                njop_land=njop_land_combined,
+                njop_building=njop_building_combined,
+                gross_revenue=gross_revenue_combined,
+                cost=cost_combined,
+            )
+
+        else:
+            raise LBTException(
+                f"Must subtract between an instance of LBT with another instance of LBT. "
+                f"{other}({other.__class__.__qualname__}) is not an instance of LBT."
+            )
+
+    def __rsub__(self, other):
+        return self.__sub__(other)
+
+    def __mul__(self, other):
+        # Multiplication is allowed only with an integer/a float
+        if isinstance(other, (int, float)):
+            return LBT(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                expense_year=self.expense_year,
+                cost_allocation=self.cost_allocation,
+                description=self.description,
+                final_year=self.final_year,
+                utilized_land_area=self.utilized_land_area,
+                utilized_building_area=self.utilized_building_area,
+                njop_land=self.njop_land * other,
+                njop_building=self.njop_building * other,
+                gross_revenue=self.gross_revenue * other,
+            )
+
+        else:
+            raise LBTException(
+                f"Must multiply with an integer or a float; "
+                f"{other}({other.__class__.__qualname__}) is not an integer nor a float."
+            )
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        # Between an instance of LBT with another instance of CapitalCost/Intangible/OPEX/ASR/LBT
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+            return np.sum(self.cost) / np.sum(other.cost)
+
+        # Between an instance of LBT and an integer/float
+        elif isinstance(other, (int, float)):
+            # Cannot divide with zero
+            if other == 0:
+                raise LBTException(f"Cannot divide with zero")
+
+            else:
+                return LBT(
+                    start_year=self.start_year,
+                    end_year=self.end_year,
+                    expense_year=self.expense_year,
+                    cost_allocation=self.cost_allocation,
+                    description=self.description,
+                    final_year=self.final_year,
+                    utilized_land_area=self.utilized_land_area,
+                    utilized_building_area=self.utilized_building_area,
+                    njop_land=self.njop_land / other,
+                    njop_building=self.njop_building / other,
+                    gross_revenue=self.gross_revenue / other,
+                )
+
+        else:
+            raise LBTException(
+                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT, "
+                f"integer or a float; {other}({other.__class__.__qualname__}) is not an instance "
+                f"of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer nor a float."
+            )
 
 
 @dataclass
