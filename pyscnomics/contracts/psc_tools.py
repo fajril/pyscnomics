@@ -5,7 +5,6 @@ from datetime import date
 from pyscnomics.econ.revenue import Lifting
 
 
-# Todo: Approach with test driven development where the test is made first, refactor the code later.
 def get_unrec_cost_2b_recovered_costrec(
         project_years: np.ndarray,
         depreciation: np.ndarray,
@@ -44,35 +43,89 @@ def get_unrec_cost_2b_recovered_costrec(
 
     """
     # Initializing the array of unrecovered cost
-    unrecovered_cost = np.zeros_like(revenue)
-    cost_2b_recovered = np.zeros_like(revenue)
-    cost_recovery = np.zeros_like(revenue)
+    yearly_unrecovered_cost = np.zeros_like(project_years)
+    revenue_minus_cost = np.zeros_like(project_years)
+    unrecovered_cost = np.zeros_like(project_years)
+    cost_to_be_recovered = np.zeros_like(project_years)
+    cost_recovery = np.zeros_like(project_years)
 
-    # Looping through-out the array
-    for index, i in enumerate(project_years):
+    # Looping through the project years
+    for index, _ in enumerate(project_years):
         if index == 0:
-            unrecovered_cost[index] = np.where(
-                (depreciation + non_capital) > (revenue - ftp_ctr - ftp_gov - ic),
-                (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic),
+            # Yearly Unrecovered Cost
+            yearly_unrecovered_cost[index] = np.where(
+                depreciation[index] + non_capital[index] > (
+                            revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]),
+                depreciation[index] + non_capital[index] - (
+                            revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]),
                 0
-            )[index]
+            )
+
+            # Revenue - Cost Yearly
+            revenue_minus_cost[index] = np.where(
+                yearly_unrecovered_cost[index] > 0,
+                0,
+                revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]
+            )
+
+            # Unrecovered Cost
+            unrecovered_cost[index] = np.where(
+                yearly_unrecovered_cost[index] - revenue_minus_cost[index] < 0,
+                0,
+                yearly_unrecovered_cost[index] - revenue_minus_cost[index]
+            )
+
+            # Cost to be Recovered
+            cost_to_be_recovered[index] = np.where(
+                (0 - unrecovered_cost[index]) < 0,
+                0,
+                0 - unrecovered_cost[index]
+            )
+
+            # Cost Recovery
             cost_recovery[index] = np.minimum(
-                (depreciation + non_capital) * cr_cap_rate,
-                (revenue - ftp_ctr - ftp_gov - ic)
-            )[index]
+                revenue[index],
+                depreciation[index] + non_capital[index] + cost_to_be_recovered[index]
+            ) * cr_cap_rate
+
         else:
-            cost_2b_recovered[index] = unrecovered_cost[index-1]
-            unrecovered_cost[index] = np.where(
-                (depreciation + non_capital + cost_2b_recovered) >
-                (revenue - ftp_ctr - ftp_gov - ic),
-                (depreciation + non_capital + cost_2b_recovered) - (revenue - ftp_ctr - ftp_gov - ic),
+            # Yearly Unrecovered Cost
+            yearly_unrecovered_cost[index] = np.where(
+                depreciation[index] + non_capital[index] > (
+                            revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]),
+                depreciation[index] + non_capital[index] - (
+                            revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]),
                 0
-            )[index]
+            )
+
+            # Revenue - Cost Yearly
+            revenue_minus_cost[index] = np.where(
+                yearly_unrecovered_cost[index] > 0,
+                0,
+                revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index] - depreciation[index] - non_capital[index]
+            )
+
+            # Unrecovered Cost
+            unrecovered_cost[index] = np.where(
+                yearly_unrecovered_cost[index] + unrecovered_cost[index - 1] - revenue_minus_cost[index] < 0,
+                0,
+                yearly_unrecovered_cost[index] + unrecovered_cost[index - 1] - revenue_minus_cost[index]
+            )
+
+            # Cost to be Recovered
+            cost_to_be_recovered[index] = np.where(
+                (unrecovered_cost[index - 1] - unrecovered_cost[index]) < 0,
+                0,
+                unrecovered_cost[index - 1] - unrecovered_cost[index]
+            )
+
+            # Cost Recovery
             cost_recovery[index] = np.minimum(
-                (depreciation + non_capital + cost_2b_recovered) * cr_cap_rate,
-                (revenue - ftp_ctr - ftp_gov - ic)
-            )[index]
-    return unrecovered_cost,  cost_2b_recovered, cost_recovery
+                revenue[index],
+                depreciation[index] + non_capital[index] + cost_to_be_recovered[index]
+            ) * cr_cap_rate
+
+    return unrecovered_cost, cost_to_be_recovered, cost_recovery
 
 
 def get_unrecovered_cost(depreciation: np.ndarray,
