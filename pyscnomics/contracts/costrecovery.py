@@ -113,8 +113,8 @@ class CostRecovery(BaseProject):
 
     _oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_undepreciated_asset: float = field(default=None, init=False, repr=False)
-    _gas_undepreciated_asset: float = field(default=None, init=False, repr=False)
+    _oil_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
 
     _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
@@ -992,6 +992,12 @@ class CostRecovery(BaseProject):
             lbt_rate=lbt_rate,
             inflation_rate=inflation_rate,
         )
+
+        # Treatment for small order of number, in example 1e-15
+        self._oil_undepreciated_asset = np.where(
+            self._oil_undepreciated_asset < 1.0e-5, 0, self._oil_undepreciated_asset)
+        self._gas_undepreciated_asset = np.where(
+            self._gas_undepreciated_asset < 1.0e-5, 0, self._gas_undepreciated_asset)
 
         # Treatment of the un-depreciated asset to be summed up in the last year of the contract or not
         if sum_undepreciated_cost is True:

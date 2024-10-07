@@ -878,6 +878,12 @@ class GrossSplit(BaseProject):
             inflation_rate=inflation_rate,
         )
 
+        # Treatment for small order of number, in example 1e-15
+        self._oil_undepreciated_asset = np.where(
+            self._oil_undepreciated_asset < 1.0e-5, 0, self._oil_undepreciated_asset)
+        self._gas_undepreciated_asset = np.where(
+            self._gas_undepreciated_asset < 1.0e-5, 0, self._gas_undepreciated_asset)
+
         # Treatment of the un-depreciated asset to be summed up in the last year of the contract or not
         if sum_undepreciated_cost is True:
             self._oil_depreciation[-1] = self._oil_depreciation[-1] + self._oil_undepreciated_asset

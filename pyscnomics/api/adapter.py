@@ -258,7 +258,8 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         "inflation_rate_applied_to": convert_str_to_inflationappliedto(str_object=data['contract_arguments']['inflation_rate_applied_to']),
         "post_uu_22_year2001": data['contract_arguments']['post_uu_22_year2001'],
         "oil_cost_of_sales_applied": data["contract_arguments"]["oil_cost_of_sales_applied"],
-        "gas_cost_of_sales_applied": data["contract_arguments"]["gas_cost_of_sales_applied"]
+        "gas_cost_of_sales_applied": data["contract_arguments"]["gas_cost_of_sales_applied"],
+        "sum_undepreciated_cost": data['contract_arguments']['sum_undepreciated_cost'],
     }
 
     # Running the contract
@@ -583,7 +584,8 @@ def get_grosssplit(data: dict, summary_result: bool = True):
             str_object=data['contract_arguments']['inflation_rate_applied_to']),
         "cum_production_split_offset": convert_list_to_array_float_or_array(data_input=data["contract_arguments"]["cum_production_split_offset"]),
         "amortization": data["contract_arguments"]["amortization"],
-        "regime": convert_grosssplitregime_to_enum(target=data["contract_arguments"]["regime"])
+        "regime": convert_grosssplitregime_to_enum(target=data["contract_arguments"]["regime"]),
+        "sum_undepreciated_cost": data["contract_arguments"]["sum_undepreciated_cost"],
     }
 
     # Running the contract

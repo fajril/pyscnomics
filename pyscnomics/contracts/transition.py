@@ -179,10 +179,13 @@ class Transition:
     _ddmo: np.ndarray = field(default=None, init=False, repr=False)
     _tax_payment: np.ndarray = field(default=None, init=False, repr=False)
     _government_take: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_undepreciated_asset: float = field(default=None, init=False, repr=False)
+    _gas_undepreciated_asset: float = field(default=None, init=False, repr=False)
 
     # Consolidated Attributes
     _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_undepreciated_asset: np.ndarray | float = field(default=None, init=False, repr=False)
     _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ddmo: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
@@ -689,6 +692,13 @@ class Transition:
         self._sulfur_wap_price = self._contract2_transitioned._sulfur_wap_price
         self._electricity_wap_price = self._contract2_transitioned._electricity_wap_price
         self._co2_wap_price = self._contract2_transitioned._co2_wap_price
+
+        # Undepreciated Asset
+        self._oil_undepreciated_asset = (self.contract1._oil_undepreciated_asset +
+                                         self.contract2._oil_undepreciated_asset)
+        self._gas_undepreciated_asset = (self.contract1._gas_undepreciated_asset +
+                                         self.contract2._gas_undepreciated_asset)
+        self._consolidated_undepreciated_asset = self._oil_undepreciated_asset + self._gas_undepreciated_asset
 
         # Sunk Cost
         self._oil_sunk_cost = self._contract1_transitioned._oil_sunk_cost + self._contract2_transitioned._oil_sunk_cost
