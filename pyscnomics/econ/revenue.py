@@ -313,8 +313,9 @@ class Lifting:
         weight = np.where(self.lifting_rate * self.ghv == 0,
                           1e-33,
                           self.lifting_rate * self.ghv)
-        return np.array([np.average(
+        wap =  np.array([np.average(
             self.price[indices == i], weights=weight[indices == i]) for i, _ in enumerate(unique_year)])
+        return self._get_array(target_param=wap)
 
     def get_aggregate_ghv(self) -> np.ndarray:
         """

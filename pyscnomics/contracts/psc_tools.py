@@ -43,11 +43,11 @@ def get_unrec_cost_2b_recovered_costrec(
 
     """
     # Initializing the array of unrecovered cost
-    yearly_unrecovered_cost = np.zeros_like(project_years)
-    revenue_minus_cost = np.zeros_like(project_years)
-    unrecovered_cost = np.zeros_like(project_years)
-    cost_to_be_recovered = np.zeros_like(project_years)
-    cost_recovery = np.zeros_like(project_years)
+    yearly_unrecovered_cost = np.zeros_like(project_years, dtype=float)
+    revenue_minus_cost = np.zeros_like(project_years, dtype=float)
+    unrecovered_cost = np.zeros_like(project_years, dtype=float)
+    cost_to_be_recovered = np.zeros_like(project_years, dtype=float)
+    cost_recovery = np.zeros_like(project_years, dtype=float)
 
     # Looping through the project years
     for index, _ in enumerate(project_years):
