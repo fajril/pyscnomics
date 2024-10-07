@@ -463,6 +463,12 @@ if __name__ == "__main__":
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
+    t1 = cs.expenditures_post_tax(
+        inflation_rate=0.01,
+        tax_portion=np.array([1, 1, 1, 1, 1]),
+        tax_rate=0.0,
+    )
+
     # lbt = LBT(
     #     start_year=2023,
     #     end_year=2030,
@@ -495,7 +501,7 @@ if __name__ == "__main__":
     #     cost_allocation=[FluidType.OIL, FluidType.GAS, FluidType.GAS],
     # )
 
-    # print('\t')
-    # print(f'Filetype: {type(t1)}')
-    # print(f'Length: {len(t1)}')
-    # print('t1 = \n', t1)
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
