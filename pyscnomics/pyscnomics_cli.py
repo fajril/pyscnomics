@@ -455,7 +455,7 @@ if __name__ == "__main__":
     from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales
     from pyscnomics.econ.selection import FluidType
 
-    cs = CostOfSales(
+    cs1 = CostOfSales(
         start_year=2023,
         end_year=2030,
         expense_year=np.array([2024, 2025, 2026, 2027, 2028]),
@@ -463,11 +463,24 @@ if __name__ == "__main__":
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
-    t1 = cs.expenditures_post_tax(
-        inflation_rate=0.01,
-        tax_portion=np.array([1, 1, 1, 1, 1]),
-        tax_rate=0.0,
+    cs2 = CostOfSales(
+        start_year=2023,
+        end_year=2030,
+        expense_year=np.array([2024, 2025, 2026, 2027, 2028]),
+        cost=np.array([100, 100, 100, 100, 100]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
+
+    cs = cs1.expenditures_post_tax(
+        inflation_rate=0.02,
+        tax_portion=np.array([1, 1, 1, 1, 1]),
+        tax_rate=0.01,
+    )
+
+    print('\t')
+    print(f'Filetype: {type(cs)}')
+    print(f'Length: {len(cs)}')
+    print('cs = \n', cs)
 
     # lbt = LBT(
     #     start_year=2023,
@@ -501,7 +514,7 @@ if __name__ == "__main__":
     #     cost_allocation=[FluidType.OIL, FluidType.GAS, FluidType.GAS],
     # )
 
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    # print('\t')
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
+    # print('t1 = \n', t1)

@@ -2865,26 +2865,83 @@ class CostOfSales(GeneralCost):
 
         else:
             raise CostOfSalesException(
-                f"Must add between an instance of CostOfSales "
-                f"with another instance of CostOfSales. "
-                f"{other}({other.__class__.__qualname__}) is not "
-                f"an instance of CostOfSales."
+                f"Must add between an instance of CostOfSales with another instance of "
+                f"CostOfSales. {other}({other.__class__.__qualname__}) is not an instance of "
+                f"CostOfSales."
             )
 
     def __iadd__(self, other):
         return self.__add__(other)
 
     def __sub__(self, other):
-        pass
+        # Only allows subtraction between an instance of CostOfSales and another instance of CostOfSales
+        if isinstance(other, CostOfSales):
+            start_year_combined = min(self.start_year, other.start_year)
+            end_year_combined = max(self.end_year, other.end_year)
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            cost_combined = np.concatenate((self.cost, -other.cost))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            description_combined = self.description + other.description
+
+            return CostOfSales(
+                start_year=start_year_combined,
+                end_year=end_year_combined,
+                expense_year=expense_year_combined,
+                cost=cost_combined,
+                cost_allocation=cost_allocation_combined,
+                description=description_combined,
+            )
+
+        else:
+            raise CostOfSalesException(
+                f"Must subtract between an instance of CostOfSales with another instance of "
+                f"CostOfSales. {other}({other.__class__.__qualname__}) is not an instance of "
+                f"CostOfSales. "
+            )
 
     def __rsub__(self, other):
-        pass
+        return self.__sub__(other)
 
     def __mul__(self, other):
-        pass
+        # Multiplication is allowed only with an integer/a float
+        if isinstance(other, (int, float)):
+            return CostOfSales(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                expense_year=self.expense_year,
+                cost=self.cost * other,
+                cost_allocation=self.cost_allocation,
+                description=self.description,
+            )
+
+        else:
+            raise CostOfSalesException(
+                f"Must multiply with an integer or a float. {other}({other.__class__.__qualname__}) "
+                f"is not an integer nor a float."
+            )
 
     def __rmul__(self, other):
-        pass
+        return self.__mul__(other)
 
     def __truediv__(self, other):
-        pass
+        # Division is allowed only with an integer or a float
+        if isinstance(other, (int, float)):
+            # Cannot divide with zero
+            if other == 0:
+                raise CostOfSalesException(f"Cannot divide with zero.")
+
+            else:
+                return CostOfSales(
+                    start_year=self.start_year,
+                    end_year=self.end_year,
+                    expense_year=self.expense_year,
+                    cost=self.cost / other,
+                    cost_allocation=self.cost_allocation,
+                    description=self.description,
+                )
+
+        else:
+            raise CostOfSalesException(
+                f"Must divide with an integer or a float, {other}({other.__class__.__qualname__}) "
+                f"is not an integer nor a float."
+            )
