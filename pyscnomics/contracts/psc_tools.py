@@ -84,7 +84,7 @@ def get_unrec_cost_2b_recovered_costrec(
 
             # Cost Recovery
             cost_recovery[index] = np.minimum(
-                revenue[index],
+                revenue[index] - ftp_ctr[index] - ftp_gov[index],
                 depreciation[index] + non_capital[index] + cost_to_be_recovered[index]
             ) * cr_cap_rate
 
@@ -121,7 +121,7 @@ def get_unrec_cost_2b_recovered_costrec(
 
             # Cost Recovery
             cost_recovery[index] = np.minimum(
-                revenue[index],
+                revenue[index] - ftp_ctr[index] - ftp_gov[index],
                 depreciation[index] + non_capital[index] + cost_to_be_recovered[index]
             ) * cr_cap_rate
 
