@@ -104,7 +104,7 @@ class Lifting:
                 f"not as {self.prod_year.__class__.__qualname__}."
             )
 
-        self.prod_year = self.prod_year.astype(np.int64)
+        self.prod_year = self.prod_year.astype(int)
 
         # Prepare attribute ghv
         if self.ghv is None:

@@ -452,35 +452,72 @@ def run_optimization(
 if __name__ == "__main__":
     # entry_point()
 
+    from datetime import date
+    from pyscnomics.econ.revenue import Lifting
     from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales
     from pyscnomics.econ.selection import FluidType
+    from pyscnomics.contracts.project import BaseProject
 
-    cs1 = CostOfSales(
+    lifting1 = Lifting(
         start_year=2023,
         end_year=2030,
-        expense_year=np.array([2024, 2025, 2026, 2027, 2028]),
-        cost=np.array([100, 100, 100, 100, 100]),
-        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+        lifting_rate=np.array([100, 100, 100]),
+        price=np.array([10, 10, 10]),
+        prod_year=np.array([2024, 2025, 2026]),
+        fluid_type=FluidType.OIL,
     )
 
-    cs2 = CostOfSales(
+    lifting2 = Lifting(
         start_year=2023,
         end_year=2030,
-        expense_year=np.array([2024, 2025, 2026, 2027, 2028]),
-        cost=np.array([100, 100, 100, 100, 100]),
-        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+        lifting_rate=np.array([50, 50, 50]),
+        price=np.array([10, 10, 10]),
+        prod_year=np.array([2024, 2025, 2026]),
+        fluid_type=FluidType.OIL,
     )
 
-    cs = cs1.expenditures_post_tax(
-        inflation_rate=0.02,
-        tax_portion=np.array([1, 1, 1, 1, 1]),
-        tax_rate=0.01,
+    cap1 = CapitalCost(
+        start_year=2023,
+        end_year=2030,
+        expense_year=np.array([2023, 2024]),
+        cost=np.array([100, 100]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    print('\t')
-    print(f'Filetype: {type(cs)}')
-    print(f'Length: {len(cs)}')
-    print('cs = \n', cs)
+    cap2 = CapitalCost(
+        start_year=2023,
+        end_year=2030,
+        expense_year=np.array([2023, 2024]),
+        cost=np.array([50, 50]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
+    )
+
+    cap3 = CapitalCost(
+        start_year=2023,
+        end_year=2030,
+        expense_year=np.array([2023, 2024]),
+        cost=np.array([50, 50]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
+    )
+
+    # =======================================================================================================
+
+    project = BaseProject(
+        start_date=date(year=2023, month=1, day=1),
+        end_date=date(year=2030, month=12, day=31),
+        # lifting=tuple([lifting1, lifting2]),
+        capital_cost=tuple([cap1, cap2, cap3]),
+        # intangible_cost=tuple([intang1, intang2, intang3]),
+        # asr_cost=tuple([asr1, asr2, asr3]),
+    )
+
+    # cs = CostOfSales(
+    #     start_year=2023,
+    #     end_year=2030,
+    #     expense_year=np.array([2024, 2025, 2026, 2027, 2028]),
+    #     cost=np.array([100, 100, 100, 100, 100]),
+    #     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+    # )
 
     # lbt = LBT(
     #     start_year=2023,

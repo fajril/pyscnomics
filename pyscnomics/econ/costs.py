@@ -369,7 +369,7 @@ class CapitalCost(GeneralCost):
                     f"not as a/an {self.pis_year.__class__.__qualname__}"
                 )
 
-        self.pis_year = self.pis_year.astype(np.int64)
+        self.pis_year = self.pis_year.astype(int)
 
         # Prepare attribute salvage_value
         if self.salvage_value is None:
@@ -1553,12 +1553,12 @@ class ASR(GeneralCost):
 
     final_year : np.ndarray
         The year in which cost distribution ends for each cost element.
-    future_rate : float, optional
-        Future rates applied to costs for each year, defaulting to a rate of 2%.
+    future_rate : float or np.ndarray, optional
+        Future rates applied to costs for each year, defaulting to a rate of 0%.
     """
 
     final_year: np.ndarray = field(default=None)
-    future_rate: float = field(default=None)
+    future_rate: float | np.ndarray = field(default=None)
 
     def __post_init__(self):
         """
@@ -1618,26 +1618,20 @@ class ASR(GeneralCost):
                     f"not as a/an {self.final_year.__class__.__qualname__}"
                 )
 
-        self.final_year = self.final_year.astype(np.int64)
+        self.final_year = self.final_year.astype(int)
 
         # Prepare attribute future_rate
         if self.future_rate is None:
-            self.future_rate = np.repeat(0.02, len(self.cost)).astype(np.float64)
+            self.future_rate = np.repeat(0.0, len(self.cost)).astype(np.float64)
 
         else:
-            if not isinstance(self.future_rate, (float, int)):
-                raise ASRException(
-                    f"Attribute future_rate must be given as a float or an int, "
-                    f"not as a/an {self.future_rate.__class__.__qualname__}"
-                )
-
-            else:
-                if self.future_rate < 0 or self.future_rate > 1:
+            if isinstance(self.future_rate, float):
+                if self.future_rate < 0.0 or self.future_rate > 1.0:
                     raise ASRException(
                         f"Attribute future_rate must be between 0 and 1"
                     )
 
-                self.future_rate = np.repeat(self.future_rate, len(self.cost)).astype(np.float64)
+        self.future_rate = self.future_rate.astype(np.float64)
 
         # Check input data for unequal length
         arr_length = len(self.cost)
@@ -2145,7 +2139,7 @@ class LBT(GeneralCost):
                     f"not as a/an {self.final_year.__class__.__qualname__}"
                 )
 
-        self.final_year = self.final_year.astype(np.int64)
+        self.final_year = self.final_year.astype(int)
 
         # Prepare attribute utilized_land_area
         if self.utilized_land_area is None:
