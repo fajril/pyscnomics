@@ -1,9 +1,6 @@
 """
 Prepares lifting data and calculate the revenue.
 """
-from random import sample
-from termios import INPCK
-
 import numpy as np
 from dataclasses import dataclass, field
 
