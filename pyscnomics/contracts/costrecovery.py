@@ -780,7 +780,12 @@ class CostRecovery(BaseProject):
 
         for index, i in enumerate(taxable_income):
             if index == 0:
-                pass
+                tax_paid[index] = np.where(taxable_income[index] > ctr_tax[index] + 0,
+                                           ctr_tax[index] + 0,
+                                           ets_and_ftp_ctr[index] - ddmo[index])
+                unpaid_tax[index] = np.where(ctr_tax[index] + 0 > tax_paid[index],
+                                             ctr_tax[index] + 0 - tax_paid[index],
+                                             0)
             else:
                 tax_paid[index] = np.where(taxable_income[index] > ctr_tax[index] + unpaid_tax[index - 1],
                                            ctr_tax[index] + unpaid_tax[index - 1],
