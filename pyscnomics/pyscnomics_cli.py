@@ -489,14 +489,14 @@ if __name__ == "__main__":
         end_year=2030,
         expense_year=np.array([2023, 2024]),
         cost=np.array([50, 50]),
-        cost_allocation=[FluidType.OIL, FluidType.OIL],
+        cost_allocation=[FluidType.GAS, FluidType.GAS],
     )
 
     cap3 = CapitalCost(
         start_year=2023,
         end_year=2030,
         expense_year=np.array([2023, 2024]),
-        cost=np.array([50, 50]),
+        cost=np.array([25, 25]),
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 

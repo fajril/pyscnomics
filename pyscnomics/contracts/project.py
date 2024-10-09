@@ -116,9 +116,9 @@ class BaseProject:
     _electricity_revenue: np.ndarray = field(default=None, init=False, repr=False)
     _co2_revenue: np.ndarray = field(default=None, init=False, repr=False)
 
-    # # Private attributes (associated with cost)
-    # _oil_capital_cost: CapitalCost = field(default=None, init=False, repr=False)
-    # _gas_capital_cost: CapitalCost = field(default=None, init=False, repr=False)
+    # Attributes to be defined later (associated with costs)
+    _oil_capital_cost: CapitalCost = field(default=None, init=False, repr=False)
+    _gas_capital_cost: CapitalCost = field(default=None, init=False, repr=False)
     # _oil_intangible: Intangible = field(default=None, init=False, repr=False)
     # _gas_intangible: Intangible = field(default=None, init=False, repr=False)
     # _oil_opex: OPEX = field(default=None, init=False, repr=False)
@@ -373,18 +373,14 @@ class BaseProject:
         self._electricity_revenue = self._electricity_lifting.revenue()
         self._co2_revenue = self._co2_lifting.revenue()
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_revenue)}')
-        print(f'Length: {len(self._oil_revenue)}')
-        print('_oil_revenue = \n', self._oil_revenue)
+        # print('\t')
+        # print(f'Filetype: {type(self.capital_cost_total)}')
+        # print(f'Length: {len(self.capital_cost_total)}')
+        # print('capital_cost_total = \n', self.capital_cost_total)
 
-        print('\t')
-        print(f'Filetype: {type(self._co2_revenue)}')
-        print(f'Length: {len(self._co2_revenue)}')
-        print('_co2_revenue = \n', self._co2_revenue)
+        # Prepare attributes associated with costs
+        self._oil_capital_cost = self._get_oil_capital()
 
-        # # Specify cost data
-        # self._oil_capital_cost = self._get_oil_tangible()
         # self._gas_capital_cost = self._get_gas_tangible()
         # self._oil_intangible = self._get_oil_intangible()
         # self._gas_intangible = self._get_gas_intangible()
@@ -774,29 +770,30 @@ class BaseProject:
             (lft for lft in self.lifting if lft.fluid_type == FluidType.CO2),
         )
 
-    def _get_oil_tangible(self) -> CapitalCost:
+    def _get_oil_capital(self) -> CapitalCost:
         """
-        Determines total oil Tangible from the number of oil Tangible instances in
-        attribute self.tangible_cost_total.
+        Determines total oil CapitalCost from the number of oil CapitalCost instances in
+        attribute self.capital_cost_total.
 
         Returns
         -------
         CapitalCost
-            An instance of Tangible that only includes FluidType.OIL as the associated
+            An instance of CapitalCost that only includes FluidType.OIL as the associated
             cost_allocation that has been combined altogether following the rules prescribed
-            in the dunder method __add__() of Tangible class.
+            in the dunder method __add__() of CapitalCost class.
 
         Notes
         -----
         The core operations are as follows:
-        (1) Check the attribute cost_allocation in attribute self.tangible_cost_total,
-        (2) If OIL is not available as an instance in attribute self.tangible_cost_total,
-            then establish a new instance of OIL Tangible with the following attribute set
+        (1) Check the attribute cost_allocation in attribute self.capital_cost_total,
+        (2) If OIL is not available as an instance in attribute self.capital_cost_total,
+            then establish a new instance of OIL CapitalCost with the following attribute set
             to zero: cost.
         (3) Identify index location where cost_allocation is FluidType.OIL in attribute
-            self.tangible_cost_total,
-        (4) Create a new instance of Tangible with only FluidType.OIL as its cost_allocation.
+            self.capital_cost_total,
+        (4) Create a new instance of CapitalCost with only FluidType.OIL as its cost_allocation.
         """
+
         if FluidType.OIL not in self.capital_cost_total.cost_allocation:
             return CapitalCost(
                 start_year=self.start_date.year,
@@ -807,41 +804,70 @@ class BaseProject:
             )
 
         else:
-            oil_tangible_id = np.argwhere(
+
+            print('\t')
+            print(f'Filetype: {type(self.capital_cost_total)}')
+            print(f'Length: {len(self.capital_cost_total)}')
+            print('capital_cost_total = \n', self.capital_cost_total)
+
+            oil_capital_id = np.argwhere(
                 np.array(self.capital_cost_total.cost_allocation) == FluidType.OIL
             ).ravel()
 
             start_year = self.capital_cost_total.start_year
             end_year = self.capital_cost_total.end_year
-            cost = self.capital_cost_total.cost[oil_tangible_id]
-            expense_year = self.capital_cost_total.expense_year[oil_tangible_id]
-            cost_allocation = np.array(self.capital_cost_total.cost_allocation)[oil_tangible_id]
-            vat_portion = self.capital_cost_total.vat_portion[oil_tangible_id]
-            vat_discount = self.capital_cost_total.vat_discount[oil_tangible_id]
-            lbt_portion = self.capital_cost_total.lbt_portion[oil_tangible_id]
-            lbt_discount = self.capital_cost_total.lbt_discount[oil_tangible_id]
-            pis_year = self.capital_cost_total.pis_year[oil_tangible_id]
-            salvage_value = self.capital_cost_total.salvage_value[oil_tangible_id]
-            useful_life = self.capital_cost_total.useful_life[oil_tangible_id]
-            depreciation_factor = self.capital_cost_total.depreciation_factor[oil_tangible_id]
-            is_ic_applied = np.array(self.capital_cost_total.is_ic_applied)[oil_tangible_id]
+            cost = self.capital_cost_total.cost[oil_capital_id]
+            expense_year = self.capital_cost_total.expense_year[oil_capital_id]
+            cost_allocation = np.array(self.capital_cost_total.cost_allocation)[oil_capital_id]
+            description = np.array(self.capital_cost_total.description)[oil_capital_id]
+            pis_year = self.capital_cost_total.pis_year[oil_capital_id]
+            salvage_value = self.capital_cost_total.salvage_value[oil_capital_id]
+            useful_life = self.capital_cost_total.useful_life[oil_capital_id]
+            depreciation_factor = self.capital_cost_total.depreciation_factor[oil_capital_id]
+            is_ic_applied = np.array(self.capital_cost_total.is_ic_applied)[oil_capital_id]
 
-            return CapitalCost(
-                start_year=start_year,
-                end_year=end_year,
-                cost=cost,
-                expense_year=expense_year,
-                cost_allocation=cost_allocation.tolist(),
-                vat_portion=vat_portion,
-                vat_discount=vat_discount,
-                lbt_portion=lbt_portion,
-                lbt_discount=lbt_discount,
-                pis_year=pis_year,
-                salvage_value=salvage_value,
-                useful_life=useful_life,
-                depreciation_factor=depreciation_factor,
-                is_ic_applied=is_ic_applied.tolist(),
-            )
+            print('\t')
+            print(f'Filetype: {type(description)}')
+            print(f'Length: {len(description)}')
+            print('description = \n', description)
+
+            # oil_tangible_id = np.argwhere(
+            #     np.array(self.capital_cost_total.cost_allocation) == FluidType.OIL
+            # ).ravel()
+            #
+            # start_year = self.capital_cost_total.start_year
+            # end_year = self.capital_cost_total.end_year
+            # cost = self.capital_cost_total.cost[oil_tangible_id]
+            # expense_year = self.capital_cost_total.expense_year[oil_tangible_id]
+            # cost_allocation = np.array(self.capital_cost_total.cost_allocation)[oil_tangible_id]
+
+            # vat_portion = self.capital_cost_total.vat_portion[oil_tangible_id]
+            # vat_discount = self.capital_cost_total.vat_discount[oil_tangible_id]
+            # lbt_portion = self.capital_cost_total.lbt_portion[oil_tangible_id]
+            # lbt_discount = self.capital_cost_total.lbt_discount[oil_tangible_id]
+
+            # pis_year = self.capital_cost_total.pis_year[oil_tangible_id]
+            # salvage_value = self.capital_cost_total.salvage_value[oil_tangible_id]
+            # useful_life = self.capital_cost_total.useful_life[oil_tangible_id]
+            # depreciation_factor = self.capital_cost_total.depreciation_factor[oil_tangible_id]
+            # is_ic_applied = np.array(self.capital_cost_total.is_ic_applied)[oil_tangible_id]
+            #
+            # return CapitalCost(
+            #     start_year=start_year,
+            #     end_year=end_year,
+            #     cost=cost,
+            #     expense_year=expense_year,
+            #     cost_allocation=cost_allocation.tolist(),
+            #     vat_portion=vat_portion,
+            #     vat_discount=vat_discount,
+            #     lbt_portion=lbt_portion,
+            #     lbt_discount=lbt_discount,
+            #     pis_year=pis_year,
+            #     salvage_value=salvage_value,
+            #     useful_life=useful_life,
+            #     depreciation_factor=depreciation_factor,
+            #     is_ic_applied=is_ic_applied.tolist(),
+            # )
 
     def _get_gas_tangible(self) -> CapitalCost:
         """
