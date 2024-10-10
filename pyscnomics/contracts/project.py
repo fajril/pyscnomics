@@ -114,6 +114,9 @@ class BaseProject:
     _oil_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     _gas_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
 
+    _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
+
     _oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _gas_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -145,7 +148,7 @@ class BaseProject:
                 f"is after the end date: {self.end_date}"
             )
 
-        # User does not provide lifting data (both OIL and GAS)
+        # User does not provide lifting data (both ALL FluidType)
         if self.lifting is None:
             self.lifting = (
                 Lifting(
@@ -190,7 +193,7 @@ class BaseProject:
                 )
             )
 
-        # User does not provide tangible_cost data (both OIL and GAS)
+        # User does not provide capital_cost data (both OIL and GAS)
         if self.capital_cost is None:
             self.capital_cost = (
                 CapitalCost(
@@ -400,8 +403,9 @@ class BaseProject:
                     )
 
             else:
+                # If there is no oil onstream date, it will be set to 1st January.
                 self.oil_onstream_date = date(
-                    year=self.project_years[oil_revenue_index[0]], month=1, day=1
+                    year=int(self.project_years[oil_revenue_index[0]]), month=1, day=1
                 )
 
         else:
@@ -437,8 +441,9 @@ class BaseProject:
                     )
 
             else:
+                # If there is no gas onstream date, it will be set to 1st January.
                 self.gas_onstream_date = date(
-                    year=self.project_years[gas_revenue_index[0]], month=1, day=1
+                    year=int(self.project_years[gas_revenue_index[0]]), month=1, day=1
                 )
 
         else:

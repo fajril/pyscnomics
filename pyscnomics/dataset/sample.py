@@ -160,8 +160,8 @@ def assign_lifting(data_raw: dict) -> tuple:
                               np.array(lifting_data[key]["ghv"]),
                               prod_rate=None if lifting_data[key]["prod_rate"] is None
                               else np.array(lifting_data[key]["prod_rate"]),
-                              prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None
-                              else np.array(lifting_data[key]["prod_rate_baseline"]),
+                              # prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None
+                              # else np.array(lifting_data[key]["prod_rate_baseline"]),
                               )
 
             lifting_list.append(lifting)

@@ -62,9 +62,9 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
     if np.sum(contract._gas_lifting.get_lifting_rate_arr()) == 0:
         gas_wap = 0.0
     else:
-        gas_wap = np.divide(np.sum(contract._gas_wap_price * contract._gas_lifting.get_lifting_rate_arr()), np.sum(
-            contract._gas_lifting.get_lifting_rate_arr()), where=np.sum(
-            contract._gas_lifting.get_lifting_rate_arr()) != 0)
+        gas_wap = np.divide(np.sum(contract._gas_wap_price * contract._gas_lifting.get_lifting_rate_arr() * contract._gas_lifting.get_lifting_ghv_arr()), np.sum(
+            contract._gas_lifting.get_lifting_rate_arr() * contract._gas_lifting.get_lifting_ghv_arr()), where=np.sum(
+            contract._gas_lifting.get_lifting_rate_arr() * contract._gas_lifting.get_lifting_ghv_arr()) != 0)
 
     # Gross Revenue
     gross_revenue_oil = np.sum(contract._oil_revenue, dtype=float)
@@ -83,6 +83,16 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
     intangible = np.sum(contract._oil_intangible_expenditures + contract._gas_intangible_expenditures - sunk_cost_extended,
                         dtype=float)
     investment = tangible + intangible
+
+    # Undepreciated Asset
+    if isinstance(contract, BaseProject):
+        undepreciated_asset_oil = 0.0
+        undepreciated_asset_gas = 0.0
+        undepreciated_asset_total = 0.0
+    else:
+        undepreciated_asset_oil = np.sum(contract._oil_undepreciated_asset)
+        undepreciated_asset_gas = np.sum(contract._gas_undepreciated_asset)
+        undepreciated_asset_total = undepreciated_asset_oil + undepreciated_asset_gas
 
     # Capex
     oil_capex = np.sum(contract._oil_capital_expenditures)
@@ -418,8 +428,11 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'gov_tax_income': gov_tax_income,
                 'gov_take': gov_take,
                 'gov_take_over_gross_rev': gov_take_over_gross_rev,
-                'gov_take_npv': gov_take_npv}
-
+                'gov_take_npv': gov_take_npv,
+                'undepreciated_asset_oil': undepreciated_asset_oil,
+                'undepreciated_asset_gas': undepreciated_asset_gas,
+                'undepreciated_asset_total': undepreciated_asset_total
+                }
     # Condition where the contract is Gross Split
     if isinstance(contract, GrossSplit):
         #  Deductible Cost
@@ -493,7 +506,11 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'gov_take': gov_take,
                 'gov_take_over_gross_rev': gov_take_over_gross_rev,
                 'gov_take_npv': gov_take_npv,
-                'gov_ftp_share': 0}
+                'gov_ftp_share': 0,
+                'undepreciated_asset_oil': undepreciated_asset_oil,
+                'undepreciated_asset_gas': undepreciated_asset_gas,
+                'undepreciated_asset_total': undepreciated_asset_total
+                }
 
     if isinstance(contract, Transition):
         ctr_ftp = np.sum(contract._ctr_ftp, dtype=float)
@@ -677,7 +694,10 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'gov_take': gov_take,
                 'gov_take_over_gross_rev': gov_take_over_gross_rev,
                 'gov_take_npv': gov_take_npv,
-                'gov_ftp_share': gov_ftp
+                'gov_ftp_share': gov_ftp,
+                'undepreciated_asset_oil': undepreciated_asset_oil,
+                'undepreciated_asset_gas': undepreciated_asset_gas,
+                'undepreciated_asset_total': undepreciated_asset_total
                 }
 
     if isinstance(contract, BaseProject):
@@ -731,4 +751,9 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'gov_take': 0,
                 'gov_take_over_gross_rev': 0,
                 'gov_take_npv': 0,
+                'undepreciated_asset_oil': 0,
+                'undepreciated_asset_gas': 0,
+                'undepreciated_asset_total': 0
                 }
+
+
