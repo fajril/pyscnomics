@@ -1,5 +1,9 @@
-import numpy as np
+"""
+This test code will be changed in the version 1_2_0
+"""
+# ToDo: Rewrite the test code in the version 1.2.0
 
+import numpy as np
 from pyscnomics.dataset.sample import load_data, load_testing
 from pyscnomics.econ.selection import FTPTaxRegime
 

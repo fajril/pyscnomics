@@ -256,7 +256,7 @@ def main(workbook_path, mode):
 @click.option(
     '-p',
     '--path',
-    help='The path of the Microsoft Excel Workbook'
+    help='The path of the Microsoft Excel Workbook with PySCnomics template'
 )
 @click.option(
     '-m',
