@@ -476,28 +476,31 @@ if __name__ == "__main__":
         fluid_type=FluidType.OIL,
     )
 
-    cap1 = CapitalCost(
+    asr1 = ASR(
         start_year=2023,
         end_year=2030,
         expense_year=np.array([2023, 2024]),
         cost=np.array([100, 100]),
         cost_allocation=[FluidType.OIL, FluidType.OIL],
+        future_rate=0.01,
     )
 
-    cap2 = CapitalCost(
+    asr2 = ASR(
         start_year=2023,
         end_year=2030,
         expense_year=np.array([2023, 2024]),
         cost=np.array([50, 50]),
         cost_allocation=[FluidType.GAS, FluidType.GAS],
+        future_rate=0.02,
     )
 
-    cap3 = CapitalCost(
+    asr3 = ASR(
         start_year=2023,
         end_year=2030,
         expense_year=np.array([2023, 2024]),
         cost=np.array([25, 25]),
         cost_allocation=[FluidType.OIL, FluidType.OIL],
+        future_rate=0.0,
     )
 
     # =======================================================================================================
@@ -506,9 +509,10 @@ if __name__ == "__main__":
         start_date=date(year=2023, month=1, day=1),
         end_date=date(year=2030, month=12, day=31),
         # lifting=tuple([lifting1, lifting2]),
-        capital_cost=tuple([cap1, cap2, cap3]),
+        # capital_cost=tuple([cap1, cap2, cap3]),
         # intangible_cost=tuple([intang1, intang2, intang3]),
-        # asr_cost=tuple([asr1, asr2, asr3]),
+        # opex=tuple([opex1, opex2, opex3])
+        asr_cost=tuple([asr1, asr2, asr3]),
     )
 
     # cs = CostOfSales(
@@ -540,7 +544,7 @@ if __name__ == "__main__":
     #     expense_year=np.array([2024, 2026]),
     #     cost_allocation=[FluidType.OIL, FluidType.GAS],
     #     final_year=np.array([2024, 2028]),
-    #     future_rate=0.0,
+    #     future_rate=0.06,
     # )
 
     # intang = Intangible(

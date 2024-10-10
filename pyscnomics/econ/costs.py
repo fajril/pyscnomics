@@ -1622,7 +1622,7 @@ class ASR(GeneralCost):
 
         # Prepare attribute future_rate
         if self.future_rate is None:
-            self.future_rate = np.repeat(0.0, len(self.cost)).astype(np.float64)
+            self.future_rate = np.repeat(0.0, len(self.cost))
 
         else:
             if isinstance(self.future_rate, float):
@@ -1630,6 +1630,8 @@ class ASR(GeneralCost):
                     raise ASRException(
                         f"Attribute future_rate must be between 0 and 1"
                     )
+
+                self.future_rate = np.repeat(self.future_rate, len(self.cost))
 
         self.future_rate = self.future_rate.astype(np.float64)
 
