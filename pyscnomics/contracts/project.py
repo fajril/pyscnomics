@@ -389,28 +389,26 @@ class BaseProject:
         self._gas_opex = self._get_gas_opex()
         self._oil_asr = self._get_oil_asr()
         self._gas_asr = self._get_gas_asr()
-        # self._oil_lbt = self._get_oil_lbt()
-        # self._gas_lbt = self._get_gas_lbt()
-
-        # print('\t')
-        # print(f'Filetype: {type(self.asr_cost_total)}')
-        # print(f'Length: {len(self.asr_cost_total)}')
-        # print('asr_cost_total = \n', self.asr_cost_total)
-        #
-        # print('\t')
-        # print(f'Filetype: {type(self._oil_asr)}')
-        # print(f'Length: {len(self._oil_asr)}')
-        # print('_oil_asr = \n', self._oil_asr)
-        #
-        # print('\t')
-        # print(f'Filetype: {type(self._gas_asr)}')
-        # print(f'Length: {len(self._gas_asr)}')
-        # print('_gas_asr = \n', self._gas_asr)
-
-        # # Specify Cost of Sales data
+        self._oil_lbt = self._get_oil_lbt()
+        self._gas_lbt = self._get_gas_lbt()
         # self._oil_cost_of_sales = self._get_oil_cost_of_sales()
         # self._gas_cost_of_sales = self._get_gas_cost_of_sales()
-        #
+
+        print('\t')
+        print(f'Filetype: {type(self.lbt_cost_total)}')
+        print(f'Length: {len(self.lbt_cost_total)}')
+        print('lbt_cost_total = \n', self.lbt_cost_total)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_lbt)}')
+        print(f'Length: {len(self._oil_lbt)}')
+        print('_oil_lbt = \n', self._oil_lbt)
+
+        print('\t')
+        print(f'Filetype: {type(self._gas_lbt)}')
+        print(f'Length: {len(self._gas_lbt)}')
+        print('_gas_lbt = \n', self._gas_lbt)
+
         # # Retrieving the Cost of Sales array
         # self._oil_cost_of_sales_expenditures = self._oil_cost_of_sales.get_cost_of_sales_arr()
         # self._gas_cost_of_sales_expenditures = self._gas_cost_of_sales.get_cost_of_sales_arr()
@@ -1257,10 +1255,134 @@ class BaseProject:
             )
 
     def _get_oil_lbt(self) -> LBT:
-        pass
+        """
+        Determines total oil LBT from the number of oil LBT instances in
+        attribute self.lbt_cost_total.
+
+        Returns
+        -------
+        LBT
+            An instance of LBT that only includes FluidType.OIL as the associated
+            cost_allocation that has been combined altogether following the rules
+            prescribed in the dunder method __add__() of LBT class.
+
+        Notes
+        -----
+        The core operations are as follows:
+        (1) Check the attribute cost_allocation in attribute self.lbt_cost_total,
+        (2) If OIL is not available as an instance in attribute self.lbt_cost_total,
+            then establish a new instance of OIL LBT with the following attribute set
+            to zero: cost.
+        (3) Identify index location where cost_allocation is FluidType.OIL in attribute
+            self.lbt_cost_total,
+        (4) Create a new instance of LBT with only FluidType.OIL as its cost_allocation.
+        """
+
+        if FluidType.OIL not in self.lbt_cost_total.cost_allocation:
+            return LBT(
+                start_year=self.start_date.year,
+                end_year=self.end_date.year,
+                expense_year=np.array([self.start_date.year]),
+                cost_allocation=[FluidType.OIL],
+            )
+
+        else:
+            oil_lbt_id = np.argwhere(
+                np.array(self.lbt_cost_total.cost_allocation) == FluidType.OIL
+            ).ravel()
+
+            start_year = self.lbt_cost_total.start_year
+            end_year = self.lbt_cost_total.end_year
+            expense_year = self.lbt_cost_total.expense_year[oil_lbt_id]
+            cost_allocation = np.array(self.lbt_cost_total.cost_allocation)[oil_lbt_id]
+            description = np.array(self.lbt_cost_total.description)[oil_lbt_id]
+            final_year = self.lbt_cost_total.final_year[oil_lbt_id]
+            utilized_land_area = self.lbt_cost_total.utilized_land_area[oil_lbt_id]
+            utilized_building_area = self.lbt_cost_total.utilized_building_area[oil_lbt_id]
+            njop_land = self.lbt_cost_total.njop_land[oil_lbt_id]
+            njop_building = self.lbt_cost_total.njop_building[oil_lbt_id]
+            gross_revenue = self.lbt_cost_total.gross_revenue[oil_lbt_id]
+            cost = self.lbt_cost_total.cost[oil_lbt_id]
+
+            return LBT(
+                start_year=start_year,
+                end_year=end_year,
+                expense_year=expense_year,
+                cost_allocation=cost_allocation.tolist(),
+                description=description.tolist(),
+                final_year=final_year,
+                utilized_land_area=utilized_land_area,
+                utilized_building_area=utilized_building_area,
+                njop_land=njop_land,
+                njop_building=njop_building,
+                gross_revenue=gross_revenue,
+                cost=cost,
+            )
 
     def _get_gas_lbt(self) -> LBT:
-        pass
+        """
+        Determines total gas LBT from the number of gas LBT instances in
+        attribute self.lbt_cost_total.
+
+        Returns
+        -------
+        LBT
+            An instance of LBT that only includes FluidType.GAS as the associated
+            cost_allocation that has been combined altogether following the rules
+            prescribed in the dunder method __add__() of LBT class.
+
+        Notes
+        -----
+        The core operations are as follows:
+        (1) Check the attribute cost_allocation in attribute self.lbt_cost_total,
+        (2) If GAS is not available as an instance in attribute self.lbt_cost_total,
+            then establish a new instance of GAS LBT with the following attribute set
+            to zero: cost.
+        (3) Identify index location where cost_allocation is FluidType.GAS in attribute
+            self.lbt_cost_total,
+        (4) Create a new instance of LBT with only FluidType.GAS as its cost_allocation.
+        """
+
+        if FluidType.GAS not in self.lbt_cost_total.cost_allocation:
+            return LBT(
+                start_year=self.start_date.year,
+                end_year=self.end_date.year,
+                expense_year=np.array([self.start_date.year]),
+                cost_allocation=[FluidType.OIL],
+            )
+
+        else:
+            gas_lbt_id = np.argwhere(
+                np.array(self.lbt_cost_total.cost_allocation) == FluidType.GAS
+            ).ravel()
+
+            start_year = self.lbt_cost_total.start_year
+            end_year = self.lbt_cost_total.end_year
+            expense_year = self.lbt_cost_total.expense_year[gas_lbt_id]
+            cost_allocation = np.array(self.lbt_cost_total.cost_allocation)[gas_lbt_id]
+            description = np.array(self.lbt_cost_total.description)[gas_lbt_id]
+            final_year = self.lbt_cost_total.final_year[gas_lbt_id]
+            utilized_land_area = self.lbt_cost_total.utilized_land_area[gas_lbt_id]
+            utilized_building_area = self.lbt_cost_total.utilized_building_area[gas_lbt_id]
+            njop_land = self.lbt_cost_total.njop_land[gas_lbt_id]
+            njop_building = self.lbt_cost_total.njop_building[gas_lbt_id]
+            gross_revenue = self.lbt_cost_total.gross_revenue[gas_lbt_id]
+            cost = self.lbt_cost_total.cost[gas_lbt_id]
+
+            return LBT(
+                start_year=start_year,
+                end_year=end_year,
+                expense_year=expense_year,
+                cost_allocation=cost_allocation.tolist(),
+                description=description.tolist(),
+                final_year=final_year,
+                utilized_land_area=utilized_land_area,
+                utilized_building_area=utilized_building_area,
+                njop_land=njop_land,
+                njop_building=njop_building,
+                gross_revenue=gross_revenue,
+                cost=cost,
+            )
 
     def _get_oil_cost_of_sales(self) -> CostOfSales:
         """

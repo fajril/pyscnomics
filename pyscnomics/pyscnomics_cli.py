@@ -476,31 +476,28 @@ if __name__ == "__main__":
         fluid_type=FluidType.OIL,
     )
 
-    asr1 = ASR(
+    lbt1 = LBT(
         start_year=2023,
         end_year=2030,
         expense_year=np.array([2023, 2024]),
         cost=np.array([100, 100]),
         cost_allocation=[FluidType.OIL, FluidType.OIL],
-        future_rate=0.01,
     )
 
-    asr2 = ASR(
+    lbt2 = LBT(
         start_year=2023,
         end_year=2030,
         expense_year=np.array([2023, 2024]),
         cost=np.array([50, 50]),
         cost_allocation=[FluidType.GAS, FluidType.GAS],
-        future_rate=0.02,
     )
 
-    asr3 = ASR(
+    lbt3 = LBT(
         start_year=2023,
         end_year=2030,
         expense_year=np.array([2023, 2024]),
         cost=np.array([25, 25]),
         cost_allocation=[FluidType.OIL, FluidType.OIL],
-        future_rate=0.0,
     )
 
     # =======================================================================================================
@@ -512,7 +509,8 @@ if __name__ == "__main__":
         # capital_cost=tuple([cap1, cap2, cap3]),
         # intangible_cost=tuple([intang1, intang2, intang3]),
         # opex=tuple([opex1, opex2, opex3])
-        asr_cost=tuple([asr1, asr2, asr3]),
+        # asr_cost=tuple([asr1, asr2, asr3]),
+        lbt_cost=tuple([lbt1, lbt2, lbt3]),
     )
 
     # cs = CostOfSales(
