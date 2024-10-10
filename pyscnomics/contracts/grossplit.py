@@ -1,6 +1,7 @@
 """
 Handles calculations associated with PSC Gross Split.
 """
+import warnings
 from dataclasses import dataclass, field
 import numpy as np
 
@@ -205,6 +206,13 @@ class GrossSplit(BaseProject):
     _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_government_take: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes fof containing the 100% contractor split warning
+    _oil_ctr_split_prior_bracket: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ctr_split_prior_bracket: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_year_maximum_ctr_split: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_year_maximum_ctr_split: np.ndarray = field(default=None, init=False, repr=False)
+
 
     def _check_attributes(self):
         """
@@ -995,6 +1003,33 @@ class GrossSplit(BaseProject):
                                minis_disc_array)
         self._gas_ctr_split = (self._gas_base_split + self._var_split_array + self._gas_prog_split +
                                minis_disc_array)
+
+        self._oil_ctr_split_prior_bracket = np.copy(self._oil_ctr_split)
+        self._gas_ctr_split_prior_bracket = np.copy(self._gas_ctr_split)
+
+        # Add the condition to show the contractor split more than 100%
+        self._oil_year_maximum_ctr_split = self._get_year_maximum_split(
+            ctr_split=self._oil_ctr_split,
+            fluid="Oil"
+        )
+
+        self._gas_year_maximum_ctr_split = self._get_year_maximum_split(
+            ctr_split=self._gas_ctr_split,
+            fluid="Gas"
+        )
+
+        # Condition to limit the contractor split is 1.0 at maximum
+        self._oil_ctr_split = np.where(
+            self._oil_ctr_split > np.full_like(self._oil_ctr_split, 1.0),
+            np.full_like(self._oil_ctr_split, 1.0),
+            self._oil_ctr_split
+        )
+
+        self._gas_ctr_split = np.where(
+            self._gas_ctr_split > np.full_like(self._gas_ctr_split, 1.0),
+            np.full_like(self._gas_ctr_split, 1.0),
+            self._gas_ctr_split
+        )
 
         # Contractor Share
         self._oil_ctr_share_before_transfer = self._oil_revenue * self._oil_ctr_split
