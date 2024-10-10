@@ -7,6 +7,7 @@ from .costs import (
     Intangible,
     OPEX,
     ASR,
+    CostOfSales
 )
 from .depreciation import (
     straight_line_depreciation_rate,

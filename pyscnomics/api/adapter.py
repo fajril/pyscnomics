@@ -1,6 +1,7 @@
 """
 This file is utilized to be the adapter of the router into the core codes.
 """
+import numpy as np
 import pandas as pd
 from datetime import datetime
 
@@ -12,7 +13,9 @@ from pyscnomics.tools.summary import get_summary
 from pyscnomics.tools.table import get_table
 from pyscnomics.optimize.optimization import optimize_psc
 from pyscnomics.optimize.optimization_transition import optimize_psc_core as optimize_psc_trans
-from pyscnomics.econ.selection import OptimizationParameter
+from pyscnomics.econ.selection import OptimizationParameter, FluidType
+from pyscnomics.tools.ltp import oil_ltp_predict, gas_ltp_predict
+from pyscnomics.tools.rpd import RPDModel
 from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_list_to_array_float_or_array,
                                       convert_dict_to_lifting,
@@ -20,6 +23,7 @@ from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_dict_to_intangible,
                                       convert_dict_to_opex,
                                       convert_dict_to_asr,
+                                      convert_dict_to_cost_of_sales,
                                       convert_list_to_array_float,
                                       convert_list_to_array_float_or_array_or_none,
                                       convert_str_to_taxsplit,
@@ -34,11 +38,24 @@ from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_str_to_optimization_parameters,
                                       convert_str_to_optimization_targetparameter,
                                       convert_grosssplitregime_to_enum,
-                                      convert_to_float)
+                                      convert_to_float,
+                                      read_fluid_type)
 
 
 class ContractException(Exception):
     """Exception to be raised if contract type is misused"""
+
+    pass
+
+
+class LTPModelException(Exception):
+    """ Exception to be raised for an incorrect LTP configurations """
+
+    pass
+
+
+class RDPModelException(Exception):
+    """ Exception to be raised for an incorrect RDP configurations """
 
     pass
 
@@ -70,6 +87,8 @@ def get_setup_dict(data: dict) -> tuple:
         The intangible cost of the project, in Intangible Dataclass format.
     opex: OPEX
         The opex cost of the project, in OPEX Dataclass format.
+    cost_of_sales: CostOfSales
+        The opex cost of the project, in CostOfSales Dataclass format.
     asr: ASR
         The asr cost of the project, in ASR Dataclass format.
 
@@ -84,7 +103,8 @@ def get_setup_dict(data: dict) -> tuple:
     intangible = convert_dict_to_intangible(data_raw=data['intangible'])
     opex = convert_dict_to_opex(data_raw=data['opex'])
     asr = convert_dict_to_asr(data_raw=data['asr'])
-    return start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr
+    cost_of_sales = convert_dict_to_cost_of_sales(data_raw=data['cost_of_sales'])
+    return start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales
 
 
 def get_summary_dict(data: dict) -> dict:
@@ -179,7 +199,7 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         The summary arguments used in retrieving the executive summary of the contract.
 
     """
-    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr = (
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
         get_setup_dict(data=data))
 
     contract = CostRecovery(
@@ -192,6 +212,7 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         intangible_cost=intangible,
         opex=opex,
         asr_cost=asr,
+        cost_of_sales=cost_of_sales,
         oil_ftp_is_available=data['costrecovery']['oil_ftp_is_available'],
         oil_ftp_is_shared=data['costrecovery']['oil_ftp_is_shared'],
         oil_ftp_portion=convert_to_float(target=data['costrecovery']['oil_ftp_portion']),
@@ -235,7 +256,10 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
         "future_rate": convert_to_float(target=data['contract_arguments']['future_rate']),
         "inflation_rate_applied_to": convert_str_to_inflationappliedto(str_object=data['contract_arguments']['inflation_rate_applied_to']),
-        "post_uu_22_year2001": data['contract_arguments']['post_uu_22_year2001']
+        "post_uu_22_year2001": data['contract_arguments']['post_uu_22_year2001'],
+        "oil_cost_of_sales_applied": data["contract_arguments"]["oil_cost_of_sales_applied"],
+        "gas_cost_of_sales_applied": data["contract_arguments"]["gas_cost_of_sales_applied"],
+        "sum_undepreciated_cost": data['contract_arguments']['sum_undepreciated_cost'],
     }
 
     # Running the contract
@@ -505,7 +529,7 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         The summary arguments used in retrieving the executive summary of the contract.
 
     """
-    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr = (
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
         get_setup_dict(data=data))
 
     contract = GrossSplit(
@@ -560,7 +584,8 @@ def get_grosssplit(data: dict, summary_result: bool = True):
             str_object=data['contract_arguments']['inflation_rate_applied_to']),
         "cum_production_split_offset": convert_list_to_array_float_or_array(data_input=data["contract_arguments"]["cum_production_split_offset"]),
         "amortization": data["contract_arguments"]["amortization"],
-        "regime": convert_grosssplitregime_to_enum(target=data["contract_arguments"]["regime"])
+        "regime": convert_grosssplitregime_to_enum(target=data["contract_arguments"]["regime"]),
+        "sum_undepreciated_cost": data["contract_arguments"]["sum_undepreciated_cost"],
     }
 
     # Running the contract
@@ -731,7 +756,7 @@ def get_baseproject(data: dict, summary_result: bool = True):
         The summary arguments used in retrieving the executive summary of the contract.
 
     """
-    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr = (
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
         get_setup_dict(data=data))
 
     contract = BaseProject(start_date=start_date,
@@ -780,9 +805,472 @@ def get_baseproject(data: dict, summary_result: bool = True):
     return summary_skk, contract, contract_arguments_dict, summary_arguments_dict
 
 
+def get_ltp(
+        volume: float,
+        start_year: int,
+        end_year: int,
+        fluid_type: FluidType
+) -> np.ndarray:
+    """
+    Function to get the ltp array.
+
+    Parameters
+    ----------
+    volume:float
+        The volume of the reserves.
+    start_year:int
+        The start year.
+    end_year:int
+        The end year.
+    fluid_type: FluidType
+        The FluidType of the corresponding volume.
+
+    Returns
+    -------
+    out: np.ndarray
+        The array of ltp
+
+    """
+    # Condition checking for the fluid type for initiating the array of ltp
+    if fluid_type == FluidType.OIL:
+        rate_ltp = oil_ltp_predict(volume=volume)
+    elif fluid_type == FluidType.GAS:
+        rate_ltp = gas_ltp_predict(volume=volume)
+    else:
+        raise LTPModelException(
+            f"Unsupported Fluid Type {fluid_type} "
+        )
+
+    # Initiating the array of years
+    year_arr = np.arange(start_year, end_year + 1)
+    gap = len(year_arr) - len(rate_ltp)
+
+    # Checking condition for the given years gap
+    if gap < 0:
+        raise LTPModelException(
+            f"Forecast years from {start_year} to {end_year} is too short. "
+            f"Please set the end_year at least until {end_year + (-1 * gap)}"
+        )
+
+    rate_gap = np.zeros(gap)
+    rate_adjusted = np.concatenate([rate_gap, rate_ltp])
+
+    return rate_adjusted
 
 
+def get_ltp_dict(data: dict):
+    """
+    The function to get the list of LTP from the given reserves volume.
 
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+
+    Returns
+    -------
+    """
+    volume = data['volume']
+    start_year = data['start_year']
+    end_year = data['end_year']
+    fluid_type = read_fluid_type(fluid=data['fluid_type'])
+
+    ltp_array = get_ltp(
+        volume=volume,
+        start_year=start_year,
+        end_year=end_year,
+        fluid_type=fluid_type,)
+
+    return pd.DataFrame(
+        {
+            'year': np.arange(start_year, end_year + 1).tolist(),
+            'ltp': ltp_array.tolist()
+        }
+    ).set_index('year').to_dict()
+
+
+def get_rdp(
+        start_year: int,
+        end_year: int,
+        year_rampup: int,
+        drate: float,
+        q_plateau_ratio: float,
+        q_min_ratio: float,
+        volume: float
+) -> np.ndarray:
+    """
+    The function to get the RDP array.
+
+    Parameters
+    ----------
+    start_year
+    end_year
+    year_rampup
+    drate
+    q_plateau_ratio
+    q_min_ratio
+    volume
+
+    Returns
+    -------
+    out: np.ndarray
+        The array of rdp
+    """
+
+    # Initiating Model
+    model = RPDModel(
+        year_rampup=year_rampup,
+        drate=drate,
+        q_plateau_ratio=q_plateau_ratio,
+        q_min_ratio=q_min_ratio,
+    )
+
+    rate_rdp = model.predict(volume)
+
+    # Initiating the array of years
+    year_arr = np.arange(start_year, end_year + 1)
+    gap = len(year_arr) - len(rate_rdp)
+
+    # Checking condition for the given years gap
+    if gap < 0:
+        raise RDPModelException(
+            f"Forecast years from {start_year} to {end_year} is too short. "
+            f"Please set the end_year at least until {end_year + (-1 * gap)}"
+        )
+
+    rate_gap = np.zeros(gap)
+    rate_adjusted = np.concatenate([rate_gap, rate_rdp])
+
+    return rate_adjusted
+
+
+def get_rpd_dict(data: dict):
+    """
+    The function to get the list of RPD from the given reserves volume.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+
+    Returns
+    -------
+    """
+    # Initiating the data input
+    year_rampup = data['year_rampup']
+    drate = data['drate']
+    q_plateau_ratio = data['q_plateau_ratio']
+    q_min_ratio = data['q_min_ratio']
+    volume = data['volume']
+    start_year = data['start_year']
+    end_year = data['end_year']
+
+    # Get the array of rdp
+    rdp_array = get_rdp(
+        start_year=start_year,
+        end_year=end_year,
+        year_rampup=year_rampup,
+        drate=drate,
+        q_plateau_ratio=q_plateau_ratio,
+        q_min_ratio=q_min_ratio,
+        volume=volume,
+    )
+
+    return pd.DataFrame(
+        {
+            'year': np.arange(start_year, end_year + 1).tolist(),
+            'rpd': rdp_array.tolist()
+        }
+    ).set_index('year').to_dict()
+
+
+def get_indirect_taxes(data: dict)-> float:
+    """
+    Function to retrieve the indirect taxes indicator from given contract data.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+
+    Returns
+    -------
+    out:float
+        The value of indirect tax indicator.
+
+    """
+    def get_contract_indirect_taxes(
+            contract_object: CostRecovery | GrossSplit | Transition,
+            contract_args: dict,
+    ):
+        # Retrieving the information of the expenditures for the inflation and VAT value is from the given data
+        contract_object.run(**contract_args)
+        oil_capital_original = np.sum(contract_object._oil_capital_expenditures)
+        gas_capital_original = np.sum(contract_object._gas_capital_expenditures)
+        oil_intangible_original = np.sum(contract_object._oil_intangible_expenditures)
+        gas_intangible_original = np.sum(contract_object._gas_intangible_expenditures)
+        oil_opex_original = np.sum(contract_object._oil_opex_expenditures)
+        gas_opex_original = np.sum(contract_object._gas_opex_expenditures)
+        oil_asr_original = np.sum(contract_object._oil_asr_expenditures)
+        gas_asr_original = np.sum(contract_object._gas_asr_expenditures)
+
+        # Set the value of VAT and Inflation to 0 and run the contract using these values
+        contract_args_zeros = contract_args.copy()
+        contract_args_zeros['vat_rate'] = 0.0
+        contract_args_zeros['inflation_rate'] = 0.0
+        contract_object.run(**contract_args_zeros)
+
+        # Retrieving the information of the expenditures for the inflation and VAT value is zero
+        oil_capital_alter = np.sum(contract_object._oil_capital_expenditures)
+        gas_capital_alter = np.sum(contract_object._gas_capital_expenditures)
+        oil_intangible_alter = np.sum(contract_object._oil_intangible_expenditures)
+        gas_intangible_alter = np.sum(contract_object._gas_intangible_expenditures)
+        oil_opex_alter = np.sum(contract_object._oil_opex_expenditures)
+        gas_opex_alter = np.sum(contract_object._gas_opex_expenditures)
+        oil_asr_alter = np.sum(contract_object._oil_asr_expenditures)
+        gas_asr_alter = np.sum(contract_object._gas_asr_expenditures)
+
+        # Get the value of the original indirect taxes from given data and indirect taxes from altered zeros contract
+        indirect_taxes_original = (
+                oil_capital_original +
+                gas_capital_original +
+                oil_intangible_original +
+                gas_intangible_original +
+                oil_opex_original +
+                gas_opex_original +
+                oil_asr_original +
+                gas_asr_original
+        )
+
+        indirect_taxes_alter = (
+            oil_capital_alter +
+            gas_capital_alter +
+            oil_intangible_alter +
+            gas_intangible_alter +
+            oil_opex_alter +
+            gas_opex_alter +
+            oil_asr_alter +
+            gas_asr_alter
+        )
+
+        return indirect_taxes_original, indirect_taxes_alter
+
+    if 'contract_1' in data or 'contract_2' in data:
+        # Retrieving the baseproject
+        project = get_transition(data=data)
+        contract = project[1]
+        contract_arguments_original = project[2]
+        in_tax_ori_1, in_tax_alter_1 = get_contract_indirect_taxes(
+            contract_object=contract.contract1,
+            contract_args=contract.argument_contract1
+        )
+
+        in_tax_ori_2, in_tax_alter_2 = get_contract_indirect_taxes(
+            contract_object=contract.contract2,
+            contract_args=contract.argument_contract2
+        )
+
+        indirect_taxes = in_tax_ori_1 + in_tax_ori_2 - in_tax_alter_1 - in_tax_alter_2
+
+    else:
+        # Retrieving the baseproject
+        project = get_baseproject(data=data)
+        contract = project[1]
+        contract_arguments_original = project[2]
+        in_tax_ori, in_tax_alter = get_contract_indirect_taxes(
+            contract_object=contract,
+            contract_args=contract_arguments_original,
+        )
+        indirect_taxes = in_tax_ori - in_tax_alter
+
+    return indirect_taxes
+
+
+def get_grosssplit_split(data: dict):
+    """
+    The function to get the contractor split information from Gross Split Contract Scheme.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+
+    Returns
+    -------
+    dict
+        The dictionary containing the information of the contractor split.
+
+
+    """
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
+        get_setup_dict(data=data))
+
+    contract = GrossSplit(
+        start_date=start_date,
+        end_date=end_date,
+        oil_onstream_date=oil_onstream_date,
+        gas_onstream_date=gas_onstream_date,
+        lifting=lifting,
+        capital_cost=tangible,
+        intangible_cost=intangible,
+        opex=opex,
+        asr_cost=asr,
+        field_status=data['grosssplit']['field_status'],
+        field_loc=data['grosssplit']['field_loc'],
+        res_depth=data['grosssplit']['res_depth'],
+        infra_avail=data['grosssplit']['infra_avail'],
+        res_type=data['grosssplit']['res_type'],
+        api_oil=data['grosssplit']['api_oil'],
+        domestic_use=data['grosssplit']['domestic_use'],
+        prod_stage=data['grosssplit']['prod_stage'],
+        co2_content=data['grosssplit']['co2_content'],
+        h2s_content=data['grosssplit']['h2s_content'],
+        base_split_ctr_oil=convert_to_float(target=data['grosssplit']['base_split_ctr_oil']),
+        base_split_ctr_gas=convert_to_float(target=data['grosssplit']['base_split_ctr_gas']),
+        split_ministry_disc=convert_to_float(target=data['grosssplit']['split_ministry_disc']),
+        oil_dmo_volume_portion=convert_to_float(target=data['grosssplit']['oil_dmo_volume_portion']),
+        oil_dmo_fee_portion=convert_to_float(target=data['grosssplit']['oil_dmo_fee_portion']),
+        oil_dmo_holiday_duration=data['grosssplit']['oil_dmo_holiday_duration'],
+        gas_dmo_volume_portion=convert_to_float(target=data['grosssplit']['gas_dmo_volume_portion']),
+        gas_dmo_fee_portion=convert_to_float(target=data['grosssplit']['gas_dmo_fee_portion']),
+        gas_dmo_holiday_duration=data['grosssplit']['gas_dmo_holiday_duration'],
+
+    )
+
+    # Filling the arguments of the contract with the data input
+    contract_arguments_dict = {
+        "sulfur_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['sulfur_revenue']),
+        "electricity_revenue": convert_str_to_otherrevenue(
+            str_object=data['contract_arguments']['electricity_revenue']),
+        "co2_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['co2_revenue']),
+        "is_dmo_end_weighted": data['contract_arguments']['is_dmo_end_weighted'],
+        "tax_regime": convert_str_to_taxregime(str_object=data['contract_arguments']['tax_regime']),
+        "tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['tax_rate']),
+        "sunk_cost_reference_year": data['contract_arguments']['sunk_cost_reference_year'],
+        "depr_method": convert_str_to_depremethod(str_object=data['contract_arguments']['depr_method']),
+        "decline_factor": data['contract_arguments']['decline_factor'],
+        "vat_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['vat_rate']),
+        "lbt_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['lbt_rate']),
+        "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
+        "future_rate": convert_to_float(target=data['contract_arguments']['future_rate']),
+        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
+            str_object=data['contract_arguments']['inflation_rate_applied_to']),
+        "cum_production_split_offset": convert_list_to_array_float_or_array(data_input=data["contract_arguments"]["cum_production_split_offset"]),
+        "amortization": data["contract_arguments"]["amortization"],
+        "regime": convert_grosssplitregime_to_enum(target=data["contract_arguments"]["regime"])
+    }
+
+    # Running the contract
+    contract.run(**contract_arguments_dict)
+
+    # Retrieving the split information
+    contractor_split = pd.DataFrame({
+        'project_years': contract.project_years.tolist(),
+        'oil_base_split': contract._oil_base_split.tolist(),
+        'gas_base_split': contract._gas_base_split.tolist(),
+        'var_split_array': contract._var_split_array.tolist(),
+        'oil_prog_split': contract._oil_prog_split.tolist(),
+        'gas_prog_split': contract._gas_prog_split.tolist(),
+        'oil_ctr_split': contract._oil_ctr_split_prior_bracket.tolist(),
+        'gas_ctr_split': contract._gas_ctr_split_prior_bracket.tolist(),
+    }).set_index('project_years').to_dict()
+
+    years_of_maximum_split = {
+        'oil': contract._oil_year_maximum_ctr_split.tolist(),
+        'gas': contract._gas_year_maximum_ctr_split.tolist(),
+    }
+
+    return {
+        'contractor_split': contractor_split,
+        'years_of_maximum_split': years_of_maximum_split
+    }
+
+
+def get_transition_split(data: dict):
+    """
+    The function to get the contractor split information from Transition Contract Scheme.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+
+    Returns
+    -------
+    summary_skk: dict
+        The executive summary of the contract.
+    contract:
+        The Transition contract object.
+    contract_arguments_dict: dict
+        The contract arguments used in running the contract calculation.
+    summary_arguments_dic: dict
+        The summary arguments used in retrieving the executive summary of the contract.
+
+    """
+    # Defining contract_1
+    if data['contract_1']['costrecovery'] is not None and data['contract_1']['grosssplit'] is None:
+        _, contract_1, contract_arguments_1, _ = get_costrecovery(data=data['contract_1'], summary_result=False)
+
+    elif data['contract_1']['grosssplit'] is not None and data['contract_1']['costrecovery'] is None:
+        _, contract_1, contract_arguments_1, _ = get_grosssplit(data=data['contract_1'], summary_result=False)
+
+    else:
+        raise ContractException("Contract type is not recognized")
+
+    # Defining contract_2
+    if data['contract_2']['costrecovery'] is not None and data['contract_2']['grosssplit'] is None:
+        _, contract_2, contract_arguments_2, _ = get_costrecovery(data=data['contract_2'], summary_result=False)
+
+    elif data['contract_2']['grosssplit'] is not None and data['contract_2']['costrecovery'] is None:
+        _, contract_2, contract_arguments_2, _ = get_grosssplit(data=data['contract_2'], summary_result=False)
+
+    else:
+        raise ContractException("Contract type is not recognized")
+
+    # generating the transition contract object
+    contract = Transition(contract1=contract_1,
+                          contract2=contract_2,
+                          argument_contract1=contract_arguments_1,
+                          argument_contract2=contract_arguments_2, )
+
+    # Generating the transition contract arguments
+    contract_arguments_dict = data['contract_arguments']
+
+    # Running the transition contract
+    contract.run(**contract_arguments_dict)
+
+    # Making the base for the loops and container of the result
+    result = {}
+
+    # Retrieving the split information from first contract
+    for index, contract in enumerate([contract_1, contract_2]):
+        if isinstance(contract, GrossSplit):
+            # Retrieving the split information
+            contractor_split = pd.DataFrame({
+                'project_years': contract.project_years.tolist(),
+                'oil_base_split': contract._oil_base_split.tolist(),
+                'gas_base_split': contract._gas_base_split.tolist(),
+                'var_split_array': contract._var_split_array.tolist(),
+                'oil_prog_split': contract._oil_prog_split.tolist(),
+                'gas_prog_split': contract._gas_prog_split.tolist(),
+                'oil_ctr_split': contract._oil_ctr_split_prior_bracket.tolist(),
+                'gas_ctr_split': contract._gas_ctr_split_prior_bracket.tolist(),
+            }).set_index('project_years').to_dict()
+
+            years_of_maximum_split = {
+                'oil': contract._oil_year_maximum_ctr_split.tolist(),
+                'gas': contract._gas_year_maximum_ctr_split.tolist(),
+            }
+
+            result['contract_' + str(index+1)] = {
+                'contractor_split': contractor_split,
+                'years_of_maximum_split': years_of_maximum_split
+            }
+        else:
+            result['contract_' + str(index + 1)] = {}
+            pass
+
+    return result
 
 
 

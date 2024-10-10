@@ -1,6 +1,7 @@
 """
 Handles calculations associated with PSC Gross Split.
 """
+import warnings
 from dataclasses import dataclass, field
 import numpy as np
 
@@ -94,6 +95,7 @@ class GrossSplit(BaseProject):
     co2_content: str | VariableSplit522017.CO2Content | VariableSplit082017.CO2Content = field(default='<5')
     h2s_content: str | VariableSplit522017.H2SContent | VariableSplit082017.H2SContent = field(default='<100')
 
+    # Todo: Refactor to use  capital and locked
     base_split_ctr_oil: float = field(default=0.43)
     base_split_ctr_gas: float = field(default=0.48)
     split_ministry_disc: float = field(default=0.08)
@@ -205,6 +207,13 @@ class GrossSplit(BaseProject):
     _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_government_take: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes fof containing the 100% contractor split warning
+    _oil_ctr_split_prior_bracket: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ctr_split_prior_bracket: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_year_maximum_ctr_split: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_year_maximum_ctr_split: np.ndarray = field(default=None, init=False, repr=False)
+
 
     def _check_attributes(self):
         """
@@ -572,27 +581,34 @@ class GrossSplit(BaseProject):
 
         self._variable_split = float(np.sum(variable_split))
 
-    def _wrapper_progressive_split(self,
-                                   fluid: FluidType,
-                                   price: float,
-                                   cum: float,
-                                   regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
+    def _wrapper_progressive_split(
+            self,
+            fluid: FluidType,
+            price: np.ndarray,
+            cum: np.ndarray,
+            regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
 
         if (regime == GrossSplitRegime.PERMEN_ESDM_52_2017 or
                 regime == GrossSplitRegime.PERMEN_ESDM_20_2019 or
                 regime == GrossSplitRegime.PERMEN_ESDM_12_2020):
-            prog_split = self._get_prog_split_52_2017(fluid, price, cum)
+            prog_price_split = self._get_prog_price_split_52_2017(fluid, price)
+            prog_cum_split = self._get_prog_cum_split_52_2017(cum)
 
         elif regime == GrossSplitRegime.PERMEN_ESDM_8_2017:
-            prog_split = self._get_prog_split_08_2017(fluid, price, cum)
+            prog_price_split = self._get_prog_price_split_08_2017(fluid, price)
+            prog_cum_split = self._get_prog_cum_split_08_2017(cum)
 
         else:
-            prog_split = ValueError('Not Recognized Gross Split Regime')
+            prog_price_split = ValueError('Not Recognized Gross Split Regime')
+            prog_cum_split = ValueError('Not Recognized Gross Split Regime')
 
-        return prog_split
+        return prog_price_split, prog_cum_split
 
     @staticmethod
-    def _get_prog_split_08_2017(fluid: FluidType, price: float, cum: float):
+    def _get_prog_price_split_08_2017(
+            fluid: FluidType,
+            price: np.ndarray
+    ):
         # Indonesia's Ministry Regulations No.08 The Year of 2017. At Appendix B Progressive Component
         if fluid == FluidType.OIL:
             if price < 40:
@@ -614,27 +630,13 @@ class GrossSplit(BaseProject):
         else:
             ps = 0
 
-        # Cumulative Progressive Split
-        if 0 < cum < 1_000:
-            px = 0.05
-        elif 1_000 <= cum < 10_000:
-            px = 0.04
-        elif 10_000 <= cum < 20_000:
-            px = 0.03
-        elif 20_000 <= cum < 50_000:
-            px = 0.02
-        elif 50_000 <= cum < 150_000:
-            px = 0.01
-        elif 150_000 <= cum:
-            px = 0
-        else:
-            raise ValueError('No Regulation exist regarding the cumulative value')
-
-        ps = ps + px
         return ps
 
     @staticmethod
-    def _get_prog_split_52_2017(fluid: FluidType, price: float, cum: float):
+    def _get_prog_price_split_52_2017(
+            fluid: FluidType,
+            price: np.ndarray
+    ):
         # Indonesia's Ministry Regulations No.52 The Year of 2017. At Appendix B Progressive Component
         if fluid == FluidType.OIL:
             ps = np.where(price > 0,
@@ -644,6 +646,8 @@ class GrossSplit(BaseProject):
         elif fluid == FluidType.GAS:
             if price < 7:
                 ps = (7 - price) * 2.5 / 100
+            elif (7 < price) and (price < 10):
+                ps = 0
             elif price > 10:
                 ps = (10 - price) * 2.5 / 100
             else:
@@ -651,24 +655,55 @@ class GrossSplit(BaseProject):
         else:
             raise ValueError('Unknown fluid type')
 
+        return ps
+
+    @staticmethod
+    def _get_prog_cum_split_08_2017(
+            cum: np.ndarray | None,
+    ):
         # Cumulative Progressive Split
-        if np.logical_and(np.greater_equal(cum, 0), np.less(cum, 30_000)):
-            px = 0.1
-        elif np.logical_and(np.greater_equal(cum, 30_000), np.less(cum, 60_000)):
-            px = 0.09
-        elif np.logical_and(np.greater_equal(cum, 60_000), np.less(cum, 90_000)):
-            px = 0.08
-        elif np.logical_and(np.greater_equal(cum, 90_000), np.less(cum, 125_000)):
-            px = 0.06
-        elif np.logical_and(np.greater_equal(cum, 125_000), np.less(cum, 175_000)):
+        if 0 < cum < 1000:
+            px = 0.05
+        elif 1000 <= cum < 10000:
             px = 0.04
-        elif np.greater_equal(cum, 175_000):
+        elif 10000 <= cum < 20000:
+            px = 0.03
+        elif 20000 <= cum < 50000:
+            px = 0.02
+        elif 50000 <= cum < 150000:
+            px = 0.01
+        elif 150000 <= cum:
+            px = 0
+        elif cum is None:
             px = 0
         else:
             raise ValueError('No Regulation exist regarding the cumulative value')
 
-        ps = ps + px
-        return ps
+        return px
+
+    @staticmethod
+    def _get_prog_cum_split_52_2017(
+            cum: np.ndarray | None
+    ):
+        # Cumulative Progressive Split
+        if np.logical_and(np.greater_equal(cum, 0), np.less(cum, 30000)):
+            px = 0.1
+        elif np.logical_and(np.greater_equal(cum, 30000), np.less(cum, 60000)):
+            px = 0.09
+        elif np.logical_and(np.greater_equal(cum, 60000), np.less(cum, 90000)):
+            px = 0.08
+        elif np.logical_and(np.greater_equal(cum, 90000), np.less(cum, 125000)):
+            px = 0.06
+        elif np.logical_and(np.greater_equal(cum, 125000), np.less(cum, 175000)):
+            px = 0.04
+        elif np.greater_equal(cum, 175000):
+            px = 0
+        elif cum is None:
+            px = 0
+        else:
+            raise ValueError('No Regulation exist regarding the cumulative value')
+
+        return px
 
     @staticmethod
     def _get_deductible_cost(ctr_gross_share, cost_tobe_deducted, carward_deduct_cost):
@@ -700,6 +735,40 @@ class GrossSplit(BaseProject):
             self._oil_sunk_cost = np.zeros(1)
             self._gas_sunk_cost = np.zeros(1)
 
+    def _get_year_maximum_split(
+            self,
+            ctr_split: np.ndarray,
+            fluid: str
+    ):
+        """
+        Function to get the years of when the contractor have maximum split 100% or more.
+
+        Parameters
+        ----------
+        ctr_split: np.ndarray
+            The array of the contractor split
+        fluid: str
+            The fluid type that the contractor split being observed.
+
+        Returns
+        -------
+        out: np.ndarray
+            The array of the years when the contractor have the maximum split 100%.
+
+        """
+
+        indices = (np.argwhere(ctr_split >= 1.0)).flatten()
+        years_of_max = self.project_years[indices]
+        if len(years_of_max)>0:
+            warnings.warn(
+                f"The {fluid} contractor split equal more than 100% are in the following years {years_of_max} ",
+                UserWarning)
+            warnings.simplefilter("default", UserWarning)
+        else:
+            pass
+
+        return years_of_max
+
     def run(self,
             sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
             electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
@@ -719,7 +788,8 @@ class GrossSplit(BaseProject):
             future_rate: float = 0.02,
             inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
             cum_production_split_offset: float | np.ndarray | None = 0.0,
-            amortization: bool = False
+            amortization: bool = False,
+            sum_undepreciated_cost: bool = False
             ):
 
         # Configure Sunk Cost Reference Year
@@ -808,6 +878,19 @@ class GrossSplit(BaseProject):
             inflation_rate=inflation_rate,
         )
 
+        # Treatment for small order of number, in example 1e-15
+        self._oil_undepreciated_asset = np.where(
+            self._oil_undepreciated_asset < 1.0e-5, 0, self._oil_undepreciated_asset)
+        self._gas_undepreciated_asset = np.where(
+            self._gas_undepreciated_asset < 1.0e-5, 0, self._gas_undepreciated_asset)
+
+        # Treatment of the un-depreciated asset to be summed up in the last year of the contract or not
+        if sum_undepreciated_cost is True:
+            self._oil_depreciation[-1] = self._oil_depreciation[-1] + self._oil_undepreciated_asset
+            self._gas_depreciation[-1] = self._gas_depreciation[-1] + self._gas_undepreciated_asset
+        else:
+            pass
+
         # Non Capital Cost
         self._oil_non_capital = (
                 self._oil_intangible_expenditures
@@ -877,37 +960,41 @@ class GrossSplit(BaseProject):
 
         # Condition when the cum_production_split_offset is filled with np.ndarray
         if isinstance(cum_production_split_offset, np.ndarray) and len(cum_production_split_offset) > 1:
-            self._oil_prog_split = vectorized_get_prog_split(
+            oil_prog_price_split, oil_prog_cum_split = vectorized_get_prog_split(
                 fluid=self._oil_lifting.fluid_type,
                 price=self._oil_lifting.get_price_arr(),
-                cum=np.full_like(self.project_years, fill_value=999_000, dtype=float),
+                cum=None,
                 regime=regime
             )
-            self._oil_prog_split += cum_production_split_offset
 
-            self._gas_prog_split = vectorized_get_prog_split(
+            self._oil_prog_split = oil_prog_price_split + cum_production_split_offset
+
+            gas_prog_price_split, gas_prog_cum_split = vectorized_get_prog_split(
                 fluid=self._gas_lifting.fluid_type,
                 price=self._gas_lifting.get_price_arr(),
-                cum=np.full_like(self.project_years, fill_value=999_000, dtype=float),
+                cum=None,
                 regime=regime
             )
-            self._gas_prog_split += cum_production_split_offset
+
+            self._gas_prog_split = gas_prog_price_split + cum_production_split_offset
 
         # Condition when the cum_production_split_offset is not filled
         else:
-            self._oil_prog_split = vectorized_get_prog_split(
+            oil_prog_price_split, oil_prog_cum_split = vectorized_get_prog_split(
                 fluid=self._oil_lifting.fluid_type,
                 price=self._oil_lifting.get_price_arr(),
                 cum=self._cumulative_prod,
                 regime=regime
             )
+            self._oil_prog_split = oil_prog_price_split + oil_prog_cum_split
 
-            self._gas_prog_split = vectorized_get_prog_split(
+            gas_prog_price_split, gas_prog_cum_split = vectorized_get_prog_split(
                 fluid=self._gas_lifting.fluid_type,
                 price=self._gas_lifting.get_price_arr(),
                 cum=self._cumulative_prod,
                 regime=regime
             )
+            self._gas_prog_split = gas_prog_price_split + gas_prog_cum_split
 
         # Ministerial Discretion
         minis_disc_array = np.full_like(self.project_years, fill_value=self.split_ministry_disc, dtype=float)
@@ -917,6 +1004,33 @@ class GrossSplit(BaseProject):
                                minis_disc_array)
         self._gas_ctr_split = (self._gas_base_split + self._var_split_array + self._gas_prog_split +
                                minis_disc_array)
+
+        self._oil_ctr_split_prior_bracket = np.copy(self._oil_ctr_split)
+        self._gas_ctr_split_prior_bracket = np.copy(self._gas_ctr_split)
+
+        # Add the condition to show the contractor split more than 100%
+        self._oil_year_maximum_ctr_split = self._get_year_maximum_split(
+            ctr_split=self._oil_ctr_split,
+            fluid="Oil"
+        )
+
+        self._gas_year_maximum_ctr_split = self._get_year_maximum_split(
+            ctr_split=self._gas_ctr_split,
+            fluid="Gas"
+        )
+
+        # Condition to limit the contractor split is 1.0 at maximum
+        self._oil_ctr_split = np.where(
+            self._oil_ctr_split > np.full_like(self._oil_ctr_split, 1.0),
+            np.full_like(self._oil_ctr_split, 1.0),
+            self._oil_ctr_split
+        )
+
+        self._gas_ctr_split = np.where(
+            self._gas_ctr_split > np.full_like(self._gas_ctr_split, 1.0),
+            np.full_like(self._gas_ctr_split, 1.0),
+            self._gas_ctr_split
+        )
 
         # Contractor Share
         self._oil_ctr_share_before_transfer = self._oil_revenue * self._oil_ctr_split

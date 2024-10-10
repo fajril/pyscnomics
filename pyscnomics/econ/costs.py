@@ -38,6 +38,12 @@ class ASRException(Exception):
     pass
 
 
+class CostOfSalesException(Exception):
+    """Exception to be raised if class CostOfSales is misused"""
+
+    pass
+
+
 @dataclass
 class GeneralCost:
     """
@@ -72,7 +78,6 @@ class GeneralCost:
     -----
     (1) The unit used in the cost should be in M unit of United States Dollar (USD),
     where the M is stands for 1000. Thus, the unit cost should be: M-USD.
-
     """
 
     start_year: int
@@ -90,6 +95,18 @@ class GeneralCost:
     project_duration: int = field(default=None, init=False, repr=False)
     project_years: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Todo add indirect taxes. This function will resulting the array of VAT values of each cost.
+    def indirect_taxes(self,
+                       year_inflation_ref: int,
+                       vat_rate: float | np.ndarray,
+                       vat_portion: np.ndarray,
+                       vat_discount: float
+                       ):
+        # Calculate Inflation
+        # Calculate Value Added Tax
+        return NotImplementedError
+
+    # ToDo: Refactor and add the routine for retrieving the cost prior to indirect tax and post of indirect tax.
     def expenditures(
         self,
         year_ref: int = None,
@@ -2140,4 +2157,251 @@ class ASR(GeneralCost):
                 f"integer or a float; "
                 f"{other}({other.__class__.__qualname__}) is not an instance "
                 f"of CapitalCost/Intangible/OPEX/ASR nor an integer nor a float."
+            )
+
+
+@dataclass
+class CostOfSales(GeneralCost):
+    """
+    Manages a cost of sales.
+
+    Parameters
+    ----------
+    The attributes are inherited from class GeneralCost.
+
+    Notes
+    -----
+    The inherited attributes (from class GeneralCost) are overridden in this class,
+    except for start_year and end_year.
+    """
+    # Inherited attributes with the modified initialization
+    cost: np.ndarray = field(default=None)
+    expense_year: np.ndarray = field(default=None)
+    cost_allocation: list[FluidType] = field(default=None)
+
+    # Inherited attributes which are being excluded
+    description: list[str] = field(default=None, init=False, repr=False)
+    vat_portion: np.ndarray = field(default=None, init=False, repr=False)
+    vat_discount: float | np.ndarray = field(default=None, init=False, repr=False)
+    lbt_portion: np.ndarray = field(default=None, init=False, repr=False)
+    lbt_discount: float | np.ndarray = field(default=None, init=False, repr=False)
+
+    def __post_init__(self):
+        # Prepare attributes project_duration and project_years
+        if self.end_year >= self.start_year:
+            self.project_duration = self.end_year - self.start_year + 1
+            self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
+
+        else:
+            raise CostOfSalesException(
+                f"Project start year {self.start_year} "
+                f"is after project's end year {self.end_year}"
+            )
+
+        # Prepare attribute expense_year
+        if self.expense_year is None:
+            self.expense_year = self.project_years.copy()
+
+        else:
+            if not isinstance(self.expense_year, np.ndarray):
+                raise CostOfSalesException(
+                    f"Attribute expense_year must be given as a numpy.ndarray datatype, "
+                    f"not a ({self.expense_year.__class__.__qualname__})"
+                )
+
+        # Prepare attribute cost
+        if self.cost is None:
+            self.cost = np.zeros_like(self.expense_year, dtype=np.float64)
+
+        else:
+            if not isinstance(self.cost, np.ndarray):
+                raise CostOfSalesException(
+                    f"Attribute cost must be given as a numpy.ndarray datatype, "
+                    f"not a ({self.cost.__class__.__qualname__})"
+                )
+
+        # Prepare attribute cost_allocation
+        if self.cost_allocation is None:
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
+
+        else:
+            if not isinstance(self.cost_allocation, list):
+                raise CostOfSalesException(
+                    f"Attribute cost_allocation must be given as a list, "
+                    f"not a ({self.cost_allocation.__class__.__qualname__})"
+                )
+
+        # Check input data for unequal length
+        arr_length = len(self.cost)
+
+        if not all(
+            len(arr) == arr_length
+            for arr in [self.expense_year, self.cost_allocation]
+        ):
+            raise CostOfSalesException(
+                f"Unequal length of array: "
+                f"cost: {len(self.cost)}, "
+                f"expense_year: {len(self.expense_year)}, "
+                f"cost_allocation: {len(self.cost_allocation)}."
+            )
+
+        # Raise an error message: expense_year is after the end year of the project
+        if np.max(self.expense_year) > self.end_year:
+            raise CostOfSalesException(
+                f"Expense year ({np.max(self.expense_year)}) "
+                f"is after the end year of the project ({self.end_year})"
+            )
+
+        # Raise an error message: expense_year is before the start year of the project
+        if np.min(self.expense_year) < self.start_year:
+            raise CostOfSalesException(
+                f"Expense year ({np.min(self.expense_year)}) "
+                f"is before the start year of the project ({self.start_year})"
+            )
+
+    def _get_array(self, target_param: np.ndarray) -> np.ndarray:
+        """
+        Create an array of target_param.
+
+        Parameters
+        ----------
+        target_param: np.ndarray
+            An array containing the parameters to be weighted.
+
+        Returns
+        -------
+        np.ndarray
+            An array with values weighted by `target_param`, aligned with production years.
+
+        Notes
+        -----
+        (1) Function np.bincount() is used to align the target_param according to
+            its corresponding prod year,
+        (2) If len(param_arr) < project_duration, then add the remaining elements
+            with zeros.
+        """
+        param_arr = np.bincount(self.expense_year - self.start_year, weights=target_param)
+        zeros = np.zeros(self.project_duration - len(param_arr))
+
+        return np.concatenate((param_arr, zeros))
+
+    def get_cost_of_sales_arr(self) -> np.ndarray:
+        """
+        Create an array of cost of sales according to the corresponding expense year.
+
+        Returns
+        -------
+        np.ndarray
+            The array of cost of sales with length equals to the project duration.
+
+        Notes
+        -----
+        Array of cost of sales is generated by calling the private method self._get_array().
+        """
+        return self._get_array(target_param=self.cost)
+
+    def __add__(self, other):
+        # Only allows addition between an instance of CostOfSales and another instance of CostOfSales
+        if isinstance(other, CostOfSales):
+            start_year_combined = min(self.start_year, other.start_year)
+            end_year_combined = max(self.end_year, other.end_year)
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            cost_combined = np.concatenate((self.cost, other.cost))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
+
+            return CostOfSales(
+                start_year=start_year_combined,
+                end_year=end_year_combined,
+                expense_year=expense_year_combined,
+                cost=cost_combined,
+                cost_allocation=cost_allocation_combined,
+            )
+
+        else:
+            raise CostOfSalesException(
+                f"Must add between an instance of CostOfSales "
+                f"with another instance of CostOfSales. "
+                f"{other}({other.__class__.__qualname__}) is not "
+                f"an instance of CostOfSales."
+            )
+
+    def __iadd__(self, other):
+        return self.__add__(other)
+
+    def __eq__(self, other):
+        # Between two instances of CostOfSales
+        if isinstance(other, CostOfSales):
+            return all(
+                (
+                    np.allclose(self.expense_year, other.expense_year),
+                    np.allclose(self.cost, other.cost),
+                    self.cost_allocation == other.cost_allocation,
+                )
+            )
+
+        # Between an instance of CostOfSales and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) == other
+
+        else:
+            return False
+
+    def __lt__(self, other):
+        # Between an instance of CostOfSales with another instance of CostOfSales
+        if isinstance(other, CostOfSales):
+            return np.sum(self.cost) < np.sum(other.cost)
+
+        # Between an instance of CostOfSales and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) < other
+
+        else:
+            raise CostOfSalesException(
+                f"Must compare an instance of CostOfSales with another instance "
+                f"of CostOfSales, an integer, or a float."
+            )
+
+    def __le__(self, other):
+        # Between an instance of CostOfSales with another instance of CostOfSales
+        if isinstance(other, CostOfSales):
+            return np.sum(self.cost) <= np.sum(other.cost)
+
+        # Between an instance of CostOfSales and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) <= other
+
+        else:
+            raise CostOfSalesException(
+                f"Must compare an instance of CostOfSales with another instance "
+                f"of CostOfSales, an integer, or a float."
+            )
+
+    def __gt__(self, other):
+        # Between an instance of CostOfSales with another instance of CostOfSales
+        if isinstance(other, CostOfSales):
+            return np.sum(self.cost) > np.sum(other.cost)
+
+        # Between an instance of CostOfSales and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) > other
+
+        else:
+            raise CostOfSalesException(
+                f"Must compare an instance of CostOfSales with another instance "
+                f"of CostOfSales, an integer, or a float."
+            )
+
+    def __ge__(self, other):
+        # Between an instance of CostOfSales with another instance of CostOfSales
+        if isinstance(other, CostOfSales):
+            return np.sum(self.cost) >= np.sum(other.cost)
+
+        # Between an instance of CostOfSales and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) >= other
+
+        else:
+            raise CostOfSalesException(
+                f"Must compare an instance of CostOfSales with another instance "
+                f"of CostOfSales, an integer, or a float."
             )
