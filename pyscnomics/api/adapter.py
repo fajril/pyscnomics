@@ -1,6 +1,7 @@
 """
 This file is utilized to be the adapter of the router into the core codes.
 """
+import numpy as np
 import pandas as pd
 from datetime import datetime
 

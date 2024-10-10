@@ -286,6 +286,7 @@ class ContractArgumentsBM(BaseModel):
     cum_production_split_offset: list | float | int | None = None
     amortization: bool = False
     regime: str = "PERMEN_ESDM_12_2020"
+    sum_undepreciated_cost: bool = False
 
 
 class ContractArgumentsTransitionBM(BaseModel):
@@ -1283,6 +1284,10 @@ def convert_summary_to_dict(dict_object: dict):
         'gov_take': dict_object['gov_take'],
         'gov_take_over_gross_rev': dict_object['gov_take_over_gross_rev'],
         'gov_take_npv': dict_object['gov_take_npv'],
+        'undepreciated_asset_oil': dict_object['undepreciated_asset_oil'],
+        'undepreciated_asset_gas': dict_object['undepreciated_asset_gas'],
+        'undepreciated_asset_total': dict_object['undepreciated_asset_total']
+
     }
     return summary_skk_format
 
