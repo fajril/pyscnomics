@@ -130,7 +130,10 @@ class BaseProject:
     _oil_cost_of_sales: CostOfSales = field(default=None, init=False, repr=False)
     _gas_cost_of_sales: CostOfSales = field(default=None, init=False, repr=False)
 
-    # # Private attributes associated with expenditures
+    # Attributes to be defined later (associated with expenditures pre tax for each cost elements)
+    _oil_capital_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_capital_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+
     # _oil_capital_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     # _gas_capital_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     # _oil_intangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
@@ -139,7 +142,7 @@ class BaseProject:
     # _gas_opex_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     # _oil_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     # _gas_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    #
+
     # # Private attributes associated with cost of sales
     # _oil_cost_of_sales_expenditures: np.ndarray = field(default=None, init=False, repr=False)
     # _gas_cost_of_sales_expenditures: np.ndarray = field(default=None, init=False, repr=False)
@@ -178,12 +181,16 @@ class BaseProject:
             _oil_lifting, _gas_lifting, _sulfur_lifting, _electricity_lifting, and _co2_lifting;
         -   Prepare attributes associated with revenue for each fluid types. The attributes are:
             _oil_revenue, _gas_revenue, _sulfur_revenue, _electricity_revenue, and _co2_revenue;
-        -   Prepare attribute _oil_capital_cost and _gas_capital_cost;
-        -   Prepare attribute _oil_intangible and _gas_intangible;
-        -   Prepare attribute _oil_opex and _gas_opex;
-        -   Prepare attribute _oil_asr and _gas_asr;
-        -   Prepare attribute _oil_lbt and _gas_lbt;
-
+        -   Prepare attributes _oil_capital_cost and _gas_capital_cost;
+        -   Prepare attributes _oil_intangible and _gas_intangible;
+        -   Prepare attributes _oil_opex and _gas_opex;
+        -   Prepare attributes _oil_asr and _gas_asr;
+        -   Prepare attributes _oil_lbt and _gas_lbt;
+        -   Prepare attributes _oil_cost_of_sales and _gas_cost_of_sales;
+        -   Raise an error: the start year of the project is inconsistent;
+        -   Raise an error: the end year of the project is inconsistent;
+        -   Prepare attribute oil_onstream_date;
+        -   Prepare attribute gas_onstream_date;
         """
 
         # Prepare attributes project_duration and project_years
@@ -391,190 +398,179 @@ class BaseProject:
         self._gas_asr = self._get_gas_asr()
         self._oil_lbt = self._get_oil_lbt()
         self._gas_lbt = self._get_gas_lbt()
-        # self._oil_cost_of_sales = self._get_oil_cost_of_sales()
-        # self._gas_cost_of_sales = self._get_gas_cost_of_sales()
+        self._oil_cost_of_sales = self._get_oil_cost_of_sales()
+        self._gas_cost_of_sales = self._get_gas_cost_of_sales()
 
-        print('\t')
-        print(f'Filetype: {type(self.lbt_cost_total)}')
-        print(f'Length: {len(self.lbt_cost_total)}')
-        print('lbt_cost_total = \n', self.lbt_cost_total)
+        # Raise an exception error if the start year of the project is inconsistent
+        if not all(
+            i == self.start_date.year
+            for i in [
+                self._oil_lifting.start_year,
+                self._gas_lifting.start_year,
+                self._sulfur_lifting.start_year,
+                self._electricity_lifting.start_year,
+                self._co2_lifting.start_year,
+                self._oil_capital_cost.start_year,
+                self._gas_capital_cost.start_year,
+                self._oil_intangible.start_year,
+                self._gas_intangible.start_year,
+                self._oil_opex.start_year,
+                self._gas_opex.start_year,
+                self._oil_asr.start_year,
+                self._gas_asr.start_year,
+                self._oil_lbt.start_year,
+                self._gas_lbt.start_year,
+                self._oil_cost_of_sales.start_year,
+                self._gas_cost_of_sales.start_year,
+            ]
+        ):
+            raise BaseProjectException(
+                f"Inconsistent start project year: "
+                f"Base project ({self.start_date.year}), "
+                f"Oil lifting ({self._oil_lifting.start_year}), "
+                f"Gas lifting ({self._gas_lifting.start_year}), "
+                f"Sulfur lifting ({self._sulfur_lifting.start_year}), "
+                f"Electricity lifting ({self._electricity_lifting.start_year}), "
+                f"CO2 lifting ({self._co2_lifting.start_year}), "
+                f"Oil tangible ({self._oil_capital_cost.start_year}), "
+                f"Gas tangible ({self._gas_capital_cost.start_year}), "
+                f"Oil intangible ({self._oil_intangible.start_year}), "
+                f"Gas intangible ({self._gas_intangible.start_year}), "
+                f"Oil opex ({self._oil_opex.start_year}), "
+                f"Gas opex ({self._gas_opex.start_year}), "
+                f"Oil asr ({self._oil_asr.start_year}), "
+                f"Gas asr ({self._gas_asr.start_year}), "
+                f"Oil LBT ({self._oil_lbt.start_year}), "
+                f"Gas LBT ({self._gas_lbt.start_year}), "
+                f"Oil cost of sales ({self._oil_cost_of_sales.start_year}), "
+                f"Gas cost of sales ({self._gas_cost_of_sales.start_year})."
+            )
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_lbt)}')
-        print(f'Length: {len(self._oil_lbt)}')
-        print('_oil_lbt = \n', self._oil_lbt)
+        # Raise an exception error if the end year of the project is inconsistent
+        if not all(
+            i == self.end_date.year
+            for i in [
+                self._oil_lifting.end_year,
+                self._gas_lifting.end_year,
+                self._sulfur_lifting.end_year,
+                self._electricity_lifting.end_year,
+                self._co2_lifting.end_year,
+                self._oil_capital_cost.end_year,
+                self._gas_capital_cost.end_year,
+                self._oil_intangible.end_year,
+                self._gas_intangible.end_year,
+                self._oil_opex.end_year,
+                self._gas_opex.end_year,
+                self._oil_asr.end_year,
+                self._gas_asr.end_year,
+                self._oil_lbt.end_year,
+                self._gas_lbt.end_year,
+                self._oil_cost_of_sales.end_year,
+                self._gas_cost_of_sales.end_year,
+            ]
+        ):
+            raise BaseProjectException(
+                f"Inconsistent end project year: "
+                f"Base project ({self.end_date.year}), "
+                f"Oil lifting ({self._oil_lifting.end_year}), "
+                f"Gas lifting ({self._gas_lifting.end_year}), "
+                f"Sulfur lifting ({self._sulfur_lifting.end_year}), "
+                f"Electricity lifting ({self._electricity_lifting.end_year}), "
+                f"CO2 lifting ({self._co2_lifting.end_year}), "
+                f"Oil tangible ({self._oil_capital_cost.end_year}), "
+                f"Gas tangible ({self._gas_capital_cost.end_year}), "
+                f"Oil intangible ({self._oil_intangible.end_year}), "
+                f"Gas intangible ({self._gas_intangible.end_year}), "
+                f"Oil opex ({self._oil_opex.end_year}), "
+                f"Gas opex ({self._gas_opex.end_year}), "
+                f"Oil asr ({self._oil_asr.end_year}), "
+                f"Gas asr ({self._gas_asr.end_year}), "
+                f"Oil LBT ({self._oil_lbt.end_year}), "
+                f"Gas LBT ({self._gas_lbt.end_year}), "
+                f"Oil cost of sales ({self._oil_cost_of_sales.end_year}), "
+                f"Gas cost of sales ({self._gas_cost_of_sales.end_year})."
+            )
 
-        print('\t')
-        print(f'Filetype: {type(self._gas_lbt)}')
-        print(f'Length: {len(self._gas_lbt)}')
-        print('_gas_lbt = \n', self._gas_lbt)
+        # Prepare attribute oil_onstream_date: set default value and error message
+        oil_revenue_index = np.argwhere(self._oil_revenue > 0).ravel()
 
-        # # Retrieving the Cost of Sales array
-        # self._oil_cost_of_sales_expenditures = self._oil_cost_of_sales.get_cost_of_sales_arr()
-        # self._gas_cost_of_sales_expenditures = self._gas_cost_of_sales.get_cost_of_sales_arr()
-        #
-        # # Raise an exception error if the start year of the project is inconsistent
-        # if not all(
-        #     i == self.start_date.year
-        #     for i in [
-        #         self._oil_lifting.start_year,
-        #         self._gas_lifting.start_year,
-        #         self._sulfur_lifting.start_year,
-        #         self._electricity_lifting.start_year,
-        #         self._co2_lifting.start_year,
-        #         self._oil_capital_cost.start_year,
-        #         self._gas_capital_cost.start_year,
-        #         self._oil_intangible.start_year,
-        #         self._gas_intangible.start_year,
-        #         self._oil_opex.start_year,
-        #         self._gas_opex.start_year,
-        #         self._oil_asr.start_year,
-        #         self._gas_asr.start_year,
-        #         self._oil_cost_of_sales.start_year,
-        #         self._gas_cost_of_sales.start_year,
-        #     ]
-        # ):
-        #     raise BaseProjectException(
-        #         f"Inconsistent start project year: "
-        #         f"Base project ({self.start_date.year}), "
-        #         f"Oil lifting ({self._oil_lifting.start_year}), "
-        #         f"Gas lifting ({self._gas_lifting.start_year}), "
-        #         f"Sulfur lifting ({self._sulfur_lifting.start_year}), "
-        #         f"Electricity lifting ({self._electricity_lifting.start_year}), "
-        #         f"CO2 lifting ({self._co2_lifting.start_year}), "
-        #         f"Oil tangible ({self._oil_capital_cost.start_year}), "
-        #         f"Gas tangible ({self._gas_capital_cost.start_year}), "
-        #         f"Oil intangible ({self._oil_intangible.start_year}), "
-        #         f"Gas intangible ({self._gas_intangible.start_year}), "
-        #         f"Oil opex ({self._oil_opex.start_year}), "
-        #         f"Gas opex ({self._gas_opex.start_year}), "
-        #         f"Oil asr ({self._oil_asr.start_year}), "
-        #         f"Gas asr ({self._gas_asr.start_year}), "
-        #         f"Oil cost of sales ({self._oil_cost_of_sales.start_year}), "
-        #         f"Gas cost of sales ({self._gas_cost_of_sales.start_year})."
-        #     )
-        #
-        # # Raise an exception error if the end year of the project is inconsistent
-        # if not all(
-        #     i == self.end_date.year
-        #     for i in [
-        #         self._oil_lifting.end_year,
-        #         self._gas_lifting.end_year,
-        #         self._sulfur_lifting.end_year,
-        #         self._electricity_lifting.end_year,
-        #         self._co2_lifting.end_year,
-        #         self._oil_capital_cost.end_year,
-        #         self._gas_capital_cost.end_year,
-        #         self._oil_intangible.end_year,
-        #         self._gas_intangible.end_year,
-        #         self._oil_opex.end_year,
-        #         self._gas_opex.end_year,
-        #         self._oil_asr.end_year,
-        #         self._gas_asr.end_year,
-        #         self._oil_cost_of_sales.end_year,
-        #         self._gas_cost_of_sales.end_year,
-        #     ]
-        # ):
-        #     raise BaseProjectException(
-        #         f"Inconsistent end project year: "
-        #         f"Base project ({self.end_date.year}), "
-        #         f"Oil lifting ({self._oil_lifting.end_year}), "
-        #         f"Gas lifting ({self._gas_lifting.end_year}), "
-        #         f"Sulfur lifting ({self._sulfur_lifting.end_year}), "
-        #         f"Electricity lifting ({self._electricity_lifting.end_year}), "
-        #         f"CO2 lifting ({self._co2_lifting.end_year}), "
-        #         f"Oil tangible ({self._oil_capital_cost.end_year}), "
-        #         f"Gas tangible ({self._gas_capital_cost.end_year}), "
-        #         f"Oil intangible ({self._oil_intangible.end_year}), "
-        #         f"Gas intangible ({self._gas_intangible.end_year}), "
-        #         f"Oil opex ({self._oil_opex.end_year}), "
-        #         f"Gas opex ({self._gas_opex.end_year}), "
-        #         f"Oil asr ({self._oil_asr.end_year}), "
-        #         f"Gas asr ({self._gas_asr.end_year}), "
-        #         f"Oil cost of sales ({self._oil_cost_of_sales.end_year}), "
-        #         f"Gas cost of sales ({self._gas_cost_of_sales.end_year})."
-        #     )
-        #
-        # # Configure oil_onstream_date: set default value and error message
-        # oil_revenue_index = np.argwhere(self._oil_revenue > 0).ravel()
-        #
-        # if len(oil_revenue_index) > 0:
-        #     if self.oil_onstream_date is not None:
-        #         if self.oil_onstream_date.year < self.start_date.year:
-        #             raise BaseProjectException(
-        #                 f"Oil onstream year ({self.oil_onstream_date.year}) is before "
-        #                 f"the start project year ({self.start_date.year})"
-        #             )
-        #
-        #         if self.oil_onstream_date.year > self.end_date.year:
-        #             raise BaseProjectException(
-        #                 f"Oil onstream year ({self.oil_onstream_date.year}) is after "
-        #                 f"the end year of the project ({self.end_date.year})"
-        #             )
-        #
-        #         oil_onstream_index = int(
-        #             np.argwhere(
-        #                 self.oil_onstream_date.year == self.project_years
-        #             ).ravel()
-        #         )
-        #
-        #         if oil_onstream_index != oil_revenue_index[0]:
-        #             raise BaseProjectException(
-        #                 f"Oil onstream year ({self.oil_onstream_date.year}) is different from "
-        #                 f"the starting year of oil production ({self.project_years[oil_revenue_index[0]]})"
-        #             )
-        #
-        #     else:
-        #         self.oil_onstream_date = date(
-        #             year=self.project_years[oil_revenue_index[0]], month=1, day=1
-        #         )
-        #
-        # else:
-        #     self.oil_onstream_date = self.end_date
-        #
-        # # Configure gas_onstream_date: set default value and error message
-        # gas_revenue_index = np.argwhere(self._gas_revenue > 0).ravel()
-        #
-        # if len(gas_revenue_index) > 0:
-        #     if self.gas_onstream_date is not None:
-        #         if self.gas_onstream_date.year < self.start_date.year:
-        #             raise BaseProjectException(
-        #                 f"Gas onstream year ({self.gas_onstream_date.year}) is before "
-        #                 f"the start project year ({self.start_date.year})"
-        #             )
-        #
-        #         if self.gas_onstream_date.year > self.end_date.year:
-        #             raise BaseProjectException(
-        #                 f"Gas onstream year ({self.gas_onstream_date.year}) is after "
-        #                 f"the end year of the project ({self.end_date.year})"
-        #             )
-        #
-        #         gas_onstream_index = int(
-        #             np.argwhere(
-        #                 self.gas_onstream_date.year == self.project_years
-        #             ).ravel()
-        #         )
-        #
-        #         if gas_onstream_index != gas_revenue_index[0]:
-        #             raise BaseProjectException(
-        #                 f"Gas onstream year ({self.gas_onstream_date.year}) is different from "
-        #                 f"the starting year of gas production ({self.project_years[gas_revenue_index[0]]})"
-        #             )
-        #
-        #     else:
-        #         self.gas_onstream_date = date(
-        #             year=self.project_years[gas_revenue_index[0]], month=1, day=1
-        #         )
-        #
-        # else:
-        #     if self.gas_onstream_date is not None:
-        #         raise BaseProjectException(
-        #             f"Gas onstream year is given ({self.gas_onstream_date.year}) "
-        #             f"but gas lifting rate is missing or zero for the entire project duration"
-        #         )
-        #
-        #     else:
-        #         self.gas_onstream_date = self.end_date
+        if len(oil_revenue_index) > 0:
+            if self.oil_onstream_date is not None:
+                if self.oil_onstream_date.year < self.start_date.year:
+                    raise BaseProjectException(
+                        f"Oil onstream year ({self.oil_onstream_date.year}) is before "
+                        f"the start project year ({self.start_date.year})"
+                    )
+
+                if self.oil_onstream_date.year > self.end_date.year:
+                    raise BaseProjectException(
+                        f"Oil onstream year ({self.oil_onstream_date.year}) is after "
+                        f"the end year of the project ({self.end_date.year})"
+                    )
+
+                oil_onstream_index = int(
+                    np.argwhere(
+                        self.oil_onstream_date.year == self.project_years
+                    ).ravel()
+                )
+
+                if oil_onstream_index != oil_revenue_index[0]:
+                    raise BaseProjectException(
+                        f"Oil onstream year ({self.oil_onstream_date.year}) is different from "
+                        f"the starting year of oil production ({self.project_years[oil_revenue_index[0]]})"
+                    )
+
+            else:
+                self.oil_onstream_date = date(
+                    year=self.project_years[oil_revenue_index[0]], month=1, day=1
+                )
+
+        else:
+            self.oil_onstream_date = self.end_date
+
+        # Prepare attribute gas_onstream_date: set default value and error message
+        gas_revenue_index = np.argwhere(self._gas_revenue > 0).ravel()
+
+        if len(gas_revenue_index) > 0:
+            if self.gas_onstream_date is not None:
+                if self.gas_onstream_date.year < self.start_date.year:
+                    raise BaseProjectException(
+                        f"Gas onstream year ({self.gas_onstream_date.year}) is before "
+                        f"the start project year ({self.start_date.year})"
+                    )
+
+                if self.gas_onstream_date.year > self.end_date.year:
+                    raise BaseProjectException(
+                        f"Gas onstream year ({self.gas_onstream_date.year}) is after "
+                        f"the end year of the project ({self.end_date.year})"
+                    )
+
+                gas_onstream_index = int(
+                    np.argwhere(
+                        self.gas_onstream_date.year == self.project_years
+                    ).ravel()
+                )
+
+                if gas_onstream_index != gas_revenue_index[0]:
+                    raise BaseProjectException(
+                        f"Gas onstream year ({self.gas_onstream_date.year}) is different from "
+                        f"the starting year of gas production ({self.project_years[gas_revenue_index[0]]})"
+                    )
+
+            else:
+                self.gas_onstream_date = date(
+                    year=self.project_years[gas_revenue_index[0]], month=1, day=1
+                )
+
+        else:
+            if self.gas_onstream_date is not None:
+                raise BaseProjectException(
+                    f"Gas onstream year is given ({self.gas_onstream_date.year}) "
+                    f"but gas lifting rate is missing or zero for the entire project duration"
+                )
+
+            else:
+                self.gas_onstream_date = self.end_date
 
     def _get_oil_lifting(self) -> Lifting:
         """
@@ -1406,6 +1402,7 @@ class BaseProject:
         - If `FluidType.OIL` is in `cost_allocation`, the corresponding cost data is extracted
           and used to create the `CostOfSales` instance.
         """
+
         if FluidType.OIL not in self.cost_of_sales_total.cost_allocation:
             return CostOfSales(
                 start_year=self.start_date.year,
@@ -1425,6 +1422,7 @@ class BaseProject:
             expense_year = self.cost_of_sales_total.expense_year[oil_cost_of_sales_id]
             cost = self.cost_of_sales_total.cost[oil_cost_of_sales_id]
             cost_allocation = np.array(self.cost_of_sales_total.cost_allocation)[oil_cost_of_sales_id]
+            description = np.array(self.cost_of_sales_total.description)[oil_cost_of_sales_id]
 
             return CostOfSales(
                 start_year=start_year,
@@ -1432,6 +1430,7 @@ class BaseProject:
                 expense_year=expense_year,
                 cost=cost,
                 cost_allocation=cost_allocation.tolist(),
+                description=description.tolist(),
             )
 
     def _get_gas_cost_of_sales(self) -> CostOfSales:
@@ -1456,6 +1455,7 @@ class BaseProject:
         - If `FluidType.GAS` is in `cost_allocation`, the corresponding cost data is extracted
           and used to create the `CostOfSales` instance.
         """
+
         if FluidType.GAS not in self.cost_of_sales_total.cost_allocation:
             return CostOfSales(
                 start_year=self.start_date.year,
@@ -1475,6 +1475,7 @@ class BaseProject:
             expense_year = self.cost_of_sales_total.expense_year[gas_cost_of_sales_id]
             cost = self.cost_of_sales_total.cost[gas_cost_of_sales_id]
             cost_allocation = np.array(self.cost_of_sales_total.cost_allocation)[gas_cost_of_sales_id]
+            description = np.array(self.cost_of_sales_total.description)[gas_cost_of_sales_id]
 
             return CostOfSales(
                 start_year=start_year,
@@ -1482,7 +1483,17 @@ class BaseProject:
                 expense_year=expense_year,
                 cost=cost,
                 cost_allocation=cost_allocation.tolist(),
+                description=description.tolist(),
             )
+
+    def _get_expenditures_pre_tax(self):
+        pass
+
+    def _get_indirect_taxes(self):
+        pass
+
+    def _get_expenditures_post_tax(self):
+        pass
 
     def _get_expenditures(
         self,

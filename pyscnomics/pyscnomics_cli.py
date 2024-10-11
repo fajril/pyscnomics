@@ -476,7 +476,7 @@ if __name__ == "__main__":
         fluid_type=FluidType.OIL,
     )
 
-    lbt1 = LBT(
+    cs1 = CostOfSales(
         start_year=2023,
         end_year=2030,
         expense_year=np.array([2023, 2024]),
@@ -484,7 +484,7 @@ if __name__ == "__main__":
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    lbt2 = LBT(
+    cs2 = CostOfSales(
         start_year=2023,
         end_year=2030,
         expense_year=np.array([2023, 2024]),
@@ -492,7 +492,7 @@ if __name__ == "__main__":
         cost_allocation=[FluidType.GAS, FluidType.GAS],
     )
 
-    lbt3 = LBT(
+    cs3 = CostOfSales(
         start_year=2023,
         end_year=2030,
         expense_year=np.array([2023, 2024]),
@@ -510,8 +510,12 @@ if __name__ == "__main__":
         # intangible_cost=tuple([intang1, intang2, intang3]),
         # opex=tuple([opex1, opex2, opex3])
         # asr_cost=tuple([asr1, asr2, asr3]),
-        lbt_cost=tuple([lbt1, lbt2, lbt3]),
+        # lbt_cost=tuple([lbt1, lbt2, lbt3]),
+        cost_of_sales=tuple([cs1, cs2, cs3]),
     )
+
+    print('\t')
+    print(f'++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
     # cs = CostOfSales(
     #     start_year=2023,
