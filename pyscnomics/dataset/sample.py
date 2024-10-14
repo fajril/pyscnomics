@@ -1,6 +1,7 @@
 import json
 import os
-import pkg_resources
+import importlib.resources as pkg_resources
+from pathlib import Path
 from datetime import datetime
 
 import numpy as np
@@ -66,8 +67,9 @@ def read_json_file(file_name: str) -> dict:
 
     # return json.loads(file_contents)
 
-    # Get the full path to the JSON file within the package
-    final_dir = pkg_resources.resource_filename('pyscnomics', 'dataset/' + file_name + '.json')
+    # Use importlib.resources.path to locate the JSON file within the package
+    with pkg_resources.path('pyscnomics.dataset', file_name + '.json') as file_path:
+        final_dir = Path(file_path)
 
     # Open and read the JSON file, returning its contents as a dictionary
     with open(final_dir) as user_file:
