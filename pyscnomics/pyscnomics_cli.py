@@ -479,7 +479,7 @@ if __name__ == "__main__":
     cs1 = CostOfSales(
         start_year=2023,
         end_year=2030,
-        expense_year=np.array([2023, 2024]),
+        expense_year=np.array([2025, 2026]),
         cost=np.array([100, 100]),
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
@@ -487,7 +487,7 @@ if __name__ == "__main__":
     cs2 = CostOfSales(
         start_year=2023,
         end_year=2030,
-        expense_year=np.array([2023, 2024]),
+        expense_year=np.array([2025, 2026]),
         cost=np.array([50, 50]),
         cost_allocation=[FluidType.GAS, FluidType.GAS],
     )
@@ -495,7 +495,7 @@ if __name__ == "__main__":
     cs3 = CostOfSales(
         start_year=2023,
         end_year=2030,
-        expense_year=np.array([2023, 2024]),
+        expense_year=np.array([2025, 2026]),
         cost=np.array([25, 25]),
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
@@ -511,11 +511,23 @@ if __name__ == "__main__":
         # opex=tuple([opex1, opex2, opex3])
         # asr_cost=tuple([asr1, asr2, asr3]),
         # lbt_cost=tuple([lbt1, lbt2, lbt3]),
-        cost_of_sales=tuple([cs1, cs2, cs3]),
+        # cost_of_sales=tuple([cs1, cs2, cs3]),
     )
 
     print('\t')
     print(f'++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+
+    project._get_expenditures_pre_tax()
+
+    print('\t')
+    print(f'Filetype: {type(project._oil_cost_of_sales_expenditures_pre_tax)}')
+    print(f'Length: {len(project._oil_cost_of_sales_expenditures_pre_tax)}')
+    print('_oil_cost_of_sales_expenditures_pre_tax = \n', project._oil_cost_of_sales_expenditures_pre_tax)
+
+    print('\t')
+    print(f'Filetype: {type(project._gas_cost_of_sales_expenditures_pre_tax)}')
+    print(f'Length: {len(project._gas_cost_of_sales_expenditures_pre_tax)}')
+    print('_gas_cost_of_sales_expenditures_pre_tax = \n', project._gas_cost_of_sales_expenditures_pre_tax)
 
     # cs = CostOfSales(
     #     start_year=2023,

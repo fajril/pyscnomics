@@ -874,27 +874,27 @@ class CostRecovery(BaseProject):
             pass
 
     def run(
-            self,
-            sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
-            co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            is_dmo_end_weighted: bool = False,
-            tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
-            tax_rate: float | np.ndarray | None = None,
-            ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
-            sunk_cost_reference_year: int = None,
-            depr_method: DeprMethod = DeprMethod.PSC_DB,
-            decline_factor: float | int = 2,
-            year_ref: int = None,
-            tax_type: TaxType = TaxType.VAT,
-            vat_rate: np.ndarray | float = 0.0,
-            lbt_rate: np.ndarray | float = 0.0,
-            inflation_rate: np.ndarray | float = 0.0,
-            future_rate: float = 0.02,
-            inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
-            post_uu_22_year2001: bool = True,
-            oil_cost_of_sales_applied: bool = False,
-            gas_cost_of_sales_applied: bool = False
+        self,
+        sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
+        co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        is_dmo_end_weighted: bool = False,
+        tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
+        tax_rate: float | np.ndarray | None = None,
+        ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
+        sunk_cost_reference_year: int = None,
+        depr_method: DeprMethod = DeprMethod.PSC_DB,
+        decline_factor: float | int = 2,
+        year_ref: int = None,
+        tax_type: TaxType = TaxType.VAT,
+        vat_rate: np.ndarray | float = 0.0,
+        lbt_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
+        future_rate: float = 0.02,
+        inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
+        post_uu_22_year2001: bool = True,
+        oil_cost_of_sales_applied: bool = False,
+        gas_cost_of_sales_applied: bool = False
     ):
 
         # Configure Sunk Cost Reference Year

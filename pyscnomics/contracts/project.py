@@ -115,6 +115,7 @@ class BaseProject:
     _sulfur_revenue: np.ndarray = field(default=None, init=False, repr=False)
     _electricity_revenue: np.ndarray = field(default=None, init=False, repr=False)
     _co2_revenue: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes to be defined later (associated with costs)
     _oil_capital_cost: CapitalCost = field(default=None, init=False, repr=False)
@@ -130,38 +131,62 @@ class BaseProject:
     _oil_cost_of_sales: CostOfSales = field(default=None, init=False, repr=False)
     _gas_cost_of_sales: CostOfSales = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with expenditures pre tax for each cost elements)
+    # Attributes to be defined later (associated with pre tax expenditures for each cost elements)
     _oil_capital_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_capital_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_intangible_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_intangible_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_opex_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_opex_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_asr_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_asr_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_lbt_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_lbt_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_cost_of_sales_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
 
-    # _oil_capital_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_capital_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    # _oil_intangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_intangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    # _oil_opex_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_opex_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    # _oil_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    # Attributes to be defined later (associated with indirect taxes for each cost element)
+    _oil_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_intangible_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_intangible_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_opex_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_opex_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_asr_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_asr_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_lbt_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_lbt_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
 
-    # # Private attributes associated with cost of sales
-    # _oil_cost_of_sales_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_cost_of_sales_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    #
-    # _oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
-    #
-    # # Private attributes associated with cashflow
-    # _oil_cashflow: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_cashflow: np.ndarray = field(default=None, init=False, repr=False)
-    #
-    # # Private attributes for wap price
-    # _oil_wap_price: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_wap_price: np.ndarray = field(default=None, init=False, repr=False)
-    # _sulfur_wap_price: np.ndarray = field(default=None, init=False, repr=False)
-    # _electricity_wap_price: np.ndarray = field(default=None, init=False, repr=False)
-    # _co2_wap_price: np.ndarray = field(default=None, init=False, repr=False)
-    #
-    # _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
+    # Attributes to be defined later (associated with post tax expenditures for each cost elements)
+    _oil_capital_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_capital_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_intangible_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_intangible_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_opex_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_opex_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_asr_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_asr_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_lbt_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_lbt_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_cost_of_sales_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes to be defined later (associated with sunk cost)
+    _oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes to be defined later (associated with cashflow)
+    _oil_cashflow: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_cashflow: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Atributes to be defined later (associated with WAP price)
+    _oil_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+    _sulfur_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+    _electricity_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+    _co2_wap_price: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         """
@@ -1486,212 +1511,283 @@ class BaseProject:
                 description=description.tolist(),
             )
 
-    def _get_expenditures_pre_tax(self):
-        pass
-
-    def _get_indirect_taxes(self):
-        pass
-
-    def _get_expenditures_post_tax(self):
-        pass
-
-    def _get_expenditures(
+    def _get_expenditures_pre_tax(
         self,
-        year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
-        vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
+        year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
-        future_rate: float = 0.02,
-        inflation_rate_applied_to: InflationAppliedTo | None = None,
     ) -> None:
         """
-        Calculate and assign expenditures for various cost components.
+        Calculate and assign pre-tax expenditures for various categories, adjusted for inflation.
+
+        This method calculates the pre-tax expenditures for multiple cost categories related
+        to oil and gas, adjusted by the provided inflation rate. The expenditures are then
+        assigned to the corresponding attributes for both oil and gas.
 
         Parameters
         ----------
-        year_ref: int, optional
-            Reference year for inflation calculation. Defaults to None.
-        tax_type: TaxType, optional
-            The type of tax applied to the corresponding asset.
-            Available options: TaxType.VAT or TaxType.LBT.
-            Defaults to TaxType.VAT.
-        vat_rate: np.ndarray | float, optional
-            The VAT rate to apply. Can be a single value or an array (defaults to 0.0).
-        lbt_rate: np.ndarray | float, optional
-            The LBT rate to apply. Can be a single value or an array (defaults to 0.0).
-        inflation_rate: np.ndarray | float, optional
-            The inflation rate to apply. Can be a single value or an array (defaults to 0.0).
-        future_rate : float, optional
-            The future rate used in cost calculation (defaults to 0.02).
+        year_inflation : np.ndarray, optional
+            A NumPy array representing the years during which inflation is applied to the costs.
+            If not provided, defaults to repeating the `start_year` for all costs.
+        inflation_rate : np.ndarray or float, optional
+            The inflation rate(s) to apply to the project costs. If provided as a float,
+            a uniform inflation rate is applied. If provided as a NumPy array, different
+            rates are applied based on the corresponding project years. Default is 0.0.
 
         Returns
         -------
         None
+            This method does not return a value. It updates the following attributes with the
+            calculated pre-tax expenditures:
 
-        Notes
-        -----
-        The core procedures are as follows:
-        (1) Create an inner function named calc_expenses() to calculate the expenditures
-            of a particular target attribute,
-        (2) Calculate the expenditures of all cost components by performing iteration
-            over all available cost components using Python's build-in map() method,
-        (3) Extract individual expenditures and assign them to the commensurate attribute.
+            -   `_oil_capital_expenditures_pre_tax`
+            -   `_gas_capital_expenditures_pre_tax`
+            -   `_oil_intangible_expenditures_pre_tax`
+            -   `_gas_intangible_expenditures_pre_tax`
+            -   `_oil_opex_expenditures_pre_tax`
+            -   `_gas_opex_expenditures_pre_tax`
+            -   `_oil_asr_expenditures_pre_tax`
+            -   `_gas_asr_expenditures_pre_tax`
+            -   `_oil_lbt_expenditures_pre_tax`
+            -   `_gas_lbt_expenditures_pre_tax`
+            -   `_oil_cost_of_sales_expenditures_pre_tax`
+            -   `_gas_cost_of_sales_expenditures_pre_tax`
         """
 
-        if year_ref is None:
-            year_ref = self.start_date.year
+        (
+            self._oil_capital_expenditures_pre_tax,
+            self._gas_capital_expenditures_pre_tax,
+            self._oil_intangible_expenditures_pre_tax,
+            self._gas_intangible_expenditures_pre_tax,
+            self._oil_opex_expenditures_pre_tax,
+            self._gas_opex_expenditures_pre_tax,
+            self._oil_asr_expenditures_pre_tax,
+            self._gas_asr_expenditures_pre_tax,
+            self._oil_lbt_expenditures_pre_tax,
+            self._gas_lbt_expenditures_pre_tax,
+            self._oil_cost_of_sales_expenditures_pre_tax,
+            self._gas_cost_of_sales_expenditures_pre_tax,
+        ) = [
+            attr.expenditures_pre_tax(year_inflation=year_inflation, inflation_rate=inflation_rate)
+            for attr in [
+                self._oil_capital_cost,
+                self._gas_capital_cost,
+                self._oil_intangible,
+                self._gas_intangible,
+                self._oil_opex,
+                self._gas_opex,
+                self._oil_asr,
+                self._gas_asr,
+                self._oil_lbt,
+                self._gas_lbt,
+                self._oil_cost_of_sales,
+                self._gas_cost_of_sales,
+            ]
+        ]
 
-        def calc_expenses(target_attr):
-            """ Calculate expenditures for a target attribute """
+    def _get_indirect_taxes(
+        self,
+        tax_portion: np.ndarray = None,
+        tax_rate: np.ndarray | float = 0.0,
+        tax_discount: float = 0.0,
+    ) -> None:
+        """
+        Calculate and assign indirect taxes for various oil and gas expenditure categories.
 
-            # No inflation rate
-            if inflation_rate_applied_to is None:
-                if target_attr is self._oil_asr or target_attr is self._gas_asr:
-                    return target_attr.expenditures_post_tax(
-                        year_ref=year_ref,
-                        tax_type=tax_type,
-                        vat_rate=vat_rate,
-                        lbt_rate=lbt_rate,
-                        inflation_rate=0.0,
-                        future_rate=future_rate,
-                    )
+        This method computes the indirect taxes (such as VAT or other applicable indirect taxes)
+        for multiple categories related to oil and gas. It adjusts these taxes based on the
+        provided tax portion, tax rate, and tax discount.
 
-                else:
-                    return target_attr.expenditures_post_tax(
-                        year_ref=year_ref,
-                        tax_type=tax_type,
-                        vat_rate=vat_rate,
-                        lbt_rate=lbt_rate,
-                        inflation_rate=0.0,
-                    )
+        Parameters
+        ----------
+        tax_portion : np.ndarray, optional
+            A NumPy array representing the portion of the cost subject to tax. If not provided,
+            an array of zeros with the same shape as the project cost will be used.
+        tax_rate : np.ndarray or float, optional
+            A NumPy array or float representing the tax rate applied to the costs. If not provided,
+            a default rate of 0.0 will be used. When provided as an array, it should match
+            the project years.
+        tax_discount : float, optional
+            A discount factor applied to the tax, reducing the overall tax impact. The default is 0.0.
 
-            # Inflation rate applied to CAPEX only
-            elif inflation_rate_applied_to == InflationAppliedTo.CAPEX:
-                if (
-                    target_attr is self._oil_capital_cost
-                    or target_attr is self._gas_capital_cost
-                    or target_attr is self._oil_intangible
-                    or target_attr is self._gas_intangible
-                ):
-                    return target_attr.expenditures_post_tax(
-                        year_ref=year_ref,
-                        tax_type=tax_type,
-                        vat_rate=vat_rate,
-                        lbt_rate=lbt_rate,
-                        inflation_rate=inflation_rate,
-                    )
+        Returns
+        -------
+        None
+            This method does not return any values. It updates the following attributes with the
+            calculated indirect taxes for oil and gas:
 
-                else:
-                    if target_attr is self._oil_asr or target_attr is self._gas_asr:
-                        return target_attr.expenditures_post_tax(
-                            year_ref=year_ref,
-                            tax_type=tax_type,
-                            vat_rate=vat_rate,
-                            lbt_rate=lbt_rate,
-                            inflation_rate=0.0,
-                            future_rate=future_rate,
-                        )
-
-                    else:
-                        return target_attr.expenditures_post_tax(
-                            year_ref=year_ref,
-                            tax_type=tax_type,
-                            vat_rate=vat_rate,
-                            lbt_rate=lbt_rate,
-                            inflation_rate=0.0,
-                        )
-
-            # Inflation rate applied to OPEX only
-            elif inflation_rate_applied_to == InflationAppliedTo.OPEX:
-                if target_attr is self._oil_opex or target_attr is self._gas_opex:
-                    return target_attr.expenditures_post_tax(
-                        year_ref=year_ref,
-                        tax_type=tax_type,
-                        vat_rate=vat_rate,
-                        lbt_rate=lbt_rate,
-                        inflation_rate=inflation_rate,
-                    )
-
-                else:
-                    if target_attr is self._oil_asr or target_attr is self._gas_asr:
-                        return target_attr.expenditures_post_tax(
-                            year_ref=year_ref,
-                            tax_type=tax_type,
-                            vat_rate=vat_rate,
-                            lbt_rate=lbt_rate,
-                            inflation_rate=0.0,
-                            future_rate=future_rate,
-                        )
-
-                    else:
-                        return target_attr.expenditures_post_tax(
-                            year_ref=year_ref,
-                            tax_type=tax_type,
-                            vat_rate=vat_rate,
-                            lbt_rate=lbt_rate,
-                            inflation_rate=0.0,
-                        )
-
-            # Inflation rate applied to CAPEX and OPEX
-            elif inflation_rate_applied_to == InflationAppliedTo.CAPEX_AND_OPEX:
-                if (
-                    target_attr is self._oil_capital_cost
-                    or target_attr is self._gas_capital_cost
-                    or target_attr is self._oil_intangible
-                    or target_attr is self._gas_intangible
-                    or target_attr is self._oil_opex
-                    or target_attr is self._gas_opex
-                ):
-                    return target_attr.expenditures_post_tax(
-                        year_ref=year_ref,
-                        tax_type=tax_type,
-                        vat_rate=vat_rate,
-                        lbt_rate=lbt_rate,
-                        inflation_rate=inflation_rate,
-                    )
-
-                else:
-                    return target_attr.expenditures_post_tax(
-                        year_ref=year_ref,
-                        tax_type=tax_type,
-                        vat_rate=vat_rate,
-                        lbt_rate=lbt_rate,
-                        inflation_rate=0.0,
-                        future_rate=future_rate,
-                    )
-
-            else:
-                raise BaseProjectException(
-                    f"The value of inflation_rate_applied_to ({inflation_rate_applied_to}) "
-                    f"is not recognized. "
-                    f"Please select between CAPEX, OPEX, CAPEX AND OPEX, or None. "
-                )
+            -   `_oil_capital_indirect_tax`
+            -   `_gas_capital_indirect_tax`
+            -   `_oil_intangible_indirect_tax`
+            -   `_gas_intangible_indirect_tax`
+            -   `_oil_opex_indirect_tax`
+            -   `_gas_opex_indirect_tax`
+            -   `_oil_asr_indirect_tax`
+            -   `_gas_asr_indirect_tax`
+            -   `_oil_lbt_indirect_tax`
+            -   `_gas_lbt_indirect_tax`
+            -   `_oil_cost_of_sales_indirect_tax`
+            -   `_gas_cost_of_sales_indirect_tax`
+        """
 
         (
-            self._oil_capital_expenditures,
-            self._gas_capital_expenditures,
-            self._oil_intangible_expenditures,
-            self._gas_intangible_expenditures,
-            self._oil_opex_expenditures,
-            self._gas_opex_expenditures,
-            self._oil_asr_expenditures,
-            self._gas_asr_expenditures,
-        ) = list(
-            map(
-                calc_expenses,
-                [self._oil_capital_cost, self._gas_capital_cost, self._oil_intangible,
-                 self._gas_intangible, self._oil_opex, self._gas_opex,
-                 self._oil_asr, self._gas_asr]
+            self._oil_capital_indirect_tax,
+            self._gas_capital_indirect_tax,
+            self._oil_intangible_indirect_tax,
+            self._gas_intangible_indirect_tax,
+            self._oil_opex_indirect_tax,
+            self._gas_opex_indirect_tax,
+            self._oil_asr_indirect_tax,
+            self._gas_asr_indirect_tax,
+            self._oil_lbt_indirect_tax,
+            self._gas_lbt_indirect_tax,
+            self._oil_cost_of_sales_indirect_tax,
+            self._gas_cost_of_sales_indirect_tax,
+        ) = [
+            attr.indirect_taxes(tax_portion=tax_portion, tax_rate=tax_rate, tax_discount=tax_discount)
+            for attr in [
+                self._oil_capital_cost,
+                self._gas_capital_cost,
+                self._oil_intangible,
+                self._gas_intangible,
+                self._oil_opex,
+                self._gas_opex,
+                self._oil_asr,
+                self._gas_asr,
+                self._oil_lbt,
+                self._gas_lbt,
+                self._oil_cost_of_sales,
+                self._gas_cost_of_sales,
+            ]
+        ]
+
+    def _get_expenditures_post_tax(
+        self,
+        year_inflation: np.ndarray = None,
+        inflation_rate: np.ndarray | float = 0.0,
+        tax_portion: np.ndarray = None,
+        tax_rate: np.ndarray | float = 0.0,
+        tax_discount: float = 0.0,
+    ) -> None:
+        """
+        Calculate and assign post-tax expenditures for various oil and gas expenditure categories.
+
+        This method computes the post-tax expenditures for multiple categories related to oil
+        and gas. It adjusts these expenditures by accounting for inflation, tax portions, tax rates,
+        and tax discounts.
+
+        Parameters
+        ----------
+        year_inflation : np.ndarray, optional
+            An array of years representing when inflation impacts each cost. If not provided,
+            it defaults to the `start_year` of the project for all costs. The array must have
+            the same length as `self.cost`.
+        inflation_rate : np.ndarray or float, optional
+            The inflation rate(s) to apply. If a single float is provided, it is applied uniformly
+            across all years. If an array is provided, each inflation rate corresponds to a specific
+            project year (default is 0.0).
+        tax_portion : np.ndarray, optional
+            A NumPy array representing the portion of each cost subject to taxation. If not provided,
+            defaults to an array of zeros, implying no taxation.
+        tax_rate : np.ndarray or float, optional
+            The tax rate to apply to the costs. If a float is provided, it applies uniformly across all
+            project years. If a NumPy array is provided, the rate can vary by year (default is 0.0).
+        tax_discount : float, optional
+            A discount applied to the tax rate, represented as a decimal fraction (e.g., 0.1 for 10%).
+            Default is 0.0, meaning no discount is applied.
+
+        Returns
+        -------
+        None
+            This method does not return any values. It updates the following attributes with
+            the calculated post-tax expenditures for oil and gas:
+
+            -   `_oil_capital_expenditures_post_tax`
+            -   `_gas_capital_expenditures_post_tax`
+            -   `_oil_intangible_expenditures_post_tax`
+            -   `_gas_intangible_expenditures_post_tax`
+            -   `_oil_opex_expenditures_post_tax`
+            -   `_gas_opex_expenditures_post_tax`
+            -   `_oil_asr_expenditures_post_tax`
+            -   `_gas_asr_expenditures_post_tax`
+            -   `_oil_lbt_expenditures_post_tax`
+            -   `_gas_lbt_expenditures_post_tax`
+            -   `_oil_cost_of_sales_expenditures_post_tax`
+            -   `_gas_cost_of_sales_expenditures_post_tax`
+        """
+
+        (
+            self._oil_capital_expenditures_post_tax,
+            self._gas_capital_expenditures_post_tax,
+            self._oil_intangible_expenditures_post_tax,
+            self._gas_intangible_expenditures_post_tax,
+            self._oil_opex_expenditures_post_tax,
+            self._gas_opex_expenditures_post_tax,
+            self._oil_asr_expenditures_post_tax,
+            self._gas_asr_expenditures_post_tax,
+            self._oil_lbt_expenditures_post_tax,
+            self._gas_lbt_expenditures_post_tax,
+            self._oil_cost_of_sales_expenditures_post_tax,
+            self._gas_cost_of_sales_expenditures_post_tax,
+        ) = [
+            attr.expenditures_post_tax(
+                year_inflation=year_inflation,
+                inflation_rate=inflation_rate,
+                tax_portion=tax_portion,
+                tax_rate=tax_rate,
+                tax_discount=tax_discount,
             )
+            for attr in [
+                self._oil_capital_cost,
+                self._gas_capital_cost,
+                self._oil_intangible,
+                self._gas_intangible,
+                self._oil_opex,
+                self._gas_opex,
+                self._oil_asr,
+                self._gas_asr,
+                self._oil_lbt,
+                self._gas_lbt,
+                self._oil_cost_of_sales,
+                self._gas_cost_of_sales,
+            ]
+        ]
+
+    def _get_tax_by_regime(self, tax_regime) -> np.ndarray:
+        """
+        Determine the tax rate array based on the tax regime and project years.
+
+        This method computes the tax rates for the project years depending on the specified
+        `tax_regime`. It uses predefined tax configurations for certain years (2013, 2016, 2020)
+        and allows for specific tax regimes that override these configurations. For tax regimes
+        like `NAILED_DOWN`, the tax rate is fixed based on the start year of the project.
+
+        Parameters
+        ----------
+        tax_regime : TaxRegime
+            The tax regime to be applied. It determines how tax rates are selected and can be
+            one of the following:
+            -   `TaxRegime.UU_07_2021`
+            -   `TaxRegime.UU_02_2020`
+            -   `TaxRegime.UU_36_2008`
+            -   `TaxRegime.NAILED_DOWN`
+
+        Returns
+        -------
+        tax_rate_arr : np.ndarray
+            A 1D array of tax rates for each project year. The tax rate is determined based on
+            the tax regime and the project's starting year in relation to the predefined tax
+            configurations.
+        """
+
+        tax_config = {
+            2013: 0.44,
+            2016: 0.42,
+            2020: 0.40
+        }
+
+        tax_rate_arr = np.full_like(
+            self.project_years, fill_value=tax_config[min(tax_config)], dtype=float
         )
-
-    def _get_tax_by_regime(self, tax_regime):
-        tax_config = {2013: 0.44,
-                      2016: 0.42,
-                      2020: 0.40}
-
-        tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[min(tax_config)], dtype=float)
 
         for year in tax_config:
             indices = np.array(np.where(self.project_years >= year)).ravel()
@@ -1699,33 +1795,56 @@ class BaseProject:
 
         if tax_regime == TaxRegime.UU_07_2021:
             tax_rate_arr = np.full_like(self.project_years, fill_value=0.40, dtype=float)
+
         if tax_regime == TaxRegime.UU_02_2020:
             tax_rate_arr = np.full_like(self.project_years, fill_value=0.42, dtype=float)
+
         if tax_regime == TaxRegime.UU_36_2008:
             tax_rate_arr = np.full_like(self.project_years, fill_value=0.44, dtype=float)
+
         if tax_regime == TaxRegime.NAILED_DOWN:
             if self.start_date.year >= max(tax_config):
-                tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[max(tax_config)], dtype=float)
+                tax_rate_arr = np.full_like(
+                    self.project_years, fill_value=tax_config[max(tax_config)], dtype=float
+                )
             else:
-                tax_rate_arr = np.full_like(self.project_years, fill_value=tax_config[min(tax_config)], dtype=float)
+                tax_rate_arr = np.full_like(
+                    self.project_years, fill_value=tax_config[min(tax_config)], dtype=float
+                )
+
         return tax_rate_arr
 
-    def _get_wap_price(self):
+    def _get_oil_wap_price(self) -> None:
         """
-        The function to wrap functions of getting the Weighted Average Price (WAP) of the produced products.
+        Calculate the weighted average price (WAP) of oil for the project years.
 
-        """
-        self._get_oil_wap_price()
-        self._get_gas_wap_price()
-        self._get_sulfur_wap_price()
-        self._get_electricity_wap_price()
-        self._get_co2_wap_price()
+        This method computes the oil weighted average price (WAP) for each project year based on the
+        lifting rates and prices of oil. The weighted average price is determined by dividing the
+        volume-weighted prices by the total oil lifting volume for each year.
 
-    def _get_oil_wap_price(self):
-        """
-        The function to fill the variable self._oil_wap_price.
+        The lifting data is iterated through, and the lifting rates and prices are considered only
+        for `FluidType.OIL`.
 
+        Returns
+        -------
+        None
+            The method updates the attribute `self._oil_wap_price` as a numpy array of weighted average
+            prices for each project year.
+
+        Notes
+        -----
+        -   The method first initializes two arrays, `vol_x_price` and `total_vol`, both of which
+            are the same size as `self.project_years`. These arrays are used to accumulate the
+            volume-weighted price and total volume of oil for each project year.
+        -   The method iterates over the `self.lifting` attribute, which contains lifting data for
+            various fluid types. Only entries where `lift.fluid_type == FluidType.OIL` are considered.
+        -   For oil liftings, the lifting rate array and price array are used to calculate the
+            volume-weighted price (`vol_x_price`), and the total lifting volume (`total_vol`).
+        -   The oil weighted average price is then calculated as the element-wise division of
+            `vol_x_price` by `total_vol`, only for years where `total_vol` is not zero.
+        -   The result is stored in `self._oil_wap_price`.
         """
+
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
 
@@ -1736,13 +1855,30 @@ class BaseProject:
 
         self._oil_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
-    def _get_gas_wap_price(self):
+    def _get_gas_wap_price(self) -> None:
         """
-        The function to fill the variable self._gas_wap_price.
+        Calculate the weighted average price (WAP) of gas based on the lifting volumes and prices.
+
+        This method computes the weighted average price of gas over the project years. The gas WAP is
+        calculated by multiplying the lifting rates with the associated prices and dividing by the
+        total lifting volumes. If there is no lifting data (both total volume and volume x price are
+        zero), the method assigns zero to the gas WAP.
+
         Returns
         -------
+        None
+            The method sets the `self._gas_wap_price` attribute to a NumPy array containing the
+            weighted average gas price for each project year. If no lifting data is available,
+            it assigns zeros.
 
+        Notes
+        -----
+        -   The `self.lifting` attribute is expected to contain objects that have the attributes
+            `fluid_type`, `get_lifting_rate_arr()`, and `get_price_arr()`.
+        -   The method calculates the weighted average price for gas only, skipping any lifting
+            records that are not related to gas (`FluidType.GAS`).
         """
+
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
 
@@ -1753,14 +1889,35 @@ class BaseProject:
 
         if np.sum(vol_x_price) + np.sum(total_vol) == 0:
             self._gas_wap_price = np.zeros_like(vol_x_price)
+
         else:
             self._gas_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
-    def _get_sulfur_wap_price(self):
+    def _get_sulfur_wap_price(self) -> None:
         """
-        The function to fill the variable self._sulfur_wap_price.
+        Calculate the weighted average price (WAP) of sulfur based on lifting volumes and prices.
 
+        This method computes the weighted average price of sulfur for the project years. The sulfur
+        WAP is calculated by multiplying the sulfur lifting rates with their respective prices and
+        dividing by the total lifting volumes for sulfur. The method skips lifting data unrelated
+        to sulfur.
+
+        Returns
+        -------
+        None
+            The method sets the `self._sulfur_wap_price` attribute to a NumPy array containing the
+            weighted average sulfur price for each project year.
+
+        Notes
+        -----
+        -   The `self.lifting` attribute is expected to contain objects that have the attributes
+            `fluid_type`, `get_lifting_rate_arr()`, and `get_price_arr()`.
+        -   The method calculates the weighted average price for sulfur only, skipping any lifting
+            records that are not related to sulfur (`FluidType.SULFUR`).
+        -   If there are no valid lifting records for sulfur, the division is avoided by using
+            `np.divide` with the `where` condition to ensure that no division by zero occurs.
         """
+
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
 
@@ -1771,11 +1928,29 @@ class BaseProject:
 
         self._sulfur_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
-    def _get_electricity_wap_price(self):
+    def _get_electricity_wap_price(self) -> None:
         """
-        The function to fill the variable self._electricity_wap_price.
+        Calculate and set the weighted average price (WAP) of electricity for the project years.
 
+        This method computes the weighted average price (WAP) of electricity based on the lifting rates
+        and prices associated with electricity. It multiplies the electricity lifting volumes by their
+        respective prices and then divides the sum by the total lifting volumes to calculate the WAP.
+
+        Returns
+        -------
+        None
+            The method updates the attribute `self._electricity_wap_price`, which contains a NumPy
+            array with the weighted average price of electricity for each project year.
+
+        Notes
+        -----
+        -   The `self.lifting` attribute is expected to contain objects that provide methods
+            `get_lifting_rate_arr()` and `get_price_arr()` to retrieve lifting rates and prices.
+        -   Only entries with `FluidType.ELECTRICITY` are used in the WAP calculation.
+        -   The `np.divide` function ensures safe division, avoiding division by zero when no
+            volumes are present.
         """
+
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
 
@@ -1786,11 +1961,29 @@ class BaseProject:
 
         self._electricity_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
-    def _get_co2_wap_price(self):
+    def _get_co2_wap_price(self) -> None:
         """
-        The function to fill the variable self._co2_wap_price.
+        Calculate and set the weighted average price (WAP) of CO2 for the project years.
 
+        This method computes the weighted average price (WAP) of CO2 based on the lifting rates
+        and prices associated with CO2. It multiplies the CO2 lifting volumes by their respective
+        prices and then divides the sum by the total lifting volumes to calculate the WAP.
+
+        Returns
+        -------
+        None
+            The method updates the attribute `self._co2_wap_price`, which contains a NumPy array
+            with the weighted average price of CO2 for each project year.
+
+        Notes
+        -----
+        -   The `self.lifting` attribute is expected to contain objects that provide methods
+            `get_lifting_rate_arr()` and `get_price_arr()` to retrieve lifting rates and prices.
+        -   Only entries with `FluidType.CO2` are used in the WAP calculation.
+        -   The `np.divide` function ensures safe division, avoiding division by zero when no
+            volumes are present.
         """
+
         vol_x_price = np.zeros_like(self.project_years, dtype=float)
         total_vol = np.zeros_like(self.project_years, dtype=float)
 
@@ -1801,12 +1994,71 @@ class BaseProject:
 
         self._co2_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
 
+    def _get_wap_price(self) -> None:
+        """
+        Calculate and set the weighted average prices (WAP) for oil, gas, sulfur, electricity,
+        and CO2 across the project years.
+
+        This method sequentially calls individual methods to compute the weighted average prices
+        for different fluid types (oil, gas, sulfur, electricity, and CO2). It then stores the
+        resulting values in corresponding attributes of the object.
+
+        The following methods are invoked:
+        -   `_get_oil_wap_price`: Computes the WAP for oil.
+        -   `_get_gas_wap_price`: Computes the WAP for gas.
+        -   `_get_sulfur_wap_price`: Computes the WAP for sulfur.
+        -   `_get_electricity_wap_price`: Computes the WAP for electricity.
+        -   `_get_co2_wap_price`: Computes the WAP for CO2.
+
+        Returns
+        -------
+        None
+            The method updates the following attributes with their corresponding WAP values:
+            -   `self._oil_wap_price`
+            -   `self._gas_wap_price`
+            -   `self._sulfur_wap_price`
+            -   `self._electricity_wap_price`
+            -   `self._co2_wap_price`
+
+        Notes
+        -----
+        -   Each WAP is computed by considering the lifting rates and prices for the corresponding
+            fluid type.
+        -   The WAP values are stored as attributes of the object for future use.
+        """
+
+        self._get_oil_wap_price()
+        self._get_gas_wap_price()
+        self._get_sulfur_wap_price()
+        self._get_electricity_wap_price()
+        self._get_co2_wap_price()
+
     def _get_other_revenue(
         self,
         sulfur_revenue: OtherRevenue,
         electricity_revenue: OtherRevenue,
         co2_revenue: OtherRevenue
-    ):
+    ) -> None:
+        """
+        Configure treatments for other revenue sources.
+
+        This method adjusts the financial attributes (revenues and expenditures) based on the
+        revenue sources for sulfur, electricity, and CO2. The adjustment is made according to
+        the type of other revenue selected for each source (either addition to revenue or reduction
+        to operating expenses).
+
+        The method updates the following attributes depending on the input revenue selections:
+        -   `self._oil_revenue`
+        -   `self._gas_revenue`
+        -   `self._oil_opex_expenditures_post_tax`
+        -   `self._gas_opex_expenditures_post_tax`
+
+        Notes
+        -----
+        -   This method modifies the internal attributes based on the selected revenue types for
+            sulfur, electricity, and CO2.
+        -   If an unsupported revenue type is provided, an `OtherRevenueException` is raised.
+        """
 
         # Configure sulfur revenue
         if sulfur_revenue is OtherRevenue.ADDITION_TO_OIL_REVENUE:
@@ -1816,10 +2068,14 @@ class BaseProject:
             self._gas_revenue = self._gas_revenue + self._sulfur_revenue
 
         elif sulfur_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
-            self._oil_opex_expenditures = self._oil_opex_expenditures - self._sulfur_revenue
+            self._oil_opex_expenditures_post_tax = (
+                self._oil_opex_expenditures_post_tax - self._sulfur_revenue
+            )
 
         elif sulfur_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
-            self._gas_opex_expenditures = self._gas_opex_expenditures - self._sulfur_revenue
+            self._gas_opex_expenditures_post_tax = (
+                self._gas_opex_expenditures_post_tax - self._sulfur_revenue
+            )
 
         else:
             raise OtherRevenueException(
@@ -1834,10 +2090,14 @@ class BaseProject:
             self._gas_revenue = self._gas_revenue + self._sulfur_revenue
 
         elif electricity_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
-            self._oil_opex_expenditures = self._oil_opex_expenditures - self._sulfur_revenue
+            self._oil_opex_expenditures_post_tax = (
+                self._oil_opex_expenditures_post_tax - self._sulfur_revenue
+            )
 
         elif electricity_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
-            self._gas_opex_expenditures = self._gas_opex_expenditures - self._sulfur_revenue
+            self._gas_opex_expenditures_post_tax = (
+                self._gas_opex_expenditures_post_tax - self._sulfur_revenue
+            )
 
         else:
             raise OtherRevenueException(
@@ -1852,29 +2112,68 @@ class BaseProject:
             self._gas_revenue = self._gas_revenue + self._co2_revenue
 
         elif co2_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
-            self._oil_opex_expenditures = self._oil_opex_expenditures - self._co2_revenue
+            self._oil_opex_expenditures_post_tax = (
+                self._oil_opex_expenditures_post_tax - self._co2_revenue
+            )
 
         elif co2_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
-            self._gas_opex_expenditures = self._gas_opex_expenditures - self._co2_revenue
+            self._gas_opex_expenditures_post_tax = (
+                self._gas_opex_expenditures_post_tax - self._co2_revenue
+            )
 
         else:
             raise OtherRevenueException(
                 f"Other Revenue Selection is not available {co2_revenue} "
             )
 
-    def _get_sunk_cost(self, sunk_cost_reference_year: int):
+    def _get_sunk_cost(self, sunk_cost_reference_year: int) -> None:
+        """
+        Calculate and update the sunk costs for oil and gas up to a specified reference year.
+
+        This method computes the sunk costs for both oil and gas by adding capital and non-capital
+        expenditures up to the given `sunk_cost_reference_year`. The method updates internal
+        attributes for oil and gas sunk costs.
+
+        The sunk costs are calculated as follows:
+        -   For oil: `self._oil_sunk_cost` is updated with the sum of
+            `self._oil_capital_expenditures_post_tax` and `self._oil_non_capital`
+            up to the specified year.
+        -   For gas: `self._gas_sunk_cost` is updated similarly with
+            `self._gas_capital_expenditures_post_tax` and `self._gas_non_capital`.
+
+        If the `sunk_cost_reference_year` is the same as the project's start year, both oil and gas
+        sunk costs are set to zero.
+
+        Parameters
+        ----------
+        sunk_cost_reference_year : int
+            The year up to which the sunk costs for oil and gas should be calculated. It must be
+            greater than or equal to the project's start year.
+
+        Attributes Updated
+        ------------------
+        self._oil_sunk_cost : np.ndarray
+            The calculated sunk costs for oil up to the specified reference year.
+        self._gas_sunk_cost : np.ndarray
+            The calculated sunk costs for gas up to the specified reference year.
+        """
+
+        # Oil sunk cost
         oil_cost_raw = (
-                self._oil_capital_expenditures
-                + self._oil_non_capital
+            self._oil_capital_expenditures_post_tax
+            + self._oil_non_capital
         )
+
         self._oil_sunk_cost = oil_cost_raw[
                               : (sunk_cost_reference_year - self.start_date.year + 1)
                               ]
 
+        # Gas sunk cost
         gas_cost_raw = (
-                self._gas_capital_expenditures
-                + self._gas_non_capital
+            self._gas_capital_expenditures_post_tax
+            + self._gas_non_capital
         )
+
         self._gas_sunk_cost = gas_cost_raw[
                               : (sunk_cost_reference_year - self.start_date.year + 1)
                               ]
@@ -1889,13 +2188,18 @@ class BaseProject:
         electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
         co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
         sunk_cost_reference_year: int = None,
-        year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
-        vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
+        year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
-        future_rate: float = 0.02,
-        inflation_rate_applied_to: InflationAppliedTo = InflationAppliedTo.CAPEX
+        tax_portion: np.ndarray = None,
+        tax_rate: np.ndarray | float = 0.0,
+        tax_discount: float = 0.0,
+        inflation_rate_applied_to: InflationAppliedTo = InflationAppliedTo.CAPEX,
+        # year_ref: int = None,
+        # tax_type: TaxType = TaxType.VAT,
+        # vat_rate: np.ndarray | float = 0.0,
+        # lbt_rate: np.ndarray | float = 0.0,
+        # inflation_rate: np.ndarray | float = 0.0,
+        # future_rate: float = 0.02,
     ) -> None:
         """
         Run the economic analysis, calculating expenditures and configuring
