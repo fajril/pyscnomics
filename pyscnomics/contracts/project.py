@@ -856,6 +856,8 @@ class BaseProject:
             useful_life = self.capital_cost_total.useful_life[oil_capital_id]
             depreciation_factor = self.capital_cost_total.depreciation_factor[oil_capital_id]
             is_ic_applied = np.array(self.capital_cost_total.is_ic_applied)[oil_capital_id]
+            tax_portion = self.capital_cost_total.tax_portion[oil_capital_id]
+            tax_discount = self.capital_cost_total.tax_discount[oil_capital_id]
 
             return CapitalCost(
                 start_year=start_year,
@@ -869,6 +871,8 @@ class BaseProject:
                 useful_life=useful_life,
                 depreciation_factor=depreciation_factor,
                 is_ic_applied=is_ic_applied.tolist(),
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
             )
 
     def _get_gas_capital(self) -> CapitalCost:
@@ -920,6 +924,8 @@ class BaseProject:
             useful_life = self.capital_cost_total.useful_life[gas_capital_id]
             depreciation_factor = self.capital_cost_total.depreciation_factor[gas_capital_id]
             is_ic_applied = np.array(self.capital_cost_total.is_ic_applied)[gas_capital_id]
+            tax_portion = self.capital_cost_total.tax_portion[gas_capital_id]
+            tax_discount = self.capital_cost_total.tax_discount[gas_capital_id]
 
             return CapitalCost(
                 start_year=start_year,
@@ -933,6 +939,8 @@ class BaseProject:
                 useful_life=useful_life,
                 depreciation_factor=depreciation_factor,
                 is_ic_applied=is_ic_applied.tolist(),
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
             )
 
     def _get_oil_intangible(self) -> Intangible:
@@ -979,6 +987,8 @@ class BaseProject:
             expense_year = self.intangible_cost_total.expense_year[oil_intangible_id]
             cost_allocation = np.array(self.intangible_cost_total.cost_allocation)[oil_intangible_id]
             description = np.array(self.intangible_cost_total.description)[oil_intangible_id]
+            tax_portion = self.intangible_cost_total.tax_portion[oil_intangible_id]
+            tax_discount = self.intangible_cost_total.tax_discount[oil_intangible_id]
 
             return Intangible(
                 start_year=start_year,
@@ -987,6 +997,8 @@ class BaseProject:
                 expense_year=expense_year,
                 cost_allocation=cost_allocation.tolist(),
                 description=description.tolist(),
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
             )
 
     def _get_gas_intangible(self) -> Intangible:
@@ -1033,6 +1045,8 @@ class BaseProject:
             expense_year = self.intangible_cost_total.expense_year[gas_intangible_id]
             cost_allocation = np.array(self.intangible_cost_total.cost_allocation)[gas_intangible_id]
             description = np.array(self.intangible_cost_total.description)[gas_intangible_id]
+            tax_portion = self.intangible_cost_total.tax_portion[gas_intangible_id]
+            tax_discount = self.intangible_cost_total.tax_discount[gas_intangible_id]
 
             return Intangible(
                 start_year=start_year,
@@ -1041,6 +1055,8 @@ class BaseProject:
                 expense_year=expense_year,
                 cost_allocation=cost_allocation.tolist(),
                 description=description.tolist(),
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
             )
 
     def _get_oil_opex(self) -> OPEX:
@@ -1089,6 +1105,8 @@ class BaseProject:
             fixed_cost = self.opex_total.fixed_cost[oil_opex_id]
             prod_rate = self.opex_total.prod_rate[oil_opex_id]
             cost_per_volume = self.opex_total.cost_per_volume[oil_opex_id]
+            tax_portion = self.opex_total.tax_portion[oil_opex_id]
+            tax_discount = self.opex_total.tax_discount[oil_opex_id]
 
             return OPEX(
                 start_year=start_year,
@@ -1099,6 +1117,8 @@ class BaseProject:
                 fixed_cost=fixed_cost,
                 prod_rate=prod_rate,
                 cost_per_volume=cost_per_volume,
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
             )
 
     def _get_gas_opex(self) -> OPEX:
@@ -1147,6 +1167,8 @@ class BaseProject:
             fixed_cost = self.opex_total.fixed_cost[gas_opex_id]
             prod_rate = self.opex_total.prod_rate[gas_opex_id]
             cost_per_volume = self.opex_total.cost_per_volume[gas_opex_id]
+            tax_portion = self.opex_total.tax_portion[gas_opex_id]
+            tax_discount = self.opex_total.tax_discount[gas_opex_id]
 
             return OPEX(
                 start_year=start_year,
@@ -1157,6 +1179,8 @@ class BaseProject:
                 fixed_cost=fixed_cost,
                 prod_rate=prod_rate,
                 cost_per_volume=cost_per_volume,
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
             )
 
     def _get_oil_asr(self) -> ASR:
@@ -1205,6 +1229,8 @@ class BaseProject:
             description = np.array(self.asr_cost_total.description)[oil_asr_id]
             final_year = self.asr_cost_total.final_year[oil_asr_id]
             future_rate = self.asr_cost_total.future_rate[oil_asr_id]
+            tax_portion = self.asr_cost_total.tax_portion[oil_asr_id]
+            tax_discount = self.asr_cost_total.tax_discount[oil_asr_id]
 
             return ASR(
                 start_year=start_year,
@@ -1215,6 +1241,8 @@ class BaseProject:
                 description=description.tolist(),
                 final_year=final_year,
                 future_rate=future_rate,
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
             )
 
     def _get_gas_asr(self) -> ASR:
@@ -1263,6 +1291,8 @@ class BaseProject:
             description = np.array(self.asr_cost_total.description)[gas_asr_id]
             final_year = self.asr_cost_total.final_year[gas_asr_id]
             future_rate = self.asr_cost_total.future_rate[gas_asr_id]
+            tax_portion = self.asr_cost_total.tax_portion[gas_asr_id]
+            tax_discount = self.asr_cost_total.tax_discount[gas_asr_id]
 
             return ASR(
                 start_year=start_year,
@@ -1273,6 +1303,8 @@ class BaseProject:
                 description=description.tolist(),
                 final_year=final_year,
                 future_rate=future_rate,
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
             )
 
     def _get_oil_lbt(self) -> LBT:
@@ -1324,6 +1356,8 @@ class BaseProject:
             njop_building = self.lbt_cost_total.njop_building[oil_lbt_id]
             gross_revenue = self.lbt_cost_total.gross_revenue[oil_lbt_id]
             cost = self.lbt_cost_total.cost[oil_lbt_id]
+            tax_portion = self.lbt_cost_total.tax_portion[oil_lbt_id]
+            tax_discount = self.lbt_cost_total.tax_discount[oil_lbt_id]
 
             return LBT(
                 start_year=start_year,
@@ -1338,6 +1372,8 @@ class BaseProject:
                 njop_building=njop_building,
                 gross_revenue=gross_revenue,
                 cost=cost,
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
             )
 
     def _get_gas_lbt(self) -> LBT:
@@ -1389,6 +1425,8 @@ class BaseProject:
             njop_building = self.lbt_cost_total.njop_building[gas_lbt_id]
             gross_revenue = self.lbt_cost_total.gross_revenue[gas_lbt_id]
             cost = self.lbt_cost_total.cost[gas_lbt_id]
+            tax_portion = self.lbt_cost_total.tax_portion[gas_lbt_id]
+            tax_discount = self.lbt_cost_total.tax_discount[gas_lbt_id]
 
             return LBT(
                 start_year=start_year,
@@ -1403,6 +1441,8 @@ class BaseProject:
                 njop_building=njop_building,
                 gross_revenue=gross_revenue,
                 cost=cost,
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
             )
 
     def _get_oil_cost_of_sales(self) -> CostOfSales:
@@ -1448,6 +1488,8 @@ class BaseProject:
             cost = self.cost_of_sales_total.cost[oil_cost_of_sales_id]
             cost_allocation = np.array(self.cost_of_sales_total.cost_allocation)[oil_cost_of_sales_id]
             description = np.array(self.cost_of_sales_total.description)[oil_cost_of_sales_id]
+            tax_portion = self.cost_of_sales_total.tax_portion[oil_cost_of_sales_id]
+            tax_discount = self.cost_of_sales_total.tax_discount[oil_cost_of_sales_id]
 
             return CostOfSales(
                 start_year=start_year,
@@ -1456,6 +1498,8 @@ class BaseProject:
                 cost=cost,
                 cost_allocation=cost_allocation.tolist(),
                 description=description.tolist(),
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
             )
 
     def _get_gas_cost_of_sales(self) -> CostOfSales:
@@ -1501,6 +1545,8 @@ class BaseProject:
             cost = self.cost_of_sales_total.cost[gas_cost_of_sales_id]
             cost_allocation = np.array(self.cost_of_sales_total.cost_allocation)[gas_cost_of_sales_id]
             description = np.array(self.cost_of_sales_total.description)[gas_cost_of_sales_id]
+            tax_portion = self.cost_of_sales_total.tax_portion[gas_cost_of_sales_id]
+            tax_discount = self.cost_of_sales_total.tax_discount[gas_cost_of_sales_id]
 
             return CostOfSales(
                 start_year=start_year,
@@ -1509,12 +1555,90 @@ class BaseProject:
                 cost=cost,
                 cost_allocation=cost_allocation.tolist(),
                 description=description.tolist(),
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
+            )
+
+    def _calc_expenditures_pre_tax(
+        self,
+        target_attr,
+        year_inflation: np.ndarray = None,
+        inflation_rate: np.ndarray | float = 0.0,
+        inflation_rate_applied_to: InflationAppliedTo | None = None,
+    ):
+
+        # No inflation rate
+        if inflation_rate_applied_to is None:
+            return target_attr.expenditures_pre_tax(
+                year_inflation=year_inflation,
+                inflation_rate=0.0,
+            )
+
+        # Inflation rate applied to CAPEX only
+        elif inflation_rate_applied_to == InflationAppliedTo.CAPEX:
+            if (
+                target_attr is self._oil_capital_cost
+                or target_attr is self._gas_capital_cost
+                or target_attr is self._oil_intangible
+                or target_attr is self._gas_intangible
+            ):
+                return target_attr.expenditures_pre_tax(
+                    year_inflation=year_inflation,
+                    inflation_rate=inflation_rate,
+                )
+
+            else:
+                return target_attr.expenditures_pre_tax(
+                    year_inflation=year_inflation,
+                    inflation_rate=0.0,
+                )
+
+        # Inflation rate applied to OPEX only
+        elif inflation_rate_applied_to == InflationAppliedTo.OPEX:
+            if target_attr is self._oil_opex or target_attr is self._gas_opex:
+                return target_attr.expenditures_pre_tax(
+                    year_inflation=year_inflation,
+                    inflation_rate=inflation_rate,
+                )
+
+            else:
+                return target_attr.expenditures_pre_tax(
+                    year_inflation=year_inflation,
+                    inflation_rate=0.0,
+                )
+
+        # Inflation rate applied to CAPEX and OPEX
+        elif inflation_rate_applied_to == InflationAppliedTo.CAPEX_AND_OPEX:
+            if (
+                target_attr is self._oil_capital_cost
+                or target_attr is self._gas_capital_cost
+                or target_attr is self._oil_intangible
+                or target_attr is self._gas_intangible
+                or target_attr is self._oil_opex
+                or target_attr is self._gas_opex
+            ):
+                return target_attr.expenditures_pre_tax(
+                    year_inflation=year_inflation,
+                    inflation_rate=inflation_rate
+                )
+
+            else:
+                return target_attr.expenditures_pre_tax(
+                    year_inflation=year_inflation,
+                    inflation_rate=0.0,
+                )
+
+        else:
+            raise BaseProjectException(
+                f"Parameter inflation_rate_applied_to is not recognized. "
+                f"Available options are: CAPEX, OPEX, CAPEX and OPEX, or None. "
             )
 
     def _get_expenditures_pre_tax(
         self,
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
+        inflation_rate_applied_to: InflationAppliedTo | None = None,
     ) -> None:
         """
         Calculate and assign pre-tax expenditures for various categories, adjusted for inflation.
@@ -1532,6 +1656,8 @@ class BaseProject:
             The inflation rate(s) to apply to the project costs. If provided as a float,
             a uniform inflation rate is applied. If provided as a NumPy array, different
             rates are applied based on the corresponding project years. Default is 0.0.
+        inflation_rate_applied_to
+            The selection of where the cost inflation will be applied to.
 
         Returns
         -------
@@ -1553,6 +1679,7 @@ class BaseProject:
             -   `_gas_cost_of_sales_expenditures_pre_tax`
         """
 
+        # Prepare expenditures pre tax associated with capital, intangible, opex, asr, and lbt costs
         (
             self._oil_capital_expenditures_pre_tax,
             self._gas_capital_expenditures_pre_tax,
@@ -1564,10 +1691,13 @@ class BaseProject:
             self._gas_asr_expenditures_pre_tax,
             self._oil_lbt_expenditures_pre_tax,
             self._gas_lbt_expenditures_pre_tax,
-            self._oil_cost_of_sales_expenditures_pre_tax,
-            self._gas_cost_of_sales_expenditures_pre_tax,
         ) = [
-            attr.expenditures_pre_tax(year_inflation=year_inflation, inflation_rate=inflation_rate)
+            self._calc_expenditures_pre_tax(
+                target_attr=attr,
+                year_inflation=year_inflation,
+                inflation_rate=inflation_rate,
+                inflation_rate_applied_to=inflation_rate_applied_to,
+            )
             for attr in [
                 self._oil_capital_cost,
                 self._gas_capital_cost,
@@ -1579,17 +1709,22 @@ class BaseProject:
                 self._gas_asr,
                 self._oil_lbt,
                 self._gas_lbt,
+            ]
+        ]
+
+        # Prepare expenditures pre tax associated with cost of sales
+        (
+            self._oil_cost_of_sales_expenditures_pre_tax,
+            self._gas_cost_of_sales_expenditures_pre_tax,
+        ) = [
+            attr.expenditures_pre_tax()
+            for attr in [
                 self._oil_cost_of_sales,
                 self._gas_cost_of_sales,
             ]
         ]
 
-    def _get_indirect_taxes(
-        self,
-        tax_portion: np.ndarray = None,
-        tax_rate: np.ndarray | float = 0.0,
-        tax_discount: float = 0.0,
-    ) -> None:
+    def _get_indirect_taxes(self, tax_rate: np.ndarray | float = 0.0) -> None:
         """
         Calculate and assign indirect taxes for various oil and gas expenditure categories.
 
@@ -1599,15 +1734,10 @@ class BaseProject:
 
         Parameters
         ----------
-        tax_portion : np.ndarray, optional
-            A NumPy array representing the portion of the cost subject to tax. If not provided,
-            an array of zeros with the same shape as the project cost will be used.
         tax_rate : np.ndarray or float, optional
             A NumPy array or float representing the tax rate applied to the costs. If not provided,
             a default rate of 0.0 will be used. When provided as an array, it should match
             the project years.
-        tax_discount : float, optional
-            A discount factor applied to the tax, reducing the overall tax impact. The default is 0.0.
 
         Returns
         -------
@@ -1629,6 +1759,7 @@ class BaseProject:
             -   `_gas_cost_of_sales_indirect_tax`
         """
 
+        # Prepare indirect taxes associated with capital, intangible, opex, asr, and lbt costs
         (
             self._oil_capital_indirect_tax,
             self._gas_capital_indirect_tax,
@@ -1640,10 +1771,8 @@ class BaseProject:
             self._gas_asr_indirect_tax,
             self._oil_lbt_indirect_tax,
             self._gas_lbt_indirect_tax,
-            self._oil_cost_of_sales_indirect_tax,
-            self._gas_cost_of_sales_indirect_tax,
         ) = [
-            attr.indirect_taxes(tax_portion=tax_portion, tax_rate=tax_rate, tax_discount=tax_discount)
+            attr.indirect_taxes(tax_rate=tax_rate)
             for attr in [
                 self._oil_capital_cost,
                 self._gas_capital_cost,
@@ -1655,6 +1784,16 @@ class BaseProject:
                 self._gas_asr,
                 self._oil_lbt,
                 self._gas_lbt,
+            ]
+        ]
+
+        # Prepare indirect taxes associated with cost of sales
+        (
+            self._oil_cost_of_sales_indirect_tax,
+            self._gas_cost_of_sales_indirect_tax,
+        ) = [
+            attr.indirect_taxes()
+            for attr in [
                 self._oil_cost_of_sales,
                 self._gas_cost_of_sales,
             ]
@@ -1664,9 +1803,7 @@ class BaseProject:
         self,
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
-        tax_portion: np.ndarray = None,
         tax_rate: np.ndarray | float = 0.0,
-        tax_discount: float = 0.0,
     ) -> None:
         """
         Calculate and assign post-tax expenditures for various oil and gas expenditure categories.
@@ -1685,15 +1822,9 @@ class BaseProject:
             The inflation rate(s) to apply. If a single float is provided, it is applied uniformly
             across all years. If an array is provided, each inflation rate corresponds to a specific
             project year (default is 0.0).
-        tax_portion : np.ndarray, optional
-            A NumPy array representing the portion of each cost subject to taxation. If not provided,
-            defaults to an array of zeros, implying no taxation.
         tax_rate : np.ndarray or float, optional
             The tax rate to apply to the costs. If a float is provided, it applies uniformly across all
             project years. If a NumPy array is provided, the rate can vary by year (default is 0.0).
-        tax_discount : float, optional
-            A discount applied to the tax rate, represented as a decimal fraction (e.g., 0.1 for 10%).
-            Default is 0.0, meaning no discount is applied.
 
         Returns
         -------
@@ -1715,6 +1846,7 @@ class BaseProject:
             -   `_gas_cost_of_sales_expenditures_post_tax`
         """
 
+        # Prepare expenditures post tax associated with capital, intangible, opex, asr, and lbt costs
         (
             self._oil_capital_expenditures_post_tax,
             self._gas_capital_expenditures_post_tax,
@@ -1726,15 +1858,11 @@ class BaseProject:
             self._gas_asr_expenditures_post_tax,
             self._oil_lbt_expenditures_post_tax,
             self._gas_lbt_expenditures_post_tax,
-            self._oil_cost_of_sales_expenditures_post_tax,
-            self._gas_cost_of_sales_expenditures_post_tax,
         ) = [
             attr.expenditures_post_tax(
                 year_inflation=year_inflation,
                 inflation_rate=inflation_rate,
-                tax_portion=tax_portion,
                 tax_rate=tax_rate,
-                tax_discount=tax_discount,
             )
             for attr in [
                 self._oil_capital_cost,
@@ -1747,6 +1875,16 @@ class BaseProject:
                 self._gas_asr,
                 self._oil_lbt,
                 self._gas_lbt,
+            ]
+        ]
+
+        # Prepare expenditures post tax associated with cost of sales
+        (
+            self._oil_cost_of_sales_expenditures_post_tax,
+            self._gas_cost_of_sales_expenditures_post_tax,
+        ) = [
+            attr.expenditures_post_tax()
+            for attr in [
                 self._oil_cost_of_sales,
                 self._gas_cost_of_sales,
             ]
@@ -2190,10 +2328,10 @@ class BaseProject:
         sunk_cost_reference_year: int = None,
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
-        tax_portion: np.ndarray = None,
+        # tax_portion: np.ndarray = None,
         tax_rate: np.ndarray | float = 0.0,
-        tax_discount: float = 0.0,
-        inflation_rate_applied_to: InflationAppliedTo = InflationAppliedTo.CAPEX,
+        # tax_discount: float = 0.0,
+        inflation_rate_applied_to: InflationAppliedTo = None,
         # year_ref: int = None,
         # tax_type: TaxType = TaxType.VAT,
         # vat_rate: np.ndarray | float = 0.0,
@@ -2252,19 +2390,28 @@ class BaseProject:
         self._get_expenditures_pre_tax(
             year_inflation=year_inflation,
             inflation_rate=inflation_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
         )
 
         # # Calculate indirect taxes
-        # self._get_indirect_taxes(
-        #     tax_portion=tax_portion,
+        # self._get_indirect_taxes(tax_rate=tax_rate)
+        #
+        # # Calculate post tax expenditures
+        # self._get_expenditures_post_tax(
+        #     year_inflation=year_inflation,
+        #     inflation_rate=inflation_rate,
         #     tax_rate=tax_rate,
-        #     tax_discount=tax_discount,
         # )
 
         print('\t')
-        print(f'Filetype: {type(self._gas_intangible_expenditures_pre_tax)}')
-        print(f'Length: {len(self._gas_intangible_expenditures_pre_tax)}')
-        print('_gas_intangible_expenditures_pre_tax = \n', self._gas_intangible_expenditures_pre_tax)
+        print(f'Filetype: {type(self._oil_asr_expenditures_pre_tax)}')
+        print(f'Length: {len(self._oil_asr_expenditures_pre_tax)}')
+        print('_oil_asr_expenditures_pre_tax = \n', self._oil_asr_expenditures_pre_tax)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_intangible_expenditures_pre_tax)}')
+        print(f'Length: {len(self._oil_intangible_expenditures_pre_tax)}')
+        print('_oil_intangible_expenditures_pre_tax = \n', self._oil_intangible_expenditures_pre_tax)
 
         # # Prepare the data
         # self._get_expenditures(

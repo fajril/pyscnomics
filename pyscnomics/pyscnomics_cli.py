@@ -457,6 +457,8 @@ if __name__ == "__main__":
     from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales
     from pyscnomics.econ.selection import FluidType
     from pyscnomics.contracts.project import BaseProject
+    from pyscnomics.econ.selection import InflationAppliedTo
+
 
     lifting1 = Lifting(
         start_year=2023,
@@ -482,6 +484,7 @@ if __name__ == "__main__":
         expense_year=np.array([2025, 2026]),
         cost=np.array([100, 100]),
         cost_allocation=[FluidType.OIL, FluidType.OIL],
+        # tax_portion=np.array([1, 1]),
     )
 
     intang2 = Intangible(
@@ -490,6 +493,7 @@ if __name__ == "__main__":
         expense_year=np.array([2025, 2026]),
         cost=np.array([50, 50]),
         cost_allocation=[FluidType.GAS, FluidType.GAS],
+        # tax_portion=np.array([1, 1]),
     )
 
     intang3 = Intangible(
@@ -498,40 +502,43 @@ if __name__ == "__main__":
         expense_year=np.array([2025, 2026]),
         cost=np.array([25, 25]),
         cost_allocation=[FluidType.OIL, FluidType.OIL],
+        # tax_portion=np.array([1, 1]),
     )
 
     # =======================================================================================================
 
-    # project = BaseProject(
-    #     start_date=date(year=2023, month=1, day=1),
-    #     end_date=date(year=2030, month=12, day=31),
-    #     # lifting=tuple([lifting1, lifting2]),
-    #     # capital_cost=tuple([cap1, cap2, cap3]),
-    #     intangible_cost=tuple([intang1, intang2, intang3]),
-    #     # opex=tuple([opex1, opex2, opex3])
-    #     # asr_cost=tuple([asr1, asr2, asr3]),
-    #     # lbt_cost=tuple([lbt1, lbt2, lbt3]),
-    #     # cost_of_sales=tuple([cs1, cs2, cs3]),
-    # )
+    project = BaseProject(
+        start_date=date(year=2023, month=1, day=1),
+        end_date=date(year=2030, month=12, day=31),
+        # lifting=tuple([lifting1, lifting2]),
+        # capital_cost=tuple([cap1, cap2, cap3]),
+        intangible_cost=tuple([intang1, intang2, intang3]),
+        # opex=tuple([opex1, opex2, opex3])
+        # asr_cost=tuple([asr1, asr2, asr3]),
+        # lbt_cost=tuple([lbt1, lbt2, lbt3]),
+        # cost_of_sales=tuple([cs1, cs2, cs3]),
+    )
+
+    project.run(
+        inflation_rate=0.05,
+        # inflation_rate_applied_to=InflationAppliedTo.CAPEX,
+    )
 
     print('\t')
     print(f'++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
-    cs = CostOfSales(
-        start_year=2023,
-        end_year=2030,
-        expense_year=np.array([2024, 2025, 2026, 2027, 2028]),
-        cost=np.array([100, 100, 100, 100, 100]),
-        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
-        tax_portion=np.array([1, 1, 1, 1, 1]),
-    )
+    # print('\t')
+    # print(f'Filetype: {type(cap)}')
+    # print(f'Length: {len(cap)}')
+    # print('cap = \n', cap)
 
-    t1 = cs.expenditures_post_tax()
-
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    # cs = CostOfSales(
+    #     start_year=2023,
+    #     end_year=2030,
+    #     expense_year=np.array([2024, 2025, 2026, 2027, 2028]),
+    #     cost=np.array([100, 100, 100, 100, 100]),
+    #     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+    # )
 
     # lbt = LBT(
     #     start_year=2023,
