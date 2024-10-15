@@ -81,6 +81,11 @@ class GeneralCost:
         A list representing the cost allocation of a tangible asset.
     description: list[str]
         A list of string description regarding the associated tangible cost.
+    tax_portion : np.ndarray, optional
+        A NumPy array representing the portion of the cost subject to tax. If not provided,
+        an array of zeros with the same shape as the project cost will be used.
+    tax_discount : float | np.ndarray, optional
+        A discount factor applied to the tax, reducing the overall tax impact. The default is 0.0.
 
     Notes
     -----
@@ -94,8 +99,10 @@ class GeneralCost:
     cost: np.ndarray
     cost_allocation: list[FluidType] = field(default=None)
     description: list[str] = field(default=None)
+    tax_portion: np.ndarray = field(default=None)
+    tax_discount: np.ndarray | float = field(default=0.0)
 
-    # Attribute to be defined later on
+    # Attribute to be defined later on (associated with project time)
     project_duration: int = field(default=None, init=False)
     project_years: np.ndarray = field(default=None, init=False)
 
@@ -157,12 +164,7 @@ class GeneralCost:
 
         return np.concatenate((expenses, zeros))
 
-    def indirect_taxes(
-        self,
-        tax_portion: np.ndarray = None,
-        tax_rate: np.ndarray | float = 0.0,
-        tax_discount: float = 0.0,
-    ) -> np.ndarray:
+    def indirect_taxes(self, tax_rate: np.ndarray | float = 0.0) -> np.ndarray:
         """
         Calculate and allocate indirect taxes on project costs.
 
@@ -172,15 +174,10 @@ class GeneralCost:
 
         Parameters
         ----------
-        tax_portion : np.ndarray, optional
-            A NumPy array representing the portion of the cost subject to tax. If not provided,
-            an array of zeros with the same shape as the project cost will be used.
         tax_rate : np.ndarray or float, optional
             A NumPy array or float representing the tax rate applied to the costs. If not provided,
             a default rate of 0.0 will be used. When provided as an array, it should match
             the project years.
-        tax_discount : float, optional
-            A discount factor applied to the tax, reducing the overall tax impact. The default is 0.0.
 
         Returns
         -------
@@ -202,9 +199,9 @@ class GeneralCost:
             cost=self.cost,
             expense_year=self.expense_year,
             project_years=self.project_years,
-            tax_portion=tax_portion,
+            tax_portion=self.tax_portion,
             tax_rate=tax_rate,
-            tax_discount=tax_discount,
+            tax_discount=self.tax_discount,
         )
 
         # Allocate indirect tax by their associated expense year
@@ -219,9 +216,7 @@ class GeneralCost:
         self,
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
-        tax_portion: np.ndarray = None,
         tax_rate: np.ndarray | float = 0.0,
-        tax_discount: float = 0.0,
     ) -> np.ndarray:
         """
         Calculate post-tax expenditures, adjusted for inflation and indirect taxes.
@@ -240,15 +235,9 @@ class GeneralCost:
             The inflation rate(s) to apply. If a single float is provided, it is applied uniformly
             across all years. If an array is provided, each inflation rate corresponds to a specific
             project year (default is 0.0).
-        tax_portion : np.ndarray, optional
-            A NumPy array representing the portion of each cost subject to taxation. If not provided,
-            defaults to an array of zeros, implying no taxation.
         tax_rate : np.ndarray or float, optional
             The tax rate to apply to the costs. If a float is provided, it applies uniformly across all
             project years. If a NumPy array is provided, the rate can vary by year (default is 0.0).
-        tax_discount : float, optional
-            A discount applied to the tax rate, represented as a decimal fraction (e.g., 0.1 for 10%).
-            Default is 0.0, meaning no discount is applied.
 
         Returns
         -------
@@ -268,12 +257,8 @@ class GeneralCost:
         """
 
         return (
-            self.expenditures_pre_tax(
-                year_inflation=year_inflation, inflation_rate=inflation_rate
-            ) +
-            self.indirect_taxes(
-                tax_portion=tax_portion, tax_rate=tax_rate, tax_discount=tax_discount,
-            )
+            self.expenditures_pre_tax(year_inflation=year_inflation, inflation_rate=inflation_rate)
+            + self.indirect_taxes(tax_rate=tax_rate)
         )
 
     def __len__(self):
@@ -320,6 +305,8 @@ class CapitalCost(GeneralCost):
         -   Prepare attribute useful_life,
         -   Prepare attribute depreciation_factor,
         -   Prepare attribute is_ic_applied,
+        -   Prepare attribute tax_portion,
+        -   Prepare attribute tax_discount,
         -   Initial check for unequal length of input arrays,
         -   Raise an error: expense_year is after the end year of the project,
         -   Raise an error: expense_year is before the start year of the project,
@@ -421,6 +408,28 @@ class CapitalCost(GeneralCost):
                     f"not as a/an {self.is_ic_applied.__class__.__qualname__}"
                 )
 
+        # Prepare attribute tax_portion
+        if self.tax_portion is None:
+            self.tax_portion = np.zeros_like(self.cost)
+
+        else:
+            if not isinstance(self.tax_portion, np.ndarray):
+                raise CapitalException(
+                    f"Attribute tax_portion must be given as a numpy.ndarray, "
+                    f"not as a/an {self.tax_portion.__class__.__qualname__}"
+                )
+
+        self.tax_portion = self.tax_portion.astype(np.float64)
+
+        # Prepare attribute tax_discount
+        if isinstance(self.tax_discount, (float, int)):
+            if self.tax_discount < 0 or self.tax_discount > 1:
+                raise CapitalException(f"Attribute tax_discount must be between 0 and 1")
+
+            self.tax_discount = np.repeat(self.tax_discount, len(self.cost))
+
+        self.tax_discount = self.tax_discount.astype(np.float64)
+
         # Check input data for unequal length
         arr_length = len(self.cost)
 
@@ -435,6 +444,8 @@ class CapitalCost(GeneralCost):
                 self.useful_life,
                 self.depreciation_factor,
                 self.is_ic_applied,
+                self.tax_portion,
+                self.tax_discount,
             ]
         ):
             raise CapitalException(
@@ -447,7 +458,9 @@ class CapitalCost(GeneralCost):
                 f"salvage_value: {len(self.salvage_value)}, "
                 f"useful_life: {len(self.useful_life)}, "
                 f"depreciation_factor: {len(self.depreciation_factor)}, "
-                f"is_ic_applied: {len(self.is_ic_applied)}."
+                f"is_ic_applied: {len(self.is_ic_applied)}, "
+                f"tax_portion: {len(self.tax_portion)}, "
+                f"tax_discount: {len(self.tax_discount)} "
             )
 
         # Raise an error: expense year is after the end year of the project
@@ -470,9 +483,7 @@ class CapitalCost(GeneralCost):
         decline_factor: float | int = 2,
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
-        tax_portion: np.ndarray = None,
         tax_rate: np.ndarray | float = 0.0,
-        tax_discount: float = 0.0,
     ) -> tuple:
         """
         This function calculates the total depreciation for a project based on the specified
@@ -497,15 +508,10 @@ class CapitalCost(GeneralCost):
             The inflation rate(s) to apply to the project costs. If provided as a float,
             a uniform inflation rate is applied. If provided as a NumPy array, different
             rates are applied based on the corresponding project years. Default is 0.0.
-        tax_portion : np.ndarray, optional
-            A NumPy array representing the portion of the cost subject to tax. If not provided,
-            an array of zeros with the same shape as the project cost will be used.
         tax_rate : np.ndarray or float, optional
             A NumPy array or float representing the tax rate applied to the costs. If not provided,
             a default rate of 0.0 will be used. When provided as an array, it should match
             the project years.
-        tax_discount : float, optional
-            A discount factor applied to the tax, reducing the overall tax impact. The default is 0.0.
 
         Returns
         -------
@@ -540,9 +546,9 @@ class CapitalCost(GeneralCost):
                 cost=self.cost,
                 expense_year=self.expense_year,
                 project_years=self.project_years,
-                tax_portion=tax_portion,
+                tax_portion=self.tax_portion,
                 tax_rate=tax_rate,
-                tax_discount=tax_discount,
+                tax_discount=self.tax_discount,
             )
         )
 
@@ -629,9 +635,7 @@ class CapitalCost(GeneralCost):
         decline_factor: float | int = 2,
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
-        tax_portion: np.ndarray = None,
         tax_rate: np.ndarray | float = 0.0,
-        tax_discount: float = 0.0,
     ) -> np.ndarray:
         """
         Calculate the total book value of depreciation for the asset.
@@ -654,15 +658,10 @@ class CapitalCost(GeneralCost):
             The inflation rate(s) to apply to the project costs. If provided as a float,
             a uniform inflation rate is applied. If provided as a NumPy array, different
             rates are applied based on the corresponding project years. Default is 0.0.
-        tax_portion : np.ndarray, optional
-            A NumPy array representing the portion of the cost subject to tax. If not provided,
-            an array of zeros with the same shape as the project cost will be used.
         tax_rate : np.ndarray or float, optional
             A NumPy array or float representing the tax rate applied to the costs. If not provided,
             a default rate of 0.0 will be used. When provided as an array, it should match
             the project years.
-        tax_discount : float, optional
-            A discount factor applied to the tax, reducing the overall tax impact. The default is 0.0.
 
         Returns
         -------
@@ -684,18 +683,18 @@ class CapitalCost(GeneralCost):
             decline_factor=decline_factor,
             year_inflation=year_inflation,
             inflation_rate=inflation_rate,
-            tax_portion=tax_portion,
+            # tax_portion=self.tax_portion,
             tax_rate=tax_rate,
-            tax_discount=tax_discount,
+            # tax_discount=self.tax_discount,
         )[0]
 
         return np.cumsum(
             self.expenditures_post_tax(
                 year_inflation=year_inflation,
                 inflation_rate=inflation_rate,
-                tax_portion=tax_portion,
+                # tax_portion=tax_portion,
                 tax_rate=tax_rate,
-                tax_discount=tax_discount,
+                # tax_discount=tax_discount,
             )
         ) - np.cumsum(total_depreciation_charge)
 
@@ -710,6 +709,8 @@ class CapitalCost(GeneralCost):
                     np.allclose(self.salvage_value, other.salvage_value),
                     np.allclose(self.useful_life, other.useful_life),
                     np.allclose(self.depreciation_factor, other.depreciation_factor),
+                    np.allclose(self.tax_portion, other.tax_portion),
+                    np.allclose(self.tax_discount, other.tax_discount),
                     self.cost_allocation == other.cost_allocation,
                 )
             )
@@ -797,6 +798,8 @@ class CapitalCost(GeneralCost):
                 (self.depreciation_factor, other.depreciation_factor)
             )
             is_ic_applied_combined = self.is_ic_applied + other.is_ic_applied
+            tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
 
             return CapitalCost(
                 start_year=start_year_combined,
@@ -810,6 +813,8 @@ class CapitalCost(GeneralCost):
                 useful_life=useful_life_combined,
                 depreciation_factor=depreciation_factor_combined,
                 is_ic_applied=is_ic_applied_combined,
+                tax_portion=tax_portion_combined,
+                tax_discount=tax_discount_combined,
             )
 
         else:
@@ -837,6 +842,8 @@ class CapitalCost(GeneralCost):
                 (self.depreciation_factor, other.depreciation_factor)
             )
             is_ic_applied_combined = self.is_ic_applied + other.is_ic_applied
+            tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
 
             return CapitalCost(
                 start_year=start_year_combined,
@@ -850,6 +857,8 @@ class CapitalCost(GeneralCost):
                 useful_life=useful_life_combined,
                 depreciation_factor=depreciation_factor_combined,
                 is_ic_applied=is_ic_applied_combined,
+                tax_portion=tax_portion_combined,
+                tax_discount=tax_discount_combined,
             )
 
         else:
@@ -878,11 +887,13 @@ class CapitalCost(GeneralCost):
                 useful_life=self.useful_life,
                 depreciation_factor=self.depreciation_factor,
                 is_ic_applied=self.is_ic_applied,
+                tax_portion=self.tax_portion,
+                tax_discount=self.tax_discount,
             )
 
         else:
             raise CapitalException(
-                f"Must multiply with an integer or a float; "
+                f"Must multiply with an integer or a float. "
                 f"{other}({other.__class__.__qualname__}) "
                 f"is not an integer nor a float."
             )
@@ -914,12 +925,14 @@ class CapitalCost(GeneralCost):
                     useful_life=self.useful_life,
                     depreciation_factor=self.depreciation_factor,
                     is_ic_applied=self.is_ic_applied,
+                    tax_portion=self.tax_portion,
+                    tax_discount=self.tax_discount,
                 )
 
         else:
             raise CapitalException(
                 f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT, "
-                f"integer or a float; {other}({other.__class__.__qualname__}) is not an instance "
+                f"integer or a float. {other}({other.__class__.__qualname__}) is not an instance "
                 f"of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer nor a float."
             )
 
@@ -940,6 +953,8 @@ class Intangible(GeneralCost):
         -   Prepare attributes project_duration and project_years,
         -   Prepare attribute description,
         -   Prepare attribute cost_allocation,
+        -   Prepare attribute tax_portion,
+        -   Prepare attribute tax_discount,
         -   Initial check for unequal length of input arrays,
         -   Raise an error: expense_year is after the end year of the project,
         -   Raise an error: expense_year is before the start year of the project,
@@ -978,6 +993,28 @@ class Intangible(GeneralCost):
                     f"not as a/an {self.cost_allocation.__class__.__qualname__}"
                 )
 
+        # Prepare attribute tax_portion
+        if self.tax_portion is None:
+            self.tax_portion = np.zeros_like(self.cost)
+
+        else:
+            if not isinstance(self.tax_portion, np.ndarray):
+                raise IntangibleException(
+                    f"Attribute tax_portion must be given as a numpy.ndarray, "
+                    f"not as a/an {self.tax_portion.__class__.__qualname__}"
+                )
+
+        self.tax_portion = self.tax_portion.astype(np.float64)
+
+        # Prepare attribute tax_discount
+        if isinstance(self.tax_discount, (float, int)):
+            if self.tax_discount < 0 or self.tax_discount > 1:
+                raise IntangibleException(f"Attribute tax_discount must be between 0 and 1")
+
+            self.tax_discount = np.repeat(self.tax_discount, len(self.cost))
+
+        self.tax_discount = self.tax_discount.astype(np.float64)
+
         # Check input data for unequal length
         arr_length = len(self.cost)
 
@@ -987,6 +1024,8 @@ class Intangible(GeneralCost):
                 self.expense_year,
                 self.cost_allocation,
                 self.description,
+                self.tax_portion,
+                self.tax_discount,
             ]
         ):
             raise IntangibleException(
@@ -995,6 +1034,8 @@ class Intangible(GeneralCost):
                 f"expense_year: {len(self.expense_year)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
                 f"description: {len(self.description)}, "
+                f"tax_portion: {len(self.tax_portion)}, "
+                f"tax_discount: {len(self.tax_discount)} "
             )
 
         # Raise an error message: expense year is after the end year of the project
@@ -1018,6 +1059,8 @@ class Intangible(GeneralCost):
                 (
                     np.allclose(self.cost, other.cost),
                     np.allclose(self.expense_year, other.expense_year),
+                    np.allclose(self.tax_portion, other.tax_portion),
+                    np.allclose(self.tax_discount, other.tax_discount),
                     self.cost_allocation == other.cost_allocation,
                 )
             )
@@ -1098,6 +1141,8 @@ class Intangible(GeneralCost):
             expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
+            tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
 
             return Intangible(
                 start_year=start_year_combined,
@@ -1106,6 +1151,8 @@ class Intangible(GeneralCost):
                 expense_year=expense_year_combined,
                 cost_allocation=cost_allocation_combined,
                 description=description_combined,
+                tax_portion=tax_portion_combined,
+                tax_discount=tax_discount_combined,
             )
 
         else:
@@ -1128,6 +1175,8 @@ class Intangible(GeneralCost):
             expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
+            tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
 
             return Intangible(
                 start_year=start_year_combined,
@@ -1136,6 +1185,8 @@ class Intangible(GeneralCost):
                 expense_year=expense_year_combined,
                 cost_allocation=cost_allocation_combined,
                 description=description_combined,
+                tax_portion=tax_portion_combined,
+                tax_discount=tax_discount_combined,
             )
 
         else:
@@ -1159,11 +1210,13 @@ class Intangible(GeneralCost):
                 expense_year=self.expense_year,
                 cost_allocation=self.cost_allocation,
                 description=self.description,
+                tax_portion=self.tax_portion,
+                tax_discount=self.tax_discount,
             )
 
         else:
             raise IntangibleException(
-                f"Must multiply with an integer or a float; "
+                f"Must multiply with an integer or a float. "
                 f"{other}({other.__class__.__qualname__}) is not an integer nor a float."
             )
 
@@ -1189,12 +1242,14 @@ class Intangible(GeneralCost):
                     expense_year=self.expense_year,
                     cost_allocation=self.cost_allocation,
                     description=self.description,
+                    tax_portion=self.tax_portion,
+                    tax_discount=self.tax_discount,
                 )
 
         else:
             raise IntangibleException(
                 f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT, "
-                f"integer or a float; {other}({other.__class__.__qualname__}) is not an "
+                f"integer or a float. {other}({other.__class__.__qualname__}) is not an "
                 f"instance of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer nor a float."
             )
 
@@ -1237,6 +1292,8 @@ class OPEX(GeneralCost):
         -   Prepare attribute description,
         -   Prepare attribute cost_allocation,
         -   Prepare attributes prod_rate and cost_per_volume,
+        -   Prepare attribute tax_portion,
+        -   Prepare attribute tax_discount,
         -   Prepare attribute variable_cost,
         -   Prepare attribute cost,
         -   Raise an error: expense_year is after the end year of the project,
@@ -1276,6 +1333,26 @@ class OPEX(GeneralCost):
                     f"not as a/an {self.cost_allocation.__class__.__qualname__}"
                 )
 
+        # Prepare attribute tax_portion
+        if self.tax_portion is None:
+            self.tax_portion = np.zeros_like(self.fixed_cost)
+
+        else:
+            if not isinstance(self.tax_portion, np.ndarray):
+                raise OPEXException(
+                    f"Attribute tax_portion must be given as a numpy.ndarray, "
+                    f"not as a/an {self.tax_portion.__class__.__qualname__}"
+                )
+
+        # Prepare attribute tax_discount
+        if isinstance(self.tax_discount, (float, int)):
+            if self.tax_discount < 0 or self.tax_discount > 1:
+                raise OPEXException(f"Attribute tax_discount must be between 0 and 1")
+
+            self.tax_discount = np.repeat(self.tax_discount, len(self.fixed_cost))
+
+        self.tax_discount = self.tax_discount.astype(np.float64)
+
         # User provides both prod_rate and cost_per_volume data
         if self.prod_rate is not None and self.cost_per_volume is not None:
 
@@ -1290,6 +1367,8 @@ class OPEX(GeneralCost):
                     self.description,
                     self.prod_rate,
                     self.cost_per_volume,
+                    self.tax_portion,
+                    self.tax_discount,
                 ]
             ):
                 raise OPEXException(
@@ -1299,7 +1378,9 @@ class OPEX(GeneralCost):
                     f"cost_allocation: {len(self.cost_allocation)}, "
                     f"description: {len(self.description)}, "
                     f"prod_rate: {len(self.prod_rate)}, "
-                    f"cost_per_volume: {len(self.cost_per_volume)}."
+                    f"cost_per_volume: {len(self.cost_per_volume)}, "
+                    f"tax_portion: {len(self.tax_portion)}, "
+                    f"tax_discount: {len(self.tax_discount)}, "
                 )
 
             # Specify attribute variable_cost
@@ -1348,6 +1429,8 @@ class OPEX(GeneralCost):
                     np.allclose(self.fixed_cost, other.fixed_cost),
                     np.allclose(self.variable_cost, other.variable_cost),
                     np.allclose(self.expense_year, other.expense_year),
+                    np.allclose(self.tax_portion, other.tax_portion),
+                    np.allclose(self.tax_discount, other.tax_discount),
                     self.cost_allocation == other.cost_allocation,
                 )
             )
@@ -1430,6 +1513,8 @@ class OPEX(GeneralCost):
             fixed_cost_combined = np.concatenate((self.fixed_cost, other.fixed_cost))
             prod_rate_combined = np.concatenate((self.prod_rate, other.prod_rate))
             cost_per_volume_combined = np.concatenate((self.cost_per_volume, other.cost_per_volume))
+            tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
 
             return OPEX(
                 start_year=start_year_combined,
@@ -1440,6 +1525,8 @@ class OPEX(GeneralCost):
                 fixed_cost=fixed_cost_combined,
                 prod_rate=prod_rate_combined,
                 cost_per_volume=cost_per_volume_combined,
+                tax_portion=tax_portion_combined,
+                tax_discount=tax_discount_combined,
             )
 
         else:
@@ -1464,6 +1551,8 @@ class OPEX(GeneralCost):
             fixed_cost_combined = np.concatenate((self.fixed_cost, -other.fixed_cost))
             prod_rate_combined = np.concatenate((self.prod_rate, -other.prod_rate))
             cost_per_volume_combined = np.concatenate((self.cost_per_volume, other.cost_per_volume))
+            tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
 
             return OPEX(
                 start_year=start_year_combined,
@@ -1474,6 +1563,8 @@ class OPEX(GeneralCost):
                 fixed_cost=fixed_cost_combined,
                 prod_rate=prod_rate_combined,
                 cost_per_volume=cost_per_volume_combined,
+                tax_portion=tax_portion_combined,
+                tax_discount=tax_discount_combined,
             )
 
         else:
@@ -1499,11 +1590,13 @@ class OPEX(GeneralCost):
                 fixed_cost=self.fixed_cost * other,
                 prod_rate=self.prod_rate * other,
                 cost_per_volume=self.cost_per_volume,
+                tax_portion=self.tax_portion,
+                tax_discount=self.tax_discount,
             )
 
         else:
             raise OPEXException(
-                f"Must multiply with an integer or a float; "
+                f"Must multiply with an integer or a float. "
                 f"{other}({other.__class__.__qualname__}) is not an integer nor a float."
             )
 
@@ -1531,12 +1624,14 @@ class OPEX(GeneralCost):
                     fixed_cost=self.fixed_cost / other,
                     prod_rate=self.prod_rate / other,
                     cost_per_volume=self.cost_per_volume,
+                    tax_portion=self.tax_portion,
+                    tax_discount=self.tax_discount,
                 )
 
         else:
             raise OPEXException(
                 f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT, "
-                f"integer or a float; {other}({other.__class__.__qualname__}) is not an instance "
+                f"integer or a float. {other}({other.__class__.__qualname__}) is not an instance "
                 f"of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer nor a float."
             )
 
@@ -1568,6 +1663,8 @@ class ASR(GeneralCost):
         -   Prepare attribute cost_allocation,
         -   Prepare attribute final_year,
         -   Prepare attribute future_rate,
+        -   Prepare attribute tax_portion,
+        -   Prepare attribute tax_discount,
         -   Initial check for unequal length of input arrays,
         -   Raise an error: final_year is before expense_year,
         -   Raise an error: expense_year is after the end year of the project,
@@ -1635,6 +1732,28 @@ class ASR(GeneralCost):
 
         self.future_rate = self.future_rate.astype(np.float64)
 
+        # Prepare attribute tax_portion
+        if self.tax_portion is None:
+            self.tax_portion = np.zeros_like(self.cost)
+
+        else:
+            if not isinstance(self.tax_portion, np.ndarray):
+                raise ASRException(
+                    f"Attribute tax_portion must be given as a numpy.ndarray, "
+                    f"not as a/an {self.tax_portion.__class__.__qualname__}"
+                )
+
+        self.tax_portion = self.tax_portion.astype(np.float64)
+
+        # Prepare attribute tax_discount
+        if isinstance(self.tax_discount, (float, int)):
+            if self.tax_discount < 0 or self.tax_discount > 1:
+                raise ASRException(f"Attribute tax_discount must be between 0 and 1")
+
+            self.tax_discount = np.repeat(self.tax_discount, len(self.cost))
+
+        self.tax_discount = self.tax_discount.astype(np.float64)
+
         # Check input data for unequal length
         arr_length = len(self.cost)
 
@@ -1646,6 +1765,8 @@ class ASR(GeneralCost):
                 self.description,
                 self.final_year,
                 self.future_rate,
+                self.tax_portion,
+                self.tax_discount,
             ]
         ):
             raise ASRException(
@@ -1655,7 +1776,9 @@ class ASR(GeneralCost):
                 f"cost_allocation: {len(self.cost_allocation)}, "
                 f"description: {len(self.description)}, "
                 f"final_year: {len(self.final_year)}, "
-                f"future_rate: {len(self.future_rate)}"
+                f"future_rate: {len(self.future_rate)}, "
+                f"tax_portion: {len(self.tax_portion)}, "
+                f"tax_discount: {len(self.tax_discount)}, "
             )
 
         # Raise an error: final_year is before expense_year
@@ -1776,12 +1899,7 @@ class ASR(GeneralCost):
 
         return np.sum(distributed_cost, axis=1, keepdims=False)
 
-    def indirect_taxes(
-        self,
-        tax_portion: np.ndarray = None,
-        tax_rate: np.ndarray | float = 0.0,
-        tax_discount: float = 0.0,
-    ) -> np.ndarray:
+    def indirect_taxes(self, tax_rate: np.ndarray | float = 0.0) -> np.ndarray:
         """
         Calculate and distribute indirect taxes over the project duration.
 
@@ -1791,16 +1909,10 @@ class ASR(GeneralCost):
 
         Parameters
         ----------
-        tax_portion : np.ndarray, optional
-            A NumPy array representing the portion of the cost subject to tax. If not provided,
-            an array of zeros with the same shape as the project cost will be used.
         tax_rate : np.ndarray or float, optional
             A NumPy array or float representing the tax rate applied to the costs. If not provided,
             a default rate of 0.0 will be used. When provided as an array, it should match
             the project years.
-        tax_discount : float, optional
-            A discount factor applied to the tax, reducing the overall tax impact.
-            The default is 0.0.
 
         Returns
         -------
@@ -1826,9 +1938,9 @@ class ASR(GeneralCost):
             cost=cost_future,
             expense_year=self.expense_year,
             project_years=self.project_years,
-            tax_portion=tax_portion,
+            tax_portion=self.tax_portion,
             tax_rate=tax_rate,
-            tax_discount=tax_discount,
+            tax_discount=self.tax_discount,
         )
 
         # Calculate distributed indirect taxes
@@ -1851,6 +1963,8 @@ class ASR(GeneralCost):
                     np.allclose(self.expense_year, other.expense_year),
                     np.allclose(self.final_year, other.final_year),
                     np.allclose(self.future_rate, other.future_rate),
+                    np.allclose(self.tax_portion, other.tax_portion),
+                    np.allclose(self.tax_discount, other.tax_discount),
                     self.cost_allocation == other.cost_allocation,
                 )
             )
@@ -1933,6 +2047,8 @@ class ASR(GeneralCost):
             description_combined = self.description + other.description
             final_year_combined = np.concatenate((self.final_year, other.final_year))
             future_rate_combined = np.concatenate((self.future_rate, other.future_rate))
+            tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
 
             return ASR(
                 start_year=start_year_combined,
@@ -1943,6 +2059,8 @@ class ASR(GeneralCost):
                 description=description_combined,
                 final_year=final_year_combined,
                 future_rate=future_rate_combined,
+                tax_portion=tax_portion_combined,
+                tax_discount=tax_discount_combined,
             )
 
         else:
@@ -1965,6 +2083,8 @@ class ASR(GeneralCost):
             description_combined = self.description + other.description
             final_year_combined = np.concatenate((self.final_year, other.final_year))
             future_rate_combined = np.concatenate((self.future_rate, other.future_rate))
+            tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
 
             return ASR(
                 start_year=start_year_combined,
@@ -1975,6 +2095,8 @@ class ASR(GeneralCost):
                 description=description_combined,
                 final_year=final_year_combined,
                 future_rate=future_rate_combined,
+                tax_portion=tax_portion_combined,
+                tax_discount=tax_discount_combined,
             )
 
         else:
@@ -1998,11 +2120,13 @@ class ASR(GeneralCost):
                 description=self.description,
                 final_year=self.final_year,
                 future_rate=self.future_rate,
+                tax_portion=self.tax_portion,
+                tax_discount=self.tax_discount,
             )
 
         else:
             raise ASRException(
-                f"Must multiply with an integer or a float; "
+                f"Must multiply with an integer or a float. "
                 f"{other}({other.__class__.__qualname__}) is not an integer nor a float."
             )
 
@@ -2030,12 +2154,14 @@ class ASR(GeneralCost):
                     description=self.description,
                     final_year=self.final_year,
                     future_rate=self.future_rate,
+                    tax_portion=self.tax_portion,
+                    tax_discount=self.tax_discount,
                 )
 
         else:
             raise ASRException(
                 f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT, "
-                f"integer or a float; {other}({other.__class__.__qualname__}) is not an instance "
+                f"integer or a float. {other}({other.__class__.__qualname__}) is not an instance "
                 f"of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer nor a float."
             )
 
@@ -2068,7 +2194,7 @@ class LBT(GeneralCost):
     njop_building: np.ndarray = field(default=None)
     gross_revenue: np.ndarray = field(default=None)
 
-    # Override attribute cost
+    # Override attributes
     cost: np.ndarray = field(default=None)
 
     # Attributes to be defined later on (associated with surface and subsurface lbt components)
@@ -2090,6 +2216,8 @@ class LBT(GeneralCost):
         -   Prepare attribute _surface_lbt_cost,
         -   Prepare attribute _subsurface_lbt_cost,
         -   Prepare attribute cost,
+        -   Prepare attribute tax_portion,
+        -   Prepare attribute tax_discount,
         -   Check for unequal length of input arrays,
         -   Raise an error: final_year is before expense_year,
         -   Raise an error: final_year is after the end year of the project,
@@ -2229,6 +2357,28 @@ class LBT(GeneralCost):
 
         self.cost = self.cost.astype(np.float64)
 
+        # Prepare attribute tax_portion
+        if self.tax_portion is None:
+            self.tax_portion = np.zeros_like(self.expense_year)
+
+        else:
+            if not isinstance(self.tax_portion, np.ndarray):
+                raise LBTException(
+                    f"Attribute tax_portion must be given as a numpy.ndarray, "
+                    f"not as a/an {self.tax_portion.__class__.__qualname__}"
+                )
+
+        self.tax_portion = self.tax_portion.astype(np.float64)
+
+        # Prepare attribute tax_discount
+        if isinstance(self.tax_discount, (float, int)):
+            if self.tax_discount < 0 or self.tax_discount > 1:
+                raise LBTException(f"Attribute tax_discount must be between 0 and 1")
+
+            self.tax_discount = np.repeat(self.tax_discount, len(self.expense_year))
+
+        self.tax_discount = self.tax_discount.astype(np.float64)
+
         # Check for unequal length of arrays
         arr_length = len(self.expense_year)
 
@@ -2244,6 +2394,8 @@ class LBT(GeneralCost):
                 self.njop_building,
                 self.gross_revenue,
                 self.cost,
+                self.tax_portion,
+                self.tax_discount,
             ]
         ):
             raise LBTException(
@@ -2257,7 +2409,9 @@ class LBT(GeneralCost):
                 f"njop_land: {len(self.njop_land)}, "
                 f"njop_building: {len(self.njop_building)}, "
                 f"gross_revenue: {len(self.gross_revenue)}, "
-                f"cost: {len(self.cost)}"
+                f"cost: {len(self.cost)}, "
+                f"tax_portion: {len(self.tax_portion)}, "
+                f"tax_discount: {len(self.tax_discount)} "
             )
 
         # Raise an error: final_year is before expense_year
@@ -2348,12 +2502,7 @@ class LBT(GeneralCost):
 
         return np.sum(distributed_cost, axis=1, keepdims=False)
 
-    def indirect_taxes(
-        self,
-        tax_portion: np.ndarray = None,
-        tax_rate: np.ndarray | float = 0.0,
-        tax_discount: float = 0.0,
-    ) -> np.ndarray:
+    def indirect_taxes(self, tax_rate: np.ndarray | float = 0.0) -> np.ndarray:
         """
         Calculate and distribute indirect taxes over the project duration.
 
@@ -2363,16 +2512,10 @@ class LBT(GeneralCost):
 
         Parameters
         ----------
-        tax_portion : np.ndarray, optional
-            A NumPy array representing the portion of the cost subject to tax. If not provided,
-            an array of zeros with the same shape as the project cost will be used.
         tax_rate : np.ndarray or float, optional
             A NumPy array or float representing the tax rate applied to the costs. If not provided,
             a default rate of 0.0 will be used. When provided as an array, it should match
             the project years.
-        tax_discount : float, optional
-            A discount factor applied to the tax, reducing the overall tax impact.
-            The default is 0.0.
 
         Returns
         -------
@@ -2395,9 +2538,9 @@ class LBT(GeneralCost):
             cost=self.cost,
             expense_year=self.expense_year,
             project_years=self.project_years,
-            tax_portion=tax_portion,
+            tax_portion=self.tax_portion,
             tax_rate=tax_rate,
-            tax_discount=tax_discount,
+            tax_discount=self.tax_discount,
         )
 
         # Calculate distributed indirect taxes
@@ -2424,6 +2567,8 @@ class LBT(GeneralCost):
                     np.allclose(self.njop_land, other.njop_land),
                     np.allclose(self.njop_building, other.njop_building),
                     np.allclose(self.gross_revenue, other.gross_revenue),
+                    np.allclose(self.tax_portion, other.tax_portion),
+                    np.allclose(self.tax_discount, other.tax_discount),
                     self.cost_allocation == other.cost_allocation,
                 )
             )
@@ -2514,6 +2659,8 @@ class LBT(GeneralCost):
             cost_combined = np.concatenate((self.cost, other.cost))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
+            tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
 
             return LBT(
                 start_year=start_year_combined,
@@ -2528,6 +2675,8 @@ class LBT(GeneralCost):
                 njop_building=njop_building_combined,
                 gross_revenue=gross_revenue_combined,
                 cost=cost_combined,
+                tax_portion=tax_portion_combined,
+                tax_discount=tax_discount_combined,
             )
 
         else:
@@ -2558,6 +2707,8 @@ class LBT(GeneralCost):
             cost_combined = np.concatenate((self.cost, -other.cost))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
+            tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
 
             return LBT(
                 start_year=start_year_combined,
@@ -2572,6 +2723,8 @@ class LBT(GeneralCost):
                 njop_building=njop_building_combined,
                 gross_revenue=gross_revenue_combined,
                 cost=cost_combined,
+                tax_portion=tax_portion_combined,
+                tax_discount=tax_discount_combined,
             )
 
         else:
@@ -2598,11 +2751,13 @@ class LBT(GeneralCost):
                 njop_land=self.njop_land * other,
                 njop_building=self.njop_building * other,
                 gross_revenue=self.gross_revenue * other,
+                tax_portion=self.tax_portion,
+                tax_discount=self.tax_discount,
             )
 
         else:
             raise LBTException(
-                f"Must multiply with an integer or a float; "
+                f"Must multiply with an integer or a float. "
                 f"{other}({other.__class__.__qualname__}) is not an integer nor a float."
             )
 
@@ -2633,12 +2788,14 @@ class LBT(GeneralCost):
                     njop_land=self.njop_land / other,
                     njop_building=self.njop_building / other,
                     gross_revenue=self.gross_revenue / other,
+                    tax_portion=self.tax_portion,
+                    tax_discount=self.tax_discount,
                 )
 
         else:
             raise LBTException(
                 f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT, "
-                f"integer or a float; {other}({other.__class__.__qualname__}) is not an instance "
+                f"integer or a float. {other}({other.__class__.__qualname__}) is not an instance "
                 f"of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer nor a float."
             )
 
@@ -2650,14 +2807,13 @@ class CostOfSales(GeneralCost):
 
     Parameters
     ----------
-    The attributes are inherited from class GeneralCost.
+    Parameters are inherited from class GeneralCost
 
     Notes
     -----
-    The inherited attributes (expense_year and cost) are overridden in this class.
+    Overridden attributes are: expense_year, cost, tax_portion, and tax_discount.
     """
 
-    # Inherited attributes with the modified initialization
     expense_year: np.ndarray = field(default=None)
     cost: np.ndarray = field(default=None)
 
@@ -2669,6 +2825,8 @@ class CostOfSales(GeneralCost):
         -   Prepare attribute cost,
         -   Prepare attribute cost_allocation,
         -   Prepare attribute description,
+        -   Prepare attribute tax_portion,
+        -   Prepare attribute tax_discount,
         -   Raise an error: expense_year is after the end year of the project,
         -   Raise an error: expense_year is before the start year of the project,
         """
@@ -2730,6 +2888,28 @@ class CostOfSales(GeneralCost):
                     f"not as a/an {self.description.__class__.__qualname__}"
                 )
 
+        # Prepare attribute tax_portion
+        if self.tax_portion is None:
+            self.tax_portion = np.zeros_like(self.expense_year)
+
+        else:
+            if not isinstance(self.tax_portion, np.ndarray):
+                raise CostOfSalesException(
+                    f"Attribute tax_portion must be given as a numpy.ndarray, "
+                    f"not as a/an {self.tax_portion.__class__.__qualname__}"
+                )
+
+        self.tax_portion = self.tax_portion.astype(np.float64)
+
+        # Prepare attribute tax_discount
+        if isinstance(self.tax_discount, (float, int)):
+            if self.tax_discount < 0 or self.tax_discount > 1:
+                raise CostOfSalesException(f"Attribute tax_discount must be between 0 and 1")
+
+            self.tax_discount = np.repeat(self.tax_discount, len(self.expense_year))
+
+        self.tax_discount = self.tax_discount.astype(np.float64)
+
         # Check input data for unequal length
         arr_length = len(self.expense_year)
 
@@ -2739,6 +2919,8 @@ class CostOfSales(GeneralCost):
                 self.cost,
                 self.cost_allocation,
                 self.description,
+                self.tax_portion,
+                self.tax_discount,
             ]
         ):
             raise CostOfSalesException(
@@ -2746,7 +2928,9 @@ class CostOfSales(GeneralCost):
                 f"expense_year: {len(self.expense_year)}, "
                 f"cost: {len(self.cost)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
-                f"description: {len(self.description)}"
+                f"description: {len(self.description)}, "
+                f"tax_portion: {len(self.tax_portion)}, "
+                f"tax_discount: {len(self.tax_discount)} "
             )
 
         # Raise an error message: expense_year is after the end year of the project

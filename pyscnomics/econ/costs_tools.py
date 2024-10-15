@@ -343,7 +343,7 @@ def calc_indirect_tax(
     project_years: np.ndarray,
     tax_portion: np.ndarray,
     tax_rate: np.ndarray | float,
-    tax_discount: float,
+    tax_discount: np.ndarray,
 ) -> np.ndarray:
     """
     Calculate the indirect tax on project costs.
@@ -366,7 +366,7 @@ def calc_indirect_tax(
         A NumPy array representing the portion of the cost that is subject to tax.
     tax_rate : np.ndarray | float
         A NumPy array of tax rates for each year of the project.
-    tax_discount : float
+    tax_discount : np.ndarray
         A discount factor applied to the tax, reducing the overall tax impact.
 
     Returns
@@ -385,26 +385,6 @@ def calc_indirect_tax(
             indirect_tax = cost * (tax_portion * tax_rate * (1.0 - tax_discount))
     """
 
-    # Prepare attribute tax portion
-    if tax_portion is None:
-        tax_portion = np.zeros_like(cost)
-
-    else:
-        if not isinstance(tax_portion, np.ndarray):
-            raise TaxInflationException(
-                f"Attribute tax portion must be given as a numpy.ndarray, "
-                f"not as a/an {tax_portion.__class__.__qualname__}"
-            )
-
-        if len(tax_portion) != len(cost):
-            raise TaxInflationException(
-                f"Unequal length of arrays: "
-                f"Expected: {len(cost)}, "
-                f"Given: {len(tax_portion)}"
-            )
-
-    tax_portion = tax_portion.astype(np.float64)
-
     # Prepare attribute tax rate
     if not isinstance(tax_rate, (np.ndarray, float)):
         raise TaxInflationException(
@@ -414,21 +394,6 @@ def calc_indirect_tax(
 
     else:
         tax_rate_arr = check_input(target_func=project_years, param=tax_rate)
-
-    # Prepare attribute tax discount
-    if not isinstance(tax_discount, (float, int)):
-        raise TaxInflationException(
-            f"Argument tax discount must be given as a float or an integer, "
-            f"not as a/an {tax_discount.__class__.__qualname__}"
-        )
-
-    else:
-        if tax_discount < 0 or tax_discount > 1:
-            raise TaxInflationException(
-                f"Argument tax discount must be between 0 and 1"
-            )
-
-        tax_discount = np.repeat(tax_discount, len(cost)).astype(np.float64)
 
     # Specify tax rate id
     tax_rate_ids = (expense_year - start_year).astype(np.int64)

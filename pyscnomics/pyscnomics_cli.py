@@ -476,7 +476,7 @@ if __name__ == "__main__":
         fluid_type=FluidType.OIL,
     )
 
-    cs1 = CostOfSales(
+    intang1 = Intangible(
         start_year=2023,
         end_year=2030,
         expense_year=np.array([2025, 2026]),
@@ -484,7 +484,7 @@ if __name__ == "__main__":
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    cs2 = CostOfSales(
+    intang2 = Intangible(
         start_year=2023,
         end_year=2030,
         expense_year=np.array([2025, 2026]),
@@ -492,7 +492,7 @@ if __name__ == "__main__":
         cost_allocation=[FluidType.GAS, FluidType.GAS],
     )
 
-    cs3 = CostOfSales(
+    intang3 = Intangible(
         start_year=2023,
         end_year=2030,
         expense_year=np.array([2025, 2026]),
@@ -502,40 +502,36 @@ if __name__ == "__main__":
 
     # =======================================================================================================
 
-    project = BaseProject(
-        start_date=date(year=2023, month=1, day=1),
-        end_date=date(year=2030, month=12, day=31),
-        # lifting=tuple([lifting1, lifting2]),
-        # capital_cost=tuple([cap1, cap2, cap3]),
-        # intangible_cost=tuple([intang1, intang2, intang3]),
-        # opex=tuple([opex1, opex2, opex3])
-        # asr_cost=tuple([asr1, asr2, asr3]),
-        # lbt_cost=tuple([lbt1, lbt2, lbt3]),
-        # cost_of_sales=tuple([cs1, cs2, cs3]),
-    )
+    # project = BaseProject(
+    #     start_date=date(year=2023, month=1, day=1),
+    #     end_date=date(year=2030, month=12, day=31),
+    #     # lifting=tuple([lifting1, lifting2]),
+    #     # capital_cost=tuple([cap1, cap2, cap3]),
+    #     intangible_cost=tuple([intang1, intang2, intang3]),
+    #     # opex=tuple([opex1, opex2, opex3])
+    #     # asr_cost=tuple([asr1, asr2, asr3]),
+    #     # lbt_cost=tuple([lbt1, lbt2, lbt3]),
+    #     # cost_of_sales=tuple([cs1, cs2, cs3]),
+    # )
 
     print('\t')
     print(f'++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
-    project._get_expenditures_pre_tax()
+    cs = CostOfSales(
+        start_year=2023,
+        end_year=2030,
+        expense_year=np.array([2024, 2025, 2026, 2027, 2028]),
+        cost=np.array([100, 100, 100, 100, 100]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+        tax_portion=np.array([1, 1, 1, 1, 1]),
+    )
+
+    t1 = cs.expenditures_post_tax()
 
     print('\t')
-    print(f'Filetype: {type(project._oil_cost_of_sales_expenditures_pre_tax)}')
-    print(f'Length: {len(project._oil_cost_of_sales_expenditures_pre_tax)}')
-    print('_oil_cost_of_sales_expenditures_pre_tax = \n', project._oil_cost_of_sales_expenditures_pre_tax)
-
-    print('\t')
-    print(f'Filetype: {type(project._gas_cost_of_sales_expenditures_pre_tax)}')
-    print(f'Length: {len(project._gas_cost_of_sales_expenditures_pre_tax)}')
-    print('_gas_cost_of_sales_expenditures_pre_tax = \n', project._gas_cost_of_sales_expenditures_pre_tax)
-
-    # cs = CostOfSales(
-    #     start_year=2023,
-    #     end_year=2030,
-    #     expense_year=np.array([2024, 2025, 2026, 2027, 2028]),
-    #     cost=np.array([100, 100, 100, 100, 100]),
-    #     cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
-    # )
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
 
     # lbt = LBT(
     #     start_year=2023,
@@ -569,7 +565,26 @@ if __name__ == "__main__":
     #     cost_allocation=[FluidType.OIL, FluidType.GAS, FluidType.GAS],
     # )
 
+    # cap1 = CapitalCost(
+    #     start_year=2023,
+    #     end_year=2030,
+    #     cost=np.array([100, 100, 100]),
+    #     expense_year=np.array([2024, 2025, 2026]),
+    #     cost_allocation=[FluidType.OIL, FluidType.GAS, FluidType.GAS],
+    #     tax_portion=np.array([1, 1, 1]),
+    # )
+    #
+    # cap2 = CapitalCost(
+    #     start_year=2023,
+    #     end_year=2030,
+    #     cost=np.array([100, 100, 100]),
+    #     expense_year=np.array([2024, 2025, 2026]),
+    #     cost_allocation=[FluidType.OIL, FluidType.GAS, FluidType.GAS],
+    #     tax_portion=np.array([0, 0, 0]),
+    #     tax_discount=0.05,
+    # )
+
     # print('\t')
-    # print(f'Filetype: {type(t1)}')
-    # print(f'Length: {len(t1)}')
-    # print('t1 = \n', t1)
+    # print(f'Filetype: {type(cap)}')
+    # print(f'Length: {len(cap)}')
+    # print('cap = \n', cap)

@@ -2207,27 +2207,6 @@ class BaseProject:
 
         Parameters
         ----------
-        year_ref: int, optional
-            Reference year for inflation calculation. Defaults to None.
-        tax_type: TaxType, optional
-            The type of tax applied to the corresponding asset.
-            Available options: TaxType.VAT or TaxType.LBT.
-            Defaults to TaxType.VAT.
-        vat_rate: np.ndarray | float, optional
-            The VAT rate to apply. Can be a single value or an array (defaults to 0.0).
-        lbt_rate: np.ndarray | float, optional
-            The LBT rate to apply. Can be a single value or an array (defaults to 0.0).
-        inflation_rate: np.ndarray | float, optional
-            The inflation rate to apply. Can be a single value or an array (defaults to 0.0).
-        future_rate : float, optional
-            The future rate used in cost calculation (defaults to 0.02).
-        inflation_rate_applied_to
-            The selection of where the cost inflation will be applied to.
-
-        sulfur_revenue
-        electricity_revenue
-        co2_revenue
-        sunk_cost_reference_year
 
         Returns
         -------
@@ -2240,6 +2219,7 @@ class BaseProject:
         (2) Calculate total expenditures for OIL and GAS,
         (3) Configure the cashflow for OIL and GAS.
         """
+
         # Configure Sunk Cost Reference Year
         if sunk_cost_reference_year is None:
             sunk_cost_reference_year = self.start_date.year
@@ -2268,72 +2248,90 @@ class BaseProject:
                 f"is after the project end date: {self.end_date}"
             )
 
-        # Prepare the data
-        self._get_expenditures(
-            year_ref=year_ref,
-            tax_type=tax_type,
-            vat_rate=vat_rate,
-            lbt_rate=lbt_rate,
+        # Calculate pre tax expenditures
+        self._get_expenditures_pre_tax(
+            year_inflation=year_inflation,
             inflation_rate=inflation_rate,
-            future_rate=future_rate,
         )
 
-        # Non-capital costs (intangible + opex + asr)
-        self._oil_non_capital = (
-                self._oil_intangible_expenditures
-                + self._oil_opex_expenditures
-                + self._oil_asr_expenditures
-        )
+        # # Calculate indirect taxes
+        # self._get_indirect_taxes(
+        #     tax_portion=tax_portion,
+        #     tax_rate=tax_rate,
+        #     tax_discount=tax_discount,
+        # )
 
-        self._gas_non_capital = (
-                self._gas_intangible_expenditures
-                + self._gas_opex_expenditures
-                + self._gas_asr_expenditures
-        )
+        print('\t')
+        print(f'Filetype: {type(self._gas_intangible_expenditures_pre_tax)}')
+        print(f'Length: {len(self._gas_intangible_expenditures_pre_tax)}')
+        print('_gas_intangible_expenditures_pre_tax = \n', self._gas_intangible_expenditures_pre_tax)
 
-        # Get Sunk Cost
-        self._get_sunk_cost(sunk_cost_reference_year)
-
-        # Get the wap of each produced fluid
-        self._get_wap_price()
-
-        # Get the other revenue
-        self._get_other_revenue(sulfur_revenue=sulfur_revenue,
-                                electricity_revenue=electricity_revenue,
-                                co2_revenue=co2_revenue,)
-
-        # Configure total expenditures for OIL and GAS
-        oil_total_expenditures = reduce(
-            lambda x, y: x + y,
-            [
-                self._oil_capital_expenditures, self._oil_intangible_expenditures,
-                self._oil_opex_expenditures, self._oil_asr_expenditures
-            ]
-        )
-
-        gas_total_expenditures = reduce(
-            lambda x, y: x + y,
-            [
-                self._gas_capital_expenditures, self._gas_intangible_expenditures,
-                self._gas_opex_expenditures, self._gas_asr_expenditures
-            ]
-        )
-
-        # Configure base cashflow
-        self._oil_cashflow = self._oil_revenue - (self._oil_capital_expenditures +
-                                                  self._oil_intangible_expenditures +
-                                                  self._oil_opex_expenditures +
-                                                  self._oil_asr_expenditures)
-
-        self._gas_cashflow = self._gas_revenue - (self._gas_capital_expenditures +
-                                                  self._gas_intangible_expenditures +
-                                                  self._gas_opex_expenditures +
-                                                  self._gas_asr_expenditures)
-
-        self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
-        self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
-        self._consolidated_government_take = np.zeros_like(self._consolidated_cashflow)
-        self._consolidated_revenue = self._oil_revenue + self._gas_revenue
+        # # Prepare the data
+        # self._get_expenditures(
+        #     year_ref=year_ref,
+        #     tax_type=tax_type,
+        #     vat_rate=vat_rate,
+        #     lbt_rate=lbt_rate,
+        #     inflation_rate=inflation_rate,
+        #     future_rate=future_rate,
+        # )
+        #
+        # # Non-capital costs (intangible + opex + asr)
+        # self._oil_non_capital = (
+        #         self._oil_intangible_expenditures
+        #         + self._oil_opex_expenditures
+        #         + self._oil_asr_expenditures
+        # )
+        #
+        # self._gas_non_capital = (
+        #         self._gas_intangible_expenditures
+        #         + self._gas_opex_expenditures
+        #         + self._gas_asr_expenditures
+        # )
+        #
+        # # Get Sunk Cost
+        # self._get_sunk_cost(sunk_cost_reference_year)
+        #
+        # # Get the wap of each produced fluid
+        # self._get_wap_price()
+        #
+        # # Get the other revenue
+        # self._get_other_revenue(sulfur_revenue=sulfur_revenue,
+        #                         electricity_revenue=electricity_revenue,
+        #                         co2_revenue=co2_revenue,)
+        #
+        # # Configure total expenditures for OIL and GAS
+        # oil_total_expenditures = reduce(
+        #     lambda x, y: x + y,
+        #     [
+        #         self._oil_capital_expenditures, self._oil_intangible_expenditures,
+        #         self._oil_opex_expenditures, self._oil_asr_expenditures
+        #     ]
+        # )
+        #
+        # gas_total_expenditures = reduce(
+        #     lambda x, y: x + y,
+        #     [
+        #         self._gas_capital_expenditures, self._gas_intangible_expenditures,
+        #         self._gas_opex_expenditures, self._gas_asr_expenditures
+        #     ]
+        # )
+        #
+        # # Configure base cashflow
+        # self._oil_cashflow = self._oil_revenue - (self._oil_capital_expenditures +
+        #                                           self._oil_intangible_expenditures +
+        #                                           self._oil_opex_expenditures +
+        #                                           self._oil_asr_expenditures)
+        #
+        # self._gas_cashflow = self._gas_revenue - (self._gas_capital_expenditures +
+        #                                           self._gas_intangible_expenditures +
+        #                                           self._gas_opex_expenditures +
+        #                                           self._gas_asr_expenditures)
+        #
+        # self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
+        # self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
+        # self._consolidated_government_take = np.zeros_like(self._consolidated_cashflow)
+        # self._consolidated_revenue = self._oil_revenue + self._gas_revenue
 
     def __len__(self):
         return self.project_duration
@@ -2523,38 +2521,4 @@ class BaseProject:
                 f"Must compare an instance of BaseProject and another instance "
                 f"of BaseProject. {other}({other.__class__.__qualname__}) is "
                 f"not an instance of BaseProject."
-            )
-
-    def __add__(self, other):
-        # Between an instance of BaseProject and another instance of BaseProject
-        if isinstance(other, BaseProject):
-            # Specify the start_date and end_date of the combined instances
-            start_date_combined = date(
-                year=min(self.start_date.year, other.start_date.year),
-                month=min(self.start_date.month, other.start_date.month),
-                day=min(self.start_date.day, other.start_date.day),
-            )
-
-            end_date_combined = date(
-                year=max(self.end_date.year, other.end_date.year),
-                month=max(self.end_date.month, other.end_date.month),
-                day=max(self.end_date.day, other.end_date.day),
-            )
-
-            return BaseProject(
-                start_date=start_date_combined,
-                end_date=end_date_combined,
-                lifting=self.lifting + other.lifting,
-                capital_cost=self.capital_cost + other.capital_cost,
-                intangible_cost=self.intangible_cost + other.intangible_cost,
-                opex=self.opex + other.opex,
-                asr_cost=self.asr_cost + other.asr_cost,
-            )
-
-        else:
-            raise BaseProjectException(
-                f"Must add between an instance of BaseProject with "
-                f"another instance of BaseProject. "
-                f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of BaseProject."
             )
