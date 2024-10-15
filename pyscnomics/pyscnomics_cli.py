@@ -484,7 +484,7 @@ if __name__ == "__main__":
         expense_year=np.array([2025, 2026]),
         cost=np.array([100, 100]),
         cost_allocation=[FluidType.OIL, FluidType.OIL],
-        # tax_portion=np.array([1, 1]),
+        tax_portion=np.array([1, 1]),
     )
 
     intang2 = Intangible(
@@ -521,7 +521,8 @@ if __name__ == "__main__":
 
     project.run(
         inflation_rate=0.05,
-        # inflation_rate_applied_to=InflationAppliedTo.CAPEX,
+        inflation_rate_applied_to=InflationAppliedTo.CAPEX,
+        tax_rate=0.01,
     )
 
     print('\t')

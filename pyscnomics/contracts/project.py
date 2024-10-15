@@ -10,7 +10,7 @@ import numpy as np
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import (
     FluidType,
-    TaxType,
+    ExpendituresType,
     TaxRegime,
     OtherRevenue,
     InflationAppliedTo,
@@ -187,6 +187,10 @@ class BaseProject:
     _sulfur_wap_price: np.ndarray = field(default=None, init=False, repr=False)
     _electricity_wap_price: np.ndarray = field(default=None, init=False, repr=False)
     _co2_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes to be defined later (associated with non capital costs)
+    _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         """
@@ -1559,79 +1563,207 @@ class BaseProject:
                 tax_discount=tax_discount,
             )
 
-    def _calc_expenditures_pre_tax(
+    def _calc_expenditures(
         self,
-        target_attr,
+        target_attr: CapitalCost | Intangible | OPEX | ASR | LBT,
+        expenditures_type: ExpendituresType,
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo | None = None,
-    ):
+        tax_rate: np.ndarray | float = 0.0,
+    ) -> np.ndarray:
+        """
+        Calculate pre-tax or post-tax expenditures for the given target attribute, with
+        optional inflation and tax adjustments.
 
-        # No inflation rate
-        if inflation_rate_applied_to is None:
-            return target_attr.expenditures_pre_tax(
-                year_inflation=year_inflation,
-                inflation_rate=0.0,
-            )
+        This method calculates expenditures (either pre-tax or post-tax) for a given
+        target attribute, applying inflation rates and taxes based on the specified
+        `expenditures_type` and `inflation_rate_applied_to` parameters.
 
-        # Inflation rate applied to CAPEX only
-        elif inflation_rate_applied_to == InflationAppliedTo.CAPEX:
-            if (
-                target_attr is self._oil_capital_cost
-                or target_attr is self._gas_capital_cost
-                or target_attr is self._oil_intangible
-                or target_attr is self._gas_intangible
-            ):
-                return target_attr.expenditures_pre_tax(
-                    year_inflation=year_inflation,
-                    inflation_rate=inflation_rate,
-                )
+        Parameters
+        ----------
+        target_attr : object
+            The target attribute for which expenditures are being calculated (e.g., oil or gas costs).
+        expenditures_type : ExpendituresType
+            Specifies whether to calculate pre-tax or post-tax expenditures.
+            Must be one of `ExpendituresType.PRE_TAX` or `ExpendituresType.POST_TAX`.
+        year_inflation : np.ndarray, optional
+            A NumPy array of inflation rates per year. Default is None.
+        inflation_rate : np.ndarray or float, optional
+            The inflation rate applied to the expenditures. Default is 0.0.
+        inflation_rate_applied_to : InflationAppliedTo or None, optional
+            Specifies whether inflation applies to CAPEX, OPEX, both, or none.
+            Must be one of `InflationAppliedTo.CAPEX`, `InflationAppliedTo.OPEX`,
+            `InflationAppliedTo.CAPEX_AND_OPEX`, or `None`. Default is None.
+        tax_rate : np.ndarray or float, optional
+            The tax rate applied for post-tax expenditures. Default is 0.0.
 
-            else:
-                return target_attr.expenditures_pre_tax(
-                    year_inflation=year_inflation,
-                    inflation_rate=0.0,
-                )
+        Returns
+        -------
+        np.ndarray
+            The calculated expenditures, either pre-tax or post-tax, depending on
+            the `expenditures_type`.
 
-        # Inflation rate applied to OPEX only
-        elif inflation_rate_applied_to == InflationAppliedTo.OPEX:
-            if target_attr is self._oil_opex or target_attr is self._gas_opex:
-                return target_attr.expenditures_pre_tax(
-                    year_inflation=year_inflation,
-                    inflation_rate=inflation_rate,
-                )
+        Notes
+        -----
+        -   The method supports applying inflation selectively to CAPEX, OPEX, or both for
+            both pre-tax and post-tax expenditures.
+        -   If inflation is applied only to CAPEX or OPEX, the other expenditure type remains
+            unaffected by inflation.
+        -   Post-tax expenditures include the impact of the specified tax rate.
+        """
 
-            else:
-                return target_attr.expenditures_pre_tax(
-                    year_inflation=year_inflation,
-                    inflation_rate=0.0,
-                )
+        # For pre-tax expenditures
+        if expenditures_type == ExpendituresType.PRE_TAX:
 
-        # Inflation rate applied to CAPEX and OPEX
-        elif inflation_rate_applied_to == InflationAppliedTo.CAPEX_AND_OPEX:
-            if (
-                target_attr is self._oil_capital_cost
-                or target_attr is self._gas_capital_cost
-                or target_attr is self._oil_intangible
-                or target_attr is self._gas_intangible
-                or target_attr is self._oil_opex
-                or target_attr is self._gas_opex
-            ):
-                return target_attr.expenditures_pre_tax(
-                    year_inflation=year_inflation,
-                    inflation_rate=inflation_rate
-                )
-
-            else:
+            # No inflation rate
+            if inflation_rate_applied_to is None:
                 return target_attr.expenditures_pre_tax(
                     year_inflation=year_inflation,
                     inflation_rate=0.0,
+                )
+
+            # Inflation rate applied to CAPEX only
+            elif inflation_rate_applied_to == InflationAppliedTo.CAPEX:
+                if (
+                    target_attr is self._oil_capital_cost
+                    or target_attr is self._gas_capital_cost
+                    or target_attr is self._oil_intangible
+                    or target_attr is self._gas_intangible
+                ):
+                    return target_attr.expenditures_pre_tax(
+                        year_inflation=year_inflation,
+                        inflation_rate=inflation_rate,
+                    )
+
+                else:
+                    return target_attr.expenditures_pre_tax(
+                        year_inflation=year_inflation,
+                        inflation_rate=0.0,
+                    )
+
+            # Inflation rate applied to OPEX only
+            elif inflation_rate_applied_to == InflationAppliedTo.OPEX:
+                if target_attr is self._oil_opex or target_attr is self._gas_opex:
+                    return target_attr.expenditures_pre_tax(
+                        year_inflation=year_inflation,
+                        inflation_rate=inflation_rate,
+                    )
+
+                else:
+                    return target_attr.expenditures_pre_tax(
+                        year_inflation=year_inflation,
+                        inflation_rate=0.0,
+                    )
+
+            # Inflation rate applied to CAPEX and OPEX
+            elif inflation_rate_applied_to == InflationAppliedTo.CAPEX_AND_OPEX:
+                if (
+                    target_attr is self._oil_capital_cost
+                    or target_attr is self._gas_capital_cost
+                    or target_attr is self._oil_intangible
+                    or target_attr is self._gas_intangible
+                    or target_attr is self._oil_opex
+                    or target_attr is self._gas_opex
+                ):
+                    return target_attr.expenditures_pre_tax(
+                        year_inflation=year_inflation,
+                        inflation_rate=inflation_rate
+                    )
+
+                else:
+                    return target_attr.expenditures_pre_tax(
+                        year_inflation=year_inflation,
+                        inflation_rate=0.0,
+                    )
+
+            else:
+                raise BaseProjectException(
+                    f"Parameter inflation_rate_applied_to is not recognized. "
+                    f"Available options are: CAPEX, OPEX, CAPEX and OPEX, or None. "
+                )
+
+        # For post-tax expenditures
+        elif expenditures_type == ExpendituresType.POST_TAX:
+
+            # No inflation rate
+            if inflation_rate_applied_to is None:
+                return target_attr.expenditures_post_tax(
+                    year_inflation=year_inflation,
+                    inflation_rate=0.0,
+                    tax_rate=tax_rate,
+                )
+
+            # Inflation rate applied to CAPEX only
+            elif inflation_rate_applied_to == InflationAppliedTo.CAPEX:
+                if (
+                    target_attr is self._oil_capital_cost
+                    or target_attr is self._gas_capital_cost
+                    or target_attr is self._oil_intangible
+                    or target_attr is self._gas_intangible
+                ):
+                    return target_attr.expenditures_post_tax(
+                        year_inflation=year_inflation,
+                        inflation_rate=inflation_rate,
+                        tax_rate=tax_rate,
+                    )
+
+                else:
+                    return target_attr.expenditures_post_tax(
+                        year_inflation=year_inflation,
+                        inflation_rate=0.0,
+                        tax_rate=tax_rate,
+                    )
+
+            # Inflation rate applied to OPEX only
+            elif inflation_rate_applied_to == InflationAppliedTo.OPEX:
+                if target_attr is self._oil_opex or target_attr is self._gas_opex:
+                    return target_attr.expenditures_post_tax(
+                        year_inflation=year_inflation,
+                        inflation_rate=inflation_rate,
+                        tax_rate=tax_rate,
+                    )
+
+                else:
+                    return target_attr.expenditures_post_tax(
+                        year_inflation=year_inflation,
+                        inflation_rate=0.0,
+                        tax_rate=tax_rate,
+                    )
+
+            # Inflation rate applied to CAPEX and OPEX
+            elif inflation_rate_applied_to == InflationAppliedTo.CAPEX_AND_OPEX:
+                if (
+                    target_attr is self._oil_capital_cost
+                    or target_attr is self._gas_capital_cost
+                    or target_attr is self._oil_intangible
+                    or target_attr is self._gas_intangible
+                    or target_attr is self._oil_opex
+                    or target_attr is self._gas_opex
+                ):
+                    return target_attr.expenditures_post_tax(
+                        year_inflation=year_inflation,
+                        inflation_rate=inflation_rate,
+                        tax_rate=tax_rate,
+                    )
+
+                else:
+                    return target_attr.expenditures_post_tax(
+                        year_inflation=year_inflation,
+                        inflation_rate=0.0,
+                        tax_rate=tax_rate,
+                    )
+
+            else:
+                raise BaseProjectException(
+                    f"Parameter inflation_rate_applied_to is not recognized. "
+                    f"Available options are: CAPEX, OPEX, CAPEX and OPEX, or None. "
                 )
 
         else:
             raise BaseProjectException(
-                f"Parameter inflation_rate_applied_to is not recognized. "
-                f"Available options are: CAPEX, OPEX, CAPEX and OPEX, or None. "
+                f"Parameter expenditures_type ({expenditures_type}) is not recognized. "
+                f"Choose between ExpendituresType.PRE_TAX or ExpendituresType.POST_TAX. "
             )
 
     def _get_expenditures_pre_tax(
@@ -1692,8 +1824,9 @@ class BaseProject:
             self._oil_lbt_expenditures_pre_tax,
             self._gas_lbt_expenditures_pre_tax,
         ) = [
-            self._calc_expenditures_pre_tax(
+            self._calc_expenditures(
                 target_attr=attr,
+                expenditures_type=ExpendituresType.PRE_TAX,
                 year_inflation=year_inflation,
                 inflation_rate=inflation_rate,
                 inflation_rate_applied_to=inflation_rate_applied_to,
@@ -1804,6 +1937,7 @@ class BaseProject:
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
         tax_rate: np.ndarray | float = 0.0,
+        inflation_rate_applied_to: InflationAppliedTo | None = None,
     ) -> None:
         """
         Calculate and assign post-tax expenditures for various oil and gas expenditure categories.
@@ -1825,6 +1959,8 @@ class BaseProject:
         tax_rate : np.ndarray or float, optional
             The tax rate to apply to the costs. If a float is provided, it applies uniformly across all
             project years. If a NumPy array is provided, the rate can vary by year (default is 0.0).
+        inflation_rate_applied_to
+            The selection of where the cost inflation will be applied to.
 
         Returns
         -------
@@ -1859,9 +1995,12 @@ class BaseProject:
             self._oil_lbt_expenditures_post_tax,
             self._gas_lbt_expenditures_post_tax,
         ) = [
-            attr.expenditures_post_tax(
+            self._calc_expenditures(
+                target_attr=attr,
+                expenditures_type=ExpendituresType.POST_TAX,
                 year_inflation=year_inflation,
                 inflation_rate=inflation_rate,
+                inflation_rate_applied_to=inflation_rate_applied_to,
                 tax_rate=tax_rate,
             )
             for attr in [
@@ -2328,16 +2467,8 @@ class BaseProject:
         sunk_cost_reference_year: int = None,
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
-        # tax_portion: np.ndarray = None,
         tax_rate: np.ndarray | float = 0.0,
-        # tax_discount: float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo = None,
-        # year_ref: int = None,
-        # tax_type: TaxType = TaxType.VAT,
-        # vat_rate: np.ndarray | float = 0.0,
-        # lbt_rate: np.ndarray | float = 0.0,
-        # inflation_rate: np.ndarray | float = 0.0,
-        # future_rate: float = 0.02,
     ) -> None:
         """
         Run the economic analysis, calculating expenditures and configuring
@@ -2393,36 +2524,27 @@ class BaseProject:
             inflation_rate_applied_to=inflation_rate_applied_to,
         )
 
-        # # Calculate indirect taxes
-        # self._get_indirect_taxes(tax_rate=tax_rate)
-        #
-        # # Calculate post tax expenditures
-        # self._get_expenditures_post_tax(
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     tax_rate=tax_rate,
-        # )
+        # Calculate indirect taxes
+        self._get_indirect_taxes(tax_rate=tax_rate)
+
+        # Calculate post tax expenditures
+        self._get_expenditures_post_tax(
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            tax_rate=tax_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
+        )
 
         print('\t')
-        print(f'Filetype: {type(self._oil_asr_expenditures_pre_tax)}')
-        print(f'Length: {len(self._oil_asr_expenditures_pre_tax)}')
-        print('_oil_asr_expenditures_pre_tax = \n', self._oil_asr_expenditures_pre_tax)
+        print(f'Filetype: {type(self._oil_capital_expenditures_post_tax)}')
+        print(f'Length: {len(self._oil_capital_expenditures_post_tax)}')
+        print('_oil_capital_expenditures_post_tax = \n', self._oil_capital_expenditures_post_tax)
 
         print('\t')
-        print(f'Filetype: {type(self._oil_intangible_expenditures_pre_tax)}')
-        print(f'Length: {len(self._oil_intangible_expenditures_pre_tax)}')
-        print('_oil_intangible_expenditures_pre_tax = \n', self._oil_intangible_expenditures_pre_tax)
+        print(f'Filetype: {type(self._oil_intangible_expenditures_post_tax)}')
+        print(f'Length: {len(self._oil_intangible_expenditures_post_tax)}')
+        print('_oil_intangible_expenditures_post_tax = \n', self._oil_intangible_expenditures_post_tax)
 
-        # # Prepare the data
-        # self._get_expenditures(
-        #     year_ref=year_ref,
-        #     tax_type=tax_type,
-        #     vat_rate=vat_rate,
-        #     lbt_rate=lbt_rate,
-        #     inflation_rate=inflation_rate,
-        #     future_rate=future_rate,
-        # )
-        #
         # # Non-capital costs (intangible + opex + asr)
         # self._oil_non_capital = (
         #         self._oil_intangible_expenditures
