@@ -623,3 +623,10 @@ class VariableSplit082017:
 
 
 
+class ContractSample(Enum):
+    """
+    Selection for generating contract sample.
+    """
+    CASE_1 = 'Cost Recovery Contract Sample'
+    CASE_2 = 'Cost Recovery Consolidated Contract Sample'
+    CASE_3 = 'Gross Split Contract Sample'

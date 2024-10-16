@@ -601,7 +601,7 @@ class BaseProject:
 
             else:
                 self.gas_onstream_date = date(
-                    year=self.project_years[gas_revenue_index[0]], month=1, day=1
+                    year=int(self.project_years[gas_revenue_index[0]]), month=1, day=1
                 )
 
         else:

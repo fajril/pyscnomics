@@ -113,8 +113,8 @@ class CostRecovery(BaseProject):
 
     _oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_undepreciated_asset: float = field(default=None, init=False, repr=False)
-    _gas_undepreciated_asset: float = field(default=None, init=False, repr=False)
+    _oil_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
 
     _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
@@ -317,7 +317,7 @@ class CostRecovery(BaseProject):
 
     def _get_rc_icp_pretax(self):
         """
-        A Function to get the value of PreTax using Revenue over Cost (RC) or Indonesian Crude Price (ICP) sliding scale.
+        A Function to get the value of PreTax Split using Revenue over Cost (RC) or Indonesian Crude Price (ICP) sliding scale.
 
         Notes
         -------
@@ -412,6 +412,8 @@ class CostRecovery(BaseProject):
                 self._gas_ftp_ctr = self.gas_ctr_pretax_share * self._gas_ftp
             self._gas_ftp_gov = self._gas_ftp - self._gas_ftp_ctr
 
+    # Todo: Refactor the ic rate thus could accepting ndarray
+    # Todo: Refactor try to not writing the type of variable into the name of variable
     def _get_ic(
             self,
             revenue: np.ndarray,
@@ -447,6 +449,8 @@ class CostRecovery(BaseProject):
 
         return ic_total, ic_unrecovered, ic_paid
 
+    # Todo: Add the point of view of the established contract definition to the docstring.
+    #  Thus, the component that resulted by the code will be referring to the contract.
     @staticmethod
     def _get_cost_recovery(
             revenue: np.ndarray,
@@ -776,7 +780,12 @@ class CostRecovery(BaseProject):
 
         for index, i in enumerate(taxable_income):
             if index == 0:
-                pass
+                tax_paid[index] = np.where(taxable_income[index] > ctr_tax[index] + 0,
+                                           ctr_tax[index] + 0,
+                                           ets_and_ftp_ctr[index] - ddmo[index])
+                unpaid_tax[index] = np.where(ctr_tax[index] + 0 > tax_paid[index],
+                                             ctr_tax[index] + 0 - tax_paid[index],
+                                             0)
             else:
                 tax_paid[index] = np.where(taxable_income[index] > ctr_tax[index] + unpaid_tax[index - 1],
                                            ctr_tax[index] + unpaid_tax[index - 1],
@@ -874,27 +883,28 @@ class CostRecovery(BaseProject):
             pass
 
     def run(
-        self,
-        sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
-        electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
-        co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
-        is_dmo_end_weighted: bool = False,
-        tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
-        tax_rate: float | np.ndarray | None = None,
-        ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
-        sunk_cost_reference_year: int = None,
-        depr_method: DeprMethod = DeprMethod.PSC_DB,
-        decline_factor: float | int = 2,
-        year_ref: int = None,
-        tax_type: TaxType = TaxType.VAT,
-        vat_rate: np.ndarray | float = 0.0,
-        lbt_rate: np.ndarray | float = 0.0,
-        inflation_rate: np.ndarray | float = 0.0,
-        future_rate: float = 0.02,
-        inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
-        post_uu_22_year2001: bool = True,
-        oil_cost_of_sales_applied: bool = False,
-        gas_cost_of_sales_applied: bool = False
+            self,
+            sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+            electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
+            co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+            is_dmo_end_weighted: bool = False,
+            tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
+            tax_rate: float | np.ndarray | None = None,
+            ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
+            sunk_cost_reference_year: int = None,
+            depr_method: DeprMethod = DeprMethod.PSC_DB,
+            decline_factor: float | int = 2,
+            year_ref: int = None,
+            tax_type: TaxType = TaxType.VAT,
+            vat_rate: np.ndarray | float = 0.0,
+            lbt_rate: np.ndarray | float = 0.0,
+            inflation_rate: np.ndarray | float = 0.0,
+            future_rate: float = 0.02,
+            inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
+            post_uu_22_year2001: bool = True,
+            oil_cost_of_sales_applied: bool = False,
+            gas_cost_of_sales_applied: bool = False,
+            sum_undepreciated_cost:bool=False
     ):
 
         # Configure Sunk Cost Reference Year
@@ -988,9 +998,21 @@ class CostRecovery(BaseProject):
             inflation_rate=inflation_rate,
         )
 
-        # Treatment of the undepreciated asset to be summed up in the last year of the contract
-        self._oil_depreciation[-1] = self._oil_depreciation[-1] + self._oil_undepreciated_asset
-        self._gas_depreciation[-1] = self._gas_depreciation[-1] + self._gas_undepreciated_asset
+        # Treatment for small order of number, in example 1e-15
+        self._oil_undepreciated_asset = np.where(
+            self._oil_undepreciated_asset < 1.0e-5, 0, self._oil_undepreciated_asset)
+        self._gas_undepreciated_asset = np.where(
+            self._gas_undepreciated_asset < 1.0e-5, 0, self._gas_undepreciated_asset)
+
+        # Treatment of the un-depreciated asset to be summed up in the last year of the contract or not
+        if sum_undepreciated_cost is True:
+            self._oil_depreciation[-1] = self._oil_depreciation[-1] + self._oil_undepreciated_asset
+            self._gas_depreciation[-1] = self._gas_depreciation[-1] + self._gas_undepreciated_asset
+
+            self._oil_undepreciated_asset = np.zeros_like(self.project_years, dtype=float)
+            self._gas_undepreciated_asset = np.zeros_like(self.project_years, dtype=float)
+        else:
+            pass
 
         # Non-capital costs (intangible + opex + asr)
         self._oil_non_capital = (
