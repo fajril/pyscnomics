@@ -459,7 +459,6 @@ if __name__ == "__main__":
     from pyscnomics.contracts.project import BaseProject
     from pyscnomics.econ.selection import InflationAppliedTo
 
-
     lifting1 = Lifting(
         start_year=2023,
         end_year=2030,
@@ -510,7 +509,7 @@ if __name__ == "__main__":
     project = BaseProject(
         start_date=date(year=2023, month=1, day=1),
         end_date=date(year=2030, month=12, day=31),
-        # lifting=tuple([lifting1, lifting2]),
+        lifting=tuple([lifting1, lifting2]),
         # capital_cost=tuple([cap1, cap2, cap3]),
         intangible_cost=tuple([intang1, intang2, intang3]),
         # opex=tuple([opex1, opex2, opex3])
@@ -520,13 +519,13 @@ if __name__ == "__main__":
     )
 
     project.run(
-        inflation_rate=0.05,
-        inflation_rate_applied_to=InflationAppliedTo.CAPEX,
+        # inflation_rate=0.05,
+        # inflation_rate_applied_to=InflationAppliedTo.CAPEX,
         tax_rate=0.01,
     )
 
     print('\t')
-    print(f'++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+    print(f'+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
     # print('\t')
     # print(f'Filetype: {type(cap)}')
