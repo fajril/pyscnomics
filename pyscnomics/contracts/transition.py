@@ -405,7 +405,7 @@ class Transition:
                 description=asr.description + desc_to_new,
                 tax_portion=np.concatenate((asr.tax_portion, zeros_to_new)),
                 tax_discount=np.concatenate((asr.tax_discount, zeros_to_new)),
-                final_year=np.concatenate((asr.final_year, zeros_to_new)),
+                final_year=np.concatenate((asr.final_year, years_to_new)),
                 future_rate=np.concatenate((asr.future_rate, zeros_to_new)),
             )
             for asr in self.contract1.asr_cost
@@ -437,7 +437,7 @@ class Transition:
                 description=bt.description + desc_to_new,
                 tax_portion=np.concatenate((bt.tax_portion, zeros_to_new)),
                 tax_discount=np.concatenate((bt.tax_discount, zeros_to_new)),
-                final_year=np.concatenate((bt.final_year, zeros_to_new)),
+                final_year=np.concatenate((bt.final_year, years_to_new)),
                 utilized_land_area=np.concatenate((bt.utilized_land_area, zeros_to_new)),
                 utilized_building_area=np.concatenate((bt.utilized_building_area, zeros_to_new)),
                 njop_land=np.concatenate((bt.njop_land, zeros_to_new)),
@@ -527,6 +527,8 @@ class Transition:
                 description=desc_to_prior + asr.description,
                 tax_portion=np.concatenate((zeros_to_prior, asr.tax_portion)),
                 tax_discount=np.concatenate((zeros_to_prior, asr.tax_discount)),
+                final_year=np.concatenate((years_to_prior, asr.final_year)),
+                future_rate=np.concatenate((zeros_to_prior, asr.future_rate)),
             )
             for asr in self.contract2.asr_cost
         ]
@@ -555,7 +557,7 @@ class Transition:
                 cost_allocation=fluid_to_prior + bt.cost_allocation,
                 tax_portion=np.concatenate((zeros_to_prior, bt.tax_portion)),
                 tax_discount=np.concatenate((zeros_to_prior, bt.tax_discount)),
-                final_year=np.concatenate((zeros_to_prior, bt.final_year)),
+                final_year=np.concatenate((years_to_new, bt.final_year)),
                 utilized_land_area=np.concatenate((zeros_to_prior, bt.utilized_land_area)),
                 utilized_building_area=np.concatenate((zeros_to_prior, bt.utilized_building_area)),
                 njop_land=np.concatenate((zeros_to_prior, bt.njop_land)),
@@ -710,46 +712,70 @@ class Transition:
                              self._contract2_transitioned._co2_revenue)
 
         # Tangible
-        self._oil_capital_expenditures = (self._contract1_transitioned._oil_capital_expenditures_post_tax +
-                                          self._contract2_transitioned._oil_capital_expenditures_post_tax)
+        self._oil_capital_expenditures_post_tax = (
+                self._contract1_transitioned._oil_capital_expenditures_post_tax +
+                self._contract2_transitioned._oil_capital_expenditures_post_tax
+        )
 
-        self._gas_capital_expenditures = (self._contract1_transitioned._gas_capital_expenditures_post_tax +
-                                          self._contract2_transitioned._gas_capital_expenditures_post_tax)
+        self._gas_capital_expenditures_post_tax = (
+                self._contract1_transitioned._gas_capital_expenditures_post_tax +
+                self._contract2_transitioned._gas_capital_expenditures_post_tax
+        )
 
         # Intangible
-        self._oil_intangible_expenditures = (self._contract1_transitioned._oil_intangible_expenditures_post_tax +
-                                             self._contract2_transitioned._oil_intangible_expenditures_post_tax)
+        self._oil_intangible_expenditures_post_tax = (
+                self._contract1_transitioned._oil_intangible_expenditures_post_tax +
+                self._contract2_transitioned._oil_intangible_expenditures_post_tax
+        )
 
-        self._gas_intangible_expenditures = (self._contract1_transitioned._gas_intangible_expenditures_post_tax +
-                                             self._contract2_transitioned._gas_intangible_expenditures_post_tax)
+        self._gas_intangible_expenditures_post_tax = (
+                self._contract1_transitioned._gas_intangible_expenditures_post_tax +
+                self._contract2_transitioned._gas_intangible_expenditures_post_tax
+        )
 
         # Opex
-        self._oil_opex_expenditures = (self._contract1_transitioned._oil_opex_expenditures_post_tax +
-                                       self._contract2_transitioned._oil_opex_expenditures_post_tax)
+        self._oil_opex_expenditures_post_tax = (
+                self._contract1_transitioned._oil_opex_expenditures_post_tax +
+                self._contract2_transitioned._oil_opex_expenditures_post_tax
+        )
 
-        self._gas_opex_expenditures = (self._contract1_transitioned._gas_opex_expenditures_post_tax +
-                                       self._contract2_transitioned._gas_opex_expenditures_post_tax)
+        self._gas_opex_expenditures_post_tax = (
+                self._contract1_transitioned._gas_opex_expenditures_post_tax +
+                self._contract2_transitioned._gas_opex_expenditures_post_tax
+        )
 
         # ASR
-        self._oil_asr_expenditures = (self._contract1_transitioned._oil_asr_expenditures_post_tax +
-                                      self._contract2_transitioned._oil_asr_expenditures_post_tax)
+        self._oil_asr_expenditures_post_tax = (
+                self._contract1_transitioned._oil_asr_expenditures_post_tax +
+                self._contract2_transitioned._oil_asr_expenditures_post_tax
+        )
 
-        self._gas_asr_expenditures = (self._contract1_transitioned._gas_asr_expenditures_post_tax +
-                                      self._contract2_transitioned._gas_asr_expenditures_post_tax)
+        self._gas_asr_expenditures_post_tax = (
+                self._contract1_transitioned._gas_asr_expenditures_post_tax +
+                self._contract2_transitioned._gas_asr_expenditures_post_tax
+        )
 
         # Cost Of Sales
-        self._oil_cost_of_sales_expenditures = (self._contract1_transitioned._oil_cost_of_sales_expenditures_post_tax +
-                                                self._contract2_transitioned._oil_cost_of_sales_expenditures_post_tax)
+        self._oil_cost_of_sales_expenditures_post_tax = (
+                self._contract1_transitioned._oil_cost_of_sales_expenditures_post_tax +
+                self._contract2_transitioned._oil_cost_of_sales_expenditures_post_tax
+        )
 
-        self._gas_cost_of_sales_expenditures = (self._contract1_transitioned._gas_cost_of_sales_expenditures_post_tax +
-                                                self._contract2_transitioned._gas_cost_of_sales_expenditures_post_tax)
+        self._gas_cost_of_sales_expenditures_post_tax = (
+                self._contract1_transitioned._gas_cost_of_sales_expenditures_post_tax +
+                self._contract2_transitioned._gas_cost_of_sales_expenditures_post_tax
+        )
 
         # Land and Building Tax
-        self._oil_lbt_expenditures = (self._contract1_transitioned._oil_lbt_expenditures_post_tax +
-                                      self._contract2_transitioned._oil_lbt_expenditures_post_tax)
+        self._oil_lbt_expenditures_post_tax = (
+                self._contract1_transitioned._oil_lbt_expenditures_post_tax +
+                self._contract2_transitioned._oil_lbt_expenditures_post_tax
+        )
 
-        self._gas_lbt_expenditures = (self._contract1_transitioned._gas_lbt_expenditures_post_tax +
-                                      self._contract2_transitioned._gas_lbt_expenditures_post_tax)
+        self._gas_lbt_expenditures_post_tax = (
+                self._contract1_transitioned._gas_lbt_expenditures_post_tax +
+                self._contract2_transitioned._gas_lbt_expenditures_post_tax
+        )
 
         # WAP Price
         self._oil_wap_price = self._contract2_transitioned._oil_wap_price
@@ -759,10 +785,8 @@ class Transition:
         self._co2_wap_price = self._contract2_transitioned._co2_wap_price
 
         # Undepreciated Asset
-        self._oil_undepreciated_asset = float(self.contract1._oil_undepreciated_asset +
-                                         self.contract2._oil_undepreciated_asset)
-        self._gas_undepreciated_asset = float(self.contract1._gas_undepreciated_asset +
-                                         self.contract2._gas_undepreciated_asset)
+        self._oil_undepreciated_asset = float(contract1_new._oil_undepreciated_asset + contract2_new._oil_undepreciated_asset)
+        self._gas_undepreciated_asset = float(contract1_new._gas_undepreciated_asset + contract2_new._gas_undepreciated_asset)
         self._consolidated_undepreciated_asset = self._oil_undepreciated_asset + self._gas_undepreciated_asset
 
         # Sunk Cost
