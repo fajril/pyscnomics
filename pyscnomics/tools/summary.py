@@ -87,14 +87,14 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
     investment = tangible + intangible
 
     # Undepreciated Asset
-    if isinstance(contract, BaseProject):
-        undepreciated_asset_oil = 0.0
-        undepreciated_asset_gas = 0.0
-        undepreciated_asset_total = 0.0
-    else:
+    if isinstance(contract, (CostRecovery, GrossSplit, Transition)):
         undepreciated_asset_oil = np.sum(contract._oil_undepreciated_asset)
         undepreciated_asset_gas = np.sum(contract._gas_undepreciated_asset)
         undepreciated_asset_total = undepreciated_asset_oil + undepreciated_asset_gas
+    else:
+        undepreciated_asset_oil = 0.0
+        undepreciated_asset_gas = 0.0
+        undepreciated_asset_total = 0.0
 
     # Capex
     oil_capex = np.sum(contract._oil_capital_expenditures)

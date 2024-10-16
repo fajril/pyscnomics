@@ -1008,6 +1008,9 @@ class CostRecovery(BaseProject):
         if sum_undepreciated_cost is True:
             self._oil_depreciation[-1] = self._oil_depreciation[-1] + self._oil_undepreciated_asset
             self._gas_depreciation[-1] = self._gas_depreciation[-1] + self._gas_undepreciated_asset
+
+            self._oil_undepreciated_asset = np.zeros_like(self.project_years, dtype=float)
+            self._gas_undepreciated_asset = np.zeros_like(self.project_years, dtype=float)
         else:
             pass
 

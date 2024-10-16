@@ -256,10 +256,14 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
         "future_rate": convert_to_float(target=data['contract_arguments']['future_rate']),
         "inflation_rate_applied_to": convert_str_to_inflationappliedto(str_object=data['contract_arguments']['inflation_rate_applied_to']),
-        "post_uu_22_year2001": data['contract_arguments']['post_uu_22_year2001'],
-        "oil_cost_of_sales_applied": data["contract_arguments"]["oil_cost_of_sales_applied"],
-        "gas_cost_of_sales_applied": data["contract_arguments"]["gas_cost_of_sales_applied"],
-        "sum_undepreciated_cost": data['contract_arguments']['sum_undepreciated_cost'],
+        "post_uu_22_year2001": True if 'post_uu_22_year2001' not in data['contract_arguments'] else
+        data['contract_arguments']['post_uu_22_year2001'],
+        "oil_cost_of_sales_applied": False if "oil_cost_of_sales_applied" not in data["contract_arguments"] else
+        data["contract_arguments"]["oil_cost_of_sales_applied"],
+        "gas_cost_of_sales_applied": False if "gas_cost_of_sales_applied" not in data["contract_arguments"] else
+        data["contract_arguments"]["gas_cost_of_sales_applied"],
+        "sum_undepreciated_cost": False if 'sum_undepreciated_cost' not in data['contract_arguments'] else
+        data['contract_arguments']['sum_undepreciated_cost'],
     }
 
     # Running the contract
@@ -585,7 +589,8 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         "cum_production_split_offset": convert_list_to_array_float_or_array(data_input=data["contract_arguments"]["cum_production_split_offset"]),
         "amortization": data["contract_arguments"]["amortization"],
         "regime": convert_grosssplitregime_to_enum(target=data["contract_arguments"]["regime"]),
-        "sum_undepreciated_cost": data["contract_arguments"]["sum_undepreciated_cost"],
+        "sum_undepreciated_cost": False if 'sum_undepreciated_cost' not in data['contract_arguments'] else
+        data['contract_arguments']['sum_undepreciated_cost'],
     }
 
     # Running the contract
