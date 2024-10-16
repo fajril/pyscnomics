@@ -5,6 +5,21 @@ Specify constants for several processes using Enum class.
 from enum import Enum
 
 
+class ExpendituresType(Enum):
+    """ Enumeration of expenditures type
+
+    Attributes
+    ----------
+    PRE_TAX : str
+        Represents pre-tax expenditures.
+    POST_TAX : str
+        Represents post-tax expenditures.
+    """
+
+    PRE_TAX = "Pre-Tax Expenditures"
+    POST_TAX = "Post-Tax Expenditures"
+
+
 class DeprMethod(Enum):
     """
     Enumeration of depreciation methods.
@@ -255,7 +270,6 @@ class NPVSelection(Enum):
     NPV_POINT_FORWARD = 'NPV Calculation using Point Forward method'
 
 
-# Refactor: OtherRevenue into OtherRevenueTreatment
 class OtherRevenue(Enum):
     """
     Enumeration class representing different types of other revenue

@@ -9,7 +9,7 @@ from typing import Dict
 
 from pyscnomics.econ.selection import (
     FluidType,
-    TaxType,
+    # TaxType,
     TaxSplitTypeCR,
     InflationAppliedTo,
     # TaxPaymentMode,
@@ -67,200 +67,27 @@ def check_input(target_func, param: np.ndarray | float | int) -> np.ndarray:
     If 'param' is a numpy.ndarray, it checks that its length matches the length
     of 'target_func'. If not, it raises an exception.
     """
-    if isinstance(param, np.ndarray):
-        if len(param) != len(target_func):
-            raise TaxInflationException(
-                f"Unequal length of arrays: "
-                f"{param.__class__.__qualname__}({param}): ({len(param)}), "
-                f"{target_func.__class__.__qualname__}({target_func}): ({len(target_func)})."
-            )
-        param_arr = param
-
-    if isinstance(param, (float, int)):
-        param_arr = np.repeat(param, len(target_func))
 
     if not isinstance(param, (float, int, np.ndarray)):
         raise TaxInflationException(
-            f"Input parameter must be of datatype np.ndarray, int, or float. "
-            f"{param} is of datatype ({param.__class__.__qualname__})."
+            f"Input parameter must be given as a float, int, or numpy.ndarray, "
+            f"not as a/an {param.__class__.__qualname__}"
         )
+
+    else:
+        if isinstance(param, np.ndarray):
+            if len(param) != len(target_func):
+                raise TaxInflationException(
+                    f"Unequal length of arrays: "
+                    f"{param.__class__.__qualname__}({param}): ({len(param)}), "
+                    f"{target_func.__class__.__qualname__}({target_func}): ({len(target_func)})."
+                )
+            param_arr = param
+
+        elif isinstance(param, (float, int)):
+            param_arr = np.repeat(param, len(target_func))
 
     return param_arr
-
-
-def get_cost_adjustment_by_tax(
-    start_year: int,
-    cost: np.ndarray,
-    expense_year: np.ndarray,
-    project_years: np.ndarray,
-    tax_portion: np.ndarray,
-    tax_rate: np.ndarray | float,
-    tax_discount: float,
-) -> np.ndarray:
-    """
-    Adjust cost based on tax scheme over the prescribed time period.
-
-    Parameters
-    ----------
-    start_year : int
-        The start year of the project.
-    cost : np.ndarray
-        An array of costs to be adjusted.
-    expense_year : np.ndarray
-        An array specifying the expense years for each cost element.
-    project_years : np.ndarray
-        An array of project years.
-    tax_portion: np.ndarray
-        The portion of 'cost' that is subject to tax.
-        Must be an array of length equals to the length of 'cost' array.
-    tax_rate: np.ndarray | float
-        The tax rate to apply. Can be a single value or an array.
-    tax_discount: float
-        The tax discount to apply.
-
-    Returns
-    -------
-    cost_adjusted: np.ndarray
-        An array of adjusted costs after applying tax scheme.
-
-    Notes
-    -----
-    The core operations are as follows:
-    (1) Create 'tax_rate_arr' by calling 'check_input()' function. If 'tax_rate'
-        is given as an array, the length of the array must be consistent with
-        the duration of the project. If it is given as a single value, then create
-        an array of length equal to the project duration with all elements set equal
-        to the single value,
-    (2) Identify the index location of 'tax_rate' based on the associated 'expense_year',
-    (3) Calculate the multiplier:
-        mult = 1.0 + tax_portion * tax_rate_arr[tax_id] * (1.0 - tax_discount),
-    (4) Apply cost adjustment = cost * mult.
-    """
-    tax_rate_arr = check_input(target_func=project_years, param=tax_rate)
-    tax_rate_id = (expense_year - start_year).astype("int")
-
-    return cost * (
-        1.0 + tax_portion * tax_rate_arr[tax_rate_id] * (1.0 - tax_discount)
-    )
-
-
-def apply_cost_adjustment(
-    start_year: int,
-    end_year: int,
-    cost: np.ndarray,
-    expense_year: np.ndarray,
-    project_years: np.ndarray,
-    year_ref: int,
-    tax_type: TaxType,
-    vat_portion: np.ndarray,
-    vat_rate: np.ndarray | float,
-    vat_discount: float,
-    lbt_portion: np.ndarray,
-    lbt_rate: np.ndarray | float,
-    lbt_discount: float,
-    inflation_rate: np.ndarray | float,
-) -> np.ndarray:
-    """
-    Adjusts cost based on inflation and tax scheme over the specified time period.
-
-    Parameters
-    ----------
-    start_year : int
-        The start year of the project.
-    end_year : int
-        The end year of the project.
-    cost : np.ndarray
-        An array of costs to be adjusted.
-    expense_year : np.ndarray
-        An array specifying the expense years for each cost element.
-    project_years : np.ndarray
-        An array of project years.
-    year_ref : int
-        The reference year for inflation calculation.
-    tax_type: TaxType
-        The type of tax used for calculation.
-        The options are TaxType.VAT and TaxType.LBT
-    vat_portion: np.ndarray
-        The portion of 'cost' that is subject to VAT.
-        Must be an array of length equals to the length of 'cost' array.
-    vat_rate: np.ndarray | float
-        The VAT rate to apply. Can be a single value or an array.
-    vat_discount: float
-        The VAT discount to apply.
-    lbt_portion: np.ndarray
-        The portion of 'cost' that is subject to LBT.
-        Must be an array of length equals to the length of 'cost' array.
-    lbt_rate: np.ndarray | float
-        The LBT rate to apply. Can be a single value or an array.
-    lbt_discount: float
-        The LBT discount to apply.
-    inflation_rate : np.ndarray | float
-        The inflation rate to apply. Can be a single value or an array.
-
-    Returns
-    -------
-    cost_adjusted: np.ndarray
-        An array of adjusted costs after applying inflation and tax scheme.
-
-    Notes
-    -----
-    The core operations are as follows:
-    (1) Apply cost adjustment due tax scheme by calling function get_cost_adjustment_by_tax().
-    (2) Check 'inflation_rate' whether it is provided as an array or as a single value.
-        If it is given as an array, the length of the array must be consistent with the
-        duration of the project. If it is given as a single value, then create an array
-        of length equal to project duration with all elements set equal to the single
-        value.
-    (3) Parameter 'id_year_ref' identify the index location of 'year_ref' in array
-        'project_years'. The result is then added by unity. This parameter sets up
-        the first index to slice the 'inflation_rate_arr',
-    (4) Parameter 'id_rate_arr' configure the index location of 'expense_year' in array
-        'project_years' based on the associated 'year_ref'. The result is then added by unity.
-        This parameter sets up the second index to slice the 'inflation_rate_arr',
-    (5) Slice 'inflation_rate_arr' according to 'id_year_ref' and 'id_rate_arr'. Add the results
-        by unity, then multiple the associated elements.
-    (5) Cost adjustment is undertaken by multiplication: 'cost_adjusted_by_tax' * 'mult'.
-    """
-    # Cost adjustment due to tax
-    if tax_type == TaxType.VAT:
-        cost_adjusted = get_cost_adjustment_by_tax(
-            start_year=start_year,
-            cost=cost,
-            expense_year=expense_year,
-            project_years=project_years,
-            tax_portion=vat_portion,
-            tax_rate=vat_rate,
-            tax_discount=vat_discount,
-        )
-
-    if tax_type == TaxType.LBT:
-        cost_adjusted = get_cost_adjustment_by_tax(
-            start_year=start_year,
-            cost=cost,
-            expense_year=expense_year,
-            project_years=project_years,
-            tax_portion=lbt_portion,
-            tax_rate=lbt_rate,
-            tax_discount=lbt_discount,
-        )
-
-    # Cost adjustment due to inflation
-    if year_ref < start_year:
-        raise TaxInflationException(
-            f"year_ref ({year_ref}) is before start_year of the project ({start_year})."
-        )
-
-    if year_ref > end_year:
-        raise TaxInflationException(
-            f"year_ref ({year_ref}) is after end_year of the project ({end_year})."
-        )
-
-    inflation_rate_arr = check_input(target_func=project_years, param=inflation_rate)
-    id_year_ref = int(np.argwhere(year_ref == project_years).ravel()[0] + 1)
-    id_rate_arr = ((expense_year - year_ref) + (year_ref - start_year) + 1).astype("int")
-    mult = np.array([np.prod(1.0 + inflation_rate_arr[id_year_ref:i]) for i in id_rate_arr])
-
-    return cost_adjusted * mult
 
 
 def apply_inflation(inflation_rate: np.ndarray | float) -> callable:
