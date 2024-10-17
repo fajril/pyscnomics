@@ -417,14 +417,14 @@ def optimize_psc_core(
     -------
     out : tuple
 
-    list_str: list
-        The list of parameter that passed and has been optimized.
-    list_params_value: list
-        The list of parameter's value that passed and has been optimized.
-    result_optimization: float
-        The value of the targeted parameter which the result of the optimization.
-    list_executed_contract: list
-        The list of executed contracts.
+        list_str: list
+            The list of parameter that passed and has been optimized.
+        list_params_value: list
+            The list of parameter's value that passed and has been optimized.
+        result_optimization: float
+            The value of the targeted parameter which the result of the optimization.
+        list_executed_contract: list
+            The list of executed contracts.
     """
     # Changing the Optimization selection from Enum to string in order to retrieve
     # the result from summary dictionary
