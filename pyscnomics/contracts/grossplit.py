@@ -654,7 +654,9 @@ class GrossSplit(BaseProject):
             cum: np.ndarray | None,
     ):
         # Cumulative Progressive Split
-        if 0 < cum < 1000:
+        if cum is None:
+            px = 0
+        elif 0 < cum < 1000:
             px = 0.05
         elif 1000 <= cum < 10000:
             px = 0.04
@@ -666,8 +668,6 @@ class GrossSplit(BaseProject):
             px = 0.01
         elif 150000 <= cum:
             px = 0
-        elif cum is None:
-            px = 0
         else:
             raise ValueError('No Regulation exist regarding the cumulative value')
 
@@ -678,7 +678,9 @@ class GrossSplit(BaseProject):
             cum: np.ndarray | None
     ):
         # Cumulative Progressive Split
-        if np.logical_and(np.greater_equal(cum, 0), np.less(cum, 30000)):
+        if cum is None:
+            px = 0
+        elif np.logical_and(np.greater_equal(cum, 0), np.less(cum, 30000)):
             px = 0.1
         elif np.logical_and(np.greater_equal(cum, 30000), np.less(cum, 60000)):
             px = 0.09
@@ -689,8 +691,6 @@ class GrossSplit(BaseProject):
         elif np.logical_and(np.greater_equal(cum, 125000), np.less(cum, 175000)):
             px = 0.04
         elif np.greater_equal(cum, 175000):
-            px = 0
-        elif cum is None:
             px = 0
         else:
             raise ValueError('No Regulation exist regarding the cumulative value')
