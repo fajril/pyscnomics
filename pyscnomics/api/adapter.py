@@ -23,6 +23,7 @@ from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_dict_to_intangible,
                                       convert_dict_to_opex,
                                       convert_dict_to_asr,
+                                      convert_dict_to_lbt,
                                       convert_dict_to_cost_of_sales,
                                       convert_list_to_array_float,
                                       convert_list_to_array_float_or_array_or_none,
@@ -87,6 +88,8 @@ def get_setup_dict(data: dict) -> tuple:
         The intangible cost of the project, in Intangible Dataclass format.
     opex: OPEX
         The opex cost of the project, in OPEX Dataclass format.
+    lbt: LBT
+        The land and building tax of the project, in LBT Dataclass format.
     cost_of_sales: CostOfSales
         The opex cost of the project, in CostOfSales Dataclass format.
     asr: ASR
@@ -103,8 +106,9 @@ def get_setup_dict(data: dict) -> tuple:
     intangible = convert_dict_to_intangible(data_raw=data['intangible'])
     opex = convert_dict_to_opex(data_raw=data['opex'])
     asr = convert_dict_to_asr(data_raw=data['asr'])
+    lbt = convert_dict_to_lbt(data_raw=data['lbt'])
     cost_of_sales = convert_dict_to_cost_of_sales(data_raw=data['cost_of_sales'])
-    return start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales
+    return start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, lbt, cost_of_sales
 
 
 def get_summary_dict(data: dict) -> dict:
@@ -199,8 +203,7 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         The summary arguments used in retrieving the executive summary of the contract.
 
     """
-    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
-        get_setup_dict(data=data))
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, lbt, cost_of_sales = get_setup_dict(data=data)
 
     contract = CostRecovery(
         start_date=start_date,
@@ -212,6 +215,7 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         intangible_cost=intangible,
         opex=opex,
         asr_cost=asr,
+        lbt_cost=lbt,
         cost_of_sales=cost_of_sales,
         oil_ftp_is_available=data['costrecovery']['oil_ftp_is_available'],
         oil_ftp_is_shared=data['costrecovery']['oil_ftp_is_shared'],
@@ -246,7 +250,7 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         "co2_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['co2_revenue']),
         "is_dmo_end_weighted": data['contract_arguments']['is_dmo_end_weighted'],
         "tax_regime": convert_str_to_taxregime(str_object=data['contract_arguments']['tax_regime']),
-        "tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['tax_rate']),
+        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['effective_tax_rate']),
         "ftp_tax_regime": convert_str_to_ftptaxregime(str_object=data['contract_arguments']['ftp_tax_regime']),
         "sunk_cost_reference_year": data['contract_arguments']['sunk_cost_reference_year'],
         "depr_method": convert_str_to_depremethod(str_object=data['contract_arguments']['depr_method']),
@@ -254,7 +258,6 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         "vat_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['vat_rate']),
         "lbt_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['lbt_rate']),
         "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
-        "future_rate": convert_to_float(target=data['contract_arguments']['future_rate']),
         "inflation_rate_applied_to": convert_str_to_inflationappliedto(str_object=data['contract_arguments']['inflation_rate_applied_to']),
         "post_uu_22_year2001": True if 'post_uu_22_year2001' not in data['contract_arguments'] else
         data['contract_arguments']['post_uu_22_year2001'],
@@ -533,7 +536,7 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         The summary arguments used in retrieving the executive summary of the contract.
 
     """
-    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, lbt, cost_of_sales = (
         get_setup_dict(data=data))
 
     contract = GrossSplit(
@@ -546,6 +549,7 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         intangible_cost=intangible,
         opex=opex,
         asr_cost=asr,
+        lbt_cost=lbt,
         field_status=data['grosssplit']['field_status'],
         field_loc=data['grosssplit']['field_loc'],
         res_depth=data['grosssplit']['res_depth'],
@@ -576,14 +580,13 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         "co2_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['co2_revenue']),
         "is_dmo_end_weighted": data['contract_arguments']['is_dmo_end_weighted'],
         "tax_regime": convert_str_to_taxregime(str_object=data['contract_arguments']['tax_regime']),
-        "tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['tax_rate']),
+        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['effective_tax_rate']),
         "sunk_cost_reference_year": data['contract_arguments']['sunk_cost_reference_year'],
         "depr_method": convert_str_to_depremethod(str_object=data['contract_arguments']['depr_method']),
         "decline_factor": data['contract_arguments']['decline_factor'],
         "vat_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['vat_rate']),
         "lbt_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['lbt_rate']),
         "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
-        "future_rate": convert_to_float(target=data['contract_arguments']['future_rate']),
         "inflation_rate_applied_to": convert_str_to_inflationappliedto(
             str_object=data['contract_arguments']['inflation_rate_applied_to']),
         "cum_production_split_offset": convert_list_to_array_float_or_array(data_input=data["contract_arguments"]["cum_production_split_offset"]),
@@ -761,7 +764,7 @@ def get_baseproject(data: dict, summary_result: bool = True):
         The summary arguments used in retrieving the executive summary of the contract.
 
     """
-    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, lbt, cost_of_sales = (
         get_setup_dict(data=data))
 
     contract = BaseProject(start_date=start_date,
@@ -1107,7 +1110,7 @@ def get_grosssplit_split(data: dict):
 
 
     """
-    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, lbt, cost_of_sales = (
         get_setup_dict(data=data))
 
     contract = GrossSplit(
@@ -1120,6 +1123,7 @@ def get_grosssplit_split(data: dict):
         intangible_cost=intangible,
         opex=opex,
         asr_cost=asr,
+        lbt_cost=lbt,
         field_status=data['grosssplit']['field_status'],
         field_loc=data['grosssplit']['field_loc'],
         res_depth=data['grosssplit']['res_depth'],
@@ -1150,14 +1154,13 @@ def get_grosssplit_split(data: dict):
         "co2_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['co2_revenue']),
         "is_dmo_end_weighted": data['contract_arguments']['is_dmo_end_weighted'],
         "tax_regime": convert_str_to_taxregime(str_object=data['contract_arguments']['tax_regime']),
-        "tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['tax_rate']),
+        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['effective_tax_rate']),
         "sunk_cost_reference_year": data['contract_arguments']['sunk_cost_reference_year'],
         "depr_method": convert_str_to_depremethod(str_object=data['contract_arguments']['depr_method']),
         "decline_factor": data['contract_arguments']['decline_factor'],
         "vat_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['vat_rate']),
         "lbt_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['lbt_rate']),
         "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
-        "future_rate": convert_to_float(target=data['contract_arguments']['future_rate']),
         "inflation_rate_applied_to": convert_str_to_inflationappliedto(
             str_object=data['contract_arguments']['inflation_rate_applied_to']),
         "cum_production_split_offset": convert_list_to_array_float_or_array(data_input=data["contract_arguments"]["cum_production_split_offset"]),
@@ -1276,10 +1279,3 @@ def get_transition_split(data: dict):
             pass
 
     return result
-
-
-
-
-
-
-

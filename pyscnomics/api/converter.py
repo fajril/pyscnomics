@@ -7,7 +7,7 @@ from typing import Dict
 from pydantic import BaseModel
 import numpy as np
 
-from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales, LBT
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type
 from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime, GrossSplitRegime
 from pyscnomics.tools.helper import (get_inflation_applied_converter,
@@ -242,7 +242,7 @@ class ContractArgumentsBM(BaseModel):
     tax_regime: str
         The tax regime used in tax calculation. The options are:
         [nailed, prevailing, UU No.36 Tahun 2008, UU No.02 Tahun 2020, UU No.07 Tahun 2021]
-    tax_rate: float
+    effective_tax_rate: float
         The tax rate used for the tax payment.
     ftp_tax_regime: str
         The tax scheme used to calculate the tax payment. The options are:
@@ -260,8 +260,6 @@ class ContractArgumentsBM(BaseModel):
         The Land and Building (LBT) rate used in the calculation.
     inflation_rate: list
         The inflation rate used in the calculation.
-    future_rate: float
-        The future rate used in the ASR calculation.
     inflation_rate_applied_to: str
         The option of where the inflation will be applied to. The options are:
         [CAPEX, OPEX, CAPEX AND OPEX]
@@ -272,7 +270,7 @@ class ContractArgumentsBM(BaseModel):
     co2_revenue: str = "Addition to Oil Revenue"
     is_dmo_end_weighted: bool = False
     tax_regime: str = "nailed down"
-    tax_rate: float | list | int | None = 0.424
+    effective_tax_rate: float | list | int | None = 0.424
     ftp_tax_regime: str = "Pre PDJP No.20 Tahun 2017"
     sunk_cost_reference_year: int | None = 2021
     depr_method: str = "PSC Declining Balance"
@@ -280,7 +278,6 @@ class ContractArgumentsBM(BaseModel):
     vat_rate: list | float | int = 0.0
     lbt_rate: list | float | int = 0.0
     inflation_rate: list | float | int = 0.0
-    future_rate: float = 0.02
     inflation_rate_applied_to: str = "CAPEX"
     post_uu_22_year2001: bool = True
     cum_production_split_offset: list | float | int | None = None
@@ -339,9 +336,9 @@ class LiftingBM(BaseModel):
     prod_rate_baseline: list[float] | list[int] | None = None
 
 
-class TangibleBM(BaseModel):
+class CapitalCostBM(BaseModel):
     """
-    The BaseModel to validate the Tangible input data.
+    The BaseModel to validate the Capital Cost input data.
 
     Parameters
     ----------
@@ -350,29 +347,23 @@ class TangibleBM(BaseModel):
     end_year: int
         The end year of the project.
     cost: list[float]
-        An list representing the cost of a tangible asset.
+        An list representing the cost of a capital asset.
     expense_year: list[int]
-        An list representing the expense year of a tangible asset.
+        An list representing the expense year of a capital asset.
     cost_allocation: list[str]
-        A list representing the cost allocation of a tangible asset.
+        A list representing the cost allocation of a capital asset.
     description: list[str]
-        A list of string description regarding the associated tangible cost.
-    vat_portion: list[float]
-        The portion of 'cost' that is subject to VAT.
-        Must be a list of length equals to the length of 'cost' list.
-    vat_discount: list[float]
-        The VAT discount to apply.
-    lbt_portion: list[float]
-        The portion of 'cost' that is subject to LBT.
-        Must be a list of length equals to the length of 'cost' list.
-    lbt_discount: list[float]
-        The LBT discount to apply.
+        A list of string description regarding the capital cost.
+    tax_portion: list[float] | list[int]
+        A list representing the tax portion of a capital asset.
+    tax_discount: list[float] | list[int]
+        A list representing the tax discount of a capital asset.
     pis_year: list[int]
-        The list representing the PIS year of a tangible asset.
+        The list representing the PIS year of a capital asset.
     salvage_value: list[float]
-        The list representing the salvage value of a tangible asset.
+        The list representing the salvage value of a capital asset.
     useful_life: list[int]
-        The list representing the useful life of a tangible asset.
+        The list representing the useful life of a capital asset.
     depreciation_factor: list[float]
         The value of depreciation factor to be used in PSC DB depreciation method.
         Default value is 0.5 for the entire project duration.
@@ -386,10 +377,8 @@ class TangibleBM(BaseModel):
     expense_year: list[int]
     cost_allocation: list[str]
     description: list[str]
-    vat_portion: list[float] | list[int]
-    vat_discount: list[float] | list[int]
-    lbt_portion: list[float] | list[int]
-    lbt_discount: list[float] | list[int]
+    tax_portion: list[float] | list[int]
+    tax_discount: list[float] | list[int]
     pis_year: list[int]
     salvage_value: list[float] | list[int]
     useful_life: list[int]
@@ -414,17 +403,11 @@ class IntangibleBM(BaseModel):
     cost_allocation: list[str]
         A list representing the cost allocation of an intangible asset.
     description: list[str]
-        A list of string description regarding the associated intangible cost.
-    vat_portion: list[float]
-        The portion of 'cost' that is subject to VAT.
-        Must be a list of length equals to the length of 'cost' list.
-    vat_discount: list[float]
-        The VAT discount to apply.
-    lbt_portion: list[float]
-        The portion of 'cost' that is subject to LBT.
-        Must be a list of length equals to the length of 'cost' list.
-    lbt_discount: list[float]
-        The LBT discount to apply.
+        A list of string description regarding the intangible cost.
+    tax_portion: list[float] | list[int]
+        A list representing the tax portion of a intangible asset.
+    tax_discount: list[float] | list[int]
+        A list representing the tax discount of a intangible asset.
     """
     start_year: int
     end_year: int
@@ -432,10 +415,8 @@ class IntangibleBM(BaseModel):
     expense_year: list[int]
     cost_allocation: list[str]
     description: list[str]
-    vat_portion: list[float] | list[int]
-    vat_discount: list[float] | list[int]
-    lbt_portion: list[float] | list[int]
-    lbt_discount: list[float] | list[int]
+    tax_portion: list[float] | list[int]
+    tax_discount: list[float] | list[int]
 
 
 class OpexBM(BaseModel):
@@ -453,19 +434,13 @@ class OpexBM(BaseModel):
     cost_allocation: list[str]
         A list representing the cost allocation of an opex asset.
     description: list[str]
-        A list of string description regarding the associated opex cost.
-    vat_portion: list[float]
-        The portion of 'cost' that is subject to VAT.
-        Must be a list of length equals to the length of 'cost' list.
-    vat_discount: list[float]
-        The VAT discount to apply.
-    lbt_portion: list[float]
-        The portion of 'cost' that is subject to LBT.
-        Must be a list of length equals to the length of 'cost' list.
-    lbt_discount: list[float]
-        The LBT discount to apply.
+        A list of string description regarding opex cost.
+    tax_portion: list[float] | list[int]
+        A list representing the tax portion of an opex asset.
+    tax_discount: list[float] | list[int]
+        A list representing the tax discount of an opex asset.
     fixed_cost : list
-        An list representing the fixed cost of an OPEX asset.
+        An list representing the fixed cost of an opex asset.
     prod_rate: list
         The production rate of a particular fluid type.
     cost_per_volume: list
@@ -479,10 +454,8 @@ class OpexBM(BaseModel):
     fixed_cost: list[float] | list[int]
     prod_rate: list[float] | list[int]
     cost_per_volume: list[float] | list[int]
-    vat_portion: list[float] | list[int]
-    vat_discount: list[float] | list[int]
-    lbt_portion: list[float] | list[int]
-    lbt_discount: list[float] | list[int]
+    tax_portion: list[float] | list[int]
+    tax_discount: list[float] | list[int]
 
 
 class AsrBM(BaseModel):
@@ -502,17 +475,15 @@ class AsrBM(BaseModel):
     cost_allocation: list[str]
         A list representing the cost allocation of an ASR asset.
     description: list[str]
-        A list of string description regarding the associated intangible cost.
-    vat_portion: list[float]
-        The portion of 'cost' that is subject to VAT.
-        Must be a list of length equals to the length of 'cost' list.
-    vat_discount: list[float]
-        The VAT discount to apply.
-    lbt_portion: list[float]
-        The portion of 'cost' that is subject to LBT.
-        Must be a list of length equals to the length of 'cost' list.
-    lbt_discount: list[float]
-        The LBT discount to apply.
+        A list of string description regarding the intangible cost.
+    tax_portion: list[float] | list[int]
+        A list representing the tax portion of an ASR asset.
+    tax_discount: list[float] | list[int]
+        A list representing the tax discount of an ASR asset.
+    final_year: list[float] | list[int]
+        A list representing the final year of an ASR asset.
+    future_rate: list[float] | list[int]
+        A list representing the future rate of an ASR asset.
     """
     start_year: int
     end_year: int
@@ -520,15 +491,14 @@ class AsrBM(BaseModel):
     expense_year: list[int]
     cost_allocation: list[str]
     description: list[str]
-    vat_portion: list[float] | list[int]
-    vat_discount: list[float] | list[int]
-    lbt_portion: list[float] | list[int]
-    lbt_discount: list[float] | list[int]
-
+    tax_portion: list[float] | list[int]
+    tax_discount: list[float] | list[int]
+    final_year: list[float] | list[int]
+    future_rate: list[float] | list[int]
 
 class CostOfSalesBM(BaseModel):
     """
-    The BaseModel to validate the Intangible input data.
+    The BaseModel to validate the cost of sales input data.
 
     Parameters
     ----------
@@ -537,18 +507,64 @@ class CostOfSalesBM(BaseModel):
     end_year: int
         The end year of the project.
     cost: list[float]
-        An list representing the cost of an intangible asset.
+        An list representing the cost of sales.
     expense_year: list[int]
-        An list representing the expense year of an intangible asset.
+        An list representing the expense year of cost of sales.
     cost_allocation: list[str]
-        A list representing the cost allocation of an intangible asset.
+        A list representing the cost allocation of cost of sales.
+    description: list[str]
+        A list of string description regarding the cost of sales.
+    tax_portion: list[float] | list[int]
+        A list representing the tax portion of cost of sales.
+    tax_discount: list[float] | list[int]
+        A list representing the tax discount of cost of sales.
     """
     start_year: int
     end_year: int
     cost: list[float] | list[int]
     expense_year: list[int]
     cost_allocation: list[str]
+    description: list[str]
+    tax_portion: list[float] | list[int]
+    tax_discount: list[float] | list[int]
 
+class LbtBM(BaseModel):
+    """
+    The BaseModel to validate the Land and Building Tax (LBT) input data.
+
+    Parameters
+    ----------
+    start_year: int
+        The start year of the project.
+    end_year: int
+        The end year of the project.
+    cost: list[float]
+        An list representing the LBT cost.
+    expense_year: list[int]
+        An list representing the expense year of LBT cost.
+    cost_allocation: list[str]
+        A list representing the cost allocation of LBT cost.
+    description: list[str]
+        A list of string description regarding the LBT cost.
+    tax_portion: list[float] | list[int]
+        A list representing the tax portion of LBT.
+    tax_discount: list[float] | list[int]
+        A list representing the tax discount of LBT cost.
+    """
+    start_year: int
+    end_year: int
+    cost: list[float] | list[int]
+    expense_year: list[int]
+    cost_allocation: list[str]
+    description: list[str]
+    tax_portion: list[float] | list[int]
+    tax_discount: list[float] | list[int]
+    final_year: list[float] | list[int]
+    utilized_land_area: list[float] | list[int]
+    utilized_building_area: list[float] | list[int]
+    njop_land: list[float] | list[int]
+    njop_building: list[float] | list[int]
+    gross_revenue: list[float] | list[int]
 
 class OptimizationDictBM(BaseModel):
     """
@@ -689,14 +705,18 @@ class Data(BaseModel):
         The contract arguments in form of ContractArgumentsBM BaseModel.
     lifting: Dict[str, LiftingBM]
         The lifting input in form of LiftingBM BaseModel.
-    tangible: Dict[str, TangibleBM]
-        The tangible input in form of TangibleBM BaseModel.
+    capital: Dict[str, CapitalCostBM]
+        The capital input in form of TangibleBM BaseModel.
     intangible: Dict[str, IntangibleBM]
         The intangible input in form of IntangibleBM BaseModel.
     opex: Dict[str, OpexBM]
         The opex input in form of OpexBM BaseModel.
     asr: Dict[str, AsrBM]
         The asr input in form of AsrBM BaseModel.
+    lbt: Dict[str, AsrBM]
+        The lbt input in form of LBT BaseModel.
+    cost_of_sales: Dict[str, CosOfSalesBM]
+        The asr input in form of Cost of Sales BaseModel.
     optimization_arguments: OptimizationBM = None
         The optimization arguments in form of OptimizationBM BaseModel.
     sensitivity_arguments: SensitivityBM = None
@@ -714,10 +734,11 @@ class Data(BaseModel):
     summary_arguments: SummaryArgumentsBM
     contract_arguments: ContractArgumentsBM
     lifting: Dict[str, LiftingBM]
-    tangible: Dict[str, TangibleBM]
+    capital: Dict[str, CapitalCostBM]
     intangible: Dict[str, IntangibleBM]
     opex: Dict[str, OpexBM]
     asr: Dict[str, AsrBM]
+    lbt: Dict[str, LbtBM]
     cost_of_sales: Dict[str, CostOfSalesBM] = None
     optimization_arguments: OptimizationBM = None
     sensitivity_arguments: SensitivityBM = None
@@ -739,7 +760,7 @@ class TransitionBM(BaseModel):
         The contract arguments in form of ContractArgumentsBM BaseModel.
     lifting: Dict[str, LiftingBM]
         The lifting input in form of LiftingBM BaseModel.
-    tangible: Dict[str, TangibleBM]
+    capital: Dict[str, CapitalCostBM]
         The tangible input in form of TangibleBM BaseModel.
     intangible: Dict[str, IntangibleBM]
         The intangible input in form of IntangibleBM BaseModel.
@@ -755,7 +776,7 @@ class TransitionBM(BaseModel):
     setup: SetupBM
     contract_arguments: ContractArgumentsBM
     lifting: Dict[str, LiftingBM]
-    tangible: Dict[str, TangibleBM]
+    capital: Dict[str, CapitalCostBM]
     intangible: Dict[str, IntangibleBM]
     opex: Dict[str, OpexBM]
     asr: Dict[str, AsrBM]
@@ -927,19 +948,19 @@ def convert_dict_to_lifting(data_raw: dict) -> tuple:
 
 def convert_dict_to_capital(data_raw: dict) -> tuple:
     """
-    The function to convert a dictionary into tuple of Tangible dataclass.
+    The function to convert a dictionary into tuple of CapitalCost dataclass.
 
     Parameters
     ----------
     data_raw
-        The dictionary which will be converted into tuple of Tangible
+        The dictionary which will be converted into tuple of CapitalCost
 
     Returns
     -------
     out:
-        tuple[Tangible]
+        tuple[CapitalCost]
     """
-    tangible_list = [
+    capital = tuple([
         CapitalCost(
             start_year=data_raw[key]['start_year'],
             end_year=data_raw[key]['end_year'],
@@ -947,10 +968,8 @@ def convert_dict_to_capital(data_raw: dict) -> tuple:
             expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
             cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
             description=data_raw[key]['description'],
-            vat_portion=np.array(data_raw[key]['vat_portion']),
-            vat_discount=np.array(data_raw[key]['vat_discount']),
-            lbt_portion=np.array(data_raw[key]['lbt_portion']),
-            lbt_discount=np.array(data_raw[key]['lbt_discount']),
+            tax_portion=np.array(data_raw[key]['tax_portion'], dtype=float),
+            tax_discount=np.array(data_raw[key]['tax_discount'], dtype=float),
             pis_year=np.array(data_raw[key]['pis_year']),
             salvage_value=np.array(data_raw[key]['salvage_value']),
             useful_life=np.array(data_raw[key]['useful_life']),
@@ -958,9 +977,9 @@ def convert_dict_to_capital(data_raw: dict) -> tuple:
             is_ic_applied=data_raw[key]['is_ic_applied'],
         )
         for key in data_raw.keys()
-    ]
+    ])
 
-    return tuple(tangible_list)
+    return capital
 
 
 def convert_dict_to_intangible(data_raw: dict) -> tuple:
@@ -977,7 +996,7 @@ def convert_dict_to_intangible(data_raw: dict) -> tuple:
     out:
         tuple[Intangible]
     """
-    intangible_list = [
+    intangible = tuple([
         Intangible(
             start_year=data_raw[key]['start_year'],
             end_year=data_raw[key]['end_year'],
@@ -985,15 +1004,13 @@ def convert_dict_to_intangible(data_raw: dict) -> tuple:
             expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
             cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
             description=data_raw[key]['description'],
-            vat_portion=np.array(data_raw[key]['vat_portion'], dtype=float),
-            vat_discount=np.array(data_raw[key]['vat_discount'], dtype=float),
-            lbt_portion=np.array(data_raw[key]['lbt_portion'], dtype=float),
-            lbt_discount=np.array(data_raw[key]['lbt_discount'], dtype=float),
+            tax_portion=np.array(data_raw[key]['tax_portion'], dtype=float),
+            tax_discount=np.array(data_raw[key]['tax_discount'], dtype=float),
         )
         for key in data_raw.keys()
-    ]
+    ])
 
-    return tuple(intangible_list)
+    return intangible
 
 
 def convert_dict_to_opex(data_raw: dict) -> tuple:
@@ -1010,25 +1027,23 @@ def convert_dict_to_opex(data_raw: dict) -> tuple:
     out:
         tuple[OPEX]
     """
-    opex_list = [
+    opex = tuple([
         OPEX(
             start_year=data_raw[key]['start_year'],
             end_year=data_raw[key]['end_year'],
             expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
             cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
             description=data_raw[key]['description'],
-            vat_portion=np.array(data_raw[key]['vat_portion'], dtype=float),
-            vat_discount=np.array(data_raw[key]['vat_discount'], dtype=float),
-            lbt_portion=np.array(data_raw[key]['lbt_portion'], dtype=float),
-            lbt_discount=np.array(data_raw[key]['lbt_discount'], dtype=float),
+            tax_portion=np.array(data_raw[key]['tax_portion'], dtype=float),
+            tax_discount=np.array(data_raw[key]['tax_discount'], dtype=float),
             fixed_cost=np.array(data_raw[key]['fixed_cost'], dtype=float),
             prod_rate=np.array(data_raw[key]['prod_rate'], dtype=float),
             cost_per_volume=np.array(data_raw[key]['cost_per_volume'], dtype=float),
         )
         for key in data_raw.keys()
-    ]
+    ])
 
-    return tuple(opex_list)
+    return opex
 
 
 def convert_dict_to_asr(data_raw: dict) -> tuple:
@@ -1045,7 +1060,7 @@ def convert_dict_to_asr(data_raw: dict) -> tuple:
     out:
         tuple[ASR]
     """
-    asr_list = [
+    asr = tuple([
         ASR(
             start_year=data_raw[key]['start_year'],
             end_year=data_raw[key]['end_year'],
@@ -1053,15 +1068,54 @@ def convert_dict_to_asr(data_raw: dict) -> tuple:
             expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
             cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
             description=data_raw[key]['description'],
-            vat_portion=np.array(data_raw[key]['vat_portion'], dtype=float),
-            vat_discount=np.array(data_raw[key]['vat_discount'], dtype=float),
-            lbt_portion=np.array(data_raw[key]['lbt_portion'], dtype=float),
-            lbt_discount=np.array(data_raw[key]['lbt_discount'], dtype=float),
+            tax_portion=np.array(data_raw[key]['tax_portion'], dtype=float),
+            tax_discount=np.array(data_raw[key]['tax_discount'], dtype=float),
+            final_year=np.array(data_raw[key]['final_year'], dtype=float),
+            future_rate=np.array(
+                data_raw[key]['future_rate'],
+                dtype=float) if isinstance(data_raw[key]['future_rate'], list) else data_raw[key]['future_rate'],
         )
         for key in data_raw.keys()
-    ]
+    ])
 
-    return tuple(asr_list)
+
+    return asr
+
+def convert_dict_to_lbt(data_raw: dict) -> tuple:
+    """
+    The function to convert dictionary into tuple of LBT dataclass.
+
+    Parameters
+    ----------
+    data_raw: dict
+        The dictionary which will be converted into tuple of Land and Building Tax
+
+    Returns
+    -------
+    out:
+        tuple[Intangible]
+    """
+    lbt = tuple([
+        LBT(
+            start_year=data_raw[key]['start_year'],
+            end_year=data_raw[key]['end_year'],
+            cost=np.array(data_raw[key]['cost'], dtype=float),
+            expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
+            cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
+            description=data_raw[key]['description'],
+            tax_portion=np.array(data_raw[key]['tax_portion'], dtype=float),
+            tax_discount=np.array(data_raw[key]['tax_discount'], dtype=float),
+            final_year=np.array(data_raw[key]['final_year'], dtype=float),
+            utilized_land_area=np.array(data_raw[key]['utilized_land_area'], dtype=float),
+            utilized_building_area=np.array(data_raw[key]['utilized_building_area'], dtype=float),
+            njop_land=np.array(data_raw[key]['njop_land'], dtype=float),
+            njop_building=np.array(data_raw[key]['njop_building'], dtype=float),
+            gross_revenue=np.array(data_raw[key]['gross_revenue'], dtype=float),
+        )
+        for key in data_raw.keys()
+    ])
+
+    return lbt
 
 
 def convert_dict_to_cost_of_sales(data_raw: dict) -> tuple:
@@ -1076,19 +1130,23 @@ def convert_dict_to_cost_of_sales(data_raw: dict) -> tuple:
     Returns
     -------
     out:
-        tuple[ASR]
+        tuple[CostOfSales]
     """
-    cos_list = [
+    cos = tuple([
         CostOfSales(
             start_year=data_raw[key]['start_year'],
             end_year=data_raw[key]['end_year'],
             cost=np.array(data_raw[key]['cost'], dtype=float),
             expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
-            cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),)
+            cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
+            description=data_raw[key]['description'],
+            tax_portion=np.array(data_raw[key]['tax_portion'], dtype=float),
+            tax_discount=np.array(data_raw[key]['tax_discount'], dtype=float),
+        )
         for key in data_raw.keys()
-    ]
+    ])
 
-    return tuple(cos_list)
+    return cos
 
 
 def convert_str_to_taxsplit(str_object: str):
