@@ -84,7 +84,7 @@ class GeneralCost:
     tax_portion : np.ndarray, optional
         A NumPy array representing the portion of the cost subject to tax. If not provided,
         an array of zeros with the same shape as the project cost will be used.
-    tax_discount : float | np.ndarray, optional
+    tax_discount : float | np.ndarray
         A discount factor applied to the tax, reducing the overall tax impact. The default is 0.0.
 
     Notes
