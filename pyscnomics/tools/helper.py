@@ -1416,7 +1416,7 @@ def get_optimization_target_converter(target: str) -> OptimizationTarget | None:
 
     Returns
     -------
-    Union[OptimizationTarget, None]
+    Optional[OptimizationTarget]
         The OptimizationTarget enum value if the target is valid, or None if the target is not found.
 
     Example
