@@ -3,7 +3,7 @@ import numpy as np
 from datetime import date
 
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales, LBT
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
@@ -29,7 +29,7 @@ def adjust_rows(original_value: float | np.ndarray,
     Returns
     -------
     adjusted_values: np.ndarray
-        The array containin the adjusted value.
+        The array containing the adjusted value.
 
     """
     if isinstance(original_value, float):
@@ -48,7 +48,6 @@ def adjust_rows(original_value: float | np.ndarray,
 
 
 def adjusting_contract_arguments(arguments_dict: dict,
-                                 project_years: np.ndarray,
                                  first_contract: bool,
                                  prior_rows: np.ndarray,
                                  post_rows: np.ndarray,
@@ -59,8 +58,6 @@ def adjusting_contract_arguments(arguments_dict: dict,
     ----------
     arguments_dict: dict
         The dictionary containing the arguments of a contract.
-    project_years: np.ndarray
-        The array of the project years.
     first_contract: bool
         The condition whether the row is existed in first or second contract in Transition scheme.
     prior_rows: np.ndarray
@@ -145,16 +142,55 @@ class Transition:
     _electricity_revenue: np.ndarray = field(default=None, init=False, repr=False)
     _co2_revenue: np.ndarray = field(default=None, init=False, repr=False)
 
-    _oil_capital_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_capital_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_intangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_intangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_opex_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_opex_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_cost_of_sales_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_cost_of_sales_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    # Attributes to be defined later (associated with pre tax expenditures for each cost elements)
+    _oil_capital_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_capital_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_intangible_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_intangible_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_opex_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_opex_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_asr_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_asr_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_cost_of_sales_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_lbt_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_lbt_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes to be defined later (associated with indirect taxes for each cost element)
+    _oil_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_intangible_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_intangible_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_opex_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_opex_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_asr_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_asr_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_lbt_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_lbt_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes to be defined later (associated with pre tax expenditures for each cost elements)
+    _oil_capital_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_capital_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_intangible_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_intangible_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_opex_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_opex_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_asr_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_asr_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_lbt_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_lbt_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_cost_of_sales_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes to be defined later (associated with total expenditures and indirect taxes for each fluid)
+    _oil_total_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_total_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_total_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_total_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_total_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_total_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
 
     _oil_wap_price: np.ndarray = field(default=None, init=False, repr=False)
     _gas_wap_price: np.ndarray = field(default=None, init=False, repr=False)
@@ -183,6 +219,7 @@ class Transition:
     _gas_undepreciated_asset: float = field(default=None, init=False, repr=False)
 
     # Consolidated Attributes
+    _consolidated_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_undepreciated_asset: np.ndarray | float = field(default=None, init=False, repr=False)
@@ -202,6 +239,7 @@ class Transition:
             opex: tuple,
             asr: tuple,
             cost_of_sales: tuple,
+            lbt:tuple
     ):
 
         # Condition where only one fluid is produced
@@ -228,6 +266,7 @@ class Transition:
                 opex=opex,
                 asr_cost=asr,
                 cost_of_sales=cost_of_sales,
+                lbt_cost=lbt,
                 oil_ftp_is_available=contract.oil_ftp_is_available,
                 oil_ftp_is_shared=contract.oil_ftp_is_shared,
                 oil_ftp_portion=contract.oil_ftp_portion,
@@ -262,6 +301,7 @@ class Transition:
                 opex=opex,
                 asr_cost=asr,
                 cost_of_sales=cost_of_sales,
+                lbt_cost=lbt,
                 field_status=contract.field_status,
                 field_loc=contract.field_loc,
                 res_depth=contract.res_depth,
@@ -300,8 +340,8 @@ class Transition:
             additional_year = 0
             end_date_condition = 0
 
-        project_years_trans = np.arange(start_date_trans.year, end_date_trans.year + 1 + additional_year)
-        project_duration_trans = end_date_trans.year - start_date_trans.year + 1 + additional_year
+        # project_years_trans = np.arange(start_date_trans.year, end_date_trans.year + 1 + additional_year)
+        # project_duration_trans = end_date_trans.year - start_date_trans.year + 1 + additional_year
 
         # Defining the array of years between the prior contract to the new contract
         years_to_new = np.arange(self.contract1.end_date.year + 1,
@@ -325,93 +365,125 @@ class Transition:
         # Modifying the contract1
         # Changing the start_date and end_date of contract1
         new_lifting_1st = [
-            Lifting(start_year=start_date_trans.year,
-                    end_year=end_date_trans.year,
-                    lifting_rate=np.concatenate((lift.lifting_rate, zeros_to_new)),
-                    price=np.concatenate((lift.price, zeros_to_new)),
-                    prod_year=np.concatenate((lift.prod_year, years_to_new)),
-                    fluid_type=lift.fluid_type,
-                    ghv=np.concatenate((lift.ghv, zeros_to_new)),
-                    prod_rate=np.concatenate((lift.prod_rate, zeros_to_new)),
-                    prod_rate_baseline=np.concatenate((lift.prod_rate_baseline, zeros_to_new)))
+            Lifting(
+                start_year=start_date_trans.year,
+                end_year=end_date_trans.year,
+                lifting_rate=np.concatenate((lift.lifting_rate, zeros_to_new)),
+                price=np.concatenate((lift.price, zeros_to_new)),
+                prod_year=np.concatenate((lift.prod_year, years_to_new)),
+                fluid_type=lift.fluid_type,
+                ghv=np.concatenate((lift.ghv, zeros_to_new)),
+                prod_rate=np.concatenate((lift.prod_rate, zeros_to_new)),
+                prod_rate_baseline=np.concatenate((lift.prod_rate_baseline, zeros_to_new))
+            )
             for lift in self.contract1.lifting
         ]
 
         # Concatenating the zeros_to_new and years_to_new to the contract1 tangible
         new_tang_1st = [
-            CapitalCost(start_year=start_date_trans.year,
-                        end_year=end_date_trans.year,
-                        cost=np.concatenate((tang.cost, zeros_to_new)),
-                        expense_year=np.concatenate((tang.expense_year, years_to_new)).astype(int),
-                        cost_allocation=tang.cost_allocation + fluid_to_new,
-                        description=tang.description + desc_to_new,
-                        vat_portion=np.concatenate((tang.vat_portion, zeros_to_new)),
-                        vat_discount=np.concatenate((tang.vat_discount, zeros_to_new)),
-                        lbt_portion=np.concatenate((tang.lbt_portion, zeros_to_new)),
-                        lbt_discount=np.concatenate((tang.lbt_discount, zeros_to_new)),
-                        pis_year=np.concatenate((tang.pis_year, zeros_to_new)).astype(int),
-                        salvage_value=np.concatenate((tang.salvage_value, zeros_to_new)),
-                        useful_life=np.concatenate((tang.useful_life, zeros_to_new)),
-                        depreciation_factor=np.concatenate((tang.depreciation_factor, zeros_to_new)),
-                        is_ic_applied=tang.is_ic_applied + ic_to_new,)
+            CapitalCost(
+                start_year=start_date_trans.year,
+                end_year=end_date_trans.year,
+                cost=np.concatenate((tang.cost, zeros_to_new)),
+                expense_year=np.concatenate((tang.expense_year, years_to_new)).astype(int),
+                cost_allocation=tang.cost_allocation + fluid_to_new,
+                description=tang.description + desc_to_new,
+                tax_portion=np.concatenate((tang.tax_portion, zeros_to_new)),
+                tax_discount=np.concatenate((tang.tax_discount, zeros_to_new)),
+                pis_year=np.concatenate((tang.pis_year, zeros_to_new)).astype(int),
+                salvage_value=np.concatenate((tang.salvage_value, zeros_to_new)),
+                useful_life=np.concatenate((tang.useful_life, zeros_to_new)),
+                depreciation_factor=np.concatenate((tang.depreciation_factor, zeros_to_new)),
+                is_ic_applied=tang.is_ic_applied + ic_to_new,
+            )
             for tang in self.contract1.capital_cost
         ]
 
         # Concatenating the zeros_to_new and years_to_new to the contract1 intangible
         new_intang_1st = [
-            Intangible(start_year=start_date_trans.year,
-                       end_year=end_date_trans.year,
-                       cost=np.concatenate((intang.cost, zeros_to_new)),
-                       expense_year=np.concatenate((intang.expense_year, years_to_new)).astype(int),
-                       cost_allocation=intang.cost_allocation + fluid_to_new,
-                       description=intang.description + desc_to_new,
-                       vat_portion=np.concatenate((intang.vat_portion, zeros_to_new)),
-                       vat_discount=np.concatenate((intang.vat_discount, zeros_to_new)),
-                       lbt_portion=np.concatenate((intang.lbt_portion, zeros_to_new)),
-                       lbt_discount=np.concatenate((intang.lbt_discount, zeros_to_new)))
+            Intangible(
+                start_year=start_date_trans.year,
+                end_year=end_date_trans.year,
+                cost=np.concatenate((intang.cost, zeros_to_new)),
+                expense_year=np.concatenate((intang.expense_year, years_to_new)).astype(int),
+                cost_allocation=intang.cost_allocation + fluid_to_new,
+                description=intang.description + desc_to_new,
+                tax_portion=np.concatenate((intang.tax_portion, zeros_to_new)),
+                tax_discount=np.concatenate((intang.tax_discount, zeros_to_new)),
+            )
             for intang in self.contract1.intangible_cost
         ]
 
         # Concatenating the zeros_to_new and years_to_new to the contract1 opex
         new_opex_1st = [
-            OPEX(start_year=start_date_trans.year,
-                 end_year=end_date_trans.year,
-                 expense_year=np.concatenate((opx.expense_year, years_to_new)).astype(int),
-                 cost_allocation=opx.cost_allocation + fluid_to_new,
-                 description=opx.description + desc_to_new,
-                 fixed_cost=np.concatenate((opx.fixed_cost, zeros_to_new)),
-                 prod_rate=np.concatenate((opx.prod_rate, zeros_to_new)),
-                 cost_per_volume=np.concatenate((opx.cost_per_volume, zeros_to_new)),
-                 vat_portion=np.concatenate((opx.vat_portion, zeros_to_new)),
-                 vat_discount=np.concatenate((opx.vat_discount, zeros_to_new)),
-                 lbt_portion=np.concatenate((opx.lbt_portion, zeros_to_new)),
-                 lbt_discount=np.concatenate((opx.lbt_discount, zeros_to_new)),)
+            OPEX(
+                start_year=start_date_trans.year,
+                end_year=end_date_trans.year,
+                expense_year=np.concatenate((opx.expense_year, years_to_new)).astype(int),
+                cost_allocation=opx.cost_allocation + fluid_to_new,
+                description=opx.description + desc_to_new,
+                fixed_cost=np.concatenate((opx.fixed_cost, zeros_to_new)),
+                prod_rate=np.concatenate((opx.prod_rate, zeros_to_new)),
+                cost_per_volume=np.concatenate((opx.cost_per_volume, zeros_to_new)),
+                tax_portion=np.concatenate((opx.tax_portion, zeros_to_new)),
+                tax_discount=np.concatenate((opx.tax_discount, zeros_to_new)),
+
+            )
             for opx in self.contract1.opex
         ]
 
         # Concatenating the zeros_to_new and years_to_new to the contract1 asr
         new_asr_1st = [
-            ASR(start_year=start_date_trans.year,
+            ASR(
+                start_year=start_date_trans.year,
                 end_year=end_date_trans.year,
                 cost=np.concatenate((asr.cost, zeros_to_new)),
                 expense_year=np.concatenate((asr.expense_year, years_to_new)).astype(int),
                 cost_allocation=asr.cost_allocation + fluid_to_new,
                 description=asr.description + desc_to_new,
-                vat_portion=np.concatenate((asr.vat_portion, zeros_to_new)),
-                vat_discount=np.concatenate((asr.vat_discount, zeros_to_new)),
-                lbt_portion=np.concatenate((asr.lbt_portion, zeros_to_new)),
-                lbt_discount=np.concatenate((asr.lbt_discount, zeros_to_new)))
+                tax_portion=np.concatenate((asr.tax_portion, zeros_to_new)),
+                tax_discount=np.concatenate((asr.tax_discount, zeros_to_new)),
+                final_year=np.concatenate((asr.final_year, years_to_new)),
+                future_rate=np.concatenate((asr.future_rate, zeros_to_new)),
+            )
             for asr in self.contract1.asr_cost
         ]
 
         # Concatenating the zeros_to_new and years_to_new to the contract1 Cost of Sales
         new_cost_of_sales_1st = [
-            CostOfSales(start_year=start_date_trans.year,
-                        end_year=end_date_trans.year,
-                        cost=np.concatenate((cos.cost, zeros_to_new)),
-                        expense_year=np.concatenate((cos.expense_year, years_to_new)).astype(int),
-                        cost_allocation=cos.cost_allocation + fluid_to_new,)
+            CostOfSales(
+                start_year=start_date_trans.year,
+                end_year=end_date_trans.year,
+                cost=np.concatenate((cos.cost, zeros_to_new)),
+                expense_year=np.concatenate((cos.expense_year, years_to_new)).astype(int),
+                cost_allocation=cos.cost_allocation + fluid_to_new,
+                description=cos.description + desc_to_new,
+                tax_portion=np.concatenate((cos.tax_portion, zeros_to_new)),
+                tax_discount=np.concatenate((cos.tax_discount, zeros_to_new)),
+            )
             for cos in self.contract1.cost_of_sales
+        ]
+
+        # Concatenating the zeros_to_new and years_to_new to the contract1 Land and Building Tax
+        new_lbt_1st = [
+            LBT(
+                start_year=start_date_trans.year,
+                end_year=end_date_trans.year,
+                cost=np.concatenate((bt.cost, zeros_to_new)),
+                expense_year=np.concatenate((bt.expense_year, years_to_new)).astype(int),
+                cost_allocation=bt.cost_allocation + fluid_to_new,
+                description=bt.description + desc_to_new,
+                tax_portion=np.concatenate((bt.tax_portion, zeros_to_new)),
+                tax_discount=np.concatenate((bt.tax_discount, zeros_to_new)),
+                final_year=np.concatenate((bt.final_year, years_to_new)),
+                utilized_land_area=np.concatenate((bt.utilized_land_area, zeros_to_new)),
+                utilized_building_area=np.concatenate((bt.utilized_building_area, zeros_to_new)),
+                njop_land=np.concatenate((bt.njop_land, zeros_to_new)),
+                njop_building=np.concatenate((bt.njop_building, zeros_to_new)),
+                gross_revenue=np.concatenate((bt.gross_revenue, zeros_to_new)),
+
+            )
+            for bt in self.contract1.lbt_cost
         ]
 
         # Modifying the contract2
@@ -433,78 +505,104 @@ class Transition:
 
         # Concatenating the zeros_to_new and years_to_new to the contract2 tangible
         new_tang_2nd = [
-            CapitalCost(start_year=start_date_trans.year,
-                        end_year=end_date_trans.year,
-                        cost=np.concatenate((zeros_to_prior, tang.cost)),
-                        expense_year=np.concatenate((years_to_prior, tang.expense_year)).astype(int),
-                        cost_allocation=fluid_to_prior + tang.cost_allocation,
-                        description=desc_to_prior + tang.description,
-                        vat_portion=np.concatenate((zeros_to_prior, tang.vat_portion)),
-                        vat_discount=np.concatenate((zeros_to_prior, tang.vat_discount)),
-                        lbt_portion=np.concatenate((zeros_to_prior, tang.lbt_portion)),
-                        lbt_discount=np.concatenate((zeros_to_prior, tang.lbt_discount)),
-                        pis_year=np.concatenate((zeros_to_prior, tang.pis_year)).astype(int),
-                        salvage_value=np.concatenate((zeros_to_prior, tang.salvage_value)),
-                        useful_life=np.concatenate((zeros_to_prior, tang.useful_life)),
-                        depreciation_factor=np.concatenate((zeros_to_prior, tang.depreciation_factor)),
-                        is_ic_applied=ic_to_prior + tang.is_ic_applied)
+            CapitalCost(
+                start_year=start_date_trans.year,
+                end_year=end_date_trans.year,
+                cost=np.concatenate((zeros_to_prior, tang.cost)),
+                expense_year=np.concatenate((years_to_prior, tang.expense_year)).astype(int),
+                cost_allocation=fluid_to_prior + tang.cost_allocation,
+                description=desc_to_prior + tang.description,
+                tax_portion=np.concatenate((zeros_to_prior, tang.tax_portion)),
+                tax_discount=np.concatenate((zeros_to_prior, tang.tax_discount)),
+                pis_year=np.concatenate((zeros_to_prior, tang.pis_year)).astype(int),
+                salvage_value=np.concatenate((zeros_to_prior, tang.salvage_value)),
+                useful_life=np.concatenate((zeros_to_prior, tang.useful_life)),
+                depreciation_factor=np.concatenate((zeros_to_prior, tang.depreciation_factor)),
+                is_ic_applied=ic_to_prior + tang.is_ic_applied
+            )
             for tang in self.contract2.capital_cost
         ]
         # Concatenating the zeros_to_new and years_to_new to the contract2 intangible
         new_intang_2nd = [
-            Intangible(start_year=start_date_trans.year,
-                       end_year=end_date_trans.year,
-                       cost=np.concatenate((zeros_to_prior, intang.cost)),
-                       expense_year=np.concatenate((years_to_prior, intang.expense_year)).astype(int),
-                       cost_allocation=fluid_to_prior + intang.cost_allocation,
-                       description=desc_to_prior + intang.description,
-                       vat_portion=np.concatenate((zeros_to_prior, intang.vat_portion)),
-                       vat_discount=np.concatenate((zeros_to_prior, intang.vat_discount)),
-                       lbt_portion=np.concatenate((zeros_to_prior, intang.lbt_portion)),
-                       lbt_discount=np.concatenate((zeros_to_prior, intang.lbt_discount)))
+            Intangible(
+                start_year=start_date_trans.year,
+                end_year=end_date_trans.year,
+                cost=np.concatenate((zeros_to_prior, intang.cost)),
+                expense_year=np.concatenate((years_to_prior, intang.expense_year)).astype(int),
+                cost_allocation=fluid_to_prior + intang.cost_allocation,
+                description=desc_to_prior + intang.description,
+                tax_portion=np.concatenate((zeros_to_prior, intang.tax_portion)),
+                tax_discount=np.concatenate((zeros_to_prior, intang.tax_discount)),
+            )
             for intang in self.contract2.intangible_cost
         ]
 
         # Concatenating the zeros_to_new and years_to_new to the contract2 opex
         new_opex_2nd = [
-            OPEX(start_year=start_date_trans.year,
-                 end_year=end_date_trans.year,
-                 expense_year=np.concatenate((years_to_prior, opx.expense_year)).astype(int),
-                 cost_allocation=fluid_to_prior + opx.cost_allocation,
-                 description=desc_to_prior + opx.description,
-                 fixed_cost=np.concatenate((zeros_to_prior, opx.fixed_cost)),
-                 prod_rate=np.concatenate((zeros_to_prior, opx.prod_rate)),
-                 cost_per_volume=np.concatenate((zeros_to_prior, opx.cost_per_volume)),
-                 vat_portion=np.concatenate((zeros_to_prior, opx.vat_portion)),
-                 vat_discount=np.concatenate((zeros_to_prior, opx.vat_discount)),
-                 lbt_portion=np.concatenate((zeros_to_prior, opx.lbt_portion)),
-                 lbt_discount=np.concatenate((zeros_to_prior, opx.lbt_discount)))
+            OPEX(
+                start_year=start_date_trans.year,
+                end_year=end_date_trans.year,
+                expense_year=np.concatenate((years_to_prior, opx.expense_year)).astype(int),
+                cost_allocation=fluid_to_prior + opx.cost_allocation,
+                description=desc_to_prior + opx.description,
+                tax_portion=np.concatenate((years_to_prior, opx.tax_portion)).astype(int),
+                tax_discount=np.concatenate((years_to_prior, opx.tax_discount)).astype(int),
+                fixed_cost=np.concatenate((zeros_to_prior, opx.fixed_cost)),
+                prod_rate=np.concatenate((zeros_to_prior, opx.prod_rate)),
+                cost_per_volume=np.concatenate((zeros_to_prior, opx.cost_per_volume)),
+            )
             for opx in self.contract2.opex
         ]
 
         # Concatenating the zeros_to_new and years_to_new to the contract2 asr
         new_asr_2nd = [
-            ASR(start_year=start_date_trans.year,
+            ASR(
+                start_year=start_date_trans.year,
                 end_year=end_date_trans.year,
                 cost=np.concatenate((zeros_to_prior, asr.cost)),
                 expense_year=np.concatenate((years_to_prior, asr.expense_year)).astype(int),
                 cost_allocation=fluid_to_prior + asr.cost_allocation,
                 description=desc_to_prior + asr.description,
-                vat_portion=np.concatenate((zeros_to_prior, asr.vat_portion)),
-                vat_discount=np.concatenate((zeros_to_prior, asr.vat_discount)),
-                lbt_portion=np.concatenate((zeros_to_prior, asr.lbt_portion)),
-                lbt_discount=np.concatenate((zeros_to_prior, asr.lbt_discount)))
+                tax_portion=np.concatenate((zeros_to_prior, asr.tax_portion)),
+                tax_discount=np.concatenate((zeros_to_prior, asr.tax_discount)),
+                final_year=np.concatenate((years_to_prior, asr.final_year)),
+                future_rate=np.concatenate((zeros_to_prior, asr.future_rate)),
+            )
             for asr in self.contract2.asr_cost
         ]
 
         # Concatenating the zeros_to_new and years_to_new to the contract2 Cost Of Sales
         new_cost_of_sales_2nd = [
-            CostOfSales(start_year=start_date_trans.year,
-                        end_year=end_date_trans.year,
-                        cost=np.concatenate((zeros_to_prior, cos.cost)),
-                        expense_year=np.concatenate((years_to_prior, cos.expense_year)).astype(int),
-                        cost_allocation=fluid_to_prior + cos.cost_allocation,)
+            CostOfSales(
+                start_year=start_date_trans.year,
+                end_year=end_date_trans.year,
+                cost=np.concatenate((zeros_to_prior, cos.cost)),
+                expense_year=np.concatenate((years_to_prior, cos.expense_year)).astype(int),
+                cost_allocation=fluid_to_prior + cos.cost_allocation,
+                tax_portion=np.concatenate((zeros_to_prior, cos.tax_portion)),
+                tax_discount=np.concatenate((zeros_to_prior, cos.tax_discount)),
+            )
             for cos in self.contract2.asr_cost
+        ]
+
+        # Concatenating the zeros_to_new and years_to_new to the contract2 Land and Building Tax
+        new_lbt_2nd = [
+            LBT(
+                start_year=start_date_trans.year,
+                end_year=end_date_trans.year,
+                cost=np.concatenate((zeros_to_prior, bt.cost)),
+                expense_year=np.concatenate((years_to_prior, bt.expense_year)).astype(int),
+                cost_allocation=fluid_to_prior + bt.cost_allocation,
+                tax_portion=np.concatenate((zeros_to_prior, bt.tax_portion)),
+                tax_discount=np.concatenate((zeros_to_prior, bt.tax_discount)),
+                final_year=np.concatenate((years_to_new, bt.final_year)),
+                utilized_land_area=np.concatenate((zeros_to_prior, bt.utilized_land_area)),
+                utilized_building_area=np.concatenate((zeros_to_prior, bt.utilized_building_area)),
+                njop_land=np.concatenate((zeros_to_prior, bt.njop_land)),
+                njop_building=np.concatenate((zeros_to_prior, bt.njop_building)),
+                gross_revenue=np.concatenate((zeros_to_prior, bt.gross_revenue)),
+            )
+            for bt in self.contract2.lbt_cost
         ]
 
         # Parsing the attributes to the new object of contract
@@ -518,6 +616,7 @@ class Transition:
             opex=tuple(new_opex_1st),
             asr=tuple(new_asr_1st),
             cost_of_sales=tuple(new_cost_of_sales_1st),
+            lbt=tuple(new_lbt_1st)
         )
 
         contract2_new = self._parse_dataclass(
@@ -530,20 +629,21 @@ class Transition:
             opex=tuple(new_opex_2nd),
             asr=tuple(new_asr_2nd),
             cost_of_sales=tuple(new_cost_of_sales_2nd),
+            lbt=tuple(new_lbt_2nd)
         )
 
         # Adjusting the contract arguments
-        new_argument_contract1 = adjusting_contract_arguments(arguments_dict=self.argument_contract1,
-                                                              project_years=project_years_trans,
-                                                              first_contract=True,
-                                                              prior_rows=zeros_to_prior,
-                                                              post_rows=zeros_to_new,)
+        new_argument_contract1 = adjusting_contract_arguments(
+            arguments_dict=self.argument_contract1,
+            first_contract=True,
+            prior_rows=zeros_to_prior,
+            post_rows=zeros_to_new,)
 
-        new_argument_contract2 = adjusting_contract_arguments(arguments_dict=self.argument_contract2,
-                                                              project_years=project_years_trans,
-                                                              first_contract=False,
-                                                              prior_rows=zeros_to_prior,
-                                                              post_rows=zeros_to_new,)
+        new_argument_contract2 = adjusting_contract_arguments(
+            arguments_dict=self.argument_contract2,
+            first_contract=False,
+            prior_rows=zeros_to_prior,
+            post_rows=zeros_to_new,)
 
         # Executing the new contract
         # for i in self.argument_contract1.keys():
@@ -584,14 +684,12 @@ class Transition:
             cr_cap_rate=1.0)
 
         # Calculate taxable income after considering transferred unrecoverable cost from contract1
-        taxable_income_trans = CostRecovery._get_ets_before_transfer(revenue=contract2_new._consolidated_taxable_income,
-                                                                     ftp_ctr=np.zeros_like(contract2_new.project_years,
-                                                                                           dtype=float),
-                                                                     ftp_gov=np.zeros_like(contract2_new.project_years,
-                                                                                           dtype=float),
-                                                                     ic=np.zeros_like(contract2_new.project_years,
-                                                                                      dtype=float),
-                                                                     cost_recovery=cost_recovery_trans)
+        taxable_income_trans = CostRecovery._get_ets_before_transfer(
+            revenue=contract2_new._consolidated_taxable_income,
+            ftp_ctr=np.zeros_like(contract2_new.project_years,dtype=float),
+            ftp_gov=np.zeros_like(contract2_new.project_years,dtype=float),
+            ic=np.zeros_like(contract2_new.project_years,dtype=float),
+            cost_recovery=cost_recovery_trans)
 
         # Calculate tax payment of adjusted taxable income
         tax_payment_transition = taxable_income_trans * contract2_new._tax_rate_arr
@@ -652,39 +750,186 @@ class Transition:
                              self._contract2_transitioned._co2_revenue)
 
         # Tangible
-        self._oil_capital_expenditures = (self._contract1_transitioned._oil_capital_expenditures +
-                                          self._contract2_transitioned._oil_capital_expenditures)
+        self._oil_capital_expenditures_post_tax = (
+                self._contract1_transitioned._oil_capital_expenditures_post_tax +
+                self._contract2_transitioned._oil_capital_expenditures_post_tax
+        )
 
-        self._gas_capital_expenditures = (self._contract1_transitioned._gas_capital_expenditures +
-                                          self._contract2_transitioned._gas_capital_expenditures)
+        self._gas_capital_expenditures_post_tax = (
+                self._contract1_transitioned._gas_capital_expenditures_post_tax +
+                self._contract2_transitioned._gas_capital_expenditures_post_tax
+        )
+
+        self._oil_capital_expenditures_pre_tax = (
+                self._contract1_transitioned._oil_capital_expenditures_pre_tax +
+                self._contract2_transitioned._oil_capital_expenditures_pre_tax
+        )
+
+        self._gas_capital_expenditures_pre_tax = (
+                self._contract1_transitioned._gas_capital_expenditures_pre_tax +
+                self._contract2_transitioned._gas_capital_expenditures_pre_tax
+        )
 
         # Intangible
-        self._oil_intangible_expenditures = (self._contract1_transitioned._oil_intangible_expenditures +
-                                             self._contract2_transitioned._oil_intangible_expenditures)
+        self._oil_intangible_expenditures_post_tax = (
+                self._contract1_transitioned._oil_intangible_expenditures_post_tax +
+                self._contract2_transitioned._oil_intangible_expenditures_post_tax
+        )
 
-        self._gas_intangible_expenditures = (self._contract1_transitioned._gas_intangible_expenditures +
-                                             self._contract2_transitioned._gas_intangible_expenditures)
+        self._gas_intangible_expenditures_post_tax = (
+                self._contract1_transitioned._gas_intangible_expenditures_post_tax +
+                self._contract2_transitioned._gas_intangible_expenditures_post_tax
+        )
+
+        self._oil_intangible_expenditures_pre_tax = (
+                self._contract1_transitioned._oil_intangible_expenditures_pre_tax +
+                self._contract2_transitioned._oil_intangible_expenditures_pre_tax
+        )
+
+        self._gas_intangible_expenditures_pre_tax = (
+                self._contract1_transitioned._gas_intangible_expenditures_pre_tax +
+                self._contract2_transitioned._gas_intangible_expenditures_pre_tax
+        )
 
         # Opex
-        self._oil_opex_expenditures = (self._contract1_transitioned._oil_opex_expenditures +
-                                       self._contract2_transitioned._oil_opex_expenditures)
+        self._oil_opex_expenditures_post_tax = (
+                self._contract1_transitioned._oil_opex_expenditures_post_tax +
+                self._contract2_transitioned._oil_opex_expenditures_post_tax
+        )
 
-        self._gas_opex_expenditures = (self._contract1_transitioned._gas_opex_expenditures +
-                                       self._contract2_transitioned._gas_opex_expenditures)
+        self._gas_opex_expenditures_post_tax = (
+                self._contract1_transitioned._gas_opex_expenditures_post_tax +
+                self._contract2_transitioned._gas_opex_expenditures_post_tax
+        )
+
+        self._oil_opex_expenditures_pre_tax = (
+                self._contract1_transitioned._oil_opex_expenditures_pre_tax +
+                self._contract2_transitioned._oil_opex_expenditures_pre_tax
+        )
+
+        self._gas_opex_expenditures_pre_tax = (
+                self._contract1_transitioned._gas_opex_expenditures_pre_tax +
+                self._contract2_transitioned._gas_opex_expenditures_pre_tax
+        )
 
         # ASR
-        self._oil_asr_expenditures = (self._contract1_transitioned._oil_asr_expenditures +
-                                      self._contract2_transitioned._oil_asr_expenditures)
+        self._oil_asr_expenditures_post_tax = (
+                self._contract1_transitioned._oil_asr_expenditures_post_tax +
+                self._contract2_transitioned._oil_asr_expenditures_post_tax
+        )
 
-        self._gas_asr_expenditures = (self._contract1_transitioned._gas_asr_expenditures +
-                                      self._contract2_transitioned._gas_asr_expenditures)
+        self._gas_asr_expenditures_post_tax = (
+                self._contract1_transitioned._gas_asr_expenditures_post_tax +
+                self._contract2_transitioned._gas_asr_expenditures_post_tax
+        )
+
+        self._oil_asr_expenditures_pre_tax = (
+                self._contract1_transitioned._oil_asr_expenditures_pre_tax +
+                self._contract2_transitioned._oil_asr_expenditures_pre_tax
+        )
+
+        self._gas_asr_expenditures_pre_tax = (
+                self._contract1_transitioned._gas_asr_expenditures_pre_tax +
+                self._contract2_transitioned._gas_asr_expenditures_pre_tax
+        )
 
         # Cost Of Sales
-        self._oil_cost_of_sales_expenditures = (self._contract1_transitioned._oil_cost_of_sales_expenditures +
-                                                self._contract2_transitioned._oil_cost_of_sales_expenditures)
+        self._oil_cost_of_sales_expenditures_post_tax = (
+                self._contract1_transitioned._oil_cost_of_sales_expenditures_post_tax +
+                self._contract2_transitioned._oil_cost_of_sales_expenditures_post_tax
+        )
 
-        self._gas_cost_of_sales_expenditures = (self._contract1_transitioned._gas_cost_of_sales_expenditures +
-                                                self._contract2_transitioned._gas_cost_of_sales_expenditures)
+        self._gas_cost_of_sales_expenditures_post_tax = (
+                self._contract1_transitioned._gas_cost_of_sales_expenditures_post_tax +
+                self._contract2_transitioned._gas_cost_of_sales_expenditures_post_tax
+        )
+
+        self._oil_cost_of_sales_expenditures_pre_tax = (
+                self._contract1_transitioned._oil_cost_of_sales_expenditures_post_tax +
+                self._contract2_transitioned._oil_cost_of_sales_expenditures_post_tax
+        )
+
+        self._gas_cost_of_sales_expenditures_pre_tax = (
+                self._contract1_transitioned._gas_cost_of_sales_expenditures_pre_tax +
+                self._contract2_transitioned._gas_cost_of_sales_expenditures_pre_tax
+        )
+
+        # Land and Building Tax
+        self._oil_lbt_expenditures_post_tax = (
+                self._contract1_transitioned._oil_lbt_expenditures_post_tax +
+                self._contract2_transitioned._oil_lbt_expenditures_post_tax
+        )
+
+        self._gas_lbt_expenditures_post_tax = (
+                self._contract1_transitioned._gas_lbt_expenditures_post_tax +
+                self._contract2_transitioned._gas_lbt_expenditures_post_tax
+        )
+
+        self._oil_lbt_expenditures_pre_tax = (
+                self._contract1_transitioned._oil_lbt_expenditures_pre_tax +
+                self._contract2_transitioned._oil_lbt_expenditures_pre_tax
+        )
+
+        self._gas_lbt_expenditures_pre_tax = (
+                self._contract1_transitioned._gas_lbt_expenditures_pre_tax +
+                self._contract2_transitioned._gas_lbt_expenditures_pre_tax
+        )
+
+        # Indirect Taxes
+        self._oil_capital_indirect_tax = (self._contract1_transitioned._oil_capital_indirect_tax +
+                                          self._contract2_transitioned._oil_capital_indirect_tax)
+
+        self._gas_capital_indirect_tax = (self._contract1_transitioned._gas_capital_indirect_tax +
+                                          self._contract2_transitioned._gas_capital_indirect_tax)
+
+        self._oil_intangible_indirect_tax = (self._contract1_transitioned._oil_intangible_indirect_tax +
+                                             self._contract2_transitioned._oil_intangible_indirect_tax)
+
+        self._gas_intangible_indirect_tax = (self._contract1_transitioned._gas_intangible_indirect_tax +
+                                             self._contract2_transitioned._gas_intangible_indirect_tax)
+
+        self._oil_opex_indirect_tax = (self._contract1_transitioned._oil_opex_indirect_tax +
+                                       self._contract2_transitioned._oil_opex_indirect_tax)
+
+        self._gas_opex_indirect_tax = (self._contract1_transitioned._gas_opex_indirect_tax +
+                                       self._contract2_transitioned._gas_opex_indirect_tax)
+
+        self._oil_asr_indirect_tax = (self._contract1_transitioned._oil_asr_indirect_tax +
+                                      self._contract2_transitioned._oil_asr_indirect_tax)
+
+        self._gas_asr_indirect_tax = (self._contract1_transitioned._gas_asr_indirect_tax +
+                                      self._contract2_transitioned._gas_asr_indirect_tax)
+
+        self._oil_lbt_indirect_tax = (self._contract1_transitioned._oil_lbt_indirect_tax +
+                                      self._contract2_transitioned._oil_lbt_indirect_tax)
+
+        self._gas_lbt_indirect_tax = (self._contract1_transitioned._gas_lbt_indirect_tax +
+                                      self._contract2_transitioned._gas_lbt_indirect_tax)
+
+        self._oil_cost_of_sales_indirect_tax = (self._contract1_transitioned._oil_cost_of_sales_indirect_tax +
+                                                self._contract2_transitioned._oil_cost_of_sales_indirect_tax)
+
+        self._gas_cost_of_sales_indirect_tax = (self._contract1_transitioned._gas_cost_of_sales_indirect_tax +
+                                                self._contract2_transitioned._gas_cost_of_sales_indirect_tax)
+
+        # Total indirect taxes for OIL and GAS
+        self._oil_total_indirect_tax = (
+                self._oil_capital_indirect_tax
+                + self._oil_intangible_indirect_tax
+                + self._oil_opex_indirect_tax
+                + self._oil_asr_indirect_tax
+                + self._oil_lbt_indirect_tax
+                + self._oil_cost_of_sales_indirect_tax
+        )
+
+        self._gas_total_indirect_tax = (
+                self._gas_capital_indirect_tax
+                + self._gas_intangible_indirect_tax
+                + self._gas_opex_indirect_tax
+                + self._gas_asr_indirect_tax
+                + self._gas_lbt_indirect_tax
+                + self._gas_cost_of_sales_indirect_tax
+        )
 
         # WAP Price
         self._oil_wap_price = self._contract2_transitioned._oil_wap_price
@@ -694,10 +939,8 @@ class Transition:
         self._co2_wap_price = self._contract2_transitioned._co2_wap_price
 
         # Undepreciated Asset
-        self._oil_undepreciated_asset = (self.contract1._oil_undepreciated_asset +
-                                         self.contract2._oil_undepreciated_asset)
-        self._gas_undepreciated_asset = (self.contract1._gas_undepreciated_asset +
-                                         self.contract2._gas_undepreciated_asset)
+        self._oil_undepreciated_asset = float(contract1_new._oil_undepreciated_asset + contract2_new._oil_undepreciated_asset)
+        self._gas_undepreciated_asset = float(contract1_new._gas_undepreciated_asset + contract2_new._gas_undepreciated_asset)
         self._consolidated_undepreciated_asset = self._oil_undepreciated_asset + self._gas_undepreciated_asset
 
         # Sunk Cost
@@ -843,6 +1086,9 @@ class Transition:
         # Consolidated Government Take
         self._consolidated_government_take = (self._contract1_transitioned._consolidated_government_take +
                                               self._contract2_transitioned._consolidated_government_take)
+
+        # Consolidated Indirect Taxes
+        self._consolidated_indirect_tax = self._oil_total_indirect_tax + self._gas_total_indirect_tax
 
         # Project Years
         self.project_years = np.copy(self._contract1_transitioned.project_years)

@@ -13,7 +13,6 @@ from pyscnomics.econ.selection import (
     TaxRegime,
     FTPTaxRegime,
     TaxSplitTypeCR,
-    TaxType,
     DeprMethod,
     OtherRevenue
 )
@@ -116,9 +115,6 @@ class CostRecovery(BaseProject):
     _oil_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
     _gas_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
 
-    _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
-
     _split_ctr_oil: np.ndarray = field(default=None, init=False, repr=False)
     _split_ctr_gas: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -200,17 +196,14 @@ class CostRecovery(BaseProject):
     _oil_government_take: np.ndarray = field(default=None, init=False, repr=False)
     _gas_government_take: np.ndarray = field(default=None, init=False, repr=False)
 
-    _oil_cashflow: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_cashflow: np.ndarray = field(default=None, init=False, repr=False)
-
     # Consolidated Attributes
-    _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_cost_of_sales: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_capital_cost: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_intangible: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_opex: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_asr: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_lbt: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_undepreciated_asset: np.ndarray | float = field(
@@ -271,7 +264,6 @@ class CostRecovery(BaseProject):
     _consolidated_government_take: np.ndarray = field(
         default=None, init=False, repr=False
     )
-    _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
 
     def _check_attributes(self):
         """
@@ -827,7 +819,7 @@ class CostRecovery(BaseProject):
 
     def _get_sunk_cost(self, sunk_cost_reference_year: int):
         oil_cost_raw = (
-                self._oil_capital_expenditures
+                self._oil_capital_expenditures_post_tax
                 + self._oil_non_capital
         )
         self._oil_sunk_cost = oil_cost_raw[
@@ -835,7 +827,7 @@ class CostRecovery(BaseProject):
                               ]
 
         gas_cost_raw = (
-                self._gas_capital_expenditures
+                self._gas_capital_expenditures_post_tax
                 + self._gas_non_capital
         )
         self._gas_sunk_cost = gas_cost_raw[
@@ -867,7 +859,7 @@ class CostRecovery(BaseProject):
             )
         # Condition when the oil cost of sales is applied while there are oil revenues
         elif oil_applied is True and np.sum(self._oil_revenue) > 0:
-            self._oil_revenue = self._oil_revenue - self._oil_cost_of_sales_expenditures
+            self._oil_revenue = self._oil_revenue - self._oil_cost_of_sales_expenditures_post_tax
         else:
             pass
 
@@ -878,7 +870,7 @@ class CostRecovery(BaseProject):
             )
         # Condition when the gas cost of sales is applied while there are gas revenues
         elif gas_applied is True and np.sum(self._gas_revenue) > 0:
-            self._gas_revenue = self._gas_revenue - self._gas_cost_of_sales_expenditures
+            self._gas_revenue = self._gas_revenue - self._gas_cost_of_sales_expenditures_post_tax
         else:
             pass
 
@@ -889,17 +881,14 @@ class CostRecovery(BaseProject):
             co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
             is_dmo_end_weighted: bool = False,
             tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
-            tax_rate: float | np.ndarray | None = None,
+            effective_tax_rate: float | np.ndarray | None = None,
             ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
             sunk_cost_reference_year: int = None,
             depr_method: DeprMethod = DeprMethod.PSC_DB,
             decline_factor: float | int = 2,
-            year_ref: int = None,
-            tax_type: TaxType = TaxType.VAT,
+            year_inflation: np.ndarray = None,
             vat_rate: np.ndarray | float = 0.0,
-            lbt_rate: np.ndarray | float = 0.0,
             inflation_rate: np.ndarray | float = 0.0,
-            future_rate: float = 0.02,
             inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
             post_uu_22_year2001: bool = True,
             oil_cost_of_sales_applied: bool = False,
@@ -935,22 +924,44 @@ class CostRecovery(BaseProject):
                 f"is after the project end date: {self.end_date}"
             )
 
-        # Configure year reference for expenditures
-        if year_ref is None:
-            year_ref = self.start_date.year
-
         # Get the WAP Price
         self._get_wap_price()
 
-        # Calculate expenditures for every cost components
-        self._get_expenditures(
-            year_ref=year_ref,
-            tax_type=tax_type,
-            vat_rate=vat_rate,
-            lbt_rate=lbt_rate,
+        # Calculate pre tax expenditures
+        self._get_expenditures_pre_tax(
+            year_inflation=year_inflation,
             inflation_rate=inflation_rate,
-            future_rate=future_rate,
-            inflation_rate_applied_to=inflation_rate_applied_to
+            inflation_rate_applied_to=inflation_rate_applied_to,
+        )
+
+        # Calculate indirect taxes
+        self._get_indirect_taxes(tax_rate=vat_rate)
+
+        # Calculate post tax expenditures
+        self._get_expenditures_post_tax(
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            tax_rate=vat_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
+        )
+
+        # Total indirect taxes for OIL and GAS
+        self._oil_total_indirect_tax = (
+                self._oil_capital_indirect_tax
+                + self._oil_intangible_indirect_tax
+                + self._oil_opex_indirect_tax
+                + self._oil_asr_indirect_tax
+                + self._oil_lbt_indirect_tax
+                + self._oil_cost_of_sales_indirect_tax
+        )
+
+        self._gas_total_indirect_tax = (
+                self._gas_capital_indirect_tax
+                + self._gas_intangible_indirect_tax
+                + self._gas_opex_indirect_tax
+                + self._gas_asr_indirect_tax
+                + self._gas_lbt_indirect_tax
+                + self._gas_cost_of_sales_indirect_tax
         )
 
         # Get The Other Revenue as the chosen selection
@@ -978,11 +989,9 @@ class CostRecovery(BaseProject):
         ) = self._oil_capital_cost.total_depreciation_rate(
             depr_method=depr_method,
             decline_factor=decline_factor,
-            year_ref=year_ref,
-            tax_type=tax_type,
-            vat_rate=vat_rate,
-            lbt_rate=lbt_rate,
+            year_inflation=year_inflation,
             inflation_rate=inflation_rate,
+            tax_rate=vat_rate,
         )
 
         (
@@ -991,11 +1000,9 @@ class CostRecovery(BaseProject):
         ) = self._gas_capital_cost.total_depreciation_rate(
             depr_method=depr_method,
             decline_factor=decline_factor,
-            year_ref=year_ref,
-            tax_type=tax_type,
-            vat_rate=vat_rate,
-            lbt_rate=lbt_rate,
+            year_inflation=year_inflation,
             inflation_rate=inflation_rate,
+            tax_rate=vat_rate,
         )
 
         # Treatment for small order of number, in example 1e-15
@@ -1008,20 +1015,26 @@ class CostRecovery(BaseProject):
         if sum_undepreciated_cost is True:
             self._oil_depreciation[-1] = self._oil_depreciation[-1] + self._oil_undepreciated_asset
             self._gas_depreciation[-1] = self._gas_depreciation[-1] + self._gas_undepreciated_asset
+
+            self._oil_undepreciated_asset = np.zeros_like(self.project_years, dtype=float)
+            self._gas_undepreciated_asset = np.zeros_like(self.project_years, dtype=float)
         else:
             pass
 
         # Non-capital costs (intangible + opex + asr)
         self._oil_non_capital = (
-                self._oil_intangible_expenditures
-                + self._oil_opex_expenditures
-                + self._oil_asr_expenditures
+                self._oil_intangible_expenditures_post_tax
+                + self._oil_opex_expenditures_post_tax
+                + self._oil_asr_expenditures_post_tax
+                + self._oil_lbt_expenditures_post_tax
+
         )
 
         self._gas_non_capital = (
-                self._gas_intangible_expenditures
-                + self._gas_opex_expenditures
-                + self._gas_asr_expenditures
+                self._gas_intangible_expenditures_post_tax
+                + self._gas_opex_expenditures_post_tax
+                + self._gas_asr_expenditures_post_tax
+                + self._gas_lbt_expenditures_post_tax
         )
 
         # Filtering for only the cost that in the bracket of the project years
@@ -1228,14 +1241,14 @@ class CostRecovery(BaseProject):
 
         # Tax Payment
         # Generating Tax array if tax_rate argument is a single value not array
-        if isinstance(tax_rate, float):
-            self._tax_rate_arr = np.full_like(self.project_years, tax_rate, dtype=float)
+        if isinstance(effective_tax_rate, float):
+            self._tax_rate_arr = np.full_like(self.project_years, effective_tax_rate, dtype=float)
 
         # Generating Tax array based on the tax regime if tax_rate argument is None
-        elif tax_rate is None:
+        elif effective_tax_rate is None:
             self._tax_rate_arr = self._get_tax_by_regime(tax_regime=tax_regime)
-        elif isinstance(tax_rate, np.ndarray):
-            self._tax_rate_arr = tax_rate
+        elif isinstance(effective_tax_rate, np.ndarray):
+            self._tax_rate_arr = effective_tax_rate
         else:
             self._tax_rate_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
 
@@ -1276,10 +1289,10 @@ class CostRecovery(BaseProject):
 
         # Contractor CashFlow
         self._oil_cashflow = self._oil_contractor_take - (
-                self._oil_capital_expenditures + self._oil_non_capital
+                self._oil_capital_expenditures_post_tax + self._oil_non_capital
         )
         self._gas_cashflow = self._gas_contractor_take - (
-                self._gas_capital_expenditures + self._gas_non_capital
+                self._gas_capital_expenditures_post_tax + self._gas_non_capital
         )
 
         # Government Take by Fluid
@@ -1298,25 +1311,28 @@ class CostRecovery(BaseProject):
         )
 
         # Returning the gross revenue
-        self._oil_revenue = self._oil_revenue + self._oil_cost_of_sales_expenditures
-        self._gas_revenue = self._gas_revenue + self._gas_cost_of_sales_expenditures
+        self._oil_revenue = self._oil_revenue + self._oil_cost_of_sales_expenditures_post_tax
+        self._gas_revenue = self._gas_revenue + self._gas_cost_of_sales_expenditures_post_tax
 
         # Consolidated attributes
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue
         self._consolidated_capital_cost = (
-                self._oil_capital_expenditures + self._gas_capital_expenditures
+                self._oil_capital_expenditures_post_tax + self._gas_capital_expenditures_post_tax
         )
-        self._consolidated_cost_of_sales = (self._oil_cost_of_sales_expenditures +
-                                            self._gas_cost_of_sales_expenditures)
+        self._consolidated_cost_of_sales = (self._oil_cost_of_sales_expenditures_post_tax +
+                                            self._gas_cost_of_sales_expenditures_post_tax)
         self._consolidated_intangible = (
-                self._oil_intangible_expenditures + self._gas_intangible_expenditures
+                self._oil_intangible_expenditures_post_tax + self._gas_intangible_expenditures_post_tax
         )
         self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
         self._consolidated_opex = (
-                self._oil_opex_expenditures + self._gas_opex_expenditures
+                self._oil_opex_expenditures_post_tax + self._gas_opex_expenditures_post_tax
         )
         self._consolidated_asr = (
-                self._oil_asr_expenditures + self._gas_asr_expenditures
+                self._oil_asr_expenditures_post_tax + self._gas_asr_expenditures_post_tax
+        )
+        self._consolidated_lbt = (
+                self._oil_lbt_expenditures_post_tax + self._gas_lbt_expenditures_post_tax
         )
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
         self._consolidated_depreciation = (
@@ -1326,6 +1342,8 @@ class CostRecovery(BaseProject):
         self._consolidated_undepreciated_asset = (
                 self._oil_undepreciated_asset + self._gas_undepreciated_asset
         )
+
+        self._consolidated_indirect_tax = self._oil_total_indirect_tax + self._gas_total_indirect_tax
         self._consolidated_ftp = self._oil_ftp + self._gas_ftp
         self._consolidated_ftp_ctr = self._oil_ftp_ctr + self._gas_ftp_ctr
         self._consolidated_ftp_gov = self._oil_ftp_gov + self._gas_ftp_gov

@@ -10,7 +10,7 @@ from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.econ.selection import OptimizationParameter, OptimizationTarget
 from pyscnomics.tools.summary import get_summary
 
-from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT
 
 
 class OptimizationException(Exception):
@@ -54,20 +54,26 @@ def adjust_contract(
     """
     # When the optimization is VAT
     if variable is OptimizationParameter.VAT_DISCOUNT:
-        contract = adjust_cost_element(contract=contract,
-                                       adjustment_value=value,
-                                       adjustment_variable=OptimizationParameter.VAT_DISCOUNT, )
+        contract = adjust_cost_element(
+            contract=contract,
+            adjustment_value=value,
+            adjustment_variable=OptimizationParameter.VAT_DISCOUNT,
+        )
 
     # When the optimization is LBT
     elif variable is OptimizationParameter.LBT_DISCOUNT:
-        contract = adjust_cost_element(contract=contract,
-                                       adjustment_value=value,
-                                       adjustment_variable=OptimizationParameter.LBT_DISCOUNT, )
+        contract = adjust_cost_element(
+            contract=contract,
+            adjustment_value=value,
+            adjustment_variable=OptimizationParameter.LBT_DISCOUNT,
+        )
 
     elif variable is OptimizationParameter.DEPRECIATION_ACCELERATION:
-        contract = adjust_cost_element(contract=contract,
-                                       adjustment_value=value,
-                                       adjustment_variable=OptimizationParameter.DEPRECIATION_ACCELERATION, )
+        contract = adjust_cost_element(
+            contract=contract,
+            adjustment_value=value,
+            adjustment_variable=OptimizationParameter.DEPRECIATION_ACCELERATION,
+        )
 
     # The condition when contract is Cost Recovery
     if isinstance(contract, CostRecovery):
@@ -100,7 +106,7 @@ def adjust_contract(
             contract_arguments['vat_rate'] = value
 
         if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
-            contract_arguments['tax_rate'] = value
+            contract_arguments['effective_tax_rate'] = value
 
     # The condition when contract is Gross Split
     if isinstance(contract, GrossSplit):
@@ -108,11 +114,17 @@ def adjust_contract(
         if variable is OptimizationParameter.MINISTERIAL_DISCRETION:
             contract.split_ministry_disc = value
 
+        if variable is OptimizationParameter.OIL_DMO_FEE:
+            contract.oil_dmo_fee_portion = value
+
+        if variable is OptimizationParameter.GAS_DMO_FEE:
+            contract.gas_dmo_fee_portion = value
+
         if variable is OptimizationParameter.VAT_RATE:
             contract_arguments['vat_rate'] = value
 
         if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
-            contract_arguments['tax_rate'] = value
+            contract_arguments['effective_tax_rate'] = value
 
     # Running the contract
     contract.run(**contract_arguments)
@@ -242,12 +254,13 @@ def optimize_psc_core(
                                         f" Optimization parameter should be chosen from OptimizationParameter enum.")
 
         # Changing the Contract parameter value based on the given input
-        result_psc, psc = adjust_contract(contract=psc,
-                                          contract_arguments=contract_arguments,
-                                          variable=param,
-                                          value=max_value,
-                                          summary_argument=summary_argument,
-                                          target_parameter=target_parameter, )
+        result_psc, psc = adjust_contract(
+            contract=psc,
+            contract_arguments=contract_arguments,
+            variable=param,
+            value=max_value,
+            summary_argument=summary_argument,
+            target_parameter=target_parameter, )
 
         # Able to conduct optimization since the result is greater than the target
         if result_psc > target_optimization_value:
@@ -256,12 +269,13 @@ def optimize_psc_core(
                       dict_optimization['max'][index])
 
             def objective_run(new_value):
-                result_psc_obj, executed_contract = adjust_contract(contract=psc,
-                                                                    contract_arguments=contract_arguments,
-                                                                    variable=param,
-                                                                    value=new_value,
-                                                                    summary_argument=summary_argument,
-                                                                    target_parameter=target_parameter)
+                result_psc_obj, executed_contract = adjust_contract(
+                    contract=psc,
+                    contract_arguments=contract_arguments,
+                    variable=param,
+                    value=new_value,
+                    summary_argument=summary_argument,
+                    target_parameter=target_parameter)
 
                 result_obj = abs(result_psc_obj - target_optimization_value)
                 return result_obj
@@ -285,12 +299,13 @@ def optimize_psc_core(
             result_optimization = function_result
 
             # Defining the executed contract
-            executed_contract = adjust_contract(contract=psc,
-                                                contract_arguments=contract_arguments,
-                                                variable=param,
-                                                value=optimized_parameter,
-                                                summary_argument=summary_argument,
-                                                target_parameter=target_parameter)[1]
+            executed_contract = adjust_contract(
+                contract=psc,
+                contract_arguments=contract_arguments,
+                variable=param,
+                value=optimized_parameter,
+                summary_argument=summary_argument,
+                target_parameter=target_parameter)[1]
 
             # Filling the list with executed contract
             list_executed_contract.append(executed_contract)
@@ -349,162 +364,123 @@ def adjust_cost_element(
 
     """
 
+    capital_adjusted = contract.capital_cost
+    intangible_adjusted = contract.intangible_cost
+    opex_adjusted = contract.opex
+    asr_adjusted = contract.asr_cost
+    lbt_adjusted = contract.lbt_cost
+    cos_adjusted = contract.cost_of_sales
+
     # Condition when the VAT of each cost element will be adjusted
     if adjustment_variable == OptimizationParameter.VAT_DISCOUNT:
-        # Adjusting the Tangible cost of the contract
-        tangible_adjusted = tuple([
-            CapitalCost(start_year=tan.start_year,
-                        end_year=tan.end_year,
-                        cost=tan.cost,
-                        expense_year=tan.expense_year,
-                        cost_allocation=tan.cost_allocation,
-                        description=tan.description,
-                        vat_portion=tan.vat_portion,
-                        vat_discount=adjustment_value,
-                        lbt_portion=tan.lbt_portion,
-                        lbt_discount=tan.lbt_discount,
-                        pis_year=tan.pis_year,
-                        salvage_value=tan.salvage_value,
-                        useful_life=tan.useful_life,
-                        depreciation_factor=tan.depreciation_factor,
-                        is_ic_applied=tan.is_ic_applied,
-                        ) for tan in contract.capital_cost
+        # Adjusting the Capital Cost of the contract
+        capital_adjusted = tuple([
+            CapitalCost(
+                start_year=tan.start_year,
+                end_year=tan.end_year,
+                cost=tan.cost,
+                expense_year=tan.expense_year,
+                cost_allocation=tan.cost_allocation,
+                description=tan.description,
+                tax_portion=tan.tax_portion,
+                tax_discount=adjustment_value,
+                pis_year=tan.pis_year,
+                salvage_value=tan.salvage_value,
+                useful_life=tan.useful_life,
+                depreciation_factor=tan.depreciation_factor,
+                is_ic_applied=tan.is_ic_applied,
+            ) for tan in contract.capital_cost
         ])
 
         # Adjusting the Intangible cost of the contract
         intangible_adjusted = tuple([
-            Intangible(start_year=intang.start_year,
-                       end_year=intang.end_year,
-                       cost=intang.cost,
-                       expense_year=intang.expense_year,
-                       cost_allocation=intang.cost_allocation,
-                       description=intang.description,
-                       vat_portion=intang.vat_portion,
-                       vat_discount=adjustment_value,
-                       lbt_portion=intang.lbt_portion,
-                       lbt_discount=intang.lbt_discount, ) for intang in contract.intangible_cost
+            Intangible(
+                start_year=intang.start_year,
+                end_year=intang.end_year,
+                cost=intang.cost,
+                expense_year=intang.expense_year,
+                cost_allocation=intang.cost_allocation,
+                description=intang.description,
+                tax_portion=intang.tax_portion,
+                tax_discount=adjustment_value,
+
+            ) for intang in contract.intangible_cost
         ])
 
         # Adjusting the OPEX cost of the contract
         opex_adjusted = tuple([
-            OPEX(start_year=opx.start_year,
-                 end_year=opx.end_year,
-                 expense_year=opx.expense_year,
-                 cost_allocation=opx.cost_allocation,
-                 description=opx.description,
-                 vat_portion=opx.vat_portion,
-                 vat_discount=adjustment_value,
-                 lbt_portion=opx.lbt_portion,
-                 lbt_discount=opx.lbt_discount,
-                 fixed_cost=opx.fixed_cost,
-                 prod_rate=opx.prod_rate,
-                 cost_per_volume=opx.cost_per_volume, ) for opx in contract.opex
+            OPEX(
+                start_year=opx.start_year,
+                end_year=opx.end_year,
+                expense_year=opx.expense_year,
+                cost_allocation=opx.cost_allocation,
+                description=opx.description,
+                tax_portion=opx.tax_portion,
+                tax_discount=adjustment_value,
+                fixed_cost=opx.fixed_cost,
+                prod_rate=opx.prod_rate,
+                cost_per_volume=opx.cost_per_volume,
+            ) for opx in contract.opex
         ])
 
         # Adjusting the ASR cost of the contract
         asr_adjusted = tuple([
-            ASR(start_year=asr.start_year,
+            ASR(
+                start_year=asr.start_year,
                 end_year=asr.end_year,
                 cost=asr.cost,
                 expense_year=asr.expense_year,
                 cost_allocation=asr.cost_allocation,
                 description=asr.description,
-                vat_portion=asr.vat_portion,
-                vat_discount=adjustment_value,
-                lbt_portion=asr.lbt_portion,
-                lbt_discount=asr.lbt_discount, ) for asr in contract.asr_cost
+                tax_portion=asr.tax_portion,
+                tax_discount=adjustment_value,
+                final_year=asr.final_year,
+                future_rate=asr.future_rate,
+            ) for asr in contract.asr_cost
         ])
 
     elif adjustment_variable == OptimizationParameter.LBT_DISCOUNT:
-        # Adjusting the Tangible cost of the contract
-        tangible_adjusted = tuple([
-            CapitalCost(start_year=tan.start_year,
-                        end_year=tan.end_year,
-                        cost=tan.cost,
-                        expense_year=tan.expense_year,
-                        cost_allocation=tan.cost_allocation,
-                        description=tan.description,
-                        vat_portion=tan.vat_portion,
-                        vat_discount=tan.vat_discount,
-                        lbt_portion=tan.lbt_portion,
-                        lbt_discount=adjustment_value,
-                        pis_year=tan.pis_year,
-                        salvage_value=tan.salvage_value,
-                        useful_life=tan.useful_life,
-                        depreciation_factor=tan.depreciation_factor,
-                        is_ic_applied=tan.is_ic_applied,
-                        ) for tan in contract.capital_cost
-        ])
-
-        # Adjusting the Intangible cost of the contract
-        intangible_adjusted = tuple([
-            Intangible(start_year=intang.start_year,
-                       end_year=intang.end_year,
-                       cost=intang.cost,
-                       expense_year=intang.expense_year,
-                       cost_allocation=intang.cost_allocation,
-                       description=intang.description,
-                       vat_portion=intang.vat_portion,
-                       vat_discount=intang.vat_discount,
-                       lbt_portion=intang.lbt_portion,
-                       lbt_discount=adjustment_value, ) for intang in contract.intangible_cost
-        ])
-
-        # Adjusting the OPEX cost of the contract
-        opex_adjusted = tuple([
-            OPEX(start_year=opx.start_year,
-                 end_year=opx.end_year,
-                 expense_year=opx.expense_year,
-                 cost_allocation=opx.cost_allocation,
-                 description=opx.description,
-                 vat_portion=opx.vat_portion,
-                 vat_discount=opx.vat_discount,
-                 lbt_portion=opx.lbt_portion,
-                 lbt_discount=adjustment_value,
-                 fixed_cost=opx.fixed_cost,
-                 prod_rate=opx.prod_rate,
-                 cost_per_volume=opx.cost_per_volume, ) for opx in contract.opex
-        ])
-
-        # Adjusting the ASR cost of the contract
-        asr_adjusted = tuple([
-            ASR(start_year=asr.start_year,
-                end_year=asr.end_year,
-                cost=asr.cost,
-                expense_year=asr.expense_year,
-                cost_allocation=asr.cost_allocation,
-                description=asr.description,
-                vat_portion=asr.vat_portion,
-                vat_discount=asr.vat_discount,
-                lbt_portion=asr.lbt_portion,
-                lbt_discount=adjustment_value, ) for asr in contract.asr_cost
+        # Adjusting the LBT of the contract
+        lbt_adjusted = tuple([
+            LBT(
+                start_year=bt.start_year,
+                end_year=bt.end_year,
+                expense_year=bt.expense_year,
+                cost=bt.cost,
+                cost_allocation=bt.cost_allocation,
+                description=bt.description,
+                tax_portion=bt.tax_portion,
+                tax_discount=adjustment_value,
+                final_year=bt.final_year,
+                utilized_land_area=bt.utilized_land_area,
+                utilized_building_area=bt.utilized_building_area,
+                njop_land=bt.njop_land,
+                njop_building=bt.njop_building,
+                gross_revenue=bt.gross_revenue,
+            ) for bt in contract.lbt_cost
         ])
 
     elif adjustment_variable == OptimizationParameter.DEPRECIATION_ACCELERATION:
         # Adjusting the useful life of the capital cost of the contract
-        tangible_adjusted = tuple([
-            CapitalCost(start_year=tan.start_year,
-                        end_year=tan.end_year,
-                        cost=tan.cost,
-                        expense_year=tan.expense_year,
-                        cost_allocation=tan.cost_allocation,
-                        description=tan.description,
-                        vat_portion=tan.vat_portion,
-                        vat_discount=tan.vat_discount,
-                        lbt_portion=tan.lbt_portion,
-                        lbt_discount=tan.lbt_discount,
-                        pis_year=tan.pis_year,
-                        salvage_value=tan.salvage_value,
-                        useful_life=adjust_useful_life_years(
-                         adjustment_value=adjustment_value,
-                         useful_life_array=tan.useful_life),
-                        depreciation_factor=tan.depreciation_factor,
-                        is_ic_applied=tan.is_ic_applied,
-                        ) for tan in contract.capital_cost
+        capital_adjusted = tuple([
+            CapitalCost(
+                start_year=tan.start_year,
+                end_year=tan.end_year,
+                cost=tan.cost,
+                expense_year=tan.expense_year,
+                cost_allocation=tan.cost_allocation,
+                description=tan.description,
+                tax_portion=tan.tax_portion,
+                tax_discount=tan.tax_discount,
+                pis_year=tan.pis_year,
+                salvage_value=tan.salvage_value,
+                useful_life=adjust_useful_life_years(
+                    adjustment_value=adjustment_value,
+                    useful_life_array=tan.useful_life),
+                depreciation_factor=tan.depreciation_factor,
+                is_ic_applied=tan.is_ic_applied,
+            ) for tan in contract.capital_cost
         ])
-        intangible_adjusted = contract.intangible_cost
-        opex_adjusted = contract.opex
-        asr_adjusted = contract.asr_cost
 
     # Condition when the chosen option is not recognized
     else:
@@ -524,68 +500,74 @@ def adjust_cost_element(
 
     # When the contract is CostRecovery, parsing back the adjusted cost elements to the cost recovery contract
     if isinstance(contract, CostRecovery):
-        contract_adjusted = CostRecovery(start_date=contract.start_date,
-                                         end_date=contract.end_date,
-                                         oil_onstream_date=oil_onstream_date,
-                                         gas_onstream_date=gas_onstream_date,
-                                         lifting=contract.lifting,
-                                         capital_cost=tangible_adjusted,
-                                         intangible_cost=intangible_adjusted,
-                                         opex=opex_adjusted,
-                                         asr_cost=asr_adjusted,
-                                         oil_ftp_is_available=contract.oil_ftp_is_available,
-                                         oil_ftp_is_shared=contract.oil_ftp_is_shared,
-                                         oil_ftp_portion=contract.oil_ftp_portion,
-                                         gas_ftp_is_available=contract.gas_ftp_is_available,
-                                         gas_ftp_is_shared=contract.gas_ftp_is_shared,
-                                         gas_ftp_portion=contract.gas_ftp_portion,
-                                         tax_split_type=contract.tax_split_type,
-                                         condition_dict=contract.condition_dict,
-                                         indicator_rc_icp_sliding=contract.indicator_rc_icp_sliding,
-                                         oil_ctr_pretax_share=contract.oil_ctr_pretax_share,
-                                         gas_ctr_pretax_share=contract.gas_ctr_pretax_share,
-                                         oil_ic_rate=contract.oil_ic_rate,
-                                         gas_ic_rate=contract.gas_ic_rate,
-                                         ic_is_available=contract.ic_is_available,
-                                         oil_cr_cap_rate=contract.oil_cr_cap_rate,
-                                         gas_cr_cap_rate=contract.gas_cr_cap_rate,
-                                         oil_dmo_volume_portion=contract.oil_dmo_volume_portion,
-                                         oil_dmo_fee_portion=contract.oil_dmo_fee_portion,
-                                         oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
-                                         gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
-                                         gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
-                                         gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration, )
+        contract_adjusted = CostRecovery(
+            start_date=contract.start_date,
+            end_date=contract.end_date,
+            oil_onstream_date=oil_onstream_date,
+            gas_onstream_date=gas_onstream_date,
+            lifting=contract.lifting,
+            capital_cost=capital_adjusted,
+            intangible_cost=intangible_adjusted,
+            opex=opex_adjusted,
+            asr_cost=asr_adjusted,
+            lbt_cost=lbt_adjusted,
+            cost_of_sales=cos_adjusted,
+            oil_ftp_is_available=contract.oil_ftp_is_available,
+            oil_ftp_is_shared=contract.oil_ftp_is_shared,
+            oil_ftp_portion=contract.oil_ftp_portion,
+            gas_ftp_is_available=contract.gas_ftp_is_available,
+            gas_ftp_is_shared=contract.gas_ftp_is_shared,
+            gas_ftp_portion=contract.gas_ftp_portion,
+            tax_split_type=contract.tax_split_type,
+            condition_dict=contract.condition_dict,
+            indicator_rc_icp_sliding=contract.indicator_rc_icp_sliding,
+            oil_ctr_pretax_share=contract.oil_ctr_pretax_share,
+            gas_ctr_pretax_share=contract.gas_ctr_pretax_share,
+            oil_ic_rate=contract.oil_ic_rate,
+            gas_ic_rate=contract.gas_ic_rate,
+            ic_is_available=contract.ic_is_available,
+            oil_cr_cap_rate=contract.oil_cr_cap_rate,
+            gas_cr_cap_rate=contract.gas_cr_cap_rate,
+            oil_dmo_volume_portion=contract.oil_dmo_volume_portion,
+            oil_dmo_fee_portion=contract.oil_dmo_fee_portion,
+            oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
+            gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
+            gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
+            gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration, )
 
     # When the contract is GrossSplit, parsing back the adjusted cost elements to the gross split contract
     elif isinstance(contract, GrossSplit):
-        contract_adjusted = GrossSplit(start_date=contract.start_date,
-                                       end_date=contract.end_date,
-                                       oil_onstream_date=oil_onstream_date,
-                                       gas_onstream_date=gas_onstream_date,
-                                       lifting=contract.lifting,
-                                       capital_cost=tangible_adjusted,
-                                       intangible_cost=intangible_adjusted,
-                                       opex=opex_adjusted,
-                                       asr_cost=asr_adjusted,
-                                       field_status=contract.field_status,
-                                       field_loc=contract.field_loc,
-                                       res_depth=contract.res_depth,
-                                       infra_avail=contract.infra_avail,
-                                       res_type=contract.res_type,
-                                       api_oil=contract.api_oil,
-                                       domestic_use=contract.domestic_use,
-                                       prod_stage=contract.prod_stage,
-                                       co2_content=contract.co2_content,
-                                       h2s_content=contract.h2s_content,
-                                       base_split_ctr_oil=contract.base_split_ctr_oil,
-                                       base_split_ctr_gas=contract.base_split_ctr_gas,
-                                       split_ministry_disc=contract.split_ministry_disc,
-                                       oil_dmo_volume_portion=contract.oil_dmo_volume_portion,
-                                       oil_dmo_fee_portion=contract.oil_dmo_fee_portion,
-                                       oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
-                                       gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
-                                       gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
-                                       gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration, )
+        contract_adjusted = GrossSplit(
+            start_date=contract.start_date,
+            end_date=contract.end_date,
+            oil_onstream_date=oil_onstream_date,
+            gas_onstream_date=gas_onstream_date,
+            lifting=contract.lifting,
+            capital_cost=capital_adjusted,
+            intangible_cost=intangible_adjusted,
+            opex=opex_adjusted,
+            asr_cost=asr_adjusted,
+            lbt_cost=lbt_adjusted,
+            cost_of_sales=cos_adjusted,
+            field_status=contract.field_status,
+            field_loc=contract.field_loc,
+            res_depth=contract.res_depth,
+            infra_avail=contract.infra_avail,
+            res_type=contract.res_type,
+            api_oil=contract.api_oil,
+            domestic_use=contract.domestic_use,
+            prod_stage=contract.prod_stage,
+            co2_content=contract.co2_content,
+            h2s_content=contract.h2s_content,
+            base_split_ctr_oil=contract.base_split_ctr_oil,
+            base_split_ctr_gas=contract.base_split_ctr_gas,
+            split_ministry_disc=contract.split_ministry_disc,
+            oil_dmo_volume_portion=contract.oil_dmo_volume_portion,
+            oil_dmo_fee_portion=contract.oil_dmo_fee_portion,
+            oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
+            gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
+            gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
+            gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration, )
 
     # When the contract is not recognized, raise an exception
     else:
@@ -744,12 +726,13 @@ def optimize_psc(
             summary_argument_pseudo = summary_argument.copy()
 
             # Retrieving the result_optim_pseudo which it will be used as base for resul_optim_new
-            optim_base_result = optimize_psc_core(dict_optimization=dict_opt_pseudo,
-                                                  contract=contract,
-                                                  contract_arguments=contract_arguments_pseudo,
-                                                  target_optimization_value=target_value_base,
-                                                  summary_argument=summary_argument_pseudo,
-                                                  target_parameter=target_parameter, )
+            optim_base_result = optimize_psc_core(
+                dict_optimization=dict_opt_pseudo,
+                contract=contract,
+                contract_arguments=contract_arguments_pseudo,
+                target_optimization_value=target_value_base,
+                summary_argument=summary_argument_pseudo,
+                target_parameter=target_parameter, )
 
             variable_value_pseudo = optim_base_result[1][0]
 
@@ -763,12 +746,14 @@ def optimize_psc(
             pass
 
     # Get the optimization of the contract
-    result = optimize_psc_core(dict_optimization=dict_optimization,
-                               contract=contract,
-                               contract_arguments=contract_arguments_new,
-                               target_optimization_value=target_optimization_value,
-                               summary_argument=summary_argument,
-                               target_parameter=target_parameter,)
+    result = optimize_psc_core(
+        dict_optimization=dict_optimization,
+        contract=contract,
+        contract_arguments=contract_arguments_new,
+        target_optimization_value=target_optimization_value,
+        summary_argument=summary_argument,
+        target_parameter=target_parameter,
+    )
 
     list_str = result[0]
     list_params_value = result[1]

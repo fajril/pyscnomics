@@ -80,29 +80,35 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
     sunk_cost_extended = np.concatenate((contract._consolidated_sunk_cost,
                                          np.zeros(len(contract.project_years) - len(contract._consolidated_sunk_cost))))
 
-    tangible = np.sum(contract._oil_capital_expenditures + contract._gas_capital_expenditures)
+    tangible = np.sum(contract._oil_capital_expenditures_post_tax + contract._gas_capital_expenditures_post_tax)
 
-    intangible = np.sum(contract._oil_intangible_expenditures + contract._gas_intangible_expenditures - sunk_cost_extended,
+    intangible = np.sum(contract._oil_intangible_expenditures_post_tax + contract._gas_intangible_expenditures_post_tax - sunk_cost_extended,
                         dtype=float)
     investment = tangible + intangible
 
+    # Indirect Taxes
+    oil_indirect_taxes = np.sum(contract._oil_total_indirect_tax)
+    gas_indirect_taxes = np.sum(contract._gas_total_indirect_tax)
+    total_indirect_taxes = oil_indirect_taxes + gas_indirect_taxes
+
     # Undepreciated Asset
-    if isinstance(contract, BaseProject):
-        undepreciated_asset_oil = 0.0
-        undepreciated_asset_gas = 0.0
-        undepreciated_asset_total = 0.0
-    else:
+    if isinstance(contract, (CostRecovery, GrossSplit, Transition)):
         undepreciated_asset_oil = np.sum(contract._oil_undepreciated_asset)
         undepreciated_asset_gas = np.sum(contract._gas_undepreciated_asset)
         undepreciated_asset_total = undepreciated_asset_oil + undepreciated_asset_gas
+    else:
+        undepreciated_asset_oil = 0.0
+        undepreciated_asset_gas = 0.0
+        undepreciated_asset_total = 0.0
 
     # Capex
-    oil_capex = np.sum(contract._oil_capital_expenditures)
-    gas_capex = np.sum(contract._gas_capital_expenditures)
+    oil_capex = np.sum(contract._oil_capital_expenditures_post_tax)
+    gas_capex = np.sum(contract._gas_capital_expenditures_post_tax)
 
     # OPEX and ASR (Non-Capital Cost)
-    opex = np.sum(contract._oil_opex_expenditures + contract._gas_opex_expenditures, dtype=float)
-    asr = np.sum(contract._oil_asr_expenditures + contract._gas_asr_expenditures, dtype=float)
+    opex = np.sum(contract._oil_opex_expenditures_post_tax + contract._gas_opex_expenditures_post_tax, dtype=float)
+    asr = np.sum(contract._oil_asr_expenditures_post_tax + contract._gas_asr_expenditures_post_tax, dtype=float)
+    lbt = np.sum(contract._oil_lbt_expenditures_post_tax + contract._gas_lbt_expenditures_post_tax, dtype=float)
 
     # Cashflow sunk cost
     if sunk_cost == 0:
@@ -163,10 +169,10 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
         # Contractor Investment NPV
         investment_npv = npv_skk_real_terms(cashflow=(
-                contract._oil_capital_expenditures +
-                contract._gas_capital_expenditures +
-                contract._oil_intangible_expenditures +
-                contract._gas_intangible_expenditures -
+                contract._oil_capital_expenditures_post_tax +
+                contract._gas_capital_expenditures_post_tax +
+                contract._oil_intangible_expenditures_post_tax +
+                contract._gas_intangible_expenditures_post_tax -
                 sunk_cost_extended
         ),
             cashflow_years=contract.project_years,
@@ -197,10 +203,10 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
         # Contractor Investment NPV
         investment_npv = npv_skk_nominal_terms(cashflow=(
-                contract._oil_capital_expenditures +
-                contract._gas_capital_expenditures +
-                contract._oil_intangible_expenditures +
-                contract._gas_intangible_expenditures -
+                contract._oil_capital_expenditures_post_tax +
+                contract._gas_capital_expenditures_post_tax +
+                contract._oil_intangible_expenditures_post_tax +
+                contract._gas_intangible_expenditures_post_tax -
                 sunk_cost_extended
         ),
             cashflow_years=contract.project_years,
@@ -231,10 +237,10 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
         # Contractor Investment NPV
         investment_npv = npv_nominal_terms(cashflow=(
-                contract._oil_capital_expenditures +
-                contract._gas_capital_expenditures +
-                contract._oil_intangible_expenditures +
-                contract._gas_intangible_expenditures -
+                contract._oil_capital_expenditures_post_tax +
+                contract._gas_capital_expenditures_post_tax +
+                contract._oil_intangible_expenditures_post_tax +
+                contract._gas_intangible_expenditures_post_tax -
                 sunk_cost_extended
         ),
             cashflow_years=contract.project_years,
@@ -269,10 +275,10 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
         # Contractor Investment NPV
         investment_npv = npv_real_terms(cashflow=(
-                contract._oil_capital_expenditures +
-                contract._gas_capital_expenditures +
-                contract._oil_intangible_expenditures +
-                contract._gas_intangible_expenditures -
+                contract._oil_capital_expenditures_post_tax +
+                contract._gas_capital_expenditures_post_tax +
+                contract._oil_intangible_expenditures_post_tax +
+                contract._gas_intangible_expenditures_post_tax -
                 sunk_cost_extended
         ),
             cashflow_years=contract.project_years,
@@ -307,10 +313,10 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
         # Contractor Investment NPV
         investment_npv = npv_point_forward(cashflow=(
-                contract._oil_capital_expenditures +
-                contract._gas_capital_expenditures +
-                contract._oil_intangible_expenditures +
-                contract._gas_intangible_expenditures -
+                contract._oil_capital_expenditures_post_tax +
+                contract._gas_capital_expenditures_post_tax +
+                contract._oil_intangible_expenditures_post_tax +
+                contract._gas_intangible_expenditures_post_tax -
                 sunk_cost_extended
         ),
             cashflow_years=contract.project_years,
@@ -345,10 +351,10 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
     # Condition when the Profitability Index is calculated using un-discounted investment
     else:
         investment_pi = np.sum(
-            contract._oil_capital_expenditures +
-            contract._gas_capital_expenditures +
-            contract._oil_intangible_expenditures +
-            contract._gas_intangible_expenditures -
+            contract._oil_capital_expenditures_post_tax +
+            contract._gas_capital_expenditures_post_tax +
+            contract._oil_intangible_expenditures_post_tax +
+            contract._gas_intangible_expenditures_post_tax -
             sunk_cost_extended
         )
         ctr_pv_ratio = np.divide(ctr_npv, investment_pi, where=investment_pi != 0)
@@ -405,9 +411,10 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'sunk_cost': sunk_cost,
                 'tangible': tangible,
                 'intangible': intangible,
-                'opex_and_asr': opex + asr,
+                'opex_asr_lbt': opex + asr + lbt,
                 'opex': opex,
                 'asr': asr,
+                'lbt': lbt,
                 'cost_recovery / deductible_cost': cost_recovery,
                 'cost_recovery_over_gross_rev': cost_recovery_over_gross_rev,
                 'unrec_cost': unrec_cost,
@@ -433,7 +440,10 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'gov_take_npv': gov_take_npv,
                 'undepreciated_asset_oil': undepreciated_asset_oil,
                 'undepreciated_asset_gas': undepreciated_asset_gas,
-                'undepreciated_asset_total': undepreciated_asset_total
+                'undepreciated_asset_total': undepreciated_asset_total,
+                'total_indirect_taxes': total_indirect_taxes,
+                'oil_indirect_taxes': oil_indirect_taxes,
+                'gas_indirect_taxes': gas_indirect_taxes,
                 }
     # Condition where the contract is Gross Split
     if isinstance(contract, GrossSplit):
@@ -484,9 +494,10 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'sunk_cost': sunk_cost,
                 'tangible': tangible,
                 'intangible': intangible,
-                'opex_and_asr': opex + asr,
+                'opex_asr_lbt': opex + asr + lbt,
                 'opex': opex,
                 'asr': asr,
+                'lbt': lbt,
                 'cost_recovery / deductible_cost': deductible_cost,
                 'cost_recovery_over_gross_rev': deductible_cost_over_gross_rev,
                 'unrec_cost': carry_forward_deductible_cost,
@@ -511,7 +522,10 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'gov_ftp_share': 0,
                 'undepreciated_asset_oil': undepreciated_asset_oil,
                 'undepreciated_asset_gas': undepreciated_asset_gas,
-                'undepreciated_asset_total': undepreciated_asset_total
+                'undepreciated_asset_total': undepreciated_asset_total,
+                'total_indirect_taxes': total_indirect_taxes,
+                'oil_indirect_taxes': oil_indirect_taxes,
+                'gas_indirect_taxes': gas_indirect_taxes,
                 }
 
     if isinstance(contract, Transition):
@@ -668,9 +682,10 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'investment': investment,
                 'tangible': tangible,
                 'intangible': intangible,
-                'opex_and_asr': opex + asr,
+                'opex_asr_lbt': opex + asr + lbt,
                 'opex': opex,
                 'asr': asr,
+                'lbt': lbt,
                 'cost_recovery / deductible_cost': deductible_cost,
                 'cost_recovery_over_gross_rev': deductible_cost_over_grossrev,
                 'unrec_cost': carry_forward_cost,
@@ -699,7 +714,10 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'gov_ftp_share': gov_ftp,
                 'undepreciated_asset_oil': undepreciated_asset_oil,
                 'undepreciated_asset_gas': undepreciated_asset_gas,
-                'undepreciated_asset_total': undepreciated_asset_total
+                'undepreciated_asset_total': undepreciated_asset_total,
+                'total_indirect_taxes': total_indirect_taxes,
+                'oil_indirect_taxes': oil_indirect_taxes,
+                'gas_indirect_taxes': gas_indirect_taxes,
                 }
 
     if isinstance(contract, BaseProject):
@@ -728,8 +746,10 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'tangible': tangible,
                 'intangible': intangible,
                 'opex_and_asr': opex + asr,
+                'opex_asr_lbt': opex + asr + lbt,
                 'opex': opex,
                 'asr': asr,
+                'lbt': lbt,
                 'ctr_npv': ctr_npv,
                 'ctr_irr': ctr_irr,
                 'ctr_pot': ctr_pot,
@@ -930,7 +950,7 @@ class Summary:
         Parsing the lifting data to the corresponding attributes
         """
         # Investment Capital Cost
-        self.capital_cost = float(np.sum(self.contract._oil_capital_expenditures + self.contract._gas_capital_expenditures))
+        self.capital_cost = float(np.sum(self.contract._oil_capital_expenditures_post_tax + self.contract._gas_capital_expenditures_post_tax))
 
     def _get_intangible_cost(self):
         """
@@ -943,8 +963,8 @@ class Summary:
         # Investment Intangible Cost
         self.intangible = float(
             np.sum(
-                self.contract._oil_intangible_expenditures +
-                self.contract._gas_intangible_expenditures -
+                self.contract._oil_intangible_expenditures_post_tax +
+                self.contract._gas_intangible_expenditures_post_tax -
                 self.sunk_cost_extended,
                 dtype=float)
         )
@@ -971,8 +991,8 @@ class Summary:
 
         """
         # Capex
-        self.oil_capex = float(np.sum(self.contract._oil_capital_expenditures))
-        self.gas_capex = float(np.sum(self.contract._gas_capital_expenditures))
+        self.oil_capex = float(np.sum(self.contract._oil_capital_expenditures_post_tax))
+        self.gas_capex = float(np.sum(self.contract._gas_capital_expenditures_post_tax))
 
     def _get_opex(self):
         """
@@ -986,8 +1006,8 @@ class Summary:
         # OPEX
         self.opex = float(
             np.sum(
-                self.contract._oil_opex_expenditures +
-                self.contract._gas_opex_expenditures,
+                self.contract._oil_opex_expenditures_post_tax +
+                self.contract._gas_opex_expenditures_post_tax,
                 dtype=float)
         )
 
@@ -1002,8 +1022,8 @@ class Summary:
         """
         self.asr = float(
             np.sum(
-                self.contract._oil_asr_expenditures +
-                self.contract._gas_asr_expenditures,
+                self.contract._oil_asr_expenditures_post_tax +
+                self.contract._gas_asr_expenditures_post_tax,
                 dtype=float))
 
     def _get_cashflow_sunkcost_pooled(self):
@@ -1131,10 +1151,10 @@ class Summary:
         # Contractor Investment NPV
         self.investment_npv = npv_skk_real_terms(
             cashflow=(
-                    self.contract._oil_capital_expenditures +
-                    self.contract._gas_capital_expenditures +
-                    self.contract._oil_intangible_expenditures +
-                    self.contract._gas_intangible_expenditures -
+                    self.contract._oil_capital_expenditures_post_tax +
+                    self.contract._gas_capital_expenditures_post_tax +
+                    self.contract._oil_intangible_expenditures_post_tax +
+                    self.contract._gas_intangible_expenditures_post_tax -
                     self.sunk_cost_extended
             ),
             cashflow_years=self.contract.project_years,
@@ -1177,10 +1197,10 @@ class Summary:
         # Contractor Investment NPV
         self.investment_npv = npv_skk_nominal_terms(
             cashflow=(
-                    self.contract._oil_capital_expenditures +
-                    self.contract._gas_capital_expenditures +
-                    self.contract._oil_intangible_expenditures +
-                    self.contract._gas_intangible_expenditures -
+                    self.contract._oil_capital_expenditures_post_tax +
+                    self.contract._gas_capital_expenditures_post_tax +
+                    self.contract._oil_intangible_expenditures_post_tax +
+                    self.contract._gas_intangible_expenditures_post_tax -
                     self.sunk_cost_extended
             ),
             cashflow_years=self.contract.project_years,
@@ -1223,10 +1243,10 @@ class Summary:
         # Contractor Investment NPV
         self.investment_npv = npv_nominal_terms(
             cashflow=(
-                    self.contract._oil_capital_expenditures +
-                    self.contract._gas_capital_expenditures +
-                    self.contract._oil_intangible_expenditures +
-                    self.contract._gas_intangible_expenditures -
+                    self.contract._oil_capital_expenditures_post_tax +
+                    self.contract._gas_capital_expenditures_post_tax +
+                    self.contract._oil_intangible_expenditures_post_tax +
+                    self.contract._gas_intangible_expenditures_post_tax -
                     self.sunk_cost_extended
             ),
             cashflow_years=self.contract.project_years,
@@ -1273,10 +1293,10 @@ class Summary:
         # Contractor Investment NPV
         self.investment_npv = npv_real_terms(
             cashflow=(
-                    self.contract._oil_capital_expenditures +
-                    self.contract._gas_capital_expenditures +
-                    self.contract._oil_intangible_expenditures +
-                    self.contract._gas_intangible_expenditures -
+                    self.contract._oil_capital_expenditures_post_tax +
+                    self.contract._gas_capital_expenditures_post_tax +
+                    self.contract._oil_intangible_expenditures_post_tax +
+                    self.contract._gas_intangible_expenditures_post_tax -
                     self.sunk_cost_extended
             ),
             cashflow_years=self.contract.project_years,
@@ -1323,10 +1343,10 @@ class Summary:
         # Contractor Investment NPV
         investment_npv = npv_point_forward(
             cashflow=(
-                    self.contract._oil_capital_expenditures +
-                    self.contract._gas_capital_expenditures +
-                    self.contract._oil_intangible_expenditures +
-                    self.contract._gas_intangible_expenditures -
+                    self.contract._oil_capital_expenditures_post_tax +
+                    self.contract._gas_capital_expenditures_post_tax +
+                    self.contract._oil_intangible_expenditures_post_tax +
+                    self.contract._gas_intangible_expenditures_post_tax -
                     self.sunk_cost_extended
             ),
             cashflow_years=self.contract.project_years,
@@ -1400,10 +1420,10 @@ class Summary:
         # Condition when the Profitability Index is calculated using un-discounted investment
         else:
             self.investment_pi = np.sum(
-                self.contract._oil_capital_expenditures +
-                self.contract._gas_capital_expenditures +
-                self.contract._oil_intangible_expenditures +
-                self.contract._gas_intangible_expenditures -
+                self.contract._oil_capital_expenditures_post_tax +
+                self.contract._gas_capital_expenditures_post_tax +
+                self.contract._oil_intangible_expenditures_post_tax +
+                self.contract._gas_intangible_expenditures_post_tax -
                 self.sunk_cost_extended
             )
             self.ctr_pv_ratio = np.divide(self.ctr_npv, self.investment_pi, where=self.investment_pi != 0)

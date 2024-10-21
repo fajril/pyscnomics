@@ -39,7 +39,7 @@ def generate_contract_sample(case: ContractSample) -> CostRecovery | GrossSplit:
         post_uu_22_year2001 = True
 
         contract_arguments = {
-            'tax_rate': tax_rate,
+            'effective_tax_rate': tax_rate,
             'ftp_tax_regime': ftp_tax_regime,
             'sunk_cost_reference_year': sunk_cost_reference_year,
             'future_rate': future_rate,
@@ -63,7 +63,7 @@ def generate_contract_sample(case: ContractSample) -> CostRecovery | GrossSplit:
         post_uu_22_year2001 = True
 
         contract_arguments = {
-            'tax_rate': tax_rate,
+            'effective_tax_rate': tax_rate,
             'ftp_tax_regime': ftp_tax_regime,
             'sunk_cost_reference_year': sunk_cost_reference_year,
             'future_rate': future_rate,
@@ -92,7 +92,7 @@ def generate_contract_sample(case: ContractSample) -> CostRecovery | GrossSplit:
 
         # Defining the contract arguments
         contract_arguments = {
-            "tax_rate": tax_rate,
+            "effective_tax_rate": tax_rate,
             "sunk_cost_reference_year": sunk_cost_reference_year,
             "vat_rate": vat_rate,
             "inflation_rate": inflation_rate,

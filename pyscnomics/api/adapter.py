@@ -23,6 +23,7 @@ from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_dict_to_intangible,
                                       convert_dict_to_opex,
                                       convert_dict_to_asr,
+                                      convert_dict_to_lbt,
                                       convert_dict_to_cost_of_sales,
                                       convert_list_to_array_float,
                                       convert_list_to_array_float_or_array_or_none,
@@ -39,7 +40,9 @@ from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_str_to_optimization_targetparameter,
                                       convert_grosssplitregime_to_enum,
                                       convert_to_float,
-                                      read_fluid_type)
+                                      read_fluid_type,
+                                      convert_to_method_limit)
+from pyscnomics.econ.limit import econ_limit
 
 
 class ContractException(Exception):
@@ -81,12 +84,14 @@ def get_setup_dict(data: dict) -> tuple:
         The gas onstream date.
     lifting: Lifting
         The lifting of the project, in Lifting Dataclass format.
-    tangible: Tangible
-        The tangible cost of the project, in Tangible Dataclass format.
+    capital: Tangible
+        The capital cost of the project, in Tangible Dataclass format.
     intangible: Intangible
         The intangible cost of the project, in Intangible Dataclass format.
     opex: OPEX
         The opex cost of the project, in OPEX Dataclass format.
+    lbt: LBT
+        The land and building tax of the project, in LBT Dataclass format.
     cost_of_sales: CostOfSales
         The opex cost of the project, in CostOfSales Dataclass format.
     asr: ASR
@@ -99,12 +104,13 @@ def get_setup_dict(data: dict) -> tuple:
     oil_onstream_date = convert_str_to_date(str_object=data['setup']['oil_onstream_date'])
     gas_onstream_date = convert_str_to_date(str_object=data['setup']['gas_onstream_date'])
     lifting = convert_dict_to_lifting(data_raw=data)
-    tangible = convert_dict_to_capital(data_raw=data['tangible'])
+    capital = convert_dict_to_capital(data_raw=data['capital'])
     intangible = convert_dict_to_intangible(data_raw=data['intangible'])
     opex = convert_dict_to_opex(data_raw=data['opex'])
     asr = convert_dict_to_asr(data_raw=data['asr'])
+    lbt = convert_dict_to_lbt(data_raw=data['lbt'])
     cost_of_sales = convert_dict_to_cost_of_sales(data_raw=data['cost_of_sales'])
-    return start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales
+    return start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, capital, intangible, opex, asr, lbt, cost_of_sales
 
 
 def get_summary_dict(data: dict) -> dict:
@@ -199,8 +205,7 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         The summary arguments used in retrieving the executive summary of the contract.
 
     """
-    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
-        get_setup_dict(data=data))
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, lbt, cost_of_sales = get_setup_dict(data=data)
 
     contract = CostRecovery(
         start_date=start_date,
@@ -212,6 +217,7 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         intangible_cost=intangible,
         opex=opex,
         asr_cost=asr,
+        lbt_cost=lbt,
         cost_of_sales=cost_of_sales,
         oil_ftp_is_available=data['costrecovery']['oil_ftp_is_available'],
         oil_ftp_is_shared=data['costrecovery']['oil_ftp_is_shared'],
@@ -246,20 +252,22 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         "co2_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['co2_revenue']),
         "is_dmo_end_weighted": data['contract_arguments']['is_dmo_end_weighted'],
         "tax_regime": convert_str_to_taxregime(str_object=data['contract_arguments']['tax_regime']),
-        "tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['tax_rate']),
+        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['effective_tax_rate']),
         "ftp_tax_regime": convert_str_to_ftptaxregime(str_object=data['contract_arguments']['ftp_tax_regime']),
         "sunk_cost_reference_year": data['contract_arguments']['sunk_cost_reference_year'],
         "depr_method": convert_str_to_depremethod(str_object=data['contract_arguments']['depr_method']),
         "decline_factor": data['contract_arguments']['decline_factor'],
         "vat_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['vat_rate']),
-        "lbt_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['lbt_rate']),
         "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
-        "future_rate": convert_to_float(target=data['contract_arguments']['future_rate']),
         "inflation_rate_applied_to": convert_str_to_inflationappliedto(str_object=data['contract_arguments']['inflation_rate_applied_to']),
-        "post_uu_22_year2001": data['contract_arguments']['post_uu_22_year2001'],
-        "oil_cost_of_sales_applied": data["contract_arguments"]["oil_cost_of_sales_applied"],
-        "gas_cost_of_sales_applied": data["contract_arguments"]["gas_cost_of_sales_applied"],
-        "sum_undepreciated_cost": data['contract_arguments']['sum_undepreciated_cost'],
+        "post_uu_22_year2001": True if 'post_uu_22_year2001' not in data['contract_arguments'] else
+        data['contract_arguments']['post_uu_22_year2001'],
+        "oil_cost_of_sales_applied": False if "oil_cost_of_sales_applied" not in data["contract_arguments"] else
+        data["contract_arguments"]["oil_cost_of_sales_applied"],
+        "gas_cost_of_sales_applied": False if "gas_cost_of_sales_applied" not in data["contract_arguments"] else
+        data["contract_arguments"]["gas_cost_of_sales_applied"],
+        "sum_undepreciated_cost": False if 'sum_undepreciated_cost' not in data['contract_arguments'] else
+        data['contract_arguments']['sum_undepreciated_cost'],
     }
 
     # Running the contract
@@ -529,7 +537,7 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         The summary arguments used in retrieving the executive summary of the contract.
 
     """
-    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, lbt, cost_of_sales = (
         get_setup_dict(data=data))
 
     contract = GrossSplit(
@@ -542,6 +550,7 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         intangible_cost=intangible,
         opex=opex,
         asr_cost=asr,
+        lbt_cost=lbt,
         field_status=data['grosssplit']['field_status'],
         field_loc=data['grosssplit']['field_loc'],
         res_depth=data['grosssplit']['res_depth'],
@@ -572,20 +581,20 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         "co2_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['co2_revenue']),
         "is_dmo_end_weighted": data['contract_arguments']['is_dmo_end_weighted'],
         "tax_regime": convert_str_to_taxregime(str_object=data['contract_arguments']['tax_regime']),
-        "tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['tax_rate']),
+        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['effective_tax_rate']),
         "sunk_cost_reference_year": data['contract_arguments']['sunk_cost_reference_year'],
         "depr_method": convert_str_to_depremethod(str_object=data['contract_arguments']['depr_method']),
         "decline_factor": data['contract_arguments']['decline_factor'],
         "vat_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['vat_rate']),
         "lbt_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['lbt_rate']),
         "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
-        "future_rate": convert_to_float(target=data['contract_arguments']['future_rate']),
         "inflation_rate_applied_to": convert_str_to_inflationappliedto(
             str_object=data['contract_arguments']['inflation_rate_applied_to']),
         "cum_production_split_offset": convert_list_to_array_float_or_array(data_input=data["contract_arguments"]["cum_production_split_offset"]),
         "amortization": data["contract_arguments"]["amortization"],
         "regime": convert_grosssplitregime_to_enum(target=data["contract_arguments"]["regime"]),
-        "sum_undepreciated_cost": data["contract_arguments"]["sum_undepreciated_cost"],
+        "sum_undepreciated_cost": False if 'sum_undepreciated_cost' not in data['contract_arguments'] else
+        data['contract_arguments']['sum_undepreciated_cost'],
     }
 
     # Running the contract
@@ -756,7 +765,7 @@ def get_baseproject(data: dict, summary_result: bool = True):
         The summary arguments used in retrieving the executive summary of the contract.
 
     """
-    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, lbt, cost_of_sales = (
         get_setup_dict(data=data))
 
     contract = BaseProject(start_date=start_date,
@@ -775,10 +784,8 @@ def get_baseproject(data: dict, summary_result: bool = True):
             str_object=data['contract_arguments']['electricity_revenue']),
         "co2_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['co2_revenue']),
         "sunk_cost_reference_year": data['contract_arguments']['sunk_cost_reference_year'],
-        "vat_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['vat_rate']),
-        "lbt_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['lbt_rate']),
+        "tax_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['vat_rate']),
         "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
-        "future_rate": convert_to_float(target=data['contract_arguments']['future_rate']),
         "inflation_rate_applied_to": convert_str_to_inflationappliedto(str_object=data['contract_arguments']['inflation_rate_applied_to']),
     }
 
@@ -983,109 +990,6 @@ def get_rpd_dict(data: dict):
         }
     ).set_index('year').to_dict()
 
-
-def get_indirect_taxes(data: dict)-> float:
-    """
-    Function to retrieve the indirect taxes indicator from given contract data.
-
-    Parameters
-    ----------
-    data: dict
-        The dictionary of the data input.
-
-    Returns
-    -------
-    out:float
-        The value of indirect tax indicator.
-
-    """
-    def get_contract_indirect_taxes(
-            contract_object: CostRecovery | GrossSplit | Transition,
-            contract_args: dict,
-    ):
-        # Retrieving the information of the expenditures for the inflation and VAT value is from the given data
-        contract_object.run(**contract_args)
-        oil_capital_original = np.sum(contract_object._oil_capital_expenditures)
-        gas_capital_original = np.sum(contract_object._gas_capital_expenditures)
-        oil_intangible_original = np.sum(contract_object._oil_intangible_expenditures)
-        gas_intangible_original = np.sum(contract_object._gas_intangible_expenditures)
-        oil_opex_original = np.sum(contract_object._oil_opex_expenditures)
-        gas_opex_original = np.sum(contract_object._gas_opex_expenditures)
-        oil_asr_original = np.sum(contract_object._oil_asr_expenditures)
-        gas_asr_original = np.sum(contract_object._gas_asr_expenditures)
-
-        # Set the value of VAT and Inflation to 0 and run the contract using these values
-        contract_args_zeros = contract_args.copy()
-        contract_args_zeros['vat_rate'] = 0.0
-        contract_args_zeros['inflation_rate'] = 0.0
-        contract_object.run(**contract_args_zeros)
-
-        # Retrieving the information of the expenditures for the inflation and VAT value is zero
-        oil_capital_alter = np.sum(contract_object._oil_capital_expenditures)
-        gas_capital_alter = np.sum(contract_object._gas_capital_expenditures)
-        oil_intangible_alter = np.sum(contract_object._oil_intangible_expenditures)
-        gas_intangible_alter = np.sum(contract_object._gas_intangible_expenditures)
-        oil_opex_alter = np.sum(contract_object._oil_opex_expenditures)
-        gas_opex_alter = np.sum(contract_object._gas_opex_expenditures)
-        oil_asr_alter = np.sum(contract_object._oil_asr_expenditures)
-        gas_asr_alter = np.sum(contract_object._gas_asr_expenditures)
-
-        # Get the value of the original indirect taxes from given data and indirect taxes from altered zeros contract
-        indirect_taxes_original = (
-                oil_capital_original +
-                gas_capital_original +
-                oil_intangible_original +
-                gas_intangible_original +
-                oil_opex_original +
-                gas_opex_original +
-                oil_asr_original +
-                gas_asr_original
-        )
-
-        indirect_taxes_alter = (
-            oil_capital_alter +
-            gas_capital_alter +
-            oil_intangible_alter +
-            gas_intangible_alter +
-            oil_opex_alter +
-            gas_opex_alter +
-            oil_asr_alter +
-            gas_asr_alter
-        )
-
-        return indirect_taxes_original, indirect_taxes_alter
-
-    if 'contract_1' in data or 'contract_2' in data:
-        # Retrieving the baseproject
-        project = get_transition(data=data)
-        contract = project[1]
-        contract_arguments_original = project[2]
-        in_tax_ori_1, in_tax_alter_1 = get_contract_indirect_taxes(
-            contract_object=contract.contract1,
-            contract_args=contract.argument_contract1
-        )
-
-        in_tax_ori_2, in_tax_alter_2 = get_contract_indirect_taxes(
-            contract_object=contract.contract2,
-            contract_args=contract.argument_contract2
-        )
-
-        indirect_taxes = in_tax_ori_1 + in_tax_ori_2 - in_tax_alter_1 - in_tax_alter_2
-
-    else:
-        # Retrieving the baseproject
-        project = get_baseproject(data=data)
-        contract = project[1]
-        contract_arguments_original = project[2]
-        in_tax_ori, in_tax_alter = get_contract_indirect_taxes(
-            contract_object=contract,
-            contract_args=contract_arguments_original,
-        )
-        indirect_taxes = in_tax_ori - in_tax_alter
-
-    return indirect_taxes
-
-
 def get_grosssplit_split(data: dict):
     """
     The function to get the contractor split information from Gross Split Contract Scheme.
@@ -1102,7 +1006,7 @@ def get_grosssplit_split(data: dict):
 
 
     """
-    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, cost_of_sales = (
+    start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, tangible, intangible, opex, asr, lbt, cost_of_sales = (
         get_setup_dict(data=data))
 
     contract = GrossSplit(
@@ -1115,6 +1019,7 @@ def get_grosssplit_split(data: dict):
         intangible_cost=intangible,
         opex=opex,
         asr_cost=asr,
+        lbt_cost=lbt,
         field_status=data['grosssplit']['field_status'],
         field_loc=data['grosssplit']['field_loc'],
         res_depth=data['grosssplit']['res_depth'],
@@ -1145,14 +1050,13 @@ def get_grosssplit_split(data: dict):
         "co2_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['co2_revenue']),
         "is_dmo_end_weighted": data['contract_arguments']['is_dmo_end_weighted'],
         "tax_regime": convert_str_to_taxregime(str_object=data['contract_arguments']['tax_regime']),
-        "tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['tax_rate']),
+        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(data_list=data['contract_arguments']['effective_tax_rate']),
         "sunk_cost_reference_year": data['contract_arguments']['sunk_cost_reference_year'],
         "depr_method": convert_str_to_depremethod(str_object=data['contract_arguments']['depr_method']),
         "decline_factor": data['contract_arguments']['decline_factor'],
         "vat_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['vat_rate']),
         "lbt_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['lbt_rate']),
         "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
-        "future_rate": convert_to_float(target=data['contract_arguments']['future_rate']),
         "inflation_rate_applied_to": convert_str_to_inflationappliedto(
             str_object=data['contract_arguments']['inflation_rate_applied_to']),
         "cum_production_split_offset": convert_list_to_array_float_or_array(data_input=data["contract_arguments"]["cum_production_split_offset"]),
@@ -1169,8 +1073,12 @@ def get_grosssplit_split(data: dict):
         'oil_base_split': contract._oil_base_split.tolist(),
         'gas_base_split': contract._gas_base_split.tolist(),
         'var_split_array': contract._var_split_array.tolist(),
-        'oil_prog_split': contract._oil_prog_split.tolist(),
-        'gas_prog_split': contract._gas_prog_split.tolist(),
+        'oil_prog_price_split': contract._oil_prog_price_split.tolist(),
+        'gas_prog_price_split': contract._gas_prog_price_split.tolist(),
+        'oil_prog_cumulative_production_split': contract._oil_prog_cum_split.tolist(),
+        'gas_prog_cumulative_production_split': contract._gas_prog_cum_split.tolist(),
+        'oil_prog_total_split': contract._oil_prog_split.tolist(),
+        'gas_prog_total_split': contract._gas_prog_split.tolist(),
         'oil_ctr_split': contract._oil_ctr_split_prior_bracket.tolist(),
         'gas_ctr_split': contract._gas_ctr_split_prior_bracket.tolist(),
     }).set_index('project_years').to_dict()
@@ -1272,9 +1180,24 @@ def get_transition_split(data: dict):
 
     return result
 
+def get_economic_limit(
+        data: dict,
+):
+    """
+    The function to get the information of economic limit years from a cashflow using selected method.
 
+    Parameters
+    ----------
+    data: dict
 
-
-
-
+    Returns
+    -------
+    int
+        The index
+    """
+    years = np.array(data['years'], dtype=int)
+    cash_flow = np.array(data['cash_flow'], dtype=float)
+    method = convert_to_method_limit(target=data['method'])
+    index_limit = econ_limit(cashflow=cash_flow, method=method)
+    return years[index_limit]
 
