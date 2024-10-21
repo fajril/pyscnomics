@@ -9,8 +9,9 @@ from pyscnomics.api.adapter import (get_baseproject,
                                     get_ltp_dict,
                                     get_rpd_dict,
                                     get_grosssplit_split,
-                                    get_transition_split)
-from pyscnomics.api.converter import Data
+                                    get_transition_split,
+                                    get_economic_limit)
+from pyscnomics.api.converter import Data, EconLimit
 from pyscnomics.api.converter import DataTransition
 from pyscnomics.api.converter import LtpBM, RpdBM
 
@@ -504,3 +505,17 @@ async def get_transition_split_information(data: DataTransition) -> dict:
     """
     result = get_transition_split(data=data.model_dump())
     return result
+
+@router.post("/econlimit")
+async def calculate_economic_limit(data: EconLimit) -> int:
+    """
+    ## Retrieve The Economic Limit Years
+    Route to get the years of the economic limit.
+
+    ### Data Input Structure
+    years: list[int]
+    cash_flow: list[int] | list[float]
+    method: str
+    """
+    return get_economic_limit(data=data.dict())
+

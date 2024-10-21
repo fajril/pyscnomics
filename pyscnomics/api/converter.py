@@ -9,7 +9,7 @@ import numpy as np
 
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales, LBT
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type
-from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime, GrossSplitRegime
+from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime, GrossSplitRegime, LimitMethod
 from pyscnomics.tools.helper import (get_inflation_applied_converter,
                                      get_npv_mode_converter,
                                      get_discounting_mode_converter,
@@ -685,6 +685,19 @@ class DataTransition(BaseModel):
     summary_arguments: SummaryArgumentsBM
     result: dict = None
     optimization_arguments: OptimizationBM = None
+
+
+class EconLimit(BaseModel):
+    """
+    The BaseModel to validate the Economic Limit.
+
+    Parameters
+    ----------
+    """
+    years: list[int]
+    cash_flow: list[int] | list[float]
+    method: str
+
 
 
 def convert_str_to_date(str_object: str | int) -> date | None:
@@ -1412,3 +1425,27 @@ def convert_to_float(target=int):
     float
     """
     return float(target)
+
+
+def convert_to_method_limit(target:str):
+    """
+    Function to convert string into LimitMethod selection.
+
+    Parameters
+    ----------
+    target: dict
+        The target that will be converted.
+
+    Returns
+    -------
+    LimitMethod
+
+    """
+    if target == 'Maximum Cumulative Cashflow':
+        return LimitMethod.MAX_CUM_CASHFLOW
+    elif target == 'Maximum NPV':
+        return LimitMethod.MAX_NPV
+    elif target == 'Negative Cashflow':
+        return LimitMethod.NEGATIVE_CASHFLOW
+    else:
+        return ValueError("Invalid LimitMethod provided.")

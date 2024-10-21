@@ -630,3 +630,12 @@ class ContractSample(Enum):
     CASE_1 = 'Cost Recovery Contract Sample'
     CASE_2 = 'Cost Recovery Consolidated Contract Sample'
     CASE_3 = 'Gross Split Contract Sample'
+
+
+class LimitMethod(Enum):
+    """
+    Economic limit method.
+    """
+    MAX_CUM_CASHFLOW = "Maximum Cumulative Cashflow"
+    NEGATIVE_CASHFLOW = "Negative Cashflow"
+    MAX_NPV = "Maximum NPV"

@@ -40,7 +40,9 @@ from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_str_to_optimization_targetparameter,
                                       convert_grosssplitregime_to_enum,
                                       convert_to_float,
-                                      read_fluid_type)
+                                      read_fluid_type,
+                                      convert_to_method_limit)
+from pyscnomics.econ.limit import econ_limit
 
 
 class ContractException(Exception):
@@ -1177,3 +1179,25 @@ def get_transition_split(data: dict):
             pass
 
     return result
+
+def get_economic_limit(
+        data: dict,
+):
+    """
+    The function to get the information of economic limit years from a cashflow using selected method.
+
+    Parameters
+    ----------
+    data: dict
+
+    Returns
+    -------
+    int
+        The index
+    """
+    years = np.array(data['years'], dtype=int)
+    cash_flow = np.array(data['cash_flow'], dtype=float)
+    method = convert_to_method_limit(target=data['method'])
+    index_limit = econ_limit(cashflow=cash_flow, method=method)
+    return years[index_limit]
+
