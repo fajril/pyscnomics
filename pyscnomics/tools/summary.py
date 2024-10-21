@@ -760,6 +760,9 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'ctr_net_share_over_gross_share': ctr_net_share_over_gross_share,
                 'ctr_net_cashflow': ctr_net_cashflow,
                 'ctr_net_cashflow_over_gross_rev': ctr_net_cashflow_over_gross_rev,
+                'total_indirect_taxes': total_indirect_taxes,
+                'oil_indirect_taxes': oil_indirect_taxes,
+                'gas_indirect_taxes': gas_indirect_taxes,
 
                 # Zero value for the psc terms
                 'gov_gross_share': 0,
