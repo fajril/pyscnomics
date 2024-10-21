@@ -197,6 +197,7 @@ class CostRecovery(BaseProject):
     _gas_government_take: np.ndarray = field(default=None, init=False, repr=False)
 
     # Consolidated Attributes
+    _consolidated_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_cost_of_sales: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_capital_cost: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_intangible: np.ndarray = field(default=None, init=False, repr=False)
@@ -944,6 +945,25 @@ class CostRecovery(BaseProject):
             inflation_rate_applied_to=inflation_rate_applied_to,
         )
 
+        # Total indirect taxes for OIL and GAS
+        self._oil_total_indirect_tax = (
+                self._oil_capital_indirect_tax
+                + self._oil_intangible_indirect_tax
+                + self._oil_opex_indirect_tax
+                + self._oil_asr_indirect_tax
+                + self._oil_lbt_indirect_tax
+                + self._oil_cost_of_sales_indirect_tax
+        )
+
+        self._gas_total_indirect_tax = (
+                self._gas_capital_indirect_tax
+                + self._gas_intangible_indirect_tax
+                + self._gas_opex_indirect_tax
+                + self._gas_asr_indirect_tax
+                + self._gas_lbt_indirect_tax
+                + self._gas_cost_of_sales_indirect_tax
+        )
+
         # Get The Other Revenue as the chosen selection
         self._get_other_revenue(sulfur_revenue=sulfur_revenue,
                                 electricity_revenue=electricity_revenue,
@@ -1322,6 +1342,8 @@ class CostRecovery(BaseProject):
         self._consolidated_undepreciated_asset = (
                 self._oil_undepreciated_asset + self._gas_undepreciated_asset
         )
+
+        self._consolidated_indirect_tax = self._oil_total_indirect_tax + self._gas_total_indirect_tax
         self._consolidated_ftp = self._oil_ftp + self._gas_ftp
         self._consolidated_ftp_ctr = self._oil_ftp_ctr + self._gas_ftp_ctr
         self._consolidated_ftp_gov = self._oil_ftp_gov + self._gas_ftp_gov

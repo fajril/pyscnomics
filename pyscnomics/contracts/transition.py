@@ -142,18 +142,55 @@ class Transition:
     _electricity_revenue: np.ndarray = field(default=None, init=False, repr=False)
     _co2_revenue: np.ndarray = field(default=None, init=False, repr=False)
 
-    _oil_capital_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_capital_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_intangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_intangible_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_opex_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_opex_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_asr_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_cost_of_sales_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_cost_of_sales_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_lbt_expenditures: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_lbt_expenditures: np.ndarray = field(default=None, init=False, repr=False)
+    # Attributes to be defined later (associated with pre tax expenditures for each cost elements)
+    _oil_capital_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_capital_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_intangible_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_intangible_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_opex_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_opex_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_asr_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_asr_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_cost_of_sales_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_lbt_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_lbt_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes to be defined later (associated with indirect taxes for each cost element)
+    _oil_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_intangible_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_intangible_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_opex_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_opex_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_asr_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_asr_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_lbt_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_lbt_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes to be defined later (associated with pre tax expenditures for each cost elements)
+    _oil_capital_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_capital_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_intangible_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_intangible_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_opex_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_opex_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_asr_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_asr_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_lbt_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_lbt_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_cost_of_sales_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes to be defined later (associated with total expenditures and indirect taxes for each fluid)
+    _oil_total_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_total_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_total_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_total_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_total_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_total_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
 
     _oil_wap_price: np.ndarray = field(default=None, init=False, repr=False)
     _gas_wap_price: np.ndarray = field(default=None, init=False, repr=False)
@@ -182,6 +219,7 @@ class Transition:
     _gas_undepreciated_asset: float = field(default=None, init=False, repr=False)
 
     # Consolidated Attributes
+    _consolidated_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_undepreciated_asset: np.ndarray | float = field(default=None, init=False, repr=False)
@@ -722,6 +760,16 @@ class Transition:
                 self._contract2_transitioned._gas_capital_expenditures_post_tax
         )
 
+        self._oil_capital_expenditures_pre_tax = (
+                self._contract1_transitioned._oil_capital_expenditures_pre_tax +
+                self._contract2_transitioned._oil_capital_expenditures_pre_tax
+        )
+
+        self._gas_capital_expenditures_pre_tax = (
+                self._contract1_transitioned._gas_capital_expenditures_pre_tax +
+                self._contract2_transitioned._gas_capital_expenditures_pre_tax
+        )
+
         # Intangible
         self._oil_intangible_expenditures_post_tax = (
                 self._contract1_transitioned._oil_intangible_expenditures_post_tax +
@@ -731,6 +779,16 @@ class Transition:
         self._gas_intangible_expenditures_post_tax = (
                 self._contract1_transitioned._gas_intangible_expenditures_post_tax +
                 self._contract2_transitioned._gas_intangible_expenditures_post_tax
+        )
+
+        self._oil_intangible_expenditures_pre_tax = (
+                self._contract1_transitioned._oil_intangible_expenditures_pre_tax +
+                self._contract2_transitioned._oil_intangible_expenditures_pre_tax
+        )
+
+        self._gas_intangible_expenditures_pre_tax = (
+                self._contract1_transitioned._gas_intangible_expenditures_pre_tax +
+                self._contract2_transitioned._gas_intangible_expenditures_pre_tax
         )
 
         # Opex
@@ -744,6 +802,16 @@ class Transition:
                 self._contract2_transitioned._gas_opex_expenditures_post_tax
         )
 
+        self._oil_opex_expenditures_pre_tax = (
+                self._contract1_transitioned._oil_opex_expenditures_pre_tax +
+                self._contract2_transitioned._oil_opex_expenditures_pre_tax
+        )
+
+        self._gas_opex_expenditures_pre_tax = (
+                self._contract1_transitioned._gas_opex_expenditures_pre_tax +
+                self._contract2_transitioned._gas_opex_expenditures_pre_tax
+        )
+
         # ASR
         self._oil_asr_expenditures_post_tax = (
                 self._contract1_transitioned._oil_asr_expenditures_post_tax +
@@ -753,6 +821,16 @@ class Transition:
         self._gas_asr_expenditures_post_tax = (
                 self._contract1_transitioned._gas_asr_expenditures_post_tax +
                 self._contract2_transitioned._gas_asr_expenditures_post_tax
+        )
+
+        self._oil_asr_expenditures_pre_tax = (
+                self._contract1_transitioned._oil_asr_expenditures_pre_tax +
+                self._contract2_transitioned._oil_asr_expenditures_pre_tax
+        )
+
+        self._gas_asr_expenditures_pre_tax = (
+                self._contract1_transitioned._gas_asr_expenditures_pre_tax +
+                self._contract2_transitioned._gas_asr_expenditures_pre_tax
         )
 
         # Cost Of Sales
@@ -766,6 +844,16 @@ class Transition:
                 self._contract2_transitioned._gas_cost_of_sales_expenditures_post_tax
         )
 
+        self._oil_cost_of_sales_expenditures_pre_tax = (
+                self._contract1_transitioned._oil_cost_of_sales_expenditures_post_tax +
+                self._contract2_transitioned._oil_cost_of_sales_expenditures_post_tax
+        )
+
+        self._gas_cost_of_sales_expenditures_pre_tax = (
+                self._contract1_transitioned._gas_cost_of_sales_expenditures_pre_tax +
+                self._contract2_transitioned._gas_cost_of_sales_expenditures_pre_tax
+        )
+
         # Land and Building Tax
         self._oil_lbt_expenditures_post_tax = (
                 self._contract1_transitioned._oil_lbt_expenditures_post_tax +
@@ -775,6 +863,72 @@ class Transition:
         self._gas_lbt_expenditures_post_tax = (
                 self._contract1_transitioned._gas_lbt_expenditures_post_tax +
                 self._contract2_transitioned._gas_lbt_expenditures_post_tax
+        )
+
+        self._oil_lbt_expenditures_pre_tax = (
+                self._contract1_transitioned._oil_lbt_expenditures_pre_tax +
+                self._contract2_transitioned._oil_lbt_expenditures_pre_tax
+        )
+
+        self._gas_lbt_expenditures_pre_tax = (
+                self._contract1_transitioned._gas_lbt_expenditures_pre_tax +
+                self._contract2_transitioned._gas_lbt_expenditures_pre_tax
+        )
+
+        # Indirect Taxes
+        self._oil_capital_indirect_tax = (self._contract1_transitioned._oil_capital_indirect_tax +
+                                          self._contract2_transitioned._oil_capital_indirect_tax)
+
+        self._gas_capital_indirect_tax = (self._contract1_transitioned._gas_capital_indirect_tax +
+                                          self._contract2_transitioned._gas_capital_indirect_tax)
+
+        self._oil_intangible_indirect_tax = (self._contract1_transitioned._oil_intangible_indirect_tax +
+                                             self._contract2_transitioned._oil_intangible_indirect_tax)
+
+        self._gas_intangible_indirect_tax = (self._contract1_transitioned._gas_intangible_indirect_tax +
+                                             self._contract2_transitioned._gas_intangible_indirect_tax)
+
+        self._oil_opex_indirect_tax = (self._contract1_transitioned._oil_opex_indirect_tax +
+                                       self._contract2_transitioned._oil_opex_indirect_tax)
+
+        self._gas_opex_indirect_tax = (self._contract1_transitioned._gas_opex_indirect_tax +
+                                       self._contract2_transitioned._gas_opex_indirect_tax)
+
+        self._oil_asr_indirect_tax = (self._contract1_transitioned._oil_asr_indirect_tax +
+                                      self._contract2_transitioned._oil_asr_indirect_tax)
+
+        self._gas_asr_indirect_tax = (self._contract1_transitioned._gas_asr_indirect_tax +
+                                      self._contract2_transitioned._gas_asr_indirect_tax)
+
+        self._oil_lbt_indirect_tax = (self._contract1_transitioned._oil_lbt_indirect_tax +
+                                      self._contract2_transitioned._oil_lbt_indirect_tax)
+
+        self._gas_lbt_indirect_tax = (self._contract1_transitioned._gas_lbt_indirect_tax +
+                                      self._contract2_transitioned._gas_lbt_indirect_tax)
+
+        self._oil_cost_of_sales_indirect_tax = (self._contract1_transitioned._oil_cost_of_sales_indirect_tax +
+                                                self._contract2_transitioned._oil_cost_of_sales_indirect_tax)
+
+        self._gas_cost_of_sales_indirect_tax = (self._contract1_transitioned._gas_cost_of_sales_indirect_tax +
+                                                self._contract2_transitioned._gas_cost_of_sales_indirect_tax)
+
+        # Total indirect taxes for OIL and GAS
+        self._oil_total_indirect_tax = (
+                self._oil_capital_indirect_tax
+                + self._oil_intangible_indirect_tax
+                + self._oil_opex_indirect_tax
+                + self._oil_asr_indirect_tax
+                + self._oil_lbt_indirect_tax
+                + self._oil_cost_of_sales_indirect_tax
+        )
+
+        self._gas_total_indirect_tax = (
+                self._gas_capital_indirect_tax
+                + self._gas_intangible_indirect_tax
+                + self._gas_opex_indirect_tax
+                + self._gas_asr_indirect_tax
+                + self._gas_lbt_indirect_tax
+                + self._gas_cost_of_sales_indirect_tax
         )
 
         # WAP Price
@@ -932,6 +1086,9 @@ class Transition:
         # Consolidated Government Take
         self._consolidated_government_take = (self._contract1_transitioned._consolidated_government_take +
                                               self._contract2_transitioned._consolidated_government_take)
+
+        # Consolidated Indirect Taxes
+        self._consolidated_indirect_tax = self._oil_total_indirect_tax + self._gas_total_indirect_tax
 
         # Project Years
         self.project_years = np.copy(self._contract1_transitioned.project_years)

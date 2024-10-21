@@ -1328,7 +1328,11 @@ def convert_summary_to_dict(dict_object: dict):
         'gov_take_npv': dict_object['gov_take_npv'],
         'undepreciated_asset_oil': dict_object['undepreciated_asset_oil'],
         'undepreciated_asset_gas': dict_object['undepreciated_asset_gas'],
-        'undepreciated_asset_total': dict_object['undepreciated_asset_total']
+        'undepreciated_asset_total': dict_object['undepreciated_asset_total'],
+        'total_indirect_taxes': dict_object['total_indirect_taxes'],
+        'oil_indirect_taxes': dict_object['oil_indirect_taxes'],
+        'gas_indirect_taxes': dict_object['gas_indirect_taxes'],
+
 
     }
     return summary_skk_format
