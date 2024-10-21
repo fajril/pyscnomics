@@ -162,6 +162,8 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_oil['Revenue'] = contract._oil_revenue
         psc_table_oil['Base_Split'] = contract._oil_base_split
         psc_table_oil['Variable_Split'] = contract._var_split_array
+        psc_table_oil['Progressive_Price_Split'] = contract._oil_prog_price_split
+        psc_table_oil['Progressive_Cumulative_Production_Split'] = contract._oil_prog_cum_split
         psc_table_oil['Progressive_Split'] = contract._oil_prog_split
         psc_table_oil['Contractor_Split'] = contract._oil_ctr_split
         psc_table_oil['Contractor_Share'] = contract._oil_ctr_share_before_transfer
@@ -197,6 +199,8 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_gas['ASR'] = contract._gas_asr_expenditures_post_tax
         psc_table_gas['Revenue'] = contract._gas_revenue
         psc_table_gas['Base_Split'] = contract._gas_base_split
+        psc_table_gas['Progressive_Price_Split'] = contract._gas_prog_price_split
+        psc_table_gas['Progressive_Cumulative_Production_Split'] = contract._gas_prog_cum_split
         psc_table_gas['Variable_Split'] = contract._var_split_array
         psc_table_gas['Progressive_Split'] = contract._gas_prog_split
         psc_table_gas['Contractor_Split'] = contract._gas_ctr_split
@@ -400,6 +404,9 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_oil_1['Revenue'] = contract._contract1_transitioned._oil_revenue
             psc_table_oil_1['Base_Split'] = contract._contract1_transitioned._oil_base_split
             psc_table_oil_1['Variable_Split'] = contract._contract1_transitioned._var_split_array
+            psc_table_oil_1['Base_Split'] = contract._contract1_transitioned._oil_base_split
+            psc_table_oil_1['Progressive_Price_Split'] = contract._contract1_transitioned._oil_prog_price_split
+            psc_table_oil_1['Progressive_Cumulative_Production_Split'] = contract._contract1_transitioned._oil_prog_cum_split
             psc_table_oil_1['Progressive_Split'] = contract._contract1_transitioned._oil_prog_split
             psc_table_oil_1['Contractor_Split'] = contract._contract1_transitioned._oil_ctr_split
             psc_table_oil_1['Contractor_Share'] = contract._contract1_transitioned._oil_ctr_share_before_transfer
@@ -435,6 +442,9 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_1['Revenue'] = contract._contract1_transitioned._gas_revenue
             psc_table_gas_1['Base_Split'] = contract._contract1_transitioned._gas_base_split
             psc_table_gas_1['Variable_Split'] = contract._contract1_transitioned._var_split_array
+            psc_table_gas_1['Base_Split'] = contract._contract1_transitioned._gas_base_split
+            psc_table_gas_1['Progressive_Price_Split'] = contract._contract1_transitioned._gas_prog_price_split
+            psc_table_gas_1['Progressive_Cumulative_Production_Split'] = contract._contract1_transitioned._gas_prog_cum_split
             psc_table_gas_1['Progressive_Split'] = contract._contract1_transitioned._gas_prog_split
             psc_table_gas_1['Contractor_Split'] = contract._contract1_transitioned._gas_ctr_split
             psc_table_gas_1['Contractor_Share'] = contract._contract1_transitioned._gas_ctr_share_before_transfer
@@ -627,6 +637,8 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_oil_2['Revenue'] = contract._contract2_transitioned._oil_revenue
             psc_table_oil_2['Base_Split'] = contract._contract2_transitioned._oil_base_split
             psc_table_oil_2['Variable_Split'] = contract._contract2_transitioned._var_split_array
+            psc_table_oil_2['Progressive_Price_Split'] = contract._contract2_transitioned._oil_prog_price_split
+            psc_table_oil_2['Progressive_Cumulative_Production_Split'] = contract._contract2_transitioned._oil_prog_cum_split
             psc_table_oil_2['Progressive_Split'] = contract._contract2_transitioned._oil_prog_split
             psc_table_oil_2['Contractor_Split'] = contract._contract2_transitioned._oil_ctr_split
             psc_table_oil_2['Contractor_Share'] = contract._contract2_transitioned._oil_ctr_share_before_transfer
@@ -662,6 +674,8 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_2['Revenue'] = contract._contract2_transitioned._gas_revenue
             psc_table_gas_2['Base_Split'] = contract._contract2_transitioned._gas_base_split
             psc_table_gas_2['Variable_Split'] = contract._contract2_transitioned._var_split_array
+            psc_table_gas_2['Progressive_Price_Split'] = contract._contract2_transitioned._gas_prog_price_split
+            psc_table_gas_2['Progressive_Cumulative_Production_Split'] = contract._contract2_transitioned._gas_prog_cum_split
             psc_table_gas_2['Progressive_Split'] = contract._contract2_transitioned._gas_prog_split
             psc_table_gas_2['Contractor_Split'] = contract._contract2_transitioned._gas_ctr_split
             psc_table_gas_2['Contractor_Share'] = contract._contract2_transitioned._gas_ctr_share_before_transfer

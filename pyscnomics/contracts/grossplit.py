@@ -121,6 +121,10 @@ class GrossSplit(BaseProject):
     _gas_base_split: np.ndarray = field(default=None, init=False, repr=False)
     _variable_split: float = field(default=0, init=False, repr=False)
     _var_split_array: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_prog_price_split: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_prog_cum_split: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_prog_price_split: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_prog_cum_split: np.ndarray = field(default=None, init=False, repr=False)
     _oil_prog_split: np.ndarray = field(default=None, init=False, repr=False)
     _gas_prog_split: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ctr_split: np.ndarray = field(default=None, init=False, repr=False)
@@ -973,41 +977,41 @@ class GrossSplit(BaseProject):
 
         # Condition when the cum_production_split_offset is filled with np.ndarray
         if isinstance(cum_production_split_offset, np.ndarray) and len(cum_production_split_offset) > 1:
-            oil_prog_price_split, oil_prog_cum_split = vectorized_get_prog_split(
+            self._oil_prog_price_split, self._oil_prog_cum_split = vectorized_get_prog_split(
                 fluid=self._oil_lifting.fluid_type,
                 price=self._oil_lifting.get_price_arr(),
                 cum=None,
                 regime=regime
             )
 
-            self._oil_prog_split = oil_prog_price_split + cum_production_split_offset
+            self._oil_prog_split = self._oil_prog_price_split + cum_production_split_offset
 
-            gas_prog_price_split, gas_prog_cum_split = vectorized_get_prog_split(
+            self._gas_prog_price_split, self._gas_prog_cum_split = vectorized_get_prog_split(
                 fluid=self._gas_lifting.fluid_type,
                 price=self._gas_lifting.get_price_arr(),
                 cum=None,
                 regime=regime
             )
 
-            self._gas_prog_split = gas_prog_price_split + cum_production_split_offset
+            self._gas_prog_split = self._gas_prog_price_split + cum_production_split_offset
 
         # Condition when the cum_production_split_offset is not filled
         else:
-            oil_prog_price_split, oil_prog_cum_split = vectorized_get_prog_split(
+            self._oil_prog_price_split, self._oil_prog_cum_split = vectorized_get_prog_split(
                 fluid=self._oil_lifting.fluid_type,
                 price=self._oil_lifting.get_price_arr(),
                 cum=self._cumulative_prod,
                 regime=regime
             )
-            self._oil_prog_split = oil_prog_price_split + oil_prog_cum_split
+            self._oil_prog_split = self._oil_prog_price_split + self._oil_prog_cum_split
 
-            gas_prog_price_split, gas_prog_cum_split = vectorized_get_prog_split(
+            self._gas_prog_price_split, self._gas_prog_cum_split = vectorized_get_prog_split(
                 fluid=self._gas_lifting.fluid_type,
                 price=self._gas_lifting.get_price_arr(),
                 cum=self._cumulative_prod,
                 regime=regime
             )
-            self._gas_prog_split = gas_prog_price_split + gas_prog_cum_split
+            self._gas_prog_split = self._gas_prog_price_split + self._gas_prog_cum_split
 
         # Ministerial Discretion
         minis_disc_array = np.full_like(self.project_years, fill_value=self.split_ministry_disc, dtype=float)
