@@ -1105,14 +1105,8 @@ def get_transition_split(data: dict):
 
     Returns
     -------
-    summary_skk: dict
-        The executive summary of the contract.
-    contract:
-        The Transition contract object.
-    contract_arguments_dict: dict
-        The contract arguments used in running the contract calculation.
-    summary_arguments_dic: dict
-        The summary arguments used in retrieving the executive summary of the contract.
+    dict
+        The dictionary containing the information of the contractor split.
 
     """
     # Defining contract_1
