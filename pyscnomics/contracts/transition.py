@@ -215,8 +215,8 @@ class Transition:
     _ddmo: np.ndarray = field(default=None, init=False, repr=False)
     _tax_payment: np.ndarray = field(default=None, init=False, repr=False)
     _government_take: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_undepreciated_asset: float = field(default=None, init=False, repr=False)
-    _gas_undepreciated_asset: float = field(default=None, init=False, repr=False)
+    _oil_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
 
     # Consolidated Attributes
     _consolidated_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
@@ -595,7 +595,7 @@ class Transition:
                 cost_allocation=fluid_to_prior + bt.cost_allocation,
                 tax_portion=np.concatenate((zeros_to_prior, bt.tax_portion)),
                 tax_discount=np.concatenate((zeros_to_prior, bt.tax_discount)),
-                final_year=np.concatenate((years_to_new, bt.final_year)),
+                final_year=np.concatenate((years_to_prior, bt.final_year)),
                 utilized_land_area=np.concatenate((zeros_to_prior, bt.utilized_land_area)),
                 utilized_building_area=np.concatenate((zeros_to_prior, bt.utilized_building_area)),
                 njop_land=np.concatenate((zeros_to_prior, bt.njop_land)),
@@ -939,8 +939,8 @@ class Transition:
         self._co2_wap_price = self._contract2_transitioned._co2_wap_price
 
         # Undepreciated Asset
-        self._oil_undepreciated_asset = float(contract1_new._oil_undepreciated_asset + contract2_new._oil_undepreciated_asset)
-        self._gas_undepreciated_asset = float(contract1_new._gas_undepreciated_asset + contract2_new._gas_undepreciated_asset)
+        self._oil_undepreciated_asset =  self._contract1_transitioned._oil_undepreciated_asset +  self._contract2_transitioned._oil_undepreciated_asset
+        self._gas_undepreciated_asset =  self._contract1_transitioned._gas_undepreciated_asset +  self._contract2_transitioned._gas_undepreciated_asset
         self._consolidated_undepreciated_asset = self._oil_undepreciated_asset + self._gas_undepreciated_asset
 
         # Sunk Cost
