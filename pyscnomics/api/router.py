@@ -518,7 +518,7 @@ async def calculate_economic_limit(data: EconLimit) -> int:
     cash_flow: list[int] | list[float]
     method: str
     """
-    return get_economic_limit(data=data.dict())
+    return get_economic_limit(data=data.model_dump())
 
 
 @router.post("/asr_expenditures")
