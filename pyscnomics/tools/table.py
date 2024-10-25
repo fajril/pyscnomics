@@ -43,6 +43,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_oil['Intangible'] = contract._oil_intangible_expenditures_post_tax
         psc_table_oil['Opex'] = contract._oil_opex_expenditures_post_tax
         psc_table_oil['ASR'] = contract._oil_asr_expenditures_post_tax
+        psc_table_oil['LBT'] = contract._oil_lbt_expenditures_post_tax
         psc_table_oil['Depreciation'] = contract._oil_depreciation
         psc_table_oil['Non_Capital'] = contract._oil_non_capital
         psc_table_oil['FTP'] = contract._oil_ftp
@@ -87,6 +88,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_gas['Intangible'] = contract._gas_intangible_expenditures_post_tax
         psc_table_gas['Opex'] = contract._gas_opex_expenditures_post_tax
         psc_table_gas['ASR'] = contract._gas_asr_expenditures_post_tax
+        psc_table_gas['LBT'] = contract._gas_lbt_expenditures_post_tax
         psc_table_gas['Depreciation'] = contract._gas_depreciation
         psc_table_gas['Non_Capital'] = contract._gas_non_capital
         psc_table_gas['FTP'] = contract._gas_ftp
@@ -180,6 +182,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_oil['Intangible'] = contract._oil_intangible_expenditures_post_tax
         psc_table_oil['Opex'] = contract._oil_opex_expenditures_post_tax
         psc_table_oil['ASR'] = contract._oil_asr_expenditures_post_tax
+        psc_table_oil['LBT'] = contract._oil_lbt_expenditures_post_tax
         psc_table_oil['Revenue'] = contract._oil_revenue
         psc_table_oil['Base_Split'] = contract._oil_base_split
         psc_table_oil['Variable_Split'] = contract._var_split_array
@@ -225,6 +228,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_gas['Intangible'] = contract._gas_intangible_expenditures_post_tax
         psc_table_gas['Opex'] = contract._gas_opex_expenditures_post_tax
         psc_table_gas['ASR'] = contract._gas_asr_expenditures_post_tax
+        psc_table_gas['LBT'] = contract._gas_lbt_expenditures_post_tax
         psc_table_gas['Revenue'] = contract._gas_revenue
         psc_table_gas['Base_Split'] = contract._gas_base_split
         psc_table_gas['Progressive_Price_Split'] = contract._gas_prog_price_split
@@ -317,6 +321,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_oil_1['Intangible'] = contract._contract1_transitioned._oil_intangible_expenditures_post_tax
             psc_table_oil_1['Opex'] = contract._contract1_transitioned._oil_opex_expenditures_post_tax
             psc_table_oil_1['ASR'] = contract._contract1_transitioned._oil_asr_expenditures_post_tax
+            psc_table_oil_1['LBT'] = contract._contract1_transitioned._oil_lbt_expenditures_post_tax
             psc_table_oil_1['Depreciation'] = contract._contract1_transitioned._oil_depreciation
             psc_table_oil_1['Non_Capital'] = contract._contract1_transitioned._oil_non_capital
             psc_table_oil_1['FTP'] = contract._contract1_transitioned._oil_ftp
@@ -361,6 +366,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_1['Intangible'] = contract._contract1_transitioned._gas_intangible_expenditures_post_tax
             psc_table_gas_1['Opex'] = contract._contract1_transitioned._gas_opex_expenditures_post_tax
             psc_table_gas_1['ASR'] = contract._contract1_transitioned._gas_asr_expenditures_post_tax
+            psc_table_gas_1['LBT'] = contract._contract1_transitioned._gas_lbt_expenditures_post_tax
             psc_table_gas_1['Depreciation'] = contract._contract1_transitioned._gas_depreciation
             psc_table_gas_1['Non_Capital'] = contract._contract1_transitioned._gas_non_capital
             psc_table_gas_1['FTP'] = contract._contract1_transitioned._gas_ftp
@@ -464,6 +470,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_oil_1['Intangible'] = contract._contract1_transitioned._oil_intangible_expenditures_post_tax
             psc_table_oil_1['Opex'] = contract._contract1_transitioned._oil_opex_expenditures_post_tax
             psc_table_oil_1['ASR'] = contract._contract1_transitioned._oil_asr_expenditures_post_tax
+            psc_table_oil_1['LBT'] = contract._contract1_transitioned._oil_lbt_expenditures_post_tax
             psc_table_oil_1['Revenue'] = contract._contract1_transitioned._oil_revenue
             psc_table_oil_1['Base_Split'] = contract._contract1_transitioned._oil_base_split
             psc_table_oil_1['Variable_Split'] = contract._contract1_transitioned._var_split_array
@@ -509,6 +516,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_1['Intangible'] = contract._contract1_transitioned._gas_intangible_expenditures_post_tax
             psc_table_gas_1['Opex'] = contract._contract1_transitioned._gas_opex_expenditures_post_tax
             psc_table_gas_1['ASR'] = contract._contract1_transitioned._gas_asr_expenditures_post_tax
+            psc_table_gas_1['LBT'] = contract._contract1_transitioned._gas_lbt_expenditures_post_tax
             psc_table_gas_1['Revenue'] = contract._contract1_transitioned._gas_revenue
             psc_table_gas_1['Base_Split'] = contract._contract1_transitioned._gas_base_split
             psc_table_gas_1['Variable_Split'] = contract._contract1_transitioned._var_split_array
@@ -592,6 +600,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_oil_2['Intangible'] = contract._contract2_transitioned._oil_intangible_expenditures_post_tax
             psc_table_oil_2['Opex'] = contract._contract2_transitioned._oil_opex_expenditures_post_tax
             psc_table_oil_2['ASR'] = contract._contract2_transitioned._oil_asr_expenditures_post_tax
+            psc_table_oil_2['LBT'] = contract._contract2_transitioned._oil_lbt_expenditures_post_tax
             psc_table_oil_2['Depreciation'] = contract._contract2_transitioned._oil_depreciation
             psc_table_oil_2['Non_Capital'] = contract._contract2_transitioned._oil_non_capital
             psc_table_oil_2['FTP'] = contract._contract2_transitioned._oil_ftp
@@ -636,6 +645,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_2['Intangible'] = contract._contract2_transitioned._gas_intangible_expenditures_post_tax
             psc_table_gas_2['Opex'] = contract._contract2_transitioned._gas_opex_expenditures_post_tax
             psc_table_gas_2['ASR'] = contract._contract2_transitioned._gas_asr_expenditures_post_tax
+            psc_table_gas_2['LBT'] = contract._contract2_transitioned._gas_lbt_expenditures_post_tax
             psc_table_gas_2['Depreciation'] = contract._contract2_transitioned._gas_depreciation
             psc_table_gas_2['Non_Capital'] = contract._contract2_transitioned._gas_non_capital
             psc_table_gas_2['FTP'] = contract._contract2_transitioned._gas_ftp
@@ -739,6 +749,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_oil_2['Intangible'] = contract._contract2_transitioned._oil_intangible_expenditures_post_tax
             psc_table_oil_2['Opex'] = contract._contract2_transitioned._oil_opex_expenditures_post_tax
             psc_table_oil_2['ASR'] = contract._contract2_transitioned._oil_asr_expenditures_post_tax
+            psc_table_gas_2['LBT'] = contract._contract2_transitioned._gas_lbt_expenditures_post_tax
             psc_table_oil_2['Revenue'] = contract._contract2_transitioned._oil_revenue
             psc_table_oil_2['Base_Split'] = contract._contract2_transitioned._oil_base_split
             psc_table_oil_2['Variable_Split'] = contract._contract2_transitioned._var_split_array
@@ -783,6 +794,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_2['Intangible'] = contract._contract2_transitioned._gas_intangible_expenditures_post_tax
             psc_table_gas_2['Opex'] = contract._contract2_transitioned._gas_opex_expenditures_post_tax
             psc_table_gas_2['ASR'] = contract._contract2_transitioned._gas_asr_expenditures_post_tax
+            psc_table_gas_2['LBT'] = contract._contract2_transitioned._gas_lbt_expenditures_post_tax
             psc_table_gas_2['Revenue'] = contract._contract2_transitioned._gas_revenue
             psc_table_gas_2['Base_Split'] = contract._contract2_transitioned._gas_base_split
             psc_table_gas_2['Variable_Split'] = contract._contract2_transitioned._var_split_array
@@ -883,6 +895,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_oil['Intangible'] = contract._oil_intangible_expenditures_post_tax
         psc_table_oil['Opex'] = contract._oil_opex_expenditures_post_tax
         psc_table_oil['ASR'] = contract._oil_asr_expenditures_post_tax
+        psc_table_oil['LBT'] = contract._oil_lbt_expenditures_post_tax
         psc_table_oil['Cashflow'] = contract._oil_cashflow
 
         psc_table_gas = pd.DataFrame()
@@ -894,6 +907,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_gas['Intangible'] = contract._gas_intangible_expenditures_post_tax
         psc_table_gas['Opex'] = contract._gas_opex_expenditures_post_tax
         psc_table_gas['ASR'] = contract._gas_asr_expenditures_post_tax
+        psc_table_gas['LBT'] = contract._gas_lbt_expenditures_post_tax
         psc_table_gas['Cashflow'] = contract._gas_cashflow
 
         psc_table_consolidated = pd.DataFrame()
