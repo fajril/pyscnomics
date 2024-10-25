@@ -52,6 +52,10 @@ def _negative_cashflow(cashflow: np.ndarray) -> int:
     if np.all(cashflow < 0):
         return 0  # Return 0 for all negative values
 
+    # Patch for negative cashflow at the first index
+    if cashflow[0] < 0.0:
+        return 0  # Return 0 for all negative values
+
     sign_changes = np.diff(np.sign(cashflow))
     if np.any(sign_changes):
         # Find the first negative cash flow
