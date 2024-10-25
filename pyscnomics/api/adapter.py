@@ -776,7 +776,8 @@ def get_baseproject(data: dict, summary_result: bool = True):
                            capital_cost=tangible,
                            intangible_cost=intangible,
                            opex=opex,
-                           asr_cost=asr,)
+                           asr_cost=asr,
+                           lbt_cost=lbt)
 
     contract_arguments_dict = {
         "sulfur_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['sulfur_revenue']),
@@ -1257,6 +1258,73 @@ def get_asr_expenditures(data:dict) -> dict:
             'project_years': contract.project_years,
             'oil_asr_expenditures': contract._oil_asr_expenditures_post_tax,
             'gas_asr_expenditures': contract._gas_asr_expenditures_post_tax,
+        }
+    )
+    df = df.set_index('project_years').to_dict()
+    return df
+
+
+def get_lbt_expenditures(data:dict) -> dict:
+    """
+    The Function to get the expenditures of an LBT cost.
+
+    Parameters
+    ----------
+    data: dict
+
+    Returns
+    -------
+    dict
+        The dictionary of LBT expenditures.
+
+    """
+    # Initiating the asr data
+    lbt_pseudo = {'lbt':data['lbt']}
+
+    # Mimics the baseproject data
+    data_pseudo = {
+        "setup": {
+            "start_date": data['start_date'],
+            "end_date": data['end_date'],
+            "oil_onstream_date": None,
+            "gas_onstream_date": None,
+        },
+        "summary_arguments":{
+            "reference_year":None,
+            "inflation_rate":0.0,
+            "discount_rate": 0.1,
+            "npv_mode": "Full Cycle Nominal Terms",
+            "discounting_mode": "Mid Year",
+            "profitability_discounted": False,
+        },
+        "contract_arguments":{
+            "sulfur_revenue": "Addition to Gas Revenue",
+            "electricity_revenue": "Addition to Oil Revenue",
+            "co2_revenue": "Addition to Gas Revenue",
+            "sunk_cost_reference_year": None,
+            "year_inflation": 0,
+            "inflation_rate": 0,
+            "vat_rate": 0,
+            "inflation_rate_applied_to": "CAPEX",
+        },
+        "lifting": None,
+        "capital": None,
+        "intangible": None,
+        "opex": None,
+        "asr": None,
+        "lbt": lbt_pseudo,
+        "cost_of_sales": None,
+    }
+
+    # Parsing the data into base project dataclass
+    contract = get_baseproject(data=data_pseudo, summary_result=False)[1]
+
+    # Returning the ASR Expenditures
+    df = pd.DataFrame(
+        {
+            'project_years': contract.project_years,
+            'oil_lbt_expenditures': contract._oil_lbt_expenditures_post_tax,
+            'gas_lbt_expenditures': contract._gas_lbt_expenditures_post_tax,
         }
     )
     df = df.set_index('project_years').to_dict()

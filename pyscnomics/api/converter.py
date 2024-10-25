@@ -339,7 +339,7 @@ class GeneralCostBM(BaseModel):
     start_year: int
     end_year: int
     expense_year: List[int]
-    cost: Union[List[float], List[int]]
+    cost: Optional[Union[List[float], List[int]]]
     cost_allocation: Optional[List[str]] = Field(default=None)
     description: Optional[List[str]] = Field(default=None)
     tax_portion: Optional[Union[List[float], List[int]]] = Field(default=None)
@@ -717,6 +717,24 @@ class ASRExpendituresBM(BaseModel):
     asr: AsrBM
 
 
+class LBTExpendituresBM(BaseModel):
+    """
+    The BaseModel to validate the LBT Expenditures Data.
+
+    Parameters
+    ----------
+    start_date : str | int
+        The start date of the project.
+    end_date : str | int
+        The end date of the project.
+    lbt : LbtBM
+        The lbt input in form of LBT BaseModel.
+    """
+    start_date: str | int = "01/01/2010"
+    end_date: str | int = "01/01/2010"
+    lbt: LbtBM
+
+
 def convert_str_to_date(str_object: str | int) -> date | None:
     """
     The function to convert string or integer unix timestamp format object into dateformat
@@ -1006,7 +1024,7 @@ def convert_dict_to_lbt(data_raw: dict) -> tuple:
         LBT(
             start_year=data_raw[key]['start_year'],
             end_year=data_raw[key]['end_year'],
-            cost=np.array(data_raw[key]['cost'], dtype=float),
+            cost=np.array(data_raw[key]['cost'], dtype=float)  if data_raw[key]['cost'] is not None else None,
             expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
             cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
             description=data_raw[key]['description'],

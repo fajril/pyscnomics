@@ -11,8 +11,9 @@ from pyscnomics.api.adapter import (get_baseproject,
                                     get_grosssplit_split,
                                     get_transition_split,
                                     get_economic_limit,
-                                    get_asr_expenditures)
-from pyscnomics.api.converter import Data, EconLimit, ASRExpendituresBM
+                                    get_asr_expenditures,
+                                    get_lbt_expenditures)
+from pyscnomics.api.converter import Data, EconLimit, ASRExpendituresBM, LBTExpendituresBM
 from pyscnomics.api.converter import DataTransition
 from pyscnomics.api.converter import LtpBM, RpdBM
 
@@ -528,4 +529,13 @@ async def calculate_asr_expenditures(data: ASRExpendituresBM) -> dict:
     Route to get the expenditures of ASR Cost.
     """
     return get_asr_expenditures(data=data.model_dump())
+
+
+@router.post("/lbt_expenditures")
+async def calculate_lbt_expenditures(data: LBTExpendituresBM) -> dict:
+    """
+    ## Retrieve The Expenditures of LBT Cost
+    Route to get the expenditures of LBT Cost.
+    """
+    return get_lbt_expenditures(data=data.model_dump())
 
