@@ -1278,7 +1278,7 @@ def get_lbt_expenditures(data:dict) -> dict:
         The dictionary of LBT expenditures.
 
     """
-    # Initiating the asr data
+    # Initiating the LBT data
     lbt_pseudo = {'lbt':data['lbt']}
 
     # Mimics the baseproject data
@@ -1319,7 +1319,7 @@ def get_lbt_expenditures(data:dict) -> dict:
     # Parsing the data into base project dataclass
     contract = get_baseproject(data=data_pseudo, summary_result=False)[1]
 
-    # Returning the ASR Expenditures
+    # Returning the LBT Expenditures
     df = pd.DataFrame(
         {
             'project_years': contract.project_years,
