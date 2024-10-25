@@ -699,6 +699,22 @@ class EconLimit(BaseModel):
     cash_flow: list[int] | list[float]
     method: str
 
+class ASRExpendituresBM(BaseModel):
+    """
+    The BaseModel to validate the ASR Expenditures Data.
+
+    Parameters
+    ----------
+    start_date : str | int
+        The start date of the project.
+    end_date : str | int
+        The end date of the project.
+    asr : AsrBM
+        The asr input in form of AsrBM BaseModel.
+    """
+    start_date: str | int = "01/01/2010"
+    end_date: str | int = "01/01/2010"
+    asr: AsrBM
 
 
 def convert_str_to_date(str_object: str | int) -> date | None:
@@ -837,7 +853,7 @@ def convert_dict_to_lifting(data_raw: dict) -> tuple:
     return assign_lifting(data_raw=data_raw)
 
 
-def convert_dict_to_capital(data_raw: dict) -> tuple:
+def convert_dict_to_capital(data_raw: dict) -> tuple | None:
     """
     The function to convert a dictionary into tuple of CapitalCost dataclass.
 
@@ -849,7 +865,7 @@ def convert_dict_to_capital(data_raw: dict) -> tuple:
     Returns
     -------
     out:
-        tuple[CapitalCost]
+        tuple[CapitalCost] | None
     """
     capital = tuple([
         CapitalCost(
@@ -868,12 +884,12 @@ def convert_dict_to_capital(data_raw: dict) -> tuple:
             is_ic_applied=data_raw[key]['is_ic_applied'],
         )
         for key in data_raw.keys()
-    ])
+    ]) if data_raw is not None else None
 
     return capital
 
 
-def convert_dict_to_intangible(data_raw: dict) -> tuple:
+def convert_dict_to_intangible(data_raw: dict) -> tuple | None:
     """
     The function to convert dictionary into tuple of Intangible dataclass.
 
@@ -885,7 +901,7 @@ def convert_dict_to_intangible(data_raw: dict) -> tuple:
     Returns
     -------
     out:
-        tuple[Intangible]
+        tuple[Intangible] | None
     """
     intangible = tuple([
         Intangible(
@@ -899,12 +915,12 @@ def convert_dict_to_intangible(data_raw: dict) -> tuple:
             tax_discount=np.array(data_raw[key]['tax_discount'], dtype=float),
         )
         for key in data_raw.keys()
-    ])
+    ]) if data_raw is not None else None
 
     return intangible
 
 
-def convert_dict_to_opex(data_raw: dict) -> tuple:
+def convert_dict_to_opex(data_raw: dict) -> tuple | None:
     """
     The function to convert dictionary into tuple of OPEX dataclass.
 
@@ -916,7 +932,7 @@ def convert_dict_to_opex(data_raw: dict) -> tuple:
     Returns
     -------
     out:
-        tuple[OPEX]
+        tuple[OPEX] | None
     """
     opex = tuple([
         OPEX(
@@ -932,7 +948,7 @@ def convert_dict_to_opex(data_raw: dict) -> tuple:
             cost_per_volume=np.array(data_raw[key]['cost_per_volume'], dtype=float),
         )
         for key in data_raw.keys()
-    ])
+    ]) if data_raw is not None else None
 
     return opex
 

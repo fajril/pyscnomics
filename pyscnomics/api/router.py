@@ -10,8 +10,9 @@ from pyscnomics.api.adapter import (get_baseproject,
                                     get_rpd_dict,
                                     get_grosssplit_split,
                                     get_transition_split,
-                                    get_economic_limit)
-from pyscnomics.api.converter import Data, EconLimit
+                                    get_economic_limit,
+                                    get_asr_expenditures)
+from pyscnomics.api.converter import Data, EconLimit, ASRExpendituresBM
 from pyscnomics.api.converter import DataTransition
 from pyscnomics.api.converter import LtpBM, RpdBM
 
@@ -518,4 +519,13 @@ async def calculate_economic_limit(data: EconLimit) -> int:
     method: str
     """
     return get_economic_limit(data=data.dict())
+
+
+@router.post("/asr_expenditures")
+async def calculate_asr_expenditures(data: ASRExpendituresBM) -> dict:
+    """
+    ## Retrieve The Expenditures of ASR Cost
+    Route to get the expenditures of ASR Cost.
+    """
+    return get_asr_expenditures(data=data.model_dump())
 

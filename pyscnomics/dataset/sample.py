@@ -141,7 +141,7 @@ def assign_onstream_date(date_data: None | str) -> datetime | None:
     return result_date
 
 
-def assign_lifting(data_raw: dict) -> tuple:
+def assign_lifting(data_raw: dict) -> tuple | None:
     """
     A function to assign the lifting data to the list of Lifting dataclass.
 
@@ -152,47 +152,50 @@ def assign_lifting(data_raw: dict) -> tuple:
 
     Returns
     -------
-    lifting_list: tuple
+    lifting_list: tuple | None
         The list containing the lifting dataclass.
 
     """
     # Defining the data source and the list container for Lifting. Then, assign them based on their fluid type
     lifting_data = data_raw['lifting']
-    lifting_list = []
-    for key in lifting_data.keys():
-        # Since the Lifting data for gas has different arguments input, conditional formatting is applied
-        if 'Gas' in key or 'GSA' in key:
-            lifting = Lifting(start_year=lifting_data[key]["start_year"],
-                              end_year=lifting_data[key]["end_year"],
-                              lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
-                              price=np.array(lifting_data[key]["price"]),
-                              prod_year=np.array(lifting_data[key]["prod_year"]),
-                              fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
-                              ghv=None if lifting_data[key]["ghv"] is None else
-                              np.array(lifting_data[key]["ghv"]),
-                              prod_rate=None if lifting_data[key]["prod_rate"] is None
-                              else np.array(lifting_data[key]["prod_rate"]),
-                              prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None
-                              else np.array(lifting_data[key]["prod_rate_baseline"]),
-                              )
+    if lifting_data is None:
+        return None
+    else:
+        lifting_list = []
+        for key in lifting_data.keys():
+            # Since the Lifting data for gas has different arguments input, conditional formatting is applied
+            if 'Gas' in key or 'GSA' in key:
+                lifting = Lifting(start_year=lifting_data[key]["start_year"],
+                                  end_year=lifting_data[key]["end_year"],
+                                  lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
+                                  price=np.array(lifting_data[key]["price"]),
+                                  prod_year=np.array(lifting_data[key]["prod_year"]),
+                                  fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
+                                  ghv=None if lifting_data[key]["ghv"] is None else
+                                  np.array(lifting_data[key]["ghv"]),
+                                  prod_rate=None if lifting_data[key]["prod_rate"] is None
+                                  else np.array(lifting_data[key]["prod_rate"]),
+                                  prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None
+                                  else np.array(lifting_data[key]["prod_rate_baseline"]),
+                                  )
 
-            lifting_list.append(lifting)
+                lifting_list.append(lifting)
 
-        else:
-            lifting = Lifting(start_year=lifting_data[key]["start_year"],
-                              end_year=lifting_data[key]["end_year"],
-                              lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
-                              price=np.array(lifting_data[key]["price"]),
-                              prod_year=np.array(lifting_data[key]["prod_year"]),
-                              fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
-                              prod_rate=None if lifting_data[key]["prod_rate"] is None
-                              else np.array(lifting_data[key]["prod_rate"]),
-                              prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None
-                              else np.array(lifting_data[key]["prod_rate_baseline"]),
-                              )
-            lifting_list.append(lifting)
+            else:
+                lifting = Lifting(start_year=lifting_data[key]["start_year"],
+                                  end_year=lifting_data[key]["end_year"],
+                                  lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
+                                  price=np.array(lifting_data[key]["price"]),
+                                  prod_year=np.array(lifting_data[key]["prod_year"]),
+                                  fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
+                                  prod_rate=None if lifting_data[key]["prod_rate"] is None
+                                  else np.array(lifting_data[key]["prod_rate"]),
+                                  prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None
+                                  else np.array(lifting_data[key]["prod_rate_baseline"]),
+                                  )
+                lifting_list.append(lifting)
 
-    return tuple(lifting_list)
+        return tuple(lifting_list)
 
 
 def assign_cost(data_raw: dict) -> tuple:
