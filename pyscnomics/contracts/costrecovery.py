@@ -197,6 +197,14 @@ class CostRecovery(BaseProject):
     _gas_government_take: np.ndarray = field(default=None, init=False, repr=False)
 
     # Consolidated Attributes
+    _consolidated_capital_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_intangible_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_opex_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_asr_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_lbt_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_cost_of_sales_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+
     _consolidated_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_intangible_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_opex_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
@@ -1348,6 +1356,21 @@ class CostRecovery(BaseProject):
 
         self._consolidated_undepreciated_asset = (
                 self._oil_undepreciated_asset + self._gas_undepreciated_asset
+        )
+
+        self._consolidated_capital_expenditures_pre_tax = self._oil_capital_expenditures_pre_tax + self._gas_capital_expenditures_pre_tax
+        self._consolidated_intangible_expenditures_pre_tax = self._oil_intangible_expenditures_pre_tax + self._gas_intangible_expenditures_pre_tax
+        self._consolidated_opex_expenditures_pre_tax = self._oil_opex_expenditures_pre_tax + self._gas_opex_expenditures_pre_tax
+        self._consolidated_asr_expenditures_pre_tax = self._oil_asr_expenditures_pre_tax + self._gas_asr_expenditures_pre_tax
+        self._consolidated_lbt_expenditures_pre_tax = self._oil_lbt_expenditures_pre_tax + self._gas_lbt_expenditures_pre_tax
+        self._consolidated_cost_of_sales_expenditures_pre_tax = self._oil_cost_of_sales_expenditures_pre_tax + self._gas_cost_of_sales_expenditures_pre_tax
+        self._consolidated_expenditures_pre_tax = (
+                self._consolidated_capital_expenditures_pre_tax +
+                self._consolidated_intangible_expenditures_pre_tax +
+                self._consolidated_opex_expenditures_pre_tax +
+                self._consolidated_asr_expenditures_pre_tax +
+                self._consolidated_lbt_expenditures_pre_tax +
+                self._consolidated_cost_of_sales_expenditures_pre_tax
         )
 
         self._consolidated_capital_indirect_tax = self._oil_capital_indirect_tax + self._gas_capital_indirect_tax

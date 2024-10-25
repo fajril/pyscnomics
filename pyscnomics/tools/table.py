@@ -70,6 +70,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_oil['Cashflow'] = contract._oil_cashflow
         psc_table_oil['Cum_Cashflow'] = np.cumsum(contract._oil_cashflow)
         psc_table_oil['Government_Take'] = contract._oil_government_take
+        psc_table_oil['Capital_Expenditures_Pre_Tax'] = contract._oil_capital_expenditures_pre_tax
+        psc_table_oil['Intangible_Expenditures_Pre_Tax'] = contract._oil_intangible_expenditures_pre_tax
+        psc_table_oil['Opex_Expenditures_Pre_Tax'] = contract._oil_opex_expenditures_pre_tax
+        psc_table_oil['ASR_Expenditures_Pre_Tax'] = contract._oil_asr_expenditures_pre_tax
+        psc_table_oil['LBT_Expenditures_Pre_Tax'] = contract._oil_lbt_expenditures_pre_tax
+        psc_table_oil['CostOfSales_Expenditures_Pre_Tax'] = contract._oil_cost_of_sales_expenditures_pre_tax
+        psc_table_oil['Total_Expenditures_Pre_Tax'] = contract._oil_total_expenditures_pre_tax
         psc_table_oil['Capital_Indirect_Tax'] = contract._oil_capital_indirect_tax
         psc_table_oil['Intangible_Indirect_Tax'] = contract._oil_intangible_indirect_tax
         psc_table_oil['Opex_Indirect_Tax'] = contract._oil_opex_indirect_tax
@@ -115,6 +122,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_gas['Cashflow'] = contract._gas_cashflow
         psc_table_gas['Cum_Cashflow'] = np.cumsum(contract._gas_cashflow)
         psc_table_gas['Government_Take'] = contract._gas_government_take
+        psc_table_gas['Capital_Expenditures_Pre_Tax'] = contract._gas_capital_expenditures_pre_tax
+        psc_table_gas['Intangible_Expenditures_Pre_Tax'] = contract._gas_intangible_expenditures_pre_tax
+        psc_table_gas['Opex_Expenditures_Pre_Tax'] = contract._gas_opex_expenditures_pre_tax
+        psc_table_gas['ASR_Expenditures_Pre_Tax'] = contract._gas_asr_expenditures_pre_tax
+        psc_table_gas['LBT_Expenditures_Pre_Tax'] = contract._gas_lbt_expenditures_pre_tax
+        psc_table_gas['CostOfSales_Expenditures_Pre_Tax'] = contract._gas_cost_of_sales_expenditures_pre_tax
+        psc_table_gas['Total_Expenditures_Pre_Tax'] = contract._gas_total_expenditures_pre_tax
         psc_table_gas['Capital_Indirect_Tax'] = contract._gas_capital_indirect_tax
         psc_table_gas['Intangible_Indirect_Tax'] = contract._gas_intangible_indirect_tax
         psc_table_gas['Opex_Indirect_Tax'] = contract._gas_opex_indirect_tax
@@ -162,6 +176,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_consolidated['C_Cashflow'] = contract._consolidated_cashflow
         psc_table_consolidated['cum_C_Cashflow'] = np.cumsum(contract._consolidated_cashflow)
         psc_table_consolidated['C_Government_take'] = contract._consolidated_government_take
+        psc_table_consolidated['C_Capital_Expenditures_Pre_Tax'] = contract._consolidated_capital_expenditures_pre_tax
+        psc_table_consolidated['C_Intangible_Expenditures_Pre_Tax'] = contract._consolidated_intangible_expenditures_pre_tax
+        psc_table_consolidated['C_Opex_Expenditures_Pre_Tax'] = contract._consolidated_opex_expenditures_pre_tax
+        psc_table_consolidated['C_ASR_Expenditures_Pre_Tax'] = contract._consolidated_asr_expenditures_pre_tax
+        psc_table_consolidated['C_LBT_Expenditures_Pre_Tax'] = contract._consolidated_lbt_expenditures_pre_tax
+        psc_table_consolidated['C_CostOfSales_Expenditures_Pre_Tax'] = contract._consolidated_cost_of_sales_expenditures_pre_tax
+        psc_table_consolidated['C_Total_Expenditures_Pre_Tax'] = contract._consolidated_expenditures_pre_tax
         psc_table_consolidated['C_Capital_Indirect_Tax'] = contract._consolidated_capital_indirect_tax
         psc_table_consolidated['C_Intangible_Indirect_Tax'] = contract._consolidated_intangible_indirect_tax
         psc_table_consolidated['C_Opex_Indirect_Tax'] = contract._consolidated_opex_indirect_tax
@@ -211,6 +232,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_oil['CTR_Cash_Flow'] = contract._oil_ctr_cashflow
         psc_table_oil['Cum_Cash_Flow'] = np.cumsum(contract._oil_ctr_cashflow)
         psc_table_oil['Government_Take'] = contract._oil_government_take
+        psc_table_oil['Capital_Expenditures_Pre_Tax'] = contract._oil_capital_expenditures_pre_tax
+        psc_table_oil['Intangible_Expenditures_Pre_Tax'] = contract._oil_intangible_expenditures_pre_tax
+        psc_table_oil['Opex_Expenditures_Pre_Tax'] = contract._oil_opex_expenditures_pre_tax
+        psc_table_oil['ASR_Expenditures_Pre_Tax'] = contract._oil_asr_expenditures_pre_tax
+        psc_table_oil['LBT_Expenditures_Pre_Tax'] = contract._oil_lbt_expenditures_pre_tax
+        psc_table_oil['CostOfSales_Expenditures_Pre_Tax'] = contract._oil_cost_of_sales_expenditures_pre_tax
+        psc_table_oil['Total_Expenditures_Pre_Tax'] = contract._oil_total_expenditures_pre_tax
         psc_table_oil['Capital_Indirect_Tax'] = contract._oil_capital_indirect_tax
         psc_table_oil['Intangible_Indirect_Tax'] = contract._oil_intangible_indirect_tax
         psc_table_oil['Opex_Indirect_Tax'] = contract._oil_opex_indirect_tax
@@ -257,6 +285,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_gas['CTR_Cash_Flow'] = contract._gas_ctr_cashflow
         psc_table_gas['Cum_Cashflow'] = np.cumsum(contract._gas_ctr_cashflow)
         psc_table_gas['Government_Take'] = contract._gas_government_take
+        psc_table_gas['Capital_Expenditures_Pre_Tax'] = contract._gas_capital_expenditures_pre_tax
+        psc_table_gas['Intangible_Expenditures_Pre_Tax'] = contract._gas_intangible_expenditures_pre_tax
+        psc_table_gas['Opex_Expenditures_Pre_Tax'] = contract._gas_opex_expenditures_pre_tax
+        psc_table_gas['ASR_Expenditures_Pre_Tax'] = contract._gas_asr_expenditures_pre_tax
+        psc_table_gas['LBT_Expenditures_Pre_Tax'] = contract._gas_lbt_expenditures_pre_tax
+        psc_table_gas['CostOfSales_Expenditures_Pre_Tax'] = contract._gas_cost_of_sales_expenditures_pre_tax
+        psc_table_gas['Total_Expenditures_Pre_Tax'] = contract._gas_total_expenditures_pre_tax
         psc_table_gas['Capital_Indirect_Tax'] = contract._gas_capital_indirect_tax
         psc_table_gas['Intangible_Indirect_Tax'] = contract._gas_intangible_indirect_tax
         psc_table_gas['Opex_Indirect_Tax'] = contract._gas_opex_indirect_tax
@@ -293,6 +328,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_consolidated['C_CashFlow'] = contract._consolidated_cashflow
         psc_table_consolidated['C_Government_Take'] = contract._consolidated_government_take
         psc_table_consolidated['cum_C_CashFlow'] = np.cumsum(contract._consolidated_cashflow)
+        psc_table_consolidated['C_Capital_Expenditures_Pre_Tax'] = contract._consolidated_capital_expenditures_pre_tax
+        psc_table_consolidated['C_Intangible_Expenditures_Pre_Tax'] = contract._consolidated_intangible_expenditures_pre_tax
+        psc_table_consolidated['C_Opex_Expenditures_Pre_Tax'] = contract._consolidated_opex_expenditures_pre_tax
+        psc_table_consolidated['C_ASR_Expenditures_Pre_Tax'] = contract._consolidated_asr_expenditures_pre_tax
+        psc_table_consolidated['C_LBT_Expenditures_Pre_Tax'] = contract._consolidated_lbt_expenditures_pre_tax
+        psc_table_consolidated['C_CostOfSales_Expenditures_Pre_Tax'] = contract._consolidated_cost_of_sales_expenditures_pre_tax
+        psc_table_consolidated['C_Total_Expenditures_Pre_Tax'] = contract._consolidated_expenditures_pre_tax
         psc_table_consolidated['C_Capital_Indirect_Tax'] = contract._consolidated_capital_indirect_tax
         psc_table_consolidated['C_Intangible_Indirect_Tax'] = contract._consolidated_intangible_indirect_tax
         psc_table_consolidated['C_Opex_Indirect_Tax'] = contract._consolidated_opex_indirect_tax
@@ -349,6 +391,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_oil_1['Cashflow'] = contract._contract1_transitioned._oil_cashflow
             psc_table_oil_1['Cum._Cashflow'] = np.cumsum(contract._contract1_transitioned._oil_cashflow)
             psc_table_oil_1['Government_Take'] = contract._contract1_transitioned._oil_government_take
+            psc_table_oil_1['Capital_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_capital_expenditures_pre_tax
+            psc_table_oil_1['Intangible_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_intangible_expenditures_pre_tax
+            psc_table_oil_1['Opex_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_opex_expenditures_pre_tax
+            psc_table_oil_1['ASR_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_asr_expenditures_pre_tax
+            psc_table_oil_1['LBT_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_lbt_expenditures_pre_tax
+            psc_table_oil_1['CostOfSales_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_cost_of_sales_expenditures_pre_tax
+            psc_table_oil_1['Total_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_total_expenditures_pre_tax
             psc_table_oil_1['Capital_Indirect_Tax'] = contract._contract1_transitioned._oil_capital_indirect_tax
             psc_table_oil_1['Intangible_Indirect_Tax'] = contract._contract1_transitioned._oil_intangible_indirect_tax
             psc_table_oil_1['Opex_Indirect_Tax'] = contract._contract1_transitioned._oil_opex_indirect_tax
@@ -394,6 +443,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_1['Cashflow'] = contract._contract1_transitioned._gas_cashflow
             psc_table_gas_1['Cum._Cashflow'] = np.cumsum(contract._contract1_transitioned._gas_cashflow)
             psc_table_gas_1['Government_Take'] = contract._contract1_transitioned._gas_government_take
+            psc_table_gas_1['Capital_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_capital_expenditures_pre_tax
+            psc_table_gas_1['Intangible_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_intangible_expenditures_pre_tax
+            psc_table_gas_1['Opex_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_opex_expenditures_pre_tax
+            psc_table_gas_1['ASR_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_asr_expenditures_pre_tax
+            psc_table_gas_1['LBT_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_lbt_expenditures_pre_tax
+            psc_table_gas_1['CostOfSales_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_cost_of_sales_expenditures_pre_tax
+            psc_table_gas_1['Total_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_total_expenditures_pre_tax
             psc_table_gas_1['Capital_Indirect_Tax'] = contract._contract1_transitioned._gas_capital_indirect_tax
             psc_table_gas_1['Intangible_Indirect_Tax'] = contract._contract1_transitioned._gas_intangible_indirect_tax
             psc_table_gas_1['Opex_Indirect_Tax'] = contract._contract1_transitioned._gas_opex_indirect_tax
@@ -449,10 +505,15 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_consolidated_1[
                 'C_Contractor_Take'] = contract._contract1_transitioned._consolidated_contractor_take
             psc_table_consolidated_1['C_Cashflow'] = contract._contract1_transitioned._consolidated_cashflow
-            psc_table_consolidated_1['cum. C_Cashflow'] = np.cumsum(
-                contract._contract1_transitioned._consolidated_cashflow)
-            psc_table_consolidated_1[
-                'C_Government_take'] = contract._contract1_transitioned._consolidated_government_take
+            psc_table_consolidated_1['cum. C_Cashflow'] = np.cumsum(contract._contract1_transitioned._consolidated_cashflow)
+            psc_table_consolidated_1['C_Government_take'] = contract._contract1_transitioned._consolidated_government_take
+            psc_table_consolidated_1['C_Capital_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_capital_expenditures_pre_tax
+            psc_table_consolidated_1['C_Intangible_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_intangible_expenditures_pre_tax
+            psc_table_consolidated_1['C_Opex_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_opex_expenditures_pre_tax
+            psc_table_consolidated_1['C_ASR_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_asr_expenditures_pre_tax
+            psc_table_consolidated_1['C_LBT_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_lbt_expenditures_pre_tax
+            psc_table_consolidated_1['C_CostOfSales_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_cost_of_sales_expenditures_pre_tax
+            psc_table_consolidated_1['C_Total_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_expenditures_pre_tax
             psc_table_consolidated_1['C_Capital_Indirect_Tax'] = contract._contract1_transitioned._consolidated_capital_indirect_tax
             psc_table_consolidated_1['C_Intangible_Indirect_Tax'] = contract._contract1_transitioned._consolidated_intangible_indirect_tax
             psc_table_consolidated_1['C_Opex_Indirect_Tax'] = contract._contract1_transitioned._consolidated_opex_indirect_tax
@@ -500,6 +561,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_oil_1['CTR_Cash_Flow'] = contract._contract1_transitioned._oil_ctr_cashflow
             psc_table_oil_1['Cum_Cash_Flow'] = np.cumsum(contract._contract1_transitioned._oil_ctr_cashflow)
             psc_table_oil_1['Government_Take'] = contract._contract1_transitioned._oil_government_take
+            psc_table_oil_1['Capital_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_capital_expenditures_pre_tax
+            psc_table_oil_1['Intangible_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_intangible_expenditures_pre_tax
+            psc_table_oil_1['Opex_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_opex_expenditures_pre_tax
+            psc_table_oil_1['ASR_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_asr_expenditures_pre_tax
+            psc_table_oil_1['LBT_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_lbt_expenditures_pre_tax
+            psc_table_oil_1['CostOfSales_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_cost_of_sales_expenditures_pre_tax
+            psc_table_oil_1['Total_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_total_expenditures_pre_tax
             psc_table_oil_1['Capital_Indirect_Tax'] = contract._contract1_transitioned._oil_capital_indirect_tax
             psc_table_oil_1['Intangible_Indirect_Tax'] = contract._contract1_transitioned._oil_intangible_indirect_tax
             psc_table_oil_1['Opex_Indirect_Tax'] = contract._contract1_transitioned._oil_opex_indirect_tax
@@ -546,6 +614,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_1['CTR_Cash_Flow'] = contract._contract1_transitioned._gas_ctr_cashflow
             psc_table_gas_1['Cum_Cash_Flow'] = np.cumsum(contract._contract2_transitioned._gas_ctr_cashflow)
             psc_table_gas_1['Government_Take'] = contract._contract2_transitioned._gas_government_take
+            psc_table_gas_1['Capital_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_capital_expenditures_pre_tax
+            psc_table_gas_1['Intangible_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_intangible_expenditures_pre_tax
+            psc_table_gas_1['Opex_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_opex_expenditures_pre_tax
+            psc_table_gas_1['ASR_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_asr_expenditures_pre_tax
+            psc_table_gas_1['LBT_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_lbt_expenditures_pre_tax
+            psc_table_gas_1['CostOfSales_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_cost_of_sales_expenditures_pre_tax
+            psc_table_gas_1['Total_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_total_expenditures_pre_tax
             psc_table_gas_1['Capital_Indirect_Tax'] = contract._contract1_transitioned._gas_capital_indirect_tax
             psc_table_gas_1['Intangible_Indirect_Tax'] = contract._contract1_transitioned._gas_intangible_indirect_tax
             psc_table_gas_1['Opex_Indirect_Tax'] = contract._contract1_transitioned._gas_opex_indirect_tax
@@ -582,6 +657,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_consolidated_1['C_Government_Take'] = contract._contract1_transitioned._consolidated_government_take
             psc_table_consolidated_1['cum_C_CashFlow'] = np.cumsum(
                 contract._contract2_transitioned._consolidated_cashflow)
+            psc_table_consolidated_1['C_Capital_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_capital_expenditures_pre_tax
+            psc_table_consolidated_1['C_Intangible_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_intangible_expenditures_pre_tax
+            psc_table_consolidated_1['C_Opex_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_opex_expenditures_pre_tax
+            psc_table_consolidated_1['C_ASR_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_asr_expenditures_pre_tax
+            psc_table_consolidated_1['C_LBT_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_lbt_expenditures_pre_tax
+            psc_table_consolidated_1['C_CostOfSales_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_cost_of_sales_expenditures_pre_tax
+            psc_table_consolidated_1['C_Total_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_expenditures_pre_tax
             psc_table_consolidated_1['C_Capital_Indirect_Tax'] = contract._contract1_transitioned._consolidated_capital_indirect_tax
             psc_table_consolidated_1['C_Intangible_Indirect_Tax'] = contract._contract1_transitioned._consolidated_intangible_indirect_tax
             psc_table_consolidated_1['C_Opex_Indirect_Tax'] = contract._contract1_transitioned._consolidated_opex_indirect_tax
@@ -628,6 +710,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_oil_2['Cashflow'] = contract._contract2_transitioned._oil_cashflow
             psc_table_oil_2['Cum._Cashflow'] = np.cumsum(contract._contract2_transitioned._oil_cashflow)
             psc_table_oil_2['Government_Take'] = contract._contract2_transitioned._oil_government_take
+            psc_table_oil_2['Capital_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_capital_expenditures_pre_tax
+            psc_table_oil_2['Intangible_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_intangible_expenditures_pre_tax
+            psc_table_oil_2['Opex_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_opex_expenditures_pre_tax
+            psc_table_oil_2['ASR_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_asr_expenditures_pre_tax
+            psc_table_oil_2['LBT_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_lbt_expenditures_pre_tax
+            psc_table_oil_2['CostOfSales_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_cost_of_sales_expenditures_pre_tax
+            psc_table_oil_2['Total_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_total_expenditures_pre_tax
             psc_table_oil_2['Capital_Indirect_Tax'] = contract._contract2_transitioned._oil_capital_indirect_tax
             psc_table_oil_2['Intangible_Indirect_Tax'] = contract._contract2_transitioned._oil_intangible_indirect_tax
             psc_table_oil_2['Opex_Indirect_Tax'] = contract._contract2_transitioned._oil_opex_indirect_tax
@@ -673,6 +762,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_2['Cashflow'] = contract._contract2_transitioned._gas_cashflow
             psc_table_gas_2['Cum._Cashflow'] = np.cumsum(contract._contract2_transitioned._gas_cashflow)
             psc_table_gas_2['Government_Take'] = contract._contract2_transitioned._gas_government_take
+            psc_table_gas_2['Capital_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_capital_expenditures_pre_tax
+            psc_table_gas_2['Intangible_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_intangible_expenditures_pre_tax
+            psc_table_gas_2['Opex_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_opex_expenditures_pre_tax
+            psc_table_gas_2['ASR_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_asr_expenditures_pre_tax
+            psc_table_gas_2['LBT_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_lbt_expenditures_pre_tax
+            psc_table_gas_2['CostOfSales_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_cost_of_sales_expenditures_pre_tax
+            psc_table_gas_2['Total_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_total_expenditures_pre_tax
             psc_table_gas_2['Capital_Indirect_Tax'] = contract._contract2_transitioned._gas_capital_indirect_tax
             psc_table_gas_2['Intangible_Indirect_Tax'] = contract._contract2_transitioned._gas_intangible_indirect_tax
             psc_table_gas_2['Opex_Indirect_Tax'] = contract._contract2_transitioned._gas_opex_indirect_tax
@@ -732,6 +828,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
                 contract._contract2_transitioned._consolidated_cashflow)
             psc_table_consolidated_2[
                 'C_Government_take'] = contract._contract2_transitioned._consolidated_government_take
+            psc_table_consolidated_2['C_Capital_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_capital_expenditures_pre_tax
+            psc_table_consolidated_2['C_Intangible_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_intangible_expenditures_pre_tax
+            psc_table_consolidated_2['C_Opex_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_opex_expenditures_pre_tax
+            psc_table_consolidated_2['C_ASR_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_asr_expenditures_pre_tax
+            psc_table_consolidated_2['C_LBT_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_lbt_expenditures_pre_tax
+            psc_table_consolidated_2['C_CostOfSales_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_cost_of_sales_expenditures_pre_tax
+            psc_table_consolidated_2['C_Total_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_expenditures_pre_tax
             psc_table_consolidated_2['C_Capital_Indirect_Tax'] = contract._contract2_transitioned._consolidated_capital_indirect_tax
             psc_table_consolidated_2['C_Intangible_Indirect_Tax'] = contract._contract2_transitioned._consolidated_intangible_indirect_tax
             psc_table_consolidated_2['C_Opex_Indirect_Tax'] = contract._contract2_transitioned._consolidated_opex_indirect_tax
@@ -778,6 +881,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_oil_2['CTR_Cash_Flow'] = contract._contract2_transitioned._oil_ctr_cashflow
             psc_table_oil_2['Cum_Cash_Flow'] = np.cumsum(contract._contract2_transitioned._oil_ctr_cashflow)
             psc_table_oil_2['Government_Take'] = contract._contract2_transitioned._oil_government_take
+            psc_table_oil_2['Capital_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_capital_expenditures_pre_tax
+            psc_table_oil_2['Intangible_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_intangible_expenditures_pre_tax
+            psc_table_oil_2['Opex_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_opex_expenditures_pre_tax
+            psc_table_oil_2['ASR_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_asr_expenditures_pre_tax
+            psc_table_oil_2['LBT_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_lbt_expenditures_pre_tax
+            psc_table_oil_2['CostOfSales_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_cost_of_sales_expenditures_pre_tax
+            psc_table_oil_2['Total_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_total_expenditures_pre_tax
             psc_table_oil_2['Capital_Indirect_Tax'] = contract._contract2_transitioned._oil_capital_indirect_tax
             psc_table_oil_2['Intangible_Indirect_Tax'] = contract._contract2_transitioned._oil_intangible_indirect_tax
             psc_table_oil_2['Opex_Indirect_Tax'] = contract._contract2_transitioned._oil_opex_indirect_tax
@@ -823,6 +933,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_2['CTR_Cash_Flow'] = contract._contract2_transitioned._gas_ctr_cashflow
             psc_table_gas_2['Cum_Cash_Flow'] = np.cumsum(contract._contract2_transitioned._gas_ctr_cashflow)
             psc_table_gas_2['Government_Take'] = contract._contract2_transitioned._gas_government_take
+            psc_table_gas_2['Capital_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_capital_expenditures_pre_tax
+            psc_table_gas_2['Intangible_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_intangible_expenditures_pre_tax
+            psc_table_gas_2['Opex_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_opex_expenditures_pre_tax
+            psc_table_gas_2['ASR_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_asr_expenditures_pre_tax
+            psc_table_gas_2['LBT_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_lbt_expenditures_pre_tax
+            psc_table_gas_2['CostOfSales_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_cost_of_sales_expenditures_pre_tax
+            psc_table_gas_2['Total_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_total_expenditures_pre_tax
             psc_table_gas_2['Capital_Indirect_Tax'] = contract._contract2_transitioned._gas_capital_indirect_tax
             psc_table_gas_2['Intangible_Indirect_Tax'] = contract._contract2_transitioned._gas_intangible_indirect_tax
             psc_table_gas_2['Opex_Indirect_Tax'] = contract._contract2_transitioned._gas_opex_indirect_tax
@@ -870,6 +987,13 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
                 'C_Government_Take'] = contract._contract2_transitioned._consolidated_government_take
             psc_table_consolidated_2['cum_C_CashFlow'] = np.cumsum(
                 contract._contract2_transitioned._consolidated_cashflow)
+            psc_table_consolidated_2['C_Capital_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_capital_expenditures_pre_tax
+            psc_table_consolidated_2['C_Intangible_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_intangible_expenditures_pre_tax
+            psc_table_consolidated_2['C_Opex_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_opex_expenditures_pre_tax
+            psc_table_consolidated_2['C_ASR_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_asr_expenditures_pre_tax
+            psc_table_consolidated_2['C_LBT_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_lbt_expenditures_pre_tax
+            psc_table_consolidated_2['C_CostOfSales_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_cost_of_sales_expenditures_pre_tax
+            psc_table_consolidated_2['C_Total_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_expenditures_pre_tax
             psc_table_consolidated_2['C_Capital_Indirect_Tax'] = contract._contract2_transitioned._consolidated_capital_indirect_tax
             psc_table_consolidated_2['C_Intangible_Indirect_Tax'] = contract._contract2_transitioned._consolidated_intangible_indirect_tax
             psc_table_consolidated_2['C_Opex_Indirect_Tax'] = contract._contract2_transitioned._consolidated_opex_indirect_tax
@@ -898,6 +1022,21 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_oil['LBT'] = contract._oil_lbt_expenditures_post_tax
         psc_table_oil['Cashflow'] = contract._oil_cashflow
 
+        psc_table_oil['Capital_Expenditures_Pre_Tax'] = contract._oil_capital_expenditures_pre_tax
+        psc_table_oil['Intangible_Expenditures_Pre_Tax'] = contract._oil_intangible_expenditures_pre_tax
+        psc_table_oil['Opex_Expenditures_Pre_Tax'] = contract._oil_opex_expenditures_pre_tax
+        psc_table_oil['ASR_Expenditures_Pre_Tax'] = contract._oil_asr_expenditures_pre_tax
+        psc_table_oil['LBT_Expenditures_Pre_Tax'] = contract._oil_lbt_expenditures_pre_tax
+        psc_table_oil['CostOfSales_Expenditures_Pre_Tax'] = contract._oil_cost_of_sales_expenditures_pre_tax
+        psc_table_oil['Total_Expenditures_Pre_Tax'] = contract._oil_total_expenditures_pre_tax
+        psc_table_oil['Capital_Indirect_Tax'] = contract._oil_capital_indirect_tax
+        psc_table_oil['Intangible_Indirect_Tax'] = contract._oil_intangible_indirect_tax
+        psc_table_oil['Opex_Indirect_Tax'] = contract._oil_opex_indirect_tax
+        psc_table_oil['ASR_Indirect_Tax'] = contract._oil_asr_indirect_tax
+        psc_table_oil['LBT_Indirect_Tax'] = contract._oil_lbt_indirect_tax
+        psc_table_oil['CostOfSales_Indirect_Tax'] = contract._oil_cost_of_sales_indirect_tax
+        psc_table_oil['Total_Indirect_Tax'] = contract._oil_total_indirect_tax
+
         psc_table_gas = pd.DataFrame()
         psc_table_gas['Years'] = contract.project_years
         psc_table_gas['Lifting'] = contract._gas_lifting.get_lifting_rate_arr()
@@ -909,6 +1048,21 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_gas['ASR'] = contract._gas_asr_expenditures_post_tax
         psc_table_gas['LBT'] = contract._gas_lbt_expenditures_post_tax
         psc_table_gas['Cashflow'] = contract._gas_cashflow
+
+        psc_table_gas['Capital_Expenditures_Pre_Tax'] = contract._gas_capital_expenditures_pre_tax
+        psc_table_gas['Intangible_Expenditures_Pre_Tax'] = contract._gas_intangible_expenditures_pre_tax
+        psc_table_gas['Opex_Expenditures_Pre_Tax'] = contract._gas_opex_expenditures_pre_tax
+        psc_table_gas['ASR_Expenditures_Pre_Tax'] = contract._gas_asr_expenditures_pre_tax
+        psc_table_gas['LBT_Expenditures_Pre_Tax'] = contract._gas_lbt_expenditures_pre_tax
+        psc_table_gas['CostOfSales_Expenditures_Pre_Tax'] = contract._gas_cost_of_sales_expenditures_pre_tax
+        psc_table_gas['Total_Expenditures_Pre_Tax'] = contract._gas_total_expenditures_pre_tax
+        psc_table_gas['Capital_Indirect_Tax'] = contract._gas_capital_indirect_tax
+        psc_table_gas['Intangible_Indirect_Tax'] = contract._gas_intangible_indirect_tax
+        psc_table_gas['Opex_Indirect_Tax'] = contract._gas_opex_indirect_tax
+        psc_table_gas['ASR_Indirect_Tax'] = contract._gas_asr_indirect_tax
+        psc_table_gas['LBT_Indirect_Tax'] = contract._gas_lbt_indirect_tax
+        psc_table_gas['CostOfSales_Indirect_Tax'] = contract._gas_cost_of_sales_indirect_tax
+        psc_table_gas['Total_Indirect_Tax'] = contract._gas_total_indirect_tax
 
         psc_table_consolidated = pd.DataFrame()
         psc_table_consolidated['Years'] = contract.project_years
@@ -928,5 +1082,20 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
                                          contract._gas_asr_expenditures_post_tax)
         psc_table_consolidated['Cashflow'] = (contract._oil_cashflow +
                                               contract._gas_cashflow)
+
+        psc_table_consolidated['Capital_Expenditures_Pre_Tax'] = contract._oil_capital_expenditures_pre_tax + contract._gas_capital_expenditures_pre_tax
+        psc_table_consolidated['Intangible_Expenditures_Pre_Tax'] = contract._oil_intangible_expenditures_pre_tax + contract._gas_intangible_expenditures_pre_tax
+        psc_table_consolidated['Opex_Expenditures_Pre_Tax'] = contract._oil_opex_expenditures_pre_tax + contract._gas_opex_expenditures_pre_tax
+        psc_table_consolidated['ASR_Expenditures_Pre_Tax'] = contract._oil_asr_expenditures_pre_tax + contract._gas_asr_expenditures_pre_tax
+        psc_table_consolidated['LBT_Expenditures_Pre_Tax'] = contract._oil_lbt_expenditures_pre_tax + contract._gas_lbt_expenditures_pre_tax
+        psc_table_consolidated['CostOfSales_Expenditures_Pre_Tax'] = contract._oil_cost_of_sales_expenditures_pre_tax + contract._gas_cost_of_sales_expenditures_pre_tax
+        psc_table_consolidated['Total_Expenditures_Pre_Tax'] = contract._oil_total_expenditures_pre_tax + contract._gas_total_expenditures_pre_tax
+        psc_table_consolidated['Capital_Indirect_Tax'] = contract._oil_capital_indirect_tax + contract._gas_capital_indirect_tax
+        psc_table_consolidated['Intangible_Indirect_Tax'] = contract._oil_intangible_indirect_tax + contract._gas_intangible_indirect_tax
+        psc_table_consolidated['Opex_Indirect_Tax'] = contract._oil_opex_indirect_tax + contract._gas_opex_indirect_tax
+        psc_table_consolidated['ASR_Indirect_Tax'] = contract._oil_asr_indirect_tax + contract._gas_asr_indirect_tax
+        psc_table_consolidated['LBT_Indirect_Tax'] = contract._oil_lbt_indirect_tax + contract._gas_lbt_indirect_tax
+        psc_table_consolidated['CostOfSales_Indirect_Tax'] = contract._oil_cost_of_sales_indirect_tax + contract._gas_cost_of_sales_indirect_tax
+        psc_table_consolidated['Total_Indirect_Tax'] = contract._oil_total_indirect_tax + contract._gas_total_indirect_tax
 
         return psc_table_oil, psc_table_gas, psc_table_consolidated
