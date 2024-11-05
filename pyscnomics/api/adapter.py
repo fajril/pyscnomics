@@ -1055,7 +1055,6 @@ def get_grosssplit_split(data: dict):
         "depr_method": convert_str_to_depremethod(str_object=data['contract_arguments']['depr_method']),
         "decline_factor": data['contract_arguments']['decline_factor'],
         "vat_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['vat_rate']),
-        "lbt_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['lbt_rate']),
         "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
         "inflation_rate_applied_to": convert_str_to_inflationappliedto(
             str_object=data['contract_arguments']['inflation_rate_applied_to']),
