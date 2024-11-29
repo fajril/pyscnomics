@@ -96,8 +96,8 @@ class CostRecovery(BaseProject):
     oil_ctr_pretax_share: float | np.ndarray = field(default=0.25)
     gas_ctr_pretax_share: float | np.ndarray = field(default=0.5)
 
-    oil_ic_rate: float = field(default=0.0)
-    gas_ic_rate: float = field(default=0.0)
+    oil_ic_rate: float | np.ndarray = field(default=0.0)
+    gas_ic_rate: float | np.ndarray = field(default=0.0)
     ic_is_available: bool = field(default=False)
     oil_cr_cap_rate: float = field(default=1.0)
     gas_cr_cap_rate: float = field(default=1.0)
@@ -419,21 +419,46 @@ class CostRecovery(BaseProject):
                 self._gas_ftp_ctr = self.gas_ctr_pretax_share * self._gas_ftp
             self._gas_ftp_gov = self._gas_ftp - self._gas_ftp_ctr
 
-    # Todo: Refactor the ic rate thus could accepting ndarray
-    # Todo: Refactor try to not writing the type of variable into the name of variable
     def _get_ic(
             self,
             revenue: np.ndarray,
             ftp: np.ndarray,
             cost_alloc: FluidType,
-            ic_rate: float,
+            ic_rate: float | np.ndarray,
     ):
+        """
+        The function to apply the Investment Credit (IC) into the capital cost based on the given IC rate.
+
+        Parameters
+        ----------
+        revenue: np.ndarray
+            The array of revenue.
+        ftp: np.ndarray
+            The array of First Tranche Petroleum (FTP).
+        cost_alloc: FluidType
+            The cost allocation of the cost.
+        ic_rate: float | np.ndarray
+            The IC rate which will be applied to the cost.
+
+        Returns
+        -------
+        out: tuple
+        ic_total: The total of the IC
+        ic_unrecovered: The unrecoverable IC
+        ic_paid: The IC that has been paid
+        """
 
         # Condition where fluid is Oil:
         if cost_alloc == FluidType.GAS:
             capital_class = self._gas_capital_cost
         else:
             capital_class = self._oil_capital_cost
+
+        # Condition when the ic rate is float
+        if isinstance(ic_rate, float):
+            ic_rate = np.full_like(capital_class.cost, ic_rate)
+        else:
+            pass
 
         # Applying the IC calculation to only true value
         ic_arr = np.where(np.asarray(capital_class.is_ic_applied) == True,
@@ -456,8 +481,6 @@ class CostRecovery(BaseProject):
 
         return ic_total, ic_unrecovered, ic_paid
 
-    # Todo: Add the point of view of the established contract definition to the docstring.
-    #  Thus, the component that resulted by the code will be referring to the contract.
     @staticmethod
     def _get_cost_recovery(
             revenue: np.ndarray,
