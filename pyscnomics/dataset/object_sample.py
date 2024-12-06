@@ -35,14 +35,12 @@ def generate_contract_sample(case: ContractSample) -> CostRecovery | GrossSplit:
         tax_rate = 0.405
         ftp_tax_regime = FTPTaxRegime.DIRECT_MODE
         sunk_cost_reference_year = 2023
-        future_rate = 0.0
         post_uu_22_year2001 = True
 
         contract_arguments = {
             'effective_tax_rate': tax_rate,
             'ftp_tax_regime': ftp_tax_regime,
             'sunk_cost_reference_year': sunk_cost_reference_year,
-            'future_rate': future_rate,
             'post_uu_22_year2001': post_uu_22_year2001,
         }
 
@@ -59,14 +57,12 @@ def generate_contract_sample(case: ContractSample) -> CostRecovery | GrossSplit:
         tax_rate = 0.405
         ftp_tax_regime = FTPTaxRegime.DIRECT_MODE
         sunk_cost_reference_year = 2023
-        future_rate = 0.0
         post_uu_22_year2001 = True
 
         contract_arguments = {
             'effective_tax_rate': tax_rate,
             'ftp_tax_regime': ftp_tax_regime,
             'sunk_cost_reference_year': sunk_cost_reference_year,
-            'future_rate': future_rate,
             'post_uu_22_year2001': post_uu_22_year2001,
         }
 
@@ -87,7 +83,6 @@ def generate_contract_sample(case: ContractSample) -> CostRecovery | GrossSplit:
              0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12,
              0.12, 0.12])
         inflation_rate = 0.0
-        future_rate = 0.0
         inflation_rate_applied_to = None
 
         # Defining the contract arguments
@@ -96,7 +91,6 @@ def generate_contract_sample(case: ContractSample) -> CostRecovery | GrossSplit:
             "sunk_cost_reference_year": sunk_cost_reference_year,
             "vat_rate": vat_rate,
             "inflation_rate": inflation_rate,
-            "future_rate": future_rate,
             "inflation_rate_applied_to": inflation_rate_applied_to,
         }
 
