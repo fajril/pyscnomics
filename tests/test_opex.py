@@ -239,10 +239,10 @@ def test_opex_arithmetics():
         cost_per_volume=np.array([0.1, 0.1]),
     )
 
-    calc_add1 = (mangga_opex + apel_opex).expenditures()
-    calc_add2 = (nanas_opex + jeruk_opex).expenditures()
-    calc_mul1 = (nanas_opex * 2).expenditures()
-    calc_div1 = (jeruk_opex / 2).expenditures()
+    calc_add1 = (mangga_opex + apel_opex).expenditures_post_tax()
+    calc_add2 = (nanas_opex + jeruk_opex).expenditures_post_tax()
+    calc_mul1 = (nanas_opex * 2).expenditures_post_tax()
+    calc_div1 = (jeruk_opex / 2).expenditures_post_tax()
 
     # Execute testing
     np.testing.assert_allclose(add1, calc_add1)
@@ -277,8 +277,8 @@ def test_opex_expenditures():
         cost_per_volume=np.array([0.1, 0.1]),
     )
 
-    calc_expense1 = mangga_opex.expenditures()
-    calc_expense2 = apel_opex.expenditures()
+    calc_expense1 = mangga_opex.expenditures_post_tax()
+    calc_expense2 = apel_opex.expenditures_post_tax()
 
     # Execute testing
     np.testing.assert_allclose(expense1, calc_expense1)
@@ -291,7 +291,7 @@ def test_opex_expenditures_with_tax_and_inflation():
     # Expected results
     case1 = np.array([0, 105, 110.25, 115.7625, 121.550625, 0, 0, 0])
     case2 = np.array([0, 102, 103, 104, 105, 0, 0, 0])
-    case3 = np.array([0, 107.1979928, 113.7348086, 119.531732, 124.4275916, 0, 0, 0])
+    case3 = np.array([0, 107.18504, 113.69756, 119.46108, 124.31724, 0, 0, 0])
 
     # Calculated results
     opex_mangga = OPEX(
@@ -299,6 +299,7 @@ def test_opex_expenditures_with_tax_and_inflation():
         end_year=2030,
         fixed_cost=np.array([100, 100, 100, 50]),
         expense_year=np.array([2024, 2025, 2026, 2027]),
+        tax_portion=np.array([1, 1, 1, 1]),
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
@@ -306,6 +307,7 @@ def test_opex_expenditures_with_tax_and_inflation():
         start_year=2023,
         end_year=2030,
         fixed_cost=np.array([50]),
+        tax_portion=np.array([1]),
         expense_year=np.array([2027]),
         cost_allocation=[FluidType.OIL],
     )
@@ -316,20 +318,18 @@ def test_opex_expenditures_with_tax_and_inflation():
         fixed_cost=np.array([100, 100, 100, 100]),
         expense_year=np.array([2024, 2025, 2026, 2027]),
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
-        vat_portion=np.array([0.36, 0.36, 0.36, 0.36]),
-        vat_discount=0.743,
+        tax_portion=np.array([0.36, 0.36, 0.36, 0.36]),
+        tax_discount=0.743,
     )
 
     opex_add = opex_mangga + opex_jeruk
 
-    case1_calc = opex_add.expenditures(inflation_rate=0.05)
-    case2_calc = opex_add.expenditures(
-        tax_type=TaxType.VAT,
-        vat_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
+    case1_calc = opex_add.expenditures_post_tax(inflation_rate=0.05)
+    case2_calc = opex_add.expenditures_post_tax(
+        tax_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
     )
-    case3_calc = opex_apel.expenditures(
-        tax_type=TaxType.VAT,
-        vat_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
+    case3_calc = opex_apel.expenditures_post_tax(
+        tax_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
         inflation_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
     )
 

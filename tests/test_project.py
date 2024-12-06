@@ -1,6 +1,7 @@
 """
 A collection of unit testings for module project.py
 """
+from typing import final
 
 import pytest
 import numpy as np
@@ -176,11 +177,11 @@ def test_base_project_tangible_expenditures():
         )
     )
 
-    base_case._get_expenditures()
+    base_case._get_expenditures_post_tax()
     results = vars(base_case)
 
-    oil_tangible_expenditures_calc = results["_oil_capital_expenditures"]
-    gas_tangible_expenditures_calc = results["_gas_capital_expenditures"]
+    oil_tangible_expenditures_calc = results["_oil_capital_expenditures_post_tax"]
+    gas_tangible_expenditures_calc = results["_gas_capital_expenditures_post_tax"]
 
     # Execute testing (expected == calculated)
     np.testing.assert_allclose(oil_tangible_expenditures, oil_tangible_expenditures_calc)
@@ -193,8 +194,8 @@ def test_base_project_intangible_expenditures():
     # Expected results
     oil_case1 = np.array([100, 0, 100, 0, 100, 0, 100, 0])
     gas_case1 = np.array([0, 50, 0, 50, 0, 50, 0, 50])
-    oil_case2 = np.array([101, 0, 113.5575, 0, 127.6281563, 0, 143.3902335, 0])
-    gas_case2 = np.array([0, 53.55, 0, 60.1965, 0, 67.64292281, 0, 75.98342282])
+    oil_case2 = np.array([101, 0, 103, 0, 105, 0, 107, 0])
+    gas_case2 = np.array([0, 51, 0, 52, 0, 53, 0, 54])
 
     # Calculated results
     intangible_mangga = Intangible(
@@ -203,6 +204,7 @@ def test_base_project_intangible_expenditures():
         cost=np.array([100, 100, 100, 100]),
         expense_year=np.array([2023, 2025, 2027, 2029]),
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+        tax_portion=np.array([1, 1, 1, 1]),
     )
 
     intangible_apel = Intangible(
@@ -211,6 +213,7 @@ def test_base_project_intangible_expenditures():
         cost=np.array([50, 50, 50, 50]),
         expense_year=np.array([2024, 2026, 2028, 2030]),
         cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+        tax_portion=np.array([1, 1, 1, 1]),
     )
 
     case1 = BaseProject(
@@ -225,20 +228,19 @@ def test_base_project_intangible_expenditures():
         intangible_cost=(intangible_mangga, intangible_apel),
     )
 
-    case1._get_expenditures()
-    case2._get_expenditures(
-        tax_type=TaxType.VAT,
-        vat_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
+    case1._get_expenditures_post_tax()
+    case2._get_expenditures_post_tax(
+        tax_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
         inflation_rate=0.05,
     )
 
     results1 = vars(case1)
     results2 = vars(case2)
 
-    oil_case1_calc = results1["_oil_intangible_expenditures"]
-    gas_case1_calc = results1["_gas_intangible_expenditures"]
-    oil_case2_calc = results2["_oil_intangible_expenditures"]
-    gas_case2_calc = results2["_gas_intangible_expenditures"]
+    oil_case1_calc = results1["_oil_intangible_expenditures_post_tax"]
+    gas_case1_calc = results1["_gas_intangible_expenditures_post_tax"]
+    oil_case2_calc = results2["_oil_intangible_expenditures_post_tax"]
+    gas_case2_calc = results2["_gas_intangible_expenditures_post_tax"]
 
     # Testing (expected == calculated)
     np.testing.assert_allclose(oil_case1, oil_case1_calc)
@@ -253,8 +255,6 @@ def test_base_project_opex_expenditures():
     # Expected results
     oil_case1 = np.array([100, 100, 100, 100, 0, 0, 0, 0])
     gas_case1 = np.array([0, 0, 0, 0, 0, 50, 50, 50])
-    oil_case2 = np.array([105.5, 107.61, 109.7622, 111.957444, 0, 0, 0, 0])
-    gas_case2 = np.array([0, 0, 0, 0, 0, 58.24026237, 59.40506762, 60.59316897])
 
     # Calculated results
     opex_mangga = OPEX(
@@ -273,66 +273,31 @@ def test_base_project_opex_expenditures():
         cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS],
     )
 
-    opex_jeruk = OPEX(
-        start_year=2023,
-        end_year=2030,
-        fixed_cost=np.array([100, 100, 100, 100]),
-        expense_year=np.array([2023, 2024, 2025, 2026]),
-        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
-        lbt_discount=0.5,
-    )
-
-    opex_nanas = OPEX(
-        start_year=2023,
-        end_year=2030,
-        fixed_cost=np.array([50, 50, 50]),
-        expense_year=np.array([2028, 2029, 2030]),
-        cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS],
-        lbt_discount=0.5,
-    )
-
     case1 = BaseProject(
         start_date=date(2023, 1, 1),
         end_date=date(2030, 1, 1),
         opex=(opex_mangga, opex_apel),
     )
 
-    case2 = BaseProject(
-        start_date=date(2023, 1, 1),
-        end_date=date(2030, 1, 1),
-        opex=(opex_jeruk, opex_nanas),
-    )
-
-    case1._get_expenditures()
-    case2._get_expenditures(
-        tax_type=TaxType.LBT,
-        lbt_rate=0.11,
-        inflation_rate=0.02,
-    )
+    case1._get_expenditures_post_tax()
 
     results1 = vars(case1)
-    results2 = vars(case2)
 
-    oil_case1_calc = results1["_oil_opex_expenditures"]
-    gas_case1_calc = results1["_gas_opex_expenditures"]
-    oil_case2_calc = results2["_oil_opex_expenditures"]
-    gas_case2_calc = results2["_gas_opex_expenditures"]
+    oil_case1_calc = results1["_oil_opex_expenditures_post_tax"]
+    gas_case1_calc = results1["_gas_opex_expenditures_post_tax"]
 
     # Testing (expected == calculated)
     np.testing.assert_allclose(oil_case1, oil_case1_calc)
     np.testing.assert_allclose(gas_case1, gas_case1_calc)
-    np.testing.assert_allclose(oil_case2, oil_case2_calc)
-    np.testing.assert_allclose(gas_case2, gas_case2_calc)
 
 
 def test_base_project_asr_expenditures():
     """ A unit testing to calculate asr expenditures in BaseProject class """
 
-    # Expected results
-    oil_case1 = np.array([117.1659381, 114.8685668, 112.6162419, 110.4080803, 0, 0, 0, 0])
-    gas_case1 = np.array([0, 0, 0, 0, 54.121608, 53.0604, 52.02, 51])
-    oil_case2 = np.array([125.1332219, 125.3543439, 125.5677742, 0, 0, 0, 126.3410973, 0])
-    gas_case2 = np.array([0, 0, 0, 0, 62.9854344, 63.08009052, 0, 63.25671746])
+    oil_case1 = np.array([100.0, 100.0, 100.0, 100.0, 0, 0, 0, 0])
+    gas_case1 = np.array([0, 0, 0, 0, 50, 50, 50, 50])
+    oil_case2 = np.array([106.8, 105.95, 105.1, 0, 0, 0, 101.7, 0])
+    gas_case2 = np.array([0, 0, 0, 0, 51.7, 51.275, 0, 50.425])
 
     # Calculated results
     asr_mangga = ASR(
@@ -340,6 +305,7 @@ def test_base_project_asr_expenditures():
         end_year=2030,
         cost=np.array([100, 100, 100, 100]),
         expense_year=np.array([2023, 2024, 2025, 2026]),
+        final_year=np.array([2023, 2024, 2025, 2026]),
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
@@ -348,6 +314,7 @@ def test_base_project_asr_expenditures():
         end_year=2030,
         cost=np.array([50, 50, 50, 50]),
         expense_year=np.array([2027, 2028, 2029, 2030]),
+        final_year=np.array([2027, 2028, 2029, 2030]),
         cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
     )
 
@@ -356,8 +323,9 @@ def test_base_project_asr_expenditures():
         end_year=2030,
         cost=np.array([100, 100, 100, 100]),
         expense_year=np.array([2023, 2024, 2025, 2029]),
+        final_year=np.array([2023, 2024, 2025, 2029]),
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
-        vat_portion=np.array([0.85, 0.85, 0.85, 0.85]),
+        tax_portion=np.array([0.85, 0.85, 0.85, 0.85]),
     )
 
     asr_nanas = ASR(
@@ -365,8 +333,9 @@ def test_base_project_asr_expenditures():
         end_year=2030,
         cost=np.array([50, 50, 50]),
         expense_year=np.array([2027, 2028, 2030]),
+        final_year=np.array([2027, 2028, 2030]),
         cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS],
-        vat_portion=np.array([0.85, 0.85, 0.85]),
+        tax_portion=np.array([0.85, 0.85, 0.85]),
     )
 
     case1 = BaseProject(
@@ -381,20 +350,19 @@ def test_base_project_asr_expenditures():
         asr_cost=(asr_jeruk, asr_nanas),
     )
 
-    case1._get_expenditures()
-    case2._get_expenditures(
-        tax_type=TaxType.VAT,
-        vat_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
+    case1._get_expenditures_post_tax()
+    case2._get_expenditures_post_tax(
+        tax_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
         inflation_rate=0.03,
     )
 
     results1 = vars(case1)
     results2 = vars(case2)
 
-    oil_case1_calc = results1["_oil_asr_expenditures"]
-    gas_case1_calc = results1["_gas_asr_expenditures"]
-    oil_case2_calc = results2["_oil_asr_expenditures"]
-    gas_case2_calc = results2["_gas_asr_expenditures"]
+    oil_case1_calc = results1["_oil_asr_expenditures_post_tax"]
+    gas_case1_calc = results1["_gas_asr_expenditures_post_tax"]
+    oil_case2_calc = results2["_oil_asr_expenditures_post_tax"]
+    gas_case2_calc = results2["_gas_asr_expenditures_post_tax"]
 
     # Testing (expected == calculated)
     np.testing.assert_allclose(oil_case1, oil_case1_calc)

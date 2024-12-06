@@ -202,10 +202,10 @@ def test_intangible_arithmetics():
     calc_div = mangga_intangible / 2
 
     # Execute testing
-    np.testing.assert_allclose(add, calc_add.expenditures())
-    np.testing.assert_allclose(sub, calc_sub.expenditures())
-    np.testing.assert_allclose(mul, calc_mul.expenditures())
-    np.testing.assert_allclose(div, calc_div.expenditures())
+    np.testing.assert_allclose(add, calc_add.expenditures_post_tax())
+    np.testing.assert_allclose(sub, calc_sub.expenditures_post_tax())
+    np.testing.assert_allclose(mul, calc_mul.expenditures_post_tax())
+    np.testing.assert_allclose(div, calc_div.expenditures_post_tax())
 
 
 def test_intangible_expenditures():
@@ -232,8 +232,8 @@ def test_intangible_expenditures():
         cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
     )
 
-    expense1_calc = intangible_mangga.expenditures()
-    expense2_calc = (intangible_mangga + intangible_apel).expenditures()
+    expense1_calc = intangible_mangga.expenditures_post_tax()
+    expense2_calc = (intangible_mangga + intangible_apel).expenditures_post_tax()
 
     # Execute testing
     np.testing.assert_allclose(expense1, expense1_calc)
@@ -247,10 +247,10 @@ def test_intangible_expenditures_with_tax_and_inflation():
     case1 = np.array([0, 102, 105.06, 109.2624, 114.72552, 0, 0, 0])
     case2 = np.array([
         0,
-        105.57,
-        108.7371,
-        113.086584,
-        118.7409132,
+        102.0,
+        105.06,
+        109.2624,
+        114.72552,
         0,
         0,
         0,
@@ -277,17 +277,15 @@ def test_intangible_expenditures_with_tax_and_inflation():
             FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
             FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS
         ],
-        lbt_discount=np.array([0, 0.3, 0.3, 0.3, 0.3, 0, 0, 0]),
     )
 
-    case1_calc = intangible_mangga.expenditures(
+    case1_calc = intangible_mangga.expenditures_post_tax(
         inflation_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
     )
 
-    case2_calc = intangible_apel.expenditures(
-        tax_type=TaxType.LBT,
+    case2_calc = intangible_apel.expenditures_post_tax(
         inflation_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
-        lbt_rate=0.05,
+        tax_rate=0.05,
     )
 
     # Execute testing

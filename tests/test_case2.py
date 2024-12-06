@@ -14,11 +14,10 @@ future_rate = 0.0
 post_uu_22_year2001 = True
 
 contract_arguments = {
-    'tax_rate': tax_rate,
+    'effective_tax_rate': tax_rate,
     'ftp_tax_regime': ftp_tax_regime,
     'sunk_cost_reference_year': sunk_cost_reference_year,
     'depr_method': depr_method,
-    'future_rate': future_rate,
     'post_uu_22_year2001': post_uu_22_year2001,
 }
 

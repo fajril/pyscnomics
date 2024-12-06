@@ -19,11 +19,10 @@ inflation_rate_applied_to = None
 
 # Defining the contract arguments
 contract_arguments = {
-    "tax_rate": tax_rate,
+    "effective_tax_rate": tax_rate,
     "sunk_cost_reference_year": sunk_cost_reference_year,
     "vat_rate": vat_rate,
     "inflation_rate": inflation_rate,
-    "future_rate": future_rate,
     "inflation_rate_applied_to": inflation_rate_applied_to,
 }
 
@@ -33,19 +32,19 @@ psc.run(**contract_arguments)
 
 def test_tangible():
     base = np.asarray(load_testing(dataset_type='case3', key='oil_tangible'))
-    calc = psc._oil_capital_expenditures
+    calc = psc._oil_capital_expenditures_post_tax
     np.testing.assert_allclose(base, calc)
 
 
 def test_intangible():
     base = np.asarray(load_testing(dataset_type='case3', key='oil_intangible'))
-    calc = psc._oil_intangible_expenditures
+    calc = psc._oil_intangible_expenditures_post_tax
     np.testing.assert_allclose(base, calc)
 
 
 def test_opex():
     base = np.asarray(load_testing(dataset_type='case3', key='oil_opex'))
-    calc = psc._oil_opex_expenditures
+    calc = psc._oil_opex_expenditures_post_tax
     np.testing.assert_allclose(base, calc)
 
 
