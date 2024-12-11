@@ -7,3 +7,9 @@ from . import dataset
 from . import io
 from . import optimize
 
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("pyscnomics")
+except PackageNotFoundError:
+    __version__ = "unknown"

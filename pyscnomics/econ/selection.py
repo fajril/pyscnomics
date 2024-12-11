@@ -5,6 +5,21 @@ Specify constants for several processes using Enum class.
 from enum import Enum
 
 
+class ExpendituresType(Enum):
+    """ Enumeration of expenditures type
+
+    Attributes
+    ----------
+    PRE_TAX : str
+        Represents pre-tax expenditures.
+    POST_TAX : str
+        Represents post-tax expenditures.
+    """
+
+    PRE_TAX = "Pre-Tax Expenditures"
+    POST_TAX = "Post-Tax Expenditures"
+
+
 class DeprMethod(Enum):
     """
     Enumeration of depreciation methods.
@@ -329,6 +344,68 @@ class OptimizationParameter(Enum):
         Optimization parameter for VAT Discount.
     LBT_DISCOUNT: str
         Optimization parameter for LBT Discount.
+
+
+    Notes
+    -----
+    The impact of the optimization of each parameter into the **contractor** economic indicator are as the following:
+
+    OIL_CTR_PRETAX
+        A higher value of this optimization parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    GAS_CTR_PRETAX
+        A higher value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    OIL_FTP_PORTION
+        A lower value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    GAS_FTP_PORTION
+        A lower value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    OIL_IC
+        A higher value of this parameter typically enhances the contractor's economic indicator while
+        diminishing the government's. However, under certain conditions, the opposite effect may occur.
+
+    GAS_IC
+        A higher value of this parameter typically enhances the contractor's economic indicator while
+        diminishing the government's. However, under certain conditions, the opposite effect may occur.
+
+    OIL_DMO_FEE
+        A higher value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    GAS_DMO_FEE
+        A higher value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    VAT_RATE
+        A lower value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    EFFECTIVE_TAX_RATE
+        A lower value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    MINISTERIAL_DISCRETION
+        A higher value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    VAT_DISCOUNT
+        A higher value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    LBT_DISCOUNT
+        A higher value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
+    DEPRECIATION_ACCELERATION
+        A higher value of this parameter enhances the contractor's economic indicator while
+        diminishing the government's economic indicator.
+
     """
     OIL_CTR_PRETAX = 'Oil Contractor Pre Tax'
     GAS_CTR_PRETAX = 'Gas Contractor Pre Tax'
@@ -546,3 +623,19 @@ class VariableSplit082017:
 
 
 
+class ContractSample(Enum):
+    """
+    Selection for generating contract sample.
+    """
+    CASE_1 = 'Cost Recovery Contract Sample'
+    CASE_2 = 'Cost Recovery Consolidated Contract Sample'
+    CASE_3 = 'Gross Split Contract Sample'
+
+
+class LimitMethod(Enum):
+    """
+    Economic limit method.
+    """
+    MAX_CUM_CASHFLOW = "Maximum Cumulative Cashflow"
+    NEGATIVE_CASHFLOW = "Negative Cashflow"
+    MAX_NPV = "Maximum NPV"

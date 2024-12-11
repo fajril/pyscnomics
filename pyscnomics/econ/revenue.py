@@ -1,6 +1,7 @@
 """
 Prepares lifting data and calculate the revenue.
 """
+
 import numpy as np
 from dataclasses import dataclass, field
 
@@ -103,7 +104,7 @@ class Lifting:
                 f"not as {self.prod_year.__class__.__qualname__}."
             )
 
-        self.prod_year = self.prod_year.astype(np.int64)
+        self.prod_year = self.prod_year.astype(int)
 
         # Prepare attribute ghv
         if self.ghv is None:
@@ -583,7 +584,7 @@ class Lifting:
 
         # Between an instance of Lifting and an instance of Tangible/Intangible/OPEX/ASR
         elif isinstance(other, (CapitalCost, Intangible, OPEX, ASR)):
-            return np.sum(self.revenue()) / np.sum(other.expenditures())
+            return np.sum(self.revenue()) / np.sum(other.expenditures_post_tax())
 
         # Between an instance of Lifting and an integer/float
         elif isinstance(other, (int, float)):
