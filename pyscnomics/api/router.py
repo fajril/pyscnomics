@@ -5,9 +5,17 @@ from pyscnomics.api.adapter import (get_baseproject,
                                     get_contract_optimization,
                                     get_grosssplit,
                                     get_transition,
-                                    get_detailed_summary)
-from pyscnomics.api.converter import Data
+                                    get_detailed_summary,
+                                    get_ltp_dict,
+                                    get_rpd_dict,
+                                    get_grosssplit_split,
+                                    get_transition_split,
+                                    get_economic_limit,
+                                    get_asr_expenditures,
+                                    get_lbt_expenditures)
+from pyscnomics.api.converter import Data, EconLimit, ASRExpendituresBM, LBTExpendituresBM
 from pyscnomics.api.converter import DataTransition
+from pyscnomics.api.converter import LtpBM, RpdBM
 
 
 router = APIRouter(prefix='/api')
@@ -33,7 +41,7 @@ async def calculate_costrecovery(data: Data) -> dict:
     - summary_arguments
     - costrecovery
     - contract_arguments
-    - lifting
+    - capital
     - tangible
     - intangible
     - opex
@@ -42,7 +50,8 @@ async def calculate_costrecovery(data: Data) -> dict:
     - sensitivity_arguments
 
     """
-    return get_costrecovery(data=data.dict())[0]
+    result = get_costrecovery(data=data.model_dump())[0]
+    return result
 
 
 @router.post("/costrecovery/detailed_summary")
@@ -58,7 +67,7 @@ async def get_costrecovery_detailed(data: Data) -> dict:
     - costrecovery
     - contract_arguments
     - lifting
-    - tangible
+    - capital
     - intangible
     - opex
     - asr
@@ -66,9 +75,10 @@ async def get_costrecovery_detailed(data: Data) -> dict:
     - sensitivity_arguments
 
     """
-
-    return get_detailed_summary(data=data.dict(),
-                                contract_type='Cost Recovery')
+    result = get_detailed_summary(
+        data=data.model_dump(),
+        contract_type='Cost Recovery')
+    return result
 
 
 @router.post("/costrecovery/table")
@@ -84,7 +94,7 @@ async def get_costrecovery_table(data: Data) -> dict:
     - costrecovery
     - contract_arguments
     - lifting
-    - tangible
+    - capital
     - intangible
     - opex
     - asr
@@ -92,7 +102,7 @@ async def get_costrecovery_table(data: Data) -> dict:
     - sensitivity_arguments
 
     """
-    return get_contract_table(data=data.dict(), contract_type='Cost Recovery')
+    return get_contract_table(data=data.model_dump(), contract_type='Cost Recovery')
 
 
 @router.post("/costrecovery/optimization")
@@ -108,7 +118,7 @@ async def calculate_costrecovery_optimization(data: Data) -> dict:
     - costrecovery
     - contract_arguments
     - lifting
-    - tangible
+    - capital
     - intangible
     - opex
     - asr
@@ -116,7 +126,7 @@ async def calculate_costrecovery_optimization(data: Data) -> dict:
     - sensitivity_arguments
 
     """
-    return get_contract_optimization(data=data.dict(), contract_type='Cost Recovery')
+    return get_contract_optimization(data=data.model_dump(), contract_type='Cost Recovery')
 
 
 @router.post("/grosssplit")
@@ -132,7 +142,7 @@ async def calculate_grosssplit(data: Data) -> dict:
     - grosssplit
     - contract_arguments
     - lifting
-    - tangible
+    - capital
     - intangible
     - opex
     - asr
@@ -140,7 +150,8 @@ async def calculate_grosssplit(data: Data) -> dict:
     - sensitivity_arguments
 
     """
-    return get_grosssplit(data=data.dict())[0]
+    result = get_grosssplit(data=data.model_dump())[0]
+    return result
 
 
 @router.post("/grosssplit/detailed_summary")
@@ -156,7 +167,7 @@ async def get_grosssplit_detailed(data: Data) -> dict:
     - costrecovery
     - contract_arguments
     - lifting
-    - tangible
+    - capital
     - intangible
     - opex
     - asr
@@ -164,9 +175,10 @@ async def get_grosssplit_detailed(data: Data) -> dict:
     - sensitivity_arguments
 
     """
-
-    return get_detailed_summary(data=data.dict(),
-                                contract_type='Gross Split')
+    result = get_detailed_summary(
+        data=data.model_dump(),
+        contract_type='Gross Split')
+    return result
 
 
 @router.post("/grosssplit/table")
@@ -182,7 +194,7 @@ async def get_grosssplit_table(data: Data) -> dict:
     - grosssplit
     - contract_arguments
     - lifting
-    - tangible
+    - capital
     - intangible
     - opex
     - asr
@@ -190,7 +202,7 @@ async def get_grosssplit_table(data: Data) -> dict:
     - sensitivity_arguments
 
     """
-    return get_contract_table(data=data.dict(), contract_type='Gross Split')
+    return get_contract_table(data=data.model_dump(), contract_type='Gross Split')
 
 
 @router.post("/grosssplit/optimization")
@@ -206,7 +218,7 @@ async def calculate_grosssplit_optimization(data: Data) -> dict:
     - grosssplit
     - contract_arguments
     - lifting
-    - tangible
+    - capital
     - intangible
     - opex
     - asr
@@ -214,7 +226,7 @@ async def calculate_grosssplit_optimization(data: Data) -> dict:
     - sensitivity_arguments
 
     """
-    return get_contract_optimization(data=data.dict(), contract_type='Gross Split')
+    return get_contract_optimization(data=data.model_dump(), contract_type='Gross Split')
 
 
 @router.post("/transition")
@@ -230,7 +242,7 @@ async def calculate_transition(data: DataTransition) -> dict:
         -- costrecovery or grosssplit
         -- contract_arguments
         -- lifting
-        -- tangible
+        -- capital
         -- intangible
         -- opex
         -- asr
@@ -239,7 +251,7 @@ async def calculate_transition(data: DataTransition) -> dict:
         -- costrecovery or grosssplit
         -- contract_arguments
         -- lifting
-        -- tangible
+        -- capital
         -- intangible
         -- opex
         -- asr
@@ -248,7 +260,8 @@ async def calculate_transition(data: DataTransition) -> dict:
 
 
     """
-    return get_transition(data=data.dict())[0]
+    result = get_transition(data=data.model_dump())[0]
+    return result
 
 
 @router.post("/transition/detailed_summary")
@@ -264,7 +277,7 @@ async def get_transition_detailed(data: DataTransition) -> dict:
     - costrecovery
     - contract_arguments
     - lifting
-    - tangible
+    - capital
     - intangible
     - opex
     - asr
@@ -272,9 +285,10 @@ async def get_transition_detailed(data: DataTransition) -> dict:
     - sensitivity_arguments
 
     """
-
-    return get_detailed_summary(data=data.dict(),
-                                contract_type='Transition')
+    result = get_detailed_summary(
+        data=data.model_dump(),
+        contract_type='Transition')
+    return result
 
 
 @router.post("/transition/table")
@@ -290,7 +304,7 @@ async def get_transition_table(data: DataTransition) -> dict:
         -- costrecovery or grosssplit
         -- contract_arguments
         -- lifting
-        -- tangible
+        -- capital
         -- intangible
         -- opex
         -- asr
@@ -299,7 +313,7 @@ async def get_transition_table(data: DataTransition) -> dict:
         -- costrecovery or grosssplit
         -- contract_arguments
         -- lifting
-        -- tangible
+        -- capital
         -- intangible
         -- opex
         -- asr
@@ -307,7 +321,7 @@ async def get_transition_table(data: DataTransition) -> dict:
     - summary_arguments
 
     """
-    return get_contract_table(data=data.dict(), contract_type='Transition')
+    return get_contract_table(data=data.model_dump(), contract_type='Transition')
 
 
 @router.post("/transition/optimization")
@@ -323,7 +337,7 @@ async def calculate_transition_optimization(data: DataTransition) -> dict:
     - grosssplit
     - contract_arguments
     - lifting
-    - tangible
+    - capital
     - intangible
     - opex
     - asr
@@ -331,7 +345,7 @@ async def calculate_transition_optimization(data: DataTransition) -> dict:
     - sensitivity_arguments
 
     """
-    return get_contract_optimization(data=data.dict(), contract_type='Transition')
+    return get_contract_optimization(data=data.model_dump(), contract_type='Transition')
 
 
 @router.post("/baseproject")
@@ -346,13 +360,14 @@ async def calculate_baseproject(data: Data) -> dict:
     - summary_arguments
     - contract_arguments
     - lifting
-    - tangible
+    - capital
     - intangible
     - opex
     - asr
 
     """
-    return get_baseproject(data=data.dict())[0]
+    result = get_baseproject(data=data.model_dump())[0]
+    return result
 
 
 @router.post("/baseproject/table")
@@ -367,13 +382,13 @@ async def get_baseproject_table(data: Data) -> dict:
     - summary_arguments
     - contract_arguments
     - lifting
-    - tangible
+    - capital
     - intangible
     - opex
     - asr
 
     """
-    return get_contract_table(data=data.dict(), contract_type='Base Project')
+    return get_contract_table(data=data.model_dump(), contract_type='Base Project')
 
 
 @router.post("/baseproject/detailed_summary")
@@ -388,12 +403,139 @@ async def get_baseproject_detailed(data: Data) -> dict:
     - summary_arguments
     - contract_arguments
     - lifting
-    - tangible
+    - capital
     - intangible
     - opex
     - asr
 
     """
+    result = get_detailed_summary(
+        data=data.model_dump(),
+        contract_type='Base Project')
+    return result
 
-    return get_detailed_summary(data=data.dict(),
-                                contract_type='Base Project')
+
+@router.post("/ltp")
+async def calculate_ltp(data: LtpBM) -> dict:
+    """
+    ## Calculate LTP model
+    Route to calculate a ltp model.
+
+    ### Data Input Structure
+    volume: float | int
+    start_year: int
+    end_year: int
+    fluid_type: str
+
+    """
+    return get_ltp_dict(data=data.model_dump())
+
+
+@router.post("/rpd")
+async def calculate_rdp(data: RpdBM) -> dict:
+    """
+    ## Calculate RPD model
+    Route to calculate a rdp model.
+
+    ### Data Input Structure
+    year_rampup: int
+    drate: float | int
+    q_plateau_ratio: float | int
+    q_min_ratio: float | int
+    volume: float | int
+    start_year: int
+    end_year: int
+    """
+    return get_rpd_dict(data=data.model_dump())
+
+
+@router.post("/grosssplit/split")
+async def get_grosssplit_split_information(data: Data) -> dict:
+    """
+    ## The Split Information
+    Route to retrieve the information of contractor split in Gross Split contract scheme.
+
+    ### Data Input Structure
+    data:
+    - setup
+    - summary_arguments
+    - grosssplit
+    - contract_arguments
+    - lifting
+    - capital
+    - intangible
+    - opex
+    - asr
+    - optimization_arguments
+    - sensitivity_arguments
+
+    """
+    return get_grosssplit_split(data=data.model_dump())
+
+
+@router.post("/transition/split")
+async def get_transition_split_information(data: DataTransition) -> dict:
+    """
+    ## The Split Information
+    Route to retrieve the information of contractor split in Transition contract scheme
+    if the transition contracts is consisting one or two gross split contracts.
+
+    ### Data Input Structure
+    data:
+    - contract_1
+        -- setup
+        -- costrecovery or grosssplit
+        -- contract_arguments
+        -- lifting
+        -- capital
+        -- intangible
+        -- opex
+        -- asr
+    - contract_2
+        -- setup
+        -- costrecovery or grosssplit
+        -- contract_arguments
+        -- lifting
+        -- capital
+        -- intangible
+        -- opex
+        -- asr
+    - contract_arguments
+    - summary_arguments
+
+
+    """
+    result = get_transition_split(data=data.model_dump())
+    return result
+
+@router.post("/econlimit")
+async def calculate_economic_limit(data: EconLimit) -> int:
+    """
+    ## Retrieve The Economic Limit Years
+    Route to get the years of the economic limit.
+
+    ### Data Input Structure
+    years: list[int]
+    cash_flow: list[int] | list[float]
+    method: str
+    """
+    return get_economic_limit(data=data.model_dump())
+
+
+@router.post("/asr_expenditures")
+async def calculate_asr_expenditures(data: ASRExpendituresBM) -> dict:
+    """
+    ## Retrieve The Expenditures of ASR Cost
+    Route to get the expenditures of ASR Cost.
+    """
+    return get_asr_expenditures(data=data.model_dump())
+
+
+@router.post("/lbt_expenditures")
+async def calculate_lbt_expenditures(data: LBTExpendituresBM) -> dict:
+    """
+    ## Retrieve The Expenditures of LBT Cost
+    Route to get the expenditures of LBT Cost.
+    """
+    return get_lbt_expenditures(data=data.model_dump())
+

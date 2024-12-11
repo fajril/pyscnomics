@@ -1,5 +1,7 @@
 import json
 import os
+import importlib.resources as pkg_resources
+from pathlib import Path
 from datetime import datetime
 
 import numpy as np
@@ -8,7 +10,7 @@ import pandas as pd
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
-from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales
 from pyscnomics.econ.revenue import Lifting, FluidType
 
 
@@ -53,13 +55,23 @@ def read_json_file(file_name: str) -> dict:
         The dictionary of the json file.
 
     """
-    if 'pyscnomics\\pyscnomics' in os.path.dirname(os.getcwd()):
-        directory = (os.path.dirname(os.getcwd())) + '/dataset/' + file_name + '.json'
+    # if 'pyscnomics\\pyscnomics' in os.path.dirname(os.getcwd()):
+    #     directory = (os.path.dirname(os.getcwd())) + '/dataset/' + file_name + '.json'
+    #
+    # else:
+    #     directory = (os.path.dirname(os.getcwd())) + '/pyscnomics/dataset/' + file_name + '.json'
+    #
+    # final_dir = os.path.abspath(directory)
+    # with open(final_dir) as user_file:
+    #     file_contents = user_file.read()
 
-    else:
-        directory = (os.path.dirname(os.getcwd())) + '/pyscnomics/dataset/' + file_name + '.json'
+    # return json.loads(file_contents)
 
-    final_dir = os.path.abspath(directory)
+    # Use importlib.resources.path to locate the JSON file within the package
+    with pkg_resources.path('pyscnomics.dataset', file_name + '.json') as file_path:
+        final_dir = Path(file_path)
+
+    # Open and read the JSON file, returning its contents as a dictionary
     with open(final_dir) as user_file:
         file_contents = user_file.read()
 
@@ -129,7 +141,7 @@ def assign_onstream_date(date_data: None | str) -> datetime | None:
     return result_date
 
 
-def assign_lifting(data_raw: dict) -> tuple:
+def assign_lifting(data_raw: dict) -> tuple | None:
     """
     A function to assign the lifting data to the list of Lifting dataclass.
 
@@ -140,52 +152,55 @@ def assign_lifting(data_raw: dict) -> tuple:
 
     Returns
     -------
-    lifting_list: tuple
+    lifting_list: tuple | None
         The list containing the lifting dataclass.
 
     """
     # Defining the data source and the list container for Lifting. Then, assign them based on their fluid type
     lifting_data = data_raw['lifting']
-    lifting_list = []
-    for key in lifting_data.keys():
-        # Since the Lifting data for gas has different arguments input, conditional formatting is applied
-        if 'Gas' in key or 'GSA' in key:
-            lifting = Lifting(start_year=lifting_data[key]["start_year"],
-                              end_year=lifting_data[key]["end_year"],
-                              lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
-                              price=np.array(lifting_data[key]["price"]),
-                              prod_year=np.array(lifting_data[key]["prod_year"]),
-                              fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
-                              ghv=None if lifting_data[key]["ghv"] is None else
-                              np.array(lifting_data[key]["ghv"]),
-                              prod_rate=None if lifting_data[key]["prod_rate"] is None
-                              else np.array(lifting_data[key]["prod_rate"]),
-                              # prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None
-                              # else np.array(lifting_data[key]["prod_rate_baseline"]),
-                              )
+    if lifting_data is None:
+        return None
+    else:
+        lifting_list = []
+        for key in lifting_data.keys():
+            # Since the Lifting data for gas has different arguments input, conditional formatting is applied
+            if 'Gas' in key or 'GSA' in key:
+                lifting = Lifting(start_year=lifting_data[key]["start_year"],
+                                  end_year=lifting_data[key]["end_year"],
+                                  lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
+                                  price=np.array(lifting_data[key]["price"]),
+                                  prod_year=np.array(lifting_data[key]["prod_year"]),
+                                  fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
+                                  ghv=None if lifting_data[key]["ghv"] is None else
+                                  np.array(lifting_data[key]["ghv"]),
+                                  prod_rate=None if lifting_data[key]["prod_rate"] is None
+                                  else np.array(lifting_data[key]["prod_rate"]),
+                                  prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None
+                                  else np.array(lifting_data[key]["prod_rate_baseline"]),
+                                  )
 
-            lifting_list.append(lifting)
+                lifting_list.append(lifting)
 
-        else:
-            lifting = Lifting(start_year=lifting_data[key]["start_year"],
-                              end_year=lifting_data[key]["end_year"],
-                              lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
-                              price=np.array(lifting_data[key]["price"]),
-                              prod_year=np.array(lifting_data[key]["prod_year"]),
-                              fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
-                              prod_rate=None if lifting_data[key]["prod_rate"] is None
-                              else np.array(lifting_data[key]["prod_rate"]),
-                              prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None
-                              else np.array(lifting_data[key]["prod_rate_baseline"]),
-                              )
-            lifting_list.append(lifting)
+            else:
+                lifting = Lifting(start_year=lifting_data[key]["start_year"],
+                                  end_year=lifting_data[key]["end_year"],
+                                  lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
+                                  price=np.array(lifting_data[key]["price"]),
+                                  prod_year=np.array(lifting_data[key]["prod_year"]),
+                                  fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
+                                  prod_rate=None if lifting_data[key]["prod_rate"] is None
+                                  else np.array(lifting_data[key]["prod_rate"]),
+                                  prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None
+                                  else np.array(lifting_data[key]["prod_rate_baseline"]),
+                                  )
+                lifting_list.append(lifting)
 
-    return tuple(lifting_list)
+        return tuple(lifting_list)
 
 
 def assign_cost(data_raw: dict) -> tuple:
     """
-    A function to assign the cost data to the list of Tangible, Intangible, OPEX and ASR dataclass.
+    A function to assign the cost data to the list of Tangible, Intangible, OPEX, ASR, LBT and CostOfSales dataclass.
 
     Parameters
     ----------
@@ -201,77 +216,114 @@ def assign_cost(data_raw: dict) -> tuple:
         A tuple containing the OPEX dataclass.
     asr_list
         A tuple containing the ASR dataclass.
+    lbt_list
+        A tuple containing the LBT dataclass.
+    cos_list
+        A tuple containing the CostOfSales dataclass.
 
     """
     # Defining the data source and the list container for Tangible. Then, assign them based on their fluid type
-    tangible_data = data_raw['tangible']
-    tangible_list = []
-    for key in tangible_data.keys():
-        tangible = CapitalCost(start_year=tangible_data[key]['start_year'],
-                               end_year=tangible_data[key]['end_year'],
-                               cost=np.array(tangible_data[key]['cost']),
-                               expense_year=np.array(tangible_data[key]['expense_year']),
-                               cost_allocation=read_fluid_type(fluid=tangible_data[key]['cost_allocation']),
-                               description=tangible_data[key]['description'],
-                               vat_portion=np.array(tangible_data[key]['vat_portion']),
-                               vat_discount=np.array(tangible_data[key]['vat_discount']),
-                               lbt_portion=np.array(tangible_data[key]['lbt_portion']),
-                               lbt_discount=np.array(tangible_data[key]['lbt_discount']),
-                               pis_year=np.array(tangible_data[key]['pis_year']),
-                               salvage_value=np.array(tangible_data[key]['salvage_value']),
-                               useful_life=np.array(tangible_data[key]['useful_life']),
-                               depreciation_factor=np.array(tangible_data[key]['depreciation_factor']),
-                               is_ic_applied=tangible_data[key]['is_ic_applied'],
-                               )
-        tangible_list.append(tangible)
+    capital_cost_data = data_raw['capital_cost']
+    capital_cost_list = ([
+        CapitalCost(
+            start_year=capital_cost_data[key]['start_year'],
+            end_year=capital_cost_data[key]['end_year'],
+            cost=np.array(capital_cost_data[key]['cost']),
+            expense_year=np.array(capital_cost_data[key]['expense_year']),
+            cost_allocation=read_fluid_type(fluid=capital_cost_data[key]['cost_allocation']),
+            description=capital_cost_data[key]['description'],
+            tax_portion=np.array(capital_cost_data[key]['tax_portion']),
+            tax_discount=np.array(capital_cost_data[key]['tax_discount']),
+            pis_year=np.array(capital_cost_data[key]['pis_year']),
+            salvage_value=np.array(capital_cost_data[key]['salvage_value']),
+            useful_life=np.array(capital_cost_data[key]['useful_life']),
+            depreciation_factor=np.array(capital_cost_data[key]['depreciation_factor']),
+            is_ic_applied=capital_cost_data[key]['is_ic_applied'],
+        ) for key in capital_cost_data.keys()
+    ]) if capital_cost_data is not None else None
 
     # Defining the data source and the list container for Intangible. Then, assign them based on their fluid type
     intangible_data = data_raw['intangible']
-    intangible_list = []
-    for key in intangible_data.keys():
-        intangible = Intangible(start_year=intangible_data[key]['start_year'],
-                                end_year=intangible_data[key]['end_year'],
-                                cost=np.array(intangible_data[key]['cost']),
-                                expense_year=np.array(intangible_data[key]['expense_year']),
-                                cost_allocation=read_fluid_type(fluid=intangible_data[key]['cost_allocation']),
-                                description=intangible_data[key]['description'],
-                                vat_portion=np.array(intangible_data[key]['vat_portion']),
-                                vat_discount=np.array(intangible_data[key]['vat_discount']),
-                                lbt_portion=np.array(intangible_data[key]['lbt_portion']),
-                                lbt_discount=np.array(intangible_data[key]['lbt_discount']),
-                                )
-        intangible_list.append(intangible)
+    intangible_list = ([
+        Intangible(
+            start_year=intangible_data[key]['start_year'],
+            end_year=intangible_data[key]['end_year'],
+            cost=np.array(intangible_data[key]['cost']),
+            expense_year=np.array(intangible_data[key]['expense_year']),
+            cost_allocation=read_fluid_type(fluid=intangible_data[key]['cost_allocation']),
+            description=intangible_data[key]['description'],
+            tax_portion=np.array(intangible_data[key]['tax_portion']),
+            tax_discount=np.array(intangible_data[key]['tax_discount']),
+        ) for key in intangible_data.keys()
+    ]) if intangible_data is not None else None
 
     # Defining the data source and the list container for Intangible. Then, them based on their fluid type
     opex_data = data_raw['opex']
-    opex_list = []
-    for key in opex_data.keys():
-        opex = OPEX(start_year=opex_data[key]['start_year'],
-                    end_year=opex_data[key]['end_year'],
-                    expense_year=np.array(opex_data[key]['expense_year']),
-                    cost_allocation=read_fluid_type(fluid=opex_data[key]['cost_allocation']),
-                    description=opex_data[key]['description'],
-                    vat_portion=np.array(opex_data[key]['vat_portion']),
-                    vat_discount=np.array(opex_data[key]['vat_discount']),
-                    lbt_portion=np.array(opex_data[key]['lbt_portion']),
-                    lbt_discount=np.array(opex_data[key]['lbt_discount']),
-                    fixed_cost=np.array(opex_data[key]['fixed_cost']))
-        opex_list.append(opex)
+    opex_list = ([
+        OPEX(
+            start_year=opex_data[key]['start_year'],
+            end_year=opex_data[key]['end_year'],
+            expense_year=np.array(opex_data[key]['expense_year']),
+            cost_allocation=read_fluid_type(fluid=opex_data[key]['cost_allocation']),
+            description=opex_data[key]['description'],
+            tax_portion=np.array(opex_data[key]['tax_portion']),
+            tax_discount=np.array(opex_data[key]['tax_discount']),
+            fixed_cost=np.array(opex_data[key]['fixed_cost'])
+        ) for key in opex_data.keys()
+    ]) if opex_data is not None else None
 
     # Defining the data source and the list container for ASR. Then, them based on their fluid type
     asr_data = data_raw['asr']
-    asr_list = []
-    for key in asr_data.keys():
-        asr = ASR(start_year=asr_data[key]['start_year'],
-                  end_year=asr_data[key]['end_year'],
-                  cost=np.array(asr_data[key]['cost']),
-                  expense_year=np.array(asr_data[key]['expense_year']),
-                  cost_allocation=read_fluid_type(fluid=asr_data[key]['cost_allocation']),
-                  description=asr_data[key]['description'],
-                  vat_portion=np.array(asr_data[key]['vat_portion']))
-        asr_list.append(asr)
+    asr_list = ([
+        ASR(
+            start_year=asr_data[key]['start_year'],
+            end_year=asr_data[key]['end_year'],
+            cost=np.array(asr_data[key]['cost']),
+            expense_year=np.array(asr_data[key]['expense_year']),
+            cost_allocation=read_fluid_type(fluid=asr_data[key]['cost_allocation']),
+            description=asr_data[key]['description'],
+            final_year=np.array(asr_data[key]['final_year']),
+            future_rate=np.array(asr_data[key]['future_rate']),
+        ) for key in asr_data.keys()
+    ]) if asr_data is not None else None
 
-    return tangible_list, intangible_list, opex_list, asr_list
+    # Defining the data source and the list container for ASR. Then, them based on their fluid type
+    lbt_data = data_raw['lbt']
+    lbt_list = ([
+        LBT(
+            start_year=asr_data[key]['start_year'],
+            end_year=asr_data[key]['end_year'],
+            cost=np.array(asr_data[key]['cost']),
+            expense_year=np.array(asr_data[key]['expense_year']),
+            cost_allocation=read_fluid_type(fluid=asr_data[key]['cost_allocation']),
+            description=asr_data[key]['description'],
+            tax_portion=np.array(asr_data[key]['tax_portion']),
+            tax_discount=np.array(asr_data[key]['tax_discount']),
+            final_year=np.array(asr_data[key]['final_year']),
+            utilized_land_area=np.array(asr_data[key]['utilized_land_area']),
+            utilized_building_area=np.array(asr_data[key]['utilized_building_area']),
+            njop_land=np.array(asr_data[key]['njop_land']),
+            njop_building=np.array(asr_data[key]['njop_building']),
+            gross_revenue=np.array(asr_data[key]['gross_revenue']),
+        ) for key in lbt_data.keys()
+    ]) if lbt_data is not None else None
+
+    # Defining the data source and the list container for Cost of Sales. Then, them based on their fluid type
+    cos_data = data_raw['cost_of_sales']
+    cos_list = ([
+        CostOfSales(
+            start_year=asr_data[key]['start_year'],
+            end_year=asr_data[key]['end_year'],
+            cost=np.array(asr_data[key]['cost']),
+            expense_year=np.array(asr_data[key]['expense_year']),
+            cost_allocation=read_fluid_type(fluid=asr_data[key]['cost_allocation']),
+            description=asr_data[key]['description'],
+            tax_portion=np.array(asr_data[key]['tax_portion']),
+            tax_discount=np.array(asr_data[key]['tax_discount']),
+        ) for key in cos_data.keys()
+    ]) if cos_data is not None else None
+
+    return capital_cost_list, intangible_list, opex_list, asr_list, lbt_list, cos_list
 
 
 def load_testing(dataset_type: str, key: str) -> dict | ValueError:
@@ -313,11 +365,11 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
 
     """
     # Checking the availability of the dataset, if not available raise a Value Error
-    dataset_list = get_json_file_names()
-    contract_list = ['project', 'cost_recovery', 'gross_split']
-    if dataset_type not in dataset_list or contract_type not in contract_list:
-        raise ValueError('Unknown dataset: "{0}", please check the Dataset and Contract Type that available.'
-                         .format(dataset_type))
+    # dataset_list = get_json_file_names()
+    # contract_list = ['project', 'cost_recovery', 'gross_split']
+    # if dataset_type not in dataset_list or contract_type not in contract_list:
+    #     raise ValueError('Unknown dataset: "{0}", please check the Dataset and Contract Type that available.'
+    #                      .format(dataset_type))
 
     # Reading the project json file
     data_raw = read_json_file(file_name=dataset_type)
@@ -330,88 +382,102 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
     gas_onstream_date = assign_onstream_date(data_raw['gas_onstream_date'])
 
     # Assigning the lifting and cost data.
-    lifting_list = assign_lifting(data_raw)
-    tangible_list, intangible_list, opex_list, asr_list = assign_cost(data_raw)
+    lifting_tuple = assign_lifting(data_raw)
+    capital_tuple, intangible_tuple, opex_tuple, asr_tuple, lbt_tuple, cos_tuple = assign_cost(data_raw)
 
     if contract_type == 'project':
-        return BaseProject(start_date=project_start_date,
-                           end_date=project_end_date,
-                           oil_onstream_date=oil_onstream_date,
-                           gas_onstream_date=gas_onstream_date,
-                           lifting=lifting_list,
-                           capital_cost=tangible_list,
-                           intangible_cost=intangible_list,
-                           opex=opex_list,
-                           asr_cost=asr_list)
+        return BaseProject(
+            start_date=project_start_date,
+            end_date=project_end_date,
+            oil_onstream_date=oil_onstream_date,
+            gas_onstream_date=gas_onstream_date,
+            lifting=lifting_tuple,
+            capital_cost=capital_tuple,
+            intangible_cost=intangible_tuple,
+            opex=opex_tuple,
+            asr_cost=asr_tuple,
+            lbt_cost=lbt_tuple,
+            cost_of_sales=cos_tuple,
+        )
 
     elif contract_type == 'cost_recovery':
         config = read_json_file(file_name=contract_type)
-        return CostRecovery(start_date=project_start_date,
-                            end_date=project_end_date,
-                            oil_onstream_date=oil_onstream_date,
-                            gas_onstream_date=gas_onstream_date,
-                            lifting=lifting_list,
-                            capital_cost=tangible_list,
-                            intangible_cost=intangible_list,
-                            opex=opex_list,
-                            asr_cost=asr_list,
-                            oil_ftp_is_available=config['oil_ftp_is_available'],
-                            oil_ftp_is_shared=config['oil_ftp_is_shared'],
-                            oil_ftp_portion=config['oil_ftp_portion'],
-                            gas_ftp_is_available=config['gas_ftp_is_available'],
-                            gas_ftp_is_shared=config['gas_ftp_is_shared'],
-                            gas_ftp_portion=config['gas_ftp_portion'],
-                            oil_ctr_pretax_share=config['oil_ctr_pretax_share'],
-                            gas_ctr_pretax_share=config['gas_ctr_pretax_share'],
-                            oil_ic_rate=config['oil_ic_rate'],
-                            gas_ic_rate=config['gas_ic_rate'],
-                            ic_is_available=config['ic_is_available'],
-                            oil_cr_cap_rate=config['oil_cr_cap_rate'],
-                            gas_cr_cap_rate=config['gas_cr_cap_rate'],
-                            oil_dmo_volume_portion=config['oil_dmo_volume_portion'],
-                            oil_dmo_fee_portion=config['oil_dmo_fee_portion'],
-                            oil_dmo_holiday_duration=config['oil_dmo_holiday_duration'],
-                            gas_dmo_volume_portion=config['gas_dmo_volume_portion'],
-                            gas_dmo_fee_portion=config['gas_dmo_fee_portion'],
-                            gas_dmo_holiday_duration=config['gas_dmo_holiday_duration'])
+        return CostRecovery(
+            start_date=project_start_date,
+            end_date=project_end_date,
+            oil_onstream_date=oil_onstream_date,
+            gas_onstream_date=gas_onstream_date,
+            lifting=lifting_tuple,
+            capital_cost=capital_tuple,
+            intangible_cost=intangible_tuple,
+            opex=opex_tuple,
+            asr_cost=asr_tuple,
+            lbt_cost=lbt_tuple,
+            cost_of_sales=cos_tuple,
+            oil_ftp_is_available=config['oil_ftp_is_available'],
+            oil_ftp_is_shared=config['oil_ftp_is_shared'],
+            oil_ftp_portion=config['oil_ftp_portion'],
+            gas_ftp_is_available=config['gas_ftp_is_available'],
+            gas_ftp_is_shared=config['gas_ftp_is_shared'],
+            gas_ftp_portion=config['gas_ftp_portion'],
+            oil_ctr_pretax_share=config['oil_ctr_pretax_share'],
+            gas_ctr_pretax_share=config['gas_ctr_pretax_share'],
+            oil_ic_rate=config['oil_ic_rate'],
+            gas_ic_rate=config['gas_ic_rate'],
+            ic_is_available=config['ic_is_available'],
+            oil_cr_cap_rate=config['oil_cr_cap_rate'],
+            gas_cr_cap_rate=config['gas_cr_cap_rate'],
+            oil_dmo_volume_portion=config['oil_dmo_volume_portion'],
+            oil_dmo_fee_portion=config['oil_dmo_fee_portion'],
+            oil_dmo_holiday_duration=config['oil_dmo_holiday_duration'],
+            gas_dmo_volume_portion=config['gas_dmo_volume_portion'],
+            gas_dmo_fee_portion=config['gas_dmo_fee_portion'],
+            gas_dmo_holiday_duration=config['gas_dmo_holiday_duration']
+        )
 
     elif contract_type == 'gross_split':
         config = read_json_file(file_name=contract_type)
-        return GrossSplit(start_date=project_start_date,
-                          end_date=project_end_date,
-                          oil_onstream_date=oil_onstream_date,
-                          gas_onstream_date=gas_onstream_date,
-                          lifting=lifting_list,
-                          capital_cost=tangible_list,
-                          intangible_cost=intangible_list,
-                          opex=opex_list,
-                          asr_cost=asr_list,
-                          field_status=config['field_status'],
-                          field_loc=config['field_loc'],
-                          res_depth=config['res_depth'],
-                          infra_avail=config['infra_avail'],
-                          res_type=config['res_type'],
-                          api_oil=config['api_oil'],
-                          domestic_use=config['domestic_use'],
-                          prod_stage=config['prod_stage'],
-                          co2_content=config['co2_content'],
-                          h2s_content=config['h2s_content'],
-                          base_split_ctr_oil=config['base_split_ctr_oil'],
-                          base_split_ctr_gas=config['base_split_ctr_gas'],
-                          split_ministry_disc=config['split_ministry_disc'],
-                          oil_dmo_volume_portion=config['oil_dmo_volume_portion'],
-                          oil_dmo_fee_portion=config['oil_dmo_fee_portion'],
-                          oil_dmo_holiday_duration=config['oil_dmo_holiday_duration'],
-                          gas_dmo_volume_portion=config['gas_dmo_volume_portion'],
-                          gas_dmo_fee_portion=config['gas_dmo_fee_portion'],
-                          gas_dmo_holiday_duration=config['gas_dmo_holiday_duration'])
+        return GrossSplit(
+            start_date=project_start_date,
+            end_date=project_end_date,
+            oil_onstream_date=oil_onstream_date,
+            gas_onstream_date=gas_onstream_date,
+            lifting=lifting_tuple,
+            capital_cost=capital_tuple,
+            intangible_cost=intangible_tuple,
+            opex=opex_tuple,
+            asr_cost=asr_tuple,
+            lbt_cost=lbt_tuple,
+            cost_of_sales=cos_tuple,
+            field_status=config['field_status'],
+            field_loc=config['field_loc'],
+            res_depth=config['res_depth'],
+            infra_avail=config['infra_avail'],
+            res_type=config['res_type'],
+            api_oil=config['api_oil'],
+            domestic_use=config['domestic_use'],
+            prod_stage=config['prod_stage'],
+            co2_content=config['co2_content'],
+            h2s_content=config['h2s_content'],
+            base_split_ctr_oil=config['base_split_ctr_oil'],
+            base_split_ctr_gas=config['base_split_ctr_gas'],
+            split_ministry_disc=config['split_ministry_disc'],
+            oil_dmo_volume_portion=config['oil_dmo_volume_portion'],
+            oil_dmo_fee_portion=config['oil_dmo_fee_portion'],
+            oil_dmo_holiday_duration=config['oil_dmo_holiday_duration'],
+            gas_dmo_volume_portion=config['gas_dmo_volume_portion'],
+            gas_dmo_fee_portion=config['gas_dmo_fee_portion'],
+            gas_dmo_holiday_duration=config['gas_dmo_holiday_duration']
+        )
 
 
-def load_cost(filename: str,
-              start_year: int = 2023,
-              end_year: int = 2043,
-              cost_allocation: FluidType = FluidType.OIL,
-              template: str = "pyscnomics") -> tuple[CapitalCost, Intangible, OPEX, ASR] | ValueError:
+def load_cost(
+        filename: str,
+        start_year: int = 2023,
+        end_year: int = 2043,
+        cost_allocation: FluidType = FluidType.OIL,
+        template: str = "pyscnomics"
+) -> tuple[CapitalCost, Intangible, OPEX, ASR] | ValueError:
     """
     Function to load the cost data from Excel file.
 
@@ -431,7 +497,7 @@ def load_cost(filename: str,
     Returns
     -------
     out: tuple
-        Tangible
+        Capital
             The Tangible dataclass.
         Intangible
             The Intangible dataclass
@@ -452,72 +518,43 @@ def load_cost(filename: str,
     df.set_index(years_arr, inplace=True)
 
     # Assigning the Tangible data
-    tangible_arr = np.array(df[[5, 7, 8, 9, 10, 11, 12]].sum(axis=1).to_numpy(dtype=float))
-    tangible = CapitalCost(start_year=start_year,
-                           end_year=end_year,
-                           cost=tangible_arr,
-                           expense_year=years_arr,
-                           cost_allocation=cost_allocation)
+    capital_arr = np.array(df[[5, 7, 8, 9, 10, 11, 12]].sum(axis=1).to_numpy(dtype=float))
+    capital = CapitalCost(
+        start_year=start_year,
+        end_year=end_year,
+        cost=capital_arr,
+        expense_year=years_arr,
+        cost_allocation=[cost_allocation] * len(capital_arr)
+    )
 
     # Assigning the Intangible data
     intangible_arr = df[6].to_numpy(dtype=float)
-    intangible = Intangible(start_year=start_year,
-                            end_year=end_year,
-                            cost=intangible_arr,
-                            expense_year=years_arr,
-                            cost_allocation=cost_allocation)
+    intangible = Intangible(
+        start_year=start_year,
+        end_year=end_year,
+        cost=intangible_arr,
+        expense_year=years_arr,
+        cost_allocation=[cost_allocation] * len(capital_arr)
+    )
 
     # Assigning the ASR data
     asr_arr = df[18].to_numpy(dtype=float)
-    asr = ASR(start_year=start_year,
-              end_year=end_year,
-              cost=asr_arr,
-              expense_year=years_arr,
-              cost_allocation=cost_allocation)
+    asr = ASR(
+        start_year=start_year,
+        end_year=end_year,
+        cost=asr_arr,
+        expense_year=years_arr,
+        cost_allocation=[cost_allocation] * len(capital_arr)
+    )
 
     # Assigning the OPEX data
     fixed_cost_arr = df[[13, 14, 15, 16, 17]].sum(axis=1).to_numpy(dtype=float)
-    opex = OPEX(start_year=start_year,
-                end_year=end_year,
-                fixed_cost=fixed_cost_arr,
-                expense_year=years_arr,
-                cost_allocation=cost_allocation)
+    opex = OPEX(
+        start_year=start_year,
+        end_year=end_year,
+        fixed_cost=fixed_cost_arr,
+        expense_year=years_arr,
+        cost_allocation=[cost_allocation] * len(capital_arr)
+    )
 
-    # Assigning the OPEX data
-    # fixed_cost_arr = df[[13, 16, 17]].sum(axis=1).to_numpy(dtype=float)
-    # variable_cost_arr = df[14].to_numpy(dtype=float)
-    # cost_per_volume_arr = df[15].to_numpy(dtype=float)
-
-    # Reading the produced fluid for determining the prod_rate attributes of the OPEX dataclass
-    # if cost_allocation == FluidType.OIL:
-    #     prod_arr = df[20].to_numpy(dtype=float)
-    #
-    # elif cost_allocation == FluidType.GAS:
-    #     prod_arr = df[22].to_numpy(dtype=float)
-    #
-    # else:
-    #     prod_arr = df[21].to_numpy(dtype=float)
-    #
-    # opex = OPEX(start_year=start_year,
-    #             end_year=end_year,
-    #             fixed_cost=fixed_cost_arr,
-    #             expense_year=years_arr,
-    #             cost_allocation=cost_allocation,
-    #             prod_rate=prod_arr,
-    #             cost_per_volume=cost_per_volume_arr)
-
-    return tangible, intangible, opex, asr
-
-#
-# if __name__ == "__main__":
-#     # Choosing the Dataset and contract type
-#     import timeit
-#     start_time = timeit.default_timer()
-#     dataset = 'small_gas'
-#     contract = 'project'
-#
-#     # Returning the load_data function
-#     psc = load_data(dataset_type=dataset, contract_type=contract)
-#     print('Output of the load_data function \n', psc, '\n')
-#     end_time = timeit.default_timer()
-#     print("The Execution Time:", end_time - start_time)
+    return capital, intangible, opex, asr
