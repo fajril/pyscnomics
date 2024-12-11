@@ -1,0 +1,180 @@
+[
+  {
+    "uuid": "7a64c3ad-598f-4f70-9fc6-24b4f672ea2f",
+    "username": "JohnDoe",
+    "pyscnomics_version": "1.1.0",
+    "execution_started_at": "27/09/2024 08:52:20 UTC+07:00",
+    "execution_finished_at": "27/09/2024 08:52:21 UTC+07:00",
+    "evaluator_name": ["John Doe", "Jane Doe"],
+    "project_id": 31655181212,
+    "project_name": "SKK",
+    "case_name": "PSC CR",
+    "case_description": "Lorem Ipsum",
+    "general_config": {
+      "start_date":  "27/09/2024",
+      "end_date":  "27/09/2034",
+      "oil_onstream_date":  "27/09/2024",
+      "gas_onstream_date": "27/09/2024",
+      "disc_ref_year": 2024,
+      "discount_rate": 0.1,
+      "profitability_discounted": true,
+      "npv_mode": "Full Cycle Nominal Terms",
+      "discounting_mode": "Mid Year"
+    },
+    "fiscal_config": {
+      "effective_tax_rate": 0.376,
+      "inflation_rate": 0.0,
+      "vat_rate": 0.11,
+      "sunk_cost_reference_year": 2023,
+      "decline_factor": 2,
+      "future_rate": 0,
+      "sulfur_revenue_applied_to": "Reduction to Oil OPEX",
+      "electricity_revenue_applied_to": "Reduction to Oil OPEX",
+      "co2_revenue_applied_to": "Reduction to Oil OPEX",
+      "inflation_rate_applied_to": "None",
+      "depr_method": "PSC Declining Balance"
+    },
+    "contract_config":{
+      "contract_type": "Cost Recovery",
+      "contract_params":{
+        "oil_ftp_is_available": true,
+        "oil_ftp_is_shared": true,
+        "oil_ftp_portion": 0.2,
+        "gas_ftp_is_available": true,
+        "gas_ftp_is_shared": true,
+        "gas_ftp_portion": 0.2,
+        "tax_split_type": "Conventional",
+        "condition_dict": {},
+        "indicator_rc_icp_sliding": [],
+        "oil_ctr_pretax_share": 0.5833,
+        "gas_ctr_pretax_share": 0.6666,
+        "oil_ic_rate": 0,
+        "gas_ic_rate": 0,
+        "ic_is_available": false,
+        "oil_cr_cap_rate": 1,
+        "gas_cr_cap_rate": 1,
+        "oil_dmo_volume_portion": 0.25,
+        "oil_dmo_fee_portion": 0.25,
+        "oil_dmo_holiday_duration": 60,
+        "gas_dmo_volume_portion": 0.25,
+        "gas_dmo_fee_portion": 1,
+        "gas_dmo_holiday_duration": 60,
+        "post_uu_22_year2001": true,
+        "oil_cost_of_sales_applied": false,
+        "gas_cost_of_sales_applied": true,
+        "is_dmo_end_weighted": true,
+        "ftp_tax_regime": "PDJP No.20 Tahun 2017"
+      }
+    },
+    "optimization_config": {},
+    "sensitivity_config": {},
+    "uncertainty_config": {},
+    "lifting": [
+      {
+        "start_year": 2016,
+        "end_year": 2042,
+        "prod_rate_baseline": [0, 0],
+        "prod_rate": null,
+        "lifting_rate": [6022],
+        "price": [67],
+        "prod_year": [2027],
+        "fluid_type": "Oil"
+      },
+      {
+        "start_year": 2016,
+        "end_year": 2042,
+        "prod_rate_baseline": [0],
+        "prod_rate": [443],
+        "lifting_rate": [443],
+        "price": [1],
+        "prod_year": [2027],
+        "ghv": [1],
+        "fluid_type": "Gas"
+      }
+    ],
+    "tangible": [
+      {
+        "start_year": 2016,
+        "end_year": 2042,
+        "cost": [67087, 87459],
+        "expense_year": [2024, 2024],
+        "cost_allocation": ["Oil",  "Gas"],
+        "description": ["Tangible Oil", "Tangibile Gas"],
+        "vat_portion": [0, 0],
+        "vat_discount": [0, 0],
+        "lbt_portion": [0, 0],
+        "lbt_discount": [0, 0],
+        "pis_year": [2027, 2027],
+        "salvage_value": [0, 0],
+        "useful_life": [5, 5],
+        "depreciation_factor": [0.25, 0.25],
+        "is_ic_applied": [false, false]
+      }
+    ],
+    "intangible": [
+      {
+        "start_year": 2016,
+        "end_year": 2042,
+        "cost": [202112, 5167],
+        "expense_year": [2024, 2025],
+        "cost_allocation": ["Oil", "Gas"],
+        "description": ["Intangible Oil", "Intangible Gas"],
+        "vat_portion": [0, 0],
+        "vat_discount": [0, 0],
+        "lbt_portion": [0, 0],
+        "lbt_discount": [0, 0]
+      }
+    ],
+    "opex": [
+      {
+        "start_year": 2016,
+        "end_year": 2042,
+        "fixed_cost": [7382, 14970],
+        "expense_year": [2024, 2024],
+        "cost_allocation": ["Oil", "Gas"],
+        "description": ["OPEX Oil", "OPEX Gas"],
+        "vat_portion": [0, 0],
+        "vat_discount": [0, 0],
+        "lbt_portion": [0, 0],
+        "lbt_discount": [0, 0],
+        "prod_rate": [0, 0],
+        "cost_per_volume": [0, 0]
+        }
+    ],
+    "asr": [
+      {
+        "start_year": 2016,
+        "end_year": 2042,
+        "cost": [0],
+        "expense_year": [2016],
+        "cost_allocation": ["Oil"],
+        "description": ["-"],
+        "vat_portion": [0],
+        "vat_discount": [0],
+        "lbt_portion": [0],
+        "lbt_discount": [0]
+      }
+    ],
+    "cost_of_sales": [
+      {
+        "start_year": 2016,
+        "end_year": 2042,
+        "cost": [31817],
+        "expense_year": [2027],
+        "cost_allocation": ["Gas"]
+        }
+    ],
+    "lbt": [{}],
+    "jobs_id": 3165518624,
+    "result_summary": [],
+    "result_table": []
+  }
+]
+
+
+
+
+
+
+
+
