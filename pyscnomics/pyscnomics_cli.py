@@ -267,7 +267,7 @@ def main(workbook_path, mode):
 @click.option(
     '-api',
     '--api',
-    default=0,
+    default=9999,
     help='The command for running the API backend. '
          '0 for not activating the API backend. 1 for activating the API backend'
 )
