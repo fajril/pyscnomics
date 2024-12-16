@@ -130,3 +130,47 @@ def test_neg_cf_mixed_cashflow():
     assert (
         result == expected_index
     ), f"Expected index {expected_index}, but got {result}."
+
+def test_mixed_cf():
+    """Test Negative Cashflow method with mixed cashflows."""
+    # Defining the cashflow
+    cf_0 = np.array([-1000, -200, 30, 133, 1000, 2000, -100, 2222, -10])
+    cf_1 = np.array([-150, -100, -200, 1, -20, -10, 100, 40, -40])
+    cf_2 = np.array([150, -100, -200, 1, 20, -10, 100, 40, -40])
+    cf_3 = np.array([150, 100, 200, 1, 20, 10, 100, 40, 40])
+    cf_4 = np.array([-150, -100, -200, -1, -20, -10, -100, -40, -40])
+    cf_5 = np.array([150, 100, 200, 1, 20, 10, 100, 40, -40])
+    cf_6 = np.array([-10, 10])
+    cf_7 = np.array([10, -11])
+    cf_8 = np.array([-10, 10, -10])
+    cf_9 = np.array([-10, 10, -10, 10])
+    cf_10 = np.array([-10, 10, -10, -10])
+    cf_11 = np.array([-10])
+    cf_12 = np.array([10])
+
+    # Defining the economic limit index
+    idx_cf_0 = 5
+    idx_cf_1 = 3
+    idx_cf_2 = 0
+    idx_cf_3 = 8
+    idx_cf_4 = 0
+    idx_cf_5 = 7
+    idx_cf_6 = 1
+    idx_cf_7 = 0
+    idx_cf_8 = 1
+    idx_cf_9 = 1
+    idx_cf_10 = 1
+    idx_cf_11 = 0
+    idx_cf_12 = 0
+
+    list_cf = [cf_0, cf_1, cf_2, cf_3, cf_4, cf_5, cf_6, cf_7, cf_8, cf_9, cf_10, cf_11, cf_12]
+    list_idx = [idx_cf_0, idx_cf_1, idx_cf_2, idx_cf_3, idx_cf_4, idx_cf_5, idx_cf_6, idx_cf_7, idx_cf_8, idx_cf_9, idx_cf_10, idx_cf_11, idx_cf_12]
+
+
+    for idx, cf in enumerate(list_cf):
+        expected_index = list_idx[idx]
+        idx_econ_limit = econ_limit(cf, method=LimitMethod.NEGATIVE_CASHFLOW)
+        assert (
+                idx_econ_limit == expected_index
+        ), f"Expected index {expected_index}, but got {idx_econ_limit} at cashflow {idx}."
+
