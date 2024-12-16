@@ -35,7 +35,7 @@ To further streamline the assessment process, PySCnomics includes specialized mo
 - And much more...
 
 ## Quick Start
-Create a new file `sample.py` with the following code:
+Create a new file, in this case named `sample.py` with the following code:
 
 ```python
 from pyscnomics.dataset.object_sample import generate_contract_sample
@@ -50,9 +50,28 @@ tables = get_table(contract=psc)
 print(tables)
 ```
 
-## Resources
-- Explore our [docs](https://docs.readthedocs.io/en/stable/) to learn how PySCnomics works.
-- Deep dive into our [books](https://isbn.perpusnas.go.id/) about PSC  
+
+## API Service with PySCnomics
+
+PySCnomics also supports running as an API service, making it easy to integrate into your applications or workflows. With just a single command, you can set up and start an API server to interact with PySCnomics programmatically.
+
+### How to Start the API Server
+
+To run the PySCnomics API service, use the following command:
+
+```bash
+pyscnomics --api 1 --port 9999
+```
+Replace 9999 with the desired port number if needed. By default, the API will be accessible at:
+http://localhost:9999
+
+### Accessing the API Documentation
+Once the API server is running, you can view the interactive API documentation by navigating to: http://localhost:9999/docs
+
+
+
+
+
 
 
 ## License
