@@ -60,7 +60,7 @@ PySCnomics also supports running as an API service, making it easy to integrate 
 To run the PySCnomics API service, use the following command:
 
 ```bash
-pyscnomics --api 9999
+pyscnomics --api 1 --port 9999
 ```
 Replace 9999 with the desired port number if needed. By default, the API will be accessible at:
 http://localhost:9999

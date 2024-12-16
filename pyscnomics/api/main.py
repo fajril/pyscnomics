@@ -1,13 +1,7 @@
 """
 This file is utilized for routing the API.
 """
-from fastapi import FastAPI, APIRouter
-from pyscnomics.api.adapter import (get_costrecovery,
-                                    get_contract_table,
-                                    get_contract_optimization,
-                                    get_grosssplit,
-                                    get_transition)
-from pyscnomics.api.converter import Data
+from fastapi import FastAPI
 from pyscnomics.api.router import router
 
 
