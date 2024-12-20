@@ -132,7 +132,7 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
         gov_take = np.sum(contract._consolidated_government_take)
 
         # Government Share
-        gov_take_over_gross_rev = gov_take / gross_revenue
+        gov_take_over_gross_rev = np.divide(gov_take, gross_revenue, where=gross_revenue != 0)
 
     elif isinstance(contract, BaseProject):
         gov_ddmo = 0
@@ -365,12 +365,12 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
     if isinstance(contract, CostRecovery):
         # Cost Recovery
         cost_recovery = np.sum(contract._consolidated_cost_recovery_after_tf, dtype=float)
-        cost_recovery_over_gross_rev = cost_recovery / gross_revenue
+        cost_recovery_over_gross_rev = np.divide(cost_recovery, gross_revenue, where=gross_revenue != 0)
 
         # Unrecoverable Cost
         unrec_cost = contract._consolidated_unrecovered_after_transfer[-1]
-        unrec_over_costrec = unrec_cost / cost_recovery
-        unrec_over_gross_rev = unrec_cost / gross_revenue
+        unrec_over_costrec = np.divide(unrec_cost, cost_recovery, where=cost_recovery!=0)
+        unrec_over_gross_rev = np.divide(unrec_cost, gross_revenue, where=gross_revenue!=0)
 
         # Gross Share of Contractor and Government
         ctr_gross_share = np.sum(contract._consolidated_contractor_share, dtype=float)
@@ -378,11 +378,11 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
         # Contractor Net Share
         ctr_net_share = np.sum(contract._consolidated_ctr_net_share, dtype=float)
-        ctr_net_share_over_gross_share = ctr_net_share / gross_revenue
+        ctr_net_share_over_gross_share = np.divide(ctr_net_share, gross_revenue, where=gross_revenue!=0)
 
         # Contractor Net Cashflow
         ctr_net_cashflow = np.sum(contract._consolidated_cashflow, dtype=float)
-        ctr_net_cashflow_over_gross_rev = ctr_net_cashflow / gross_revenue
+        ctr_net_cashflow_over_gross_rev = np.divide(ctr_net_cashflow, gross_revenue, where= gross_revenue!=0)
 
         # Government FTP Share
         gov_ftp_share = np.sum(contract._consolidated_ftp_gov)
