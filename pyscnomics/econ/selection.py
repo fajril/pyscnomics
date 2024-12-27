@@ -639,3 +639,12 @@ class LimitMethod(Enum):
     MAX_CUM_CASHFLOW = "Maximum Cumulative Cashflow"
     NEGATIVE_CASHFLOW = "Negative Cashflow"
     MAX_NPV = "Maximum NPV"
+
+
+class UncertaintyDistribution(Enum):
+    """
+    Uncertainty Distribution Option.
+    """
+    UNIFORM = 'Uniform Distribution'
+    TRIANGULAR = 'Triangular Distribution'
+    NORMAL = 'Normal Distribution'
