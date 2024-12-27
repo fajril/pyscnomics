@@ -50,6 +50,46 @@ tables = get_table(contract=psc)
 print(tables)
 ```
 
+## Sensitivity Analysis
+Create a new file with the following code:
+
+```python
+from pyscnomics.dataset.object_sample import generate_contract_sample
+from pyscnomics.econ.selection import ContractSample
+from pyscnomics.optimize.sensitivity import sensitivity_psc
+from pyscnomics.tools.summary import get_summary
+
+# Initiating Contract Object
+psc = generate_contract_sample(case=ContractSample.CASE_1)
+
+# Defining the contract arguments
+contract_arguments = {
+    'effective_tax_rate': 0.40
+}
+
+# Defining the summary arguments
+summary_arguments = {
+    'reference_year':2023,
+}
+
+# Executing the sensitivity
+result = sensitivity_psc(
+    contract=psc,
+    contract_arguments=contract_arguments,
+    summary_arguments=summary_arguments,
+    min_deviation=0.2,
+    max_deviation=0.2,
+    base_value=1,
+    step=10,
+)
+
+# Printing the sensitivity result
+for i in result.keys():
+    print(i)
+    print(result[i])
+    print('')
+
+```
 
 ## API Service with PySCnomics
 

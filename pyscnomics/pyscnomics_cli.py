@@ -290,7 +290,7 @@ def entry_point(**kwargs):
                 """
         print(body)
         port_number = kwargs['port']
-        uvicorn.run("pyscnomics.api.main:app", port=int(port_number), reload=False)
+        uvicorn.run("pyscnomics.api.main:app", host="0.0.0.0", port=int(port_number), reload=False)
 
     if kwargs['path'] is not None:
         # Defining the cli command for path
