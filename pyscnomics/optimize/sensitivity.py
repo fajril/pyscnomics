@@ -229,6 +229,7 @@ def _adjust_element_single_contract(
         contract_arguments: dict,
         element: str,
         adjustment_value: float,
+        run_contract:bool = False
 ) -> CostRecovery | GrossSplit | Transition:
     """
     The function to adjust the element of the contract based on the adjustment_value.
@@ -243,6 +244,8 @@ def _adjust_element_single_contract(
         The element of the contract that will be adjusted.
     adjustment_value: float
         The adjustment value which will be multiplied by the corresponding element.
+    run_contract:bool
+        The option to run the contract or not.
 
     Returns
     -------
@@ -413,6 +416,42 @@ def _adjust_element_single_contract(
             for lift in contract.lifting
         ])
 
+    elif element == 'OILLIFTING':
+        # Adjusting the lifting
+        lifting_adjusted = tuple([
+            Lifting(
+                start_year=lift.start_year,
+                end_year=lift.end_year,
+                lifting_rate=lift.lifting_rate * adjustment_value if lift.fluid_type is FluidType.OIL else lift.lifting_rate,
+                price=lift.price,
+                prod_year=lift.prod_year,
+                fluid_type=lift.fluid_type,
+                ghv=lift.ghv,
+                # prod_rate=lift.prod_rate,
+                # prod_rate is being by passed in the routine of sensitivity, thus it will be filled with the lifting value
+                prod_rate_baseline=lift.prod_rate_baseline,
+            )
+            for lift in contract.lifting
+        ])
+
+    elif element == 'GASLIFTING':
+        # Adjusting the lifting
+        lifting_adjusted = tuple([
+            Lifting(
+                start_year=lift.start_year,
+                end_year=lift.end_year,
+                lifting_rate=lift.lifting_rate * adjustment_value if lift.fluid_type is FluidType.GAS else lift.lifting_rate,
+                price=lift.price,
+                prod_year=lift.prod_year,
+                fluid_type=lift.fluid_type,
+                ghv=lift.ghv,
+                # prod_rate=lift.prod_rate,
+                # prod_rate is being by passed in the routine of sensitivity, thus it will be filled with the lifting value
+                prod_rate_baseline=lift.prod_rate_baseline,
+            )
+            for lift in contract.lifting
+        ])
+
     else:
         raise SensitivityException(
             f"The element value, {element}, is not recognized."
@@ -523,8 +562,11 @@ def _adjust_element_single_contract(
         raise SensitivityException(
             f"The contract type, {type(contract)}, is not recognized."
         )
+    if run_contract is True:
+        contract_adjusted.run(**contract_arguments)
+    else:
+        pass
 
-    contract_adjusted.run(**contract_arguments)
     return contract_adjusted
 
 
@@ -617,15 +659,15 @@ def sensitivity_psc(
         for indicator in indicator_list
     }
 
-    # Transform result dictionary into DataFrames
-    sensitivity_result_df = {
-        indicator: pd.DataFrame.from_dict(
-            data, orient='index'
-        ).reset_index().rename(columns={'index': 'Factor'}).set_index('Factor')
-        for indicator, data in sensitivity_result.items()
-    }
-
     if dataframe_output is True:
+        # Transform result dictionary into DataFrames
+        sensitivity_result_df = {
+            indicator: pd.DataFrame.from_dict(
+                data, orient='index'
+            ).reset_index().rename(columns={'index': 'Factor'}).set_index('Factor')
+            for indicator, data in sensitivity_result.items()
+        }
         return sensitivity_result_df
+
     else:
         return sensitivity_result
