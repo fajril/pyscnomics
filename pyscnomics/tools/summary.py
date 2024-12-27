@@ -23,7 +23,7 @@ class SummaryException(Exception):
 
 
 def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
-                reference_year: int,
+                reference_year: int | None = None,
                 inflation_rate: float = 0,
                 discount_rate: float = 0.1,
                 npv_mode: NPVSelection = NPVSelection.NPV_SKK_REAL_TERMS,
@@ -43,6 +43,9 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
             f"The Discounting Reference Year {reference_year} "
             f"is before the project years: {contract.start_date.year}"
         )
+    # Condition when the reference year is None
+    if reference_year is None:
+        reference_year = contract.start_date.year
 
     # Condition when the reference year is after than project end date year
     if reference_year > contract_end_object:

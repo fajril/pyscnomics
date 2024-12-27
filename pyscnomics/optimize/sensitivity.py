@@ -20,7 +20,7 @@ def get_multipliers_sensitivity(
     base_value: float = 1.0,
     step: int = 10,
     number_of_params: int = 5,
-) -> np.ndarray:
+) -> (np.ndarray, int):
     """
     Generate multipliers for different economic parameters within a specified range
     for sensitivity study.
@@ -42,6 +42,8 @@ def get_multipliers_sensitivity(
     -------
     multipliers: np.ndarray
         A 3D NumPy array containing multipliers for different economic factors.
+    total_run: int
+        The total run of sensitivity.
     """
     # Specify the minimum and maximum values
     min_val = base_value - min_deviation
@@ -627,6 +629,7 @@ def sensitivity_psc(
                 contract_arguments=contract_arguments,
                 element=element,
                 adjustment_value=mul,
+                run_contract=True
             )
             for mul in multipliers
         }
