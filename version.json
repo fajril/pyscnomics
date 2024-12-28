@@ -1,0 +1,13 @@
+{
+  "inherit": true,
+  "version": {
+    "major": 1,
+    "minor": 2,
+    "build": 3
+  },
+  "features": [
+    "Detached sensitivity",
+    "Detached uncertainty",
+    "Minor bug fixing"
+    ]
+}
