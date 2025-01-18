@@ -9,6 +9,7 @@ from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
+from pyscnomics.optimize import sensitivity_psc
 from pyscnomics.tools.summary import get_summary
 from pyscnomics.tools.table import get_table
 from pyscnomics.optimize.optimization import optimize_psc
@@ -1327,4 +1328,49 @@ def get_lbt_expenditures(data:dict) -> dict:
     )
     df = df.set_index('project_years').to_dict()
     return df
+
+def get_sensitivity(data:dict, contract_type:str):
+    if 'sensitivity_arguments' not in data:
+        raise ContractException("The payload does not have the sensitivity_arguments key")
+
+    if data['sensitivity_arguments'] is None:
+        raise ContractException("The payload sensitivity_arguments does not have any values")
+
+    # Retrieving the contract, contract_arguments_dict, summary_arguments_dict based on the contract type
+    if contract_type == 'Cost Recovery':
+        contract = get_costrecovery(data=data)[1]
+        contract_arguments = get_costrecovery(data=data)[2]
+        summary_argument = get_costrecovery(data=data)[3]
+
+    elif contract_type == 'Gross Split':
+        contract = get_grosssplit(data=data)[1]
+        contract_arguments = get_grosssplit(data=data)[2]
+        summary_argument = get_grosssplit(data=data)[3]
+
+    elif contract_type == 'Transition':
+        contract = get_transition(data=data)[1]
+        contract_arguments = get_transition(data=data)[2]
+        summary_argument = get_transition(data=data)[3]
+
+    else:
+        contract = NotImplemented
+        contract_arguments = NotImplemented
+        summary_argument = NotImplemented
+
+    # Constructing the sensitivity arguments
+    sensitivity_result = sensitivity_psc(
+        contract=contract,
+        contract_arguments=contract_arguments,
+        summary_arguments=summary_argument,
+        min_deviation=data['sensitivity_arguments']['min_deviation'],
+        max_deviation=data['sensitivity_arguments']['max_deviation'],
+        base_value=data['sensitivity_arguments']['base_value'],
+        step=data['sensitivity_arguments']['step'],
+        dataframe_output=False,
+    )
+
+
+
+    return sensitivity_result
+
 

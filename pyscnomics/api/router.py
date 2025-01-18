@@ -12,7 +12,8 @@ from pyscnomics.api.adapter import (get_baseproject,
                                     get_transition_split,
                                     get_economic_limit,
                                     get_asr_expenditures,
-                                    get_lbt_expenditures)
+                                    get_lbt_expenditures,
+                                    get_sensitivity)
 from pyscnomics.api.converter import Data, EconLimit, ASRExpendituresBM, LBTExpendituresBM
 from pyscnomics.api.converter import DataTransition
 from pyscnomics.api.converter import LtpBM, RpdBM
@@ -538,4 +539,35 @@ async def calculate_lbt_expenditures(data: LBTExpendituresBM) -> dict:
     Route to get the expenditures of LBT Cost.
     """
     return get_lbt_expenditures(data=data.model_dump())
+
+
+@router.post("/costrecovery/sensitivity")
+async def calculate_costrecovery_sensitivity(data: Data) -> dict:
+    """
+    ## Retrieve The Sensitivity of a cost recovery contract.
+    Route to get the sensitivity of a cost recovery contract.
+    """
+    return get_sensitivity(
+        data=data.model_dump(),
+        contract_type='Cost Recovery')
+
+@router.post("/grosssplit/sensitivity")
+async def calculate_grosssplit_sensitivity(data: Data) -> dict:
+    """
+    ## Retrieve The Sensitivity of a gross split contract.
+    Route to get the sensitivity of a contract.
+    """
+    return get_sensitivity(
+        data=data.model_dump(),
+        contract_type='Gross Split')
+
+@router.post("/transition/sensitivity")
+async def calculate_transition_sensitivity(data: DataTransition) -> dict:
+    """
+    ## Retrieve The Sensitivity of a gross split contract.
+    Route to get the sensitivity of a contract.
+    """
+    return get_sensitivity(
+        data=data.model_dump(),
+        contract_type='Transition')
 

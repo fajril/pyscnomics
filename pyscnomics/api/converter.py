@@ -486,13 +486,19 @@ class SensitivityBM(BaseModel):
 
     Parameters
     ----------
-    min: float
-        The minimum value for the sensitivity
-    max: float
-        The maximum value for the sensitivity
+    min_deviation: float | int
+        The minimum deviation from the base value.
+    max_deviation: float | int
+        The maximum deviation from the base value.
+    step: float | int
+        The number of steps to create multipliers. Default is 10.
+    base_value: float | int
+        The base value for the multipliers. Default is 1.0.
     """
-    min: float | int
-    max: float | int
+    min_deviation: float | int
+    max_deviation: float | int
+    step: float | int
+    base_value: float | int
 
 
 class UncertaintyBM(BaseModel):
@@ -686,6 +692,7 @@ class DataTransition(BaseModel):
     summary_arguments: SummaryArgumentsBM
     result: dict = None
     optimization_arguments: OptimizationBM = None
+    sensitivity_arguments: SensitivityBM = None
 
 
 class EconLimit(BaseModel):

@@ -452,12 +452,12 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
     if isinstance(contract, GrossSplit):
         #  Deductible Cost
         deductible_cost = np.sum(contract._consolidated_deductible_cost)
-        deductible_cost_over_gross_rev = deductible_cost / gross_revenue
+        deductible_cost_over_gross_rev = np.divide(deductible_cost, gross_revenue, where=gross_revenue!=0)
 
         # Carry Forward Cost
         carry_forward_deductible_cost = contract._consolidated_carward_deduct_cost[-1]
-        carry_forcost_over_gross_share = carry_forward_deductible_cost / gross_revenue
-        carry_forcost_over_deductible_cost = carry_forward_deductible_cost / deductible_cost
+        carry_forcost_over_gross_share = np.divide(carry_forward_deductible_cost, gross_revenue, where=gross_revenue!=0)
+        carry_forcost_over_deductible_cost = np.divide(carry_forward_deductible_cost, deductible_cost, where=deductible_cost!=0)
 
         # CTR Gross Share
         ctr_gross_share = np.sum(contract._consolidated_ctr_share_before_tf, dtype=float)
@@ -467,11 +467,11 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
         # CTR Net Share
         ctr_net_share = np.sum(contract._consolidated_ctr_net_share)
-        ctr_net_share_over_gross_share = ctr_net_share / gross_revenue
+        ctr_net_share_over_gross_share = np.divide(ctr_net_share, gross_revenue, where= gross_revenue!=0)
 
         # CTR Net Cashflow
         ctr_net_cashflow = np.sum(contract._consolidated_cashflow)
-        ctr_net_cashflow_over_gross_rev = ctr_net_cashflow / gross_revenue
+        ctr_net_cashflow_over_gross_rev = np.divide(ctr_net_cashflow, gross_revenue, where=gross_revenue!=0)
 
         # Contractor IRR
         ctr_irr = irr(cashflow=contract._consolidated_cashflow)

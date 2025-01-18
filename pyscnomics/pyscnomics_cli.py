@@ -21,10 +21,6 @@ from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 
-from pyscnomics.optimize.sensitivity import (
-    get_multipliers_sensitivity,
-    execute_sensitivity,
-)
 
 from pyscnomics.optimize.uncertainty import (
     get_montecarlo_data,
