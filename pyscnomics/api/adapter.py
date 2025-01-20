@@ -1354,9 +1354,9 @@ def get_sensitivity(data:dict, contract_type:str):
         summary_argument = get_transition(data=data)[3]
 
     else:
-        contract = NotImplemented
-        contract_arguments = NotImplemented
-        summary_argument = NotImplemented
+        contract = get_baseproject(data=data)[1]
+        contract_arguments = get_baseproject(data=data)[2]
+        summary_argument = get_baseproject(data=data)[3]
 
     # Constructing the sensitivity arguments
     sensitivity_result = sensitivity_psc(
@@ -1396,9 +1396,9 @@ def get_uncertainty(data: dict, contract_type: str):
         summary_argument = get_transition(data=data)[3]
 
     else:
-        contract = NotImplemented
-        contract_arguments = NotImplemented
-        summary_argument = NotImplemented
+        contract = get_baseproject(data=data)[1]
+        contract_arguments = get_baseproject(data=data)[2]
+        summary_argument = get_baseproject(data=data)[3]
 
     # Constructing the sensitivity arguments
     uncertainty_args = {

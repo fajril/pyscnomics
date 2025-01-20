@@ -449,6 +449,8 @@ def get_contract_attributes(
     elif isinstance(contract, Transition):
         attr['contract_1'], attr['contract_2'] = construct_transition_attr(contract=contract)
         attr['contract_arguments'] = construct_transition_arguments(contract_arguments=contract_arguments)
+    elif isinstance(contract, BaseProject):
+        attr['contract_arguments'] = construct_baseproject_arguments_attr(contract_arguments=contract_arguments)
 
     # Constructing the lifting key
     attr['lifting'] = construct_lifting_attr(lifting=contract.lifting)

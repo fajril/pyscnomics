@@ -161,7 +161,7 @@ def get_baseproject(data: dict):
             str_object=data['contract_arguments']['electricity_revenue']),
         "co2_revenue": convert_str_to_otherrevenue(str_object=data['contract_arguments']['co2_revenue']),
         "sunk_cost_reference_year": data['contract_arguments']['sunk_cost_reference_year'],
-        "tax_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['vat_rate']),
+        "tax_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['tax_rate']),
         "inflation_rate": convert_list_to_array_float_or_array(data_input=data['contract_arguments']['inflation_rate']),
         "inflation_rate_applied_to": convert_str_to_inflationappliedto(str_object=data['contract_arguments']['inflation_rate_applied_to']),
     }
@@ -871,7 +871,7 @@ def uncertainty_psc(
         opex_distribution: UncertaintyDistribution = UncertaintyDistribution.NORMAL,
         capex_distribution: UncertaintyDistribution = UncertaintyDistribution.NORMAL,
         lifting_distribution: UncertaintyDistribution = UncertaintyDistribution.NORMAL,
-        verbose: bool = False,
+        verbose: bool = True,
 ):
     # Translating the contract type before parsing into ProcessMonte class
     if isinstance(contract, CostRecovery):
