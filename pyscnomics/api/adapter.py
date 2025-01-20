@@ -131,12 +131,12 @@ def get_summary_dict(data: dict) -> dict:
 
     """
     # Filling the argument with the input data
-    reference_year = data['summary_arguments']['reference_year']
-    inflation_rate = data['summary_arguments']['inflation_rate']
-    discount_rate = data['summary_arguments']['discount_rate']
-    npv_mode = convert_str_to_npvmode(str_object=data['summary_arguments']['npv_mode'])
-    discounting_mode = convert_str_to_discountingmode(str_object=data['summary_arguments']['discounting_mode'])
-    profitability_discounted = data['summary_arguments']['profitability_discounted']
+    reference_year = data['summary_arguments'].get('reference_year', None)
+    inflation_rate = data['summary_arguments'].get('inflation_rate', None)
+    discount_rate = data['summary_arguments'].get('discount_rate', 0.1)
+    npv_mode = convert_str_to_npvmode(str_object=data['summary_arguments'].get('npv_mode', "Full Cycle Nominal Terms"))
+    discounting_mode = convert_str_to_discountingmode(str_object=data['summary_arguments'].get('discounting_mode', 'discounting_mode'))
+    profitability_discounted = data['summary_arguments'].get('profitability_discounted', False)
 
     summary_arguments_dict = {
         'reference_year': reference_year,

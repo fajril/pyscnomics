@@ -645,6 +645,6 @@ class UncertaintyDistribution(Enum):
     """
     Uncertainty Distribution Option.
     """
-    UNIFORM = 'Uniform Distribution'
-    TRIANGULAR = 'Triangular Distribution'
-    NORMAL = 'Normal Distribution'
+    UNIFORM = 'Uniform'
+    TRIANGULAR = 'Triangular'
+    NORMAL = 'Normal'
