@@ -316,6 +316,27 @@ class ProcessMonte:
                     multipliers[i],
                     ["fixed_cost", "cost_per_volume"],
                 )
+                Adj_Partial_Data(
+                    contract_,
+                    "ASR",
+                    "asr",
+                    multipliers[i],
+                    ["cost"],
+                )
+                Adj_Partial_Data(
+                    contract_,
+                    "LBT",
+                    "lbt",
+                    multipliers[i],
+                    ["cost"],
+                )
+                Adj_Partial_Data(
+                    contract_,
+                    "COS",
+                    "cost_of_sales",
+                    multipliers[i],
+                    ["cost"],
+                )
             elif self.parameter[i]["id"] == 3:
                 Adj_Partial_Data(
                     contract_, "CAPEX", "capital", multipliers[i], ["cost"]
