@@ -238,11 +238,12 @@ def construct_cost_attr(cost: tuple[CapitalCost] | tuple[Intangible] | tuple[OPE
     return dict(zip(cost_key, costs))
 
 def construct_setup_attr(contract: BaseProject | CostRecovery | GrossSplit | Transition):
+    fluid_produced = [lift.fluid_type for lift in contract.lifting]
     return {
         "start_date": contract.start_date.strftime("%d/%m/%Y"),
         "end_date": contract.end_date.strftime("%d/%m/%Y"),
-        "oil_onstream_date": contract.oil_onstream_date.strftime("%d/%m/%Y"),
-        "gas_onstream_date": contract.gas_onstream_date.strftime("%d/%m/%Y"),
+        "oil_onstream_date": None if FluidType.OIL not in fluid_produced else contract.oil_onstream_date.strftime("%d/%m/%Y"),
+        "gas_onstream_date": None if FluidType.GAS not in fluid_produced else contract.gas_onstream_date.strftime("%d/%m/%Y"),
     }
 
 def construct_summary_arguments_attr(summary_arguments: dict):
