@@ -13,7 +13,8 @@ from pyscnomics.api.adapter import (get_baseproject,
                                     get_economic_limit,
                                     get_asr_expenditures,
                                     get_lbt_expenditures,
-                                    get_sensitivity)
+                                    get_sensitivity,
+                                    get_uncertainty)
 from pyscnomics.api.converter import Data, EconLimit, ASRExpendituresBM, LBTExpendituresBM
 from pyscnomics.api.converter import DataTransition
 from pyscnomics.api.converter import LtpBM, RpdBM
@@ -570,4 +571,15 @@ async def calculate_transition_sensitivity(data: DataTransition) -> dict:
     return get_sensitivity(
         data=data.model_dump(),
         contract_type='Transition')
+
+
+@router.post("/costrecovery/uncertainty")
+async def calculate_costrecovery_uncertainty(data: Data) -> dict:
+    """
+    ## Retrieve The Uncertainty of a cost recovery contract.
+    Route to get the uncertainty of a cost recovery contract.
+    """
+    return get_uncertainty(
+        data=data.model_dump(),
+        contract_type='Cost Recovery')
 

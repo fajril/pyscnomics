@@ -9,7 +9,7 @@ from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
-from pyscnomics.optimize import sensitivity_psc
+from pyscnomics.optimize import sensitivity_psc, uncertainty_psc
 from pyscnomics.tools.summary import get_summary
 from pyscnomics.tools.table import get_table
 from pyscnomics.optimize.optimization import optimize_psc
@@ -42,7 +42,8 @@ from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_grosssplitregime_to_enum,
                                       convert_to_float,
                                       read_fluid_type,
-                                      convert_to_method_limit)
+                                      convert_to_method_limit,
+                                      convert_to_uncertainty_distribution)
 from pyscnomics.econ.limit import econ_limit
 
 
@@ -1369,8 +1370,68 @@ def get_sensitivity(data:dict, contract_type:str):
         dataframe_output=False,
     )
 
-
-
     return sensitivity_result
 
+def get_uncertainty(data: dict, contract_type: str):
+    if 'uncertainty_arguments' not in data:
+        raise ContractException("The payload does not have the uncertainty_arguments key")
+
+    if data['uncertainty_arguments'] is None:
+        raise ContractException("The payload uncertainty_arguments does not have any values")
+
+    # Retrieving the contract, contract_arguments_dict, summary_arguments_dict based on the contract type
+    if contract_type == 'Cost Recovery':
+        contract = get_costrecovery(data=data)[1]
+        contract_arguments = get_costrecovery(data=data)[2]
+        summary_argument = get_costrecovery(data=data)[3]
+
+    elif contract_type == 'Gross Split':
+        contract = get_grosssplit(data=data)[1]
+        contract_arguments = get_grosssplit(data=data)[2]
+        summary_argument = get_grosssplit(data=data)[3]
+
+    elif contract_type == 'Transition':
+        contract = get_transition(data=data)[1]
+        contract_arguments = get_transition(data=data)[2]
+        summary_argument = get_transition(data=data)[3]
+
+    else:
+        contract = NotImplemented
+        contract_arguments = NotImplemented
+        summary_argument = NotImplemented
+
+    # Constructing the sensitivity arguments
+    uncertainty_args = {
+        'contract': contract,
+        'contract_arguments': contract_arguments,
+        'summary_arguments': summary_argument,
+        'run_number': data['uncertainty_arguments']['run_number'],
+        'min_oil_price': data['uncertainty_arguments']['min_oil_price'],
+        'mean_oil_price': data['uncertainty_arguments']['mean_oil_price'],
+        'max_oil_price': data['uncertainty_arguments']['max_oil_price'],
+        'min_gas_price': data['uncertainty_arguments']['min_gas_price'],
+        'mean_gas_price': data['uncertainty_arguments']['mean_gas_price'],
+        'max_gas_price': data['uncertainty_arguments']['max_gas_price'],
+        'min_opex': data['uncertainty_arguments']['min_opex'],
+        'mean_opex': data['uncertainty_arguments']['mean_opex'],
+        'max_opex': data['uncertainty_arguments']['max_opex'],
+        'min_capex': data['uncertainty_arguments']['min_capex'],
+        'mean_capex': data['uncertainty_arguments']['mean_capex'],
+        'max_capex': data['uncertainty_arguments']['max_capex'],
+        'min_lifting': data['uncertainty_arguments']['min_lifting'],
+        'mean_lifting': data['uncertainty_arguments']['mean_lifting'],
+        'max_lifting': data['uncertainty_arguments']['max_lifting'],
+        'oil_price_stddev': data['uncertainty_arguments']['oil_price_stddev'],
+        'gas_price_stddev': data['uncertainty_arguments']['gas_price_stddev'],
+        'opex_stddev': data['uncertainty_arguments']['opex_stddev'],
+        'capex_stddev': data['uncertainty_arguments']['capex_stddev'],
+        'lifting_stddev': data['uncertainty_arguments']['lifting_stddev'],
+        'oil_price_distribution': convert_to_uncertainty_distribution(target=data['uncertainty_arguments']['oil_price_distribution']),
+        'gas_price_distribution': convert_to_uncertainty_distribution(target=data['uncertainty_arguments']['gas_price_distribution']),
+        'opex_distribution': convert_to_uncertainty_distribution(target=data['uncertainty_arguments']['opex_distribution']),
+        'capex_distribution': convert_to_uncertainty_distribution(target=data['uncertainty_arguments']['capex_distribution']),
+        'lifting_distribution': convert_to_uncertainty_distribution(target=data['uncertainty_arguments']['lifting_distribution']),
+    }
+
+    return uncertainty_psc(**uncertainty_args)
 

@@ -9,7 +9,7 @@ import numpy as np
 
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales, LBT
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type
-from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime, GrossSplitRegime, LimitMethod
+from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime, GrossSplitRegime, LimitMethod, UncertaintyDistribution
 from pyscnomics.tools.helper import (get_inflation_applied_converter,
                                      get_npv_mode_converter,
                                      get_discounting_mode_converter,
@@ -507,19 +507,35 @@ class UncertaintyBM(BaseModel):
 
     Parameters
     ----------
-    number_of_simulation: int
+    run_number: int
         The number of the simulation.
-    min: list[float]
-        The minimum value for uncertainty model
-    max: list[float]
-        The maximum value for uncertainty model
-    std_dev: list[float]
-        The standard deviation for the uncertainty model
     """
-    number_of_simulation: int
-    min: list[float] | list[int]
-    max: list[float] | list[int]
-    std_dev: list[float] | list[int]
+    run_number: int
+    oil_price_distribution: str
+    gas_price_distribution: str
+    opex_distribution: str
+    capex_distribution: str
+    lifting_distribution: str
+    min_oil_price: float | int = Field(default=None)
+    mean_oil_price: float | int = Field(default=None)
+    max_oil_price: float | int = Field(default=None)
+    min_gas_price: float | int = Field(default=None)
+    mean_gas_price: float | int = Field(default=None)
+    max_gas_price: float | int = Field(default=None)
+    min_opex: float | int = Field(default=None)
+    mean_opex: float | int = Field(default=None)
+    max_opex: float | int = Field(default=None)
+    min_capex: float | int = Field(default=None)
+    mean_capex: float | int = Field(default=None)
+    max_capex: float | int = Field(default=None)
+    min_lifting: float | int = Field(default=None)
+    mean_lifting: float | int = Field(default=None)
+    max_lifting: float | int = Field(default=None)
+    oil_price_stddev: float | int = Field(default=1.25)
+    gas_price_stddev: float | int = Field(default=1.25)
+    opex_stddev: float | int = Field(default=1.25)
+    capex_stddev: float | int = Field(default=1.25)
+    lifting_stddev: float | int = Field(default=1.25)
 
 
 class LtpBM(BaseModel):
@@ -1491,3 +1507,29 @@ def convert_to_method_limit(target:str):
         return LimitMethod.NEGATIVE_CASHFLOW
     else:
         return ValueError("Invalid LimitMethod provided.")
+
+
+def convert_to_uncertainty_distribution(target: str):
+    """
+    Function to convert string into Uncertainty Distribution selection.
+
+    Parameters
+    ----------
+    target: dict
+        The target that will be converted.
+
+    Returns
+    -------
+    UncertaintyDistribution
+
+    """
+    attrs = {
+        'Uniform': UncertaintyDistribution.UNIFORM,
+        'Triangular': UncertaintyDistribution.TRIANGULAR,
+        'Normal': UncertaintyDistribution.NORMAL,
+    }
+
+    for key in attrs.keys():
+        if target == key:
+            return attrs[key]
+
