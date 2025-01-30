@@ -648,3 +648,13 @@ class UncertaintyDistribution(Enum):
     UNIFORM = 'Uniform'
     TRIANGULAR = 'Triangular'
     NORMAL = 'Normal'
+
+class DecisionTreeParameters(Enum):
+    OIL_FTP = 'Oil FTP'
+    OIL_SPLIT = 'Oil Pre Tax Split'
+    OIL_DMO_PORTION = 'Oil DMO Portion'
+    OIL_DMO_FEE = 'Oil DMO Fee'
+    GAS_FTP = 'Gas FTP'
+    GAS_SPLIT = 'Gas Pre Tax Split'
+    GAS_DMO_PORTION = 'Gas DMO Portion'
+    GAS_DMO_FEE = 'Gas DMO Fee'
