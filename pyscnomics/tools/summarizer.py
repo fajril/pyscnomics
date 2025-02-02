@@ -1,5 +1,5 @@
 from typing import List, Union
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 import numpy as np
 
 from pyscnomics.contracts.project import BaseProject
@@ -379,12 +379,12 @@ class Summary:
         return {
             idx: {
                 'years': contract.project_years,
-                'oil_ftp_ctr': contract._oil_ftp_ctr,
-                'oil_ftp_gov': contract._oil_ftp_gov,
-                'gas_ftp_ctr': contract._gas_ftp_ctr,
-                'gas_ftp_gov': contract._gas_ftp_gov,
-                'consolidated_ctr_ftp': contract._oil_ftp_ctr + contract._gas_ftp_ctr,
-                'consolidated_gov_ftp': contract._oil_ftp_gov + contract._gas_ftp_gov,
+                'oil_ftp_ctr': np.zeros_like(contract.project_years) if isinstance(contract, GrossSplit) else contract._oil_ftp_ctr,
+                'oil_ftp_gov': np.zeros_like(contract.project_years) if isinstance(contract, GrossSplit) else contract._oil_ftp_gov,
+                'gas_ftp_ctr': np.zeros_like(contract.project_years) if isinstance(contract, GrossSplit) else contract._gas_ftp_ctr,
+                'gas_ftp_gov': np.zeros_like(contract.project_years) if isinstance(contract, GrossSplit) else contract._gas_ftp_gov,
+                'consolidated_ctr_ftp': np.zeros_like(contract.project_years) if isinstance(contract, GrossSplit) else (contract._oil_ftp_ctr + contract._gas_ftp_ctr),
+                'consolidated_gov_ftp': np.zeros_like(contract.project_years) if isinstance(contract, GrossSplit) else (contract._oil_ftp_gov + contract._gas_ftp_gov),
             }
             for idx, contract in enumerate(self.contract)
         }
@@ -418,7 +418,7 @@ class Summary:
     @staticmethod
     def _merge_dicts(data: dict, mode: str):
         # Convert to list of dictionaries
-        dicts = list(data.values())
+        dicts = tuple(data.values())
 
         # Copy first dictionary
         merged = {key: value.copy() for key, value in dicts[0].items()}
@@ -622,7 +622,6 @@ class Summary:
         """Convert selected dataclass attributes into a pandas DataFrame."""
         exclude: list = ['contract', 'reference_year', 'inflation_rate', 'discount_rate', 'npv_mode',
                          'discounting_mode', 'profitability_discounted', ]
-        exclude = exclude or []  # Default to an empty list if no exclusion is provided
         data_dict = {key: value for key, value in self.__dict__.items() if key not in exclude}
         return pd.DataFrame(data_dict)  # Convert filtered dictionary to DataFrame
 

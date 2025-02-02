@@ -743,8 +743,8 @@ class GrossSplit(BaseProject):
                               ]
 
         if sunk_cost_reference_year == self.start_date.year:
-            self._oil_sunk_cost = np.zeros(1)
-            self._gas_sunk_cost = np.zeros(1)
+            self._oil_sunk_cost = np.zeros_like(self.project_years)
+            self._gas_sunk_cost = np.zeros_like(self.project_years)
 
     def _get_year_maximum_split(
             self,
