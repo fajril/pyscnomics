@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Tuple, Union
 from dataclasses import dataclass, field
 import numpy as np
 
@@ -7,17 +7,107 @@ from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.econ.selection import NPVSelection, DiscountingMode
+from pyscnomics.econ.indicator import (irr,
+                                       npv_nominal_terms,
+                                       npv_real_terms,
+                                       npv_skk_nominal_terms,
+                                       npv_skk_real_terms,
+                                       npv_point_forward,
+                                       pot_psc)
+
+@dataclass
+class ExecutiveSummary:
+    lifting_oil: float = field(default=None, init=False, repr=False)
+    oil_wap: float = field(default=None, init=False, repr=False)
+    lifting_gas: float = field(default=None, init=False, repr=False)
+    gas_wap: float = field(default=None, init=False, repr=False)
+    gross_revenue: float = field(default=None, init=False, repr=False)
+    gross_revenue_oil: float = field(default=None, init=False, repr=False)
+    gross_revenue_gas: float = field(default=None, init=False, repr=False)
+    ctr_gross_share: float = field(default=None, init=False, repr=False)
+    gov_gross_share: float = field(default=None, init=False, repr=False)
+    investment: float = field(default=None, init=False, repr=False)
+    oil_capex: float = field(default=None, init=False, repr=False)
+    gas_capex: float = field(default=None, init=False, repr=False)
+    sunk_cost: float = field(default=None, init=False, repr=False)
+    tangible: float = field(default=None, init=False, repr=False)
+    intangible: float = field(default=None, init=False, repr=False)
+    opex_asr_lbt: float = field(default=None, init=False, repr=False)
+    opex: float = field(default=None, init=False, repr=False)
+    asr: float = field(default=None, init=False, repr=False)
+    lbt: float = field(default=None, init=False, repr=False)
+    cost_recovery_deductible_cost: float = field(default=None, init=False, repr=False)
+    cost_recovery_over_gross_rev: float = field(default=None, init=False, repr=False)
+    unrec_cost: float = field(default=None, init=False, repr=False)
+    unrec_over_costrec: float = field(default=None, init=False, repr=False)
+    unrec_over_gross_rev: float = field(default=None, init=False, repr=False)
+    ctr_net_share: float = field(default=None, init=False, repr=False)
+    ctr_net_share_over_gross_share: float = field(default=None, init=False, repr=False)
+    ctr_net_cashflow: float = field(default=None, init=False, repr=False)
+    ctr_net_cashflow_over_gross_rev: float = field(default=None, init=False, repr=False)
+    ctr_npv: float = field(default=None, init=False, repr=False)
+    ctr_npv_sunk_cost_pooled: float = field(default=None, init=False, repr=False)
+    ctr_irr: float = field(default=None, init=False, repr=False)
+    ctr_irr_sunk_cost_pooled: float = field(default=None, init=False, repr=False)
+    ctr_pot: float = field(default=None, init=False, repr=False)
+    ctr_pv_ratio: float = field(default=None, init=False, repr=False)
+    ctr_pi: float = field(default=None, init=False, repr=False)
+    gov_ftp_share: float = field(default=None, init=False, repr=False)
+    gov_equity_share: float = field(default=None, init=False, repr=False)
+    gov_ddmo: float = field(default=None, init=False, repr=False)
+    gov_tax_income: float = field(default=None, init=False, repr=False)
+    gov_take: float = field(default=None, init=False, repr=False)
+    gov_take_over_gross_rev: float = field(default=None, init=False, repr=False)
+    gov_take_npv: float = field(default=None, init=False, repr=False)
+    undepreciated_asset_oil: float = field(default=None, init=False, repr=False)
+    undepreciated_asset_gas: float = field(default=None, init=False, repr=False)
+    undepreciated_asset_total: float = field(default=None, init=False, repr=False)
+    total_indirect_taxes: float = field(default=None, init=False, repr=False)
+    oil_indirect_taxes: float = field(default=None, init=False, repr=False)
+    gas_indirect_taxes: float = field(default=None, init=False, repr=False)
 
 
 @dataclass
 class Summary:
-    contract: List[Union[BaseProject, CostRecovery, GrossSplit, Transition]]
+    contract: Tuple[Union[BaseProject, CostRecovery, GrossSplit, Transition]]
     reference_year: int | None = field(default=None)
     inflation_rate: float = field(default=0.0)
     discount_rate: float = field(default=0.1)
     npv_mode: NPVSelection = field(default=NPVSelection.NPV_SKK_REAL_TERMS)
     discounting_mode: DiscountingMode = field(default=DiscountingMode)
     profitability_discounted: bool = True
+
+    # Executive Summary
+    executive_summary: ExecutiveSummary = field(default=None, init=False, repr=False)
+
+    # Economic Indicator
+    ctr_npv_nominal_terms: float = field(default=None, init=False, repr=False)
+    ctr_npv_real_terms: float = field(default=None, init=False, repr=False)
+    ctr_npv_skk_nominal_terms: float = field(default=None, init=False, repr=False)
+    ctr_npv_skk_real_terms: float = field(default=None, init=False, repr=False)
+    ctr_npv_point_forward: float = field(default=None, init=False, repr=False)
+
+    ctr_npv_sunkcost_pooled_nominal_terms: float = field(default=None, init=False, repr=False)
+    ctr_npv_sunkcost_pooled_real_terms: float = field(default=None, init=False, repr=False)
+    ctr_npv_sunkcost_pooled_skk_nominal_terms: float = field(default=None, init=False, repr=False)
+    ctr_npv_sunkcost_pooled_skk_real_terms: float = field(default=None, init=False, repr=False)
+    ctr_npv_sunkcost_pooled_point_forward: float = field(default=None, init=False, repr=False)
+
+    investment_npv_nominal_terms: float = field(default=None, init=False, repr=False)
+    investment_npv_real_terms: float = field(default=None, init=False, repr=False)
+    investment_npv_skk_nominal_terms: float = field(default=None, init=False, repr=False)
+    investment_npv_skk_real_terms: float = field(default=None, init=False, repr=False)
+    investment_npv_point_forward: float = field(default=None, init=False, repr=False)
+
+    gov_take_npv_nominal_terms: float = field(default=None, init=False, repr=False)
+    gov_take_npv_real_terms: float = field(default=None, init=False, repr=False)
+    gov_take_npv_skk_nominal_terms: float = field(default=None, init=False, repr=False)
+    gov_take_npv_skk_real_terms: float = field(default=None, init=False, repr=False)
+    gov_take_npv_point_forward: float = field(default=None, init=False, repr=False)
+
+    pot: float = field(default=None, init=False, repr=False)
+    pv_ratio: float = field(default=None, init=False, repr=False)
+    pi: float = field(default=None, init=False, repr=False)
 
     # Years
     years: np.ndarray = field(default=None, init=False, repr=False)
@@ -161,8 +251,9 @@ class Summary:
 
     def __post_init__(self):
         # Defining overall project years
-        min_year = min(np.concatenate([contract.project_years for contract in self.contract]))
-        max_year = max(np.concatenate([contract.project_years for contract in self.contract]))
+        project_years = np.concatenate([contract.project_years for contract in self.contract])
+        min_year = min(project_years)
+        max_year = max(project_years)
 
         self.years = np.arange(
             min_year, max_year + 1, 1
@@ -627,12 +718,107 @@ class Summary:
 
     def case_combine(self):
         self.run(mode='combine')
-        return self._to_dataframe()
-
 
     def case_incremental(self):
         self.run(mode='incremental')
-        return self._to_dataframe()
+
+    def _calc_npv(self):
+        ctr_npv_nominal_terms = npv_real_terms(
+            cashflow=self.consolidated_ctr_cashflow,
+            cashflow_years=self.years,
+            discount_rate=self.discount_rate,
+            reference_year=self.reference_year,
+            inflation_rate=self.inflation_rate,
+            discounting_mode=self.discounting_mode,
+        )
+
+        # To Do: Continue the codes below
+        investment_npv_nominal_terms
+        gov_take_npv_nominal_terms
+
+        ctr_npv_real_terms
+        investment_npv_real_terms
+        gov_take_npv_real_terms
+
+        ctr_npv_skk_nominal_terms
+        investment_npv_skk_nominal_terms
+        gov_take_npv_skk_nominal_terms
+
+        ctr_npv_skk_real_terms
+        investment_npv_skk_real_terms
+        gov_take_npv_skk_real_terms
+
+        ctr_npv_point_forward
+        investment_npv_point_forward
+        gov_take_npv_point_forward
+
+
+    def get_executive_summary(self):
+        # Lifting Group
+        lifting_oil = np.sum(self.oil_lifting)
+        lifting_gas = np.sum(self.gas_lifting)
+
+        # Gross Revenue Group
+        gross_revenue_oil = np.sum(self.oil_revenue)
+        gross_revenue_gas = np.sum(self.gas_revenue)
+        gross_revenue = gross_revenue_oil + gross_revenue_gas
+
+        # WAP Group
+        oil_wap = gross_revenue_oil / lifting_oil
+        gas_wap = gross_revenue_gas / lifting_gas
+
+        # Contractor and Government Gross share
+        ctr_gross_share = np.sum(self.consolidated_ctr_share)
+        gov_gross_share = np.sum(self.consolidated_gov_share)
+
+        # Investment Group
+        sunk_cost = np.sum(self.consolidated_sunk_cost)
+        tangible = np.sum(self.consolidated_capital_expenditures_post_tax)
+        intangible = np.sum(self.consolidated_intangible_expenditures_post_tax)
+        investment = tangible + intangible
+
+        # OPEX and ASR Group
+        opex = np.sum(self.consolidated_opex_expenditures_post_tax)
+        asr = np.sum(self.consolidated_asr_expenditures_post_tax)
+        lbt = np.sum(self.consolidated_lbt_expenditures_post_tax)
+        opex_asr_lbt = opex + asr + lbt
+
+        # Cost recovery or Deductible Cost
+        costrecovery_or_deductible_cost = np.sum(self.consolidated_costrecovery_or_deductible_cost)
+        cost_recovery_over_gross_rev = costrecovery_or_deductible_cost / gross_revenue
+
+        # Unrecoverable Cost
+        unrec_cost = np.sum(self.consolidated_unrecoverable_cost_or_carryforward_cost)
+        unrec_over_gross_rev = unrec_cost/ gross_revenue
+
+        # Contractor Net Share
+        ctr_share = np.sum(self.consolidated_ctr_share)
+        ctr_net_share_over_gross_share = ctr_share / gross_revenue
+
+        # Contractor Net Cashflow
+        ctr_net_cashflow = np.sum(self.consolidated_ctr_cashflow)
+        ctr_net_cashflow_over_gross_rev = ctr_net_cashflow / gross_revenue
+
+        # Contractor NPV
+        # Contractor IRR
+        # Contractor POT
+        # Contractor PV Ratio
+        # Contractor pi
+
+
+
+
+
+
+
+
+
+
+
+
+
+        return NotImplementedError
+
 
 
 
