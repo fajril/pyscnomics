@@ -81,33 +81,13 @@ class Summary:
     executive_summary: ExecutiveSummary = field(default=None, init=False, repr=False)
 
     # Economic Indicator
-    ctr_npv_nominal_terms: float = field(default=None, init=False, repr=False)
-    ctr_npv_real_terms: float = field(default=None, init=False, repr=False)
-    ctr_npv_skk_nominal_terms: float = field(default=None, init=False, repr=False)
-    ctr_npv_skk_real_terms: float = field(default=None, init=False, repr=False)
-    ctr_npv_point_forward: float = field(default=None, init=False, repr=False)
-
-    ctr_npv_sunkcost_pooled_nominal_terms: float = field(default=None, init=False, repr=False)
-    ctr_npv_sunkcost_pooled_real_terms: float = field(default=None, init=False, repr=False)
-    ctr_npv_sunkcost_pooled_skk_nominal_terms: float = field(default=None, init=False, repr=False)
-    ctr_npv_sunkcost_pooled_skk_real_terms: float = field(default=None, init=False, repr=False)
-    ctr_npv_sunkcost_pooled_point_forward: float = field(default=None, init=False, repr=False)
-
-    investment_npv_nominal_terms: float = field(default=None, init=False, repr=False)
-    investment_npv_real_terms: float = field(default=None, init=False, repr=False)
-    investment_npv_skk_nominal_terms: float = field(default=None, init=False, repr=False)
-    investment_npv_skk_real_terms: float = field(default=None, init=False, repr=False)
-    investment_npv_point_forward: float = field(default=None, init=False, repr=False)
-
-    gov_take_npv_nominal_terms: float = field(default=None, init=False, repr=False)
-    gov_take_npv_real_terms: float = field(default=None, init=False, repr=False)
-    gov_take_npv_skk_nominal_terms: float = field(default=None, init=False, repr=False)
-    gov_take_npv_skk_real_terms: float = field(default=None, init=False, repr=False)
-    gov_take_npv_point_forward: float = field(default=None, init=False, repr=False)
-
+    ctr_npv: float = field(default=None, init=False, repr=False)
+    investment_npv: float = field(default=None, init=False, repr=False)
+    gov_take_npv: float = field(default=None, init=False, repr=False)
     pot: float = field(default=None, init=False, repr=False)
     pv_ratio: float = field(default=None, init=False, repr=False)
     pi: float = field(default=None, init=False, repr=False)
+    irr: float = field(default=None, init=False, repr=False)
 
     # Years
     years: np.ndarray = field(default=None, init=False, repr=False)
@@ -195,6 +175,7 @@ class Summary:
     oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    oil_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
     gas_depreciable: np.ndarray = field(default=None, init=False, repr=False)
     gas_intangible: np.ndarray = field(default=None, init=False, repr=False)
     gas_opex: np.ndarray = field(default=None, init=False, repr=False)
@@ -203,6 +184,7 @@ class Summary:
     gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     gas_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    gas_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
     consolidated_depreciable: np.ndarray = field(default=None, init=False, repr=False)
     consolidated_intangible: np.ndarray = field(default=None, init=False, repr=False)
     consolidated_opex: np.ndarray = field(default=None, init=False, repr=False)
@@ -211,6 +193,7 @@ class Summary:
     consolidated_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     consolidated_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    consolidated_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
 
     # PSC terms
     oil_costrecovery_or_deductible_cost: np.ndarray = field(default=None, init=False, repr=False)
@@ -375,6 +358,7 @@ class Summary:
                 'oil_depreciation': contract._oil_depreciation,
                 'oil_non_capital': contract._oil_non_capital,
                 'oil_sunk_cost': contract._oil_sunk_cost,
+                'oil_undepreciated_asset': contract._oil_undepreciated_asset,
                 'gas_depreciable': contract._gas_capital_expenditures_post_tax,
                 'gas_intangible': contract._gas_intangible_expenditures_post_tax,
                 'gas_opex': contract._gas_opex_expenditures_post_tax,
@@ -383,6 +367,7 @@ class Summary:
                 'gas_depreciation': contract._gas_depreciation,
                 'gas_non_capital': contract._gas_non_capital,
                 'gas_sunk_cost': contract._gas_sunk_cost,
+                'gas_undepreciated_asset': contract._gas_undepreciated_asset,
                 'consolidated_depreciable': contract._oil_capital_expenditures_post_tax + contract._gas_capital_expenditures_post_tax,
                 'consolidated_intangible': contract._oil_intangible_expenditures_post_tax + contract._gas_intangible_expenditures_post_tax,
                 'consolidated_opex': contract._oil_opex_expenditures_post_tax + contract._gas_opex_expenditures_post_tax,
@@ -391,6 +376,7 @@ class Summary:
                 'consolidated_depreciation': contract._oil_depreciation + contract._gas_depreciation,
                 'consolidated_non_capital': contract._oil_non_capital + contract._gas_non_capital,
                 'consolidated_sunk_cost': contract._oil_sunk_cost + contract._gas_sunk_cost,
+                'consolidated_undepreciated_asset': contract._oil_undepreciated_asset + contract._gas_undepreciated_asset,
             }
             for idx, contract in enumerate(self.contract)
         }
@@ -621,6 +607,7 @@ class Summary:
         self.oil_depreciation = cost_contract['oil_depreciation']
         self.oil_non_capital = cost_contract['oil_non_capital']
         self.oil_sunk_cost = cost_contract['oil_sunk_cost']
+        self.oil_undepreciated_asset = cost_contract['oil_undepreciated_asset']
         self.gas_depreciable = cost_contract['gas_depreciable']
         self.gas_intangible = cost_contract['gas_intangible']
         self.gas_opex = cost_contract['gas_opex']
@@ -629,6 +616,7 @@ class Summary:
         self.gas_depreciation = cost_contract['gas_depreciation']
         self.gas_non_capital = cost_contract['gas_non_capital']
         self.gas_sunk_cost = cost_contract['gas_sunk_cost']
+        self.gas_undepreciated_asset = cost_contract['gas_undepreciated_asset']
         self.consolidated_depreciable = cost_contract['consolidated_depreciable']
         self.consolidated_intangible = cost_contract['consolidated_intangible']
         self.consolidated_opex = cost_contract['consolidated_opex']
@@ -637,6 +625,7 @@ class Summary:
         self.consolidated_depreciation = cost_contract['consolidated_depreciation']
         self.consolidated_non_capital = cost_contract['consolidated_non_capital']
         self.consolidated_sunk_cost = cost_contract['consolidated_sunk_cost']
+        self.consolidated_undepreciated_asset = cost_contract['consolidated_undepreciated_asset']
 
         # PSC terms
         self.oil_costrecovery_or_deductible_cost = psc_terms['oil_costrecovery_or_deductible_cost']
@@ -723,35 +712,191 @@ class Summary:
         self.run(mode='incremental')
 
     def _calc_npv(self):
-        ctr_npv_nominal_terms = npv_real_terms(
+        # NPV Calculation for SKK Real Terms
+        if self.npv_mode == NPVSelection.NPV_SKK_REAL_TERMS:
+            # Contractor NPV
+            self.ctr_npv = npv_skk_real_terms(
+                cashflow=self.consolidated_ctr_cashflow,
+                cashflow_years=self.years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                discounting_mode=self.discounting_mode
+            )
+
+            # Contractor Investment NPV
+            self.investment_npv = npv_skk_real_terms(
+                cashflow=(
+                        self.consolidated_capital_expenditures_post_tax +
+                        self.consolidated_intangible_expenditures_post_tax
+                ),
+                cashflow_years=self.years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                discounting_mode=self.discounting_mode
+            )
+
+            # Government Take Net Present Value
+            self.gov_take_npv = npv_skk_real_terms(
+                cashflow=self.consolidated_government_take,
+                cashflow_years=self.years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                discounting_mode=self.discounting_mode
+            )
+
+        # NPV Calculation for SKK Nominal Terms
+        elif self.npv_mode == NPVSelection.NPV_SKK_NOMINAL_TERMS:
+            # Contractor NPV
+            self.ctr_npv = npv_skk_nominal_terms(
+                cashflow=self.consolidated_ctr_cashflow,
+                cashflow_years=self.years,
+                discount_rate=self.discount_rate,
+                discounting_mode=self.discounting_mode
+            )
+
+            # Contractor Investment NPV
+            self.investment_npv = npv_skk_nominal_terms(
+                cashflow=(
+                        self.consolidated_capital_expenditures_post_tax +
+                        self.consolidated_intangible_expenditures_post_tax
+                ),
+                cashflow_years=self.years,
+                discount_rate=self.discount_rate,
+                discounting_mode=self.discounting_mode
+            )
+
+            # Government Take Net Present Value
+            self.gov_take_npv = npv_skk_nominal_terms(
+                cashflow=self.consolidated_government_take,
+                cashflow_years=self.years,
+                discount_rate=self.discount_rate,
+                discounting_mode=self.discounting_mode
+            )
+
+        # NPV Calculation for Nominal Terms
+        elif self.npv_mode == NPVSelection.NPV_NOMINAL_TERMS:
+            # Contractor NPV
+            self.ctr_npv = npv_nominal_terms(
+                cashflow=self.consolidated_ctr_cashflow,
+                cashflow_years=self.years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                discounting_mode=self.discounting_mode
+            )
+
+            # Contractor Investment NPV
+            self.investment_npv = npv_nominal_terms(
+                cashflow=(
+                    self.consolidated_capital_expenditures_post_tax +
+                    self.consolidated_intangible_expenditures_post_tax
+            ),
+                cashflow_years=self.years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                discounting_mode=self.discounting_mode
+            )
+
+            # Government Take Net Present Value
+            self.gov_take_npv = npv_nominal_terms(
+                cashflow=self.consolidated_government_take,
+                cashflow_years=self.years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                discounting_mode=self.discounting_mode
+            )
+
+        # NPV Calculation for Real Terms
+        elif self.npv_mode == NPVSelection.NPV_REAL_TERMS:
+            # Contractor NPV
+            self.ctr_npv = npv_real_terms(
+                cashflow=self.consolidated_ctr_cashflow,
+                cashflow_years=self.years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                inflation_rate=self.inflation_rate,
+                discounting_mode=self.discounting_mode
+            )
+
+            # Contractor Investment NPV
+            self.investment_npv = npv_real_terms(
+                cashflow=(
+                        self.consolidated_capital_expenditures_post_tax +
+                        self.consolidated_intangible_expenditures_post_tax
+                ),
+                cashflow_years=self.years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                inflation_rate=self.inflation_rate,
+                discounting_mode=self.discounting_mode
+            )
+
+            # Government Take Net Present Value
+            self.gov_take_npv = npv_real_terms(
+                cashflow=self.consolidated_government_take,
+                cashflow_years=self.years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                inflation_rate=self.inflation_rate,
+                discounting_mode=self.discounting_mode
+            )
+
+        # NPV Calculation for Point Forwards
+        else:
+            # Contractor NPV
+            self.ctr_npv = npv_point_forward(
+                cashflow=self.consolidated_ctr_cashflow,
+                cashflow_years=self.years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                discounting_mode=self.discounting_mode
+            )
+
+            # Contractor Investment NPV
+            self.investment_npv = npv_point_forward(
+                cashflow=(
+                    self.consolidated_capital_expenditures_post_tax +
+                    self.consolidated_intangible_expenditures_post_tax
+            ),
+                cashflow_years=self.years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                discounting_mode=self.discounting_mode
+            )
+
+            # Government Take Net Present Value
+            self.gov_take_npv = npv_point_forward(
+                cashflow=self.consolidated_government_take,
+                cashflow_years=self.years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                discounting_mode=self.discounting_mode
+            )
+
+    def _calc_pot(self):
+        # Contractor POT
+        self.pot = pot_psc(
             cashflow=self.consolidated_ctr_cashflow,
             cashflow_years=self.years,
-            discount_rate=self.discount_rate,
-            reference_year=self.reference_year,
-            inflation_rate=self.inflation_rate,
-            discounting_mode=self.discounting_mode,
+            reference_year=self.reference_year
         )
 
-        # To Do: Continue the codes below
-        investment_npv_nominal_terms
-        gov_take_npv_nominal_terms
+    def _calc_pv_ratio(self):
+        if self.profitability_discounted:
+            self.pv_ratio = np.divide(self.ctr_npv, self.investment_npv, where=self.investment_npv != 0)
 
-        ctr_npv_real_terms
-        investment_npv_real_terms
-        gov_take_npv_real_terms
+        # Condition when the Profitability Index is calculated using un-discounted investment
+        else:
+            investment = np.sum(
+                self.consolidated_capital_expenditures_post_tax +
+                self.consolidated_intangible_expenditures_post_tax +
+                self.consolidated_sunk_cost
+            )
+            self.pv_ratio = np.divide(self.ctr_npv, investment, where=investment != 0)
 
-        ctr_npv_skk_nominal_terms
-        investment_npv_skk_nominal_terms
-        gov_take_npv_skk_nominal_terms
+        self.ctr_pi = 1 + self.pv_ratio
 
-        ctr_npv_skk_real_terms
-        investment_npv_skk_real_terms
-        gov_take_npv_skk_real_terms
-
-        ctr_npv_point_forward
-        investment_npv_point_forward
-        gov_take_npv_point_forward
-
+    def _calc_irr(self):
+        self.irr = irr(cashflow=self.consolidated_ctr_cashflow)
 
     def get_executive_summary(self):
         # Lifting Group
@@ -800,32 +945,97 @@ class Summary:
         ctr_net_cashflow_over_gross_rev = ctr_net_cashflow / gross_revenue
 
         # Contractor NPV
+        self._calc_npv()
+        ctr_npv = self.ctr_npv
+
+        # Investment NPV
+        investment_npv = self.investment_npv
+
+        # Government Take NPV
+        gov_take_npv = self.gov_take_npv
+
+        # POT
+        self._calc_pot()
+        pot = self.pot
+
+        # PV_Ratio
+        self._calc_pv_ratio()
+        pv_ratio = self.pv_ratio
+        pi = self.pi
+
         # Contractor IRR
-        # Contractor POT
-        # Contractor PV Ratio
-        # Contractor pi
+        self._calc_irr()
+        ctr_irr = self.irr
 
+        # Government Indicator
+        gov_ftp_share = self.consolidated_gov_ftp
+        gov_equity_share = self.consolidated_gov_share
+        gov_ddmo = self.consolidated_ddmo
+        gov_tax_income = self.consolidated_effective_tax_payment
+        gov_take = self.consolidated_government_take
+        gov_take_over_gross_rev = gov_take / gross_revenue
+        oil_indirect_taxes = (
+                self.oil_capital_indirect_tax +
+                self.oil_intangible_indirect_tax +
+                self.oil_opex_indirect_tax +
+                self.oil_asr_indirect_tax +
+                self.oil_lbt_indirect_tax +
+                self.oil_cost_of_sales_indirect_tax
+        )
+        gas_indirect_taxes = (
+                self.gas_capital_indirect_tax +
+                self.gas_intangible_indirect_tax +
+                self.gas_opex_indirect_tax +
+                self.gas_asr_indirect_tax +
+                self.gas_lbt_indirect_tax +
+                self.gas_cost_of_sales_indirect_tax
+        )
+        total_indirect_taxes = oil_indirect_taxes + gas_indirect_taxes
 
+        # Undepreciated Asset
+        undepreciated_asset_oil = self.oil_undepreciated_asset
+        undepreciated_asset_gas = self.gas_undepreciated_asset
+        undepreciated_asset_total = undepreciated_asset_oil + undepreciated_asset_gas
 
-
-
-
-
-
-
-
-
-
-
-        return NotImplementedError
-
-
-
-
-
-
-
-
-
-
+        return {
+            'lifting_oil':lifting_oil,
+            'oil_wap':oil_wap,
+            'lifting_gas':lifting_gas,
+            'gas_wap':gas_wap,
+            'gross_revenue':gross_revenue,
+            'ctr_gross_share':ctr_gross_share,
+            'sunk_cost':sunk_cost,
+            'investment':investment,
+            'tangible':tangible,
+            'intangible':intangible,
+            'opex_asr_lbt':opex_asr_lbt,
+            'opex':opex,
+            'asr':asr,
+            'cost_recovery/deductible_cost':costrecovery_or_deductible_cost,
+            'cost_recovery_over_gross_rev':cost_recovery_over_gross_rev,
+            'unrec_cost':unrec_cost,
+            'unrec_over_gross_rev':unrec_over_gross_rev,
+            'ctr_net_share':ctr_share,
+            'ctr_net_share_over_gross_share':ctr_net_share_over_gross_share,
+            'ctr_net_cashflow':ctr_net_cashflow,
+            'ctr_net_cashflow_over_gross_rev':ctr_net_cashflow_over_gross_rev,
+            'ctr_npv':ctr_npv,
+            'ctr_irr':ctr_irr,
+            'ctr_pot':pot,
+            'ctr_pv_ratio':pv_ratio,
+            'ctr_pi':pi,
+            'gov_gross_share':gov_gross_share,
+            'gov_ftp_share':gov_ftp_share,
+            'gov_ddmo':gov_ddmo,
+            'gov_tax_income':gov_tax_income,
+            'gov_take':gov_take,
+            'gov_take_over_gross_rev':gov_take_over_gross_rev,
+            'gov_take_npv':gov_take_npv,
+            'undepreciated_asset_oil':undepreciated_asset_oil,
+            'undepreciated_asset_gas':undepreciated_asset_gas,
+            'undepreciated_asset_total':undepreciated_asset_total,
+            'total_indirect_taxes':total_indirect_taxes,
+            'oil_indirect_taxes':oil_indirect_taxes,
+            'gas_indirect_taxes':gas_indirect_taxes,
+        }
 
