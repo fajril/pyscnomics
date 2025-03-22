@@ -483,8 +483,8 @@ class Summary:
                 if key == 'years':
                     pass
                 elif key == 'oil_undepreciated_asset' or key == 'gas_undepreciated_asset' or key == 'consolidated_undepreciated_asset':
-                    undepreciated = np.zeros_like(cntrct['years'])
-                    undepreciated[-1] = cntrct[key]
+                    undepreciated = np.zeros_like(self.years)
+                    undepreciated[len(cntrct['years'])-1] = cntrct[key]
                     cntrct[key] = undepreciated
                 else:
                     cntrct[key] = self._map_to_ref_years(
