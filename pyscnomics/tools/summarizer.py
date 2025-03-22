@@ -242,6 +242,12 @@ class Summary:
             min_year, max_year + 1, 1
         )
 
+        # Condition when the reference year is None
+        if self.reference_year is None:
+            self.reference_year = min_year
+        else:
+            pass
+
     def _get_lifting_dict(self):
         return {
             idx: {
@@ -915,8 +921,10 @@ class Summary:
         gross_revenue = gross_revenue_oil + gross_revenue_gas
 
         # WAP Group
-        oil_wap = gross_revenue_oil / lifting_oil
-        gas_wap = gross_revenue_gas / lifting_gas
+        oil_wap = np.divide(gross_revenue_oil, lifting_oil,
+                            where=lifting_oil != 0)
+        gas_wap = np.divide(gross_revenue_gas, lifting_gas,
+                            where=lifting_gas != 0)
 
         # Contractor and Government Gross share
         ctr_gross_share = np.sum(self.consolidated_ctr_share)
