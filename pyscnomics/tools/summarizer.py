@@ -69,7 +69,7 @@ class ExecutiveSummary:
 
 @dataclass
 class Summary:
-    contract: Tuple[Union[BaseProject, CostRecovery, GrossSplit, Transition]]
+    contract: Tuple[Union[BaseProject, CostRecovery, GrossSplit, Transition], ...]
     reference_year: int | None = field(default=None)
     inflation_rate: float = field(default=0.0)
     discount_rate: float = field(default=0.1)
