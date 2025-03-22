@@ -974,13 +974,13 @@ class Summary:
         ctr_irr = self.irr
 
         # Government Indicator
-        gov_ftp_share = self.consolidated_gov_ftp
-        gov_equity_share = self.consolidated_gov_share
-        gov_ddmo = self.consolidated_ddmo
-        gov_tax_income = self.consolidated_effective_tax_payment
-        gov_take = self.consolidated_government_take
+        gov_ftp_share = np.sum(self.consolidated_gov_ftp)
+        gov_equity_share = np.sum(self.consolidated_gov_share)
+        gov_ddmo = np.sum(self.consolidated_ddmo)
+        gov_tax_income = np.sum(self.consolidated_effective_tax_payment)
+        gov_take = np.sum(self.consolidated_government_take)
         gov_take_over_gross_rev = gov_take / gross_revenue
-        oil_indirect_taxes = (
+        oil_indirect_taxes = np.sum(
                 self.oil_capital_indirect_tax +
                 self.oil_intangible_indirect_tax +
                 self.oil_opex_indirect_tax +
@@ -988,7 +988,7 @@ class Summary:
                 self.oil_lbt_indirect_tax +
                 self.oil_cost_of_sales_indirect_tax
         )
-        gas_indirect_taxes = (
+        gas_indirect_taxes = np.sum(
                 self.gas_capital_indirect_tax +
                 self.gas_intangible_indirect_tax +
                 self.gas_opex_indirect_tax +
@@ -999,8 +999,8 @@ class Summary:
         total_indirect_taxes = oil_indirect_taxes + gas_indirect_taxes
 
         # Undepreciated Asset
-        undepreciated_asset_oil = self.oil_undepreciated_asset
-        undepreciated_asset_gas = self.gas_undepreciated_asset
+        undepreciated_asset_oil = np.sum(self.oil_undepreciated_asset)
+        undepreciated_asset_gas = np.sum(self.gas_undepreciated_asset)
         undepreciated_asset_total = undepreciated_asset_oil + undepreciated_asset_gas
 
         return {
