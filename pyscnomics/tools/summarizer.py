@@ -944,19 +944,27 @@ class Summary:
 
         # Cost recovery or Deductible Cost
         costrecovery_or_deductible_cost = np.sum(self.consolidated_costrecovery_or_deductible_cost)
-        cost_recovery_over_gross_rev = costrecovery_or_deductible_cost / gross_revenue
+        cost_recovery_over_gross_rev =  np.divide(
+            costrecovery_or_deductible_cost, gross_revenue,
+            where=gross_revenue != 0)
 
         # Unrecoverable Cost
         unrec_cost = np.sum(self.consolidated_unrecoverable_cost_or_carryforward_cost)
-        unrec_over_gross_rev = unrec_cost/ gross_revenue
+        unrec_over_gross_rev = np.divide(
+            unrec_cost, gross_revenue,
+            where=gross_revenue != 0)
 
         # Contractor Net Share
         ctr_share = np.sum(self.consolidated_ctr_share)
-        ctr_net_share_over_gross_share = ctr_share / gross_revenue
+        ctr_net_share_over_gross_share = np.divide(
+            ctr_share, gross_revenue,
+            where=gross_revenue != 0)
 
         # Contractor Net Cashflow
         ctr_net_cashflow = np.sum(self.consolidated_ctr_cashflow)
-        ctr_net_cashflow_over_gross_rev = ctr_net_cashflow / gross_revenue
+        ctr_net_cashflow_over_gross_rev = np.divide(
+            ctr_net_cashflow, gross_revenue,
+            where=gross_revenue != 0)
 
         # Contractor NPV
         self._calc_npv()
@@ -987,7 +995,12 @@ class Summary:
         gov_ddmo = np.sum(self.consolidated_ddmo)
         gov_tax_income = np.sum(self.consolidated_effective_tax_payment)
         gov_take = np.sum(self.consolidated_government_take)
-        gov_take_over_gross_rev = gov_take / gross_revenue
+        result_zeros = np.zeros_like(gov_take, dtype=float)
+        gov_take_over_gross_rev = np.divide(
+            gov_take, gross_revenue,
+            out=result_zeros,
+            where=gross_revenue != 0)
+
         oil_indirect_taxes = np.sum(
                 self.oil_capital_indirect_tax +
                 self.oil_intangible_indirect_tax +
