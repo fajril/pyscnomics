@@ -482,6 +482,10 @@ class Summary:
             for key in cntrct:
                 if key == 'years':
                     pass
+                elif key == 'oil_undepreciated_asset' or key == 'gas_undepreciated_asset' or key == 'consolidated_undepreciated_asset':
+                    undepreciated = np.zeros_like(cntrct['years'])
+                    undepreciated[-1] = cntrct[key]
+                    cntrct[key] = undepreciated
                 else:
                     cntrct[key] = self._map_to_ref_years(
                         ref_years=self.years,
@@ -707,9 +711,11 @@ class Summary:
 
     def case_combine(self):
         self.run(mode='combine')
+        return self._to_dataframe()
 
     def case_incremental(self):
         self.run(mode='incremental')
+        return self._to_dataframe()
 
     def _calc_npv(self):
         # NPV Calculation for SKK Real Terms
