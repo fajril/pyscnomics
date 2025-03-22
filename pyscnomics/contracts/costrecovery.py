@@ -855,26 +855,30 @@ class CostRecovery(BaseProject):
 
         return unpaid_tax, ctr_tax
 
-    def _get_sunk_cost(self, sunk_cost_reference_year: int):
-        oil_cost_raw = (
-                self._oil_capital_expenditures_post_tax
-                + self._oil_non_capital
-        )
-        self._oil_sunk_cost = oil_cost_raw[
-                              : (sunk_cost_reference_year - self.start_date.year + 1)
-                              ]
-
-        gas_cost_raw = (
-                self._gas_capital_expenditures_post_tax
-                + self._gas_non_capital
-        )
-        self._gas_sunk_cost = gas_cost_raw[
-                              : (sunk_cost_reference_year - self.start_date.year + 1)
-                              ]
-
-        if sunk_cost_reference_year == self.start_date.year:
-            self._oil_sunk_cost = np.zeros_like(self.project_years)
-            self._gas_sunk_cost = np.zeros_like(self.project_years)
+    # Todo (20 March 2025): Fix the sunk cost calculation method
+    # def _get_sunk_cost(self, sunk_cost_reference_year: int):
+    #     oil_cost_raw = (
+    #             self._oil_capital_expenditures_post_tax
+    #             + self._oil_non_capital
+    #     )
+    #     self._oil_sunk_cost = oil_cost_raw[
+    #                           : (sunk_cost_reference_year - self.start_date.year + 1)
+    #                           ]
+    #     self._oil_sunk_cost = np.concatenate((self._oil_sunk_cost, np.zeros(self.project_years[-1] - sunk_cost_reference_year)))
+    #
+    #     gas_cost_raw = (
+    #             self._gas_capital_expenditures_post_tax
+    #             + self._gas_non_capital
+    #     )
+    #     self._gas_sunk_cost = gas_cost_raw[
+    #                           : (sunk_cost_reference_year - self.start_date.year + 1)
+    #                           ]
+    #     self._gas_sunk_cost = np.concatenate(
+    #         (self._gas_sunk_cost, np.zeros(self.project_years[-1] - sunk_cost_reference_year)))
+    #
+    #     if sunk_cost_reference_year == self.start_date.year:
+    #         self._oil_sunk_cost = np.zeros_like(self.project_years)
+    #         self._gas_sunk_cost = np.zeros_like(self.project_years)
 
     def _apply_cost_of_sales(self,
                              oil_applied: bool = False,

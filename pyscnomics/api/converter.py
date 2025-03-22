@@ -37,8 +37,8 @@ class SetupBM(BaseModel):
     """
     start_date: str | int = "01/01/2010"
     end_date: str | int = "31/12/2045"
-    oil_onstream_date: str | int | None = "01/01/2023"
-    gas_onstream_date: str | int | None = "01/01/2023"
+    oil_onstream_date: str | int | None = None
+    gas_onstream_date: str | int | None = None
 
 
 class SummaryArgumentsBM(BaseModel):
@@ -391,8 +391,8 @@ class OpexBM(GeneralCostBM):
         Cost associated with production of a particular fluid type.
     """
     fixed_cost: list[float] | list[int]
-    prod_rate: list[float] | list[int]
-    cost_per_volume: list[float] | list[int]
+    prod_rate: list[float] | list[int] = Field(default=None)
+    cost_per_volume: list[float] | list[int] = Field(default=None)
 
     cost: list[float] | list[int] = Field(default=None, exclude=True)
 
@@ -914,15 +914,15 @@ def convert_dict_to_capital(data_raw: dict) -> tuple | None:
             end_year=data_raw[key]['end_year'],
             cost=np.array(data_raw[key]['cost']),
             expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
-            cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
-            description=data_raw[key]['description'],
-            tax_portion=np.array(data_raw[key]['tax_portion'], dtype=float),
-            tax_discount=np.array(data_raw[key]['tax_discount'], dtype=float),
-            pis_year=np.array(data_raw[key]['pis_year']),
-            salvage_value=np.array(data_raw[key]['salvage_value']),
-            useful_life=np.array(data_raw[key]['useful_life']),
-            depreciation_factor=np.array(data_raw[key]['depreciation_factor']),
-            is_ic_applied=data_raw[key]['is_ic_applied'],
+            cost_allocation=None if 'cost_allocation' not in data_raw[key] or data_raw[key]['cost_allocation'] is None else read_fluid_type(fluid=data_raw[key]['cost_allocation']),
+            description=None if 'description' not in data_raw[key] or data_raw[key]['description'] is None else data_raw[key]['description'],
+            tax_portion=None if 'tax_portion' not in data_raw[key] or data_raw[key]['tax_portion'] is None else np.array(data_raw[key]['tax_portion'], dtype=float),
+            tax_discount=0.0 if 'tax_discount' not in data_raw[key] or data_raw[key]['tax_discount'] is None else np.array(data_raw[key]['tax_discount'], dtype=float),
+            pis_year= None if 'pis_year' not in data_raw[key] or data_raw[key]['pis_year'] is None else np.array(data_raw[key]['pis_year']),
+            salvage_value= None if 'salvage_value' not in data_raw[key] or data_raw[key]['salvage_value'] is None else np.array(data_raw[key]['salvage_value']),
+            useful_life= None if 'useful_life' not in data_raw[key] or data_raw[key]['useful_life'] is None else np.array(data_raw[key]['useful_life']),
+            depreciation_factor= None if 'depreciation_factor' not in data_raw[key] or data_raw[key]['depreciation_factor'] is None else np.array(data_raw[key]['depreciation_factor']),
+            is_ic_applied=None if 'is_ic_applied' not in data_raw[key] or data_raw[key]['is_ic_applied'] is None else data_raw[key]['is_ic_applied'],
         )
         for key in data_raw.keys()
     ]) if data_raw is not None else None
@@ -950,11 +950,10 @@ def convert_dict_to_intangible(data_raw: dict) -> tuple | None:
             end_year=data_raw[key]['end_year'],
             cost=np.array(data_raw[key]['cost'], dtype=float),
             expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
-            cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
-            description=data_raw[key]['description'],
-            tax_portion=np.array(data_raw[key]['tax_portion'], dtype=float),
-            tax_discount=np.array(data_raw[key]['tax_discount'], dtype=float),
-        )
+            cost_allocation=None if 'cost_allocation' not in data_raw[key] or data_raw[key]['cost_allocation'] is None else read_fluid_type(fluid=data_raw[key]['cost_allocation']),
+            description=None if 'description' not in data_raw[key] or data_raw[key]['description'] is None else data_raw[key]['description'],
+            tax_portion=None if 'tax_portion' not in data_raw[key] or data_raw[key]['tax_portion'] is None else np.array(data_raw[key]['tax_portion'], dtype=float),
+            tax_discount=0.0 if 'tax_discount' not in data_raw[key] or data_raw[key]['tax_discount'] is None else np.array(data_raw[key]['tax_discount'], dtype=float),)
         for key in data_raw.keys()
     ]) if data_raw is not None else None
 
@@ -980,13 +979,13 @@ def convert_dict_to_opex(data_raw: dict) -> tuple | None:
             start_year=data_raw[key]['start_year'],
             end_year=data_raw[key]['end_year'],
             expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
-            cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
-            description=data_raw[key]['description'],
-            tax_portion=np.array(data_raw[key]['tax_portion'], dtype=float),
-            tax_discount=np.array(data_raw[key]['tax_discount'], dtype=float),
-            fixed_cost=np.array(data_raw[key]['fixed_cost'], dtype=float),
-            prod_rate=np.array(data_raw[key]['prod_rate'], dtype=float),
-            cost_per_volume=np.array(data_raw[key]['cost_per_volume'], dtype=float),
+            cost_allocation=None if 'cost_allocation' not in data_raw[key] or data_raw[key]['cost_allocation'] is None else read_fluid_type(fluid=data_raw[key]['cost_allocation']),
+            description=None if 'description' not in data_raw[key] or data_raw[key]['description'] is None else data_raw[key]['description'],
+            tax_portion=None if 'tax_portion' not in data_raw[key] or data_raw[key]['tax_portion'] is None else np.array(data_raw[key]['tax_portion'], dtype=float),
+            tax_discount=0.0 if 'tax_discount' not in data_raw[key] or data_raw[key]['tax_discount'] is None else np.array(data_raw[key]['tax_discount'], dtype=float),
+            fixed_cost=np.array(data_raw[key]['fixed_cost'], dtype=float) if 'fixed_cost' in data_raw[key] else None,
+            prod_rate=None if 'prod_rate' not in data_raw[key] or data_raw[key]['prod_rate'] is None else np.array(data_raw[key]['prod_rate'], dtype=float),
+            cost_per_volume=None if 'cost_per_volume' not in data_raw[key] or data_raw[key]['cost_per_volume'] is None else np.array(data_raw[key]['cost_per_volume'], dtype=float),
         )
         for key in data_raw.keys()
     ]) if data_raw is not None else None
@@ -1014,14 +1013,12 @@ def convert_dict_to_asr(data_raw: dict) -> tuple:
             end_year=data_raw[key]['end_year'],
             cost=np.array(data_raw[key]['cost'], dtype=float),
             expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
-            cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
-            description=data_raw[key]['description'],
-            tax_portion=np.array(data_raw[key]['tax_portion'], dtype=float),
-            tax_discount=np.array(data_raw[key]['tax_discount'], dtype=float),
-            final_year=np.array(data_raw[key]['final_year'], dtype=float) if data_raw[key]['final_year'] is not None else None,
-            future_rate=np.array(
-                data_raw[key]['future_rate'],
-                dtype=float) if isinstance(data_raw[key]['future_rate'], list) else data_raw[key]['future_rate'],
+            cost_allocation=None if 'cost_allocation' not in data_raw[key] or data_raw[key]['cost_allocation'] is None else read_fluid_type(fluid=data_raw[key]['cost_allocation']),
+            description=None if 'description' not in data_raw[key] or data_raw[key]['description'] is None else data_raw[key]['description'],
+            tax_portion=None if 'tax_portion' not in data_raw[key] or data_raw[key]['tax_portion'] is None else np.array(data_raw[key]['tax_portion'], dtype=float),
+            tax_discount=0.0 if 'tax_discount' not in data_raw[key] or data_raw[key]['tax_discount'] is None else np.array(data_raw[key]['tax_discount'], dtype=float),
+            final_year= None if 'final_year' not in data_raw[key] or data_raw[key]['final_year'] is None else np.array(data_raw[key]['final_year'], dtype=float),
+            future_rate=None if 'future_rate' not in data_raw[key] or data_raw[key]['future_rate'] is None else np.array(data_raw[key]['future_rate'],dtype=float),
         )
         for key in data_raw.keys()
     ]) if data_raw is not None else None
@@ -1049,10 +1046,10 @@ def convert_dict_to_lbt(data_raw: dict) -> tuple:
             end_year=data_raw[key]['end_year'],
             cost=np.array(data_raw[key]['cost'], dtype=float)  if data_raw[key]['cost'] is not None else None,
             expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
-            cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
-            description=data_raw[key]['description'],
-            tax_portion=np.array(data_raw[key]['tax_portion'], dtype=float),
-            tax_discount=np.array(data_raw[key]['tax_discount'], dtype=float),
+            cost_allocation=None if 'cost_allocation' not in data_raw[key] or data_raw[key]['cost_allocation'] is None else read_fluid_type(fluid=data_raw[key]['cost_allocation']),
+            description=None if 'description' not in data_raw[key] or data_raw[key]['description'] is None else data_raw[key]['description'],
+            tax_portion=None if 'tax_portion' not in data_raw[key] or data_raw[key]['tax_portion'] is None else np.array(data_raw[key]['tax_portion'], dtype=float),
+            tax_discount=0.0 if 'tax_discount' not in data_raw[key] or data_raw[key]['tax_discount'] is None else np.array(data_raw[key]['tax_discount'], dtype=float),
             final_year=np.array(data_raw[key]['final_year'], dtype=float) if data_raw[key]['final_year'] is not None else None,
             utilized_land_area=np.array(data_raw[key]['utilized_land_area'], dtype=float) if data_raw[key]['utilized_land_area'] is not None else None,
             utilized_building_area=np.array(data_raw[key]['utilized_building_area'], dtype=float) if data_raw[key]['utilized_building_area'] is not None else None,
@@ -1086,10 +1083,10 @@ def convert_dict_to_cost_of_sales(data_raw: dict) -> tuple:
             end_year=data_raw[key]['end_year'],
             cost=np.array(data_raw[key]['cost'], dtype=float),
             expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
-            cost_allocation=read_fluid_type(fluid=data_raw[key]['cost_allocation']),
-            description=data_raw[key]['description'],
-            tax_portion=np.array(data_raw[key]['tax_portion'], dtype=float),
-            tax_discount=np.array(data_raw[key]['tax_discount'], dtype=float),
+            cost_allocation=None if 'cost_allocation' not in data_raw[key] or data_raw[key]['cost_allocation'] is None else read_fluid_type(fluid=data_raw[key]['cost_allocation']),
+            description=None if 'description' not in data_raw[key] or data_raw[key]['description'] is None else data_raw[key]['description'],
+            tax_portion=None if 'tax_portion' not in data_raw[key] or data_raw[key]['tax_portion'] is None else np.array(data_raw[key]['tax_portion'], dtype=float),
+            tax_discount=0.0 if 'tax_discount' not in data_raw[key] or data_raw[key]['tax_discount'] is None else np.array(data_raw[key]['tax_discount'], dtype=float),
         )
         for key in data_raw.keys()
     ]) if data_raw is not None else None

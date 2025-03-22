@@ -103,15 +103,15 @@ def get_setup_dict(data: dict) -> tuple:
     # Parsing the contract setup into each corresponding variables
     start_date = convert_str_to_date(str_object=data['setup']['start_date'])
     end_date = convert_str_to_date(str_object=data['setup']['end_date'])
-    oil_onstream_date = convert_str_to_date(str_object=data['setup']['oil_onstream_date'])
-    gas_onstream_date = convert_str_to_date(str_object=data['setup']['gas_onstream_date'])
-    lifting = convert_dict_to_lifting(data_raw=data)
-    capital = convert_dict_to_capital(data_raw=data['capital'])
-    intangible = convert_dict_to_intangible(data_raw=data['intangible'])
-    opex = convert_dict_to_opex(data_raw=data['opex'])
-    asr = convert_dict_to_asr(data_raw=data['asr'])
-    lbt = convert_dict_to_lbt(data_raw=data['lbt'])
-    cost_of_sales = convert_dict_to_cost_of_sales(data_raw=data['cost_of_sales'])
+    oil_onstream_date = convert_str_to_date(str_object=data['setup'].get('oil_onstream_date', None))
+    gas_onstream_date = convert_str_to_date(str_object=data['setup'].get('gas_onstream_date', None))
+    lifting = convert_dict_to_lifting(data_raw=data) if 'lifting' in data else None
+    capital = convert_dict_to_capital(data_raw=data['capital']) if 'capital' in data else None
+    intangible = convert_dict_to_intangible(data_raw=data['intangible']) if 'intangible' in data else None
+    opex = convert_dict_to_opex(data_raw=data['opex']) if 'opex' in data else None
+    asr = convert_dict_to_asr(data_raw=data['asr']) if 'asr' in data else None
+    lbt = convert_dict_to_lbt(data_raw=data['lbt']) if 'lbt' in data else None
+    cost_of_sales = convert_dict_to_cost_of_sales(data_raw=data['cost_of_sales']) if 'cost_of_sales' in data else None
     return start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, capital, intangible, opex, asr, lbt, cost_of_sales
 
 

@@ -2416,61 +2416,30 @@ class BaseProject:
                 f"Other Revenue Selection is not available {co2_revenue} "
             )
 
-    def _get_sunk_cost(self, sunk_cost_reference_year: int) -> None:
-        """
-        Calculate and update the sunk costs for oil and gas up to a specified reference year.
-
-        This method computes the sunk costs for both oil and gas by adding capital and non-capital
-        expenditures up to the given `sunk_cost_reference_year`. The method updates internal
-        attributes for oil and gas sunk costs.
-
-        The sunk costs are calculated as follows:
-        -   For oil: `self._oil_sunk_cost` is updated with the sum of
-            `self._oil_capital_expenditures_post_tax` and `self._oil_non_capital`
-            up to the specified year.
-        -   For gas: `self._gas_sunk_cost` is updated similarly with
-            `self._gas_capital_expenditures_post_tax` and `self._gas_non_capital`.
-
-        If the `sunk_cost_reference_year` is the same as the project's start year, both oil and gas
-        sunk costs are set to zero.
-
-        Parameters
-        ----------
-        sunk_cost_reference_year : int
-            The year up to which the sunk costs for oil and gas should be calculated. It must be
-            greater than or equal to the project's start year.
-
-        Attributes Updated
-        ------------------
-        self._oil_sunk_cost : np.ndarray
-            The calculated sunk costs for oil up to the specified reference year.
-        self._gas_sunk_cost : np.ndarray
-            The calculated sunk costs for gas up to the specified reference year.
-        """
-
-        # Oil sunk cost
+    def _get_sunk_cost(self, sunk_cost_reference_year: int):
         oil_cost_raw = (
-            self._oil_capital_expenditures_post_tax
-            + self._oil_non_capital
+                self._oil_capital_expenditures_post_tax
+                + self._oil_non_capital
         )
-
         self._oil_sunk_cost = oil_cost_raw[
                               : (sunk_cost_reference_year - self.start_date.year + 1)
                               ]
+        self._oil_sunk_cost = np.concatenate(
+            (self._oil_sunk_cost, np.zeros(self.project_years[-1] - sunk_cost_reference_year)))
 
-        # Gas sunk cost
         gas_cost_raw = (
-            self._gas_capital_expenditures_post_tax
-            + self._gas_non_capital
+                self._gas_capital_expenditures_post_tax
+                + self._gas_non_capital
         )
-
         self._gas_sunk_cost = gas_cost_raw[
                               : (sunk_cost_reference_year - self.start_date.year + 1)
                               ]
+        self._gas_sunk_cost = np.concatenate(
+            (self._gas_sunk_cost, np.zeros(self.project_years[-1] - sunk_cost_reference_year)))
 
         if sunk_cost_reference_year == self.start_date.year:
-            self._oil_sunk_cost = np.zeros(1)
-            self._gas_sunk_cost = np.zeros(1)
+            self._oil_sunk_cost = np.zeros_like(self.project_years)
+            self._gas_sunk_cost = np.zeros_like(self.project_years)
 
     def run(
         self,
