@@ -1066,3 +1066,6 @@ class Summary:
             'gas_indirect_taxes':gas_indirect_taxes,
         }
 
+    def get_cashflow_table(self):
+        return self._to_dataframe()
+
