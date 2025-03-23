@@ -200,6 +200,7 @@ class GrossSplitRegime(Enum):
     PERMEN_ESDM_52_2017 = 'Peraturan Menteri ESDM No. 52 Tahun 2017'
     PERMEN_ESDM_20_2019 = 'Peraturan Menteri ESDM No. 20 Tahun 2019'
     PERMEN_ESDM_12_2020 = 'Peraturan Menteri ESDM No. 12 Tahun 2020'
+    PERMEN_ESDM_13_2024 = 'Peraturan Menteri ESDM No. 13 Tahun 2024'
 
 
 class DiscountingMode(Enum):
@@ -449,27 +450,27 @@ class VariableSplit522017:
         """
         Field Status variable split component.
         """
-        POD_I = 'POD I'
-        POD_II = 'POD II'
-        NO_POD = 'No POD'
+        POD_I = 'Plan of Development I'
+        POD_II = 'Plan of Development II'
+        NO_POD = 'No Plan of Development'
 
     class FieldLocation(Enum):
         """
         Field Location variable split component.
         """
-        ONSHORE = 'Onshore'
-        OFFSHORE_0_UNTIL_LESSEQUAL_20 = 'Offshore (0<h<=20)'
-        OFFSHORE_20_UNTIL_LESSEQUAL_50 = 'Offshore (20<h<=50)'
-        OFFSHORE_50_UNTIL_LESSEQUAL_150 = 'Offshore (50<h<=150)'
-        OFFSHORE_150_UNTIL_LESSEQUAL_1000 = 'Offshore (150<h<=1000)'
-        OFFSHORE_GREATERTHAN_1000 = 'Offshore (h>1000)'
+        ONSHORE = 'On Shore'
+        OFFSHORE_0_UNTIL_LESSEQUAL_20 = 'Offshore 0 < h <= 20'
+        OFFSHORE_20_UNTIL_LESSEQUAL_50 = 'Offshore 20 < h <= 50'
+        OFFSHORE_50_UNTIL_LESSEQUAL_150 = 'Offshore 50 < h <= 150'
+        OFFSHORE_150_UNTIL_LESSEQUAL_1000 = 'Offshore 150 < h <= 1000'
+        OFFSHORE_GREATERTHAN_1000 = 'Offshore h > 1000'
 
     class ReservoirDepth(Enum):
         """
         Reservoir Depth variable split component.
         """
-        LESSEQUAL_2500 = '<=2500'
-        GREATERTHAN_2500 = '>2500'
+        LESSEQUAL_2500 = 'Reservoir Depth <=2500'
+        GREATERTHAN_2500 = 'Reservoir Depth >2500'
 
     class InfrastructureAvailability(Enum):
         """
@@ -490,38 +491,38 @@ class VariableSplit522017:
         """
         CO2 Content variable split component.
         """
-        LESSTHAN_5 = '<5'
-        EQUAL_5_UNTIL_LESSTHAN_10 = '5<=x<10'
-        EQUAL_10_UNTIL_LESSTHAN_20 = '10<=x<20'
-        EQUAL_20_UNTIL_LESSTHAN_40 = '20<=x<40'
-        EQUAL_40_UNTIL_LESSTHAN_60 = '40<=x<60'
-        EQUALGREATERTHAN_60 = 'x>=60'
+        LESSTHAN_5 = '< 5'
+        EQUAL_5_UNTIL_LESSTHAN_10 = '5 <= x < 10'
+        EQUAL_10_UNTIL_LESSTHAN_20 = '10 <= x < 20'
+        EQUAL_20_UNTIL_LESSTHAN_40 = '20 <= x < 40'
+        EQUAL_40_UNTIL_LESSTHAN_60 = '40 <= x < 60'
+        EQUALGREATERTHAN_60 = '60 <= x'
 
     class H2SContent(Enum):
         """
         H2S Content variable split component.
         """
         LESSTHAN_100 = '<100'
-        EQUAL_100_UNTIL_LESSTHAN_1000 = '100<=x<1000'
-        EQUAL_1000_UNTIL_LESSTHAN_2000 = '1000<=x<2000'
-        EQUAL_2000_UNTIL_LESSTHAN_3000 = '2000<=x<3000'
-        EQUAL_3000_UNTIL_LESSTHAN_4000 = '3000<=x<4000'
-        EQUALGREATERTHAN_4000 = 'x>=4000'
+        EQUAL_100_UNTIL_LESSTHAN_1000 = '100 <= x < 1000'
+        EQUAL_1000_UNTIL_LESSTHAN_2000 = '1000 <= x < 2000'
+        EQUAL_2000_UNTIL_LESSTHAN_3000 = '2000 <= x < 3000'
+        EQUAL_3000_UNTIL_LESSTHAN_4000 = '3000 <= x < 4000'
+        EQUALGREATERTHAN_4000 = '4000 <= x'
 
     class APIOil(Enum):
         """
         API Density variable split component.
         """
-        LESSTHAN_25 = '<25'
-        EQUALGREATERTHAN_25 = '>=25'
+        LESSTHAN_25 = '< 25'
+        EQUALGREATERTHAN_25 = '25 <= x'
 
     class DomesticUse(Enum):
         """
         Domestic Use variable split component.
         """
-        EQUAL_30_UNTIL_LESSTHAN_50 = '30<=x<50'
-        EQUAL_50_UNTIL_LESSTHAN_70 = '50<=x<70'
-        EQUAL_70_UNTIL_LESSTHAN_100 = '70<=x<100'
+        EQUAL_30_UNTIL_LESSTHAN_50 = '30 <= x < 50'
+        EQUAL_50_UNTIL_LESSTHAN_70 = '50 <= x < 70'
+        EQUAL_70_UNTIL_LESSTHAN_100 = '70 <= x < 100'
 
     class ProductionStage(Enum):
         """
@@ -540,28 +541,28 @@ class VariableSplit082017:
         """
         Field Status variable split component.
         """
-        POD_I = 'POD I'
-        POD_II = 'POD II'
-        POFD = 'POFD'
-        NO_POD = 'No POD'
+        POD_I = 'Plan of Development I'
+        POD_II = 'Plan of Development II'
+        POFD = 'Plan of Further Development'
+        NO_POD = 'No Plan of Development'
 
     class FieldLocation(Enum):
         """
         Field Location variable split component.
         """
-        ONSHORE = 'OnShore'
-        OFFSHORE_0_UNTIL_LESSEQUAL_20 = 'Offshore (0<h<=20)'
-        OFFSHORE_20_UNTIL_LESSEQUAL_50 = 'Offshore (20<h<=50)'
-        OFFSHORE_50_UNTIL_LESSEQUAL_150 = 'Offshore (50<h<=150)'
-        OFFSHORE_150_UNTIL_LESSEQUAL_1000 = 'Offshore (150<h<=1000)'
-        OFFSHORE_GREATERTHAN_1000 = 'Offshore (h>1000)'
+        ONSHORE = 'On Shore'
+        OFFSHORE_0_UNTIL_LESSEQUAL_20 = 'Offshore 0 < h <= 20'
+        OFFSHORE_20_UNTIL_LESSEQUAL_50 = 'Offshore 20 < h <= 50'
+        OFFSHORE_50_UNTIL_LESSEQUAL_150 = 'Offshore 50 < h <= 150'
+        OFFSHORE_150_UNTIL_LESSEQUAL_1000 = 'Offshore 150 < h <= 1000'
+        OFFSHORE_GREATERTHAN_1000 = 'Offshore h > 1000'
 
     class ReservoirDepth(Enum):
         """
         Reservoir Depth variable split component.
         """
-        LESSEQUAL_2500 = '<=2500'
-        GREATERTHAN_2500 = '>2500'
+        LESSEQUAL_2500 = 'Reservoir Depth <=2500'
+        GREATERTHAN_2500 = 'Reservoir Depth >2500'
 
     class InfrastructureAvailability(Enum):
         """
@@ -581,37 +582,37 @@ class VariableSplit082017:
         """
         CO2 Content variable split component.
         """
-        LESSTHAN_5 = '<5'
-        EQUAL_5_UNTIL_LESSTHAN_10 = '5<=x<10'
-        EQUAL_10_UNTIL_LESSTHAN_20 = '10<=x<20'
-        EQUAL_20_UNTIL_LESSTHAN_40 = '20<=x<40'
-        EQUAL_40_UNTIL_LESSTHAN_60 = '40<=x<60'
-        EQUALGREATERTHAN_60 = 'x>=60'
+        LESSTHAN_5 = '< 5'
+        EQUAL_5_UNTIL_LESSTHAN_10 = '5 <= x < 10'
+        EQUAL_10_UNTIL_LESSTHAN_20 = '10 <= x < 20'
+        EQUAL_20_UNTIL_LESSTHAN_40 = '20 <= x < 40'
+        EQUAL_40_UNTIL_LESSTHAN_60 = '40 <= x < 60'
+        EQUALGREATERTHAN_60 = '60 <= x'
 
     class H2SContent(Enum):
         """
         H2S Content variable split component.
         """
         LESSTHAN_100 = '<100'
-        EQUAL_100_UNTIL_LESSTHAN_300 = '100<=x<300'
-        EQUAL_300_UNTIL_LESSTHAN_500 = '300<=x<500'
-        EQUALGREATERTHAN_500 = 'x>=500'
+        EQUAL_100_UNTIL_LESSTHAN_300 = '100 <= x < 300'
+        EQUAL_300_UNTIL_LESSTHAN_500 = '1000 <= x < 500'
+        EQUALGREATERTHAN_500 = '500 <= x'
 
     class APIOil(Enum):
         """
         API Density variable split component.
         """
-        LESSTHAN_25 = '<25'
-        EQUALGREATERTHAN_25 = '>=25'
+        LESSTHAN_25 = '< 25'
+        EQUALGREATERTHAN_25 = '25 <= x'
 
     class DomesticUse(Enum):
         """
         Domestic Use variable split component.
         """
-        LESSTHAN_30 = '<30'
-        EQUAL_30_UNTIL_LESSTHAN_50 = '30<=x<50'
-        EQUAL_50_UNTIL_LESSTHAN_70 = '50<=x<70'
-        EQUAL_70_UNTIL_LESSTHAN_100 = '70<=x<100'
+        LESSTHAN_30 = '< 30'
+        EQUAL_30_UNTIL_LESSTHAN_50 = '30 <= x < 50'
+        EQUAL_50_UNTIL_LESSTHAN_70 = '50 <= x < 70'
+        EQUAL_70_UNTIL_LESSTHAN_100 = '70 <= x < 100'
 
     class ProductionStage(Enum):
         """
@@ -621,7 +622,34 @@ class VariableSplit082017:
         SECONDARY = 'Secondary'
         TERTIARY = 'Tertiary'
 
+class VariableSplit132024:
+    """
+    Variable Spilt Component for Gross Split No.13 Year 2024 Regime.
+    """
+    class InfrastructureAvailability(Enum):
+        """
+        Infrastructure Availability variable split component.
+        """
+        NOT_AVAILABLE = 'x = 0%'
+        PARTIALLY_AVAILABLE = '0 < x <= 50'
+        AVAILABLE = '50 < x'
 
+    class FieldReservesAmount(Enum):
+        """
+        Field Reserves Amount variable split component.
+        """
+        LOW = ' x < 20'
+        MEDIUM = '20 <= x <= 60'
+        HIGH = '60 < x'
+
+    class FieldLocation(Enum):
+        """
+        Field Location variable split component.
+        """
+        ONSHORE = '-'
+        SHALLOW_OFFSHORE = 'h < 500'
+        DEEP_OFFSHORE = '500 <= h <= 1000'
+        ULTRADEEP_OFFSHORE = '1000 < H'
 
 class ContractSample(Enum):
     """

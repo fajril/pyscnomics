@@ -82,12 +82,12 @@ class BaseProject:
     end_date: date
     oil_onstream_date: date = field(default=None)
     gas_onstream_date: date = field(default=None)
-    lifting: tuple[Lifting] = field(default=None)
-    capital_cost: tuple[CapitalCost] = field(default=None)
-    intangible_cost: tuple[Intangible] = field(default=None)
-    opex: tuple[OPEX] = field(default=None)
-    asr_cost: tuple[ASR] = field(default=None)
-    lbt_cost: tuple[LBT] = field(default=None)
+    lifting: tuple[Lifting, ...] = field(default=None)
+    capital_cost: tuple[CapitalCost, ...] = field(default=None)
+    intangible_cost: tuple[Intangible, ...] = field(default=None)
+    opex: tuple[OPEX, ...] = field(default=None)
+    asr_cost: tuple[ASR, ...] = field(default=None)
+    lbt_cost: tuple[LBT, ...] = field(default=None)
     cost_of_sales: tuple[CostOfSales] = field(default=None)
 
     # Attributes to be defined later (associated with project duration)

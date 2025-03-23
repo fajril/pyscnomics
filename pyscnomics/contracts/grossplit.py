@@ -15,7 +15,8 @@ from pyscnomics.econ.selection import (FluidType,
                                        OtherRevenue,
                                        InflationAppliedTo,
                                        VariableSplit522017,
-                                       VariableSplit082017)
+                                       VariableSplit082017,
+                                       VariableSplit132024)
 from pyscnomics.econ.results import CashFlow
 from pyscnomics.econ.depreciation import unit_of_production_rate
 
@@ -84,16 +85,17 @@ class GrossSplit(BaseProject):
     gas_dmo_holiday_duration: int
         The duration of the Gas's DMO Holiday in month unit.
     """
-    field_status: str | VariableSplit522017.FieldStatus | VariableSplit082017.FieldStatus = field(default='No POD')
-    field_loc: str | VariableSplit522017.FieldLocation | VariableSplit082017.FieldLocation = field(default='Onshore')
-    res_depth: str | VariableSplit522017.ReservoirDepth | VariableSplit082017.ReservoirDepth = field(default='<=2500')
-    infra_avail: str | VariableSplit522017.InfrastructureAvailability | VariableSplit082017.InfrastructureAvailability = field(default='Well Developed')
-    res_type: str | VariableSplit522017.ReservoirType | VariableSplit082017.ReservoirType = field(default='Conventional')
-    api_oil: str | VariableSplit522017.APIOil | VariableSplit082017.APIOil = field(default='<25')
-    domestic_use: str | VariableSplit522017.DomesticUse | VariableSplit082017.DomesticUse = field(default='50<=x<70')
-    prod_stage: str | VariableSplit522017.ProductionStage | VariableSplit082017.ProductionStage = field(default='Secondary')
-    co2_content: str | VariableSplit522017.CO2Content | VariableSplit082017.CO2Content = field(default='<5')
-    h2s_content: str | VariableSplit522017.H2SContent | VariableSplit082017.H2SContent = field(default='<100')
+    field_status: str | VariableSplit522017.FieldStatus | VariableSplit082017.FieldStatus | None = field(default='No POD')
+    field_loc: str | VariableSplit522017.FieldLocation | VariableSplit082017.FieldLocation | VariableSplit132024.FieldLocation= field(default='Onshore')
+    res_depth: str | VariableSplit522017.ReservoirDepth | VariableSplit082017.ReservoirDepth | None  = field(default='<=2500')
+    infra_avail: str | VariableSplit522017.InfrastructureAvailability | VariableSplit082017.InfrastructureAvailability | VariableSplit132024.InfrastructureAvailability = field(default='Well Developed')
+    res_type: str | VariableSplit522017.ReservoirType | VariableSplit082017.ReservoirType | None = field(default='Conventional')
+    api_oil: str | VariableSplit522017.APIOil | VariableSplit082017.APIOil | None = field(default='<25')
+    domestic_use: str | VariableSplit522017.DomesticUse | VariableSplit082017.DomesticUse | None = field(default='50<=x<70')
+    prod_stage: str | VariableSplit522017.ProductionStage | VariableSplit082017.ProductionStage | None = field(default='Secondary')
+    co2_content: str | VariableSplit522017.CO2Content | VariableSplit082017.CO2Content | None = field(default='<5')
+    h2s_content: str | VariableSplit522017.H2SContent | VariableSplit082017.H2SContent | None = field(default='<100')
+    field_reserves: str | VariableSplit132024.FieldReservesAmount | None = field(default=VariableSplit132024.FieldReservesAmount.HIGH)
 
     base_split_ctr_oil: float = field(default=0.43)
     base_split_ctr_gas: float = field(default=0.48)
@@ -134,6 +136,9 @@ class GrossSplit(BaseProject):
     _gas_gov_share: np.ndarray = field(default=None, init=False, repr=False)
     _oil_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
     _gas_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_amortization: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_amortization: np.ndarray = field(default=None, init=False, repr=False)
 
     _oil_cost_tobe_deducted: np.ndarray = field(default=None, init=False, repr=False)
     _gas_cost_tobe_deducted: np.ndarray = field(default=None, init=False, repr=False)
@@ -219,6 +224,8 @@ class GrossSplit(BaseProject):
     _consolidated_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
 
+    _consolidated_amortization: np.ndarray = field(default=None, init=False, repr=False)
+
     # Attributes fof containing the 100% contractor split warning
     _oil_ctr_split_prior_bracket: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ctr_split_prior_bracket: np.ndarray = field(default=None, init=False, repr=False)
@@ -289,9 +296,12 @@ class GrossSplit(BaseProject):
             variable_split_func = self._get_var_split_08_2017()
 
         elif (regime == GrossSplitRegime.PERMEN_ESDM_52_2017 or
-              GrossSplitRegime.PERMEN_ESDM_20_2019 or
-              GrossSplitRegime.PERMEN_ESDM_12_2020):
+              regime == GrossSplitRegime.PERMEN_ESDM_20_2019 or
+              regime == GrossSplitRegime.PERMEN_ESDM_12_2020):
             variable_split_func = self._get_var_split_52_2017()
+
+        elif regime == GrossSplitRegime.PERMEN_ESDM_13_2024:
+            variable_split_func = self._get_var_split_13_2024()
 
         else:
             raise GrossSplitException(
@@ -592,6 +602,66 @@ class GrossSplit(BaseProject):
 
         self._variable_split = float(np.sum(variable_split))
 
+    def _get_var_split_13_2024(self):
+        """
+        A function to get the value of Variable Split based on the given parameters.
+
+        Returns
+        -------
+        _variable_split: float
+            The value of variable split.
+        """
+        params_str = {
+            'field_loc': {
+                'onshore': 0.11,
+                'shallow_offshore': 0.12,
+                'deep_offshore': 0.13,
+                'ultradeep_offshore': 0.14,
+            },
+            'infra_avail': {
+                'available': 0.10,
+                'partially_available': 0.11,
+                'not_available': 0.13,
+            },
+            'field_reserves':{
+                'low': 0.14,
+                'medium': 0.13,
+                'high': 0.12,
+            }
+        }
+
+        params_enum = {
+            'field_loc': {
+                VariableSplit132024.FieldLocation.ONSHORE: 0.11,
+                VariableSplit132024.FieldLocation.SHALLOW_OFFSHORE: 0.12,
+                VariableSplit132024.FieldLocation.DEEP_OFFSHORE: 0.13,
+                VariableSplit132024.FieldLocation.ULTRADEEP_OFFSHORE: 0.14,
+            },
+            'infra_avail': {
+                VariableSplit132024.InfrastructureAvailability.AVAILABLE: 0.10,
+                VariableSplit132024.InfrastructureAvailability.PARTIALLY_AVAILABLE: 0.11,
+                VariableSplit132024.InfrastructureAvailability.NOT_AVAILABLE: 0.13,
+            },
+            'field_reserves':{
+                VariableSplit132024.FieldReservesAmount.LOW: 0.14,
+                VariableSplit132024.FieldReservesAmount.MEDIUM: 0.13,
+                VariableSplit132024.FieldReservesAmount.HIGH: 0.12,
+            }
+        }
+
+        source_dict = {
+            'field_loc': self.field_loc,
+            'infra_avail': self.infra_avail,
+            'field_reserves': self.field_reserves,
+        }
+
+        variable_split = np.array([
+            params_str[key][param] if isinstance(param, str) else params_enum[key][param]
+            for key, param in source_dict.items()
+        ], dtype=float)
+
+        self._variable_split = float(np.sum(variable_split))
+
     def _wrapper_progressive_split(
             self,
             fluid: FluidType,
@@ -608,6 +678,10 @@ class GrossSplit(BaseProject):
         elif regime == GrossSplitRegime.PERMEN_ESDM_8_2017:
             prog_price_split = self._get_prog_price_split_08_2017(fluid, price)
             prog_cum_split = self._get_prog_cum_split_08_2017(cum)
+
+        elif regime == GrossSplitRegime.PERMEN_ESDM_13_2024:
+            prog_price_split = self._get_prog_price_split_13_2024(fluid, price)
+            prog_cum_split = cum * 0 # Multiplied by 0 since there is no terms in the Regulation and filling the vectorization
 
         else:
             prog_price_split = ValueError('Not Recognized Gross Split Regime')
@@ -667,6 +741,45 @@ class GrossSplit(BaseProject):
             raise ValueError('Unknown fluid type')
 
         return ps
+
+    @staticmethod
+    def _get_prog_price_split_13_2024(
+            fluid: FluidType,
+            price: np.ndarray
+    ):
+        if fluid == FluidType.OIL:
+            if price <= 45:
+                ps = 0.05
+            elif 46 < price <= 65:
+                ps = -0.0025 * (price - 45) + 0.05 # In the form of y2 = m * (x2 - x1) + y1
+            elif 65 < price <= 85:
+                ps = 0.0
+            elif 85 < price <= 105:
+                ps = -0.0025 * (price - 85) + 0.0 # In the form of y2 = m * (x2 - x1) + y1
+            elif 105 < price:
+                ps = -0.05
+            else:
+                ps = 0
+
+        elif fluid == FluidType.GAS:
+            if price <= 4:
+                ps = 0.05
+            elif 4 < price <= 7:
+                ps = -0.0025 * (price - 4) + 0.05 # In the form of y2 = m * (x2 - x1) + y1
+            elif 7 < price <= 10:
+                ps = 0.0
+            elif 10 < price <= 13:
+                ps = -0.0025 * (price - 10) + 0.0 # In the form of y2 = m * (x2 - x1) + y1
+            elif 13 < price:
+                ps = -0.05
+            else:
+                ps = 0
+
+        else:
+            raise ValueError('Unknown fluid type')
+
+        return ps
+
 
     @staticmethod
     def _get_prog_cum_split_08_2017(
@@ -941,7 +1054,7 @@ class GrossSplit(BaseProject):
 
         # Amortization Cost
         if amortization is True:
-            self._oil_depreciation += unit_of_production_rate(
+            self._oil_amortization = unit_of_production_rate(
                 start_year_project=self.start_date.year,
                 cost=float(np.sum(self._oil_sunk_cost)),
                 prod=self._oil_lifting.get_lifting_rate_arr(),
@@ -949,7 +1062,7 @@ class GrossSplit(BaseProject):
                 salvage_value=0.0,
                 amortization_len=self.project_duration,)
 
-            self._gas_depreciation += unit_of_production_rate(
+            self._gas_amortization = unit_of_production_rate(
                 start_year_project=self.start_date.year,
                 cost=float(np.sum(self._gas_sunk_cost)),
                 prod=self._gas_lifting.get_lifting_rate_arr(),
@@ -957,8 +1070,12 @@ class GrossSplit(BaseProject):
                 salvage_value=0.0,
                 amortization_len=self.project_duration,)
 
+            self._oil_sunk_cost = np.zeros_like(self.project_years)
+            self._gas_sunk_cost = np.zeros_like(self.project_years)
+
         else:
-            pass
+            self._oil_amortization = np.zeros_like(self.project_years)
+            self._gas_amortization = np.zeros_like(self.project_years)
 
         # Variable Split. -> Will set the value of _variable_split
         self._wrapper_variable_split(regime=regime)
@@ -1236,6 +1353,8 @@ class GrossSplit(BaseProject):
         self._consolidated_asr_indirect_tax = self._oil_asr_indirect_tax + self._gas_asr_indirect_tax
         self._consolidated_lbt_indirect_tax = self._oil_lbt_indirect_tax + self._gas_lbt_indirect_tax
         self._consolidated_cost_of_sales_indirect_tax = self._oil_cost_of_sales_indirect_tax + self._gas_cost_of_sales_indirect_tax
+
+        self._consolidated_amortization = self._oil_amortization + self._gas_amortization
 
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue
         self._consolidated_capital_cost = self._oil_capital_expenditures_post_tax + self._gas_capital_expenditures_post_tax
