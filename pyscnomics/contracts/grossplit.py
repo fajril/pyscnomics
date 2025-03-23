@@ -613,7 +613,7 @@ class GrossSplit(BaseProject):
         """
         params_str = {
             'field_loc': {
-                'onshore': 0.11,
+                'Onshore': 0.11,
                 'shallow_offshore': 0.12,
                 'deep_offshore': 0.13,
                 'ultradeep_offshore': 0.14,

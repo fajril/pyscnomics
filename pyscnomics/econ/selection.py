@@ -631,14 +631,14 @@ class VariableSplit132024:
         Infrastructure Availability variable split component.
         """
         NOT_AVAILABLE = 'x = 0%'
-        PARTIALLY_AVAILABLE = '0 < x <= 50'
-        AVAILABLE = '50 < x'
+        PARTIALLY_AVAILABLE = '0 < x <= 50%'
+        AVAILABLE = '50% < x'
 
     class FieldReservesAmount(Enum):
         """
         Field Reserves Amount variable split component.
         """
-        LOW = ' x < 20'
+        LOW = 'x < 20'
         MEDIUM = '20 <= x <= 60'
         HIGH = '60 < x'
 
@@ -646,10 +646,10 @@ class VariableSplit132024:
         """
         Field Location variable split component.
         """
-        ONSHORE = '-'
+        ONSHORE = 'Onshore'
         SHALLOW_OFFSHORE = 'h < 500'
         DEEP_OFFSHORE = '500 <= h <= 1000'
-        ULTRADEEP_OFFSHORE = '1000 < H'
+        ULTRADEEP_OFFSHORE = '1000 < h'
 
 class ContractSample(Enum):
     """

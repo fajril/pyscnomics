@@ -201,16 +201,17 @@ class GrossSplitBM(BaseModel):
         The gas Domestic Market Obligation (DMO) Holiday duration.
 
     """
-    field_status: str = "No POD"
-    field_loc: str = "Onshore"
-    res_depth: str = "<=2500"
-    infra_avail: str = "Well Developed"
-    res_type: str = "Conventional"
-    api_oil: str = "<25"
-    domestic_use: str = "50<=x<70"
-    prod_stage: str = "Secondary"
-    co2_content: str = "<5"
-    h2s_content: str = "<100"
+    field_status: str = Field(default=None)
+    field_loc: str = Field(default=None)
+    res_depth: str = Field(default=None)
+    infra_avail: str = Field(default=None)
+    res_type: str = Field(default=None)
+    api_oil: str = Field(default=None)
+    domestic_use: str = Field(default=None)
+    prod_stage: str = Field(default=None)
+    co2_content: str = Field(default=None)
+    h2s_content: str = Field(default=None)
+    field_reserves: str = Field(default=None)
     base_split_ctr_oil: float | int = 0.43
     base_split_ctr_gas: float | int = 0.48
     split_ministry_disc: float | int = 0.08
@@ -1339,6 +1340,7 @@ def convert_grosssplitregime_to_enum(target: str) -> GrossSplitRegime:
         "PERMEN_ESDM_52_2017": GrossSplitRegime.PERMEN_ESDM_52_2017,
         "PERMEN_ESDM_20_2019": GrossSplitRegime.PERMEN_ESDM_20_2019,
         "PERMEN_ESDM_12_2020": GrossSplitRegime.PERMEN_ESDM_12_2020,
+        "PERMEN_ESDM_13_2024": GrossSplitRegime.PERMEN_ESDM_13_2024,
     }
 
     for key in attrs.keys():
