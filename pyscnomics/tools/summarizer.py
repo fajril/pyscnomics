@@ -712,7 +712,7 @@ class Summary:
         """Convert selected dataclass attributes into a pandas DataFrame."""
         exclude: list = ['contract', 'reference_year', 'inflation_rate', 'discount_rate', 'npv_mode',
                          'discounting_mode', 'profitability_discounted', ]
-        data_dict = {key: value for key, value in self.__dict__.items() if key not in exclude}
+        data_dict = {key: value.tolist() if isinstance(value, np.ndarray) else value for key, value in self.__dict__.items() if key not in exclude}
         return pd.DataFrame(data_dict)  # Convert filtered dictionary to DataFrame
 
     def case_combine(self):
