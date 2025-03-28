@@ -343,7 +343,6 @@ def npv_real_terms(
     # Condition when the cashflow is all zeros
     if np.all(cashflow == 0):
         return 0.0
-    
     reference_year_arr = np.full_like(cashflow, fill_value=reference_year)
     t_arr = cashflow_years - reference_year_arr
 
