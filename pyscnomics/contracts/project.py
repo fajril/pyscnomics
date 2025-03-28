@@ -2377,16 +2377,16 @@ class BaseProject:
             self._oil_revenue = self._oil_revenue + self._electricity_revenue
 
         elif electricity_revenue is OtherRevenue.ADDITION_TO_GAS_REVENUE:
-            self._gas_revenue = self._gas_revenue + self._sulfur_revenue
+            self._gas_revenue = self._gas_revenue + self._electricity_revenue
 
         elif electricity_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
             self._oil_opex_expenditures_post_tax = (
-                self._oil_opex_expenditures_post_tax - self._sulfur_revenue
+                self._oil_opex_expenditures_post_tax - self._electricity_revenue
             )
 
         elif electricity_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
             self._gas_opex_expenditures_post_tax = (
-                self._gas_opex_expenditures_post_tax - self._sulfur_revenue
+                self._gas_opex_expenditures_post_tax - self._electricity_revenue
             )
 
         else:
