@@ -200,6 +200,7 @@ class GrossSplitRegime(Enum):
     PERMEN_ESDM_52_2017 = 'Peraturan Menteri ESDM No. 52 Tahun 2017'
     PERMEN_ESDM_20_2019 = 'Peraturan Menteri ESDM No. 20 Tahun 2019'
     PERMEN_ESDM_12_2020 = 'Peraturan Menteri ESDM No. 12 Tahun 2020'
+    PERMEN_ESDM_13_2024 = 'Peraturan Menteri ESDM No. 13 Tahun 2024'
 
 
 class DiscountingMode(Enum):
@@ -621,7 +622,34 @@ class VariableSplit082017:
         SECONDARY = 'Secondary'
         TERTIARY = 'Tertiary'
 
+class VariableSplit132024:
+    """
+    Variable Spilt Component for Gross Split No.13 Year 2024 Regime.
+    """
+    class InfrastructureAvailability(Enum):
+        """
+        Infrastructure Availability variable split component.
+        """
+        NOT_AVAILABLE = 'x = 0%'
+        PARTIALLY_AVAILABLE = '0 < x <= 50%'
+        AVAILABLE = '50% < x'
 
+    class FieldReservesAmount(Enum):
+        """
+        Field Reserves Amount variable split component.
+        """
+        LOW = 'x < 20'
+        MEDIUM = '20 <= x <= 60'
+        HIGH = '60 < x'
+
+    class FieldLocation(Enum):
+        """
+        Field Location variable split component.
+        """
+        ONSHORE = 'Onshore'
+        SHALLOW_OFFSHORE = 'h < 500'
+        DEEP_OFFSHORE = '500 <= h <= 1000'
+        ULTRADEEP_OFFSHORE = '1000 < h'
 
 class ContractSample(Enum):
     """
@@ -645,6 +673,6 @@ class UncertaintyDistribution(Enum):
     """
     Uncertainty Distribution Option.
     """
-    UNIFORM = 'Uniform Distribution'
-    TRIANGULAR = 'Triangular Distribution'
-    NORMAL = 'Normal Distribution'
+    UNIFORM = 'Uniform'
+    TRIANGULAR = 'Triangular'
+    NORMAL = 'Normal'

@@ -12,7 +12,9 @@ from pyscnomics.api.adapter import (get_baseproject,
                                     get_transition_split,
                                     get_economic_limit,
                                     get_asr_expenditures,
-                                    get_lbt_expenditures)
+                                    get_lbt_expenditures,
+                                    get_sensitivity,
+                                    get_uncertainty)
 from pyscnomics.api.converter import Data, EconLimit, ASRExpendituresBM, LBTExpendituresBM
 from pyscnomics.api.converter import DataTransition
 from pyscnomics.api.converter import LtpBM, RpdBM
@@ -539,3 +541,85 @@ async def calculate_lbt_expenditures(data: LBTExpendituresBM) -> dict:
     """
     return get_lbt_expenditures(data=data.model_dump())
 
+
+@router.post("/costrecovery/sensitivity")
+async def calculate_costrecovery_sensitivity(data: Data) -> dict:
+    """
+    ## Retrieve The Sensitivity of a cost recovery contract.
+    Route to get the sensitivity of a cost recovery contract.
+    """
+    return get_sensitivity(
+        data=data.model_dump(),
+        contract_type='Cost Recovery')
+
+@router.post("/grosssplit/sensitivity")
+async def calculate_grosssplit_sensitivity(data: Data) -> dict:
+    """
+    ## Retrieve The Sensitivity of a gross split contract.
+    Route to get the sensitivity of a contract.
+    """
+    return get_sensitivity(
+        data=data.model_dump(),
+        contract_type='Gross Split')
+
+@router.post("/transition/sensitivity")
+async def calculate_transition_sensitivity(data: DataTransition) -> dict:
+    """
+    ## Retrieve The Sensitivity of a gross split contract.
+    Route to get the sensitivity of a contract.
+    """
+    return get_sensitivity(
+        data=data.model_dump(),
+        contract_type='Transition')
+
+@router.post("/baseproject/sensitivity")
+async def calculate_project_sensitivity(data: Data) -> dict:
+    """
+    ## Retrieve The Sensitivity of a base project contract.
+    Route to get the sensitivity of a contract.
+    """
+    return get_sensitivity(
+        data=data.model_dump(),
+        contract_type='Base Project')
+
+
+@router.post("/costrecovery/uncertainty")
+async def calculate_costrecovery_uncertainty(data: Data) -> dict:
+    """
+    ## Retrieve The Uncertainty of a cost recovery contract.
+    Route to get the uncertainty of a cost recovery contract.
+    """
+    return get_uncertainty(
+        data=data.model_dump(),
+        contract_type='Cost Recovery')
+
+@router.post("/grosssplit/uncertainty")
+async def calculate_grosssplit_uncertainty(data: Data) -> dict:
+    """
+    ## Retrieve The Uncertainty of a gross split contract.
+    Route to get the uncertainty of a gross split contract.
+    """
+    return get_uncertainty(
+        data=data.model_dump(),
+        contract_type='Gross Split')
+
+
+@router.post("/transition/uncertainty")
+async def calculate_transition_uncertainty(data: Data) -> dict:
+    """
+    ## Retrieve The Uncertainty of a transition contract.
+    Route to get the uncertainty of a transition contract.
+    """
+    return get_uncertainty(
+        data=data.model_dump(),
+        contract_type='Gross Split')
+
+@router.post("/baseproject/uncertainty")
+async def calculate_baseproject_uncertainty(data: Data) -> dict:
+    """
+    ## Retrieve The Uncertainty of a base project contract.
+    Route to get the uncertainty of a base projcet contract.
+    """
+    return get_uncertainty(
+        data=data.model_dump(),
+        contract_type='Base Project')
