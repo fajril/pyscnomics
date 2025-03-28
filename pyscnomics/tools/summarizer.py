@@ -462,12 +462,12 @@ class Summary:
         return {
             idx: {
                 'years': contract.project_years,
-                'oil_ftp_ctr': np.zeros_like(contract.project_years) if isinstance(contract, GrossSplit) else contract._oil_ftp_ctr,
-                'oil_ftp_gov': np.zeros_like(contract.project_years) if isinstance(contract, GrossSplit) else contract._oil_ftp_gov,
-                'gas_ftp_ctr': np.zeros_like(contract.project_years) if isinstance(contract, GrossSplit) else contract._gas_ftp_ctr,
-                'gas_ftp_gov': np.zeros_like(contract.project_years) if isinstance(contract, GrossSplit) else contract._gas_ftp_gov,
-                'consolidated_ctr_ftp': np.zeros_like(contract.project_years) if isinstance(contract, GrossSplit) else (contract._oil_ftp_ctr + contract._gas_ftp_ctr),
-                'consolidated_gov_ftp': np.zeros_like(contract.project_years) if isinstance(contract, GrossSplit) else (contract._oil_ftp_gov + contract._gas_ftp_gov),
+                'oil_ftp_ctr': np.zeros_like(contract.project_years, dtype=float) if isinstance(contract, GrossSplit) else contract._oil_ftp_ctr,
+                'oil_ftp_gov': np.zeros_like(contract.project_years, dtype=float) if isinstance(contract, GrossSplit) else contract._oil_ftp_gov,
+                'gas_ftp_ctr': np.zeros_like(contract.project_years, dtype=float) if isinstance(contract, GrossSplit) else contract._gas_ftp_ctr,
+                'gas_ftp_gov': np.zeros_like(contract.project_years, dtype=float) if isinstance(contract, GrossSplit) else contract._gas_ftp_gov,
+                'consolidated_ctr_ftp': np.zeros_like(contract.project_years, dtype=float) if isinstance(contract, GrossSplit) else (contract._oil_ftp_ctr + contract._gas_ftp_ctr),
+                'consolidated_gov_ftp': np.zeros_like(contract.project_years, dtype=float) if isinstance(contract, GrossSplit) else (contract._oil_ftp_gov + contract._gas_ftp_gov),
             }
             for idx, contract in enumerate(self.contract)
         }
@@ -489,7 +489,7 @@ class Summary:
                 if key == 'years':
                     pass
                 elif key == 'oil_undepreciated_asset' or key == 'gas_undepreciated_asset' or key == 'consolidated_undepreciated_asset':
-                    undepreciated = np.zeros_like(self.years)
+                    undepreciated = np.zeros_like(self.years, dtype=float)
                     undepreciated[len(cntrct['years'])-1] = cntrct[key]
                     cntrct[key] = undepreciated
                 else:
