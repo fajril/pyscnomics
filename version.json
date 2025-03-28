@@ -6,6 +6,7 @@
     "build": 0
   },
   "features": [
+    "Adding Summarizer Module",
     "Adding the Sensitivity API",
     "Adding the Uncertainty API"
     ]
