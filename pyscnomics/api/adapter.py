@@ -1023,16 +1023,16 @@ def get_grosssplit_split(data: dict):
         opex=opex,
         asr_cost=asr,
         lbt_cost=lbt,
-        field_status=data['grosssplit']['field_status'],
-        field_loc=data['grosssplit']['field_loc'],
-        res_depth=data['grosssplit']['res_depth'],
-        infra_avail=data['grosssplit']['infra_avail'],
-        res_type=data['grosssplit']['res_type'],
-        api_oil=data['grosssplit']['api_oil'],
-        domestic_use=data['grosssplit']['domestic_use'],
-        prod_stage=data['grosssplit']['prod_stage'],
-        co2_content=data['grosssplit']['co2_content'],
-        h2s_content=data['grosssplit']['h2s_content'],
+        field_status=data['grosssplit']['field_status'] if 'field_status' in data['grosssplit'] else None,
+        field_loc=data['grosssplit']['field_loc'] if 'field_loc' in data['grosssplit'] else None,
+        res_depth=data['grosssplit']['res_depth'] if 'res_depth' in data['grosssplit'] else None,
+        infra_avail=data['grosssplit']['infra_avail'] if 'infra_avail' in data['grosssplit'] else None,
+        res_type=data['grosssplit']['res_type'] if 'res_type' in data['grosssplit'] else None,
+        api_oil=data['grosssplit']['api_oil'] if 'api_oil' in data['grosssplit'] else None,
+        domestic_use=data['grosssplit']['domestic_use'] if 'domestic_use' in data['grosssplit'] else None,
+        prod_stage=data['grosssplit']['prod_stage'] if 'prod_stage' in data['grosssplit'] else None,
+        co2_content=data['grosssplit']['co2_content'] if 'co2_content' in data['grosssplit'] else None,
+        h2s_content=data['grosssplit']['h2s_content'] if 'h2s_content' in data['grosssplit'] else None,
         base_split_ctr_oil=convert_to_float(target=data['grosssplit']['base_split_ctr_oil']),
         base_split_ctr_gas=convert_to_float(target=data['grosssplit']['base_split_ctr_gas']),
         split_ministry_disc=convert_to_float(target=data['grosssplit']['split_ministry_disc']),
@@ -1063,7 +1063,10 @@ def get_grosssplit_split(data: dict):
             str_object=data['contract_arguments']['inflation_rate_applied_to']),
         "cum_production_split_offset": convert_list_to_array_float_or_array(data_input=data["contract_arguments"]["cum_production_split_offset"]),
         "amortization": data["contract_arguments"]["amortization"],
-        "regime": convert_grosssplitregime_to_enum(target=data["contract_arguments"]["regime"])
+        "regime": convert_grosssplitregime_to_enum(target=data["contract_arguments"]["regime"]),
+        "sum_undepreciated_cost": False if 'sum_undepreciated_cost' not in data['contract_arguments'] else
+        data['contract_arguments']['sum_undepreciated_cost'],
+
     }
 
     # Running the contract
