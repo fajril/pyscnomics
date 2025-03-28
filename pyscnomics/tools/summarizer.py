@@ -894,7 +894,9 @@ class Summary:
 
     def _calc_pv_ratio(self):
         if self.profitability_discounted:
-            self.pv_ratio = np.divide(self.ctr_npv, self.investment_npv, where=self.investment_npv != 0)
+            self.pv_ratio = np.divide(self.ctr_npv, self.investment_npv,
+                                      out=np.zeros_like(self.ctr_npv),
+                                      where=self.investment_npv != 0)
 
         # Condition when the Profitability Index is calculated using un-discounted investment
         else:
@@ -903,7 +905,9 @@ class Summary:
                 self.consolidated_intangible_expenditures_post_tax +
                 self.consolidated_sunk_cost
             )
-            self.pv_ratio = np.divide(self.ctr_npv, investment, where=investment != 0)
+            self.pv_ratio = np.divide(self.ctr_npv, investment,
+                                      out=np.zeros_like(self.ctr_npv),
+                                      where=investment != 0)
 
         self.ctr_pi = 1 + self.pv_ratio
 
@@ -922,8 +926,10 @@ class Summary:
 
         # WAP Group
         oil_wap = np.divide(gross_revenue_oil, lifting_oil,
+                            out=np.zeros_like(gross_revenue_oil),
                             where=lifting_oil != 0)
         gas_wap = np.divide(gross_revenue_gas, lifting_gas,
+                            out=np.zeros_like(gross_revenue_gas),
                             where=lifting_gas != 0)
 
         # Contractor and Government Gross share
@@ -946,24 +952,28 @@ class Summary:
         costrecovery_or_deductible_cost = np.sum(self.consolidated_costrecovery_or_deductible_cost)
         cost_recovery_over_gross_rev =  np.divide(
             costrecovery_or_deductible_cost, gross_revenue,
+            out=np.zeros_like(costrecovery_or_deductible_cost),
             where=gross_revenue != 0)
 
         # Unrecoverable Cost
         unrec_cost = np.sum(self.consolidated_unrecoverable_cost_or_carryforward_cost)
         unrec_over_gross_rev = np.divide(
             unrec_cost, gross_revenue,
+            out=np.zeros_like(unrec_cost),
             where=gross_revenue != 0)
 
         # Contractor Net Share
         ctr_share = np.sum(self.consolidated_ctr_share)
         ctr_net_share_over_gross_share = np.divide(
             ctr_share, gross_revenue,
+            out=np.zeros_like(ctr_share),
             where=gross_revenue != 0)
 
         # Contractor Net Cashflow
         ctr_net_cashflow = np.sum(self.consolidated_ctr_cashflow)
         ctr_net_cashflow_over_gross_rev = np.divide(
             ctr_net_cashflow, gross_revenue,
+            out=np.zeros_like(ctr_net_cashflow),
             where=gross_revenue != 0)
 
         # Contractor NPV
