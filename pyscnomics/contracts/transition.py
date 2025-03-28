@@ -212,11 +212,26 @@ class Transition:
     _ctr_net_cashflow: np.ndarray = field(default=None, init=False, repr=False)
     _ctr_ftp: np.ndarray = field(default=None, init=False, repr=False)
     _gov_ftp: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_ddmo: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ddmo: np.ndarray = field(default=None, init=False, repr=False)
     _ddmo: np.ndarray = field(default=None, init=False, repr=False)
     _tax_payment: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_effective_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_effective_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_ctr_take: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ctr_take: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_government_take: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_government_take: np.ndarray = field(default=None, init=False, repr=False)
     _government_take: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_cashflow: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_cashflow: np.ndarray = field(default=None, init=False, repr=False)
     _oil_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
     _gas_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_ftp_ctr: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ftp_ctr: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_ftp_gov: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ftp_gov: np.ndarray = field(default=None, init=False, repr=False)
 
     # Consolidated Attributes
     _consolidated_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
@@ -227,6 +242,9 @@ class Transition:
     _consolidated_ddmo: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_government_take: np.ndarray = field(default=None, init=False, repr=False)
+
+    _consolidated_ctr_ftp: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_gov_ftp: np.ndarray = field(default=None, init=False, repr=False)
 
     @staticmethod
     def _parse_dataclass(
@@ -973,6 +991,36 @@ class Transition:
         _ctr_ftp_2 = None
         _gov_ftp_2 = None
 
+        _oil_effective_tax_payment_1 = None
+        _gas_effective_tax_payment_1 = None
+        _oil_effective_tax_payment_2 = None
+        _gas_effective_tax_payment_2 = None
+
+        _oil_ctr_take_1 = None
+        _gas_ctr_take_1 = None
+        _oil_ctr_take_2 = None
+        _gas_ctr_take_2 = None
+
+        _oil_cashflow_1 = None
+        _gas_cashflow_1 = None
+        _oil_cashflow_2 = None
+        _gas_cashflow_2 = None
+
+        _oil_cashflow_1 = None
+        _gas_cashflow_1 = None
+        _oil_cashflow_2 = None
+        _gas_cashflow_2 = None
+
+        _oil_ctr_ftp_1 = None
+        _gas_ctr_ftp_1 = None
+        _oil_ctr_ftp_2 = None
+        _gas_ctr_ftp_2 = None
+
+        _oil_gov_ftp_1 = None
+        _gas_gov_ftp_1 = None
+        _oil_gov_ftp_2 = None
+        _gas_gov_ftp_2 = None
+
         # Determining variables if the type of Contract1 is Cost Recovery
         if isinstance(self.contract1, CostRecovery):
             _oil_deductible_cost_1 = self._contract1_transitioned._oil_cost_recovery_after_tf
@@ -983,8 +1031,19 @@ class Transition:
             _gas_ctr_ets_1 = self._contract1_transitioned._gas_ets_after_transfer
             _oil_gov_ets_1 = self._contract1_transitioned._oil_government_share
             _gas_gov_ets_1 = self._contract1_transitioned._gas_government_share
+            _oil_ctr_ftp_1 = self._contract1_transitioned._oil_ftp_ctr
+            _gas_ctr_ftp_1 = self._contract1_transitioned._gas_ftp_ctr
+            _oil_gov_ftp_1 = self._contract1_transitioned._oil_ftp_gov
+            _gas_gov_ftp_1 = self._contract1_transitioned._gas_ftp_gov
             _ctr_ftp_1 = self._contract1_transitioned._consolidated_ftp_ctr
             _gov_ftp_1 = self._contract1_transitioned._consolidated_ftp_gov
+            _oil_effective_tax_payment_1 = self._contract1_transitioned._oil_tax_payment
+            _gas_effective_tax_payment_1 = self._contract1_transitioned._gas_tax_payment
+            _oil_ctr_take_1 = self._contract1_transitioned._oil_contractor_take
+            _gas_ctr_take_1 = self._contract1_transitioned._gas_contractor_take
+            _oil_cashflow_1 = self._contract1_transitioned._oil_cashflow
+            _gas_cashflow_1 = self._contract1_transitioned._gas_cashflow
+
 
         # Determining variables if the type of Contract1 is Gross Split
         elif isinstance(self.contract1, GrossSplit):
@@ -996,8 +1055,18 @@ class Transition:
             _gas_ctr_ets_1 = self._contract1_transitioned._gas_ctr_share_after_transfer
             _oil_gov_ets_1 = np.zeros_like(self._contract1_transitioned.project_years)
             _gas_gov_ets_1 = np.zeros_like(self._contract1_transitioned.project_years)
+            _oil_ctr_ftp_1 = np.zeros_like(self._contract1_transitioned.project_years, dtype=float)
+            _gas_ctr_ftp_1 = np.zeros_like(self._contract1_transitioned.project_years, dtype=float)
+            _oil_gov_ftp_1 = np.zeros_like(self._contract1_transitioned.project_years, dtype=float)
+            _gas_gov_ftp_1 = np.zeros_like(self._contract1_transitioned.project_years, dtype=float)
             _ctr_ftp_1 = np.zeros_like(self._contract1_transitioned.project_years, dtype=float)
-            _gov_ftp_1 = self._contract1_transitioned._consolidated_gov_share_before_tf
+            _gov_ftp_1 = np.zeros_like(self._contract1_transitioned.project_years, dtype=float)
+            _oil_effective_tax_payment_1 = self._contract1_transitioned._oil_tax
+            _gas_effective_tax_payment_1 = self._contract1_transitioned._gas_tax
+            _oil_ctr_take_1 = self._contract1_transitioned._oil_ctr_net_share
+            _gas_ctr_take_1 = self._contract1_transitioned._gas_ctr_net_share
+            _oil_cashflow_1 = self._contract1_transitioned._oil_ctr_cashflow
+            _gas_cashflow_1 = self._contract1_transitioned._gas_ctr_cashflow
 
         # Determining variables if the type of Contract2 is Cost Recovery
         if isinstance(self.contract2, CostRecovery):
@@ -1009,8 +1078,18 @@ class Transition:
             _gas_ctr_ets_2 = self._contract2_transitioned._gas_ets_after_transfer
             _oil_gov_ets_2 = self._contract2_transitioned._oil_government_share
             _gas_gov_ets_2 = self._contract2_transitioned._gas_government_share
+            _oil_ctr_ftp_2 = self._contract2_transitioned._oil_ftp_ctr
+            _gas_ctr_ftp_2 = self._contract2_transitioned._gas_ftp_ctr
+            _oil_gov_ftp_2 = self._contract2_transitioned._oil_ftp_gov
+            _gas_gov_ftp_2 = self._contract2_transitioned._gas_ftp_gov
             _ctr_ftp_2 = self._contract2_transitioned._consolidated_ftp_ctr
             _gov_ftp_2 = self._contract2_transitioned._consolidated_ftp_gov
+            _oil_effective_tax_payment_2 = self._contract2_transitioned._oil_tax_payment
+            _gas_effective_tax_payment_2 = self._contract2_transitioned._gas_tax_payment
+            _oil_ctr_take_2 = self._contract2_transitioned._oil_contractor_take
+            _gas_ctr_take_2 = self._contract2_transitioned._gas_contractor_take
+            _oil_cashflow_2 = self._contract2_transitioned._oil_cashflow
+            _gas_cashflow_2 = self._contract2_transitioned._gas_cashflow
 
         # Determining variables if the type of Contract2 is Gross Split
         elif isinstance(self.contract2, GrossSplit):
@@ -1022,8 +1101,18 @@ class Transition:
             _gas_ctr_ets_2 = self._contract2_transitioned._gas_ctr_share_after_transfer
             _oil_gov_ets_2 = np.zeros_like(self._contract2_transitioned.project_years)
             _gas_gov_ets_2 = np.zeros_like(self._contract2_transitioned.project_years)
+            _oil_ctr_ftp_2 = np.zeros_like(self._contract2_transitioned.project_years, dtype=float)
+            _gas_ctr_ftp_2 = np.zeros_like(self._contract2_transitioned.project_years, dtype=float)
+            _oil_gov_ftp_2 = np.zeros_like(self._contract2_transitioned.project_years, dtype=float)
+            _gas_gov_ftp_2 = np.zeros_like(self._contract2_transitioned.project_years, dtype=float)
             _ctr_ftp_2 = np.zeros_like(self._contract2_transitioned.project_years, dtype=float)
             _gov_ftp_2 = self._contract2_transitioned._consolidated_gov_share_before_tf
+            _oil_effective_tax_payment_2 = self._contract2_transitioned._oil_tax
+            _gas_effective_tax_payment_2 = self._contract2_transitioned._gas_tax
+            _oil_ctr_take_2 = self._contract2_transitioned._oil_ctr_net_share
+            _gas_ctr_take_2 = self._contract2_transitioned._gas_ctr_net_share
+            _oil_cashflow_2 = self._contract2_transitioned._oil_ctr_cashflow
+            _gas_cashflow_2 = self._contract2_transitioned._gas_ctr_cashflow
 
         # Deductible Cost / Cost Recovery
         self._oil_deductible_cost = _oil_deductible_cost_1 + _oil_deductible_cost_2
@@ -1040,6 +1129,22 @@ class Transition:
         self._oil_gov_ets = _oil_gov_ets_1 + _oil_gov_ets_2
         self._gas_gov_ets = _gas_gov_ets_1 + _gas_gov_ets_2
 
+        # Effective Tax Payment
+        self._oil_effective_tax_payment = _oil_effective_tax_payment_1 + _oil_effective_tax_payment_2
+        self._gas_effective_tax_payment = _gas_effective_tax_payment_1 + _gas_effective_tax_payment_2
+
+        # DDMO
+        self._oil_ddmo = self._contract1_transitioned._oil_ddmo + self._contract2_transitioned._oil_ddmo
+        self._gas_ddmo = self._contract1_transitioned._gas_ddmo + self._contract2_transitioned._gas_ddmo
+
+        # Contractor Take
+        self._oil_ctr_take = _oil_ctr_take_1 + _oil_ctr_take_2
+        self._gas_ctr_take = _gas_ctr_take_1 + _gas_ctr_take_2
+
+        # Cashflow
+        self._oil_cashflow = _oil_cashflow_1 + _oil_cashflow_2
+        self._gas_cashflow = _gas_cashflow_1 + _gas_cashflow_2
+
         # Contractor Net Operating Profit
         self._net_operating_profit = (self._contract1_transitioned._consolidated_ctr_net_share +
                                       self._contract2_transitioned._consolidated_ctr_net_share)
@@ -1049,6 +1154,10 @@ class Transition:
                                   self._contract2_transitioned._consolidated_cashflow)
 
         # FTP
+        self._oil_ftp_ctr = _oil_ctr_ftp_1 + _oil_ctr_ftp_2
+        self._gas_ftp_ctr = _gas_ctr_ftp_1 + _gas_ctr_ftp_2
+        self._oil_ftp_gov = _oil_gov_ftp_1 + _oil_gov_ftp_2
+        self._gas_ftp_gov = _gas_gov_ftp_1 + _gas_gov_ftp_2
         self._ctr_ftp = _ctr_ftp_1 + _ctr_ftp_2
         self._gov_ftp = _gov_ftp_1 + _gov_ftp_2
 
@@ -1061,6 +1170,10 @@ class Transition:
                              self._contract2_transitioned._consolidated_tax_payment)
 
         # Government Take
+        self._oil_government_take = self._contract1_transitioned._oil_government_take + self._contract2_transitioned._oil_government_take
+        self._gas_government_take = self._contract1_transitioned._gas_government_take + self._contract2_transitioned._gas_government_take
+
+
         self._government_take = (self._contract1_transitioned._consolidated_government_take +
                                  self._contract2_transitioned._consolidated_government_take)
 

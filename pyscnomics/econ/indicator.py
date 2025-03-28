@@ -340,6 +340,9 @@ def npv_real_terms(
     at the end of each year. If it is DiscountingMode.MID_YEAR, the discounting is
     applied at the mid-year of each period.
     """
+    # Condition when the cashflow is all zeros
+    if np.all(cashflow == 0):
+        return 0.0
     reference_year_arr = np.full_like(cashflow, fill_value=reference_year)
     t_arr = cashflow_years - reference_year_arr
 
@@ -446,6 +449,9 @@ def npv_skk_real_terms(
     [2] In SKK Real terms, the inflation rate is set to as the same as discount rate.
 
     """
+    # Condition when the cashflow is all zeros
+    if np.all(cashflow == 0):
+        return 0.0
 
     reference_year_arr = np.full_like(cashflow, fill_value=reference_year)
     t_arr = cashflow_years - reference_year_arr

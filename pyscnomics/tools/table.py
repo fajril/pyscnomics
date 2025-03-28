@@ -214,6 +214,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_oil['Contractor_Share'] = contract._oil_ctr_share_before_transfer
         psc_table_oil['Government_Share'] = contract._oil_gov_share
         psc_table_oil['Depreciation'] = contract._oil_depreciation
+        psc_table_oil['Amortization'] = contract._oil_amortization
         psc_table_oil['Non_Capital'] = contract._oil_non_capital
         psc_table_oil['Total_Expenses'] = contract._oil_total_expenses
         psc_table_oil['Cost_To_Be_Deducted'] = contract._oil_cost_tobe_deducted
@@ -267,6 +268,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_gas['Contractor_Share'] = contract._gas_ctr_share_before_transfer
         psc_table_gas['Government_Share'] = contract._gas_gov_share
         psc_table_gas['Depreciation'] = contract._gas_depreciation
+        psc_table_gas['Amortization'] = contract._gas_amortization
         psc_table_gas['Non_Capital'] = contract._gas_non_capital
         psc_table_gas['Total_Expenses'] = contract._gas_total_expenses
         psc_table_gas['Cost_To_Be_Deducted'] = contract._gas_cost_tobe_deducted
@@ -309,6 +311,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
         psc_table_consolidated['C_Government_Share'] = contract._consolidated_ctr_share_before_tf
         psc_table_consolidated['C_Contractor_Share'] = contract._consolidated_gov_share_before_tf
         psc_table_consolidated['C_Depreciation'] = contract._consolidated_depreciation
+        psc_table_consolidated['C_Amortization'] = contract._consolidated_amortization
         psc_table_consolidated['C_Opex'] = contract._consolidated_opex
         psc_table_consolidated['C_ASR'] = contract._consolidated_asr
         psc_table_consolidated['C_Non_Capital'] = contract._consolidated_non_capital
@@ -543,6 +546,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_oil_1['Contractor_Share'] = contract._contract1_transitioned._oil_ctr_share_before_transfer
             psc_table_oil_1['Government_Share'] = contract._contract1_transitioned._oil_gov_share
             psc_table_oil_1['Depreciation'] = contract._contract1_transitioned._oil_depreciation
+            psc_table_oil_1['Amortization'] = contract._contract1_transitioned._oil_amortization
             psc_table_oil_1['Non_Capital'] = contract._contract1_transitioned._oil_non_capital
             psc_table_oil_1['Total_Expenses'] = contract._contract1_transitioned._oil_total_expenses
             psc_table_oil_1['Cost_To_Be_Deducted'] = contract._contract1_transitioned._oil_cost_tobe_deducted
@@ -596,6 +600,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_1['Contractor_Share'] = contract._contract1_transitioned._gas_ctr_share_before_transfer
             psc_table_gas_1['Government_Share'] = contract._contract1_transitioned._gas_gov_share
             psc_table_gas_1['Depreciation'] = contract._contract1_transitioned._gas_depreciation
+            psc_table_gas_1['Amortization'] = contract._contract1_transitioned._gas_amortization
             psc_table_gas_1['Non_Capital'] = contract._contract1_transitioned._gas_non_capital
             psc_table_gas_1['Total_Expenses'] = contract._contract1_transitioned._gas_total_expenses
             psc_table_gas_1['Cost_To_Be_Deducted'] = contract._contract1_transitioned._gas_cost_tobe_deducted
@@ -637,6 +642,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_consolidated_1['C_Government_Share'] = contract._contract1_transitioned._consolidated_ctr_share_before_tf
             psc_table_consolidated_1['C_Contractor_Share'] = contract._contract1_transitioned._consolidated_gov_share_before_tf
             psc_table_consolidated_1['C_Depreciation'] = contract._contract1_transitioned._consolidated_depreciation
+            psc_table_consolidated_1['C_Amortization'] = contract._contract1_transitioned._consolidated_amortization
             psc_table_consolidated_1['C_Opex'] = contract._contract1_transitioned._consolidated_opex
             psc_table_consolidated_1['C_ASR'] = contract._contract1_transitioned._consolidated_asr
             psc_table_consolidated_1['C_Non_Capital'] = contract._contract1_transitioned._consolidated_non_capital
@@ -863,6 +869,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_oil_2['Contractor_Share'] = contract._contract2_transitioned._oil_ctr_share_before_transfer
             psc_table_oil_2['Government_Share'] = contract._contract2_transitioned._oil_gov_share
             psc_table_oil_2['Depreciation'] = contract._contract2_transitioned._oil_depreciation
+            psc_table_oil_2['Amortization'] = contract._contract2_transitioned._oil_amortization
             psc_table_oil_2['Non_Capital'] = contract._contract2_transitioned._oil_non_capital
             psc_table_oil_2['Total_Expenses'] = contract._contract2_transitioned._oil_total_expenses
             psc_table_oil_2['Cost_To_Be_Deducted'] = contract._contract2_transitioned._oil_cost_tobe_deducted
@@ -915,6 +922,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_gas_2['Contractor_Share'] = contract._contract2_transitioned._gas_ctr_share_before_transfer
             psc_table_gas_2['Government_Share'] = contract._contract2_transitioned._gas_gov_share
             psc_table_gas_2['Depreciation'] = contract._contract2_transitioned._gas_depreciation
+            psc_table_gas_2['Amortization'] = contract._contract2_transitioned._gas_amortization
             psc_table_gas_2['Non_Capital'] = contract._contract2_transitioned._gas_non_capital
             psc_table_gas_2['Total_Expenses'] = contract._contract2_transitioned._gas_total_expenses
             psc_table_gas_2['Cost_To_Be_Deducted'] = contract._contract2_transitioned._gas_cost_tobe_deducted
@@ -960,6 +968,7 @@ def get_table(contract: BaseProject | CostRecovery | GrossSplit | Transition) ->
             psc_table_consolidated_2[
                 'C_Contractor_Share'] = contract._contract2_transitioned._consolidated_gov_share_before_tf
             psc_table_consolidated_2['C_Depreciation'] = contract._contract2_transitioned._consolidated_depreciation
+            psc_table_consolidated_2['C_Amortization'] = contract._contract2_transitioned._consolidated_amortization
             psc_table_consolidated_2['C_Opex'] = contract._contract2_transitioned._consolidated_opex
             psc_table_consolidated_2['C_ASR'] = contract._contract2_transitioned._consolidated_asr
             psc_table_consolidated_2['C_Non_Capital'] = contract._contract2_transitioned._consolidated_non_capital

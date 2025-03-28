@@ -9,6 +9,7 @@ from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
+from pyscnomics.optimize import sensitivity_psc, uncertainty_psc
 from pyscnomics.tools.summary import get_summary
 from pyscnomics.tools.table import get_table
 from pyscnomics.optimize.optimization import optimize_psc
@@ -41,7 +42,8 @@ from pyscnomics.api.converter import (convert_str_to_date,
                                       convert_grosssplitregime_to_enum,
                                       convert_to_float,
                                       read_fluid_type,
-                                      convert_to_method_limit)
+                                      convert_to_method_limit,
+                                      convert_to_uncertainty_distribution)
 from pyscnomics.econ.limit import econ_limit
 
 
@@ -101,15 +103,15 @@ def get_setup_dict(data: dict) -> tuple:
     # Parsing the contract setup into each corresponding variables
     start_date = convert_str_to_date(str_object=data['setup']['start_date'])
     end_date = convert_str_to_date(str_object=data['setup']['end_date'])
-    oil_onstream_date = convert_str_to_date(str_object=data['setup']['oil_onstream_date'])
-    gas_onstream_date = convert_str_to_date(str_object=data['setup']['gas_onstream_date'])
-    lifting = convert_dict_to_lifting(data_raw=data)
-    capital = convert_dict_to_capital(data_raw=data['capital'])
-    intangible = convert_dict_to_intangible(data_raw=data['intangible'])
-    opex = convert_dict_to_opex(data_raw=data['opex'])
-    asr = convert_dict_to_asr(data_raw=data['asr'])
-    lbt = convert_dict_to_lbt(data_raw=data['lbt'])
-    cost_of_sales = convert_dict_to_cost_of_sales(data_raw=data['cost_of_sales'])
+    oil_onstream_date = convert_str_to_date(str_object=data['setup'].get('oil_onstream_date', None))
+    gas_onstream_date = convert_str_to_date(str_object=data['setup'].get('gas_onstream_date', None))
+    lifting = convert_dict_to_lifting(data_raw=data) if 'lifting' in data else None
+    capital = convert_dict_to_capital(data_raw=data['capital']) if 'capital' in data else None
+    intangible = convert_dict_to_intangible(data_raw=data['intangible']) if 'intangible' in data else None
+    opex = convert_dict_to_opex(data_raw=data['opex']) if 'opex' in data else None
+    asr = convert_dict_to_asr(data_raw=data['asr']) if 'asr' in data else None
+    lbt = convert_dict_to_lbt(data_raw=data['lbt']) if 'lbt' in data else None
+    cost_of_sales = convert_dict_to_cost_of_sales(data_raw=data['cost_of_sales']) if 'cost_of_sales' in data else None
     return start_date, end_date, oil_onstream_date, gas_onstream_date, lifting, capital, intangible, opex, asr, lbt, cost_of_sales
 
 
@@ -130,12 +132,12 @@ def get_summary_dict(data: dict) -> dict:
 
     """
     # Filling the argument with the input data
-    reference_year = data['summary_arguments']['reference_year']
-    inflation_rate = data['summary_arguments']['inflation_rate']
-    discount_rate = data['summary_arguments']['discount_rate']
-    npv_mode = convert_str_to_npvmode(str_object=data['summary_arguments']['npv_mode'])
-    discounting_mode = convert_str_to_discountingmode(str_object=data['summary_arguments']['discounting_mode'])
-    profitability_discounted = data['summary_arguments']['profitability_discounted']
+    reference_year = data['summary_arguments'].get('reference_year', None)
+    inflation_rate = data['summary_arguments'].get('inflation_rate', None)
+    discount_rate = data['summary_arguments'].get('discount_rate', 0.1)
+    npv_mode = convert_str_to_npvmode(str_object=data['summary_arguments'].get('npv_mode', "Full Cycle Nominal Terms"))
+    discounting_mode = convert_str_to_discountingmode(str_object=data['summary_arguments'].get('discounting_mode', 'discounting_mode'))
+    profitability_discounted = data['summary_arguments'].get('profitability_discounted', False)
 
     summary_arguments_dict = {
         'reference_year': reference_year,
@@ -551,16 +553,17 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         opex=opex,
         asr_cost=asr,
         lbt_cost=lbt,
-        field_status=data['grosssplit']['field_status'],
-        field_loc=data['grosssplit']['field_loc'],
-        res_depth=data['grosssplit']['res_depth'],
-        infra_avail=data['grosssplit']['infra_avail'],
-        res_type=data['grosssplit']['res_type'],
-        api_oil=data['grosssplit']['api_oil'],
-        domestic_use=data['grosssplit']['domestic_use'],
-        prod_stage=data['grosssplit']['prod_stage'],
-        co2_content=data['grosssplit']['co2_content'],
-        h2s_content=data['grosssplit']['h2s_content'],
+        field_status=data['grosssplit']['field_status'] if 'field_status' in data['grosssplit'] else None,
+        field_loc=data['grosssplit']['field_loc'] if 'field_loc' in data['grosssplit'] else None,
+        res_depth=data['grosssplit']['res_depth'] if 'res_depth' in data['grosssplit'] else None,
+        infra_avail=data['grosssplit']['infra_avail'] if 'infra_avail' in data['grosssplit'] else None,
+        res_type=data['grosssplit']['res_type'] if 'res_type' in data['grosssplit'] else None,
+        api_oil=data['grosssplit']['api_oil'] if 'api_oil' in data['grosssplit'] else None,
+        domestic_use=data['grosssplit']['domestic_use'] if 'domestic_use' in data['grosssplit'] else None,
+        prod_stage=data['grosssplit']['prod_stage'] if 'prod_stage' in data['grosssplit'] else None,
+        co2_content=data['grosssplit']['co2_content'] if 'co2_content' in data['grosssplit'] else None,
+        h2s_content=data['grosssplit']['h2s_content'] if 'h2s_content' in data['grosssplit'] else None,
+        field_reserves=data['grosssplit']['field_reserves'] if 'field_reserves' in data['grosssplit'] else None,
         base_split_ctr_oil=convert_to_float(target=data['grosssplit']['base_split_ctr_oil']),
         base_split_ctr_gas=convert_to_float(target=data['grosssplit']['base_split_ctr_gas']),
         split_ministry_disc=convert_to_float(target=data['grosssplit']['split_ministry_disc']),
@@ -1020,16 +1023,16 @@ def get_grosssplit_split(data: dict):
         opex=opex,
         asr_cost=asr,
         lbt_cost=lbt,
-        field_status=data['grosssplit']['field_status'],
-        field_loc=data['grosssplit']['field_loc'],
-        res_depth=data['grosssplit']['res_depth'],
-        infra_avail=data['grosssplit']['infra_avail'],
-        res_type=data['grosssplit']['res_type'],
-        api_oil=data['grosssplit']['api_oil'],
-        domestic_use=data['grosssplit']['domestic_use'],
-        prod_stage=data['grosssplit']['prod_stage'],
-        co2_content=data['grosssplit']['co2_content'],
-        h2s_content=data['grosssplit']['h2s_content'],
+        field_status=data['grosssplit']['field_status'] if 'field_status' in data['grosssplit'] else None,
+        field_loc=data['grosssplit']['field_loc'] if 'field_loc' in data['grosssplit'] else None,
+        res_depth=data['grosssplit']['res_depth'] if 'res_depth' in data['grosssplit'] else None,
+        infra_avail=data['grosssplit']['infra_avail'] if 'infra_avail' in data['grosssplit'] else None,
+        res_type=data['grosssplit']['res_type'] if 'res_type' in data['grosssplit'] else None,
+        api_oil=data['grosssplit']['api_oil'] if 'api_oil' in data['grosssplit'] else None,
+        domestic_use=data['grosssplit']['domestic_use'] if 'domestic_use' in data['grosssplit'] else None,
+        prod_stage=data['grosssplit']['prod_stage'] if 'prod_stage' in data['grosssplit'] else None,
+        co2_content=data['grosssplit']['co2_content'] if 'co2_content' in data['grosssplit'] else None,
+        h2s_content=data['grosssplit']['h2s_content'] if 'h2s_content' in data['grosssplit'] else None,
         base_split_ctr_oil=convert_to_float(target=data['grosssplit']['base_split_ctr_oil']),
         base_split_ctr_gas=convert_to_float(target=data['grosssplit']['base_split_ctr_gas']),
         split_ministry_disc=convert_to_float(target=data['grosssplit']['split_ministry_disc']),
@@ -1060,7 +1063,10 @@ def get_grosssplit_split(data: dict):
             str_object=data['contract_arguments']['inflation_rate_applied_to']),
         "cum_production_split_offset": convert_list_to_array_float_or_array(data_input=data["contract_arguments"]["cum_production_split_offset"]),
         "amortization": data["contract_arguments"]["amortization"],
-        "regime": convert_grosssplitregime_to_enum(target=data["contract_arguments"]["regime"])
+        "regime": convert_grosssplitregime_to_enum(target=data["contract_arguments"]["regime"]),
+        "sum_undepreciated_cost": False if 'sum_undepreciated_cost' not in data['contract_arguments'] else
+        data['contract_arguments']['sum_undepreciated_cost'],
+
     }
 
     # Running the contract
@@ -1327,4 +1333,109 @@ def get_lbt_expenditures(data:dict) -> dict:
     )
     df = df.set_index('project_years').to_dict()
     return df
+
+def get_sensitivity(data:dict, contract_type:str):
+    if 'sensitivity_arguments' not in data:
+        raise ContractException("The payload does not have the sensitivity_arguments key")
+
+    if data['sensitivity_arguments'] is None:
+        raise ContractException("The payload sensitivity_arguments does not have any values")
+
+    # Retrieving the contract, contract_arguments_dict, summary_arguments_dict based on the contract type
+    if contract_type == 'Cost Recovery':
+        contract = get_costrecovery(data=data)[1]
+        contract_arguments = get_costrecovery(data=data)[2]
+        summary_argument = get_costrecovery(data=data)[3]
+
+    elif contract_type == 'Gross Split':
+        contract = get_grosssplit(data=data)[1]
+        contract_arguments = get_grosssplit(data=data)[2]
+        summary_argument = get_grosssplit(data=data)[3]
+
+    elif contract_type == 'Transition':
+        contract = get_transition(data=data)[1]
+        contract_arguments = get_transition(data=data)[2]
+        summary_argument = get_transition(data=data)[3]
+
+    else:
+        contract = get_baseproject(data=data)[1]
+        contract_arguments = get_baseproject(data=data)[2]
+        summary_argument = get_baseproject(data=data)[3]
+
+    # Constructing the sensitivity arguments
+    sensitivity_result = sensitivity_psc(
+        contract=contract,
+        contract_arguments=contract_arguments,
+        summary_arguments=summary_argument,
+        min_deviation=data['sensitivity_arguments']['min_deviation'],
+        max_deviation=data['sensitivity_arguments']['max_deviation'],
+        base_value=data['sensitivity_arguments']['base_value'],
+        step=data['sensitivity_arguments']['step'],
+        dataframe_output=False,
+    )
+
+    return sensitivity_result
+
+def get_uncertainty(data: dict, contract_type: str):
+    if 'uncertainty_arguments' not in data:
+        raise ContractException("The payload does not have the uncertainty_arguments key")
+
+    if data['uncertainty_arguments'] is None:
+        raise ContractException("The payload uncertainty_arguments does not have any values")
+
+    # Retrieving the contract, contract_arguments_dict, summary_arguments_dict based on the contract type
+    if contract_type == 'Cost Recovery':
+        contract = get_costrecovery(data=data)[1]
+        contract_arguments = get_costrecovery(data=data)[2]
+        summary_argument = get_costrecovery(data=data)[3]
+
+    elif contract_type == 'Gross Split':
+        contract = get_grosssplit(data=data)[1]
+        contract_arguments = get_grosssplit(data=data)[2]
+        summary_argument = get_grosssplit(data=data)[3]
+
+    elif contract_type == 'Transition':
+        contract = get_transition(data=data)[1]
+        contract_arguments = get_transition(data=data)[2]
+        summary_argument = get_transition(data=data)[3]
+
+    else:
+        contract = get_baseproject(data=data)[1]
+        contract_arguments = get_baseproject(data=data)[2]
+        summary_argument = get_baseproject(data=data)[3]
+
+    # Constructing the sensitivity arguments
+    uncertainty_args = {
+        'contract': contract,
+        'contract_arguments': contract_arguments,
+        'summary_arguments': summary_argument,
+        'run_number': data['uncertainty_arguments']['run_number'],
+        'min_oil_price': data['uncertainty_arguments']['min_oil_price'],
+        'mean_oil_price': data['uncertainty_arguments']['mean_oil_price'],
+        'max_oil_price': data['uncertainty_arguments']['max_oil_price'],
+        'min_gas_price': data['uncertainty_arguments']['min_gas_price'],
+        'mean_gas_price': data['uncertainty_arguments']['mean_gas_price'],
+        'max_gas_price': data['uncertainty_arguments']['max_gas_price'],
+        'min_opex': data['uncertainty_arguments']['min_opex'],
+        'mean_opex': data['uncertainty_arguments']['mean_opex'],
+        'max_opex': data['uncertainty_arguments']['max_opex'],
+        'min_capex': data['uncertainty_arguments']['min_capex'],
+        'mean_capex': data['uncertainty_arguments']['mean_capex'],
+        'max_capex': data['uncertainty_arguments']['max_capex'],
+        'min_lifting': data['uncertainty_arguments']['min_lifting'],
+        'mean_lifting': data['uncertainty_arguments']['mean_lifting'],
+        'max_lifting': data['uncertainty_arguments']['max_lifting'],
+        'oil_price_stddev': data['uncertainty_arguments']['oil_price_stddev'],
+        'gas_price_stddev': data['uncertainty_arguments']['gas_price_stddev'],
+        'opex_stddev': data['uncertainty_arguments']['opex_stddev'],
+        'capex_stddev': data['uncertainty_arguments']['capex_stddev'],
+        'lifting_stddev': data['uncertainty_arguments']['lifting_stddev'],
+        'oil_price_distribution': convert_to_uncertainty_distribution(target=data['uncertainty_arguments']['oil_price_distribution']),
+        'gas_price_distribution': convert_to_uncertainty_distribution(target=data['uncertainty_arguments']['gas_price_distribution']),
+        'opex_distribution': convert_to_uncertainty_distribution(target=data['uncertainty_arguments']['opex_distribution']),
+        'capex_distribution': convert_to_uncertainty_distribution(target=data['uncertainty_arguments']['capex_distribution']),
+        'lifting_distribution': convert_to_uncertainty_distribution(target=data['uncertainty_arguments']['lifting_distribution']),
+    }
+
+    return uncertainty_psc(**uncertainty_args)
 
