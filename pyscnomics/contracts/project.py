@@ -1,5 +1,5 @@
 """
-Configure base project as a base framework for contract.
+Configure base project as a base framework for PSC contract.
 """
 
 from dataclasses import dataclass, field
@@ -27,19 +27,19 @@ from pyscnomics.econ.costs import (
 
 
 class SunkCostException(Exception):
-    """Exception to raise for a misuse of Sunk Cost Method"""
+    """ Exception to be raised for a misuse of Sunk Cost Method """
 
     pass
 
 
 class BaseProjectException(Exception):
-    """Exception to raise for a misuse of BaseProject class"""
+    """ Exception to be raised for a misuse of BaseProject class """
 
     pass
 
 
 class OtherRevenueException(Exception):
-    """Exception to raise for a misuse of Other Revenue"""
+    """ Exception to be raised for a misuse of Other Revenue """
 
     pass
 
@@ -48,7 +48,8 @@ class OtherRevenueException(Exception):
 class BaseProject:
     """
     Represents a base project with start and end dates, lifting information,
-    capital and intangible costs, operational expenses (OPEX), and ASR costs.
+    capital and intangible costs, operational expenses (OPEX), ASR costs,
+    LBT costs, and Cost of Sales.
 
     Parameters
     ----------
@@ -130,7 +131,8 @@ class BaseProject:
     _oil_cost_of_sales: CostOfSales = field(default=None, init=False, repr=False)
     _gas_cost_of_sales: CostOfSales = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with pre tax expenditures for each cost elements)
+    # Attributes to be defined later
+    # (Associated with pre tax expenditures for each cost elements)
     _oil_capital_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_capital_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
     _oil_intangible_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
@@ -144,7 +146,8 @@ class BaseProject:
     _oil_cost_of_sales_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_cost_of_sales_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with indirect taxes for each cost element)
+    # Attributes to be defined later
+    # (Associated with indirect taxes for each cost element)
     _oil_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _oil_intangible_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
@@ -158,7 +161,8 @@ class BaseProject:
     _oil_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with post tax expenditures for each cost elements)
+    # Attributes to be defined later
+    # (Associated with post tax expenditures for each cost elements)
     _oil_capital_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_capital_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
     _oil_intangible_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
@@ -172,7 +176,8 @@ class BaseProject:
     _oil_cost_of_sales_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_cost_of_sales_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with total expenditures and indirect taxes for each fluid)
+    # Attributes to be defined later
+    # (Associated with total expenditures and indirect taxes for each fluid)
     _oil_total_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_total_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
     _oil_total_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
@@ -248,50 +253,57 @@ class BaseProject:
                 f"is after the end date: {self.end_date}"
             )
 
-        # Prepare attribute lifting (for all FluidType)
+        # Prepare attribute lifting (for OIL, GAS, SULFUR, ELECTRICITY, and CO2)
         if self.lifting is None:
             self.lifting = (
                 Lifting(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
+                    prod_year=self.project_years.copy(),
                     lifting_rate=np.zeros(self.project_duration),
                     price=np.zeros(self.project_duration),
-                    prod_year=self.project_years,
                     fluid_type=FluidType.OIL,
                 ),
                 Lifting(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
+                    prod_year=self.project_years.copy(),
                     lifting_rate=np.zeros(self.project_duration),
                     price=np.zeros(self.project_duration),
-                    prod_year=self.project_years,
                     fluid_type=FluidType.GAS,
                 ),
                 Lifting(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
+                    prod_year=self.project_years.copy(),
                     lifting_rate=np.zeros(self.project_duration),
                     price=np.zeros(self.project_duration),
-                    prod_year=self.project_years,
                     fluid_type=FluidType.SULFUR,
                 ),
                 Lifting(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
+                    prod_year=self.project_years.copy(),
                     lifting_rate=np.zeros(self.project_duration),
                     price=np.zeros(self.project_duration),
-                    prod_year=self.project_years,
                     fluid_type=FluidType.ELECTRICITY,
                 ),
                 Lifting(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
+                    prod_year=self.project_years.copy(),
                     lifting_rate=np.zeros(self.project_duration),
                     price=np.zeros(self.project_duration),
-                    prod_year=self.project_years,
                     fluid_type=FluidType.CO2,
-                )
+                ),
             )
+
+        else:
+            if not isinstance(self.lifting, tuple):
+                raise BaseProjectException(
+                    f"Attribute lifting must be provided as a tuple of Lifting instances, "
+                    f"not as an/a {self.lifting.__class__.__qualname__}"
+                )
 
         # Prepare attribute capital_cost (for both OIL and GAS)
         if self.capital_cost is None:
@@ -299,18 +311,25 @@ class BaseProject:
                 CapitalCost(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
-                    cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
+                    cost=np.array([0]),
                     cost_allocation=[FluidType.OIL],
                 ),
                 CapitalCost(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
-                    cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
+                    cost=np.array([0]),
                     cost_allocation=[FluidType.GAS],
-                )
+                ),
             )
+
+        else:
+            if not isinstance(self.capital_cost, tuple):
+                raise BaseProjectException(
+                    f"Attribute capital_cost must be provided as a tuple of CapitalCost "
+                    f"instances, not as an/a {self.capital_cost.__class__.__qualname__}"
+                )
 
         # Prepare attribute intangible_cost (for both OIL and GAS)
         if self.intangible_cost is None:
@@ -318,18 +337,25 @@ class BaseProject:
                 Intangible(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
-                    cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
+                    cost=np.array([0]),
                     cost_allocation=[FluidType.OIL],
                 ),
                 Intangible(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
-                    cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
+                    cost=np.array([0]),
                     cost_allocation=[FluidType.GAS],
                 ),
             )
+
+        else:
+            if not isinstance(self.intangible_cost, tuple):
+                raise BaseProjectException(
+                    f"Attribute intangible_cost must be provided as a tuple of Intangible "
+                    f"instances, not as an/a {self.intangible_cost.__class__.__qualname__}"
+                )
 
         # Prepare attribute opex (for both OIL and GAS)
         if self.opex is None:
@@ -337,18 +363,25 @@ class BaseProject:
                 OPEX(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
-                    fixed_cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
+                    fixed_cost=np.array([0]),
                     cost_allocation=[FluidType.OIL],
                 ),
                 OPEX(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
-                    fixed_cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
+                    fixed_cost=np.array([0]),
                     cost_allocation=[FluidType.GAS],
                 ),
             )
+
+        else:
+            if not isinstance(self.opex, tuple):
+                raise BaseProjectException(
+                    f"Attribute opex must be provided as a tuple of OPEX instances, "
+                    f"not as an/a {self.opex.__class__.__qualname__}"
+                )
 
         # Prepare attribute asr_cost (for both OIL and GAS)
         if self.asr_cost is None:
@@ -356,18 +389,25 @@ class BaseProject:
                 ASR(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
-                    cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
+                    cost=np.array([0]),
                     cost_allocation=[FluidType.OIL],
                 ),
                 ASR(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
-                    cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
+                    cost=np.array([0]),
                     cost_allocation=[FluidType.GAS],
                 ),
             )
+
+        else:
+            if not isinstance(self.asr_cost, tuple):
+                raise BaseProjectException(
+                    f"Attribute asr_cost must be provided as a tuple of ASR instances, "
+                    f"not as an/a {self.asr_cost.__class__.__qualname__}"
+                )
 
         # Prepare attribute lbt_cost (for both OIL and GAS)
         if self.lbt_cost is None:
@@ -375,18 +415,25 @@ class BaseProject:
                 LBT(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
-                    cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
+                    cost=np.array([0]),
                     cost_allocation=[FluidType.OIL],
                 ),
                 LBT(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
-                    cost=np.array([0]),
                     expense_year=np.array([self.start_date.year]),
+                    cost=np.array([0]),
                     cost_allocation=[FluidType.GAS],
                 ),
             )
+
+        else:
+            if not isinstance(self.lbt_cost, tuple):
+                raise BaseProjectException(
+                    f"Attribute lbt_cost must be provided as a tuple of LBT instances, "
+                    f"not as an/a {self.lbt_cost.__class__.__qualname__}"
+                )
 
         # Prepare attribute cost_of_sales (for both OIL and GAS)
         if self.cost_of_sales is None:
@@ -394,18 +441,25 @@ class BaseProject:
                 CostOfSales(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
-                    cost=np.zeros(self.project_duration, dtype=np.float64),
-                    expense_year=self.project_years.copy(),
-                    cost_allocation=[FluidType.OIL for _ in range(self.project_duration)],
+                    expense_year=np.array([self.start_date.year]),
+                    cost=np.array([0]),
+                    cost_allocation=[FluidType.OIL],
                 ),
                 CostOfSales(
                     start_year=self.start_date.year,
                     end_year=self.end_date.year,
-                    cost=np.zeros(self.project_duration, dtype=np.float64),
-                    expense_year=self.project_years.copy(),
-                    cost_allocation=[FluidType.GAS for _ in range(self.project_duration)],
+                    expense_year=np.array([self.start_date.year]),
+                    cost=np.array([0]),
+                    cost_allocation=[FluidType.GAS],
                 ),
             )
+
+        else:
+            if not isinstance(self.cost_of_sales, tuple):
+                raise BaseProjectException(
+                    f"Attribute cost_of_sales must be provided as a tuple of CostOfSales "
+                    f"instances, not as an/a {self.cost_of_sales.__class__.__qualname__}"
+                )
 
         # Prepare attributes associated with total cost per component
         self.capital_cost_total = reduce(lambda x, y: x + y, self.capital_cost)
@@ -559,7 +613,8 @@ class BaseProject:
                 if oil_onstream_index != oil_revenue_index[0]:
                     raise BaseProjectException(
                         f"Oil onstream year ({self.oil_onstream_date.year}) is different from "
-                        f"the starting year of oil production ({self.project_years[oil_revenue_index[0]]})"
+                        f"the starting year of oil production "
+                        f"({self.project_years[oil_revenue_index[0]]})"
                     )
 
             else:
@@ -596,7 +651,8 @@ class BaseProject:
                 if gas_onstream_index != gas_revenue_index[0]:
                     raise BaseProjectException(
                         f"Gas onstream year ({self.gas_onstream_date.year}) is different from "
-                        f"the starting year of gas production ({self.project_years[gas_revenue_index[0]]})"
+                        f"the starting year of gas production "
+                        f"({self.project_years[gas_revenue_index[0]]})"
                     )
 
             else:
@@ -605,14 +661,7 @@ class BaseProject:
                 )
 
         else:
-            if self.gas_onstream_date is not None:
-                raise BaseProjectException(
-                    f"Gas onstream year is given ({self.gas_onstream_date.year}) "
-                    f"but gas lifting rate is missing or zero for the entire project duration"
-                )
-
-            else:
-                self.gas_onstream_date = self.end_date
+            self.gas_onstream_date = self.end_date
 
     def _get_oil_lifting(self) -> Lifting:
         """
@@ -644,9 +693,9 @@ class BaseProject:
             return Lifting(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
+                prod_year=self.project_years,
                 lifting_rate=np.zeros(self.project_duration),
                 price=np.zeros(self.project_duration),
-                prod_year=self.project_years,
                 fluid_type=FluidType.OIL,
                 prod_rate=np.zeros(self.project_duration),
                 prod_rate_baseline=np.zeros(self.project_duration),
@@ -654,7 +703,7 @@ class BaseProject:
 
         return reduce(
             lambda x, y: x + y,
-            (lft for lft in self.lifting if lft.fluid_type == FluidType.OIL),
+            (lft for lft in self.lifting if lft.fluid_type == FluidType.OIL)
         )
 
     def _get_gas_lifting(self) -> Lifting:
@@ -687,24 +736,23 @@ class BaseProject:
             return Lifting(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
+                prod_year=self.project_years,
                 lifting_rate=np.zeros(self.project_duration),
                 price=np.zeros(self.project_duration),
-                prod_year=self.project_years,
                 fluid_type=FluidType.GAS,
-                ghv=np.zeros(self.project_duration),
                 prod_rate=np.zeros(self.project_duration),
                 prod_rate_baseline=np.zeros(self.project_duration),
             )
 
         return reduce(
             lambda x, y: x + y,
-            (lft for lft in self.lifting if lft.fluid_type == FluidType.GAS),
+            (lft for lft in self.lifting if lft.fluid_type == FluidType.GAS)
         )
 
     def _get_sulfur_lifting(self) -> Lifting:
         """
-        Determines total sulfur Lifting from the number of sulfur Lifting instances in
-        attribute self.lifting.
+        Determines total sulfur Lifting from the number of sulfur Lifting instances
+        in attribute self.lifting.
 
         Returns
         -------
@@ -731,39 +779,41 @@ class BaseProject:
             return Lifting(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
+                prod_year=self.project_years,
                 lifting_rate=np.zeros(self.project_duration),
                 price=np.zeros(self.project_duration),
-                prod_year=self.project_years,
                 fluid_type=FluidType.SULFUR,
+                prod_rate=np.zeros(self.project_duration),
+                prod_rate_baseline=np.zeros(self.project_duration),
             )
 
         return reduce(
             lambda x, y: x + y,
-            (lft for lft in self.lifting if lft.fluid_type == FluidType.SULFUR),
+            (lft for lft in self.lifting if lft.fluid_type == FluidType.SULFUR)
         )
 
     def _get_electricity_lifting(self) -> Lifting:
         """
-        Determines total ELECTRICITY Lifting from the number of ELECTRICITY Lifting instances in
-        attribute self.lifting.
+        Determines total ELECTRICITY Lifting from the number of ELECTRICITY Lifting
+        instances in attribute self.lifting.
 
         Returns
         -------
         total_electricity_lifting: Lifting
-            Total ELECTRICITY Lifting as a new instance of ELECTRICITY Lifting where the associated
-            attributes are determined based on the prescribed rule in the corresponding
-            dunder method __add__() of the Lifting class.
+            Total ELECTRICITY Lifting as a new instance of ELECTRICITY Lifting where
+            the associated attributes are determined based on the prescribed rule in
+            the corresponding dunder method __add__() of the Lifting class.
 
         Notes
         -----
         The order of operations is as follows:
         (1) Check the fluid_type in attribute self.lifting,
-        (2) If ELECTRICITY is not available as an instance in attribute self.lifting, then
-            establish a new instance of ELECTRICITY Lifting with the following attributes set
-            to zero: lifting_rate, price.
-        (3) Add the instances with fluid_type ELECTRICITY, return the result as a new instance of
-            ELECTRICITY Lifting following the rule prescribed in the dunder method __add__() of
-            class Lifting.
+        (2) If ELECTRICITY is not available as an instance in attribute self.lifting,
+            then establish a new instance of ELECTRICITY Lifting with the following
+            attributes set to zero: lifting_rate, price.
+        (3) Add the instances with fluid_type ELECTRICITY, return the result as a new
+            instance of ELECTRICITY Lifting following the rule prescribed in the dunder
+            method __add__() of class Lifting.
         """
 
         fluid_types = [lft.fluid_type for lft in self.lifting]
@@ -772,15 +822,17 @@ class BaseProject:
             return Lifting(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
+                prod_year=self.project_years,
                 lifting_rate=np.zeros(self.project_duration),
                 price=np.zeros(self.project_duration),
-                prod_year=self.project_years,
                 fluid_type=FluidType.ELECTRICITY,
+                prod_rate=np.zeros(self.project_duration),
+                prod_rate_baseline=np.zeros(self.project_duration),
             )
 
         return reduce(
             lambda x, y: x + y,
-            (lft for lft in self.lifting if lft.fluid_type == FluidType.ELECTRICITY),
+            (lft for lft in self.lifting if lft.fluid_type == FluidType.ELECTRICITY)
         )
 
     def _get_co2_lifting(self) -> Lifting:
@@ -800,11 +852,11 @@ class BaseProject:
         The order of operations is as follows:
         (1) Check the fluid_type in attribute self.lifting,
         (2) If CO2 is not available as an instance in attribute self.lifting, then
-            establish a new instance of CO2 Lifting with the following attributes set
-            to zero: lifting_rate, price.
-        (3) Add the instances with fluid_type CO2, return the result as a new instance of
-            CO2 Lifting following the rule prescribed in the dunder method __add__() of
-            class Lifting.
+            establish a new instance of CO2 Lifting with the following attributes
+            set to zero: lifting_rate, price.
+        (3) Add the instances with fluid_type CO2, return the result as a new instance
+            of CO2 Lifting following the rule prescribed in the dunder method __add__()
+            of class Lifting.
         """
 
         fluid_types = [lft.fluid_type for lft in self.lifting]
@@ -813,15 +865,17 @@ class BaseProject:
             return Lifting(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
+                prod_year=self.project_years,
                 lifting_rate=np.zeros(self.project_duration),
                 price=np.zeros(self.project_duration),
-                prod_year=self.project_years,
                 fluid_type=FluidType.CO2,
+                prod_rate=np.zeros(self.project_duration),
+                prod_rate_baseline=np.zeros(self.project_duration),
             )
 
         return reduce(
             lambda x, y: x + y,
-            (lft for lft in self.lifting if lft.fluid_type == FluidType.CO2),
+            (lft for lft in self.lifting if lft.fluid_type == FluidType.CO2)
         )
 
     def _get_oil_capital(self) -> CapitalCost:
@@ -852,8 +906,8 @@ class BaseProject:
             return CapitalCost(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
-                cost=np.array([0]),
                 expense_year=np.array([self.start_date.year]),
+                cost=np.array([0]),
                 cost_allocation=[FluidType.OIL],
             )
 
@@ -864,17 +918,17 @@ class BaseProject:
 
             start_year = self.capital_cost_total.start_year
             end_year = self.capital_cost_total.end_year
-            cost = self.capital_cost_total.cost[oil_capital_id]
             expense_year = self.capital_cost_total.expense_year[oil_capital_id]
+            cost = self.capital_cost_total.cost[oil_capital_id]
             cost_allocation = np.array(self.capital_cost_total.cost_allocation)[oil_capital_id]
             description = np.array(self.capital_cost_total.description)[oil_capital_id]
+            tax_portion = self.capital_cost_total.tax_portion[oil_capital_id]
+            tax_discount = self.capital_cost_total.tax_discount[oil_capital_id]
             pis_year = self.capital_cost_total.pis_year[oil_capital_id]
             salvage_value = self.capital_cost_total.salvage_value[oil_capital_id]
             useful_life = self.capital_cost_total.useful_life[oil_capital_id]
             depreciation_factor = self.capital_cost_total.depreciation_factor[oil_capital_id]
             is_ic_applied = np.array(self.capital_cost_total.is_ic_applied)[oil_capital_id]
-            tax_portion = self.capital_cost_total.tax_portion[oil_capital_id]
-            tax_discount = self.capital_cost_total.tax_discount[oil_capital_id]
 
             return CapitalCost(
                 start_year=start_year,
@@ -883,13 +937,13 @@ class BaseProject:
                 cost=cost,
                 cost_allocation=cost_allocation.tolist(),
                 description=description.tolist(),
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
                 pis_year=pis_year,
                 salvage_value=salvage_value,
                 useful_life=useful_life,
                 depreciation_factor=depreciation_factor,
                 is_ic_applied=is_ic_applied.tolist(),
-                tax_portion=tax_portion,
-                tax_discount=tax_discount,
             )
 
     def _get_gas_capital(self) -> CapitalCost:
@@ -920,8 +974,8 @@ class BaseProject:
             return CapitalCost(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
-                cost=np.array([0]),
                 expense_year=np.array([self.start_date.year]),
+                cost=np.array([0]),
                 cost_allocation=[FluidType.GAS],
             )
 
@@ -932,17 +986,17 @@ class BaseProject:
 
             start_year = self.capital_cost_total.start_year
             end_year = self.capital_cost_total.end_year
-            cost = self.capital_cost_total.cost[gas_capital_id]
             expense_year = self.capital_cost_total.expense_year[gas_capital_id]
+            cost = self.capital_cost_total.cost[gas_capital_id]
             cost_allocation = np.array(self.capital_cost_total.cost_allocation)[gas_capital_id]
             description = np.array(self.capital_cost_total.description)[gas_capital_id]
+            tax_portion = self.capital_cost_total.tax_portion[gas_capital_id]
+            tax_discount = self.capital_cost_total.tax_discount[gas_capital_id]
             pis_year = self.capital_cost_total.pis_year[gas_capital_id]
             salvage_value = self.capital_cost_total.salvage_value[gas_capital_id]
             useful_life = self.capital_cost_total.useful_life[gas_capital_id]
             depreciation_factor = self.capital_cost_total.depreciation_factor[gas_capital_id]
             is_ic_applied = np.array(self.capital_cost_total.is_ic_applied)[gas_capital_id]
-            tax_portion = self.capital_cost_total.tax_portion[gas_capital_id]
-            tax_discount = self.capital_cost_total.tax_discount[gas_capital_id]
 
             return CapitalCost(
                 start_year=start_year,
@@ -951,13 +1005,13 @@ class BaseProject:
                 cost=cost,
                 cost_allocation=cost_allocation.tolist(),
                 description=description.tolist(),
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
                 pis_year=pis_year,
                 salvage_value=salvage_value,
                 useful_life=useful_life,
                 depreciation_factor=depreciation_factor,
                 is_ic_applied=is_ic_applied.tolist(),
-                tax_portion=tax_portion,
-                tax_discount=tax_discount,
             )
 
     def _get_oil_intangible(self) -> Intangible:
@@ -988,8 +1042,8 @@ class BaseProject:
             return Intangible(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
-                cost=np.array([0]),
                 expense_year=np.array([self.start_date.year]),
+                cost=np.array([0]),
                 cost_allocation=[FluidType.OIL],
             )
 
@@ -1000,8 +1054,8 @@ class BaseProject:
 
             start_year = self.intangible_cost_total.start_year
             end_year = self.intangible_cost_total.end_year
-            cost = self.intangible_cost_total.cost[oil_intangible_id]
             expense_year = self.intangible_cost_total.expense_year[oil_intangible_id]
+            cost = self.intangible_cost_total.cost[oil_intangible_id]
             cost_allocation = np.array(self.intangible_cost_total.cost_allocation)[oil_intangible_id]
             description = np.array(self.intangible_cost_total.description)[oil_intangible_id]
             tax_portion = self.intangible_cost_total.tax_portion[oil_intangible_id]
@@ -1010,8 +1064,8 @@ class BaseProject:
             return Intangible(
                 start_year=start_year,
                 end_year=end_year,
-                cost=cost,
                 expense_year=expense_year,
+                cost=cost,
                 cost_allocation=cost_allocation.tolist(),
                 description=description.tolist(),
                 tax_portion=tax_portion,
@@ -1046,8 +1100,8 @@ class BaseProject:
             return Intangible(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
-                cost=np.array([0]),
                 expense_year=np.array([self.start_date.year]),
+                cost=np.array([0]),
                 cost_allocation=[FluidType.GAS],
             )
 
@@ -1058,8 +1112,8 @@ class BaseProject:
 
             start_year = self.intangible_cost_total.start_year
             end_year = self.intangible_cost_total.end_year
-            cost = self.intangible_cost_total.cost[gas_intangible_id]
             expense_year = self.intangible_cost_total.expense_year[gas_intangible_id]
+            cost = self.intangible_cost_total.cost[gas_intangible_id]
             cost_allocation = np.array(self.intangible_cost_total.cost_allocation)[gas_intangible_id]
             description = np.array(self.intangible_cost_total.description)[gas_intangible_id]
             tax_portion = self.intangible_cost_total.tax_portion[gas_intangible_id]
@@ -1068,8 +1122,8 @@ class BaseProject:
             return Intangible(
                 start_year=start_year,
                 end_year=end_year,
-                cost=cost,
                 expense_year=expense_year,
+                cost=cost,
                 cost_allocation=cost_allocation.tolist(),
                 description=description.tolist(),
                 tax_portion=tax_portion,
@@ -1104,8 +1158,8 @@ class BaseProject:
             return OPEX(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
-                fixed_cost=np.array([0]),
                 expense_year=np.array([self.start_date.year]),
+                fixed_cost=np.array([0]),
                 cost_allocation=[FluidType.OIL],
             )
 
@@ -1119,11 +1173,11 @@ class BaseProject:
             expense_year = self.opex_total.expense_year[oil_opex_id]
             cost_allocation = np.array(self.opex_total.cost_allocation)[oil_opex_id]
             description = np.array(self.opex_total.description)[oil_opex_id]
+            tax_portion = self.opex_total.tax_portion[oil_opex_id]
+            tax_discount = self.opex_total.tax_discount[oil_opex_id]
             fixed_cost = self.opex_total.fixed_cost[oil_opex_id]
             prod_rate = self.opex_total.prod_rate[oil_opex_id]
             cost_per_volume = self.opex_total.cost_per_volume[oil_opex_id]
-            tax_portion = self.opex_total.tax_portion[oil_opex_id]
-            tax_discount = self.opex_total.tax_discount[oil_opex_id]
 
             return OPEX(
                 start_year=start_year,
@@ -1131,11 +1185,11 @@ class BaseProject:
                 expense_year=expense_year,
                 cost_allocation=cost_allocation.tolist(),
                 description=description.tolist(),
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
                 fixed_cost=fixed_cost,
                 prod_rate=prod_rate,
                 cost_per_volume=cost_per_volume,
-                tax_portion=tax_portion,
-                tax_discount=tax_discount,
             )
 
     def _get_gas_opex(self) -> OPEX:
@@ -1166,8 +1220,8 @@ class BaseProject:
             return OPEX(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
-                fixed_cost=np.array([0]),
                 expense_year=np.array([self.start_date.year]),
+                fixed_cost=np.array([0]),
                 cost_allocation=[FluidType.GAS],
             )
 
@@ -1181,11 +1235,11 @@ class BaseProject:
             expense_year = self.opex_total.expense_year[gas_opex_id]
             cost_allocation = np.array(self.opex_total.cost_allocation)[gas_opex_id]
             description = np.array(self.opex_total.description)[gas_opex_id]
+            tax_portion = self.opex_total.tax_portion[gas_opex_id]
+            tax_discount = self.opex_total.tax_discount[gas_opex_id]
             fixed_cost = self.opex_total.fixed_cost[gas_opex_id]
             prod_rate = self.opex_total.prod_rate[gas_opex_id]
             cost_per_volume = self.opex_total.cost_per_volume[gas_opex_id]
-            tax_portion = self.opex_total.tax_portion[gas_opex_id]
-            tax_discount = self.opex_total.tax_discount[gas_opex_id]
 
             return OPEX(
                 start_year=start_year,
@@ -1193,11 +1247,11 @@ class BaseProject:
                 expense_year=expense_year,
                 cost_allocation=cost_allocation.tolist(),
                 description=description.tolist(),
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
                 fixed_cost=fixed_cost,
                 prod_rate=prod_rate,
                 cost_per_volume=cost_per_volume,
-                tax_portion=tax_portion,
-                tax_discount=tax_discount,
             )
 
     def _get_oil_asr(self) -> ASR:
@@ -1228,9 +1282,9 @@ class BaseProject:
             return ASR(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
-                cost=np.array([0]),
                 expense_year=np.array([self.start_date.year]),
-                cost_allocation=[FluidType.OIL],
+                cost=np.array([0]),
+                cost_allocation=[FluidType.OIL]
             )
 
         else:
@@ -1240,26 +1294,26 @@ class BaseProject:
 
             start_year = self.asr_cost_total.start_year
             end_year = self.asr_cost_total.end_year
-            cost = self.asr_cost_total.cost[oil_asr_id]
             expense_year = self.asr_cost_total.expense_year[oil_asr_id]
+            cost = self.asr_cost_total.cost[oil_asr_id]
             cost_allocation = np.array(self.asr_cost_total.cost_allocation)[oil_asr_id]
             description = np.array(self.asr_cost_total.description)[oil_asr_id]
-            final_year = self.asr_cost_total.final_year[oil_asr_id]
-            future_rate = self.asr_cost_total.future_rate[oil_asr_id]
             tax_portion = self.asr_cost_total.tax_portion[oil_asr_id]
             tax_discount = self.asr_cost_total.tax_discount[oil_asr_id]
+            final_year = self.asr_cost_total.final_year[oil_asr_id]
+            future_rate = self.asr_cost_total.future_rate[oil_asr_id]
 
             return ASR(
                 start_year=start_year,
                 end_year=end_year,
-                cost=cost,
                 expense_year=expense_year,
+                cost=cost,
                 cost_allocation=cost_allocation.tolist(),
                 description=description.tolist(),
-                final_year=final_year,
-                future_rate=future_rate,
                 tax_portion=tax_portion,
                 tax_discount=tax_discount,
+                final_year=final_year,
+                future_rate=future_rate,
             )
 
     def _get_gas_asr(self) -> ASR:
@@ -1290,8 +1344,8 @@ class BaseProject:
             return ASR(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
-                cost=np.array([0]),
                 expense_year=np.array([self.start_date.year]),
+                cost=np.array([0]),
                 cost_allocation=[FluidType.GAS],
             )
 
@@ -1302,26 +1356,26 @@ class BaseProject:
 
             start_year = self.asr_cost_total.start_year
             end_year = self.asr_cost_total.end_year
-            cost = self.asr_cost_total.cost[gas_asr_id]
             expense_year = self.asr_cost_total.expense_year[gas_asr_id]
+            cost = self.asr_cost_total.cost[gas_asr_id]
             cost_allocation = np.array(self.asr_cost_total.cost_allocation)[gas_asr_id]
             description = np.array(self.asr_cost_total.description)[gas_asr_id]
-            final_year = self.asr_cost_total.final_year[gas_asr_id]
-            future_rate = self.asr_cost_total.future_rate[gas_asr_id]
             tax_portion = self.asr_cost_total.tax_portion[gas_asr_id]
             tax_discount = self.asr_cost_total.tax_discount[gas_asr_id]
+            final_year = self.asr_cost_total.final_year[gas_asr_id]
+            future_rate = self.asr_cost_total.future_rate[gas_asr_id]
 
             return ASR(
                 start_year=start_year,
                 end_year=end_year,
-                cost=cost,
                 expense_year=expense_year,
+                cost=cost,
                 cost_allocation=cost_allocation.tolist(),
                 description=description.tolist(),
-                final_year=final_year,
-                future_rate=future_rate,
                 tax_portion=tax_portion,
                 tax_discount=tax_discount,
+                final_year=final_year,
+                future_rate=future_rate,
             )
 
     def _get_oil_lbt(self) -> LBT:
@@ -1366,6 +1420,8 @@ class BaseProject:
             expense_year = self.lbt_cost_total.expense_year[oil_lbt_id]
             cost_allocation = np.array(self.lbt_cost_total.cost_allocation)[oil_lbt_id]
             description = np.array(self.lbt_cost_total.description)[oil_lbt_id]
+            tax_portion = self.lbt_cost_total.tax_portion[oil_lbt_id]
+            tax_discount = self.lbt_cost_total.tax_discount[oil_lbt_id]
             final_year = self.lbt_cost_total.final_year[oil_lbt_id]
             utilized_land_area = self.lbt_cost_total.utilized_land_area[oil_lbt_id]
             utilized_building_area = self.lbt_cost_total.utilized_building_area[oil_lbt_id]
@@ -1373,8 +1429,6 @@ class BaseProject:
             njop_building = self.lbt_cost_total.njop_building[oil_lbt_id]
             gross_revenue = self.lbt_cost_total.gross_revenue[oil_lbt_id]
             cost = self.lbt_cost_total.cost[oil_lbt_id]
-            tax_portion = self.lbt_cost_total.tax_portion[oil_lbt_id]
-            tax_discount = self.lbt_cost_total.tax_discount[oil_lbt_id]
 
             return LBT(
                 start_year=start_year,
@@ -1382,6 +1436,8 @@ class BaseProject:
                 expense_year=expense_year,
                 cost_allocation=cost_allocation.tolist(),
                 description=description.tolist(),
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
                 final_year=final_year,
                 utilized_land_area=utilized_land_area,
                 utilized_building_area=utilized_building_area,
@@ -1389,8 +1445,6 @@ class BaseProject:
                 njop_building=njop_building,
                 gross_revenue=gross_revenue,
                 cost=cost,
-                tax_portion=tax_portion,
-                tax_discount=tax_discount,
             )
 
     def _get_gas_lbt(self) -> LBT:
@@ -1421,8 +1475,8 @@ class BaseProject:
             return LBT(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
-                expense_year=np.array([self.start_date.year]),
-                cost_allocation=[FluidType.OIL],
+                expense_year=[self.start_date.year],
+                cost_allocation=[FluidType.GAS]
             )
 
         else:
@@ -1435,6 +1489,8 @@ class BaseProject:
             expense_year = self.lbt_cost_total.expense_year[gas_lbt_id]
             cost_allocation = np.array(self.lbt_cost_total.cost_allocation)[gas_lbt_id]
             description = np.array(self.lbt_cost_total.description)[gas_lbt_id]
+            tax_portion = self.lbt_cost_total.tax_portion[gas_lbt_id]
+            tax_discount = self.lbt_cost_total.tax_discount[gas_lbt_id]
             final_year = self.lbt_cost_total.final_year[gas_lbt_id]
             utilized_land_area = self.lbt_cost_total.utilized_land_area[gas_lbt_id]
             utilized_building_area = self.lbt_cost_total.utilized_building_area[gas_lbt_id]
@@ -1442,8 +1498,6 @@ class BaseProject:
             njop_building = self.lbt_cost_total.njop_building[gas_lbt_id]
             gross_revenue = self.lbt_cost_total.gross_revenue[gas_lbt_id]
             cost = self.lbt_cost_total.cost[gas_lbt_id]
-            tax_portion = self.lbt_cost_total.tax_portion[gas_lbt_id]
-            tax_discount = self.lbt_cost_total.tax_discount[gas_lbt_id]
 
             return LBT(
                 start_year=start_year,
@@ -1451,6 +1505,8 @@ class BaseProject:
                 expense_year=expense_year,
                 cost_allocation=cost_allocation.tolist(),
                 description=description.tolist(),
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
                 final_year=final_year,
                 utilized_land_area=utilized_land_area,
                 utilized_building_area=utilized_building_area,
@@ -1458,31 +1514,28 @@ class BaseProject:
                 njop_building=njop_building,
                 gross_revenue=gross_revenue,
                 cost=cost,
-                tax_portion=tax_portion,
-                tax_discount=tax_discount,
             )
 
     def _get_oil_cost_of_sales(self) -> CostOfSales:
         """
-        Retrieve or create the cost of sales for oil.
+        Retrieve the oil cost of sales from the total cost of sales data.
 
-        This method checks if the `FluidType.OIL` is present in the `cost_allocation`
-        of `cost_of_sales_total`. If not present, it creates a new `CostOfSales` instance
-        with zero costs for the duration of the project. If present, it extracts the relevant
-        cost information for `FluidType.OIL` and returns a `CostOfSales` instance populated
-        with this data.
+        If oil-related costs are not found in the cost allocation, returns a default
+        `CostOfSales` instance with zero cost. Otherwise, extracts and returns the
+        relevant cost details for oil from `cost_of_sales_total`.
 
         Returns
         -------
         CostOfSales
-            An instance of `CostOfSales` representing the cost of sales for oil.
+            An instance of `CostOfSales` containing the cost of sales data for oil,
+            including start and end years, expense year, cost, cost allocation,
+            description, tax portion, and tax discount.
 
         Notes
         -----
-        - If `FluidType.OIL` is not in `cost_allocation`, a new `CostOfSales` instance is
-          created with zero costs.
-        - If `FluidType.OIL` is in `cost_allocation`, the corresponding cost data is extracted
-          and used to create the `CostOfSales` instance.
+        - The method checks if `FluidType.OIL` exists in `cost_of_sales_total.cost_allocation`.
+        - If it does not exist, a default `CostOfSales` with zero cost is returned.
+        - If it exists, relevant attributes are extracted using `np.argwhere` and returned.
         """
 
         if FluidType.OIL not in self.cost_of_sales_total.cost_allocation:
@@ -1521,25 +1574,24 @@ class BaseProject:
 
     def _get_gas_cost_of_sales(self) -> CostOfSales:
         """
-        Retrieve or create the cost of sales for gas.
+        Retrieve the gas cost of sales from the total cost of sales data.
 
-        This method checks if the `FluidType.GAS` is present in the `cost_allocation`
-        of `cost_of_sales_total`. If not present, it creates a new `CostOfSales` instance
-        with zero costs for the duration of the project. If present, it extracts the relevant
-        cost information for `FluidType.GAS` and returns a `CostOfSales` instance populated
-        with this data.
+        If gas-related costs are not found in the cost allocation, returns a default
+        `CostOfSales` instance with zero cost. Otherwise, extracts and returns the
+        relevant cost details for gas from `cost_of_sales_total`.
 
         Returns
         -------
         CostOfSales
-            An instance of `CostOfSales` representing the cost of sales for gas.
+            An instance of `CostOfSales` containing the cost of sales data for gas,
+            including start and end years, expense year, cost, cost allocation,
+            description, tax portion, and tax discount.
 
         Notes
         -----
-        - If `FluidType.GAS` is not in `cost_allocation`, a new `CostOfSales` instance is
-          created with zero costs.
-        - If `FluidType.GAS` is in `cost_allocation`, the corresponding cost data is extracted
-          and used to create the `CostOfSales` instance.
+        - The method checks if `FluidType.GAS` exists in `cost_of_sales_total.cost_allocation`.
+        - If it does not exist, a default `CostOfSales` with zero cost is returned.
+        - If it exists, relevant attributes are extracted using `np.argwhere` and returned.
         """
 
         if FluidType.GAS not in self.cost_of_sales_total.cost_allocation:
@@ -1581,7 +1633,7 @@ class BaseProject:
         target_attr: CapitalCost | Intangible | OPEX | ASR | LBT,
         expenditures_type: ExpendituresType,
         year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | int | float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo | None = None,
         tax_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
@@ -1596,7 +1648,8 @@ class BaseProject:
         Parameters
         ----------
         target_attr : object
-            The target attribute for which expenditures are being calculated (e.g., oil or gas costs).
+            The target attribute for which expenditures are being calculated
+            (e.g., oil or gas costs).
         expenditures_type : ExpendituresType
             Specifies whether to calculate pre-tax or post-tax expenditures.
             Must be one of `ExpendituresType.PRE_TAX` or `ExpendituresType.POST_TAX`.
@@ -1782,7 +1835,7 @@ class BaseProject:
     def _get_expenditures_pre_tax(
         self,
         year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | int | float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo | None = None,
     ) -> None:
         """
@@ -1824,7 +1877,8 @@ class BaseProject:
             -   `_gas_cost_of_sales_expenditures_pre_tax`
         """
 
-        # Prepare expenditures pre tax associated with capital, intangible, opex, asr, and lbt costs
+        # Prepare expenditures pre tax associated with capital, intangible,
+        # opex, asr, and lbt costs
         (
             self._oil_capital_expenditures_pre_tax,
             self._gas_capital_expenditures_pre_tax,
@@ -1870,7 +1924,10 @@ class BaseProject:
             ]
         ]
 
-    def _get_indirect_taxes(self, tax_rate: np.ndarray | float = 0.0) -> None:
+    def _get_indirect_taxes(
+        self,
+        tax_rate: np.ndarray | float = 0.0
+    ) -> None:
         """
         Calculate and assign indirect taxes for various oil and gas expenditure categories.
 
@@ -1881,15 +1938,15 @@ class BaseProject:
         Parameters
         ----------
         tax_rate : np.ndarray or float, optional
-            A NumPy array or float representing the tax rate applied to the costs. If not provided,
-            a default rate of 0.0 will be used. When provided as an array, it should match
-            the project years.
+            A NumPy array or float representing the tax rate applied to the costs. If not
+            provided, a default rate of 0.0 will be used. When provided as an array, it
+            should match the project years.
 
         Returns
         -------
         None
-            This method does not return any values. It updates the following attributes with the
-            calculated indirect taxes for oil and gas:
+            This method does not return any values. It updates the following attributes with
+            the calculated indirect taxes for oil and gas:
 
             -   `_oil_capital_indirect_tax`
             -   `_gas_capital_indirect_tax`
@@ -1905,7 +1962,8 @@ class BaseProject:
             -   `_gas_cost_of_sales_indirect_tax`
         """
 
-        # Prepare indirect taxes associated with capital, intangible, opex, asr, and lbt costs
+        # Prepare indirect taxes associated with capital, intangible,
+        # opex, asr, and lbt costs
         (
             self._oil_capital_indirect_tax,
             self._gas_capital_indirect_tax,
@@ -1948,16 +2006,17 @@ class BaseProject:
     def _get_expenditures_post_tax(
         self,
         year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | int | float = 0.0,
         tax_rate: np.ndarray | float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo | None = None,
     ) -> None:
         """
-        Calculate and assign post-tax expenditures for various oil and gas expenditure categories.
+        Calculate and assign post-tax expenditures for various oil and gas expenditure
+        categories.
 
-        This method computes the post-tax expenditures for multiple categories related to oil
-        and gas. It adjusts these expenditures by accounting for inflation, tax portions, tax rates,
-        and tax discounts.
+        This method computes the post-tax expenditures for multiple categories related
+        to oil and gas. It adjusts these expenditures by accounting for inflation,
+        tax portions, tax rates, and tax discounts.
 
         Parameters
         ----------
@@ -1966,12 +2025,13 @@ class BaseProject:
             it defaults to the `start_year` of the project for all costs. The array must have
             the same length as `self.cost`.
         inflation_rate : np.ndarray or float, optional
-            The inflation rate(s) to apply. If a single float is provided, it is applied uniformly
-            across all years. If an array is provided, each inflation rate corresponds to a specific
-            project year (default is 0.0).
+            The inflation rate(s) to apply. If a single float is provided, it is applied
+            uniformly across all years. If an array is provided, each inflation rate
+            corresponds to a specific project year (default is 0.0).
         tax_rate : np.ndarray or float, optional
-            The tax rate to apply to the costs. If a float is provided, it applies uniformly across all
-            project years. If a NumPy array is provided, the rate can vary by year (default is 0.0).
+            The tax rate to apply to the costs. If a float is provided, it applies uniformly
+            across all project years. If a NumPy array is provided, the rate can vary by year
+            (default is 0.0).
         inflation_rate_applied_to
             The selection of where the cost inflation will be applied to.
 
@@ -1995,7 +2055,8 @@ class BaseProject:
             -   `_gas_cost_of_sales_expenditures_post_tax`
         """
 
-        # Prepare expenditures post tax associated with capital, intangible, opex, asr, and lbt costs
+        # Prepare expenditures post tax associated with capital, intangible,
+        # opex, asr, and lbt costs
         (
             self._oil_capital_expenditures_post_tax,
             self._gas_capital_expenditures_post_tax,
@@ -2042,7 +2103,10 @@ class BaseProject:
             ]
         ]
 
-    def _get_tax_by_regime(self, tax_regime) -> np.ndarray:
+    def _get_tax_by_regime(
+        self,
+        tax_regime
+    ) -> np.ndarray:
         """
         Determine the tax rate array based on the tax regime and project years.
 
@@ -2104,194 +2168,162 @@ class BaseProject:
 
         return tax_rate_arr
 
+    def _calc_wap_price(
+        self,
+        fluidtype: FluidType,
+    ) -> np.ndarray:
+        """
+        Compute the Weighted Average Price (WAP) for a given fluid type.
+
+        This method calculates the WAP price by weighting the price of the fluid type
+        by its lifting volume over the project duration. If the total volume is zero
+        for any time step, the corresponding WAP price is set to zero.
+
+        Parameters
+        ----------
+        fluidtype : FluidType
+            The fluid type (e.g., OIL, GAS, SULFUR) for which to compute the WAP price.
+
+        Returns
+        -------
+        np.ndarray
+            A NumPy array representing the WAP price for each project year.
+
+        Notes
+        -----
+        - The calculation considers only lifting instances that match the specified
+          fluid type.
+        - If `total_vol` is zero for any time step, the result is explicitly set to
+          zero to avoid division errors.
+        """
+
+        # Initialize attributes with zero values with length = project_duration
+        vol_x_price = np.zeros_like(self.project_years, dtype=np.float64)
+        total_vol = np.zeros_like(self.project_years, dtype=np.float64)
+
+        # Add contributions from every FLUID TYPE lifting instances
+        for lft in self.lifting:
+            if lft.fluid_type == fluidtype:
+                lft_rate = lft.get_lifting_rate_arr()
+                vol_x_price += lft_rate * lft.get_price_arr()
+                total_vol += lft_rate
+
+        # Calculate FLUID WAP price
+        return np.divide(
+            vol_x_price, total_vol, where=(total_vol > 0), out=np.zeros_like(total_vol)
+        )
+
     def _get_oil_wap_price(self) -> None:
         """
-        Calculate the weighted average price (WAP) of oil for the project years.
+        Compute and store the Weighted Average Price (WAP) for oil.
 
-        This method computes the oil weighted average price (WAP) for each project year based on the
-        lifting rates and prices of oil. The weighted average price is determined by dividing the
-        volume-weighted prices by the total oil lifting volume for each year.
-
-        The lifting data is iterated through, and the lifting rates and prices are considered only
-        for `FluidType.OIL`.
+        This method calculates the WAP price for oil by calling `_calc_wap_price`
+        with `FluidType.OIL` and stores the result in `self._oil_wap_price`.
 
         Returns
         -------
         None
-            The method updates the attribute `self._oil_wap_price` as a numpy array of weighted average
-            prices for each project year.
+            The computed oil WAP price is stored in `self._oil_wap_price`.
 
         Notes
         -----
-        -   The method first initializes two arrays, `vol_x_price` and `total_vol`, both of which
-            are the same size as `self.project_years`. These arrays are used to accumulate the
-            volume-weighted price and total volume of oil for each project year.
-        -   The method iterates over the `self.lifting` attribute, which contains lifting data for
-            various fluid types. Only entries where `lift.fluid_type == FluidType.OIL` are considered.
-        -   For oil liftings, the lifting rate array and price array are used to calculate the
-            volume-weighted price (`vol_x_price`), and the total lifting volume (`total_vol`).
-        -   The oil weighted average price is then calculated as the element-wise division of
-            `vol_x_price` by `total_vol`, only for years where `total_vol` is not zero.
-        -   The result is stored in `self._oil_wap_price`.
+        - The WAP price is computed based on the lifting rate and price for oil.
+        - The stored `_oil_wap_price` is a NumPy array representing the WAP price
+          for each project year.
         """
 
-        vol_x_price = np.zeros_like(self.project_years, dtype=float)
-        total_vol = np.zeros_like(self.project_years, dtype=float)
-
-        for lift in self.lifting:
-            if lift.fluid_type == FluidType.OIL:
-                vol_x_price = vol_x_price + lift.get_lifting_rate_arr() * lift.get_price_arr()
-                total_vol = total_vol + lift.get_lifting_rate_arr()
-
-        self._oil_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
+        self._oil_wap_price = self._calc_wap_price(fluidtype=FluidType.OIL)
 
     def _get_gas_wap_price(self) -> None:
         """
-        Calculate the weighted average price (WAP) of gas based on the lifting volumes and prices.
+        Compute and store the Weighted Average Price (WAP) for gas.
 
-        This method computes the weighted average price of gas over the project years. The gas WAP is
-        calculated by multiplying the lifting rates with the associated prices and dividing by the
-        total lifting volumes. If there is no lifting data (both total volume and volume x price are
-        zero), the method assigns zero to the gas WAP.
+        This method calculates the WAP price for gas by calling `_calc_wap_price`
+        with `FluidType.GAS` and stores the result in `self._gas_wap_price`.
 
         Returns
         -------
         None
-            The method sets the `self._gas_wap_price` attribute to a NumPy array containing the
-            weighted average gas price for each project year. If no lifting data is available,
-            it assigns zeros.
+            The computed gas WAP price is stored in `self._gas_wap_price`.
 
         Notes
         -----
-        -   The `self.lifting` attribute is expected to contain objects that have the attributes
-            `fluid_type`, `get_lifting_rate_arr()`, and `get_price_arr()`.
-        -   The method calculates the weighted average price for gas only, skipping any lifting
-            records that are not related to gas (`FluidType.GAS`).
+        - The WAP price is computed based on the lifting rate and price for gas.
+        - The stored `_gas_wap_price` is a NumPy array representing the WAP price
+          for each project year.
         """
 
-        vol_x_price = np.zeros_like(self.project_years, dtype=float)
-        total_vol = np.zeros_like(self.project_years, dtype=float)
-
-        for lift in self.lifting:
-            if lift.fluid_type == FluidType.GAS:
-                vol_x_price = vol_x_price + lift.get_lifting_rate_arr() * lift.get_price_arr()
-                total_vol = total_vol + lift.get_lifting_rate_arr()
-
-        if np.sum(vol_x_price) + np.sum(total_vol) == 0:
-            self._gas_wap_price = np.zeros_like(vol_x_price)
-
-        else:
-            self._gas_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
+        self._gas_wap_price = self._calc_wap_price(fluidtype=FluidType.GAS)
 
     def _get_sulfur_wap_price(self) -> None:
         """
-        Calculate the weighted average price (WAP) of sulfur based on lifting volumes and prices.
+        Compute and store the Weighted Average Price (WAP) for sulfur.
 
-        This method computes the weighted average price of sulfur for the project years. The sulfur
-        WAP is calculated by multiplying the sulfur lifting rates with their respective prices and
-        dividing by the total lifting volumes for sulfur. The method skips lifting data unrelated
-        to sulfur.
+        This method calculates the WAP price for sulfur by calling `_calc_wap_price`
+        with `FluidType.SULFUR` and stores the result in `self._sulfur_wap_price`.
 
         Returns
         -------
         None
-            The method sets the `self._sulfur_wap_price` attribute to a NumPy array containing the
-            weighted average sulfur price for each project year.
+            The computed sulfur WAP price is stored in `self._sulfur_wap_price`.
 
         Notes
         -----
-        -   The `self.lifting` attribute is expected to contain objects that have the attributes
-            `fluid_type`, `get_lifting_rate_arr()`, and `get_price_arr()`.
-        -   The method calculates the weighted average price for sulfur only, skipping any lifting
-            records that are not related to sulfur (`FluidType.SULFUR`).
-        -   If there are no valid lifting records for sulfur, the division is avoided by using
-            `np.divide` with the `where` condition to ensure that no division by zero occurs.
+        - The WAP price is computed based on the lifting rate and price for sulfur.
+        - The stored `_sulfur_wap_price` is a NumPy array representing the WAP price
+          for each project year.
         """
 
-        vol_x_price = np.zeros_like(self.project_years, dtype=float)
-        total_vol = np.zeros_like(self.project_years, dtype=float)
-
-        for lift in self.lifting:
-            if lift.fluid_type == FluidType.SULFUR:
-                vol_x_price = vol_x_price + lift.get_lifting_rate_arr() * lift.get_price_arr()
-                total_vol = total_vol + lift.get_lifting_rate_arr()
-
-        self._sulfur_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
+        self._sulfur_wap_price = self._calc_wap_price(fluidtype=FluidType.SULFUR)
 
     def _get_electricity_wap_price(self) -> None:
         """
-        Calculate and set the weighted average price (WAP) of electricity for the project years.
+        Compute and store the Weighted Average Price (WAP) for electricity.
 
-        This method computes the weighted average price (WAP) of electricity based on the lifting rates
-        and prices associated with electricity. It multiplies the electricity lifting volumes by their
-        respective prices and then divides the sum by the total lifting volumes to calculate the WAP.
+        This method calculates the WAP price for electricity by calling `_calc_wap_price`
+        with `FluidType.ELECTRICITY` and stores the result in `self._electricity_wap_price`.
 
         Returns
         -------
         None
-            The method updates the attribute `self._electricity_wap_price`, which contains a NumPy
-            array with the weighted average price of electricity for each project year.
+            The computed electricity WAP price is stored in `self._electricity_wap_price`.
 
         Notes
         -----
-        -   The `self.lifting` attribute is expected to contain objects that provide methods
-            `get_lifting_rate_arr()` and `get_price_arr()` to retrieve lifting rates and prices.
-        -   Only entries with `FluidType.ELECTRICITY` are used in the WAP calculation.
-        -   The `np.divide` function ensures safe division, avoiding division by zero when no
-            volumes are present.
+        - The WAP price is computed based on the lifting rate and price for electricity.
+        - The stored `_electricity_wap_price` is a NumPy array representing the WAP price
+          for each project year.
         """
 
-        vol_x_price = np.zeros_like(self.project_years, dtype=float)
-        total_vol = np.zeros_like(self.project_years, dtype=float)
-
-        for lift in self.lifting:
-            if lift.fluid_type == FluidType.ELECTRICITY:
-                vol_x_price = vol_x_price + lift.get_lifting_rate_arr() * lift.get_price_arr()
-                total_vol = total_vol + lift.get_lifting_rate_arr()
-
-        self._electricity_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
+        self._electricity_wap_price = self._calc_wap_price(fluidtype=FluidType.ELECTRICITY)
 
     def _get_co2_wap_price(self) -> None:
         """
-        Calculate and set the weighted average price (WAP) of CO2 for the project years.
+        Compute and store the Weighted Average Price (WAP) for CO₂.
 
-        This method computes the weighted average price (WAP) of CO2 based on the lifting rates
-        and prices associated with CO2. It multiplies the CO2 lifting volumes by their respective
-        prices and then divides the sum by the total lifting volumes to calculate the WAP.
+        This method calculates the WAP price for CO₂ by calling `_calc_wap_price`
+        with `FluidType.CO2` and stores the result in `self._co2_wap_price`.
 
         Returns
         -------
         None
-            The method updates the attribute `self._co2_wap_price`, which contains a NumPy array
-            with the weighted average price of CO2 for each project year.
+            The computed CO₂ WAP price is stored in `self._co2_wap_price`.
 
         Notes
         -----
-        -   The `self.lifting` attribute is expected to contain objects that provide methods
-            `get_lifting_rate_arr()` and `get_price_arr()` to retrieve lifting rates and prices.
-        -   Only entries with `FluidType.CO2` are used in the WAP calculation.
-        -   The `np.divide` function ensures safe division, avoiding division by zero when no
-            volumes are present.
+        - The WAP price is computed based on the lifting rate and price for CO₂.
+        - The stored `_co2_wap_price` is a NumPy array representing the WAP price
+          for each project year.
         """
 
-        vol_x_price = np.zeros_like(self.project_years, dtype=float)
-        total_vol = np.zeros_like(self.project_years, dtype=float)
-
-        for lift in self.lifting:
-            if lift.fluid_type == FluidType.CO2:
-                vol_x_price = vol_x_price + lift.get_lifting_rate_arr() * lift.get_price_arr()
-                total_vol = total_vol + lift.get_lifting_rate_arr()
-
-        self._co2_wap_price = np.divide(vol_x_price, total_vol, where=total_vol != 0)
+        self._co2_wap_price = self._calc_wap_price(fluidtype=FluidType.CO2)
 
     def _get_wap_price(self) -> None:
         """
-        Calculate and set the weighted average prices (WAP) for oil, gas, sulfur, electricity,
-        and CO2 across the project years.
+        Compute and store the Weighted Average Price (WAP) for all fluid types.
 
-        This method sequentially calls individual methods to compute the weighted average prices
-        for different fluid types (oil, gas, sulfur, electricity, and CO2). It then stores the
-        resulting values in corresponding attributes of the object.
+        This method sequentially calculates the WAP prices for oil, gas, sulfur,
+        electricity, and CO₂ by calling their respective WAP calculation methods.
 
         The following methods are invoked:
         -   `_get_oil_wap_price`: Computes the WAP for oil.
@@ -2303,6 +2335,9 @@ class BaseProject:
         Returns
         -------
         None
+            The computed WAP prices for all fluid types are stored in their respective
+            attributes.
+
             The method updates the following attributes with their corresponding WAP values:
             -   `self._oil_wap_price`
             -   `self._gas_wap_price`
@@ -2312,9 +2347,9 @@ class BaseProject:
 
         Notes
         -----
-        -   Each WAP is computed by considering the lifting rates and prices for the corresponding
-            fluid type.
-        -   The WAP values are stored as attributes of the object for future use.
+        - This method calls `_get_oil_wap_price`, `_get_gas_wap_price`, `_get_sulfur_wap_price`,
+          `_get_electricity_wap_price`, and `_get_co2_wap_price` to compute WAP prices.
+        - Each fluid type's WAP price is stored as a NumPy array in its corresponding attribute.
         """
 
         self._get_oil_wap_price()
@@ -2330,112 +2365,153 @@ class BaseProject:
         co2_revenue: OtherRevenue
     ) -> None:
         """
-        Configure treatments for other revenue sources.
+        Allocate additional revenue streams (sulfur, electricity, and CO₂) to
+        either oil revenue, gas revenue, or as a reduction to operating
+        expenditures (OPEX).
 
-        This method adjusts the financial attributes (revenues and expenditures) based on the
-        revenue sources for sulfur, electricity, and CO2. The adjustment is made according to
-        the type of other revenue selected for each source (either addition to revenue or reduction
-        to operating expenses).
+        Parameters
+        ----------
+        sulfur_revenue : OtherRevenue, optional
+            The allocation method for sulfur revenue.
+            Possible options:
+            - `OtherRevenue.ADDITION_TO_OIL_REVENUE`: Adds to oil revenue.
+            - `OtherRevenue.ADDITION_TO_GAS_REVENUE`: Adds to gas revenue.
+            - `OtherRevenue.REDUCTION_TO_OIL_OPEX`: Reduces oil OPEX.
+            - `OtherRevenue.REDUCTION_TO_GAS_OPEX`: Reduces gas OPEX.
 
-        The method updates the following attributes depending on the input revenue selections:
-        -   `self._oil_revenue`
-        -   `self._gas_revenue`
-        -   `self._oil_opex_expenditures_post_tax`
-        -   `self._gas_opex_expenditures_post_tax`
+        electricity_revenue : OtherRevenue, optional
+            The allocation method for electricity revenue.
+            Possible options are the same as `sulfur_revenue`.
+
+        co2_revenue : OtherRevenue, optional
+            The allocation method for CO₂ revenue.
+            Possible options are the same as `sulfur_revenue`.
+
+        Raises
+        ------
+        OtherRevenueException
+            If an invalid revenue allocation option is provided for sulfur,
+            electricity, or CO₂.
 
         Notes
         -----
-        -   This method modifies the internal attributes based on the selected revenue types for
-            sulfur, electricity, and CO2.
-        -   If an unsupported revenue type is provided, an `OtherRevenueException` is raised.
+        - Depending on the selected revenue allocation, sulfur, electricity,
+          and CO₂ revenue may be added to oil or gas revenue or used to offset
+          post-tax OPEX expenditures.
+        - If an invalid allocation option is provided, an `OtherRevenueException`
+          is raised.
         """
 
         # Configure sulfur revenue
         if sulfur_revenue is OtherRevenue.ADDITION_TO_OIL_REVENUE:
-            self._oil_revenue = self._oil_revenue + self._sulfur_revenue
+            self._oil_revenue += self._sulfur_revenue
 
         elif sulfur_revenue is OtherRevenue.ADDITION_TO_GAS_REVENUE:
-            self._gas_revenue = self._gas_revenue + self._sulfur_revenue
+            self._gas_revenue += self._sulfur_revenue
 
         elif sulfur_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
-            self._oil_opex_expenditures_post_tax = (
-                self._oil_opex_expenditures_post_tax - self._sulfur_revenue
-            )
+            self._oil_opex_expenditures_post_tax -= self._sulfur_revenue
 
         elif sulfur_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
-            self._gas_opex_expenditures_post_tax = (
-                self._gas_opex_expenditures_post_tax - self._sulfur_revenue
-            )
+            self._gas_opex_expenditures_post_tax -= self._sulfur_revenue
 
         else:
             raise OtherRevenueException(
-                f"Other Revenue Selection is not available {sulfur_revenue} "
+                f"Other Revenue selection is not available: {sulfur_revenue} "
             )
 
         # Configure electricity revenue
         if electricity_revenue is OtherRevenue.ADDITION_TO_OIL_REVENUE:
-            self._oil_revenue = self._oil_revenue + self._electricity_revenue
+            self._oil_revenue += self._electricity_revenue
 
         elif electricity_revenue is OtherRevenue.ADDITION_TO_GAS_REVENUE:
-            self._gas_revenue = self._gas_revenue + self._electricity_revenue
+            self._gas_revenue += self._electricity_revenue
 
         elif electricity_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
-            self._oil_opex_expenditures_post_tax = (
-                self._oil_opex_expenditures_post_tax - self._electricity_revenue
-            )
+            self._oil_opex_expenditures_post_tax -= self._electricity_revenue
 
         elif electricity_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
-            self._gas_opex_expenditures_post_tax = (
-                self._gas_opex_expenditures_post_tax - self._electricity_revenue
-            )
+            self._gas_opex_expenditures_post_tax -= self._electricity_revenue
 
         else:
             raise OtherRevenueException(
-                f"Other Revenue Selection is not available {electricity_revenue} "
+                f"Other revenue selection is not available: {electricity_revenue}"
             )
 
         # Configure CO2 revenue
         if co2_revenue is OtherRevenue.ADDITION_TO_OIL_REVENUE:
-            self._oil_revenue = self._oil_revenue + self._co2_revenue
+            self._oil_revenue += self._co2_revenue
 
         elif co2_revenue is OtherRevenue.ADDITION_TO_GAS_REVENUE:
-            self._gas_revenue = self._gas_revenue + self._co2_revenue
+            self._gas_revenue += self._co2_revenue
 
         elif co2_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
-            self._oil_opex_expenditures_post_tax = (
-                self._oil_opex_expenditures_post_tax - self._co2_revenue
-            )
+            self._oil_opex_expenditures_post_tax -= self._co2_revenue
 
         elif co2_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
-            self._gas_opex_expenditures_post_tax = (
-                self._gas_opex_expenditures_post_tax - self._co2_revenue
-            )
+            self._gas_opex_expenditures_post_tax -= self._co2_revenue
 
         else:
             raise OtherRevenueException(
-                f"Other Revenue Selection is not available {co2_revenue} "
+                f"Other revenue selection is not available: {co2_revenue}"
             )
 
-    def _get_sunk_cost(self, sunk_cost_reference_year: int):
+    def _get_sunk_cost(
+        self,
+        sunk_cost_reference_year: int
+    ):
+        """
+        Calculate the sunk costs for oil and gas up to a specified reference year.
+
+        Parameters
+        ----------
+        sunk_cost_reference_year : int
+            The reference year up to which sunk costs are accumulated. If it matches
+            the project start year, sunk costs are set to zero.
+
+        Notes
+        -----
+        - If the `sunk_cost_reference_year` equals the project start year, both
+          `_oil_sunk_cost` and `_gas_sunk_cost` are initialized as zero.
+        - Otherwise, the sunk costs are computed as the cumulative sum of capital
+          and non-capital expenditures for oil and gas from the start year up to the
+          specified reference year.
+
+        Attributes Modified
+        -------------------
+        _oil_sunk_cost : np.ndarray
+            The accumulated sunk cost for oil up to the reference year.
+        _gas_sunk_cost : np.ndarray
+            The accumulated sunk cost for gas up to the reference year.
+        """
+
+        # Prepare oil sunk cost
         oil_cost_raw = (
-                self._oil_capital_expenditures_post_tax
-                + self._oil_non_capital
+            self._oil_capital_expenditures_post_tax
+            + self._oil_non_capital
         )
+
         self._oil_sunk_cost = oil_cost_raw[
                               : (sunk_cost_reference_year - self.start_date.year + 1)
                               ]
-        self._oil_sunk_cost = np.concatenate(
-            (self._oil_sunk_cost, np.zeros(self.project_years[-1] - sunk_cost_reference_year)))
 
-        gas_cost_raw = (
-                self._gas_capital_expenditures_post_tax
-                + self._gas_non_capital
+        self._oil_sunk_cost = np.concatenate(
+            (self._oil_sunk_cost, np.zeros(self.project_years[-1] - sunk_cost_reference_year))
         )
+
+        # Prepare gas sunk cost
+        gas_cost_raw = (
+            self._gas_capital_expenditures_post_tax
+            + self._gas_non_capital
+        )
+
         self._gas_sunk_cost = gas_cost_raw[
                               : (sunk_cost_reference_year - self.start_date.year + 1)
                               ]
+
         self._gas_sunk_cost = np.concatenate(
-            (self._gas_sunk_cost, np.zeros(self.project_years[-1] - sunk_cost_reference_year)))
+            (self._gas_sunk_cost, np.zeros(self.project_years[-1] - sunk_cost_reference_year))
+        )
 
         if sunk_cost_reference_year == self.start_date.year:
             self._oil_sunk_cost = np.zeros_like(self.project_years)
