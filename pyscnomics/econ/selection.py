@@ -6,13 +6,14 @@ from enum import Enum
 
 
 class ExpendituresType(Enum):
-    """ Enumeration of expenditures type
+    """
+    Enumeration of expenditures type.
 
     Attributes
     ----------
-    PRE_TAX : str
+    PRE_TAX: str
         Represents pre-tax expenditures.
-    POST_TAX : str
+    POST_TAX: str
         Represents post-tax expenditures.
     """
 
@@ -26,33 +27,30 @@ class DeprMethod(Enum):
 
     Attributes
     ----------
-    SL : str
+    SL: str
         Represents the straight-line depreciation method
-    DB : str
+    DB: str
         Represents the declining balance depreciation method
-    PSC_DB : str
-        Represents the PSC double declining balance method
-    UOP : str
-        Represents the units of production depreciation method
+    PSC_DB: str
+        Represents the PSC declining balance method
     """
 
     SL = "sl"
     DB = "db"
     PSC_DB = "psc db"
-    UOP = "uop"
 
 
 class FluidType(Enum):
     """
-    Enumeration of fluid types for depreciation calculation.
+    Enumeration of fluid types.
 
     Attributes
     ----------
-    ALL : str
+    ALL: str
         Represents all fluid types
-    OIL : str
+    OIL: str
         Represents oil as the fluid type
-    GAS : str
+    GAS: str
         Represents gas as the fluid type
     SULFUR: str
         Represents sulfur as the fluid type
@@ -92,11 +90,11 @@ class TaxSplitTypeCR(Enum):
 
     Attributes
     ----------
-    CONVENTIONAL : str
+    CONVENTIONAL: str
         Represents conventional split type
-    SLIDING_SCALE : str
+    SLIDING_SCALE: str
         Represents sliding scale split type
-    R2C : str
+    R2C: str
         Represents revenue to cost split type
     """
 
@@ -109,8 +107,8 @@ class YearReference(Enum):
     """
     Enumeration of different year references used for depreciation calculations.
 
-    Attributes:
-    -----------
+    Attributes
+    ----------
     PIS_YEAR : str
         Symbolic name for the Placed in Service (PIS) year reference
 
@@ -128,17 +126,23 @@ class TaxRegime(Enum):
 
     Attributes
     ----------
-    UU_36_2008 (str): Tax regime under "UU No.36 Tahun 2008"
-    UU_02_2020 (str): Tax regime under "UU No.02 Tahun 2020"
-    UU_07_2021 (str): Tax regime under "UU No.07 Tahun 2021"
-    NAILED_DOWN (str): Special tax regime designated as "nailed down"
-    PREVAILING (str): General tax regime referred to as "prevailing"
+    NAILED_DOWN: str
+        Special tax regime designated as "nailed down"
+    PREVAILING: str
+        General tax regime referred to as "prevailing"
+    UU_36_2008: str
+        Tax regime under "UU No.36 Tahun 2008"
+    UU_02_2020: str
+        Tax regime under "UU No.02 Tahun 2020"
+    UU_07_2021: str
+        Tax regime under "UU No.07 Tahun 2021"
     """
+
     NAILED_DOWN = "nailed down"
     PREVAILING = "prevailing"
-    UU_36_2008 = "UU No.36 Tahun 2008"
-    UU_02_2020 = "UU No.02 Tahun 2020"
-    UU_07_2021 = "UU No.07 Tahun 2021"
+    UU_36_2008 = "UU No. 36 Tahun 2008"
+    UU_02_2020 = "UU No. 02 Tahun 2020"
+    UU_07_2021 = "UU No. 07 Tahun 2021"
 
 
 class TaxPaymentMode(Enum):
@@ -153,6 +157,7 @@ class TaxPaymentMode(Enum):
     TAX_DIRECT_MODE: str
         Calculation method where the tax is calculated directly from taxable income.
     """
+
     TAX_DUE_MODE = (
         "Calculation method where it treated like the unrecoverable cost, "
         "could be weighted on the next year"
@@ -174,6 +179,7 @@ class FTPTaxRegime(Enum):
     PRE_PDJP_20_2017: str
         Manifests Pre Peraturan DIRJEN PAJAK No. PER-20/PJ/2017
     """
+
     PDJP_20_2017 = "Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
     PRE_PDJP_20_2017 = "Pre Peraturan DIRJEN PAJAK No. PER-20/PJ/2017"
     DIRECT_MODE = "The tax will be paid directly"
@@ -196,11 +202,11 @@ class GrossSplitRegime(Enum):
     PERMEN_ESDM_12_2020: str
         Represents the Gross Split Regime according to Peraturan Menteri ESDM No. 12 Tahun 2020.
     """
-    PERMEN_ESDM_8_2017 = 'Peraturan Menteri ESDM No. 8 Tahun 2017'
-    PERMEN_ESDM_52_2017 = 'Peraturan Menteri ESDM No. 52 Tahun 2017'
-    PERMEN_ESDM_20_2019 = 'Peraturan Menteri ESDM No. 20 Tahun 2019'
-    PERMEN_ESDM_12_2020 = 'Peraturan Menteri ESDM No. 12 Tahun 2020'
-    PERMEN_ESDM_13_2024 = 'Peraturan Menteri ESDM No. 13 Tahun 2024'
+
+    PERMEN_ESDM_8_2017 = None
+    PERMEN_ESDM_52_2017 = None
+    PERMEN_ESDM_20_2019 = None
+    PERMEN_ESDM_12_2020 = None
 
 
 class DiscountingMode(Enum):
@@ -214,6 +220,7 @@ class DiscountingMode(Enum):
     MID_YEAR: str
         Discounting method where the cash flows are discounted to the middle of each year.
     """
+
     END_YEAR = "End Year Discounting"
     MID_YEAR = "Mid Year Discounting"
 
@@ -229,21 +236,10 @@ class ContractType(Enum):
         Cost Recovery (CR) contract type.
     GROSS_SPLIT: str
         Gross Split (GS) contract type.
-    TRANSITION_CR_CR: str
-        Transition contract type from Cost Recovery to Cost Recovery.
-    TRANSITION_CR_GS: str
-        Transition contract type from Cost Recovery to Gross Split.
-    TRANSITION_GS_GS: str
-        Transition contract type from Gross Split to Gross Split.
-    TRANSITION_GS_CR: str
-        Transition contract type from Gross Split to Cost Recovery.
     """
-    COST_RECOVERY = 'Cost Recovery (CR)'
-    GROSS_SPLIT = 'Gross Split (GS)'
-    TRANSITION_CR_CR = 'Transition CR - CR'
-    TRANSITION_CR_GS = 'Transition CR - GS'
-    TRANSITION_GS_GS = 'Transition GS - GS'
-    TRANSITION_GS_CR = 'Transition GS - CR'
+
+    COST_RECOVERY = "Cost Recovery (CR)"
+    GROSS_SPLIT = "Gross Split (GS)"
 
 
 class NPVSelection(Enum):
@@ -264,11 +260,11 @@ class NPVSelection(Enum):
     NPV_POINT_FORWARD: str
         NPV Calculation using the Point Forward method.
     """
-    NPV_REAL_TERMS = 'NPV Calculation using real terms method'
-    NPV_NOMINAL_TERMS = 'NPV Calculation using nominal terms method'
-    NPV_SKK_NOMINAL_TERMS = 'NPV Calculation using SKK Nominal terms method'
-    NPV_SKK_REAL_TERMS = 'NPV Calculation using SKK Real terms method'
-    NPV_POINT_FORWARD = 'NPV Calculation using Point Forward method'
+    NPV_REAL_TERMS = "NPV Calculation using real terms method"
+    NPV_NOMINAL_TERMS = "NPV Calculation using nominal terms method"
+    NPV_SKK_NOMINAL_TERMS = "NPV Calculation using SKK Nominal terms method"
+    NPV_SKK_REAL_TERMS = "NPV Calculation using SKK Real terms method"
+    NPV_POINT_FORWARD = "NPV Calculation using Point Forward method"
 
 
 class OtherRevenue(Enum):
@@ -312,367 +308,191 @@ class InflationAppliedTo(Enum):
     CAPEX_AND_OPEX = "Inflation rate will be applied to Tangible, Intangible, Operating Cost"
 
 
-class OptimizationParameter(Enum):
-    """
-    Enumeration class representing different optimization parameters in
-    oil and gas economic analysis.
-
-    Attributes
-    ----------
-    OIL_CTR_PRETAX: str
-        Optimization parameter for Oil Contractor Pre Tax.
-    GAS_CTR_PRETAX: str
-        Optimization parameter for Gas Contractor Pre Tax.
-    OIL_FTP_PORTION: str
-        Optimization parameter for Oil FTP Portion.
-    GAS_FTP_PORTION: str
-        Optimization parameter for Gas FTP Portion.
-    OIL_IC: str
-        Optimization parameter for Oil Investment Credit (IC).
-    GAS_IC: str
-        Optimization parameter for Gas Investment Credit (IC).
-    OIL_DMO_FEE: str
-        Optimization parameter for Oil Domestic Market Obligation (DMO) Fee.
-    GAS_DMO_FEE: str
-        Optimization parameter for Gas Domestic Market Obligation (DMO) Fee.
-    VAT_RATE: str
-        Optimization parameter for Value-Added Tax (VAT) Rate.
-    EFFECTIVE_TAX_RATE: str
-        Optimization parameter for Effective Tax Rate.
-    MINISTERIAL_DISCRETION: str
-        Optimization parameter for Ministerial Discretion.
-    VAT_DISCOUNT: str
-        Optimization parameter for VAT Discount.
-    LBT_DISCOUNT: str
-        Optimization parameter for LBT Discount.
-
-
-    Notes
-    -----
-    The impact of the optimization of each parameter into the **contractor** economic indicator are as the following:
-
-    OIL_CTR_PRETAX
-        A higher value of this optimization parameter enhances the contractor's economic indicator while
-        diminishing the government's economic indicator.
-
-    GAS_CTR_PRETAX
-        A higher value of this parameter enhances the contractor's economic indicator while
-        diminishing the government's economic indicator.
-
-    OIL_FTP_PORTION
-        A lower value of this parameter enhances the contractor's economic indicator while
-        diminishing the government's economic indicator.
-
-    GAS_FTP_PORTION
-        A lower value of this parameter enhances the contractor's economic indicator while
-        diminishing the government's economic indicator.
-
-    OIL_IC
-        A higher value of this parameter typically enhances the contractor's economic indicator while
-        diminishing the government's. However, under certain conditions, the opposite effect may occur.
-
-    GAS_IC
-        A higher value of this parameter typically enhances the contractor's economic indicator while
-        diminishing the government's. However, under certain conditions, the opposite effect may occur.
-
-    OIL_DMO_FEE
-        A higher value of this parameter enhances the contractor's economic indicator while
-        diminishing the government's economic indicator.
-
-    GAS_DMO_FEE
-        A higher value of this parameter enhances the contractor's economic indicator while
-        diminishing the government's economic indicator.
-
-    VAT_RATE
-        A lower value of this parameter enhances the contractor's economic indicator while
-        diminishing the government's economic indicator.
-
-    EFFECTIVE_TAX_RATE
-        A lower value of this parameter enhances the contractor's economic indicator while
-        diminishing the government's economic indicator.
-
-    MINISTERIAL_DISCRETION
-        A higher value of this parameter enhances the contractor's economic indicator while
-        diminishing the government's economic indicator.
-
-    VAT_DISCOUNT
-        A higher value of this parameter enhances the contractor's economic indicator while
-        diminishing the government's economic indicator.
-
-    LBT_DISCOUNT
-        A higher value of this parameter enhances the contractor's economic indicator while
-        diminishing the government's economic indicator.
-
-    DEPRECIATION_ACCELERATION
-        A higher value of this parameter enhances the contractor's economic indicator while
-        diminishing the government's economic indicator.
-
-    """
-    OIL_CTR_PRETAX = 'Oil Contractor Pre Tax'
-    GAS_CTR_PRETAX = 'Gas Contractor Pre Tax'
-    OIL_FTP_PORTION = 'Oil FTP Portion'
-    GAS_FTP_PORTION = 'Gas FTP Portion'
-    OIL_IC = 'Oil IC'
-    GAS_IC = 'Gas IC'
-    OIL_DMO_FEE = 'Oil DMO Fee'
-    GAS_DMO_FEE = 'Gas Dmo Fee'
-    VAT_RATE = 'VAT Rate'
-    EFFECTIVE_TAX_RATE = 'Effective Tax Rate'
-    MINISTERIAL_DISCRETION = 'Ministerial Discretion'
-    VAT_DISCOUNT = 'VAT Discount'
-    LBT_DISCOUNT = 'LBT Discount'
-    DEPRECIATION_ACCELERATION = 'Depreciation Acceleration'
-
-
-class OptimizationTarget(Enum):
-    """
-    Enumeration class representing different optimization targets in economic analysis.
-
-    Attributes
-    ----------
-    IRR: str
-        Optimization target for Internal Rate of Return (IRR).
-    NPV: str
-        Optimization target for Net Present Value (NPV).
-    PI: str
-        Optimization target for Profitability Index (PI).
-    """
-    IRR = 'IRR'
-    NPV = 'NPV'
-    PI = 'PI'
-
-
 class VariableSplit522017:
     """
-    Variable Spilt Component for Gross Split No.20 Year 2019 Regime.
+    Variable split corresponds to PERMEN No. 52 Year 2017.
     """
     class FieldStatus(Enum):
         """
-        Field Status variable split component.
+        Field status variable split component
         """
-        POD_I = 'Plan of Development I'
-        POD_II = 'Plan of Development II'
-        NO_POD = 'No Plan of Development'
+        POD_I = "Plan of Development I"
+        POD_II = "Plan of Development II"
+        NO_POD = "No Plan of Development"
 
     class FieldLocation(Enum):
         """
-        Field Location variable split component.
+        Field location variable split component
         """
-        ONSHORE = 'On Shore'
-        OFFSHORE_0_UNTIL_LESSEQUAL_20 = 'Offshore 0 < h <= 20'
-        OFFSHORE_20_UNTIL_LESSEQUAL_50 = 'Offshore 20 < h <= 50'
-        OFFSHORE_50_UNTIL_LESSEQUAL_150 = 'Offshore 50 < h <= 150'
-        OFFSHORE_150_UNTIL_LESSEQUAL_1000 = 'Offshore 150 < h <= 1000'
-        OFFSHORE_GREATERTHAN_1000 = 'Offshore h > 1000'
+        ONSHORE = "On Shore"
+        OFFSHORE_0_UNTIL_LESSEQUAL_20 = "Offshore 0 < h <= 20"
+        OFFSHORE_20_UNTIL_LESSEQUAL_50 = "Offshore 20 < h <= 50"
+        OFFSHORE_50_UNTIL_LESSEQUAL_150 = "Offshore 50 < h <= 150"
+        OFFSHORE_150_UNTIL_LESSEQUAL_1000 = "Offshore 150 < h <= 1000"
+        OFFSHORE_GREATERTHAN_1000 = "Offshore h > 1000"
 
     class ReservoirDepth(Enum):
         """
-        Reservoir Depth variable split component.
+        Reservoir depth variable split component
         """
-        LESSEQUAL_2500 = 'Reservoir Depth <=2500'
-        GREATERTHAN_2500 = 'Reservoir Depth >2500'
+        LESSEQUAL_2500 = "Reservoir Depth <=2500"
+        GREATERTHAN_2500 = "Reservoir Depth >2500"
 
     class InfrastructureAvailability(Enum):
         """
-        Infrastructure Availability variable split component.
+        Infrastucture availability variable split component
         """
-        WELL_DEVELOPED = 'Well Developed'
-        NEW_FRONTIER_OFFSHORE = 'New Frontier Offshore'
-        NEW_FRONTIER_ONSHORE = 'New Frontier Onshore'
+        WELL_DEVELOP = "Well Developed"
+        NEW_FRONTIER_OFFSHORE = "New Frontier Offshore"
+        NEW_FRONTIER_ONSHORE = "New Frontier Onshore"
 
     class ReservoirType(Enum):
         """
-        Reservoir Type variable split component.
+        Reservoir type variable split component
         """
-        CONVENTIONAL = 'Conventional'
-        NON_CONVENTIONAL = 'Non Conventional'
+        CONVENTIONAL = "Conventional"
+        NON_CONVENTIONAL = "Non Conventional"
 
     class CO2Content(Enum):
         """
-        CO2 Content variable split component.
+        CO2 content variable split component
         """
-        LESSTHAN_5 = '< 5'
-        EQUAL_5_UNTIL_LESSTHAN_10 = '5 <= x < 10'
-        EQUAL_10_UNTIL_LESSTHAN_20 = '10 <= x < 20'
-        EQUAL_20_UNTIL_LESSTHAN_40 = '20 <= x < 40'
-        EQUAL_40_UNTIL_LESSTHAN_60 = '40 <= x < 60'
-        EQUALGREATERTHAN_60 = '60 <= x'
+        LESSTHAN5 = "< 5"
+        EQUAL_5_UNTIL_LESSTHAN_10 = "5 <= x < 10"
+        EQUAL_10_UNTIL_LESSTHAN_20 = "10 <= x < 20"
+        EQUAL_20_UNTIL_LESSTHAN_40 = "20 <= x < 40"
+        EQUAL_40_UNTIL_LESSTHAN_60 = "40 <= x < 60"
+        EQUALGREATERTHAN_60 = "60 <= x"
 
     class H2SContent(Enum):
         """
-        H2S Content variable split component.
+        H2S content variable split component
         """
-        LESSTHAN_100 = '<100'
-        EQUAL_100_UNTIL_LESSTHAN_1000 = '100 <= x < 1000'
-        EQUAL_1000_UNTIL_LESSTHAN_2000 = '1000 <= x < 2000'
-        EQUAL_2000_UNTIL_LESSTHAN_3000 = '2000 <= x < 3000'
-        EQUAL_3000_UNTIL_LESSTHAN_4000 = '3000 <= x < 4000'
-        EQUALGREATERTHAN_4000 = '4000 <= x'
+        LESSTHAN_100 = "<100"
+        EQUAL_100_UNTIL_LESSTHAN_1000 = "100 <= x < 1000"
+        EQUAL_1000_UNTIL_LESSTHAN_2000 = "1000 <= x < 2000"
+        EQUAL_2000_UNTIL_LESSTHAN_3000 = "2000 <= x < 3000"
+        EQUAL_3000_UNTIL_LESSTHAN_4000 = "3000 <= x < 4000"
+        EQUALGREATERTHAN_4000 = "4000 <= x"
 
     class APIOil(Enum):
         """
-        API Density variable split component.
+        API density variable split component
         """
-        LESSTHAN_25 = '< 25'
-        EQUALGREATERTHAN_25 = '25 <= x'
+        LESSTHAN_25 = "< 25"
+        EQUALGREATERTHAN_25 = "25 <= x"
 
     class DomesticUse(Enum):
         """
-        Domestic Use variable split component.
+        Domestic use variable split component
         """
-        EQUAL_30_UNTIL_LESSTHAN_50 = '30 <= x < 50'
-        EQUAL_50_UNTIL_LESSTHAN_70 = '50 <= x < 70'
-        EQUAL_70_UNTIL_LESSTHAN_100 = '70 <= x < 100'
+        EQUAL_30_UNTIL_LESSTHAN_50 = "30 <= x < 50"
+        EQUAL_50_UNTIL_LESSTHAN_70 = "50 <= x < 70"
+        EQUAL_70_UNTIL_LESSTHAN_100 = "70 <= x < 100"
 
     class ProductionStage(Enum):
         """
-        Production Stage variable split component.
+        Production stage variable split component
         """
-        PRIMARY = 'Primary'
-        SECONDARY = 'Secondary'
-        TERTIARY = 'Tertiary'
+        PRIMARY = "Primary"
+        SECONDARY = "Secondary"
+        TERTIARY = "Tertiary"
 
 
 class VariableSplit082017:
     """
-    Variable Spilt Component for Gross Split No.08 Year 2017 Regime.
+    Variable split corresponds to PERMEN No. 08 Year 2017.
     """
     class FieldStatus(Enum):
         """
-        Field Status variable split component.
+        Field status variable split component
         """
-        POD_I = 'Plan of Development I'
-        POD_II = 'Plan of Development II'
-        POFD = 'Plan of Further Development'
-        NO_POD = 'No Plan of Development'
+        POD_I = "Plan of Development I"
+        POD_II = "Plan of Development II"
+        POFD = "Plan of Further Development"
+        NO_POD = "No Plan of Development"
 
     class FieldLocation(Enum):
         """
-        Field Location variable split component.
+        Field location variable split component
         """
-        ONSHORE = 'On Shore'
-        OFFSHORE_0_UNTIL_LESSEQUAL_20 = 'Offshore 0 < h <= 20'
-        OFFSHORE_20_UNTIL_LESSEQUAL_50 = 'Offshore 20 < h <= 50'
-        OFFSHORE_50_UNTIL_LESSEQUAL_150 = 'Offshore 50 < h <= 150'
-        OFFSHORE_150_UNTIL_LESSEQUAL_1000 = 'Offshore 150 < h <= 1000'
-        OFFSHORE_GREATERTHAN_1000 = 'Offshore h > 1000'
+        ONSHORE = "On Shore"
+        OFFSHORE_0_UNTIL_LESSEQUAL_20 = "Offshore 0 < h <= 20"
+        OFFSHORE_20_UNTIL_LESSEQUAL_50 = "Offshore 20 < h <= 50"
+        OFFSHORE_50_UNTIL_LESSEQUAL_150 = "Offshore 50 < h <= 150"
+        OFFSHORE_150_UNTIL_LESSEQUAL_1000 = "Offshore 150 < h <= 1000"
+        OFFSHORE_GREATERTHAN_1000 = "Offshore h > 1000"
 
     class ReservoirDepth(Enum):
         """
-        Reservoir Depth variable split component.
+        Reservoir depth variable split component
         """
-        LESSEQUAL_2500 = 'Reservoir Depth <=2500'
-        GREATERTHAN_2500 = 'Reservoir Depth >2500'
+        LESSEQUAL_2500 = "Reservoir Depth <=2500"
+        GREATERTHAN_2500 = "Reservoir Depth >2500"
 
     class InfrastructureAvailability(Enum):
         """
-        Infrastructure Availability variable split component.
+        Infrastucture availability variable split component
         """
-        WELL_DEVELOPED = 'Well Developed'
-        NEW_FRONTIER = 'New Frontier'
+        WELL_DEVELOPED = "Well Developed"
+        NEW_FRONTIER = "New Frontier"
 
     class ReservoirType(Enum):
         """
-        Reservoir Type variable split component.
+        Reservoir type variable split component
         """
-        CONVENTIONAL = 'Conventional'
-        NON_CONVENTIONAL = 'Non Conventional'
+        CONVENTIONAL = "Conventional"
+        NON_CONVENTIONAL = "Non Conventional"
 
     class CO2Content(Enum):
         """
-        CO2 Content variable split component.
+        CO2 content variable split component
         """
-        LESSTHAN_5 = '< 5'
-        EQUAL_5_UNTIL_LESSTHAN_10 = '5 <= x < 10'
-        EQUAL_10_UNTIL_LESSTHAN_20 = '10 <= x < 20'
-        EQUAL_20_UNTIL_LESSTHAN_40 = '20 <= x < 40'
-        EQUAL_40_UNTIL_LESSTHAN_60 = '40 <= x < 60'
-        EQUALGREATERTHAN_60 = '60 <= x'
+        LESSTHAN5 = "< 5"
+        EQUAL_5_UNTIL_LESSTHAN_10 = "5 <= x < 10"
+        EQUAL_10_UNTIL_LESSTHAN_20 = "10 <= x < 20"
+        EQUAL_20_UNTIL_LESSTHAN_40 = "20 <= x < 40"
+        EQUAL_40_UNTIL_LESSTHAN_60 = "40 <= x < 60"
+        EQUALGREATERTHAN_60 = "60 <= x"
 
     class H2SContent(Enum):
         """
-        H2S Content variable split component.
+        H2S content variable split component
         """
-        LESSTHAN_100 = '<100'
-        EQUAL_100_UNTIL_LESSTHAN_300 = '100 <= x < 300'
-        EQUAL_300_UNTIL_LESSTHAN_500 = '1000 <= x < 500'
-        EQUALGREATERTHAN_500 = '500 <= x'
+        LESSTHAN_100 = "<100"
+        EQUAL_100_UNTIL_LESSTHAN_300 = "100 <= x < 300"
+        EQUAL_300_UNTIL_LESSTHAN_500 = "1000 <= x < 500"
+        EQUALGREATERTHAN_500 = "500 <= x"
 
     class APIOil(Enum):
         """
-        API Density variable split component.
+        API density variable split component
         """
-        LESSTHAN_25 = '< 25'
-        EQUALGREATERTHAN_25 = '25 <= x'
+        LESSTHAN_25 = "< 25"
+        EQUALGREATERTHAN_25 = "25 <= x"
 
     class DomesticUse(Enum):
         """
-        Domestic Use variable split component.
+        Domestic use variable split component
         """
-        LESSTHAN_30 = '< 30'
-        EQUAL_30_UNTIL_LESSTHAN_50 = '30 <= x < 50'
-        EQUAL_50_UNTIL_LESSTHAN_70 = '50 <= x < 70'
-        EQUAL_70_UNTIL_LESSTHAN_100 = '70 <= x < 100'
+        LESSTHAN_30 = "< 30"
+        EQUAL_30_UNTIL_LESSTHAN_50 = "30 <= x < 50"
+        EQUAL_50_UNTIL_LESSTHAN_70 = "50 <= x < 70"
+        EQUAL_70_UNTIL_LESSTHAN_100 = "70 <= x < 100"
 
     class ProductionStage(Enum):
         """
-        Production Stage variable split component.
+        Production stage variable split component
         """
-        PRIMARY = 'Primary'
-        SECONDARY = 'Secondary'
-        TERTIARY = 'Tertiary'
+        PRIMARY = "Primary"
+        SECONDARY = "Secondary"
+        TERTIARY = "Tertiary"
 
-class VariableSplit132024:
-    """
-    Variable Spilt Component for Gross Split No.13 Year 2024 Regime.
-    """
-    class InfrastructureAvailability(Enum):
-        """
-        Infrastructure Availability variable split component.
-        """
-        NOT_AVAILABLE = 'x = 0%'
-        PARTIALLY_AVAILABLE = '0 < x <= 50%'
-        AVAILABLE = '50% < x'
-
-    class FieldReservesAmount(Enum):
-        """
-        Field Reserves Amount variable split component.
-        """
-        LOW = 'x < 20'
-        MEDIUM = '20 <= x <= 60'
-        HIGH = '60 < x'
-
-    class FieldLocation(Enum):
-        """
-        Field Location variable split component.
-        """
-        ONSHORE = 'Onshore'
-        SHALLOW_OFFSHORE = 'h < 500'
-        DEEP_OFFSHORE = '500 <= h <= 1000'
-        ULTRADEEP_OFFSHORE = '1000 < h'
 
 class ContractSample(Enum):
     """
     Selection for generating contract sample.
     """
-    CASE_1 = 'Cost Recovery Contract Sample'
-    CASE_2 = 'Cost Recovery Consolidated Contract Sample'
-    CASE_3 = 'Gross Split Contract Sample'
-
-
-class LimitMethod(Enum):
-    """
-    Economic limit method.
-    """
-    MAX_CUM_CASHFLOW = "Maximum Cumulative Cashflow"
-    NEGATIVE_CASHFLOW = "Negative Cashflow"
-    MAX_NPV = "Maximum NPV"
-
-
-class UncertaintyDistribution(Enum):
-    """
-    Uncertainty Distribution Option.
-    """
-    UNIFORM = 'Uniform'
-    TRIANGULAR = 'Triangular'
-    NORMAL = 'Normal'
+    CASE_1 = "Cost Recovery Contract Sample"
+    CASE_2 = "Cost Recovery Consolidated Contract Sample"
+    CASE_3 = "Gross Split Contract Sample"
