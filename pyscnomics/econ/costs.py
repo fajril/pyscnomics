@@ -64,6 +64,12 @@ class CostOfSalesException(Exception):
     pass
 
 
+class PreOnstreamCostException(Exception):
+    """ Exception to be raised for an incorrect use of class PreOnstreamCost """
+
+    pass
+
+
 @dataclass
 class GeneralCost:
     """
@@ -3705,3 +3711,94 @@ class CostOfSales(GeneralCost):
                 f"{other}({other.__class__.__qualname__}) is not an instance of "
                 f"CostOfSales nor an integer nor a float."
             )
+
+
+@dataclass
+class PreOnstreamCost:
+    """
+    Manages a PreOnstreamCost asset.
+    """
+
+    start_year: int
+    end_year: int
+    onstream_year: int
+    expense_year: np.ndarray
+    cost: np.ndarray
+    pod_1_available: bool = field(default=None)
+    pod_1_year: int = field(default=None)
+    description: list[str] = field(default=None)
+    tax_portion: np.ndarray = field(default=None)
+    tax_discount: np.ndarray | float = field(default=0.0)
+
+    # Attributes to be defined in the __post_init__
+    project_duration: int = field(default=None, init=False)
+    project_years: np.ndarray = field(default=None, init=False)
+
+    def __post_init__(self):
+
+        # Prepare attribute project_duration and project_years
+        if self.end_year >= self.start_year:
+            self.project_duration = self.end_year - self.start_year + 1
+            self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
+
+        else:
+            raise PreOnstreamCostException(
+                f"start year {self.start_year} is after the end year {self.end_year} of the project"
+            )
+
+        print('\t')
+        print('project_years')
+        print(f'Filetype: {type(self.project_years)}, Length: {len(self.project_years)}')
+        print(self.project_years)
+
+        # Prepare attribute expense_year
+
+
+
+    def cumulative(self):
+        pass
+
+    def total_amortization_rate(self):
+        pass
+
+    def total_amortization_book_value(self):
+        pass
+
+    def __len__(self):
+        pass
+
+    def __eq__(self, other):
+        pass
+
+    def __lt__(self, other):
+        pass
+
+    def __le__(self, other):
+        pass
+
+    def __gt__(self, other):
+        pass
+
+    def __ge__(self, other):
+        pass
+
+    def __add__(self, other):
+        pass
+
+    def __iadd__(self, other):
+        pass
+
+    def __sub__(self, other):
+        pass
+
+    def __rsub__(self, other):
+        pass
+
+    def __mul__(self, other):
+        pass
+
+    def __rmul__(self, other):
+        pass
+
+    def __truediv__(self, other):
+        pass

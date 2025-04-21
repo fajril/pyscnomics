@@ -17,6 +17,7 @@ from pyscnomics.econ.selection import (FluidType,
                                        VariableSplit522017,
                                        VariableSplit082017,
                                        VariableSplit132024)
+
 from pyscnomics.econ.results import CashFlow
 from pyscnomics.econ.depreciation import unit_of_production_rate
 

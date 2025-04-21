@@ -277,11 +277,11 @@ def entry_point(**kwargs):
     """ Manages CLI """
     if kwargs['api'] == 1:
         body = """
-                We welcome you to our library, PySCnomics. This package contains tailored functionalities for 
-                assessing economic feasibility of oil and gas projects following the state-of-the-art Production 
+                We welcome you to our library, PySCnomics. This package contains tailored functionalities for
+                assessing economic feasibility of oil and gas projects following the state-of-the-art Production
                 Sharing Contract (PSC) schemes in Indonesia.
-                PySCnomics is the product of join research between Indonesia's Special Task Force for Upstream Oil 
-                and Gas Business Activities (SKK Migas) and the Department of Petroleum Engineering, 
+                PySCnomics is the product of join research between Indonesia's Special Task Force for Upstream Oil
+                and Gas Business Activities (SKK Migas) and the Department of Petroleum Engineering,
                 Institut Teknologi Bandung (ITB)
                 """
         print(body)

@@ -19,24 +19,24 @@ from .depreciation import (
     unit_of_production_rate,
     unit_of_production_book_value,
 )
-from .selection import (
-    DeprMethod,
-    FluidType,
-    TaxType,
-    TaxSplitTypeCR,
-    YearReference,
-    TaxRegime,
-    TaxPaymentMode,
-    FTPTaxRegime,
-    GrossSplitRegime,
-    DiscountingMode,
-    ContractType,
-    NPVSelection,
-    OtherRevenue,
-    InflationAppliedTo,
-    OptimizationParameter,
-    OptimizationTarget,
-)
+# from .selection import (
+#     DeprMethod,
+#     FluidType,
+#     TaxType,
+#     TaxSplitTypeCR,
+#     YearReference,
+#     TaxRegime,
+#     TaxPaymentMode,
+#     FTPTaxRegime,
+#     GrossSplitRegime,
+#     DiscountingMode,
+#     ContractType,
+#     NPVSelection,
+#     OtherRevenue,
+#     InflationAppliedTo,
+#     OptimizationParameter,
+#     OptimizationTarget,
+# )
 from .indicator import (
     pot,
     npv,
@@ -51,4 +51,4 @@ from .indicator import (
     pot_psc,
 )
 
-from .limit import *
+# from .limit import *
