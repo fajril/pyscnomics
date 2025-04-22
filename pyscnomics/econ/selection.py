@@ -496,3 +496,9 @@ class ContractSample(Enum):
     CASE_1 = "Cost Recovery Contract Sample"
     CASE_2 = "Cost Recovery Consolidated Contract Sample"
     CASE_3 = "Gross Split Contract Sample"
+
+
+class SunkCostEndPoint(Enum):
+
+    POD_I = "POD I"
+    ONSTREAM = "ONSTREAM"
