@@ -3724,89 +3724,21 @@ class CostOfSales(GeneralCost):
 
 
 @dataclass
-class SunkCost:
-    """
-    Manages sunk cost.
+class SunkCost(GeneralCost):
 
-    Parameters
-    ----------
-    start_year : int
-        The starting year of the project.
-    end_year : int
-        The ending year of the project.
-    expense_year : np.ndarray
-        Array of years when expenses occurred. Must be within project duration.
-    cost : np.ndarray, optional
-        Array of costs corresponding to expense years. Defaults to zeros if not provided.
-    end_point_reference : SunkCostEndPoint, optional
-        Reference point for calculating sunk costs (default: SunkCostEndPoint.ONSTREAM).
-    description : list[str], optional
-        Descriptions for each expense. Defaults to empty strings if not provided.
-    onstream_year : int, optional
-        Year when the project becomes operational. Required for ONSTREAM reference.
-    pod1_year : int, optional
-        Year of POD (Plan of Development) I approval. Required for POD_I reference.
-
-    Attributes
-    ----------
-    project_duration : int
-        Total number of years in the project (end_year - start_year + 1).
-        Initialized during __post_init__.
-    project_years : np.ndarray
-        Array containing all years from start_year to end_year inclusive.
-        Initialized during __post_init__.
-    sunk_cost_total : float
-        Sum of costs considered sunk based on end_point_reference.
-        Calculated during __post_init__.
-
-    Raises
-    ------
-    SunkCostException
-        For various validation errors including:
-        - Invalid data types for any parameters
-        - Missing required values (when needed based on end_point_reference)
-        - Array length mismatches between expense_year, cost, and description
-        - Expense years outside project duration
-        - Logical inconsistencies in timeline (e.g., onstream before start year)
-        - Invalid end_point_reference value
-
-    Notes
-    -----
-    The sunk cost calculation depends on end_point_reference:
-    - ONSTREAM: Includes costs up to and including onstream_year
-    - POD_I: Includes costs up to and including pod1_year
-
-    All expense years must fall within the project duration (start_year to end_year).
-    """
-
-    start_year: int
-    end_year: int
-    expense_year: np.ndarray
-    cost: np.ndarray = field(default=None)
-    end_point_reference: SunkCostEndPoint = field(default=SunkCostEndPoint.ONSTREAM)
-    description: list[str] = field(default=None)
+    # Local arguments
     onstream_year: int = field(default=None)
     pod1_year: int = field(default=None)
+    end_point_reference: SunkCostEndPoint = field(default=SunkCostEndPoint.ONSTREAM)
+
+    # Overridden argument
+    cost: np.ndarray = field(default=None)
 
     # Attributes to be defined later
-    project_duration: int = field(default=None, init=False)
-    project_years: np.ndarray = field(default=None, init=False)
     sunk_cost_total: float = field(default=0.0, init=False)
     pre_onstream_cost_total: float = field(default=0.0, init=False)
 
     def __post_init__(self):
-        """
-        Handles the following operations/procedures:
-        -   Prepare attributes project_duration and project_years,
-        -   Prepare attribute expense_year,
-        -   Prepare attribute cost,
-        -   Prepare attribute description,
-        -   Check input data for unequal length of arrays,
-        -   Raise an error: expense year is after the end year of the project,
-        -   Raise an error: expense year is after the end year of the project,
-        -   Specify condition for end_point_reference equals to onstream year,
-        -   Specify condition for end_point_reference equals to POD I year
-        """
 
         # Prepare attribute project_duration and project_years
         if self.end_year >= self.start_year:
@@ -3853,6 +3785,21 @@ class SunkCost:
 
         self.cost = self.cost.astype(np.float64)
 
+        # Prepare attribute cost_allocation
+        if self.cost_allocation is None:
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
+
+        else:
+            if not isinstance(self.cost_allocation, list):
+                raise SunkCostException(
+                    f"Attribute cost_allocation must be given as a list, "
+                    f"not as a/an {self.cost_allocation.__class__.__qualname__}"
+                )
+
+            self.cost_allocation = [
+                FluidType.OIL if pd.isna(val) else val for _, val in enumerate(self.cost_allocation)
+            ]
+
         # Prepare attribute description
         if self.description is None:
             self.description = [" " for _ in range(len(self.expense_year))]
@@ -3868,6 +3815,60 @@ class SunkCost:
                 " " if pd.isna(val) else val for _, val in enumerate(self.description)
             ]
 
+        # Prepare attribute tax_portion
+        if self.tax_portion is None:
+            self.tax_portion = np.zeros_like(self.expense_year)
+
+        else:
+            if not isinstance(self.tax_portion, np.ndarray):
+                raise SunkCostException(
+                    f"Attribute tax_portion must be given as a numpy.ndarray, "
+                    f"not as a/an {self.tax_portion.__class__.__qualname__}"
+                )
+
+            tax_portion_nan_id = np.argwhere(pd.isna(self.tax_portion)).ravel()
+            if len(tax_portion_nan_id) > 0:
+                self.tax_portion[tax_portion_nan_id] = np.zeros(len(tax_portion_nan_id))
+
+            tax_portion_large = np.sum(self.tax_portion > 1.0, dtype=np.float64)
+            tax_portion_negative = np.sum(self.tax_portion < 0.0, dtype=np.float64)
+            if tax_portion_large > 0 or tax_portion_negative > 0:
+                raise SunkCostException(
+                    f"The value of tax_portion must be: 0 < tax_portion < 1, "
+                    f"tax_portion: {self.tax_portion}"
+                )
+
+        self.tax_portion = self.tax_portion.astype(np.float64)
+
+        # Prepare attribute tax_discount
+        if not isinstance(self.tax_discount, (float, int, np.ndarray)):
+            raise SunkCostException(
+                f"Attribute tax_discount must be provided as a float/int "
+                f"or as a numpy.ndarray, not as a/an "
+                f"{self.tax_discount.__class__.__qualname__}"
+            )
+
+        if isinstance(self.tax_discount, (float, int)):
+            if self.tax_discount < 0 or self.tax_discount > 1:
+                raise SunkCostException(f"Attribute tax_discount must be between 0 and 1")
+
+            self.tax_discount = np.repeat(self.tax_discount, len(self.expense_year))
+
+        elif isinstance(self.tax_discount, np.ndarray):
+            tax_discount_nan_id = np.argwhere(pd.isna(self.tax_discount)).ravel()
+            if len(tax_discount_nan_id) > 0:
+                self.tax_discount[tax_discount_nan_id] = np.zeros(len(tax_discount_nan_id))
+
+            tax_discount_large = np.sum(self.tax_discount > 1.0, dtype=np.float64)
+            tax_discount_negative = np.sum(self.tax_discount < 0.0, dtype=np.float64)
+            if tax_discount_large > 0 or tax_discount_negative > 0:
+                raise SunkCostException(
+                    f"The value of tax_discount must be: 0 < tax_discount < 1, "
+                    f"tax_discount: {self.tax_discount}"
+                )
+
+        self.tax_discount = self.tax_discount.astype(np.float64)
+
         # Check input data for unequal length of arrays
         arr_reference = len(self.expense_year)
 
@@ -3875,14 +3876,20 @@ class SunkCost:
             len(arr) == arr_reference
             for arr in [
                 self.cost,
+                self.cost_allocation,
                 self.description,
+                self.tax_portion,
+                self.tax_discount,
             ]
         ):
             raise SunkCostException(
                 f"Unequal length of arrays: "
                 f"expense_year: {len(self.expense_year)}, "
                 f"cost: {len(self.cost)}, "
+                f"cost_allocation: {len(self.cost_allocation)}, "
                 f"description: {len(self.description)}, "
+                f"tax_portion: {len(self.tax_portion)}, "
+                f"tax_discount: {len(self.tax_discount)} "
             )
 
         # Raise an error: expense year is after the end year of the project
@@ -3899,53 +3906,32 @@ class SunkCost:
                 f"is before the start year of the project ({self.start_year})"
             )
 
-        # Specify condition for end_point_reference equals to onstream year
+    def get_cost(
+        self,
+        year_inflation: np.ndarray = None,
+        inflation_rate: np.ndarray | int | float = 0.0,
+        tax_rate: np.ndarray | float = 0.0,
+    ):
+
+        t1 = self.expenditures_post_tax(
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            tax_rate=tax_rate,
+        )
+
+        print('\t')
+        print(f'Filetype: {type(t1)}')
+        print(f'Length: {len(t1)}')
+        print('t1 = ', t1)
+
+
+    def _get_sunk_cost(self):
+
         if self.end_point_reference == SunkCostEndPoint.ONSTREAM:
 
-            # Prepare attribute onstream year
             if self.onstream_year is None:
                 raise SunkCostException(
-                    f"Missing data for onstream_year: ({self.onstream_year})"
-                )
-
-            else:
-                if not isinstance(self.onstream_year, int):
-                    raise SunkCostException(
-                        f"Attribute onstream_year must be provided as an int, "
-                        f"not as a/an {self.onstream_year.__class__.__qualname__}"
-                    )
-
-                if self.onstream_year <= self.start_year:
-                    raise SunkCostException(
-                        f"Onstream year ({self.onstream_year}) is before the start "
-                        f"year of the project ({self.start_year})"
-                    )
-
-                if self.onstream_year >= self.end_year:
-                    raise SunkCostException(
-                        f"Onstream year ({self.onstream_year}) is after the end year "
-                        f"of the project ({self.end_year})"
-                    )
-
-            # Filter expense_year array
-            expense_year_large_sum = np.sum(self.expense_year > self.onstream_year, dtype=int)
-            if expense_year_large_sum > 0:
-                raise SunkCostException(
-                    f"Onstream year ({self.onstream_year}) is before the "
-                    f"expense_year ({self.expense_year})"
-                )
-
-            # Fill attribute sunk_cost_total
-            ids = np.argwhere(self.expense_year <= self.onstream_year).ravel()
-            self.sunk_cost_total = np.sum(self.cost[ids], dtype=np.float64)
-
-        # Specify condition for end_point_reference equals to POD I year
-        elif self.end_point_reference == SunkCostEndPoint.POD_I:
-
-            # Prepare attribute onstream year
-            if self.onstream_year is None:
-                raise SunkCostException(
-                    f"Missing data for onstream_year: ({self.onstream_year})"
+                    f"Missing data onstream_year: {self.onstream_year}"
                 )
 
             else:
@@ -3963,57 +3949,21 @@ class SunkCost:
 
                 if self.onstream_year > self.end_year:
                     raise SunkCostException(
-                        f"Onstream year ({self.onstream_year}) is after the end year "
-                        f"of the project ({self.end_year})"
+                        f"Onstream year ({self.onstream_year}) is after the end "
+                        f"year of the project ({self.end_year})"
                     )
 
-            # Prepare attribute POD I year
-            if self.pod1_year is None:
-                raise SunkCostException(
-                    f"Missing data for POD I year: {self.pod1_year}"
-                )
-
-            else:
-                if not isinstance(self.pod1_year, int):
-                    raise SunkCostException(
-                        f"Attribute pod1_year must be provided as an int, "
-                        f"not as a/an {self.pod1_year.__class__.__qualname__}"
-                    )
-
-                if self.pod1_year < self.start_year:
-                    raise SunkCostException(
-                        f"POD I year ({self.pod1_year}) is before the start year "
-                        f"of the project ({self.start_year})"
-                    )
-
-                if self.pod1_year > self.end_year:
-                    raise SunkCostException(
-                        f"POD I year ({self.pod1_year}) is after the end year "
-                        f"of the project ({self.end_year})"
-                    )
-
-                if self.pod1_year > self.onstream_year:
-                    raise SunkCostException(
-                        f"POD I year ({self.pod1_year}) is after the onstream year "
-                        f"({self.onstream_year})"
-                    )
-
-            # Filter expense_year array
-            expense_year_large_sum = np.sum(self.expense_year > self.onstream_year, dtype=int)
-            if expense_year_large_sum > 0:
-                raise SunkCostException(
-                    f"Onstream year ({self.onstream_year}) is before the "
-                    f"expense_year ({self.expense_year})"
-                )
-
-            ids = np.argwhere(self.expense_year <= self.pod1_year).ravel()
-            self.sunk_cost_total = np.sum(self.cost[ids], dtype=np.float64)
+        elif self.end_point_reference == SunkCostEndPoint.POD_I:
+            pass
 
         else:
             raise SunkCostException(
-                f"Sunk cost end-point reference is not recognized "
-                f"({self.end_point_reference})"
+                f"Must choose between 'ONSTREAM' or 'POD_I' for "
+                f"end point reference"
             )
+
+    def _get_pre_onstream_cost(self):
+        pass
 
     def total_amortization_rate(self):
         pass

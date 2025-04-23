@@ -499,6 +499,9 @@ class ContractSample(Enum):
 
 
 class SunkCostEndPoint(Enum):
+    """
+    End-point selection for sunk cost.
+    """
 
     POD_I = "POD I"
     ONSTREAM = "ONSTREAM"
