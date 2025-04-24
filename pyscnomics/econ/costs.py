@@ -17,7 +17,6 @@ import pyscnomics.econ.depreciation as depr
 from pyscnomics.econ.selection import (
     FluidType,
     DeprMethod,
-    SunkCostEndPoint,
 )
 from pyscnomics.econ.costs_tools import (
     get_cost_adjustment_by_inflation,
@@ -3989,7 +3988,7 @@ class SunkCost(GeneralCost):
         tax_rate: np.ndarray | float = 0.0,
     ):
         """
-        Calculate oil-related cost classifications (sunk cost and pre-onstream cost)
+        Classify oil-related costs into sunk cost and pre-onstream cost,
         adjusted by VAT.
 
         The function categorizes costs into:
@@ -4003,12 +4002,11 @@ class SunkCost(GeneralCost):
 
         Returns
         -------
-        tuple
-            A tuple containing:
-            - sunk_cost_oil_total : float
-                Total sunk costs allocated to oil
-            - pre_onstream_cost_oil_total : float
-                Total pre-onstream costs allocated to oil
+        None
+            This method does not return any value but stores the following attributes in the
+            instance:
+            - `sunk_cost_oil_total` (float): Total sunk costs allocated to oil.
+            - `pre_onstream_cost_oil_total` (float): Total pre-onstream costs allocated to oil.
 
         Raises
         ------
@@ -4104,27 +4102,234 @@ class SunkCost(GeneralCost):
 
             else:
                 raise SunkCostException(
-                    f"Cannot have POD I year larger than onstream year"
+                    f"Cannot have POD I year after the onstream year"
                 )
 
-        return sunk_cost_oil_total, pre_onstream_cost_oil_total
+        self.sunk_cost_oil_total = sunk_cost_oil_total
+        self.pre_onstream_cost_oil_total = pre_onstream_cost_oil_total
 
     def _get_gas_cost_classification(
         self,
         tax_rate: np.ndarray | float = 0.0,
     ):
-        pass
+        """
+        Classify gas-related costs into sunk costs and pre-onstream costs, adjusted by VAT.
+
+        This method calculates and stores two types of costs for gas:
+        1. Sunk costs: Expenses incurred before or during the POD I approval year
+        2. Pre-onstream costs: Expenses incurred between POD I approval and onstream year
+
+        Parameters
+        ----------
+        tax_rate : np.ndarray or float, optional
+            Tax rate to be applied for VAT calculation. Can be either:
+            - A single float value (applied uniformly)
+            - A numpy array of rates (for year-specific tax rates)
+            Default is 0.0 (no tax).
+
+        Returns
+        -------
+        None
+            Instead of returning values, this method sets the following instance attributes:
+            - sunk_cost_gas_total : float
+                Total sunk costs allocated to gas (after VAT adjustment)
+            - pre_onstream_cost_gas_total : float
+                Total pre-onstream costs allocated to gas (after VAT adjustment)
+
+        Raises
+        ------
+        SunkCostException
+            If POD I approval year is later than onstream year, which is an invalid temporal
+            relationship
+
+        Notes
+        -----
+        The classification logic follows these rules:
+        1. If FluidType.GAS is not in cost_allocation:
+            - Both sunk and pre-onstream costs are set to 0.0
+        2. When POD I year equals onstream year:
+            - All costs ≤ onstream year are considered sunk costs
+            - Pre-onstream costs are set to 0.0
+        3. When POD I year < onstream year:
+            - Sunk costs: expenses ≤ POD I year
+            - Pre-onstream costs: expenses > POD I year but ≤ onstream year
+        4. All costs are first adjusted by VAT using calc_indirect_tax()
+        """
+
+        # Adjust cost by VAT
+        cost_adjusted_by_VAT = (
+            self.cost +
+            calc_indirect_tax(
+                start_year=self.start_year,
+                cost=self.cost,
+                expense_year=self.expense_year,
+                project_years=self.project_years,
+                tax_portion=self.tax_portion,
+                tax_rate=tax_rate,
+                tax_discount=self.tax_discount,
+            )
+        )
+
+        # Determine gas sunk cost and gas pre-onstream cost
+        if FluidType.GAS not in self.cost_allocation:
+            sunk_cost_gas_total = 0.0
+            pre_onstream_cost_gas_total = 0.0
+
+        else:
+            # Year of POD I approval equals to onstream year
+            if self.pod1_year == self.onstream_year:
+
+                # Gas sunk cost (total)
+                sunk_cost_id = np.argwhere(self.expense_year <= self.onstream_year).ravel()
+                cost_allocation_id = np.array(
+                    [self.cost_allocation[val] for _, val in enumerate(sunk_cost_id)]
+                )
+                sunk_cost_gas_id = np.array(
+                    [i for i, val in enumerate(cost_allocation_id) if val == FluidType.GAS]
+                )
+
+                if len(sunk_cost_gas_id) > 0:
+                    sunk_cost_gas_total = np.sum(
+                        cost_adjusted_by_VAT[sunk_cost_gas_id], dtype=np.float64
+                    )
+                else:
+                    sunk_cost_gas_total = 0.0
+
+                # Gas pre-onstream cost (total)
+                pre_onstream_cost_gas_total = 0.0
+
+            # Year of POD I approval is before the onstream year
+            elif self.pod1_year < self.onstream_year:
+
+                # Gas sunk cost (total)
+                sunk_cost_id = np.argwhere(self.expense_year <= self.pod1_year).ravel()
+                cost_allocation_id = np.array(
+                    [self.cost_allocation[val] for _, val in enumerate(sunk_cost_id)]
+                )
+                sunk_cost_gas_id = np.array(
+                    [i for i, val in enumerate(cost_allocation_id) if val == FluidType.GAS]
+                )
+
+                if len(sunk_cost_gas_id) > 0:
+                    sunk_cost_gas_total = np.sum(
+                        cost_adjusted_by_VAT[sunk_cost_gas_id], dtype=np.float64
+                    )
+                else:
+                    sunk_cost_gas_total = 0.0
+
+                # Gas pre-onstream cost (total)
+                pre_onstream_cost_id = np.argwhere(self.expense_year >= self.pod1_year).ravel()
+                cost_allocation_id = np.array(
+                    [self.cost_allocation[val] for _, val in enumerate(pre_onstream_cost_id)]
+                )
+                pre_onstream_cost_gas_id = np.array(
+                    [i for i, val in enumerate(cost_allocation_id) if val == FluidType.GAS]
+                )
+
+                if len(pre_onstream_cost_gas_id) > 0:
+                    pre_onstream_cost_gas_total = np.sum(
+                        cost_adjusted_by_VAT[pre_onstream_cost_gas_id], dtype=np.float64
+                    )
+                else:
+                    pre_onstream_cost_gas_total = 0.0
+
+            else:
+                raise SunkCostException(
+                    f"Cannot have POD I year after the onstream year"
+                )
+
+        self.sunk_cost_gas_total = sunk_cost_gas_total
+        self.pre_onstream_cost_gas_total = pre_onstream_cost_gas_total
 
     def get_cost_classification(
         self,
         tax_rate: np.ndarray | float = 0.0,
     ):
-        
+        """
+        Calculate and classify both oil and gas costs into sunk and pre-onstream categories.
+
+        This method serves as a wrapper that calls two specialized classification methods:
+        1. `_get_oil_cost_classification()` - for oil cost classification
+        2. `_get_gas_cost_classification()` - for gas cost classification
+
+        Both methods will store their results as instance attributes after adjusting costs by VAT.
+
+        Parameters
+        ----------
+        tax_rate : np.ndarray or float, optional
+            Tax rate(s) to be applied for VAT calculation. Can be either:
+            - A single float value (uniform rate for all years)
+            - A numpy array (year-specific tax rates)
+            Default is 0.0 (no tax).
+
+        Returns
+        -------
+        None
+            This method doesn't return values but sets the following instance attributes:
+            - sunk_cost_oil_total : float
+                Total sunk costs allocated to oil
+            - pre_onstream_cost_oil_total : float
+                Total pre-onstream costs allocated to oil
+            - sunk_cost_gas_total : float
+                Total sunk costs allocated to gas
+            - pre_onstream_cost_gas_total : float
+                Total pre-onstream costs allocated to gas
+
+        Notes
+        -----
+        - Both underlying classification methods apply VAT adjustment using `calc_indirect_tax`
+        - Classification follows the same temporal logic for both oil and gas:
+            - Sunk costs: expenses incurred ≤ POD I approval year
+            - Pre-onstream costs: expenses between POD I approval and onstream year
+        - If either oil or gas is not in cost_allocation, corresponding costs will be 0.0
+
+        See Also
+        --------
+        _get_oil_cost_classification : Method for oil-specific cost classification
+        _get_gas_cost_classification : Method for gas-specific cost classification
+        """
+
         self._get_oil_cost_classification(tax_rate=tax_rate)
         self._get_gas_cost_classification(tax_rate=tax_rate)
 
-    def total_amortization_rate(self):
-        pass
+    def get_amortization_charge(
+        self,
+        cost: float,
+        prod: np.ndarray,
+        prod_year: np.ndarray,
+        salvage_value: float = 0.0,
+        amortization_len: int = 0,
+        tax_rate: np.ndarray | float = 0.0,
+    ):
+
+        # Specify sunk cost and pre-onstream cost for OIL and GAS
+        self.get_cost_classification(tax_rate=tax_rate)
+
+        print('\t')
+        print(f'Filetype: {type(self.sunk_cost_oil_total)}')
+        print('sunk_cost_oil_total = ', self.sunk_cost_oil_total)
+
+        if np.min(prod_year) != self.onstream_year:
+            raise SunkCostException(
+                f"Unequal value for the start of fluid production ({np.min(prod_year)}) "
+                f"and the onstream year ({self.onstream_year})"
+            )
+
+        # Calculate amortization charge
+        amortization_charge = depr.unit_of_production_rate(
+            start_year_project=self.start_year,
+            cost=self.sunk_cost_oil_total,
+            prod_year=prod_year,
+            prod=prod,
+            salvage_value=salvage_value,
+            amortization_len=amortization_len,
+        )
+
+        print('\t')
+        print(f'Filetype: {type(amortization_charge)}')
+        print(f'Length: {len(amortization_charge)}')
+        print('amortization_charge = ', amortization_charge)
+
 
     def total_amortization_book_value(self):
         pass

@@ -943,12 +943,15 @@ class GrossSplit(BaseProject):
                 f"is after the project end date: {self.end_date}"
             )
 
-        # Checking if the Cumulative Production Split Offset length is same with the project years
+        # Checking if the Cumulative Production Split Offset length is
+        # same with the project years
         if isinstance(cum_production_split_offset, np.ndarray):
             if len(cum_production_split_offset) != len(self.project_years):
                 raise CumulativeProductionSplitException(
-                    f"Length of the cum_production_split_offset: {len(cum_production_split_offset)} "
-                    f"is not the same with Length of the project years: {len(self.project_years)}"
+                    f"Length of the cum_production_split_offset: "
+                    f"{len(cum_production_split_offset)} "
+                    f"is not the same with Length of the project years: "
+                    f"{len(self.project_years)}"
                 )
 
         # Get the WAP Price
@@ -974,27 +977,29 @@ class GrossSplit(BaseProject):
 
         # Total indirect taxes for OIL and GAS
         self._oil_total_indirect_tax = (
-                self._oil_capital_indirect_tax
-                + self._oil_intangible_indirect_tax
-                + self._oil_opex_indirect_tax
-                + self._oil_asr_indirect_tax
-                + self._oil_lbt_indirect_tax
-                + self._oil_cost_of_sales_indirect_tax
+            self._oil_capital_indirect_tax
+            + self._oil_intangible_indirect_tax
+            + self._oil_opex_indirect_tax
+            + self._oil_asr_indirect_tax
+            + self._oil_lbt_indirect_tax
+            + self._oil_cost_of_sales_indirect_tax
         )
 
         self._gas_total_indirect_tax = (
-                self._gas_capital_indirect_tax
-                + self._gas_intangible_indirect_tax
-                + self._gas_opex_indirect_tax
-                + self._gas_asr_indirect_tax
-                + self._gas_lbt_indirect_tax
-                + self._gas_cost_of_sales_indirect_tax
+            self._gas_capital_indirect_tax
+            + self._gas_intangible_indirect_tax
+            + self._gas_opex_indirect_tax
+            + self._gas_asr_indirect_tax
+            + self._gas_lbt_indirect_tax
+            + self._gas_cost_of_sales_indirect_tax
         )
 
         # Get The Other Revenue as the chosen selection
-        self._get_other_revenue(sulfur_revenue=sulfur_revenue,
-                                electricity_revenue=electricity_revenue,
-                                co2_revenue=co2_revenue)
+        self._get_other_revenue(
+            sulfur_revenue=sulfur_revenue,
+            electricity_revenue=electricity_revenue,
+            co2_revenue=co2_revenue
+        )
 
         # Depreciation (tangible cost)
         (
@@ -1021,9 +1026,11 @@ class GrossSplit(BaseProject):
 
         # Treatment for small order of number, in example 1e-15
         self._oil_undepreciated_asset = np.where(
-            self._oil_undepreciated_asset < 1.0e-5, 0, self._oil_undepreciated_asset)
+            self._oil_undepreciated_asset < 1.0e-5, 0, self._oil_undepreciated_asset
+        )
         self._gas_undepreciated_asset = np.where(
-            self._gas_undepreciated_asset < 1.0e-5, 0, self._gas_undepreciated_asset)
+            self._gas_undepreciated_asset < 1.0e-5, 0, self._gas_undepreciated_asset
+        )
 
         # Treatment of the un-depreciated asset to be summed up in the last year of the contract or not
         if sum_undepreciated_cost is True:
