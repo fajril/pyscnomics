@@ -3729,16 +3729,32 @@ class SunkCost(GeneralCost):
     # Local arguments
     onstream_year: int = field(default=None)
     pod1_year: int = field(default=None)
-    end_point_reference: SunkCostEndPoint = field(default=SunkCostEndPoint.ONSTREAM)
 
     # Overridden argument
     cost: np.ndarray = field(default=None)
 
     # Attributes to be defined later
-    sunk_cost_total: float = field(default=0.0, init=False)
-    pre_onstream_cost_total: float = field(default=0.0, init=False)
+    sunk_cost_oil_total: float = field(default=0.0, init=False)
+    sunk_cost_gas_total: float = field(default=0.0, init=False)
+    pre_onstream_cost_oil_total: float = field(default=0.0, init=False)
+    pre_onstream_cost_gas_total: float = field(default=0.0, init=False)
 
     def __post_init__(self):
+        """
+        Handles the following operations/procedures:
+        -   Prepare attribute project_duration and project_years,
+        -   Prepare attribute onstream_year,
+        -   Prepare attribute pod1_year,
+        -   Prepare attribute expense_year,
+        -   Prepare attribute cost,
+        -   Prepare attribute cost_allocation,
+        -   Prepare attribute description,
+        -   Prepare attribute tax_portion,
+        -   Prepare attribute tax_discount,
+        -   Check input data for unequal length of arrays,
+        -   Raise an error: expense year is after the end year of the project,
+        -   Raise an error: expense year is after the end year of the project
+        """
 
         # Prepare attribute project_duration and project_years
         if self.end_year >= self.start_year:
@@ -3750,6 +3766,60 @@ class SunkCost(GeneralCost):
                 f"start year {self.start_year} is after the end year {self.end_year} "
                 f"of the project"
             )
+
+        # Prepare attribute onstream_year
+        if self.onstream_year is None:
+            raise SunkCostException(
+                f"Missing data for onstream_year: {self.onstream_year}"
+            )
+
+        else:
+            if not isinstance(self.onstream_year, int):
+                raise SunkCostException(
+                    f"Attribute onstream_year must be provided as an int, "
+                    f"not as a/an {self.onstream_year.__class__.__qualname__}"
+                )
+
+            if self.onstream_year < self.start_year:
+                raise SunkCostException(
+                    f"Onstream year ({self.onstream_year}) is before the start "
+                    f"year of the project ({self.start_year})"
+                )
+
+            if self.onstream_year > self.end_year:
+                raise SunkCostException(
+                    f"Onstream year ({self.onstream_year}) is after the end year "
+                    f"of the project ({self.end_year})"
+                )
+
+        # Prepare attribute pod1_year
+        if self.pod1_year is None:
+            self.pod1_year = self.onstream_year
+
+        else:
+            if not isinstance(self.pod1_year, int):
+                raise SunkCostException(
+                    f"Attribute pod1_year must be provided as an int, "
+                    f"not as a/an {self.pod1_year.__class__.__qualname__}"
+                )
+
+            if self.pod1_year > self.onstream_year:
+                raise SunkCostException(
+                    f"POD I year ({self.pod1_year}) is after the onstream "
+                    f"year ({self.onstream_year})"
+                )
+
+            if self.pod1_year < self.start_year:
+                raise SunkCostException(
+                    f"POD I year ({self.pod1_year}) is before the start year "
+                    f"of the project ({self.start_year})"
+                )
+
+            if self.pod1_year > self.end_year:
+                raise SunkCostException(
+                    f"POD I year ({self.pod1_year}) is after the end year "
+                    f"of the project ({self.end_year})"
+                )
 
         # Prepare attribute expense_year
         if not isinstance(self.expense_year, np.ndarray):
@@ -3763,6 +3833,14 @@ class SunkCost(GeneralCost):
             if expense_year_nan_sum > 0:
                 raise SunkCostException(
                     f"Missing values in array expense_year: {self.expense_year}"
+                )
+
+            expense_year_large_sum = np.sum(self.expense_year > self.onstream_year, dtype=int)
+            if expense_year_large_sum > 0:
+                raise SunkCostException(
+                    f"Cannot accept expense_year > onstream_year, "
+                    f"expense_year: ({self.expense_year}), "
+                    f"onstream_year: ({self.onstream_year})"
                 )
 
         self.expense_year = self.expense_year.astype(int)
@@ -3906,64 +3984,144 @@ class SunkCost(GeneralCost):
                 f"is before the start year of the project ({self.start_year})"
             )
 
-    def get_cost(
+    def _get_oil_cost_classification(
         self,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | int | float = 0.0,
         tax_rate: np.ndarray | float = 0.0,
     ):
+        """
+        Calculate oil-related cost classifications (sunk cost and pre-onstream cost)
+        adjusted by VAT.
 
-        t1 = self.expenditures_post_tax(
-            year_inflation=year_inflation,
-            inflation_rate=inflation_rate,
-            tax_rate=tax_rate,
+        The function categorizes costs into:
+        1. Sunk costs: expenses incurred before or during POD I approval year
+        2. Pre-onstream costs: expenses between POD I approval and onstream year
+
+        Parameters
+        ----------
+        tax_rate : np.ndarray or float, optional
+            Tax rate to be applied for VAT calculation. Default is 0.0 (no tax).
+
+        Returns
+        -------
+        tuple
+            A tuple containing:
+            - sunk_cost_oil_total : float
+                Total sunk costs allocated to oil
+            - pre_onstream_cost_oil_total : float
+                Total pre-onstream costs allocated to oil
+
+        Raises
+        ------
+        SunkCostException
+            If POD I approval year is later than onstream year
+
+        Notes
+        -----
+        - Costs are first adjusted by adding VAT calculated using `calc_indirect_tax`
+        - If FluidType.OIL is not in cost allocation, both returned values will be 0
+        - When POD I year equals onstream year, all pre-onstream costs are 0
+        - When POD I year is before onstream year, costs are split between:
+            * Sunk costs (<= POD I year)
+            * Pre-onstream costs (> POD I year and <= onstream year)
+        """
+
+        # Adjust cost by VAT
+        cost_adjusted_by_vat = (
+            self.cost +
+            calc_indirect_tax(
+                start_year=self.start_year,
+                cost=self.cost,
+                expense_year=self.expense_year,
+                project_years=self.project_years,
+                tax_portion=self.tax_portion,
+                tax_rate=tax_rate,
+                tax_discount=self.tax_discount,
+            )
         )
 
-        print('\t')
-        print(f'Filetype: {type(t1)}')
-        print(f'Length: {len(t1)}')
-        print('t1 = ', t1)
-
-
-    def _get_sunk_cost(self):
-
-        if self.end_point_reference == SunkCostEndPoint.ONSTREAM:
-
-            if self.onstream_year is None:
-                raise SunkCostException(
-                    f"Missing data onstream_year: {self.onstream_year}"
-                )
-
-            else:
-                if not isinstance(self.onstream_year, int):
-                    raise SunkCostException(
-                        f"Attribute onstream_year must be provided as an int, "
-                        f"not as a/an {self.onstream_year.__class__.__qualname__}"
-                    )
-
-                if self.onstream_year < self.start_year:
-                    raise SunkCostException(
-                        f"Onstream year ({self.onstream_year}) is before the start "
-                        f"year of the project ({self.start_year})"
-                    )
-
-                if self.onstream_year > self.end_year:
-                    raise SunkCostException(
-                        f"Onstream year ({self.onstream_year}) is after the end "
-                        f"year of the project ({self.end_year})"
-                    )
-
-        elif self.end_point_reference == SunkCostEndPoint.POD_I:
-            pass
+        # Determine oil sunk cost and oil pre-onstream cost
+        if FluidType.OIL not in self.cost_allocation:
+            sunk_cost_oil_total = 0.0
+            pre_onstream_cost_oil_total = 0.0
 
         else:
-            raise SunkCostException(
-                f"Must choose between 'ONSTREAM' or 'POD_I' for "
-                f"end point reference"
-            )
+            # Year of POD I approval equals to onstream year
+            if self.pod1_year == self.onstream_year:
 
-    def _get_pre_onstream_cost(self):
+                # Oil sunk cost (total)
+                sunk_cost_id = np.argwhere(self.expense_year <= self.onstream_year).ravel()
+                cost_allocation_id = np.array(
+                    [self.cost_allocation[val] for _, val in enumerate(sunk_cost_id)]
+                )
+                sunk_cost_oil_id = np.array(
+                    [i for i, val in enumerate(cost_allocation_id) if val == FluidType.OIL]
+                )
+
+                if len(sunk_cost_oil_id) > 0:
+                    sunk_cost_oil_total = np.sum(
+                        cost_adjusted_by_vat[sunk_cost_oil_id], dtype=np.float64
+                    )
+                else:
+                    sunk_cost_oil_total = 0.0
+
+                # Oil pre-onstream cost (total)
+                pre_onstream_cost_oil_total = 0.0
+
+            # Year of POD I approval is before the onstream year
+            elif self.pod1_year < self.onstream_year:
+
+                # Oil sunk cost (total)
+                sunk_cost_id = np.argwhere(self.expense_year <= self.pod1_year).ravel()
+                cost_allocation_id = np.array(
+                    [self.cost_allocation[val] for _, val in enumerate(sunk_cost_id)]
+                )
+                sunk_cost_oil_id = np.array(
+                    [i for i, val in enumerate(cost_allocation_id) if val == FluidType.OIL]
+                )
+
+                if len(sunk_cost_oil_id) > 0:
+                    sunk_cost_oil_total = np.sum(
+                        cost_adjusted_by_vat[sunk_cost_oil_id], dtype=np.float64
+                    )
+                else:
+                    sunk_cost_oil_total = 0.0
+
+                # Oil pre-onstream cost (total)
+                pre_onstream_cost_id = np.argwhere(self.expense_year >= self.pod1_year).ravel()
+                cost_allocation_id = np.array(
+                    [self.cost_allocation[val] for _, val in enumerate(pre_onstream_cost_id)]
+                )
+                pre_onstream_cost_oil_id = np.array(
+                    [i for i, val in enumerate(cost_allocation_id) if val == FluidType.OIL]
+                )
+
+                if len(pre_onstream_cost_oil_id) > 0:
+                    pre_onstream_cost_oil_total = np.sum(
+                        cost_adjusted_by_vat[pre_onstream_cost_oil_id], dtype=np.float64
+                    )
+                else:
+                    pre_onstream_cost_oil_total = 0.0
+
+            else:
+                raise SunkCostException(
+                    f"Cannot have POD I year larger than onstream year"
+                )
+
+        return sunk_cost_oil_total, pre_onstream_cost_oil_total
+
+    def _get_gas_cost_classification(
+        self,
+        tax_rate: np.ndarray | float = 0.0,
+    ):
         pass
+
+    def get_cost_classification(
+        self,
+        tax_rate: np.ndarray | float = 0.0,
+    ):
+        
+        self._get_oil_cost_classification(tax_rate=tax_rate)
+        self._get_gas_cost_classification(tax_rate=tax_rate)
 
     def total_amortization_rate(self):
         pass

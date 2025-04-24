@@ -7,17 +7,18 @@ from pyscnomics.econ.selection import FluidType, SunkCostEndPoint
 posc = SunkCost(
     start_year=2023,
     end_year=2030,
-    expense_year=np.array([2023, 2024, 2025, 2026, 2027]),
+    expense_year=np.array([2023, 2024, 2024, 2026, 2025]),
     cost=np.array([100, 100, 100, 50, 50]),
+    cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.GAS, FluidType.OIL, FluidType.GAS],
     end_point_reference=SunkCostEndPoint.ONSTREAM,
-    onstream_year=2023,
+    onstream_year=2027,
     pod1_year=2025,
     tax_portion=np.array([1, 1, 1, 1, 1]),
 )
 
-posc.get_cost()
-
-# t1 = posc.expenditures_post_tax()
+t1 = posc._get_oil_cost_classification(
+    tax_rate=0.0
+)
 
 # print('\t')
 # print(f'Filetype: {type()}')
@@ -29,11 +30,11 @@ posc.get_cost()
 # print(f'Length: {len(t1)}')
 # print('t1 = ', t1)
 
-# print('\t')
-# print(f'Filetype: {type(t1)}')
-# # print(f'Length: {len(t1)}')
-# print('t1 = ', t1)
-#
+print('\t')
+print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+print('t1 = ', t1)
+
 # print('\t')
 # print(f'Filetype: {type(t2)}')
 # # print(f'Length: {len(t2)}')
