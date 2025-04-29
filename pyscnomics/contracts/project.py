@@ -90,6 +90,7 @@ class BaseProject:
     asr_cost: tuple[ASR, ...] = field(default=None)
     lbt_cost: tuple[LBT, ...] = field(default=None)
     cost_of_sales: tuple[CostOfSales] = field(default=None)
+    sunk_cost: tuple[SunkCost] = field(default=None)
 
     # Attributes to be defined later (associated with project duration)
     project_duration: int = field(default=None, init=False)

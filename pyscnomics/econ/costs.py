@@ -3732,12 +3732,6 @@ class SunkCost(GeneralCost):
     # Overridden argument
     cost: np.ndarray = field(default=None)
 
-    # Attributes to be defined later
-    sunk_cost_oil_total: float = field(default=0.0, init=False)
-    sunk_cost_gas_total: float = field(default=0.0, init=False)
-    pre_onstream_cost_oil_total: float = field(default=0.0, init=False)
-    pre_onstream_cost_gas_total: float = field(default=0.0, init=False)
-
     def __post_init__(self):
         """
         Handles the following operations/procedures:
@@ -3745,14 +3739,14 @@ class SunkCost(GeneralCost):
         -   Prepare attribute onstream_year,
         -   Prepare attribute pod1_year,
         -   Prepare attribute expense_year,
+        -   Raise an error: expense year is after the end year of the project,
+        -   Raise an error: expense year is after the end year of the project
         -   Prepare attribute cost,
         -   Prepare attribute cost_allocation,
         -   Prepare attribute description,
         -   Prepare attribute tax_portion,
         -   Prepare attribute tax_discount,
         -   Check input data for unequal length of arrays,
-        -   Raise an error: expense year is after the end year of the project,
-        -   Raise an error: expense year is after the end year of the project
         """
 
         # Prepare attribute project_duration and project_years
@@ -3843,6 +3837,20 @@ class SunkCost(GeneralCost):
                 )
 
         self.expense_year = self.expense_year.astype(int)
+
+        # Raise an error: expense year is after the end year of the project
+        if np.max(self.expense_year) > self.end_year:
+            raise SunkCostException(
+                f"Expense year ({np.max(self.expense_year)}) "
+                f"is after the end year of the project ({self.end_year})"
+            )
+
+        # Raise an error: expense year is after the end year of the project
+        if np.min(self.expense_year) < self.start_year:
+            raise SunkCostException(
+                f"Expense year ({np.min(self.expense_year)}) "
+                f"is before the start year of the project ({self.start_year})"
+            )
 
         # Prepare attribute cost
         if self.cost is None:
@@ -3969,21 +3977,91 @@ class SunkCost(GeneralCost):
                 f"tax_discount: {len(self.tax_discount)} "
             )
 
-        # Raise an error: expense year is after the end year of the project
-        if np.max(self.expense_year) > self.end_year:
-            raise SunkCostException(
-                f"Expense year ({np.max(self.expense_year)}) "
-                f"is after the end year of the project ({self.end_year})"
+    def get_oil_vat(
+        self,
+        tax_rate: np.ndarray | float,
+        fluid_type: FluidType,
+    ):
+
+        print('\t')
+        print('cost_allocation')
+        print(self.cost_allocation)
+
+        # Adjust cost by VAT
+        indirect_tax = calc_indirect_tax(
+            start_year=self.start_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            tax_portion=self.tax_portion,
+            tax_rate=tax_rate,
+            tax_discount=self.tax_discount,
+        )
+
+        print('\t')
+        print('indirect_tax = ', indirect_tax)
+
+        # Year of POD I approval equals to onstream year
+        if self.pod1_year == self.onstream_year:
+
+            # Determine sunk cost ID for a particular fluid type (OIL or GAS)
+            sc_id = np.argwhere(self.expense_year <= self.onstream_year).ravel()
+            sc_cost_allocation_id = np.array(
+                [self.cost_allocation[val] for _, val in enumerate(sc_id)]
+            )
+            sc_fluid_type_id = np.array(
+                [i for i, val in enumerate(sc_cost_allocation_id) if val == fluid_type]
             )
 
-        # Raise an error: expense year is after the end year of the project
-        if np.min(self.expense_year) < self.start_year:
-            raise SunkCostException(
-                f"Expense year ({np.min(self.expense_year)}) "
-                f"is before the start year of the project ({self.start_year})"
+            # Determine pre-onstream cost ID for a particular fluid type (OIL or GAS)
+            poc_fluid_type_id = np.array([])
+
+        # Year of POD I approval is before the onstream year
+        elif self.pod1_year < self.onstream_year:
+
+            # Determine sunk cost ID for a particular fluid type (OIL or GAS)
+            sc_id = np.argwhere(self.expense_year <= self.pod1_year).ravel()
+            sc_cost_allocation_id = np.array(
+                [self.cost_allocation[val] for _, val in enumerate(sc_id)]
+            )
+            sc_fluid_type_id = np.array(
+                [i for i, val in enumerate(sc_cost_allocation_id) if val == fluid_type]
             )
 
-    def _get_oil_cost_classification(
+            print('\t')
+            print('sunk_cost_fluid_type_id = ', sc_fluid_type_id)
+
+            # Determine pre-onstream cost ID for a particular fluid type (OIL or GAS)
+            poc_id = np.argwhere(self.expense_year >= self.pod1_year).ravel()
+
+            print('\t')
+            print('poc_id = ', poc_id)
+
+            poc_cost_allocation_id = np.array(
+                [self.cost_allocation[val] for _, val in enumerate(poc_id)]
+            )
+
+            print('\t')
+            print('poc_cost_allocation_id = ', poc_cost_allocation_id)
+
+            poc_fluid_type_id = np.array(
+                [i for i, val in enumerate(poc_cost_allocation_id) if val == fluid_type]
+            )
+
+            print('\t')
+            print('poc_fluid_type_id = ', poc_fluid_type_id)
+
+
+        else:
+            raise SunkCostException(f"Cannot have POD I year after the onstream year")
+
+
+
+
+
+
+
+    def _get_oil_aaa(
         self,
         tax_rate: np.ndarray | float = 0.0,
     ) -> tuple:

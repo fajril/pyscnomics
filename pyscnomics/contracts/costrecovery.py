@@ -935,7 +935,7 @@ class CostRecovery(BaseProject):
             post_uu_22_year2001: bool = True,
             oil_cost_of_sales_applied: bool = False,
             gas_cost_of_sales_applied: bool = False,
-            sum_undepreciated_cost:bool=False
+            sum_undepreciated_cost: bool = False
     ):
 
         # Configure Sunk Cost Reference Year

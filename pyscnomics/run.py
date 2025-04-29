@@ -11,17 +11,22 @@ posc = SunkCost(
     pod1_year=2025,
     expense_year=np.array([2023, 2024, 2024, 2026, 2025]),
     cost=np.array([100, 100, 100, 50, 50]),
-    cost_allocation=[FluidType.GAS, FluidType.OIL, FluidType.GAS, FluidType.OIL, FluidType.GAS],
+    cost_allocation=[FluidType.GAS, FluidType.OIL, FluidType.GAS, FluidType.GAS, FluidType.GAS],
     tax_portion=np.array([1, 1, 1, 1, 1]),
 )
 
-t1 = posc.get_pre_onstream_cost_oil_amortization_charge(
-    tax_rate=0.0,
-    prod=np.array([50, 1_000]),
-    prod_year=np.array([2027, 2028]),
-    salvage_value=0.0,
-    amortization_len=8,
+posc.get_oil_vat(
+    tax_rate=0.1,
+    fluid_type=FluidType.OIL,
 )
+
+# t1 = posc.get_pre_onstream_cost_oil_amortization_charge(
+#     tax_rate=0.0,
+#     prod=np.array([50, 100]),
+#     prod_year=np.array([2027, 2028]),
+#     salvage_value=0.0,
+#     amortization_len=8,
+# )
 
 
 # print('\t')
@@ -29,10 +34,10 @@ t1 = posc.get_pre_onstream_cost_oil_amortization_charge(
 # print(f'Length: {len()}')
 # print()
 
-print('\t')
-print(f'Filetype: {type(t1)}')
-print(f'Length: {len(t1)}')
-print('t1 = \n', t1)
+# print('\t')
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t1)}')
