@@ -17,6 +17,7 @@ import pyscnomics.econ.depreciation as depr
 from pyscnomics.econ.selection import (
     FluidType,
     DeprMethod,
+    SunkCostInvestmentType,
 )
 from pyscnomics.econ.costs_tools import (
     get_cost_adjustment_by_inflation,
@@ -3728,6 +3729,7 @@ class SunkCost(GeneralCost):
     # Local arguments
     onstream_year: int = field(default=None)
     pod1_year: int = field(default=None)
+    investment_type: list[SunkCostInvestmentType] = field(default=None)
 
     # Overridden argument
     cost: np.ndarray = field(default=None)
@@ -3742,6 +3744,7 @@ class SunkCost(GeneralCost):
         -   Raise an error: expense year is after the end year of the project,
         -   Raise an error: expense year is after the end year of the project
         -   Prepare attribute cost,
+        -   Prepare attribute investment_type,
         -   Prepare attribute cost_allocation,
         -   Prepare attribute description,
         -   Prepare attribute tax_portion,
@@ -3870,6 +3873,24 @@ class SunkCost(GeneralCost):
 
         self.cost = self.cost.astype(np.float64)
 
+        # Prepare attribute investment_type
+        if self.investment_type is None:
+            self.investment_type = [
+                SunkCostInvestmentType.TANGIBLE for _ in range(len(self.expense_year))
+            ]
+
+        else:
+            if not isinstance(self.investment_type, list):
+                raise SunkCostException(
+                    f"Attribute investment_type must be given as a list, "
+                    f"not as a/an {self.investment_type.__class__.__qualname__}"
+                )
+
+            self.investment_type = [
+                SunkCostInvestmentType.TANGIBLE if pd.isna(val) else val
+                for _, val in enumerate(self.investment_type)
+            ]
+
         # Prepare attribute cost_allocation
         if self.cost_allocation is None:
             self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
@@ -3961,6 +3982,7 @@ class SunkCost(GeneralCost):
             len(arr) == arr_reference
             for arr in [
                 self.cost,
+                self.investment_type,
                 self.cost_allocation,
                 self.description,
                 self.tax_portion,
@@ -3971,24 +3993,15 @@ class SunkCost(GeneralCost):
                 f"Unequal length of arrays: "
                 f"expense_year: {len(self.expense_year)}, "
                 f"cost: {len(self.cost)}, "
+                f"investment_type: {len(self.investment_type)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
                 f"description: {len(self.description)}, "
                 f"tax_portion: {len(self.tax_portion)}, "
                 f"tax_discount: {len(self.tax_discount)} "
             )
 
-    def get_oil_vat(
-        self,
-        tax_rate: np.ndarray | float,
-        fluid_type: FluidType,
-    ):
-
-        print('\t')
-        print('cost_allocation')
-        print(self.cost_allocation)
-
-        # Adjust cost by VAT
-        indirect_tax = calc_indirect_tax(
+    def _get_indirect_tax(self, tax_rate: np.ndarray | float = 0.0):
+        return calc_indirect_tax(
             start_year=self.start_year,
             cost=self.cost,
             expense_year=self.expense_year,
@@ -3998,8 +4011,7 @@ class SunkCost(GeneralCost):
             tax_discount=self.tax_discount,
         )
 
-        print('\t')
-        print('indirect_tax = ', indirect_tax)
+    def _get_sunk_cost_id(self, fluid_type: FluidType) -> np.ndarray:
 
         # Year of POD I approval equals to onstream year
         if self.pod1_year == self.onstream_year:
@@ -4010,11 +4022,8 @@ class SunkCost(GeneralCost):
                 [self.cost_allocation[val] for _, val in enumerate(sc_id)]
             )
             sc_fluid_type_id = np.array(
-                [i for i, val in enumerate(sc_cost_allocation_id) if val == fluid_type]
+                [sc_id[i] for i, val in enumerate(sc_cost_allocation_id) if val == fluid_type]
             )
-
-            # Determine pre-onstream cost ID for a particular fluid type (OIL or GAS)
-            poc_fluid_type_id = np.array([])
 
         # Year of POD I approval is before the onstream year
         elif self.pod1_year < self.onstream_year:
@@ -4025,35 +4034,156 @@ class SunkCost(GeneralCost):
                 [self.cost_allocation[val] for _, val in enumerate(sc_id)]
             )
             sc_fluid_type_id = np.array(
-                [i for i, val in enumerate(sc_cost_allocation_id) if val == fluid_type]
+                [sc_id[i] for i, val in enumerate(sc_cost_allocation_id) if val == fluid_type]
             )
-
-            print('\t')
-            print('sunk_cost_fluid_type_id = ', sc_fluid_type_id)
-
-            # Determine pre-onstream cost ID for a particular fluid type (OIL or GAS)
-            poc_id = np.argwhere(self.expense_year >= self.pod1_year).ravel()
-
-            print('\t')
-            print('poc_id = ', poc_id)
-
-            poc_cost_allocation_id = np.array(
-                [self.cost_allocation[val] for _, val in enumerate(poc_id)]
-            )
-
-            print('\t')
-            print('poc_cost_allocation_id = ', poc_cost_allocation_id)
-
-            poc_fluid_type_id = np.array(
-                [i for i, val in enumerate(poc_cost_allocation_id) if val == fluid_type]
-            )
-
-            print('\t')
-            print('poc_fluid_type_id = ', poc_fluid_type_id)
-
 
         else:
             raise SunkCostException(f"Cannot have POD I year after the onstream year")
+
+        return sc_fluid_type_id
+
+    def _get_preonstream_cost_id(self, fluid_type: FluidType) -> np.ndarray:
+
+        # Year of POD I approval equals to onstream year
+        if self.pod1_year == self.onstream_year:
+
+            # Determine pre-onstream cost ID for a particular fluid type (OIL or GAS)
+            poc_fluid_type_id = np.array([])
+
+        # Year of POD I approval is before the onstream year
+        elif self.pod1_year < self.onstream_year:
+
+            # Determine pre-onstream cost ID for a particular fluid type (OIL or GAS)
+            poc_id = np.argwhere(self.expense_year >= self.pod1_year).ravel()
+            poc_cost_allocation_id = np.array(
+                [self.cost_allocation[val] for _, val in enumerate(poc_id)]
+            )
+            poc_fluid_type_id = np.array(
+                [poc_id[i] for i, val in enumerate(poc_cost_allocation_id) if val == fluid_type]
+            )
+
+        else:
+            raise SunkCostException(f"Cannot have POD I year after the onstream year")
+
+        return poc_fluid_type_id
+
+    def _get_sunk_cost_investment_id(
+        self,
+        fluid_type: FluidType,
+        investment_config: SunkCostInvestmentType,
+    ):
+
+        # Identify sunk cost id
+        sc_fluid_type_id = self._get_sunk_cost_id(fluid_type=fluid_type)
+
+        # Determine sunk cost tangible id
+        if len(sc_fluid_type_id) == 0:
+            sc_investment_id = np.array([])
+
+        else:
+            sc_investment_id = np.array(
+                [
+                    sc_fluid_type_id[i]
+                    for i, val in enumerate(np.array(self.investment_type)[sc_fluid_type_id])
+                    if val == investment_config
+                ]
+            )
+
+        return sc_investment_id
+
+    def _get_preonstream_cost_investment_id(
+        self,
+        fluid_type: FluidType,
+        investment_config: SunkCostInvestmentType,
+    ):
+
+        # Identify pre-onstream cost id
+        poc_fluid_type_id = self._get_preonstream_cost_id(fluid_type=fluid_type)
+
+        if len(poc_fluid_type_id) == 0:
+            poc_investment_id = np.array([])
+
+        else:
+            poc_investment_id = np.array(
+                [
+                    poc_fluid_type_id[i]
+                    for i, val in enumerate(np.array(self.investment_type)[poc_fluid_type_id])
+                    if val == investment_config
+                ]
+            )
+
+        return poc_investment_id
+
+    def get_sunk_cost_tangible_array(
+        self,
+        fluid_type: FluidType,
+        investment_config: SunkCostInvestmentType,
+        tax_rate: np.ndarray | float = 0.0,
+    ):
+
+        cost_adjusted_by_vat = self.cost + self._get_indirect_tax(tax_rate=tax_rate)
+
+        sc_tangible_id = self._get_sunk_cost_investment_id(
+            fluid_type=fluid_type,
+            investment_config=investment_config,
+        )
+
+        print('\t')
+        print('sc_tangible_id = ', sc_tangible_id)
+
+        if len(sc_tangible_id) > 0:
+
+            sc_tangible = cost_adjusted_by_vat[sc_tangible_id]
+
+            print('\t')
+            print('sc_tangible = ', sc_tangible)
+
+            sc_tangible_expenses = np.bincount(
+                self.expense_year[sc_tangible_id] - self.start_year, weights=sc_tangible
+            )
+
+            print('\t')
+            print('sc_tangible_expenses = ', sc_tangible_expenses)
+
+            zeros = np.zeros(self.project_duration - len(sc_tangible_expenses))
+
+            print('\t')
+            print('zeros = ', zeros)
+
+            sc_tangible_array = np.concatenate((sc_tangible_expenses, zeros), dtype=np.float64)
+
+        else:
+            sc_tangible_array = np.zeros_like(self.project_years, dtype=np.float64)
+
+        print('\t')
+        print('sc_tangible_array = ', sc_tangible_array)
+
+
+
+
+
+
+
+
+    def get_preonstream_cost_array(self):
+        pass
+
+    def get_sunk_cost_bulk(self):
+        pass
+
+    def get_preonstream_cost_bulk(self):
+        pass
+
+
+
+
+
+
+
+
+
+
+
 
 
 

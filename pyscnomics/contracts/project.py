@@ -27,7 +27,7 @@ from pyscnomics.econ.costs import (
 
 
 class SunkCostException(Exception):
-    """ Exception to be raised for a misuse of Sunk Cost Method """
+    """ Exception to be raised for a misuse of class SunkCost"""
 
     pass
 

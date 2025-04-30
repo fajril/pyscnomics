@@ -496,3 +496,12 @@ class ContractSample(Enum):
     CASE_1 = "Cost Recovery Contract Sample"
     CASE_2 = "Cost Recovery Consolidated Contract Sample"
     CASE_3 = "Gross Split Contract Sample"
+
+
+class SunkCostInvestmentType(Enum):
+    """
+    Selection for sunk cost (or pre-onstream cost) investment type.
+    """
+
+    TANGIBLE = "Tangible"
+    INTANGIBLE = "Intangible"
