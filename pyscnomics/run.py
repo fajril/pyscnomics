@@ -35,27 +35,21 @@ print('cost = ', posc.cost)
 print('expense_year = ', posc.expense_year)
 print('project_years = ', posc.project_years)
 
-sunk_cost_gas_tangible_bulk = posc.get_sunk_cost_investment_bulk(
-    tax_rate=0.0,
-    fluid_type=FluidType.GAS,
-    investment_config=SunkCostInvestmentType.TANGIBLE,
-)
-
-sunk_cost_gas_intangible_bulk = posc.get_sunk_cost_investment_bulk(
+t1 = posc.get_preonstream_cost_amortization_charge(
     tax_rate=0.0,
     fluid_type=FluidType.GAS,
     investment_config=SunkCostInvestmentType.INTANGIBLE,
+    prod=np.array([50, 100]),
+    prod_year=np.array([2027, 2028]),
+    amortization_len=8,
 )
 
-print('\t')
-print(sunk_cost_gas_tangible_bulk)
-print(sunk_cost_gas_intangible_bulk)
-
-# t1 = posc.get_pre_onstream_cost_oil_amortization_charge(
+# t1 = posc.get_sunk_cost_amortization_charge(
 #     tax_rate=0.0,
+#     fluid_type=FluidType.GAS,
+#     investment_config=SunkCostInvestmentType.INTANGIBLE,
 #     prod=np.array([50, 100]),
 #     prod_year=np.array([2027, 2028]),
-#     salvage_value=0.0,
 #     amortization_len=8,
 # )
 
@@ -63,11 +57,11 @@ print(sunk_cost_gas_intangible_bulk)
 # print(f'Filetype: {type()}')
 # print(f'Length: {len()}')
 # print()
-#
-# print('\t')
-# print(f'Filetype: {type(t1)}')
-# print(f'Length: {len(t1)}')
-# print('t1 = ', t1)
+
+print('\t')
+print(f'Filetype: {type(t1)}')
+print(f'Length: {len(t1)}')
+print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t1)}')

@@ -4000,18 +4000,39 @@ class SunkCost(GeneralCost):
                 f"tax_discount: {len(self.tax_discount)} "
             )
 
-    def _get_indirect_tax(self, tax_rate: np.ndarray | float = 0.0) -> np.ndarray:
-        return calc_indirect_tax(
-            start_year=self.start_year,
-            cost=self.cost,
-            expense_year=self.expense_year,
-            project_years=self.project_years,
-            tax_portion=self.tax_portion,
-            tax_rate=tax_rate,
-            tax_discount=self.tax_discount,
-        )
-
     def _get_sunk_cost_id(self, fluid_type: FluidType) -> np.ndarray:
+        """
+        Get the indices of sunk costs for a specific fluid type (OIL or GAS).
+
+        The method identifies which costs are considered sunk cost based on the
+        relationship between the POD I approval year and the onstream year, and
+        filters them by the specified fluid type (OIL or GAS).
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type to filter by (must be either OIL or GAS).
+
+        Returns
+        -------
+        np.ndarray
+            Array of indices representing sunk costs for the specified fluid type.
+
+        Raises
+        ------
+        SunkCostException
+            If POD I year occurs after the onstream year, which is an invalid scenario.
+
+        Notes
+        -----
+        The sunk cost determination depends on the timing relationship:
+        1.  If POD I year equals onstream year:
+            costs expensed before/on onstream year are considered as sunk cost.
+        2.  If POD I year is before onstream year:
+            costs expensed before/on POD I year are sunk considered as sunk cost.
+
+        The method filters these sunk costs by the specified fluid type (OIL or GAS).
+        """
 
         # Year of POD I approval equals to onstream year
         if self.pod1_year == self.onstream_year:
@@ -4043,6 +4064,39 @@ class SunkCost(GeneralCost):
         return sc_fluid_type_id
 
     def _get_preonstream_cost_id(self, fluid_type: FluidType) -> np.ndarray:
+        """
+        Get the indices of pre-onstream costs for a specific fluid type (OIL or GAS).
+
+        Identifies which costs are considered pre-onstream cost based on the relationship
+        between the POD I approval year and the onstream year, and filters them by the
+        specified fluid type (OIL or GAS).
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type to filter by (must be either OIL or GAS).
+
+        Returns
+        -------
+        np.ndarray
+            Array of indices representing pre-onstream costs for the specified fluid type.
+            Returns empty array if POD I year equals onstream year.
+
+        Raises
+        ------
+        SunkCostException
+            If POD I year occurs after the onstream year, which is an invalid scenario.
+
+        Notes
+        -----
+        The pre-onstream cost determination depends on the timing relationship:
+        1.  If POD I year equals onstream year:
+            returns empty array (no pre-onstream costs)
+        2.  If POD I year is before onstream year:
+            costs expensed between POD I year and onstream year
+
+        The method filters these pre-onstream costs by the specified fluid type (OIL or GAS).
+        """
 
         # Year of POD I approval equals to onstream year
         if self.pod1_year == self.onstream_year:
@@ -4072,6 +4126,40 @@ class SunkCost(GeneralCost):
         fluid_type: FluidType,
         investment_config: SunkCostInvestmentType,
     ) -> np.ndarray:
+        """
+        Get the indices of sunk costs filtered by both fluid type and investment type.
+
+        This method first identifies sunk costs for a specific fluid type (OIL or GAS),
+        then further filters them by the specified investment type (Tangible or Intangible).
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type to filter by (must be either OIL or GAS).
+        investment_config : SunkCostInvestmentType
+            The investment type to filter by. Must be one of:
+            - SunkCostInvestmentType.TANGIBLE: For tangible investments
+            - SunkCostInvestmentType.INTANGIBLE: For intangible investments
+
+        Returns
+        -------
+        np.ndarray
+            Array of indices representing sunk costs that match both the specified
+            fluid type and investment type. Returns empty array if no matching costs found.
+
+        Notes
+        -----
+        The method works in two stages:
+        1. First calls `_get_sunk_cost_id` to get sunk costs for the specified fluid type
+        2. Then filters these costs by the specified investment type (Tangible/Intangible)
+
+        If no sunk costs exist for the fluid type, returns an empty array immediately.
+
+        See Also
+        --------
+        _get_sunk_cost_id : Method used to get sunk costs by fluid type.
+        SunkCostInvestmentType : Enum defining the investment type options.
+        """
 
         # Identify sunk cost id
         sc_fluid_type_id = self._get_sunk_cost_id(fluid_type=fluid_type)
@@ -4096,6 +4184,41 @@ class SunkCost(GeneralCost):
         fluid_type: FluidType,
         investment_config: SunkCostInvestmentType,
     ) -> np.ndarray:
+        """
+        Get the indices of pre-onstream costs filtered by both fluid type and investment type.
+
+        This method first identifies pre-onstream costs for a specific fluid type (OIL or GAS),
+        then further filters them by the specified investment type (Tangible or Intangible).
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type to filter by (must be either OIL or GAS).
+        investment_config : SunkCostInvestmentType
+            The investment type to filter by. Must be one of:
+            - SunkCostInvestmentType.TANGIBLE: For tangible investments
+            - SunkCostInvestmentType.INTANGIBLE: For intangible investments
+
+        Returns
+        -------
+        np.ndarray
+            Array of indices representing pre-onstream costs that match both the specified
+            fluid type and investment type. Returns empty array if:
+            - No pre-onstream costs exist for the fluid type, or
+            - No costs match the specified investment type
+
+        Notes
+        -----
+        The method works in two stages:
+        1. First calls `_get_preonstream_cost_id` to get pre-onstream costs for the fluid type
+        2. Then filters these costs by the specified investment type (Tangible/Intangible)
+
+        See Also
+        --------
+        _get_preonstream_cost_id : Method used to get pre-onstream costs by fluid type.
+        SunkCostInvestmentType : Enum defining the investment type options.
+        _get_sunk_cost_investment_id : Similar method for sunk costs.
+        """
 
         # Identify pre-onstream cost id
         poc_fluid_type_id = self._get_preonstream_cost_id(fluid_type=fluid_type)
@@ -4114,18 +4237,98 @@ class SunkCost(GeneralCost):
 
         return poc_investment_id
 
+    def get_indirect_tax(self, tax_rate: np.ndarray | float = 0.0) -> np.ndarray:
+        """
+        Calculate indirect tax for the project.
+
+        This method computes the indirect tax by calling the `calc_indirect_tax` function
+        with the object's attributes as parameters.
+
+        Parameters
+        ----------
+        tax_rate : np.ndarray or float, optional
+            The tax rate(s) to apply. Can be a single float or an array of rates.
+            Default is 0.0 (no tax).
+
+        Returns
+        -------
+        np.ndarray
+            Array of calculated indirect tax values for each project year.
+
+        Notes
+        -----
+        The actual calculation is delegated to the `calc_indirect_tax` function which uses:
+        - The project's start year
+        - Cost values
+        - Expense year information
+        - Project duration
+        - Tax portion
+        - Provided tax rate(s)
+        - Tax discount information
+
+        See Also
+        --------
+        calc_indirect_tax : The function that performs the actual tax calculation.
+        """
+
+        return calc_indirect_tax(
+            start_year=self.start_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            tax_portion=self.tax_portion,
+            tax_rate=tax_rate,
+            tax_discount=self.tax_discount,
+        )
+
     def get_sunk_cost_investment_array(
         self,
         fluid_type: FluidType,
         investment_config: SunkCostInvestmentType,
         tax_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
+        """
+        Calculate sunk cost investment array adjusted for tax and allocated by expense year.
+
+        This method computes an array of sunk costs for a specific fluid and investment type,
+        adjusted for VAT/indirect tax, and distributed across project years based on when
+        the expenses occurred.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type to filter by (OIL or GAS).
+        investment_config : SunkCostInvestmentType
+            The investment type to filter by (TANGIBLE or INTANGIBLE).
+        tax_rate : np.ndarray or float, optional
+            The tax rate(s) to apply for VAT adjustment. Can be a single float or array.
+            Default is 0.0 (no tax).
+
+        Returns
+        -------
+        np.ndarray
+            An array of length `project_duration` containing:
+            - Sunk costs adjusted for tax, allocated to their respective expense years
+            - Zeros for years with no expenses
+            - All zeros if no matching costs found
+
+        Notes
+        -----
+        The method performs the following operations:
+        1. Adjusts costs by adding indirect tax (VAT)
+        2. Identifies relevant sunk costs using fluid and investment type filters
+        3. Allocates costs to expense years using bincount
+        4. Pads with zeros for remaining project duration
+
+        The output array length matches the project duration, with costs positioned
+        according to (expense_year - start_year).
+        """
 
         # Adjust cost by VAT
-        cost_adjusted_by_vat = self.cost + self._get_indirect_tax(tax_rate=tax_rate)
+        cost_adjusted_by_vat = self.cost + self.get_indirect_tax(tax_rate=tax_rate)
 
-        # Identify the indices of a particular investment type
-        # (Tangible or Intangible) for OIL or GAS
+        # Identify the sunk cost indices for a particular fluid type (OIL or GAS)
+        # and for a particular investment type (TANGIBLE or INTANGIBLE)
         sc_investment_id = self._get_sunk_cost_investment_id(
             fluid_type=fluid_type,
             investment_config=investment_config,
@@ -4134,12 +4337,12 @@ class SunkCost(GeneralCost):
         # For non-empty "sc_investment_id" array
         if len(sc_investment_id) > 0:
 
-            # Extract sunk cost for a particular investment type
-            # (Tangible or Intangible) for OIL or GAS
+            # Extract sunk cost for a particular fluid type (OIL or GAS) and
+            # for a particular investment type (TANGIBLE or INTANGIBLE)
             sc_investment = cost_adjusted_by_vat[sc_investment_id]
 
-            # Allocate sunk cost of a particular investment type (Tangible or Intangible)
-            # by their associated expense year in array project_years (for OIL or GAS)
+            # Allocate the extracted sunk cost by their associated
+            # expense year in array project_years
             sc_investment_expenses = np.bincount(
                 self.expense_year[sc_investment_id] - self.start_year, weights=sc_investment
             )
@@ -4160,12 +4363,50 @@ class SunkCost(GeneralCost):
         investment_config: SunkCostInvestmentType,
         tax_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
+        """
+        Calculate pre-onstream cost investment array adjusted for tax and allocated
+        by expense year.
+
+        This method computes an array of pre-onstream costs for a specific fluid
+        and investment type, adjusted for VAT/indirect tax, and distributed across
+        project years based on when the expenses occurred.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type to filter by (OIL or GAS).
+        investment_config : SunkCostInvestmentType
+            The investment type to filter by (TANGIBLE or INTANGIBLE).
+        tax_rate : np.ndarray or float, optional
+            The tax rate(s) to apply for VAT adjustment. Can be a single float or array.
+            Default is 0.0 (no tax).
+
+        Returns
+        -------
+        np.ndarray
+            An array of length `project_duration` containing:
+            - Pre-onstream costs adjusted for tax, allocated to their respective expense years
+            - Zeros for years with no expenses
+            - All zeros if no matching costs found
+
+        Notes
+        -----
+        The method performs the following operations:
+        1. Adjusts costs by adding indirect tax (VAT)
+        2. Identifies relevant pre-onstream costs using fluid and investment type filters
+        3. Allocates costs to expense years using bincount
+        4. Pads with zeros for remaining project duration
+
+        The output array length matches the project duration, with costs positioned
+        according to (expense_year - start_year). Pre-onstream costs are defined as
+        costs incurred between POD I approval and onstream date.
+        """
 
         # Adjust cost by VAT
-        cost_adjusted_by_vat = self.cost + self._get_indirect_tax(tax_rate=tax_rate)
+        cost_adjusted_by_vat = self.cost + self.get_indirect_tax(tax_rate=tax_rate)
 
-        # Identify the indices of a particular investment type
-        # (Tangible or Intangible) for OIL or GAS
+        # Identify the preonstream cost indices for a particular fluid type (OIL or GAS)
+        # and for a particular investment type (TANGIBLE or INTANGIBLE)
         poc_investment_id = self._get_preonstream_cost_investment_id(
             fluid_type=fluid_type,
             investment_config=investment_config,
@@ -4174,12 +4415,12 @@ class SunkCost(GeneralCost):
         # For non-empty "poc_investment_id" array
         if len(poc_investment_id) > 0:
 
-            # Extract preonstream cost for a particular investment type
-            # (Tangible or Intangible) for OIL or GAS
+            # Extract preonstream cost for a particular fluid type (OIL or GAS) and
+            # for a particular investment type (TANGIBLE or INTANGIBLE)
             poc_investment = cost_adjusted_by_vat[poc_investment_id]
 
-            # Allocate preonstream cost of a particular investment type (Tangible or Intangible)
-            # by their associated expense year in array project_years (for OIL or GAS)
+            # Allocate the extracted preonstream cost by their associated
+            # expense year in array project_years
             poc_investment_expenses = np.bincount(
                 self.expense_year[poc_investment_id] - self.start_year, weights=poc_investment
             )
@@ -4200,313 +4441,286 @@ class SunkCost(GeneralCost):
         investment_config: SunkCostInvestmentType,
         tax_rate: np.ndarray | float = 0.0,
     ) -> float:
+        """
+        Calculate the total bulk sunk cost for a specific fluid and investment type.
 
+        This method computes the sum of all sunk costs (adjusted for tax) for a given
+        fluid type and investment type combination.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type to filter by (OIL or GAS).
+        investment_config : SunkCostInvestmentType
+            The investment type to filter by (TANGIBLE or INTANGIBLE).
+        tax_rate : np.ndarray or float, optional
+            The tax rate(s) to apply for VAT adjustment. Can be a single float or array.
+            Default is 0.0 (no tax).
+
+        Returns
+        -------
+        float
+            The total sum of sunk costs matching the specified fluid type and investment type,
+            including tax adjustments. Returns 0.0 if no matching costs exist.
+
+        Notes
+        -----
+        The method:
+        1. Gets the full sunk cost array using `get_sunk_cost_investment_array`
+        2. Sums all values in the array using numpy.sum with float64 precision
+        3. Returns the total bulk value.
+        """
+
+        # Identify the array of sunk cost for a particular fluid type (OIL or GAS)
+        # and for a particular investment type (TANGIBLE or INTANGIBLE)
         sc_investment_array = self.get_sunk_cost_investment_array(
             fluid_type=fluid_type,
             investment_config=investment_config,
             tax_rate=tax_rate,
         )
 
+        # Calculate the sunk cost bulk value
         return np.sum(sc_investment_array, dtype=np.float64)
 
-
-    def get_preonstream_cost_investment_bulk(self):
-        pass
-
-
-
-
-
-
-    def _get_amortization_charge(
+    def get_preonstream_cost_investment_bulk(
         self,
-        cost: float,
+        fluid_type: FluidType,
+        investment_config: SunkCostInvestmentType,
+        tax_rate: np.ndarray | float = 0.0,
+    ) -> float:
+        """
+        Calculate the total bulk pre-onstream cost for a specific fluid and
+        investment type.
+
+        This method computes the sum of all pre-onstream costs (adjusted for tax)
+        for a given fluid type and investment type combination.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type to filter by (OIL or GAS).
+        investment_config : SunkCostInvestmentType
+            The investment type to filter by (TANGIBLE or INTANGIBLE).
+        tax_rate : np.ndarray or float, optional
+            The tax rate(s) to apply for VAT adjustment. Can be a single float or array.
+            Default is 0.0 (no tax).
+
+        Returns
+        -------
+        float
+            The total sum of pre-onstream costs matching the specified fluid type and
+            investment type, including tax adjustments. Returns 0.0 if:
+            - No pre-onstream costs exist for the criteria, or
+            - POD I year equals onstream year (no pre-onstream period)
+
+        Notes
+        -----
+        The method:
+        1. Gets the full pre-onstream cost array using `get_preonstream_cost_investment_array`
+        2. Sums all values in the array using numpy.sum with float64 precision
+        3. Returns the total bulk value.
+        """
+
+        # Identify the array of preonstream cost for a particular fluid type
+        # (OIL or GAS) and for a particular investment type (TANGIBLE or INTANGIBLE)
+        poc_investment_array = self.get_preonstream_cost_investment_array(
+            fluid_type=fluid_type,
+            investment_config=investment_config,
+            tax_rate=tax_rate,
+        )
+
+        # Calculate the preonstream cost bulk value
+        return np.sum(poc_investment_array, dtype=np.float64)
+
+    def sunk_cost_amortization_charge(
+        self,
+        fluid_type: FluidType,
+        investment_config: SunkCostInvestmentType,
         prod: np.ndarray,
         prod_year: np.ndarray,
+        tax_rate: np.ndarray | float = 0.0,
         salvage_value: float = 0.0,
         amortization_len: int = 0,
     ) -> np.ndarray:
+        """
+        Calculate amortization charges for sunk costs using unit-of-production method.
 
-        # The start of production year must be the same with onstream year
+        This method computes the amortization of sunk costs over production years based
+        on production volumes, with optional salvage value and amortization length
+        constraints.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type to amortize costs for (OIL or GAS).
+        investment_config : SunkCostInvestmentType
+            The investment type to amortize (TANGIBLE or INTANGIBLE).
+        prod : np.ndarray
+            Array of production volumes for each year.
+        prod_year : np.ndarray
+            Array of years corresponding to production volumes.
+        tax_rate : np.ndarray or float, optional
+            Tax rate(s) to apply to sunk costs before amortization.
+            Default is 0.0 (no tax adjustment).
+        salvage_value : float, optional
+            Residual value of the asset after amortization.
+            Default is 0.0 (no salvage value).
+        amortization_len : int, optional
+            Maximum number of years to amortize costs over.
+            Default is 0 (no limit).
+
+        Returns
+        -------
+        np.ndarray
+            Array of amortization charges for each project year, calculated using the
+            unit-of-production method.
+
+        Raises
+        ------
+        SunkCostException
+            If the first production year doesn't match the onstream year.
+
+        Notes
+        -----
+        The method:
+        1. Gets total sunk costs (including tax adjustment)
+        2. Validates production start year matches onstream year
+        3. Calculates amortization using unit-of-production method
+        4. Applies salvage value and amortization length constraints if specified
+
+        The unit-of-production method allocates costs based on production volumes,
+        resulting in higher charges in high-production years.
+
+        See Also
+        --------
+        get_sunk_cost_investment_bulk : Gets the total sunk costs for amortization.
+        depr.unit_of_production_rate : Performs the actual amortization calculation.
+        """
+
+        # Determine the bulk value of the sunk cost for a particular
+        # fluid type (OIL or GAS) and a particular investment type
+        # (TANGIBLE or INTANGIBLE)
+        bulk_cost = self.get_sunk_cost_investment_bulk(
+            fluid_type=fluid_type,
+            investment_config=investment_config,
+            tax_rate=tax_rate,
+        )
+
+        # The start of production year must be the same with the onstream year
         if np.min(prod_year) != self.onstream_year:
             raise SunkCostException(
-                f"Unequal value for the start of fluid production ({np.min(prod_year)}) "
+                f"Unequal value for the start of production ({np.min(prod_year)}) "
                 f"and the onstream year ({self.onstream_year})"
             )
 
         # Calculate amortization charge
-        amortization_charge = depr.unit_of_production_rate(
+        return depr.unit_of_production_rate(
             start_year_project=self.start_year,
-            cost=cost,
+            cost=bulk_cost,
             prod_year=prod_year,
             prod=prod,
             salvage_value=salvage_value,
             amortization_len=amortization_len,
         )
 
-        return amortization_charge
-
-    def get_sunk_cost_oil_amortization_charge(
+    def preonstream_cost_amortization_charge(
         self,
+        fluid_type: FluidType,
+        investment_config: SunkCostInvestmentType,
         prod: np.ndarray,
         prod_year: np.ndarray,
+        tax_rate: np.ndarray | float = 0.0,
         salvage_value: float = 0.0,
         amortization_len: int = 0,
-        tax_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
         """
-        Calculate amortization charges for oil sunk costs using the unit-of-production method.
+        Calculate amortization charges for pre-onstream costs using unit-of-production
+        method.
+
+        This method computes the amortization of pre-onstream costs over production
+        years based on production volumes, with optional salvage value and amortization
+        length constraints.
 
         Parameters
         ----------
+        fluid_type : FluidType
+            The fluid type to amortize costs for (OIL or GAS).
+        investment_config : SunkCostInvestmentType
+            The investment type to amortize (TANGIBLE or INTANGIBLE).
         prod : np.ndarray
-            Array of oil production volumes for each year.
+            Array of production volumes for each year, in units consistent with cost basis.
         prod_year : np.ndarray
-            Array of years corresponding to the production volumes.
-        salvage_value : float, optional
-            The residual value of the asset after amortization. Default is 0.0.
-        amortization_len : int, optional
-            The maximum number of years over which to amortize the costs.
-            If 0 (default), uses the full production period.
+            Array of years corresponding to production volumes.
         tax_rate : np.ndarray or float, optional
-            Tax rate to be applied for VAT calculation when determining sunk costs.
-            Default is 0.0 (no tax).
-
-        Returns
-        -------
-        np.ndarray
-            Array of amortization charges for each project year, calculated based on:
-            - Oil sunk costs (from `_get_oil_cost_classification`)
-            - Production profile
-            - Unit-of-production amortization method
-
-        Raises
-        ------
-        SunkCostException
-            If the first production year doesn't match the project's onstream year,
-            propagated from `_get_amortization_charge`.
-
-        Notes
-        -----
-        - Combines oil sunk cost determination and amortization calculation
-        - Uses the sunk cost portion from `_get_oil_cost_classification`
-        - Delegates amortization calculation to `_get_amortization_charge`
-        - Follows the same unit-of-production amortization method
-        - Production validation occurs in the underlying amortization method
-
-        See Also
-        --------
-        _get_oil_cost_classification : Method used to determine oil sunk costs
-        _get_amortization_charge : Method used to calculate the amortization
-        """
-
-        return self._get_amortization_charge(
-            cost=self._get_oil_cost_classification(tax_rate=tax_rate)[0],
-            prod=prod,
-            prod_year=prod_year,
-            salvage_value=salvage_value,
-            amortization_len=amortization_len,
-        )
-
-    def get_sunk_cost_gas_amortization_charge(
-        self,
-        prod: np.ndarray,
-        prod_year: np.ndarray,
-        salvage_value: float = 0.0,
-        amortization_len: int = 0,
-        tax_rate: np.ndarray | float = 0.0,
-    ) -> np.ndarray:
-        """
-        Calculate amortization charges for gas sunk costs using the unit-of-production method.
-
-        Parameters
-        ----------
-        prod : np.ndarray
-            Array of gas production volumes for each year.
-        prod_year : np.ndarray
-            Array of years corresponding to the production volumes.
-            Must start from the project's onstream year.
-        salvage_value : float, optional
-            The residual value of the asset after amortization. Default is 0.0.
-        amortization_len : int, optional
-            The maximum number of years over which to amortize the costs.
-            If 0 (default), uses the full production period.
-        tax_rate : np.ndarray or float, optional
-            Tax rate to be applied for VAT calculation when determining sunk costs.
-            Default is 0.0 (no tax).
-
-        Returns
-        -------
-        np.ndarray
-            Array of amortization charges for each project year, calculated based on:
-            - Gas sunk costs (from `_get_gas_cost_classification`)
-            - Production profile
-            - Unit-of-production amortization method
-
-        Raises
-        ------
-        SunkCostException
-            If the first production year doesn't match the project's onstream year,
-            propagated from `_get_amortization_charge`.
-
-        Notes
-        -----
-        - Combines gas sunk cost determination and amortization calculation
-        - Uses the sunk cost portion from `_get_gas_cost_classification`
-        - Delegates amortization calculation to `_get_amortization_charge`
-        - Follows the same unit-of-production amortization method as oil costs
-        - Production validation occurs in the underlying amortization method
-
-        See Also
-        --------
-        _get_gas_cost_classification : Method used to determine gas sunk costs
-        _get_amortization_charge : Method used to calculate the amortization
-        """
-
-        return self._get_amortization_charge(
-            cost=self._get_gas_cost_classification(tax_rate=tax_rate)[0],
-            prod=prod,
-            prod_year=prod_year,
-            salvage_value=salvage_value,
-            amortization_len=amortization_len,
-        )
-
-    def get_pre_onstream_cost_oil_amortization_charge(
-        self,
-        prod: np.ndarray,
-        prod_year: np.ndarray,
-        salvage_value: float = 0.0,
-        amortization_len: int = 0,
-        tax_rate: np.ndarray | float = 0.0,
-    ) -> np.ndarray:
-        """
-        Calculate amortization charges for oil pre-onstream costs using
-        the unit-of-production method.
-
-        This method calculates amortization specifically for oil-related costs
-        incurred after POD I approval but before production start (onstream year).
-
-        Parameters
-        ----------
-        prod : np.ndarray
-            Array of oil production volumes for each year.
-        prod_year : np.ndarray
-            Array of years corresponding to the production volumes.
-            Must start from the project's onstream year.
-        salvage_value : float, optional
-            The residual value of the asset after amortization. Default is 0.0.
-        amortization_len : int, optional
-            The maximum number of years over which to amortize the costs.
-            If 0 (default), uses the full production period.
-        tax_rate : np.ndarray or float, optional
-            Tax rate to be applied for VAT calculation when determining pre-onstream costs.
-            Default is 0.0 (no tax).
-
-        Returns
-        -------
-        np.ndarray
-            Array of amortization charges for each project year, calculated based on:
-            - Oil pre-onstream costs (from `_get_oil_cost_classification`)
-            - Production profile
-            - Unit-of-production amortization method
-
-        Raises
-        ------
-        SunkCostException
-            If the first production year doesn't match the project's onstream year,
-            propagated from `_get_amortization_charge`.
-
-        Notes
-        -----
-        - Focuses specifically on pre-onstream costs (costs between POD I and onstream)
-        - Uses the pre-onstream cost portion from `_get_oil_cost_classification`
-        - Delegates amortization calculation to `_get_amortization_charge`
-        - Follows the same unit-of-production amortization method as sunk costs
-        - Production validation occurs in the underlying amortization method
-
-        See Also
-        --------
-        _get_oil_cost_classification : Method used to determine oil cost components
-        _get_amortization_charge : Method used to calculate the amortization
-        """
-
-        return self._get_amortization_charge(
-            cost=self._get_oil_cost_classification(tax_rate=tax_rate)[1],
-            prod=prod,
-            prod_year=prod_year,
-            salvage_value=salvage_value,
-            amortization_len=amortization_len,
-        )
-
-    def get_pre_onstream_cost_gas_amortization_charge(
-        self,
-        prod: np.ndarray,
-        prod_year: np.ndarray,
-        salvage_value: float = 0.0,
-        amortization_len: int = 0,
-        tax_rate: np.ndarray | float = 0.0,
-    ) -> np.ndarray:
-        """
-        Calculate amortization charges for gas pre-onstream costs using
-        the unit-of-production method.
-
-        This method computes amortization specifically for gas-related costs
-        incurred after POD I approval but before production start (onstream year),
-        providing the annual charge schedule.
-
-        Parameters
-        ----------
-        prod : np.ndarray
-            Array of gas production volumes for each year.
-            Shape should match prod_year.
-        prod_year : np.ndarray
-            Array of calendar years corresponding to production volumes.
-            Must begin with the project's onstream year.
-        salvage_value : float, optional
-            Residual asset value after amortization period. Reduces amortizable base.
-            Default is 0.0 (full amortization of costs).
-        amortization_len : int, optional
-            Maximum amortization period in years. If 0 (default), uses full production profile.
-        tax_rate : np.ndarray or float, optional
-            VAT rate(s) applied to determine tax-adjusted pre-onstream costs.
+            Tax rate(s) to apply to pre-onstream costs before amortization.
             Default is 0.0 (no tax adjustment).
+        salvage_value : float, optional
+            Residual value of the asset after amortization.
+            Default is 0.0 (no salvage value).
+        amortization_len : int, optional
+            Maximum number of years to amortize costs over.
+            Default is 0 (no limit, amortize over full production profile).
 
         Returns
         -------
         np.ndarray
-            Annual amortization charge array with same length as project years, where:
-            - Each element represents the gas pre-onstream cost allocation for that year
-            - Charges are production-weighted according to unit-of-production method
-            - Total equals (tax-adjusted pre-onstream costs - salvage_value)
+            Array of amortization charges for each project year, calculated using the
+            unit-of-production method. Returns zero array if no pre-onstream costs exist.
 
         Raises
         ------
         SunkCostException
-            If production start year doesn't match project onstream year.
+            If the first production year doesn't match the onstream year.
 
         Notes
         -----
-        - Specifically handles costs incurred between POD I approval and onstream year
-        - Uses index [1] from _get_gas_cost_classification (pre-onstream costs)
-        - Consistent methodology with oil version, applied to gas costs
-        - Production profile drives allocation regardless of actual cost timing
-        - Tax rate affects cost basis but not annual allocation method
+        The method:
+        1. Gets total pre-onstream costs (including tax adjustment)
+        2. Validates production start year matches onstream year
+        3. Calculates amortization using unit-of-production method
+        4. Applies salvage value and amortization length constraints if specified
+
+        Pre-onstream costs are amortized from first production year onward, in proportion
+        to production volumes each year.
 
         See Also
         --------
-        _get_gas_cost_classification : Source of pre-onstream cost amounts
-        _get_amortization_charge : Core amortization calculation engine
+        get_preonstream_cost_investment_bulk:
+            Gets the total pre-onstream costs for amortization.
+        depr.unit_of_production_rate:
+            Performs the actual amortization calculation.
         """
 
-        return self._get_amortization_charge(
-            cost=self._get_gas_cost_classification(tax_rate=tax_rate)[1],
-            prod=prod,
+        # Determine the bulk value of the preonstream cost for a particular
+        # fluid type (OIL or GAS) and a particular investment type
+        # (TANGIBLE or INTANGIBLE)
+        bulk_value = self.get_preonstream_cost_investment_bulk(
+            fluid_type=fluid_type,
+            investment_config=investment_config,
+            tax_rate=tax_rate,
+        )
+
+        # The start of production year must be the same with the onstream year
+        if np.min(prod_year) != self.onstream_year:
+            raise SunkCostException(
+                f"Unequal value for the start of production ({np.min(prod_year)}) "
+                f"and the onstream year ({self.onstream_year})"
+            )
+
+        # Calculate amortization charge
+        return depr.unit_of_production_rate(
+            start_year_project=self.start_year,
+            cost=bulk_value,
             prod_year=prod_year,
+            prod=prod,
             salvage_value=salvage_value,
             amortization_len=amortization_len,
         )
 
-    def total_amortization_book_value(self):
+    def sunk_cost_amortization_book_value(self):
+        pass
+
+    def preonstream_cost_amortization_book_value(self):
         pass
 
     def __len__(self):
