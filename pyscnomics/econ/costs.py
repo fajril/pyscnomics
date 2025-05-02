@@ -4717,26 +4717,264 @@ class SunkCost(GeneralCost):
             amortization_len=amortization_len,
         )
 
-    def sunk_cost_amortization_book_value(self):
-        pass
+    def sunk_cost_amortization_book_value(
+        self,
+        fluid_type: FluidType,
+        investment_config: SunkCostInvestmentType,
+        prod: np.ndarray,
+        prod_year: np.ndarray,
+        tax_rate: np.ndarray | float = 0.0,
+        salvage_value: float = 0.0,
+        amortization_len: int = 0,
+    ):
+        """
+        Calculate the book value over time for sunk cost amortization.
 
-    def preonstream_cost_amortization_book_value(self):
-        pass
+        This method computes the remaining book value of sunk costs after accounting for
+        accumulated amortization charges, showing how the asset value declines over the
+        project life.
 
-    def __len__(self):
-        pass
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type (OIL or GAS) for which to calculate book values.
+        investment_config : SunkCostInvestmentType
+            The investment type (TANGIBLE or INTANGIBLE) to analyze.
+        prod : np.ndarray
+            Array of production volumes for each year.
+        prod_year : np.ndarray
+            Array of years corresponding to production volumes.
+        tax_rate : np.ndarray or float, optional
+            Tax rate(s) applied to the sunk costs. Default is 0.0 (no tax).
+        salvage_value : float, optional
+            Residual value of the asset after full amortization. Default is 0.0.
+        amortization_len : int, optional
+            Maximum number of years for amortization. Default is 0 (no limit).
+
+        Returns
+        -------
+        np.ndarray
+            Array of book values for each project year, calculated as:
+            (cumulative sunk costs) - (cumulative amortization charges)
+
+        Notes
+        -----
+        The book value calculation:
+        1. Starts with the cumulative sum of all sunk costs
+        2. Subtracts the cumulative sum of amortization charges
+        3. Results show the remaining unamortized value each year
+
+        See Also
+        --------
+        sunk_cost_amortization_charge : Calculates the amortization charges.
+        get_sunk_cost_investment_array : Gets the sunk cost allocation array.
+        """
+
+        # Determine sunk cost amortization charge for a particular fluid type
+        # (OIL or GAS) and for a particular investment type (TANGIBLE or INTANGIBLE)
+        sc_amortization_charge = self.sunk_cost_amortization_charge(
+            fluid_type=fluid_type,
+            investment_config=investment_config,
+            prod=prod,
+            prod_year=prod_year,
+            tax_rate=tax_rate,
+            salvage_value=salvage_value,
+            amortization_len=amortization_len,
+        )
+
+        # Determine sunk cost array for a particular fluid type (OIL or GAS)
+        # and for a particular investment type (TANGIBLE or INTANGIBLE)
+        sc_investment_array = self.get_sunk_cost_investment_array(
+            fluid_type=fluid_type,
+            investment_config=investment_config,
+            tax_rate=tax_rate,
+        )
+
+        # Calculate sunk cost amortization book value
+        return np.cumsum(sc_investment_array) - np.cumsum(sc_amortization_charge)
+
+    def preonstream_cost_amortization_book_value(
+        self,
+        fluid_type: FluidType,
+        investment_config: SunkCostInvestmentType,
+        prod: np.ndarray,
+        prod_year: np.ndarray,
+        tax_rate: np.ndarray | float = 0.0,
+        salvage_value: float = 0.0,
+        amortization_len: int = 0,
+    ):
+        """
+        Calculate the book value over time for pre-onstream cost amortization.
+
+        This method tracks the remaining book value of pre-onstream costs by comparing
+        cumulative costs against cumulative amortization charges, showing the asset's
+        declining value through the project life.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type (OIL or GAS) for book value calculation.
+        investment_config : SunkCostInvestmentType
+            The investment type (TANGIBLE or INTANGIBLE) to analyze.
+        prod : np.ndarray
+            Array of production volumes for each year (units consistent with cost basis).
+        prod_year : np.ndarray
+            Array of years corresponding to production volumes.
+        tax_rate : np.ndarray or float, optional
+            Tax rate(s) applied to pre-onstream costs. Default is 0.0 (no tax).
+        salvage_value : float, optional
+            Residual value after full amortization. Default is 0.0.
+        amortization_len : int, optional
+            Maximum amortization period in years. Default is 0 (no limit).
+
+        Returns
+        -------
+        np.ndarray
+            Array of book values for each project year, calculated as:
+            (cumulative pre-onstream costs) - (cumulative amortization charges)
+            Returns zero array if no pre-onstream costs exist.
+
+        Notes
+        -----
+        Key calculation aspects:
+        1. Uses unit-of-production amortization method
+        2. Book value declines in proportion to production
+        3. Respects amortization length constraints
+
+        See Also
+        --------
+        preonstream_cost_amortization_charge : Calculates amortization charges.
+        get_preonstream_cost_investment_array : Gets cost allocation array.
+        """
+
+        # Determine preonstream cost amortization charge for a particular fluid type
+        # (OIL or GAS) and for a particular investment type (TANGIBLE or INTANGIBLE)
+        poc_amortization_charge = self.preonstream_cost_amortization_charge(
+            fluid_type=fluid_type,
+            investment_config=investment_config,
+            prod=prod,
+            prod_year=prod_year,
+            tax_rate=tax_rate,
+            salvage_value=salvage_value,
+            amortization_len=amortization_len,
+        )
+
+        # Determine preonstream cost array for a particular fluid type (OIL or GAS)
+        # and for a particular investment type (TANGIBLE or INTANGIBLE)
+        poc_investment_array = self.get_preonstream_cost_investment_array(
+            fluid_type=fluid_type,
+            investment_config=investment_config,
+            tax_rate=tax_rate,
+        )
+
+        return np.cumsum(poc_investment_array) - np.cumsum(poc_amortization_charge)
 
     def __eq__(self, other):
-        pass
+        # Between two instances of SunkCost
+        if isinstance(other, SunkCost):
+            return all(
+                (
+                    self.start_year == other.start_year,
+                    self.end_year == other.end_year,
+                    self.onstream_year == other.onstream_year,
+                    self.pod1_year == other.pod1_year,
+                    np.allclose(self.expense_year, other.expense_year),
+                    np.allclose(self.cost, other.cost),
+                    np.allclose(self.tax_portion, other.tax_portion),
+                    np.allclose(self.tax_discount, other.tax_discount),
+                    self.cost_allocation == other.cost_allocation,
+                    self.investment_type == other.investment_type,
+                )
+            )
+
+        # Between an instance of SunkCost and an integer/float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) == other
+
+        else:
+            return False
 
     def __lt__(self, other):
-        pass
+        # Between an instance of SunkCost with another instance of
+        # CapitalCost/Intangible/OPEX/ASR/LBT/SunkCost
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, SunkCost)):
+            return np.sum(self.cost) < np.sum(other.cost)
+
+        # Between an instance of SunkCost and an integer/a float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) < other
+
+        else:
+            raise SunkCostException(
+                f"Must compare an instance of SunkCost with another instance of "
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/SunkCost, an integer, or a float."
+            )
 
     def __le__(self, other):
-        pass
+        # Between an instance of SunkCost with another instance of
+        # CapitalCost/Intangible/OPEX/ASR/LBT/SunkCost
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, SunkCost)):
+            return np.sum(self.cost) <= np.sum(other.cost)
+
+        # Between an instance of SunkCost and an integer/a float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) <= other
+
+        else:
+            raise SunkCostException(
+                f"Must compare an instance of SunkCost with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/SunkCost, an integer, or a float."
+            )
 
     def __gt__(self, other):
-        pass
+        # Between an instance of SunkCost with another instance of
+        # CapitalCost/Intangible/OPEX/ASR/LBT/SunkCost
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, SunkCost)):
+            return np.sum(self.cost) > np.sum(other.cost)
+
+        # Between an instance of SunkCost and an integer/a float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) > other
+
+        else:
+            raise SunkCostException(
+                f"Must compare an instance of SunkCost with another instance of "
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/SunkCost, an integer, or a float."
+            )
 
     def __ge__(self, other):
+        # Between an instance of SunkCost with another instance of
+        # CapitalCost/Intangible/OPEX/ASR/LBT/SunkCost
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, SunkCost)):
+            return np.sum(self.cost) >= np.sum(other.cost)
+
+        # Between an instance of SunkCost and an integer/a float
+        elif isinstance(other, (int, float)):
+            return np.sum(self.cost) >= other
+
+        else:
+            raise SunkCostException(
+                f"Must compare an instance of SunkCost with another instance of "
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/SunkCost, an integer, or a float."
+            )
+
+    def __add__(self, other):
+        pass
+
+    def __iadd__(self, other):
+        pass
+
+    def __sub__(self, other):
+        pass
+
+    def __rsub__(self, other):
+        pass
+
+    def __mul__(self, other):
+        pass
+
+    def __rmul__(self, other):
+        pass
+
+    def __truediv__(self, other):
         pass

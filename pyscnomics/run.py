@@ -35,7 +35,7 @@ print('cost = ', posc.cost)
 print('expense_year = ', posc.expense_year)
 print('project_years = ', posc.project_years)
 
-t1 = posc.get_preonstream_cost_amortization_charge(
+t1 = posc.preonstream_cost_amortization_book_value(
     tax_rate=0.0,
     fluid_type=FluidType.GAS,
     investment_config=SunkCostInvestmentType.INTANGIBLE,
@@ -43,6 +43,15 @@ t1 = posc.get_preonstream_cost_amortization_charge(
     prod_year=np.array([2027, 2028]),
     amortization_len=8,
 )
+
+# t1 = posc.get_preonstream_cost_amortization_charge(
+#     tax_rate=0.0,
+#     fluid_type=FluidType.GAS,
+#     investment_config=SunkCostInvestmentType.INTANGIBLE,
+#     prod=np.array([50, 100]),
+#     prod_year=np.array([2027, 2028]),
+#     amortization_len=8,
+# )
 
 # t1 = posc.get_sunk_cost_amortization_charge(
 #     tax_rate=0.0,
@@ -58,10 +67,10 @@ t1 = posc.get_preonstream_cost_amortization_charge(
 # print(f'Length: {len()}')
 # print()
 
-print('\t')
-print(f'Filetype: {type(t1)}')
-print(f'Length: {len(t1)}')
-print('t1 = \n', t1)
+# print('\t')
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t1)}')
