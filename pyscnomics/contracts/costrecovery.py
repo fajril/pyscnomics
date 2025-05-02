@@ -84,11 +84,11 @@ class CostRecovery(BaseProject):
     """
     oil_ftp_is_available: bool = field(default=True)
     oil_ftp_is_shared: bool = field(default=True)
-    oil_ftp_portion: float = field(default=0.2)
+    oil_ftp_portion: float | np.ndarray = field(default=0.2)
 
     gas_ftp_is_available: bool = field(default=True)
     gas_ftp_is_shared: bool = field(default=True)
-    gas_ftp_portion: float = field(default=0.2)
+    gas_ftp_portion: float | np.ndarray = field(default=0.2)
 
     tax_split_type: TaxSplitTypeCR = field(default=TaxSplitTypeCR.CONVENTIONAL)
     condition_dict: dict = field(default_factory=dict)
@@ -102,21 +102,18 @@ class CostRecovery(BaseProject):
     oil_cr_cap_rate: float = field(default=1.0)
     gas_cr_cap_rate: float = field(default=1.0)
 
-    oil_dmo_volume_portion: float = field(default=0.25)
-    oil_dmo_fee_portion: float = field(default=0.25)
+    oil_dmo_volume_portion: float | np.ndarray = field(default=0.25)
+    oil_dmo_fee_portion: float | np.ndarray = field(default=0.25)
     oil_dmo_holiday_duration: int = field(default=60)
 
-    gas_dmo_volume_portion: float = field(default=1.0)
-    gas_dmo_fee_portion: float = field(default=1.0)
+    gas_dmo_volume_portion: float | np.ndarray = field(default=1.0)
+    gas_dmo_fee_portion: float | np.ndarray = field(default=1.0)
     gas_dmo_holiday_duration: int = field(default=60)
 
     _oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _oil_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
     _gas_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
-
-    _split_ctr_oil: np.ndarray = field(default=None, init=False, repr=False)
-    _split_ctr_gas: np.ndarray = field(default=None, init=False, repr=False)
 
     _oil_ic: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ic_unrecovered: np.ndarray = field(default=None, init=False, repr=False)
@@ -286,7 +283,7 @@ class CostRecovery(BaseProject):
         -------
 
         """
-        # Defining any attributes that in the form of fraction
+       # Defining any attributes that in the form of fraction
         fraction_attributes = (
             ('oil_ftp_portion', self.oil_ftp_portion),
             ('gas_ftp_portion', self.gas_ftp_portion),
@@ -303,24 +300,28 @@ class CostRecovery(BaseProject):
         )
 
         for attr_name, attr in fraction_attributes:
-            if attr > 1.0 or attr < 0.0:
-                range_type = 'exceeding 1.0' if attr > 1.0 else 'below 0.0'
+            if isinstance(attr, float):
+                if attr > 1.0 or attr < 0.0:
+                    range_type = 'exceeding 1.0' if attr > 1.0 else 'below 0.0'
+                    raise CostRecoveryException(
+                        f"The {attr_name} value, {attr}, is {range_type}. "
+                        f"The allowed range for this attribute is between 0.0 and 1.0."
+                    )
+                else:
+                    pass
+            elif isinstance(attr, np.ndarray):
+                if len(attr) != len(self.project_years):
+                    raise CostRecoveryException(
+                        f"The {attr_name} length, is {len(attr)}. "
+                        f"The allowed length for this attribute is the same as the length of the project years:  "
+                        f"{len(self.project_years)}"
+                    )
+                else:
+                    pass
+            else:
                 raise CostRecoveryException(
-                    f"The {attr_name} value, {attr}, is {range_type}. "
-                    f"The allowed range for this attribute is between 0.0 and 1.0."
-                )
+                    f"The {attr_name} type: {type(attr)}, is not allowed.")
 
-        discrete_attributes = (
-            ('oil_dmo_holiday_duration', self.oil_dmo_holiday_duration),
-            ('gas_dmo_holiday_duration', self.gas_dmo_holiday_duration)
-        )
-
-        for attr_name, attr in discrete_attributes:
-            if attr < 0:
-                raise CostRecoveryException(
-                    f"The {attr_name} value, {attr}, is below 0. "
-                    f"The minimum value for this attribute is 0."
-                )
 
     def _get_rc_icp_pretax(self):
         """
