@@ -6,7 +6,6 @@ from typing import Dict, Union, Optional, List
 
 from pydantic import BaseModel, Field
 import numpy as np
-from requests.packages import target
 
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales, LBT
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type
@@ -123,25 +122,25 @@ class CostRecoveryBM(BaseModel):
     """
     oil_ftp_is_available: bool = True
     oil_ftp_is_shared: bool = True
-    oil_ftp_portion: float | int = 0.2
+    oil_ftp_portion: float | int | list[float] = 0.2
     gas_ftp_is_available: bool = True
     gas_ftp_is_shared: bool = True
-    gas_ftp_portion: float | int = 0.2
+    gas_ftp_portion: float | int | list[float] = 0.2
     tax_split_type: str = "Conventional"
     condition_dict: dict = {}
     indicator_rc_icp_sliding: list[float] = []
-    oil_ctr_pretax_share: float | int = 0.34722220
-    gas_ctr_pretax_share: float | int = 0.5208330
+    oil_ctr_pretax_share: float | int | list[float] = 0.34722220
+    gas_ctr_pretax_share: float | int | list[float] = 0.5208330
     oil_ic_rate: float | int = 0
     gas_ic_rate: float | int = 0
     ic_is_available: bool = False
     oil_cr_cap_rate: float | int = 1
     gas_cr_cap_rate: float | int = 1
-    oil_dmo_volume_portion: float | int = 0.25
-    oil_dmo_fee_portion: float | int = 0.25
+    oil_dmo_volume_portion: float | int | list[float] = 0.25
+    oil_dmo_fee_portion: float | int | list[float] = 0.25
     oil_dmo_holiday_duration: float | int = 60
-    gas_dmo_volume_portion: float | int = 0.25
-    gas_dmo_fee_portion: float | int = 1
+    gas_dmo_volume_portion: float | int | list[float] = 0.25
+    gas_dmo_fee_portion: float | int | list[float] = 1
     gas_dmo_holiday_duration: float | int = 60
 
 
@@ -216,11 +215,11 @@ class GrossSplitBM(BaseModel):
     base_split_ctr_oil: float | int = 0.43
     base_split_ctr_gas: float | int = 0.48
     split_ministry_disc: float | int = 0.08
-    oil_dmo_volume_portion: float | int = 0.25
-    oil_dmo_fee_portion: float | int = 1.0
+    oil_dmo_volume_portion: float | int | list[float] = 0.25
+    oil_dmo_fee_portion: float | int | list[float] = 1.0
     oil_dmo_holiday_duration: float | int = 60
-    gas_dmo_volume_portion: float | int = 1.0
-    gas_dmo_fee_portion: float | int = 1.0
+    gas_dmo_volume_portion: float | int | list[float] = 1.0
+    gas_dmo_fee_portion: float | int | list[float] = 1.0
     gas_dmo_holiday_duration: float | int = 60
 
 
