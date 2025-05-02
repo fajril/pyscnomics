@@ -6,6 +6,7 @@ from typing import Dict, Union, Optional, List
 
 from pydantic import BaseModel, Field
 import numpy as np
+from requests.packages import target
 
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales, LBT
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type
