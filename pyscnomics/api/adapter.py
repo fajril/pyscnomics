@@ -567,11 +567,11 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         base_split_ctr_oil=convert_to_float(target=data['grosssplit']['base_split_ctr_oil']),
         base_split_ctr_gas=convert_to_float(target=data['grosssplit']['base_split_ctr_gas']),
         split_ministry_disc=convert_to_float(target=data['grosssplit']['split_ministry_disc']),
-        oil_dmo_volume_portion=convert_to_float(target=data['grosssplit']['oil_dmo_volume_portion']),
-        oil_dmo_fee_portion=convert_to_float(target=data['grosssplit']['oil_dmo_fee_portion']),
+        oil_dmo_volume_portion=convert_list_to_array_float_or_array(data_input=data['grosssplit']['oil_dmo_volume_portion']),
+        oil_dmo_fee_portion=convert_list_to_array_float_or_array(data_input=data['grosssplit']['oil_dmo_fee_portion']),
         oil_dmo_holiday_duration=data['grosssplit']['oil_dmo_holiday_duration'],
-        gas_dmo_volume_portion=convert_to_float(target=data['grosssplit']['gas_dmo_volume_portion']),
-        gas_dmo_fee_portion=convert_to_float(target=data['grosssplit']['gas_dmo_fee_portion']),
+        gas_dmo_volume_portion=convert_list_to_array_float_or_array(data_input=data['grosssplit']['gas_dmo_volume_portion']),
+        gas_dmo_fee_portion=convert_list_to_array_float_or_array(data_input=data['grosssplit']['gas_dmo_fee_portion']),
         gas_dmo_holiday_duration=data['grosssplit']['gas_dmo_holiday_duration'],
 
     )
@@ -1036,11 +1036,11 @@ def get_grosssplit_split(data: dict):
         base_split_ctr_oil=convert_to_float(target=data['grosssplit']['base_split_ctr_oil']),
         base_split_ctr_gas=convert_to_float(target=data['grosssplit']['base_split_ctr_gas']),
         split_ministry_disc=convert_to_float(target=data['grosssplit']['split_ministry_disc']),
-        oil_dmo_volume_portion=convert_to_float(target=data['grosssplit']['oil_dmo_volume_portion']),
-        oil_dmo_fee_portion=convert_to_float(target=data['grosssplit']['oil_dmo_fee_portion']),
+        oil_dmo_volume_portion=convert_list_to_array_float_or_array(data_input=data['grosssplit']['oil_dmo_volume_portion']),
+        oil_dmo_fee_portion=convert_list_to_array_float_or_array(data_input=data['grosssplit']['oil_dmo_fee_portion']),
         oil_dmo_holiday_duration=data['grosssplit']['oil_dmo_holiday_duration'],
-        gas_dmo_volume_portion=convert_to_float(target=data['grosssplit']['gas_dmo_volume_portion']),
-        gas_dmo_fee_portion=convert_to_float(target=data['grosssplit']['gas_dmo_fee_portion']),
+        gas_dmo_volume_portion=convert_list_to_array_float_or_array(convert_list_to_array_float_or_array=data['grosssplit']['gas_dmo_volume_portion']),
+        gas_dmo_fee_portion=convert_list_to_array_float_or_array(convert_list_to_array_float_or_array=data['grosssplit']['gas_dmo_fee_portion']),
         gas_dmo_holiday_duration=data['grosssplit']['gas_dmo_holiday_duration'],
 
     )

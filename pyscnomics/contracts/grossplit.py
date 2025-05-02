@@ -10,7 +10,6 @@ from pyscnomics.contracts import psc_tools
 from pyscnomics.econ.selection import (FluidType,
                                        GrossSplitRegime,
                                        TaxRegime,
-                                       TaxType,
                                        DeprMethod,
                                        OtherRevenue,
                                        InflationAppliedTo,
@@ -101,12 +100,12 @@ class GrossSplit(BaseProject):
     base_split_ctr_gas: float = field(default=0.48)
     split_ministry_disc: float = field(default=0.08)
 
-    oil_dmo_volume_portion: float = field(default=0.25)
-    oil_dmo_fee_portion: float = field(default=1.0)
+    oil_dmo_volume_portion: float | np.ndarray = field(default=0.25)
+    oil_dmo_fee_portion: float | np.ndarray = field(default=1.0)
     oil_dmo_holiday_duration: int = field(default=60)
 
-    gas_dmo_volume_portion: float = field(default=1.0)
-    gas_dmo_fee_portion: float = field(default=1.0)
+    gas_dmo_volume_portion: float | np.ndarray = field(default=1.0)
+    gas_dmo_fee_portion: float | np.ndarray = field(default=1.0)
     gas_dmo_holiday_duration: int = field(default=60)
 
     conversion_boe_to_scf: float = field(default=5.615, init=False, repr=False)
