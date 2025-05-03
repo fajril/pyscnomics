@@ -3,11 +3,9 @@
   "version": {
     "major": 1,
     "minor": 3,
-    "build": 0
+    "build": 1
   },
   "features": [
-    "Adding Summarizer Module",
-    "Adding the Sensitivity API",
-    "Adding the Uncertainty API"
+    "Adding The ability of array PSC terms input"
     ]
 }
