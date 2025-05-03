@@ -300,7 +300,7 @@ class CostRecovery(BaseProject):
         )
 
         for attr_name, attr in fraction_attributes:
-            if isinstance(attr, float):
+            if isinstance(attr, float) or isinstance(attr, int):
                 if attr > 1.0 or attr < 0.0:
                     range_type = 'exceeding 1.0' if attr > 1.0 else 'below 0.0'
                     raise CostRecoveryException(
@@ -938,6 +938,7 @@ class CostRecovery(BaseProject):
             gas_cost_of_sales_applied: bool = False,
             sum_undepreciated_cost:bool=False
     ):
+        self._check_attributes()
 
         # Configure Sunk Cost Reference Year
         if sunk_cost_reference_year is None:

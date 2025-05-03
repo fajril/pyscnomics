@@ -407,8 +407,8 @@ def get_dmo(onstream_date: date,
             start_date: date,
             project_years: np.ndarray,
             dmo_holiday_duration: int,
-            dmo_volume_portion: float,
-            dmo_fee_portion: float,
+            dmo_volume_portion: float | np.ndarray,
+            dmo_fee_portion: float | np.ndarray,
             lifting: Lifting,
             price: np.ndarray,
             ctr_pretax_share: float,
@@ -431,9 +431,9 @@ def get_dmo(onstream_date: date,
         The array containing the contract years from the beginning until the end of the contract.
     dmo_holiday_duration: int
         The duration of the DMO holiday.
-    dmo_volume_portion: float
+    dmo_volume_portion: float | np.ndarray
         The DMO volume portion.
-    dmo_fee_portion: float
+    dmo_fee_portion: float | np.ndarray
         The DMO fee portion.
     lifting: Lifting
         The Lifting class of the produced fluid.
