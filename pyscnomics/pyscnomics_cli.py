@@ -22,11 +22,11 @@ from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 
 
-from pyscnomics.optimize.uncertainty import (
-    get_montecarlo_data,
-    get_multipliers_montecarlo,
-    execute_montecarlo,
-)
+# from pyscnomics.optimize.uncertainty import (
+#     get_montecarlo_data,
+#     get_multipliers_montecarlo,
+#     execute_montecarlo,
+# )
 
 
 # Click command for generating CLI command
@@ -47,205 +47,209 @@ def main(workbook_path, mode):
 
     # Run standard economic analysis
     if mode == "Standard":
-        (
-            psc,
-            psc_arguments,
-            summary_arguments,
-            data
-        ) = InitiateContract(workbook_path=workbook_path).activate()
-
-        run_standard(
-            contract=psc,
-            contract_arguments=psc_arguments,
-            workbook_object=workbook_object,
-            summary_argument=summary_arguments,
-        )
+        # (
+        #     psc,
+        #     psc_arguments,
+        #     summary_arguments,
+        #     data
+        # ) = InitiateContract(workbook_path=workbook_path).activate()
+        #
+        # run_standard(
+        #     contract=psc,
+        #     contract_arguments=psc_arguments,
+        #     workbook_object=workbook_object,
+        #     summary_argument=summary_arguments,
+        # )
+        pass
 
     # Run optimization study
     elif mode == "Optimization":
-        (
-            psc,
-            psc_arguments,
-            summary_arguments,
-            data
-        ) = InitiateContract(workbook_path=workbook_path).activate()
-
-        run_optimization(
-            contract=psc,
-            data=data,
-            contract_arguments=psc_arguments,
-            workbook_object=workbook_object,
-            summary_arguments=summary_arguments,
-        )
+        # (
+        #     psc,
+        #     psc_arguments,
+        #     summary_arguments,
+        #     data
+        # ) = InitiateContract(workbook_path=workbook_path).activate()
+        #
+        # run_optimization(
+        #     contract=psc,
+        #     data=data,
+        #     contract_arguments=psc_arguments,
+        #     workbook_object=workbook_object,
+        #     summary_arguments=summary_arguments,
+        # )
+        pass
 
     # Run sensitivity study
     elif mode == "Sensitivity":
-        # Prepare the loaded data
-        data = Aggregate(workbook_to_read=workbook_path)
-        data.fit()
-
-        # Specify the multipliers
-        multipliers, total_run = get_multipliers_sensitivity(
-            min_deviation=data.sensitivity_data.percentage_min,
-            max_deviation=data.sensitivity_data.percentage_max,
-            number_of_params=len(data.sensitivity_data.parameter),
-        )
-
-        # Run sensitivity study
-        target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
-        results = execute_sensitivity(
-            data=data,
-            target=target,
-            multipliers=multipliers,
-            workbook_path=workbook_path,
-        )
-
-        # Arrange the results into the desired output structure
-        results_arranged = {
-            key: (
-                np.zeros(
-                    [multipliers.shape[1], len(data.sensitivity_data.parameter)],
-                    dtype=np.float_
-                )
-            )
-            for key in target
-        }
-
-        for i, econ in enumerate(target):
-            for j, param in enumerate(data.sensitivity_data.parameter):
-                results_arranged[econ][:, j] = results[param][:, i]
-
-        # Grouping the sensitivity result
-        list_df = [pd.DataFrame] * len(target)
-        for index, key in enumerate(target):
-            df = pd.DataFrame()
-            df['oil_price'] = results_arranged[key][:, 0]
-            df['gas_price'] = results_arranged[key][:, 1]
-            df['opex'] = results_arranged[key][:, 2]
-            df['capex'] = results_arranged[key][:, 3]
-            df['prod'] = results_arranged[key][:, 4]
-            list_df[index] = df
-
-        # Writing the sensitivity result into the workbook
-        list_cell_sensitivity = ['M4', 'M29', 'M54', 'M79', 'M104', 'M129']
-        for index, cell in enumerate(list_cell_sensitivity):
-            write_table(workbook_object=workbook_object,
-                        sheet_name='Sensitivity',
-                        starting_cell=cell,
-                        table=list_df[index], )
+        # # Prepare the loaded data
+        # data = Aggregate(workbook_to_read=workbook_path)
+        # data.fit()
+        #
+        # # Specify the multipliers
+        # multipliers, total_run = get_multipliers_sensitivity(
+        #     min_deviation=data.sensitivity_data.percentage_min,
+        #     max_deviation=data.sensitivity_data.percentage_max,
+        #     number_of_params=len(data.sensitivity_data.parameter),
+        # )
+        #
+        # # Run sensitivity study
+        # target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
+        # results = execute_sensitivity(
+        #     data=data,
+        #     target=target,
+        #     multipliers=multipliers,
+        #     workbook_path=workbook_path,
+        # )
+        #
+        # # Arrange the results into the desired output structure
+        # results_arranged = {
+        #     key: (
+        #         np.zeros(
+        #             [multipliers.shape[1], len(data.sensitivity_data.parameter)],
+        #             dtype=np.float_
+        #         )
+        #     )
+        #     for key in target
+        # }
+        #
+        # for i, econ in enumerate(target):
+        #     for j, param in enumerate(data.sensitivity_data.parameter):
+        #         results_arranged[econ][:, j] = results[param][:, i]
+        #
+        # # Grouping the sensitivity result
+        # list_df = [pd.DataFrame] * len(target)
+        # for index, key in enumerate(target):
+        #     df = pd.DataFrame()
+        #     df['oil_price'] = results_arranged[key][:, 0]
+        #     df['gas_price'] = results_arranged[key][:, 1]
+        #     df['opex'] = results_arranged[key][:, 2]
+        #     df['capex'] = results_arranged[key][:, 3]
+        #     df['prod'] = results_arranged[key][:, 4]
+        #     list_df[index] = df
+        #
+        # # Writing the sensitivity result into the workbook
+        # list_cell_sensitivity = ['M4', 'M29', 'M54', 'M79', 'M104', 'M129']
+        # for index, cell in enumerate(list_cell_sensitivity):
+        #     write_table(workbook_object=workbook_object,
+        #                 sheet_name='Sensitivity',
+        #                 starting_cell=cell,
+        #                 table=list_df[index], )
+        pass
 
     # Run montecarlo simulation
     elif mode == "Uncertainty":
-        # Prepare the loaded data
-        data = Aggregate(workbook_to_read=workbook_path)
-        data.fit()
-
-        # Prepare MonteCarlo data
-        uncertainty_data, mean_values_not_zero = get_montecarlo_data(data=data)
-
-        # Get multipliers
-        multipliers = np.ones(
-            [uncertainty_data["run_number"], len(uncertainty_data["parameter"])],
-            dtype=np.float_
-        )
-
-        for i in mean_values_not_zero:
-            multipliers[:, i] = get_multipliers_montecarlo(
-                run_number=uncertainty_data["run_number"],
-                distribution=uncertainty_data["distribution"][i],
-                min_value=uncertainty_data["min_values"][i],
-                mean_value=uncertainty_data["mean_values"][i],
-                max_value=uncertainty_data["max_values"][i],
-                std_dev=uncertainty_data["std_dev"][i],
-            )
-
-        # Run MonteCarlo simulation
-        target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
-        results = execute_montecarlo(
-            data=data,
-            workbook_path=workbook_path,
-            uncertainty_data=uncertainty_data,
-            target=target,
-            mult=multipliers,
-        )
-
-        # Sorted the results
-        results_sorted = np.take_along_axis(
-            arr=results,
-            indices=np.argsort(results, axis=0),
-            axis=0,
-        )
-
-        # Specify probability
-        prob = (
-                np.arange(1, uncertainty_data["run_number"] + 1, dtype=np.float_)
-                / uncertainty_data["run_number"]
-        )
-
-        # Arrange the results
-        results_arranged = np.concatenate((prob[:, np.newaxis], results_sorted), axis=1)
-
-        # Calculate P10, P50, P90
-        percentiles = np.percentile(
-            a=results_arranged,
-            q=[10, 50, 90],
-            method="lower",
-            axis=0,
-        )
-
-        # Determine indices of data to be captured to Excel
-        indices = (
-            np.linspace(0, uncertainty_data["run_number"], 101)[0:-1].astype(int)
-        )
-
-        # Final outcomes to be captured to Excel
-        outcomes = {
-            "results": results_arranged[indices, :],
-            "P10": percentiles[0, :],
-            "P50": percentiles[1, :],
-            "P90": percentiles[2, :],
-        }
-
-        # Making the dataframe to contain the result of percentile
-        df_uncertainty_percentile = pd.DataFrame()
-        df_uncertainty_percentile.index = ['Result', 'NPV', 'IRR', 'PI', 'POT', 'Gov_Take', 'CTR_Net_Share']
-        df_uncertainty_percentile['P10'] = outcomes['P10']
-        df_uncertainty_percentile['P50'] = outcomes['P50']
-        df_uncertainty_percentile['P90'] = outcomes['P90']
-        df_uncertainty_transposed = df_uncertainty_percentile.transpose()
-        df_uncertainty_transposed.drop(['Result'], axis=1, inplace=True)
-
-        # Grouping the data into each category in a dataframe
-        df_uncertainty_result = pd.DataFrame()
-        df_uncertainty_result['frequency'] = outcomes['results'][:, 0]
-        df_uncertainty_result['npv'] = outcomes['results'][:, 1]
-        df_uncertainty_result['irr'] = outcomes['results'][:, 2]
-        df_uncertainty_result['pi'] = outcomes['results'][:, 3]
-        df_uncertainty_result['pot'] = outcomes['results'][:, 4]
-        df_uncertainty_result['gov_take'] = outcomes['results'][:, 5]
-        df_uncertainty_result['ctr_net_share'] = outcomes['results'][:, 6]
-
-        # Writing the percentile table into Excel workbook
-        write_table(
-            workbook_object=workbook_object,
-            sheet_name='Uncertainty',
-            starting_cell='L6',
-            table=df_uncertainty_transposed,
-        )
-
-        # Writing the result table into Excel workbook
-        write_table(
-            workbook_object=workbook_object,
-            sheet_name='Uncertainty',
-            starting_cell='K49',
-            table=df_uncertainty_result,
-        )
-
-        # Generating the uncertainty plot
-        get_uncertainty_plot(uncertainty_outcomes=outcomes, plot_type='Stairway')
+        # # Prepare the loaded data
+        # data = Aggregate(workbook_to_read=workbook_path)
+        # data.fit()
+        #
+        # # Prepare MonteCarlo data
+        # uncertainty_data, mean_values_not_zero = get_montecarlo_data(data=data)
+        #
+        # # Get multipliers
+        # multipliers = np.ones(
+        #     [uncertainty_data["run_number"], len(uncertainty_data["parameter"])],
+        #     dtype=np.float_
+        # )
+        #
+        # for i in mean_values_not_zero:
+        #     multipliers[:, i] = get_multipliers_montecarlo(
+        #         run_number=uncertainty_data["run_number"],
+        #         distribution=uncertainty_data["distribution"][i],
+        #         min_value=uncertainty_data["min_values"][i],
+        #         mean_value=uncertainty_data["mean_values"][i],
+        #         max_value=uncertainty_data["max_values"][i],
+        #         std_dev=uncertainty_data["std_dev"][i],
+        #     )
+        #
+        # # Run MonteCarlo simulation
+        # target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
+        # results = execute_montecarlo(
+        #     data=data,
+        #     workbook_path=workbook_path,
+        #     uncertainty_data=uncertainty_data,
+        #     target=target,
+        #     mult=multipliers,
+        # )
+        #
+        # # Sorted the results
+        # results_sorted = np.take_along_axis(
+        #     arr=results,
+        #     indices=np.argsort(results, axis=0),
+        #     axis=0,
+        # )
+        #
+        # # Specify probability
+        # prob = (
+        #         np.arange(1, uncertainty_data["run_number"] + 1, dtype=np.float_)
+        #         / uncertainty_data["run_number"]
+        # )
+        #
+        # # Arrange the results
+        # results_arranged = np.concatenate((prob[:, np.newaxis], results_sorted), axis=1)
+        #
+        # # Calculate P10, P50, P90
+        # percentiles = np.percentile(
+        #     a=results_arranged,
+        #     q=[10, 50, 90],
+        #     method="lower",
+        #     axis=0,
+        # )
+        #
+        # # Determine indices of data to be captured to Excel
+        # indices = (
+        #     np.linspace(0, uncertainty_data["run_number"], 101)[0:-1].astype(int)
+        # )
+        #
+        # # Final outcomes to be captured to Excel
+        # outcomes = {
+        #     "results": results_arranged[indices, :],
+        #     "P10": percentiles[0, :],
+        #     "P50": percentiles[1, :],
+        #     "P90": percentiles[2, :],
+        # }
+        #
+        # # Making the dataframe to contain the result of percentile
+        # df_uncertainty_percentile = pd.DataFrame()
+        # df_uncertainty_percentile.index = ['Result', 'NPV', 'IRR', 'PI', 'POT', 'Gov_Take', 'CTR_Net_Share']
+        # df_uncertainty_percentile['P10'] = outcomes['P10']
+        # df_uncertainty_percentile['P50'] = outcomes['P50']
+        # df_uncertainty_percentile['P90'] = outcomes['P90']
+        # df_uncertainty_transposed = df_uncertainty_percentile.transpose()
+        # df_uncertainty_transposed.drop(['Result'], axis=1, inplace=True)
+        #
+        # # Grouping the data into each category in a dataframe
+        # df_uncertainty_result = pd.DataFrame()
+        # df_uncertainty_result['frequency'] = outcomes['results'][:, 0]
+        # df_uncertainty_result['npv'] = outcomes['results'][:, 1]
+        # df_uncertainty_result['irr'] = outcomes['results'][:, 2]
+        # df_uncertainty_result['pi'] = outcomes['results'][:, 3]
+        # df_uncertainty_result['pot'] = outcomes['results'][:, 4]
+        # df_uncertainty_result['gov_take'] = outcomes['results'][:, 5]
+        # df_uncertainty_result['ctr_net_share'] = outcomes['results'][:, 6]
+        #
+        # # Writing the percentile table into Excel workbook
+        # write_table(
+        #     workbook_object=workbook_object,
+        #     sheet_name='Uncertainty',
+        #     starting_cell='L6',
+        #     table=df_uncertainty_transposed,
+        # )
+        #
+        # # Writing the result table into Excel workbook
+        # write_table(
+        #     workbook_object=workbook_object,
+        #     sheet_name='Uncertainty',
+        #     starting_cell='K49',
+        #     table=df_uncertainty_result,
+        # )
+        #
+        # # Generating the uncertainty plot
+        # get_uncertainty_plot(uncertainty_outcomes=outcomes, plot_type='Stairway')
+        pass
 
     # Giving the workbook execution status to show that execution is success
-    xw.Book(workbook_path).sheets("References").range("N17").value = "Success"
+    xw.Book(workbook_path).sheets("References").range("N17").value = "Pyscnomics Version Not Supported. Please use older pyscnomics version"
 
 
 @click.command()
