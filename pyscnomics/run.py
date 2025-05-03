@@ -30,19 +30,29 @@ posc = SunkCost(
     tax_portion=np.array([1, 1, 1, 1, 1, 1]),
 )
 
-print('\t')
-print('cost = ', posc.cost)
-print('expense_year = ', posc.expense_year)
-print('project_years = ', posc.project_years)
+posc_total = 10 * posc
 
-t1 = posc.preonstream_cost_amortization_book_value(
+print('\t')
+print('onstream_year = ', posc_total.onstream_year)
+print('pod1_year = ', posc_total.pod1_year)
+print('cost = ', posc_total.cost)
+print('expense_year = ', posc_total.expense_year)
+print('project_years = ', posc_total.project_years)
+
+t1 = posc_total.get_sunk_cost_investment_array(
     tax_rate=0.0,
-    fluid_type=FluidType.GAS,
-    investment_config=SunkCostInvestmentType.INTANGIBLE,
-    prod=np.array([50, 100]),
-    prod_year=np.array([2027, 2028]),
-    amortization_len=8,
+    fluid_type=FluidType.OIL,
+    investment_config=SunkCostInvestmentType.TANGIBLE,
 )
+
+# t2 = posc_total.sunk_cost_amortization_charge(
+#     tax_rate=0.0,
+#     fluid_type=FluidType.OIL,
+#     investment_config=SunkCostInvestmentType.TANGIBLE,
+#     prod=np.array([50, 1_000]),
+#     prod_year=np.array([2027, 2030]),
+#     amortization_len=8,
+# )
 
 # t1 = posc.get_preonstream_cost_amortization_charge(
 #     tax_rate=0.0,
@@ -67,16 +77,16 @@ t1 = posc.preonstream_cost_amortization_book_value(
 # print(f'Length: {len()}')
 # print()
 
-# print('\t')
-# print(f'Filetype: {type(t1)}')
-# print(f'Length: {len(t1)}')
-# print('t1 = \n', t1)
+print('\t')
+print(f'Filetype: {type(t1)}')
+print(f'Length: {len(t1)}')
+print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t1)}')
 # print(f'Length: {len(t1)}')
 # print('t1 = ', t1)
-#
+
 # print('\t')
 # print(f'Filetype: {type(t2)}')
 # print(f'Length: {len(t2)}')

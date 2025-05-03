@@ -279,7 +279,7 @@ class GeneralCost:
         )
 
     def __len__(self):
-        return self.project_duration
+        return len(self.expense_year)
 
 
 @dataclass
@@ -3725,6 +3725,20 @@ class CostOfSales(GeneralCost):
 
 @dataclass
 class SunkCost(GeneralCost):
+    """
+    Manages sunk cost.
+
+    This class inherits the attributes from class GeneralCost.
+
+    Parameters
+    ----------
+    onstream_year: int
+        The year of initial hydrocarbon production.
+    pod1_year: int
+        The year of POD I approval.
+    investment_type: list[SunkCostInvestmentType]
+        The type of investment (TANGIBLE or INTANGIBLE).
+    """
 
     # Local arguments
     onstream_year: int = field(default=None)
@@ -4959,22 +4973,143 @@ class SunkCost(GeneralCost):
             )
 
     def __add__(self, other):
-        pass
+        # Only allows addition between an instance of SunkCost
+        # and another instance of SunkCost
+        if isinstance(other, SunkCost):
+            start_year_combined = min(self.start_year, other.start_year)
+            end_year_combined = max(self.end_year, other.end_year)
+            onstream_year_combined = min(self.onstream_year, other.onstream_year)
+            pod1_year_combined = min(self.pod1_year, other.pod1_year)
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            cost_combined = np.concatenate((self.cost, other.cost))
+            tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            description_combined = self.description + other.description
+            investment_type_combined = self.investment_type + other.investment_type
+
+            return SunkCost(
+                start_year=start_year_combined,
+                end_year=end_year_combined,
+                onstream_year=onstream_year_combined,
+                pod1_year=pod1_year_combined,
+                expense_year=expense_year_combined,
+                cost=cost_combined,
+                cost_allocation=cost_allocation_combined,
+                description=description_combined,
+                tax_portion=tax_portion_combined,
+                tax_discount=tax_discount_combined,
+                investment_type=investment_type_combined,
+            )
+
+        else:
+            raise SunkCostException(
+                f"Must add an instance of SunkCost with another instance of SunkCost, "
+                f"{other}: ({other.__class__.__qualname__}) is not an instance of SunkCost."
+            )
 
     def __iadd__(self, other):
-        pass
+        return self.__add__(other)
 
     def __sub__(self, other):
-        pass
+        # Only allows subtraction between an instance of SunkCost
+        # and another instance of SunkCost
+        if isinstance(other, SunkCost):
+            start_year_combined = min(self.start_year, other.start_year)
+            end_year_combined = max(self.end_year, other.end_year)
+            onstream_year_combined = min(self.onstream_year, other.onstream_year)
+            pod1_year_combined = min(self.pod1_year, other.pod1_year)
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            cost_combined = np.concatenate((self.cost, -other.cost))
+            tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
+            cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            description_combined = self.description + other.description
+            investment_type_combined = self.investment_type + other.investment_type
+
+            return SunkCost(
+                start_year=start_year_combined,
+                end_year=end_year_combined,
+                onstream_year=onstream_year_combined,
+                pod1_year=pod1_year_combined,
+                expense_year=expense_year_combined,
+                cost=cost_combined,
+                cost_allocation=cost_allocation_combined,
+                description=description_combined,
+                tax_portion=tax_portion_combined,
+                tax_discount=tax_discount_combined,
+                investment_type=investment_type_combined,
+            )
+
+        else:
+            raise SunkCostException(
+                f"Must subtract an instance of SunkCost with another instance of "
+                f"SunkCost, {other}: ({other.__class__.__qualname__}) is not an "
+                f"instance of SunkCost."
+            )
 
     def __rsub__(self, other):
-        pass
+        return self.__sub__(other)
 
     def __mul__(self, other):
-        pass
+        # Multiplication is allowed only with an integer or a float
+        if isinstance(other, (int, float)):
+            return SunkCost(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                onstream_year=self.onstream_year,
+                pod1_year=self.pod1_year,
+                expense_year=self.expense_year,
+                cost=self.cost * other,
+                cost_allocation=self.cost_allocation,
+                description=self.description,
+                tax_portion=self.tax_portion,
+                tax_discount=self.tax_discount,
+                investment_type=self.investment_type,
+            )
+
+        else:
+            raise SunkCostException(
+                f"Must multiply with an integer or a float. "
+                f"{other}: ({other.__class__.__qualname__}) is not an integer "
+                f"nor a float."
+            )
 
     def __rmul__(self, other):
-        pass
+        return self.__mul__(other)
 
     def __truediv__(self, other):
-        pass
+        # Between an instance of SunkCost with another instance of
+        # CapitalCost/Intangible/OPEX/ASR/LBT/SunkCost
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, SunkCost)):
+            return np.sum(self.cost) / np.sum(other.cost)
+
+        # Between an instance of SunkCost and an integer or a float
+        elif isinstance(other, (int, float)):
+            # Cannot divide by zero
+            if other == 0:
+                raise SunkCostException(f"Cannot divide by zero")
+
+            else:
+                return SunkCost(
+                    start_year=self.start_year,
+                    end_year=self.end_year,
+                    onstream_year=self.onstream_year,
+                    pod1_year=self.pod1_year,
+                    expense_year=self.expense_year,
+                    cost=self.cost / other,
+                    cost_allocation=self.cost_allocation,
+                    description=self.description,
+                    tax_portion=self.tax_portion,
+                    tax_discount=self.tax_discount,
+                    investment_type=self.investment_type,
+                )
+
+        else:
+            raise SunkCostException(
+                f"Must divide with an instance of CapitalCost/Intangible/OPEX/"
+                f"ASR/LBT/SunkCost, an integer, or a float. "
+                f"{other}: ({other.__class__.__qualname__}) is not an intance of "
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/SunkCost nor an integer "
+                f"nor a float."
+            )
