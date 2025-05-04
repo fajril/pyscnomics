@@ -1402,8 +1402,9 @@ def convert_summary_to_dict(dict_object: dict):
         'total_indirect_taxes': dict_object['total_indirect_taxes'],
         'oil_indirect_taxes': dict_object['oil_indirect_taxes'],
         'gas_indirect_taxes': dict_object['gas_indirect_taxes'],
-
-
+        'total_carry_forward_depreciation': dict_object['total_carry_forward_depreciation'],
+        'oil_carry_forward_depreciation': dict_object['oil_carry_forward_depreciation'],
+        'gas_carry_forward_depreciation': dict_object['gas_carry_forward_depreciation'],
     }
     return summary_skk_format
 

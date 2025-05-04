@@ -108,12 +108,18 @@ class GrossSplit(BaseProject):
     gas_dmo_fee_portion: float | np.ndarray = field(default=1.0)
     gas_dmo_holiday_duration: int = field(default=60)
 
+    oil_carry_forward_depreciation: float | np.ndarray = field(default=0.0)
+    gas_carry_forward_depreciation: float | np.ndarray = field(default=0.0)
+
     conversion_boe_to_scf: float = field(default=5.615, init=False, repr=False)
 
     _oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _oil_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
     _gas_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
 
     _cumulative_prod: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -199,6 +205,8 @@ class GrossSplit(BaseProject):
     _consolidated_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
 
+    _consolidated_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
+
     _consolidated_capital_cost: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_intangible: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_opex: np.ndarray = field(default=None, init=False, repr=False)
@@ -268,6 +276,37 @@ class GrossSplit(BaseProject):
                     f"The {attr_name} value, {attr}, is below 0. "
                     f"The minimum value for this attribute is 0."
                 )
+
+        # Check the carry forward depreciation
+        carward_depr = {
+            'oil_carry_forward_depreciation': self.oil_carry_forward_depreciation,
+            'gas_carry_forward_depreciation': self.gas_carry_forward_depreciation,
+        }
+
+        # Checking for negative values in carry forward depreciation
+        for attr_name, value in carward_depr.items():
+            if np.any(value < 0):
+                raise GrossSplitException(
+                    f"The {attr_name} containing negative value")
+
+            elif isinstance(value, np.ndarray) and len(value) > self.project_duration:
+                raise GrossSplitException(
+                    f"The {attr_name} length is :{len(value)},exceeding the length of the project duration: {self.project_duration}")
+
+            elif isinstance(value, (np.ndarray, float)):
+                # Ensure value is a NumPy array
+                a_array = np.atleast_1d(value).astype(float)
+
+                # Truncate or pad with zeros to match length of project years
+                result = np.zeros_like(self.project_years, dtype=float)
+                result[:len(a_array)] = a_array[:len(self.project_years)]
+                carward_depr[attr_name] = result
+
+            else:
+                pass
+
+        self._oil_carry_forward_depreciation = carward_depr['oil_carry_forward_depreciation']
+        self._gas_carry_forward_depreciation = carward_depr['gas_carry_forward_depreciation']
 
     def _wrapper_variable_split(self,
                                 regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
@@ -913,6 +952,8 @@ class GrossSplit(BaseProject):
             sum_undepreciated_cost: bool = False
             ):
 
+        self._check_attributes()
+
         # Configure Sunk Cost Reference Year
         if sunk_cost_reference_year is None:
             sunk_cost_reference_year = self.start_date.year
@@ -1032,6 +1073,10 @@ class GrossSplit(BaseProject):
             self._gas_undepreciated_asset = np.zeros_like(self.project_years, dtype=float)
         else:
             pass
+
+        # Adding the depreciation with the carry forward depreciation
+        self._oil_depreciation += self._oil_carry_forward_depreciation
+        self._gas_depreciation += self._gas_carry_forward_depreciation
 
         # Non Capital Cost
         self._oil_non_capital = (
@@ -1366,6 +1411,7 @@ class GrossSplit(BaseProject):
         self._consolidated_depreciation = self._oil_depreciation + self._gas_depreciation
         self._consolidated_undepreciated_asset = self._oil_undepreciated_asset + self._gas_undepreciated_asset
         self._consolidated_indirect_tax = self._oil_total_indirect_tax + self._gas_total_indirect_tax
+        self._consolidated_carry_forward_depreciation = self._oil_carry_forward_depreciation + self._gas_carry_forward_depreciation
         self._consolidated_ctr_share_before_tf = self._oil_ctr_share_before_transfer + self._gas_ctr_share_before_transfer
         self._consolidated_gov_share_before_tf = self._oil_gov_share + self._gas_gov_share
         self._consolidated_total_expenses = self._oil_total_expenses + self._gas_total_expenses

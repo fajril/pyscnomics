@@ -110,10 +110,16 @@ class CostRecovery(BaseProject):
     gas_dmo_fee_portion: float | np.ndarray = field(default=1.0)
     gas_dmo_holiday_duration: int = field(default=60)
 
+    oil_carry_forward_depreciation: float | np.ndarray = field(default=0.0)
+    gas_carry_forward_depreciation: float | np.ndarray = field(default=0.0)
+
     _oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _oil_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
     _gas_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
 
     _oil_ic: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ic_unrecovered: np.ndarray = field(default=None, init=False, repr=False)
@@ -221,6 +227,7 @@ class CostRecovery(BaseProject):
     _consolidated_undepreciated_asset: np.ndarray | float = field(
         default=None, init=False, repr=False
     )
+    _consolidated_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ftp: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ftp_ctr: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ftp_gov: np.ndarray = field(default=None, init=False, repr=False)
@@ -321,6 +328,37 @@ class CostRecovery(BaseProject):
             else:
                 raise CostRecoveryException(
                     f"The {attr_name} type: {type(attr)}, is not allowed.")
+
+        # Check the carry forward depreciation
+        carward_depr = {
+            'oil_carry_forward_depreciation': self.oil_carry_forward_depreciation,
+            'gas_carry_forward_depreciation': self.gas_carry_forward_depreciation,
+        }
+
+        # Checking for negative values in carry forward depreciation
+        for attr_name, value in carward_depr.items():
+            if np.any(value < 0):
+                raise CostRecoveryException(
+                    f"The {attr_name} containing negative value")
+
+            elif isinstance(value, np.ndarray) and len(value) > self.project_duration:
+                raise CostRecoveryException(
+                    f"The {attr_name} length is :{len(value)},exceeding the length of the project duration: {self.project_duration}")
+
+            elif isinstance(value, (np.ndarray, float)):
+                # Ensure value is a NumPy array
+                a_array = np.atleast_1d(value).astype(float)
+
+                # Truncate or pad with zeros to match length of project years
+                result = np.zeros_like(self.project_years, dtype=float)
+                result[:len(a_array)] = a_array[:len(self.project_years)]
+                carward_depr[attr_name] = result
+
+            else:
+                pass
+
+        self._oil_carry_forward_depreciation = carward_depr['oil_carry_forward_depreciation']
+        self._gas_carry_forward_depreciation = carward_depr['gas_carry_forward_depreciation']
 
 
     def _get_rc_icp_pretax(self):
@@ -1065,6 +1103,10 @@ class CostRecovery(BaseProject):
         else:
             pass
 
+        # Adding the depreciation with the carry forward depreciation
+        self._oil_depreciation += self._oil_carry_forward_depreciation
+        self._gas_depreciation += self._gas_carry_forward_depreciation
+
         # Non-capital costs (intangible + opex + asr)
         self._oil_non_capital = (
                 self._oil_intangible_expenditures_post_tax
@@ -1409,6 +1451,7 @@ class CostRecovery(BaseProject):
         self._consolidated_lbt_indirect_tax = self._oil_lbt_indirect_tax + self._gas_lbt_indirect_tax
         self._consolidated_cost_of_sales_indirect_tax = self._oil_cost_of_sales_indirect_tax + self._gas_cost_of_sales_indirect_tax
         self._consolidated_indirect_tax = self._oil_total_indirect_tax + self._gas_total_indirect_tax
+        self._consolidated_carry_forward_depreciation = self._oil_carry_forward_depreciation + self._gas_carry_forward_depreciation
 
         self._consolidated_ftp = self._oil_ftp + self._gas_ftp
         self._consolidated_ftp_ctr = self._oil_ftp_ctr + self._gas_ftp_ctr
