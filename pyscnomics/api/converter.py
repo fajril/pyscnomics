@@ -119,6 +119,10 @@ class CostRecoveryBM(BaseModel):
         The gas Domestic Market Obligation (DMO) fee portion.
     gas_dmo_holiday_duration: float
         The gas Domestic Market Obligation (DMO) Holiday duration.
+    oil_carry_forward_depreciation
+        The oil carry forward depreciation.
+    gas_carry_forward_depreciation
+        The gas carry forward depreciation.
     """
     oil_ftp_is_available: bool = True
     oil_ftp_is_shared: bool = True
@@ -142,6 +146,8 @@ class CostRecoveryBM(BaseModel):
     gas_dmo_volume_portion: float | int | list[float] = 0.25
     gas_dmo_fee_portion: float | int | list[float] = 1
     gas_dmo_holiday_duration: float | int = 60
+    oil_carry_forward_depreciation: float | int | list[float] = 0.0
+    gas_carry_forward_depreciation: float | int | list[float] = 0.0
 
 
 class GrossSplitBM(BaseModel):
@@ -199,6 +205,10 @@ class GrossSplitBM(BaseModel):
         The gas Domestic Market Obligation (DMO) fee portion.
     gas_dmo_holiday_duration: float
         The gas Domestic Market Obligation (DMO) Holiday duration.
+    oil_carry_forward_depreciation
+        The oil carry forward depreciation.
+    gas_carry_forward_depreciation
+        The gas carry forward depreciation.
 
     """
     field_status: str = Field(default=None)
@@ -221,6 +231,8 @@ class GrossSplitBM(BaseModel):
     gas_dmo_volume_portion: float | int | list[float] = 1.0
     gas_dmo_fee_portion: float | int | list[float] = 1.0
     gas_dmo_holiday_duration: float | int = 60
+    oil_carry_forward_depreciation: float | int | list[float] = 0.0
+    gas_carry_forward_depreciation: float | int | list[float] = 0.0
 
 
 class ContractArgumentsBM(BaseModel):

@@ -1104,8 +1104,9 @@ class CostRecovery(BaseProject):
             pass
 
         # Adding the depreciation with the carry forward depreciation
-        self._oil_depreciation += self._oil_carry_forward_depreciation
-        self._gas_depreciation += self._gas_carry_forward_depreciation
+        self._oil_depreciation = self._oil_depreciation + self._oil_carry_forward_depreciation
+        self._gas_depreciation = self._gas_depreciation + self._gas_carry_forward_depreciation
+
 
         # Non-capital costs (intangible + opex + asr)
         self._oil_non_capital = (
