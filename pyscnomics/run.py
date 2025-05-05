@@ -30,20 +30,19 @@ posc = SunkCost(
     tax_portion=np.array([1, 1, 1, 1, 1, 1]),
 )
 
-posc_total = 10 * posc
-
-print('\t')
-print('onstream_year = ', posc_total.onstream_year)
-print('pod1_year = ', posc_total.pod1_year)
-print('cost = ', posc_total.cost)
-print('expense_year = ', posc_total.expense_year)
-print('project_years = ', posc_total.project_years)
-
-t1 = posc_total.get_sunk_cost_investment_array(
-    tax_rate=0.0,
-    fluid_type=FluidType.OIL,
-    investment_config=SunkCostInvestmentType.TANGIBLE,
+t1 = posc.get_preonstream_cost_investment_array(
+    fluid_type=FluidType.GAS,
+    investment_config=SunkCostInvestmentType.INTANGIBLE,
+    tax_rate=0.1,
 )
+
+# print('\t')
+# print('onstream_year = ', posc_total.onstream_year)
+# print('pod1_year = ', posc_total.pod1_year)
+# print('cost = ', posc_total.cost)
+# print('expense_year = ', posc_total.expense_year)
+# print('project_years = ', posc_total.project_years)
+
 
 # t2 = posc_total.sunk_cost_amortization_charge(
 #     tax_rate=0.0,

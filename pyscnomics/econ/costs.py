@@ -3862,7 +3862,7 @@ class SunkCost(GeneralCost):
                 f"is after the end year of the project ({self.end_year})"
             )
 
-        # Raise an error: expense year is after the end year of the project
+        # Raise an error: expense_year is before the start year of the project
         if np.min(self.expense_year) < self.start_year:
             raise SunkCostException(
                 f"Expense year ({np.min(self.expense_year)}) "
@@ -4175,10 +4175,11 @@ class SunkCost(GeneralCost):
         SunkCostInvestmentType : Enum defining the investment type options.
         """
 
-        # Identify sunk cost id
+        # Identify sunk cost id for a particular fluid type (OIL or GAS)
         sc_fluid_type_id = self._get_sunk_cost_id(fluid_type=fluid_type)
 
-        # Determine sunk cost tangible id
+        # Determine sunk cost id for a particular investment type
+        # (TANGIBLE or INTANGIBLE)
         if len(sc_fluid_type_id) == 0:
             sc_investment_id = np.array([])
 
@@ -4234,9 +4235,11 @@ class SunkCost(GeneralCost):
         _get_sunk_cost_investment_id : Similar method for sunk costs.
         """
 
-        # Identify pre-onstream cost id
+        # Identify pre-onstream cost id for a particular fluid type (OIL or GAS)
         poc_fluid_type_id = self._get_preonstream_cost_id(fluid_type=fluid_type)
 
+        # Determine preonstream cost id for a particular investment type
+        # (TANGIBLE or INTANGIBLE)
         if len(poc_fluid_type_id) == 0:
             poc_investment_id = np.array([])
 
