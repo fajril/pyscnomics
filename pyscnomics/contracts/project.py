@@ -133,57 +133,162 @@ class BaseProject:
 
     # Attributes to be defined later
     # (Associated with pre tax expenditures for each cost elements)
-    _oil_capital_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_capital_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_intangible_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_intangible_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_opex_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_opex_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_asr_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_asr_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_lbt_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_lbt_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_cost_of_sales_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_cost_of_sales_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_capital_expenditures_pre_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_capital_expenditures_pre_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _oil_intangible_expenditures_pre_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_intangible_expenditures_pre_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _oil_opex_expenditures_pre_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_opex_expenditures_pre_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _oil_asr_expenditures_pre_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_asr_expenditures_pre_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _oil_lbt_expenditures_pre_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_lbt_expenditures_pre_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _oil_cost_of_sales_expenditures_pre_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_cost_of_sales_expenditures_pre_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
 
     # Attributes to be defined later
     # (Associated with indirect taxes for each cost element)
-    _oil_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_intangible_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_intangible_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_capital_indirect_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_capital_indirect_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _oil_intangible_indirect_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_intangible_indirect_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
     _oil_opex_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_opex_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _oil_asr_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_asr_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _oil_lbt_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_lbt_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_cost_of_sales_indirect_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_cost_of_sales_indirect_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
 
     # Attributes to be defined later
     # (Associated with post tax expenditures for each cost elements)
-    _oil_capital_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_capital_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_intangible_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_intangible_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_opex_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_opex_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_asr_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_asr_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_lbt_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_lbt_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_cost_of_sales_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_cost_of_sales_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_capital_expenditures_post_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_capital_expenditures_post_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _oil_intangible_expenditures_post_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_intangible_expenditures_post_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _oil_opex_expenditures_post_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_opex_expenditures_post_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _oil_asr_expenditures_post_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_asr_expenditures_post_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _oil_lbt_expenditures_post_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_lbt_expenditures_post_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _oil_cost_of_sales_expenditures_post_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_cost_of_sales_expenditures_post_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
 
     # Attributes to be defined later
     # (Associated with total expenditures and indirect taxes for each fluid)
-    _oil_total_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_total_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_total_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_total_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_total_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_total_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_total_expenditures_pre_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_total_expenditures_pre_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _oil_total_indirect_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_total_indirect_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _oil_total_expenditures_post_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
+
+    _gas_total_expenditures_post_tax: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
 
     # Attributes to be defined later (associated with sunk cost)
     _oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
@@ -208,7 +313,9 @@ class BaseProject:
     _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_government_take: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_government_take: (
+        np.ndarray
+    ) = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         """
@@ -612,8 +719,8 @@ class BaseProject:
 
                 if oil_onstream_index != oil_revenue_index[0]:
                     raise BaseProjectException(
-                        f"Oil onstream year ({self.oil_onstream_date.year}) is different from "
-                        f"the starting year of oil production "
+                        f"Oil onstream year ({self.oil_onstream_date.year}) is different "
+                        f"from the starting year of oil production "
                         f"({self.project_years[oil_revenue_index[0]]})"
                     )
 
@@ -650,8 +757,8 @@ class BaseProject:
 
                 if gas_onstream_index != gas_revenue_index[0]:
                     raise BaseProjectException(
-                        f"Gas onstream year ({self.gas_onstream_date.year}) is different from "
-                        f"the starting year of gas production "
+                        f"Gas onstream year ({self.gas_onstream_date.year}) is different "
+                        f"from the starting year of gas production "
                         f"({self.project_years[gas_revenue_index[0]]})"
                     )
 
@@ -1056,7 +1163,9 @@ class BaseProject:
             end_year = self.intangible_cost_total.end_year
             expense_year = self.intangible_cost_total.expense_year[oil_intangible_id]
             cost = self.intangible_cost_total.cost[oil_intangible_id]
-            cost_allocation = np.array(self.intangible_cost_total.cost_allocation)[oil_intangible_id]
+            cost_allocation = np.array(
+                self.intangible_cost_total.cost_allocation
+            )[oil_intangible_id]
             description = np.array(self.intangible_cost_total.description)[oil_intangible_id]
             tax_portion = self.intangible_cost_total.tax_portion[oil_intangible_id]
             tax_discount = self.intangible_cost_total.tax_discount[oil_intangible_id]
@@ -1556,8 +1665,12 @@ class BaseProject:
             end_year = self.cost_of_sales_total.end_year
             expense_year = self.cost_of_sales_total.expense_year[oil_cost_of_sales_id]
             cost = self.cost_of_sales_total.cost[oil_cost_of_sales_id]
-            cost_allocation = np.array(self.cost_of_sales_total.cost_allocation)[oil_cost_of_sales_id]
-            description = np.array(self.cost_of_sales_total.description)[oil_cost_of_sales_id]
+            cost_allocation = np.array(
+                self.cost_of_sales_total.cost_allocation
+            )[oil_cost_of_sales_id]
+            description = np.array(
+                self.cost_of_sales_total.description
+            )[oil_cost_of_sales_id]
             tax_portion = self.cost_of_sales_total.tax_portion[oil_cost_of_sales_id]
             tax_discount = self.cost_of_sales_total.tax_discount[oil_cost_of_sales_id]
 
@@ -1612,8 +1725,12 @@ class BaseProject:
             end_year = self.cost_of_sales_total.end_year
             expense_year = self.cost_of_sales_total.expense_year[gas_cost_of_sales_id]
             cost = self.cost_of_sales_total.cost[gas_cost_of_sales_id]
-            cost_allocation = np.array(self.cost_of_sales_total.cost_allocation)[gas_cost_of_sales_id]
-            description = np.array(self.cost_of_sales_total.description)[gas_cost_of_sales_id]
+            cost_allocation = np.array(
+                self.cost_of_sales_total.cost_allocation
+            )[gas_cost_of_sales_id]
+            description = np.array(
+                self.cost_of_sales_total.description
+            )[gas_cost_of_sales_id]
             tax_portion = self.cost_of_sales_total.tax_portion[gas_cost_of_sales_id]
             tax_discount = self.cost_of_sales_total.tax_discount[gas_cost_of_sales_id]
 
