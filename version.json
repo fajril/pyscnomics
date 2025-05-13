@@ -2,12 +2,10 @@
   "inherit": true,
   "version": {
     "major": 1,
-    "minor": 3,
+    "minor": 4,
     "build": 0
   },
   "features": [
-    "Adding Summarizer Module",
-    "Adding the Sensitivity API",
-    "Adding the Uncertainty API"
+    "Adding the feature of including carry forward depreciation in the Cost Recovery and Gross Split"
     ]
 }
