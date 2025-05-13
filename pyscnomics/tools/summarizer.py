@@ -176,6 +176,7 @@ class Summary:
     oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     oil_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
+    oil_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     gas_depreciable: np.ndarray = field(default=None, init=False, repr=False)
     gas_intangible: np.ndarray = field(default=None, init=False, repr=False)
     gas_opex: np.ndarray = field(default=None, init=False, repr=False)
@@ -185,6 +186,7 @@ class Summary:
     gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     gas_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     gas_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
+    gas_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     consolidated_depreciable: np.ndarray = field(default=None, init=False, repr=False)
     consolidated_intangible: np.ndarray = field(default=None, init=False, repr=False)
     consolidated_opex: np.ndarray = field(default=None, init=False, repr=False)
@@ -194,6 +196,7 @@ class Summary:
     consolidated_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     consolidated_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
+    consolidated_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
 
     # PSC terms
     oil_costrecovery_or_deductible_cost: np.ndarray = field(default=None, init=False, repr=False)
@@ -365,6 +368,7 @@ class Summary:
                 'oil_non_capital': contract._oil_non_capital,
                 'oil_sunk_cost': contract._oil_sunk_cost,
                 'oil_undepreciated_asset': contract._oil_undepreciated_asset,
+                'oil_carry_forward_depreciation': contract._oil_carry_forward_depreciation,
                 'gas_depreciable': contract._gas_capital_expenditures_post_tax,
                 'gas_intangible': contract._gas_intangible_expenditures_post_tax,
                 'gas_opex': contract._gas_opex_expenditures_post_tax,
@@ -374,6 +378,7 @@ class Summary:
                 'gas_non_capital': contract._gas_non_capital,
                 'gas_sunk_cost': contract._gas_sunk_cost,
                 'gas_undepreciated_asset': contract._gas_undepreciated_asset,
+                'gas_carry_forward_depreciation': contract._gas_carry_forward_depreciation,
                 'consolidated_depreciable': contract._oil_capital_expenditures_post_tax + contract._gas_capital_expenditures_post_tax,
                 'consolidated_intangible': contract._oil_intangible_expenditures_post_tax + contract._gas_intangible_expenditures_post_tax,
                 'consolidated_opex': contract._oil_opex_expenditures_post_tax + contract._gas_opex_expenditures_post_tax,
@@ -383,6 +388,7 @@ class Summary:
                 'consolidated_non_capital': contract._oil_non_capital + contract._gas_non_capital,
                 'consolidated_sunk_cost': contract._oil_sunk_cost + contract._gas_sunk_cost,
                 'consolidated_undepreciated_asset': contract._oil_undepreciated_asset + contract._gas_undepreciated_asset,
+                'consolidated_carry_forward_depreciation': contract._consolidated_carry_forward_depreciation,
             }
             for idx, contract in enumerate(self.contract)
         }
@@ -618,6 +624,7 @@ class Summary:
         self.oil_non_capital = cost_contract['oil_non_capital']
         self.oil_sunk_cost = cost_contract['oil_sunk_cost']
         self.oil_undepreciated_asset = cost_contract['oil_undepreciated_asset']
+        self.oil_carry_forward_depreciation = cost_contract['oil_carry_forward_depreciation']
         self.gas_depreciable = cost_contract['gas_depreciable']
         self.gas_intangible = cost_contract['gas_intangible']
         self.gas_opex = cost_contract['gas_opex']
@@ -627,6 +634,7 @@ class Summary:
         self.gas_non_capital = cost_contract['gas_non_capital']
         self.gas_sunk_cost = cost_contract['gas_sunk_cost']
         self.gas_undepreciated_asset = cost_contract['gas_undepreciated_asset']
+        self.gas_carry_forward_depreciation = cost_contract['gas_carry_forward_depreciation']
         self.consolidated_depreciable = cost_contract['consolidated_depreciable']
         self.consolidated_intangible = cost_contract['consolidated_intangible']
         self.consolidated_opex = cost_contract['consolidated_opex']
@@ -636,6 +644,7 @@ class Summary:
         self.consolidated_non_capital = cost_contract['consolidated_non_capital']
         self.consolidated_sunk_cost = cost_contract['consolidated_sunk_cost']
         self.consolidated_undepreciated_asset = cost_contract['consolidated_undepreciated_asset']
+        self.consolidated_carry_forward_depreciation = cost_contract['consolidated_carry_forward_depreciation']
 
         # PSC terms
         self.oil_costrecovery_or_deductible_cost = psc_terms['oil_costrecovery_or_deductible_cost']
@@ -1034,6 +1043,11 @@ class Summary:
         undepreciated_asset_gas = np.sum(self.gas_undepreciated_asset)
         undepreciated_asset_total = undepreciated_asset_oil + undepreciated_asset_gas
 
+        # Carry Forward Depreciation
+        oil_carry_forward_depreciation = np.sum(self.oil_carry_forward_depreciation)
+        gas_carry_forward_depreciation = np.sum(self.gas_carry_forward_depreciation)
+        total_carry_forward_depreciation = oil_carry_forward_depreciation + gas_carry_forward_depreciation
+
         return {
             'lifting_oil':lifting_oil,
             'oil_wap':oil_wap,
@@ -1074,6 +1088,9 @@ class Summary:
             'total_indirect_taxes':total_indirect_taxes,
             'oil_indirect_taxes':oil_indirect_taxes,
             'gas_indirect_taxes':gas_indirect_taxes,
+            'total_carry_forward_depreciation': total_carry_forward_depreciation,
+            'oil_carry_forward_depreciation': oil_carry_forward_depreciation,
+            'gas_carry_forward_depreciation': gas_carry_forward_depreciation,
         }
 
     def get_cashflow_table(self):

@@ -38,14 +38,15 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
         contract_start_object = contract.start_date.year
         contract_end_object = contract.end_date.year
 
+    # Condition when the reference year is None
+    if reference_year is None:
+        reference_year = contract.start_date.year
+
     if reference_year < contract_start_object:
         raise SummaryException(
             f"The Discounting Reference Year {reference_year} "
             f"is before the project years: {contract.start_date.year}"
         )
-    # Condition when the reference year is None
-    if reference_year is None:
-        reference_year = contract.start_date.year
 
     # Condition when the reference year is after than project end date year
     if reference_year > contract_end_object:
@@ -93,6 +94,11 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
     oil_indirect_taxes = np.sum(contract._oil_total_indirect_tax)
     gas_indirect_taxes = np.sum(contract._gas_total_indirect_tax)
     total_indirect_taxes = oil_indirect_taxes + gas_indirect_taxes
+
+    # Carry Forward Depreciation
+    oil_carry_forward_depreciation = np.sum(contract._oil_carry_forward_depreciation)
+    gas_carry_forward_depreciation = np.sum(contract._gas_carry_forward_depreciation)
+    total_carry_forward_depreciation = oil_carry_forward_depreciation + gas_carry_forward_depreciation
 
     # Undepreciated Asset
     if isinstance(contract, (CostRecovery, GrossSplit, Transition)):
@@ -447,6 +453,9 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'total_indirect_taxes': total_indirect_taxes,
                 'oil_indirect_taxes': oil_indirect_taxes,
                 'gas_indirect_taxes': gas_indirect_taxes,
+                'total_carry_forward_depreciation': total_carry_forward_depreciation,
+                'oil_carry_forward_depreciation': oil_carry_forward_depreciation,
+                'gas_carry_forward_depreciation': gas_carry_forward_depreciation,
                 }
     # Condition where the contract is Gross Split
     if isinstance(contract, GrossSplit):
@@ -529,6 +538,9 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'total_indirect_taxes': total_indirect_taxes,
                 'oil_indirect_taxes': oil_indirect_taxes,
                 'gas_indirect_taxes': gas_indirect_taxes,
+                'total_carry_forward_depreciation': total_carry_forward_depreciation,
+                'oil_carry_forward_depreciation': oil_carry_forward_depreciation,
+                'gas_carry_forward_depreciation': gas_carry_forward_depreciation,
                 }
 
     if isinstance(contract, Transition):

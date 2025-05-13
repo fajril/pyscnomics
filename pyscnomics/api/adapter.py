@@ -244,6 +244,8 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         gas_dmo_volume_portion=convert_list_to_array_float_or_array(data_input=data['costrecovery']['gas_dmo_volume_portion']),
         gas_dmo_fee_portion=convert_list_to_array_float_or_array(data_input=data['costrecovery']['gas_dmo_fee_portion']),
         gas_dmo_holiday_duration=data['costrecovery']['gas_dmo_holiday_duration'],
+        oil_carry_forward_depreciation=convert_list_to_array_float_or_array(data_input=data['costrecovery']['oil_carry_forward_depreciation']),
+        gas_carry_forward_depreciation=convert_list_to_array_float_or_array(data_input=data['costrecovery']['gas_carry_forward_depreciation']),
     )
 
     # Filling the arguments of the contract with the data input
@@ -573,6 +575,8 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         gas_dmo_volume_portion=convert_list_to_array_float_or_array(data_input=data['grosssplit']['gas_dmo_volume_portion']),
         gas_dmo_fee_portion=convert_list_to_array_float_or_array(data_input=data['grosssplit']['gas_dmo_fee_portion']),
         gas_dmo_holiday_duration=data['grosssplit']['gas_dmo_holiday_duration'],
+        oil_carry_forward_depreciation=convert_list_to_array_float_or_array(data_input=data['grosssplit']['oil_carry_forward_depreciation']),
+        gas_carry_forward_depreciation=convert_list_to_array_float_or_array(data_input=data['grosssplit']['gas_carry_forward_depreciation']),
 
     )
 
@@ -1039,10 +1043,11 @@ def get_grosssplit_split(data: dict):
         oil_dmo_volume_portion=convert_list_to_array_float_or_array(data_input=data['grosssplit']['oil_dmo_volume_portion']),
         oil_dmo_fee_portion=convert_list_to_array_float_or_array(data_input=data['grosssplit']['oil_dmo_fee_portion']),
         oil_dmo_holiday_duration=data['grosssplit']['oil_dmo_holiday_duration'],
-        gas_dmo_volume_portion=convert_list_to_array_float_or_array(convert_list_to_array_float_or_array=data['grosssplit']['gas_dmo_volume_portion']),
-        gas_dmo_fee_portion=convert_list_to_array_float_or_array(convert_list_to_array_float_or_array=data['grosssplit']['gas_dmo_fee_portion']),
+        gas_dmo_volume_portion=convert_list_to_array_float_or_array(data_input=data['grosssplit']['gas_dmo_volume_portion']),
+        gas_dmo_fee_portion=convert_list_to_array_float_or_array(data_input=data['grosssplit']['gas_dmo_fee_portion']),
         gas_dmo_holiday_duration=data['grosssplit']['gas_dmo_holiday_duration'],
-
+        oil_carry_forward_depreciation=convert_list_to_array_float_or_array(data_input=data['grosssplit']['oil_carry_forward_depreciation']),
+        gas_carry_forward_depreciation=convert_list_to_array_float_or_array(data_input=data['grosssplit']['gas_carry_forward_depreciation']),
     )
 
     # Filling the arguments of the contract with the data input
