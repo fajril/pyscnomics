@@ -223,6 +223,8 @@ def get_costrecovery(data: dict):
         gas_dmo_volume_portion=convert_to_float(target=data['costrecovery']['gas_dmo_volume_portion']),
         gas_dmo_fee_portion=convert_to_float(target=data['costrecovery']['gas_dmo_fee_portion']),
         gas_dmo_holiday_duration=data['costrecovery']['gas_dmo_holiday_duration'],
+        oil_carry_forward_depreciation=data['costrecovery']['oil_carry_forward_depreciation'],
+        gas_carry_forward_depreciation=data['costrecovery']['gas_carry_forward_depreciation'],
     )
 
     # Filling the arguments of the contract with the data input
@@ -306,7 +308,8 @@ def get_grosssplit(data: dict):
         gas_dmo_volume_portion=convert_to_float(target=data['grosssplit']['gas_dmo_volume_portion']),
         gas_dmo_fee_portion=convert_to_float(target=data['grosssplit']['gas_dmo_fee_portion']),
         gas_dmo_holiday_duration=data['grosssplit']['gas_dmo_holiday_duration'],
-
+        oil_carry_forward_depreciation=data['grosssplit']['oil_carry_forward_depreciation'],
+        gas_carry_forward_depreciation=data['grosssplit']['gas_carry_forward_depreciation'],
     )
 
     # Filling the arguments of the contract with the data input

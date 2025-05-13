@@ -342,6 +342,8 @@ def _adjust_element_single_contract(
             gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
             gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
             gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration,
+            oil_carry_forward_depreciation=contract.oil_carry_forward_depreciation,
+            gas_carry_forward_depreciation=contract.gas_carry_forward_depreciation,
         )
 
     # When the contract is GrossSplit, parsing back the adjusted cost elements to the gross split contract
@@ -377,6 +379,8 @@ def _adjust_element_single_contract(
             gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
             gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
             gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration,
+            oil_carry_forward_depreciation=contract.oil_carry_forward_depreciation,
+            gas_carry_forward_depreciation=contract.gas_carry_forward_depreciation,
         )
 
     elif isinstance(contract, BaseProject):
