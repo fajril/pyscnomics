@@ -2,10 +2,10 @@
   "inherit": true,
   "version": {
     "major": 1,
-    "minor": 3,
-    "build": 1
+    "minor": 4,
+    "build": 0
   },
   "features": [
-    "Adding The ability of array PSC terms input"
+    "Adding the feature of including carry forward depreciation in the Cost Recovery and Gross Split"
     ]
 }
