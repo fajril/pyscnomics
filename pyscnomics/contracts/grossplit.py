@@ -272,154 +272,93 @@ class GrossSplit(BaseProject):
     _gas_government_take: np.ndarray = field(default=None, init=False, repr=False)
 
     # Consolidated Attributes
-    _consolidated_capital_expenditures_pre_tax: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_intangible_expenditures_pre_tax: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_opex_expenditures_pre_tax: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_asr_expenditures_pre_tax: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_lbt_expenditures_pre_tax: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_cost_of_sales_expenditures_pre_tax: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_expenditures_pre_tax: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_capital_indirect_tax: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_intangible_indirect_tax: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_opex_indirect_tax: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_asr_indirect_tax: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_lbt_indirect_tax: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_cost_of_sales_indirect_tax: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_indirect_tax: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_capital_cost: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_intangible: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_opex: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_asr: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_lbt: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_non_capital: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_depreciation: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_undepreciated_asset: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_ctr_share_before_tf: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_gov_share_before_tf: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_total_expenses: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_cost_tobe_deducted: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_carward_deduct_cost: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_deductible_cost: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_carward_cost_aftertf: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_ctr_share_after_transfer: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_net_operating_profit: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_dmo_volume: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_dmo_fee: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_ddmo: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_taxable_income: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_tax_payment: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
-    _consolidated_ctr_net_share: (
-        np.ndarray
-    ) = field(default=None, init=False, repr=False)
-
+    _consolidated_capital_expenditures_pre_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_intangible_expenditures_pre_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_opex_expenditures_pre_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_asr_expenditures_pre_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_lbt_expenditures_pre_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_cost_of_sales_expenditures_pre_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_expenditures_pre_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_capital_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_intangible_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_opex_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_asr_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_lbt_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_cost_of_sales_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_capital_cost: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_intangible: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_opex: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_asr: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_lbt: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_non_capital: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_depreciation: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_undepreciated_asset: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_ctr_share_before_tf: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_gov_share_before_tf: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_total_expenses: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_cost_tobe_deducted: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_carward_deduct_cost: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_deductible_cost: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_carward_cost_aftertf: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_ctr_share_after_transfer: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_net_operating_profit: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_dmo_volume: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_ddmo: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_amortization: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes for containing the 100% contractor split warning

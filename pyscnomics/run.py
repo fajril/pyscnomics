@@ -1,73 +1,54 @@
 
-import numpy as np
-from pyscnomics.econ.costs import SunkCost
-from pyscnomics.econ.selection import FluidType, SunkCostInvestmentType
+# import numpy as np
+# from pyscnomics.econ.costs import SunkCost
+# from pyscnomics.econ.selection import FluidType, SunkCostInvestmentType
+from datetime import date
+from pyscnomics.contracts.project import BaseProject
+from pyscnomics.example import ExampleCase
 
 
-posc = SunkCost(
-    start_year=2023,
-    end_year=2030,
-    onstream_year=2027,
-    pod1_year=2025,
-    expense_year=np.array([2023, 2024, 2024, 2026, 2025, 2027]),
-    cost=np.array([90, 100, 100, 40, 50, 10]),
-    cost_allocation=[
-        FluidType.OIL,
-        FluidType.OIL,
-        FluidType.OIL,
-        FluidType.GAS,
-        FluidType.GAS,
-        FluidType.GAS,
-    ],
-    investment_type=[
-        SunkCostInvestmentType.TANGIBLE,
-        SunkCostInvestmentType.TANGIBLE,
-        SunkCostInvestmentType.TANGIBLE,
-        SunkCostInvestmentType.INTANGIBLE,
-        SunkCostInvestmentType.INTANGIBLE,
-        SunkCostInvestmentType.INTANGIBLE,
-    ],
-    tax_portion=np.array([1, 1, 1, 1, 1, 1]),
+case = ExampleCase()
+project = BaseProject(
+    start_date=date(year=2023, month=1, day=1),
+    end_date=date(year=2030, month=12, day=31),
+    oil_onstream_date=date(year=2027, month=1, day=1),
+    gas_onstream_date=date(year=2027, month=1, day=1),
+    lifting=tuple([case.lifting_mangga, case.lifting_apel]),
+    capital_cost=tuple([case.capital_mangga, case.capital_apel]),
+    intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),
+    opex=tuple([case.opex_mangga, case.opex_apel]),
+    asr_cost=tuple([case.asr_mangga, case.asr_apel]),
+    lbt_cost=tuple([case.lbt_mangga, case.lbt_apel]),
+    cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
+    sunk_cost=tuple([case.sunk_cost_mangga, case.sunk_cost_apel]),
 )
 
-t1 = posc.get_preonstream_cost_investment_array(
-    fluid_type=FluidType.GAS,
-    investment_config=SunkCostInvestmentType.INTANGIBLE,
-    tax_rate=0.1,
-)
+print('\t')
+print('================================================================')
+
+t1 = project._get_gas_sunk_cost()
 
 # print('\t')
-# print('onstream_year = ', posc_total.onstream_year)
-# print('pod1_year = ', posc_total.pod1_year)
-# print('cost = ', posc_total.cost)
-# print('expense_year = ', posc_total.expense_year)
-# print('project_years = ', posc_total.project_years)
+# print('oil_onstream_date = ', project.oil_onstream_date)
+# print('gas_onstream_date = ', project.gas_onstream_date)
 
-
-# t2 = posc_total.sunk_cost_amortization_charge(
-#     tax_rate=0.0,
-#     fluid_type=FluidType.OIL,
-#     investment_config=SunkCostInvestmentType.TANGIBLE,
+# t1 = posc.sunk_cost_amortization_charge(
+#     tax_rate=0.1,
+#     fluid_type=FluidType.GAS,
+#     investment_config=SunkCostInvestmentType.INTANGIBLE,
+#     prod_year=np.array([2027, 2028]),
 #     prod=np.array([50, 1_000]),
-#     prod_year=np.array([2027, 2030]),
+#     salvage_value=0.0,
 #     amortization_len=8,
 # )
-
-# t1 = posc.get_preonstream_cost_amortization_charge(
-#     tax_rate=0.0,
+#
+# t2 = posc.preonstream_cost_amortization_charge(
+#     tax_rate=0.1,
 #     fluid_type=FluidType.GAS,
 #     investment_config=SunkCostInvestmentType.INTANGIBLE,
-#     prod=np.array([50, 100]),
 #     prod_year=np.array([2027, 2028]),
-#     amortization_len=8,
-# )
-
-# t1 = posc.get_sunk_cost_amortization_charge(
-#     tax_rate=0.0,
-#     fluid_type=FluidType.GAS,
-#     investment_config=SunkCostInvestmentType.INTANGIBLE,
-#     prod=np.array([50, 100]),
-#     prod_year=np.array([2027, 2028]),
+#     prod=np.array([50, 1_000]),
+#     salvage_value=0.0,
 #     amortization_len=8,
 # )
 
@@ -82,54 +63,6 @@ print(f'Length: {len(t1)}')
 print('t1 = \n', t1)
 
 # print('\t')
-# print(f'Filetype: {type(t1)}')
-# print(f'Length: {len(t1)}')
-# print('t1 = ', t1)
-
-# print('\t')
 # print(f'Filetype: {type(t2)}')
 # print(f'Length: {len(t2)}')
-# print('t2 = ', t2)
-
-
-# def _get_fluid_type_id(self, fluid_type: FluidType) -> tuple:
-#     # Year of POD I approval equals to onstream year
-#     if self.pod1_year == self.onstream_year:
-#
-#         # Determine sunk cost ID for a particular fluid type (OIL or GAS)
-#         sc_id = np.argwhere(self.expense_year <= self.onstream_year).ravel()
-#         sc_cost_allocation_id = np.array(
-#             [self.cost_allocation[val] for _, val in enumerate(sc_id)]
-#         )
-#         sc_fluid_type_id = np.array(
-#             [sc_id[i] for i, val in enumerate(sc_cost_allocation_id) if val == fluid_type]
-#         )
-#
-#         # Determine pre-onstream cost ID for a particular fluid type (OIL or GAS)
-#         poc_fluid_type_id = np.array([])
-#
-#     # Year of POD I approval is before the onstream year
-#     elif self.pod1_year < self.onstream_year:
-#
-#         # Determine sunk cost ID for a particular fluid type (OIL or GAS)
-#         sc_id = np.argwhere(self.expense_year <= self.pod1_year).ravel()
-#         sc_cost_allocation_id = np.array(
-#             [self.cost_allocation[val] for _, val in enumerate(sc_id)]
-#         )
-#         sc_fluid_type_id = np.array(
-#             [sc_id[i] for i, val in enumerate(sc_cost_allocation_id) if val == fluid_type]
-#         )
-#
-#         # Determine pre-onstream cost ID for a particular fluid type (OIL or GAS)
-#         poc_id = np.argwhere(self.expense_year >= self.pod1_year).ravel()
-#         poc_cost_allocation_id = np.array(
-#             [self.cost_allocation[val] for _, val in enumerate(poc_id)]
-#         )
-#         poc_fluid_type_id = np.array(
-#             [poc_id[i] for i, val in enumerate(poc_cost_allocation_id) if val == fluid_type]
-#         )
-#
-#     else:
-#         raise SunkCostException(f"Cannot have POD I year after the onstream year")
-#
-#     return sc_fluid_type_id, poc_fluid_type_id
+# print('t2 = \n', t2)

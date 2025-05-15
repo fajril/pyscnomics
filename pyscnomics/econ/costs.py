@@ -3779,9 +3779,7 @@ class SunkCost(GeneralCost):
 
         # Prepare attribute onstream_year
         if self.onstream_year is None:
-            raise SunkCostException(
-                f"Missing data for onstream_year: {self.onstream_year}"
-            )
+            self.onstream_year = self.end_year
 
         else:
             if not isinstance(self.onstream_year, int):
