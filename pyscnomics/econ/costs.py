@@ -74,12 +74,6 @@ class SunkCostException(Exception):
     pass
 
 
-class PreOnstreamCostException(Exception):
-    """ Exception to be raised for an incorrect use of class PreOnstreamCost """
-
-    pass
-
-
 @dataclass
 class GeneralCost:
     """
