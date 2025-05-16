@@ -3738,6 +3738,9 @@ class SunkCost(GeneralCost):
     onstream_year: int = field(default=None)
     pod1_year: int = field(default=None)
     investment_type: list[SunkCostInvestmentType] = field(default=None)
+    salvage_value: np.ndarray = field(default=None)
+    depreciation_period: np.ndarray = field(default=None)
+    depreciation_factor: np.ndarray = field(default=None)
 
     # Overridden argument
     cost: np.ndarray = field(default=None)
@@ -3927,6 +3930,70 @@ class SunkCost(GeneralCost):
                 " " if pd.isna(val) else val for _, val in enumerate(self.description)
             ]
 
+        # Prepare attribute salvage_value
+        if self.salvage_value is None:
+            self.salvage_value = np.zeros_like(self.expense_year)
+
+        else:
+            if not isinstance(self.salvage_value, np.ndarray):
+                raise SunkCostException(
+                    f"Attribute salvage_value must be provided as a numpy.ndarray, "
+                    f"not as an/a {self.salvage_value.__class__.__qualname__}"
+                )
+
+            salvage_value_nan_id = np.argwhere(pd.isna(self.salvage_value)).ravel()
+            if len(salvage_value_nan_id) > 0:
+                self.salvage_value[salvage_value_nan_id] = np.zeros(len(salvage_value_nan_id))
+
+        self.salvage_value = self.salvage_value.astype(np.float64)
+
+        # Prepare attribute depreciation_period
+        if self.depreciation_period is None:
+            self.depreciation_period = np.repeat(5.0, len(self.expense_year))
+
+        else:
+            if not isinstance(self.depreciation_period, np.ndarray):
+                raise SunkCostException(
+                    f"Attribute depreciation_period must be given as a numpy.ndarray, "
+                    f"not as an/a {self.depreciation_period.__class__.__qualname__}"
+                )
+
+            depreciation_period_nan_id = np.argwhere(pd.isna(self.depreciation_period)).ravel()
+            if len(depreciation_period_nan_id) > 0:
+                self.depreciation_period[depreciation_period_nan_id] = np.repeat(
+                    5.0, len(depreciation_period_nan_id)
+                )
+
+        self.depreciation_period = self.depreciation_period.astype(np.float64)
+
+        # Prepare attribute depreciation_factor
+        if self.depreciation_factor is None:
+            self.depreciation_factor = np.repeat(0.5, len(self.expense_year))
+
+        else:
+            if not isinstance(self.depreciation_factor, np.ndarray):
+                raise SunkCostException(
+                    f"Attribute depreciation_factor must be given as a numpy.ndarray, "
+                    f"not as an/a {self.depreciation_factor.__class__.__qualname__}"
+                )
+
+            depreciation_factor_nan_id = np.argwhere(pd.isna(self.depreciation_factor)).ravel()
+            if len(depreciation_factor_nan_id) > 0:
+                self.depreciation_factor[depreciation_factor_nan_id] = np.repeat(
+                    0.5, len(depreciation_factor_nan_id)
+                )
+
+            depreciation_factor_large = np.sum(self.depreciation_factor > 1.0, dtype=int)
+            depreciation_factor_negative = np.sum(self.depreciation_factor < 0.0, dtype=int)
+            if depreciation_factor_large > 0 or depreciation_factor_negative > 0:
+                raise SunkCostException(
+                    f"The value of depreciation_factor must be within the "
+                    f"following interval: 0 < depreciation_factor < 1, "
+                    f"depreciation_factor: {self.depreciation_factor}"
+                )
+
+        self.depreciation_factor = self.depreciation_factor.astype(np.float64)
+
         # Prepare attribute tax_portion
         if self.tax_portion is None:
             self.tax_portion = np.zeros_like(self.expense_year)
@@ -3991,6 +4058,9 @@ class SunkCost(GeneralCost):
                 self.investment_type,
                 self.cost_allocation,
                 self.description,
+                self.salvage_value,
+                self.depreciation_period,
+                self.depreciation_factor,
                 self.tax_portion,
                 self.tax_discount,
             ]
@@ -4002,6 +4072,9 @@ class SunkCost(GeneralCost):
                 f"investment_type: {len(self.investment_type)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
                 f"description: {len(self.description)}, "
+                f"salvage_value: {len(self.salvage_value)}, "
+                f"depreciation_period: {len(self.depreciation_period)}, "
+                f"depreciation_factor: {len(self.depreciation_factor)}, "
                 f"tax_portion: {len(self.tax_portion)}, "
                 f"tax_discount: {len(self.tax_discount)} "
             )
@@ -4877,6 +4950,82 @@ class SunkCost(GeneralCost):
         )
 
         return np.cumsum(poc_investment_array) - np.cumsum(poc_amortization_charge)
+
+    def total_depreciation_rate(
+        self,
+        cost_to_be_depreciated: np.ndarray,
+        depr_method: DeprMethod = DeprMethod.PSC_DB,
+        decline_factor: float | int = 2,
+    ):
+
+        # Calculate depreciation for every cost element in array cost_adjusted_by_vat
+        # Depreciation method is straight line
+        if depr_method == DeprMethod.SL:
+            depreciation_charge = np.array(
+                [
+                    depr.straight_line_depreciation_rate(
+                        cost=c,
+                        salvage_value=sv,
+                        useful_life=dp,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, sv, dp in zip(
+                        cost_to_be_depreciated,
+                        self.salvage_value,
+                        self.depreciation_period,
+                    )
+                ]
+            )
+
+        # Depreciation method is declining balance
+        elif depr_method == DeprMethod.DB:
+            depreciation_charge = np.array(
+                [
+                    depr.declining_balance_depreciation_rate(
+                        cost=c,
+                        salvage_value=sv,
+                        useful_life=dp,
+                        decline_factor=decline_factor,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, sv, dp in zip(
+                        cost_to_be_depreciated,
+                        self.salvage_value,
+                        self.depreciation_period,
+                    )
+                ]
+            )
+
+        # Depreciation method is PSC declining balance
+        elif depr_method == DeprMethod.PSC_DB:
+            depreciation_charge = np.array(
+                [
+                    depr.psc_declining_balance_depreciation_rate(
+                        cost=c,
+                        depreciation_factor=df,
+                        useful_life=dp,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, df, dp in zip(
+                        cost_to_be_depreciated,
+                        self.depreciation_factor,
+                        self.depreciation_period,
+                    )
+                ]
+            )
+
+        else:
+            raise SunkCostException(
+                f"Depreciation method ({depr_method}) is not recognized"
+            )
+
+        print('\t')
+        print(f'Filetype: {type(depreciation_charge)}')
+        print(f'Length: {len(depreciation_charge)}')
+        print('depreciation_charge = \n', depreciation_charge)
+
+        # The relative difference of expense_year and start_year
+
 
     def __eq__(self, other):
         # Between two instances of SunkCost

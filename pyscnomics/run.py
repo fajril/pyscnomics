@@ -1,32 +1,49 @@
 
-# import numpy as np
-# from pyscnomics.econ.costs import SunkCost
-# from pyscnomics.econ.selection import FluidType, SunkCostInvestmentType
+import numpy as np
+from pyscnomics.econ.costs import SunkCost
+from pyscnomics.econ.selection import FluidType, SunkCostInvestmentType
 from datetime import date
 from pyscnomics.contracts.project import BaseProject
+from pyscnomics.econ.selection import DeprMethod
 from pyscnomics.example import ExampleCase
 
 
 case = ExampleCase()
-project = BaseProject(
-    start_date=date(year=2023, month=1, day=1),
-    end_date=date(year=2030, month=12, day=31),
-    oil_onstream_date=date(year=2027, month=1, day=1),
-    gas_onstream_date=date(year=2027, month=1, day=1),
-    lifting=tuple([case.lifting_mangga, case.lifting_apel]),
-    capital_cost=tuple([case.capital_mangga, case.capital_apel]),
-    intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),
-    opex=tuple([case.opex_mangga, case.opex_apel]),
-    asr_cost=tuple([case.asr_mangga, case.asr_apel]),
-    lbt_cost=tuple([case.lbt_mangga, case.lbt_apel]),
-    cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
-    sunk_cost=tuple([case.sunk_cost_mangga, case.sunk_cost_apel]),
+sc_mangga = case.sunk_cost_mangga
+
+sc_oil_tangible_array = sc_mangga.get_sunk_cost_investment_array(
+    tax_rate=0.0,
+    fluid_type=FluidType.OIL,
+    investment_config=SunkCostInvestmentType.TANGIBLE,
 )
 
 print('\t')
-print('================================================================')
+print(f'Filetype: {type(sc_oil_tangible_array)}')
+print(f'Length: {len(sc_oil_tangible_array)}')
+print('sc_oil_tangible_array = ', sc_oil_tangible_array)
 
-t1 = project._get_gas_sunk_cost()
+sc_mangga.total_depreciation_rate(
+    cost_to_be_depreciated=sc_oil_tangible_array,
+    depr_method=DeprMethod.PSC_DB,
+)
+
+# project = BaseProject(
+#     start_date=date(year=2023, month=1, day=1),
+#     end_date=date(year=2030, month=12, day=31),
+#     oil_onstream_date=date(year=2027, month=1, day=1),
+#     gas_onstream_date=date(year=2027, month=1, day=1),
+#     lifting=tuple([case.lifting_mangga, case.lifting_apel]),
+#     capital_cost=tuple([case.capital_mangga, case.capital_apel]),
+#     intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),
+#     opex=tuple([case.opex_mangga, case.opex_apel]),
+#     asr_cost=tuple([case.asr_mangga, case.asr_apel]),
+#     lbt_cost=tuple([case.lbt_mangga, case.lbt_apel]),
+#     cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
+#     sunk_cost=tuple([case.sunk_cost_mangga, case.sunk_cost_apel]),
+# )
+
+print('\t')
+print('================================================================')
 
 # print('\t')
 # print('oil_onstream_date = ', project.oil_onstream_date)
@@ -57,10 +74,10 @@ t1 = project._get_gas_sunk_cost()
 # print(f'Length: {len()}')
 # print()
 
-print('\t')
-print(f'Filetype: {type(t1)}')
-print(f'Length: {len(t1)}')
-print('t1 = \n', t1)
+# print('\t')
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t2)}')

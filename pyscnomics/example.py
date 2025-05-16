@@ -189,29 +189,31 @@ class ExampleCase:
                 SunkCostInvestmentType.INTANGIBLE,
                 SunkCostInvestmentType.INTANGIBLE,
             ],
+            tax_portion=np.array([1, 1, 1, 1, 1, 1]),
+            depreciation_factor=np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.3]),
         )
 
-        self.sunk_cost_apel = SunkCost(
-            start_year=2023,
-            end_year=2030,
-            onstream_year=2027,
-            pod1_year=2025,
-            expense_year=np.array([2023, 2024, 2024, 2026, 2025, 2027]),
-            cost=np.array([5, 5, 5, 20, 5, 20]),
-            cost_allocation=[
-                FluidType.GAS,
-                FluidType.GAS,
-                FluidType.GAS,
-                FluidType.GAS,
-                FluidType.GAS,
-                FluidType.GAS,
-            ],
-            investment_type=[
-                SunkCostInvestmentType.TANGIBLE,
-                SunkCostInvestmentType.TANGIBLE,
-                SunkCostInvestmentType.TANGIBLE,
-                SunkCostInvestmentType.INTANGIBLE,
-                SunkCostInvestmentType.INTANGIBLE,
-                SunkCostInvestmentType.INTANGIBLE,
-            ],
-        )
+        # self.sunk_cost_apel = SunkCost(
+        #     start_year=2023,
+        #     end_year=2030,
+        #     onstream_year=2027,
+        #     pod1_year=2025,
+        #     expense_year=np.array([2023, 2024, 2024, 2026, 2025, 2027]),
+        #     cost=np.array([5, 5, 5, 20, 5, 20]),
+        #     cost_allocation=[
+        #         FluidType.GAS,
+        #         FluidType.GAS,
+        #         FluidType.GAS,
+        #         FluidType.GAS,
+        #         FluidType.GAS,
+        #         FluidType.GAS,
+        #     ],
+        #     investment_type=[
+        #         SunkCostInvestmentType.TANGIBLE,
+        #         SunkCostInvestmentType.TANGIBLE,
+        #         SunkCostInvestmentType.TANGIBLE,
+        #         SunkCostInvestmentType.INTANGIBLE,
+        #         SunkCostInvestmentType.INTANGIBLE,
+        #         SunkCostInvestmentType.INTANGIBLE,
+        #     ],
+        # )
