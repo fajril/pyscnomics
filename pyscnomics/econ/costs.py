@@ -4409,7 +4409,7 @@ class SunkCost(GeneralCost):
         # Adjust cost by VAT
         cost_adjusted_by_vat = self.cost + self.get_indirect_tax(tax_rate=tax_rate)
 
-        # Identify the sunk cost indices for a particular fluid type (OIL or GAS)
+        # Identify sunk cost indices for a particular fluid type (OIL or GAS)
         # and for a particular investment type (TANGIBLE or INTANGIBLE)
         sc_investment_id = self._get_sunk_cost_investment_id(
             fluid_type=fluid_type,
@@ -4517,176 +4517,18 @@ class SunkCost(GeneralCost):
 
         return poc_investment_array
 
-    def get_sunk_cost_investment_bulk(
+    @staticmethod
+    def get_investment_bulk(cost_investment_array: np.ndarray) -> float:
+        return np.sum(cost_investment_array, dtype=np.float64)
+
+    def get_amortization_charge(
         self,
-        fluid_type: FluidType,
-        investment_config: SunkCostInvestmentType,
-        tax_rate: np.ndarray | float = 0.0,
-    ) -> float:
-        """
-        Calculate the total bulk sunk cost for a specific fluid and investment type.
-
-        This method computes the sum of all sunk costs (adjusted for tax) for a given
-        fluid type and investment type combination.
-
-        Parameters
-        ----------
-        fluid_type : FluidType
-            The fluid type to filter by (OIL or GAS).
-        investment_config : SunkCostInvestmentType
-            The investment type to filter by (TANGIBLE or INTANGIBLE).
-        tax_rate : np.ndarray or float, optional
-            The tax rate(s) to apply for VAT adjustment. Can be a single float or array.
-            Default is 0.0 (no tax).
-
-        Returns
-        -------
-        float
-            The total sum of sunk costs matching the specified fluid type and investment type,
-            including tax adjustments. Returns 0.0 if no matching costs exist.
-
-        Notes
-        -----
-        The method:
-        1. Gets the full sunk cost array using `get_sunk_cost_investment_array`
-        2. Sums all values in the array using numpy.sum with float64 precision
-        3. Returns the total bulk value.
-        """
-
-        # Identify the array of sunk cost for a particular fluid type (OIL or GAS)
-        # and for a particular investment type (TANGIBLE or INTANGIBLE)
-        sc_investment_array = self.get_sunk_cost_investment_array(
-            fluid_type=fluid_type,
-            investment_config=investment_config,
-            tax_rate=tax_rate,
-        )
-
-        # Calculate the sunk cost bulk value
-        return np.sum(sc_investment_array, dtype=np.float64)
-
-    def get_preonstream_cost_investment_bulk(
-        self,
-        fluid_type: FluidType,
-        investment_config: SunkCostInvestmentType,
-        tax_rate: np.ndarray | float = 0.0,
-    ) -> float:
-        """
-        Calculate the total bulk pre-onstream cost for a specific fluid and
-        investment type.
-
-        This method computes the sum of all pre-onstream costs (adjusted for tax)
-        for a given fluid type and investment type combination.
-
-        Parameters
-        ----------
-        fluid_type : FluidType
-            The fluid type to filter by (OIL or GAS).
-        investment_config : SunkCostInvestmentType
-            The investment type to filter by (TANGIBLE or INTANGIBLE).
-        tax_rate : np.ndarray or float, optional
-            The tax rate(s) to apply for VAT adjustment. Can be a single float or array.
-            Default is 0.0 (no tax).
-
-        Returns
-        -------
-        float
-            The total sum of pre-onstream costs matching the specified fluid type and
-            investment type, including tax adjustments. Returns 0.0 if:
-            - No pre-onstream costs exist for the criteria, or
-            - POD I year equals onstream year (no pre-onstream period)
-
-        Notes
-        -----
-        The method:
-        1. Gets the full pre-onstream cost array using `get_preonstream_cost_investment_array`
-        2. Sums all values in the array using numpy.sum with float64 precision
-        3. Returns the total bulk value.
-        """
-
-        # Identify the array of preonstream cost for a particular fluid type
-        # (OIL or GAS) and for a particular investment type (TANGIBLE or INTANGIBLE)
-        poc_investment_array = self.get_preonstream_cost_investment_array(
-            fluid_type=fluid_type,
-            investment_config=investment_config,
-            tax_rate=tax_rate,
-        )
-
-        # Calculate the preonstream cost bulk value
-        return np.sum(poc_investment_array, dtype=np.float64)
-
-    def sunk_cost_amortization_charge(
-        self,
-        fluid_type: FluidType,
-        investment_config: SunkCostInvestmentType,
+        cost_bulk: float,
         prod: np.ndarray,
         prod_year: np.ndarray,
-        tax_rate: np.ndarray | float = 0.0,
         salvage_value: float = 0.0,
         amortization_len: int = 0,
     ) -> np.ndarray:
-        """
-        Calculate amortization charges for sunk costs using unit-of-production method.
-
-        This method computes the amortization of sunk costs over production years based
-        on production volumes, with optional salvage value and amortization length
-        constraints.
-
-        Parameters
-        ----------
-        fluid_type : FluidType
-            The fluid type to amortize costs for (OIL or GAS).
-        investment_config : SunkCostInvestmentType
-            The investment type to amortize (TANGIBLE or INTANGIBLE).
-        prod : np.ndarray
-            Array of production volumes for each year.
-        prod_year : np.ndarray
-            Array of years corresponding to production volumes.
-        tax_rate : np.ndarray or float, optional
-            Tax rate(s) to apply to sunk costs before amortization.
-            Default is 0.0 (no tax adjustment).
-        salvage_value : float, optional
-            Residual value of the asset after amortization.
-            Default is 0.0 (no salvage value).
-        amortization_len : int, optional
-            Maximum number of years to amortize costs over.
-            Default is 0 (no limit).
-
-        Returns
-        -------
-        np.ndarray
-            Array of amortization charges for each project year, calculated using the
-            unit-of-production method.
-
-        Raises
-        ------
-        SunkCostException
-            If the first production year doesn't match the onstream year.
-
-        Notes
-        -----
-        The method:
-        1. Gets total sunk costs (including tax adjustment)
-        2. Validates production start year matches onstream year
-        3. Calculates amortization using unit-of-production method
-        4. Applies salvage value and amortization length constraints if specified
-
-        The unit-of-production method allocates costs based on production volumes,
-        resulting in higher charges in high-production years.
-
-        See Also
-        --------
-        get_sunk_cost_investment_bulk : Gets the total sunk costs for amortization.
-        depr.unit_of_production_rate : Performs the actual amortization calculation.
-        """
-
-        # Determine the bulk value of the sunk cost for a particular
-        # fluid type (OIL or GAS) and a particular investment type
-        # (TANGIBLE or INTANGIBLE)
-        bulk_cost = self.get_sunk_cost_investment_bulk(
-            fluid_type=fluid_type,
-            investment_config=investment_config,
-            tax_rate=tax_rate,
-        )
 
         # The start of production year must be the same with the onstream year
         if np.min(prod_year) != self.onstream_year:
@@ -4695,337 +4537,288 @@ class SunkCost(GeneralCost):
                 f"and the onstream year ({self.onstream_year})"
             )
 
-        # Calculate amortization charge
+        # Calculate amortization charge by calling function unit_of_production_rate()
         return depr.unit_of_production_rate(
             start_year_project=self.start_year,
-            cost=bulk_cost,
+            cost=cost_bulk,
             prod_year=prod_year,
             prod=prod,
             salvage_value=salvage_value,
             amortization_len=amortization_len,
         )
 
-    def preonstream_cost_amortization_charge(
+    def get_amortization_book_value(
         self,
-        fluid_type: FluidType,
-        investment_config: SunkCostInvestmentType,
+        cost_investment_array: np.ndarray,
+        cost_bulk: float,
         prod: np.ndarray,
         prod_year: np.ndarray,
-        tax_rate: np.ndarray | float = 0.0,
         salvage_value: float = 0.0,
         amortization_len: int = 0,
     ) -> np.ndarray:
-        """
-        Calculate amortization charges for pre-onstream costs using unit-of-production
-        method.
-
-        This method computes the amortization of pre-onstream costs over production
-        years based on production volumes, with optional salvage value and amortization
-        length constraints.
-
-        Parameters
-        ----------
-        fluid_type : FluidType
-            The fluid type to amortize costs for (OIL or GAS).
-        investment_config : SunkCostInvestmentType
-            The investment type to amortize (TANGIBLE or INTANGIBLE).
-        prod : np.ndarray
-            Array of production volumes for each year, in units consistent with cost basis.
-        prod_year : np.ndarray
-            Array of years corresponding to production volumes.
-        tax_rate : np.ndarray or float, optional
-            Tax rate(s) to apply to pre-onstream costs before amortization.
-            Default is 0.0 (no tax adjustment).
-        salvage_value : float, optional
-            Residual value of the asset after amortization.
-            Default is 0.0 (no salvage value).
-        amortization_len : int, optional
-            Maximum number of years to amortize costs over.
-            Default is 0 (no limit, amortize over full production profile).
-
-        Returns
-        -------
-        np.ndarray
-            Array of amortization charges for each project year, calculated using the
-            unit-of-production method. Returns zero array if no pre-onstream costs exist.
-
-        Raises
-        ------
-        SunkCostException
-            If the first production year doesn't match the onstream year.
-
-        Notes
-        -----
-        The method:
-        1. Gets total pre-onstream costs (including tax adjustment)
-        2. Validates production start year matches onstream year
-        3. Calculates amortization using unit-of-production method
-        4. Applies salvage value and amortization length constraints if specified
-
-        Pre-onstream costs are amortized from first production year onward, in proportion
-        to production volumes each year.
-
-        See Also
-        --------
-        get_preonstream_cost_investment_bulk:
-            Gets the total pre-onstream costs for amortization.
-        depr.unit_of_production_rate:
-            Performs the actual amortization calculation.
-        """
-
-        # Determine the bulk value of the preonstream cost for a particular
-        # fluid type (OIL or GAS) and a particular investment type
-        # (TANGIBLE or INTANGIBLE)
-        bulk_value = self.get_preonstream_cost_investment_bulk(
-            fluid_type=fluid_type,
-            investment_config=investment_config,
-            tax_rate=tax_rate,
-        )
-
-        # The start of production year must be the same with the onstream year
-        if np.min(prod_year) != self.onstream_year:
-            raise SunkCostException(
-                f"Unequal value for the start of production ({np.min(prod_year)}) "
-                f"and the onstream year ({self.onstream_year})"
-            )
 
         # Calculate amortization charge
-        return depr.unit_of_production_rate(
-            start_year_project=self.start_year,
-            cost=bulk_value,
-            prod_year=prod_year,
+        amortization_charge = self.get_amortization_charge(
+            cost_bulk=cost_bulk,
             prod=prod,
+            prod_year=prod_year,
             salvage_value=salvage_value,
             amortization_len=amortization_len,
         )
 
-    def sunk_cost_amortization_book_value(
+        # Calculate amortization book value
+        return np.cumsum(cost_investment_array) - np.cumsum(amortization_charge)
+
+    def get_sunk_cost_tangible_depreciation_rate(
         self,
         fluid_type: FluidType,
-        investment_config: SunkCostInvestmentType,
-        prod: np.ndarray,
-        prod_year: np.ndarray,
-        tax_rate: np.ndarray | float = 0.0,
-        salvage_value: float = 0.0,
-        amortization_len: int = 0,
-    ):
-        """
-        Calculate the book value over time for sunk cost amortization.
-
-        This method computes the remaining book value of sunk costs after accounting for
-        accumulated amortization charges, showing how the asset value declines over the
-        project life.
-
-        Parameters
-        ----------
-        fluid_type : FluidType
-            The fluid type (OIL or GAS) for which to calculate book values.
-        investment_config : SunkCostInvestmentType
-            The investment type (TANGIBLE or INTANGIBLE) to analyze.
-        prod : np.ndarray
-            Array of production volumes for each year.
-        prod_year : np.ndarray
-            Array of years corresponding to production volumes.
-        tax_rate : np.ndarray or float, optional
-            Tax rate(s) applied to the sunk costs. Default is 0.0 (no tax).
-        salvage_value : float, optional
-            Residual value of the asset after full amortization. Default is 0.0.
-        amortization_len : int, optional
-            Maximum number of years for amortization. Default is 0 (no limit).
-
-        Returns
-        -------
-        np.ndarray
-            Array of book values for each project year, calculated as:
-            (cumulative sunk costs) - (cumulative amortization charges)
-
-        Notes
-        -----
-        The book value calculation:
-        1. Starts with the cumulative sum of all sunk costs
-        2. Subtracts the cumulative sum of amortization charges
-        3. Results show the remaining unamortized value each year
-
-        See Also
-        --------
-        sunk_cost_amortization_charge : Calculates the amortization charges.
-        get_sunk_cost_investment_array : Gets the sunk cost allocation array.
-        """
-
-        # Determine sunk cost amortization charge for a particular fluid type
-        # (OIL or GAS) and for a particular investment type (TANGIBLE or INTANGIBLE)
-        sc_amortization_charge = self.sunk_cost_amortization_charge(
-            fluid_type=fluid_type,
-            investment_config=investment_config,
-            prod=prod,
-            prod_year=prod_year,
-            tax_rate=tax_rate,
-            salvage_value=salvage_value,
-            amortization_len=amortization_len,
-        )
-
-        # Determine sunk cost array for a particular fluid type (OIL or GAS)
-        # and for a particular investment type (TANGIBLE or INTANGIBLE)
-        sc_investment_array = self.get_sunk_cost_investment_array(
-            fluid_type=fluid_type,
-            investment_config=investment_config,
-            tax_rate=tax_rate,
-        )
-
-        # Calculate sunk cost amortization book value
-        return np.cumsum(sc_investment_array) - np.cumsum(sc_amortization_charge)
-
-    def preonstream_cost_amortization_book_value(
-        self,
-        fluid_type: FluidType,
-        investment_config: SunkCostInvestmentType,
-        prod: np.ndarray,
-        prod_year: np.ndarray,
-        tax_rate: np.ndarray | float = 0.0,
-        salvage_value: float = 0.0,
-        amortization_len: int = 0,
-    ):
-        """
-        Calculate the book value over time for pre-onstream cost amortization.
-
-        This method tracks the remaining book value of pre-onstream costs by comparing
-        cumulative costs against cumulative amortization charges, showing the asset's
-        declining value through the project life.
-
-        Parameters
-        ----------
-        fluid_type : FluidType
-            The fluid type (OIL or GAS) for book value calculation.
-        investment_config : SunkCostInvestmentType
-            The investment type (TANGIBLE or INTANGIBLE) to analyze.
-        prod : np.ndarray
-            Array of production volumes for each year (units consistent with cost basis).
-        prod_year : np.ndarray
-            Array of years corresponding to production volumes.
-        tax_rate : np.ndarray or float, optional
-            Tax rate(s) applied to pre-onstream costs. Default is 0.0 (no tax).
-        salvage_value : float, optional
-            Residual value after full amortization. Default is 0.0.
-        amortization_len : int, optional
-            Maximum amortization period in years. Default is 0 (no limit).
-
-        Returns
-        -------
-        np.ndarray
-            Array of book values for each project year, calculated as:
-            (cumulative pre-onstream costs) - (cumulative amortization charges)
-            Returns zero array if no pre-onstream costs exist.
-
-        Notes
-        -----
-        Key calculation aspects:
-        1. Uses unit-of-production amortization method
-        2. Book value declines in proportion to production
-        3. Respects amortization length constraints
-
-        See Also
-        --------
-        preonstream_cost_amortization_charge : Calculates amortization charges.
-        get_preonstream_cost_investment_array : Gets cost allocation array.
-        """
-
-        # Determine preonstream cost amortization charge for a particular fluid type
-        # (OIL or GAS) and for a particular investment type (TANGIBLE or INTANGIBLE)
-        poc_amortization_charge = self.preonstream_cost_amortization_charge(
-            fluid_type=fluid_type,
-            investment_config=investment_config,
-            prod=prod,
-            prod_year=prod_year,
-            tax_rate=tax_rate,
-            salvage_value=salvage_value,
-            amortization_len=amortization_len,
-        )
-
-        # Determine preonstream cost array for a particular fluid type (OIL or GAS)
-        # and for a particular investment type (TANGIBLE or INTANGIBLE)
-        poc_investment_array = self.get_preonstream_cost_investment_array(
-            fluid_type=fluid_type,
-            investment_config=investment_config,
-            tax_rate=tax_rate,
-        )
-
-        return np.cumsum(poc_investment_array) - np.cumsum(poc_amortization_charge)
-
-    def total_depreciation_rate(
-        self,
-        cost_to_be_depreciated: np.ndarray,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
-    ):
+        tax_rate: np.ndarray | float = 0.0,
+    ) -> tuple:
 
-        # Calculate depreciation for every cost element in array cost_adjusted_by_vat
-        # Depreciation method is straight line
-        if depr_method == DeprMethod.SL:
+        # Adjust cost by VAT
+        cost_adjusted_by_vat = self.cost + self.get_indirect_tax(tax_rate=tax_rate)
+
+        # Identify sunk cost tangible indices for a particular fluid type (OIL or GAS)
+        sc_tangible_id = self._get_sunk_cost_investment_id(
+            fluid_type=fluid_type,
+            investment_config=SunkCostInvestmentType.TANGIBLE,
+        )
+
+        # Operations to be conducted when a particular sunk cost tangible
+        # indices are available
+        if len(sc_tangible_id) > 0:
+
+            # Calculate depreciation for every cost element in array cost_adjusted_by_vat
+            # Depreciation method is straight line
+            if depr_method == DeprMethod.SL:
+                depreciation_charge = np.array(
+                    [
+                        depr.straight_line_depreciation_rate(
+                            cost=c,
+                            salvage_value=sv,
+                            useful_life=dp,
+                            depreciation_len=self.project_duration,
+                        )
+                        for c, sv, dp in zip(
+                            cost_adjusted_by_vat[sc_tangible_id],
+                            self.salvage_value[sc_tangible_id],
+                            self.depreciation_period[sc_tangible_id],
+                        )
+                    ]
+                )
+
+            # Depreciation method is declining balance
+            elif depr_method == DeprMethod.DB:
+                depreciation_charge = np.array(
+                    [
+                        depr.declining_balance_depreciation_rate(
+                            cost=c,
+                            salvage_value=sv,
+                            useful_life=dp,
+                            decline_factor=decline_factor,
+                            depreciation_len=self.project_duration,
+                        )
+                        for c, sv, dp in zip(
+                            cost_adjusted_by_vat[sc_tangible_id],
+                            self.salvage_value[sc_tangible_id],
+                            self.depreciation_period[sc_tangible_id],
+                        )
+                    ]
+                )
+
+            # Depreciation method is PSC declining balance
+            elif depr_method == DeprMethod.PSC_DB:
+                depreciation_charge = np.array(
+                    [
+                        depr.psc_declining_balance_depreciation_rate(
+                            cost=c,
+                            depreciation_factor=df,
+                            useful_life=dp,
+                            depreciation_len=self.project_duration,
+                        )
+                        for c, df, dp in zip(
+                            cost_adjusted_by_vat[sc_tangible_id],
+                            self.depreciation_factor[sc_tangible_id],
+                            self.depreciation_period[sc_tangible_id],
+                        )
+                    ]
+                )
+
+            else:
+                raise SunkCostException(
+                    f"Depreciation method ({depr_method}) is not recognized"
+                )
+
+            # The relative difference between expense_year and start_year
+            shift_indices = self.expense_year[sc_tangible_id] - self.start_year
+
+            # Modify depreciation_charge so that expenditures are aligned
+            # with the corresponding expense_year
             depreciation_charge = np.array(
                 [
-                    depr.straight_line_depreciation_rate(
-                        cost=c,
-                        salvage_value=sv,
-                        useful_life=dp,
-                        depreciation_len=self.project_duration,
-                    )
-                    for c, sv, dp in zip(
-                        cost_to_be_depreciated,
-                        self.salvage_value,
-                        self.depreciation_period,
-                    )
+                    np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
+                    for row, i in zip(depreciation_charge, shift_indices)
                 ]
             )
 
-        # Depreciation method is declining balance
-        elif depr_method == DeprMethod.DB:
-            depreciation_charge = np.array(
-                [
-                    depr.declining_balance_depreciation_rate(
-                        cost=c,
-                        salvage_value=sv,
-                        useful_life=dp,
-                        decline_factor=decline_factor,
-                        depreciation_len=self.project_duration,
-                    )
-                    for c, sv, dp in zip(
-                        cost_to_be_depreciated,
-                        self.salvage_value,
-                        self.depreciation_period,
-                    )
-                ]
+            # Calculate total depreciation charge for all cost components
+            # and the associated undepreciated asset (if any)
+            total_depreciation_charge = depreciation_charge.sum(axis=0, keepdims=False)
+            undepreciated_asset = (
+                    np.sum(cost_adjusted_by_vat[sc_tangible_id])
+                    - np.sum(total_depreciation_charge)
             )
 
-        # Depreciation method is PSC declining balance
-        elif depr_method == DeprMethod.PSC_DB:
-            depreciation_charge = np.array(
-                [
-                    depr.psc_declining_balance_depreciation_rate(
-                        cost=c,
-                        depreciation_factor=df,
-                        useful_life=dp,
-                        depreciation_len=self.project_duration,
-                    )
-                    for c, df, dp in zip(
-                        cost_to_be_depreciated,
-                        self.depreciation_factor,
-                        self.depreciation_period,
-                    )
-                ]
-            )
-
+        # Operations to be conducted when a particular sunk cost tangible
+        # indices are unavailable
         else:
-            raise SunkCostException(
-                f"Depreciation method ({depr_method}) is not recognized"
+            total_depreciation_charge = np.zeros_like(self.project_years, dtype=np.float64)
+            undepreciated_asset = 0.0
+
+        return total_depreciation_charge, undepreciated_asset
+
+    def get_preonstream_cost_tangible_depreciation_rate(
+        self,
+        fluid_type: FluidType,
+        depr_method: DeprMethod = DeprMethod.PSC_DB,
+        decline_factor: float | int = 2,
+        tax_rate: np.ndarray | float = 0.0,
+    ) -> tuple:
+
+        # Adjust cost by VAT
+        cost_adjusted_by_vat = self.cost + self.get_indirect_tax(tax_rate=tax_rate)
+
+        # Identify preonstream cost tangible indices for a particular fluid type (OIL or GAS)
+        poc_tangible_id = self._get_preonstream_cost_investment_id(
+            fluid_type=fluid_type,
+            investment_config=SunkCostInvestmentType.TANGIBLE,
+        )
+
+        # Operations to be conducted when a particular preonstream
+        # cost tangible indices are available
+        if len(poc_tangible_id) > 0:
+
+            # Calculate depreciation for every cost element in array cost_adjusted_by_vat
+            # Depreciation method is straight line
+            if depr_method == DeprMethod.SL:
+                depreciation_charge = np.array(
+                    [
+                        depr.straight_line_depreciation_rate(
+                            cost=c,
+                            salvage_value=sv,
+                            useful_life=dp,
+                            depreciation_len=self.project_duration,
+                        )
+                        for c, sv, dp, in zip(
+                            cost_adjusted_by_vat[poc_tangible_id],
+                            self.salvage_value[poc_tangible_id],
+                            self.depreciation_period[poc_tangible_id],
+                        )
+                    ]
+                )
+
+            # Depreciation method is declining balance
+            elif depr_method == DeprMethod.DB:
+                depreciation_charge = np.array(
+                    [
+                        depr.declining_balance_depreciation_rate(
+                            cost=c,
+                            salvage_value=sv,
+                            useful_life=dp,
+                            decline_factor=decline_factor,
+                            depreciation_len=self.project_duration,
+                        )
+                        for c, sv, dp in zip(
+                            cost_adjusted_by_vat[poc_tangible_id],
+                            self.salvage_value[poc_tangible_id],
+                            self.depreciation_period[poc_tangible_id],
+                        )
+                    ]
+                )
+
+            # Depreciation method is PSC declining balance
+            elif depr_method == DeprMethod.PSC_DB:
+                depreciation_charge = np.array(
+                    [
+                        depr.psc_declining_balance_depreciation_rate(
+                            cost=c,
+                            depreciation_factor=df,
+                            useful_life=dp,
+                            depreciation_len=self.project_duration,
+                        )
+                        for c, df, dp, in zip(
+                            cost_adjusted_by_vat[poc_tangible_id],
+                            self.depreciation_factor[poc_tangible_id],
+                            self.depreciation_period[poc_tangible_id],
+                        )
+                    ]
+                )
+
+            else:
+                raise SunkCostException(
+                    f"Depreciation method ({depr_method}) is not recognized"
+                )
+
+            # The relative difference between expense_year and start_year
+            shift_indices = self.expense_year[poc_tangible_id] - self.start_year
+
+            # Modify depreciation_charge so that expenditures are aligned
+            # with the corresponding expense_year
+            depreciation_charge = np.array(
+                [
+                    np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
+                    for row, i in zip(depreciation_charge, shift_indices)
+                ]
             )
 
-        print('\t')
-        print(f'Filetype: {type(depreciation_charge)}')
-        print(f'Length: {len(depreciation_charge)}')
-        print('depreciation_charge = \n', depreciation_charge)
+            # Calculate total depreciation charge for all cost components
+            # and the associated undepreciated asset (if any)
+            total_depreciation_charge = depreciation_charge.sum(axis=0, keepdims=False)
+            undepreciated_asset = (
+                np.sum(cost_adjusted_by_vat[poc_tangible_id])
+                - np.sum(total_depreciation_charge)
+            )
 
-        # The relative difference of expense_year and start_year
+        # Operations to be conducted when a particular preonstream
+        # cost tangible indices are unavailable
+        else:
+            total_depreciation_charge = np.zeros_like(self.project_years, dtype=np.float64)
+            undepreciated_asset = 0.0
 
+        return total_depreciation_charge, undepreciated_asset
+
+    def get_sunk_cost_tangible_depreciation_book_value(
+        self,
+        fluid_type: FluidType,
+        depr_method: DeprMethod = DeprMethod.PSC_DB,
+        decline_factor: float | int = 2,
+        tax_rate: np.ndarray | float = 0.0,
+    ) -> np.ndarray:
+
+        # Calculate sunk cost tangible array for a particular fluid type (OIL or GAS)
+        sc_tangible_array = self.get_sunk_cost_investment_array(
+            fluid_type=FluidType.OIL,
+            investment_config=SunkCostInvestmentType.TANGIBLE,
+            tax_rate=tax_rate,
+        )
+
+        # Calculate sunk cost tangible depreciation charge for a particular
+        # fluid type (OIL or GAS)
+        sc_tangible_depreciation_charge = (
+            self.get_sunk_cost_tangible_depreciation_rate(
+                fluid_type=fluid_type,
+                depr_method=depr_method,
+                decline_factor=decline_factor,
+                tax_rate=tax_rate,
+            )[0]
+        )
+
+        return np.cumsum(sc_tangible_array) - np.cumsum(sc_tangible_depreciation_charge)
+
+    def get_preonstream_cost_tangible_depreciation_book_value(self):
+        pass
 
     def __eq__(self, other):
         # Between two instances of SunkCost

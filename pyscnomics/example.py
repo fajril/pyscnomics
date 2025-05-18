@@ -43,8 +43,19 @@ class ExampleCase:
     sunk_cost_apel: SunkCost = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
+        self._get_lifting_data()
+        self._get_capital_cost_data()
+        self._get_intangible_cost_data()
+        self._get_opex_data()
+        self._get_asr_cost_data()
+        self._get_lbt_cost_data()
+        self._get_cost_of_sales_data()
+        self._get_sunk_cost_data()
 
-        # Synthetic data: Lifting
+    def _get_lifting_data(self):
+        """
+        Generate synthetic lifting data.
+        """
         self.lifting_mangga = Lifting(
             start_year=2023,
             end_year=2030,
@@ -63,7 +74,10 @@ class ExampleCase:
             fluid_type=FluidType.GAS,
         )
 
-        # Synthetic data: CapitalCost
+    def _get_capital_cost_data(self):
+        """
+        Generate synthetic data for capital cost.
+        """
         self.capital_mangga = CapitalCost(
             start_year=2023,
             end_year=2030,
@@ -80,6 +94,10 @@ class ExampleCase:
             cost_allocation=[np.nan, FluidType.GAS, FluidType.GAS, None],
         )
 
+    def _get_intangible_cost_data(self):
+        """
+        Generate synthetic data for intangible cost.
+        """
         # Synthetic data: Intangible
         self.intangible_mangga = Intangible(
             start_year=2023,
@@ -97,7 +115,10 @@ class ExampleCase:
             cost_allocation=[np.nan, FluidType.GAS, FluidType.GAS, None],
         )
 
-        # Synthetic data: OPEX
+    def _get_opex_data(self):
+        """
+        Generate synthetic data for OPEX.
+        """
         self.opex_mangga = OPEX(
             start_year=2023,
             end_year=2030,
@@ -114,7 +135,10 @@ class ExampleCase:
             cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
         )
 
-        # Synthetic data: ASR
+    def _get_asr_cost_data(self):
+        """
+        Generate synthetic data for ASR cost.
+        """
         self.asr_mangga = ASR(
             start_year=2023,
             end_year=2030,
@@ -131,6 +155,10 @@ class ExampleCase:
             cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
         )
 
+    def _get_lbt_cost_data(self):
+        """
+        Generate synthetic data for LBT cost.
+        """
         # Synthetic data: LBT
         self.lbt_mangga = LBT(
             start_year=2023,
@@ -148,7 +176,10 @@ class ExampleCase:
             cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
         )
 
-        # Synthetic data: CostOfSales
+    def _get_cost_of_sales_data(self):
+        """
+        Generate synthetic data for cost of sales.
+        """
         self.cos_mangga = CostOfSales(
             start_year=2023,
             end_year=2030,
@@ -165,7 +196,10 @@ class ExampleCase:
             cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
         )
 
-        # Synthetic data: SunkCost
+    def _get_sunk_cost_data(self):
+        """
+        Generate synthetic data for sunk cost.
+        """
         self.sunk_cost_mangga = SunkCost(
             start_year=2023,
             end_year=2030,
@@ -193,27 +227,27 @@ class ExampleCase:
             depreciation_factor=np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.3]),
         )
 
-        # self.sunk_cost_apel = SunkCost(
-        #     start_year=2023,
-        #     end_year=2030,
-        #     onstream_year=2027,
-        #     pod1_year=2025,
-        #     expense_year=np.array([2023, 2024, 2024, 2026, 2025, 2027]),
-        #     cost=np.array([5, 5, 5, 20, 5, 20]),
-        #     cost_allocation=[
-        #         FluidType.GAS,
-        #         FluidType.GAS,
-        #         FluidType.GAS,
-        #         FluidType.GAS,
-        #         FluidType.GAS,
-        #         FluidType.GAS,
-        #     ],
-        #     investment_type=[
-        #         SunkCostInvestmentType.TANGIBLE,
-        #         SunkCostInvestmentType.TANGIBLE,
-        #         SunkCostInvestmentType.TANGIBLE,
-        #         SunkCostInvestmentType.INTANGIBLE,
-        #         SunkCostInvestmentType.INTANGIBLE,
-        #         SunkCostInvestmentType.INTANGIBLE,
-        #     ],
-        # )
+        self.sunk_cost_apel = SunkCost(
+            start_year=2023,
+            end_year=2030,
+            onstream_year=2027,
+            pod1_year=2025,
+            expense_year=np.array([2023, 2024, 2024, 2026, 2025, 2027]),
+            cost=np.array([5, 5, 5, 20, 5, 20]),
+            cost_allocation=[
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+            ],
+            investment_type=[
+                SunkCostInvestmentType.TANGIBLE,
+                SunkCostInvestmentType.TANGIBLE,
+                SunkCostInvestmentType.TANGIBLE,
+                SunkCostInvestmentType.INTANGIBLE,
+                SunkCostInvestmentType.INTANGIBLE,
+                SunkCostInvestmentType.INTANGIBLE,
+            ],
+        )
