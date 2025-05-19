@@ -246,8 +246,8 @@ class ExampleCase:
                 SunkCostInvestmentType.TANGIBLE,
                 SunkCostInvestmentType.TANGIBLE,
                 SunkCostInvestmentType.TANGIBLE,
-                SunkCostInvestmentType.INTANGIBLE,
-                SunkCostInvestmentType.INTANGIBLE,
-                SunkCostInvestmentType.INTANGIBLE,
+                SunkCostInvestmentType.TANGIBLE,
+                SunkCostInvestmentType.TANGIBLE,
+                SunkCostInvestmentType.TANGIBLE,
             ],
         )

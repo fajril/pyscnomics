@@ -78,13 +78,22 @@ sc_oil_tangible_depreciation_bv = (
     )
 )
 
+poc_oil_tangible_depreciation_bv = (
+    sc_apel.get_preonstream_cost_tangible_depreciation_book_value(
+        fluid_type=FluidType.GAS,
+        depr_method=DeprMethod.PSC_DB,
+        decline_factor=2,
+        tax_rate=0.0,
+    )
+)
+
 print('\t')
 print('================================================================')
 
 print('\t')
-print(f'Filetype: {type(sc_oil_tangible_depreciation_bv)}')
-print(f'Length: {len(sc_oil_tangible_depreciation_bv)}')
-print('sc_oil_tangible_depreciation_bv = \n', sc_oil_tangible_depreciation_bv)
+print(f'Filetype: {type(poc_oil_tangible_depreciation_bv)}')
+print(f'Length: {len(poc_oil_tangible_depreciation_bv)}')
+print('poc_oil_tangible_depreciation_bv = \n', poc_oil_tangible_depreciation_bv)
 
 # project = BaseProject(
 #     start_date=date(year=2023, month=1, day=1),

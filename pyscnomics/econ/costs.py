@@ -3732,6 +3732,13 @@ class SunkCost(GeneralCost):
         The year of POD I approval.
     investment_type: list[SunkCostInvestmentType]
         The type of investment (TANGIBLE or INTANGIBLE).
+    salvage_value: np.ndarray
+        The value of the asset at the end of useful period.
+    depreciation_period: np.ndarray
+        The period of depreciation (analogue to useful_life in class CapitalCost).
+    depreciation_factor: np.ndarray
+        The value of depreciation factor to be used in PSC_DB depreciation method.
+        Default value is 0.5 for the entire project duration.
     """
 
     # Local arguments
@@ -3748,19 +3755,22 @@ class SunkCost(GeneralCost):
     def __post_init__(self):
         """
         Handles the following operations/procedures:
-        -   Prepare attribute project_duration and project_years,
-        -   Prepare attribute onstream_year,
-        -   Prepare attribute pod1_year,
-        -   Prepare attribute expense_year,
-        -   Raise an error: expense year is after the end year of the project,
-        -   Raise an error: expense year is after the end year of the project
-        -   Prepare attribute cost,
-        -   Prepare attribute investment_type,
-        -   Prepare attribute cost_allocation,
-        -   Prepare attribute description,
-        -   Prepare attribute tax_portion,
-        -   Prepare attribute tax_discount,
-        -   Check input data for unequal length of arrays,
+        - Prepare attribute project_duration and project_years,
+        - Prepare attribute onstream_year,
+        - Prepare attribute pod1_year,
+        - Prepare attribute expense_year,
+        - Raise an error: expense year is after the end year of the project,
+        - Raise an error: expense year is before the start year of the project,
+        - Prepare attribute cost,
+        - Prepare attribute investment_type,
+        - Prepare attribute cost_allocation,
+        - Prepare attribute description,
+        - Prepare attribute salvage_value,
+        - Prepare attribute depreciation_period,
+        - Prepare attribute depreciation_factor,
+        - Prepare attribute tax_portion,
+        - Prepare attribute tax_discount,
+        - Check input data for unequal length of arrays,
         """
 
         # Prepare attribute project_duration and project_years
@@ -4519,6 +4529,30 @@ class SunkCost(GeneralCost):
 
     @staticmethod
     def get_investment_bulk(cost_investment_array: np.ndarray) -> float:
+        """
+       Compute the total sum of all investments in the given array.
+
+        Parameters
+        ----------
+        cost_investment_array : np.ndarray
+            Array containing investment cost values to be summed.
+            This parameter could be one of the following:
+            - sc_oil_tangible_array
+            - sc_oil_intangible_array
+            - sc_gas_tangible_array
+            - sc_gas_intangible_array
+            - poc_oil_tangible_array
+            - poc_oil_intangible_array
+            - poc_gas_tangible_array
+            - poc_gas_intangible_array
+
+        Returns
+        -------
+        float
+            The total sum of all investment costs in the input array.
+            The sum is computed using float64 precision to maintain numerical accuracy.
+        """
+
         return np.sum(cost_investment_array, dtype=np.float64)
 
     def get_amortization_charge(
@@ -4529,6 +4563,52 @@ class SunkCost(GeneralCost):
         salvage_value: float = 0.0,
         amortization_len: int = 0,
     ) -> np.ndarray:
+        """
+        Calculate amortization charges using the unit of production method.
+
+        This method computes the amortization expense based on actual production
+        volumes each year relative to total production over the asset's life.
+
+        Parameters
+        ----------
+        cost_bulk : float
+            The total sunk cost or preonstream cost to be amortized.
+            This parameter could be one of the following:
+            - sc_oil_tangible_bulk
+            - sc_oil_intangible_bulk
+            - sc_gas_tangible_bulk
+            - sc_gas_intangible_bulk
+            - poc_oil_tangible_bulk
+            - poc_oil_intangible_bulk
+            - poc_gas_tangible_bulk
+            - poc_gas_intangible_bulk
+        prod : np.ndarray
+            Array of production volumes for each year.
+        prod_year : np.ndarray
+            Array of years corresponding to the production volumes.
+            Must start at the same year as the asset's onstream year.
+        salvage_value : float, optional
+            The estimated residual value at the end of amortization (default=0.0).
+        amortization_len : int, optional
+            The maximum number of years over which to amortize (default=0 for no limit).
+
+        Returns
+        -------
+        np.ndarray
+            Array of amortization charges for each production year.
+
+        Raises
+        ------
+        SunkCostException
+            If the first production year doesn't match the asset's onstream year.
+
+        Notes
+        -----
+        - The calculation is delegated to `unit_of_production_rate()` function.
+        - Amortization continues until either:
+            * All production is accounted for, or
+            * The amortization length is reached (if specified)
+        """
 
         # The start of production year must be the same with the onstream year
         if np.min(prod_year) != self.onstream_year:
@@ -4556,6 +4636,59 @@ class SunkCost(GeneralCost):
         salvage_value: float = 0.0,
         amortization_len: int = 0,
     ) -> np.ndarray:
+        """
+        Calculate the amortization book value over time for an investment.
+
+        The book value is computed as the cumulative investment costs minus
+        the cumulative amortization charges, showing the remaining undepreciated
+        value of the asset over time.
+
+        Parameters
+        ----------
+        cost_investment_array : np.ndarray
+            Array of investment costs for each period.
+            This parameter could be one of the following:
+            - sc_oil_tangible_array
+            - sc_oil_intangible_array
+            - sc_gas_tangible_array
+            - sc_gas_intangible_array
+            - poc_oil_tangible_array
+            - poc_oil_intangible_array
+            - poc_gas_tangible_array
+            - poc_gas_intangible_array
+        cost_bulk : float
+            Total capital cost to be amortized (depreciated).
+            This parameter could be one of the following:
+            - sc_oil_tangible_bulk
+            - sc_oil_intangible_bulk
+            - sc_gas_tangible_bulk
+            - sc_gas_intangible_bulk
+            - poc_oil_tangible_bulk
+            - poc_oil_intangible_bulk
+            - poc_gas_tangible_bulk
+            - poc_gas_intangible_bulk
+        prod : np.ndarray
+            Array of production volumes for each year.
+        prod_year : np.ndarray
+            Array of years corresponding to the production volumes.
+            Must start at the same year as the asset's onstream year.
+        salvage_value : float, optional
+            The estimated residual value at the end of amortization (default=0.0).
+        amortization_len : int, optional
+            The maximum number of years over which to amortize (default=0 for no limit).
+
+        Returns
+        -------
+        np.ndarray
+            Array of book values for each period, calculated as:
+            cumulative_investment - cumulative_amortization
+
+        Notes
+        -----
+        - Relies on `get_amortization_charge()` to compute the amortization schedule.
+        - The book value will never go below the salvage value.
+        - Both investment costs and amortization charges are cumulatively summed.
+        """
 
         # Calculate amortization charge
         amortization_charge = self.get_amortization_charge(
@@ -4576,6 +4709,51 @@ class SunkCost(GeneralCost):
         decline_factor: float | int = 2,
         tax_rate: np.ndarray | float = 0.0,
     ) -> tuple:
+        """
+        Calculate depreciation rates for tangible sunk costs based on specified method.
+
+        Computes depreciation charges for tangible assets associated with either oil or gas
+        production, applying the selected depreciation method. Returns both the annual
+        depreciation charges and any remaining undepreciated asset value.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type (OIL or GAS) for which to calculate depreciation.
+        depr_method : DeprMethod, optional
+            The depreciation method to apply (default: PSC_DB). Options:
+            - SL: Straight Line
+            - DB: Declining Balance
+            - PSC_DB: PSC Declining Balance
+        decline_factor : float | int, optional
+            The acceleration factor for declining balance methods (default: 2).
+        tax_rate : np.ndarray | float, optional
+            Tax rate(s) to adjust costs (default: 0.0). Can be a single value or array.
+
+        Returns
+        -------
+        tuple[np.ndarray, float]
+            A tuple containing:
+            - total_depreciation_charge: np.ndarray
+                Annual depreciation charges for each project year
+            - undepreciated_asset: float
+                Remaining asset value after all depreciation
+
+        Raises
+        ------
+        SunkCostException
+            If an unrecognized depreciation method is specified.
+
+        Notes
+        -----
+        - Costs are adjusted by indirect taxes (VAT) before depreciation calculation.
+        - Depreciation schedules are aligned with expense years for each cost component.
+        - Three depreciation methods are supported:
+            1. Straight Line (SL)
+            2. Declining Balance (DB)
+            3. PSC Declining Balance (PSC_DB)
+        - If no tangible assets exist for the specified fluid type, returns zero arrays.
+        """
 
         # Adjust cost by VAT
         cost_adjusted_by_vat = self.cost + self.get_indirect_tax(tax_rate=tax_rate)
@@ -4686,6 +4864,52 @@ class SunkCost(GeneralCost):
         decline_factor: float | int = 2,
         tax_rate: np.ndarray | float = 0.0,
     ) -> tuple:
+        """
+        Calculate depreciation rates for tangible pre-onstream costs based on specified method.
+
+        Computes depreciation charges for tangible assets incurred before production start
+        (pre-onstream) for either oil or gas projects. Returns both the annual depreciation
+        charges and any remaining undepreciated asset value.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type (OIL or GAS) for which to calculate depreciation.
+        depr_method : DeprMethod, optional
+            The depreciation method to apply (default: PSC_DB). Options:
+            - SL: Straight Line
+            - DB: Declining Balance
+            - PSC_DB: PSC Declining Balance
+        decline_factor : float | int, optional
+            The acceleration factor for declining balance methods (default: 2).
+        tax_rate : np.ndarray | float, optional
+            Tax rate(s) to adjust costs (default: 0.0). Can be a single value or array.
+
+        Returns
+        -------
+        tuple[np.ndarray, float]
+            A tuple containing:
+            - total_depreciation_charge: np.ndarray
+                Annual depreciation charges for each project year, aligned with expense years
+            - undepreciated_asset: float
+                Remaining asset value after all depreciation charges
+
+        Raises
+        ------
+        SunkCostException
+            If an unrecognized depreciation method is specified.
+
+        Notes
+        -----
+        - Costs are adjusted by indirect taxes (VAT) before depreciation calculation
+        - Depreciation schedules are time-shifted to align with actual expense years
+        - Handles three depreciation methods:
+            1. Straight Line (equal annual charges)
+            2. Declining Balance (accelerated depreciation)
+            3. PSC-specific Declining Balance
+        - Returns zero arrays if no pre-onstream tangible costs exist for the fluid type
+        - For PSC_DB method, uses predefined depreciation factors instead of salvage values
+        """
 
         # Adjust cost by VAT
         cost_adjusted_by_vat = self.cost + self.get_indirect_tax(tax_rate=tax_rate)
@@ -4796,6 +5020,41 @@ class SunkCost(GeneralCost):
         decline_factor: float | int = 2,
         tax_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
+        """
+        Calculate the book value over time for tangible sunk costs after depreciation.
+
+        The book value represents the remaining undepreciated value of tangible assets
+        for a specific fluid type (OIL or GAS) over the project duration, computed as
+        the cumulative investment costs minus cumulative depreciation charges.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type (OIL or GAS) for which to calculate book values.
+        depr_method : DeprMethod, optional
+            The depreciation method to apply (default: PSC_DB). Options:
+            - SL: Straight Line
+            - DB: Declining Balance
+            - PSC_DB: PSC Declining Balance
+        decline_factor : float | int, optional
+            The acceleration factor for declining balance methods (default: 2).
+        tax_rate : np.ndarray | float, optional
+            Tax rate(s) to adjust costs (default: 0.0). Can be a single value or array.
+
+        Returns
+        -------
+        np.ndarray
+            Array of book values for each period, calculated as:
+            cumulative_investment - cumulative_depreciation
+
+        Notes
+        -----
+        - Combines results from:
+            * get_sunk_cost_investment_array() for cumulative investment costs
+            * get_sunk_cost_tangible_depreciation_rate() for depreciation charges
+        - Uses tax-adjusted costs for accurate valuation
+        - Time-aligned with project duration years
+        """
 
         # Calculate sunk cost tangible array for a particular fluid type (OIL or GAS)
         sc_tangible_array = self.get_sunk_cost_investment_array(
@@ -4817,8 +5076,68 @@ class SunkCost(GeneralCost):
 
         return np.cumsum(sc_tangible_array) - np.cumsum(sc_tangible_depreciation_charge)
 
-    def get_preonstream_cost_tangible_depreciation_book_value(self):
-        pass
+    def get_preonstream_cost_tangible_depreciation_book_value(
+        self,
+        fluid_type: FluidType,
+        depr_method: DeprMethod = DeprMethod.PSC_DB,
+        decline_factor: float | int = 2,
+        tax_rate: np.ndarray | float = 0.0,
+    ) -> np.ndarray:
+        """
+        Calculate the book value over time for pre-onstream tangible costs after
+        depreciation.
+
+        Computes the remaining undepreciated value of tangible assets incurred before
+        production start (pre-onstream) for a specific fluid type, showing how the
+        asset value declines over the project duration.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type (OIL or GAS) for which to calculate book values.
+        depr_method : DeprMethod, optional
+            The depreciation method to apply (default: PSC_DB). Options:
+            - SL: Straight Line
+            - DB: Declining Balance
+            - PSC_DB: PSC Declining Balance
+        decline_factor : float | int, optional
+            The acceleration factor for declining balance methods (default: 2).
+        tax_rate : np.ndarray | float, optional
+            Tax rate(s) to adjust costs (default: 0.0). Can be a single value or array.
+
+        Returns
+        -------
+        np.ndarray
+            Array of book values for each period, calculated as:
+            cumulative_preonstream_costs - cumulative_depreciation_charges
+
+        Notes
+        -----
+        - Relies on:
+            * get_preonstream_cost_investment_array() for cumulative pre-onstream costs
+            * get_preonstream_cost_tangible_depreciation_rate() for depreciation charges
+        - Book value represents the remaining capitalizable value of pre-production assets
+        - Automatically handles time-alignment between costs and depreciation schedules
+        - Returns zero array if no pre-onstream costs exist for the specified fluid type
+        """
+
+        # Calculate preonstream cost tangible array for a particular fluid type (OIL or GAS)
+        poc_tangible_array = self.get_preonstream_cost_investment_array(
+            fluid_type=fluid_type,
+            investment_config=SunkCostInvestmentType.TANGIBLE,
+            tax_rate=tax_rate,
+        )
+
+        poc_tangible_depreciation_charge = (
+            self.get_preonstream_cost_tangible_depreciation_rate(
+                fluid_type=fluid_type,
+                depr_method=depr_method,
+                decline_factor=decline_factor,
+                tax_rate=tax_rate,
+            )[0]
+        )
+
+        return np.cumsum(poc_tangible_array) - np.cumsum(poc_tangible_depreciation_charge)
 
     def __eq__(self, other):
         # Between two instances of SunkCost
@@ -4831,6 +5150,9 @@ class SunkCost(GeneralCost):
                     self.pod1_year == other.pod1_year,
                     np.allclose(self.expense_year, other.expense_year),
                     np.allclose(self.cost, other.cost),
+                    np.allclose(self.salvage_value, other.salvage_value),
+                    np.allclose(self.depreciation_period, other.depreciation_period),
+                    np.allclose(self.depreciation_factor, other.depreciation_factor),
                     np.allclose(self.tax_portion, other.tax_portion),
                     np.allclose(self.tax_discount, other.tax_discount),
                     self.cost_allocation == other.cost_allocation,
@@ -4919,6 +5241,15 @@ class SunkCost(GeneralCost):
             pod1_year_combined = min(self.pod1_year, other.pod1_year)
             expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_combined = np.concatenate((self.cost, other.cost))
+            salvage_value_combined = np.concatenate(
+                (self.salvage_value, other.salvage_value)
+            )
+            depreciation_period_combined = np.concatenate(
+                (self.depreciation_period, other.depreciation_period)
+            )
+            depreciation_factor_combined = np.concatenate(
+                (self.depreciation_factor, other.depreciation_factor)
+            )
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
             tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
@@ -4934,6 +5265,9 @@ class SunkCost(GeneralCost):
                 cost=cost_combined,
                 cost_allocation=cost_allocation_combined,
                 description=description_combined,
+                salvage_value=salvage_value_combined,
+                depreciation_period=depreciation_period_combined,
+                depreciation_factor=depreciation_factor_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
                 investment_type=investment_type_combined,
@@ -4958,6 +5292,15 @@ class SunkCost(GeneralCost):
             pod1_year_combined = min(self.pod1_year, other.pod1_year)
             expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_combined = np.concatenate((self.cost, -other.cost))
+            salvage_value_combined = np.concatenate(
+                (self.salvage_value, other.salvage_value)
+            )
+            depreciation_period_combined = np.concatenate(
+                (self.depreciation_period, other.depreciation_period)
+            )
+            depreciation_factor_combined = np.concatenate(
+                (self.depreciation_factor, other.depreciation_factor)
+            )
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
             tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
@@ -4973,6 +5316,9 @@ class SunkCost(GeneralCost):
                 cost=cost_combined,
                 cost_allocation=cost_allocation_combined,
                 description=description_combined,
+                salvage_value=salvage_value_combined,
+                depreciation_period=depreciation_period_combined,
+                depreciation_factor=depreciation_factor_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
                 investment_type=investment_type_combined,
@@ -5000,6 +5346,9 @@ class SunkCost(GeneralCost):
                 cost=self.cost * other,
                 cost_allocation=self.cost_allocation,
                 description=self.description,
+                salvage_value=self.salvage_value,
+                depreciation_period=self.depreciation_period,
+                depreciation_factor=self.depreciation_factor,
                 tax_portion=self.tax_portion,
                 tax_discount=self.tax_discount,
                 investment_type=self.investment_type,
@@ -5037,6 +5386,9 @@ class SunkCost(GeneralCost):
                     cost=self.cost / other,
                     cost_allocation=self.cost_allocation,
                     description=self.description,
+                    salvage_value=self.salvage_value,
+                    depreciation_period=self.depreciation_period,
+                    depreciation_factor=self.depreciation_factor,
                     tax_portion=self.tax_portion,
                     tax_discount=self.tax_discount,
                     investment_type=self.investment_type,
