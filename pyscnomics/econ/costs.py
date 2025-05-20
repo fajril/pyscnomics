@@ -3726,8 +3726,6 @@ class SunkCost(GeneralCost):
 
     Parameters
     ----------
-    onstream_year: int
-        The year of initial hydrocarbon production.
     pod1_year: int
         The year of POD I approval.
     investment_type: list[SunkCostInvestmentType]
@@ -3742,7 +3740,6 @@ class SunkCost(GeneralCost):
     """
 
     # Local arguments
-    onstream_year: int = field(default=None)
     pod1_year: int = field(default=None)
     investment_type: list[SunkCostInvestmentType] = field(default=None)
     salvage_value: np.ndarray = field(default=None)
@@ -3752,11 +3749,13 @@ class SunkCost(GeneralCost):
     # Overridden argument
     cost: np.ndarray = field(default=None)
 
+    # Attribute to be defined later
+    onstream_year: int = field(default=None, init=False)
+
     def __post_init__(self):
         """
         Handles the following operations/procedures:
         - Prepare attribute project_duration and project_years,
-        - Prepare attribute onstream_year,
         - Prepare attribute pod1_year,
         - Prepare attribute expense_year,
         - Raise an error: expense year is after the end year of the project,
@@ -3784,44 +3783,17 @@ class SunkCost(GeneralCost):
                 f"of the project"
             )
 
-        # Prepare attribute onstream_year
-        if self.onstream_year is None:
-            self.onstream_year = self.end_year
-
-        else:
-            if not isinstance(self.onstream_year, int):
-                raise SunkCostException(
-                    f"Attribute onstream_year must be provided as an int, "
-                    f"not as a/an {self.onstream_year.__class__.__qualname__}"
-                )
-
-            if self.onstream_year < self.start_year:
-                raise SunkCostException(
-                    f"Onstream year ({self.onstream_year}) is before the start "
-                    f"year of the project ({self.start_year})"
-                )
-
-            if self.onstream_year > self.end_year:
-                raise SunkCostException(
-                    f"Onstream year ({self.onstream_year}) is after the end year "
-                    f"of the project ({self.end_year})"
-                )
-
         # Prepare attribute pod1_year
         if self.pod1_year is None:
-            self.pod1_year = self.onstream_year
+            raise SunkCostException(
+                f"Missing data for pod1_year: {self.pod1_year}"
+            )
 
         else:
             if not isinstance(self.pod1_year, int):
                 raise SunkCostException(
                     f"Attribute pod1_year must be provided as an int, "
                     f"not as a/an {self.pod1_year.__class__.__qualname__}"
-                )
-
-            if self.pod1_year > self.onstream_year:
-                raise SunkCostException(
-                    f"POD I year ({self.pod1_year}) is after the onstream "
-                    f"year ({self.onstream_year})"
                 )
 
             if self.pod1_year < self.start_year:
@@ -3848,14 +3820,6 @@ class SunkCost(GeneralCost):
             if expense_year_nan_sum > 0:
                 raise SunkCostException(
                     f"Missing values in array expense_year: {self.expense_year}"
-                )
-
-            expense_year_large_sum = np.sum(self.expense_year > self.onstream_year, dtype=int)
-            if expense_year_large_sum > 0:
-                raise SunkCostException(
-                    f"Cannot accept expense_year > onstream_year, "
-                    f"expense_year: ({self.expense_year}), "
-                    f"onstream_year: ({self.onstream_year})"
                 )
 
         self.expense_year = self.expense_year.astype(int)
@@ -4702,7 +4666,7 @@ class SunkCost(GeneralCost):
         # Calculate amortization book value
         return np.cumsum(cost_investment_array) - np.cumsum(amortization_charge)
 
-    def get_sunk_cost_tangible_depreciation_rate(
+    def get_sunk_cost_tangible_depreciation_charge(
         self,
         fluid_type: FluidType,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
@@ -4857,7 +4821,7 @@ class SunkCost(GeneralCost):
 
         return total_depreciation_charge, undepreciated_asset
 
-    def get_preonstream_cost_tangible_depreciation_rate(
+    def get_preonstream_cost_tangible_depreciation_charge(
         self,
         fluid_type: FluidType,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
@@ -5051,7 +5015,7 @@ class SunkCost(GeneralCost):
         -----
         - Combines results from:
             * get_sunk_cost_investment_array() for cumulative investment costs
-            * get_sunk_cost_tangible_depreciation_rate() for depreciation charges
+            * get_sunk_cost_tangible_depreciation_charge() for depreciation charges
         - Uses tax-adjusted costs for accurate valuation
         - Time-aligned with project duration years
         """
@@ -5066,7 +5030,7 @@ class SunkCost(GeneralCost):
         # Calculate sunk cost tangible depreciation charge for a particular
         # fluid type (OIL or GAS)
         sc_tangible_depreciation_charge = (
-            self.get_sunk_cost_tangible_depreciation_rate(
+            self.get_sunk_cost_tangible_depreciation_charge(
                 fluid_type=fluid_type,
                 depr_method=depr_method,
                 decline_factor=decline_factor,
@@ -5115,7 +5079,7 @@ class SunkCost(GeneralCost):
         -----
         - Relies on:
             * get_preonstream_cost_investment_array() for cumulative pre-onstream costs
-            * get_preonstream_cost_tangible_depreciation_rate() for depreciation charges
+            * get_preonstream_cost_tangible_depreciation_charge() for depreciation charges
         - Book value represents the remaining capitalizable value of pre-production assets
         - Automatically handles time-alignment between costs and depreciation schedules
         - Returns zero array if no pre-onstream costs exist for the specified fluid type
@@ -5129,7 +5093,7 @@ class SunkCost(GeneralCost):
         )
 
         poc_tangible_depreciation_charge = (
-            self.get_preonstream_cost_tangible_depreciation_rate(
+            self.get_preonstream_cost_tangible_depreciation_charge(
                 fluid_type=fluid_type,
                 depr_method=depr_method,
                 decline_factor=decline_factor,
@@ -5237,7 +5201,6 @@ class SunkCost(GeneralCost):
         if isinstance(other, SunkCost):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            onstream_year_combined = min(self.onstream_year, other.onstream_year)
             pod1_year_combined = min(self.pod1_year, other.pod1_year)
             expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_combined = np.concatenate((self.cost, other.cost))
@@ -5259,7 +5222,6 @@ class SunkCost(GeneralCost):
             return SunkCost(
                 start_year=start_year_combined,
                 end_year=end_year_combined,
-                onstream_year=onstream_year_combined,
                 pod1_year=pod1_year_combined,
                 expense_year=expense_year_combined,
                 cost=cost_combined,
@@ -5288,7 +5250,6 @@ class SunkCost(GeneralCost):
         if isinstance(other, SunkCost):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            onstream_year_combined = min(self.onstream_year, other.onstream_year)
             pod1_year_combined = min(self.pod1_year, other.pod1_year)
             expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_combined = np.concatenate((self.cost, -other.cost))
@@ -5310,7 +5271,6 @@ class SunkCost(GeneralCost):
             return SunkCost(
                 start_year=start_year_combined,
                 end_year=end_year_combined,
-                onstream_year=onstream_year_combined,
                 pod1_year=pod1_year_combined,
                 expense_year=expense_year_combined,
                 cost=cost_combined,
@@ -5340,7 +5300,6 @@ class SunkCost(GeneralCost):
             return SunkCost(
                 start_year=self.start_year,
                 end_year=self.end_year,
-                onstream_year=self.onstream_year,
                 pod1_year=self.pod1_year,
                 expense_year=self.expense_year,
                 cost=self.cost * other,
@@ -5380,7 +5339,6 @@ class SunkCost(GeneralCost):
                 return SunkCost(
                     start_year=self.start_year,
                     end_year=self.end_year,
-                    onstream_year=self.onstream_year,
                     pod1_year=self.pod1_year,
                     expense_year=self.expense_year,
                     cost=self.cost / other,
