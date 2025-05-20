@@ -2,10 +2,11 @@
 Configure base project as a base framework for PSC contract.
 """
 
+import numpy as np
 from dataclasses import dataclass, field
 from datetime import date
 from functools import reduce
-import numpy as np
+from typing import Callable
 
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import (
@@ -139,6 +140,8 @@ class BaseProject:
     _oil_sunk_cost: SunkCost = field(default=None, init=False, repr=False)
     _gas_sunk_cost: SunkCost = field(default=None, init=False, repr=False)
 
+
+
     # Attributes to be defined later
     # (Associated with pre tax expenditures for each cost elements)
     _oil_capital_expenditures_pre_tax: np.ndarray = field(
@@ -266,9 +269,46 @@ class BaseProject:
     )
 
     # Attributes to be defined later
+    # Associated with investment_type and investment config
+    _investment_type_list: list[str] = field(default=None, init=False, repr=False)
+    _investment_config_list: list[SunkCostInvestmentType] = field(
+        default=None, init=False, repr=False
+    )
+
+    # Attributes to be defined later
     # Associated with sunk cost and preonstream cost
     _oil_sunk_cost_array: dict = field(default=None, init=False, repr=False)
-
+    _gas_sunk_cost_array: dict = field(default=None, init=False, repr=False)
+    _oil_preonstream_cost_array: dict = field(default=None, init=False, repr=False)
+    _gas_preonstream_cost_array: dict = field(default=None, init=False, repr=False)
+    _oil_sunk_cost_bulk: dict = field(default=None, init=False, repr=False)
+    _gas_sunk_cost_bulk: dict = field(default=None, init=False, repr=False)
+    _oil_preonstream_cost_bulk: dict = field(default=None, init=False, repr=False)
+    _gas_preonstream_cost_bulk: dict = field(default=None, init=False, repr=False)
+    _oil_sunk_cost_amortization_charge: dict = field(
+        default=None, init=False, repr=False
+    )
+    _gas_sunk_cost_amortization_charge: dict = field(
+        default=None, init=False, repr=False
+    )
+    _oil_preonstream_cost_amortization_charge: dict = field(
+        default=None, init=False, repr=False
+    )
+    _gas_preonstream_cost_amortization_charge: dict = field(
+        default=None, init=False, repr=False
+    )
+    _oil_sunk_cost_tangible_depreciation_charge: dict = field(
+        default=None, init=False, repr=False
+    )
+    _gas_sunk_cost_tangible_depreciation_charge: dict = field(
+        default=None, init=False, repr=False
+    )
+    _oil_preonstream_cost_tangible_depreciation_charge: dict = field(
+        default=None, init=False, repr=False
+    )
+    _gas_preonstream_cost_tangible_depreciation_charge: dict = field(
+        default=None, init=False, repr=False
+    )
 
     # Attributes to be defined later (associated with cashflow)
     _oil_cashflow: np.ndarray = field(default=None, init=False, repr=False)
@@ -335,6 +375,12 @@ class BaseProject:
                 f"start date {self.start_date} "
                 f"is after the end date: {self.end_date}"
             )
+
+        # Prepare attributes _investment_type_list and _investment_config_list
+        self._investment_type_list = ["Tangible", "Intangible"]
+        self._investment_config_list = [
+            SunkCostInvestmentType.TANGIBLE, SunkCostInvestmentType.INTANGIBLE
+        ]
 
         # Prepare attribute lifting (for OIL, GAS, SULFUR, ELECTRICITY, and CO2)
         if self.lifting is None:
@@ -682,27 +728,6 @@ class BaseProject:
                     f"instances, not as an/a {self.sunk_cost.__class__.__qualname__}"
                 )
 
-        # for _, val in enumerate(self.sunk_cost):
-        #
-        #     # Replace attribute 'onstream_year' in every instances of SunkCost
-        #     # included in `self.sunk_cost` with the minimum value between
-        #     # the oil onstream year and the gas onstream year
-        #     val.onstream_year = min(
-        #         self.oil_onstream_date.year, self.gas_onstream_date.year
-        #     )
-        #
-        #     # Does not allow pod1_year after onstream_year
-        #     if val.onstream_year < val.pod1_year:
-        #         raise SunkCostException(
-        #             f"POD I year ({val.pod1_year}) is after the onstream "
-        #             f"year ({val.onstream_year})"
-        #         )
-
-        print('\t')
-        print(f'Filetype: {type(self.sunk_cost)}')
-        print(f'Length: {len(self.sunk_cost)}')
-        print('sunk_cost = \n', self.sunk_cost)
-
         # Prepare attributes associated with total cost per component
         self.capital_cost_total = reduce(lambda x, y: x + y, self.capital_cost)
         self.intangible_cost_total = reduce(lambda x, y: x + y, self.intangible_cost)
@@ -712,53 +737,36 @@ class BaseProject:
         self.cost_of_sales_total = reduce(lambda x, y: x + y, self.cost_of_sales)
         self.sunk_cost_total = reduce(lambda x, y: x + y, self.sunk_cost)
 
-        print('\t')
-        print(f'Filetype: {type(self.sunk_cost_total)}')
-        print(f'Length: {len(self.sunk_cost_total)}')
-        print('sunk_cost_total = \n', self.sunk_cost_total)
+        # Prepare attribute onstream_year of `sunk_cost_total`
+        self.sunk_cost_total.onstream_year = min(
+            self.oil_onstream_date.year, self.gas_onstream_date.year
+        )
 
-        # Prepare attribute onstream_year of `sunk_cost_total` instance
-        if self.sunk_cost_total.onstream_year is not None:
-            return SunkCostException(
-                f"Attribute onstream_year must be initiliazed as None, not "
+        if not isinstance(self.sunk_cost_total.onstream_year, int):
+            raise SunkCostException(
+                f"Attribute onstream_year must be provided as an int, not as an/a "
                 f"{self.sunk_cost_total.onstream_year.__class__.__qualname__}"
             )
 
-        else:
-            self.sunk_cost_total.onstream_year = min(
-                self.oil_onstream_date.year, self.gas_onstream_date.year
+        if self.sunk_cost_total.onstream_year < self.start_date.year:
+            raise SunkCostException(
+                f"Onstream year ({self.sunk_cost_total.onstream_year}) is before "
+                f"the start year of the project ({self.start_date.year})"
             )
 
-            if not isinstance(self.sunk_cost_total.onstream_year, int):
-                raise SunkCostException(
-                    f"Attribute onstream_year must be provided as an int, not as an/a "
-                    f"{self.sunk_cost_total.onstream_year.__class__.__qualname__}"
-                )
+        if self.sunk_cost_total.onstream_year > self.end_date.year:
+            raise SunkCostException(
+                f"Onstream year ({self.sunk_cost_total.onstream_year}) is after "
+                f"the end year of the project ({self.end_date.year})"
+            )
 
-            if self.sunk_cost_total.onstream_year < self.start_date.year:
-                raise SunkCostException(
-                    f"Onstream year ({self.sunk_cost_total.onstream_year}) is before "
-                    f"the start year of the project ({self.start_date.year})"
-                )
+        if self.sunk_cost_total.onstream_year < self.sunk_cost_total.pod1_year:
+            raise SunkCostException(
+                f"POD I year ({self.sunk_cost_total.pod1_year}) is after the "
+                f"onstream year ({self.sunk_cost_total.onstream_year})"
+            )
 
-            if self.sunk_cost_total.onstream_year > self.end_date.year:
-                raise SunkCostException(
-                    f"Onstream year ({self.sunk_cost_total.onstream_year}) is after "
-                    f"the end year of the project ({self.end_date.year})"
-                )
-
-            if self.sunk_cost_total.onstream_year < self.sunk_cost_total.pod1_year:
-                raise SunkCostException(
-                    f"POD I year ({self.sunk_cost_total.pod1_year}) is after the "
-                    f"onstream year ({self.sunk_cost_total.onstream_year})"
-                )
-
-        print('\t')
-        print(f'Filetype: {type(self.sunk_cost_total)}')
-        print(f'Length: {len(self.sunk_cost_total)}')
-        print('sunk_cost_total = \n', self.sunk_cost_total)
-
-        # Prepare attribute expense_year of `sunk_cost_total` instance
+        # Prepare attribute expense_year of `sunk_cost_total`
         sc_expense_year_large_sum = np.sum(
             self.sunk_cost_total.expense_year > self.sunk_cost_total.onstream_year
         )
@@ -771,120 +779,129 @@ class BaseProject:
                 f"expense_year: ({self.sunk_cost_total.expense_year}) "
             )
 
+        # Prepare attributes associated with costs
+        self._oil_capital_cost = self._get_oil_capital()
+        self._gas_capital_cost = self._get_gas_capital()
+        self._oil_intangible = self._get_oil_intangible()
+        self._gas_intangible = self._get_gas_intangible()
+        self._oil_opex = self._get_oil_opex()
+        self._gas_opex = self._get_gas_opex()
+        self._oil_asr = self._get_oil_asr()
+        self._gas_asr = self._get_gas_asr()
+        self._oil_lbt = self._get_oil_lbt()
+        self._gas_lbt = self._get_gas_lbt()
+        self._oil_cost_of_sales = self._get_oil_cost_of_sales()
+        self._gas_cost_of_sales = self._get_gas_cost_of_sales()
+        self._oil_sunk_cost = self._get_oil_sunk_cost()
+        self._gas_sunk_cost = self._get_gas_sunk_cost()
 
-        # # Prepare attributes associated with costs
-        # self._oil_capital_cost = self._get_oil_capital()
-        # self._gas_capital_cost = self._get_gas_capital()
-        # self._oil_intangible = self._get_oil_intangible()
-        # self._gas_intangible = self._get_gas_intangible()
-        # self._oil_opex = self._get_oil_opex()
-        # self._gas_opex = self._get_gas_opex()
-        # self._oil_asr = self._get_oil_asr()
-        # self._gas_asr = self._get_gas_asr()
-        # self._oil_lbt = self._get_oil_lbt()
-        # self._gas_lbt = self._get_gas_lbt()
-        # self._oil_cost_of_sales = self._get_oil_cost_of_sales()
-        # self._gas_cost_of_sales = self._get_gas_cost_of_sales()
-        # self._oil_sunk_cost = self._get_oil_sunk_cost()
-        # self._gas_sunk_cost = self._get_gas_sunk_cost()
+        print('\t')
+        print(f'Filetype: {type(self._oil_sunk_cost)}')
+        print(f'Length: {len(self._oil_sunk_cost)}')
+        print('_oil_sunk_cost = \n', self._oil_sunk_cost)
 
-        # # Raise an exception error if the start year of the project is inconsistent
-        # if not all(
-        #     i == self.start_date.year
-        #     for i in [
-        #         self._oil_lifting.start_year,
-        #         self._gas_lifting.start_year,
-        #         self._sulfur_lifting.start_year,
-        #         self._electricity_lifting.start_year,
-        #         self._co2_lifting.start_year,
-        #         self._oil_capital_cost.start_year,
-        #         self._gas_capital_cost.start_year,
-        #         self._oil_intangible.start_year,
-        #         self._gas_intangible.start_year,
-        #         self._oil_opex.start_year,
-        #         self._gas_opex.start_year,
-        #         self._oil_asr.start_year,
-        #         self._gas_asr.start_year,
-        #         self._oil_lbt.start_year,
-        #         self._gas_lbt.start_year,
-        #         self._oil_cost_of_sales.start_year,
-        #         self._gas_cost_of_sales.start_year,
-        #         self._oil_sunk_cost.start_year,
-        #         self._gas_sunk_cost.start_year,
-        #     ]
-        # ):
-        #     raise BaseProjectException(
-        #         f"Inconsistent start project year: "
-        #         f"Base project ({self.start_date.year}), "
-        #         f"Oil lifting ({self._oil_lifting.start_year}), "
-        #         f"Gas lifting ({self._gas_lifting.start_year}), "
-        #         f"Sulfur lifting ({self._sulfur_lifting.start_year}), "
-        #         f"Electricity lifting ({self._electricity_lifting.start_year}), "
-        #         f"CO2 lifting ({self._co2_lifting.start_year}), "
-        #         f"Oil tangible ({self._oil_capital_cost.start_year}), "
-        #         f"Gas tangible ({self._gas_capital_cost.start_year}), "
-        #         f"Oil intangible ({self._oil_intangible.start_year}), "
-        #         f"Gas intangible ({self._gas_intangible.start_year}), "
-        #         f"Oil opex ({self._oil_opex.start_year}), "
-        #         f"Gas opex ({self._gas_opex.start_year}), "
-        #         f"Oil asr ({self._oil_asr.start_year}), "
-        #         f"Gas asr ({self._gas_asr.start_year}), "
-        #         f"Oil LBT ({self._oil_lbt.start_year}), "
-        #         f"Gas LBT ({self._gas_lbt.start_year}), "
-        #         f"Oil cost of sales ({self._oil_cost_of_sales.start_year}), "
-        #         f"Gas cost of sales ({self._gas_cost_of_sales.start_year}), "
-        #         f"Oil sunk cost ({self._oil_sunk_cost.start_year}), "
-        #         f"Gas sunk cost ({self._gas_sunk_cost.start_year}). "
-        #     )
-        #
-        # # Raise an exception error if the end year of the project is inconsistent
-        # if not all(
-        #     i == self.end_date.year
-        #     for i in [
-        #         self._oil_lifting.end_year,
-        #         self._gas_lifting.end_year,
-        #         self._sulfur_lifting.end_year,
-        #         self._electricity_lifting.end_year,
-        #         self._co2_lifting.end_year,
-        #         self._oil_capital_cost.end_year,
-        #         self._gas_capital_cost.end_year,
-        #         self._oil_intangible.end_year,
-        #         self._gas_intangible.end_year,
-        #         self._oil_opex.end_year,
-        #         self._gas_opex.end_year,
-        #         self._oil_asr.end_year,
-        #         self._gas_asr.end_year,
-        #         self._oil_lbt.end_year,
-        #         self._gas_lbt.end_year,
-        #         self._oil_cost_of_sales.end_year,
-        #         self._gas_cost_of_sales.end_year,
-        #         self._oil_sunk_cost.end_year,
-        #         self._gas_sunk_cost.end_year,
-        #     ]
-        # ):
-        #     raise BaseProjectException(
-        #         f"Inconsistent end project year: "
-        #         f"Base project ({self.end_date.year}), "
-        #         f"Oil lifting ({self._oil_lifting.end_year}), "
-        #         f"Gas lifting ({self._gas_lifting.end_year}), "
-        #         f"Sulfur lifting ({self._sulfur_lifting.end_year}), "
-        #         f"Electricity lifting ({self._electricity_lifting.end_year}), "
-        #         f"CO2 lifting ({self._co2_lifting.end_year}), "
-        #         f"Oil tangible ({self._oil_capital_cost.end_year}), "
-        #         f"Gas tangible ({self._gas_capital_cost.end_year}), "
-        #         f"Oil intangible ({self._oil_intangible.end_year}), "
-        #         f"Gas intangible ({self._gas_intangible.end_year}), "
-        #         f"Oil opex ({self._oil_opex.end_year}), "
-        #         f"Gas opex ({self._gas_opex.end_year}), "
-        #         f"Oil asr ({self._oil_asr.end_year}), "
-        #         f"Gas asr ({self._gas_asr.end_year}), "
-        #         f"Oil LBT ({self._oil_lbt.end_year}), "
-        #         f"Gas LBT ({self._gas_lbt.end_year}), "
-        #         f"Oil cost of sales ({self._oil_cost_of_sales.end_year}), "
-        #         f"Gas cost of sales ({self._gas_cost_of_sales.end_year}), "
-        #         f"Oil sunk cost ({self._oil_sunk_cost.end_year}), "
-        #         f"Gas sunk cost ({self._gas_sunk_cost.end_year}). "
-        #     )
+        print('\t')
+        print(f'Filetype: {type(self._gas_sunk_cost)}')
+        print(f'Length: {len(self._gas_sunk_cost)}')
+        print('_gas_sunk_cost = \n', self._gas_sunk_cost)
+
+        # Raise an exception error if the start year of the project is inconsistent
+        if not all(
+            i == self.start_date.year
+            for i in [
+                self._oil_lifting.start_year,
+                self._gas_lifting.start_year,
+                self._sulfur_lifting.start_year,
+                self._electricity_lifting.start_year,
+                self._co2_lifting.start_year,
+                self._oil_capital_cost.start_year,
+                self._gas_capital_cost.start_year,
+                self._oil_intangible.start_year,
+                self._gas_intangible.start_year,
+                self._oil_opex.start_year,
+                self._gas_opex.start_year,
+                self._oil_asr.start_year,
+                self._gas_asr.start_year,
+                self._oil_lbt.start_year,
+                self._gas_lbt.start_year,
+                self._oil_cost_of_sales.start_year,
+                self._gas_cost_of_sales.start_year,
+                self._oil_sunk_cost.start_year,
+                self._gas_sunk_cost.start_year,
+            ]
+        ):
+            raise BaseProjectException(
+                f"Inconsistent start project year: "
+                f"Base project ({self.start_date.year}), "
+                f"Oil lifting ({self._oil_lifting.start_year}), "
+                f"Gas lifting ({self._gas_lifting.start_year}), "
+                f"Sulfur lifting ({self._sulfur_lifting.start_year}), "
+                f"Electricity lifting ({self._electricity_lifting.start_year}), "
+                f"CO2 lifting ({self._co2_lifting.start_year}), "
+                f"Oil tangible ({self._oil_capital_cost.start_year}), "
+                f"Gas tangible ({self._gas_capital_cost.start_year}), "
+                f"Oil intangible ({self._oil_intangible.start_year}), "
+                f"Gas intangible ({self._gas_intangible.start_year}), "
+                f"Oil opex ({self._oil_opex.start_year}), "
+                f"Gas opex ({self._gas_opex.start_year}), "
+                f"Oil asr ({self._oil_asr.start_year}), "
+                f"Gas asr ({self._gas_asr.start_year}), "
+                f"Oil LBT ({self._oil_lbt.start_year}), "
+                f"Gas LBT ({self._gas_lbt.start_year}), "
+                f"Oil cost of sales ({self._oil_cost_of_sales.start_year}), "
+                f"Gas cost of sales ({self._gas_cost_of_sales.start_year}), "
+                f"Oil sunk cost ({self._oil_sunk_cost.start_year}), "
+                f"Gas sunk cost ({self._gas_sunk_cost.start_year}). "
+            )
+
+        # Raise an exception error if the end year of the project is inconsistent
+        if not all(
+            i == self.end_date.year
+            for i in [
+                self._oil_lifting.end_year,
+                self._gas_lifting.end_year,
+                self._sulfur_lifting.end_year,
+                self._electricity_lifting.end_year,
+                self._co2_lifting.end_year,
+                self._oil_capital_cost.end_year,
+                self._gas_capital_cost.end_year,
+                self._oil_intangible.end_year,
+                self._gas_intangible.end_year,
+                self._oil_opex.end_year,
+                self._gas_opex.end_year,
+                self._oil_asr.end_year,
+                self._gas_asr.end_year,
+                self._oil_lbt.end_year,
+                self._gas_lbt.end_year,
+                self._oil_cost_of_sales.end_year,
+                self._gas_cost_of_sales.end_year,
+                self._oil_sunk_cost.end_year,
+                self._gas_sunk_cost.end_year,
+            ]
+        ):
+            raise BaseProjectException(
+                f"Inconsistent end project year: "
+                f"Base project ({self.end_date.year}), "
+                f"Oil lifting ({self._oil_lifting.end_year}), "
+                f"Gas lifting ({self._gas_lifting.end_year}), "
+                f"Sulfur lifting ({self._sulfur_lifting.end_year}), "
+                f"Electricity lifting ({self._electricity_lifting.end_year}), "
+                f"CO2 lifting ({self._co2_lifting.end_year}), "
+                f"Oil tangible ({self._oil_capital_cost.end_year}), "
+                f"Gas tangible ({self._gas_capital_cost.end_year}), "
+                f"Oil intangible ({self._oil_intangible.end_year}), "
+                f"Gas intangible ({self._gas_intangible.end_year}), "
+                f"Oil opex ({self._oil_opex.end_year}), "
+                f"Gas opex ({self._gas_opex.end_year}), "
+                f"Oil asr ({self._oil_asr.end_year}), "
+                f"Gas asr ({self._gas_asr.end_year}), "
+                f"Oil LBT ({self._oil_lbt.end_year}), "
+                f"Gas LBT ({self._gas_lbt.end_year}), "
+                f"Oil cost of sales ({self._oil_cost_of_sales.end_year}), "
+                f"Gas cost of sales ({self._gas_cost_of_sales.end_year}), "
+                f"Oil sunk cost ({self._oil_sunk_cost.end_year}), "
+                f"Gas sunk cost ({self._gas_sunk_cost.end_year}). "
+            )
 
     def _get_oil_lifting(self) -> Lifting:
         """
@@ -1863,38 +1880,38 @@ class BaseProject:
 
     def _get_oil_sunk_cost(self) -> SunkCost:
         """
-        Retrieve or construct the oil-specific sunk cost from the total sunk costs.
+        Retrieve or construct the sunk costs associated with oil production.
 
-        This method checks if oil costs are present in the total sunk costs. If not,
-        it returns a zero-cost SunkCost object for oil. If present, it extracts and
-        returns only the oil-related portion of the sunk costs.
+        This method returns a SunkCost object containing either:
+        - A zero-cost allocation for oil if no oil costs exist in the total sunk costs
+        - The subset of sunk costs specifically allocated to oil production
 
         Returns
         -------
         SunkCost
-            A SunkCost object containing either:
-            - Zero costs for oil if no oil allocation exists in total sunk costs
-            - Only the oil-related portion of costs if oil allocation exists
+            A SunkCost object containing:
+            - Basic timeline information (start_year, end_year, etc.)
+            - Cost and expense year arrays
+            - Allocation and type information
+            - Tax and depreciation parameters
+
+            If no oil allocation exists, returns a minimal SunkCost with zero cost
+            for the project timeline.
 
         Notes
         -----
-        The returned SunkCost object will have the following attributes:
-        - For zero-cost case:
-            - start_year, end_year, onstream_year from instance dates
-            - Single expense year (start_date.year)
-            - Zero cost
-            - Cost allocation set to [FluidType.OIL]
-
-        - For existing oil costs:
-            - All years (start, end, onstream, pod1) from total sunk costs
-            - Filtered expense years, costs, and allocations for oil only
-            - All other attributes filtered for oil only
+        - The returned SunkCost will only contain oil-related costs, even if the
+          total sunk costs include other fluid types.
+        - All array fields in the returned object will be filtered to only include
+          oil-related entries when oil costs exist in the total sunk costs.
+        - When no oil costs exist, a single zero-cost entry is returned with the
+          project's start year as the expense year.
         """
-
         if FluidType.OIL not in self.sunk_cost_total.cost_allocation:
             return SunkCost(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
+                onstream_year=self.start_date.year,
                 pod1_year=self.start_date.year,
                 expense_year=np.array([self.start_date.year]),
                 cost=np.array([0]),
@@ -1906,69 +1923,76 @@ class BaseProject:
                 np.array(self.sunk_cost_total.cost_allocation) == FluidType.OIL
             ).ravel()
 
+            start_year = self.sunk_cost_total.start_year
+            end_year = self.sunk_cost_total.end_year
+            onstream_year = self.sunk_cost_total.onstream_year
+            pod1_year = self.sunk_cost_total.pod1_year
+            expense_year = self.sunk_cost_total.expense_year[oil_sunk_cost_id]
+            cost = self.sunk_cost_total.cost[oil_sunk_cost_id]
+            salvage_value = self.sunk_cost_total.salvage_value[oil_sunk_cost_id]
+            depreciation_period = self.sunk_cost_total.depreciation_period[oil_sunk_cost_id]
+            depreciation_factor = self.sunk_cost_total.depreciation_factor[oil_sunk_cost_id]
+            cost_allocation = np.array(self.sunk_cost_total.cost_allocation)[oil_sunk_cost_id]
+            investment_type = np.array(self.sunk_cost_total.investment_type)[oil_sunk_cost_id]
+            description = np.array(self.sunk_cost_total.description)[oil_sunk_cost_id]
+            tax_portion = self.sunk_cost_total.tax_portion[oil_sunk_cost_id]
+            tax_discount = self.sunk_cost_total.tax_discount[oil_sunk_cost_id]
 
-            # start_year = self.sunk_cost_total.start_year
-            # end_year = self.sunk_cost_total.end_year
-            # onstream_year = min(self.oil_onstream_date.year, self.gas_onstream_date.year)
-            # pod1_year = self.sunk_cost_total.pod1_year
-            # expense_year = self.sunk_cost_total.expense_year[oil_sunk_cost_id]
-            # cost = self.sunk_cost_total.cost[oil_sunk_cost_id]
-            # cost_allocation = np.array(self.sunk_cost_total.cost_allocation)[oil_sunk_cost_id]
-            # investment_type = np.array(self.sunk_cost_total.investment_type)[oil_sunk_cost_id]
-            # description = np.array(self.sunk_cost_total.description)[oil_sunk_cost_id]
-            # tax_portion = self.sunk_cost_total.tax_portion[oil_sunk_cost_id]
-            # tax_discount = self.sunk_cost_total.tax_discount[oil_sunk_cost_id]
-            #
-            # return SunkCost(
-            #     start_year=start_year,
-            #     end_year=end_year,
-            #     onstream_year=onstream_year,
-            #     pod1_year=pod1_year,
-            #     expense_year=expense_year,
-            #     cost=cost,
-            #     cost_allocation=cost_allocation.tolist(),
-            #     investment_type=investment_type.tolist(),
-            #     description=description.tolist(),
-            #     tax_portion=tax_portion,
-            #     tax_discount=tax_discount,
-            # )
+            return SunkCost(
+                start_year=start_year,
+                end_year=end_year,
+                onstream_year=onstream_year,
+                pod1_year=pod1_year,
+                expense_year=expense_year,
+                cost=cost,
+                salvage_value=salvage_value,
+                depreciation_period=depreciation_period,
+                depreciation_factor=depreciation_factor,
+                cost_allocation=cost_allocation.tolist(),
+                investment_type=investment_type.tolist(),
+                description=description.tolist(),
+                tax_portion=tax_portion,
+                tax_discount=tax_discount,
+            )
 
     def _get_gas_sunk_cost(self) -> SunkCost:
         """
-        Retrieve or construct the gas-specific sunk cost from the total sunk costs.
+        Retrieve or construct the sunk costs associated with gas production.
 
-        This method checks if gas costs are present in the total sunk costs. If not,
-        it returns a zero-cost SunkCost object for gas. If present, it extracts and
-        returns only the gas-related portion of the sunk costs.
+        This method returns a `SunkCost` object containing either:
+        - A zero-cost allocation for gas if no gas costs exist in the total sunk costs.
+        - The subset of sunk costs specifically allocated to gas production.
 
         Returns
         -------
         SunkCost
-            A SunkCost object containing either:
-            - Zero costs for gas if no gas allocation exists in total sunk costs
-            - Only the gas-related portion of costs if gas allocation exists
+            A `SunkCost` object containing:
+            - Timeline attributes (`start_year`, `end_year`, `onstream_year`, `pod1_year`).
+            - Cost-related arrays (`expense_year`, `cost`, `salvage_value`).
+            - Depreciation parameters (`depreciation_period`, `depreciation_factor`).
+            - Allocation metadata (`cost_allocation`, `investment_type`, `description`).
+            - Tax-related fields (`tax_portion`, `tax_discount`).
+
+            If no gas allocation exists, returns a minimal `SunkCost` with zero cost
+            for the project timeline.
 
         Notes
         -----
-        The returned SunkCost object will have the following attributes:
-        - For zero-cost case:
-            - start_year, end_year, onstream_year from instance dates
-            - Single expense year (start_date.year)
-            - Zero cost
-            - Cost allocation set to [FluidType.GAS]
-
-        - For existing gas costs:
-            - All years (start, end, onstream, pod1) from total sunk costs
-            - Filtered expense years, costs, and allocations for gas only
-            - All other attributes (investment_type, description, etc.) filtered for gas only
-            - Array attributes converted to lists for compatibility
+        - The returned `SunkCost` will only contain gas-related costs, even if the
+          total sunk costs include other fluid types (e.g., oil).
+        - All array fields (e.g., `cost`, `expense_year`) are filtered to include only
+          entries where `cost_allocation == FluidType.GAS`.
+        - If no gas costs are present, the returned object will have:
+            - A single `expense_year` set to the project's `start_date.year`.
+            - A zero `cost` array.
+            - `cost_allocation = [FluidType.GAS]`.
         """
-
         if FluidType.GAS not in self.sunk_cost_total.cost_allocation:
             return SunkCost(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
                 onstream_year=self.start_date.year,
+                pod1_year=self.start_date.year,
                 expense_year=np.array([self.start_date.year]),
                 cost=np.array([0]),
                 cost_allocation=[FluidType.GAS],
@@ -1985,6 +2009,9 @@ class BaseProject:
             pod1_year = self.sunk_cost_total.pod1_year
             expense_year = self.sunk_cost_total.expense_year[gas_sunk_cost_id]
             cost = self.sunk_cost_total.cost[gas_sunk_cost_id]
+            salvage_value = self.sunk_cost_total.salvage_value[gas_sunk_cost_id]
+            depreciation_period = self.sunk_cost_total.depreciation_period[gas_sunk_cost_id]
+            depreciation_factor = self.sunk_cost_total.depreciation_factor[gas_sunk_cost_id]
             cost_allocation = np.array(self.sunk_cost_total.cost_allocation)[gas_sunk_cost_id]
             investment_type = np.array(self.sunk_cost_total.investment_type)[gas_sunk_cost_id]
             description = np.array(self.sunk_cost_total.description)[gas_sunk_cost_id]
@@ -1998,12 +2025,303 @@ class BaseProject:
                 pod1_year=pod1_year,
                 expense_year=expense_year,
                 cost=cost,
+                salvage_value=salvage_value,
+                depreciation_period=depreciation_period,
+                depreciation_factor=depreciation_factor,
                 cost_allocation=cost_allocation.tolist(),
                 investment_type=investment_type.tolist(),
                 description=description.tolist(),
                 tax_portion=tax_portion,
                 tax_discount=tax_discount,
             )
+
+    def _calc_cost_array(
+        self,
+        fluid_type: FluidType,
+        cost_method: Callable,
+        tax_rate: np.ndarray | float = 0.0,
+    ) -> dict:
+        """
+         Calculates cost arrays for each investment type using the provided
+         cost calculation method.
+
+        This method iterates over the predefined investment types and their
+        corresponding configurations, and applies the given `cost_method` to
+        compute the cost array for the specified fluid type and tax rate.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type for which the cost is being calculated
+            (e.g., `FluidType.OIL` or `FluidType.GAS`).
+
+        cost_method : Callable
+            A callable method (e.g., `get_sunk_cost_investment_array`,
+            `get_preonstream_cost_investment_array`)
+            that takes `fluid_type`, `investment_config`, and `tax_rate`
+            as keyword arguments and returns the corresponding cost array.
+
+        tax_rate : float or np.ndarray, optional
+            The tax rate(s) applied to the cost calculation. Default is 0.0.
+
+        Returns
+        -------
+        dict
+            A dictionary mapping each investment type
+            (as defined in `self._investment_type_list`)
+            to its computed cost array using the specified method.
+        """
+        return {
+            key: cost_method(
+                fluid_type=fluid_type,
+                investment_config=config,
+                tax_rate=tax_rate,
+            )
+            for key, config in zip(self._investment_type_list, self._investment_config_list)
+        }
+
+    def _calc_cost_bulk(
+        self,
+        cost_obj: SunkCost,
+        cost_array: np.ndarray,
+    ) -> dict:
+        """
+        Computes bulk investment costs for each investment type using a SunkCost object.
+
+        This method applies the `get_investment_bulk` method of the provided `cost_obj`
+        to each investment type's cost array, producing a dictionary of bulk cost values.
+
+        Parameters
+        ----------
+        cost_obj : SunkCost
+            An instance of the `SunkCost` class that provides the `get_investment_bulk`
+            method used to compute the bulk cost for each investment type.
+
+        cost_array : np.ndarray or dict-like
+            A dictionary or array-like structure that maps each investment type (from
+            `self._investment_type_list`) to its associated cost array.
+
+        Returns
+        -------
+        dict
+            A dictionary mapping each investment type to its computed bulk investment cost.
+        """
+        return {
+            key: cost_obj.get_investment_bulk(cost_investment_array=cost_array[key])
+            for key in self._investment_type_list
+        }
+
+    def _get_sunk_cost_array(self, tax_rate: np.ndarray | float = 0.0) -> None:
+        """
+        Generates and stores sunk cost arrays for oil and gas based on the given tax rate.
+
+        This method computes the investment cost arrays for both `FluidType.OIL` and
+        `FluidType.GAS` using their respective sunk cost objects and stores the results
+        in internal attributes (`self._oil_sunk_cost_array` and `self._gas_sunk_cost_array`).
+
+        Parameters
+        ----------
+        tax_rate : float or np.ndarray, optional
+            The tax rate(s) to apply during sunk cost calculations. Default is 0.0.
+
+        Returns
+        -------
+        None
+            This method updates the internal attributes and does not return a value.
+
+        Sets the following instance attributes:
+            - `self._oil_sunk_cost_array` : dict
+            - `self._gas_sunk_cost_array` : dict
+
+        Notes
+        -----
+        This method leverages the `_calc_cost_array` utility function to perform
+        the actual cost calculation for each fluid type. It passes in the appropriate
+        cost computation method (`get_sunk_cost_investment_array`) for both oil and gas.
+        """
+        (
+            self._oil_sunk_cost_array,
+            self._gas_sunk_cost_array,
+        ) = [
+            self._calc_cost_array(fluid_type=ft, cost_method=cm, tax_rate=tax_rate)
+            for ft, cm in zip(
+                [
+                    FluidType.OIL,
+                    FluidType.GAS,
+                ],
+                [
+                    self._oil_sunk_cost.get_sunk_cost_investment_array,
+                    self._gas_sunk_cost.get_sunk_cost_investment_array,
+                ]
+            )
+        ]
+
+    def _get_preonstream_cost_array(self, tax_rate: np.ndarray | float = 0.0) -> None:
+        """
+        Computes and stores pre-onstream cost arrays for oil and gas based on
+        the given tax rate.
+
+        This method calculates the investment cost arrays associated with pre-onstream
+        activities for both `FluidType.OIL` and `FluidType.GAS`, using their respective
+        `SunkCost` objects. The results are stored in instance attributes for later use
+        in economic evaluations.
+
+        Parameters
+        ----------
+        tax_rate : float or np.ndarray, optional
+            The tax rate(s) applied during pre-onstream cost calculations. Default is 0.0.
+
+        Returns
+        -------
+        None
+            This method sets instance variables and does not return a value.
+
+        Sets the following instance attributes:
+            - `self._oil_preonstream_cost_array` : dict
+            - `self._gas_preonstream_cost_array` : dict
+
+        Notes
+        -----
+        Internally, this method calls `_calc_cost_array` for each fluid type, using
+        the corresponding `get_preonstream_cost_investment_array` method from the oil
+        and gas `SunkCost` objects.
+        """
+        (
+            self._oil_preonstream_cost_array,
+            self._gas_preonstream_cost_array,
+        ) = [
+            self._calc_cost_array(fluid_type=ft, cost_method=cm, tax_rate=tax_rate)
+            for ft, cm in zip(
+                [
+                    FluidType.OIL,
+                    FluidType.GAS,
+                ],
+                [
+                    self._oil_sunk_cost.get_preonstream_cost_investment_array,
+                    self._gas_sunk_cost.get_preonstream_cost_investment_array,
+                ]
+            )
+        ]
+
+    def _get_sunk_cost_bulk(self) -> None:
+        """
+        Computes and stores bulk sunk costs for oil and gas.
+
+        This method calculates the total (bulk) sunk investment costs for each
+        investment type related to `FluidType.OIL` and `FluidType.GAS`. It uses
+        the respective `SunkCost` objects and their associated cost arrays.
+        The resulting bulk costs are stored in internal attributes.
+
+        Returns
+        -------
+        None
+            This method updates internal attributes in-place and does not return a value.
+
+        Sets the following instance attributes:
+            - `self._oil_sunk_cost_bulk` : dict
+            - `self._gas_sunk_cost_bulk` : dict
+
+        Notes
+        -----
+        This method internally calls `_calc_cost_bulk`, which applies the
+        `get_investment_bulk` method of the provided `SunkCost` object to
+        each investment type's cost array.
+        """
+        (
+            self._oil_sunk_cost_bulk,
+            self._gas_sunk_cost_bulk,
+        ) = [
+            self._calc_cost_bulk(cost_obj=co, cost_array=ca) for co, ca in zip(
+                [self._oil_sunk_cost, self._gas_sunk_cost],
+                [self._oil_sunk_cost_array, self._gas_sunk_cost_array]
+            )
+        ]
+
+    def _get_preonstream_cost_bulk(self) -> None:
+        """
+        Computes and stores bulk pre-onstream costs for oil and gas.
+
+        This method calculates the total (bulk) pre-onstream investment costs for
+        each investment type associated with `FluidType.OIL` and `FluidType.GAS`.
+        It uses the respective `SunkCost` objects and their corresponding
+        pre-onstream cost arrays. The computed bulk costs are stored as instance
+        attributes for later use in economic evaluations.
+
+        Returns
+        -------
+        None
+            This method performs internal updates and does not return a value.
+
+        Sets the following instance attributes:
+            - `self._oil_preonstream_cost_bulk` : dict
+            - `self._gas_preonstream_cost_bulk` : dict
+
+        Notes
+        -----
+        Internally, this method calls `_calc_cost_bulk`, which applies the
+        `get_investment_bulk` method of each `SunkCost` object to the corresponding
+        pre-onstream cost array.
+        """
+        (
+            self._oil_preonstream_cost_bulk,
+            self._gas_preonstream_cost_bulk,
+        ) = [
+            self._calc_cost_bulk(cost_obj=co, cost_array=ca) for co, ca in zip(
+                [self._oil_sunk_cost, self._gas_sunk_cost],
+                [self._oil_preonstream_cost_array, self._gas_preonstream_cost_array]
+            )
+        ]
+
+
+
+
+    def fit(self, tax_rate: np.ndarray | float = 0.0) -> None:
+
+        self._get_sunk_cost_array(tax_rate=tax_rate)
+        self._get_preonstream_cost_array(tax_rate=tax_rate)
+        self._get_sunk_cost_bulk()
+        self._get_preonstream_cost_bulk()
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_sunk_cost_array)}')
+        print(f'Length: {len(self._oil_sunk_cost_array)}')
+        print('_oil_sunk_cost_array = \n', self._oil_sunk_cost_array)
+
+        print('\t')
+        print(f'Filetype: {type(self._gas_sunk_cost_array)}')
+        print(f'Length: {len(self._gas_sunk_cost_array)}')
+        print('_gas_sunk_cost_array = \n', self._gas_sunk_cost_array)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_preonstream_cost_array)}')
+        print(f'Length: {len(self._oil_preonstream_cost_array)}')
+        print('_oil_preonstream_cost_array = \n', self._oil_preonstream_cost_array)
+
+        print('\t')
+        print(f'Filetype: {type(self._gas_preonstream_cost_array)}')
+        print(f'Length: {len(self._gas_preonstream_cost_array)}')
+        print('_gas_preonstream_cost_array = \n', self._gas_preonstream_cost_array)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_sunk_cost_bulk)}')
+        print(f'Length: {len(self._oil_sunk_cost_bulk)}')
+        print('_oil_sunk_cost_bulk = \n', self._oil_sunk_cost_bulk)
+
+        print('\t')
+        print(f'Filetype: {type(self._gas_sunk_cost_bulk)}')
+        print(f'Length: {len(self._gas_sunk_cost_bulk)}')
+        print('_gas_sunk_cost_bulk = \n', self._gas_sunk_cost_bulk)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_preonstream_cost_bulk)}')
+        print(f'Length: {len(self._oil_preonstream_cost_bulk)}')
+        print('_oil_preonstream_cost_bulk = \n', self._oil_preonstream_cost_bulk)
+
+        print('\t')
+        print(f'Filetype: {type(self._gas_preonstream_cost_bulk)}')
+        print(f'Length: {len(self._gas_preonstream_cost_bulk)}')
+        print('_gas_preonstream_cost_bulk = \n', self._gas_preonstream_cost_bulk)
+
 
     def _calc_expenditures(
         self,
@@ -2832,36 +3150,6 @@ class BaseProject:
             raise OtherRevenueException(
                 f"Other revenue selection is not available: {co2_revenue}"
             )
-
-    def _get_sunk_cost(self):
-        pass
-
-    def _get_preonstream_cost(self):
-        pass
-
-    def _get_oil_sunk_cost_tangible(self) -> None:
-        pass
-
-    def _get_oil_sunk_cost_intangible(self) -> None:
-        pass
-
-    def _get_gas_sunk_cost_tangible(self) -> None:
-        pass
-
-    def _get_gas_sunk_cost_intangible(self) -> None:
-        pass
-
-    def _get_oil_preonstream_cost_tangible(self) -> None:
-        pass
-
-    def _get_oil_preonstream_cost_intangible(self) -> None:
-        pass
-
-    def _get_gas_preonstream_cost_tangible(self) -> None:
-        pass
-
-    def _get_gas_preonstream_cost_intangible(self) -> None:
-        pass
 
     # def _get_sunk_cost(
     #     self,

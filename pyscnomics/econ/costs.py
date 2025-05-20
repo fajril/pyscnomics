@@ -3740,6 +3740,7 @@ class SunkCost(GeneralCost):
     """
 
     # Local arguments
+    onstream_year: int = field(default=None)
     pod1_year: int = field(default=None)
     investment_type: list[SunkCostInvestmentType] = field(default=None)
     salvage_value: np.ndarray = field(default=None)
@@ -3748,9 +3749,6 @@ class SunkCost(GeneralCost):
 
     # Overridden argument
     cost: np.ndarray = field(default=None)
-
-    # Attribute to be defined later
-    onstream_year: int = field(default=None, init=False)
 
     def __post_init__(self):
         """
@@ -5201,6 +5199,7 @@ class SunkCost(GeneralCost):
         if isinstance(other, SunkCost):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
+            onstream_year_combined = None
             pod1_year_combined = min(self.pod1_year, other.pod1_year)
             expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_combined = np.concatenate((self.cost, other.cost))
@@ -5222,6 +5221,7 @@ class SunkCost(GeneralCost):
             return SunkCost(
                 start_year=start_year_combined,
                 end_year=end_year_combined,
+                onstream_year=onstream_year_combined,
                 pod1_year=pod1_year_combined,
                 expense_year=expense_year_combined,
                 cost=cost_combined,
@@ -5250,6 +5250,7 @@ class SunkCost(GeneralCost):
         if isinstance(other, SunkCost):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
+            onstream_year_combined = None
             pod1_year_combined = min(self.pod1_year, other.pod1_year)
             expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_combined = np.concatenate((self.cost, -other.cost))
@@ -5271,6 +5272,7 @@ class SunkCost(GeneralCost):
             return SunkCost(
                 start_year=start_year_combined,
                 end_year=end_year_combined,
+                onstream_year=onstream_year_combined,
                 pod1_year=pod1_year_combined,
                 expense_year=expense_year_combined,
                 cost=cost_combined,
@@ -5300,6 +5302,7 @@ class SunkCost(GeneralCost):
             return SunkCost(
                 start_year=self.start_year,
                 end_year=self.end_year,
+                onstream_year=None,
                 pod1_year=self.pod1_year,
                 expense_year=self.expense_year,
                 cost=self.cost * other,
@@ -5339,6 +5342,7 @@ class SunkCost(GeneralCost):
                 return SunkCost(
                     start_year=self.start_year,
                     end_year=self.end_year,
+                    onstream_year=None,
                     pod1_year=self.pod1_year,
                     expense_year=self.expense_year,
                     cost=self.cost / other,

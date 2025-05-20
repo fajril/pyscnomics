@@ -28,6 +28,8 @@ pr = BaseProject(
 print('\t')
 print('================================================================')
 
+pr.fit(tax_rate=0.0)
+
 # t1 = posc.sunk_cost_amortization_charge(
 #     tax_rate=0.1,
 #     fluid_type=FluidType.GAS,
