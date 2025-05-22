@@ -28,12 +28,17 @@ pr = BaseProject(
 print('\t')
 print('================================================================')
 
-pr.fit_sunk_preonstream_cost(
-    tax_rate=0.0,
+pr.run(
     prod_year=np.array([2027, 2028]),
     prod=np.array([50, 1_000]),
+    tax_rate=0.0,
+    depr_method=DeprMethod.PSC_DB,
+    decline_factor=2,
     salvage_value=0.0,
-    amortization_len=8,
+    amortization_len=pr.project_duration,
+    year_inflation=None,
+    inflation_rate=0.0,
+    inflation_rate_applied_to=None,
 )
 
 # t1 = posc.sunk_cost_amortization_charge(

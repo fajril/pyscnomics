@@ -336,9 +336,33 @@ class BaseProject:
     _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Attributes to be defined later
+    # (associated with consolidated sunk cost and preonstream cost)
+    _consolidated_sunk_cost_array: dict = field(default=None, init=False, repr=False)
+    _consolidated_preonstream_cost_array: dict = field(default=None, init=False, repr=False)
+    _consolidated_sunk_cost_bulk: dict = field(default=None, init=False, repr=False)
+    _consolidated_preonstream_cost_bulk: dict = field(default=None, init=False, repr=False)
+    _consolidated_sunk_cost_amortization_charge: dict = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_preonstream_cost_amortization_charge: dict = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_sunk_cost_tangible_depreciation_charge: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_preonstream_cost_tangible_depreciation_charge: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_sunk_cost_tangible_undepreciated_asset: float = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_preonstream_cost_tangible_undepreciated_asset: float = field(
+        default=None, init=False, repr=False
+    )
+
     # Attributes to be defined later (associated with consolidated profiles)
     _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_government_take: np.ndarray = field(
         default=None, init=False, repr=False
@@ -805,16 +829,6 @@ class BaseProject:
         self._gas_cost_of_sales = self._get_gas_cost_of_sales()
         self._oil_sunk_cost = self._get_oil_sunk_cost()
         self._gas_sunk_cost = self._get_gas_sunk_cost()
-
-        print('\t')
-        print(f'Filetype: {type(self._oil_sunk_cost)}')
-        print(f'Length: {len(self._oil_sunk_cost)}')
-        print('_oil_sunk_cost = \n', self._oil_sunk_cost)
-
-        print('\t')
-        print(f'Filetype: {type(self._gas_sunk_cost)}')
-        print(f'Length: {len(self._gas_sunk_cost)}')
-        print('_gas_sunk_cost = \n', self._gas_sunk_cost)
 
         # Raise an exception error if the start year of the project is inconsistent
         if not all(
@@ -2681,11 +2695,11 @@ class BaseProject:
         self,
         prod_year: np.ndarray,
         prod: np.ndarray,
-        salvage_value: float = 0.0,
-        amortization_len: int = 0,
+        tax_rate: np.ndarray | float = 0.0,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
-        tax_rate: np.ndarray | float = 0.0,
+        salvage_value: float = 0.0,
+        amortization_len: int = 0,
     ) -> None:
         """
         Calculate and fit all sunk and pre-onstream cost components.
@@ -3592,90 +3606,131 @@ class BaseProject:
                 f"Other revenue selection is not available: {co2_revenue}"
             )
 
-    def run(
-        self,
-        sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
-        electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
-        co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
-        sunk_cost_reference_year: int = None,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | float = 0.0,
-        tax_rate: np.ndarray | float = 0.0,
-        inflation_rate_applied_to: InflationAppliedTo = None,
-    ) -> None:
+    def _get_consolidated_profile(self, is_dict: bool, oil_param, gas_param):
         """
-        Execute the economic analysis, calculating expenditures, revenues, and cashflows
-        for both oil and gas, and applying sunk costs, taxes, and other revenues as specified.
+        Combine oil and gas parameters into consolidated profiles.
 
-        This method configures and computes various components of the project's financial model,
-        including:
-        - Pre-tax and post-tax expenditures for oil and gas
-        - Indirect taxes
-        - Non-capital costs (e.g., intangible, OPEX, ASR, LBT)
-        - Sunk costs and revenues from sulfur, electricity, and CO2
-        - Weighted average price (WAP) calculations
-        - Final cashflows for both oil and gas, along with consolidated profiles
+        Creates consolidated results by either summing dictionary values or adding
+        array-like objects, depending on the input type.
 
         Parameters
         ----------
-        sulfur_revenue : OtherRevenue, optional
-            Specifies how sulfur revenue is treated.
-            Default is `OtherRevenue.ADDITION_TO_GAS_REVENUE`.
-        electricity_revenue : OtherRevenue, optional
-            Specifies how electricity revenue is treated.
-            Default is `OtherRevenue.ADDITION_TO_OIL_REVENUE`.
-        co2_revenue : OtherRevenue, optional
-            Specifies how CO2 revenue is treated.
-            Default is `OtherRevenue.ADDITION_TO_GAS_REVENUE`.
-        sunk_cost_reference_year : int, optional
-            The year to use for sunk cost calculations.
-            If not provided, defaults to the project's start year.
-        year_inflation : np.ndarray, optional
-            A NumPy array containing the inflation rates for each year. Default is None.
-        inflation_rate : np.ndarray or float, optional
-            The inflation rate to be applied to expenditures. Default is 0.0.
+        is_dict : bool
+            Flag indicating whether inputs are dictionaries (True) or array-like (False).
+        oil_param : dict or array-like
+            Oil-related parameters. Either:
+            - Dictionary (when is_dict=True) with keys matching self._investment_type_list
+            - Array-like object supporting addition (when is_dict=False)
+        gas_param : dict or array-like
+            Gas-related parameters. Must be same type as oil_param.
+
+        Returns
+        -------
+        dict or array-like
+            Consolidated results matching input type:
+            - If is_dict=True: Dictionary with summed values for each investment type
+            - If is_dict=False: Sum of oil_param and gas_param
+
+        Notes
+        -----
+        - For dictionary inputs: Only keys in self._investment_type_list are processed
+        - For array inputs: Both parameters must support the + operator
+        - Input types must be consistent (both dict or both array-like)
+        - Typically used to combine oil and gas cost profiles or amortization charges
+        """
+        if is_dict is True:
+            return {
+                key: oil_param[key] + gas_param[key] for key in self._investment_type_list
+            }
+
+        else:
+            return oil_param + gas_param
+
+    def run(
+        self,
+        prod_year: np.ndarray,
+        prod: np.ndarray,
+        tax_rate: np.ndarray | float = 0.0,
+        depr_method: DeprMethod = DeprMethod.PSC_DB,
+        decline_factor: float | int = 2,
+        salvage_value: float = 0.0,
+        amortization_len: int = 0,
+        year_inflation: np.ndarray = None,
+        inflation_rate: np.ndarray | float = 0.0,
+        inflation_rate_applied_to: InflationAppliedTo = None,
+        sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
+        co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+    ) -> None:
+        """
+        Execute complete economic model calculation pipeline.
+
+        This orchestrates the full economic calculation sequence including:
+        - Cost amortization and depreciation
+        - Expenditure calculations (pre-tax and post-tax)
+        - Revenue and cashflow computations
+        - Consolidated oil and gas results
+
+        Parameters
+        ----------
+        prod_year : np.ndarray
+            Array of production years for economic calculations.
+        prod : np.ndarray
+            Array of production volumes corresponding to prod_year.
         tax_rate : np.ndarray or float, optional
-            The tax rate applied to post-tax expenditures and indirect taxes. Default is 0.0.
+            Tax rate(s) to apply. Can be single value or time-varying array.
+            Default is 0.0 (no tax).
+        depr_method : DeprMethod, optional
+            Depreciation method for tangible assets.
+            Default is DeprMethod.PSC_DB (PSC declining balance).
+        decline_factor : float or int, optional
+            Decline factor for depreciation calculations.
+            Default is 2 (double declining balance).
+        salvage_value : float, optional
+            Residual value of assets at end of amortization period.
+            Default is 0.0.
+        amortization_len : int, optional
+            Custom amortization period length in years. If 0, uses default.
+            Default is 0.
+        year_inflation : np.ndarray, optional
+            Array of inflation adjustment years. If None, no inflation adjustment.
+            Default is None.
+        inflation_rate : np.ndarray or float, optional
+            Inflation rate(s) for cost adjustments.
+            Default is 0.0 (no inflation).
         inflation_rate_applied_to : InflationAppliedTo, optional
-            Specifies whether inflation is applied to CAPEX, OPEX, or both. Default is None.
+            Specifies which costs to apply inflation to.
+            Default is None (no inflation application).
+        sulfur_revenue : OtherRevenue, optional
+            Treatment of sulfur byproduct revenue.
+            Default is OtherRevenue.ADDITION_TO_GAS_REVENUE.
+        electricity_revenue : OtherRevenue, optional
+            Treatment of electricity byproduct revenue.
+            Default is OtherRevenue.ADDITION_TO_OIL_REVENUE.
+        co2_revenue : OtherRevenue, optional
+            Treatment of CO2 byproduct revenue.
+            Default is OtherRevenue.ADDITION_TO_GAS_REVENUE.
 
         Returns
         -------
         None
-            This method does not return anything. It updates the financial attributes
-            of the project, including:
-            - Total expenditures (pre-tax and post-tax) for oil and gas
-            - Indirect taxes and non-capital costs for oil and gas
-            - Cashflows for oil and gas, and consolidated cashflows and revenues.
+            Results are stored in numerous instance variables including:
+            - Cost arrays and bulk values (_oil/gas_sunk/preonstream_cost_*)
+            - Amortization and depreciation charges
+            - Expenditure components (capital, opex, ASR, LBT, etc.)
+            - Revenue and cashflow calculations
+            - Consolidated oil+gas results (_consolidated_*)
         """
-
-        # Configure Sunk Cost Reference Year
-        if sunk_cost_reference_year is None:
-            sunk_cost_reference_year = self.start_date.year
-
-        if sunk_cost_reference_year > self.oil_onstream_date.year:
-            raise SunkCostException(
-                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
-                f"is after the on stream date: {self.oil_onstream_date}"
-            )
-
-        if sunk_cost_reference_year > self.gas_onstream_date.year:
-            raise SunkCostException(
-                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
-                f"is after the on stream date: {self.gas_onstream_date}"
-            )
-
-        if sunk_cost_reference_year < self.start_date.year:
-            raise SunkCostException(
-                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
-                f"is before the project start date: {self.start_date}"
-            )
-
-        if sunk_cost_reference_year > self.end_date.year:
-            raise SunkCostException(
-                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
-                f"is after the project end date: {self.end_date}"
-            )
+        # Prepare several attributes associated with sunk cost and preonstream cost
+        self.fit_sunk_preonstream_cost(
+            prod_year=prod_year,
+            prod=prod,
+            tax_rate=tax_rate,
+            depr_method=depr_method,
+            decline_factor=decline_factor,
+            salvage_value=salvage_value,
+            amortization_len=amortization_len,
+        )
 
         # Calculate pre tax expenditures
         self._get_expenditures_pre_tax(
@@ -3711,9 +3766,6 @@ class BaseProject:
             + self._gas_lbt_expenditures_post_tax
             + self._gas_cost_of_sales_expenditures_post_tax
         )
-
-        # Sunk cost
-        self._get_sunk_cost(sunk_cost_reference_year=sunk_cost_reference_year)
 
         # WAP (Weighted Average Price) for each produced fluid
         self._get_wap_price()
@@ -3797,9 +3849,61 @@ class BaseProject:
             )
         )
 
-        # Configure consolidated profiles
+        # Prepare attributes associated with consolidated sunk cost and preonstream cost
+        (
+            self._consolidated_sunk_cost_array,
+            self._consolidated_preonstream_cost_array,
+            self._consolidated_sunk_cost_bulk,
+            self._consolidated_preonstream_cost_bulk,
+            self._consolidated_sunk_cost_amortization_charge,
+            self._consolidated_preonstream_cost_amortization_charge
+        ) = [
+            self._get_consolidated_profile(is_dict=True, oil_param=i, gas_param=j)
+            for i, j, in zip(
+                [
+                    self._oil_sunk_cost_array,
+                    self._oil_preonstream_cost_array,
+                    self._oil_sunk_cost_bulk,
+                    self._oil_preonstream_cost_bulk,
+                    self._oil_sunk_cost_amortization_charge,
+                    self._oil_preonstream_cost_amortization_charge
+                ],
+                [
+                    self._gas_sunk_cost_array,
+                    self._gas_preonstream_cost_array,
+                    self._gas_sunk_cost_bulk,
+                    self._gas_preonstream_cost_bulk,
+                    self._gas_sunk_cost_amortization_charge,
+                    self._gas_preonstream_cost_amortization_charge
+                ]
+            )
+        ]
+
+        (
+            self._consolidated_sunk_cost_tangible_depreciation_charge,
+            self._consolidated_preonstream_cost_tangible_depreciation_charge,
+            self._consolidated_sunk_cost_tangible_undepreciated_asset,
+            self._consolidated_preonstream_cost_tangible_undepreciated_asset
+        ) = [
+            self._get_consolidated_profile(is_dict=False, oil_param=i, gas_param=j)
+            for i, j, in zip(
+                [
+                    self._oil_sunk_cost_tangible_depreciation_charge,
+                    self._oil_preonstream_cost_tangible_depreciation_charge,
+                    self._oil_sunk_cost_tangible_undepreciated_asset,
+                    self._oil_preonstream_cost_tangible_undepreciated_asset
+                ],
+                [
+                    self._gas_sunk_cost_tangible_depreciation_charge,
+                    self._gas_preonstream_cost_tangible_depreciation_charge,
+                    self._gas_sunk_cost_tangible_undepreciated_asset,
+                    self._gas_preonstream_cost_tangible_undepreciated_asset
+                ]
+            )
+        ]
+
+        # Prepare consolidated profiles
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue
-        self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
         self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
         self._consolidated_government_take = np.zeros_like(self._consolidated_cashflow)
 
@@ -3823,6 +3927,8 @@ class BaseProject:
             lbt_other = sum(other._oil_lbt.cost) + sum(other._gas_lbt.cost)
             cos_self = sum(self._oil_cost_of_sales.cost) + sum(self._gas_cost_of_sales.cost)
             cos_other = sum(other._oil_cost_of_sales.cost) + sum(other._gas_cost_of_sales.cost)
+            sc_self = sum(self._oil_sunk_cost.cost) + sum(self._gas_sunk_cost.cost)
+            sc_other = sum(other._oil_sunk_cost.cost) + sum(other._gas_sunk_cost.cost)
 
             return all(
                 (
@@ -3845,6 +3951,7 @@ class BaseProject:
                     asr_self == asr_other,
                     lbt_self == lbt_other,
                     cos_self == cos_other,
+                    sc_self == sc_other,
                 )
             )
 
@@ -3868,14 +3975,22 @@ class BaseProject:
             lbt_other = sum(other._oil_lbt.cost) + sum(other._gas_lbt.cost)
             cos_self = sum(self._oil_cost_of_sales.cost) + sum(self._gas_cost_of_sales.cost)
             cos_other = sum(other._oil_cost_of_sales.cost) + sum(other._gas_cost_of_sales.cost)
+            sc_self = sum(self._oil_sunk_cost.cost) + sum(self._gas_sunk_cost.cost)
+            sc_other = sum(other._oil_sunk_cost.cost) + sum(other._gas_sunk_cost.cost)
 
             expense_self = reduce(
                 lambda x, y: x + y,
-                [tangible_self, intangible_self, opex_self, asr_self, lbt_self, cos_self]
+                [
+                    tangible_self, intangible_self, opex_self, asr_self,
+                    lbt_self, cos_self, sc_self
+                ]
             )
             expense_other = reduce(
                 lambda x, y: x + y,
-                [tangible_other, intangible_other, opex_other, asr_other, lbt_other, cos_other]
+                [
+                    tangible_other, intangible_other, opex_other, asr_other,
+                    lbt_other, cos_other, sc_other
+                ]
             )
 
             return all(
@@ -3909,14 +4024,22 @@ class BaseProject:
             lbt_other = sum(other._oil_lbt.cost) + sum(other._gas_lbt.cost)
             cos_self = sum(self._oil_cost_of_sales.cost) + sum(self._gas_cost_of_sales.cost)
             cos_other = sum(other._oil_cost_of_sales.cost) + sum(other._gas_cost_of_sales.cost)
+            sc_self = sum(self._oil_sunk_cost.cost) + sum(self._gas_sunk_cost.cost)
+            sc_other = sum(other._oil_sunk_cost.cost) + sum(other._gas_sunk_cost.cost)
 
             expense_self = reduce(
                 lambda x, y: x + y,
-                [tangible_self, intangible_self, opex_self, asr_self, lbt_self, cos_self]
+                [
+                    tangible_self, intangible_self, opex_self, asr_self,
+                    lbt_self, cos_self, sc_self
+                ]
             )
             expense_other = reduce(
                 lambda x, y: x + y,
-                [tangible_other, intangible_other, opex_other, asr_other, lbt_other, cos_other]
+                [
+                    tangible_other, intangible_other, opex_other, asr_other,
+                    lbt_other, cos_other, sc_other
+                ]
             )
 
             return all(
@@ -3950,14 +4073,22 @@ class BaseProject:
             lbt_other = sum(other._oil_lbt.cost) + sum(other._gas_lbt.cost)
             cos_self = sum(self._oil_cost_of_sales.cost) + sum(self._gas_cost_of_sales.cost)
             cos_other = sum(other._oil_cost_of_sales.cost) + sum(other._gas_cost_of_sales.cost)
+            sc_self = sum(self._oil_sunk_cost.cost) + sum(self._gas_sunk_cost.cost)
+            sc_other = sum(other._oil_sunk_cost.cost) + sum(other._gas_sunk_cost.cost)
 
             expense_self = reduce(
                 lambda x, y: x + y,
-                [tangible_self, intangible_self, opex_self, asr_self, lbt_self, cos_self]
+                [
+                    tangible_self, intangible_self, opex_self, asr_self,
+                    lbt_self, cos_self, sc_self
+                ]
             )
             expense_other = reduce(
                 lambda x, y: x + y,
-                [tangible_other, intangible_other, opex_other, asr_other, lbt_other, cos_other]
+                [
+                    tangible_other, intangible_other, opex_other, asr_other,
+                    lbt_other, cos_other, sc_other
+                ]
             )
 
             return all(
@@ -3991,14 +4122,22 @@ class BaseProject:
             lbt_other = sum(other._oil_lbt.cost) + sum(other._gas_lbt.cost)
             cos_self = sum(self._oil_cost_of_sales.cost) + sum(self._gas_cost_of_sales.cost)
             cos_other = sum(other._oil_cost_of_sales.cost) + sum(other._gas_cost_of_sales.cost)
+            sc_self = sum(self._oil_sunk_cost.cost) + sum(self._gas_sunk_cost.cost)
+            sc_other = sum(other._oil_sunk_cost.cost) + sum(other._gas_sunk_cost.cost)
 
             expense_self = reduce(
                 lambda x, y: x + y,
-                [tangible_self, intangible_self, opex_self, asr_self, lbt_self, cos_self]
+                [
+                    tangible_self, intangible_self, opex_self, asr_self,
+                    lbt_self, cos_self, sc_self
+                ]
             )
             expense_other = reduce(
                 lambda x, y: x + y,
-                [tangible_other, intangible_other, opex_other, asr_other, lbt_other, cos_other]
+                [
+                    tangible_other, intangible_other, opex_other, asr_other,
+                    lbt_other, cos_other, sc_other
+                ]
             )
 
             return all(
