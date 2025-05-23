@@ -35,7 +35,6 @@ pr.run(
     depr_method=DeprMethod.PSC_DB,
     decline_factor=2,
     salvage_value=0.0,
-    amortization_len=pr.project_duration,
     year_inflation=None,
     inflation_rate=0.0,
     inflation_rate_applied_to=None,

@@ -2184,7 +2184,6 @@ class BaseProject:
         prod_year: np.ndarray,
         prod: np.ndarray,
         salvage_value: float = 0.0,
-        amortization_len: int = 0,
     ) -> dict:
         """
         Calculate amortization charges for different investment types.
@@ -2203,9 +2202,6 @@ class BaseProject:
         salvage_value : float, optional
             The salvage value of the asset at end of amortization period.
             Default is 0.0.
-        amortization_len : int, optional
-            Length of the amortization period in years. If 0, will use default.
-            Default is 0.
 
         Returns
         -------
@@ -2224,7 +2220,7 @@ class BaseProject:
                 prod_year=prod_year,
                 prod=prod,
                 salvage_value=salvage_value,
-                amortization_len=amortization_len,
+                amortization_len=self.project_duration,
             )
             for key in self._investment_type_list
         }
@@ -2283,44 +2279,43 @@ class BaseProject:
 
     def _get_sunk_cost_array(self, tax_rate: np.ndarray | float = 0.0) -> None:
         """
-        Initializes the sunk cost arrays for oil and gas based on the provided
-        tax rate.
+        Initializes the sunk cost investment arrays for oil and gas based on
+        the specified tax rate.
 
-        This method computes and stores the sunk cost investment arrays for both o
-        il and gas by calling `_calc_sunk_cost_array` with the appropriate `fluid_type`
-        and `SunkCost` object.
-
-        The results are assigned to `self._oil_sunk_cost_array` and `self._gas_sunk_cost_array`.
+        This method calculates and assigns the sunk cost arrays for both oil
+        and gas by calling `_calc_sunk_cost_array` with the respective `fluid_type`
+        and `SunkCost` object. The results are stored in `self._oil_sunk_cost_array`
+        and `self._gas_sunk_cost_array`.
 
         Parameters
         ----------
         tax_rate : float or np.ndarray, optional
-            The tax rate(s) used in the sunk cost calculation. Can be a scalar or an array.
-            Default is 0.0.
+            The tax rate(s) applied in the sunk cost calculation.
+            Can be a scalar or array of values. Default is 0.0.
 
         Returns
         -------
         None
-            This method updates internal attributes and does not return a value.
+            This method does not return anything. It updates internal attributes in-place.
 
         Attributes Updated
         ------------------
         self._oil_sunk_cost_array : dict
-            Dictionary of sunk cost arrays for oil, keyed by investment type.
-
+            Dictionary containing sunk cost arrays for oil, keyed by investment type.
         self._gas_sunk_cost_array : dict
-            Dictionary of sunk cost arrays for gas, keyed by investment type.
+            Dictionary containing sunk cost arrays for gas, keyed by investment type.
         """
-        (
-            self._oil_sunk_cost_array,
-            self._gas_sunk_cost_array,
-        ) = [
-            self._calc_sunk_cost_array(fluid_type=ft, cost_obj=co, tax_rate=tax_rate)
-            for ft, co in zip(
-                [FluidType.OIL, FluidType.GAS],
-                [self._oil_sunk_cost, self._gas_sunk_cost],
-            )
-        ]
+        self._oil_sunk_cost_array = self._calc_sunk_cost_array(
+            fluid_type=FluidType.OIL,
+            cost_obj=self._oil_sunk_cost,
+            tax_rate=tax_rate,
+        )
+
+        self._gas_sunk_cost_array = self._calc_sunk_cost_array(
+            fluid_type=FluidType.GAS,
+            cost_obj=self._gas_sunk_cost,
+            tax_rate=tax_rate,
+        )
 
     def _get_preonstream_cost_array(self, tax_rate: np.ndarray | float = 0.0) -> None:
         """
@@ -2349,20 +2344,20 @@ class BaseProject:
         ------------------
         self._oil_preonstream_cost_array : dict
             Dictionary of pre-onstream cost arrays for oil, keyed by investment type.
-
         self._gas_preonstream_cost_array : dict
             Dictionary of pre-onstream cost arrays for gas, keyed by investment type.
         """
-        (
-            self._oil_preonstream_cost_array,
-            self._gas_preonstream_cost_array,
-        ) = [
-            self._calc_preonstream_cost_array(fluid_type=ft, cost_obj=co, tax_rate=tax_rate)
-            for ft, co, in zip(
-                [FluidType.OIL, FluidType.GAS],
-                [self._oil_sunk_cost, self._gas_sunk_cost],
-            )
-        ]
+        self._oil_preonstream_cost_array = self._calc_preonstream_cost_array(
+            fluid_type=FluidType.OIL,
+            cost_obj=self._oil_sunk_cost,
+            tax_rate=tax_rate,
+        )
+
+        self._gas_preonstream_cost_array = self._calc_preonstream_cost_array(
+            fluid_type=FluidType.GAS,
+            cost_obj=self._gas_sunk_cost,
+            tax_rate=tax_rate,
+        )
 
     def _get_sunk_cost_bulk(self) -> None:
         """
@@ -2388,15 +2383,15 @@ class BaseProject:
         `get_investment_bulk` method of the provided `SunkCost` object to
         each investment type's cost array.
         """
-        (
-            self._oil_sunk_cost_bulk,
-            self._gas_sunk_cost_bulk,
-        ) = [
-            self._calc_cost_bulk(cost_obj=co, cost_array=ca) for co, ca in zip(
-                [self._oil_sunk_cost, self._gas_sunk_cost],
-                [self._oil_sunk_cost_array, self._gas_sunk_cost_array]
-            )
-        ]
+        self._oil_sunk_cost_bulk = self._calc_cost_bulk(
+            cost_obj=self._oil_sunk_cost,
+            cost_array=self._oil_sunk_cost_array,
+        )
+
+        self._gas_sunk_cost_bulk = self._calc_cost_bulk(
+            cost_obj=self._gas_sunk_cost,
+            cost_array=self._gas_sunk_cost_array,
+        )
 
     def _get_preonstream_cost_bulk(self) -> None:
         """
@@ -2423,22 +2418,21 @@ class BaseProject:
         `get_investment_bulk` method of each `SunkCost` object to the corresponding
         pre-onstream cost array.
         """
-        (
-            self._oil_preonstream_cost_bulk,
-            self._gas_preonstream_cost_bulk,
-        ) = [
-            self._calc_cost_bulk(cost_obj=co, cost_array=ca) for co, ca in zip(
-                [self._oil_sunk_cost, self._gas_sunk_cost],
-                [self._oil_preonstream_cost_array, self._gas_preonstream_cost_array]
-            )
-        ]
+        self._oil_preonstream_cost_bulk = self._calc_cost_bulk(
+            cost_obj=self._oil_sunk_cost,
+            cost_array=self._oil_preonstream_cost_array,
+        )
+
+        self._gas_preonstream_cost_bulk = self._calc_cost_bulk(
+            cost_obj=self._gas_sunk_cost,
+            cost_array=self._gas_preonstream_cost_array,
+        )
 
     def _get_sunk_cost_amortization_charge(
         self,
         prod_year: np.ndarray,
         prod: np.ndarray,
         salvage_value: float = 0.0,
-        amortization_len: int = 0,
     ) -> None:
         """
         Calculate and store amortization charges for oil and gas sunk costs.
@@ -2456,9 +2450,6 @@ class BaseProject:
         salvage_value : float, optional
             The salvage value of the assets at end of amortization period.
             Default is 0.0.
-        amortization_len : int, optional
-            Length of the amortization period in years. If 0, uses default period.
-            Default is 0.
 
         Returns
         -------
@@ -2474,30 +2465,27 @@ class BaseProject:
         - This method delegates the actual calculation to `_calc_amortization_charge`.
         - The results are stored in instance variables rather than returned.
         """
-        (
-            self._oil_sunk_cost_amortization_charge,
-            self._gas_sunk_cost_amortization_charge
-        ) = [
-            self._calc_amortization_charge(
-                cost_obj=co,
-                cost_bulk=cb,
-                prod_year=prod_year,
-                prod=prod,
-                salvage_value=salvage_value,
-                amortization_len=amortization_len,
-            )
-            for co, cb in zip(
-                [self._oil_sunk_cost, self._gas_sunk_cost],
-                [self._oil_sunk_cost_bulk, self._gas_sunk_cost_bulk]
-            )
-        ]
+        self._oil_sunk_cost_amortization_charge = self._calc_amortization_charge(
+            cost_obj=self._oil_sunk_cost,
+            cost_bulk=self._oil_sunk_cost_bulk,
+            prod_year=prod_year,
+            prod=prod,
+            salvage_value=salvage_value,
+        )
+
+        self._gas_sunk_cost_amortization_charge = self._calc_amortization_charge(
+            cost_obj=self._gas_sunk_cost,
+            cost_bulk=self._gas_sunk_cost_bulk,
+            prod_year=prod_year,
+            prod=prod,
+            salvage_value=salvage_value,
+        )
 
     def _get_preonstream_cost_amortization_charge(
         self,
         prod_year: np.ndarray,
         prod: np.ndarray,
         salvage_value: float = 0.0,
-        amortization_len: int = 0,
     ) -> None:
         """
         Calculate and store amortization charges for pre-onstream oil and gas costs.
@@ -2515,9 +2503,6 @@ class BaseProject:
         salvage_value : float, optional
             Residual value of assets at end of amortization period.
             Default is 0.0 (no salvage value).
-        amortization_len : int, optional
-            Custom amortization period length in years. If 0, uses default period.
-            Default is 0.
 
         Returns
         -------
@@ -2533,23 +2518,21 @@ class BaseProject:
         - Processes oil and gas costs separately using their respective bulk data
         - Results are stored rather than returned to enable access throughout class
         """
-        (
-            self._oil_preonstream_cost_amortization_charge,
-            self._gas_preonstream_cost_amortization_charge
-        ) = [
-            self._calc_amortization_charge(
-                cost_obj=co,
-                cost_bulk=cb,
-                prod_year=prod_year,
-                prod=prod,
-                salvage_value=salvage_value,
-                amortization_len=amortization_len
-            )
-            for co, cb in zip(
-                [self._oil_sunk_cost, self._gas_sunk_cost],
-                [self._oil_preonstream_cost_bulk, self._gas_preonstream_cost_bulk]
-            )
-        ]
+        self._oil_preonstream_cost_amortization_charge = self._calc_amortization_charge(
+            cost_obj=self._oil_sunk_cost,
+            cost_bulk=self._oil_preonstream_cost_bulk,
+            prod_year=prod_year,
+            prod=prod,
+            salvage_value=salvage_value,
+        )
+
+        self._gas_preonstream_cost_amortization_charge = self._calc_amortization_charge(
+            cost_obj=self._gas_sunk_cost,
+            cost_bulk=self._gas_preonstream_cost_bulk,
+            prod_year=prod_year,
+            prod=prod,
+            salvage_value=salvage_value,
+        )
 
     def _get_sunk_cost_tangible_depreciation_charge(
         self,
@@ -2699,7 +2682,6 @@ class BaseProject:
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
         salvage_value: float = 0.0,
-        amortization_len: int = 0,
     ) -> None:
         """
         Calculate and fit all sunk and pre-onstream cost components.
@@ -2720,9 +2702,6 @@ class BaseProject:
         salvage_value : float, optional
             Residual value of assets at end of amortization period.
             Default is 0.0.
-        amortization_len : int, optional
-            Custom amortization period length in years. If 0, uses default period.
-            Default is 0.
         depr_method : DeprMethod, optional
             Depreciation method to use for tangible assets.
             Default is DeprMethod.PSC_DB (PSC declining balance).
@@ -2768,13 +2747,11 @@ class BaseProject:
             prod_year=prod_year,
             prod=prod,
             salvage_value=salvage_value,
-            amortization_len=amortization_len,
         )
         self._get_preonstream_cost_amortization_charge(
             prod_year=prod_year,
             prod=prod,
             salvage_value=salvage_value,
-            amortization_len=amortization_len,
         )
 
         # Determine sunk cost and preonstream cost tangible depreciation charge
@@ -2783,7 +2760,6 @@ class BaseProject:
             decline_factor=decline_factor,
             tax_rate=tax_rate,
         )
-
         self._get_preonstream_cost_tangible_depreciation_charge(
             depr_method=depr_method,
             decline_factor=decline_factor,
@@ -3654,7 +3630,6 @@ class BaseProject:
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
         salvage_value: float = 0.0,
-        amortization_len: int = 0,
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo = None,
@@ -3689,9 +3664,6 @@ class BaseProject:
         salvage_value : float, optional
             Residual value of assets at end of amortization period.
             Default is 0.0.
-        amortization_len : int, optional
-            Custom amortization period length in years. If 0, uses default.
-            Default is 0.
         year_inflation : np.ndarray, optional
             Array of inflation adjustment years. If None, no inflation adjustment.
             Default is None.
@@ -3729,7 +3701,6 @@ class BaseProject:
             depr_method=depr_method,
             decline_factor=decline_factor,
             salvage_value=salvage_value,
-            amortization_len=amortization_len,
         )
 
         # Calculate pre tax expenditures
