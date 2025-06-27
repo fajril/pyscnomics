@@ -229,21 +229,10 @@ class ContractType(Enum):
         Cost Recovery (CR) contract type.
     GROSS_SPLIT: str
         Gross Split (GS) contract type.
-    TRANSITION_CR_CR: str
-        Transition contract type from Cost Recovery to Cost Recovery.
-    TRANSITION_CR_GS: str
-        Transition contract type from Cost Recovery to Gross Split.
-    TRANSITION_GS_GS: str
-        Transition contract type from Gross Split to Gross Split.
-    TRANSITION_GS_CR: str
-        Transition contract type from Gross Split to Cost Recovery.
     """
-    COST_RECOVERY = 'Cost Recovery (CR)'
-    GROSS_SPLIT = 'Gross Split (GS)'
-    TRANSITION_CR_CR = 'Transition CR - CR'
-    TRANSITION_CR_GS = 'Transition CR - GS'
-    TRANSITION_GS_GS = 'Transition GS - GS'
-    TRANSITION_GS_CR = 'Transition GS - CR'
+
+    COST_RECOVERY = "Cost Recovery (CR)"
+    GROSS_SPLIT = "Gross Split (GS)"
 
 
 class NPVSelection(Enum):
@@ -676,3 +665,12 @@ class UncertaintyDistribution(Enum):
     UNIFORM = 'Uniform'
     TRIANGULAR = 'Triangular'
     NORMAL = 'Normal'
+
+
+class SunkCostInvestmentType(Enum):
+    """
+    Selection for sunk cost (or pre-onstream cost) investment type.
+    """
+
+    TANGIBLE = "Tangible"
+    INTANGIBLE = "Intangible"

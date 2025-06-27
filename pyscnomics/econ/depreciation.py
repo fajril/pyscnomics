@@ -7,19 +7,22 @@ import pandas as pd
 
 
 class DepreciationException(Exception):
-    """Raise an exception error for a misuse of depreciation method"""
+    """ Raise an exception error for a misuse of depreciation method """
 
     pass
 
 
 class UnitOfProductionException(Exception):
-    """Exception to be raised for a misuse of unit of production method"""
+    """ Exception to be raised for a misuse of unit of production method """
 
     pass
 
 
 def straight_line_depreciation_rate(
-    cost: float, salvage_value: float, useful_life: int, depreciation_len: int = 0
+    cost: float,
+    salvage_value: float,
+    useful_life: int,
+    depreciation_len: int = 0,
 ) -> np.ndarray:
     """
     Calculate the straight-line depreciation charge for each period.
@@ -66,7 +69,10 @@ def straight_line_depreciation_rate(
 
 
 def straight_line_book_value(
-    cost: float, salvage_value: float, useful_life: int, depreciation_len: int = 0
+    cost: float,
+    salvage_value: float,
+    useful_life: int,
+    depreciation_len: int = 0,
 ) -> np.ndarray:
     """
     Calculate the book value of an asset over time using the straight-line depreciation method.
@@ -110,9 +116,7 @@ def straight_line_book_value(
     )
 
     # Calculate book value
-    book_value = cost - np.cumsum(depreciation_charge)
-
-    return book_value
+    return cost - np.cumsum(depreciation_charge)
 
 
 def declining_balance_depreciation_rate(

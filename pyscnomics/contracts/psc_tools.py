@@ -1,3 +1,8 @@
+"""
+A collection of functions performing various calculations
+related to PSC contract
+"""
+
 import numpy as np
 import dateutils
 from datetime import date
