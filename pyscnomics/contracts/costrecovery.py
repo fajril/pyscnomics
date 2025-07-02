@@ -14,7 +14,8 @@ from pyscnomics.econ.selection import (
     FTPTaxRegime,
     TaxSplitTypeCR,
     DeprMethod,
-    OtherRevenue
+    OtherRevenue,
+    SunkCostMethod
 )
 
 
@@ -894,34 +895,9 @@ class CostRecovery(BaseProject):
 
         return unpaid_tax, ctr_tax
 
-    # Todo (20 March 2025): Fix the sunk cost calculation method
-    # def _get_sunk_cost(self, sunk_cost_reference_year: int):
-    #     oil_cost_raw = (
-    #             self._oil_capital_expenditures_post_tax
-    #             + self._oil_non_capital
-    #     )
-    #     self._oil_sunk_cost = oil_cost_raw[
-    #                           : (sunk_cost_reference_year - self.start_date.year + 1)
-    #                           ]
-    #     self._oil_sunk_cost = np.concatenate((self._oil_sunk_cost, np.zeros(self.project_years[-1] - sunk_cost_reference_year)))
-    #
-    #     gas_cost_raw = (
-    #             self._gas_capital_expenditures_post_tax
-    #             + self._gas_non_capital
-    #     )
-    #     self._gas_sunk_cost = gas_cost_raw[
-    #                           : (sunk_cost_reference_year - self.start_date.year + 1)
-    #                           ]
-    #     self._gas_sunk_cost = np.concatenate(
-    #         (self._gas_sunk_cost, np.zeros(self.project_years[-1] - sunk_cost_reference_year)))
-    #
-    #     if sunk_cost_reference_year == self.start_date.year:
-    #         self._oil_sunk_cost = np.zeros_like(self.project_years)
-    #         self._gas_sunk_cost = np.zeros_like(self.project_years)
-
-    def _apply_cost_of_sales(self,
-                             oil_applied: bool = False,
-                             gas_applied: bool = False):
+    def _apply_cost_of_sales(
+        self, oil_applied: bool = False, gas_applied: bool = False
+    ):
         """
         The function to apply the cost of sales.
 
@@ -955,56 +931,54 @@ class CostRecovery(BaseProject):
         else:
             pass
 
+    def _prepare_sunk_cost_contract(self, depr_method, decline_factor):
+        # Get the revenue total
+        all_revenue = self._oil_revenue + self._gas_revenue
+
+        # Find the first index where b is non-zero
+        start_idx = np.argmax(all_revenue != 0)
+
+        # Slice a from that index to the end
+        prod_year = self.project_years[start_idx:]
+
+        # Prepare several attributes associated with sunk cost and preonstream cost
+        self.fit_sunk_preonstream_cost(
+            prod_year=prod_year,
+            prod=self._oil_lifting.prod_rate_total,
+            tax_rate=0.0,
+            depr_method=depr_method,
+            decline_factor=decline_factor,
+            salvage_value=0.0,
+        )
+
     def run(
-            self,
-            sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
-            co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            is_dmo_end_weighted: bool = False,
-            tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
-            effective_tax_rate: float | np.ndarray | None = None,
-            ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
-            sunk_cost_reference_year: int = None,
-            depr_method: DeprMethod = DeprMethod.PSC_DB,
-            decline_factor: float | int = 2,
-            year_inflation: np.ndarray = None,
-            vat_rate: np.ndarray | float = 0.0,
-            inflation_rate: np.ndarray | float = 0.0,
-            inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
-            post_uu_22_year2001: bool = True,
-            oil_cost_of_sales_applied: bool = False,
-            gas_cost_of_sales_applied: bool = False,
-            sum_undepreciated_cost:bool=False
+        self,
+        sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
+        co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        is_dmo_end_weighted: bool = False,
+        tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
+        effective_tax_rate: float | np.ndarray | None = None,
+        ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
+        depr_method: DeprMethod = DeprMethod.PSC_DB,
+        decline_factor: float | int = 2,
+        year_inflation: np.ndarray = None,
+        vat_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
+        inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
+        post_uu_22_year2001: bool = True,
+        oil_cost_of_sales_applied: bool = False,
+        gas_cost_of_sales_applied: bool = False,
+        sum_undepreciated_cost: bool = False,
+        sunk_cost_method: SunkCostMethod = SunkCostMethod.DIRECT,
     ):
         self._check_attributes()
 
-        # Configure Sunk Cost Reference Year
-        if sunk_cost_reference_year is None:
-            sunk_cost_reference_year = self.start_date.year
-
-        if sunk_cost_reference_year > self.oil_onstream_date.year:
-            raise SunkCostException(
-                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
-                f"is after the on stream date: {self.oil_onstream_date}"
-            )
-
-        if sunk_cost_reference_year > self.gas_onstream_date.year:
-            raise SunkCostException(
-                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
-                f"is after the on stream date: {self.gas_onstream_date}"
-            )
-
-        if sunk_cost_reference_year < self.start_date.year:
-            raise SunkCostException(
-                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
-                f"is before the project start date: {self.start_date}"
-            )
-
-        if sunk_cost_reference_year > self.end_date.year:
-            raise SunkCostException(
-                f"Sunk Cost Reference Year {sunk_cost_reference_year} "
-                f"is after the project end date: {self.end_date}"
-            )
+        # Preparing the Sunk Cost
+        self._prepare_sunk_cost_contract(
+            depr_method=depr_method,
+            decline_factor=decline_factor,
+        )
 
         # Get the WAP Price
         self._get_wap_price()
@@ -1131,9 +1105,6 @@ class CostRecovery(BaseProject):
         self._gas_depreciation = self._gas_depreciation[
                                  : (self.end_date.year - self.start_date.year + 1)
                                  ]
-
-        # Get Sunk Cost
-        self._get_sunk_cost(sunk_cost_reference_year)
 
         # Investment credit
         self._oil_ic, self._oil_ic_unrecovered, self._oil_ic_paid = self._get_ic(
@@ -1375,12 +1346,88 @@ class CostRecovery(BaseProject):
         )
 
         # Contractor CashFlow
-        self._oil_cashflow = self._oil_contractor_take - (
-                self._oil_capital_expenditures_post_tax + self._oil_non_capital
-        )
-        self._gas_cashflow = self._gas_contractor_take - (
-                self._gas_capital_expenditures_post_tax + self._gas_non_capital
-        )
+        # Conditional if based on the sunk cost method
+        if sunk_cost_method == SunkCostMethod.POOLED_1ST_YEAR:
+            oil_sunk_cost = np.zeros_like(self.project_years, dtype=float)
+            gas_sunk_cost = np.zeros_like(self.project_years, dtype=float)
+
+            # Find the first index where revenue is non-zero
+            start_idx_oil = np.argmax(self._oil_revenue != 0)
+
+            oil_sunk_cost[start_idx_oil] = (
+                    self._oil_sunk_cost_bulk['Tangible'] +
+                    self._oil_sunk_cost_bulk['Intangible'] +
+                    self._oil_preonstream_cost_bulk['Tangible'] +
+                    self._oil_preonstream_cost_bulk['Intangible']
+            )
+
+            # Find the first index where revenue is non-zero
+            start_idx_gas = np.argmax(self._gas_revenue != 0)
+
+            gas_sunk_cost[start_idx_gas] = (
+                    self._gas_sunk_cost_bulk['Tangible'] +
+                    self._gas_sunk_cost_bulk['Intangible'] +
+                    self._gas_preonstream_cost_bulk['Tangible'] +
+                    self._gas_preonstream_cost_bulk['Intangible']
+            )
+
+            self._oil_cashflow = self._oil_contractor_take - (
+                    self._oil_capital_expenditures_post_tax +
+                    self._oil_non_capital +
+                    oil_sunk_cost
+            )
+
+            self._gas_cashflow = self._gas_contractor_take - (
+                    self._gas_capital_expenditures_post_tax +
+                    self._gas_non_capital +
+                    gas_sunk_cost
+            )
+
+        elif sunk_cost_method == SunkCostMethod.DEPRECIATED_TANGIBLE:
+            self._oil_cashflow = self._oil_contractor_take - (
+                    self._oil_capital_expenditures_post_tax +
+                    self._oil_non_capital +
+                    self._oil_cost_of_sales_expenditures_post_tax +
+                    self._oil_sunk_cost_tangible_depreciation_charge +
+                    self._oil_preonstream_cost_tangible_depreciation_charge +
+                    self._oil_sunk_cost_array['Intangible'] +
+                    self._oil_preonstream_cost_array['Intangible']
+            )
+
+            self._gas_cashflow = self._gas_contractor_take - (
+                    self._gas_capital_expenditures_post_tax +
+                    self._gas_non_capital +
+                    self._gas_cost_of_sales_expenditures_post_tax +
+                    self._gas_sunk_cost_tangible_depreciation_charge +
+                    self._gas_preonstream_cost_tangible_depreciation_charge +
+                    self._gas_sunk_cost_array['Intangible'] +
+                    self._gas_preonstream_cost_array['Intangible']
+            )
+
+        elif sunk_cost_method == SunkCostMethod.DIRECT:
+            self._oil_cashflow = self._oil_contractor_take - (
+                    self._oil_capital_expenditures_post_tax +
+                    self._oil_non_capital +
+                    self._oil_sunk_cost_array['Tangible'] +
+                    self._oil_preonstream_cost_array['Tangible'] +
+                    self._oil_sunk_cost_array['Intangible'] +
+                    self._oil_preonstream_cost_array['Intangible']
+            )
+
+            self._gas_cashflow = self._gas_contractor_take - (
+                    self._gas_capital_expenditures_post_tax +
+                    self._gas_non_capital +
+                    self._gas_sunk_cost_array['Tangible'] +
+                    self._gas_preonstream_cost_array['Tangible'] +
+                    self._gas_sunk_cost_array['Intangible'] +
+                    self._gas_preonstream_cost_array['Intangible']
+            )
+
+
+        else:
+            raise SunkCostException(
+                f" SunkCostMethod: {sunk_cost_method}, is not recognized. It should be from SunkCost method enum"
+            )
 
         # Government Take by Fluid
         self._oil_government_take = (
@@ -1411,7 +1458,10 @@ class CostRecovery(BaseProject):
         self._consolidated_intangible = (
                 self._oil_intangible_expenditures_post_tax + self._gas_intangible_expenditures_post_tax
         )
-        self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
+
+        self._consolidated_sunk_cost = (self._oil_sunk_cost_array['Tangible'] + self._oil_sunk_cost_array['Intangible'] +
+                                        self._gas_sunk_cost_array['Tangible'] + self._gas_sunk_cost_array['Intangible'])
+
         self._consolidated_opex = (
                 self._oil_opex_expenditures_post_tax + self._gas_opex_expenditures_post_tax
         )
@@ -1546,6 +1596,8 @@ class CostRecovery(BaseProject):
                 + self._consolidated_ddmo
         )
 
-        self._consolidated_cashflow = self._consolidated_contractor_take - (
-                self._consolidated_capital_cost + self._consolidated_non_capital + self._consolidated_cost_of_sales
-        )
+        # self._consolidated_cashflow = self._consolidated_contractor_take - (
+        #         self._consolidated_capital_cost + self._consolidated_non_capital + self._consolidated_cost_of_sales
+        # )
+
+        self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
