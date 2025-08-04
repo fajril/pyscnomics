@@ -1,0 +1,253 @@
+"""
+Example case to be executed.
+"""
+
+import numpy as np
+from dataclasses import dataclass, field
+
+from pyscnomics.econ.selection import FluidType, SunkCostInvestmentType
+from pyscnomics.econ.revenue import Lifting
+from pyscnomics.econ.costs import (
+    CapitalCost,
+    Intangible,
+    OPEX,
+    ASR,
+    LBT,
+    CostOfSales,
+    SunkCost,
+)
+
+
+@dataclass
+class ExampleCase:
+    """
+    A class consisting a collection of prescribed synthetic data designed as
+    example to run class BaseProject, CostRecovery, and GrossSplit.
+    """
+
+    lifting_mangga: Lifting = field(default=None, init=False, repr=False)
+    lifting_apel: Lifting = field(default=None, init=False, repr=False)
+    capital_mangga: CapitalCost = field(default=None, init=False, repr=False)
+    capital_apel: CapitalCost = field(default=None, init=False, repr=False)
+    intangible_mangga: Intangible = field(default=None, init=False, repr=False)
+    intangible_apel: Intangible = field(default=None, init=False, repr=False)
+    opex_mangga: OPEX = field(default=None, init=False, repr=False)
+    opex_apel: OPEX = field(default=None, init=False, repr=False)
+    asr_mangga: ASR = field(default=None, init=False, repr=False)
+    asr_apel: ASR = field(default=None, init=False, repr=False)
+    lbt_mangga: LBT = field(default=None, init=False, repr=False)
+    lbt_apel: LBT = field(default=None, init=False, repr=False)
+    cos_mangga: CostOfSales = field(default=None, init=False, repr=False)
+    cos_apel: CostOfSales = field(default=None, init=False, repr=False)
+    sunk_cost_mangga: SunkCost = field(default=None, init=False, repr=False)
+    sunk_cost_apel: SunkCost = field(default=None, init=False, repr=False)
+
+    def __post_init__(self):
+        self._get_lifting_data()
+        self._get_capital_cost_data()
+        self._get_intangible_cost_data()
+        self._get_opex_data()
+        self._get_asr_cost_data()
+        self._get_lbt_cost_data()
+        self._get_cost_of_sales_data()
+        self._get_sunk_cost_data()
+
+    def _get_lifting_data(self):
+        """
+        Generate synthetic lifting data.
+        """
+        self.lifting_mangga = Lifting(
+            start_year=2023,
+            end_year=2030,
+            prod_year=np.array([2026, 2027, 2028, 2027]),
+            lifting_rate=np.array([np.nan, None, 100, 100]),
+            price=np.array([10, 10, 10, 10]),
+            fluid_type=FluidType.OIL,
+        )
+
+        self.lifting_apel = Lifting(
+            start_year=2023,
+            end_year=2030,
+            prod_year=np.array([2026, 2027, 2028, 2027]),
+            lifting_rate=np.array([np.nan, None, 5, 5]),
+            price=np.array([2, 2, 2, 2]),
+            fluid_type=FluidType.GAS,
+        )
+
+    def _get_capital_cost_data(self):
+        """
+        Generate synthetic data for capital cost.
+        """
+        self.capital_mangga = CapitalCost(
+            start_year=2023,
+            end_year=2030,
+            expense_year=np.array([2023, 2024, 2025, 2024]),
+            cost=np.array([np.nan, 100, 100, None]),
+            cost_allocation=[np.nan, FluidType.OIL, FluidType.OIL, None],
+        )
+
+        self.capital_apel = CapitalCost(
+            start_year=2023,
+            end_year=2030,
+            expense_year=np.array([2023, 2024, 2025, 2024]),
+            cost=np.array([np.nan, 10, 10, None]),
+            cost_allocation=[np.nan, FluidType.GAS, FluidType.GAS, None],
+        )
+
+    def _get_intangible_cost_data(self):
+        """
+        Generate synthetic data for intangible cost.
+        """
+        # Synthetic data: Intangible
+        self.intangible_mangga = Intangible(
+            start_year=2023,
+            end_year=2030,
+            expense_year=np.array([2023, 2024, 2025, 2024]),
+            cost=np.array([np.nan, 100, 100, None]),
+            cost_allocation=[np.nan, FluidType.OIL, FluidType.OIL, None],
+        )
+
+        self.intangible_apel = Intangible(
+            start_year=2023,
+            end_year=2030,
+            expense_year=np.array([2023, 2024, 2025, 2024]),
+            cost=np.array([np.nan, 10, 10, None]),
+            cost_allocation=[np.nan, FluidType.GAS, FluidType.GAS, None],
+        )
+
+    def _get_opex_data(self):
+        """
+        Generate synthetic data for OPEX.
+        """
+        self.opex_mangga = OPEX(
+            start_year=2023,
+            end_year=2030,
+            expense_year=np.array([2023, 2024, 2025, 2024]),
+            fixed_cost=np.array([np.nan, 100, 100, None]),
+            cost_allocation=[np.nan, FluidType.OIL, FluidType.OIL, None],
+        )
+
+        self.opex_apel = OPEX(
+            start_year=2023,
+            end_year=2030,
+            expense_year=np.array([2023, 2024, 2025, 2024]),
+            fixed_cost=np.array([np.nan, 10, 10, None]),
+            cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+        )
+
+    def _get_asr_cost_data(self):
+        """
+        Generate synthetic data for ASR cost.
+        """
+        self.asr_mangga = ASR(
+            start_year=2023,
+            end_year=2030,
+            expense_year=np.array([2023, 2024, 2025, 2024]),
+            cost=np.array([np.nan, 100, 100, None]),
+            cost_allocation=[np.nan, FluidType.OIL, FluidType.OIL, None],
+        )
+
+        self.asr_apel = ASR(
+            start_year=2023,
+            end_year=2030,
+            expense_year=np.array([2023, 2024, 2025, 2024]),
+            cost=np.array([np.nan, 10, 10, None]),
+            cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+        )
+
+    def _get_lbt_cost_data(self):
+        """
+        Generate synthetic data for LBT cost.
+        """
+        # Synthetic data: LBT
+        self.lbt_mangga = LBT(
+            start_year=2023,
+            end_year=2030,
+            expense_year=np.array([2023, 2024, 2025, 2024]),
+            cost=np.array([np.nan, 100, 100, None]),
+            cost_allocation=[np.nan, FluidType.OIL, FluidType.OIL, None],
+        )
+
+        self.lbt_apel = LBT(
+            start_year=2023,
+            end_year=2030,
+            expense_year=np.array([2023, 2024, 2025, 2024]),
+            cost=np.array([np.nan, 10, 10, None]),
+            cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+        )
+
+    def _get_cost_of_sales_data(self):
+        """
+        Generate synthetic data for cost of sales.
+        """
+        self.cos_mangga = CostOfSales(
+            start_year=2023,
+            end_year=2030,
+            expense_year=np.array([2023, 2024, 2025, 2024]),
+            cost=np.array([np.nan, 100, 100, None]),
+            cost_allocation=[np.nan, FluidType.OIL, FluidType.OIL, None],
+        )
+
+        self.cos_apel = CostOfSales(
+            start_year=2023,
+            end_year=2030,
+            expense_year=np.array([2023, 2024, 2025, 2024]),
+            cost=np.array([np.nan, 10, 10, None]),
+            cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+        )
+
+    def _get_sunk_cost_data(self):
+        """
+        Generate synthetic data for sunk cost.
+        """
+        self.sunk_cost_mangga = SunkCost(
+            start_year=2023,
+            end_year=2030,
+            pod1_year=2025,
+            onstream_year=2027,
+            expense_year=np.array([2023, 2024, 2024, 2026, 2025, 2027]),
+            cost=np.array([50, 50, 50, 200, 50, 200]),
+            cost_allocation=[
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+            ],
+            investment_type=[
+                SunkCostInvestmentType.TANGIBLE,
+                SunkCostInvestmentType.TANGIBLE,
+                SunkCostInvestmentType.TANGIBLE,
+                SunkCostInvestmentType.INTANGIBLE,
+                SunkCostInvestmentType.INTANGIBLE,
+                SunkCostInvestmentType.INTANGIBLE,
+            ],
+            tax_portion=np.array([1, 1, 1, 1, 1, 1]),
+        )
+
+        self.sunk_cost_apel = SunkCost(
+            start_year=2023,
+            end_year=2030,
+            pod1_year=2025,
+            onstream_year=2027,
+            expense_year=np.array([2023, 2024, 2024, 2026, 2025, 2027]),
+            cost=np.array([5, 5, 5, 20, 5, 20]),
+            cost_allocation=[
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+            ],
+            investment_type=[
+                SunkCostInvestmentType.INTANGIBLE,
+                SunkCostInvestmentType.INTANGIBLE,
+                SunkCostInvestmentType.INTANGIBLE,
+                SunkCostInvestmentType.TANGIBLE,
+                SunkCostInvestmentType.TANGIBLE,
+                SunkCostInvestmentType.TANGIBLE,
+            ],
+            tax_portion=np.array([1, 1, 1, 1, 1, 1]),
+        )
