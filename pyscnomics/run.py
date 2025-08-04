@@ -1,15 +1,14 @@
 
 import numpy as np
-from pyscnomics.econ.costs import SunkCost
 from pyscnomics.econ.selection import FluidType, SunkCostInvestmentType, DeprMethod
 from datetime import date
-from pyscnomics.contracts.project import BaseProject
+# from pyscnomics.contracts.project import BaseProject
 from pyscnomics.econ.selection import DeprMethod
 from pyscnomics.example import ExampleCase
 
 
-lifting_mangga = ExampleCase().lifting_mangga
-t1 = lifting_mangga.revenue()
+capital_mangga = ExampleCase().capital_mangga
+
 
 # case = ExampleCase()
 #
@@ -65,10 +64,10 @@ t1 = lifting_mangga.revenue()
 # print(f'Length: {len()}')
 # print()
 
-print('\t')
-print(f'Filetype: {type(t1)}')
-print(f'Length: {len(t1)}')
-print('t1 = \n', t1)
+# print('\t')
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t2)}')
