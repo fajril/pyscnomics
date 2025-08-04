@@ -13,6 +13,7 @@ from pyscnomics.econ.costs import (
     OPEX,
     ASR,
     LBT,
+    CostOfSales,
 )
 
 
@@ -275,11 +276,7 @@ class Lifting:
 
     def _get_array(self, target_param: np.ndarray) -> np.ndarray:
         """
-<<<<<<< Updated upstream
         Creates an array of target_param and aligns it with the corresponding
-=======
-        Create an array of target_param that aligns with its corresponding
->>>>>>> Stashed changes
         production year.
 
         Parameters
@@ -307,41 +304,41 @@ class Lifting:
 
     def get_lifting_rate_ghv_arr(self) -> np.ndarray:
         """
-<<<<<<< Updated upstream
         Creates an array of (lifting rate * ghv) and aligns it according to the
         corresponding production year.
-=======
-        Create an array of (lifting rate * ghv) according to the corresponding
-        production year.
->>>>>>> Stashed changes
 
         Returns
         -------
         np.ndarray
-<<<<<<< Updated upstream
             The array of (lifting rate * ghv) with length equals to project duration.
 
         Notes
         -----
-        Array of (lifting rate * ghv) is generated using method _get_array() with
-=======
-            Array of (lifting rate * ghv) with length equals to project duration.
-
-        Notes
-        -----
         Array of (lifting_rate * ghv) is generated using method _get_array() with
->>>>>>> Stashed changes
         target_param = lifting_rate * ghv.
         """
         return self._get_array(target_param=self.lifting_rate * self.ghv)
 
+    def get_lifting_rate_arr(self) -> np.ndarray:
+        """
+        Creates an array of lifting_rate and aligns it according to the
+        corresponding production year.
+
+        Returns
+        -------
+        np.ndarray
+            The array of lifting_rate with length equals to project duration.
+
+        Notes
+        -----
+        Array of lifting_rate is generated using method _get_array() with
+        target_param = lifting_rate.
+        """
+        return self._get_array(target_param=self.lifting_rate)
+
     def get_ghv_arr(self) -> np.ndarray:
         """
-<<<<<<< Updated upstream
         Creates an array of ghv and aligns it according to the corresponding production year.
-=======
-        Create an array of GHV and align it according to the corresponding production year.
->>>>>>> Stashed changes
 
         Returns
         -------
@@ -356,21 +353,13 @@ class Lifting:
 
     def get_prod_rate_arr(self) -> np.ndarray:
         """
-<<<<<<< Updated upstream
         Creates an array of production rate and aligns it according to the
         corresponding production year.
-=======
-        Create an array of production rate according to its corresponding production year.
->>>>>>> Stashed changes
 
         Returns
         -------
         np.ndarray
-<<<<<<< Updated upstream
             The array of production rate with length equals to project duration.
-=======
-            Array of production rate with length equals to project duration.
->>>>>>> Stashed changes
 
         Notes
         -----
@@ -381,13 +370,8 @@ class Lifting:
 
     def get_prod_rate_baseline_arr(self) -> np.ndarray:
         """
-<<<<<<< Updated upstream
         Creates an array of production rate baseline and aligns it according to
         the corresponding production year.
-=======
-        Create an array of production rate baseline according to its corresponding
-        production year.
->>>>>>> Stashed changes
 
         Returns
         -------
@@ -520,11 +504,6 @@ class Lifting:
 
         rev = self.lifting_rate * self.price * self.ghv
         rev_update = np.bincount(self.prod_year - self.start_year, weights=rev)
-
-        print('\t')
-        print(f'Filetype: {type(rev_update)}')
-        print(f'Length: {len(rev_update)}')
-        print(rev_update)
 
         # Modify revenue, accounting for project duration
         zeros = np.zeros(self.project_duration - len(rev_update))
@@ -743,8 +722,9 @@ class Lifting:
         if isinstance(other, Lifting):
             return np.sum(self.revenue()) / np.sum(other.revenue())
 
-        # Between an instance of Lifting and an instance of Capital/Intangible/OPEX/ASR/LBT
-        elif isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # Between an instance of Lifting and an instance of
+        # Capital/Intangible/OPEX/ASR/LBT/CostOfSales
+        elif isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.revenue()) / np.sum(other.expenditures_post_tax())
 
         # Between an instance of Lifting and an integer/a float

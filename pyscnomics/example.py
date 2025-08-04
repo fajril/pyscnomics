@@ -22,11 +22,7 @@ from pyscnomics.econ.costs import (
 class ExampleCase:
     """
     A class consisting a collection of prescribed synthetic data designed as
-<<<<<<< Updated upstream
     example to run class BaseProject, CostRecovery, and GrossSplit.
-=======
-    an example to run class BaseProject, CostRecovery, and GrossSplit.
->>>>>>> Stashed changes
     """
 
     lifting_mangga: Lifting = field(default=None, init=False, repr=False)
@@ -48,15 +44,6 @@ class ExampleCase:
 
     def __post_init__(self):
         self._get_lifting_data()
-<<<<<<< Updated upstream
-        self._get_capital_cost_data()
-        self._get_intangible_cost_data()
-        self._get_opex_data()
-        self._get_asr_cost_data()
-        self._get_lbt_cost_data()
-        self._get_cost_of_sales_data()
-        self._get_sunk_cost_data()
-=======
         # self._get_capital_cost_data()
         # self._get_intangible_cost_data()
         # self._get_opex_data()
@@ -64,7 +51,6 @@ class ExampleCase:
         # self._get_lbt_cost_data()
         # self._get_cost_of_sales_data()
         # self._get_sunk_cost_data()
->>>>>>> Stashed changes
 
     def _get_lifting_data(self):
         """
@@ -73,22 +59,6 @@ class ExampleCase:
         self.lifting_mangga = Lifting(
             start_year=2023,
             end_year=2030,
-<<<<<<< Updated upstream
-            prod_year=np.array([2026, 2027, 2028, 2027]),
-            lifting_rate=np.array([np.nan, None, 100, 100]),
-            price=np.array([10, 10, 10, 10]),
-            fluid_type=FluidType.OIL,
-        )
-
-        self.lifting_apel = Lifting(
-            start_year=2023,
-            end_year=2030,
-            prod_year=np.array([2026, 2027, 2028, 2027]),
-            lifting_rate=np.array([np.nan, None, 5, 5]),
-            price=np.array([2, 2, 2, 2]),
-            fluid_type=FluidType.GAS,
-        )
-=======
             prod_year=np.array([2025, 2026, 2027, 2028, 2027, 2025, 2025, 2025]),
             lifting_rate=np.array([10, 25, 50, 100, 150, 10, 10, 10]),
             price=np.array([10, 10, 10, 10, 10, 10, 10, 10]),
@@ -103,7 +73,6 @@ class ExampleCase:
         #     price=np.array([2, 2, 2, 2]),
         #     fluid_type=FluidType.GAS,
         # )
->>>>>>> Stashed changes
 
     def _get_capital_cost_data(self):
         """
