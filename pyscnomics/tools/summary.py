@@ -57,20 +57,20 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
     # Defining the same summary parameters for any contract
     # Lifting
-    lifting_oil = np.sum(contract._oil_lifting.get_lifting_rate_arr(), dtype=float)
-    if np.sum(contract._oil_lifting.get_lifting_rate_arr()) == 0:
+    lifting_oil = np.sum(contract._oil_lifting.get_lifting_rate_ghv_arr(), dtype=float)
+    if np.sum(contract._oil_lifting.get_lifting_rate_ghv_arr()) == 0:
         oil_wap = 0.0
     else:
-        oil_wap = np.divide(np.sum(contract._oil_revenue), np.sum(contract._oil_lifting.get_lifting_rate_arr()),
-                            where=np.sum(contract._oil_lifting.get_lifting_rate_arr()) != 0)
+        oil_wap = np.divide(np.sum(contract._oil_revenue), np.sum(contract._oil_lifting.get_lifting_rate_ghv_arr()),
+                            where=np.sum(contract._oil_lifting.get_lifting_rate_ghv_arr()) != 0)
 
-    lifting_gas = np.sum(contract._gas_lifting.get_lifting_rate_arr(), dtype=float)
-    if np.sum(contract._gas_lifting.get_lifting_rate_arr()) == 0:
+    lifting_gas = np.sum(contract._gas_lifting.get_lifting_rate_ghv_arr(), dtype=float)
+    if np.sum(contract._gas_lifting.get_lifting_rate_ghv_arr()) == 0:
         gas_wap = 0.0
     else:
-        gas_wap = np.divide(np.sum(contract._gas_wap_price * contract._gas_lifting.get_lifting_rate_arr() * contract._gas_lifting.get_lifting_ghv_arr()), np.sum(
-            contract._gas_lifting.get_lifting_rate_arr() * contract._gas_lifting.get_lifting_ghv_arr()), where=np.sum(
-            contract._gas_lifting.get_lifting_rate_arr() * contract._gas_lifting.get_lifting_ghv_arr()) != 0)
+        gas_wap = np.divide(np.sum(contract._gas_wap_price * contract._gas_lifting.get_lifting_rate_ghv_arr() * contract._gas_lifting.get_ghv_arr()), np.sum(
+            contract._gas_lifting.get_lifting_rate_ghv_arr() * contract._gas_lifting.get_ghv_arr()), where=np.sum(
+            contract._gas_lifting.get_lifting_rate_ghv_arr() * contract._gas_lifting.get_ghv_arr()) != 0)
 
     # Gross Revenue
     gross_revenue_oil = np.sum(contract._oil_revenue, dtype=float)
@@ -976,24 +976,24 @@ class Summary:
         Parsing the lifting data to the lifting attributes
         """
         # Lifting Oil
-        self.lifting_oil = float(np.sum(self.contract._oil_lifting.get_lifting_rate_arr(), dtype=float))
-        if np.sum(self.contract._oil_lifting.get_lifting_rate_arr()) == 0:
+        self.lifting_oil = float(np.sum(self.contract._oil_lifting.get_lifting_rate_ghv_arr(), dtype=float))
+        if np.sum(self.contract._oil_lifting.get_lifting_rate_ghv_arr()) == 0:
             self.oil_wap = 0.0
         else:
             self.oil_wap = np.divide(np.sum(self.contract._oil_revenue),
-                                np.sum(self.contract._oil_lifting.get_lifting_rate_arr()),
-                                where=np.sum(self.contract._oil_lifting.get_lifting_rate_arr()) != 0)
+                                     np.sum(self.contract._oil_lifting.get_lifting_rate_ghv_arr()),
+                                     where=np.sum(self.contract._oil_lifting.get_lifting_rate_ghv_arr()) != 0)
 
-        self.lifting_gas = float(np.sum(self.contract._gas_lifting.get_lifting_rate_arr(), dtype=float))
+        self.lifting_gas = float(np.sum(self.contract._gas_lifting.get_lifting_rate_ghv_arr(), dtype=float))
 
         # Lifting Gas
-        if np.sum(self.contract._gas_lifting.get_lifting_rate_arr()) == 0:
+        if np.sum(self.contract._gas_lifting.get_lifting_rate_ghv_arr()) == 0:
             self.gas_wap = 0.0
         else:
             self.gas_wap = np.divide(
-                np.sum(self.contract._gas_wap_price * self.contract._gas_lifting.get_lifting_rate_arr()),
-                np.sum(self.contract._gas_lifting.get_lifting_rate_arr()),
-                where=np.sum(self.contract._gas_lifting.get_lifting_rate_arr()) != 0)
+                np.sum(self.contract._gas_wap_price * self.contract._gas_lifting.get_lifting_rate_ghv_arr()),
+                np.sum(self.contract._gas_lifting.get_lifting_rate_ghv_arr()),
+                where=np.sum(self.contract._gas_lifting.get_lifting_rate_ghv_arr()) != 0)
 
     def _get_gross_revenue(self):
         """

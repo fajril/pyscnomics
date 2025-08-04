@@ -3330,7 +3330,7 @@ class BaseProject:
         # Add contributions from every FLUID TYPE lifting instances
         for lft in self.lifting:
             if lft.fluid_type == fluidtype:
-                lft_rate = lft.get_lifting_rate_arr()
+                lft_rate = lft.get_lifting_rate_ghv_arr()
                 vol_x_price += lft_rate * lft.get_price_arr()
                 total_vol += lft_rate
 

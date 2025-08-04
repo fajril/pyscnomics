@@ -1101,7 +1101,7 @@ class GrossSplit(BaseProject):
             self._oil_amortization = unit_of_production_rate(
                 start_year_project=self.start_date.year,
                 cost=float(np.sum(self._oil_sunk_cost)),
-                prod=self._oil_lifting.get_lifting_rate_arr(),
+                prod=self._oil_lifting.get_lifting_rate_ghv_arr(),
                 prod_year=self.project_years,
                 salvage_value=0.0,
                 amortization_len=self.project_duration,)
@@ -1109,7 +1109,7 @@ class GrossSplit(BaseProject):
             self._gas_amortization = unit_of_production_rate(
                 start_year_project=self.start_date.year,
                 cost=float(np.sum(self._gas_sunk_cost)),
-                prod=self._gas_lifting.get_lifting_rate_arr(),
+                prod=self._gas_lifting.get_lifting_rate_ghv_arr(),
                 prod_year=self.project_years,
                 salvage_value=0.0,
                 amortization_len=self.project_duration,)
