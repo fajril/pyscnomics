@@ -27,49 +27,49 @@ from pyscnomics.econ.costs_tools import (
 
 
 class GeneralCostException(Exception):
-    """ Exception to be raised for an incorrect use of class GeneralCost """
+    """Exception to be raised for an incorrect use of class GeneralCost"""
 
     pass
 
 
 class CapitalException(Exception):
-    """ Exception to be raised for an incorrect use of class CapitalCost """
+    """Exception to be raised for an incorrect use of class CapitalCost"""
 
     pass
 
 
 class IntangibleException(Exception):
-    """ Exception to be raised for an incorrect use of class Intangible """
+    """Exception to be raised for an incorrect use of class Intangible"""
 
     pass
 
 
 class OPEXException(Exception):
-    """ Exception to be raised for an incorrect use of class OPEX """
+    """Exception to be raised for an incorrect use of class OPEX"""
 
     pass
 
 
 class ASRException(Exception):
-    """ Exception to be raised for an incorrect use of class ASR """
+    """Exception to be raised for an incorrect use of class ASR"""
 
     pass
 
 
 class LBTException(Exception):
-    """ Exception to be raised for an incorrect use of class LBT """
+    """Exception to be raised for an incorrect use of class LBT"""
 
     pass
 
 
 class CostOfSalesException(Exception):
-    """ Exception to be raised for an incorrect use of class CostOfSales """
+    """Exception to be raised for an incorrect use of class CostOfSales"""
 
     pass
 
 
 class SunkCostException(Exception):
-    """ Exception to be raised for an incorrect use of class SunkCost """
+    """Exception to be raised for an incorrect use of class SunkCost"""
 
     pass
 
@@ -171,10 +171,7 @@ class GeneralCost:
 
         return np.concatenate((expenses, zeros))
 
-    def indirect_taxes(
-        self,
-        tax_rate: np.ndarray | float = 0.0
-    ) -> np.ndarray:
+    def indirect_taxes(self, tax_rate: np.ndarray | float = 0.0) -> np.ndarray:
         """
         Calculate and allocate indirect taxes on project costs.
 
@@ -267,10 +264,9 @@ class GeneralCost:
             expenditures_post_tax = expenditures_pre_tax + indirect_tax
         """
 
-        return (
-            self.expenditures_pre_tax(year_inflation=year_inflation, inflation_rate=inflation_rate)
-            + self.indirect_taxes(tax_rate=tax_rate)
-        )
+        return self.expenditures_pre_tax(
+            year_inflation=year_inflation, inflation_rate=inflation_rate
+        ) + self.indirect_taxes(tax_rate=tax_rate)
 
     def __len__(self):
         return len(self.expense_year)
@@ -393,7 +389,8 @@ class CapitalCost(GeneralCost):
                 )
 
             self.cost_allocation = [
-                FluidType.OIL if pd.isna(val) else val for _, val in enumerate(self.cost_allocation)
+                FluidType.OIL if pd.isna(val) else val
+                for _, val in enumerate(self.cost_allocation)
             ]
 
         # Prepare attribute pis_year
@@ -409,7 +406,9 @@ class CapitalCost(GeneralCost):
 
             pis_year_nan_id = np.argwhere(pd.isna(self.pis_year)).ravel()
             if len(pis_year_nan_id) > 0:
-                self.pis_year[pis_year_nan_id] = self.expense_year[pis_year_nan_id].copy()
+                self.pis_year[pis_year_nan_id] = self.expense_year[
+                    pis_year_nan_id
+                ].copy()
 
         self.pis_year = self.pis_year.astype(int)
 
@@ -426,7 +425,9 @@ class CapitalCost(GeneralCost):
 
             salvage_value_nan_id = np.argwhere(pd.isna(self.salvage_value)).ravel()
             if len(salvage_value_nan_id) > 0:
-                self.salvage_value[salvage_value_nan_id] = np.zeros(len(salvage_value_nan_id))
+                self.salvage_value[salvage_value_nan_id] = np.zeros(
+                    len(salvage_value_nan_id)
+                )
 
         self.salvage_value = self.salvage_value.astype(np.float64)
 
@@ -443,7 +444,9 @@ class CapitalCost(GeneralCost):
 
             useful_life_nan_id = np.argwhere(pd.isna(self.useful_life)).ravel()
             if len(useful_life_nan_id) > 0:
-                self.useful_life[useful_life_nan_id] = np.repeat(5.0, len(useful_life_nan_id))
+                self.useful_life[useful_life_nan_id] = np.repeat(
+                    5.0, len(useful_life_nan_id)
+                )
 
         self.useful_life = self.useful_life.astype(np.float64)
 
@@ -458,10 +461,12 @@ class CapitalCost(GeneralCost):
                     f"not as a/an {self.depreciation_factor.__class__.__qualname__}"
                 )
 
-            depreciation_factor_nan_id = np.argwhere(pd.isna(self.depreciation_factor)).ravel()
+            depreciation_factor_nan_id = np.argwhere(
+                pd.isna(self.depreciation_factor)
+            ).ravel()
             if len(depreciation_factor_nan_id) > 0:
-                self.depreciation_factor[depreciation_factor_nan_id] = (
-                    np.repeat(0.5, len(depreciation_factor_nan_id))
+                self.depreciation_factor[depreciation_factor_nan_id] = np.repeat(
+                    0.5, len(depreciation_factor_nan_id)
                 )
 
         self.depreciation_factor = self.depreciation_factor.astype(np.float64)
@@ -478,7 +483,8 @@ class CapitalCost(GeneralCost):
                 )
 
             self.is_ic_applied = [
-                False if pd.isna(val) else val for _, val in enumerate(self.is_ic_applied)
+                False if pd.isna(val) else val
+                for _, val in enumerate(self.is_ic_applied)
             ]
 
         # Prepare attribute tax_portion
@@ -515,14 +521,18 @@ class CapitalCost(GeneralCost):
 
         if isinstance(self.tax_discount, (float, int)):
             if self.tax_discount < 0 or self.tax_discount > 1:
-                raise CapitalException(f"Attribute tax_discount must be between 0 and 1")
+                raise CapitalException(
+                    f"Attribute tax_discount must be between 0 and 1"
+                )
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.cost))
 
         elif isinstance(self.tax_discount, np.ndarray):
             tax_discount_nan_id = np.argwhere(pd.isna(self.tax_discount)).ravel()
             if len(tax_discount_nan_id) > 0:
-                self.tax_discount[tax_discount_nan_id] = np.zeros(len(tax_discount_nan_id))
+                self.tax_discount[tax_discount_nan_id] = np.zeros(
+                    len(tax_discount_nan_id)
+                )
 
             tax_discount_large = np.sum(self.tax_discount > 1.0, dtype=np.float64)
             tax_discount_negative = np.sum(self.tax_discount < 0.0, dtype=np.float64)
@@ -642,25 +652,22 @@ class CapitalCost(GeneralCost):
         """
 
         # Cost adjustment due to inflation and tax
-        cost_adjusted = (
-            get_cost_adjustment_by_inflation(
-                start_year=self.start_year,
-                end_year=self.end_year,
-                cost=self.cost,
-                expense_year=self.expense_year,
-                project_years=self.project_years,
-                year_inflation=year_inflation,
-                inflation_rate=inflation_rate,
-            ) +
-            calc_indirect_tax(
-                start_year=self.start_year,
-                cost=self.cost,
-                expense_year=self.expense_year,
-                project_years=self.project_years,
-                tax_portion=self.tax_portion,
-                tax_rate=tax_rate,
-                tax_discount=self.tax_discount,
-            )
+        cost_adjusted = get_cost_adjustment_by_inflation(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+        ) + calc_indirect_tax(
+            start_year=self.start_year,
+            cost=self.cost,
+            expense_year=self.expense_year,
+            project_years=self.project_years,
+            tax_portion=self.tax_portion,
+            tax_rate=tax_rate,
+            tax_discount=self.tax_discount,
         )
 
         # Calculate depreciation
@@ -800,14 +807,13 @@ class CapitalCost(GeneralCost):
         )[0]
 
         # Calculate total depreciation book value
-        return (
-            np.cumsum(self.expenditures_post_tax(
+        return np.cumsum(
+            self.expenditures_post_tax(
                 year_inflation=year_inflation,
                 inflation_rate=inflation_rate,
                 tax_rate=tax_rate,
-            ))
-            - np.cumsum(total_depreciation_charge)
-        )
+            )
+        ) - np.cumsum(total_depreciation_charge)
 
     def __eq__(self, other):
         # Between two instances of CapitalCost
@@ -906,16 +912,22 @@ class CapitalCost(GeneralCost):
         if isinstance(other, CapitalCost):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
             cost_combined = np.concatenate((self.cost, other.cost))
             pis_year_combined = np.concatenate((self.pis_year, other.pis_year))
-            salvage_value_combined = np.concatenate((self.salvage_value, other.salvage_value))
+            salvage_value_combined = np.concatenate(
+                (self.salvage_value, other.salvage_value)
+            )
             useful_life_combined = np.concatenate((self.useful_life, other.useful_life))
             depreciation_factor_combined = np.concatenate(
                 (self.depreciation_factor, other.depreciation_factor)
             )
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
+            tax_discount_combined = np.concatenate(
+                (self.tax_discount, other.tax_discount)
+            )
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
             is_ic_applied_combined = self.is_ic_applied + other.is_ic_applied
@@ -951,16 +963,22 @@ class CapitalCost(GeneralCost):
         if isinstance(other, CapitalCost):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
             cost_combined = np.concatenate((self.cost, -other.cost))
             pis_year_combined = np.concatenate((self.pis_year, other.pis_year))
-            salvage_value_combined = np.concatenate((self.salvage_value, other.salvage_value))
+            salvage_value_combined = np.concatenate(
+                (self.salvage_value, other.salvage_value)
+            )
             useful_life_combined = np.concatenate((self.useful_life, other.useful_life))
             depreciation_factor_combined = np.concatenate(
                 (self.depreciation_factor, other.depreciation_factor)
             )
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
+            tax_discount_combined = np.concatenate(
+                (self.tax_discount, other.tax_discount)
+            )
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
             is_is_applied_combined = self.is_ic_applied + other.is_ic_applied
@@ -1136,7 +1154,8 @@ class Intangible(GeneralCost):
                 )
 
             self.cost_allocation = [
-                FluidType.OIL if pd.isna(val) else val for _, val in enumerate(self.cost_allocation)
+                FluidType.OIL if pd.isna(val) else val
+                for _, val in enumerate(self.cost_allocation)
             ]
 
         # Prepare attribute description
@@ -1188,14 +1207,18 @@ class Intangible(GeneralCost):
 
         if isinstance(self.tax_discount, (float, int)):
             if self.tax_discount < 0 or self.tax_discount > 1:
-                raise IntangibleException(f"Attribute tax_discount must be between 0 and 1")
+                raise IntangibleException(
+                    f"Attribute tax_discount must be between 0 and 1"
+                )
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.cost))
 
         elif isinstance(self.tax_discount, np.ndarray):
             tax_discount_nan_id = np.argwhere(pd.isna(self.tax_discount)).ravel()
             if len(tax_discount_nan_id) > 0:
-                self.tax_discount[tax_discount_nan_id] = np.zeros(len(tax_discount_nan_id))
+                self.tax_discount[tax_discount_nan_id] = np.zeros(
+                    len(tax_discount_nan_id)
+                )
 
             tax_discount_large = np.sum(self.tax_discount > 1.0, dtype=np.float64)
             tax_discount_negative = np.sum(self.tax_discount < 0.0, dtype=np.float64)
@@ -1254,7 +1277,7 @@ class Intangible(GeneralCost):
                     np.allclose(self.cost, other.cost),
                     np.allclose(self.tax_portion, other.tax_portion),
                     np.allclose(self.tax_discount, other.tax_discount),
-                    self.cost_allocation == other.cost_allocation
+                    self.cost_allocation == other.cost_allocation,
                 )
             )
 
@@ -1335,10 +1358,14 @@ class Intangible(GeneralCost):
         if isinstance(other, Intangible):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
             cost_combined = np.concatenate((self.cost, other.cost))
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
+            tax_discount_combined = np.concatenate(
+                (self.tax_discount, other.tax_discount)
+            )
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
 
@@ -1368,10 +1395,14 @@ class Intangible(GeneralCost):
         if isinstance(other, Intangible):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
             cost_combined = np.concatenate((self.cost, -other.cost))
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
+            tax_discount_combined = np.concatenate(
+                (self.tax_discount, other.tax_discount)
+            )
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
 
@@ -1536,13 +1567,17 @@ class OPEX(GeneralCost):
             else:
                 fixed_cost_nan_id = np.argwhere(pd.isna(self.fixed_cost)).ravel()
                 if len(fixed_cost_nan_id) > 0:
-                    self.fixed_cost[fixed_cost_nan_id] = np.zeros(len(fixed_cost_nan_id))
+                    self.fixed_cost[fixed_cost_nan_id] = np.zeros(
+                        len(fixed_cost_nan_id)
+                    )
 
         self.fixed_cost = self.fixed_cost.astype(np.float64)
 
         # Prepare attribute cost_allocation
         if self.cost_allocation is None:
-            self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
+            self.cost_allocation = [
+                FluidType.OIL for _ in range(len(self.expense_year))
+            ]
 
         else:
             if not isinstance(self.cost_allocation, list):
@@ -1552,7 +1587,8 @@ class OPEX(GeneralCost):
                 )
 
             self.cost_allocation = [
-                FluidType.OIL if pd.isna(val) else val for _, val in enumerate(self.cost_allocation)
+                FluidType.OIL if pd.isna(val) else val
+                for _, val in enumerate(self.cost_allocation)
             ]
 
         # Prepare attribute description
@@ -1611,7 +1647,9 @@ class OPEX(GeneralCost):
         elif isinstance(self.tax_discount, np.ndarray):
             tax_discount_nan_id = np.argwhere(pd.isna(self.tax_discount)).ravel()
             if len(tax_discount_nan_id) > 0:
-                self.tax_discount[tax_discount_nan_id] = np.zeros(len(tax_discount_nan_id))
+                self.tax_discount[tax_discount_nan_id] = np.zeros(
+                    len(tax_discount_nan_id)
+                )
 
             tax_discount_large = np.sum(self.tax_discount > 1.0, dtype=np.float64)
             tax_discount_negative = np.sum(self.tax_discount < 0.0, dtype=np.float64)
@@ -1653,10 +1691,12 @@ class OPEX(GeneralCost):
                 )
 
             else:
-                cost_per_volume_nan_id = np.argwhere(pd.isna(self.cost_per_volume)).ravel()
+                cost_per_volume_nan_id = np.argwhere(
+                    pd.isna(self.cost_per_volume)
+                ).ravel()
                 if len(cost_per_volume_nan_id) > 0:
-                    self.cost_per_volume[cost_per_volume_nan_id] = (
-                        np.zeros(len(cost_per_volume_nan_id))
+                    self.cost_per_volume[cost_per_volume_nan_id] = np.zeros(
+                        len(cost_per_volume_nan_id)
                     )
 
         self.cost_per_volume = self.cost_per_volume.astype(np.float64)
@@ -1665,16 +1705,16 @@ class OPEX(GeneralCost):
         arr_reference = len(self.expense_year)
 
         if not all(
-                len(arr) == arr_reference
-                for arr in [
-                    self.fixed_cost,
-                    self.cost_allocation,
-                    self.description,
-                    self.tax_portion,
-                    self.tax_discount,
-                    self.prod_rate,
-                    self.cost_per_volume,
-                ]
+            len(arr) == arr_reference
+            for arr in [
+                self.fixed_cost,
+                self.cost_allocation,
+                self.description,
+                self.tax_portion,
+                self.tax_discount,
+                self.prod_rate,
+                self.cost_per_volume,
+            ]
         ):
             raise OPEXException(
                 f"Unequal length of arrays: "
@@ -1802,12 +1842,18 @@ class OPEX(GeneralCost):
         if isinstance(other, OPEX):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
             fixed_cost_combined = np.concatenate((self.fixed_cost, other.fixed_cost))
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
+            tax_discount_combined = np.concatenate(
+                (self.tax_discount, other.tax_discount)
+            )
             prod_rate_combined = np.concatenate((self.prod_rate, other.prod_rate))
-            cost_per_volume_combined = np.concatenate((self.cost_per_volume, other.cost_per_volume))
+            cost_per_volume_combined = np.concatenate(
+                (self.cost_per_volume, other.cost_per_volume)
+            )
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
 
@@ -1839,12 +1885,18 @@ class OPEX(GeneralCost):
         if isinstance(other, OPEX):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
             fixed_cost_combined = np.concatenate((self.fixed_cost, -other.fixed_cost))
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
+            tax_discount_combined = np.concatenate(
+                (self.tax_discount, other.tax_discount)
+            )
             prod_rate_combined = np.concatenate((self.prod_rate, other.prod_rate))
-            cost_per_volume_combined = np.concatenate((self.cost_per_volume, -other.cost_per_volume))
+            cost_per_volume_combined = np.concatenate(
+                (self.cost_per_volume, -other.cost_per_volume)
+            )
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
 
@@ -1984,7 +2036,9 @@ class ASR(GeneralCost):
         else:
             expense_year_nan_sum = np.sum(pd.isna(self.expense_year), dtype=np.float64)
             if expense_year_nan_sum > 0:
-                raise ASRException(f"Missing values in array expense_year: {self.expense_year}")
+                raise ASRException(
+                    f"Missing values in array expense_year: {self.expense_year}"
+                )
 
         self.expense_year = self.expense_year.astype(int)
 
@@ -2014,7 +2068,8 @@ class ASR(GeneralCost):
                 )
 
             self.cost_allocation = [
-                FluidType.OIL if pd.isna(val) else val for _, val in enumerate(self.cost_allocation)
+                FluidType.OIL if pd.isna(val) else val
+                for _, val in enumerate(self.cost_allocation)
             ]
 
         # Prepare attribute description
@@ -2073,7 +2128,9 @@ class ASR(GeneralCost):
         elif isinstance(self.tax_discount, np.ndarray):
             tax_discount_nan_id = np.argwhere(pd.isna(self.tax_discount)).ravel()
             if len(tax_discount_nan_id) > 0:
-                self.tax_discount[tax_discount_nan_id] = np.zeros(len(tax_discount_nan_id))
+                self.tax_discount[tax_discount_nan_id] = np.zeros(
+                    len(tax_discount_nan_id)
+                )
 
             tax_discount_large = np.sum(self.tax_discount > 1.0, dtype=np.float64)
             tax_discount_negative = np.sum(self.tax_discount < 0.0, dtype=np.float64)
@@ -2105,7 +2162,9 @@ class ASR(GeneralCost):
             elif isinstance(self.future_rate, np.ndarray):
                 future_rate_nan_id = np.argwhere(pd.isna(self.future_rate)).ravel()
                 if len(future_rate_nan_id) > 0:
-                    self.future_rate[future_rate_nan_id] = np.zeros(len(future_rate_nan_id))
+                    self.future_rate[future_rate_nan_id] = np.zeros(
+                        len(future_rate_nan_id)
+                    )
 
                 future_rate_negative = np.sum(self.future_rate < 0.0)
                 future_rate_large = np.sum(self.future_rate > 1.0)
@@ -2130,7 +2189,9 @@ class ASR(GeneralCost):
 
             final_year_nan = np.argwhere(pd.isna(self.final_year)).ravel()
             if len(final_year_nan) > 0:
-                self.final_year[final_year_nan] = self.expense_year[final_year_nan].copy()
+                self.final_year[final_year_nan] = self.expense_year[
+                    final_year_nan
+                ].copy()
 
             # Exception: final_year is before expense_year
             final_year_small_sum = np.sum(self.final_year < self.expense_year)
@@ -2281,10 +2342,7 @@ class ASR(GeneralCost):
 
         return np.sum(distributed_cost, axis=1, keepdims=False)
 
-    def indirect_taxes(
-        self,
-        tax_rate: np.ndarray | float = 0.0
-    ) -> np.ndarray:
+    def indirect_taxes(self, tax_rate: np.ndarray | float = 0.0) -> np.ndarray:
         """
         Calculate and distribute indirect taxes over the project duration.
 
@@ -2433,10 +2491,14 @@ class ASR(GeneralCost):
         if isinstance(other, ASR):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
             cost_combined = np.concatenate((self.cost, other.cost))
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
+            tax_discount_combined = np.concatenate(
+                (self.tax_discount, other.tax_discount)
+            )
             final_year_combined = np.concatenate((self.final_year, other.final_year))
             future_rate_combined = np.concatenate((self.future_rate, other.future_rate))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
@@ -2470,10 +2532,14 @@ class ASR(GeneralCost):
         if isinstance(other, ASR):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
             cost_combined = np.concatenate((self.cost, -other.cost))
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
+            tax_discount_combined = np.concatenate(
+                (self.tax_discount, other.tax_discount)
+            )
             final_year_combined = np.concatenate((self.final_year, other.final_year))
             future_rate_combined = np.concatenate((self.future_rate, other.future_rate))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
@@ -2650,7 +2716,9 @@ class LBT(GeneralCost):
 
         # Prepare attribute cost_allocation
         if self.cost_allocation is None:
-            self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
+            self.cost_allocation = [
+                FluidType.OIL for _ in range(len(self.expense_year))
+            ]
 
         else:
             if not isinstance(self.cost_allocation, list):
@@ -2660,7 +2728,8 @@ class LBT(GeneralCost):
                 )
 
             self.cost_allocation = [
-                FluidType.OIL if pd.isna(val) else val for _, val in enumerate(self.cost_allocation)
+                FluidType.OIL if pd.isna(val) else val
+                for _, val in enumerate(self.cost_allocation)
             ]
 
         # Prepare attribute description
@@ -2719,7 +2788,9 @@ class LBT(GeneralCost):
         elif isinstance(self.tax_discount, np.ndarray):
             tax_discount_nan_id = np.argwhere(pd.isna(self.tax_discount)).ravel()
             if len(tax_discount_nan_id) > 0:
-                self.tax_discount[tax_discount_nan_id] = np.zeros(len(tax_discount_nan_id))
+                self.tax_discount[tax_discount_nan_id] = np.zeros(
+                    len(tax_discount_nan_id)
+                )
 
             tax_discount_large = np.sum(self.tax_discount > 1.0, dtype=np.float64)
             tax_discount_negative = np.sum(self.tax_discount < 0.0, dtype=np.float64)
@@ -2744,7 +2815,9 @@ class LBT(GeneralCost):
 
             final_year_nan_id = np.argwhere(pd.isna(self.final_year)).ravel()
             if len(final_year_nan_id) > 0:
-                self.final_year[final_year_nan_id] = self.expense_year[final_year_nan_id].copy()
+                self.final_year[final_year_nan_id] = self.expense_year[
+                    final_year_nan_id
+                ].copy()
 
             # Exception: final_year is before expense_year
             final_year_small_sum = np.sum(self.final_year < self.expense_year)
@@ -2777,7 +2850,9 @@ class LBT(GeneralCost):
             # Missing data in array utilized_land_area
             utilized_land_nan_id = np.argwhere(pd.isna(self.utilized_land_area)).ravel()
             if len(utilized_land_nan_id) > 0:
-                self.utilized_land_area[utilized_land_nan_id] = np.zeros(len(utilized_land_nan_id))
+                self.utilized_land_area[utilized_land_nan_id] = np.zeros(
+                    len(utilized_land_nan_id)
+                )
 
             # Exception: negative values in array utilized_land_area
             utilized_land_area_negative_sum = np.sum(self.utilized_land_area < 0)
@@ -2800,10 +2875,12 @@ class LBT(GeneralCost):
                 )
 
             # Missing data in array utilized_building_area
-            utilized_building_nan_id = np.argwhere(pd.isna(self.utilized_building_area)).ravel()
+            utilized_building_nan_id = np.argwhere(
+                pd.isna(self.utilized_building_area)
+            ).ravel()
             if len(utilized_building_nan_id) > 0:
-                self.utilized_building_area[utilized_building_nan_id] = (
-                    np.zeros(len(utilized_building_nan_id))
+                self.utilized_building_area[utilized_building_nan_id] = np.zeros(
+                    len(utilized_building_nan_id)
                 )
 
             # Exception: negative values in array utilized_building_area
@@ -2847,7 +2924,9 @@ class LBT(GeneralCost):
             # Missing data in array njop_building
             njop_building_nan_id = np.argwhere(pd.isna(self.njop_building)).ravel()
             if len(njop_building_nan_id) > 0:
-                self.njop_building[njop_building_nan_id] = np.zeros(len(njop_building_nan_id))
+                self.njop_building[njop_building_nan_id] = np.zeros(
+                    len(njop_building_nan_id)
+                )
 
         self.njop_building = self.njop_building.astype(np.float64)
 
@@ -2865,17 +2944,23 @@ class LBT(GeneralCost):
             # Missing data in array gross_revenue
             gross_revenue_nan_id = np.argwhere(pd.isna(self.gross_revenue)).ravel()
             if len(gross_revenue_nan_id) > 0:
-                self.gross_revenue[gross_revenue_nan_id] = np.zeros(len(gross_revenue_nan_id))
+                self.gross_revenue[gross_revenue_nan_id] = np.zeros(
+                    len(gross_revenue_nan_id)
+                )
 
         self.gross_revenue = self.gross_revenue.astype(np.float64)
 
         # Prepare attribute _surface_lbt_cost
         surface_land = self.utilized_land_area * self.njop_land
         surface_building = self.utilized_building_area * self.njop_building
-        self._surface_lbt_cost = (0.5 / 100) * (40 / 100) * 1.0 * (surface_land + surface_building)
+        self._surface_lbt_cost = (
+            (0.5 / 100) * (40 / 100) * 1.0 * (surface_land + surface_building)
+        )
 
         # Prepare attribute _subsurface_lbt_cost
-        self._subsurface_lbt_cost = (0.5 / 100) * (40 / 100) * 10.04 * self.gross_revenue
+        self._subsurface_lbt_cost = (
+            (0.5 / 100) * (40 / 100) * 10.04 * self.gross_revenue
+        )
 
         # Prepare attribute cost
         if self.cost is None:
@@ -3003,10 +3088,7 @@ class LBT(GeneralCost):
 
         return np.sum(distributed_cost, axis=1, keepdims=False)
 
-    def indirect_taxes(
-        self,
-        tax_rate: np.ndarray | float = 0.0
-    ) -> np.ndarray:
+    def indirect_taxes(self, tax_rate: np.ndarray | float = 0.0) -> np.ndarray:
         """
         Calculate and distribute indirect taxes over the project duration.
 
@@ -3070,7 +3152,9 @@ class LBT(GeneralCost):
                     np.allclose(self.tax_discount, other.tax_discount),
                     np.allclose(self.final_year, other.final_year),
                     np.allclose(self.utilized_land_area, other.utilized_land_area),
-                    np.allclose(self.utilized_building_area, other.utilized_building_area),
+                    np.allclose(
+                        self.utilized_building_area, other.utilized_building_area
+                    ),
                     np.allclose(self.njop_land, other.njop_land),
                     np.allclose(self.njop_building, other.njop_building),
                     np.allclose(self.gross_revenue, other.gross_revenue),
@@ -3156,9 +3240,13 @@ class LBT(GeneralCost):
         if isinstance(other, LBT):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
+            tax_discount_combined = np.concatenate(
+                (self.tax_discount, other.tax_discount)
+            )
             final_year_combined = np.concatenate((self.final_year, other.final_year))
             utilized_land_area_combined = np.concatenate(
                 (self.utilized_land_area, other.utilized_land_area)
@@ -3167,8 +3255,12 @@ class LBT(GeneralCost):
                 (self.utilized_building_area, other.utilized_building_area)
             )
             njop_land_combined = np.concatenate((self.njop_land, other.njop_land))
-            njop_building_combined = np.concatenate((self.njop_building, other.njop_building))
-            gross_revenue_combined = np.concatenate((self.gross_revenue, other.gross_revenue))
+            njop_building_combined = np.concatenate(
+                (self.njop_building, other.njop_building)
+            )
+            gross_revenue_combined = np.concatenate(
+                (self.gross_revenue, other.gross_revenue)
+            )
             cost_combined = np.concatenate((self.cost, other.cost))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
@@ -3205,9 +3297,13 @@ class LBT(GeneralCost):
         if isinstance(other, LBT):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
+            tax_discount_combined = np.concatenate(
+                (self.tax_discount, other.tax_discount)
+            )
             final_year_combined = np.concatenate((self.final_year, other.final_year))
             utilized_land_area_combined = np.concatenate(
                 (self.utilized_land_area, other.utilized_land_area)
@@ -3216,8 +3312,12 @@ class LBT(GeneralCost):
                 (self.utilized_building_area, other.utilized_building_area)
             )
             njop_land_combined = np.concatenate((self.njop_land, -other.njop_land))
-            njop_building_combined = np.concatenate((self.njop_building, -other.njop_building))
-            gross_revenue_combined = np.concatenate((self.gross_revenue, -other.gross_revenue))
+            njop_building_combined = np.concatenate(
+                (self.njop_building, -other.njop_building)
+            )
+            gross_revenue_combined = np.concatenate(
+                (self.gross_revenue, -other.gross_revenue)
+            )
             cost_combined = np.concatenate((self.cost, -other.cost))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
@@ -3394,7 +3494,9 @@ class CostOfSales(GeneralCost):
 
         # Prepare attribute cost_allocation
         if self.cost_allocation is None:
-            self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
+            self.cost_allocation = [
+                FluidType.OIL for _ in range(len(self.expense_year))
+            ]
 
         else:
             if not isinstance(self.cost_allocation, list):
@@ -3404,7 +3506,8 @@ class CostOfSales(GeneralCost):
                 )
 
             self.cost_allocation = [
-                FluidType.OIL if pd.isna(val) else val for _, val in enumerate(self.cost_allocation)
+                FluidType.OIL if pd.isna(val) else val
+                for _, val in enumerate(self.cost_allocation)
             ]
 
         # Prepare attribute description
@@ -3456,14 +3559,18 @@ class CostOfSales(GeneralCost):
 
         if isinstance(self.tax_discount, (float, int)):
             if self.tax_discount < 0 or self.tax_discount > 1:
-                raise CostOfSalesException(f"Attribute tax_discount must be between 0 and 1")
+                raise CostOfSalesException(
+                    f"Attribute tax_discount must be between 0 and 1"
+                )
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.expense_year))
 
         elif isinstance(self.tax_discount, np.ndarray):
             tax_discount_nan_id = np.argwhere(pd.isna(self.tax_discount)).ravel()
             if len(tax_discount_nan_id) > 0:
-                self.tax_discount[tax_discount_nan_id] = np.zeros(len(tax_discount_nan_id))
+                self.tax_discount[tax_discount_nan_id] = np.zeros(
+                    len(tax_discount_nan_id)
+                )
 
             tax_discount_large = np.sum(self.tax_discount > 1.0, dtype=np.float64)
             tax_discount_negative = np.sum(self.tax_discount < 0.0, dtype=np.float64)
@@ -3523,7 +3630,7 @@ class CostOfSales(GeneralCost):
                     np.allclose(self.cost, other.cost),
                     np.allclose(self.tax_portion, other.tax_portion),
                     np.allclose(self.tax_discount, other.tax_discount),
-                    self.cost_allocation == other.cost_allocation
+                    self.cost_allocation == other.cost_allocation,
                 )
             )
 
@@ -3603,8 +3710,12 @@ class CostOfSales(GeneralCost):
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            tax_discount_combined = np.concatenate(
+                (self.tax_discount, other.tax_discount)
+            )
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
             cost_combined = np.concatenate((self.cost, other.cost))
 
             return CostOfSales(
@@ -3637,8 +3748,12 @@ class CostOfSales(GeneralCost):
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            tax_discount_combined = np.concatenate(
+                (self.tax_discount, other.tax_discount)
+            )
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
             cost_combined = np.concatenate((self.cost, -other.cost))
 
             return CostOfSales(
@@ -3783,9 +3898,7 @@ class SunkCost(GeneralCost):
 
         # Prepare attribute pod1_year
         if self.pod1_year is None:
-            raise SunkCostException(
-                f"Missing data for pod1_year: {self.pod1_year}"
-            )
+            raise SunkCostException(f"Missing data for pod1_year: {self.pod1_year}")
 
         else:
             if not isinstance(self.pod1_year, int):
@@ -3874,7 +3987,9 @@ class SunkCost(GeneralCost):
 
         # Prepare attribute cost_allocation
         if self.cost_allocation is None:
-            self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
+            self.cost_allocation = [
+                FluidType.OIL for _ in range(len(self.expense_year))
+            ]
 
         else:
             if not isinstance(self.cost_allocation, list):
@@ -3884,7 +3999,8 @@ class SunkCost(GeneralCost):
                 )
 
             self.cost_allocation = [
-                FluidType.OIL if pd.isna(val) else val for _, val in enumerate(self.cost_allocation)
+                FluidType.OIL if pd.isna(val) else val
+                for _, val in enumerate(self.cost_allocation)
             ]
 
         # Prepare attribute description
@@ -3915,7 +4031,9 @@ class SunkCost(GeneralCost):
 
             salvage_value_nan_id = np.argwhere(pd.isna(self.salvage_value)).ravel()
             if len(salvage_value_nan_id) > 0:
-                self.salvage_value[salvage_value_nan_id] = np.zeros(len(salvage_value_nan_id))
+                self.salvage_value[salvage_value_nan_id] = np.zeros(
+                    len(salvage_value_nan_id)
+                )
 
         self.salvage_value = self.salvage_value.astype(np.float64)
 
@@ -3930,7 +4048,9 @@ class SunkCost(GeneralCost):
                     f"not as an/a {self.depreciation_period.__class__.__qualname__}"
                 )
 
-            depreciation_period_nan_id = np.argwhere(pd.isna(self.depreciation_period)).ravel()
+            depreciation_period_nan_id = np.argwhere(
+                pd.isna(self.depreciation_period)
+            ).ravel()
             if len(depreciation_period_nan_id) > 0:
                 self.depreciation_period[depreciation_period_nan_id] = np.repeat(
                     5.0, len(depreciation_period_nan_id)
@@ -3949,14 +4069,20 @@ class SunkCost(GeneralCost):
                     f"not as an/a {self.depreciation_factor.__class__.__qualname__}"
                 )
 
-            depreciation_factor_nan_id = np.argwhere(pd.isna(self.depreciation_factor)).ravel()
+            depreciation_factor_nan_id = np.argwhere(
+                pd.isna(self.depreciation_factor)
+            ).ravel()
             if len(depreciation_factor_nan_id) > 0:
                 self.depreciation_factor[depreciation_factor_nan_id] = np.repeat(
                     0.5, len(depreciation_factor_nan_id)
                 )
 
-            depreciation_factor_large = np.sum(self.depreciation_factor > 1.0, dtype=int)
-            depreciation_factor_negative = np.sum(self.depreciation_factor < 0.0, dtype=int)
+            depreciation_factor_large = np.sum(
+                self.depreciation_factor > 1.0, dtype=int
+            )
+            depreciation_factor_negative = np.sum(
+                self.depreciation_factor < 0.0, dtype=int
+            )
             if depreciation_factor_large > 0 or depreciation_factor_negative > 0:
                 raise SunkCostException(
                     f"The value of depreciation_factor must be within the "
@@ -4001,14 +4127,18 @@ class SunkCost(GeneralCost):
 
         if isinstance(self.tax_discount, (float, int)):
             if self.tax_discount < 0 or self.tax_discount > 1:
-                raise SunkCostException(f"Attribute tax_discount must be between 0 and 1")
+                raise SunkCostException(
+                    f"Attribute tax_discount must be between 0 and 1"
+                )
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.expense_year))
 
         elif isinstance(self.tax_discount, np.ndarray):
             tax_discount_nan_id = np.argwhere(pd.isna(self.tax_discount)).ravel()
             if len(tax_discount_nan_id) > 0:
-                self.tax_discount[tax_discount_nan_id] = np.zeros(len(tax_discount_nan_id))
+                self.tax_discount[tax_discount_nan_id] = np.zeros(
+                    len(tax_discount_nan_id)
+                )
 
             tax_discount_large = np.sum(self.tax_discount > 1.0, dtype=np.float64)
             tax_discount_negative = np.sum(self.tax_discount < 0.0, dtype=np.float64)
@@ -4094,7 +4224,11 @@ class SunkCost(GeneralCost):
                 [self.cost_allocation[val] for _, val in enumerate(sc_id)]
             )
             sc_fluid_type_id = np.array(
-                [sc_id[i] for i, val in enumerate(sc_cost_allocation_id) if val == fluid_type]
+                [
+                    sc_id[i]
+                    for i, val in enumerate(sc_cost_allocation_id)
+                    if val == fluid_type
+                ]
             )
 
         # Year of POD I approval is before the onstream year
@@ -4106,7 +4240,11 @@ class SunkCost(GeneralCost):
                 [self.cost_allocation[val] for _, val in enumerate(sc_id)]
             )
             sc_fluid_type_id = np.array(
-                [sc_id[i] for i, val in enumerate(sc_cost_allocation_id) if val == fluid_type]
+                [
+                    sc_id[i]
+                    for i, val in enumerate(sc_cost_allocation_id)
+                    if val == fluid_type
+                ]
             )
 
         else:
@@ -4164,7 +4302,11 @@ class SunkCost(GeneralCost):
                 [self.cost_allocation[val] for _, val in enumerate(poc_id)]
             )
             poc_fluid_type_id = np.array(
-                [poc_id[i] for i, val in enumerate(poc_cost_allocation_id) if val == fluid_type]
+                [
+                    poc_id[i]
+                    for i, val in enumerate(poc_cost_allocation_id)
+                    if val == fluid_type
+                ]
             )
 
         else:
@@ -4224,7 +4366,9 @@ class SunkCost(GeneralCost):
             sc_investment_id = np.array(
                 [
                     sc_fluid_type_id[i]
-                    for i, val in enumerate(np.array(self.investment_type)[sc_fluid_type_id])
+                    for i, val in enumerate(
+                        np.array(self.investment_type)[sc_fluid_type_id]
+                    )
                     if val == investment_config
                 ]
             )
@@ -4284,7 +4428,9 @@ class SunkCost(GeneralCost):
             poc_investment_id = np.array(
                 [
                     poc_fluid_type_id[i]
-                    for i, val in enumerate(np.array(self.investment_type)[poc_fluid_type_id])
+                    for i, val in enumerate(
+                        np.array(self.investment_type)[poc_fluid_type_id]
+                    )
                     if val == investment_config
                 ]
             )
@@ -4398,7 +4544,8 @@ class SunkCost(GeneralCost):
             # Allocate the extracted sunk cost by their associated
             # expense year in array project_years
             sc_investment_expenses = np.bincount(
-                self.expense_year[sc_investment_id] - self.start_year, weights=sc_investment
+                self.expense_year[sc_investment_id] - self.start_year,
+                weights=sc_investment,
             )
             zeros = np.zeros(self.project_duration - len(sc_investment_expenses))
             sc_investment_array = np.concatenate(
@@ -4476,7 +4623,8 @@ class SunkCost(GeneralCost):
             # Allocate the extracted preonstream cost by their associated
             # expense year in array project_years
             poc_investment_expenses = np.bincount(
-                self.expense_year[poc_investment_id] - self.start_year, weights=poc_investment
+                self.expense_year[poc_investment_id] - self.start_year,
+                weights=poc_investment,
             )
             zeros = np.zeros(self.project_duration - len(poc_investment_expenses))
             poc_investment_array = np.concatenate(
@@ -4492,27 +4640,27 @@ class SunkCost(GeneralCost):
     @staticmethod
     def get_investment_bulk(cost_investment_array: np.ndarray) -> float:
         """
-       Compute the total sum of all investments in the given array.
+        Compute the total sum of all investments in the given array.
 
-        Parameters
-        ----------
-        cost_investment_array : np.ndarray
-            Array containing investment cost values to be summed.
-            This parameter could be one of the following:
-            - sc_oil_tangible_array
-            - sc_oil_intangible_array
-            - sc_gas_tangible_array
-            - sc_gas_intangible_array
-            - poc_oil_tangible_array
-            - poc_oil_intangible_array
-            - poc_gas_tangible_array
-            - poc_gas_intangible_array
+         Parameters
+         ----------
+         cost_investment_array : np.ndarray
+             Array containing investment cost values to be summed.
+             This parameter could be one of the following:
+             - sc_oil_tangible_array
+             - sc_oil_intangible_array
+             - sc_gas_tangible_array
+             - sc_gas_intangible_array
+             - poc_oil_tangible_array
+             - poc_oil_intangible_array
+             - poc_gas_tangible_array
+             - poc_gas_intangible_array
 
-        Returns
-        -------
-        float
-            The total sum of all investment costs in the input array.
-            The sum is computed using float64 precision to maintain numerical accuracy.
+         Returns
+         -------
+         float
+             The total sum of all investment costs in the input array.
+             The sum is computed using float64 precision to maintain numerical accuracy.
         """
 
         return np.sum(cost_investment_array, dtype=np.float64)
@@ -4806,15 +4954,16 @@ class SunkCost(GeneralCost):
             # Calculate total depreciation charge for all cost components
             # and the associated undepreciated asset (if any)
             total_depreciation_charge = depreciation_charge.sum(axis=0, keepdims=False)
-            undepreciated_asset = (
-                    np.sum(cost_adjusted_by_vat[sc_tangible_id])
-                    - np.sum(total_depreciation_charge)
+            undepreciated_asset = np.sum(cost_adjusted_by_vat[sc_tangible_id]) - np.sum(
+                total_depreciation_charge
             )
 
         # Operations to be conducted when a particular sunk cost tangible
         # indices are unavailable
         else:
-            total_depreciation_charge = np.zeros_like(self.project_years, dtype=np.float64)
+            total_depreciation_charge = np.zeros_like(
+                self.project_years, dtype=np.float64
+            )
             undepreciated_asset = 0.0
 
         return total_depreciation_charge, undepreciated_asset
@@ -4962,15 +5111,16 @@ class SunkCost(GeneralCost):
             # Calculate total depreciation charge for all cost components
             # and the associated undepreciated asset (if any)
             total_depreciation_charge = depreciation_charge.sum(axis=0, keepdims=False)
-            undepreciated_asset = (
-                np.sum(cost_adjusted_by_vat[poc_tangible_id])
-                - np.sum(total_depreciation_charge)
-            )
+            undepreciated_asset = np.sum(
+                cost_adjusted_by_vat[poc_tangible_id]
+            ) - np.sum(total_depreciation_charge)
 
         # Operations to be conducted when a particular preonstream
         # cost tangible indices are unavailable
         else:
-            total_depreciation_charge = np.zeros_like(self.project_years, dtype=np.float64)
+            total_depreciation_charge = np.zeros_like(
+                self.project_years, dtype=np.float64
+            )
             undepreciated_asset = 0.0
 
         return total_depreciation_charge, undepreciated_asset
@@ -5099,7 +5249,9 @@ class SunkCost(GeneralCost):
             )[0]
         )
 
-        return np.cumsum(poc_tangible_array) - np.cumsum(poc_tangible_depreciation_charge)
+        return np.cumsum(poc_tangible_array) - np.cumsum(
+            poc_tangible_depreciation_charge
+        )
 
     def __eq__(self, other):
         # Between two instances of SunkCost
@@ -5201,7 +5353,9 @@ class SunkCost(GeneralCost):
             end_year_combined = max(self.end_year, other.end_year)
             onstream_year_combined = None
             pod1_year_combined = min(self.pod1_year, other.pod1_year)
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
             cost_combined = np.concatenate((self.cost, other.cost))
             salvage_value_combined = np.concatenate(
                 (self.salvage_value, other.salvage_value)
@@ -5213,7 +5367,9 @@ class SunkCost(GeneralCost):
                 (self.depreciation_factor, other.depreciation_factor)
             )
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
+            tax_discount_combined = np.concatenate(
+                (self.tax_discount, other.tax_discount)
+            )
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
             investment_type_combined = self.investment_type + other.investment_type
@@ -5252,7 +5408,9 @@ class SunkCost(GeneralCost):
             end_year_combined = max(self.end_year, other.end_year)
             onstream_year_combined = None
             pod1_year_combined = min(self.pod1_year, other.pod1_year)
-            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
+            expense_year_combined = np.concatenate(
+                (self.expense_year, other.expense_year)
+            )
             cost_combined = np.concatenate((self.cost, -other.cost))
             salvage_value_combined = np.concatenate(
                 (self.salvage_value, other.salvage_value)
@@ -5264,7 +5422,9 @@ class SunkCost(GeneralCost):
                 (self.depreciation_factor, other.depreciation_factor)
             )
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
+            tax_discount_combined = np.concatenate(
+                (self.tax_discount, other.tax_discount)
+            )
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
             description_combined = self.description + other.description
             investment_type_combined = self.investment_type + other.investment_type

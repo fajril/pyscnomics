@@ -840,8 +840,9 @@ def convert_list_to_array_float_or_array(data_input: list | float | int | str) -
         return np.array(data_input, dtype=float)
 
 
-def convert_list_to_array_float_or_array_or_none(data_list: list | float | int | str | None
-                                                 ) -> np.ndarray | float | None:
+def convert_list_to_array_float_or_array_or_none(
+    data_list: list | float | int | str | None
+) -> np.ndarray | float | None:
     """
     Function to convert list into array of float, None or array.
 

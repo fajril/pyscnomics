@@ -7,13 +7,13 @@ import pandas as pd
 
 
 class DepreciationException(Exception):
-    """ Raise an exception error for a misuse of depreciation method """
+    """Raise an exception error for a misuse of depreciation method"""
 
     pass
 
 
 class UnitOfProductionException(Exception):
-    """ Exception to be raised for a misuse of unit of production method """
+    """Exception to be raised for a misuse of unit of production method"""
 
     pass
 
@@ -166,21 +166,25 @@ def declining_balance_depreciation_rate(
 
     # Depreciation charge
     depreciation_charge = (
-            depreciation_factor * cost * np.power(1 - depreciation_factor, periods - 1)
+        depreciation_factor * cost * np.power(1 - depreciation_factor, periods - 1)
     )
 
     # Depreciation charge reaches the salvage value
     if depreciation_charge.sum() > (cost - salvage_value):
         remaining_depreciation = cost - salvage_value - np.cumsum(depreciation_charge)
-        remaining_depreciation_modified = (
-            np.where(remaining_depreciation < 0, 0, remaining_depreciation)
+        remaining_depreciation_modified = np.where(
+            remaining_depreciation < 0, 0, remaining_depreciation
         )
-        remaining_depreciation_unique_sum = np.sum(np.unique(remaining_depreciation_modified))
+        remaining_depreciation_unique_sum = np.sum(
+            np.unique(remaining_depreciation_modified)
+        )
 
         # Depreciation charge is paid off since the first year
         if remaining_depreciation_unique_sum == 0:
             depreciation_charge_new = np.zeros_like(depreciation_charge)
-            depreciation_charge_new[0] = depreciation_charge[0] + remaining_depreciation[0]
+            depreciation_charge_new[0] = (
+                depreciation_charge[0] + remaining_depreciation[0]
+            )
             depreciation_charge = depreciation_charge_new.copy()
 
         # Depreciation charge is paid off after the first year
@@ -199,7 +203,7 @@ def declining_balance_depreciation_rate(
     depreciation_charge = np.concatenate(
         (
             depreciation_charge,
-            cost - salvage_value - np.sum(depreciation_charge, keepdims=True)
+            cost - salvage_value - np.sum(depreciation_charge, keepdims=True),
         )
     )
 
@@ -323,10 +327,7 @@ def psc_declining_balance_depreciation_rate(
 
     # Modify depreciation charge; specify the last element as the remaining cost
     depreciation_charge = np.concatenate(
-        (
-            depreciation_charge,
-            cost - np.sum(depreciation_charge, keepdims=True)
-        )
+        (depreciation_charge, cost - np.sum(depreciation_charge, keepdims=True))
     )
 
     # Modify depreciation charge; accounting for project duration
@@ -501,7 +502,9 @@ def unit_of_production_rate(
         )
 
     # Calculate amortization charge (1 * UOP)
-    amortization_charge = np.divide(prod, cum_prod, where=cum_prod != 0) * (cost - salvage_value)
+    amortization_charge = np.divide(prod, cum_prod, where=cum_prod != 0) * (
+        cost - salvage_value
+    )
 
     # Calculate amortization charge (2 * UOP)
     amortization_charge = 2.0 * amortization_charge
@@ -511,7 +514,9 @@ def unit_of_production_rate(
     remaining_amortization_modified = np.where(
         remaining_amortization < 0, 0, remaining_amortization
     )
-    remaining_amortization_unique_sum = np.sum(np.unique(remaining_amortization_modified))
+    remaining_amortization_unique_sum = np.sum(
+        np.unique(remaining_amortization_modified)
+    )
 
     # Amortization charge is paid off since the first year
     if remaining_amortization_unique_sum == 0:
@@ -532,7 +537,9 @@ def unit_of_production_rate(
         )
 
     # Allocate amortization_charge according to their associated year
-    amortization_charge = np.bincount(prod_year - start_year_project, weights=amortization_charge)
+    amortization_charge = np.bincount(
+        prod_year - start_year_project, weights=amortization_charge
+    )
 
     # Modify amortization charge, accounting for project duration
     if amortization_len > len(amortization_charge):
