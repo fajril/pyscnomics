@@ -7,8 +7,10 @@ from pyscnomics.econ.selection import DeprMethod
 from pyscnomics.example import ExampleCase
 
 
-capital_mangga = ExampleCase().capital_mangga
+intangible_mangga = ExampleCase().intangible_mangga
+intangible_apel = ExampleCase().intangible_apel
 
+t1 = intangible_mangga + intangible_apel
 
 # case = ExampleCase()
 #
@@ -64,10 +66,10 @@ capital_mangga = ExampleCase().capital_mangga
 # print(f'Length: {len()}')
 # print()
 
-# print('\t')
-# print(f'Filetype: {type(t1)}')
-# print(f'Length: {len(t1)}')
-# print('t1 = \n', t1)
+print('\t')
+print(f'Filetype: {type(t1)}')
+print(f'Length: {len(t1)}')
+print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t2)}')

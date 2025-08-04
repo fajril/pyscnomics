@@ -43,8 +43,8 @@ class ExampleCase:
 
     def __post_init__(self):
         # self._get_lifting_data()
-        self._get_capital_cost_data()
-        # self._get_intangible_cost_data()
+        # self._get_capital_cost_data()
+        self._get_intangible_cost_data()
         # self._get_opex_data()
         # self._get_asr_cost_data()
         # self._get_lbt_cost_data()
@@ -83,16 +83,17 @@ class ExampleCase:
             expense_year=np.array([2023, 2024, 2025, 2024]),
             cost=np.array([np.nan, 100, 100, None]),
             cost_allocation=[np.nan, FluidType.OIL, FluidType.OIL, None],
-            is_sunkcost=[True, True, False, None, True],
+            is_sunkcost=[np.nan, False, False, None],
         )
 
-        # self.capital_apel = CapitalCost(
-        #     start_year=2023,
-        #     end_year=2030,
-        #     expense_year=np.array([2023, 2024, 2025, 2024]),
-        #     cost=np.array([np.nan, 10, 10, None]),
-        #     cost_allocation=[np.nan, FluidType.GAS, FluidType.GAS, None],
-        # )
+        self.capital_apel = CapitalCost(
+            start_year=2023,
+            end_year=2030,
+            expense_year=np.array([2023, 2024, 2025, 2024]),
+            cost=np.array([np.nan, 10, 10, None]),
+            cost_allocation=[np.nan, FluidType.GAS, FluidType.GAS, None],
+            is_sunkcost=[True, True, True, True],
+        )
 
     def _get_intangible_cost_data(self):
         """
@@ -105,6 +106,7 @@ class ExampleCase:
             expense_year=np.array([2023, 2024, 2025, 2024]),
             cost=np.array([np.nan, 100, 100, None]),
             cost_allocation=[np.nan, FluidType.OIL, FluidType.OIL, None],
+            is_sunkcost=[np.nan, False, False, None],
         )
 
         self.intangible_apel = Intangible(
@@ -113,6 +115,7 @@ class ExampleCase:
             expense_year=np.array([2023, 2024, 2025, 2024]),
             cost=np.array([np.nan, 10, 10, None]),
             cost_allocation=[np.nan, FluidType.GAS, FluidType.GAS, None],
+            is_sunkcost=[True, True, True, True],
         )
 
     def _get_opex_data(self):
