@@ -17,7 +17,7 @@ from pyscnomics.econ.costs import (
 
 
 class LiftingException(Exception):
-    """ Exception to be raised when class Lifting is misused """
+    """Exception to be raised when class Lifting is misused"""
 
     pass
 
@@ -134,8 +134,8 @@ class Lifting:
         # Prepare attribute lifting rate
         if not isinstance(self.lifting_rate, np.ndarray):
             raise LiftingException(
-                f"Attribute lifting rate must be provided as numpy ndarray, "
-                f"not as a/an {self.lifting_rate.__class__.__qualname__}."
+                f"Attribute lifting rate must be provided as a numpy ndarray, "
+                f"not as an/a {self.lifting_rate.__class__.__qualname__}."
             )
 
         else:
@@ -200,7 +200,9 @@ class Lifting:
 
             prod_rate_nan_id = np.argwhere(pd.isna(self.prod_rate)).ravel()
             if len(prod_rate_nan_id) > 0:
-                self.prod_rate[prod_rate_nan_id] = self.lifting_rate[prod_rate_nan_id].copy()
+                self.prod_rate[prod_rate_nan_id] = self.lifting_rate[
+                    prod_rate_nan_id
+                ].copy()
 
             # Raise an exception: prod_rate is smaller than lifting_rate
             prod_rate_small_sum = np.sum(self.prod_rate < self.lifting_rate)
@@ -225,8 +227,8 @@ class Lifting:
 
             prod_rate_baseline_nan_id = np.argwhere(pd.isna(self.prod_rate_baseline)).ravel()
             if len(prod_rate_baseline_nan_id) > 0:
-                self.prod_rate_baseline[prod_rate_baseline_nan_id] = (
-                    np.zeros(len(prod_rate_baseline_nan_id))
+                self.prod_rate_baseline[prod_rate_baseline_nan_id] = np.zeros(
+                    len(prod_rate_baseline_nan_id)
                 )
 
         self.prod_rate_baseline = self.prod_rate_baseline.astype(np.float64)
@@ -235,14 +237,14 @@ class Lifting:
         arr_reference = len(self.prod_year)
 
         if not all(
-                len(arr) == arr_reference
-                for arr in [
-                    self.lifting_rate,
-                    self.price,
-                    self.ghv,
-                    self.prod_rate,
-                    self.prod_rate_baseline,
-                ]
+            len(arr) == arr_reference
+            for arr in [
+                self.lifting_rate,
+                self.price,
+                self.ghv,
+                self.prod_rate,
+                self.prod_rate_baseline,
+            ]
         ):
             raise LiftingException(
                 f"Unequal length of arrays: "
@@ -273,7 +275,11 @@ class Lifting:
 
     def _get_array(self, target_param: np.ndarray) -> np.ndarray:
         """
+<<<<<<< Updated upstream
         Creates an array of target_param and aligns it with the corresponding
+=======
+        Create an array of target_param that aligns with its corresponding
+>>>>>>> Stashed changes
         production year.
 
         Parameters
@@ -293,6 +299,7 @@ class Lifting:
         (2) If len(param_arr) < project_duration, then add the remaining elements
             with zeros.
         """
+
         param_arr = np.bincount(self.prod_year - self.start_year, weights=target_param)
         zeros = np.zeros(self.project_duration - len(param_arr))
 
@@ -300,24 +307,41 @@ class Lifting:
 
     def get_lifting_rate_ghv_arr(self) -> np.ndarray:
         """
+<<<<<<< Updated upstream
         Creates an array of (lifting rate * ghv) and aligns it according to the
         corresponding production year.
+=======
+        Create an array of (lifting rate * ghv) according to the corresponding
+        production year.
+>>>>>>> Stashed changes
 
         Returns
         -------
         np.ndarray
+<<<<<<< Updated upstream
             The array of (lifting rate * ghv) with length equals to project duration.
 
         Notes
         -----
         Array of (lifting rate * ghv) is generated using method _get_array() with
+=======
+            Array of (lifting rate * ghv) with length equals to project duration.
+
+        Notes
+        -----
+        Array of (lifting_rate * ghv) is generated using method _get_array() with
+>>>>>>> Stashed changes
         target_param = lifting_rate * ghv.
         """
         return self._get_array(target_param=self.lifting_rate * self.ghv)
 
     def get_ghv_arr(self) -> np.ndarray:
         """
+<<<<<<< Updated upstream
         Creates an array of ghv and aligns it according to the corresponding production year.
+=======
+        Create an array of GHV and align it according to the corresponding production year.
+>>>>>>> Stashed changes
 
         Returns
         -------
@@ -332,13 +356,21 @@ class Lifting:
 
     def get_prod_rate_arr(self) -> np.ndarray:
         """
+<<<<<<< Updated upstream
         Creates an array of production rate and aligns it according to the
         corresponding production year.
+=======
+        Create an array of production rate according to its corresponding production year.
+>>>>>>> Stashed changes
 
         Returns
         -------
         np.ndarray
+<<<<<<< Updated upstream
             The array of production rate with length equals to project duration.
+=======
+            Array of production rate with length equals to project duration.
+>>>>>>> Stashed changes
 
         Notes
         -----
@@ -349,8 +381,13 @@ class Lifting:
 
     def get_prod_rate_baseline_arr(self) -> np.ndarray:
         """
+<<<<<<< Updated upstream
         Creates an array of production rate baseline and aligns it according to
         the corresponding production year.
+=======
+        Create an array of production rate baseline according to its corresponding
+        production year.
+>>>>>>> Stashed changes
 
         Returns
         -------
@@ -399,14 +436,15 @@ class Lifting:
 
         Notes
         -----
-        If `lifting_rate` or `ghv` is zero, a small value (1E-33) is used to avoid division by zero.
+        If `lifting_rate` or `ghv` is zero, a small value (1E-33) is used to avoid
+        division by zero.
         """
         # Identify unique year in prod_year array
         unique_year, indices = np.unique(self.prod_year, return_inverse=True)
 
         # Calculate weight
         weight = np.where(
-            self.lifting_rate * self.ghv == 0, 1E-33, self.lifting_rate * self.ghv
+            self.lifting_rate * self.ghv == 0, 1e-33, self.lifting_rate * self.ghv
         )
 
         # Calculate WAP (Weighted Average Price)
@@ -447,7 +485,7 @@ class Lifting:
         unique_year, indices = np.unique(self.prod_year, return_inverse=True)
 
         # Determine weight values
-        weight = np.where(self.lifting_rate == 0, 1E-33, self.lifting_rate)
+        weight = np.where(self.lifting_rate == 0, 1e-33, self.lifting_rate)
 
         # Calculate the Weighted Average Gross Heating Value (WAGHV)
         waghv = np.array(
@@ -479,8 +517,14 @@ class Lifting:
         The function np.bincount() is used to align the revenue elements with its
         correponding year.
         """
+
         rev = self.lifting_rate * self.price * self.ghv
         rev_update = np.bincount(self.prod_year - self.start_year, weights=rev)
+
+        print('\t')
+        print(f'Filetype: {type(rev_update)}')
+        print(f'Length: {len(rev_update)}')
+        print(rev_update)
 
         # Modify revenue, accounting for project duration
         zeros = np.zeros(self.project_duration - len(rev_update))

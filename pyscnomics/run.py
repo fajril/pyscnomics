@@ -8,6 +8,7 @@ from pyscnomics.econ.selection import DeprMethod
 from pyscnomics.example import ExampleCase
 
 
+<<<<<<< Updated upstream
 case = ExampleCase()
 
 pr = BaseProject(
@@ -59,6 +60,29 @@ print('================================================================')
 #     salvage_value=0.0,
 #     amortization_len=8,
 # )
+=======
+lifting_mangga = ExampleCase().lifting_mangga
+t1 = lifting_mangga.revenue()
+
+
+# pr = BaseProject(
+#     start_date=date(year=2023, month=1, day=1),
+#     end_date=date(year=2030, month=12, day=31),
+#     oil_onstream_date=date(year=2027, month=1, day=1),
+#     gas_onstream_date=date(year=2027, month=1, day=1),
+#     lifting=tuple([case.lifting_mangga, case.lifting_apel]),
+#     capital_cost=tuple([case.capital_mangga, case.capital_apel]),
+#     intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),
+#     opex=tuple([case.opex_mangga, case.opex_apel]),
+#     asr_cost=tuple([case.asr_mangga, case.asr_apel]),
+#     lbt_cost=tuple([case.lbt_mangga, case.lbt_apel]),
+#     cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
+#     sunk_cost=tuple([case.sunk_cost_mangga, case.sunk_cost_apel]),
+# )
+#
+# print('\t')
+# print('================================================================')
+>>>>>>> Stashed changes
 
 # print('\t')
 # print(f'Filetype: {type()}')
