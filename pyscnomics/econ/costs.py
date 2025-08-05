@@ -90,6 +90,8 @@ class GeneralCost:
         An array representing the expense year of a tangible asset.
     cost_allocation : list[FluidType]
         A list representing the cost allocation of a tangible asset.
+    is_sunkcost: list[bool]
+        Whether the corresponding cost elements are considered as sunk cost.
     description: list[str]
         A list of string description regarding the associated tangible cost.
     tax_portion : np.ndarray, optional
@@ -417,7 +419,7 @@ class CapitalCost(GeneralCost):
             )
 
             if np.sum(is_sunkcost_not_boolean) > 0:
-                raise CapitalException(f"Must insert boolean in list `is_sunkcost`")
+                raise CapitalException(f"Must insert boolean in list is_sunkcost")
 
         # Prepare attribute pis_year
         if self.pis_year is None:
@@ -512,7 +514,7 @@ class CapitalCost(GeneralCost):
             )
 
             if np.sum(is_ic_applied_not_boolean) > 0:
-                raise CapitalException(f"Must insert boolean in list `is_ic_applied`")
+                raise CapitalException(f"Must insert boolean in list is_ic_applied")
 
         # Prepare attribute tax_portion
         if self.tax_portion is None:
@@ -1205,7 +1207,7 @@ class Intangible(GeneralCost):
         else:
             if not isinstance(self.is_sunkcost, list):
                 raise IntangibleException(
-                    f"Attribute `is_sunkcost` must be provided as a list, "
+                    f"Attribute is_sunkcost must be provided as a list, "
                     f"not as a/an {self.is_sunkcost.__class__.__qualname__}"
                 )
 
@@ -1221,7 +1223,7 @@ class Intangible(GeneralCost):
             )
 
             if np.sum(is_sunkcost_not_boolean) > 0:
-                raise IntangibleException(f"Must insert boolean in list `is_sunkcost`")
+                raise IntangibleException(f"Must insert boolean in list is_sunkcost")
 
         # Prepare attribute tax_portion
         if self.tax_portion is None:
@@ -1568,6 +1570,7 @@ class OPEX(GeneralCost):
         -   Prepare attribute fixed_cost,
         -   Prepare attribute cost_allocation,
         -   Prepare attribute description,
+        -   Prepare attribute is_sunkcost,
         -   Prepare attribute tax_portion,
         -   Prepare attribute tax_discount,
         -   Prepare attribute prod_rate,
@@ -1627,9 +1630,7 @@ class OPEX(GeneralCost):
 
         # Prepare attribute cost_allocation
         if self.cost_allocation is None:
-            self.cost_allocation = [
-                FluidType.OIL for _ in range(len(self.expense_year))
-            ]
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.cost_allocation, list):
@@ -1657,6 +1658,31 @@ class OPEX(GeneralCost):
             self.description = [
                 " " if pd.isna(val) else val for _, val in enumerate(self.description)
             ]
+
+        # Prepare attribute is_sunkcost
+        if self.is_sunkcost is None:
+            self.is_sunkcost = [False for _ in range(len(self.expense_year))]
+
+        else:
+            if not isinstance(self.is_sunkcost, list):
+                raise OPEXException(
+                    f"Attribute is_sunkcost must be provided as a list, "
+                    f"not as a/an {self.is_sunkcost.__class__.__qualname__}"
+                )
+
+            self.is_sunkcost = [
+                False if pd.isna(val) else val for _, val in enumerate(self.is_sunkcost)
+            ]
+
+            is_sunkcost_not_boolean = np.array(
+                [
+                    1 if not isinstance(val, bool) else 0
+                    for _, val in enumerate(self.is_sunkcost)
+                ]
+            )
+
+            if np.sum(is_sunkcost_not_boolean) > 0:
+                raise OPEXException(f"Must insert boolean in list is_sunkcost")
 
         # Prepare attribute tax_portion
         if self.tax_portion is None:
@@ -1761,6 +1787,7 @@ class OPEX(GeneralCost):
             for arr in [
                 self.fixed_cost,
                 self.cost_allocation,
+                self.is_sunkcost,
                 self.description,
                 self.tax_portion,
                 self.tax_discount,
@@ -1773,6 +1800,7 @@ class OPEX(GeneralCost):
                 f"expense_year: {len(self.expense_year)}, "
                 f"fixed_cost: {len(self.fixed_cost)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
+                f"is_sunkcost: {len(self.is_sunkcost)}, "
                 f"description: {len(self.description)}, "
                 f"tax_portion: {len(self.tax_portion)}, "
                 f"tax_discount: {len(self.tax_discount)}, "
@@ -1814,6 +1842,7 @@ class OPEX(GeneralCost):
                     np.allclose(self.variable_cost, other.variable_cost),
                     np.allclose(self.cost, other.cost),
                     self.cost_allocation == other.cost_allocation,
+                    self.is_sunkcost == other.is_sunkcost,
                 )
             )
 
@@ -1826,8 +1855,8 @@ class OPEX(GeneralCost):
 
     def __lt__(self, other):
         # Between an instance of OPEX with another instance of
-        # CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.cost) < np.sum(other.cost)
 
         # Between an instance of OPEX and an integer/float
@@ -1837,13 +1866,13 @@ class OPEX(GeneralCost):
         else:
             raise OPEXException(
                 f"Must compare an instance of OPEX with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __le__(self, other):
         # Between an instance of OPEX with another instance of
-        # CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.cost) <= np.sum(other.cost)
 
         # Between an instance of OPEX and an integer/float
@@ -1853,13 +1882,13 @@ class OPEX(GeneralCost):
         else:
             raise OPEXException(
                 f"Must compare an instance of OPEX with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __gt__(self, other):
         # Between an instance of OPEX with another instance of
-        # CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.cost) > other.cost
 
         # Between an instance of OPEX and an integer/float
@@ -1869,13 +1898,13 @@ class OPEX(GeneralCost):
         else:
             raise OPEXException(
                 f"Must compare an instance of OPEX with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __ge__(self, other):
         # Between an instance of OPEX with another instance of
-        # CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.cost) >= other.cost
 
         # Between an instance of OPEX and an integer/float
@@ -1885,7 +1914,7 @@ class OPEX(GeneralCost):
         else:
             raise OPEXException(
                 f"Must compare an instance of OPEX with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -1894,19 +1923,16 @@ class OPEX(GeneralCost):
         if isinstance(other, OPEX):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate(
-                (self.expense_year, other.expense_year)
-            )
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             fixed_cost_combined = np.concatenate((self.fixed_cost, other.fixed_cost))
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate(
-                (self.tax_discount, other.tax_discount)
-            )
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
             prod_rate_combined = np.concatenate((self.prod_rate, other.prod_rate))
             cost_per_volume_combined = np.concatenate(
                 (self.cost_per_volume, other.cost_per_volume)
             )
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
             description_combined = self.description + other.description
 
             return OPEX(
@@ -1915,6 +1941,7 @@ class OPEX(GeneralCost):
                 expense_year=expense_year_combined,
                 fixed_cost=fixed_cost_combined,
                 cost_allocation=cost_allocation_combined,
+                is_sunkcost=is_sunkcost_combined,
                 description=description_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
@@ -1937,19 +1964,16 @@ class OPEX(GeneralCost):
         if isinstance(other, OPEX):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate(
-                (self.expense_year, other.expense_year)
-            )
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             fixed_cost_combined = np.concatenate((self.fixed_cost, -other.fixed_cost))
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate(
-                (self.tax_discount, other.tax_discount)
-            )
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
             prod_rate_combined = np.concatenate((self.prod_rate, other.prod_rate))
             cost_per_volume_combined = np.concatenate(
                 (self.cost_per_volume, -other.cost_per_volume)
             )
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
             description_combined = self.description + other.description
 
             return OPEX(
@@ -1958,6 +1982,7 @@ class OPEX(GeneralCost):
                 expense_year=expense_year_combined,
                 fixed_cost=fixed_cost_combined,
                 cost_allocation=cost_allocation_combined,
+                is_sunkcost=is_sunkcost_combined,
                 description=description_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
@@ -1983,6 +2008,7 @@ class OPEX(GeneralCost):
                 expense_year=self.expense_year,
                 fixed_cost=self.fixed_cost * other,
                 cost_allocation=self.cost_allocation,
+                is_sunkcost=self.is_sunkcost,
                 description=self.description,
                 tax_portion=self.tax_portion,
                 tax_discount=self.tax_discount,
@@ -2002,8 +2028,8 @@ class OPEX(GeneralCost):
 
     def __truediv__(self, other):
         # Between an instance of OPEX with another instance of
-        # CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.cost) / np.sum(other.cost)
 
         # Between an instance of OPEX and an integer/a float
@@ -2019,6 +2045,7 @@ class OPEX(GeneralCost):
                     expense_year=self.expense_year,
                     fixed_cost=self.fixed_cost / other,
                     cost_allocation=self.cost_allocation,
+                    is_sunkcost=self.is_sunkcost,
                     description=self.description,
                     tax_portion=self.tax_portion,
                     tax_discount=self.tax_discount,
@@ -2028,9 +2055,9 @@ class OPEX(GeneralCost):
 
         else:
             raise OPEXException(
-                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT, "
-                f"integer or a float. {other}({other.__class__.__qualname__}) is not "
-                f"an instance of CapitalCost/Intangible/OPEX/ASR/LBT not an integer "
+                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT"
+                f"/CostOfSales, integer or a float. {other}({other.__class__.__qualname__}) "
+                f"is not an instance of CapitalCost/Intangible/OPEX/ASR/LBT not an integer "
                 f"nor a float."
             )
 
@@ -2060,6 +2087,7 @@ class ASR(GeneralCost):
         -   Prepare attributes project_duration and project_years,
         -   Prepare attribute dscription,
         -   Prepare attribute cost_allocation,
+        -   Prepare attribute is_sunkcost,
         -   Prepare attribute tax_portion,
         -   Prepare attribute tax_discount,
         -   Prepare attribute future_rate,
@@ -2110,7 +2138,7 @@ class ASR(GeneralCost):
 
         # Prepare attribute cost_allocation
         if self.cost_allocation is None:
-            self.cost_allocation = [FluidType.OIL for _ in range(len(self.cost))]
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.cost_allocation, list):
@@ -2126,7 +2154,7 @@ class ASR(GeneralCost):
 
         # Prepare attribute description
         if self.description is None:
-            self.description = [" " for _ in range(len(self.cost))]
+            self.description = [" " for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.description, list):
@@ -2138,6 +2166,31 @@ class ASR(GeneralCost):
             self.description = [
                 " " if pd.isna(val) else val for _, val in enumerate(self.description)
             ]
+
+        # Prepare attribute is_sunkcost
+        if self.is_sunkcost is None:
+            self.is_sunkcost = [False for _ in range(len(self.expense_year))]
+
+        else:
+            if not isinstance(self.is_sunkcost, list):
+                raise ASRException(
+                    f"Attribute is_sunkcost must be provided as a list, "
+                    f"not as a/an {self.is_sunkcost.__class__.__qualname__}"
+                )
+
+            self.is_sunkcost = [
+                False if pd.isna(val) else val for _, val in enumerate(self.is_sunkcost)
+            ]
+
+            is_sunkcost_not_boolean = np.array(
+                [
+                    1 if not isinstance(val, bool) else 0
+                    for _, val in enumerate(self.is_sunkcost)
+                ]
+            )
+
+            if np.sum(is_sunkcost_not_boolean) > 0:
+                raise ASRException(f"Must insert boolean in list is_sunkcost")
 
         # Prepare attribute tax_portion
         if self.tax_portion is None:
@@ -2263,13 +2316,14 @@ class ASR(GeneralCost):
         self.final_year = self.final_year.astype(int)
 
         # Check input data for unequal length
-        arr_reference = len(self.cost)
+        arr_reference = len(self.expense_year)
 
         if not all(
             len(arr) == arr_reference
             for arr in [
-                self.expense_year,
+                self.cost,
                 self.cost_allocation,
+                self.is_sunkcost,
                 self.description,
                 self.tax_portion,
                 self.tax_discount,
@@ -2282,6 +2336,7 @@ class ASR(GeneralCost):
                 f"cost: {len(self.cost)}, "
                 f"expense_year: {len(self.expense_year)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
+                f"is_sunkcost: {len(self.is_sunkcost)}, "
                 f"description: {len(self.description)}, "
                 f"final_year: {len(self.final_year)}, "
                 f"future_rate: {len(self.future_rate)}, "
@@ -2463,6 +2518,7 @@ class ASR(GeneralCost):
                     np.allclose(self.final_year, other.final_year),
                     np.allclose(self.future_rate, other.future_rate),
                     self.cost_allocation == other.cost_allocation,
+                    self.is_sunkcost == other.is_sunkcost,
                 )
             )
 
@@ -2475,8 +2531,8 @@ class ASR(GeneralCost):
 
     def __lt__(self, other):
         # Between an instance of ASR with another instance of
-        # CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.cost) < np.sum(other.cost)
 
         # Between an instance of ASR and an integer/float
@@ -2486,13 +2542,13 @@ class ASR(GeneralCost):
         else:
             raise ASRException(
                 f"Must compare an instance of ASR with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer or a float. "
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer or a float. "
             )
 
     def __le__(self, other):
         # Between an instance of ASR with another instance of
-        # CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.cost) <= np.sum(other.cost)
 
         # Between an instance of ASR and an integer/float
@@ -2502,13 +2558,13 @@ class ASR(GeneralCost):
         else:
             raise ASRException(
                 f"Must compare an instance of ASR with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer or a float. "
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer or a float. "
             )
 
     def __gt__(self, other):
         # Between an instance of ASR with another instance of
-        # CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.cost) > np.sum(other.cost)
 
         # Between an instance of ASR and an integer/float
@@ -2518,13 +2574,13 @@ class ASR(GeneralCost):
         else:
             raise ASRException(
                 f"Must compare an instance of ASR with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __ge__(self, other):
         # Between an instance of ASR with another instance of
-        # CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.cost) >= np.sum(other.cost)
 
         # Between an instance of ASR and an integer/float
@@ -2534,7 +2590,7 @@ class ASR(GeneralCost):
         else:
             raise ASRException(
                 f"Must compare an instance of ASR with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -2543,17 +2599,14 @@ class ASR(GeneralCost):
         if isinstance(other, ASR):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate(
-                (self.expense_year, other.expense_year)
-            )
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_combined = np.concatenate((self.cost, other.cost))
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate(
-                (self.tax_discount, other.tax_discount)
-            )
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
             final_year_combined = np.concatenate((self.final_year, other.final_year))
             future_rate_combined = np.concatenate((self.future_rate, other.future_rate))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
             description_combined = self.description + other.description
 
             return ASR(
@@ -2562,6 +2615,7 @@ class ASR(GeneralCost):
                 expense_year=expense_year_combined,
                 cost=cost_combined,
                 cost_allocation=cost_allocation_combined,
+                is_sunkcost=is_sunkcost_combined,
                 description=description_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
@@ -2584,17 +2638,14 @@ class ASR(GeneralCost):
         if isinstance(other, ASR):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate(
-                (self.expense_year, other.expense_year)
-            )
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_combined = np.concatenate((self.cost, -other.cost))
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate(
-                (self.tax_discount, other.tax_discount)
-            )
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
             final_year_combined = np.concatenate((self.final_year, other.final_year))
             future_rate_combined = np.concatenate((self.future_rate, other.future_rate))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
             description_combined = self.description + other.description
 
             return ASR(
@@ -2603,6 +2654,7 @@ class ASR(GeneralCost):
                 expense_year=expense_year_combined,
                 cost=cost_combined,
                 cost_allocation=cost_allocation_combined,
+                is_sunkcost=is_sunkcost_combined,
                 description=description_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
@@ -2630,6 +2682,7 @@ class ASR(GeneralCost):
                 expense_year=self.expense_year,
                 cost=self.cost * other,
                 cost_allocation=self.cost_allocation,
+                is_sunkcost=self.is_sunkcost,
                 description=self.description,
                 tax_portion=self.tax_portion,
                 tax_discount=self.tax_discount,
@@ -2649,8 +2702,8 @@ class ASR(GeneralCost):
 
     def __truediv__(self, other):
         # Between an instance of ASR with another instance of
-        # CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.cost) / np.sum(other.cost)
 
         # Between an instance of ASR and an integer/a float
@@ -2665,6 +2718,7 @@ class ASR(GeneralCost):
                     expense_year=self.expense_year,
                     cost=self.cost / other,
                     cost_allocation=self.cost_allocation,
+                    is_sunkcost=self.is_sunkcost,
                     description=self.description,
                     tax_portion=self.tax_portion,
                     tax_discount=self.tax_discount,
@@ -2674,9 +2728,9 @@ class ASR(GeneralCost):
 
         else:
             raise ASRException(
-                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT, "
-                f"integer or a float. {other}({other.__class__.__qualname__}) is not "
-                f"an instance of CapitalCost/Intangible/OPEX/ASR/LBT not an integer "
+                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT"
+                f"/CostOfSales, integer or a float. {other}({other.__class__.__qualname__}) "
+                f"is not an instance of CapitalCost/Intangible/OPEX/ASR/LBT not an integer "
                 f"nor a float."
             )
 
@@ -2723,6 +2777,7 @@ class LBT(GeneralCost):
         -   Prepare attributes project_duration and project_years,
         -   Prepare attribute expense_year,
         -   Prepare attribute cost_allocation,
+        -   Prepare attribute is_sunkcost,
         -   Prepare attribute description,
         -   Prepare attribute tax_portion,
         -   Prepare attribute tax_discount,
@@ -2798,6 +2853,31 @@ class LBT(GeneralCost):
             self.description = [
                 " " if pd.isna(val) else val for _, val in enumerate(self.description)
             ]
+
+        # Prepare attribute is_sunkcost
+        if self.is_sunkcost is None:
+            self.is_sunkcost = [False for _ in range(len(self.expense_year))]
+
+        else:
+            if not isinstance(self.is_sunkcost, list):
+                raise LBTException(
+                    f"Attribute is_sunkcost must be provided as a list, "
+                    f"not as a/an {self.is_sunkcost.__class__.__qualname__}"
+                )
+
+            self.is_sunkcost = [
+                False if pd.isna(val) else val for _, val in enumerate(self.is_sunkcost)
+            ]
+
+            is_sunkcost_not_boolean = np.array(
+                [
+                    1 if not isinstance(val, bool) else 0
+                    for _, val in enumerate(self.is_sunkcost)
+                ]
+            )
+
+            if np.sum(is_sunkcost_not_boolean) > 0:
+                raise LBTException(f"Must insert boolean in list is_sunkcost")
 
         # Prepare attribute tax_portion
         if self.tax_portion is None:
@@ -3039,6 +3119,7 @@ class LBT(GeneralCost):
             len(arr) == arr_reference
             for arr in [
                 self.cost_allocation,
+                self.is_sunkcost,
                 self.description,
                 self.tax_portion,
                 self.tax_discount,
@@ -3055,6 +3136,7 @@ class LBT(GeneralCost):
                 f"Unequal length of arrays: "
                 f"expense_year: {len(self.expense_year)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
+                f"is_sunkcost: {len(self.is_sunkcost)}, "
                 f"description: {len(self.description)}, "
                 f"tax_portion: {len(self.tax_portion)}, "
                 f"tax_discount: {len(self.tax_discount)}, "
@@ -3204,14 +3286,13 @@ class LBT(GeneralCost):
                     np.allclose(self.tax_discount, other.tax_discount),
                     np.allclose(self.final_year, other.final_year),
                     np.allclose(self.utilized_land_area, other.utilized_land_area),
-                    np.allclose(
-                        self.utilized_building_area, other.utilized_building_area
-                    ),
+                    np.allclose(self.utilized_building_area, other.utilized_building_area),
                     np.allclose(self.njop_land, other.njop_land),
                     np.allclose(self.njop_building, other.njop_building),
                     np.allclose(self.gross_revenue, other.gross_revenue),
                     np.allclose(self.cost, other.cost),
                     self.cost_allocation == other.cost_allocation,
+                    self.is_sunkcost == other.is_sunkcost,
                 )
             )
 
@@ -3224,8 +3305,8 @@ class LBT(GeneralCost):
 
     def __lt__(self, other):
         # Between an instance of LBT with another instance of
-        # CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.cost) < np.sum(other.cost)
 
         # Between an instance of LBT and an integer/a float
@@ -3235,13 +3316,13 @@ class LBT(GeneralCost):
         else:
             raise LBTException(
                 f"Must compare an instance of LBT with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __le__(self, other):
         # Between an instance of LBT with another instance of
-        # CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.cost) <= np.sum(other.cost)
 
         # Between an instance of LBT and an integer/a float
@@ -3251,13 +3332,13 @@ class LBT(GeneralCost):
         else:
             raise LBTException(
                 f"Must compare an instance of LBT with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __gt__(self, other):
         # Between an instance of LBT with another instance of
-        # CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.cost) > np.sum(other.cost)
 
         # Between an instance of ASR and an integer/float
@@ -3267,13 +3348,13 @@ class LBT(GeneralCost):
         else:
             raise LBTException(
                 f"Must compare an instance of ASR with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __ge__(self, other):
         # Between an instance of LBT with another instance of
-        # CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.cost) >= np.sum(other.cost)
 
         # Between an instance of LBT and an integer/a float
@@ -3283,7 +3364,7 @@ class LBT(GeneralCost):
         else:
             raise LBTException(
                 f"Must compare an instance of LBT with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT, an integer, or a float."
+                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -3292,13 +3373,9 @@ class LBT(GeneralCost):
         if isinstance(other, LBT):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate(
-                (self.expense_year, other.expense_year)
-            )
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate(
-                (self.tax_discount, other.tax_discount)
-            )
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
             final_year_combined = np.concatenate((self.final_year, other.final_year))
             utilized_land_area_combined = np.concatenate(
                 (self.utilized_land_area, other.utilized_land_area)
@@ -3307,14 +3384,11 @@ class LBT(GeneralCost):
                 (self.utilized_building_area, other.utilized_building_area)
             )
             njop_land_combined = np.concatenate((self.njop_land, other.njop_land))
-            njop_building_combined = np.concatenate(
-                (self.njop_building, other.njop_building)
-            )
-            gross_revenue_combined = np.concatenate(
-                (self.gross_revenue, other.gross_revenue)
-            )
+            njop_building_combined = np.concatenate((self.njop_building, other.njop_building))
+            gross_revenue_combined = np.concatenate((self.gross_revenue, other.gross_revenue))
             cost_combined = np.concatenate((self.cost, other.cost))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
             description_combined = self.description + other.description
 
             return LBT(
@@ -3323,6 +3397,7 @@ class LBT(GeneralCost):
                 expense_year=expense_year_combined,
                 cost_allocation=cost_allocation_combined,
                 description=description_combined,
+                is_sunkcost=is_sunkcost_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
                 final_year=final_year_combined,
@@ -3349,13 +3424,9 @@ class LBT(GeneralCost):
         if isinstance(other, LBT):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
-            expense_year_combined = np.concatenate(
-                (self.expense_year, other.expense_year)
-            )
+            expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
-            tax_discount_combined = np.concatenate(
-                (self.tax_discount, other.tax_discount)
-            )
+            tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
             final_year_combined = np.concatenate((self.final_year, other.final_year))
             utilized_land_area_combined = np.concatenate(
                 (self.utilized_land_area, other.utilized_land_area)
@@ -3364,14 +3435,11 @@ class LBT(GeneralCost):
                 (self.utilized_building_area, other.utilized_building_area)
             )
             njop_land_combined = np.concatenate((self.njop_land, -other.njop_land))
-            njop_building_combined = np.concatenate(
-                (self.njop_building, -other.njop_building)
-            )
-            gross_revenue_combined = np.concatenate(
-                (self.gross_revenue, -other.gross_revenue)
-            )
+            njop_building_combined = np.concatenate((self.njop_building, -other.njop_building))
+            gross_revenue_combined = np.concatenate((self.gross_revenue, -other.gross_revenue))
             cost_combined = np.concatenate((self.cost, -other.cost))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
             description_combined = self.description + other.description
 
             return LBT(
@@ -3380,6 +3448,7 @@ class LBT(GeneralCost):
                 expense_year=expense_year_combined,
                 cost_allocation=cost_allocation_combined,
                 description=description_combined,
+                is_sunkcost=is_sunkcost_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
                 final_year=final_year_combined,
@@ -3408,6 +3477,7 @@ class LBT(GeneralCost):
                 end_year=self.end_year,
                 expense_year=self.expense_year,
                 cost_allocation=self.cost_allocation,
+                is_sunkcost=self.is_sunkcost,
                 description=self.description,
                 tax_portion=self.tax_portion,
                 tax_discount=self.tax_discount,
@@ -3431,8 +3501,8 @@ class LBT(GeneralCost):
 
     def __truediv__(self, other):
         # Between an instance of LBT with another instance of
-        # CapitalCost/Intangible/OPEX/ASR/LBT
-        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT)):
+        # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
+        if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
             return np.sum(self.cost) / np.sum(other.cost)
 
         # Between an instance of LBT and an integer/a float
@@ -3448,6 +3518,7 @@ class LBT(GeneralCost):
                     expense_year=self.expense_year,
                     cost_allocation=self.cost_allocation,
                     description=self.description,
+                    is_sunkcost=self.is_sunkcost,
                     final_year=self.final_year,
                     utilized_land_area=self.utilized_land_area,
                     utilized_building_area=self.utilized_building_area,
@@ -3460,9 +3531,9 @@ class LBT(GeneralCost):
 
         else:
             raise LBTException(
-                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT, "
-                f"integer or a float. {other}({other.__class__.__qualname__}) is not "
-                f"an instance  of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer "
+                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT"
+                f"/CostOfSales, integer or a float. {other}({other.__class__.__qualname__}) "
+                f"is not an instance  of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer "
                 f"nor a float."
             )
 
@@ -3491,6 +3562,7 @@ class CostOfSales(GeneralCost):
         -   Prepare attribute expense_year,
         -   Prepare attribute cost,
         -   Prepare attribute cost_allocation,
+        -   Prepare attribute is_sunkcost,
         -   Prepare attribute description,
         -   Prepare attribute tax_portion,
         -   Prepare attribute tax_discount,
@@ -3546,9 +3618,7 @@ class CostOfSales(GeneralCost):
 
         # Prepare attribute cost_allocation
         if self.cost_allocation is None:
-            self.cost_allocation = [
-                FluidType.OIL for _ in range(len(self.expense_year))
-            ]
+            self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.cost_allocation, list):
@@ -3576,6 +3646,37 @@ class CostOfSales(GeneralCost):
             self.description = [
                 " " if pd.isna(val) else val for _, val in enumerate(self.description)
             ]
+
+        # Prepare attribute is_sunkcost
+        if self.is_sunkcost is None:
+            self.is_sunkcost = [False for _ in range(len(self.expense_year))]
+
+        else:
+            if not isinstance(self.is_sunkcost, list):
+                raise CostOfSalesException(
+                    f"Attribute is_sunkcost must be provided as a list, "
+                    f"not as a/an {self.is_sunkcost.__class__.__qualname__}"
+                )
+
+            self.is_sunkcost = [
+                False if pd.isna(val) else val for _, val in enumerate(self.is_sunkcost)
+            ]
+
+            is_sunkcost_not_boolean = np.array(
+                [
+                    1 if not isinstance(val, bool) else 0
+                    for _, val in enumerate(self.is_sunkcost)
+                ]
+            )
+
+            if np.sum(is_sunkcost_not_boolean) > 0:
+                raise CostOfSalesException(f"Must insert boolean in list is_sunkcost")
+
+        print('\t')
+        print(f'Filetype: {type(self.is_sunkcost)}')
+        print(f'Length: {len(self.is_sunkcost)}')
+        print('is_sunkcost = ', self.is_sunkcost)
+
 
         # Prepare attribute tax_portion
         if self.tax_portion is None:
@@ -3882,6 +3983,3 @@ class CostOfSales(GeneralCost):
                 f"{other}({other.__class__.__qualname__}) is not an instance of "
                 f"CostOfSales nor an integer nor a float."
             )
-
-
-

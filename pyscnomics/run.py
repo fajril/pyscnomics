@@ -7,10 +7,7 @@ from pyscnomics.econ.selection import DeprMethod
 from pyscnomics.example import ExampleCase
 
 
-intangible_mangga = ExampleCase().intangible_mangga
-intangible_apel = ExampleCase().intangible_apel
-
-t1 = intangible_mangga + intangible_apel
+cos_mangga = ExampleCase().cos_mangga
 
 # case = ExampleCase()
 #
@@ -65,11 +62,11 @@ t1 = intangible_mangga + intangible_apel
 # print(f'Filetype: {type()}')
 # print(f'Length: {len()}')
 # print()
-
-print('\t')
-print(f'Filetype: {type(t1)}')
-print(f'Length: {len(t1)}')
-print('t1 = \n', t1)
+#
+# print('\t')
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t2)}')

@@ -44,11 +44,11 @@ class ExampleCase:
     def __post_init__(self):
         # self._get_lifting_data()
         # self._get_capital_cost_data()
-        self._get_intangible_cost_data()
+        # self._get_intangible_cost_data()
         # self._get_opex_data()
         # self._get_asr_cost_data()
         # self._get_lbt_cost_data()
-        # self._get_cost_of_sales_data()
+        self._get_cost_of_sales_data()
         # self._get_sunk_cost_data()
 
     def _get_lifting_data(self):
@@ -128,6 +128,7 @@ class ExampleCase:
             expense_year=np.array([2023, 2024, 2025, 2024]),
             fixed_cost=np.array([np.nan, 100, 100, None]),
             cost_allocation=[np.nan, FluidType.OIL, FluidType.OIL, None],
+            is_sunkcost=[np.nan, True, True, None],
         )
 
         self.opex_apel = OPEX(
@@ -148,6 +149,7 @@ class ExampleCase:
             expense_year=np.array([2023, 2024, 2025, 2024]),
             cost=np.array([np.nan, 100, 100, None]),
             cost_allocation=[np.nan, FluidType.OIL, FluidType.OIL, None],
+            is_sunkcost=[np.nan, False, False, None],
         )
 
         self.asr_apel = ASR(
@@ -156,6 +158,7 @@ class ExampleCase:
             expense_year=np.array([2023, 2024, 2025, 2024]),
             cost=np.array([np.nan, 10, 10, None]),
             cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+            is_sunkcost=[True, True, True, True],
         )
 
     def _get_lbt_cost_data(self):
@@ -169,6 +172,7 @@ class ExampleCase:
             expense_year=np.array([2023, 2024, 2025, 2024]),
             cost=np.array([np.nan, 100, 100, None]),
             cost_allocation=[np.nan, FluidType.OIL, FluidType.OIL, None],
+            is_sunkcost=[np.nan, False, False, None],
         )
 
         self.lbt_apel = LBT(
@@ -177,6 +181,7 @@ class ExampleCase:
             expense_year=np.array([2023, 2024, 2025, 2024]),
             cost=np.array([np.nan, 10, 10, None]),
             cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+            is_sunkcost=[True, True, True, True],
         )
 
     def _get_cost_of_sales_data(self):
@@ -189,15 +194,16 @@ class ExampleCase:
             expense_year=np.array([2023, 2024, 2025, 2024]),
             cost=np.array([np.nan, 100, 100, None]),
             cost_allocation=[np.nan, FluidType.OIL, FluidType.OIL, None],
+            is_sunkcost=[np.nan, True, True, None],
         )
 
-        self.cos_apel = CostOfSales(
-            start_year=2023,
-            end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([np.nan, 10, 10, None]),
-            cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
-        )
+        # self.cos_apel = CostOfSales(
+        #     start_year=2023,
+        #     end_year=2030,
+        #     expense_year=np.array([2023, 2024, 2025, 2024]),
+        #     cost=np.array([np.nan, 10, 10, None]),
+        #     cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+        # )
 
     # def _get_sunk_cost_data(self):
     #     """
