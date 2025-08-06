@@ -26,6 +26,7 @@ class ExampleCase:
 
     lifting_mangga: Lifting = field(default=None, init=False, repr=False)
     lifting_apel: Lifting = field(default=None, init=False, repr=False)
+    lifting_nanas: Lifting = field(default=None, init=False, repr=False)
     capital_mangga: CapitalCost = field(default=None, init=False, repr=False)
     capital_apel: CapitalCost = field(default=None, init=False, repr=False)
     intangible_mangga: Intangible = field(default=None, init=False, repr=False)
@@ -55,18 +56,18 @@ class ExampleCase:
         self.lifting_mangga = Lifting(
             start_year=2023,
             end_year=2030,
-            prod_year=np.array([2025, 2026, 2027, 2028, 2027, 2025, 2025, 2025]),
-            lifting_rate=np.array([10, 25, 50, 100, 150, 10, 10, 10]),
-            price=np.array([10, 10, 10, 10, 10, 10, 10, 10]),
+            prod_year=np.array([2025, 2026, 2027, 2028, 2027, 2025]),
+            lifting_rate=np.array([10, 10, 10, 10, 10, 10]),
+            price=np.array([10, 10, 10, 10, 10, 10]),
             fluid_type=FluidType.OIL,
         )
 
         self.lifting_apel = Lifting(
             start_year=2023,
             end_year=2030,
-            prod_year=np.array([2026, 2027, 2028, 2027]),
-            lifting_rate=np.array([np.nan, None, 5, 5]),
-            price=np.array([2, 2, 2, 2]),
+            prod_year=np.array([2024, 2024, 2024]),
+            lifting_rate=np.array([np.nan, 10, None]),
+            price=np.array([2, 2, 2]),
             fluid_type=FluidType.GAS,
         )
 
@@ -78,18 +79,18 @@ class ExampleCase:
             start_year=2023,
             end_year=2030,
             expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([np.nan, 100, 100, None]),
-            cost_allocation=[np.nan, FluidType.OIL, FluidType.OIL, None],
-            is_sunkcost=[np.nan, False, False, None],
+            cost=np.array([25, 100, 100, 25]),
+            cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+            is_sunkcost=[True, False, False, True],
         )
 
         self.capital_apel = CapitalCost(
             start_year=2023,
             end_year=2030,
             expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([np.nan, 10, 10, None]),
-            cost_allocation=[np.nan, FluidType.GAS, FluidType.GAS, None],
-            is_sunkcost=[True, True, True, True],
+            cost=np.array([12.5, 50, 50, 12.5]),
+            cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+            is_sunkcost=[True, False, False, True],
         )
 
     def _get_intangible_cost_data(self):

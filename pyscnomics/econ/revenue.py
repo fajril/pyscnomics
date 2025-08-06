@@ -511,7 +511,7 @@ class Lifting:
         return np.concatenate((rev_update, zeros))
 
     def __len__(self):
-        return self.project_duration
+        return len(self.prod_year)
 
     def __eq__(self, other):
         # Between two instances of lifting
