@@ -134,7 +134,16 @@ class BaseProject:
     # Attributes to be defined later (associated with sunk cost in each cost categories)
     _oil_capital_sunk_cost: CapitalCost = field(default=None, init=False, repr=False)
     _gas_capital_sunk_cost: CapitalCost = field(default=None, init=False, repr=False)
-
+    _oil_intangible_sunk_cost: Intangible = field(default=None, init=False, repr=False)
+    _gas_intangible_sunk_cost: Intangible = field(default=None, init=False, repr=False)
+    _oil_opex_sunk_cost: OPEX = field(default=None, init=False, repr=False)
+    _gas_opex_sunk_cost: OPEX = field(default=None, init=False, repr=False)
+    _oil_asr_sunk_cost: ASR = field(default=None, init=False, repr=False)
+    _gas_asr_sunk_cost: ASR = field(default=None, init=False, repr=False)
+    _oil_lbt_sunk_cost: LBT = field(default=None, init=False, repr=False)
+    _gas_lbt_sunk_cost: LBT = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_sunk_cost: CostOfSales = field(default=None, init=False, repr=False)
+    _gas_cost_of_sales_sunk_cost: CostOfSales = field(default=None, init=False, repr=False)
 
     # Attributes to be defined later
     # (Associated with pre tax expenditures for each cost elements)
@@ -624,6 +633,10 @@ class BaseProject:
         # # self._oil_sunk_cost = self._get_oil_sunk_cost()
         # # self._gas_sunk_cost = self._get_gas_sunk_cost()
 
+        # Prepare attributes associated with sunk costs
+        self._oil_capital_sunk_cost = self._get_oil_capital_sunk_cost()
+        self._gas_capital_sunk_cost = self._get_gas_capital_sunk_cost()
+
         print('\t')
         print(f'Filetype: {type(self._oil_capital_cost)}')
         print(f'Length: {len(self._oil_capital_cost)}')
@@ -883,32 +896,37 @@ class BaseProject:
                 cost_allocation=[fluid_type],
             )
 
-        # Configure indices to slice data according to fluid type and sunk cost
-        allocation_array = np.array(self.capital_cost_total.cost_allocation)
-        sunkcost_array = np.array(self.capital_cost_total.is_sunkcost)
-        mask = np.logical_and(
-            allocation_array == fluid_type,
-            sunkcost_array == include_sunkcost,
-        )
-        indices = np.flatnonzero(mask)
+        else:
+            # Configure indices to slice data according to fluid type and sunk cost
+            allocation_array = np.array(self.capital_cost_total.cost_allocation)
+            sunkcost_array = np.array(self.capital_cost_total.is_sunkcost)
+            mask = np.logical_and(
+                allocation_array == fluid_type,
+                sunkcost_array == include_sunkcost,
+            )
+            indices = np.flatnonzero(mask)
 
-        # Slice filtered data, return a new instance of CapitalCost with filtered data
-        return CapitalCost(
-            start_year=self.capital_cost_total.start_year,
-            end_year=self.capital_cost_total.end_year,
-            expense_year=self.capital_cost_total.expense_year[indices],
-            cost=self.capital_cost_total.cost[indices],
-            cost_allocation=np.array(self.capital_cost_total.cost_allocation)[indices].tolist(),
-            description=np.array(self.capital_cost_total.description)[indices].tolist(),
-            is_sunkcost=np.array(self.capital_cost_total.is_sunkcost)[indices].tolist(),
-            tax_portion=self.capital_cost_total.tax_portion[indices],
-            tax_discount=self.capital_cost_total.tax_discount[indices],
-            pis_year=self.capital_cost_total.pis_year[indices],
-            salvage_value=self.capital_cost_total.salvage_value[indices],
-            useful_life=self.capital_cost_total.useful_life[indices],
-            depreciation_factor=self.capital_cost_total.depreciation_factor[indices],
-            is_ic_applied=np.array(self.capital_cost_total.is_ic_applied)[indices].tolist(),
-        )
+            # Slice filtered data, return a new instance of CapitalCost with filtered data
+            return CapitalCost(
+                start_year=self.capital_cost_total.start_year,
+                end_year=self.capital_cost_total.end_year,
+                expense_year=self.capital_cost_total.expense_year[indices],
+                cost=self.capital_cost_total.cost[indices],
+                cost_allocation=(
+                    np.array(self.capital_cost_total.cost_allocation)[indices].tolist()
+                ),
+                description=np.array(self.capital_cost_total.description)[indices].tolist(),
+                is_sunkcost=np.array(self.capital_cost_total.is_sunkcost)[indices].tolist(),
+                tax_portion=self.capital_cost_total.tax_portion[indices],
+                tax_discount=self.capital_cost_total.tax_discount[indices],
+                pis_year=self.capital_cost_total.pis_year[indices],
+                salvage_value=self.capital_cost_total.salvage_value[indices],
+                useful_life=self.capital_cost_total.useful_life[indices],
+                depreciation_factor=self.capital_cost_total.depreciation_factor[indices],
+                is_ic_applied=(
+                    np.array(self.capital_cost_total.is_ic_applied)[indices].tolist()
+                ),
+            )
 
     def _get_oil_capital(self):
         return self._get_filtered_capital_cost(fluid_type=FluidType.OIL, include_sunkcost=False)
@@ -917,154 +935,65 @@ class BaseProject:
         return self._get_filtered_capital_cost(fluid_type=FluidType.GAS, include_sunkcost=False)
 
     def _get_oil_capital_sunk_cost(self):
-        pass
+        return self._get_filtered_capital_cost(fluid_type=FluidType.OIL, include_sunkcost=True)
 
     def _get_gas_capital_sunk_cost(self):
+        return self._get_filtered_capital_cost(fluid_type=FluidType.GAS, include_sunkcost=True)
+
+    def _get_filtered_intangible(
+        self,
+        fluid_type: FluidType,
+        include_sunkcost: bool,
+    ):
+        # Handle case when requested fluid type is not found
+        if fluid_type not in self.intangible_cost_total.cost_allocation:
+            return Intangible(
+                start_year=self.start_date.year,
+                end_year=self.end_date.year,
+                expense_year=np.array([self.start_date.year]),
+                cost=np.array([0]),
+                cost_allocation=[fluid_type],
+            )
+
+        else:
+            # Configure indices to slice data according to fluid type and sunk cost
+            allocation_array = np.array(self.intangible_cost_total.cost_allocation)
+            sunkcost_array = np.array(self.intangible_cost_total.is_sunkcost)
+            mask = np.logical_and(
+                allocation_array == fluid_type,
+                sunkcost_array == include_sunkcost,
+            )
+            indices = np.flatnonzero(mask)
+
+            # Slice filtered data, return a new instance of Intangible with filtered data
+            return Intangible(
+                start_year=self.intangible_cost_total.start_year,
+                end_year=self.intangible_cost_total.end_year,
+                expense_year=self.intangible_cost_total.expense_year[indices],
+                cost=self.intangible_cost_total.cost[indices],
+                cost_allocation=(
+                    np.array(self.intangible_cost_total.cost_allocation)[indices].tolist()
+                ),
+                description=np.array(self.intangible_cost_total.description)[indices].tolist(),
+                is_sunkcost=np.array(self.intangible_cost_total.is_sunkcost)[indices].tolist(),
+                tax_portion=self.intangible_cost_total.tax_portion,
+                tax_discount=self.intangible_cost_total.tax_discount,
+            )
+
+    def _get_oil_intangible(self):
+        pass
+
+    def _get_gas_intangible(self):
+        pass
+
+    def _get_oil_intangible_sunk_cost(self):
+        pass
+
+    def _get_gas_intangible_sunk_cost(self):
         pass
 
 
 
-    # def _get_oil_capital(self) -> CapitalCost:
-    #     """
-    #     Determines total oil CapitalCost from the number of oil CapitalCost instances in
-    #     attribute self.capital_cost_total.
-    #
-    #     Returns
-    #     -------
-    #     CapitalCost
-    #         An instance of CapitalCost that only includes FluidType.OIL as the associated
-    #         cost_allocation that has been combined altogether following the rules prescribed
-    #         in the dunder method __add__() of CapitalCost class.
-    #
-    #     Notes
-    #     -----
-    #     The core operations are as follows:
-    #     (1) Check the attribute cost_allocation in attribute self.capital_cost_total,
-    #     (2) If OIL is not available as an instance in attribute self.capital_cost_total,
-    #         then establish a new instance of OIL CapitalCost with the following attribute set
-    #         to zero: cost.
-    #     (3) Identify index location where cost_allocation is FluidType.OIL in attribute
-    #         self.capital_cost_total,
-    #     (4) Create a new instance of CapitalCost with only FluidType.OIL as its cost_allocation.
-    #     """
-    #
-    #     if FluidType.OIL not in self.capital_cost_total.cost_allocation:
-    #         return CapitalCost(
-    #             start_year=self.start_date.year,
-    #             end_year=self.end_date.year,
-    #             expense_year=np.array([self.start_date.year]),
-    #             cost=np.array([0]),
-    #             cost_allocation=[FluidType.OIL],
-    #         )
-    #
-    #     else:
-    #         # Configure indices of OIL capital cost
-    #         mask = np.logical_and(
-    #             np.array(self.capital_cost_total.cost_allocation) == FluidType.OIL,
-    #             np.array(self.capital_cost_total.is_sunkcost) == False
-    #         )
-    #
-    #         oil_capital_id = np.flatnonzero(mask)
-    #
-    #         start_year = self.capital_cost_total.start_year
-    #         end_year = self.capital_cost_total.end_year
-    #         expense_year = self.capital_cost_total.expense_year[oil_capital_id]
-    #         cost = self.capital_cost_total.cost[oil_capital_id]
-    #         cost_allocation = np.array(self.capital_cost_total.cost_allocation)[oil_capital_id]
-    #         description = np.array(self.capital_cost_total.description)[oil_capital_id]
-    #         is_sunkcost = np.array(self.capital_cost_total.is_sunkcost)[oil_capital_id]
-    #         tax_portion = self.capital_cost_total.tax_portion[oil_capital_id]
-    #         tax_discount = self.capital_cost_total.tax_discount[oil_capital_id]
-    #         pis_year = self.capital_cost_total.pis_year[oil_capital_id]
-    #         salvage_value = self.capital_cost_total.salvage_value[oil_capital_id]
-    #         useful_life = self.capital_cost_total.useful_life[oil_capital_id]
-    #         depreciation_factor = self.capital_cost_total.depreciation_factor[oil_capital_id]
-    #         is_ic_applied = np.array(self.capital_cost_total.is_ic_applied)[oil_capital_id]
-    #
-    #         return CapitalCost(
-    #             start_year=start_year,
-    #             end_year=end_year,
-    #             expense_year=expense_year,
-    #             cost=cost,
-    #             cost_allocation=cost_allocation.tolist(),
-    #             description=description.tolist(),
-    #             is_sunkcost=is_sunkcost.tolist(),
-    #             tax_portion=tax_portion,
-    #             tax_discount=tax_discount,
-    #             pis_year=pis_year,
-    #             salvage_value=salvage_value,
-    #             useful_life=useful_life,
-    #             depreciation_factor=depreciation_factor,
-    #             is_ic_applied=is_ic_applied.tolist(),
-    #         )
-
-    # def _get_gas_capital(self) -> CapitalCost:
-    #     """
-    #     Determines total gas CapitalCost from the number of gas CapitalCost instances in
-    #     attribute self.capital_cost_total.
-    #
-    #     Returns
-    #     -------
-    #     CapitalCost
-    #         An instance of CapitalCost that only includes FluidType.GAS as the associated
-    #         cost_allocation that has been combined altogether following the rules prescribed
-    #         in the dunder method __add__() of CapitalCost class.
-    #
-    #     Notes
-    #     -----
-    #     The core operations are as follows:
-    #     (1) Check the attribute cost_allocation in attribute self.capital_cost_total,
-    #     (2) If GAS is not available as an instance in attribute self.capital_cost_total,
-    #         then establish a new instance of GAS CapitalCost with the following attribute set
-    #         to zero: cost.
-    #     (3) Identify index location where cost_allocation is FluidType.GAS in attribute
-    #         self.capital_cost_total,
-    #     (4) Create a new instance of CapitalCost with only FluidType.GAS as its cost_allocation.
-    #     """
-    #
-    #     if FluidType.GAS not in self.capital_cost_total.cost_allocation:
-    #         return CapitalCost(
-    #             start_year=self.start_date.year,
-    #             end_year=self.end_date.year,
-    #             expense_year=np.array([self.start_date.year]),
-    #             cost=np.array([0]),
-    #             cost_allocation=[FluidType.GAS],
-    #         )
-    #
-    #     else:
-    #         gas_capital_id = np.argwhere(
-    #             np.array(self.capital_cost_total.cost_allocation) == FluidType.GAS
-    #         ).ravel()
-    #
-    #         start_year = self.capital_cost_total.start_year
-    #         end_year = self.capital_cost_total.end_year
-    #         expense_year = self.capital_cost_total.expense_year[gas_capital_id]
-    #         cost = self.capital_cost_total.cost[gas_capital_id]
-    #         cost_allocation = np.array(self.capital_cost_total.cost_allocation)[gas_capital_id]
-    #         description = np.array(self.capital_cost_total.description)[gas_capital_id]
-    #         tax_portion = self.capital_cost_total.tax_portion[gas_capital_id]
-    #         tax_discount = self.capital_cost_total.tax_discount[gas_capital_id]
-    #         pis_year = self.capital_cost_total.pis_year[gas_capital_id]
-    #         salvage_value = self.capital_cost_total.salvage_value[gas_capital_id]
-    #         useful_life = self.capital_cost_total.useful_life[gas_capital_id]
-    #         depreciation_factor = self.capital_cost_total.depreciation_factor[gas_capital_id]
-    #         is_ic_applied = np.array(self.capital_cost_total.is_ic_applied)[gas_capital_id]
-    #
-    #         return CapitalCost(
-    #             start_year=start_year,
-    #             end_year=end_year,
-    #             expense_year=expense_year,
-    #             cost=cost,
-    #             cost_allocation=cost_allocation.tolist(),
-    #             description=description.tolist(),
-    #             tax_portion=tax_portion,
-    #             tax_discount=tax_discount,
-    #             pis_year=pis_year,
-    #             salvage_value=salvage_value,
-    #             useful_life=useful_life,
-    #             depreciation_factor=depreciation_factor,
-    #             is_ic_applied=is_ic_applied.tolist(),
-    #         )
 
     def _get_oil_intangible(self) -> Intangible:
         """
