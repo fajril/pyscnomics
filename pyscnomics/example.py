@@ -102,18 +102,18 @@ class ExampleCase:
             start_year=2023,
             end_year=2030,
             expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([np.nan, 100, 100, None]),
-            cost_allocation=[np.nan, FluidType.OIL, FluidType.OIL, None],
-            is_sunkcost=[np.nan, False, False, None],
+            cost=np.array([100, 100, 212, 212]),
+            cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+            is_sunkcost=[False, False, True, True],
         )
 
         self.intangible_apel = Intangible(
             start_year=2023,
             end_year=2030,
             expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([np.nan, 10, 10, None]),
-            cost_allocation=[np.nan, FluidType.GAS, FluidType.GAS, None],
-            is_sunkcost=[True, True, True, True],
+            cost=np.array([50, 50, 515, 515]),
+            cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+            is_sunkcost=[False, False, True, True],
         )
 
     def _get_opex_data(self):

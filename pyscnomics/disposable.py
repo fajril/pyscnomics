@@ -1697,153 +1697,270 @@ Collection of classes or modules to be disposed in the future version.
 
 
 
+def _get_oil_capital(self) -> CapitalCost:
+    """
+    Determines total oil CapitalCost from the number of oil CapitalCost instances in
+    attribute self.capital_cost_total.
+
+    Returns
+    -------
+    CapitalCost
+        An instance of CapitalCost that only includes FluidType.OIL as the associated
+        cost_allocation that has been combined altogether following the rules prescribed
+        in the dunder method __add__() of CapitalCost class.
+
+    Notes
+    -----
+    The core operations are as follows:
+    (1) Check the attribute cost_allocation in attribute self.capital_cost_total,
+    (2) If OIL is not available as an instance in attribute self.capital_cost_total,
+        then establish a new instance of OIL CapitalCost with the following attribute set
+        to zero: cost.
+    (3) Identify index location where cost_allocation is FluidType.OIL in attribute
+        self.capital_cost_total,
+    (4) Create a new instance of CapitalCost with only FluidType.OIL as its cost_allocation.
+    """
+
+    if FluidType.OIL not in self.capital_cost_total.cost_allocation:
+        return CapitalCost(
+            start_year=self.start_date.year,
+            end_year=self.end_date.year,
+            expense_year=np.array([self.start_date.year]),
+            cost=np.array([0]),
+            cost_allocation=[FluidType.OIL],
+        )
+
+    else:
+        # Configure indices of OIL capital cost
+        mask = np.logical_and(
+            np.array(self.capital_cost_total.cost_allocation) == FluidType.OIL,
+            np.array(self.capital_cost_total.is_sunkcost) == False
+        )
+
+        oil_capital_id = np.flatnonzero(mask)
+
+        start_year = self.capital_cost_total.start_year
+        end_year = self.capital_cost_total.end_year
+        expense_year = self.capital_cost_total.expense_year[oil_capital_id]
+        cost = self.capital_cost_total.cost[oil_capital_id]
+        cost_allocation = np.array(self.capital_cost_total.cost_allocation)[oil_capital_id]
+        description = np.array(self.capital_cost_total.description)[oil_capital_id]
+        is_sunkcost = np.array(self.capital_cost_total.is_sunkcost)[oil_capital_id]
+        tax_portion = self.capital_cost_total.tax_portion[oil_capital_id]
+        tax_discount = self.capital_cost_total.tax_discount[oil_capital_id]
+        pis_year = self.capital_cost_total.pis_year[oil_capital_id]
+        salvage_value = self.capital_cost_total.salvage_value[oil_capital_id]
+        useful_life = self.capital_cost_total.useful_life[oil_capital_id]
+        depreciation_factor = self.capital_cost_total.depreciation_factor[oil_capital_id]
+        is_ic_applied = np.array(self.capital_cost_total.is_ic_applied)[oil_capital_id]
+
+        return CapitalCost(
+            start_year=start_year,
+            end_year=end_year,
+            expense_year=expense_year,
+            cost=cost,
+            cost_allocation=cost_allocation.tolist(),
+            description=description.tolist(),
+            is_sunkcost=is_sunkcost.tolist(),
+            tax_portion=tax_portion,
+            tax_discount=tax_discount,
+            pis_year=pis_year,
+            salvage_value=salvage_value,
+            useful_life=useful_life,
+            depreciation_factor=depreciation_factor,
+            is_ic_applied=is_ic_applied.tolist(),
+        )
 
 
 
-# def _get_oil_capital(self) -> CapitalCost:
-#     """
-#     Determines total oil CapitalCost from the number of oil CapitalCost instances in
-#     attribute self.capital_cost_total.
-#
-#     Returns
-#     -------
-#     CapitalCost
-#         An instance of CapitalCost that only includes FluidType.OIL as the associated
-#         cost_allocation that has been combined altogether following the rules prescribed
-#         in the dunder method __add__() of CapitalCost class.
-#
-#     Notes
-#     -----
-#     The core operations are as follows:
-#     (1) Check the attribute cost_allocation in attribute self.capital_cost_total,
-#     (2) If OIL is not available as an instance in attribute self.capital_cost_total,
-#         then establish a new instance of OIL CapitalCost with the following attribute set
-#         to zero: cost.
-#     (3) Identify index location where cost_allocation is FluidType.OIL in attribute
-#         self.capital_cost_total,
-#     (4) Create a new instance of CapitalCost with only FluidType.OIL as its cost_allocation.
-#     """
-#
-#     if FluidType.OIL not in self.capital_cost_total.cost_allocation:
-#         return CapitalCost(
-#             start_year=self.start_date.year,
-#             end_year=self.end_date.year,
-#             expense_year=np.array([self.start_date.year]),
-#             cost=np.array([0]),
-#             cost_allocation=[FluidType.OIL],
-#         )
-#
-#     else:
-#         # Configure indices of OIL capital cost
-#         mask = np.logical_and(
-#             np.array(self.capital_cost_total.cost_allocation) == FluidType.OIL,
-#             np.array(self.capital_cost_total.is_sunkcost) == False
-#         )
-#
-#         oil_capital_id = np.flatnonzero(mask)
-#
-#         start_year = self.capital_cost_total.start_year
-#         end_year = self.capital_cost_total.end_year
-#         expense_year = self.capital_cost_total.expense_year[oil_capital_id]
-#         cost = self.capital_cost_total.cost[oil_capital_id]
-#         cost_allocation = np.array(self.capital_cost_total.cost_allocation)[oil_capital_id]
-#         description = np.array(self.capital_cost_total.description)[oil_capital_id]
-#         is_sunkcost = np.array(self.capital_cost_total.is_sunkcost)[oil_capital_id]
-#         tax_portion = self.capital_cost_total.tax_portion[oil_capital_id]
-#         tax_discount = self.capital_cost_total.tax_discount[oil_capital_id]
-#         pis_year = self.capital_cost_total.pis_year[oil_capital_id]
-#         salvage_value = self.capital_cost_total.salvage_value[oil_capital_id]
-#         useful_life = self.capital_cost_total.useful_life[oil_capital_id]
-#         depreciation_factor = self.capital_cost_total.depreciation_factor[oil_capital_id]
-#         is_ic_applied = np.array(self.capital_cost_total.is_ic_applied)[oil_capital_id]
-#
-#         return CapitalCost(
-#             start_year=start_year,
-#             end_year=end_year,
-#             expense_year=expense_year,
-#             cost=cost,
-#             cost_allocation=cost_allocation.tolist(),
-#             description=description.tolist(),
-#             is_sunkcost=is_sunkcost.tolist(),
-#             tax_portion=tax_portion,
-#             tax_discount=tax_discount,
-#             pis_year=pis_year,
-#             salvage_value=salvage_value,
-#             useful_life=useful_life,
-#             depreciation_factor=depreciation_factor,
-#             is_ic_applied=is_ic_applied.tolist(),
-#         )
+def _get_gas_capital(self) -> CapitalCost:
+    """
+    Determines total gas CapitalCost from the number of gas CapitalCost instances in
+    attribute self.capital_cost_total.
 
+    Returns
+    -------
+    CapitalCost
+        An instance of CapitalCost that only includes FluidType.GAS as the associated
+        cost_allocation that has been combined altogether following the rules prescribed
+        in the dunder method __add__() of CapitalCost class.
 
+    Notes
+    -----
+    The core operations are as follows:
+    (1) Check the attribute cost_allocation in attribute self.capital_cost_total,
+    (2) If GAS is not available as an instance in attribute self.capital_cost_total,
+        then establish a new instance of GAS CapitalCost with the following attribute set
+        to zero: cost.
+    (3) Identify index location where cost_allocation is FluidType.GAS in attribute
+        self.capital_cost_total,
+    (4) Create a new instance of CapitalCost with only FluidType.GAS as its cost_allocation.
+    """
 
+    if FluidType.GAS not in self.capital_cost_total.cost_allocation:
+        return CapitalCost(
+            start_year=self.start_date.year,
+            end_year=self.end_date.year,
+            expense_year=np.array([self.start_date.year]),
+            cost=np.array([0]),
+            cost_allocation=[FluidType.GAS],
+        )
 
+    else:
+        gas_capital_id = np.argwhere(
+            np.array(self.capital_cost_total.cost_allocation) == FluidType.GAS
+        ).ravel()
 
+        start_year = self.capital_cost_total.start_year
+        end_year = self.capital_cost_total.end_year
+        expense_year = self.capital_cost_total.expense_year[gas_capital_id]
+        cost = self.capital_cost_total.cost[gas_capital_id]
+        cost_allocation = np.array(self.capital_cost_total.cost_allocation)[gas_capital_id]
+        description = np.array(self.capital_cost_total.description)[gas_capital_id]
+        tax_portion = self.capital_cost_total.tax_portion[gas_capital_id]
+        tax_discount = self.capital_cost_total.tax_discount[gas_capital_id]
+        pis_year = self.capital_cost_total.pis_year[gas_capital_id]
+        salvage_value = self.capital_cost_total.salvage_value[gas_capital_id]
+        useful_life = self.capital_cost_total.useful_life[gas_capital_id]
+        depreciation_factor = self.capital_cost_total.depreciation_factor[gas_capital_id]
+        is_ic_applied = np.array(self.capital_cost_total.is_ic_applied)[gas_capital_id]
 
+        return CapitalCost(
+            start_year=start_year,
+            end_year=end_year,
+            expense_year=expense_year,
+            cost=cost,
+            cost_allocation=cost_allocation.tolist(),
+            description=description.tolist(),
+            tax_portion=tax_portion,
+            tax_discount=tax_discount,
+            pis_year=pis_year,
+            salvage_value=salvage_value,
+            useful_life=useful_life,
+            depreciation_factor=depreciation_factor,
+            is_ic_applied=is_ic_applied.tolist(),
+        )
+        
+        
+        
+def _get_oil_intangible(self) -> Intangible:
+    """
+    Determines total oil Intangible from the number of oil Intangible instances in
+    attribute self.intangible_cost_total.
 
-# def _get_gas_capital(self) -> CapitalCost:
-#     """
-#     Determines total gas CapitalCost from the number of gas CapitalCost instances in
-#     attribute self.capital_cost_total.
-#
-#     Returns
-#     -------
-#     CapitalCost
-#         An instance of CapitalCost that only includes FluidType.GAS as the associated
-#         cost_allocation that has been combined altogether following the rules prescribed
-#         in the dunder method __add__() of CapitalCost class.
-#
-#     Notes
-#     -----
-#     The core operations are as follows:
-#     (1) Check the attribute cost_allocation in attribute self.capital_cost_total,
-#     (2) If GAS is not available as an instance in attribute self.capital_cost_total,
-#         then establish a new instance of GAS CapitalCost with the following attribute set
-#         to zero: cost.
-#     (3) Identify index location where cost_allocation is FluidType.GAS in attribute
-#         self.capital_cost_total,
-#     (4) Create a new instance of CapitalCost with only FluidType.GAS as its cost_allocation.
-#     """
-#
-#     if FluidType.GAS not in self.capital_cost_total.cost_allocation:
-#         return CapitalCost(
-#             start_year=self.start_date.year,
-#             end_year=self.end_date.year,
-#             expense_year=np.array([self.start_date.year]),
-#             cost=np.array([0]),
-#             cost_allocation=[FluidType.GAS],
-#         )
-#
-#     else:
-#         gas_capital_id = np.argwhere(
-#             np.array(self.capital_cost_total.cost_allocation) == FluidType.GAS
-#         ).ravel()
-#
-#         start_year = self.capital_cost_total.start_year
-#         end_year = self.capital_cost_total.end_year
-#         expense_year = self.capital_cost_total.expense_year[gas_capital_id]
-#         cost = self.capital_cost_total.cost[gas_capital_id]
-#         cost_allocation = np.array(self.capital_cost_total.cost_allocation)[gas_capital_id]
-#         description = np.array(self.capital_cost_total.description)[gas_capital_id]
-#         tax_portion = self.capital_cost_total.tax_portion[gas_capital_id]
-#         tax_discount = self.capital_cost_total.tax_discount[gas_capital_id]
-#         pis_year = self.capital_cost_total.pis_year[gas_capital_id]
-#         salvage_value = self.capital_cost_total.salvage_value[gas_capital_id]
-#         useful_life = self.capital_cost_total.useful_life[gas_capital_id]
-#         depreciation_factor = self.capital_cost_total.depreciation_factor[gas_capital_id]
-#         is_ic_applied = np.array(self.capital_cost_total.is_ic_applied)[gas_capital_id]
-#
-#         return CapitalCost(
-#             start_year=start_year,
-#             end_year=end_year,
-#             expense_year=expense_year,
-#             cost=cost,
-#             cost_allocation=cost_allocation.tolist(),
-#             description=description.tolist(),
-#             tax_portion=tax_portion,
-#             tax_discount=tax_discount,
-#             pis_year=pis_year,
-#             salvage_value=salvage_value,
-#             useful_life=useful_life,
-#             depreciation_factor=depreciation_factor,
-#             is_ic_applied=is_ic_applied.tolist(),
-#         )
+    Returns
+    -------
+    Intangible
+        An instance of Intangible that only includes FluidType.OIL as the associated
+        cost_allocation that has been combined altogether following the rules prescribed
+        in the dunder method __add__() of Intangible class.
+
+    Notes
+    -----
+    The core operations are as follows:
+    (1) Check the attribute cost_allocation in attribute self.intangible_cost_total,
+    (2) If OIL is not available as an instance in attribute self.intangible_cost_total,
+        then establish a new instance of OIL Intangible with the following attribute set
+        to zero: cost.
+    (3) Identify index location where cost_allocation is FluidType.OIL in attribute
+        self.intangible_cost_total,
+    (4) Create a new instance of Intangible with only FluidType.OIL as its cost_allocation.
+    """
+
+    if FluidType.OIL not in self.intangible_cost_total.cost_allocation:
+        return Intangible(
+            start_year=self.start_date.year,
+            end_year=self.end_date.year,
+            expense_year=np.array([self.start_date.year]),
+            cost=np.array([0]),
+            cost_allocation=[FluidType.OIL],
+        )
+
+    else:
+        oil_intangible_id = np.argwhere(
+            np.array(self.intangible_cost_total.cost_allocation) == FluidType.OIL
+        ).ravel()
+
+        start_year = self.intangible_cost_total.start_year
+        end_year = self.intangible_cost_total.end_year
+        expense_year = self.intangible_cost_total.expense_year[oil_intangible_id]
+        cost = self.intangible_cost_total.cost[oil_intangible_id]
+        cost_allocation = np.array(
+            self.intangible_cost_total.cost_allocation
+        )[oil_intangible_id]
+        description = np.array(self.intangible_cost_total.description)[oil_intangible_id]
+        tax_portion = self.intangible_cost_total.tax_portion[oil_intangible_id]
+        tax_discount = self.intangible_cost_total.tax_discount[oil_intangible_id]
+
+        return Intangible(
+            start_year=start_year,
+            end_year=end_year,
+            expense_year=expense_year,
+            cost=cost,
+            cost_allocation=cost_allocation.tolist(),
+            description=description.tolist(),
+            tax_portion=tax_portion,
+            tax_discount=tax_discount,
+        )
+            
+            
+            
+def _get_gas_intangible(self) -> Intangible:
+    """
+    Determines total gas Intangible from the number of gas Intangible instances in
+    attribute self.intangible_cost_total.
+
+    Returns
+    -------
+    Intangible
+        An instance of Intangible that only includes FluidType.GAS as the associated
+        cost_allocation that has been combined altogether following the rules prescribed
+        in the dunder method __add__() of Intangible class.
+
+    Notes
+    -----
+    The core operations are as follows:
+    (1) Check the attribute cost_allocation in attribute self.intangible_cost_total,
+    (2) If GAS is not available as an instance in attribute self.intangible_cost_total,
+        then establish a new instance of GAS Intangible with the following attribute set
+        to zero: cost.
+    (3) Identify index location where cost_allocation is FluidType.GAS in attribute
+        self.intangible_cost_total,
+    (4) Create a new instance of Intangible with only FluidType.GAS as its cost_allocation.
+    """
+
+    if FluidType.GAS not in self.intangible_cost_total.cost_allocation:
+        return Intangible(
+            start_year=self.start_date.year,
+            end_year=self.end_date.year,
+            expense_year=np.array([self.start_date.year]),
+            cost=np.array([0]),
+            cost_allocation=[FluidType.GAS],
+        )
+
+    else:
+        gas_intangible_id = np.argwhere(
+            np.array(self.intangible_cost_total.cost_allocation) == FluidType.GAS
+        ).ravel()
+
+        start_year = self.intangible_cost_total.start_year
+        end_year = self.intangible_cost_total.end_year
+        expense_year = self.intangible_cost_total.expense_year[gas_intangible_id]
+        cost = self.intangible_cost_total.cost[gas_intangible_id]
+        cost_allocation = np.array(self.intangible_cost_total.cost_allocation)[gas_intangible_id]
+        description = np.array(self.intangible_cost_total.description)[gas_intangible_id]
+        tax_portion = self.intangible_cost_total.tax_portion[gas_intangible_id]
+        tax_discount = self.intangible_cost_total.tax_discount[gas_intangible_id]
+
+        return Intangible(
+            start_year=start_year,
+            end_year=end_year,
+            expense_year=expense_year,
+            cost=cost,
+            cost_allocation=cost_allocation.tolist(),
+            description=description.tolist(),
+            tax_portion=tax_portion,
+            tax_discount=tax_discount,
+        )
+        
+        

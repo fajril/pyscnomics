@@ -613,14 +613,14 @@ class BaseProject:
         self.cost_of_sales_total = reduce(lambda x, y: x + y, self.cost_of_sales)
 
         print('\t')
-        print(f'Filetype: {type(self.capital_cost_total)}')
-        print(f'Length: {len(self.capital_cost_total)}')
-        print('capital_cost_total = ', self.capital_cost_total)
+        print(f'Filetype: {type(self.intangible_cost_total)}')
+        print(f'Length: {len(self.intangible_cost_total)}')
+        print('intangible_cost_total = ', self.intangible_cost_total)
 
         # Prepare attributes associated with costs
         self._oil_capital_cost = self._get_oil_capital()
         self._gas_capital_cost = self._get_gas_capital()
-        # self._oil_intangible = self._get_oil_intangible()
+        self._oil_intangible = self._get_oil_intangible()
         # self._gas_intangible = self._get_gas_intangible()
         # self._oil_opex = self._get_oil_opex()
         # self._gas_opex = self._get_gas_opex()
@@ -633,14 +633,21 @@ class BaseProject:
         # # self._oil_sunk_cost = self._get_oil_sunk_cost()
         # # self._gas_sunk_cost = self._get_gas_sunk_cost()
 
+        print('\t')
+        print(f'Filetype: {type(self._oil_intangible)}')
+        print(f'Length: {len(self._oil_intangible)}')
+        print('_oil_intangible = ', self._oil_intangible)
+
         # Prepare attributes associated with sunk costs
         self._oil_capital_sunk_cost = self._get_oil_capital_sunk_cost()
         self._gas_capital_sunk_cost = self._get_gas_capital_sunk_cost()
+        # self._oil_intangible_sunk_cost = self._get_oil_intangible_sunk_cost()
+        # self._gas_intangible_sunk_cost = self._get_gas_intangible_sunk_cost()
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_capital_cost)}')
-        print(f'Length: {len(self._oil_capital_cost)}')
-        print('_oil_capital_cost = ', self._oil_capital_cost)
+        # print('\t')
+        # print(f'Filetype: {type(self._oil_intangible_sunk_cost)}')
+        # print(f'Length: {len(self._oil_intangible_sunk_cost)}')
+        # print('_oil_intangible_sunk_cost = ', self._oil_intangible_sunk_cost)
 
 
         # # Raise an exception error if the start year of the project is inconsistent
@@ -929,16 +936,24 @@ class BaseProject:
             )
 
     def _get_oil_capital(self):
-        return self._get_filtered_capital_cost(fluid_type=FluidType.OIL, include_sunkcost=False)
+        return self._get_filtered_capital_cost(
+            fluid_type=FluidType.OIL, include_sunkcost=False
+        )
 
     def _get_gas_capital(self):
-        return self._get_filtered_capital_cost(fluid_type=FluidType.GAS, include_sunkcost=False)
+        return self._get_filtered_capital_cost(
+            fluid_type=FluidType.GAS, include_sunkcost=False
+        )
 
     def _get_oil_capital_sunk_cost(self):
-        return self._get_filtered_capital_cost(fluid_type=FluidType.OIL, include_sunkcost=True)
+        return self._get_filtered_capital_cost(
+            fluid_type=FluidType.OIL, include_sunkcost=True
+        )
 
     def _get_gas_capital_sunk_cost(self):
-        return self._get_filtered_capital_cost(fluid_type=FluidType.GAS, include_sunkcost=True)
+        return self._get_filtered_capital_cost(
+            fluid_type=FluidType.GAS, include_sunkcost=True
+        )
 
     def _get_filtered_intangible(
         self,
@@ -963,6 +978,12 @@ class BaseProject:
                 allocation_array == fluid_type,
                 sunkcost_array == include_sunkcost,
             )
+
+            print('\t')
+            print(f'Filetype: {type(mask)}')
+            print(f'Length: {len(mask)}')
+            print('mask = ', mask)
+
             indices = np.flatnonzero(mask)
 
             # Slice filtered data, return a new instance of Intangible with filtered data
@@ -976,142 +997,23 @@ class BaseProject:
                 ),
                 description=np.array(self.intangible_cost_total.description)[indices].tolist(),
                 is_sunkcost=np.array(self.intangible_cost_total.is_sunkcost)[indices].tolist(),
-                tax_portion=self.intangible_cost_total.tax_portion,
-                tax_discount=self.intangible_cost_total.tax_discount,
+                tax_portion=self.intangible_cost_total.tax_portion[indices],
+                tax_discount=self.intangible_cost_total.tax_discount[indices],
             )
 
     def _get_oil_intangible(self):
-        pass
+        return self._get_filtered_intangible(fluid_type=FluidType.OIL, include_sunkcost=False)
 
     def _get_gas_intangible(self):
-        pass
+        return self._get_filtered_intangible(fluid_type=FluidType.GAS, include_sunkcost=False)
 
     def _get_oil_intangible_sunk_cost(self):
-        pass
+        return self._get_filtered_intangible(fluid_type=FluidType.OIL, include_sunkcost=True)
 
     def _get_gas_intangible_sunk_cost(self):
-        pass
+        return self._get_filtered_intangible(fluid_type=FluidType.GAS, include_sunkcost=True)
 
 
-
-
-    def _get_oil_intangible(self) -> Intangible:
-        """
-        Determines total oil Intangible from the number of oil Intangible instances in
-        attribute self.intangible_cost_total.
-
-        Returns
-        -------
-        Intangible
-            An instance of Intangible that only includes FluidType.OIL as the associated
-            cost_allocation that has been combined altogether following the rules prescribed
-            in the dunder method __add__() of Intangible class.
-
-        Notes
-        -----
-        The core operations are as follows:
-        (1) Check the attribute cost_allocation in attribute self.intangible_cost_total,
-        (2) If OIL is not available as an instance in attribute self.intangible_cost_total,
-            then establish a new instance of OIL Intangible with the following attribute set
-            to zero: cost.
-        (3) Identify index location where cost_allocation is FluidType.OIL in attribute
-            self.intangible_cost_total,
-        (4) Create a new instance of Intangible with only FluidType.OIL as its cost_allocation.
-        """
-
-        if FluidType.OIL not in self.intangible_cost_total.cost_allocation:
-            return Intangible(
-                start_year=self.start_date.year,
-                end_year=self.end_date.year,
-                expense_year=np.array([self.start_date.year]),
-                cost=np.array([0]),
-                cost_allocation=[FluidType.OIL],
-            )
-
-        else:
-            oil_intangible_id = np.argwhere(
-                np.array(self.intangible_cost_total.cost_allocation) == FluidType.OIL
-            ).ravel()
-
-            start_year = self.intangible_cost_total.start_year
-            end_year = self.intangible_cost_total.end_year
-            expense_year = self.intangible_cost_total.expense_year[oil_intangible_id]
-            cost = self.intangible_cost_total.cost[oil_intangible_id]
-            cost_allocation = np.array(
-                self.intangible_cost_total.cost_allocation
-            )[oil_intangible_id]
-            description = np.array(self.intangible_cost_total.description)[oil_intangible_id]
-            tax_portion = self.intangible_cost_total.tax_portion[oil_intangible_id]
-            tax_discount = self.intangible_cost_total.tax_discount[oil_intangible_id]
-
-            return Intangible(
-                start_year=start_year,
-                end_year=end_year,
-                expense_year=expense_year,
-                cost=cost,
-                cost_allocation=cost_allocation.tolist(),
-                description=description.tolist(),
-                tax_portion=tax_portion,
-                tax_discount=tax_discount,
-            )
-
-    def _get_gas_intangible(self) -> Intangible:
-        """
-        Determines total gas Intangible from the number of gas Intangible instances in
-        attribute self.intangible_cost_total.
-
-        Returns
-        -------
-        Intangible
-            An instance of Intangible that only includes FluidType.GAS as the associated
-            cost_allocation that has been combined altogether following the rules prescribed
-            in the dunder method __add__() of Intangible class.
-
-        Notes
-        -----
-        The core operations are as follows:
-        (1) Check the attribute cost_allocation in attribute self.intangible_cost_total,
-        (2) If GAS is not available as an instance in attribute self.intangible_cost_total,
-            then establish a new instance of GAS Intangible with the following attribute set
-            to zero: cost.
-        (3) Identify index location where cost_allocation is FluidType.GAS in attribute
-            self.intangible_cost_total,
-        (4) Create a new instance of Intangible with only FluidType.GAS as its cost_allocation.
-        """
-
-        if FluidType.GAS not in self.intangible_cost_total.cost_allocation:
-            return Intangible(
-                start_year=self.start_date.year,
-                end_year=self.end_date.year,
-                expense_year=np.array([self.start_date.year]),
-                cost=np.array([0]),
-                cost_allocation=[FluidType.GAS],
-            )
-
-        else:
-            gas_intangible_id = np.argwhere(
-                np.array(self.intangible_cost_total.cost_allocation) == FluidType.GAS
-            ).ravel()
-
-            start_year = self.intangible_cost_total.start_year
-            end_year = self.intangible_cost_total.end_year
-            expense_year = self.intangible_cost_total.expense_year[gas_intangible_id]
-            cost = self.intangible_cost_total.cost[gas_intangible_id]
-            cost_allocation = np.array(self.intangible_cost_total.cost_allocation)[gas_intangible_id]
-            description = np.array(self.intangible_cost_total.description)[gas_intangible_id]
-            tax_portion = self.intangible_cost_total.tax_portion[gas_intangible_id]
-            tax_discount = self.intangible_cost_total.tax_discount[gas_intangible_id]
-
-            return Intangible(
-                start_year=start_year,
-                end_year=end_year,
-                expense_year=expense_year,
-                cost=cost,
-                cost_allocation=cost_allocation.tolist(),
-                description=description.tolist(),
-                tax_portion=tax_portion,
-                tax_discount=tax_discount,
-            )
 
     def _get_oil_opex(self) -> OPEX:
         """
