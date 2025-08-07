@@ -613,9 +613,9 @@ class BaseProject:
         self.cost_of_sales_total = reduce(lambda x, y: x + y, self.cost_of_sales)
 
         print('\t')
-        print(f'Filetype: {type(self.opex_total)}')
-        print(f'Length: {len(self.opex_total)}')
-        print('opex_total = ', self.opex_total)
+        print(f'Filetype: {type(self.lbt_cost_total)}')
+        print(f'Length: {len(self.lbt_cost_total)}')
+        print('lbt_cost_total = ', self.lbt_cost_total)
 
         # Prepare attributes associated with costs
         self._oil_capital_cost = self._get_oil_capital()
@@ -624,19 +624,19 @@ class BaseProject:
         self._gas_intangible = self._get_gas_intangible()
         self._oil_opex = self._get_oil_opex()
         self._gas_opex = self._get_gas_opex()
-        # self._oil_asr = self._get_oil_asr()
-        # self._gas_asr = self._get_gas_asr()
-        # self._oil_lbt = self._get_oil_lbt()
-        # self._gas_lbt = self._get_gas_lbt()
+        self._oil_asr = self._get_oil_asr()
+        self._gas_asr = self._get_gas_asr()
+        self._oil_lbt = self._get_oil_lbt()
+        self._gas_lbt = self._get_gas_lbt()
         # self._oil_cost_of_sales = self._get_oil_cost_of_sales()
         # self._gas_cost_of_sales = self._get_gas_cost_of_sales()
         # # self._oil_sunk_cost = self._get_oil_sunk_cost()
         # # self._gas_sunk_cost = self._get_gas_sunk_cost()
 
         print('\t')
-        print(f'Filetype: {type(self._gas_opex)}')
-        print(f'Length: {len(self._gas_opex)}')
-        print('_gas_opex = ', self._gas_opex)
+        print(f'Filetype: {type(self._gas_lbt)}')
+        print(f'Length: {len(self._gas_lbt)}')
+        print('_gas_lbt = ', self._gas_lbt)
 
         # Prepare attributes associated with sunk costs
         self._oil_capital_sunk_cost = self._get_oil_capital_sunk_cost()
@@ -645,11 +645,15 @@ class BaseProject:
         self._gas_intangible_sunk_cost = self._get_gas_intangible_sunk_cost()
         self._oil_opex_sunk_cost = self._get_oil_opex_sunk_cost()
         self._gas_opex_sunk_cost = self._get_gas_opex_sunk_cost()
+        self._oil_asr_sunk_cost = self._get_oil_asr_sunk_cost()
+        self._gas_asr_sunk_cost = self._get_gas_asr_sunk_cost()
+        self._oil_lbt_sunk_cost = self._get_oil_lbt_sunk_cost()
+        self._gas_lbt_sunk_cost = self._get_gas_lbt_sunk_cost()
 
         print('\t')
-        print(f'Filetype: {type(self._gas_opex_sunk_cost)}')
-        print(f'Length: {len(self._gas_opex_sunk_cost)}')
-        print('_gas_opex_sunk_cost = ', self._gas_opex_sunk_cost)
+        print(f'Filetype: {type(self._gas_lbt_sunk_cost)}')
+        print(f'Length: {len(self._gas_lbt_sunk_cost)}')
+        print('_gas_lbt_sunk_cost = ', self._gas_lbt_sunk_cost)
 
 
         # # Raise an exception error if the start year of the project is inconsistent
@@ -1485,294 +1489,413 @@ class BaseProject:
         fluid_type: FluidType,
         include_sunkcost: bool,
     ) -> ASR:
-        pass
+        """
+        Get abandonment, site restoration, and post-operation costs (ASR) filtered
+        by fluid type and sunk cost inclusion.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type to filter ASR costs by.
+        include_sunkcost : bool
+            Whether to include sunk costs in the filtered results.
+            If True, includes sunk costs; if False, excludes them.
+
+        Returns
+        -------
+        ASR
+            A new ASR instance containing only the costs that match:
+            1. The specified fluid type
+            2. The sunk cost inclusion criteria
+
+            If no matching costs are found, returns an ASR instance with:
+            - Zero cost
+            - Single expense year (project start year)
+            - The requested fluid type in cost_allocation
+            - The requested sunk cost flag in is_sunkcost
+
+        Notes
+        -----
+        - The method filters the data from self.asr_cost_total based on the criteria.
+        - All returned arrays (cost, expense_year, etc.) will have the same length.
+        - The filtering preserves all original ASR attributes, but with only
+          the matching elements in each array.
+        - When no matching costs exist, the returned dummy instance will include:
+          * The requested fluid_type in cost_allocation
+          * The requested include_sunkcost value in is_sunkcost
+        """
+
+        # Handle case when requested fluid type is not found
+        if fluid_type not in self.asr_cost_total.cost_allocation:
+            return ASR(
+                start_year=self.start_date.year,
+                end_year=self.end_date.year,
+                expense_year=np.array([self.start_date.year]),
+                cost=np.array([0]),
+                cost_allocation=[fluid_type],
+                is_sunkcost=[include_sunkcost],
+            )
+
+        else:
+            # Configure indices to slice data according to fluid type and sunk cost
+            allocation_array = np.array(self.asr_cost_total.cost_allocation)
+            sunkcost_array = np.array(self.asr_cost_total.is_sunkcost)
+            mask = np.logical_and(
+                allocation_array == fluid_type,
+                sunkcost_array == include_sunkcost,
+            )
+            indices = np.flatnonzero(mask)
+
+            # Slice filtered data, return a new instance of ASR with filtered data
+            return ASR(
+                start_year=self.asr_cost_total.start_year,
+                end_year=self.asr_cost_total.end_year,
+                expense_year=self.asr_cost_total.expense_year[indices],
+                cost=self.asr_cost_total.cost[indices],
+                cost_allocation=np.array(self.asr_cost_total.cost_allocation)[indices].tolist(),
+                description=np.array(self.asr_cost_total.description)[indices].tolist(),
+                is_sunkcost=np.array(self.asr_cost_total.is_sunkcost)[indices].tolist(),
+                tax_portion=self.asr_cost_total.tax_portion[indices],
+                tax_discount=self.asr_cost_total.tax_discount[indices],
+                final_year=self.asr_cost_total.final_year[indices],
+                future_rate=self.asr_cost_total.future_rate[indices],
+            )
 
     def _get_oil_asr(self) -> ASR:
-        pass
+        """
+        Get ASR (abandonment, site restoration, and post-operation) costs
+        specifically for OIL, excluding sunk costs.
+
+        Returns
+        -------
+        ASR
+            A new ASR instance containing only the costs that:
+            1. Are allocated to OIL fluid type
+            2. Are not sunk costs
+
+            If no matching costs are found, returns an ASR instance with:
+            - Zero cost
+            - Single expense year (project start year)
+            - OIL as the cost_allocation
+            - False in is_sunkcost (matching the include_sunkcost=False filter)
+
+        Notes
+        -----
+        - This is a convenience wrapper around _get_filtered_asr() with:
+          fluid_type=FluidType.OIL and include_sunkcost=False
+        - All returned arrays will have the same length.
+        - The dummy instance (when no costs exist) will include:
+          * OIL in cost_allocation
+          * False in is_sunkcost
+        - See _get_filtered_asr() for more detailed filtering behavior.
+        """
+        return self._get_filtered_asr(fluid_type=FluidType.OIL, include_sunkcost=False)
 
     def _get_gas_asr(self) -> ASR:
-        pass
+        """
+        Get ASR (abandonment, site restoration, and post-operation) costs
+        specifically for GAS, excluding sunk costs.
+
+        Returns
+        -------
+        ASR
+            A new ASR instance containing only the costs that:
+            1. Are allocated to GAS fluid type
+            2. Are not sunk costs
+
+            If no matching costs are found, returns an ASR instance with:
+            - Zero cost
+            - Single expense year (project start year)
+            - GAS as the cost_allocation
+            - False in is_sunkcost (matching the include_sunkcost=False filter)
+
+        Notes
+        -----
+        - This is a convenience wrapper around _get_filtered_asr() with:
+          fluid_type=FluidType.GAS and include_sunkcost=False
+        - All returned arrays will have the same length.
+        - The dummy instance (when no costs exist) will include:
+          * GAS in cost_allocation
+          * False in is_sunkcost
+        - See _get_filtered_asr() for more detailed filtering behavior.
+        """
+        return self._get_filtered_asr(fluid_type=FluidType.GAS, include_sunkcost=False)
 
     def _get_oil_asr_sunk_cost(self) -> ASR:
-        pass
+        """
+        Get ASR (abandonment, site restoration, and post-operation) costs
+        specifically for OIL, including only sunk costs.
+
+        Returns
+        -------
+        ASR
+            A new ASR instance containing only the costs that:
+            1. Are allocated to OIL fluid type
+            2. Are sunk costs (already incurred)
+
+            If no matching costs are found, returns an ASR instance with:
+            - Zero cost
+            - Single expense year (project start year)
+            - OIL as the cost_allocation
+            - True in is_sunkcost (matching the include_sunkcost=True filter)
+
+        Notes
+        -----
+        - This is a convenience wrapper around _get_filtered_asr() with:
+          fluid_type=FluidType.OIL and include_sunkcost=True
+        - All returned arrays will have the same length.
+        - The dummy instance (when no costs exist) will include:
+          * OIL in cost_allocation
+          * True in is_sunkcost
+        - See _get_filtered_asr() for more detailed filtering behavior.
+        """
+        return self._get_filtered_asr(fluid_type=FluidType.OIL, include_sunkcost=True)
 
     def _get_gas_asr_sunk_cost(self) -> ASR:
-        pass
+        """
+        Get ASR (abandonment, site restoration, and post-operation) costs
+        specifically for GAS, including only sunk costs.
+
+        Returns
+        -------
+        ASR
+            A new ASR instance containing only the costs that:
+            1. Are allocated to GAS fluid type
+            2. Are sunk costs (already incurred)
+
+            If no matching costs are found, returns an ASR instance with:
+            - Zero cost
+            - Single expense year (project start year)
+            - GAS as the cost_allocation
+            - True in is_sunkcost (matching the include_sunkcost=True filter)
+
+        Notes
+        -----
+        - This is a convenience wrapper around _get_filtered_asr() with:
+          fluid_type=FluidType.GAS and include_sunkcost=True
+        - All returned arrays will have the same length.
+        - The dummy instance (when no costs exist) will include:
+          * GAS in cost_allocation
+          * True in is_sunkcost
+        - See _get_filtered_asr() for more detailed filtering behavior.
+        """
+        return self._get_filtered_asr(fluid_type=FluidType.GAS, include_sunkcost=True)
 
     def _get_filtered_lbt(
         self,
         fluid_type: FluidType,
         include_sunkcost: bool,
     ) -> LBT:
-        pass
-
-
-
-
-
-
-
-
-
-
-
-    def _get_oil_lbt(self) -> LBT:
         """
-        Determines total oil LBT from the number of oil LBT instances in
-        attribute self.lbt_cost_total.
+        Get land and building tax (LBT) costs filtered by fluid type and
+        sunk cost inclusion.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type to filter LBT costs by.
+        include_sunkcost : bool
+            Whether to include sunk costs in the filtered results.
+            If True, includes sunk costs; if False, excludes them.
 
         Returns
         -------
         LBT
-            An instance of LBT that only includes FluidType.OIL as the associated
-            cost_allocation that has been combined altogether following the rules
-            prescribed in the dunder method __add__() of LBT class.
+            A new LBT instance containing only the costs that match:
+            1. The specified fluid type
+            2. The sunk cost inclusion criteria
+
+            If no matching costs are found, returns an LBT instance with:
+            - Zero cost
+            - Single expense year (project start year)
+            - The requested fluid type in cost_allocation
+            - The requested sunk cost flag in is_sunkcost
 
         Notes
         -----
-        The core operations are as follows:
-        (1) Check the attribute cost_allocation in attribute self.lbt_cost_total,
-        (2) If OIL is not available as an instance in attribute self.lbt_cost_total,
-            then establish a new instance of OIL LBT with the following attribute set
-            to zero: cost.
-        (3) Identify index location where cost_allocation is FluidType.OIL in attribute
-            self.lbt_cost_total,
-        (4) Create a new instance of LBT with only FluidType.OIL as its cost_allocation.
+        - The method filters the data from self.lbt_cost_total based on the criteria.
+        - All returned arrays (cost, expense_year, etc.) will have the same length.
+        - The filtering preserves all original LBT attributes, but with only
+          the matching elements in each array.
+        - When no matching costs exist, the returned dummy instance will include:
+          * The requested fluid_type in cost_allocation
+          * The requested include_sunkcost value in is_sunkcost
         """
 
-        if FluidType.OIL not in self.lbt_cost_total.cost_allocation:
+        # Handle case when requested fluid type is not found
+        if fluid_type not in self.lbt_cost_total.cost_allocation:
             return LBT(
                 start_year=self.start_date.year,
                 end_year=self.end_date.year,
                 expense_year=np.array([self.start_date.year]),
-                cost_allocation=[FluidType.OIL],
+                cost=np.array([0]),
+                cost_allocation=[fluid_type],
+                is_sunkcost=[include_sunkcost],
             )
 
         else:
-            oil_lbt_id = np.argwhere(
-                np.array(self.lbt_cost_total.cost_allocation) == FluidType.OIL
-            ).ravel()
+            # Configure indices to slice data according to fluid type and sunk cost
+            allocation_array = np.array(self.lbt_cost_total.cost_allocation)
+            sunkcost_array = np.array(self.lbt_cost_total.is_sunkcost)
+            mask = np.logical_and(
+                allocation_array == fluid_type,
+                sunkcost_array == include_sunkcost,
+            )
+            indices = np.flatnonzero(mask)
 
-            start_year = self.lbt_cost_total.start_year
-            end_year = self.lbt_cost_total.end_year
-            expense_year = self.lbt_cost_total.expense_year[oil_lbt_id]
-            cost_allocation = np.array(self.lbt_cost_total.cost_allocation)[oil_lbt_id]
-            description = np.array(self.lbt_cost_total.description)[oil_lbt_id]
-            tax_portion = self.lbt_cost_total.tax_portion[oil_lbt_id]
-            tax_discount = self.lbt_cost_total.tax_discount[oil_lbt_id]
-            final_year = self.lbt_cost_total.final_year[oil_lbt_id]
-            utilized_land_area = self.lbt_cost_total.utilized_land_area[oil_lbt_id]
-            utilized_building_area = self.lbt_cost_total.utilized_building_area[oil_lbt_id]
-            njop_land = self.lbt_cost_total.njop_land[oil_lbt_id]
-            njop_building = self.lbt_cost_total.njop_building[oil_lbt_id]
-            gross_revenue = self.lbt_cost_total.gross_revenue[oil_lbt_id]
-            cost = self.lbt_cost_total.cost[oil_lbt_id]
-
+            # Slice filtered data, return a new instance with filtered data
             return LBT(
-                start_year=start_year,
-                end_year=end_year,
-                expense_year=expense_year,
-                cost_allocation=cost_allocation.tolist(),
-                description=description.tolist(),
-                tax_portion=tax_portion,
-                tax_discount=tax_discount,
-                final_year=final_year,
-                utilized_land_area=utilized_land_area,
-                utilized_building_area=utilized_building_area,
-                njop_land=njop_land,
-                njop_building=njop_building,
-                gross_revenue=gross_revenue,
-                cost=cost,
+                start_year=self.lbt_cost_total.start_year,
+                end_year=self.lbt_cost_total.end_year,
+                expense_year=self.lbt_cost_total.expense_year[indices],
+                cost_allocation=np.array(self.lbt_cost_total.cost_allocation)[indices].tolist(),
+                description=np.array(self.lbt_cost_total.description)[indices].tolist(),
+                is_sunkcost=np.array(self.lbt_cost_total.is_sunkcost)[indices].tolist(),
+                tax_portion=self.lbt_cost_total.tax_portion[indices],
+                tax_discount=self.lbt_cost_total.tax_discount[indices],
+                final_year=self.lbt_cost_total.final_year[indices],
+                utilized_land_area=self.lbt_cost_total.utilized_land_area[indices],
+                utilized_building_area=self.lbt_cost_total.utilized_building_area[indices],
+                njop_land=self.lbt_cost_total.njop_land[indices],
+                njop_building=self.lbt_cost_total.njop_building[indices],
+                gross_revenue=self.lbt_cost_total.gross_revenue[indices],
+                cost=self.lbt_cost_total.cost[indices],
             )
 
-    def _get_gas_lbt(self) -> LBT:
+    def _get_oil_lbt(self) -> LBT:
         """
-        Determines total gas LBT from the number of gas LBT instances in
-        attribute self.lbt_cost_total.
+        Get LBT (land and building tax) costs specifically for OIL, excluding sunk costs.
 
         Returns
         -------
         LBT
-            An instance of LBT that only includes FluidType.GAS as the associated
-            cost_allocation that has been combined altogether following the rules
-            prescribed in the dunder method __add__() of LBT class.
+            A new LBT instance containing only the costs that:
+            1. Are allocated to OIL fluid type
+            2. Are not sunk costs
+
+            If no matching costs are found, returns an LBT instance with:
+            - Zero cost
+            - Single expense year (project start year)
+            - OIL as the cost_allocation
+            - False in is_sunkcost (matching the include_sunkcost=False filter)
 
         Notes
         -----
-        The core operations are as follows:
-        (1) Check the attribute cost_allocation in attribute self.lbt_cost_total,
-        (2) If GAS is not available as an instance in attribute self.lbt_cost_total,
-            then establish a new instance of GAS LBT with the following attribute set
-            to zero: cost.
-        (3) Identify index location where cost_allocation is FluidType.GAS in attribute
-            self.lbt_cost_total,
-        (4) Create a new instance of LBT with only FluidType.GAS as its cost_allocation.
+        - This is a convenience wrapper around _get_filtered_lbt() with:
+          fluid_type=FluidType.OIL and include_sunkcost=False
+        - All returned arrays will have the same length.
+        - The dummy instance (when no costs exist) will include:
+          * OIL in cost_allocation
+          * False in is_sunkcost
+        - See _get_filtered_lbt() for more detailed filtering behavior.
         """
+        return self._get_filtered_lbt(fluid_type=FluidType.OIL, include_sunkcost=False)
 
-        if FluidType.GAS not in self.lbt_cost_total.cost_allocation:
-            return LBT(
-                start_year=self.start_date.year,
-                end_year=self.end_date.year,
-                expense_year=[self.start_date.year],
-                cost_allocation=[FluidType.GAS]
-            )
+    def _get_gas_lbt(self) -> LBT:
+        """
+        Get LBT (land and building tax) costs specifically for GAS, excluding sunk costs.
 
-        else:
-            gas_lbt_id = np.argwhere(
-                np.array(self.lbt_cost_total.cost_allocation) == FluidType.GAS
-            ).ravel()
+        Returns
+        -------
+        LBT
+            A new LBT instance containing only the costs that:
+            1. Are allocated to GAS fluid type
+            2. Are not sunk costs
 
-            start_year = self.lbt_cost_total.start_year
-            end_year = self.lbt_cost_total.end_year
-            expense_year = self.lbt_cost_total.expense_year[gas_lbt_id]
-            cost_allocation = np.array(self.lbt_cost_total.cost_allocation)[gas_lbt_id]
-            description = np.array(self.lbt_cost_total.description)[gas_lbt_id]
-            tax_portion = self.lbt_cost_total.tax_portion[gas_lbt_id]
-            tax_discount = self.lbt_cost_total.tax_discount[gas_lbt_id]
-            final_year = self.lbt_cost_total.final_year[gas_lbt_id]
-            utilized_land_area = self.lbt_cost_total.utilized_land_area[gas_lbt_id]
-            utilized_building_area = self.lbt_cost_total.utilized_building_area[gas_lbt_id]
-            njop_land = self.lbt_cost_total.njop_land[gas_lbt_id]
-            njop_building = self.lbt_cost_total.njop_building[gas_lbt_id]
-            gross_revenue = self.lbt_cost_total.gross_revenue[gas_lbt_id]
-            cost = self.lbt_cost_total.cost[gas_lbt_id]
+            If no matching costs are found, returns an LBT instance with:
+            - Zero cost
+            - Single expense year (project start year)
+            - GAS as the cost_allocation
+            - False in is_sunkcost (matching the include_sunkcost=False filter)
 
-            return LBT(
-                start_year=start_year,
-                end_year=end_year,
-                expense_year=expense_year,
-                cost_allocation=cost_allocation.tolist(),
-                description=description.tolist(),
-                tax_portion=tax_portion,
-                tax_discount=tax_discount,
-                final_year=final_year,
-                utilized_land_area=utilized_land_area,
-                utilized_building_area=utilized_building_area,
-                njop_land=njop_land,
-                njop_building=njop_building,
-                gross_revenue=gross_revenue,
-                cost=cost,
-            )
+        Notes
+        -----
+        - This is a convenience wrapper around _get_filtered_lbt() with:
+          fluid_type=FluidType.GAS and include_sunkcost=False
+        - All returned arrays will have the same length.
+        - The dummy instance (when no costs exist) will include:
+          * GAS in cost_allocation
+          * False in is_sunkcost
+        - See _get_filtered_lbt() for more detailed filtering behavior.
+        """
+        return self._get_filtered_lbt(fluid_type=FluidType.GAS, include_sunkcost=False)
+
+    def _get_oil_lbt_sunk_cost(self) -> LBT:
+        """
+        Get LBT (land and building tax) costs specifically for OIL, including sunk costs.
+
+        Returns
+        -------
+        LBT
+            A new LBT instance containing only the costs that:
+            1. Are allocated to OIL fluid type
+            2. Are sunk costs (include_sunkcost=True)
+
+            If no matching costs are found, returns an LBT instance with:
+            - Zero cost
+            - Single expense year (project start year)
+            - OIL as the cost_allocation
+            - True in is_sunkcost (matching the include_sunkcost=True filter)
+
+        Notes
+        -----
+        - This is a convenience wrapper around _get_filtered_lbt() with:
+          fluid_type=FluidType.OIL and include_sunkcost=True
+        - All returned arrays will have the same length.
+        - The dummy instance (when no costs exist) will include:
+          * OIL in cost_allocation
+          * True in is_sunkcost
+        - See _get_filtered_lbt() for more detailed filtering behavior.
+        """
+        return self._get_filtered_lbt(fluid_type=FluidType.OIL, include_sunkcost=True)
+
+    def _get_gas_lbt_sunk_cost(self) -> LBT:
+        """
+        Get LBT (land and building tax) costs specifically for GAS, including sunk costs.
+
+        Returns
+        -------
+        LBT
+            A new LBT instance containing only the costs that:
+            1. Are allocated to GAS fluid type
+            2. Are sunk costs (include_sunkcost=True)
+
+            If no matching costs are found, returns an LBT instance with:
+            - Zero cost
+            - Single expense year (project start year)
+            - GAS as the cost_allocation
+            - True in is_sunkcost (matching the include_sunkcost=True filter)
+
+        Notes
+        -----
+        - This is a convenience wrapper around _get_filtered_lbt() with:
+          fluid_type=FluidType.GAS and include_sunkcost=True
+        - All returned arrays will have the same length.
+        - The dummy instance (when no costs exist) will include:
+          * GAS in cost_allocation
+          * True in is_sunkcost
+        - See _get_filtered_lbt() for more detailed filtering behavior.
+        """
+        return self._get_filtered_lbt(fluid_type=FluidType.GAS, include_sunkcost=True)
+
+    def _get_filtered_cost_of_sales(
+        self,
+        fluid_type: FluidType,
+        include_sunkcost: bool,
+    ) -> CostOfSales:
+        pass
 
     def _get_oil_cost_of_sales(self) -> CostOfSales:
-        """
-        Retrieve the oil cost of sales from the total cost of sales data.
-
-        If oil-related costs are not found in the cost allocation, returns a default
-        `CostOfSales` instance with zero cost. Otherwise, extracts and returns the
-        relevant cost details for oil from `cost_of_sales_total`.
-
-        Returns
-        -------
-        CostOfSales
-            An instance of `CostOfSales` containing the cost of sales data for oil,
-            including start and end years, expense year, cost, cost allocation,
-            description, tax portion, and tax discount.
-
-        Notes
-        -----
-        - The method checks if `FluidType.OIL` exists in `cost_of_sales_total.cost_allocation`.
-        - If it does not exist, a default `CostOfSales` with zero cost is returned.
-        - If it exists, relevant attributes are extracted using `np.argwhere` and returned.
-        """
-
-        if FluidType.OIL not in self.cost_of_sales_total.cost_allocation:
-            return CostOfSales(
-                start_year=self.start_date.year,
-                end_year=self.end_date.year,
-                expense_year=self.project_years,
-                cost=np.zeros_like(self.project_years, dtype=np.float64),
-                cost_allocation=[FluidType.OIL for _ in range(self.project_duration)],
-            )
-
-        else:
-            oil_cost_of_sales_id = np.argwhere(
-                np.array(self.cost_of_sales_total.cost_allocation) == FluidType.OIL
-            ).ravel()
-
-            start_year = self.cost_of_sales_total.start_year
-            end_year = self.cost_of_sales_total.end_year
-            expense_year = self.cost_of_sales_total.expense_year[oil_cost_of_sales_id]
-            cost = self.cost_of_sales_total.cost[oil_cost_of_sales_id]
-            cost_allocation = np.array(
-                self.cost_of_sales_total.cost_allocation
-            )[oil_cost_of_sales_id]
-            description = np.array(
-                self.cost_of_sales_total.description
-            )[oil_cost_of_sales_id]
-            tax_portion = self.cost_of_sales_total.tax_portion[oil_cost_of_sales_id]
-            tax_discount = self.cost_of_sales_total.tax_discount[oil_cost_of_sales_id]
-
-            return CostOfSales(
-                start_year=start_year,
-                end_year=end_year,
-                expense_year=expense_year,
-                cost=cost,
-                cost_allocation=cost_allocation.tolist(),
-                description=description.tolist(),
-                tax_portion=tax_portion,
-                tax_discount=tax_discount,
-            )
+        pass
 
     def _get_gas_cost_of_sales(self) -> CostOfSales:
-        """
-        Retrieve the gas cost of sales from the total cost of sales data.
+        pass
 
-        If gas-related costs are not found in the cost allocation, returns a default
-        `CostOfSales` instance with zero cost. Otherwise, extracts and returns the
-        relevant cost details for gas from `cost_of_sales_total`.
+    def _get_oil_cost_of_sales_sunk_cost(self) -> CostOfSales:
+        pass
 
-        Returns
-        -------
-        CostOfSales
-            An instance of `CostOfSales` containing the cost of sales data for gas,
-            including start and end years, expense year, cost, cost allocation,
-            description, tax portion, and tax discount.
-
-        Notes
-        -----
-        - The method checks if `FluidType.GAS` exists in `cost_of_sales_total.cost_allocation`.
-        - If it does not exist, a default `CostOfSales` with zero cost is returned.
-        - If it exists, relevant attributes are extracted using `np.argwhere` and returned.
-        """
-
-        if FluidType.GAS not in self.cost_of_sales_total.cost_allocation:
-            return CostOfSales(
-                start_year=self.start_date.year,
-                end_year=self.end_date.year,
-                expense_year=self.project_years,
-                cost=np.zeros_like(self.project_years, dtype=np.float64),
-                cost_allocation=[FluidType.GAS for _ in range(self.project_duration)],
-            )
-
-        else:
-            gas_cost_of_sales_id = np.argwhere(
-                np.array(self.cost_of_sales_total.cost_allocation) == FluidType.GAS
-            ).ravel()
-
-            start_year = self.cost_of_sales_total.start_year
-            end_year = self.cost_of_sales_total.end_year
-            expense_year = self.cost_of_sales_total.expense_year[gas_cost_of_sales_id]
-            cost = self.cost_of_sales_total.cost[gas_cost_of_sales_id]
-            cost_allocation = np.array(
-                self.cost_of_sales_total.cost_allocation
-            )[gas_cost_of_sales_id]
-            description = np.array(
-                self.cost_of_sales_total.description
-            )[gas_cost_of_sales_id]
-            tax_portion = self.cost_of_sales_total.tax_portion[gas_cost_of_sales_id]
-            tax_discount = self.cost_of_sales_total.tax_discount[gas_cost_of_sales_id]
-
-            return CostOfSales(
-                start_year=start_year,
-                end_year=end_year,
-                expense_year=expense_year,
-                cost=cost,
-                cost_allocation=cost_allocation.tolist(),
-                description=description.tolist(),
-                tax_portion=tax_portion,
-                tax_discount=tax_discount,
-            )
+    def _get_gas_cost_of_sales_sunk_cost(self) -> CostOfSales:
+        pass
 
     def _calc_expenditures(
         self,

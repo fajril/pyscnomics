@@ -3112,5 +3112,271 @@ def _get_oil_asr(self) -> ASR:
                 tax_discount=tax_discount,
                 final_year=final_year,
                 future_rate=future_rate,
-            )        
+            )    
+
+
+
+def _get_oil_lbt(self) -> LBT:
+    """
+    Determines total oil LBT from the number of oil LBT instances in
+    attribute self.lbt_cost_total.
+
+    Returns
+    -------
+    LBT
+        An instance of LBT that only includes FluidType.OIL as the associated
+        cost_allocation that has been combined altogether following the rules
+        prescribed in the dunder method __add__() of LBT class.
+
+    Notes
+    -----
+    The core operations are as follows:
+    (1) Check the attribute cost_allocation in attribute self.lbt_cost_total,
+    (2) If OIL is not available as an instance in attribute self.lbt_cost_total,
+        then establish a new instance of OIL LBT with the following attribute set
+        to zero: cost.
+    (3) Identify index location where cost_allocation is FluidType.OIL in attribute
+        self.lbt_cost_total,
+    (4) Create a new instance of LBT with only FluidType.OIL as its cost_allocation.
+    """
+
+    if FluidType.OIL not in self.lbt_cost_total.cost_allocation:
+        return LBT(
+            start_year=self.start_date.year,
+            end_year=self.end_date.year,
+            expense_year=np.array([self.start_date.year]),
+            cost_allocation=[FluidType.OIL],
+        )
+
+    else:
+        oil_lbt_id = np.argwhere(
+            np.array(self.lbt_cost_total.cost_allocation) == FluidType.OIL
+        ).ravel()
+
+        start_year = self.lbt_cost_total.start_year
+        end_year = self.lbt_cost_total.end_year
+        expense_year = self.lbt_cost_total.expense_year[oil_lbt_id]
+        cost_allocation = np.array(self.lbt_cost_total.cost_allocation)[oil_lbt_id]
+        description = np.array(self.lbt_cost_total.description)[oil_lbt_id]
+        tax_portion = self.lbt_cost_total.tax_portion[oil_lbt_id]
+        tax_discount = self.lbt_cost_total.tax_discount[oil_lbt_id]
+        final_year = self.lbt_cost_total.final_year[oil_lbt_id]
+        utilized_land_area = self.lbt_cost_total.utilized_land_area[oil_lbt_id]
+        utilized_building_area = self.lbt_cost_total.utilized_building_area[oil_lbt_id]
+        njop_land = self.lbt_cost_total.njop_land[oil_lbt_id]
+        njop_building = self.lbt_cost_total.njop_building[oil_lbt_id]
+        gross_revenue = self.lbt_cost_total.gross_revenue[oil_lbt_id]
+        cost = self.lbt_cost_total.cost[oil_lbt_id]
+
+        return LBT(
+            start_year=start_year,
+            end_year=end_year,
+            expense_year=expense_year,
+            cost_allocation=cost_allocation.tolist(),
+            description=description.tolist(),
+            tax_portion=tax_portion,
+            tax_discount=tax_discount,
+            final_year=final_year,
+            utilized_land_area=utilized_land_area,
+            utilized_building_area=utilized_building_area,
+            njop_land=njop_land,
+            njop_building=njop_building,
+            gross_revenue=gross_revenue,
+            cost=cost,
+        )     
+
+
+
+def _get_gas_lbt(self) -> LBT:
+    """
+    Determines total gas LBT from the number of gas LBT instances in
+    attribute self.lbt_cost_total.
+
+    Returns
+    -------
+    LBT
+        An instance of LBT that only includes FluidType.GAS as the associated
+        cost_allocation that has been combined altogether following the rules
+        prescribed in the dunder method __add__() of LBT class.
+
+    Notes
+    -----
+    The core operations are as follows:
+    (1) Check the attribute cost_allocation in attribute self.lbt_cost_total,
+    (2) If GAS is not available as an instance in attribute self.lbt_cost_total,
+        then establish a new instance of GAS LBT with the following attribute set
+        to zero: cost.
+    (3) Identify index location where cost_allocation is FluidType.GAS in attribute
+        self.lbt_cost_total,
+    (4) Create a new instance of LBT with only FluidType.GAS as its cost_allocation.
+    """
+
+    if FluidType.GAS not in self.lbt_cost_total.cost_allocation:
+        return LBT(
+            start_year=self.start_date.year,
+            end_year=self.end_date.year,
+            expense_year=[self.start_date.year],
+            cost_allocation=[FluidType.GAS]
+        )
+
+    else:
+        gas_lbt_id = np.argwhere(
+            np.array(self.lbt_cost_total.cost_allocation) == FluidType.GAS
+        ).ravel()
+
+        start_year = self.lbt_cost_total.start_year
+        end_year = self.lbt_cost_total.end_year
+        expense_year = self.lbt_cost_total.expense_year[gas_lbt_id]
+        cost_allocation = np.array(self.lbt_cost_total.cost_allocation)[gas_lbt_id]
+        description = np.array(self.lbt_cost_total.description)[gas_lbt_id]
+        tax_portion = self.lbt_cost_total.tax_portion[gas_lbt_id]
+        tax_discount = self.lbt_cost_total.tax_discount[gas_lbt_id]
+        final_year = self.lbt_cost_total.final_year[gas_lbt_id]
+        utilized_land_area = self.lbt_cost_total.utilized_land_area[gas_lbt_id]
+        utilized_building_area = self.lbt_cost_total.utilized_building_area[gas_lbt_id]
+        njop_land = self.lbt_cost_total.njop_land[gas_lbt_id]
+        njop_building = self.lbt_cost_total.njop_building[gas_lbt_id]
+        gross_revenue = self.lbt_cost_total.gross_revenue[gas_lbt_id]
+        cost = self.lbt_cost_total.cost[gas_lbt_id]
+
+        return LBT(
+            start_year=start_year,
+            end_year=end_year,
+            expense_year=expense_year,
+            cost_allocation=cost_allocation.tolist(),
+            description=description.tolist(),
+            tax_portion=tax_portion,
+            tax_discount=tax_discount,
+            final_year=final_year,
+            utilized_land_area=utilized_land_area,
+            utilized_building_area=utilized_building_area,
+            njop_land=njop_land,
+            njop_building=njop_building,
+            gross_revenue=gross_revenue,
+            cost=cost,
+        ) 
+        
+        
+        
+def _get_oil_cost_of_sales(self) -> CostOfSales:
+    """
+    Retrieve the oil cost of sales from the total cost of sales data.
+
+    If oil-related costs are not found in the cost allocation, returns a default
+    `CostOfSales` instance with zero cost. Otherwise, extracts and returns the
+    relevant cost details for oil from `cost_of_sales_total`.
+
+    Returns
+    -------
+    CostOfSales
+        An instance of `CostOfSales` containing the cost of sales data for oil,
+        including start and end years, expense year, cost, cost allocation,
+        description, tax portion, and tax discount.
+
+    Notes
+    -----
+    - The method checks if `FluidType.OIL` exists in `cost_of_sales_total.cost_allocation`.
+    - If it does not exist, a default `CostOfSales` with zero cost is returned.
+    - If it exists, relevant attributes are extracted using `np.argwhere` and returned.
+    """
+
+    if FluidType.OIL not in self.cost_of_sales_total.cost_allocation:
+        return CostOfSales(
+            start_year=self.start_date.year,
+            end_year=self.end_date.year,
+            expense_year=self.project_years,
+            cost=np.zeros_like(self.project_years, dtype=np.float64),
+            cost_allocation=[FluidType.OIL for _ in range(self.project_duration)],
+        )
+
+    else:
+        oil_cost_of_sales_id = np.argwhere(
+            np.array(self.cost_of_sales_total.cost_allocation) == FluidType.OIL
+        ).ravel()
+
+        start_year = self.cost_of_sales_total.start_year
+        end_year = self.cost_of_sales_total.end_year
+        expense_year = self.cost_of_sales_total.expense_year[oil_cost_of_sales_id]
+        cost = self.cost_of_sales_total.cost[oil_cost_of_sales_id]
+        cost_allocation = np.array(
+            self.cost_of_sales_total.cost_allocation
+        )[oil_cost_of_sales_id]
+        description = np.array(
+            self.cost_of_sales_total.description
+        )[oil_cost_of_sales_id]
+        tax_portion = self.cost_of_sales_total.tax_portion[oil_cost_of_sales_id]
+        tax_discount = self.cost_of_sales_total.tax_discount[oil_cost_of_sales_id]
+
+        return CostOfSales(
+            start_year=start_year,
+            end_year=end_year,
+            expense_year=expense_year,
+            cost=cost,
+            cost_allocation=cost_allocation.tolist(),
+            description=description.tolist(),
+            tax_portion=tax_portion,
+            tax_discount=tax_discount,
+        )
+        
+        
+        
+def _get_gas_cost_of_sales(self) -> CostOfSales:
+    """
+    Retrieve the gas cost of sales from the total cost of sales data.
+
+    If gas-related costs are not found in the cost allocation, returns a default
+    `CostOfSales` instance with zero cost. Otherwise, extracts and returns the
+    relevant cost details for gas from `cost_of_sales_total`.
+
+    Returns
+    -------
+    CostOfSales
+        An instance of `CostOfSales` containing the cost of sales data for gas,
+        including start and end years, expense year, cost, cost allocation,
+        description, tax portion, and tax discount.
+
+    Notes
+    -----
+    - The method checks if `FluidType.GAS` exists in `cost_of_sales_total.cost_allocation`.
+    - If it does not exist, a default `CostOfSales` with zero cost is returned.
+    - If it exists, relevant attributes are extracted using `np.argwhere` and returned.
+    """
+
+    if FluidType.GAS not in self.cost_of_sales_total.cost_allocation:
+        return CostOfSales(
+            start_year=self.start_date.year,
+            end_year=self.end_date.year,
+            expense_year=self.project_years,
+            cost=np.zeros_like(self.project_years, dtype=np.float64),
+            cost_allocation=[FluidType.GAS for _ in range(self.project_duration)],
+        )
+
+    else:
+        gas_cost_of_sales_id = np.argwhere(
+            np.array(self.cost_of_sales_total.cost_allocation) == FluidType.GAS
+        ).ravel()
+
+        start_year = self.cost_of_sales_total.start_year
+        end_year = self.cost_of_sales_total.end_year
+        expense_year = self.cost_of_sales_total.expense_year[gas_cost_of_sales_id]
+        cost = self.cost_of_sales_total.cost[gas_cost_of_sales_id]
+        cost_allocation = np.array(
+            self.cost_of_sales_total.cost_allocation
+        )[gas_cost_of_sales_id]
+        description = np.array(
+            self.cost_of_sales_total.description
+        )[gas_cost_of_sales_id]
+        tax_portion = self.cost_of_sales_total.tax_portion[gas_cost_of_sales_id]
+        tax_discount = self.cost_of_sales_total.tax_discount[gas_cost_of_sales_id]
+
+        return CostOfSales(
+            start_year=start_year,
+            end_year=end_year,
+            expense_year=expense_year,
+            cost=cost,
+            cost_allocation=cost_allocation.tolist(),
+            description=description.tolist(),
+            tax_portion=tax_portion,
+            tax_discount=tax_discount,
+        )
         

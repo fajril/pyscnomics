@@ -18,8 +18,8 @@ pr = BaseProject(
     capital_cost=tuple([case.capital_mangga, case.capital_apel]),
     intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),
     opex=tuple([case.opex_mangga, case.opex_apel]),
-    # asr_cost=tuple([case.asr_mangga, case.asr_apel]),
-    # lbt_cost=tuple([case.lbt_mangga, case.lbt_apel]),
+    asr_cost=tuple([case.asr_mangga, case.asr_apel]),
+    lbt_cost=tuple([case.lbt_mangga, case.lbt_apel]),
     # cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
 )
 
