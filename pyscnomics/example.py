@@ -102,7 +102,7 @@ class ExampleCase:
             start_year=2023,
             end_year=2030,
             expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([100, 100, 212, 212]),
+            cost=np.array([100, 100, 50, 50]),
             cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
             is_sunkcost=[False, False, True, True],
         )
@@ -111,7 +111,7 @@ class ExampleCase:
             start_year=2023,
             end_year=2030,
             expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([50, 50, 515, 515]),
+            cost=np.array([10, 10, 5, 5]),
             cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
             is_sunkcost=[False, False, True, True],
         )
@@ -124,17 +124,18 @@ class ExampleCase:
             start_year=2023,
             end_year=2030,
             expense_year=np.array([2023, 2024, 2025, 2024]),
-            fixed_cost=np.array([np.nan, 100, 100, None]),
-            cost_allocation=[np.nan, FluidType.OIL, FluidType.OIL, None],
-            is_sunkcost=[np.nan, True, True, None],
+            fixed_cost=np.array([100, 100, 50, 50]),
+            cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+            is_sunkcost=[False, False, True, True],
         )
 
         self.opex_apel = OPEX(
             start_year=2023,
             end_year=2030,
             expense_year=np.array([2023, 2024, 2025, 2024]),
-            fixed_cost=np.array([np.nan, 10, 10, None]),
+            fixed_cost=np.array([10, 10, 5, 5]),
             cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+            is_sunkcost=[False, False, True, True],
         )
 
     def _get_asr_cost_data(self):
