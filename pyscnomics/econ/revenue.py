@@ -276,25 +276,30 @@ class Lifting:
 
     def _get_array(self, target_param: np.ndarray) -> np.ndarray:
         """
-        Creates an array of target_param and aligns it with the corresponding
-        production year.
+        Aggregates and aligns `target_param` values with the corresponding production years.
+
+        This function uses `np.bincount` to sum the values in `target_param` based on
+        their associated production year (relative to the project's start year).
+        The resulting array is then padded with zeros if the project duration exceeds
+        the number of aggregated entries.
 
         Parameters
         ----------
-        target_param: np.ndarray
-            An array containing the parameters to be weighted.
+        target_param : np.ndarray
+            An array of numeric values to be aggregated and aligned by production year.
 
         Returns
         -------
         np.ndarray
-            An array with values weighted by `target_param`, aligned with production years.
+            A 1D array of the same length as the project duration, where each element
+            represents the aggregated value for a production year. Missing years are filled with zeros.
 
         Notes
         -----
-        (1) Function np.bincount() is used to align the target_param according to
-            its corresponding prod year,
-        (2) If len(param_arr) < project_duration, then add the remaining elements
-            with zeros.
+        - `np.bincount` is used to group and sum values based on the difference between
+          `self.prod_year` and `self.start_year`.
+        - If the resulting array is shorter than the project duration, it is extended
+          with zeros to ensure alignment.
         """
 
         param_arr = np.bincount(self.prod_year - self.start_year, weights=target_param)
@@ -304,18 +309,23 @@ class Lifting:
 
     def get_lifting_rate_ghv_arr(self) -> np.ndarray:
         """
-        Creates an array of (lifting rate * ghv) and aligns it according to the
-        corresponding production year.
+        Computes and aligns the array of lifting rate multiplied by GHV with production years.
+
+        This method calculates the product of `lifting_rate` and `ghv` for each time step,
+        then uses `_get_array` to aggregate and align the values according to the corresponding
+        production year. The final array is padded with zeros if necessary to match the
+        project duration.
 
         Returns
         -------
         np.ndarray
-            The array of (lifting rate * ghv) with length equals to project duration.
+            A 1D array of length equal to the project duration, where each element represents
+            the aligned value of `lifting_rate * ghv` for that production year.
 
         Notes
         -----
-        Array of (lifting_rate * ghv) is generated using method _get_array() with
-        target_param = lifting_rate * ghv.
+        - Internally uses `_get_array()` with `target_param = lifting_rate * ghv`.
+        - Ensures alignment with production years and fills missing years with zeros.
         """
         return self._get_array(target_param=self.lifting_rate * self.ghv)
 

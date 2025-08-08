@@ -266,6 +266,14 @@ class BaseProject:
         Handles the following operations/procedures:
         -   Prepare attributes project_duration and project_years;
         -   Prepare attribute lifting;
+        -   Prepare attributes associated with lifting for each fluid types.
+            The attributes are: _oil_lifting, _gas_lifting, _sulfur_lifting,
+            _electricity_lifting, and _co2_lifting;
+        -   Prepare attributes associated with revenue for each fluid types.
+            The attributes are: _oil_revenue, _gas_revenue, _sulfur_revenue,
+            _electricity_revenue, and _co2_revenue;
+        -   Prepare attribute oil_onstream_date;
+        -   Prepare attribute gas_onstream_date;
         -   Prepare attribute capital_cost;
         -   Prepare attribute intangible_cost;
         -   Prepare attribute opex;
@@ -273,22 +281,24 @@ class BaseProject:
         -   Prepare attribute lbt_cost;
         -   Prepare attribute cost_of_sales;
         -   Prepare attributes associated with total cost per component
-            (leveraging dunder method __add__). The attributes are: capital_cost_total,
-            intangible_cost_total, opex_total, asr_cost_total, lbt_cost_total, and cost_of_sales_total;
-        -   Prepare attributes associated with lifting for each fluid types. The attributes are:
-            _oil_lifting, _gas_lifting, _sulfur_lifting, _electricity_lifting, and _co2_lifting;
-        -   Prepare attributes associated with revenue for each fluid types. The attributes are:
-            _oil_revenue, _gas_revenue, _sulfur_revenue, _electricity_revenue, and _co2_revenue;
+            (leveraging dunder method __add__). The attributes are:
+            capital_cost_total, intangible_cost_total, opex_total, asr_cost_total,
+            lbt_cost_total, and cost_of_sales_total;
         -   Prepare attributes _oil_capital_cost and _gas_capital_cost;
         -   Prepare attributes _oil_intangible and _gas_intangible;
         -   Prepare attributes _oil_opex and _gas_opex;
         -   Prepare attributes _oil_asr and _gas_asr;
         -   Prepare attributes _oil_lbt and _gas_lbt;
         -   Prepare attributes _oil_cost_of_sales and _gas_cost_of_sales;
-        -   Raise an error: the start year of the project is inconsistent;
-        -   Raise an error: the end year of the project is inconsistent;
-        -   Prepare attribute oil_onstream_date;
-        -   Prepare attribute gas_onstream_date;
+        -   Prepare attributes _oil_capital_sunk_cost and _gas_capital_sunk_cost;
+        -   Prepare attributes _oil_intangible_sunk_cost and _gas_intangible_sunk_cost;
+        -   Prepare attributes _oil_opex_sunk_cost and _gas_opex_sunk_cost;
+        -   Prepare attributes _oil_asr_sunk_cost and _gas_asr_sunk_cost;
+        -   Prepare attributes _oil_lbt_sunk_cost and _gas_lbt_sunk_cost;
+        -   Prepare attribute _oil_cost_of_sales_sunk_cost;
+        -   Prepare attribute _gas_cost_of_sales_sunk_cost;
+        -   Raise an exception if the start year of the project is inconsistent;
+        -   Raise an exception if the end year of the project is inconsistent.
         """
 
         # Prepare attributes project_duration and project_years
@@ -663,7 +673,16 @@ class BaseProject:
                 self._gas_cost_of_sales.start_year,
                 self._oil_capital_sunk_cost.start_year,
                 self._gas_capital_sunk_cost.start_year,
-                ###
+                self._oil_intangible_sunk_cost.start_year,
+                self._gas_intangible_sunk_cost.start_year,
+                self._oil_opex_sunk_cost.start_year,
+                self._gas_opex_sunk_cost.start_year,
+                self._oil_asr_sunk_cost.start_year,
+                self._gas_asr_sunk_cost.start_year,
+                self._oil_lbt_sunk_cost.start_year,
+                self._gas_lbt_sunk_cost.start_year,
+                self._oil_cost_of_sales_sunk_cost.start_year,
+                self._gas_cost_of_sales_sunk_cost.start_year,
             ]
         ):
             raise BaseProjectException(
@@ -686,58 +705,88 @@ class BaseProject:
                 f"Gas LBT ({self._gas_lbt.start_year}), "
                 f"Oil cost of sales ({self._oil_cost_of_sales.start_year}), "
                 f"Gas cost of sales ({self._gas_cost_of_sales.start_year}), "
-                # f"Oil sunk cost ({self._oil_sunk_cost.start_year}), "
-                # f"Gas sunk cost ({self._gas_sunk_cost.start_year}). "
+                f"Oil capital sunkcost ({self._oil_capital_sunk_cost.start_year}), "
+                f"Gas capital sunkcost ({self._gas_capital_sunk_cost.start_year}), "
+                f"Oil intangible sunkcost ({self._oil_intangible_sunk_cost.start_year}), "
+                f"Gas intangible sunkcost ({self._gas_intangible_sunk_cost.start_year}), "
+                f"Oil OPEX sunkcost ({self._oil_opex_sunk_cost.start_year}), "
+                f"Gas OPEX sunkcost ({self._gas_opex_sunk_cost.start_year}), "
+                f"Oil ASR sunkcost ({self._oil_asr_sunk_cost.start_year}), "
+                f"Gas ASR sunkcost ({self._gas_asr_sunk_cost.start_year}), "
+                f"Oil LBT sunkcost ({self._oil_lbt_sunk_cost.start_year}), "
+                f"Gas LBT sunkcost ({self._gas_lbt_sunk_cost.start_year}), "
+                f"Oil cost of sales sunkcost: ({self._oil_cost_of_sales_sunk_cost.start_year}), "
+                f"Gas cost of sales sunkcost: ({self._gas_cost_of_sales_sunk_cost.start_year})."
             )
 
-        # # Raise an exception error if the end year of the project is inconsistent
-        # if not all(
-        #     i == self.end_date.year
-        #     for i in [
-        #         self._oil_lifting.end_year,
-        #         self._gas_lifting.end_year,
-        #         self._sulfur_lifting.end_year,
-        #         self._electricity_lifting.end_year,
-        #         self._co2_lifting.end_year,
-        #         self._oil_capital_cost.end_year,
-        #         self._gas_capital_cost.end_year,
-        #         self._oil_intangible.end_year,
-        #         self._gas_intangible.end_year,
-        #         self._oil_opex.end_year,
-        #         self._gas_opex.end_year,
-        #         self._oil_asr.end_year,
-        #         self._gas_asr.end_year,
-        #         self._oil_lbt.end_year,
-        #         self._gas_lbt.end_year,
-        #         self._oil_cost_of_sales.end_year,
-        #         self._gas_cost_of_sales.end_year,
-        #         # self._oil_sunk_cost.end_year,
-        #         # self._gas_sunk_cost.end_year,
-        #     ]
-        # ):
-        #     raise BaseProjectException(
-        #         f"Inconsistent end project year: "
-        #         f"Base project ({self.end_date.year}), "
-        #         f"Oil lifting ({self._oil_lifting.end_year}), "
-        #         f"Gas lifting ({self._gas_lifting.end_year}), "
-        #         f"Sulfur lifting ({self._sulfur_lifting.end_year}), "
-        #         f"Electricity lifting ({self._electricity_lifting.end_year}), "
-        #         f"CO2 lifting ({self._co2_lifting.end_year}), "
-        #         f"Oil tangible ({self._oil_capital_cost.end_year}), "
-        #         f"Gas tangible ({self._gas_capital_cost.end_year}), "
-        #         f"Oil intangible ({self._oil_intangible.end_year}), "
-        #         f"Gas intangible ({self._gas_intangible.end_year}), "
-        #         f"Oil opex ({self._oil_opex.end_year}), "
-        #         f"Gas opex ({self._gas_opex.end_year}), "
-        #         f"Oil asr ({self._oil_asr.end_year}), "
-        #         f"Gas asr ({self._gas_asr.end_year}), "
-        #         f"Oil LBT ({self._oil_lbt.end_year}), "
-        #         f"Gas LBT ({self._gas_lbt.end_year}), "
-        #         f"Oil cost of sales ({self._oil_cost_of_sales.end_year}), "
-        #         f"Gas cost of sales ({self._gas_cost_of_sales.end_year}), "
-        #         # f"Oil sunk cost ({self._oil_sunk_cost.end_year}), "
-        #         # f"Gas sunk cost ({self._gas_sunk_cost.end_year}). "
-        #     )
+        # Raise an exception error if the end year of the project is inconsistent
+        if not all(
+            i == self.end_date.year
+            for i in [
+                self._oil_lifting.end_year,
+                self._gas_lifting.end_year,
+                self._sulfur_lifting.end_year,
+                self._electricity_lifting.end_year,
+                self._co2_lifting.end_year,
+                self._oil_capital_cost.end_year,
+                self._gas_capital_cost.end_year,
+                self._oil_intangible.end_year,
+                self._gas_intangible.end_year,
+                self._oil_opex.end_year,
+                self._gas_opex.end_year,
+                self._oil_asr.end_year,
+                self._gas_asr.end_year,
+                self._oil_lbt.end_year,
+                self._gas_lbt.end_year,
+                self._oil_cost_of_sales.end_year,
+                self._gas_cost_of_sales.end_year,
+                self._oil_capital_sunk_cost.end_year,
+                self._gas_capital_sunk_cost.end_year,
+                self._oil_intangible_sunk_cost.end_year,
+                self._gas_intangible_sunk_cost.end_year,
+                self._oil_opex_sunk_cost.end_year,
+                self._gas_opex_sunk_cost.end_year,
+                self._oil_asr_sunk_cost.end_year,
+                self._gas_asr_sunk_cost.end_year,
+                self._oil_lbt_sunk_cost.end_year,
+                self._gas_lbt_sunk_cost.end_year,
+                self._oil_cost_of_sales_sunk_cost.end_year,
+                self._gas_cost_of_sales_sunk_cost.end_year,
+            ]
+        ):
+            raise BaseProjectException(
+                f"Inconsistent end project year: "
+                f"Base project ({self.end_date.year}), "
+                f"Oil lifting ({self._oil_lifting.end_year}), "
+                f"Gas lifting ({self._gas_lifting.end_year}), "
+                f"Sulfur lifting ({self._sulfur_lifting.end_year}), "
+                f"Electricity lifting ({self._electricity_lifting.end_year}), "
+                f"CO2 lifting ({self._co2_lifting.end_year}), "
+                f"Oil tangible ({self._oil_capital_cost.end_year}), "
+                f"Gas tangible ({self._gas_capital_cost.end_year}), "
+                f"Oil intangible ({self._oil_intangible.end_year}), "
+                f"Gas intangible ({self._gas_intangible.end_year}), "
+                f"Oil opex ({self._oil_opex.end_year}), "
+                f"Gas opex ({self._gas_opex.end_year}), "
+                f"Oil asr ({self._oil_asr.end_year}), "
+                f"Gas asr ({self._gas_asr.end_year}), "
+                f"Oil LBT ({self._oil_lbt.end_year}), "
+                f"Gas LBT ({self._gas_lbt.end_year}), "
+                f"Oil cost of sales ({self._oil_cost_of_sales.end_year}), "
+                f"Gas cost of sales ({self._gas_cost_of_sales.end_year}), "
+                f"Oil capital sunkcost ({self._oil_capital_sunk_cost.end_year}), "
+                f"Gas capital sunkcost ({self._gas_capital_sunk_cost.end_year}), "
+                f"Oil intangible sunkcost ({self._oil_intangible_sunk_cost.end_year}), "
+                f"Gas intangible sunkcost ({self._gas_intangible_sunk_cost.end_year}), "
+                f"Oil OPEX sunkcost ({self._oil_opex_sunk_cost.end_year}), "
+                f"Gas OPEX sunkcost ({self._gas_opex_sunk_cost.end_year}), "
+                f"Oil ASR sunkcost ({self._oil_asr_sunk_cost.end_year}), "
+                f"Gas ASR sunkcost ({self._gas_asr_sunk_cost.end_year}), "
+                f"Oil LBT sunkcost ({self._oil_lbt_sunk_cost.end_year}), "
+                f"Gas LBT sunkcost ({self._gas_lbt_sunk_cost.end_year}), "
+                f"Oil cost of sales sunkcost ({self._oil_cost_of_sales_sunk_cost.end_year}), "
+                f"Gas cost of sales sunkcost ({self._gas_cost_of_sales_sunk_cost.end_year})."
+            )
 
     def _get_lifting_by_commodity(self, commodity: FluidType) -> Lifting:
         """

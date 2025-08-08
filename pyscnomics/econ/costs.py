@@ -26,49 +26,49 @@ from pyscnomics.econ.costs_tools import (
 
 
 class GeneralCostException(Exception):
-    """Exception to be raised for an incorrect use of class GeneralCost"""
+    """ Exception to be raised for an incorrect use of class GeneralCost """
 
     pass
 
 
 class CapitalException(Exception):
-    """Exception to be raised for an incorrect use of class CapitalCost"""
+    """ Exception to be raised for an incorrect use of class CapitalCost """
 
     pass
 
 
 class IntangibleException(Exception):
-    """Exception to be raised for an incorrect use of class Intangible"""
+    """ Exception to be raised for an incorrect use of class Intangible """
 
     pass
 
 
 class OPEXException(Exception):
-    """Exception to be raised for an incorrect use of class OPEX"""
+    """ Exception to be raised for an incorrect use of class OPEX """
 
     pass
 
 
 class ASRException(Exception):
-    """Exception to be raised for an incorrect use of class ASR"""
+    """ Exception to be raised for an incorrect use of class ASR """
 
     pass
 
 
 class LBTException(Exception):
-    """Exception to be raised for an incorrect use of class LBT"""
+    """ Exception to be raised for an incorrect use of class LBT """
 
     pass
 
 
 class CostOfSalesException(Exception):
-    """Exception to be raised for an incorrect use of class CostOfSales"""
+    """ Exception to be raised for an incorrect use of class CostOfSales """
 
     pass
 
 
 class SunkCostException(Exception):
-    """Exception to be raised for an incorrect use of class SunkCost"""
+    """ Exception to be raised for an incorrect procedure associated with sunkcost """
 
     pass
 
@@ -2085,15 +2085,18 @@ class ASR(GeneralCost):
         """
         Handles the following operations/procedures:
         -   Prepare attributes project_duration and project_years,
-        -   Prepare attribute dscription,
+        -   Prepare attribute expense_year,
+        -   Prepare attribute cost,
+        -   Prepare attribute description,
         -   Prepare attribute cost_allocation,
         -   Prepare attribute is_sunkcost,
         -   Prepare attribute tax_portion,
         -   Prepare attribute tax_discount,
         -   Prepare attribute future_rate,
         -   Prepare attribute final_year,
-        -   Raise an error: expense_year is after the end year of the project,
-        -   Raise an error: expense_year is before the start year of the project,
+        -   Check input data for unequal length,
+        -   Raise an exception: expense year is after the end year of the project,
+        -   Raise an exception: expense year is before the start year of the project,
         """
 
         # Prepare attributes project_duration and project_years
@@ -3566,6 +3569,7 @@ class CostOfSales(GeneralCost):
         -   Prepare attribute description,
         -   Prepare attribute tax_portion,
         -   Prepare attribute tax_discount,
+        -   Check input data for unequal length,
         -   Raise an exception: expense_year is after the end year of the project,
         -   Raise an exception: expense_year is before the start_year of the project
         """
