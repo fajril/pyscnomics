@@ -612,11 +612,6 @@ class BaseProject:
         self.lbt_cost_total = reduce(lambda x, y: x + y, self.lbt_cost)
         self.cost_of_sales_total = reduce(lambda x, y: x + y, self.cost_of_sales)
 
-        print('\t')
-        print(f'Filetype: {type(self.lbt_cost_total)}')
-        print(f'Length: {len(self.lbt_cost_total)}')
-        print('lbt_cost_total = ', self.lbt_cost_total)
-
         # Prepare attributes associated with costs
         self._oil_capital_cost = self._get_oil_capital()
         self._gas_capital_cost = self._get_gas_capital()
@@ -628,15 +623,8 @@ class BaseProject:
         self._gas_asr = self._get_gas_asr()
         self._oil_lbt = self._get_oil_lbt()
         self._gas_lbt = self._get_gas_lbt()
-        # self._oil_cost_of_sales = self._get_oil_cost_of_sales()
-        # self._gas_cost_of_sales = self._get_gas_cost_of_sales()
-        # # self._oil_sunk_cost = self._get_oil_sunk_cost()
-        # # self._gas_sunk_cost = self._get_gas_sunk_cost()
-
-        print('\t')
-        print(f'Filetype: {type(self._gas_lbt)}')
-        print(f'Length: {len(self._gas_lbt)}')
-        print('_gas_lbt = ', self._gas_lbt)
+        self._oil_cost_of_sales = self._get_oil_cost_of_sales()
+        self._gas_cost_of_sales = self._get_gas_cost_of_sales()
 
         # Prepare attributes associated with sunk costs
         self._oil_capital_sunk_cost = self._get_oil_capital_sunk_cost()
@@ -649,62 +637,59 @@ class BaseProject:
         self._gas_asr_sunk_cost = self._get_gas_asr_sunk_cost()
         self._oil_lbt_sunk_cost = self._get_oil_lbt_sunk_cost()
         self._gas_lbt_sunk_cost = self._get_gas_lbt_sunk_cost()
+        self._oil_cost_of_sales_sunk_cost = self._get_oil_cost_of_sales_sunk_cost()
+        self._gas_cost_of_sales_sunk_cost = self._get_gas_cost_of_sales_sunk_cost()
 
-        print('\t')
-        print(f'Filetype: {type(self._gas_lbt_sunk_cost)}')
-        print(f'Length: {len(self._gas_lbt_sunk_cost)}')
-        print('_gas_lbt_sunk_cost = ', self._gas_lbt_sunk_cost)
+        # Raise an exception error if the start year of the project is inconsistent
+        if not all(
+            i == self.start_date.year
+            for i in [
+                self._oil_lifting.start_year,
+                self._gas_lifting.start_year,
+                self._sulfur_lifting.start_year,
+                self._electricity_lifting.start_year,
+                self._co2_lifting.start_year,
+                self._oil_capital_cost.start_year,
+                self._gas_capital_cost.start_year,
+                self._oil_intangible.start_year,
+                self._gas_intangible.start_year,
+                self._oil_opex.start_year,
+                self._gas_opex.start_year,
+                self._oil_asr.start_year,
+                self._gas_asr.start_year,
+                self._oil_lbt.start_year,
+                self._gas_lbt.start_year,
+                self._oil_cost_of_sales.start_year,
+                self._gas_cost_of_sales.start_year,
+                self._oil_capital_sunk_cost.start_year,
+                self._gas_capital_sunk_cost.start_year,
+                ###
+            ]
+        ):
+            raise BaseProjectException(
+                f"Inconsistent start project year: "
+                f"Base project ({self.start_date.year}), "
+                f"Oil lifting ({self._oil_lifting.start_year}), "
+                f"Gas lifting ({self._gas_lifting.start_year}), "
+                f"Sulfur lifting ({self._sulfur_lifting.start_year}), "
+                f"Electricity lifting ({self._electricity_lifting.start_year}), "
+                f"CO2 lifting ({self._co2_lifting.start_year}), "
+                f"Oil tangible ({self._oil_capital_cost.start_year}), "
+                f"Gas tangible ({self._gas_capital_cost.start_year}), "
+                f"Oil intangible ({self._oil_intangible.start_year}), "
+                f"Gas intangible ({self._gas_intangible.start_year}), "
+                f"Oil opex ({self._oil_opex.start_year}), "
+                f"Gas opex ({self._gas_opex.start_year}), "
+                f"Oil asr ({self._oil_asr.start_year}), "
+                f"Gas asr ({self._gas_asr.start_year}), "
+                f"Oil LBT ({self._oil_lbt.start_year}), "
+                f"Gas LBT ({self._gas_lbt.start_year}), "
+                f"Oil cost of sales ({self._oil_cost_of_sales.start_year}), "
+                f"Gas cost of sales ({self._gas_cost_of_sales.start_year}), "
+                # f"Oil sunk cost ({self._oil_sunk_cost.start_year}), "
+                # f"Gas sunk cost ({self._gas_sunk_cost.start_year}). "
+            )
 
-
-        # # Raise an exception error if the start year of the project is inconsistent
-        # if not all(
-        #     i == self.start_date.year
-        #     for i in [
-        #         self._oil_lifting.start_year,
-        #         self._gas_lifting.start_year,
-        #         self._sulfur_lifting.start_year,
-        #         self._electricity_lifting.start_year,
-        #         self._co2_lifting.start_year,
-        #         self._oil_capital_cost.start_year,
-        #         self._gas_capital_cost.start_year,
-        #         self._oil_intangible.start_year,
-        #         self._gas_intangible.start_year,
-        #         self._oil_opex.start_year,
-        #         self._gas_opex.start_year,
-        #         self._oil_asr.start_year,
-        #         self._gas_asr.start_year,
-        #         self._oil_lbt.start_year,
-        #         self._gas_lbt.start_year,
-        #         self._oil_cost_of_sales.start_year,
-        #         self._gas_cost_of_sales.start_year,
-        #         # self._oil_sunk_cost.start_year,
-        #         # self._gas_sunk_cost.start_year,
-        #     ]
-        # ):
-        #     raise BaseProjectException(
-        #         f"Inconsistent start project year: "
-        #         f"Base project ({self.start_date.year}), "
-        #         f"Oil lifting ({self._oil_lifting.start_year}), "
-        #         f"Gas lifting ({self._gas_lifting.start_year}), "
-        #         f"Sulfur lifting ({self._sulfur_lifting.start_year}), "
-        #         f"Electricity lifting ({self._electricity_lifting.start_year}), "
-        #         f"CO2 lifting ({self._co2_lifting.start_year}), "
-        #         f"Oil tangible ({self._oil_capital_cost.start_year}), "
-        #         f"Gas tangible ({self._gas_capital_cost.start_year}), "
-        #         f"Oil intangible ({self._oil_intangible.start_year}), "
-        #         f"Gas intangible ({self._gas_intangible.start_year}), "
-        #         f"Oil opex ({self._oil_opex.start_year}), "
-        #         f"Gas opex ({self._gas_opex.start_year}), "
-        #         f"Oil asr ({self._oil_asr.start_year}), "
-        #         f"Gas asr ({self._gas_asr.start_year}), "
-        #         f"Oil LBT ({self._oil_lbt.start_year}), "
-        #         f"Gas LBT ({self._gas_lbt.start_year}), "
-        #         f"Oil cost of sales ({self._oil_cost_of_sales.start_year}), "
-        #         f"Gas cost of sales ({self._gas_cost_of_sales.start_year}), "
-        #         # f"Oil sunk cost ({self._oil_sunk_cost.start_year}), "
-        #         # f"Gas sunk cost ({self._gas_sunk_cost.start_year}). "
-        #     )
-        #
         # # Raise an exception error if the end year of the project is inconsistent
         # if not all(
         #     i == self.end_date.year
@@ -1883,19 +1868,200 @@ class BaseProject:
         fluid_type: FluidType,
         include_sunkcost: bool,
     ) -> CostOfSales:
-        pass
+        """
+        Get cost of sales filtered by fluid type and sunk cost inclusion.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The fluid type to filter cost of sales by.
+        include_sunkcost : bool
+            Whether to include sunk costs in the filtered results.
+            If True, includes sunk costs; if False, excludes them.
+
+        Returns
+        -------
+        CostOfSales
+            A new CostOfSales instance containing only the costs that match:
+            1. The specified fluid type
+            2. The sunk cost inclusion criteria
+
+            If no matching costs are found, returns a CostOfSales instance with:
+            - Zero cost
+            - Single expense year (project start year)
+            - The requested fluid type in cost_allocation
+            - The requested sunk cost flag in is_sunkcost
+
+        Notes
+        -----
+        - The method filters the data from self.cost_of_sales_total based on the criteria.
+        - All returned arrays (cost, expense_year, etc.) will have the same length.
+        - The filtering preserves all original CostOfSales attributes, but with only
+          the matching elements in each array.
+        - When no matching costs exist, the returned dummy instance will include:
+          * The requested fluid_type in cost_allocation
+          * The requested include_sunkcost value in is_sunkcost
+        """
+
+        # Handle case when requested fluid type is not found
+        if fluid_type not in self.cost_of_sales_total.cost_allocation:
+            return CostOfSales(
+                start_year=self.start_date.year,
+                end_year=self.end_date.year,
+                expense_year=np.array([self.start_date.year]),
+                cost=np.array([0]),
+                cost_allocation=[fluid_type],
+                is_sunkcost=[include_sunkcost],
+            )
+
+        else:
+            # Configure indices to slice data according to fluid type and sunk cost
+            allocation_array = np.array(self.cost_of_sales_total.cost_allocation)
+            sunkcost_array = np.array(self.cost_of_sales_total.is_sunkcost)
+            mask = np.logical_and(
+                allocation_array == fluid_type,
+                sunkcost_array == include_sunkcost,
+            )
+            indices = np.flatnonzero(mask)
+
+            # Slice filtered data, return a new instance of CostOfSales with filtered data
+            return CostOfSales(
+                start_year=self.cost_of_sales_total.start_year,
+                end_year=self.cost_of_sales_total.end_year,
+                expense_year=self.cost_of_sales_total.expense_year[indices],
+                cost=self.cost_of_sales_total.cost[indices],
+                cost_allocation=(
+                    np.array(self.cost_of_sales_total.cost_allocation)[indices].tolist()
+                ),
+                description=np.array(self.cost_of_sales_total.description)[indices].tolist(),
+                is_sunkcost=np.array(self.cost_of_sales_total.is_sunkcost)[indices].tolist(),
+                tax_portion=self.cost_of_sales_total.tax_portion[indices],
+                tax_discount=self.cost_of_sales_total.tax_discount[indices],
+            )
 
     def _get_oil_cost_of_sales(self) -> CostOfSales:
-        pass
+        """
+        Get cost of sales specifically for OIL, excluding sunk costs.
+
+        Returns
+        -------
+        CostOfSales
+            A new CostOfSales instance containing only the costs that:
+            1. Are allocated to OIL fluid type
+            2. Are not sunk costs
+
+            If no matching costs are found, returns a CostOfSales instance with:
+            - Zero cost
+            - Single expense year (project start year)
+            - OIL as the cost_allocation
+            - False in is_sunkcost (matching the include_sunkcost=False filter)
+
+        Notes
+        -----
+        - This is a convenience wrapper around _get_filtered_cost_of_sales() with:
+          fluid_type=FluidType.OIL and include_sunkcost=False
+        - All returned arrays will have the same length.
+        - The dummy instance (when no costs exist) will include:
+          * OIL in cost_allocation
+          * False in is_sunkcost
+        - See _get_filtered_cost_of_sales() for more detailed filtering behavior.
+        """
+        return self._get_filtered_cost_of_sales(
+            fluid_type=FluidType.OIL, include_sunkcost=False
+        )
 
     def _get_gas_cost_of_sales(self) -> CostOfSales:
-        pass
+        """
+        Get cost of sales specifically for GAS, excluding sunk costs.
+
+        Returns
+        -------
+        CostOfSales
+            A new CostOfSales instance containing only the costs that:
+            1. Are allocated to GAS fluid type
+            2. Are not sunk costs
+
+            If no matching costs are found, returns a CostOfSales instance with:
+            - Zero cost
+            - Single expense year (project start year)
+            - GAS as the cost_allocation
+            - False in is_sunkcost (matching the include_sunkcost=False filter)
+
+        Notes
+        -----
+        - This is a convenience wrapper around _get_filtered_cost_of_sales() with:
+          fluid_type=FluidType.GAS and include_sunkcost=False
+        - All returned arrays will have the same length.
+        - The dummy instance (when no costs exist) will include:
+          * GAS in cost_allocation
+          * False in is_sunkcost
+        - See _get_filtered_cost_of_sales() for more detailed filtering behavior.
+        """
+        return self._get_filtered_cost_of_sales(
+            fluid_type=FluidType.GAS, include_sunkcost=False
+        )
 
     def _get_oil_cost_of_sales_sunk_cost(self) -> CostOfSales:
-        pass
+        """
+        Get cost of sales specifically for OIL, including only sunk costs.
+
+        Returns
+        -------
+        CostOfSales
+            A new CostOfSales instance containing only the costs that:
+            1. Are allocated to OIL fluid type
+            2. Are sunk costs
+
+            If no matching costs are found, returns a CostOfSales instance with:
+            - Zero cost
+            - Single expense year (project start year)
+            - OIL as the cost_allocation
+            - True in is_sunkcost (matching the include_sunkcost=True filter)
+
+        Notes
+        -----
+        - This is a convenience wrapper around _get_filtered_cost_of_sales() with:
+          fluid_type=FluidType.OIL and include_sunkcost=True
+        - All returned arrays will have the same length.
+        - The dummy instance (when no costs exist) will include:
+          * OIL in cost_allocation
+          * True in is_sunkcost
+        - See _get_filtered_cost_of_sales() for more detailed filtering behavior.
+        """
+        return self._get_filtered_cost_of_sales(
+            fluid_type=FluidType.OIL, include_sunkcost=True
+        )
 
     def _get_gas_cost_of_sales_sunk_cost(self) -> CostOfSales:
-        pass
+        """
+        Get cost of sales specifically for GAS, including only sunk costs.
+
+        Returns
+        -------
+        CostOfSales
+            A new CostOfSales instance containing only the costs that:
+            1. Are allocated to GAS fluid type
+            2. Are sunk costs
+
+            If no matching costs are found, returns a CostOfSales instance with:
+            - Zero cost
+            - Single expense year (project start year)
+            - GAS as the cost_allocation
+            - True in is_sunkcost (matching the include_sunkcost=True filter)
+
+        Notes
+        -----
+        - This is a convenience wrapper around _get_filtered_cost_of_sales() with:
+          fluid_type=FluidType.GAS and include_sunkcost=True
+        - All returned arrays will have the same length.
+        - The dummy instance (when no costs exist) will include:
+          * GAS in cost_allocation
+          * True in is_sunkcost
+        - See _get_filtered_cost_of_sales() for more detailed filtering behavior.
+        """
+        return self._get_filtered_cost_of_sales(
+            fluid_type=FluidType.GAS, include_sunkcost=True
+        )
 
     def _calc_expenditures(
         self,
