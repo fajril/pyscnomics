@@ -79,18 +79,18 @@ class ExampleCase:
             start_year=2023,
             end_year=2030,
             expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([25, 100, 100, 25]),
+            cost=np.array([100, 100, 50, 50]),
             cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
-            is_sunkcost=[True, False, False, True],
+            is_sunkcost=[False, False, True, True],
         )
 
         self.capital_apel = CapitalCost(
             start_year=2023,
             end_year=2030,
             expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([12.5, 50, 50, 12.5]),
+            cost=np.array([10, 10, 5, 5]),
             cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
-            is_sunkcost=[True, False, False, True],
+            is_sunkcost=[False, False, True, True],
         )
 
     def _get_intangible_cost_data(self):

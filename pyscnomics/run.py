@@ -23,11 +23,17 @@ pr = BaseProject(
     cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
 )
 
+pr.run(
+    year_inflation=None,
+    inflation_rate=0.0,
+    inflation_rate_applied_to=None,
+)
+
 # pr.run(
 #     prod_year=np.array([2027, 2028]),
 #     prod=np.array([50, 1_000]),
 #     tax_rate=0.0,
-#     depr_method=DeprMethod.PSC_DB,
+#     # depr_method=DeprMethod.PSC_DB,
 #     decline_factor=2,
 #     salvage_value=0.0,
 #     year_inflation=None,
