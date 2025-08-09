@@ -148,12 +148,6 @@ class BaseProject:
     # Attributes to be defined later (associated with sunk cost)
     _oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _gas_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_sunk_cost_amortization_charge: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _gas_sunk_cost_amortization_charge: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
 
     # Attributes to be defined later
     # (Associated with pre tax expenditures for each cost elements)
@@ -2112,6 +2106,26 @@ class BaseProject:
             fluid_type=FluidType.GAS, include_sunkcost=True
         )
 
+    def _check_sunkcost_max_year(self, sunkcost_objects: list):
+        return np.array([np.max(sc.expense_year) for sc in sunkcost_objects]).max()
+
+    def _validate_sunkcost(self):
+
+        oil_sunkcost_max_year = self._check_sunkcost_max_year(
+            sunkcost_objects=[
+                self._oil_capital_sunk_cost,
+                self._oil_intangible_sunk_cost,
+                self._oil_opex_sunk_cost,
+                self._oil_asr_sunk_cost,
+                self._oil_lbt_sunk_cost,
+                self._oil_cost_of_sales_sunk_cost,
+            ]
+        )
+
+        print('\t')
+        print(f'Filetype: {type(oil_sunkcost_max_year)}')
+        print('oil_sunkcost_max_year = ', oil_sunkcost_max_year)
+
     def _get_sunk_cost_array(self, sunkcost_objects: list) -> np.ndarray:
         """
         Aggregates sunk cost array from a list of sunk cost objects and aligns it
@@ -3012,6 +3026,8 @@ class BaseProject:
         # salvage_value: float = 0.0,
     ) -> None:
 
+        self._validate_sunkcost()
+
         # Configure sunk cost for OIL and GAS
         self._oil_sunk_cost = self._get_sunk_cost_array(
             sunkcost_objects=[
@@ -3035,50 +3051,61 @@ class BaseProject:
             ]
         )
 
-        # Calculate pre tax expenditures
-        self._get_expenditures_pre_tax(
-            year_inflation=year_inflation,
-            inflation_rate=inflation_rate,
-            inflation_rate_applied_to=inflation_rate_applied_to,
-        )
-
-        # Calculate indirect taxes
-        self._get_indirect_taxes(tax_rate=tax_rate)
-
-        # Calculate post tax expenditures
-        self._get_expenditures_post_tax(
-            year_inflation=year_inflation,
-            inflation_rate=inflation_rate,
-            tax_rate=tax_rate,
-            inflation_rate_applied_to=inflation_rate_applied_to,
-        )
-
-        # Non-capital costs (intangible + opex + asr + lbt + cost of sales)
-        self._oil_non_capital = (
-            self._oil_intangible_expenditures_post_tax
-            + self._oil_opex_expenditures_post_tax
-            + self._oil_asr_expenditures_post_tax
-            + self._oil_lbt_expenditures_post_tax
-            + self._oil_cost_of_sales_expenditures_post_tax
-        )
-
-        self._gas_non_capital = (
-            self._gas_intangible_expenditures_post_tax
-            + self._gas_opex_expenditures_post_tax
-            + self._gas_asr_expenditures_post_tax
-            + self._gas_lbt_expenditures_post_tax
-            + self._gas_cost_of_sales_expenditures_post_tax
-        )
-
-        # WAP (Weighted Average Price) for each produced fluid
-        self._get_wap_price()
-
-        # Other revenue
-        self._get_other_revenue(
-            sulfur_revenue=sulfur_revenue,
-            electricity_revenue=electricity_revenue,
-            co2_revenue=co2_revenue,
-        )
+        # self._gas_sunk_cost = self._get_sunk_cost_array(
+        #     sunkcost_objects=[
+        #         self._gas_capital_sunk_cost,
+        #         self._gas_intangible_sunk_cost,
+        #         self._gas_opex_sunk_cost,
+        #         self._gas_asr_sunk_cost,
+        #         self._gas_lbt_sunk_cost,
+        #         self._gas_cost_of_sales_sunk_cost,
+        #     ]
+        # )
+        #
+        # # Calculate pre tax expenditures
+        # self._get_expenditures_pre_tax(
+        #     year_inflation=year_inflation,
+        #     inflation_rate=inflation_rate,
+        #     inflation_rate_applied_to=inflation_rate_applied_to,
+        # )
+        #
+        # # Calculate indirect taxes
+        # self._get_indirect_taxes(tax_rate=tax_rate)
+        #
+        # # Calculate post tax expenditures
+        # self._get_expenditures_post_tax(
+        #     year_inflation=year_inflation,
+        #     inflation_rate=inflation_rate,
+        #     tax_rate=tax_rate,
+        #     inflation_rate_applied_to=inflation_rate_applied_to,
+        # )
+        #
+        # # Non-capital costs (intangible + opex + asr + lbt + cost of sales)
+        # self._oil_non_capital = (
+        #     self._oil_intangible_expenditures_post_tax
+        #     + self._oil_opex_expenditures_post_tax
+        #     + self._oil_asr_expenditures_post_tax
+        #     + self._oil_lbt_expenditures_post_tax
+        #     + self._oil_cost_of_sales_expenditures_post_tax
+        # )
+        #
+        # self._gas_non_capital = (
+        #     self._gas_intangible_expenditures_post_tax
+        #     + self._gas_opex_expenditures_post_tax
+        #     + self._gas_asr_expenditures_post_tax
+        #     + self._gas_lbt_expenditures_post_tax
+        #     + self._gas_cost_of_sales_expenditures_post_tax
+        # )
+        #
+        # # WAP (Weighted Average Price) for each produced fluid
+        # self._get_wap_price()
+        #
+        # # Other revenue
+        # self._get_other_revenue(
+        #     sulfur_revenue=sulfur_revenue,
+        #     electricity_revenue=electricity_revenue,
+        #     co2_revenue=co2_revenue,
+        # )
 
         # # Total pre-tax expenditures for OIL and GAS
         # self._oil_total_expenditures_pre_tax = (

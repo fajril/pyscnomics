@@ -78,7 +78,7 @@ class ExampleCase:
         self.capital_mangga = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024]),
+            expense_year=np.array([2023, 2024, 2025, 2027]),
             cost=np.array([100, 100, 50, 50]),
             cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
             is_sunkcost=[False, False, True, True],
