@@ -5,7 +5,7 @@ Example case to be executed.
 import numpy as np
 from dataclasses import dataclass, field
 
-from pyscnomics.econ.selection import FluidType, SunkCostInvestmentType
+from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import (
     CapitalCost,
@@ -65,7 +65,7 @@ class ExampleCase:
         self.lifting_apel = Lifting(
             start_year=2023,
             end_year=2030,
-            prod_year=np.array([2024, 2024, 2024]),
+            prod_year=np.array([2025, 2025, 2025]),
             lifting_rate=np.array([np.nan, 10, None]),
             price=np.array([2, 2, 2]),
             fluid_type=FluidType.GAS,
@@ -78,7 +78,7 @@ class ExampleCase:
         self.capital_mangga = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2027]),
+            expense_year=np.array([2023, 2024, 2025, 2024]),
             cost=np.array([100, 100, 50, 50]),
             cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
             is_sunkcost=[False, False, True, True],
@@ -105,6 +105,7 @@ class ExampleCase:
             cost=np.array([100, 100, 50, 50]),
             cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
             is_sunkcost=[False, False, True, True],
+            tax_portion=np.array([1, 1, 1, 1]),
         )
 
         self.intangible_apel = Intangible(
