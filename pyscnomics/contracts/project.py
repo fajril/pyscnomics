@@ -2288,7 +2288,7 @@ class BaseProject:
         )
 
     @staticmethod
-    def _validate_sunkcost(fluid_onstream_year: int, sunkcost_objects: list):
+    def _validate_sunkcost(fluid_onstream_year: int, sunkcost_objects: list) -> None:
         """
         Validate that all sunk cost expense years do not exceed the fluid onstream year.
 
@@ -2881,71 +2881,6 @@ class BaseProject:
                 f"Other revenue selection is not available: {co2_revenue}"
             )
 
-    @staticmethod
-    def _get_total_expenditures(expenditures_objects: list[np.ndarray, ...]):
-        return np.sum(np.stack(expenditures_objects), axis=0)
-
-    def _get_tax_by_regime(self, tax_regime) -> np.ndarray:
-        """
-        Determine the tax rate array based on the tax regime and project years.
-
-        This method computes the tax rates for the project years depending on the specified
-        `tax_regime`. It uses predefined tax configurations for certain years (2013, 2016, 2020)
-        and allows for specific tax regimes that override these configurations. For tax regimes
-        like `NAILED_DOWN`, the tax rate is fixed based on the start year of the project.
-
-        Parameters
-        ----------
-        tax_regime : TaxRegime
-            The tax regime to be applied. It determines how tax rates are selected and can be
-            one of the following:
-            -   `TaxRegime.UU_07_2021`
-            -   `TaxRegime.UU_02_2020`
-            -   `TaxRegime.UU_36_2008`
-            -   `TaxRegime.NAILED_DOWN`
-
-        Returns
-        -------
-        tax_rate_arr : np.ndarray
-            A 1D array of tax rates for each project year. The tax rate is determined based on
-            the tax regime and the project's starting year in relation to the predefined tax
-            configurations.
-        """
-        tax_config = {
-            2013: 0.44,
-            2016: 0.42,
-            2020: 0.40
-        }
-
-        tax_rate_arr = np.full_like(
-            self.project_years, fill_value=tax_config[min(tax_config)], dtype=float
-        )
-
-        for year in tax_config:
-            indices = np.array(np.where(self.project_years >= year)).ravel()
-            tax_rate_arr[indices] = tax_config[year]
-
-        if tax_regime == TaxRegime.UU_07_2021:
-            tax_rate_arr = np.full_like(self.project_years, fill_value=0.40, dtype=float)
-
-        if tax_regime == TaxRegime.UU_02_2020:
-            tax_rate_arr = np.full_like(self.project_years, fill_value=0.42, dtype=float)
-
-        if tax_regime == TaxRegime.UU_36_2008:
-            tax_rate_arr = np.full_like(self.project_years, fill_value=0.44, dtype=float)
-
-        if tax_regime == TaxRegime.NAILED_DOWN:
-            if self.start_date.year >= max(tax_config):
-                tax_rate_arr = np.full_like(
-                    self.project_years, fill_value=tax_config[max(tax_config)], dtype=float
-                )
-            else:
-                tax_rate_arr = np.full_like(
-                    self.project_years, fill_value=tax_config[min(tax_config)], dtype=float
-                )
-
-        return tax_rate_arr
-
     def run(
         self,
         sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
@@ -3030,117 +2965,97 @@ class BaseProject:
             co2_revenue=co2_revenue,
         )
 
-        # Total pre-tax expenditures for OIL and GAS
-        self._oil_total_expenditures_pre_tax = self._get_total_expenditures(
-            expenditures_objects=[
-                self._oil_capital_expenditures_pre_tax,
-                self._oil_intangible_expenditures_pre_tax,
-                self._oil_opex_expenditures_pre_tax,
-                self._oil_asr_expenditures_pre_tax,
-                self._oil_lbt_expenditures_pre_tax,
-                self._oil_cost_of_sales_expenditures_pre_tax,
-            ]
+        # Total OIL pre-tax expenditures
+        self._oil_total_expenditures_pre_tax = (
+            self._oil_capital_expenditures_pre_tax +
+            self._oil_intangible_expenditures_pre_tax +
+            self._oil_opex_expenditures_pre_tax +
+            self._oil_asr_expenditures_pre_tax +
+            self._oil_lbt_expenditures_pre_tax +
+            self._oil_cost_of_sales_expenditures_pre_tax
         )
 
-        self._gas_total_expenditures_pre_tax = self._get_total_expenditures(
-            expenditures_objects=[
-                self._gas_capital_expenditures_pre_tax,
-                self._gas_intangible_expenditures_pre_tax,
-                self._gas_opex_expenditures_pre_tax,
-                self._gas_asr_expenditures_pre_tax,
-                self._gas_lbt_expenditures_pre_tax,
-                self._gas_cost_of_sales_expenditures_pre_tax,
-            ]
+        # Total GAS pre-tax expenditures
+        self._gas_total_expenditures_pre_tax = (
+            self._gas_capital_expenditures_pre_tax +
+            self._gas_intangible_expenditures_pre_tax +
+            self._gas_opex_expenditures_pre_tax +
+            self._gas_asr_expenditures_pre_tax +
+            self._gas_lbt_expenditures_pre_tax +
+            self._gas_cost_of_sales_expenditures_pre_tax
         )
 
-        # Total indirect taxes for OIL and GAS
-        self._oil_total_indirect_tax = self._get_total_expenditures(
-            expenditures_objects=[
-                self._oil_capital_indirect_tax,
-                self._oil_intangible_indirect_tax,
-                self._oil_opex_indirect_tax,
-                self._oil_asr_indirect_tax,
-                self._oil_lbt_indirect_tax,
-                self._oil_cost_of_sales_indirect_tax,
-            ]
+        # Total OIL indirect taxes
+        self._oil_total_indirect_tax = (
+            self._oil_capital_indirect_tax +
+            self._oil_intangible_indirect_tax +
+            self._oil_opex_indirect_tax +
+            self._oil_asr_indirect_tax +
+            self._oil_lbt_indirect_tax +
+            self._oil_cost_of_sales_indirect_tax
         )
 
-        self._gas_total_indirect_tax = self._get_total_expenditures(
-            expenditures_objects=[
-                self._gas_capital_indirect_tax,
-                self._gas_intangible_indirect_tax,
-                self._gas_opex_indirect_tax,
-                self._gas_asr_indirect_tax,
-                self._gas_lbt_indirect_tax,
-                self._gas_cost_of_sales_indirect_tax,
-            ]
+        # Total GAS indirect taxes
+        self._gas_total_indirect_tax = (
+            self._gas_capital_indirect_tax +
+            self._gas_intangible_indirect_tax +
+            self._gas_opex_indirect_tax +
+            self._gas_asr_indirect_tax +
+            self._gas_lbt_indirect_tax +
+            self._gas_cost_of_sales_indirect_tax
         )
 
-        # Total post-tax expenditures for OIL and GAS
-        self._oil_total_expenditures_post_tax = self._get_total_expenditures(
-            expenditures_objects=[
-                self._oil_capital_expenditures_post_tax,
-                self._oil_intangible_expenditures_post_tax,
-                self._oil_opex_expenditures_post_tax,
-                self._oil_asr_expenditures_post_tax,
-                self._oil_lbt_expenditures_post_tax,
-                self._oil_cost_of_sales_expenditures_post_tax,
-            ]
+        # Total OIL post-tax expenditures
+        self._oil_total_expenditures_post_tax = (
+            self._oil_capital_expenditures_post_tax +
+            self._oil_intangible_expenditures_post_tax +
+            self._oil_opex_expenditures_post_tax +
+            self._oil_asr_expenditures_post_tax +
+            self._oil_lbt_expenditures_post_tax +
+            self._oil_cost_of_sales_expenditures_post_tax
         )
 
-        self._gas_total_expenditures_post_tax = self._get_total_expenditures(
-            expenditures_objects=[
-                self._gas_capital_expenditures_post_tax,
-                self._gas_intangible_expenditures_post_tax,
-                self._gas_opex_expenditures_post_tax,
-                self._gas_asr_expenditures_post_tax,
-                self._gas_lbt_expenditures_post_tax,
-                self._gas_cost_of_sales_expenditures_post_tax,
-            ]
+        # Total GAS post-tax expenditures
+        self._gas_total_expenditures_post_tax = (
+            self._gas_capital_expenditures_post_tax +
+            self._gas_intangible_expenditures_post_tax +
+            self._gas_opex_expenditures_post_tax +
+            self._gas_asr_expenditures_post_tax +
+            self._gas_lbt_expenditures_post_tax +
+            self._gas_cost_of_sales_expenditures_post_tax
         )
 
-        # # Non-capital costs (intangible + opex + asr + lbt + cost of sales)
-        # self._oil_non_capital = (
-        #     self._oil_intangible_expenditures_post_tax
-        #     + self._oil_opex_expenditures_post_tax
-        #     + self._oil_asr_expenditures_post_tax
-        #     + self._oil_lbt_expenditures_post_tax
-        #     + self._oil_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # self._gas_non_capital = (
-        #     self._gas_intangible_expenditures_post_tax
-        #     + self._gas_opex_expenditures_post_tax
-        #     + self._gas_asr_expenditures_post_tax
-        #     + self._gas_lbt_expenditures_post_tax
-        #     + self._gas_cost_of_sales_expenditures_post_tax
-        # )
+        # Non-capital costs (intangible + opex + asr + lbt + cost of sales)
+        self._oil_non_capital = (
+            self._oil_intangible_expenditures_post_tax
+            + self._oil_opex_expenditures_post_tax
+            + self._oil_asr_expenditures_post_tax
+            + self._oil_lbt_expenditures_post_tax
+            + self._oil_cost_of_sales_expenditures_post_tax
+        )
 
-        # # Configure base cashflow for OIL and GAS
-        # self._oil_cashflow = (
-        #     self._oil_revenue -
-        #     (
-        #         self._oil_capital_expenditures_post_tax
-        #         + self._oil_intangible_expenditures_post_tax
-        #         + self._oil_opex_expenditures_post_tax
-        #         + self._oil_asr_expenditures_post_tax
-        #         + self._oil_lbt_expenditures_post_tax
-        #         + self._oil_cost_of_sales_expenditures_post_tax
-        #     )
-        # )
-        #
-        # self._gas_cashflow = (
-        #     self._gas_revenue -
-        #     (
-        #         self._gas_capital_expenditures_post_tax
-        #         + self._gas_intangible_expenditures_post_tax
-        #         + self._gas_opex_expenditures_post_tax
-        #         + self._gas_asr_expenditures_post_tax
-        #         + self._gas_lbt_expenditures_post_tax
-        #         + self._gas_cost_of_sales_expenditures_post_tax
-        #     )
-        # )
-        #
+        self._gas_non_capital = (
+            self._gas_intangible_expenditures_post_tax
+            + self._gas_opex_expenditures_post_tax
+            + self._gas_asr_expenditures_post_tax
+            + self._gas_lbt_expenditures_post_tax
+            + self._gas_cost_of_sales_expenditures_post_tax
+        )
+
+        # Configure base cashflow for OIL and GAS
+        self._oil_cashflow = (
+            self._oil_revenue - (self._oil_sunk_cost + self._oil_total_expenditures_post_tax)
+        )
+
+        self._gas_cashflow = (
+            self._gas_revenue - (self._gas_sunk_cost + self._gas_total_expenditures_post_tax)
+        )
+
+        print('\t')
+        print(f'Filetype: {type(self._gas_cashflow)}')
+        print(f'Length: {len(self._gas_cashflow)}')
+        print('_gas_cashflow = \n', self._gas_cashflow)
+
         # # Prepare consolidated profiles
         # self._consolidated_revenue = self._oil_revenue + self._gas_revenue
         # self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow

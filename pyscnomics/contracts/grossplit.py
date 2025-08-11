@@ -21,19 +21,19 @@ from pyscnomics.econ.depreciation import unit_of_production_rate
 
 
 class GrossSplitException(Exception):
-    """Exception to raise for a misuse of GrossSplit class"""
+    """ Exception to be raised for a misuse of GrossSplit class """
 
     pass
 
 
 class SunkCostException(Exception):
-    """Exception to raise for a misuse of Sunk Cost Method"""
+    """ Exception to be raised for a misuse of sunkcost method """
 
     pass
 
 
 class CumulativeProductionSplitException(Exception):
-    """Exception to raise for a misuse of Cumulative Production Split Offset"""
+    """ Exception to be raised for a misuse of Cumulative Production Split Offset """
 
     pass
 
@@ -51,7 +51,8 @@ class GrossSplit(BaseProject):
         The field location of the corresponding contract.
     res_depth: str | VariableSplit522017.ReservoirDepth | VariableSplit082017.ReservoirDepth
         The reservoir depth of the corresponding contract
-    infra_avail: str | VariableSplit522017.InfrastructureAvailability | VariableSplit082017.InfrastructureAvailability
+    infra_avail: str | VariableSplit522017.InfrastructureAvailability
+        | VariableSplit082017.InfrastructureAvailability
         The infrastructure availability of the corresponding contract.
     res_type: str | VariableSplit522017.ReservoirType | VariableSplit082017.ReservoirType
         The reservoir type of the corresponding contract.
@@ -84,17 +85,65 @@ class GrossSplit(BaseProject):
     gas_dmo_holiday_duration: int
         The duration of the Gas's DMO Holiday in month unit.
     """
-    field_status: str | VariableSplit522017.FieldStatus | VariableSplit082017.FieldStatus | None = field(default='No POD')
-    field_loc: str | VariableSplit522017.FieldLocation | VariableSplit082017.FieldLocation | VariableSplit132024.FieldLocation= field(default='Onshore')
-    res_depth: str | VariableSplit522017.ReservoirDepth | VariableSplit082017.ReservoirDepth | None  = field(default='<=2500')
-    infra_avail: str | VariableSplit522017.InfrastructureAvailability | VariableSplit082017.InfrastructureAvailability | VariableSplit132024.InfrastructureAvailability = field(default='Well Developed')
-    res_type: str | VariableSplit522017.ReservoirType | VariableSplit082017.ReservoirType | None = field(default='Conventional')
-    api_oil: str | VariableSplit522017.APIOil | VariableSplit082017.APIOil | None = field(default='<25')
-    domestic_use: str | VariableSplit522017.DomesticUse | VariableSplit082017.DomesticUse | None = field(default='50<=x<70')
-    prod_stage: str | VariableSplit522017.ProductionStage | VariableSplit082017.ProductionStage | None = field(default='Secondary')
-    co2_content: str | VariableSplit522017.CO2Content | VariableSplit082017.CO2Content | None = field(default='<5')
-    h2s_content: str | VariableSplit522017.H2SContent | VariableSplit082017.H2SContent | None = field(default='<100')
-    field_reserves: str | VariableSplit132024.FieldReservesAmount | None = field(default=VariableSplit132024.FieldReservesAmount.HIGH)
+
+    field_status: (
+        str | VariableSplit522017.FieldStatus | VariableSplit082017.FieldStatus | None
+    ) = field(default='No POD')
+
+    field_loc: (
+        str
+        | VariableSplit522017.FieldLocation
+        | VariableSplit082017.FieldLocation
+        | VariableSplit132024.FieldLocation
+    ) = field(default='Onshore')
+
+    res_depth: (
+        str
+        | VariableSplit522017.ReservoirDepth
+        | VariableSplit082017.ReservoirDepth
+        | None
+    ) = field(default='<=2500')
+
+    infra_avail: (
+        str
+        | VariableSplit522017.InfrastructureAvailability
+        | VariableSplit082017.InfrastructureAvailability
+        | VariableSplit132024.InfrastructureAvailability
+    ) = field(default='Well Developed')
+
+    res_type: (
+        str
+        | VariableSplit522017.ReservoirType
+        | VariableSplit082017.ReservoirType
+        | None
+    ) = field(default='Conventional')
+
+    api_oil: (
+        str | VariableSplit522017.APIOil | VariableSplit082017.APIOil | None
+    ) = field(default='<25')
+
+    domestic_use: (
+        str | VariableSplit522017.DomesticUse | VariableSplit082017.DomesticUse | None
+    ) = field(default='50<=x<70')
+
+    prod_stage: (
+        str
+        | VariableSplit522017.ProductionStage
+        | VariableSplit082017.ProductionStage
+        | None
+    ) = field(default='Secondary')
+
+    co2_content: (
+        str | VariableSplit522017.CO2Content | VariableSplit082017.CO2Content | None
+    ) = field(default='<5')
+
+    h2s_content: (
+        str | VariableSplit522017.H2SContent | VariableSplit082017.H2SContent | None
+    ) = field(default='<100')
+
+    field_reserves: (
+        str | VariableSplit132024.FieldReservesAmount | None
+    ) = field(default=VariableSplit132024.FieldReservesAmount.HIGH)
 
     base_split_ctr_oil: float = field(default=0.43)
     base_split_ctr_gas: float = field(default=0.48)
@@ -189,24 +238,50 @@ class GrossSplit(BaseProject):
     _gas_government_take: np.ndarray = field(default=None, init=False, repr=False)
 
     # Consolidated Attributes
-    _consolidated_capital_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_intangible_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_opex_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_asr_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_lbt_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_cost_of_sales_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_capital_expenditures_pre_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_intangible_expenditures_pre_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_opex_expenditures_pre_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_asr_expenditures_pre_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_lbt_expenditures_pre_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_cost_of_sales_expenditures_pre_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_expenditures_pre_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
 
-    _consolidated_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_intangible_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_opex_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_asr_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_lbt_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_capital_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_intangible_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_opex_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_asr_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_lbt_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_cost_of_sales_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
     _consolidated_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-
-    _consolidated_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
-
+    _consolidated_carry_forward_depreciation: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
     _consolidated_capital_cost: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_intangible: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_opex: np.ndarray = field(default=None, init=False, repr=False)
@@ -214,23 +289,42 @@ class GrossSplit(BaseProject):
     _consolidated_lbt: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_depreciation: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_ctr_share_before_tf: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_gov_share_before_tf: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_cost_tobe_deducted: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_carward_deduct_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_deductible_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_carward_cost_aftertf: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_ctr_share_after_transfer: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_net_operating_profit: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_undepreciated_asset: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_ctr_share_before_tf: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_gov_share_before_tf: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_total_expenses: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_cost_tobe_deducted: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_carward_deduct_cost: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_deductible_cost: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_carward_cost_aftertf: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_ctr_share_after_transfer: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_net_operating_profit: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
     _consolidated_dmo_volume: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ddmo: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
-
     _consolidated_amortization: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes fof containing the 100% contractor split warning
@@ -238,7 +332,6 @@ class GrossSplit(BaseProject):
     _gas_ctr_split_prior_bracket: np.ndarray = field(default=None, init=False, repr=False)
     _oil_year_maximum_ctr_split: np.ndarray = field(default=None, init=False, repr=False)
     _gas_year_maximum_ctr_split: np.ndarray = field(default=None, init=False, repr=False)
-
 
     def _check_attributes(self):
         """
@@ -308,8 +401,10 @@ class GrossSplit(BaseProject):
         self._oil_carry_forward_depreciation = carward_depr['oil_carry_forward_depreciation']
         self._gas_carry_forward_depreciation = carward_depr['gas_carry_forward_depreciation']
 
-    def _wrapper_variable_split(self,
-                                regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
+    def _wrapper_variable_split(
+        self,
+        regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019
+    ):
         """
         Function to wrap the variable split function.
 
@@ -326,8 +421,8 @@ class GrossSplit(BaseProject):
         Notes
         -------
         (1) Gross Split Regime PERMEN ESDM No. 52 Tahun 2017, PERMEN ESDM No. 20 Tahun 2019,
-        and PERMEN ESDM No. 12 Tahun 2020 are having the same variable split value. The complete differences
-        could be seen in official documents.
+        and PERMEN ESDM No. 12 Tahun 2020 are having the same variable split value.
+        The complete differences could be seen in official documents.
         """
 
         if regime == GrossSplitRegime.PERMEN_ESDM_8_2017:
@@ -701,11 +796,12 @@ class GrossSplit(BaseProject):
         self._variable_split = float(np.sum(variable_split))
 
     def _wrapper_progressive_split(
-            self,
-            fluid: FluidType,
-            price: np.ndarray,
-            cum: np.ndarray,
-            regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019):
+        self,
+        fluid: FluidType,
+        price: np.ndarray,
+        cum: np.ndarray,
+        regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
+    ):
 
         if (regime == GrossSplitRegime.PERMEN_ESDM_52_2017 or
                 regime == GrossSplitRegime.PERMEN_ESDM_20_2019 or
@@ -729,10 +825,11 @@ class GrossSplit(BaseProject):
 
     @staticmethod
     def _get_prog_price_split_08_2017(
-            fluid: FluidType,
-            price: np.ndarray
+        fluid: FluidType,
+        price: np.ndarray,
     ):
-        # Indonesia's Ministry Regulations No.08 The Year of 2017. At Appendix B Progressive Component
+        # Indonesia's Ministry Regulations No.08 The Year of 2017.
+        # At Appendix B Progressive Component
         if fluid == FluidType.OIL:
             if price < 40:
                 ps = 0.075
@@ -757,14 +854,17 @@ class GrossSplit(BaseProject):
 
     @staticmethod
     def _get_prog_price_split_52_2017(
-            fluid: FluidType,
-            price: np.ndarray
+        fluid: FluidType,
+        price: np.ndarray,
     ):
-        # Indonesia's Ministry Regulations No.52 The Year of 2017. At Appendix B Progressive Component
+        # Indonesia's Ministry Regulations No.52 The Year of 2017.
+        # At Appendix B Progressive Component
         if fluid == FluidType.OIL:
-            ps = np.where(price > 0,
-                          (85 - price) * 0.25 / 100,
-                          0)
+            ps = np.where(
+                price > 0,
+                (85 - price) * 0.25 / 100,
+                0
+            )
 
         elif fluid == FluidType.GAS:
             if price < 7:
@@ -782,8 +882,8 @@ class GrossSplit(BaseProject):
 
     @staticmethod
     def _get_prog_price_split_13_2024(
-            fluid: FluidType,
-            price: np.ndarray
+        fluid: FluidType,
+        price: np.ndarray,
     ):
         if fluid == FluidType.OIL:
             if price <= 45:
@@ -818,11 +918,9 @@ class GrossSplit(BaseProject):
 
         return ps
 
-
     @staticmethod
-    def _get_prog_cum_split_08_2017(
-            cum: np.ndarray | None,
-    ):
+    def _get_prog_cum_split_08_2017(cum: np.ndarray | None):
+
         # Cumulative Progressive Split
         if cum is None:
             px = 0
@@ -844,9 +942,8 @@ class GrossSplit(BaseProject):
         return px
 
     @staticmethod
-    def _get_prog_cum_split_52_2017(
-            cum: np.ndarray | None
-    ):
+    def _get_prog_cum_split_52_2017(cum: np.ndarray | None):
+
         # Cumulative Progressive Split
         if cum is None:
             px = 0
@@ -872,9 +969,11 @@ class GrossSplit(BaseProject):
 
         carward_deduct_cost = np.concatenate((np.zeros(1), carward_deduct_cost[:-1]))
 
-        return np.where(ctr_gross_share > (cost_tobe_deducted + carward_deduct_cost),
-                        cost_tobe_deducted + carward_deduct_cost,
-                        ctr_gross_share)
+        return np.where(
+            ctr_gross_share > (cost_tobe_deducted + carward_deduct_cost),
+            cost_tobe_deducted + carward_deduct_cost,
+            ctr_gross_share
+        )
 
     # Todo (20 March 2025): Fix the sunk cost calculation method
     # def _get_sunk_cost(self, sunk_cost_reference_year: int):
@@ -899,9 +998,9 @@ class GrossSplit(BaseProject):
     #         self._gas_sunk_cost = np.zeros_like(self.project_years)
 
     def _get_year_maximum_split(
-            self,
-            ctr_split: np.ndarray,
-            fluid: str
+        self,
+        ctr_split: np.ndarray,
+        fluid: str,
     ):
         """
         Function to get the years of when the contractor have maximum split 100% or more.
@@ -922,35 +1021,102 @@ class GrossSplit(BaseProject):
 
         indices = (np.argwhere(ctr_split >= 1.0)).flatten()
         years_of_max = self.project_years[indices]
+
         if len(years_of_max)>0:
             warnings.warn(
-                f"The {fluid} contractor split equal more than 100% are in the following years {years_of_max} ",
-                UserWarning)
+                (
+                    f"The {fluid} contractor split equal more than 100% are in the "
+                    f"following years {years_of_max}"
+                ), UserWarning
+            )
             warnings.simplefilter("default", UserWarning)
+
         else:
             pass
 
         return years_of_max
 
-    def run(self,
-            sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
-            co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            is_dmo_end_weighted=False,
-            regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
-            tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
-            effective_tax_rate: float | np.ndarray = 0.22,
-            sunk_cost_reference_year: int = None,
-            depr_method: DeprMethod = DeprMethod.PSC_DB,
-            decline_factor: float | int = 2,
-            year_inflation: np.ndarray = None,
-            vat_rate: np.ndarray | float = 0.0,
-            inflation_rate: np.ndarray | float = 0.0,
-            inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
-            cum_production_split_offset: float | np.ndarray | None = 0.0,
-            amortization: bool = False,
-            sum_undepreciated_cost: bool = False
-            ):
+    def _get_tax_by_regime(self, tax_regime) -> np.ndarray:
+        """
+        Determine the tax rate array based on the tax regime and project years.
+
+        This method computes the tax rates for the project years depending on the specified
+        `tax_regime`. It uses predefined tax configurations for certain years (2013, 2016, 2020)
+        and allows for specific tax regimes that override these configurations. For tax regimes
+        like `NAILED_DOWN`, the tax rate is fixed based on the start year of the project.
+
+        Parameters
+        ----------
+        tax_regime : TaxRegime
+            The tax regime to be applied. It determines how tax rates are selected and can be
+            one of the following:
+            -   `TaxRegime.UU_07_2021`
+            -   `TaxRegime.UU_02_2020`
+            -   `TaxRegime.UU_36_2008`
+            -   `TaxRegime.NAILED_DOWN`
+
+        Returns
+        -------
+        tax_rate_arr : np.ndarray
+            A 1D array of tax rates for each project year. The tax rate is determined based on
+            the tax regime and the project's starting year in relation to the predefined tax
+            configurations.
+        """
+        tax_config = {
+            2013: 0.44,
+            2016: 0.42,
+            2020: 0.40
+        }
+
+        tax_rate_arr = np.full_like(
+            self.project_years, fill_value=tax_config[min(tax_config)], dtype=float
+        )
+
+        for year in tax_config:
+            indices = np.array(np.where(self.project_years >= year)).ravel()
+            tax_rate_arr[indices] = tax_config[year]
+
+        if tax_regime == TaxRegime.UU_07_2021:
+            tax_rate_arr = np.full_like(self.project_years, fill_value=0.40, dtype=float)
+
+        if tax_regime == TaxRegime.UU_02_2020:
+            tax_rate_arr = np.full_like(self.project_years, fill_value=0.42, dtype=float)
+
+        if tax_regime == TaxRegime.UU_36_2008:
+            tax_rate_arr = np.full_like(self.project_years, fill_value=0.44, dtype=float)
+
+        if tax_regime == TaxRegime.NAILED_DOWN:
+            if self.start_date.year >= max(tax_config):
+                tax_rate_arr = np.full_like(
+                    self.project_years, fill_value=tax_config[max(tax_config)], dtype=float
+                )
+            else:
+                tax_rate_arr = np.full_like(
+                    self.project_years, fill_value=tax_config[min(tax_config)], dtype=float
+                )
+
+        return tax_rate_arr
+
+    def run(
+        self,
+        sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
+        co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        is_dmo_end_weighted=False,
+        regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
+        tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
+        effective_tax_rate: float | np.ndarray = 0.22,
+        sunk_cost_reference_year: int = None,
+        depr_method: DeprMethod = DeprMethod.PSC_DB,
+        decline_factor: float | int = 2,
+        year_inflation: np.ndarray = None,
+        vat_rate: np.ndarray | float = 0.0,
+        inflation_rate: np.ndarray | float = 0.0,
+        inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
+        cum_production_split_offset: float | np.ndarray | None = 0.0,
+        amortization: bool = False,
+        sum_undepreciated_cost: bool = False
+    ):
 
         self._check_attributes()
 

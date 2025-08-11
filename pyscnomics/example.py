@@ -57,18 +57,27 @@ class ExampleCase:
             start_year=2023,
             end_year=2030,
             prod_year=np.array([2025, 2026, 2027, 2028, 2027, 2025]),
-            lifting_rate=np.array([10, 10, 10, 10, 10, 10]),
-            price=np.array([10, 10, 10, 10, 10, 10]),
+            lifting_rate=np.array([100, 100, 100, 200, 200, 200]),
+            price=np.array([10, 10, 10, 5, 5, 5]),
             fluid_type=FluidType.OIL,
         )
 
         self.lifting_apel = Lifting(
             start_year=2023,
             end_year=2030,
-            prod_year=np.array([2025, 2025, 2025]),
-            lifting_rate=np.array([np.nan, 10, None]),
-            price=np.array([2, 2, 2]),
+            prod_year=np.array([2025, 2026, 2027, 2028, 2027, 2025]),
+            lifting_rate=np.array([10, 10, 10, 20, 20, 20]),
+            price=np.array([2, 2, 2, 1, 1, 1]),
             fluid_type=FluidType.GAS,
+        )
+
+        self.lifting_nanas = Lifting(
+            start_year=2023,
+            end_year=2030,
+            prod_year=np.array([2025, 2026, 2027, 2028, 2027, 2025]),
+            lifting_rate=np.array([10, 10, 10, 20, 20, 20]),
+            price=np.array([2, 2, 2, 1, 1, 1]),
+            fluid_type=FluidType.SULFUR,
         )
 
     def _get_capital_cost_data(self):
@@ -82,6 +91,7 @@ class ExampleCase:
             cost=np.array([100, 100, 50, 50]),
             cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
             is_sunkcost=[False, False, True, True],
+            tax_portion=np.array([1, 1, 1, 1]),
         )
 
         self.capital_apel = CapitalCost(
@@ -91,6 +101,7 @@ class ExampleCase:
             cost=np.array([10, 10, 5, 5]),
             cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
             is_sunkcost=[False, False, True, True],
+            tax_portion=np.array([1, 1, 1, 1]),
         )
 
     def _get_intangible_cost_data(self):
@@ -115,6 +126,7 @@ class ExampleCase:
             cost=np.array([10, 10, 5, 5]),
             cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
             is_sunkcost=[False, False, True, True],
+            tax_portion=np.array([1, 1, 1, 1]),
         )
 
     def _get_opex_data(self):
@@ -128,6 +140,7 @@ class ExampleCase:
             fixed_cost=np.array([100, 100, 50, 50]),
             cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
             is_sunkcost=[False, False, True, True],
+            tax_portion=np.array([1, 1, 1, 1]),
         )
 
         self.opex_apel = OPEX(
@@ -137,6 +150,7 @@ class ExampleCase:
             fixed_cost=np.array([10, 10, 5, 5]),
             cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
             is_sunkcost=[False, False, True, True],
+            tax_portion=np.array([1, 1, 1, 1]),
         )
 
     def _get_asr_cost_data(self):
@@ -150,6 +164,7 @@ class ExampleCase:
             cost=np.array([100, 100, 50, 50]),
             cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
             is_sunkcost=[False, False, True, True],
+            tax_portion=np.array([1, 1, 1, 1]),
         )
 
         self.asr_apel = ASR(
@@ -159,6 +174,7 @@ class ExampleCase:
             cost=np.array([10, 10, 5, 5]),
             cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
             is_sunkcost=[False, False, True, True],
+            tax_portion=np.array([1, 1, 1, 1]),
         )
 
     def _get_lbt_cost_data(self):
@@ -173,6 +189,7 @@ class ExampleCase:
             cost=np.array([100, 100, 50, 50]),
             cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
             is_sunkcost=[False, False, True, True],
+            tax_portion=np.array([1, 1, 1, 1]),
         )
 
         self.lbt_apel = LBT(
@@ -182,6 +199,7 @@ class ExampleCase:
             cost=np.array([10, 10, 5, 5]),
             cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
             is_sunkcost=[False, False, True, True],
+            tax_portion=np.array([1, 1, 1, 1]),
         )
 
     def _get_cost_of_sales_data(self):
