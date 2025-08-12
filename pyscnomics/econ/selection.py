@@ -736,6 +736,10 @@ class SunkCostMethod(Enum):
 
 
 class CashflowType(Enum):
+    """
+    Options for cashflow type.
+    """
+
     OIL = "Oil"
     GAS = "Gas"
     CONSOLIDATED = "Consolidated"
