@@ -733,3 +733,9 @@ class SunkCostMethod(Enum):
     DIRECT = (
         "Sunk Cost will be directly applied to the cashflow based on the expense year"
     )
+
+
+class CashflowType(Enum):
+    OIL = "Oil"
+    GAS = "Gas"
+    CONSOLIDATED = "Consolidated"

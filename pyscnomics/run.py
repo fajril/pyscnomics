@@ -5,6 +5,7 @@ from pyscnomics.econ.selection import (
     DeprMethod,
     InflationAppliedTo,
     OtherRevenue,
+    CashflowType,
 )
 from datetime import date
 from pyscnomics.contracts.project import BaseProject
@@ -28,13 +29,24 @@ pr = BaseProject(
     cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
 )
 
-pr.run(
-    sulfur_revenue=OtherRevenue.ADDITION_TO_OIL_REVENUE,
-    year_inflation=None,
-    inflation_rate=0.,
-    inflation_rate_applied_to=InflationAppliedTo.CAPEX_AND_OPEX,
-    tax_rate=0.1,
-)
+# pr.run(
+#     sulfur_revenue=OtherRevenue.ADDITION_TO_OIL_REVENUE,
+#     year_inflation=None,
+#     inflation_rate=0.,
+#     inflation_rate_applied_to=InflationAppliedTo.CAPEX_AND_OPEX,
+#     tax_rate=0.1,
+# )
+
+# pr.cashflow_calculate(
+#     sulfur_revenue=OtherRevenue.ADDITION_TO_OIL_REVENUE,
+#     year_inflation=None,
+#     inflation_rate=0.,
+#     inflation_rate_applied_to=InflationAppliedTo.CAPEX_AND_OPEX,
+#     tax_rate=0.1,
+# )
+
+t1 = pr.get_oil_cashflow_table()
+t2 = pr.get_gas_cashflow_table()
 
 # pr.run(
 #     prod_year=np.array([2027, 2028]),
@@ -73,12 +85,12 @@ pr.run(
 # print(f'Length: {len()}')
 # print()
 
-# print('\t')
-# print(f'Filetype: {type(t1)}')
-# print(f'Length: {len(t1)}')
-# print('t1 = \n', t1)
+print('\t')
+print(f'Filetype: {type(t1)}')
+print(f'Length: {len(t1)}')
+print('t1 = \n', t1)
 
-# print('\t')
-# print(f'Filetype: {type(t2)}')
-# print(f'Length: {len(t2)}')
-# print('t2 = \n', t2)
+print('\t')
+print(f'Filetype: {type(t2)}')
+print(f'Length: {len(t2)}')
+print('t2 = \n', t2)
