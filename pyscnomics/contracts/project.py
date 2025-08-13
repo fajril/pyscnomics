@@ -327,6 +327,7 @@ class BaseProject:
     )
 
     # Attributes to be defined later (associated with consolidated cashflow)
+    _consolidated_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
@@ -3028,12 +3029,7 @@ class BaseProject:
             + self._gas_cost_of_sales_expenditures_pre_tax
         )
         self._consolidated_expenditures_pre_tax = (
-            self._consolidated_capital_expenditures_pre_tax
-            + self._consolidated_intangible_expenditures_pre_tax
-            + self._consolidated_opex_expenditures_pre_tax
-            + self._consolidated_asr_expenditures_pre_tax
-            + self._consolidated_lbt_expenditures_pre_tax
-            + self._consolidated_cost_of_sales_expenditures_pre_tax
+            self._oil_total_expenditures_pre_tax + self._gas_total_expenditures_pre_tax
         )
 
         # Attributes associated with consolidated indirect tax
@@ -3056,12 +3052,7 @@ class BaseProject:
             self._oil_cost_of_sales_indirect_tax + self._gas_cost_of_sales_indirect_tax
         )
         self._consolidated_indirect_tax = (
-            self._consolidated_capital_indirect_tax
-            + self._consolidated_intangible_indirect_tax
-            + self._consolidated_opex_indirect_tax
-            + self._consolidated_asr_indirect_tax
-            + self._consolidated_lbt_indirect_tax
-            + self._consolidated_cost_of_sales_indirect_tax
+            self._oil_total_indirect_tax + self._gas_total_indirect_tax
         )
 
         # Attributes associated with consolidated expenditures post tax
@@ -3086,16 +3077,13 @@ class BaseProject:
             self._oil_cost_of_sales_expenditures_post_tax
             + self._gas_cost_of_sales_expenditures_post_tax
         )
+
         self._consolidated_expenditures_post_tax = (
-            self._consolidated_capital_expenditures_post_tax
-            + self._consolidated_intangible_expenditures_post_tax
-            + self._consolidated_opex_expenditures_post_tax
-            + self._consolidated_asr_expenditures_post_tax
-            + self._consolidated_lbt_expenditures_post_tax
-            + self._consolidated_cost_of_sales_expenditures_post_tax
+            self._oil_total_expenditures_post_tax + self._gas_total_expenditures_post_tax
         )
 
         # Attribute associated with consolidated cashflow
+        self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
         self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
 
     def run(
