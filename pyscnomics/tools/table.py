@@ -308,8 +308,8 @@ def get_table(
         psc_table_consolidated['C_Contractor_Share'] = contract._consolidated_gov_share_before_tf
         psc_table_consolidated['C_Depreciation'] = contract._consolidated_depreciation
         psc_table_consolidated['C_Amortization'] = contract._consolidated_amortization
-        psc_table_consolidated['C_Opex'] = contract._consolidated_opex
-        psc_table_consolidated['C_ASR'] = contract._consolidated_asr
+        psc_table_consolidated['C_Opex'] = contract._consolidated_opex_expenditures_post_tax
+        psc_table_consolidated['C_ASR'] = contract._consolidated_asr_expenditures_post_tax
         psc_table_consolidated['C_Non_Capital'] = contract._consolidated_non_capital
         psc_table_consolidated['C_Total_Expenses'] = contract._consolidated_total_expenses
         psc_table_consolidated['C_Cost_To_Be_Deducted'] = contract._consolidated_cost_tobe_deducted
@@ -464,10 +464,10 @@ def get_table(
             psc_table_consolidated_1[
                 'Lifting_gas'] = contract._contract1_transitioned._gas_lifting.get_lifting_rate_ghv_arr()
             psc_table_consolidated_1['C_Revenue'] = contract._contract1_transitioned._consolidated_revenue
-            psc_table_consolidated_1['C_Depreciable'] = contract._contract1_transitioned._consolidated_capital_cost
-            psc_table_consolidated_1['C_Intangible'] = contract._contract1_transitioned._consolidated_intangible
-            psc_table_consolidated_1['C_Opex'] = contract._contract1_transitioned._consolidated_opex
-            psc_table_consolidated_1['C_ASR'] = contract._contract1_transitioned._consolidated_asr
+            psc_table_consolidated_1['C_Depreciable'] = contract._contract1_transitioned._consolidated_capital_expenditures_post_tax
+            psc_table_consolidated_1['C_Intangible'] = contract._contract1_transitioned._consolidated_intangible_expenditures_post_tax
+            psc_table_consolidated_1['C_Opex'] = contract._contract1_transitioned._consolidated_opex_expenditures_post_tax
+            psc_table_consolidated_1['C_ASR'] = contract._contract1_transitioned._consolidated_asr_expenditures_post_tax
             psc_table_consolidated_1['C_Depreciation'] = contract._contract1_transitioned._consolidated_depreciation
             psc_table_consolidated_1['C_Non_Capital'] = contract._contract1_transitioned._consolidated_non_capital
             psc_table_consolidated_1['C_FTP'] = contract._contract1_transitioned._consolidated_ftp
@@ -639,8 +639,8 @@ def get_table(
             psc_table_consolidated_1['C_Contractor_Share'] = contract._contract1_transitioned._consolidated_gov_share_before_tf
             psc_table_consolidated_1['C_Depreciation'] = contract._contract1_transitioned._consolidated_depreciation
             psc_table_consolidated_1['C_Amortization'] = contract._contract1_transitioned._consolidated_amortization
-            psc_table_consolidated_1['C_Opex'] = contract._contract1_transitioned._consolidated_opex
-            psc_table_consolidated_1['C_ASR'] = contract._contract1_transitioned._consolidated_asr
+            psc_table_consolidated_1['C_Opex'] = contract._contract1_transitioned._consolidated_opex_expenditures_post_tax
+            psc_table_consolidated_1['C_ASR'] = contract._contract1_transitioned._consolidated_asr_expenditures_post_tax
             psc_table_consolidated_1['C_Non_Capital'] = contract._contract1_transitioned._consolidated_non_capital
             psc_table_consolidated_1['C_Total_Expenses'] = contract._contract1_transitioned._consolidated_total_expenses
             psc_table_consolidated_1['C_Cost_To_Be_Deducted'] = contract._contract1_transitioned._consolidated_cost_tobe_deducted
@@ -786,10 +786,10 @@ def get_table(
             psc_table_consolidated_2[
                 'Lifting_gas'] = contract._contract2_transitioned._gas_lifting.get_lifting_rate_ghv_arr()
             psc_table_consolidated_2['C_Revenue'] = contract._contract2_transitioned._consolidated_revenue
-            psc_table_consolidated_2['C_Depreciable'] = contract._contract2_transitioned._consolidated_capital_cost
-            psc_table_consolidated_2['C_Intangible'] = contract._contract2_transitioned._consolidated_intangible
-            psc_table_consolidated_2['C_Opex'] = contract._contract2_transitioned._consolidated_opex
-            psc_table_consolidated_2['C_ASR'] = contract._contract2_transitioned._consolidated_asr
+            psc_table_consolidated_2['C_Depreciable'] = contract._contract2_transitioned._consolidated_capital_expenditures_post_tax
+            psc_table_consolidated_2['C_Intangible'] = contract._contract2_transitioned._consolidated_intangible_expenditures_post_tax
+            psc_table_consolidated_2['C_Opex'] = contract._contract2_transitioned._consolidated_opex_expenditures_post_tax
+            psc_table_consolidated_2['C_ASR'] = contract._contract2_transitioned._consolidated_asr_expenditures_post_tax
             psc_table_consolidated_2['C_Depreciation'] = contract._contract2_transitioned._consolidated_depreciation
             psc_table_consolidated_2['C_Non_Capital'] = contract._contract2_transitioned._consolidated_non_capital
             psc_table_consolidated_2['C_FTP'] = contract._contract2_transitioned._consolidated_ftp
@@ -965,8 +965,8 @@ def get_table(
                 'C_Contractor_Share'] = contract._contract2_transitioned._consolidated_gov_share_before_tf
             psc_table_consolidated_2['C_Depreciation'] = contract._contract2_transitioned._consolidated_depreciation
             psc_table_consolidated_2['C_Amortization'] = contract._contract2_transitioned._consolidated_amortization
-            psc_table_consolidated_2['C_Opex'] = contract._contract2_transitioned._consolidated_opex
-            psc_table_consolidated_2['C_ASR'] = contract._contract2_transitioned._consolidated_asr
+            psc_table_consolidated_2['C_Opex'] = contract._contract2_transitioned._consolidated_opex_expenditures_post_tax
+            psc_table_consolidated_2['C_ASR'] = contract._contract2_transitioned._consolidated_asr_expenditures_post_tax
             psc_table_consolidated_2['C_Non_Capital'] = contract._contract2_transitioned._consolidated_non_capital
             psc_table_consolidated_2['C_Total_Expenses'] = contract._contract2_transitioned._consolidated_total_expenses
             psc_table_consolidated_2[

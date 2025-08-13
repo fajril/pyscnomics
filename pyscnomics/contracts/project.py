@@ -13,7 +13,6 @@ from pyscnomics.econ.selection import (
     ExpendituresType,
     OtherRevenue,
     InflationAppliedTo,
-    CashflowType,
 )
 from pyscnomics.econ.costs import (
     CapitalCost,
@@ -246,15 +245,25 @@ class BaseProject:
     _oil_cashflow: np.ndarray = field(default=None, init=False, repr=False)
     _gas_cashflow: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with consolidated profiles)
+    # Attributes to be defined later (associated with consolidated lifting)
     _consolidated_lifting: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_wap_price: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes to be defined later (associated with consolidated sunk cost)
+    _consolidated_capital_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_intangible_sunk_cost: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_opex_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_asr_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_lbt_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_cost_of_sales_sunk_cost: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
     _consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
 
-    _consolidated_capital_sunk_cost
-
-
+    # Attributes to be defined later (associated with consolidated expenditures pre tax)
     _consolidated_capital_expenditures_pre_tax: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -277,10 +286,47 @@ class BaseProject:
         default=None, init=False, repr=False
     )
 
-    _consolidated_capital_indirect_tax
-    _consolidated_intangible_indirect_tax
+    # Attributes to be defined later (associated with consolidated indirect tax)
+    _consolidated_capital_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_intangible_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_opex_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_asr_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_lbt_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_cost_of_sales_indirect_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Attributes to be defined later (associated with consolidated expenditures post tax)
+    _consolidated_capital_expenditures_post_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_intangible_expenditures_post_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_opex_expenditures_post_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_asr_expenditures_post_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_lbt_expenditures_post_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_cost_of_sales_expenditures_post_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_expenditures_post_tax: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
 
+    # Attributes to be defined later (associated with consolidated cashflow)
     _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
@@ -2916,29 +2962,140 @@ class BaseProject:
 
     def _get_consolidated_profiles(self) -> None:
         """
-        Consolidates oil and gas profiles into combined project profiles.
+        Aggregates oil and gas profiles into consolidated project-wide profiles.
 
-        This method computes the total revenue, sunk cost, and cash flow by summing the
-        corresponding oil and gas profiles. The consolidated results are stored in
-        instance attributes for later use.
+        This method sums corresponding oil and gas arrays to produce consolidated
+        lifting, prices, revenues, sunk costs, expenditures (pre- and post-tax),
+        indirect taxes, and cash flows. The results are stored in instance attributes
+        for further use.
 
         Returns
         -------
         None
-            This method updates the following instance attributes in place:
-            - `_consolidated_revenue` : Combined oil and gas revenue.
-            - `_consolidated_sunk_cost` : Combined oil and gas sunk costs.
-            - `_consolidated_cashflow` : Combined oil and gas cash flows.
+            Updates instance attributes with consolidated values.
 
         Notes
         -----
-        - The attributes `_oil_revenue`, `_gas_revenue`, `_oil_sunk_cost`, `_gas_sunk_cost`,
-          `_oil_cashflow`, and `_gas_cashflow` must be defined before calling this method.
-        - All attributes must be compatible for element-wise addition (e.g., same shape).
+        - All oil and gas attributes must be defined and have matching shapes.
+        - Consolidation is performed via element-wise addition.
         """
 
+        # Attributes associated with consolidated lifting
+        self._consolidated_lifting = (
+            self._oil_lifting.get_lifting_rate_arr()
+            + self._gas_lifting.get_lifting_rate_arr()
+        )
+        self._consolidated_wap_price = self._oil_wap_price + self._gas_wap_price
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue
+
+        # Attributes associated with consolidated sunkcost
+        self._consolidated_capital_sunk_cost = (
+            self._oil_capital_sunk_cost + self._gas_capital_sunk_cost
+        )
+        self._consolidated_intangible_sunk_cost = (
+            self._oil_intangible_sunk_cost + self._gas_intangible_sunk_cost
+        )
+        self._consolidated_opex_sunk_cost = (
+            self._oil_opex_sunk_cost + self._gas_opex_sunk_cost
+        )
+        self._consolidated_asr_sunk_cost = self._oil_asr_sunk_cost + self._gas_asr_sunk_cost
+        self._consolidated_lbt_sunk_cost = self._oil_lbt_sunk_cost + self._gas_lbt_sunk_cost
+        self._consolidated_cost_of_sales_sunk_cost = (
+            self._oil_cost_of_sales_sunk_cost + self._gas_cost_of_sales_sunk_cost
+        )
         self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
+
+        # Attributes associated with consolidated expenditures pre tax
+        self._consolidated_capital_expenditures_pre_tax = (
+            self._oil_capital_expenditures_pre_tax
+            + self._gas_capital_expenditures_pre_tax
+        )
+        self._consolidated_intangible_expenditures_pre_tax = (
+            self._oil_intangible_expenditures_pre_tax
+            + self._gas_intangible_expenditures_pre_tax
+        )
+        self._consolidated_opex_expenditures_pre_tax = (
+            self._oil_opex_expenditures_pre_tax + self._gas_opex_expenditures_pre_tax
+        )
+        self._consolidated_asr_expenditures_pre_tax = (
+            self._oil_asr_expenditures_pre_tax + self._gas_asr_expenditures_pre_tax
+        )
+        self._consolidated_lbt_expenditures_pre_tax = (
+            self._oil_lbt_expenditures_pre_tax + self._gas_lbt_expenditures_pre_tax
+        )
+        self._consolidated_cost_of_sales_expenditures_pre_tax = (
+            self._oil_cost_of_sales_expenditures_pre_tax
+            + self._gas_cost_of_sales_expenditures_pre_tax
+        )
+        self._consolidated_expenditures_pre_tax = (
+            self._consolidated_capital_expenditures_pre_tax
+            + self._consolidated_intangible_expenditures_pre_tax
+            + self._consolidated_opex_expenditures_pre_tax
+            + self._consolidated_asr_expenditures_pre_tax
+            + self._consolidated_lbt_expenditures_pre_tax
+            + self._consolidated_cost_of_sales_expenditures_pre_tax
+        )
+
+        # Attributes associated with consolidated indirect tax
+        self._consolidated_capital_indirect_tax = (
+            self._oil_capital_indirect_tax + self._gas_capital_indirect_tax
+        )
+        self._consolidated_intangible_indirect_tax = (
+            self._oil_intangible_indirect_tax + self._gas_intangible_indirect_tax
+        )
+        self._consolidated_opex_indirect_tax = (
+            self._oil_opex_indirect_tax + self._gas_opex_indirect_tax
+        )
+        self._consolidated_asr_indirect_tax = (
+            self._oil_asr_indirect_tax + self._gas_asr_indirect_tax
+        )
+        self._consolidated_lbt_indirect_tax = (
+            self._oil_lbt_indirect_tax + self._gas_lbt_indirect_tax
+        )
+        self._consolidated_cost_of_sales_indirect_tax = (
+            self._oil_cost_of_sales_indirect_tax + self._gas_cost_of_sales_indirect_tax
+        )
+        self._consolidated_indirect_tax = (
+            self._consolidated_capital_indirect_tax
+            + self._consolidated_intangible_indirect_tax
+            + self._consolidated_opex_indirect_tax
+            + self._consolidated_asr_indirect_tax
+            + self._consolidated_lbt_indirect_tax
+            + self._consolidated_cost_of_sales_indirect_tax
+        )
+
+        # Attributes associated with consolidated expenditures post tax
+        self._consolidated_capital_expenditures_post_tax = (
+            self._oil_capital_expenditures_post_tax
+            + self._gas_capital_expenditures_post_tax
+        )
+        self._consolidated_intangible_expenditures_post_tax = (
+            self._oil_intangible_expenditures_post_tax
+            + self._gas_intangible_expenditures_post_tax
+        )
+        self._consolidated_opex_expenditures_post_tax = (
+            self._oil_opex_expenditures_post_tax + self._gas_opex_expenditures_post_tax
+        )
+        self._consolidated_asr_expenditures_post_tax = (
+            self._oil_asr_expenditures_post_tax + self._gas_asr_expenditures_post_tax
+        )
+        self._consolidated_lbt_expenditures_post_tax = (
+            self._oil_lbt_expenditures_post_tax + self._gas_lbt_expenditures_post_tax
+        )
+        self._consolidated_cost_of_sales_expenditures_post_tax = (
+            self._oil_cost_of_sales_expenditures_post_tax
+            + self._gas_cost_of_sales_expenditures_post_tax
+        )
+        self._consolidated_expenditures_post_tax = (
+            self._consolidated_capital_expenditures_post_tax
+            + self._consolidated_intangible_expenditures_post_tax
+            + self._consolidated_opex_expenditures_post_tax
+            + self._consolidated_asr_expenditures_post_tax
+            + self._consolidated_lbt_expenditures_post_tax
+            + self._consolidated_cost_of_sales_expenditures_post_tax
+        )
+
+        # Attribute associated with consolidated cashflow
         self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
 
     def run(
@@ -2951,6 +3108,31 @@ class BaseProject:
         inflation_rate: np.ndarray | float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo = None,
     ) -> None:
+        """
+        Executes the full economic calculation workflow for a base project.
+
+        This method performs the complete sequence of calculations required to produce
+        oil, gas, and consolidated economic profiles. It validates sunk costs, computes
+        expenditures (pre-tax and post-tax), indirect taxes, other revenues, and
+        cashflows, then prepares the consolidated profiles for reporting or further analysis.
+
+        Parameters
+        ----------
+        sulfur_revenue : OtherRevenue, default=OtherRevenue.ADDITION_TO_GAS_REVENUE
+            How sulfur revenue is allocated (e.g., added to gas revenue or treated separately).
+        electricity_revenue : OtherRevenue, default=OtherRevenue.ADDITION_TO_OIL_REVENUE
+            How electricity revenue is allocated.
+        co2_revenue : OtherRevenue, default=OtherRevenue.ADDITION_TO_GAS_REVENUE
+            How CO₂ revenue is allocated.
+        tax_rate : np.ndarray or float, default=0.0
+            Indirect tax rate(s) applied to applicable expenditures.
+        year_inflation : np.ndarray, optional
+            Array specifying the inflation year for each time step.
+        inflation_rate : np.ndarray or float, default=0.0
+            Inflation rate(s) to be applied.
+        inflation_rate_applied_to : InflationAppliedTo, optional
+            Specifies which expenditures the inflation rate should be applied to.
+        """
 
         # WAP (Weighted Average Price) for each produced fluid
         self._get_wap_price()
@@ -3027,62 +3209,62 @@ class BaseProject:
 
         # Total OIL pre-tax expenditures
         self._oil_total_expenditures_pre_tax = (
-            self._oil_capital_expenditures_pre_tax +
-            self._oil_intangible_expenditures_pre_tax +
-            self._oil_opex_expenditures_pre_tax +
-            self._oil_asr_expenditures_pre_tax +
-            self._oil_lbt_expenditures_pre_tax +
-            self._oil_cost_of_sales_expenditures_pre_tax
+            self._oil_capital_expenditures_pre_tax
+            + self._oil_intangible_expenditures_pre_tax
+            + self._oil_opex_expenditures_pre_tax
+            + self._oil_asr_expenditures_pre_tax
+            + self._oil_lbt_expenditures_pre_tax
+            + self._oil_cost_of_sales_expenditures_pre_tax
         )
 
         # Total GAS pre-tax expenditures
         self._gas_total_expenditures_pre_tax = (
-            self._gas_capital_expenditures_pre_tax +
-            self._gas_intangible_expenditures_pre_tax +
-            self._gas_opex_expenditures_pre_tax +
-            self._gas_asr_expenditures_pre_tax +
-            self._gas_lbt_expenditures_pre_tax +
-            self._gas_cost_of_sales_expenditures_pre_tax
+            self._gas_capital_expenditures_pre_tax
+            + self._gas_intangible_expenditures_pre_tax
+            + self._gas_opex_expenditures_pre_tax
+            + self._gas_asr_expenditures_pre_tax
+            + self._gas_lbt_expenditures_pre_tax
+            + self._gas_cost_of_sales_expenditures_pre_tax
         )
 
         # Total OIL indirect taxes
         self._oil_total_indirect_tax = (
-            self._oil_capital_indirect_tax +
-            self._oil_intangible_indirect_tax +
-            self._oil_opex_indirect_tax +
-            self._oil_asr_indirect_tax +
-            self._oil_lbt_indirect_tax +
-            self._oil_cost_of_sales_indirect_tax
+            self._oil_capital_indirect_tax
+            + self._oil_intangible_indirect_tax
+            + self._oil_opex_indirect_tax
+            + self._oil_asr_indirect_tax
+            + self._oil_lbt_indirect_tax
+            + self._oil_cost_of_sales_indirect_tax
         )
 
         # Total GAS indirect taxes
         self._gas_total_indirect_tax = (
-            self._gas_capital_indirect_tax +
-            self._gas_intangible_indirect_tax +
-            self._gas_opex_indirect_tax +
-            self._gas_asr_indirect_tax +
-            self._gas_lbt_indirect_tax +
-            self._gas_cost_of_sales_indirect_tax
+            self._gas_capital_indirect_tax
+            + self._gas_intangible_indirect_tax
+            + self._gas_opex_indirect_tax
+            + self._gas_asr_indirect_tax
+            + self._gas_lbt_indirect_tax
+            + self._gas_cost_of_sales_indirect_tax
         )
 
         # Total OIL post-tax expenditures
         self._oil_total_expenditures_post_tax = (
-            self._oil_capital_expenditures_post_tax +
-            self._oil_intangible_expenditures_post_tax +
-            self._oil_opex_expenditures_post_tax +
-            self._oil_asr_expenditures_post_tax +
-            self._oil_lbt_expenditures_post_tax +
-            self._oil_cost_of_sales_expenditures_post_tax
+            self._oil_capital_expenditures_post_tax
+            + self._oil_intangible_expenditures_post_tax
+            + self._oil_opex_expenditures_post_tax
+            + self._oil_asr_expenditures_post_tax
+            + self._oil_lbt_expenditures_post_tax
+            + self._oil_cost_of_sales_expenditures_post_tax
         )
 
         # Total GAS post-tax expenditures
         self._gas_total_expenditures_post_tax = (
-            self._gas_capital_expenditures_post_tax +
-            self._gas_intangible_expenditures_post_tax +
-            self._gas_opex_expenditures_post_tax +
-            self._gas_asr_expenditures_post_tax +
-            self._gas_lbt_expenditures_post_tax +
-            self._gas_cost_of_sales_expenditures_post_tax
+            self._gas_capital_expenditures_post_tax
+            + self._gas_intangible_expenditures_post_tax
+            + self._gas_opex_expenditures_post_tax
+            + self._gas_asr_expenditures_post_tax
+            + self._gas_lbt_expenditures_post_tax
+            + self._gas_cost_of_sales_expenditures_post_tax
         )
 
         # Non-capital costs (intangible + opex + asr + lbt + cost of sales)

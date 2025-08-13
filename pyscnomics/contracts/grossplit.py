@@ -282,11 +282,11 @@ class GrossSplit(BaseProject):
     _consolidated_carry_forward_depreciation: np.ndarray = field(
         default=None, init=False, repr=False
     )
-    _consolidated_capital_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_intangible: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_opex: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_asr: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_lbt: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_capital_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_intangible_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_opex_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_asr_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_lbt_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_undepreciated_asset: np.ndarray = field(
@@ -1567,12 +1567,15 @@ class GrossSplit(BaseProject):
         self._consolidated_amortization = self._oil_amortization + self._gas_amortization
 
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue
-        self._consolidated_capital_cost = self._oil_capital_expenditures_post_tax + self._gas_capital_expenditures_post_tax
-        self._consolidated_intangible = self._oil_intangible_expenditures_post_tax + self._gas_intangible_expenditures_post_tax
+
+        self._consolidated_capital_expenditures_post_tax = self._oil_capital_expenditures_post_tax + self._gas_capital_expenditures_post_tax
+        self._consolidated_intangible_expenditures_post_tax = self._oil_intangible_expenditures_post_tax + self._gas_intangible_expenditures_post_tax
         self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
-        self._consolidated_opex = self._oil_opex_expenditures_post_tax + self._gas_opex_expenditures_post_tax
-        self._consolidated_asr = self._oil_asr_expenditures_post_tax + self._gas_asr_expenditures_post_tax
-        self._consolidated_lbt = self._oil_lbt_expenditures_post_tax + self._gas_lbt_expenditures_post_tax
+        self._consolidated_opex_expenditures_post_tax = self._oil_opex_expenditures_post_tax + self._gas_opex_expenditures_post_tax
+        self._consolidated_asr_expenditures_post_tax = self._oil_asr_expenditures_post_tax + self._gas_asr_expenditures_post_tax
+        self._consolidated_lbt_expenditures_post_tax = self._oil_lbt_expenditures_post_tax + self._gas_lbt_expenditures_post_tax
+        self._consolidated_cost_of_sales_expenditures_post_tax = self._oil_cost_of_sales_expenditures_post_tax + self._gas_cost_of_sales_expenditures_post_tax
+
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
         self._consolidated_depreciation = self._oil_depreciation + self._gas_depreciation
         self._consolidated_undepreciated_asset = self._oil_undepreciated_asset + self._gas_undepreciated_asset
