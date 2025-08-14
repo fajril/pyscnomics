@@ -93,18 +93,33 @@ class ExampleCase:
                 FluidType.OIL, FluidType.OIL, FluidType.OIL,
                 FluidType.OIL, FluidType.OIL, FluidType.OIL,
             ],
-            is_sunkcost=[False, False, True, True, True, True],
+            # cost_allocation=[
+            #     FluidType.GAS, FluidType.GAS, FluidType.GAS,
+            #     FluidType.GAS, FluidType.GAS, FluidType.GAS,
+            # ],
+            is_sunkcost=[True, True, True, True, True, True],
+            # is_sunkcost=[False, False, False, False, False, False],
+            # is_sunkcost=[False, False, True, True, True, True],
             tax_portion=np.array([1, 1, 1, 1, 1, 1]),
         )
 
         self.capital_apel = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([10, 10, 5, 5]),
-            cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
-            is_sunkcost=[False, False, True, True],
-            tax_portion=np.array([1, 1, 1, 1]),
+            expense_year=np.array([2023, 2024, 2025, 2024, 2026, 2027]),
+            cost=np.array([10, 10, 5, 5, 2.5, 2.5]),
+            # cost_allocation=[
+            #     FluidType.OIL, FluidType.OIL, FluidType.OIL,
+            #     FluidType.OIL, FluidType.OIL, FluidType.OIL,
+            # ],
+            cost_allocation=[
+                FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                FluidType.GAS, FluidType.GAS, FluidType.GAS,
+            ],
+            # is_sunkcost=[True, True, True, True, True, True],
+            # is_sunkcost=[False, False, False, False, False, False],
+            is_sunkcost=[False, False, True, True, True, True],
+            tax_portion=np.array([1, 1, 1, 1, 1, 1]),
         )
 
     def _get_intangible_cost_data(self):
@@ -115,21 +130,38 @@ class ExampleCase:
         self.intangible_mangga = Intangible(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([100, 100, 50, 50]),
-            cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
-            is_sunkcost=[False, False, True, True],
-            tax_portion=np.array([1, 1, 1, 1]),
+            expense_year=np.array([2023, 2024, 2025, 2024, 2026, 2027]),
+            cost=np.array([100, 100, 50, 50, 25, 25]),
+            # cost_allocation=[
+            #     FluidType.OIL, FluidType.OIL, FluidType.OIL,
+            #     FluidType.OIL, FluidType.OIL, FluidType.OIL,
+            # ],
+            cost_allocation=[
+                FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                FluidType.GAS, FluidType.GAS, FluidType.GAS,
+            ],
+            # is_sunkcost=[True, True, True, True, True, True],
+            # is_sunkcost=[False, False, False, False, False, False],
+            is_sunkcost=[False, False, True, True, True, True],
+            tax_portion=np.array([1, 1, 1, 1, 1, 1]),
         )
 
         self.intangible_apel = Intangible(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([10, 10, 5, 5]),
-            cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
-            is_sunkcost=[False, False, True, True],
-            tax_portion=np.array([1, 1, 1, 1]),
+            expense_year=np.array([2023, 2024, 2025, 2024, 2026, 2027]),
+            cost=np.array([10, 10, 5, 5, 2.5, 2.5]),
+            # cost_allocation=[
+            #     FluidType.OIL, FluidType.OIL, FluidType.OIL,
+            #     FluidType.OIL, FluidType.OIL, FluidType.OIL,
+            # ],
+            cost_allocation=[
+                FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                FluidType.GAS, FluidType.GAS, FluidType.GAS,
+            ],
+            # is_sunkcost=[True, True, True, True, True, True],
+            # is_sunkcost=[False, False, False, False, False, False],
+            tax_portion=np.array([1, 1, 1, 1, 1, 1]),
         )
 
     def _get_opex_data(self):

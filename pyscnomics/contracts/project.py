@@ -155,6 +155,27 @@ class BaseProject:
     _oil_cost_of_sales_sunk_cost: CostOfSales = field(default=None, init=False, repr=False)
     _gas_cost_of_sales_sunk_cost: CostOfSales = field(default=None, init=False, repr=False)
 
+    # _oil_capital_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
+    # _gas_capital_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
+    # _oil_intangible_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
+    # _gas_intangible_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
+    # _oil_opex_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
+    # _gas_opex_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
+    # _oil_asr_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
+    # _gas_asr_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
+    # _oil_lbt_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
+    # _gas_lbt_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
+    # _oil_cost_of_sales_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
+    # _gas_cost_of_sales_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
+
+    _oil_tangible_sunkcost_total: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_tangible_sunkcost_total: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_intangible_sunkcost_total: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_intangible_sunkcost_total: np.ndarray = field(default=None, init=False, repr=False)
+
+    # _tangible_sunkcost_total: dict = field(default=None, init=False, repr=False)
+    # _intangible_sunkcost_total: dict = field(default=None, init=False, repr=False)
+
     # Attributes to be defined later (associated with sunk cost)
     _oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _gas_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
@@ -694,168 +715,168 @@ class BaseProject:
         # Prepare attributes associated with costs
         self._oil_capital_cost = self._get_oil_capital()
         self._gas_capital_cost = self._get_gas_capital()
-        self._oil_intangible = self._get_oil_intangible()
-        self._gas_intangible = self._get_gas_intangible()
-        self._oil_opex = self._get_oil_opex()
-        self._gas_opex = self._get_gas_opex()
-        self._oil_asr = self._get_oil_asr()
-        self._gas_asr = self._get_gas_asr()
-        self._oil_lbt = self._get_oil_lbt()
-        self._gas_lbt = self._get_gas_lbt()
-        self._oil_cost_of_sales = self._get_oil_cost_of_sales()
-        self._gas_cost_of_sales = self._get_gas_cost_of_sales()
+        # self._oil_intangible = self._get_oil_intangible()
+        # self._gas_intangible = self._get_gas_intangible()
+        # self._oil_opex = self._get_oil_opex()
+        # self._gas_opex = self._get_gas_opex()
+        # self._oil_asr = self._get_oil_asr()
+        # self._gas_asr = self._get_gas_asr()
+        # self._oil_lbt = self._get_oil_lbt()
+        # self._gas_lbt = self._get_gas_lbt()
+        # self._oil_cost_of_sales = self._get_oil_cost_of_sales()
+        # self._gas_cost_of_sales = self._get_gas_cost_of_sales()
 
         # Prepare attributes associated with sunk costs
         self._oil_capital_sunk_cost = self._get_oil_capital_sunk_cost()
         self._gas_capital_sunk_cost = self._get_gas_capital_sunk_cost()
-        self._oil_intangible_sunk_cost = self._get_oil_intangible_sunk_cost()
-        self._gas_intangible_sunk_cost = self._get_gas_intangible_sunk_cost()
-        self._oil_opex_sunk_cost = self._get_oil_opex_sunk_cost()
-        self._gas_opex_sunk_cost = self._get_gas_opex_sunk_cost()
-        self._oil_asr_sunk_cost = self._get_oil_asr_sunk_cost()
-        self._gas_asr_sunk_cost = self._get_gas_asr_sunk_cost()
-        self._oil_lbt_sunk_cost = self._get_oil_lbt_sunk_cost()
-        self._gas_lbt_sunk_cost = self._get_gas_lbt_sunk_cost()
-        self._oil_cost_of_sales_sunk_cost = self._get_oil_cost_of_sales_sunk_cost()
-        self._gas_cost_of_sales_sunk_cost = self._get_gas_cost_of_sales_sunk_cost()
+        # self._oil_intangible_sunk_cost = self._get_oil_intangible_sunk_cost()
+        # self._gas_intangible_sunk_cost = self._get_gas_intangible_sunk_cost()
+        # self._oil_opex_sunk_cost = self._get_oil_opex_sunk_cost()
+        # self._gas_opex_sunk_cost = self._get_gas_opex_sunk_cost()
+        # self._oil_asr_sunk_cost = self._get_oil_asr_sunk_cost()
+        # self._gas_asr_sunk_cost = self._get_gas_asr_sunk_cost()
+        # self._oil_lbt_sunk_cost = self._get_oil_lbt_sunk_cost()
+        # self._gas_lbt_sunk_cost = self._get_gas_lbt_sunk_cost()
+        # self._oil_cost_of_sales_sunk_cost = self._get_oil_cost_of_sales_sunk_cost()
+        # self._gas_cost_of_sales_sunk_cost = self._get_gas_cost_of_sales_sunk_cost()
 
-        # Raise an exception error if the start year of the project is inconsistent
-        if not all(
-            i == self.start_date.year
-            for i in [
-                self._oil_lifting.start_year,
-                self._gas_lifting.start_year,
-                self._sulfur_lifting.start_year,
-                self._electricity_lifting.start_year,
-                self._co2_lifting.start_year,
-                self._oil_capital_cost.start_year,
-                self._gas_capital_cost.start_year,
-                self._oil_intangible.start_year,
-                self._gas_intangible.start_year,
-                self._oil_opex.start_year,
-                self._gas_opex.start_year,
-                self._oil_asr.start_year,
-                self._gas_asr.start_year,
-                self._oil_lbt.start_year,
-                self._gas_lbt.start_year,
-                self._oil_cost_of_sales.start_year,
-                self._gas_cost_of_sales.start_year,
-                self._oil_capital_sunk_cost.start_year,
-                self._gas_capital_sunk_cost.start_year,
-                self._oil_intangible_sunk_cost.start_year,
-                self._gas_intangible_sunk_cost.start_year,
-                self._oil_opex_sunk_cost.start_year,
-                self._gas_opex_sunk_cost.start_year,
-                self._oil_asr_sunk_cost.start_year,
-                self._gas_asr_sunk_cost.start_year,
-                self._oil_lbt_sunk_cost.start_year,
-                self._gas_lbt_sunk_cost.start_year,
-                self._oil_cost_of_sales_sunk_cost.start_year,
-                self._gas_cost_of_sales_sunk_cost.start_year,
-            ]
-        ):
-            raise BaseProjectException(
-                f"Inconsistent start project year: "
-                f"Base project ({self.start_date.year}), "
-                f"Oil lifting ({self._oil_lifting.start_year}), "
-                f"Gas lifting ({self._gas_lifting.start_year}), "
-                f"Sulfur lifting ({self._sulfur_lifting.start_year}), "
-                f"Electricity lifting ({self._electricity_lifting.start_year}), "
-                f"CO2 lifting ({self._co2_lifting.start_year}), "
-                f"Oil tangible ({self._oil_capital_cost.start_year}), "
-                f"Gas tangible ({self._gas_capital_cost.start_year}), "
-                f"Oil intangible ({self._oil_intangible.start_year}), "
-                f"Gas intangible ({self._gas_intangible.start_year}), "
-                f"Oil opex ({self._oil_opex.start_year}), "
-                f"Gas opex ({self._gas_opex.start_year}), "
-                f"Oil asr ({self._oil_asr.start_year}), "
-                f"Gas asr ({self._gas_asr.start_year}), "
-                f"Oil LBT ({self._oil_lbt.start_year}), "
-                f"Gas LBT ({self._gas_lbt.start_year}), "
-                f"Oil cost of sales ({self._oil_cost_of_sales.start_year}), "
-                f"Gas cost of sales ({self._gas_cost_of_sales.start_year}), "
-                f"Oil capital sunkcost ({self._oil_capital_sunk_cost.start_year}), "
-                f"Gas capital sunkcost ({self._gas_capital_sunk_cost.start_year}), "
-                f"Oil intangible sunkcost ({self._oil_intangible_sunk_cost.start_year}), "
-                f"Gas intangible sunkcost ({self._gas_intangible_sunk_cost.start_year}), "
-                f"Oil OPEX sunkcost ({self._oil_opex_sunk_cost.start_year}), "
-                f"Gas OPEX sunkcost ({self._gas_opex_sunk_cost.start_year}), "
-                f"Oil ASR sunkcost ({self._oil_asr_sunk_cost.start_year}), "
-                f"Gas ASR sunkcost ({self._gas_asr_sunk_cost.start_year}), "
-                f"Oil LBT sunkcost ({self._oil_lbt_sunk_cost.start_year}), "
-                f"Gas LBT sunkcost ({self._gas_lbt_sunk_cost.start_year}), "
-                f"Oil cost of sales sunkcost: ({self._oil_cost_of_sales_sunk_cost.start_year}), "
-                f"Gas cost of sales sunkcost: ({self._gas_cost_of_sales_sunk_cost.start_year})."
-            )
-
-        # Raise an exception error if the end year of the project is inconsistent
-        if not all(
-            i == self.end_date.year
-            for i in [
-                self._oil_lifting.end_year,
-                self._gas_lifting.end_year,
-                self._sulfur_lifting.end_year,
-                self._electricity_lifting.end_year,
-                self._co2_lifting.end_year,
-                self._oil_capital_cost.end_year,
-                self._gas_capital_cost.end_year,
-                self._oil_intangible.end_year,
-                self._gas_intangible.end_year,
-                self._oil_opex.end_year,
-                self._gas_opex.end_year,
-                self._oil_asr.end_year,
-                self._gas_asr.end_year,
-                self._oil_lbt.end_year,
-                self._gas_lbt.end_year,
-                self._oil_cost_of_sales.end_year,
-                self._gas_cost_of_sales.end_year,
-                self._oil_capital_sunk_cost.end_year,
-                self._gas_capital_sunk_cost.end_year,
-                self._oil_intangible_sunk_cost.end_year,
-                self._gas_intangible_sunk_cost.end_year,
-                self._oil_opex_sunk_cost.end_year,
-                self._gas_opex_sunk_cost.end_year,
-                self._oil_asr_sunk_cost.end_year,
-                self._gas_asr_sunk_cost.end_year,
-                self._oil_lbt_sunk_cost.end_year,
-                self._gas_lbt_sunk_cost.end_year,
-                self._oil_cost_of_sales_sunk_cost.end_year,
-                self._gas_cost_of_sales_sunk_cost.end_year,
-            ]
-        ):
-            raise BaseProjectException(
-                f"Inconsistent end project year: "
-                f"Base project ({self.end_date.year}), "
-                f"Oil lifting ({self._oil_lifting.end_year}), "
-                f"Gas lifting ({self._gas_lifting.end_year}), "
-                f"Sulfur lifting ({self._sulfur_lifting.end_year}), "
-                f"Electricity lifting ({self._electricity_lifting.end_year}), "
-                f"CO2 lifting ({self._co2_lifting.end_year}), "
-                f"Oil tangible ({self._oil_capital_cost.end_year}), "
-                f"Gas tangible ({self._gas_capital_cost.end_year}), "
-                f"Oil intangible ({self._oil_intangible.end_year}), "
-                f"Gas intangible ({self._gas_intangible.end_year}), "
-                f"Oil opex ({self._oil_opex.end_year}), "
-                f"Gas opex ({self._gas_opex.end_year}), "
-                f"Oil asr ({self._oil_asr.end_year}), "
-                f"Gas asr ({self._gas_asr.end_year}), "
-                f"Oil LBT ({self._oil_lbt.end_year}), "
-                f"Gas LBT ({self._gas_lbt.end_year}), "
-                f"Oil cost of sales ({self._oil_cost_of_sales.end_year}), "
-                f"Gas cost of sales ({self._gas_cost_of_sales.end_year}), "
-                f"Oil capital sunkcost ({self._oil_capital_sunk_cost.end_year}), "
-                f"Gas capital sunkcost ({self._gas_capital_sunk_cost.end_year}), "
-                f"Oil intangible sunkcost ({self._oil_intangible_sunk_cost.end_year}), "
-                f"Gas intangible sunkcost ({self._gas_intangible_sunk_cost.end_year}), "
-                f"Oil OPEX sunkcost ({self._oil_opex_sunk_cost.end_year}), "
-                f"Gas OPEX sunkcost ({self._gas_opex_sunk_cost.end_year}), "
-                f"Oil ASR sunkcost ({self._oil_asr_sunk_cost.end_year}), "
-                f"Gas ASR sunkcost ({self._gas_asr_sunk_cost.end_year}), "
-                f"Oil LBT sunkcost ({self._oil_lbt_sunk_cost.end_year}), "
-                f"Gas LBT sunkcost ({self._gas_lbt_sunk_cost.end_year}), "
-                f"Oil cost of sales sunkcost ({self._oil_cost_of_sales_sunk_cost.end_year}), "
-                f"Gas cost of sales sunkcost ({self._gas_cost_of_sales_sunk_cost.end_year})."
-            )
+        # # Raise an exception error if the start year of the project is inconsistent
+        # if not all(
+        #     i == self.start_date.year
+        #     for i in [
+        #         self._oil_lifting.start_year,
+        #         self._gas_lifting.start_year,
+        #         self._sulfur_lifting.start_year,
+        #         self._electricity_lifting.start_year,
+        #         self._co2_lifting.start_year,
+        #         self._oil_capital_cost.start_year,
+        #         self._gas_capital_cost.start_year,
+        #         self._oil_intangible.start_year,
+        #         self._gas_intangible.start_year,
+        #         self._oil_opex.start_year,
+        #         self._gas_opex.start_year,
+        #         self._oil_asr.start_year,
+        #         self._gas_asr.start_year,
+        #         self._oil_lbt.start_year,
+        #         self._gas_lbt.start_year,
+        #         self._oil_cost_of_sales.start_year,
+        #         self._gas_cost_of_sales.start_year,
+        #         self._oil_capital_sunk_cost.start_year,
+        #         self._gas_capital_sunk_cost.start_year,
+        #         self._oil_intangible_sunk_cost.start_year,
+        #         self._gas_intangible_sunk_cost.start_year,
+        #         self._oil_opex_sunk_cost.start_year,
+        #         self._gas_opex_sunk_cost.start_year,
+        #         self._oil_asr_sunk_cost.start_year,
+        #         self._gas_asr_sunk_cost.start_year,
+        #         self._oil_lbt_sunk_cost.start_year,
+        #         self._gas_lbt_sunk_cost.start_year,
+        #         self._oil_cost_of_sales_sunk_cost.start_year,
+        #         self._gas_cost_of_sales_sunk_cost.start_year,
+        #     ]
+        # ):
+        #     raise BaseProjectException(
+        #         f"Inconsistent start project year: "
+        #         f"Base project ({self.start_date.year}), "
+        #         f"Oil lifting ({self._oil_lifting.start_year}), "
+        #         f"Gas lifting ({self._gas_lifting.start_year}), "
+        #         f"Sulfur lifting ({self._sulfur_lifting.start_year}), "
+        #         f"Electricity lifting ({self._electricity_lifting.start_year}), "
+        #         f"CO2 lifting ({self._co2_lifting.start_year}), "
+        #         f"Oil tangible ({self._oil_capital_cost.start_year}), "
+        #         f"Gas tangible ({self._gas_capital_cost.start_year}), "
+        #         f"Oil intangible ({self._oil_intangible.start_year}), "
+        #         f"Gas intangible ({self._gas_intangible.start_year}), "
+        #         f"Oil opex ({self._oil_opex.start_year}), "
+        #         f"Gas opex ({self._gas_opex.start_year}), "
+        #         f"Oil asr ({self._oil_asr.start_year}), "
+        #         f"Gas asr ({self._gas_asr.start_year}), "
+        #         f"Oil LBT ({self._oil_lbt.start_year}), "
+        #         f"Gas LBT ({self._gas_lbt.start_year}), "
+        #         f"Oil cost of sales ({self._oil_cost_of_sales.start_year}), "
+        #         f"Gas cost of sales ({self._gas_cost_of_sales.start_year}), "
+        #         f"Oil capital sunkcost ({self._oil_capital_sunk_cost.start_year}), "
+        #         f"Gas capital sunkcost ({self._gas_capital_sunk_cost.start_year}), "
+        #         f"Oil intangible sunkcost ({self._oil_intangible_sunk_cost.start_year}), "
+        #         f"Gas intangible sunkcost ({self._gas_intangible_sunk_cost.start_year}), "
+        #         f"Oil OPEX sunkcost ({self._oil_opex_sunk_cost.start_year}), "
+        #         f"Gas OPEX sunkcost ({self._gas_opex_sunk_cost.start_year}), "
+        #         f"Oil ASR sunkcost ({self._oil_asr_sunk_cost.start_year}), "
+        #         f"Gas ASR sunkcost ({self._gas_asr_sunk_cost.start_year}), "
+        #         f"Oil LBT sunkcost ({self._oil_lbt_sunk_cost.start_year}), "
+        #         f"Gas LBT sunkcost ({self._gas_lbt_sunk_cost.start_year}), "
+        #         f"Oil cost of sales sunkcost: ({self._oil_cost_of_sales_sunk_cost.start_year}), "
+        #         f"Gas cost of sales sunkcost: ({self._gas_cost_of_sales_sunk_cost.start_year})."
+        #     )
+        #
+        # # Raise an exception error if the end year of the project is inconsistent
+        # if not all(
+        #     i == self.end_date.year
+        #     for i in [
+        #         self._oil_lifting.end_year,
+        #         self._gas_lifting.end_year,
+        #         self._sulfur_lifting.end_year,
+        #         self._electricity_lifting.end_year,
+        #         self._co2_lifting.end_year,
+        #         self._oil_capital_cost.end_year,
+        #         self._gas_capital_cost.end_year,
+        #         self._oil_intangible.end_year,
+        #         self._gas_intangible.end_year,
+        #         self._oil_opex.end_year,
+        #         self._gas_opex.end_year,
+        #         self._oil_asr.end_year,
+        #         self._gas_asr.end_year,
+        #         self._oil_lbt.end_year,
+        #         self._gas_lbt.end_year,
+        #         self._oil_cost_of_sales.end_year,
+        #         self._gas_cost_of_sales.end_year,
+        #         self._oil_capital_sunk_cost.end_year,
+        #         self._gas_capital_sunk_cost.end_year,
+        #         self._oil_intangible_sunk_cost.end_year,
+        #         self._gas_intangible_sunk_cost.end_year,
+        #         self._oil_opex_sunk_cost.end_year,
+        #         self._gas_opex_sunk_cost.end_year,
+        #         self._oil_asr_sunk_cost.end_year,
+        #         self._gas_asr_sunk_cost.end_year,
+        #         self._oil_lbt_sunk_cost.end_year,
+        #         self._gas_lbt_sunk_cost.end_year,
+        #         self._oil_cost_of_sales_sunk_cost.end_year,
+        #         self._gas_cost_of_sales_sunk_cost.end_year,
+        #     ]
+        # ):
+        #     raise BaseProjectException(
+        #         f"Inconsistent end project year: "
+        #         f"Base project ({self.end_date.year}), "
+        #         f"Oil lifting ({self._oil_lifting.end_year}), "
+        #         f"Gas lifting ({self._gas_lifting.end_year}), "
+        #         f"Sulfur lifting ({self._sulfur_lifting.end_year}), "
+        #         f"Electricity lifting ({self._electricity_lifting.end_year}), "
+        #         f"CO2 lifting ({self._co2_lifting.end_year}), "
+        #         f"Oil tangible ({self._oil_capital_cost.end_year}), "
+        #         f"Gas tangible ({self._gas_capital_cost.end_year}), "
+        #         f"Oil intangible ({self._oil_intangible.end_year}), "
+        #         f"Gas intangible ({self._gas_intangible.end_year}), "
+        #         f"Oil opex ({self._oil_opex.end_year}), "
+        #         f"Gas opex ({self._gas_opex.end_year}), "
+        #         f"Oil asr ({self._oil_asr.end_year}), "
+        #         f"Gas asr ({self._gas_asr.end_year}), "
+        #         f"Oil LBT ({self._oil_lbt.end_year}), "
+        #         f"Gas LBT ({self._gas_lbt.end_year}), "
+        #         f"Oil cost of sales ({self._oil_cost_of_sales.end_year}), "
+        #         f"Gas cost of sales ({self._gas_cost_of_sales.end_year}), "
+        #         f"Oil capital sunkcost ({self._oil_capital_sunk_cost.end_year}), "
+        #         f"Gas capital sunkcost ({self._gas_capital_sunk_cost.end_year}), "
+        #         f"Oil intangible sunkcost ({self._oil_intangible_sunk_cost.end_year}), "
+        #         f"Gas intangible sunkcost ({self._gas_intangible_sunk_cost.end_year}), "
+        #         f"Oil OPEX sunkcost ({self._oil_opex_sunk_cost.end_year}), "
+        #         f"Gas OPEX sunkcost ({self._gas_opex_sunk_cost.end_year}), "
+        #         f"Oil ASR sunkcost ({self._oil_asr_sunk_cost.end_year}), "
+        #         f"Gas ASR sunkcost ({self._gas_asr_sunk_cost.end_year}), "
+        #         f"Oil LBT sunkcost ({self._oil_lbt_sunk_cost.end_year}), "
+        #         f"Gas LBT sunkcost ({self._gas_lbt_sunk_cost.end_year}), "
+        #         f"Oil cost of sales sunkcost ({self._oil_cost_of_sales_sunk_cost.end_year}), "
+        #         f"Gas cost of sales sunkcost ({self._gas_cost_of_sales_sunk_cost.end_year})."
+        #     )
 
     def _get_lifting_by_commodity(self, commodity: FluidType) -> Lifting:
         """
@@ -1190,107 +1211,100 @@ class BaseProject:
         """
         Get capital costs filtered by fluid type and sunk cost inclusion.
 
+        This method retrieves the portion of the project's total capital costs
+        (`self.capital_cost_total`) that match both a specific fluid type
+        (`fluid_type`) and sunk cost flag (`include_sunkcost`).
+
         Parameters
         ----------
         fluid_type : FluidType
-            The fluid type to filter capital costs by.
+            The fluid type to filter capital costs by (e.g., `FluidType.OIL`,
+            `FluidType.GAS`).
         include_sunkcost : bool
-            Whether to include sunk costs in the filtered results.
-            If True, includes sunk costs; if False, excludes them.
+            If True, include only sunk costs. If False, exclude sunk costs.
 
         Returns
         -------
         CapitalCost
-            A new CapitalCost instance containing only the costs that match:
-            1. The specified fluid type
-            2. The sunk cost inclusion criteria
+            A new `CapitalCost` instance containing only the costs that match the
+            given fluid type and sunk cost flag.
 
-            If no matching costs are found, returns a CapitalCost instance with:
+            If no matching costs are found, returns a `CapitalCost` instance with:
             - Zero cost
             - Single expense year (project start year)
-            - The requested fluid type in cost_allocation
-            - The requested sunk cost flag in is_sunkcost
+            - Specified `fluid_type` in cost_allocation
+            - Specified `include_sunkcost` in is_sunkcost
 
         Notes
         -----
-        - The method filters the data from self.capital_cost_total based on the criteria.
-        - All returned arrays (cost, expense_year, etc.) will have the same length.
-        - The filtering preserves all original CapitalCost attributes, but with only
-          the matching elements in each array.
-        - When no matching costs exist, the returned dummy instance will include:
-          * The requested fluid_type in cost_allocation
-          * The requested include_sunkcost value in is_sunkcost
+        - Matching is performed using a logical AND on `cost_allocation` and
+          `is_sunkcost` arrays.
+        - When no matches exist, a dummy `CapitalCost` instance is returned
+          with preserved metadata (start_year, end_year, fluid type, sunk cost flag).
+        - All returned arrays (cost, expense_year, etc.) have consistent lengths.
+        - Preserves all other original attributes (description, tax_portion,
+          tax_discount, pis_year, salvage_value, useful_life, depreciation_factor,
+          is_ic_applied) for the filtered indices.
         """
 
-        # Handle case when requested fluid type is not found
-        if fluid_type not in self.capital_cost_total.cost_allocation:
+        cct = self.capital_cost_total
+
+        allocation_array = np.array(cct.cost_allocation)
+        sunkcost_array = np.array(cct.is_sunkcost)
+        mask = np.logical_and(
+            allocation_array == fluid_type,
+            sunkcost_array == include_sunkcost,
+        )
+        indices = np.flatnonzero(mask)
+
+        if len(indices) == 0:
             return CapitalCost(
-                start_year=self.start_date.year,
-                end_year=self.end_date.year,
-                expense_year=np.array([self.start_date.year]),
+                start_year=cct.start_year,
+                end_year=cct.end_year,
+                expense_year=np.array([cct.start_year]),
                 cost=np.array([0]),
                 cost_allocation=[fluid_type],
                 is_sunkcost=[include_sunkcost],
             )
 
-        else:
-            # Configure indices to slice data according to fluid type and sunk cost
-            allocation_array = np.array(self.capital_cost_total.cost_allocation)
-            sunkcost_array = np.array(self.capital_cost_total.is_sunkcost)
-            mask = np.logical_and(
-                allocation_array == fluid_type,
-                sunkcost_array == include_sunkcost,
-            )
-            indices = np.flatnonzero(mask)
-
-            # Slice filtered data, return a new instance of CapitalCost with filtered data
-            return CapitalCost(
-                start_year=self.capital_cost_total.start_year,
-                end_year=self.capital_cost_total.end_year,
-                expense_year=self.capital_cost_total.expense_year[indices],
-                cost=self.capital_cost_total.cost[indices],
-                cost_allocation=(
-                    np.array(self.capital_cost_total.cost_allocation)[indices].tolist()
-                ),
-                description=np.array(self.capital_cost_total.description)[indices].tolist(),
-                is_sunkcost=np.array(self.capital_cost_total.is_sunkcost)[indices].tolist(),
-                tax_portion=self.capital_cost_total.tax_portion[indices],
-                tax_discount=self.capital_cost_total.tax_discount[indices],
-                pis_year=self.capital_cost_total.pis_year[indices],
-                salvage_value=self.capital_cost_total.salvage_value[indices],
-                useful_life=self.capital_cost_total.useful_life[indices],
-                depreciation_factor=self.capital_cost_total.depreciation_factor[indices],
-                is_ic_applied=(
-                    np.array(self.capital_cost_total.is_ic_applied)[indices].tolist()
-                ),
-            )
+        return CapitalCost(
+            start_year=cct.start_year,
+            end_year=cct.end_year,
+            expense_year=cct.expense_year[indices],
+            cost=cct.cost[indices],
+            cost_allocation=np.array(cct.cost_allocation)[indices].tolist(),
+            description=np.array(cct.description)[indices].tolist(),
+            is_sunkcost=np.array(cct.is_sunkcost)[indices].tolist(),
+            tax_portion=cct.tax_portion[indices],
+            tax_discount=cct.tax_discount[indices],
+            pis_year=cct.pis_year[indices],
+            salvage_value=cct.salvage_value[indices],
+            useful_life=cct.useful_life[indices],
+            depreciation_factor=cct.depreciation_factor[indices],
+            is_ic_applied=np.array(cct.is_ic_applied)[indices].tolist(),
+        )
 
     def _get_oil_capital(self) -> CapitalCost:
         """
-        Get capital costs specifically for OIL, excluding sunk costs.
+         Get oil-related capital costs excluding sunk costs.
 
         Returns
         -------
         CapitalCost
-            A new CapitalCost instance containing only the costs that:
-            1. Are allocated to OIL fluid type
-            2. Are not sunk costs
+            A CapitalCost instance containing only the capital costs that:
+            1. Are allocated to oil (`FluidType.OIL`)
+            2. Are not classified as sunk costs (`include_sunkcost=False`)
 
             If no matching costs are found, returns a CapitalCost instance with:
             - Zero cost
             - Single expense year (project start year)
-            - OIL as the cost_allocation
-            - False in is_sunkcost (matching the include_sunkcost=False filter)
+            - `FluidType.OIL` in cost_allocation
+            - `False` in is_sunkcost
 
         Notes
         -----
-        - This is a convenience wrapper around _get_filtered_capital_cost() with:
-          fluid_type=FluidType.OIL and include_sunkcost=False
-        - All returned arrays will have the same length.
-        - The dummy instance (when no costs exist) will include:
-          * OIL in cost_allocation
-          * False in is_sunkcost
-        - See _get_filtered_capital_cost() for more detailed filtering behavior.
+        - This method is a specialized call to `_get_filtered_capital_cost`
+          with `fluid_type=FluidType.OIL` and `include_sunkcost=False`.
         """
         return self._get_filtered_capital_cost(
             fluid_type=FluidType.OIL, include_sunkcost=False
@@ -1298,30 +1312,25 @@ class BaseProject:
 
     def _get_gas_capital(self) -> CapitalCost:
         """
-        Get capital costs specifically for GAS, excluding sunk costs.
+        Get gas-related capital costs excluding sunk costs.
 
         Returns
         -------
         CapitalCost
-            A new CapitalCost instance containing only the costs that:
-            1. Are allocated to GAS fluid type
-            2. Are not sunk costs
+            A CapitalCost instance containing only the capital costs that:
+            1. Are allocated to gas (`FluidType.GAS`)
+            2. Are not classified as sunk costs (`include_sunkcost=False`)
 
             If no matching costs are found, returns a CapitalCost instance with:
             - Zero cost
             - Single expense year (project start year)
-            - GAS as the cost_allocation
-            - False in is_sunkcost (matching the include_sunkcost=False filter)
+            - `FluidType.GAS` in cost_allocation
+            - `False` in is_sunkcost
 
         Notes
         -----
-        - This is a convenience wrapper around _get_filtered_capital_cost() with:
-          fluid_type=FluidType.GAS and include_sunkcost=False
-        - All returned arrays will have the same length.
-        - The dummy instance (when no costs exist) will include:
-          * GAS in cost_allocation
-          * False in is_sunkcost
-        - See _get_filtered_capital_cost() for more detailed filtering behavior.
+        - This method is a specialized call to `_get_filtered_capital_cost`
+          with `fluid_type=FluidType.GAS` and `include_sunkcost=False`.
         """
         return self._get_filtered_capital_cost(
             fluid_type=FluidType.GAS, include_sunkcost=False
@@ -1329,30 +1338,29 @@ class BaseProject:
 
     def _get_oil_capital_sunk_cost(self) -> CapitalCost:
         """
-        Get capital costs specifically for OIL, including only sunk costs.
+        Get capital costs for oil including sunk costs.
+
+        This method retrieves the portion of the project's total capital costs
+        (`self.capital_cost_total`) that are allocated to oil (`FluidType.OIL`)
+        and are considered sunk costs (`include_sunkcost=True`).
 
         Returns
         -------
         CapitalCost
-            A new CapitalCost instance containing only the costs that:
-            1. Are allocated to OIL fluid type
-            2. Are sunk costs (already incurred)
+            A new `CapitalCost` instance containing only the costs that match:
+            1. `FluidType.OIL` in cost_allocation
+            2. `is_sunkcost=True`
 
-            If no matching costs are found, returns a CapitalCost instance with:
+            If no matching costs are found, returns a `CapitalCost` instance with:
             - Zero cost
             - Single expense year (project start year)
-            - OIL as the cost_allocation
-            - True in is_sunkcost (matching the include_sunkcost=True filter)
+            - `FluidType.OIL` in cost_allocation
+            - `is_sunkcost=True`
 
         Notes
         -----
-        - This is a convenience wrapper around _get_filtered_capital_cost() with:
-          fluid_type=FluidType.OIL and include_sunkcost=True
-        - All returned arrays will have the same length.
-        - The dummy instance (when no costs exist) will include:
-          * OIL in cost_allocation
-          * True in is_sunkcost
-        - See _get_filtered_capital_cost() for more detailed filtering behavior.
+        - Internally calls `_get_filtered_capital_cost()` with
+          `fluid_type=FluidType.OIL` and `include_sunkcost=True`.
         """
         return self._get_filtered_capital_cost(
             fluid_type=FluidType.OIL, include_sunkcost=True
@@ -1360,30 +1368,29 @@ class BaseProject:
 
     def _get_gas_capital_sunk_cost(self) -> CapitalCost:
         """
-        Get capital costs specifically for GAS, including only sunk costs.
+        Get capital costs for gas including sunk costs.
+
+        This method retrieves the portion of the project's total capital costs
+        (`self.capital_cost_total`) that are allocated to gas (`FluidType.GAS`)
+        and are considered sunk costs (`include_sunkcost=True`).
 
         Returns
         -------
         CapitalCost
-            A new CapitalCost instance containing only the costs that:
-            1. Are allocated to GAS fluid type
-            2. Are sunk costs (already incurred)
+            A new `CapitalCost` instance containing only the costs that match:
+            1. `FluidType.GAS` in cost_allocation
+            2. `is_sunkcost=True`
 
-            If no matching costs are found, returns a CapitalCost instance with:
+            If no matching costs are found, returns a `CapitalCost` instance with:
             - Zero cost
             - Single expense year (project start year)
-            - GAS as the cost_allocation
-            - True in is_sunkcost (matching the include_sunkcost=True filter)
+            - `FluidType.GAS` in cost_allocation
+            - `is_sunkcost=True`
 
         Notes
         -----
-        - This is a convenience wrapper around _get_filtered_capital_cost() with:
-          fluid_type=FluidType.GAS and include_sunkcost=True
-        - All returned arrays will have the same length.
-        - The dummy instance (when no costs exist) will include:
-          * GAS in cost_allocation
-          * True in is_sunkcost
-        - See _get_filtered_capital_cost() for more detailed filtering behavior.
+        - Internally calls `_get_filtered_capital_cost()` with
+          `fluid_type=FluidType.GAS` and `include_sunkcost=True`.
         """
         return self._get_filtered_capital_cost(
             fluid_type=FluidType.GAS, include_sunkcost=True
@@ -1397,187 +1404,192 @@ class BaseProject:
         """
         Get intangible costs filtered by fluid type and sunk cost inclusion.
 
+        This method retrieves the portion of the project's total intangible costs
+        (`self.intangible_cost_total`) that match both a specific fluid type
+        (`fluid_type`) and sunk cost flag (`include_sunkcost`).
+
         Parameters
         ----------
         fluid_type : FluidType
-            The fluid type to filter intangible costs by.
+            The fluid type to filter intangible costs by (e.g., `FluidType.OIL`,
+            `FluidType.GAS`).
         include_sunkcost : bool
-            Whether to include sunk costs in the filtered results.
-            If True, includes sunk costs; if False, excludes them.
+            If True, include only sunk costs. If False, exclude sunk costs.
 
         Returns
         -------
         Intangible
-            A new Intangible instance containing only the costs that match:
-            1. The specified fluid type
-            2. The sunk cost inclusion criteria
+            A new `Intangible` instance containing only the costs that match the
+            given fluid type and sunk cost flag.
 
-            If no matching costs are found, returns an Intangible instance with:
+            If no matching costs are found, returns an `Intangible` instance with:
             - Zero cost
             - Single expense year (project start year)
-            - The requested fluid type in cost_allocation
-            - The requested sunk cost flag in is_sunkcost
+            - Specified `fluid_type` in cost_allocation
+            - Specified `include_sunkcost` in is_sunkcost
 
         Notes
         -----
-        - The method filters the data from self.intangible_cost_total based on the criteria.
-        - All returned arrays (cost, expense_year, etc.) will have the same length.
-        - The filtering preserves all original Intangible attributes, but with only
-          the matching elements in each array.
-        - When no matching costs exist, the returned dummy instance will include:
-          * The requested fluid_type in cost_allocation
-          * The requested include_sunkcost value in is_sunkcost
+        - Matching is performed using a logical AND on `cost_allocation` and
+          `is_sunkcost` arrays.
+        - When no matches exist, a dummy `Intangible` instance is returned
+          with preserved metadata (start_year, end_year, fluid type, sunk cost flag).
+        - All returned arrays (cost, expense_year, etc.) have consistent lengths.
         """
 
-        # Handle case when requested fluid type is not found
-        if fluid_type not in self.intangible_cost_total.cost_allocation:
+        ict = self.intangible_cost_total
+
+        allocation_array = np.array(ict.cost_allocation)
+        sunkcost_array = np.array(ict.is_sunkcost)
+        mask = np.logical_and(
+            allocation_array == fluid_type,
+            sunkcost_array == include_sunkcost,
+        )
+        indices = np.flatnonzero(mask)
+
+        if len(indices) == 0:
             return Intangible(
-                start_year=self.start_date.year,
-                end_year=self.end_date.year,
-                expense_year=np.array([self.start_date.year]),
+                start_year=ict.start_year,
+                end_year=ict.end_year,
+                expense_year=np.array([ict.start_year]),
                 cost=np.array([0]),
                 cost_allocation=[fluid_type],
                 is_sunkcost=[include_sunkcost],
             )
 
-        else:
-            # Configure indices to slice data according to fluid type and sunk cost
-            allocation_array = np.array(self.intangible_cost_total.cost_allocation)
-            sunkcost_array = np.array(self.intangible_cost_total.is_sunkcost)
-            mask = np.logical_and(
-                allocation_array == fluid_type,
-                sunkcost_array == include_sunkcost,
-            )
-            indices = np.flatnonzero(mask)
-
-            # Slice filtered data, return a new instance of Intangible with filtered data
-            return Intangible(
-                start_year=self.intangible_cost_total.start_year,
-                end_year=self.intangible_cost_total.end_year,
-                expense_year=self.intangible_cost_total.expense_year[indices],
-                cost=self.intangible_cost_total.cost[indices],
-                cost_allocation=(
-                    np.array(self.intangible_cost_total.cost_allocation)[indices].tolist()
-                ),
-                description=np.array(self.intangible_cost_total.description)[indices].tolist(),
-                is_sunkcost=np.array(self.intangible_cost_total.is_sunkcost)[indices].tolist(),
-                tax_portion=self.intangible_cost_total.tax_portion[indices],
-                tax_discount=self.intangible_cost_total.tax_discount[indices],
-            )
+        return Intangible(
+            start_year=ict.start_year,
+            end_year=ict.end_year,
+            expense_year=ict.expense_year[indices],
+            cost=ict.cost[indices],
+            cost_allocation=np.array(ict.cost_allocation)[indices].tolist(),
+            description=np.array(ict.description)[indices].tolist(),
+            is_sunkcost=np.array(ict.is_sunkcost)[indices].tolist(),
+            tax_portion=ict.tax_portion[indices],
+            tax_discount=ict.tax_discount[indices],
+        )
 
     def _get_oil_intangible(self) -> Intangible:
         """
-        Get intangible costs specifically for OIL, excluding sunk costs.
+        Get intangible costs for oil excluding sunk costs.
+
+        This method retrieves the portion of the project's total intangible costs
+        (`self.intangible_cost_total`) that are allocated to oil (`FluidType.OIL`)
+        and are not considered sunk costs (`include_sunkcost=False`).
 
         Returns
         -------
         Intangible
-            A new Intangible instance containing only the costs that:
-            1. Are allocated to OIL fluid type
-            2. Are not sunk costs
+            A new `Intangible` instance containing only the costs that match:
+            1. `FluidType.OIL` in cost_allocation
+            2. `is_sunkcost=False`
 
-            If no matching costs are found, returns an Intangible instance with:
+            If no matching costs are found, returns an `Intangible` instance with:
             - Zero cost
             - Single expense year (project start year)
-            - OIL as the cost_allocation
-            - False in is_sunkcost (matching the include_sunkcost=False filter)
+            - `FluidType.OIL` in cost_allocation
+            - `is_sunkcost=False`
 
         Notes
         -----
-        - This is a convenience wrapper around _get_filtered_intangible() with:
-          fluid_type=FluidType.OIL and include_sunkcost=False
-        - All returned arrays will have the same length.
-        - The dummy instance (when no costs exist) will include:
-          * OIL in cost_allocation
-          * False in is_sunkcost
-        - See _get_filtered_intangible() for more detailed filtering behavior.
+        - Internally calls `_get_filtered_intangible()` with
+          `fluid_type=FluidType.OIL` and `include_sunkcost=False`.
+        - All returned arrays (cost, expense_year, etc.) have consistent lengths.
+        - When no matching costs exist, a dummy instance is returned
+          preserving the specified fluid type and sunk cost flag.
         """
         return self._get_filtered_intangible(fluid_type=FluidType.OIL, include_sunkcost=False)
 
     def _get_gas_intangible(self) -> Intangible:
         """
-        Get intangible costs specifically for GAS, excluding sunk costs.
+        Get intangible costs for gas excluding sunk costs.
+
+        This method retrieves the portion of the project's total intangible costs
+        (`self.intangible_cost_total`) that are allocated to gas (`FluidType.GAS`)
+        and are not considered sunk costs (`include_sunkcost=False`).
 
         Returns
         -------
         Intangible
-            A new Intangible instance containing only the costs that:
-            1. Are allocated to GAS fluid type
-            2. Are not sunk costs
+            A new `Intangible` instance containing only the costs that match:
+            1. `FluidType.GAS` in cost_allocation
+            2. `is_sunkcost=False`
 
-            If no matching costs are found, returns an Intangible instance with:
+            If no matching costs are found, returns an `Intangible` instance with:
             - Zero cost
             - Single expense year (project start year)
-            - GAS as the cost_allocation
-            - False in is_sunkcost (matching the include_sunkcost=False filter)
+            - `FluidType.GAS` in cost_allocation
+            - `is_sunkcost=False`
 
         Notes
         -----
-        - This is a convenience wrapper around _get_filtered_intangible() with:
-          fluid_type=FluidType.GAS and include_sunkcost=False
-        - All returned arrays will have the same length.
-        - The dummy instance (when no costs exist) will include:
-          * GAS in cost_allocation
-          * False in is_sunkcost
-        - See _get_filtered_intangible() for more detailed filtering behavior.
+        - Internally calls `_get_filtered_intangible()` with
+          `fluid_type=FluidType.GAS` and `include_sunkcost=False`.
+        - All returned arrays (cost, expense_year, etc.) have consistent lengths.
+        - When no matching costs exist, a dummy instance is returned
+          preserving the specified fluid type and sunk cost flag.
         """
         return self._get_filtered_intangible(fluid_type=FluidType.GAS, include_sunkcost=False)
 
     def _get_oil_intangible_sunk_cost(self) -> Intangible:
         """
-        Get intangible costs specifically for OIL, including only sunk costs.
+        Get intangible costs for oil that are classified as sunk costs.
+
+        This method retrieves the portion of the project's total intangible costs
+        (`self.intangible_cost_total`) that are allocated to oil (`FluidType.OIL`)
+        and are considered sunk costs (`include_sunkcost=True`).
 
         Returns
         -------
         Intangible
-            A new Intangible instance containing only the costs that:
-            1. Are allocated to OIL fluid type
-            2. Are sunk costs (already incurred)
+            A new `Intangible` instance containing only the costs that match:
+            1. `FluidType.OIL` in cost_allocation
+            2. `is_sunkcost=True`
 
-            If no matching costs are found, returns an Intangible instance with:
+            If no matching costs are found, returns an `Intangible` instance with:
             - Zero cost
             - Single expense year (project start year)
-            - OIL as the cost_allocation
-            - True in is_sunkcost (matching the include_sunkcost=True filter)
+            - `FluidType.OIL` in cost_allocation
+            - `is_sunkcost=True`
 
         Notes
         -----
-        - This is a convenience wrapper around _get_filtered_intangible() with:
-          fluid_type=FluidType.OIL and include_sunkcost=True
-        - All returned arrays will have the same length.
-        - The dummy instance (when no costs exist) will include:
-          * OIL in cost_allocation
-          * True in is_sunkcost
-        - See _get_filtered_intangible() for more detailed filtering behavior.
+        - Internally calls `_get_filtered_intangible()` with
+          `fluid_type=FluidType.OIL` and `include_sunkcost=True`.
+        - All returned arrays (cost, expense_year, etc.) have consistent lengths.
+        - When no matching costs exist, a dummy instance is returned
+          preserving the specified fluid type and sunk cost flag.
         """
         return self._get_filtered_intangible(fluid_type=FluidType.OIL, include_sunkcost=True)
 
     def _get_gas_intangible_sunk_cost(self) -> Intangible:
         """
-        Get intangible costs specifically for GAS, including only sunk costs.
+        Get intangible costs for gas that are classified as sunk costs.
+
+        This method retrieves the portion of the project's total intangible costs
+        (`self.intangible_cost_total`) that are allocated to gas (`FluidType.GAS`)
+        and are considered sunk costs (`include_sunkcost=True`).
 
         Returns
         -------
         Intangible
-            A new Intangible instance containing only the costs that:
-            1. Are allocated to GAS fluid type
-            2. Are sunk costs (already incurred)
+            A new `Intangible` instance containing only the costs that match:
+            1. `FluidType.GAS` in cost_allocation
+            2. `is_sunkcost=True`
 
-            If no matching costs are found, returns an Intangible instance with:
+            If no matching costs are found, returns an `Intangible` instance with:
             - Zero cost
             - Single expense year (project start year)
-            - GAS as the cost_allocation
-            - True in is_sunkcost (matching the include_sunkcost=True filter)
+            - `FluidType.GAS` in cost_allocation
+            - `is_sunkcost=True`
 
         Notes
         -----
-        - This is a convenience wrapper around _get_filtered_intangible() with:
-          fluid_type=FluidType.GAS and include_sunkcost=True
-        - All returned arrays will have the same length.
-        - The dummy instance (when no costs exist) will include:
-          * GAS in cost_allocation
-          * True in is_sunkcost
-        - See _get_filtered_intangible() for more detailed filtering behavior.
+        - Internally calls `_get_filtered_intangible()` with
+          `fluid_type=FluidType.GAS` and `include_sunkcost=True`.
+        - All returned arrays (cost, expense_year, etc.) have consistent lengths.
+        - When no matching costs exist, a dummy instance is returned
+          preserving the specified fluid type and sunk cost flag.
         """
         return self._get_filtered_intangible(fluid_type=FluidType.GAS, include_sunkcost=True)
 
@@ -1586,41 +1598,7 @@ class BaseProject:
         fluid_type: FluidType,
         include_sunkcost: bool,
     ) -> OPEX:
-        """
-        Get operating expenditures (OPEX) filtered by fluid type and sunk cost inclusion.
-
-        Parameters
-        ----------
-        fluid_type : FluidType
-            The fluid type to filter operating costs by.
-        include_sunkcost : bool
-            Whether to include sunk costs in the filtered results.
-            If True, includes sunk costs; if False, excludes them.
-
-        Returns
-        -------
-        OPEX
-            A new OPEX instance containing only the costs that match:
-            1. The specified fluid type
-            2. The sunk cost inclusion criteria
-
-            If no matching costs are found, returns an OPEX instance with:
-            - Zero fixed cost
-            - Single expense year (project start year)
-            - The requested fluid type in cost_allocation
-            - The requested sunk cost flag in is_sunkcost
-
-        Notes
-        -----
-        - The method filters the data from self.opex_total based on the criteria.
-        - All returned arrays (fixed_cost, expense_year, etc.) will have the same length.
-        - The filtering preserves all original OPEX attributes, but with only
-          the matching elements in each array.
-        - When no matching costs exist, the returned dummy instance will include:
-          * The requested fluid_type in cost_allocation
-          * The requested include_sunkcost value in is_sunkcost
-        """
-
+        
         # Handle case when requested fluid type is not found
         if fluid_type not in self.opex_total.cost_allocation:
             return OPEX(
@@ -2400,33 +2378,66 @@ class BaseProject:
                 f"({fluid_onstream_year})"
             )
 
-    @staticmethod
-    def _get_sunk_cost_array(sunkcost_objects: list) -> np.ndarray:
-        """
-        Aggregates sunk cost array from a list of sunk cost objects and aligns it
-        according to the corresponding project years.
+    def _get_sunkcost_array(self):
 
-        This is carried out by using the `expenditures_pre_tax()` method on each
-        objects in the provided list, then sums them element-wise to produce a single
-        combined array.
+        (
+            oil_capital_sunkcost_arr,
+            gas_capital_sunkcost_arr,
+            oil_intangible_sunkcost_arr,
+            gas_intangible_sunkcost_arr,
+            oil_opex_sunkcost_arr,
+            gas_opex_sunkcost_arr,
+            oil_asr_sunkcost_arr,
+            gas_asr_sunkcost_arr,
+            oil_lbt_sunkcost_arr,
+            gas_lbt_sunkcost_arr,
+            oil_cos_sunkcost_arr,
+            gas_cos_sunkcost_arr,
+        ) = [
+            sc_obj.expenditures_pre_tax()
+            for sc_obj in [
+                self._oil_capital_sunk_cost,
+                self._gas_capital_sunk_cost,
+                self._oil_intangible_sunk_cost,
+                self._gas_intangible_sunk_cost,
+                self._oil_opex_sunk_cost,
+                self._gas_opex_sunk_cost,
+                self._oil_asr_sunk_cost,
+                self._gas_asr_sunk_cost,
+                self._oil_lbt_sunk_cost,
+                self._gas_lbt_sunk_cost,
+                self._oil_cost_of_sales_sunk_cost,
+                self._gas_cost_of_sales_sunk_cost,
+            ]
+        ]
 
-        Parameters
-        ----------
-        sunkcost_objects : list
-            A list of sunk cost objects.
-
-        Returns
-        -------
-        np.ndarray
-            A 1D array representing the total sunk cost array for a particular fluid type
-
-        Notes
-        -----
-        -   Each element in `sunkcost_objects` must implement `expenditures_pre_tax()`
-            and return an array of the same shape.
-        -   The result is computed as the sum over axis 0 of the stacked arrays.
-        """
-        return np.array([sc.expenditures_pre_tax() for sc in sunkcost_objects]).sum(axis=0)
+    # @staticmethod
+    # def _get_sunk_cost_array(sunkcost_objects: list) -> np.ndarray:
+    #     """
+    #     Aggregates sunk cost array from a list of sunk cost objects and aligns it
+    #     according to the corresponding project years.
+    #
+    #     This is carried out by using the `expenditures_pre_tax()` method on each
+    #     objects in the provided list, then sums them element-wise to produce a single
+    #     combined array.
+    #
+    #     Parameters
+    #     ----------
+    #     sunkcost_objects : list
+    #         A list of sunk cost objects.
+    #
+    #     Returns
+    #     -------
+    #     np.ndarray
+    #         A 1D array representing the total sunk cost array for a particular fluid type
+    #
+    #     Notes
+    #     -----
+    #     -   Each element in `sunkcost_objects` must implement `expenditures_pre_tax()`
+    #         and return an array of the same shape.
+    #     -   The result is computed as the sum over axis 0 of the stacked arrays.
+    #     """
+    #     return np.array([sc.expenditures_pre_tax() for sc in sunkcost_objects]).sum(axis=0)
 
     def _calc_expenditures(
         self,
@@ -3151,138 +3162,140 @@ class BaseProject:
             ]
         )
 
-        # Identify OIL sunk cost array
-        self._oil_sunk_cost = self._get_sunk_cost_array(
-            sunkcost_objects=[
-                self._oil_capital_sunk_cost,
-                self._oil_intangible_sunk_cost,
-                self._oil_opex_sunk_cost,
-                self._oil_asr_sunk_cost,
-                self._oil_lbt_sunk_cost,
-                self._oil_cost_of_sales_sunk_cost,
-            ]
-        )
+        self._get_sunkcost_array()
 
-        # Identify GAS sunk cost array
-        self._gas_sunk_cost = self._get_sunk_cost_array(
-            sunkcost_objects=[
-                self._gas_capital_sunk_cost,
-                self._gas_intangible_sunk_cost,
-                self._gas_opex_sunk_cost,
-                self._gas_asr_sunk_cost,
-                self._gas_lbt_sunk_cost,
-                self._gas_cost_of_sales_sunk_cost,
-            ]
-        )
+        # # Identify OIL sunk cost array
+        # self._oil_sunk_cost = self._get_sunk_cost_array(
+        #     sunkcost_objects=[
+        #         self._oil_capital_sunk_cost,
+        #         self._oil_intangible_sunk_cost,
+        #         self._oil_opex_sunk_cost,
+        #         self._oil_asr_sunk_cost,
+        #         self._oil_lbt_sunk_cost,
+        #         self._oil_cost_of_sales_sunk_cost,
+        #     ]
+        # )
+        #
+        # # Identify GAS sunk cost array
+        # self._gas_sunk_cost = self._get_sunk_cost_array(
+        #     sunkcost_objects=[
+        #         self._gas_capital_sunk_cost,
+        #         self._gas_intangible_sunk_cost,
+        #         self._gas_opex_sunk_cost,
+        #         self._gas_asr_sunk_cost,
+        #         self._gas_lbt_sunk_cost,
+        #         self._gas_cost_of_sales_sunk_cost,
+        #     ]
+        # )
 
-        # Calculate pre tax expenditures
-        self._get_expenditures_pre_tax(
-            year_inflation=year_inflation,
-            inflation_rate=inflation_rate,
-            inflation_rate_applied_to=inflation_rate_applied_to,
-        )
-
-        # Calculate indirect taxes
-        self._get_indirect_taxes(tax_rate=tax_rate)
-
-        # Calculate post tax expenditures
-        self._get_expenditures_post_tax()
-
-        # Other revenue
-        self._get_other_revenue(
-            sulfur_revenue=sulfur_revenue,
-            electricity_revenue=electricity_revenue,
-            co2_revenue=co2_revenue,
-        )
-
-        # Total OIL pre-tax expenditures
-        self._oil_total_expenditures_pre_tax = (
-            self._oil_capital_expenditures_pre_tax
-            + self._oil_intangible_expenditures_pre_tax
-            + self._oil_opex_expenditures_pre_tax
-            + self._oil_asr_expenditures_pre_tax
-            + self._oil_lbt_expenditures_pre_tax
-            + self._oil_cost_of_sales_expenditures_pre_tax
-        )
-
-        # Total GAS pre-tax expenditures
-        self._gas_total_expenditures_pre_tax = (
-            self._gas_capital_expenditures_pre_tax
-            + self._gas_intangible_expenditures_pre_tax
-            + self._gas_opex_expenditures_pre_tax
-            + self._gas_asr_expenditures_pre_tax
-            + self._gas_lbt_expenditures_pre_tax
-            + self._gas_cost_of_sales_expenditures_pre_tax
-        )
-
-        # Total OIL indirect taxes
-        self._oil_total_indirect_tax = (
-            self._oil_capital_indirect_tax
-            + self._oil_intangible_indirect_tax
-            + self._oil_opex_indirect_tax
-            + self._oil_asr_indirect_tax
-            + self._oil_lbt_indirect_tax
-            + self._oil_cost_of_sales_indirect_tax
-        )
-
-        # Total GAS indirect taxes
-        self._gas_total_indirect_tax = (
-            self._gas_capital_indirect_tax
-            + self._gas_intangible_indirect_tax
-            + self._gas_opex_indirect_tax
-            + self._gas_asr_indirect_tax
-            + self._gas_lbt_indirect_tax
-            + self._gas_cost_of_sales_indirect_tax
-        )
-
-        # Total OIL post-tax expenditures
-        self._oil_total_expenditures_post_tax = (
-            self._oil_capital_expenditures_post_tax
-            + self._oil_intangible_expenditures_post_tax
-            + self._oil_opex_expenditures_post_tax
-            + self._oil_asr_expenditures_post_tax
-            + self._oil_lbt_expenditures_post_tax
-            + self._oil_cost_of_sales_expenditures_post_tax
-        )
-
-        # Total GAS post-tax expenditures
-        self._gas_total_expenditures_post_tax = (
-            self._gas_capital_expenditures_post_tax
-            + self._gas_intangible_expenditures_post_tax
-            + self._gas_opex_expenditures_post_tax
-            + self._gas_asr_expenditures_post_tax
-            + self._gas_lbt_expenditures_post_tax
-            + self._gas_cost_of_sales_expenditures_post_tax
-        )
-
-        # Non-capital costs (intangible + opex + asr + lbt + cost of sales)
-        self._oil_non_capital = (
-            self._oil_intangible_expenditures_post_tax
-            + self._oil_opex_expenditures_post_tax
-            + self._oil_asr_expenditures_post_tax
-            + self._oil_lbt_expenditures_post_tax
-            + self._oil_cost_of_sales_expenditures_post_tax
-        )
-
-        self._gas_non_capital = (
-            self._gas_intangible_expenditures_post_tax
-            + self._gas_opex_expenditures_post_tax
-            + self._gas_asr_expenditures_post_tax
-            + self._gas_lbt_expenditures_post_tax
-            + self._gas_cost_of_sales_expenditures_post_tax
-        )
-
-        # Configure base cashflow for OIL and GAS
-        self._oil_cashflow = (
-            self._oil_revenue - (self._oil_sunk_cost + self._oil_total_expenditures_post_tax)
-        )
-
-        self._gas_cashflow = (
-            self._gas_revenue - (self._gas_sunk_cost + self._gas_total_expenditures_post_tax)
-        )
-
-        # Prepare consolidated profiles
-        self._get_consolidated_profiles()
+        # # Calculate pre tax expenditures
+        # self._get_expenditures_pre_tax(
+        #     year_inflation=year_inflation,
+        #     inflation_rate=inflation_rate,
+        #     inflation_rate_applied_to=inflation_rate_applied_to,
+        # )
+        #
+        # # Calculate indirect taxes
+        # self._get_indirect_taxes(tax_rate=tax_rate)
+        #
+        # # Calculate post tax expenditures
+        # self._get_expenditures_post_tax()
+        #
+        # # Other revenue
+        # self._get_other_revenue(
+        #     sulfur_revenue=sulfur_revenue,
+        #     electricity_revenue=electricity_revenue,
+        #     co2_revenue=co2_revenue,
+        # )
+        #
+        # # Total OIL pre-tax expenditures
+        # self._oil_total_expenditures_pre_tax = (
+        #     self._oil_capital_expenditures_pre_tax
+        #     + self._oil_intangible_expenditures_pre_tax
+        #     + self._oil_opex_expenditures_pre_tax
+        #     + self._oil_asr_expenditures_pre_tax
+        #     + self._oil_lbt_expenditures_pre_tax
+        #     + self._oil_cost_of_sales_expenditures_pre_tax
+        # )
+        #
+        # # Total GAS pre-tax expenditures
+        # self._gas_total_expenditures_pre_tax = (
+        #     self._gas_capital_expenditures_pre_tax
+        #     + self._gas_intangible_expenditures_pre_tax
+        #     + self._gas_opex_expenditures_pre_tax
+        #     + self._gas_asr_expenditures_pre_tax
+        #     + self._gas_lbt_expenditures_pre_tax
+        #     + self._gas_cost_of_sales_expenditures_pre_tax
+        # )
+        #
+        # # Total OIL indirect taxes
+        # self._oil_total_indirect_tax = (
+        #     self._oil_capital_indirect_tax
+        #     + self._oil_intangible_indirect_tax
+        #     + self._oil_opex_indirect_tax
+        #     + self._oil_asr_indirect_tax
+        #     + self._oil_lbt_indirect_tax
+        #     + self._oil_cost_of_sales_indirect_tax
+        # )
+        #
+        # # Total GAS indirect taxes
+        # self._gas_total_indirect_tax = (
+        #     self._gas_capital_indirect_tax
+        #     + self._gas_intangible_indirect_tax
+        #     + self._gas_opex_indirect_tax
+        #     + self._gas_asr_indirect_tax
+        #     + self._gas_lbt_indirect_tax
+        #     + self._gas_cost_of_sales_indirect_tax
+        # )
+        #
+        # # Total OIL post-tax expenditures
+        # self._oil_total_expenditures_post_tax = (
+        #     self._oil_capital_expenditures_post_tax
+        #     + self._oil_intangible_expenditures_post_tax
+        #     + self._oil_opex_expenditures_post_tax
+        #     + self._oil_asr_expenditures_post_tax
+        #     + self._oil_lbt_expenditures_post_tax
+        #     + self._oil_cost_of_sales_expenditures_post_tax
+        # )
+        #
+        # # Total GAS post-tax expenditures
+        # self._gas_total_expenditures_post_tax = (
+        #     self._gas_capital_expenditures_post_tax
+        #     + self._gas_intangible_expenditures_post_tax
+        #     + self._gas_opex_expenditures_post_tax
+        #     + self._gas_asr_expenditures_post_tax
+        #     + self._gas_lbt_expenditures_post_tax
+        #     + self._gas_cost_of_sales_expenditures_post_tax
+        # )
+        #
+        # # Non-capital costs (intangible + opex + asr + lbt + cost of sales)
+        # self._oil_non_capital = (
+        #     self._oil_intangible_expenditures_post_tax
+        #     + self._oil_opex_expenditures_post_tax
+        #     + self._oil_asr_expenditures_post_tax
+        #     + self._oil_lbt_expenditures_post_tax
+        #     + self._oil_cost_of_sales_expenditures_post_tax
+        # )
+        #
+        # self._gas_non_capital = (
+        #     self._gas_intangible_expenditures_post_tax
+        #     + self._gas_opex_expenditures_post_tax
+        #     + self._gas_asr_expenditures_post_tax
+        #     + self._gas_lbt_expenditures_post_tax
+        #     + self._gas_cost_of_sales_expenditures_post_tax
+        # )
+        #
+        # # Configure base cashflow for OIL and GAS
+        # self._oil_cashflow = (
+        #     self._oil_revenue - (self._oil_sunk_cost + self._oil_total_expenditures_post_tax)
+        # )
+        #
+        # self._gas_cashflow = (
+        #     self._gas_revenue - (self._gas_sunk_cost + self._gas_total_expenditures_post_tax)
+        # )
+        #
+        # # Prepare consolidated profiles
+        # self._get_consolidated_profiles()
 
     def __len__(self):
         return self.project_duration

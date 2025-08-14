@@ -1225,8 +1225,10 @@ class GrossSplit(BaseProject):
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
         self._consolidated_cashflow = self._oil_ctr_cashflow + self._gas_ctr_cashflow
 
-    def _prepare_sunkcost_preonstream_cost(
+    def _prepare_sunk_preonstream_cost(
         self,
+        fluid_type: FluidType,
+        fluid_onstream_year: int,
         is_pod_1: bool = False,
         pod_1_approval_year: int = None,
     ):
@@ -1243,11 +1245,16 @@ class GrossSplit(BaseProject):
         )
 
         if is_pod_1 == True:
+
+            # If user does not provide POD approval 1 year
             if pod_1_approval_year is None:
                 pod_1_approval_year = self.oil_onstream_date.year
+
             else:
                 if pod_1_approval_year > self.oil_onstream_date.year:
-                    raise SunkCostException
+                    raise SunkCostException(
+                        f"POD I year ({pod_1_approval_year}) is larger than onstream year ()"
+                    )
 
                 if pod_1_approval_year < self.start_date.year:
                     raise SunkCostException
@@ -1267,19 +1274,6 @@ class GrossSplit(BaseProject):
             else:
                 raise SunkCostException
 
-
-                print('\t')
-                print(f'Filetype: {type(sc_id)}')
-                # print(f'Length: {len(sc_id)}')
-                print('sc_id = ', sc_id)
-
-                print('\t')
-                print(f'Filetype: {type(self._oil_sunk_cost)}')
-                print(f'Length: {len(self._oil_sunk_cost)}')
-                print('_oil_sunk_cost = ', self._oil_sunk_cost)
-
-        else:
-            pass
 
 
 
@@ -1340,7 +1334,7 @@ class GrossSplit(BaseProject):
         )
 
         # Prepare sunk cost and preonstream cost
-        self._prepare_sunkcost_preonstream_cost(
+        self._prepare_sunk_preonstream_cost(
             is_pod_1=is_pod_1,
             pod_1_approval_year=approval_year,
         )
