@@ -144,6 +144,9 @@ class GrossSplit(BaseProject):
     _oil_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _gas_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
 
+    _oil_preonstream_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_preonstream_cost: np.ndarray = field(default=None, init=False, repr=False)
+
     # Attributes to be defined later (associated with total expenses)
     _oil_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
     _gas_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
@@ -1222,6 +1225,65 @@ class GrossSplit(BaseProject):
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
         self._consolidated_cashflow = self._oil_ctr_cashflow + self._gas_ctr_cashflow
 
+    def _prepare_sunkcost_preonstream_cost(
+        self,
+        is_pod_1: bool = False,
+        pod_1_approval_year: int = None,
+    ):
+
+        oil_sunkcost_array = self._get_sunk_cost_array(
+            sunkcost_objects=[
+                self._oil_capital_sunk_cost,
+                self._oil_intangible_sunk_cost,
+                self._oil_opex_sunk_cost,
+                self._oil_asr_sunk_cost,
+                self._oil_lbt_sunk_cost,
+                self._oil_cost_of_sales_sunk_cost,
+            ]
+        )
+
+        if is_pod_1 == True:
+            if pod_1_approval_year is None:
+                pod_1_approval_year = self.oil_onstream_date.year
+            else:
+                if pod_1_approval_year > self.oil_onstream_date.year:
+                    raise SunkCostException
+
+                if pod_1_approval_year < self.start_date.year:
+                    raise SunkCostException
+
+                if pod_1_approval_year > self.end_date.year:
+                    raise SunkCostException
+
+            if pod_1_approval_year == self.oil_onstream_date.year:
+                sc_id = int(np.flatnonzero((pod_1_approval_year == self.project_years)))
+                self._oil_sunk_cost = np.zeros_like(self.project_years, dtype=np.float64)
+                self._oil_sunk_cost[:sc_id + 1] = oil_sunkcost_array[:sc_id + 1]
+                self._oil_preonstream_cost = np.zeros_like(self.project_years, dtype=np.float64)
+
+            elif pod_1_approval_year < self.oil_onstream_date.year:
+                pass
+
+            else:
+                raise SunkCostException
+
+
+                print('\t')
+                print(f'Filetype: {type(sc_id)}')
+                # print(f'Length: {len(sc_id)}')
+                print('sc_id = ', sc_id)
+
+                print('\t')
+                print(f'Filetype: {type(self._oil_sunk_cost)}')
+                print(f'Length: {len(self._oil_sunk_cost)}')
+                print('_oil_sunk_cost = ', self._oil_sunk_cost)
+
+        else:
+            pass
+
+
+
+
     def run(
         self,
         sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
@@ -1231,6 +1293,8 @@ class GrossSplit(BaseProject):
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
+        is_pod_1: bool = False,
+        approval_year: int = None,
         # is_dmo_end_weighted=False,
         # regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
         # tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
@@ -1249,10 +1313,37 @@ class GrossSplit(BaseProject):
         # WAP (Weighted Average Price) for each produced fluid
         self._get_wap_price()
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_wap_price)}')
-        print(f'Length: {len(self._oil_wap_price)}')
-        print('_oil_wap_price = \n', self._oil_wap_price)
+        # Validate OIL sunkcost
+        self._validate_sunkcost(
+            fluid_onstream_year=self.oil_onstream_date.year,
+            sunkcost_objects=[
+                self._oil_capital_sunk_cost,
+                self._oil_intangible_sunk_cost,
+                self._oil_opex_sunk_cost,
+                self._oil_asr_sunk_cost,
+                self._oil_lbt_sunk_cost,
+                self._oil_cost_of_sales_sunk_cost,
+            ]
+        )
+
+        # Validate GAS sunkcost
+        self._validate_sunkcost(
+            fluid_onstream_year=self.gas_onstream_date.year,
+            sunkcost_objects=[
+                self._gas_capital_sunk_cost,
+                self._gas_intangible_sunk_cost,
+                self._gas_opex_sunk_cost,
+                self._gas_asr_sunk_cost,
+                self._gas_lbt_sunk_cost,
+                self._gas_cost_of_sales_sunk_cost,
+            ]
+        )
+
+        # Prepare sunk cost and preonstream cost
+        self._prepare_sunkcost_preonstream_cost(
+            is_pod_1=is_pod_1,
+            pod_1_approval_year=approval_year,
+        )
 
         # # Configure Sunk Cost Reference Year
         # if sunk_cost_reference_year is None:

@@ -56,7 +56,7 @@ class ExampleCase:
         self.lifting_mangga = Lifting(
             start_year=2023,
             end_year=2030,
-            prod_year=np.array([2025, 2026, 2027, 2028, 2027, 2025]),
+            prod_year=np.array([2027, 2028, 2027, 2028, 2030, 2029]),
             lifting_rate=np.array([100, 100, 100, 200, 200, 200]),
             price=np.array([10, 10, 10, 5, 5, 5]),
             fluid_type=FluidType.OIL,
@@ -87,11 +87,14 @@ class ExampleCase:
         self.capital_mangga = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([100, 100, 50, 50]),
-            cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
-            is_sunkcost=[False, False, True, True],
-            tax_portion=np.array([1, 1, 1, 1]),
+            expense_year=np.array([2023, 2024, 2025, 2024, 2026, 2027]),
+            cost=np.array([100, 100, 50, 50, 25, 25]),
+            cost_allocation=[
+                FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL,
+            ],
+            is_sunkcost=[False, False, True, True, True, True],
+            tax_portion=np.array([1, 1, 1, 1, 1, 1]),
         )
 
         self.capital_apel = CapitalCost(

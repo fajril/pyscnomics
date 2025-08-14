@@ -38,12 +38,14 @@ params = {
     "year_inflation": None,
     "inflation_rate": 0.0,
     "inflation_rate_applied_to": None,
+    "is_pod_1": True,
+    "approval_year": 2027,
 }
 
 gs = GrossSplit(
     start_date=date(year=2023, month=1, day=1),
     end_date=date(year=2030, month=12, day=31),
-    oil_onstream_date=date(year=2025, month=1, day=1),
+    oil_onstream_date=date(year=2027, month=1, day=1),
     gas_onstream_date=date(year=2025, month=1, day=1),
     lifting=tuple([case.lifting_mangga, case.lifting_apel, case.lifting_nanas]),
     capital_cost=tuple([case.capital_mangga, case.capital_apel]),
