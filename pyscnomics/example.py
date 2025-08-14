@@ -65,7 +65,7 @@ class ExampleCase:
         self.lifting_apel = Lifting(
             start_year=2023,
             end_year=2030,
-            prod_year=np.array([2025, 2026, 2027, 2028, 2027, 2025]),
+            prod_year=np.array([2027, 2028, 2027, 2028, 2030, 2029]),
             lifting_rate=np.array([10, 10, 10, 20, 20, 20]),
             price=np.array([2, 2, 2, 1, 1, 1]),
             fluid_type=FluidType.GAS,
@@ -74,7 +74,7 @@ class ExampleCase:
         self.lifting_nanas = Lifting(
             start_year=2023,
             end_year=2030,
-            prod_year=np.array([2025, 2026, 2027, 2028, 2027, 2025]),
+            prod_year=np.array([2027, 2028, 2027, 2028, 2030, 2029]),
             lifting_rate=np.array([10, 10, 10, 20, 20, 20]),
             price=np.array([2, 2, 2, 1, 1, 1]),
             fluid_type=FluidType.SULFUR,
@@ -132,14 +132,14 @@ class ExampleCase:
             end_year=2030,
             expense_year=np.array([2023, 2024, 2025, 2024, 2026, 2027]),
             cost=np.array([100, 100, 50, 50, 25, 25]),
-            # cost_allocation=[
-            #     FluidType.OIL, FluidType.OIL, FluidType.OIL,
-            #     FluidType.OIL, FluidType.OIL, FluidType.OIL,
-            # ],
             cost_allocation=[
-                FluidType.GAS, FluidType.GAS, FluidType.GAS,
-                FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL,
             ],
+            # cost_allocation=[
+            #     FluidType.GAS, FluidType.GAS, FluidType.GAS,
+            #     FluidType.GAS, FluidType.GAS, FluidType.GAS,
+            # ],
             # is_sunkcost=[True, True, True, True, True, True],
             # is_sunkcost=[False, False, False, False, False, False],
             is_sunkcost=[False, False, True, True, True, True],
@@ -174,6 +174,9 @@ class ExampleCase:
             expense_year=np.array([2023, 2024, 2025, 2024]),
             fixed_cost=np.array([100, 100, 50, 50]),
             cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+            # cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+            # is_sunkcost=[True, True, True, True],
+            # is_sunkcost=[False, False, False, False],
             is_sunkcost=[False, False, True, True],
             tax_portion=np.array([1, 1, 1, 1]),
         )
@@ -198,6 +201,9 @@ class ExampleCase:
             expense_year=np.array([2023, 2024, 2025, 2024]),
             cost=np.array([100, 100, 50, 50]),
             cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+            # cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+            # is_sunkcost=[True, True, True, True],
+            # is_sunkcost=[False, False, False, False],
             is_sunkcost=[False, False, True, True],
             tax_portion=np.array([1, 1, 1, 1]),
         )
@@ -223,6 +229,9 @@ class ExampleCase:
             expense_year=np.array([2023, 2024, 2025, 2024]),
             cost=np.array([100, 100, 50, 50]),
             cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+            # cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+            # is_sunkcost=[True, True, True, True],
+            # is_sunkcost=[False, False, False, False],
             is_sunkcost=[False, False, True, True],
             tax_portion=np.array([1, 1, 1, 1]),
         )
@@ -247,6 +256,9 @@ class ExampleCase:
             expense_year=np.array([2023, 2024, 2025, 2024]),
             cost=np.array([100, 100, 50, 50]),
             cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+            # cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+            # is_sunkcost=[True, True, True, True],
+            # is_sunkcost=[False, False, False, False],
             is_sunkcost=[False, False, True, True],
         )
 
