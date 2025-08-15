@@ -1238,7 +1238,7 @@ class GrossSplit(BaseProject):
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
         self._consolidated_cashflow = self._oil_ctr_cashflow + self._gas_ctr_cashflow
 
-    def _prepare_sunk_preonstream_cost(
+    def _prepare_spc(
         self,
         fluid_type: FluidType,
         fluid_onstream_year: int,
@@ -1287,7 +1287,104 @@ class GrossSplit(BaseProject):
             else:
                 raise SunkCostException
 
+    def _prepare_sunk_preonstream(self):
 
+        # Validate OIL and GAS sunk-preonstream cost
+        self._get_sunkcost_validation()
+
+        # Define sunk-preonstream cost array
+        keys_spc = [
+            "oil_capital",
+            "gas_capital",
+            "oil_intangible",
+            "gas_intangible",
+            "oil_opex",
+            "gas_opex",
+            "oil_asr",
+            "gas_asr",
+            "oil_lbt",
+            "gas_lbt",
+            "oil_cost_of_sales",
+            "gas_cost_of_sales",
+        ]
+
+        vals_spc = [
+            self._oil_capital_sunk_cost,
+            self._gas_capital_sunk_cost,
+            self._oil_intangible_sunk_cost,
+            self._gas_intangible_sunk_cost,
+            self._oil_opex_sunk_cost,
+            self._gas_opex_sunk_cost,
+            self._oil_asr_sunk_cost,
+            self._gas_asr_sunk_cost,
+            self._oil_lbt_sunk_cost,
+            self._gas_lbt_sunk_cost,
+            self._oil_cost_of_sales_sunk_cost,
+            self._gas_cost_of_sales_sunk_cost,
+        ]
+
+        sunk_preonstream_cost_init = {
+            key: val.expenditures_pre_tax() for key, val in zip(keys_spc, vals_spc)
+        }
+
+        return {
+            "oil_depreciable": sunk_preonstream_cost_init["oil_capital"],
+            "gas_depreciable": sunk_preonstream_cost_init["gas_capital"],
+            "oil_non_depreciable": (
+                    sunk_preonstream_cost_init["oil_intangible"]
+                    + sunk_preonstream_cost_init["oil_opex"]
+                    + sunk_preonstream_cost_init["oil_asr"]
+                    + sunk_preonstream_cost_init["oil_lbt"]
+                    + sunk_preonstream_cost_init["oil_cost_of_sales"]
+            ),
+            "gas_non_depreciable": (
+                    sunk_preonstream_cost_init["gas_intangible"]
+                    + sunk_preonstream_cost_init["gas_opex"]
+                    + sunk_preonstream_cost_init["gas_asr"]
+                    + sunk_preonstream_cost_init["gas_lbt"]
+                    + sunk_preonstream_cost_init["gas_cost_of_sales"]
+            ),
+        }
+
+    def _get_sunk_preonstream(
+        self,
+        is_pod_1: bool = False,
+        approval_year: int = None,
+    ):
+
+        sunk_preonstream_cost = self._prepare_sunk_preonstream()
+
+        if not isinstance(is_pod_1, bool):
+            raise SunkCostException(
+                f"Attribute is_pod_1 must be given as a boolean, "
+                f"not a/an {is_pod_1.__class__.__qualname__}"
+            )
+
+        if is_pod_1 == False:
+
+            # Define depreciable sunk cost and preonstream cost
+            self._oil_depreciable_sunk_cost = sunk_preonstream_cost["oil_depreciable"]
+            self._gas_depreciable_sunk_cost = sunk_preonstream_cost["gas_depreciable"]
+            self._oil_depreciable_preonstream_cost = np.zeros_like(
+                self.project_years, dtype=np.float64
+            )
+            self._gas_depreciable_preonstream_cost = np.zeros_like(
+                self.project_years, dtype=np.float64
+            )
+
+            # Define non-depreciable sunk cost and preonstream cost
+            self._oil_non_depreciable_sunk_cost = sunk_preonstream_cost["oil_non_depreciable"]
+            self._gas_non_depreciable_sunk_cost = sunk_preonstream_cost["gas_non_depreciable"]
+
+            print('\t')
+            print(f'Filetype: {type(self._oil_depreciable_preonstream_cost)}')
+            print(f'Length: {len(self._oil_depreciable_preonstream_cost)}')
+            print('_oil_depreciable_preonstream_cost = ')
+            print(self._oil_depreciable_preonstream_cost)
+
+
+        else:
+            pass
 
 
 
@@ -1320,37 +1417,9 @@ class GrossSplit(BaseProject):
         # WAP (Weighted Average Price) for each produced fluid
         self._get_wap_price()
 
-        # Validate OIL sunkcost
-        self._validate_sunkcost(
-            fluid_onstream_year=self.oil_onstream_date.year,
-            sunkcost_objects=[
-                self._oil_capital_sunk_cost,
-                self._oil_intangible_sunk_cost,
-                self._oil_opex_sunk_cost,
-                self._oil_asr_sunk_cost,
-                self._oil_lbt_sunk_preonstrem_cost,
-                self._oil_cost_of_sales_sunk_cost,
-            ]
-        )
-
-        # Validate GAS sunkcost
-        self._validate_sunkcost(
-            fluid_onstream_year=self.gas_onstream_date.year,
-            sunkcost_objects=[
-                self._gas_capital_sunk_cost,
-                self._gas_intangible_sunk_cost,
-                self._gas_opex_sunk_cost,
-                self._gas_asr_sunk_cost,
-                self._gas_lbt_sunk_cost,
-                self._gas_cost_of_sales_sunk_cost,
-            ]
-        )
-
         # Prepare sunk cost and preonstream cost
-        self._prepare_sunk_preonstream_cost(
-            is_pod_1=is_pod_1,
-            pod_1_approval_year=approval_year,
-        )
+        self._get_sunk_preonstream()
+
 
         # # Configure Sunk Cost Reference Year
         # if sunk_cost_reference_year is None:
