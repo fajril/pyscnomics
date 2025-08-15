@@ -141,7 +141,7 @@ class BaseProject:
     _oil_cost_of_sales: CostOfSales = field(default=None, init=False, repr=False)
     _gas_cost_of_sales: CostOfSales = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with sunk cost in each cost categories)
+    # Attributes to be defined later (associated with sunkcost in each cost categories)
     _oil_capital_sunk_cost: CapitalCost = field(default=None, init=False, repr=False)
     _gas_capital_sunk_cost: CapitalCost = field(default=None, init=False, repr=False)
     _oil_intangible_sunk_cost: Intangible = field(default=None, init=False, repr=False)
@@ -155,28 +155,15 @@ class BaseProject:
     _oil_cost_of_sales_sunk_cost: CostOfSales = field(default=None, init=False, repr=False)
     _gas_cost_of_sales_sunk_cost: CostOfSales = field(default=None, init=False, repr=False)
 
-    # _oil_capital_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_capital_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
-    # _oil_intangible_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_intangible_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
-    # _oil_opex_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_opex_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
-    # _oil_asr_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_asr_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
-    # _oil_lbt_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_lbt_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
-    # _oil_cost_of_sales_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_cost_of_sales_sunk_cost_arr: np.ndarray = field(default=None, init=False, repr=False)
-
-    _oil_tangible_sunkcost_total: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_tangible_sunkcost_total: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_intangible_sunkcost_total: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_intangible_sunkcost_total: np.ndarray = field(default=None, init=False, repr=False)
-
-    # _tangible_sunkcost_total: dict = field(default=None, init=False, repr=False)
-    # _intangible_sunkcost_total: dict = field(default=None, init=False, repr=False)
-
     # Attributes to be defined later (associated with sunk cost)
+    _oil_depreciable_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_depreciable_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_non_depreciable_sunk_cost: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _gas_non_depreciable_sunk_cost: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
     _oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _gas_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -272,14 +259,10 @@ class BaseProject:
     _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes to be defined later (associated with consolidated sunk cost)
-    _consolidated_capital_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_intangible_sunk_cost: np.ndarray = field(
+    _consolidated_depreciable_sunk_cost: np.ndarray = field(
         default=None, init=False, repr=False
     )
-    _consolidated_opex_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_asr_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_lbt_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_cost_of_sales_sunk_cost: np.ndarray = field(
+    _consolidated_non_depreciable_sunk_cost: np.ndarray = field(
         default=None, init=False, repr=False
     )
     _consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
@@ -2429,70 +2412,106 @@ class BaseProject:
         )
 
     def _get_sunkcost_array(self):
+        """
+        Compute and categorize sunk costs for oil and gas.
 
-        (
-            oil_capital_sunkcost_arr,
-            gas_capital_sunkcost_arr,
-            oil_intangible_sunkcost_arr,
-            gas_intangible_sunkcost_arr,
-            oil_opex_sunkcost_arr,
-            gas_opex_sunkcost_arr,
-            oil_asr_sunkcost_arr,
-            gas_asr_sunkcost_arr,
-            oil_lbt_sunkcost_arr,
-            gas_lbt_sunkcost_arr,
-            oil_cos_sunkcost_arr,
-            gas_cos_sunkcost_arr,
-        ) = [
-            sc_obj.expenditures_pre_tax()
-            for sc_obj in [
-                self._oil_capital_sunk_cost,
-                self._gas_capital_sunk_cost,
-                self._oil_intangible_sunk_cost,
-                self._gas_intangible_sunk_cost,
-                self._oil_opex_sunk_cost,
-                self._gas_opex_sunk_cost,
-                self._oil_asr_sunk_cost,
-                self._gas_asr_sunk_cost,
-                self._oil_lbt_sunk_cost,
-                self._gas_lbt_sunk_cost,
-                self._oil_cost_of_sales_sunk_cost,
-                self._gas_cost_of_sales_sunk_cost,
-            ]
+        This method validates the sunk costs for both oil and gas, then constructs
+        arrays representing various sunk cost categories (capital, intangible,
+        operational, abandonment, tax, and cost of sales). It classifies them into
+        depreciable and non-depreciable categories and calculates total sunk costs
+        for each fluid type.
+
+        Notes
+        -----
+        - Depreciable sunk costs include only capital expenditures.
+        - Non-depreciable sunk costs include intangible, operational, abandonment,
+          tax, and cost of sales expenditures.
+        - All values are computed pre-tax using the `expenditures_pre_tax` method
+          from each sunk cost object.
+
+        Returns
+        -------
+        None
+            This method does not return a value. It sets the following internal
+            attributes:
+            - _oil_depreciable_sunk_cost
+            - _gas_depreciable_sunk_cost
+            - _oil_non_depreciable_sunk_cost
+            - _gas_non_depreciable_sunk_cost
+            - _oil_sunk_cost
+            - _gas_sunk_cost
+
+        See Also
+        --------
+        -   _get_sunkcost_validation : Validates sunk cost data before computation.
+        -   expenditures_pre_tax : Returns the pre-tax expenditures for a cost object.
+        """
+
+        # Validate OIL and GAS sunkcost
+        self._get_sunkcost_validation()
+
+        # Prepare sunkcost arrays for each sunkcost objects
+        keys = [
+            "oil_capital",
+            "gas_capital",
+            "oil_intangible",
+            "gas_intangible",
+            "oil_opex",
+            "gas_opex",
+            "oil_asr",
+            "gas_asr",
+            "oil_lbt",
+            "gas_lbt",
+            "oil_cost_of_sales",
+            "gas_cost_of_sales",
         ]
 
-        print('\t')
-        print(f'Filetype: {type(oil_lbt_sunkcost_arr)}')
-        print(f'Length: {len(oil_lbt_sunkcost_arr)}')
-        print('oil_lbt_sunkcost_arr = \n', oil_lbt_sunkcost_arr)
+        vals = [
+            self._oil_capital_sunk_cost,
+            self._gas_capital_sunk_cost,
+            self._oil_intangible_sunk_cost,
+            self._gas_intangible_sunk_cost,
+            self._oil_opex_sunk_cost,
+            self._gas_opex_sunk_cost,
+            self._oil_asr_sunk_cost,
+            self._gas_asr_sunk_cost,
+            self._oil_lbt_sunk_cost,
+            self._gas_lbt_sunk_cost,
+            self._oil_cost_of_sales_sunk_cost,
+            self._gas_cost_of_sales_sunk_cost,
+        ]
 
-    # @staticmethod
-    # def _get_sunk_cost_array(sunkcost_objects: list) -> np.ndarray:
-    #     """
-    #     Aggregates sunk cost array from a list of sunk cost objects and aligns it
-    #     according to the corresponding project years.
-    #
-    #     This is carried out by using the `expenditures_pre_tax()` method on each
-    #     objects in the provided list, then sums them element-wise to produce a single
-    #     combined array.
-    #
-    #     Parameters
-    #     ----------
-    #     sunkcost_objects : list
-    #         A list of sunk cost objects.
-    #
-    #     Returns
-    #     -------
-    #     np.ndarray
-    #         A 1D array representing the total sunk cost array for a particular fluid type
-    #
-    #     Notes
-    #     -----
-    #     -   Each element in `sunkcost_objects` must implement `expenditures_pre_tax()`
-    #         and return an array of the same shape.
-    #     -   The result is computed as the sum over axis 0 of the stacked arrays.
-    #     """
-    #     return np.array([sc.expenditures_pre_tax() for sc in sunkcost_objects]).sum(axis=0)
+        sunkcost_arr = {key: val.expenditures_pre_tax() for key, val in zip(keys, vals)}
+
+        # Define depreciable sunk costs
+        self._oil_depreciable_sunk_cost = sunkcost_arr["oil_capital"]
+        self._gas_depreciable_sunk_cost = sunkcost_arr["gas_capital"]
+
+        # Define non-depreciable sunk costs
+        self._oil_non_depreciable_sunk_cost = (
+            sunkcost_arr["oil_intangible"]
+            + sunkcost_arr["oil_opex"]
+            + sunkcost_arr["oil_asr"]
+            + sunkcost_arr["oil_lbt"]
+            + sunkcost_arr["oil_cost_of_sales"]
+        )
+
+        self._gas_non_depreciable_sunk_cost = (
+            sunkcost_arr["gas_intangible"]
+            + sunkcost_arr["gas_opex"]
+            + sunkcost_arr["gas_asr"]
+            + sunkcost_arr["gas_lbt"]
+            + sunkcost_arr["gas_cost_of_sales"]
+        )
+
+        # Defone total sunkcost for OIL and GAS
+        self._oil_sunk_cost = (
+            self._oil_depreciable_sunk_cost + self._oil_non_depreciable_sunk_cost
+        )
+
+        self._gas_sunk_cost = (
+            self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
+        )
 
     def _calc_expenditures(
         self,
@@ -3056,19 +3075,11 @@ class BaseProject:
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue
 
         # Attributes associated with consolidated sunkcost
-        self._consolidated_capital_sunk_cost = (
-            self._oil_capital_sunk_cost + self._gas_capital_sunk_cost
+        self._consolidated_depreciable_sunk_cost = (
+            self._oil_depreciable_sunk_cost + self._gas_depreciable_sunk_cost
         )
-        self._consolidated_intangible_sunk_cost = (
-            self._oil_intangible_sunk_cost + self._gas_intangible_sunk_cost
-        )
-        self._consolidated_opex_sunk_cost = (
-            self._oil_opex_sunk_cost + self._gas_opex_sunk_cost
-        )
-        self._consolidated_asr_sunk_cost = self._oil_asr_sunk_cost + self._gas_asr_sunk_cost
-        self._consolidated_lbt_sunk_cost = self._oil_lbt_sunk_cost + self._gas_lbt_sunk_cost
-        self._consolidated_cost_of_sales_sunk_cost = (
-            self._oil_cost_of_sales_sunk_cost + self._gas_cost_of_sales_sunk_cost
+        self._consolidated_non_depreciable_sunk_cost = (
+            self._oil_non_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
         )
         self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
 
@@ -3143,7 +3154,6 @@ class BaseProject:
             self._oil_cost_of_sales_expenditures_post_tax
             + self._gas_cost_of_sales_expenditures_post_tax
         )
-
         self._consolidated_expenditures_post_tax = (
             self._oil_total_expenditures_post_tax + self._gas_total_expenditures_post_tax
         )
@@ -3191,143 +3201,117 @@ class BaseProject:
         # WAP (Weighted Average Price) for each produced fluid
         self._get_wap_price()
 
-        # Validate OIL and GAS sunkcost
-        self._get_sunkcost_validation()
-
+        # Prepare sunkcost
         self._get_sunkcost_array()
 
-        # # Identify OIL sunk cost array
-        # self._oil_sunk_cost = self._get_sunk_cost_array(
-        #     sunkcost_objects=[
-        #         self._oil_capital_sunk_cost,
-        #         self._oil_intangible_sunk_cost,
-        #         self._oil_opex_sunk_cost,
-        #         self._oil_asr_sunk_cost,
-        #         self._oil_lbt_sunk_cost,
-        #         self._oil_cost_of_sales_sunk_cost,
-        #     ]
-        # )
-        #
-        # # Identify GAS sunk cost array
-        # self._gas_sunk_cost = self._get_sunk_cost_array(
-        #     sunkcost_objects=[
-        #         self._gas_capital_sunk_cost,
-        #         self._gas_intangible_sunk_cost,
-        #         self._gas_opex_sunk_cost,
-        #         self._gas_asr_sunk_cost,
-        #         self._gas_lbt_sunk_cost,
-        #         self._gas_cost_of_sales_sunk_cost,
-        #     ]
-        # )
+        # Calculate pre tax expenditures
+        self._get_expenditures_pre_tax(
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
+        )
 
-        # # Calculate pre tax expenditures
-        # self._get_expenditures_pre_tax(
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     inflation_rate_applied_to=inflation_rate_applied_to,
-        # )
-        #
-        # # Calculate indirect taxes
-        # self._get_indirect_taxes(tax_rate=tax_rate)
-        #
-        # # Calculate post tax expenditures
-        # self._get_expenditures_post_tax()
-        #
-        # # Other revenue
-        # self._get_other_revenue(
-        #     sulfur_revenue=sulfur_revenue,
-        #     electricity_revenue=electricity_revenue,
-        #     co2_revenue=co2_revenue,
-        # )
-        #
-        # # Total OIL pre-tax expenditures
-        # self._oil_total_expenditures_pre_tax = (
-        #     self._oil_capital_expenditures_pre_tax
-        #     + self._oil_intangible_expenditures_pre_tax
-        #     + self._oil_opex_expenditures_pre_tax
-        #     + self._oil_asr_expenditures_pre_tax
-        #     + self._oil_lbt_expenditures_pre_tax
-        #     + self._oil_cost_of_sales_expenditures_pre_tax
-        # )
-        #
-        # # Total GAS pre-tax expenditures
-        # self._gas_total_expenditures_pre_tax = (
-        #     self._gas_capital_expenditures_pre_tax
-        #     + self._gas_intangible_expenditures_pre_tax
-        #     + self._gas_opex_expenditures_pre_tax
-        #     + self._gas_asr_expenditures_pre_tax
-        #     + self._gas_lbt_expenditures_pre_tax
-        #     + self._gas_cost_of_sales_expenditures_pre_tax
-        # )
-        #
-        # # Total OIL indirect taxes
-        # self._oil_total_indirect_tax = (
-        #     self._oil_capital_indirect_tax
-        #     + self._oil_intangible_indirect_tax
-        #     + self._oil_opex_indirect_tax
-        #     + self._oil_asr_indirect_tax
-        #     + self._oil_lbt_indirect_tax
-        #     + self._oil_cost_of_sales_indirect_tax
-        # )
-        #
-        # # Total GAS indirect taxes
-        # self._gas_total_indirect_tax = (
-        #     self._gas_capital_indirect_tax
-        #     + self._gas_intangible_indirect_tax
-        #     + self._gas_opex_indirect_tax
-        #     + self._gas_asr_indirect_tax
-        #     + self._gas_lbt_indirect_tax
-        #     + self._gas_cost_of_sales_indirect_tax
-        # )
-        #
-        # # Total OIL post-tax expenditures
-        # self._oil_total_expenditures_post_tax = (
-        #     self._oil_capital_expenditures_post_tax
-        #     + self._oil_intangible_expenditures_post_tax
-        #     + self._oil_opex_expenditures_post_tax
-        #     + self._oil_asr_expenditures_post_tax
-        #     + self._oil_lbt_expenditures_post_tax
-        #     + self._oil_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # # Total GAS post-tax expenditures
-        # self._gas_total_expenditures_post_tax = (
-        #     self._gas_capital_expenditures_post_tax
-        #     + self._gas_intangible_expenditures_post_tax
-        #     + self._gas_opex_expenditures_post_tax
-        #     + self._gas_asr_expenditures_post_tax
-        #     + self._gas_lbt_expenditures_post_tax
-        #     + self._gas_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # # Non-capital costs (intangible + opex + asr + lbt + cost of sales)
-        # self._oil_non_capital = (
-        #     self._oil_intangible_expenditures_post_tax
-        #     + self._oil_opex_expenditures_post_tax
-        #     + self._oil_asr_expenditures_post_tax
-        #     + self._oil_lbt_expenditures_post_tax
-        #     + self._oil_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # self._gas_non_capital = (
-        #     self._gas_intangible_expenditures_post_tax
-        #     + self._gas_opex_expenditures_post_tax
-        #     + self._gas_asr_expenditures_post_tax
-        #     + self._gas_lbt_expenditures_post_tax
-        #     + self._gas_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # # Configure base cashflow for OIL and GAS
-        # self._oil_cashflow = (
-        #     self._oil_revenue - (self._oil_sunk_cost + self._oil_total_expenditures_post_tax)
-        # )
-        #
-        # self._gas_cashflow = (
-        #     self._gas_revenue - (self._gas_sunk_cost + self._gas_total_expenditures_post_tax)
-        # )
-        #
-        # # Prepare consolidated profiles
-        # self._get_consolidated_profiles()
+        # Calculate indirect taxes
+        self._get_indirect_taxes(tax_rate=tax_rate)
+
+        # Calculate post tax expenditures
+        self._get_expenditures_post_tax()
+
+        # Other revenue
+        self._get_other_revenue(
+            sulfur_revenue=sulfur_revenue,
+            electricity_revenue=electricity_revenue,
+            co2_revenue=co2_revenue,
+        )
+
+        # Total OIL pre-tax expenditures
+        self._oil_total_expenditures_pre_tax = (
+            self._oil_capital_expenditures_pre_tax
+            + self._oil_intangible_expenditures_pre_tax
+            + self._oil_opex_expenditures_pre_tax
+            + self._oil_asr_expenditures_pre_tax
+            + self._oil_lbt_expenditures_pre_tax
+            + self._oil_cost_of_sales_expenditures_pre_tax
+        )
+
+        # Total GAS pre-tax expenditures
+        self._gas_total_expenditures_pre_tax = (
+            self._gas_capital_expenditures_pre_tax
+            + self._gas_intangible_expenditures_pre_tax
+            + self._gas_opex_expenditures_pre_tax
+            + self._gas_asr_expenditures_pre_tax
+            + self._gas_lbt_expenditures_pre_tax
+            + self._gas_cost_of_sales_expenditures_pre_tax
+        )
+
+        # Total OIL indirect taxes
+        self._oil_total_indirect_tax = (
+            self._oil_capital_indirect_tax
+            + self._oil_intangible_indirect_tax
+            + self._oil_opex_indirect_tax
+            + self._oil_asr_indirect_tax
+            + self._oil_lbt_indirect_tax
+            + self._oil_cost_of_sales_indirect_tax
+        )
+
+        # Total GAS indirect taxes
+        self._gas_total_indirect_tax = (
+            self._gas_capital_indirect_tax
+            + self._gas_intangible_indirect_tax
+            + self._gas_opex_indirect_tax
+            + self._gas_asr_indirect_tax
+            + self._gas_lbt_indirect_tax
+            + self._gas_cost_of_sales_indirect_tax
+        )
+
+        # Total OIL post-tax expenditures
+        self._oil_total_expenditures_post_tax = (
+            self._oil_capital_expenditures_post_tax
+            + self._oil_intangible_expenditures_post_tax
+            + self._oil_opex_expenditures_post_tax
+            + self._oil_asr_expenditures_post_tax
+            + self._oil_lbt_expenditures_post_tax
+            + self._oil_cost_of_sales_expenditures_post_tax
+        )
+
+        # Total GAS post-tax expenditures
+        self._gas_total_expenditures_post_tax = (
+            self._gas_capital_expenditures_post_tax
+            + self._gas_intangible_expenditures_post_tax
+            + self._gas_opex_expenditures_post_tax
+            + self._gas_asr_expenditures_post_tax
+            + self._gas_lbt_expenditures_post_tax
+            + self._gas_cost_of_sales_expenditures_post_tax
+        )
+
+        # Non-capital costs (intangible + opex + asr + lbt + cost of sales)
+        self._oil_non_capital = (
+            self._oil_intangible_expenditures_post_tax
+            + self._oil_opex_expenditures_post_tax
+            + self._oil_asr_expenditures_post_tax
+            + self._oil_lbt_expenditures_post_tax
+            + self._oil_cost_of_sales_expenditures_post_tax
+        )
+
+        self._gas_non_capital = (
+            self._gas_intangible_expenditures_post_tax
+            + self._gas_opex_expenditures_post_tax
+            + self._gas_asr_expenditures_post_tax
+            + self._gas_lbt_expenditures_post_tax
+            + self._gas_cost_of_sales_expenditures_post_tax
+        )
+
+        # Configure base cashflow for OIL and GAS
+        self._oil_cashflow = (
+            self._oil_revenue - (self._oil_sunk_cost + self._oil_total_expenditures_post_tax)
+        )
+
+        self._gas_cashflow = (
+            self._gas_revenue - (self._gas_sunk_cost + self._gas_total_expenditures_post_tax)
+        )
+
+        # Prepare consolidated profiles
+        self._get_consolidated_profiles()
 
     def __len__(self):
         return self.project_duration

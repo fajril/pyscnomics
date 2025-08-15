@@ -144,6 +144,19 @@ class GrossSplit(BaseProject):
     _oil_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _gas_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
 
+    # Attributes to be defined later (associated with preonstream cost)
+    _oil_depreciable_preonstream_cost: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _gas_depreciable_preonstream_cost: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _oil_non_depreciable_preonstream_cost: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _gas_non_depreciable_preonstream_cost: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
     _oil_preonstream_cost: np.ndarray = field(default=None, init=False, repr=False)
     _gas_preonstream_cost: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -1089,7 +1102,7 @@ class GrossSplit(BaseProject):
                 self._oil_opex_sunk_cost + self._gas_opex_sunk_cost
         )
         self._consolidated_asr_sunk_cost = self._oil_asr_sunk_cost + self._gas_asr_sunk_cost
-        self._consolidated_lbt_sunk_cost = self._oil_lbt_sunk_cost + self._gas_lbt_sunk_cost
+        self._consolidated_lbt_sunk_cost = self._oil_lbt_sunk_preonstrem_cost + self._gas_lbt_sunk_cost
         self._consolidated_cost_of_sales_sunk_cost = (
                 self._oil_cost_of_sales_sunk_cost + self._gas_cost_of_sales_sunk_cost
         )
@@ -1239,7 +1252,7 @@ class GrossSplit(BaseProject):
                 self._oil_intangible_sunk_cost,
                 self._oil_opex_sunk_cost,
                 self._oil_asr_sunk_cost,
-                self._oil_lbt_sunk_cost,
+                self._oil_lbt_sunk_preonstrem_cost,
                 self._oil_cost_of_sales_sunk_cost,
             ]
         )
@@ -1315,7 +1328,7 @@ class GrossSplit(BaseProject):
                 self._oil_intangible_sunk_cost,
                 self._oil_opex_sunk_cost,
                 self._oil_asr_sunk_cost,
-                self._oil_lbt_sunk_cost,
+                self._oil_lbt_sunk_preonstrem_cost,
                 self._oil_cost_of_sales_sunk_cost,
             ]
         )

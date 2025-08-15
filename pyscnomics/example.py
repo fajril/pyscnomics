@@ -97,9 +97,9 @@ class ExampleCase:
             #     FluidType.GAS, FluidType.GAS, FluidType.GAS,
             #     FluidType.GAS, FluidType.GAS, FluidType.GAS,
             # ],
-            is_sunkcost=[True, True, True, True, True, True],
+            # is_sunkcost=[True, True, True, True, True, True],
             # is_sunkcost=[False, False, False, False, False, False],
-            # is_sunkcost=[False, False, True, True, True, True],
+            is_sunkcost=[False, False, True, True, True, True],
             tax_portion=np.array([1, 1, 1, 1, 1, 1]),
         )
 
@@ -161,6 +161,7 @@ class ExampleCase:
             ],
             # is_sunkcost=[True, True, True, True, True, True],
             # is_sunkcost=[False, False, False, False, False, False],
+            is_sunkcost=[False, False, True, True, True, True],
             tax_portion=np.array([1, 1, 1, 1, 1, 1]),
         )
 
