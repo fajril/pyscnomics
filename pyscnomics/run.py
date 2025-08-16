@@ -38,8 +38,8 @@ params = {
     "year_inflation": None,
     "inflation_rate": 0.0,
     "inflation_rate_applied_to": None,
-    # "is_pod_1": False,
-    # "approval_year": 2027,
+    "is_pod_1": True,
+    "approval_year": 2027,
 }
 
 gs = GrossSplit(

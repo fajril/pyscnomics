@@ -1346,45 +1346,86 @@ class GrossSplit(BaseProject):
             ),
         }
 
-    def _get_sunk_preonstream(
-        self,
-        is_pod_1: bool = False,
-        approval_year: int = None,
-    ):
+    def _get_sunk_preonstream(self, is_pod_1: bool, approval_year: int):
 
-        sunk_preonstream_cost = self._prepare_sunk_preonstream()
+        # Call sunk_preonstream_cost from method _prepare_sunk_preonstream()
+        spc = self._prepare_sunk_preonstream()
 
+        # Filter argument is_pod_1 from inappropriate data type
         if not isinstance(is_pod_1, bool):
-            raise SunkCostException(
+            raise GrossSplitException(
                 f"Attribute is_pod_1 must be given as a boolean, "
                 f"not a/an {is_pod_1.__class__.__qualname__}"
             )
 
+        # Procedures to be carried out if gross split contract is NOT POD I
         if is_pod_1 == False:
 
-            # Define depreciable sunk cost and preonstream cost
-            self._oil_depreciable_sunk_cost = sunk_preonstream_cost["oil_depreciable"]
-            self._gas_depreciable_sunk_cost = sunk_preonstream_cost["gas_depreciable"]
-            self._oil_depreciable_preonstream_cost = np.zeros_like(
-                self.project_years, dtype=np.float64
+            # Define attributes associated with sunk cost
+            self._oil_depreciable_sunk_cost = spc["oil_depreciable"]
+            self._gas_depreciable_sunk_cost = spc["gas_depreciable"]
+            self._oil_non_depreciable_sunk_cost = spc["oil_non_depreciable"]
+            self._gas_non_depreciable_sunk_cost = spc["gas_non_depreciable"]
+            self._oil_sunk_cost = (
+                self._oil_depreciable_sunk_cost + self._gas_depreciable_sunk_cost
             )
-            self._gas_depreciable_preonstream_cost = np.zeros_like(
-                self.project_years, dtype=np.float64
+            self._gas_sunk_cost = (
+                self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
             )
 
-            # Define non-depreciable sunk cost and preonstream cost
-            self._oil_non_depreciable_sunk_cost = sunk_preonstream_cost["oil_non_depreciable"]
-            self._gas_non_depreciable_sunk_cost = sunk_preonstream_cost["gas_non_depreciable"]
+            # Define attributes associated with preonstream cost
+            for fluid in ["oil", "gas"]:
+                for category in ["depreciable", "non_depreciable"]:
+                    setattr(
+                        self,
+                        f"_{fluid}_{category}_preonstream_cost",
+                        np.zeros_like(self.project_years, dtype=np.float64)
+                    )
+
+            self._oil_preonstream_cost = (
+                self._oil_depreciable_preonstream_cost
+                + self._oil_non_depreciable_preonstream_cost
+            )
+
+            self._gas_preonstream_cost = (
+                self._gas_depreciable_preonstream_cost
+                + self._gas_non_depreciable_preonstream_cost
+            )
+
+        # Procedures to be carried out if gross split contract is POD I
+        # elif is_pod_1 == True:
+        else:
+
+            # Filter approval_year for inappropriate value
+            if not isinstance(approval_year, int):
+                raise GrossSplitException(
+                    f"Parameter approval_year must be provided as an int, "
+                    f"not as a/an {approval_year.__class__.__qualname__}"
+                )
+
+            if approval_year < self.start_date.year:
+                raise GrossSplitException(
+                    f"Approval year ({approval_year}) is before "
+                    f"the project start year ({self.start_date.year})"
+                )
+
+            if approval_year > self.end_date.year:
+                raise GrossSplitException(
+                    f"Approval year ({approval_year}) is after "
+                    f"the project end year ({self.end_date.year})"
+                )
 
             print('\t')
-            print(f'Filetype: {type(self._oil_depreciable_preonstream_cost)}')
-            print(f'Length: {len(self._oil_depreciable_preonstream_cost)}')
-            print('_oil_depreciable_preonstream_cost = ')
-            print(self._oil_depreciable_preonstream_cost)
+            print(f'Filetype: {type(spc["oil_depreciable"])}')
+            print(f'Length: {len(spc["oil_depreciable"])}')
+            print('spc["oil_depreciable"] = \n', spc["oil_depreciable"])
 
+            t1 = int(np.flatnonzero(self.project_years == approval_year))
 
-        else:
-            pass
+            print('\t')
+            print(f'Filetype: {type(t1)}')
+            # print(f'Length: {len(t1)}')
+            print('t1 = ', t1)
 
 
 
@@ -1418,7 +1459,7 @@ class GrossSplit(BaseProject):
         self._get_wap_price()
 
         # Prepare sunk cost and preonstream cost
-        self._get_sunk_preonstream()
+        self._get_sunk_preonstream(is_pod_1=is_pod_1, approval_year=approval_year)
 
 
         # # Configure Sunk Cost Reference Year
