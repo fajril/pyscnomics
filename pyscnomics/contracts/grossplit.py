@@ -369,6 +369,376 @@ class GrossSplit(BaseProject):
         self._oil_carry_forward_depreciation = carward_depr["oil_carry_forward_depreciation"]
         self._gas_carry_forward_depreciation = carward_depr["gas_carry_forward_depreciation"]
 
+    def _validate_approval_year(self, approval_year: int, fluid_type: str) -> None:
+        """
+        Validate that the given approval year is appropriate for the project timeline
+        and the specified fluid type.
+
+        This method ensures that:
+            - `approval_year` is an integer.
+            - `approval_year` lies between the project start year and end year.
+            - `approval_year` is not later than the onstream year of the specified fluid.
+            - `fluid_type` is one of the supported types ("oil" or "gas").
+
+        Parameters
+        ----------
+        approval_year : int
+            The year of POD I approval. Must be an integer within the project timeline
+            and not after the fluid's onstream year.
+        fluid_type : str
+            The type of fluid for validation. Supported values are:
+            - ``"oil"``
+            - ``"gas"``
+
+        Raises
+        ------
+        GrossSplitException
+            If `approval_year` is not an integer.
+            If `approval_year` is before the project start year.
+            If `approval_year` is after the project end year.
+            If `fluid_type` is unsupported.
+            If `approval_year` is after the fluid's onstream year.
+
+        Returns
+        -------
+        None
+            This method does not return anything. It only validates inputs
+            and raises exceptions when validation fails.
+        """
+
+        if not isinstance(approval_year, int):
+            raise GrossSplitException(
+                f"Parameter approval_year must be an integer, "
+                f"not {approval_year.__class__.__qualname__}"
+            )
+
+        if approval_year < self.start_date.year:
+            raise GrossSplitException(
+                f"Approval year ({approval_year}) is before "
+                f"the project start year ({self.start_date.year})"
+            )
+
+        if approval_year > self.end_date.year:
+            raise GrossSplitException(
+                f"Approval year ({approval_year}) is after "
+                f"the project end year ({self.end_date.year})"
+            )
+
+        fluid_onstream_years = {
+            "oil": self.oil_onstream_date.year,
+            "gas": self.gas_onstream_date.year,
+        }
+
+        try:
+            onstream_year = fluid_onstream_years[fluid_type]
+
+        except KeyError:
+            raise GrossSplitException(f"Unsupported fluid type ({fluid_type}) provided.")
+
+        if approval_year > onstream_year:
+            raise GrossSplitException(
+                f"Approval year ({approval_year}) is after {fluid_type} "
+                f"onstream year ({onstream_year})"
+            )
+
+    def _prepare_sunk_preonstream(self) -> dict:
+        """
+        Prepare and aggregate sunk-preonstream costs for oil and gas.
+
+        This method validates the sunk-preonstream cost objects, extracts their
+        pre-tax expenditures, and aggregates them into depreciable and
+        non-depreciable categories for both oil and gas.
+
+        Returns
+        -------
+        dict
+            Dictionary with the following keys:
+
+            - ``"oil_depreciable"`` : ndarray
+                Pre-tax expenditures associated with oil capital (depreciable).
+            - ``"gas_depreciable"`` : ndarray
+                Pre-tax expenditures associated with gas capital (depreciable).
+            - ``"oil_non_depreciable"`` : ndarray
+                Aggregated pre-tax expenditures of oil intangible, opex, ASR,
+                LBT, and cost of sales (non-depreciable).
+            - ``"gas_non_depreciable"`` : ndarray
+                Aggregated pre-tax expenditures of gas intangible, opex, ASR,
+                LBT, and cost of sales (non-depreciable).
+
+        Notes
+        -----
+        -   The method first validates OIL and GAS sunk-preonstream costs using
+            method `_get_sunkcost_validation`.
+        -   Internally, each sunk-preonstream cost object must implement
+            ``.expenditures_pre_tax()`` which returns the pre-tax expenditures as
+            an ndarray.
+        -   Results are returned as NumPy arrays aligned with ``self.project_years``.
+        """
+
+        # Validate OIL and GAS sunk-preonstream cost
+        self._get_sunkcost_validation()
+
+        # Define sunk-preonstream cost array
+        keys_spc = [
+            "oil_capital",
+            "gas_capital",
+            "oil_intangible",
+            "gas_intangible",
+            "oil_opex",
+            "gas_opex",
+            "oil_asr",
+            "gas_asr",
+            "oil_lbt",
+            "gas_lbt",
+            "oil_cost_of_sales",
+            "gas_cost_of_sales",
+        ]
+
+        vals_spc = [
+            self._oil_capital_sunk_cost,
+            self._gas_capital_sunk_cost,
+            self._oil_intangible_sunk_cost,
+            self._gas_intangible_sunk_cost,
+            self._oil_opex_sunk_cost,
+            self._gas_opex_sunk_cost,
+            self._oil_asr_sunk_cost,
+            self._gas_asr_sunk_cost,
+            self._oil_lbt_sunk_cost,
+            self._gas_lbt_sunk_cost,
+            self._oil_cost_of_sales_sunk_cost,
+            self._gas_cost_of_sales_sunk_cost,
+        ]
+
+        sunk_preonstream_cost_init = {
+            key: val.expenditures_pre_tax() for key, val in zip(keys_spc, vals_spc)
+        }
+
+        return {
+            "oil_depreciable": sunk_preonstream_cost_init["oil_capital"],
+            "gas_depreciable": sunk_preonstream_cost_init["gas_capital"],
+            "oil_non_depreciable": (
+                    sunk_preonstream_cost_init["oil_intangible"]
+                    + sunk_preonstream_cost_init["oil_opex"]
+                    + sunk_preonstream_cost_init["oil_asr"]
+                    + sunk_preonstream_cost_init["oil_lbt"]
+                    + sunk_preonstream_cost_init["oil_cost_of_sales"]
+            ),
+            "gas_non_depreciable": (
+                    sunk_preonstream_cost_init["gas_intangible"]
+                    + sunk_preonstream_cost_init["gas_opex"]
+                    + sunk_preonstream_cost_init["gas_asr"]
+                    + sunk_preonstream_cost_init["gas_lbt"]
+                    + sunk_preonstream_cost_init["gas_cost_of_sales"]
+            ),
+        }
+
+    def _initialize_sunk_preonstream(self) -> None:
+        """
+        Initialize sunk and pre-onstream cost arrays for oil and gas.
+
+        This method sets up zero-filled NumPy arrays for each combination of:
+            - Fluid type: ``"oil"``, ``"gas"``
+            - Cost category: ``"depreciable"``, ``"non_depreciable"``
+            - Cost type: ``"sunk_cost"``, ``"preonstream_cost"``
+
+        Each array is initialized with the same shape as ``self.project_years`` and
+        stored as an attribute on the instance using the naming convention:
+        ``_{fluid}_{category}_{cost_type}``.
+
+        Example created attributes:
+            - ``_oil_depreciable_sunk_cost``
+            - ``_oil_non_depreciable_preonstream_cost``
+            - ``_gas_depreciable_sunk_cost``
+            - ``_gas_non_depreciable_preonstream_cost``
+
+        Returns
+        -------
+        None
+            This method modifies the instance by creating attributes dynamically.
+        """
+
+        fluids = ["oil", "gas"]
+        categories = ["depreciable", "non_depreciable"]
+        cost_types = ["sunk_cost", "preonstream_cost"]
+
+        for fluid in fluids:
+            for category in categories:
+                for cost_type in cost_types:
+                    setattr(
+                        self,
+                        f"_{fluid}_{category}_{cost_type}",
+                        np.zeros_like(self.project_years, dtype=np.float64)
+                    )
+
+    def _get_sunk_preonstream(self, is_pod_1: bool, approval_year: int) -> None:
+        """
+        Compute and assign sunk cost and pre-onstream cost arrays for oil and gas.
+
+        Depending on whether the contract is POD I or not, this method splits or
+        allocates project costs into sunk costs and pre-onstream costs. It relies on
+        cost data prepared by ``_prepare_sunk_preonstream()`` and updates instance
+        attributes accordingly.
+
+        Workflow
+        --------
+        - If ``is_pod_1`` is False:
+            All costs are treated as sunk costs, and pre-onstream costs are set to zero.
+        - If ``is_pod_1`` is True:
+            Costs are split at the approval year (or at the onstream year if approval year is None).
+            - Costs before approval year → sunk costs
+            - Costs from approval year onward → pre-onstream costs
+        - For each fluid (oil, gas) and category (depreciable, non_depreciable),
+          both sunk cost and pre-onstream cost arrays are updated.
+        - Total sunk and pre-onstream costs are also calculated per fluid by summing
+          across categories.
+
+      Parameters
+        ----------
+        is_pod_1 : bool
+            Indicates whether the gross split contract is POD I.
+            - ``True`` : Costs are split into sunk and pre-onstream costs.
+            - ``False`` : All costs are classified as sunk costs.
+        approval_year : int
+            Year of contract approval. Used to split sunk and pre-onstream costs
+            when ``is_pod_1`` is True. If None, the onstream year of each fluid is used.
+
+        Returns
+        -------
+        None
+            This method modifies the instance in-place by creating/updating
+            the following attributes:
+
+            Per fluid and category:
+                - ``_oil_depreciable_sunk_cost``
+                - ``_oil_non_depreciable_sunk_cost``
+                - ``_oil_depreciable_preonstream_cost``
+                - ``_oil_non_depreciable_preonstream_cost``
+                - ``_gas_depreciable_sunk_cost``
+                - ``_gas_non_depreciable_sunk_cost``
+                - ``_gas_depreciable_preonstream_cost``
+                - ``_gas_non_depreciable_preonstream_cost``
+
+            Totals (per fluid):
+                - ``_oil_sunk_cost``
+                - ``_oil_preonstream_cost``
+                - ``_gas_sunk_cost``
+                - ``_gas_preonstream_cost``
+        """
+
+        # Call sunk_preonstream_cost from method _prepare_sunk_preonstream()
+        spc = self._prepare_sunk_preonstream()
+
+        # Filter argument is_pod_1 from inappropriate data type
+        if not isinstance(is_pod_1, bool):
+            raise GrossSplitException(
+                f"Attribute is_pod_1 must be a boolean, not {is_pod_1.__class__.__qualname__}"
+            )
+
+        fluids = ["oil", "gas"]
+        categories = ["depreciable", "non_depreciable"]
+        cost_types = ["sunk_cost", "preonstream_cost"]
+        onstream_years = [self.oil_onstream_date.year, self.gas_onstream_date.year]
+
+        # If gross split contract is NOT POD I, set all costs as sunk cost
+        if not is_pod_1:
+
+            # Define sunk cost and preonstream cost arrays
+            for fluid in fluids:
+                for category in categories:
+                    key = f"{fluid}_{category}"
+
+                    # Define sunk cost arrays
+                    setattr(self, f"_{key}_sunk_cost", spc[key])
+
+                    # Define preonstream cost arrays
+                    setattr(
+                        self,
+                        f"_{key}_preonstream_cost",
+                        np.zeros_like(self.project_years, dtype=np.float64)
+                    )
+
+        # If gross split contract is POD I, split costs at approval year
+        else:
+            approval_years = {
+                fluid: ons if approval_year is None else approval_year
+                for fluid, ons in zip(fluids, onstream_years)
+            }
+
+            idx = {key: None for key in fluids}
+
+            # Initialize sunk cost and preonstream cost arrays
+            self._initialize_sunk_preonstream()
+
+            for fluid in fluids:
+                # Filter approval_year for inappropriate value
+                self._validate_approval_year(
+                    approval_year=approval_years[fluid], fluid_type=fluid
+                )
+
+                # Identify index for approval_year
+                idx[fluid] = np.searchsorted(self.project_years, approval_years[fluid])
+
+                # Update values of sunk cost and preonstream cost arrays
+                for category in categories:
+                    key = f"{fluid}_{category}"
+
+                    # Update the values of sunk cost arrays
+                    getattr(self, f"_{key}_sunk_cost")[:idx[fluid]] = (
+                        spc[key][:idx[fluid]]
+                    )
+
+                    # Update the values of preonstream cost arrays
+                    getattr(self, f"_{key}_preonstream_cost")[idx[fluid]:] = (
+                        spc[key][idx[fluid]:]
+                    )
+
+        # Define total sunk cost and preonstream cost arrays
+        # Total = depreciable + non_depreciable
+        for fluid in fluids:
+            for cost_type in cost_types:
+                depreciable = getattr(self, f"_{fluid}_depreciable_{cost_type}")
+                non_depreciable = getattr(self, f"_{fluid}_non_depreciable_{cost_type}")
+                setattr(self, f"_{fluid}_{cost_type}", depreciable + non_depreciable)
+
+    def _check_cum_production_split_offset(
+        self,
+        cum_production_split_offset: float | np.ndarray | None,
+    ):
+        """
+        Validate the cumulative production split offset.
+
+        Ensures that if a cumulative production split offset is provided as a
+        NumPy array, its length matches the project duration.
+
+        Parameters
+        ----------
+        cum_production_split_offset : float, np.ndarray, or None
+            The cumulative production split offset to validate. Can be:
+            - A single float value (scalar)
+            - A NumPy array of values for each project year
+            - None (no offset provided)
+
+        Raises
+        ------
+        CumulativeProductionSplitException
+            If ``cum_production_split_offset`` is a NumPy array and its length
+            does not match the project duration.
+
+        Returns
+        -------
+        None
+            This method only validates the input and raises an exception if invalid.
+        """
+
+        if isinstance(cum_production_split_offset, np.ndarray):
+            if len(cum_production_split_offset) != self.project_duration:
+                raise CumulativeProductionSplitException(
+                    f"Length of the cum_production_split_offset: "
+                    f"({len(cum_production_split_offset)}) "
+                    f"is different from the length of project years: "
+                    f"{self.project_duration}"
+                )
+
     def _wrapper_variable_split(
         self,
         regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019
@@ -1102,7 +1472,7 @@ class GrossSplit(BaseProject):
                 self._oil_opex_sunk_cost + self._gas_opex_sunk_cost
         )
         self._consolidated_asr_sunk_cost = self._oil_asr_sunk_cost + self._gas_asr_sunk_cost
-        self._consolidated_lbt_sunk_cost = self._oil_lbt_sunk_preonstrem_cost + self._gas_lbt_sunk_cost
+        self._consolidated_lbt_sunk_cost = self._oil_lbt_sunk_preonstream_cost + self._gas_lbt_sunk_cost
         self._consolidated_cost_of_sales_sunk_cost = (
                 self._oil_cost_of_sales_sunk_cost + self._gas_cost_of_sales_sunk_cost
         )
@@ -1238,194 +1608,7 @@ class GrossSplit(BaseProject):
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
         self._consolidated_cashflow = self._oil_ctr_cashflow + self._gas_ctr_cashflow
 
-    def _prepare_spc(
-        self,
-        fluid_type: FluidType,
-        fluid_onstream_year: int,
-        is_pod_1: bool = False,
-        pod_1_approval_year: int = None,
-    ):
 
-        oil_sunkcost_array = self._get_sunk_cost_array(
-            sunkcost_objects=[
-                self._oil_capital_sunk_cost,
-                self._oil_intangible_sunk_cost,
-                self._oil_opex_sunk_cost,
-                self._oil_asr_sunk_cost,
-                self._oil_lbt_sunk_preonstrem_cost,
-                self._oil_cost_of_sales_sunk_cost,
-            ]
-        )
-
-        if is_pod_1 == True:
-
-            # If user does not provide POD approval 1 year
-            if pod_1_approval_year is None:
-                pod_1_approval_year = self.oil_onstream_date.year
-
-            else:
-                if pod_1_approval_year > self.oil_onstream_date.year:
-                    raise SunkCostException(
-                        f"POD I year ({pod_1_approval_year}) is larger than onstream year ()"
-                    )
-
-                if pod_1_approval_year < self.start_date.year:
-                    raise SunkCostException
-
-                if pod_1_approval_year > self.end_date.year:
-                    raise SunkCostException
-
-            if pod_1_approval_year == self.oil_onstream_date.year:
-                sc_id = int(np.flatnonzero((pod_1_approval_year == self.project_years)))
-                self._oil_sunk_cost = np.zeros_like(self.project_years, dtype=np.float64)
-                self._oil_sunk_cost[:sc_id + 1] = oil_sunkcost_array[:sc_id + 1]
-                self._oil_preonstream_cost = np.zeros_like(self.project_years, dtype=np.float64)
-
-            elif pod_1_approval_year < self.oil_onstream_date.year:
-                pass
-
-            else:
-                raise SunkCostException
-
-    def _prepare_sunk_preonstream(self):
-
-        # Validate OIL and GAS sunk-preonstream cost
-        self._get_sunkcost_validation()
-
-        # Define sunk-preonstream cost array
-        keys_spc = [
-            "oil_capital",
-            "gas_capital",
-            "oil_intangible",
-            "gas_intangible",
-            "oil_opex",
-            "gas_opex",
-            "oil_asr",
-            "gas_asr",
-            "oil_lbt",
-            "gas_lbt",
-            "oil_cost_of_sales",
-            "gas_cost_of_sales",
-        ]
-
-        vals_spc = [
-            self._oil_capital_sunk_cost,
-            self._gas_capital_sunk_cost,
-            self._oil_intangible_sunk_cost,
-            self._gas_intangible_sunk_cost,
-            self._oil_opex_sunk_cost,
-            self._gas_opex_sunk_cost,
-            self._oil_asr_sunk_cost,
-            self._gas_asr_sunk_cost,
-            self._oil_lbt_sunk_cost,
-            self._gas_lbt_sunk_cost,
-            self._oil_cost_of_sales_sunk_cost,
-            self._gas_cost_of_sales_sunk_cost,
-        ]
-
-        sunk_preonstream_cost_init = {
-            key: val.expenditures_pre_tax() for key, val in zip(keys_spc, vals_spc)
-        }
-
-        return {
-            "oil_depreciable": sunk_preonstream_cost_init["oil_capital"],
-            "gas_depreciable": sunk_preonstream_cost_init["gas_capital"],
-            "oil_non_depreciable": (
-                    sunk_preonstream_cost_init["oil_intangible"]
-                    + sunk_preonstream_cost_init["oil_opex"]
-                    + sunk_preonstream_cost_init["oil_asr"]
-                    + sunk_preonstream_cost_init["oil_lbt"]
-                    + sunk_preonstream_cost_init["oil_cost_of_sales"]
-            ),
-            "gas_non_depreciable": (
-                    sunk_preonstream_cost_init["gas_intangible"]
-                    + sunk_preonstream_cost_init["gas_opex"]
-                    + sunk_preonstream_cost_init["gas_asr"]
-                    + sunk_preonstream_cost_init["gas_lbt"]
-                    + sunk_preonstream_cost_init["gas_cost_of_sales"]
-            ),
-        }
-
-    def _get_sunk_preonstream(self, is_pod_1: bool, approval_year: int):
-
-        # Call sunk_preonstream_cost from method _prepare_sunk_preonstream()
-        spc = self._prepare_sunk_preonstream()
-
-        # Filter argument is_pod_1 from inappropriate data type
-        if not isinstance(is_pod_1, bool):
-            raise GrossSplitException(
-                f"Attribute is_pod_1 must be given as a boolean, "
-                f"not a/an {is_pod_1.__class__.__qualname__}"
-            )
-
-        # Procedures to be carried out if gross split contract is NOT POD I
-        if is_pod_1 == False:
-
-            # Define attributes associated with sunk cost
-            self._oil_depreciable_sunk_cost = spc["oil_depreciable"]
-            self._gas_depreciable_sunk_cost = spc["gas_depreciable"]
-            self._oil_non_depreciable_sunk_cost = spc["oil_non_depreciable"]
-            self._gas_non_depreciable_sunk_cost = spc["gas_non_depreciable"]
-            self._oil_sunk_cost = (
-                self._oil_depreciable_sunk_cost + self._gas_depreciable_sunk_cost
-            )
-            self._gas_sunk_cost = (
-                self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
-            )
-
-            # Define attributes associated with preonstream cost
-            for fluid in ["oil", "gas"]:
-                for category in ["depreciable", "non_depreciable"]:
-                    setattr(
-                        self,
-                        f"_{fluid}_{category}_preonstream_cost",
-                        np.zeros_like(self.project_years, dtype=np.float64)
-                    )
-
-            self._oil_preonstream_cost = (
-                self._oil_depreciable_preonstream_cost
-                + self._oil_non_depreciable_preonstream_cost
-            )
-
-            self._gas_preonstream_cost = (
-                self._gas_depreciable_preonstream_cost
-                + self._gas_non_depreciable_preonstream_cost
-            )
-
-        # Procedures to be carried out if gross split contract is POD I
-        # elif is_pod_1 == True:
-        else:
-
-            # Filter approval_year for inappropriate value
-            if not isinstance(approval_year, int):
-                raise GrossSplitException(
-                    f"Parameter approval_year must be provided as an int, "
-                    f"not as a/an {approval_year.__class__.__qualname__}"
-                )
-
-            if approval_year < self.start_date.year:
-                raise GrossSplitException(
-                    f"Approval year ({approval_year}) is before "
-                    f"the project start year ({self.start_date.year})"
-                )
-
-            if approval_year > self.end_date.year:
-                raise GrossSplitException(
-                    f"Approval year ({approval_year}) is after "
-                    f"the project end year ({self.end_date.year})"
-                )
-
-            print('\t')
-            print(f'Filetype: {type(spc["oil_depreciable"])}')
-            print(f'Length: {len(spc["oil_depreciable"])}')
-            print('spc["oil_depreciable"] = \n', spc["oil_depreciable"])
-
-            t1 = int(np.flatnonzero(self.project_years == approval_year))
-
-            print('\t')
-            print(f'Filetype: {type(t1)}')
-            # print(f'Length: {len(t1)}')
-            print('t1 = ', t1)
 
 
 
@@ -1440,6 +1623,7 @@ class GrossSplit(BaseProject):
         inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
         is_pod_1: bool = False,
         approval_year: int = None,
+        cum_production_split_offset: float | np.ndarray | None = 0.0,
         # is_dmo_end_weighted=False,
         # regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
         # tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
@@ -1447,7 +1631,6 @@ class GrossSplit(BaseProject):
         # sunk_cost_reference_year: int = None,
         # depr_method: DeprMethod = DeprMethod.PSC_DB,
         # decline_factor: float | int = 2,
-        # cum_production_split_offset: float | np.ndarray | None = 0.0,
         # amortization: bool = False,
         # sum_undepreciated_cost: bool = False
     ):
@@ -1455,51 +1638,33 @@ class GrossSplit(BaseProject):
         # Perform initial check to several input arguments
         self._check_attributes()
 
+        # Check if the cumulative production split offset length is the same
+        # with the length of project years
+        self._check_cum_production_split_offset(
+            cum_production_split_offset=cum_production_split_offset
+        )
+
         # WAP (Weighted Average Price) for each produced fluid
         self._get_wap_price()
 
-        # Prepare sunk cost and preonstream cost
+        # Prepare attributes associated with sunk costs and preonstream costs
         self._get_sunk_preonstream(is_pod_1=is_pod_1, approval_year=approval_year)
 
+        print('\t')
+        print(f'Filetype: {type(self._oil_depreciable_sunk_cost)}')
+        print(f'Length: {len(self._oil_depreciable_sunk_cost)}')
+        print('_oil_depreciable_sunk_cost = \n', self._oil_depreciable_sunk_cost)
 
-        # # Configure Sunk Cost Reference Year
-        # if sunk_cost_reference_year is None:
-        #     sunk_cost_reference_year = self.start_date.year
-        #
-        # if sunk_cost_reference_year > self.oil_onstream_date.year:
-        #     raise SunkCostException(
-        #         f"Sunk Cost Reference Year {sunk_cost_reference_year} "
-        #         f"is after the on stream date: {self.oil_onstream_date}"
-        #     )
-        #
-        # if sunk_cost_reference_year > self.gas_onstream_date.year:
-        #     raise SunkCostException(
-        #         f"Sunk Cost Reference Year {sunk_cost_reference_year} "
-        #         f"is after the on stream date: {self.gas_onstream_date}"
-        #     )
-        #
-        # if sunk_cost_reference_year < self.start_date.year:
-        #     raise SunkCostException(
-        #         f"Sunk Cost Reference Year {sunk_cost_reference_year} "
-        #         f"is before the project start date: {self.start_date}"
-        #     )
-        #
-        # if sunk_cost_reference_year > self.end_date.year:
-        #     raise SunkCostException(
-        #         f"Sunk Cost Reference Year {sunk_cost_reference_year} "
-        #         f"is after the project end date: {self.end_date}"
-        #     )
+        print('\t')
+        print(f'Filetype: {type(self._oil_non_depreciable_sunk_cost)}')
+        print(f'Length: {len(self._oil_non_depreciable_sunk_cost)}')
+        print('_oil_non_depreciable_sunk_cost = \n', self._oil_non_depreciable_sunk_cost)
 
-        # # Checking if the Cumulative Production Split Offset length is same with the project years
-        # if isinstance(cum_production_split_offset, np.ndarray):
-        #     if len(cum_production_split_offset) != len(self.project_years):
-        #         raise CumulativeProductionSplitException(
-        #             f"Length of the cum_production_split_offset: {len(cum_production_split_offset)} "
-        #             f"is not the same with Length of the project years: {len(self.project_years)}"
-        #         )
+        print('\t')
+        print(f'Filetype: {type(self._oil_sunk_cost)}')
+        print(f'Length: {len(self._oil_sunk_cost)}')
+        print('_oil_sunk_cost = \n', self._oil_sunk_cost)
 
-
-        #
         # # Calculate expenditures for every cost components
         # self._get_expenditures_pre_tax(
         #     year_inflation=year_inflation,

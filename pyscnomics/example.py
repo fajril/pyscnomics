@@ -65,7 +65,7 @@ class ExampleCase:
         self.lifting_apel = Lifting(
             start_year=2023,
             end_year=2030,
-            prod_year=np.array([2027, 2028, 2027, 2028, 2030, 2029]),
+            prod_year=np.array([2028, 2028, 2029, 2029, 2030, 2030]),
             lifting_rate=np.array([10, 10, 10, 20, 20, 20]),
             price=np.array([2, 2, 2, 1, 1, 1]),
             fluid_type=FluidType.GAS,
@@ -87,39 +87,34 @@ class ExampleCase:
         self.capital_mangga = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024, 2026, 2027]),
-            cost=np.array([100, 100, 50, 50, 25, 25]),
+            expense_year=np.array([2023, 2024, 2025, 2026, 2027]),
+            cost=np.array([100, 90, 80, 70, 60]),
             cost_allocation=[
-                FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL
             ],
-            # cost_allocation=[
-            #     FluidType.GAS, FluidType.GAS, FluidType.GAS,
-            #     FluidType.GAS, FluidType.GAS, FluidType.GAS,
-            # ],
-            # is_sunkcost=[True, True, True, True, True, True],
-            # is_sunkcost=[False, False, False, False, False, False],
-            is_sunkcost=[False, False, True, True, True, True],
-            tax_portion=np.array([1, 1, 1, 1, 1, 1]),
+            is_sunkcost=[True, True, True, True, True],
+            tax_portion=np.array([1, 1, 1, 1, 1]),
         )
 
         self.capital_apel = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024, 2026, 2027]),
-            cost=np.array([10, 10, 5, 5, 2.5, 2.5]),
-            # cost_allocation=[
-            #     FluidType.OIL, FluidType.OIL, FluidType.OIL,
-            #     FluidType.OIL, FluidType.OIL, FluidType.OIL,
-            # ],
+            expense_year=np.array([2023, 2024, 2025, 2026, 2027, 2028]),
+            cost=np.array([10, 9, 8, 7, 6, 5]),
             cost_allocation=[
                 FluidType.GAS, FluidType.GAS, FluidType.GAS,
                 FluidType.GAS, FluidType.GAS, FluidType.GAS,
             ],
-            # is_sunkcost=[True, True, True, True, True, True],
-            # is_sunkcost=[False, False, False, False, False, False],
-            is_sunkcost=[False, False, True, True, True, True],
-            tax_portion=np.array([1, 1, 1, 1, 1, 1]),
+            is_sunkcost=[
+                True, True, True,
+                True, True, True,
+            ],
+            tax_portion=np.array(
+                [
+                    1, 1, 1,
+                    1, 1, 1,
+                ]
+            )
         )
 
     def _get_intangible_cost_data(self):
