@@ -94,10 +94,6 @@ class BaseProject:
     project_duration: int = field(default=None, init=False)
     project_years: np.ndarray = field(default=None, init=False)
 
-    # Attributes associated with cashflow table generation
-    _last_run_params: dict = field(default=None, init=False, repr=False)
-    _run_completed: bool = field(default=False, init=False, repr=False)
-
     # Attributes to be defined later (associated with lifting for each fluid types)
     _oil_lifting: Lifting = field(default=None, init=False, repr=False)
     _gas_lifting: Lifting = field(default=None, init=False, repr=False)
