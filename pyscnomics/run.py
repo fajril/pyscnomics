@@ -116,8 +116,8 @@ kwargs_cr = {
     "gas_dmo_volume_portion": 1.0,
     "gas_dmo_fee_portion": 1.0,
     "gas_dmo_holiday_duration": 60,
-    "oil_carry_forward_depreciation": np.array([100, 200, 300, 400, 500, 600]),
-    "gas_carry_forward_depreciation": 10,
+    "oil_carry_forward_depreciation": np.array([100, 100, 100, 100, 100, 100, 100, 100]),
+    "gas_carry_forward_depreciation": 50,
 }
 
 params_cr = {

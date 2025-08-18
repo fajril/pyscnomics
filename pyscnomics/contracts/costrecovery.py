@@ -18,6 +18,13 @@ from pyscnomics.econ.selection import (
     SunkCostMethod,
 )
 
+import pandas as pd
+
+pd.set_option("display.max_columns", None)
+# pd.set_option("display.expand_frame_repr", False)
+pd.set_option("display.width", 2000)
+# pd.set_option("display.max_colwidth", None)
+
 
 class SunkCostException(Exception):
     """Exception to raise for a misuse of Sunk Cost Method"""
@@ -257,10 +264,35 @@ class CostRecovery(BaseProject):
 
     def _check_attributes(self):
         """
-        Function to check the Cost Recovery input.
-        -------
+        Validate and normalize project attributes for fractions, DMO holidays,
+        and carry-forward depreciation.
 
+        This method performs consistency checks on attributes related to
+        fractional values (e.g., FTP portion, pretax share, investment credit rate,
+        cost recovery cap, and DMO portions), discrete values (DMO holiday durations),
+        and carry-forward depreciation arrays. It ensures correct data types,
+        value ranges, and dimensional consistency with the project duration.
+        Carry-forward depreciation arrays are also standardized to match the
+        length of project years.
+
+        Raises
+        ------
+        CostRecoveryException
+            If any attribute has an invalid type, contains values outside
+            the allowed range, has inconsistent array length, or contains
+            negative values.
+
+        Returns
+        -------
+        None
+            This method updates internal attributes in-place by normalizing
+            carry-forward depreciation arrays. No return value.
         """
+
+        # Prepare fractional attributes
+        min_fraction = 0.0
+        max_fraction = 1.0
+
         # Defining any attributes that in the form of fraction
         fraction_attributes = (
             ("oil_ftp_portion", self.oil_ftp_portion),
@@ -278,65 +310,77 @@ class CostRecovery(BaseProject):
         )
 
         for attr_name, attr in fraction_attributes:
+            if not isinstance(attr, (float, int, np.ndarray)):
+                raise CostRecoveryException(
+                    f"Attribute {attr_name} should be given as an int, float, "
+                    f"or a numpy ndarray, not as a/an "
+                    f"{attr.__class__.__qualname__}"
+                )
+
             if isinstance(attr, float) or isinstance(attr, int):
-                if attr > 1.0 or attr < 0.0:
-                    range_type = "exceeding 1.0" if attr > 1.0 else "below 0.0"
+                if not (min_fraction <= attr <= max_fraction):
+                    range_type = "exceeding 1.0" if attr > max_fraction else "below 0"
                     raise CostRecoveryException(
-                        f"The {attr_name} value, {attr}, is {range_type}. "
-                        f"The allowed range for this attribute is between 0.0 and 1.0."
+                        f"The {attr_name} value ({attr}) is {range_type}. "
+                        f"Allowed range: {min_fraction} - {max_fraction}."
                     )
-                else:
-                    pass
+
             elif isinstance(attr, np.ndarray):
                 if len(attr) != len(self.project_years):
                     raise CostRecoveryException(
-                        f"The {attr_name} length, is {len(attr)}. "
-                        f"The allowed length for this attribute is the same as the length of the project years:  "
-                        f"{len(self.project_years)}"
+                        f"The {attr_name} length is ({len(attr)}). "
+                        f"The length of {attr_name} ({len(attr)}) is different from "
+                        f"the length of the project {len(self.project_duration)}"
                     )
-                else:
-                    pass
-            else:
+
+        # Prepare attributes associated with DMO holiday
+        discrete_attributes = (
+            ("oil_dmo_holiday_duration", self.oil_dmo_holiday_duration),
+            ("gas_dmo_holiday_duration", self.gas_dmo_holiday_duration),
+        )
+
+        for attr_name, attr in discrete_attributes:
+            if attr < 0:
                 raise CostRecoveryException(
-                    f"The {attr_name} type: {type(attr)}, is not allowed."
+                    f"The {attr_name} value ({attr}) is below 0. "
+                    f"The minimum value of this attribute is 0. "
                 )
 
-        # Check the carry forward depreciation
+        # Prepare attributes associated with carry forward depreciation
         carward_depr = {
             "oil_carry_forward_depreciation": self.oil_carry_forward_depreciation,
             "gas_carry_forward_depreciation": self.gas_carry_forward_depreciation,
         }
 
-        # Checking for negative values in carry forward depreciation
         for attr_name, value in carward_depr.items():
+            # Check for unsuitable data type
+            if not isinstance(value, (np.ndarray, float, int)):
+                raise CostRecoveryException(
+                    f"Attribute {attr_name} must be given as a numpy ndarray, "
+                    f"a float, or an integer, not as a/an "
+                    f"{value.__class__.__qualname__}"
+                )
+
+            # Check for negative values
             if np.any(value < 0):
+                raise CostRecoveryException(f"The {attr_name} contains negative values")
+
+            # Check length exceeding project duration
+            if isinstance(value, np.ndarray) and len(value) > self.project_duration:
                 raise CostRecoveryException(
-                    f"The {attr_name} containing negative value"
+                    f"The {attr_name} length ({len(value)}) exceeds "
+                    f"project duration ({self.project_duration})"
                 )
 
-            elif isinstance(value, np.ndarray) and len(value) > self.project_duration:
-                raise CostRecoveryException(
-                    f"The {attr_name} length is :{len(value)},exceeding the length of the project duration: {self.project_duration}"
-                )
-
-            elif isinstance(value, (np.ndarray, float)):
-                # Ensure value is a NumPy array
-                a_array = np.atleast_1d(value).astype(float)
-
-                # Truncate or pad with zeros to match length of project years
+            # Modify 'carward_depr' to array with length equals to project duration
+            if isinstance(value, (np.ndarray, float, int)):
+                arr = np.atleast_1d(value).astype(float)
                 result = np.zeros_like(self.project_years, dtype=float)
-                result[: len(a_array)] = a_array[: len(self.project_years)]
+                result[:len(arr)] = arr
                 carward_depr[attr_name] = result
 
-            else:
-                pass
-
-        self._oil_carry_forward_depreciation = carward_depr[
-            "oil_carry_forward_depreciation"
-        ]
-        self._gas_carry_forward_depreciation = carward_depr[
-            "gas_carry_forward_depreciation"
-        ]
+        self._oil_carry_forward_depreciation = carward_depr["oil_carry_forward_depreciation"]
+        self._gas_carry_forward_depreciation = carward_depr["gas_carry_forward_depreciation"]
 
     def _get_tax_by_regime(self, tax_regime) -> np.ndarray:
         """
@@ -1255,20 +1299,45 @@ class CostRecovery(BaseProject):
         # sum_undepreciated_cost: bool = False,
         # sunk_cost_method: SunkCostMethod = SunkCostMethod.DIRECT,
     ):
+        # Perform initial check to several input arguments
         self._check_attributes()
 
-        print('\t')
-        print('Aditya')
+        # Calculate WAP (Weighted Average Price) for each produced fluid
+        self._get_wap_price()
 
-        # # Preparing the Sunk Cost
-        # self._prepare_sunk_cost_contract(
-        #     depr_method=depr_method,
-        #     decline_factor=decline_factor,
-        # )
-        #
-        # # Get the WAP Price
-        # self._get_wap_price()
-        #
+        # Prepare attributes associated with sunk cost
+        self._get_sunkcost_array()
+
+        revenue_attrs = {
+            "years": self.project_years,
+            "oil revenue": self._oil_revenue,
+            "gas revenue": self._gas_revenue,
+            "sulfur revenue": self._sulfur_revenue,
+            "electricity revenue": self._electricity_revenue,
+            "co2 revenue": self._co2_revenue,
+            "oil wap price": self._oil_wap_price,
+            "gas wap price": self._gas_wap_price,
+            "sulfur wap price": self._sulfur_wap_price,
+            "electricity wap price": self._electricity_wap_price,
+            "co2 wap price": self._co2_wap_price,
+        }
+
+        sunkcost_attrs = {
+            "years": self.project_years,
+            "_oil_depreciable_sunk_cost": self._oil_depreciable_sunk_cost,
+            "_gas_depreciable_sunk_cost": self._gas_depreciable_sunk_cost,
+            "_oil_non_depreciable_sunk_cost": self._oil_non_depreciable_sunk_cost,
+            "_gas_non_depreciable_sunk_cost": self._gas_non_depreciable_sunk_cost,
+            "_oil_sunk_cost": self._oil_sunk_cost,
+            "_gas_sunk_cost": self._gas_sunk_cost,
+        }
+
+        print('\t')
+        print(f'Filetype: {type(pd.DataFrame(sunkcost_attrs))}')
+        print(f'Length: {len(pd.DataFrame(sunkcost_attrs))}')
+        print(pd.DataFrame(sunkcost_attrs))
+
+
         # # Calculate pre tax expenditures
         # self._get_expenditures_pre_tax(
         #     year_inflation=year_inflation,
