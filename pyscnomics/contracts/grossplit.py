@@ -1608,10 +1608,6 @@ class GrossSplit(BaseProject):
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
         self._consolidated_cashflow = self._oil_ctr_cashflow + self._gas_ctr_cashflow
 
-
-
-
-
     def run(
         self,
         sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,

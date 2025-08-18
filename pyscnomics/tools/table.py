@@ -139,10 +139,10 @@ def get_table(
         psc_table_consolidated['Lifting_oil'] = contract._oil_lifting.get_lifting_rate_ghv_arr()
         psc_table_consolidated['Lifting_gas'] = contract._gas_lifting.get_lifting_rate_ghv_arr()
         psc_table_consolidated['C_Revenue'] = contract._consolidated_revenue
-        psc_table_consolidated['C_Depreciable'] = contract._consolidated_capital_cost
-        psc_table_consolidated['C_Intangible'] = contract._consolidated_intangible
-        psc_table_consolidated['C_Opex'] = contract._consolidated_opex
-        psc_table_consolidated['C_ASR'] = contract._consolidated_asr
+        psc_table_consolidated['C_Depreciable'] = contract._consolidated_capital_expenditures_post_tax
+        psc_table_consolidated['C_Intangible'] = contract._consolidated_intangible_expenditures_post_tax
+        psc_table_consolidated['C_Opex'] = contract._consolidated_opex_expenditures_post_tax
+        psc_table_consolidated['C_ASR'] = contract._consolidated_asr_expenditures_post_tax
         psc_table_consolidated['C_Depreciation'] = contract._consolidated_depreciation
         psc_table_consolidated['C_Non_Capital'] = contract._consolidated_non_capital
         psc_table_consolidated['C_FTP'] = contract._consolidated_ftp

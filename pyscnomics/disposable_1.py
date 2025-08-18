@@ -2590,3 +2590,47 @@ def fit_sunk_preonstream_cost(
         tax_rate=tax_rate,
     )
     
+    
+# # Filter approval_year for inappropriate value
+            # self._validate_approval_year(approval_year=approval_year, fluid_type=fluid_type)
+            #
+            # # Identify location of approval year in project years array
+            # idx = np.searchsorted(self.project_years, approval_year)
+            #
+            # fluids = ["oil", "gas"]
+            # categories = ["depreciable", "non_depreciable"]
+            # cost_types = ["sunk_cost", "preonstream_cost"]
+            #
+            # # Initialize sunk cost and preonstream cost arrays
+            # for fluid in fluids:
+            #     for category in categories:
+            #         for cost_type in cost_types:
+            #             setattr(
+            #                 self,
+            #                 f"_{fluid}_{category}_{cost_type}",
+            #                 np.zeros_like(self.project_years, dtype=np.float64)
+            #             )
+            #
+            # # Update sunk cost and preonstream cost arrays
+            # for fluid in fluids:
+            #     for category in categories:
+            #         key = f"{fluid}_{category}"
+            #         getattr(self, f"_{key}_sunk_cost")[:idx] = spc[key][:idx]
+            #         getattr(self, f"_{key}_preonstream_cost")[idx:] = spc[key][idx:]
+            #
+            # # Specify total sunk cost and preonstream cost arrays for OIL and GAS
+            # self._oil_sunk_cost = (
+            #     self._oil_depreciable_sunk_cost + self._oil_non_depreciable_sunk_cost
+            # )
+            # self._gas_sunk_cost = (
+            #     self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
+            # )
+            # self._oil_preonstream_cost = (
+            #     self._oil_depreciable_preonstream_cost
+            #     + self._oil_non_depreciable_preonstream_cost
+            # )
+            # self._gas_preonstream_cost = (
+            #     self._gas_depreciable_preonstream_cost
+            #     + self._gas_non_depreciable_preonstream_cost
+            # )
+    
