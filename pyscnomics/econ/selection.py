@@ -743,3 +743,11 @@ class CashflowType(Enum):
     OIL = "Oil"
     GAS = "Gas"
     CONSOLIDATED = "Consolidated"
+
+
+class CostType(Enum):
+    """ Selection for Cost Type """
+
+    SUNK_COST = "Sunk Cost"
+    PRE_ONSTREAM_COST = "Preonstream Cost"
+    POST_ONSTREAM_COST = "Postonstream Cost"

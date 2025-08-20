@@ -5,7 +5,7 @@ Example case to be executed.
 import numpy as np
 from dataclasses import dataclass, field
 
-from pyscnomics.econ.selection import FluidType
+from pyscnomics.econ.selection import FluidType, CostType
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import (
     CapitalCost,
@@ -43,11 +43,11 @@ class ExampleCase:
     def __post_init__(self):
         self._get_lifting_data()
         self._get_capital_cost_data()
-        self._get_intangible_cost_data()
-        self._get_opex_data()
-        self._get_asr_cost_data()
-        self._get_lbt_cost_data()
-        self._get_cost_of_sales_data()
+        # self._get_intangible_cost_data()
+        # self._get_opex_data()
+        # self._get_asr_cost_data()
+        # self._get_lbt_cost_data()
+        # self._get_cost_of_sales_data()
 
     def _get_lifting_data(self):
         """
@@ -87,35 +87,56 @@ class ExampleCase:
         self.capital_mangga = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2026, 2027]),
-            cost=np.array([100, 90, 80, 70, 60]),
+            expense_year=np.array(
+                [
+                    2023, 2024, 2025, 2026,
+                    2027, 2028, 2029, 2030,
+                ]
+            ),
+            cost=np.array(
+                [
+                    200, 200, 200, 150,
+                    100, 75, 50, 50,
+                ]
+            ),
             cost_allocation=[
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
             ],
-            is_sunkcost=[False, True, True, True, True],
-            tax_portion=np.array([1, 1, 1, 1, 1]),
-        )
-
-        self.capital_apel = CapitalCost(
-            start_year=2023,
-            end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2026, 2027]),
-            cost=np.array([10, 9, 8, 7, 6]),
-            cost_allocation=[
-                FluidType.GAS, FluidType.GAS, FluidType.GAS,
-                FluidType.GAS, FluidType.GAS,
-            ],
-            is_sunkcost=[
-                True, True, True,
-                True, True,
+            cost_type=[
+                np.nan, CostType.SUNK_COST, CostType.SUNK_COST,
+                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
             ],
             tax_portion=np.array(
                 [
-                    1, 1, 1,
-                    1, 1,
+                    1, 1, 1, 1,
+                    1, 1, 1, 1,
                 ]
-            )
+            ),
         )
+
+        # self.capital_apel = CapitalCost(
+        #     start_year=2023,
+        #     end_year=2030,
+        #     expense_year=np.array([2023, 2024, 2025, 2026, 2027]),
+        #     cost=np.array([10, 9, 8, 7, 6]),
+        #     cost_allocation=[
+        #         FluidType.GAS, FluidType.GAS, FluidType.GAS,
+        #         FluidType.GAS, FluidType.GAS,
+        #     ],
+        #     is_sunkcost=[
+        #         True, True, True,
+        #         True, True,
+        #     ],
+        #     tax_portion=np.array(
+        #         [
+        #             1, 1, 1,
+        #             1, 1,
+        #         ]
+        #     )
+        # )
 
     def _get_intangible_cost_data(self):
         """

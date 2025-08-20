@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 import pyscnomics.econ.depreciation as depr
 from pyscnomics.econ.selection import (
     FluidType,
+    CostType,
     DeprMethod,
 )
 from pyscnomics.econ.costs_tools import (
@@ -84,21 +85,33 @@ class GeneralCost:
         The start year of the project.
     end_year : int
         The end year of the project.
-    cost : numpy.ndarray
-        An array representing the cost of a tangible asset.
     expense_year : numpy.ndarray
-        An array representing the expense year of a tangible asset.
-    cost_allocation : list[FluidType]
-        A list representing the cost allocation of a tangible asset.
-    is_sunkcost: list[bool]
-        Whether the corresponding cost elements are considered as sunk cost.
-    description: list[str]
-        A list of string description regarding the associated tangible cost.
-    tax_portion : np.ndarray, optional
-        A NumPy array representing the portion of the cost subject to tax. If not provided,
-        an array of zeros with the same shape as the project cost will be used.
-    tax_discount : float | np.ndarray, optional
-        A discount factor applied to the tax, reducing the overall tax impact. The default is 0.0.
+        Array of years when the cost is incurred.
+    cost : numpy.ndarray
+        Array of cost values corresponding to `expense_year`.
+    cost_allocation : list[FluidType], optional
+        Allocation of each cost element to a specific fluid type
+        (e.g., `FluidType.OIL`, `FluidType.GAS`). Default is None.
+    cost_type : list[CostType], optional
+        Type/category of each cost element (e.g. `CostType.SUNKCOST`,
+        `CostType.PRE_ONSTREAM_COST`, `CostType.POST_ONSTREAM_COST`).
+        Default is None.
+    description : list[str], optional
+        Descriptive labels or notes for each cost element. Default is None.
+    tax_portion : numpy.ndarray, optional
+        Portion of each cost element subject to tax. If not provided,
+        defaults to an array of zeros with the same shape as `cost`.
+    tax_discount : float | int | numpy.ndarray, optional
+        Discount factor(s) applied to the taxable portion of costs,
+        reducing the overall tax impact. Default is 0.0.
+
+    Attributes
+    ----------
+    project_duration : int
+        Total duration of the project in years, computed in `__post_init__`.
+    project_years : numpy.ndarray
+        Array of project years spanning from `start_year` to `end_year`,
+        computed in `__post_init__`.
     """
 
     start_year: int
@@ -106,7 +119,7 @@ class GeneralCost:
     expense_year: np.ndarray
     cost: np.ndarray
     cost_allocation: list[FluidType] = field(default=None)
-    is_sunkcost: list[bool] = field(default=None)
+    cost_type: list[CostType] = field(default=None)
     description: list[str] = field(default=None)
     tax_portion: np.ndarray = field(default=None)
     tax_discount: np.ndarray | float | int = field(default=0.0)
@@ -309,9 +322,9 @@ class CapitalCost(GeneralCost):
         -   Prepare attributes project_duration and project_years,
         -   Prepare attribute expense_year,
         -   Prepare attribute cost,
-        -   Prepare attribute description,
         -   Prepare attribute cost_allocation,
-        -   Prepare attribute is_sunkcost,
+        -   Prepare attribute cost_type,
+        -   Prepare attribute description,
         -   Prepare attribute pis_year,
         -   Prepare attribute salvage_value,
         -   Prepare attribute useful_life,
@@ -365,21 +378,6 @@ class CapitalCost(GeneralCost):
 
         self.cost = self.cost.astype(np.float64)
 
-        # Prepare attribute description
-        if self.description is None:
-            self.description = [" " for _ in range(len(self.expense_year))]
-
-        else:
-            if not isinstance(self.description, list):
-                raise CapitalException(
-                    f"Attribute description must be given as a list, "
-                    f"not as a/an {self.description.__class__.__qualname__}"
-                )
-
-            self.description = [
-                " " if pd.isna(val) else val for _, val in enumerate(self.description)
-            ]
-
         # Prepare attribute cost_allocation
         if self.cost_allocation is None:
             self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
@@ -396,30 +394,48 @@ class CapitalCost(GeneralCost):
                 for _, val in enumerate(self.cost_allocation)
             ]
 
-        # Prepare attribute is_sunkcost
-        if self.is_sunkcost is None:
-            self.is_sunkcost = [False for _ in range(len(self.expense_year))]
-
-        else:
-            if not isinstance(self.is_sunkcost, list):
-                raise CapitalException(
-                    f"Attribute is_sunkcost must be given as a list, "
-                    f"not as a/an {self.is_sunkcost.__class__.__qualname__}"
-                )
-
-            self.is_sunkcost = [
-                False if pd.isna(val) else val for _, val in enumerate(self.is_sunkcost)
+        # Prepare attribute cost_type
+        if self.cost_type is None:
+            self.cost_type = [
+                CostType.POST_ONSTREAM_COST for _ in range(len(self.expense_year))
             ]
 
-            is_sunkcost_not_boolean = np.array(
+        else:
+            if not isinstance(self.cost_type, list):
+                raise CapitalException(
+                    f"Attribute cost_type must be given as a list, not "
+                    f"as a/an {self.cost_type.__class__.__qualname__}"
+                )
+
+            self.cost_type = [
+                CostType.POST_ONSTREAM_COST if pd.isna(val) else val
+                for _, val in enumerate(self.cost_type)
+            ]
+
+            incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, bool) else 0
-                    for _, val in enumerate(self.is_sunkcost)
+                    1 if not isinstance(val, CostType) else 0
+                    for _, val in enumerate(self.cost_type)
                 ]
             )
 
-            if np.sum(is_sunkcost_not_boolean) > 0:
-                raise CapitalException(f"Must insert boolean in list is_sunkcost")
+            if np.sum(incorrect_cost_type) > 0:
+                raise CapitalException(f"Must insert CostType in list cost_type")
+
+        # Prepare attribute description
+        if self.description is None:
+            self.description = [" " for _ in range(len(self.expense_year))]
+
+        else:
+            if not isinstance(self.description, list):
+                raise CapitalException(
+                    f"Attribute description must be given as a list, "
+                    f"not as a/an {self.description.__class__.__qualname__}"
+                )
+
+            self.description = [
+                " " if pd.isna(val) else val for _, val in enumerate(self.description)
+            ]
 
         # Prepare attribute pis_year
         if self.pis_year is None:
@@ -581,7 +597,7 @@ class CapitalCost(GeneralCost):
             for arr in [
                 self.cost,
                 self.cost_allocation,
-                self.is_sunkcost,
+                self.cost_type,
                 self.description,
                 self.tax_portion,
                 self.tax_discount,
@@ -597,7 +613,7 @@ class CapitalCost(GeneralCost):
                 f"cost: {len(self.cost)}, "
                 f"expense_year: {len(self.expense_year)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
-                f"is_sunk_cost: {len(self.is_sunkcost)}, "
+                f"cost_type: {len(self.cost_type)}, "
                 f"description: {len(self.description)}, "
                 f"tax_portion: {len(self.tax_portion)}, "
                 f"tax_discount: {len(self.tax_discount)}, "
@@ -862,7 +878,7 @@ class CapitalCost(GeneralCost):
                     np.allclose(self.tax_portion, other.tax_portion),
                     np.allclose(self.tax_discount, other.tax_discount),
                     self.cost_allocation == other.cost_allocation,
-                    self.is_sunkcost == other.is_sunkcost,
+                    self.cost_type == other.cost_type,
                     self.is_ic_applied == other.is_ic_applied,
                 )
             )
@@ -955,7 +971,7 @@ class CapitalCost(GeneralCost):
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
             tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
-            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
+            cost_type_combined = self.cost_type + other.cost_type
             description_combined = self.description + other.description
             is_ic_applied_combined = self.is_ic_applied + other.is_ic_applied
 
@@ -965,7 +981,7 @@ class CapitalCost(GeneralCost):
                 expense_year=expense_year_combined,
                 cost=cost_combined,
                 cost_allocation=cost_allocation_combined,
-                is_sunkcost=is_sunkcost_combined,
+                cost_type=cost_type_combined,
                 description=description_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
@@ -1002,7 +1018,7 @@ class CapitalCost(GeneralCost):
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
             tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
-            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
+            cost_type_combined = self.cost_type + other.cost_type
             description_combined = self.description + other.description
             is_is_applied_combined = self.is_ic_applied + other.is_ic_applied
 
@@ -1012,7 +1028,7 @@ class CapitalCost(GeneralCost):
                 expense_year=expense_year_combined,
                 cost=cost_combined,
                 cost_allocation=cost_allocation_combined,
-                is_sunkcost=is_sunkcost_combined,
+                cost_type=cost_type_combined,
                 description=description_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
@@ -1043,7 +1059,7 @@ class CapitalCost(GeneralCost):
                 expense_year=self.expense_year,
                 cost=self.cost * other,
                 cost_allocation=self.cost_allocation,
-                is_sunkcost=self.is_sunkcost,
+                cost_type=self.cost_type,
                 description=self.description,
                 tax_portion=self.tax_portion,
                 tax_discount=self.tax_discount,
@@ -1083,7 +1099,7 @@ class CapitalCost(GeneralCost):
                     expense_year=self.expense_year,
                     cost=self.cost / other,
                     cost_allocation=self.cost_allocation,
-                    is_sunkcost=self.is_sunkcost,
+                    cost_type=self.cost_type,
                     description=self.description,
                     tax_portion=self.tax_portion,
                     tax_discount=self.tax_discount,
