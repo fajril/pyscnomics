@@ -43,7 +43,7 @@ class ExampleCase:
     def __post_init__(self):
         self._get_lifting_data()
         self._get_capital_cost_data()
-        # self._get_intangible_cost_data()
+        self._get_intangible_cost_data()
         # self._get_opex_data()
         # self._get_asr_cost_data()
         # self._get_lbt_cost_data()
@@ -96,7 +96,7 @@ class ExampleCase:
             cost=np.array(
                 [
                     200, 200, 200, 150,
-                    100, 75, 50, 50,
+                    100, 75, 25, 25,
                 ]
             ),
             cost_allocation=[
@@ -117,69 +117,108 @@ class ExampleCase:
             ),
         )
 
-        # self.capital_apel = CapitalCost(
-        #     start_year=2023,
-        #     end_year=2030,
-        #     expense_year=np.array([2023, 2024, 2025, 2026, 2027]),
-        #     cost=np.array([10, 9, 8, 7, 6]),
-        #     cost_allocation=[
-        #         FluidType.GAS, FluidType.GAS, FluidType.GAS,
-        #         FluidType.GAS, FluidType.GAS,
-        #     ],
-        #     is_sunkcost=[
-        #         True, True, True,
-        #         True, True,
-        #     ],
-        #     tax_portion=np.array(
-        #         [
-        #             1, 1, 1,
-        #             1, 1,
-        #         ]
-        #     )
-        # )
+        self.capital_apel = CapitalCost(
+            start_year=2023,
+            end_year=2030,
+            expense_year=np.array(
+                [
+                    2023, 2024, 2025, 2026,
+                    2027, 2028, 2029, 2030,
+                ]
+            ),
+            cost=np.array(
+                [
+                    200, 200, 200, 150,
+                    100, 75, 25, 25,
+                ]
+            ),
+            cost_allocation=[
+                FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+            ],
+            cost_type=[
+                np.nan, CostType.SUNK_COST, CostType.SUNK_COST,
+                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
+            ],
+            tax_portion=np.array(
+                [
+                    1, 1, 1, 1,
+                    1, 1, 1, 1,
+                ]
+            ),
+        )
 
     def _get_intangible_cost_data(self):
         """
         Generate synthetic data for intangible cost.
         """
-        # Synthetic data: Intangible
         self.intangible_mangga = Intangible(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024, 2026, 2027]),
-            cost=np.array([100, 100, 50, 50, 25, 25]),
+            expense_year=np.array(
+                [
+                    2023, 2024, 2025, 2026,
+                    2027, 2028, 2029, 2030,
+                ]
+            ),
+            cost=np.array(
+                [
+                    200, 200, 200, 150,
+                    100, 75, 25, 25,
+                ]
+            ),
             cost_allocation=[
-                FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
             ],
-            # cost_allocation=[
-            #     FluidType.GAS, FluidType.GAS, FluidType.GAS,
-            #     FluidType.GAS, FluidType.GAS, FluidType.GAS,
-            # ],
-            # is_sunkcost=[True, True, True, True, True, True],
-            # is_sunkcost=[False, False, False, False, False, False],
-            is_sunkcost=[False, False, True, True, True, True],
-            tax_portion=np.array([1, 1, 1, 1, 1, 1]),
+            cost_type=[
+                CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
+                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
+            ],
+            tax_portion=np.array(
+                [
+                    1, 1, 1, 1,
+                    1, 1, 1, 1,
+                ]
+            ),
         )
 
-        self.intangible_apel = Intangible(
-            start_year=2023,
-            end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024, 2026, 2027]),
-            cost=np.array([10, 10, 5, 5, 2.5, 2.5]),
-            # cost_allocation=[
-            #     FluidType.OIL, FluidType.OIL, FluidType.OIL,
-            #     FluidType.OIL, FluidType.OIL, FluidType.OIL,
-            # ],
-            cost_allocation=[
-                FluidType.GAS, FluidType.GAS, FluidType.GAS,
-                FluidType.GAS, FluidType.GAS, FluidType.GAS,
-            ],
-            # is_sunkcost=[True, True, True, True, True, True],
-            # is_sunkcost=[False, False, False, False, False, False],
-            is_sunkcost=[False, False, True, True, True, True],
-            tax_portion=np.array([1, 1, 1, 1, 1, 1]),
-        )
+        # self.intangible_apel = Intangible(
+        #     start_year=2023,
+        #     end_year=2030,
+        #     expense_year=np.array(
+        #         [
+        #             2023, 2024, 2025, 2026,
+        #             2027, 2028, 2029, 2030,
+        #         ]
+        #     ),
+        #     cost=np.array(
+        #         [
+        #             200, 200, 200, 150,
+        #             100, 75, 25, 25,
+        #         ]
+        #     ),
+        #     cost_allocation=[
+        #         FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+        #         FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+        #     ],
+        #     cost_type=[
+        #         np.nan, CostType.SUNK_COST, CostType.SUNK_COST,
+        #         CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
+        #         CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+        #         CostType.POST_ONSTREAM_COST,
+        #     ],
+        #     tax_portion=np.array(
+        #         [
+        #             1, 1, 1, 1,
+        #             1, 1, 1, 1,
+        #         ]
+        #     ),
+        # )
 
     def _get_opex_data(self):
         """

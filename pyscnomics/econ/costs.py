@@ -1136,15 +1136,16 @@ class Intangible(GeneralCost):
         -   Prepare attributes project_duration and project_years,
         -   Prepare attribute expense_year,
         -   Prepare attribute cost,
-        -   Prepare attribute description,
         -   Prepare attribute cost_allocation,
-        -   Prepare attribute is_sunkcost,
+        -   Prepare attribute cost_type,
+        -   Prepare attribute description,
         -   Prepare attribute tax_portion,
         -   Prepare attribute tax_discount,
         -   Check for unequal length of input arrays,
         -   Raise an error: expense_year is after the end year of the project,
         -   Raise an error: expense_year is before the start year of the project,
         """
+
         # Prepare attributes project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -1201,6 +1202,34 @@ class Intangible(GeneralCost):
                 for _, val in enumerate(self.cost_allocation)
             ]
 
+        # Prepare attribute cost_type
+        if self.cost_type is None:
+            self.cost_type = [
+                CostType.POST_ONSTREAM_COST for _ in range(len(self.expense_year))
+            ]
+
+        else:
+            if not isinstance(self.cost_type, list):
+                raise IntangibleException(
+                    f"Attribute cost_type must be given as a list, not "
+                    f"as a/an {self.cost_type.__class__.__qualname__}"
+                )
+
+            self.cost_type = [
+                CostType.POST_ONSTREAM_COST if pd.isna(val) else val
+                for _, val in enumerate(self.cost_type)
+            ]
+
+            incorrect_cost_type = np.array(
+                [
+                    1 if not isinstance(val, CostType) else 0
+                    for _, val in enumerate(self.cost_type)
+                ]
+            )
+
+            if np.sum(incorrect_cost_type) > 0:
+                raise IntangibleException(f"Must insert CostType in list cost_type")
+
         # Prepare attribute description
         if self.description is None:
             self.description = [" " for _ in range(len(self.expense_year))]
@@ -1215,31 +1244,6 @@ class Intangible(GeneralCost):
             self.description = [
                 " " if pd.isna(val) else val for _, val in enumerate(self.description)
             ]
-
-        # Prepare attribute is_sunkcost
-        if self.is_sunkcost is None:
-            self.is_sunkcost = [False for _ in range(len(self.expense_year))]
-
-        else:
-            if not isinstance(self.is_sunkcost, list):
-                raise IntangibleException(
-                    f"Attribute is_sunkcost must be provided as a list, "
-                    f"not as a/an {self.is_sunkcost.__class__.__qualname__}"
-                )
-
-            self.is_sunkcost = [
-                False if pd.isna(val) else val for _, val in enumerate(self.is_sunkcost)
-            ]
-
-            is_sunkcost_not_boolean = np.array(
-                [
-                    1 if not isinstance(val, bool) else 0
-                    for _, val in enumerate(self.is_sunkcost)
-                ]
-            )
-
-            if np.sum(is_sunkcost_not_boolean) > 0:
-                raise IntangibleException(f"Must insert boolean in list is_sunkcost")
 
         # Prepare attribute tax_portion
         if self.tax_portion is None:
@@ -1306,7 +1310,7 @@ class Intangible(GeneralCost):
             for arr in [
                 self.cost,
                 self.cost_allocation,
-                self.is_sunkcost,
+                self.cost_type,
                 self.description,
                 self.tax_portion,
                 self.tax_discount,
@@ -1317,7 +1321,7 @@ class Intangible(GeneralCost):
                 f"cost: {len(self.cost)}, "
                 f"expense_year: {len(self.expense_year)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
-                f"is_sunkcost: {len(self.is_sunkcost)}, "
+                f"cost_type: {len(self.cost_type)}, "
                 f"description: {len(self.description)}, "
                 f"tax_portion: {len(self.tax_portion)}, "
                 f"tax_discount: {len(self.tax_discount)}, "
@@ -1341,14 +1345,14 @@ class Intangible(GeneralCost):
         if isinstance(other, Intangible):
             return all(
                 (
-                    self.start_year == other.end_year,
+                    self.start_year == other.start_year,
                     self.end_year == other.end_year,
                     np.allclose(self.expense_year, other.expense_year),
                     np.allclose(self.cost, other.cost),
                     np.allclose(self.tax_portion, other.tax_portion),
                     np.allclose(self.tax_discount, other.tax_discount),
                     self.cost_allocation == other.cost_allocation,
-                    self.is_sunkcost == other.is_sunkcost,
+                    self.cost_type == other.cost_type,
                 )
             )
 
@@ -1434,7 +1438,7 @@ class Intangible(GeneralCost):
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
             tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
-            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
+            cost_type_combined = self.cost_type + other.cost_type
             description_combined = self.description + other.description
 
             return Intangible(
@@ -1443,7 +1447,7 @@ class Intangible(GeneralCost):
                 expense_year=expense_year_combined,
                 cost=cost_combined,
                 cost_allocation=cost_allocation_combined,
-                is_sunkcost=is_sunkcost_combined,
+                cost_type=cost_type_combined,
                 description=description_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
@@ -1469,7 +1473,7 @@ class Intangible(GeneralCost):
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
             tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
-            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
+            cost_type_combined = self.cost_type + other.cost_type
             description_combined = self.description + other.description
 
             return Intangible(
@@ -1478,7 +1482,7 @@ class Intangible(GeneralCost):
                 expense_year=expense_year_combined,
                 cost=cost_combined,
                 cost_allocation=cost_allocation_combined,
-                is_sunkcost=is_sunkcost_combined,
+                cost_type=cost_type_combined,
                 description=description_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
@@ -1502,7 +1506,7 @@ class Intangible(GeneralCost):
                 expense_year=self.expense_year,
                 cost=self.cost * other,
                 cost_allocation=self.cost_allocation,
-                is_sunkcost=self.is_sunkcost,
+                cost_type=self.cost_type,
                 description=self.description,
                 tax_portion=self.tax_portion,
                 tax_discount=self.tax_discount,
@@ -1537,7 +1541,7 @@ class Intangible(GeneralCost):
                     expense_year=self.expense_year,
                     cost=self.cost / other,
                     cost_allocation=self.cost_allocation,
-                    is_sunkcost=self.is_sunkcost,
+                    cost_type=self.cost_type,
                     description=self.description,
                     tax_portion=self.tax_portion,
                     tax_discount=self.tax_discount,
@@ -1585,8 +1589,8 @@ class OPEX(GeneralCost):
         -   Prepare attribute expense_year,
         -   Prepare attribute fixed_cost,
         -   Prepare attribute cost_allocation,
+        -   Prepare attribute cost_type,
         -   Prepare attribute description,
-        -   Prepare attribute is_sunkcost,
         -   Prepare attribute tax_portion,
         -   Prepare attribute tax_discount,
         -   Prepare attribute prod_rate,
@@ -1660,6 +1664,34 @@ class OPEX(GeneralCost):
                 for _, val in enumerate(self.cost_allocation)
             ]
 
+        # Prepare attribute cost_type
+        if self.cost_type is None:
+            self.cost_type = [
+                CostType.POST_ONSTREAM_COST for _ in range(len(self.expense_year))
+            ]
+
+        else:
+            if not isinstance(self.cost_type, list):
+                raise OPEXException(
+                    f"Attribute cost_type must be given as a list, not "
+                    f"as a/an {self.cost_type.__class__.__qualname__}"
+                )
+
+            self.cost_type = [
+                CostType.POST_ONSTREAM_COST if pd.isna(val) else val
+                for _, val in enumerate(self.cost_type)
+            ]
+
+            incorrect_cost_type = np.array(
+                [
+                    1 if not isinstance(val, CostType) else 0
+                    for _, val in enumerate(self.cost_type)
+                ]
+            )
+
+            if np.sum(incorrect_cost_type) > 0:
+                raise OPEXException(f"Must insert CostType in list cost_type")
+
         # Prepare attribute description
         if self.description is None:
             self.description = [" " for _ in range(len(self.expense_year))]
@@ -1674,31 +1706,6 @@ class OPEX(GeneralCost):
             self.description = [
                 " " if pd.isna(val) else val for _, val in enumerate(self.description)
             ]
-
-        # Prepare attribute is_sunkcost
-        if self.is_sunkcost is None:
-            self.is_sunkcost = [False for _ in range(len(self.expense_year))]
-
-        else:
-            if not isinstance(self.is_sunkcost, list):
-                raise OPEXException(
-                    f"Attribute is_sunkcost must be provided as a list, "
-                    f"not as a/an {self.is_sunkcost.__class__.__qualname__}"
-                )
-
-            self.is_sunkcost = [
-                False if pd.isna(val) else val for _, val in enumerate(self.is_sunkcost)
-            ]
-
-            is_sunkcost_not_boolean = np.array(
-                [
-                    1 if not isinstance(val, bool) else 0
-                    for _, val in enumerate(self.is_sunkcost)
-                ]
-            )
-
-            if np.sum(is_sunkcost_not_boolean) > 0:
-                raise OPEXException(f"Must insert boolean in list is_sunkcost")
 
         # Prepare attribute tax_portion
         if self.tax_portion is None:
@@ -1803,7 +1810,7 @@ class OPEX(GeneralCost):
             for arr in [
                 self.fixed_cost,
                 self.cost_allocation,
-                self.is_sunkcost,
+                self.cost_type,
                 self.description,
                 self.tax_portion,
                 self.tax_discount,
@@ -1816,7 +1823,7 @@ class OPEX(GeneralCost):
                 f"expense_year: {len(self.expense_year)}, "
                 f"fixed_cost: {len(self.fixed_cost)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
-                f"is_sunkcost: {len(self.is_sunkcost)}, "
+                f"cost_type: {len(self.cost_type)}, "
                 f"description: {len(self.description)}, "
                 f"tax_portion: {len(self.tax_portion)}, "
                 f"tax_discount: {len(self.tax_discount)}, "
@@ -1858,7 +1865,7 @@ class OPEX(GeneralCost):
                     np.allclose(self.variable_cost, other.variable_cost),
                     np.allclose(self.cost, other.cost),
                     self.cost_allocation == other.cost_allocation,
-                    self.is_sunkcost == other.is_sunkcost,
+                    self.cost_type == other.cost_type,
                 )
             )
 
@@ -1905,7 +1912,7 @@ class OPEX(GeneralCost):
         # Between an instance of OPEX with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) > other.cost
+            return np.sum(self.cost) > np.sum(other.cost)
 
         # Between an instance of OPEX and an integer/float
         elif isinstance(other, (int, float)):
@@ -1921,7 +1928,7 @@ class OPEX(GeneralCost):
         # Between an instance of OPEX with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) >= other.cost
+            return np.sum(self.cost) >= np.sum(other.cost)
 
         # Between an instance of OPEX and an integer/float
         elif isinstance(other, (int, float)):
@@ -1948,7 +1955,7 @@ class OPEX(GeneralCost):
                 (self.cost_per_volume, other.cost_per_volume)
             )
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
-            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
+            cost_type_combined = self.cost_type + other.cost_type
             description_combined = self.description + other.description
 
             return OPEX(
@@ -1957,7 +1964,7 @@ class OPEX(GeneralCost):
                 expense_year=expense_year_combined,
                 fixed_cost=fixed_cost_combined,
                 cost_allocation=cost_allocation_combined,
-                is_sunkcost=is_sunkcost_combined,
+                cost_type=cost_type_combined,
                 description=description_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
@@ -1989,7 +1996,7 @@ class OPEX(GeneralCost):
                 (self.cost_per_volume, -other.cost_per_volume)
             )
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
-            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
+            cost_type_combined = self.cost_type + other.cost_type
             description_combined = self.description + other.description
 
             return OPEX(
@@ -1998,7 +2005,7 @@ class OPEX(GeneralCost):
                 expense_year=expense_year_combined,
                 fixed_cost=fixed_cost_combined,
                 cost_allocation=cost_allocation_combined,
-                is_sunkcost=is_sunkcost_combined,
+                cost_type=cost_type_combined,
                 description=description_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
@@ -2024,7 +2031,7 @@ class OPEX(GeneralCost):
                 expense_year=self.expense_year,
                 fixed_cost=self.fixed_cost * other,
                 cost_allocation=self.cost_allocation,
-                is_sunkcost=self.is_sunkcost,
+                cost_type=self.cost_type,
                 description=self.description,
                 tax_portion=self.tax_portion,
                 tax_discount=self.tax_discount,
@@ -2061,7 +2068,7 @@ class OPEX(GeneralCost):
                     expense_year=self.expense_year,
                     fixed_cost=self.fixed_cost / other,
                     cost_allocation=self.cost_allocation,
-                    is_sunkcost=self.is_sunkcost,
+                    cost_type=self.cost_type,
                     description=self.description,
                     tax_portion=self.tax_portion,
                     tax_discount=self.tax_discount,
@@ -2103,9 +2110,9 @@ class ASR(GeneralCost):
         -   Prepare attributes project_duration and project_years,
         -   Prepare attribute expense_year,
         -   Prepare attribute cost,
-        -   Prepare attribute description,
         -   Prepare attribute cost_allocation,
-        -   Prepare attribute is_sunkcost,
+        -   Prepare attribute cost_type,
+        -   Prepare attribute description,
         -   Prepare attribute tax_portion,
         -   Prepare attribute tax_discount,
         -   Prepare attribute future_rate,
@@ -2171,6 +2178,34 @@ class ASR(GeneralCost):
                 for _, val in enumerate(self.cost_allocation)
             ]
 
+        # Prepare attribute cost_type
+        if self.cost_type is None:
+            self.cost_type = [
+                CostType.POST_ONSTREAM_COST for _ in range(len(self.expense_year))
+            ]
+
+        else:
+            if not isinstance(self.cost_type, list):
+                raise ASRException(
+                    f"Attribute cost_type must be given as a list, not "
+                    f"as a/an {self.cost_type.__class__.__qualname__}"
+                )
+
+            self.cost_type = [
+                CostType.POST_ONSTREAM_COST if pd.isna(val) else val
+                for _, val in enumerate(self.cost_type)
+            ]
+
+            incorrect_cost_type = np.array(
+                [
+                    1 if not isinstance(val, CostType) else 0
+                    for _, val in enumerate(self.cost_type)
+                ]
+            )
+
+            if np.sum(incorrect_cost_type) > 0:
+                raise ASRException(f"Must insert CostType in list cost_type")
+
         # Prepare attribute description
         if self.description is None:
             self.description = [" " for _ in range(len(self.expense_year))]
@@ -2185,31 +2220,6 @@ class ASR(GeneralCost):
             self.description = [
                 " " if pd.isna(val) else val for _, val in enumerate(self.description)
             ]
-
-        # Prepare attribute is_sunkcost
-        if self.is_sunkcost is None:
-            self.is_sunkcost = [False for _ in range(len(self.expense_year))]
-
-        else:
-            if not isinstance(self.is_sunkcost, list):
-                raise ASRException(
-                    f"Attribute is_sunkcost must be provided as a list, "
-                    f"not as a/an {self.is_sunkcost.__class__.__qualname__}"
-                )
-
-            self.is_sunkcost = [
-                False if pd.isna(val) else val for _, val in enumerate(self.is_sunkcost)
-            ]
-
-            is_sunkcost_not_boolean = np.array(
-                [
-                    1 if not isinstance(val, bool) else 0
-                    for _, val in enumerate(self.is_sunkcost)
-                ]
-            )
-
-            if np.sum(is_sunkcost_not_boolean) > 0:
-                raise ASRException(f"Must insert boolean in list is_sunkcost")
 
         # Prepare attribute tax_portion
         if self.tax_portion is None:
@@ -2342,7 +2352,7 @@ class ASR(GeneralCost):
             for arr in [
                 self.cost,
                 self.cost_allocation,
-                self.is_sunkcost,
+                self.cost_type,
                 self.description,
                 self.tax_portion,
                 self.tax_discount,
@@ -2355,7 +2365,7 @@ class ASR(GeneralCost):
                 f"cost: {len(self.cost)}, "
                 f"expense_year: {len(self.expense_year)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
-                f"is_sunkcost: {len(self.is_sunkcost)}, "
+                f"cost_type: {len(self.cost_type)}, "
                 f"description: {len(self.description)}, "
                 f"final_year: {len(self.final_year)}, "
                 f"future_rate: {len(self.future_rate)}, "
@@ -2537,7 +2547,7 @@ class ASR(GeneralCost):
                     np.allclose(self.final_year, other.final_year),
                     np.allclose(self.future_rate, other.future_rate),
                     self.cost_allocation == other.cost_allocation,
-                    self.is_sunkcost == other.is_sunkcost,
+                    self.cost_type == other.cost_type,
                 )
             )
 
@@ -2625,7 +2635,7 @@ class ASR(GeneralCost):
             final_year_combined = np.concatenate((self.final_year, other.final_year))
             future_rate_combined = np.concatenate((self.future_rate, other.future_rate))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
-            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
+            cost_type_combined = self.cost_type + other.cost_type
             description_combined = self.description + other.description
 
             return ASR(
@@ -2634,7 +2644,7 @@ class ASR(GeneralCost):
                 expense_year=expense_year_combined,
                 cost=cost_combined,
                 cost_allocation=cost_allocation_combined,
-                is_sunkcost=is_sunkcost_combined,
+                cost_type=cost_type_combined,
                 description=description_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
@@ -2664,7 +2674,7 @@ class ASR(GeneralCost):
             final_year_combined = np.concatenate((self.final_year, other.final_year))
             future_rate_combined = np.concatenate((self.future_rate, other.future_rate))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
-            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
+            cost_type_combined = self.cost_type + other.cost_type
             description_combined = self.description + other.description
 
             return ASR(
@@ -2673,7 +2683,7 @@ class ASR(GeneralCost):
                 expense_year=expense_year_combined,
                 cost=cost_combined,
                 cost_allocation=cost_allocation_combined,
-                is_sunkcost=is_sunkcost_combined,
+                cost_type=cost_type_combined,
                 description=description_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
@@ -2701,7 +2711,7 @@ class ASR(GeneralCost):
                 expense_year=self.expense_year,
                 cost=self.cost * other,
                 cost_allocation=self.cost_allocation,
-                is_sunkcost=self.is_sunkcost,
+                cost_type=self.cost_type,
                 description=self.description,
                 tax_portion=self.tax_portion,
                 tax_discount=self.tax_discount,
@@ -2737,7 +2747,7 @@ class ASR(GeneralCost):
                     expense_year=self.expense_year,
                     cost=self.cost / other,
                     cost_allocation=self.cost_allocation,
-                    is_sunkcost=self.is_sunkcost,
+                    cost_type=self.cost_type,
                     description=self.description,
                     tax_portion=self.tax_portion,
                     tax_discount=self.tax_discount,

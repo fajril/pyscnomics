@@ -17,7 +17,7 @@ from pyscnomics.example import ExampleCase
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-t1 = ExampleCase().capital_mangga
+t1 = ExampleCase().intangible_mangga
 
 
 # case = ExampleCase()
