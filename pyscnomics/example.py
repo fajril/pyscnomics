@@ -17,6 +17,52 @@ from pyscnomics.econ.costs import (
 )
 
 
+# Example cases
+expense_year_cases = {
+    "case_1": np.array([2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]),
+}
+
+cost_cases = {
+    "case_1": np.array([200, 200, 200, 150, 100, 75, 25, 25]),
+}
+
+cost_allocation_cases = {
+    "case_1": (
+        [
+            FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+            FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+        ]
+    ),
+    "case_2": (
+        [
+            FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+            FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+        ]
+    ),
+}
+
+cost_type_cases = {
+    "case_1": (
+        [
+            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+        ]
+    ),
+    "case_2": (
+        [
+            CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
+            CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
+        ]
+    )
+}
+
+tax_portion_cases = {
+    "case_1": np.array([0, 0, 0, 0, 0, 0, 0, 0]),
+}
+
+
 @dataclass
 class ExampleCase:
     """
@@ -43,7 +89,7 @@ class ExampleCase:
     def __post_init__(self):
         self._get_lifting_data()
         self._get_capital_cost_data()
-        self._get_intangible_cost_data()
+        # self._get_intangible_cost_data()
         # self._get_opex_data()
         # self._get_asr_cost_data()
         # self._get_lbt_cost_data()
@@ -87,67 +133,21 @@ class ExampleCase:
         self.capital_mangga = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array(
-                [
-                    2023, 2024, 2025, 2026,
-                    2027, 2028, 2029, 2030,
-                ]
-            ),
-            cost=np.array(
-                [
-                    200, 200, 200, 150,
-                    100, 75, 25, 25,
-                ]
-            ),
-            cost_allocation=[
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-            ],
-            cost_type=[
-                np.nan, CostType.SUNK_COST, CostType.SUNK_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST,
-            ],
-            tax_portion=np.array(
-                [
-                    1, 1, 1, 1,
-                    1, 1, 1, 1,
-                ]
-            ),
+            expense_year=expense_year_cases["case_1"],
+            cost=cost_cases["case_1"],
+            cost_allocation=cost_allocation_cases["case_1"],
+            cost_type=cost_type_cases["case_1"],
+            tax_portion=tax_portion_cases["case_1"],
         )
 
         self.capital_apel = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array(
-                [
-                    2023, 2024, 2025, 2026,
-                    2027, 2028, 2029, 2030,
-                ]
-            ),
-            cost=np.array(
-                [
-                    200, 200, 200, 150,
-                    100, 75, 25, 25,
-                ]
-            ),
-            cost_allocation=[
-                FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
-                FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
-            ],
-            cost_type=[
-                np.nan, CostType.SUNK_COST, CostType.SUNK_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST,
-            ],
-            tax_portion=np.array(
-                [
-                    1, 1, 1, 1,
-                    1, 1, 1, 1,
-                ]
-            ),
+            expense_year=expense_year_cases["case_1"],
+            cost=cost_cases["case_1"],
+            cost_allocation=cost_allocation_cases["case_2"],
+            cost_type=cost_type_cases["case_2"],
+            tax_portion=tax_portion_cases["case_1"],
         )
 
     def _get_intangible_cost_data(self):
