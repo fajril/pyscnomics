@@ -4,8 +4,19 @@ A collection of unit testing for CostOfSales class.
 
 import pytest
 import numpy as np
-from pyscnomics.econ.selection import FluidType
+from pyscnomics.econ.selection import FluidType, CostType
 from pyscnomics.econ.costs import CostOfSales, CostOfSalesException
+
+
+# Parameters for example
+expense_year_1 = np.array([2023, 2024, 2025, 2026])
+cost_1 = np.array([200, 150, 100, 50])
+cost_allocation_1 = [FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL]
+cost_type_1 = [
+    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+]
+tax_portion_1 = np.array([1, 1, 1, 1])
 
 
 def test_cos_incorrect_start_year_end_year():
@@ -286,3 +297,78 @@ def test_cos_prepare_cost_allocation():
     # Check whether expected == calculated
     assert cost_allocation_exp1 == cost_allocation_calc1
     assert cost_allocation_exp2 == cost_allocation_calc2
+
+
+def test_cos_comparison():
+
+    cos_mangga = CostOfSales(
+        start_year=2023,
+        end_year=2030,
+        expense_year=np.array([2025, 2026]),
+        cost=np.array([100, 50]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
+    )
+
+    cos_apel = CostOfSales(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([100, 50]),
+        expense_year=np.array([2025, 2026]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
+    )
+
+    cos_nanas = CostOfSales(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([25, 25]),
+        expense_year=np.array([2025, 2026]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
+    )
+
+    assert cos_mangga == cos_apel
+    assert cos_apel != cos_nanas
+    assert cos_nanas < cos_mangga
+    assert cos_apel > cos_nanas
+
+
+def test_cos_dunder_add():
+
+    cos_mangga = CostOfSales(
+        start_year=2023,
+        end_year=2030,
+        expense_year=expense_year_1,
+        cost=cost_1,
+        cost_allocation=cost_allocation_1,
+        cost_type=cost_type_1,
+    )
+
+    cos_apel = CostOfSales(
+        start_year=2023,
+        end_year=2030,
+        expense_year=np.array([2029, 2029]),
+        cost=np.array([500, 500]),
+        cost_allocation=[FluidType.GAS, FluidType.GAS],
+        cost_type=[CostType.SUNK_COST, CostType.SUNK_COST],
+    )
+
+    cos_total = cos_mangga + cos_apel
+
+    expected = {
+        "expense_year": np.array([2023, 2024, 2025, 2026, 2029, 2029]),
+        "cost": np.array([200, 150, 100, 50, 500, 500]),
+        "cost_allocation": [
+            FluidType.OIL, FluidType.OIL, FluidType.OIL,
+            FluidType.OIL, FluidType.GAS, FluidType.GAS,
+        ],
+        "cost_type": [
+            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+            CostType.SUNK_COST, CostType.SUNK_COST,
+        ],
+    }
+
+    # Execute testings
+    np.testing.assert_allclose(cos_total.expense_year, expected["expense_year"])
+    np.testing.assert_allclose(cos_total.cost, expected["cost"])
+    assert cos_total.cost_allocation == expected["cost_allocation"]
+    assert cos_total.cost_type == expected["cost_type"]

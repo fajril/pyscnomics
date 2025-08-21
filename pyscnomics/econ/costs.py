@@ -2806,7 +2806,7 @@ class LBT(GeneralCost):
         -   Prepare attributes project_duration and project_years,
         -   Prepare attribute expense_year,
         -   Prepare attribute cost_allocation,
-        -   Prepare attribute is_sunkcost,
+        -   Prepare attribute cost_type,
         -   Prepare attribute description,
         -   Prepare attribute tax_portion,
         -   Prepare attribute tax_discount,
@@ -2868,6 +2868,34 @@ class LBT(GeneralCost):
                 for _, val in enumerate(self.cost_allocation)
             ]
 
+        # Prepare attribute cost_type
+        if self.cost_type is None:
+            self.cost_type = [
+                CostType.POST_ONSTREAM_COST for _ in range(len(self.expense_year))
+            ]
+
+        else:
+            if not isinstance(self.cost_type, list):
+                raise LBTException(
+                    f"Attribute cost_type must be given as a list, not "
+                    f"as a/an {self.cost_type.__class__.__qualname__}"
+                )
+
+            self.cost_type = [
+                CostType.POST_ONSTREAM_COST if pd.isna(val) else val
+                for _, val in enumerate(self.cost_type)
+            ]
+
+            incorrect_cost_type = np.array(
+                [
+                    1 if not isinstance(val, CostType) else 0
+                    for _, val in enumerate(self.cost_type)
+                ]
+            )
+
+            if np.sum(incorrect_cost_type) > 0:
+                raise LBTException(f"Must insert CostType in list cost_type")
+
         # Prepare attribute description
         if self.description is None:
             self.description = [" " for _ in range(len(self.expense_year))]
@@ -2882,31 +2910,6 @@ class LBT(GeneralCost):
             self.description = [
                 " " if pd.isna(val) else val for _, val in enumerate(self.description)
             ]
-
-        # Prepare attribute is_sunkcost
-        if self.is_sunkcost is None:
-            self.is_sunkcost = [False for _ in range(len(self.expense_year))]
-
-        else:
-            if not isinstance(self.is_sunkcost, list):
-                raise LBTException(
-                    f"Attribute is_sunkcost must be provided as a list, "
-                    f"not as a/an {self.is_sunkcost.__class__.__qualname__}"
-                )
-
-            self.is_sunkcost = [
-                False if pd.isna(val) else val for _, val in enumerate(self.is_sunkcost)
-            ]
-
-            is_sunkcost_not_boolean = np.array(
-                [
-                    1 if not isinstance(val, bool) else 0
-                    for _, val in enumerate(self.is_sunkcost)
-                ]
-            )
-
-            if np.sum(is_sunkcost_not_boolean) > 0:
-                raise LBTException(f"Must insert boolean in list is_sunkcost")
 
         # Prepare attribute tax_portion
         if self.tax_portion is None:
@@ -3148,7 +3151,7 @@ class LBT(GeneralCost):
             len(arr) == arr_reference
             for arr in [
                 self.cost_allocation,
-                self.is_sunkcost,
+                self.cost_type,
                 self.description,
                 self.tax_portion,
                 self.tax_discount,
@@ -3165,7 +3168,7 @@ class LBT(GeneralCost):
                 f"Unequal length of arrays: "
                 f"expense_year: {len(self.expense_year)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
-                f"is_sunkcost: {len(self.is_sunkcost)}, "
+                f"cost_type: {len(self.cost_type)}, "
                 f"description: {len(self.description)}, "
                 f"tax_portion: {len(self.tax_portion)}, "
                 f"tax_discount: {len(self.tax_discount)}, "
@@ -3321,7 +3324,7 @@ class LBT(GeneralCost):
                     np.allclose(self.gross_revenue, other.gross_revenue),
                     np.allclose(self.cost, other.cost),
                     self.cost_allocation == other.cost_allocation,
-                    self.is_sunkcost == other.is_sunkcost,
+                    self.cost_type == other.cost_type,
                 )
             )
 
@@ -3417,7 +3420,7 @@ class LBT(GeneralCost):
             gross_revenue_combined = np.concatenate((self.gross_revenue, other.gross_revenue))
             cost_combined = np.concatenate((self.cost, other.cost))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
-            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
+            cost_type_combined = self.cost_type + other.cost_type
             description_combined = self.description + other.description
 
             return LBT(
@@ -3425,8 +3428,8 @@ class LBT(GeneralCost):
                 end_year=end_year_combined,
                 expense_year=expense_year_combined,
                 cost_allocation=cost_allocation_combined,
+                cost_type=cost_type_combined,
                 description=description_combined,
-                is_sunkcost=is_sunkcost_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
                 final_year=final_year_combined,
@@ -3468,7 +3471,7 @@ class LBT(GeneralCost):
             gross_revenue_combined = np.concatenate((self.gross_revenue, -other.gross_revenue))
             cost_combined = np.concatenate((self.cost, -other.cost))
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
-            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
+            cost_type_combined = self.cost_type + other.cost_type
             description_combined = self.description + other.description
 
             return LBT(
@@ -3476,8 +3479,8 @@ class LBT(GeneralCost):
                 end_year=end_year_combined,
                 expense_year=expense_year_combined,
                 cost_allocation=cost_allocation_combined,
+                cost_type=cost_type_combined,
                 description=description_combined,
-                is_sunkcost=is_sunkcost_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
                 final_year=final_year_combined,
@@ -3506,7 +3509,7 @@ class LBT(GeneralCost):
                 end_year=self.end_year,
                 expense_year=self.expense_year,
                 cost_allocation=self.cost_allocation,
-                is_sunkcost=self.is_sunkcost,
+                cost_type=self.cost_type,
                 description=self.description,
                 tax_portion=self.tax_portion,
                 tax_discount=self.tax_discount,
@@ -3546,8 +3549,8 @@ class LBT(GeneralCost):
                     end_year=self.end_year,
                     expense_year=self.expense_year,
                     cost_allocation=self.cost_allocation,
+                    cost_type=self.cost_type,
                     description=self.description,
-                    is_sunkcost=self.is_sunkcost,
                     final_year=self.final_year,
                     utilized_land_area=self.utilized_land_area,
                     utilized_building_area=self.utilized_building_area,
@@ -3591,7 +3594,7 @@ class CostOfSales(GeneralCost):
         -   Prepare attribute expense_year,
         -   Prepare attribute cost,
         -   Prepare attribute cost_allocation,
-        -   Prepare attribute is_sunkcost,
+        -   Prepare attribute cost_type,
         -   Prepare attribute description,
         -   Prepare attribute tax_portion,
         -   Prepare attribute tax_discount,
@@ -3662,6 +3665,34 @@ class CostOfSales(GeneralCost):
                 for _, val in enumerate(self.cost_allocation)
             ]
 
+        # Prepare attribute cost_type
+        if self.cost_type is None:
+            self.cost_type = [
+                CostType.POST_ONSTREAM_COST for _ in range(len(self.expense_year))
+            ]
+
+        else:
+            if not isinstance(self.cost_type, list):
+                raise CostOfSalesException(
+                    f"Attribute cost_type must be given as a list, not "
+                    f"as a/an {self.cost_type.__class__.__qualname__}"
+                )
+
+            self.cost_type = [
+                CostType.POST_ONSTREAM_COST if pd.isna(val) else val
+                for _, val in enumerate(self.cost_type)
+            ]
+
+            incorrect_cost_type = np.array(
+                [
+                    1 if not isinstance(val, CostType) else 0
+                    for _, val in enumerate(self.cost_type)
+                ]
+            )
+
+            if np.sum(incorrect_cost_type) > 0:
+                raise CostOfSalesException(f"Must insert CostType in list cost_type")
+
         # Prepare attribute description
         if self.description is None:
             self.description = [" " for _ in range(len(self.expense_year))]
@@ -3676,31 +3707,6 @@ class CostOfSales(GeneralCost):
             self.description = [
                 " " if pd.isna(val) else val for _, val in enumerate(self.description)
             ]
-
-        # Prepare attribute is_sunkcost
-        if self.is_sunkcost is None:
-            self.is_sunkcost = [False for _ in range(len(self.expense_year))]
-
-        else:
-            if not isinstance(self.is_sunkcost, list):
-                raise CostOfSalesException(
-                    f"Attribute is_sunkcost must be provided as a list, "
-                    f"not as a/an {self.is_sunkcost.__class__.__qualname__}"
-                )
-
-            self.is_sunkcost = [
-                False if pd.isna(val) else val for _, val in enumerate(self.is_sunkcost)
-            ]
-
-            is_sunkcost_not_boolean = np.array(
-                [
-                    1 if not isinstance(val, bool) else 0
-                    for _, val in enumerate(self.is_sunkcost)
-                ]
-            )
-
-            if np.sum(is_sunkcost_not_boolean) > 0:
-                raise CostOfSalesException(f"Must insert boolean in list is_sunkcost")
 
         # Prepare attribute tax_portion
         if self.tax_portion is None:
@@ -3767,8 +3773,8 @@ class CostOfSales(GeneralCost):
             for arr in [
                 self.cost,
                 self.cost_allocation,
+                self.cost_type,
                 self.description,
-                self.is_sunkcost,
                 self.tax_portion,
                 self.tax_discount,
             ]
@@ -3778,8 +3784,8 @@ class CostOfSales(GeneralCost):
                 f"expense_year: {len(self.expense_year)}, "
                 f"cost: {len(self.cost)}, "
                 f"cost_allocation: {len(self.cost_allocation)}, "
+                f"cost_type: {len(self.cost_type)}, "
                 f"description: {len(self.description)}, "
-                f"is_sunkcost: {len(self.is_sunkcost)}, "
                 f"tax_portion: {len(self.tax_portion)}, "
                 f"tax_discount: {len(self.tax_discount)} "
             )
@@ -3810,7 +3816,7 @@ class CostOfSales(GeneralCost):
                     np.allclose(self.tax_portion, other.tax_portion),
                     np.allclose(self.tax_discount, other.tax_discount),
                     self.cost_allocation == other.cost_allocation,
-                    self.is_sunkcost == other.is_sunkcost,
+                    self.cost_type == other.cost_type
                 )
             )
 
@@ -3892,8 +3898,8 @@ class CostOfSales(GeneralCost):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            cost_type_combined = self.cost_type + other.cost_type
             description_combined = self.description + other.description
-            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
             tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
             expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
@@ -3903,7 +3909,7 @@ class CostOfSales(GeneralCost):
                 start_year=start_year_combined,
                 end_year=end_year_combined,
                 cost_allocation=cost_allocation_combined,
-                is_sunkcost=is_sunkcost_combined,
+                cost_type=cost_type_combined,
                 description=description_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
@@ -3928,8 +3934,8 @@ class CostOfSales(GeneralCost):
             start_year_combined = min(self.start_year, other.start_year)
             end_year_combined = max(self.end_year, other.end_year)
             cost_allocation_combined = self.cost_allocation + other.cost_allocation
+            cost_type_combined = self.cost_type + other.cost_type
             description_combined = self.description + other.description
-            is_sunkcost_combined = self.is_sunkcost + other.is_sunkcost
             tax_portion_combined = np.concatenate((self.tax_portion, other.tax_portion))
             tax_discount_combined = np.concatenate((self.tax_discount, other.tax_discount))
             expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
@@ -3939,8 +3945,8 @@ class CostOfSales(GeneralCost):
                 start_year=start_year_combined,
                 end_year=end_year_combined,
                 cost_allocation=cost_allocation_combined,
+                cost_type=cost_type_combined,
                 description=description_combined,
-                is_sunkcost=is_sunkcost_combined,
                 tax_portion=tax_portion_combined,
                 tax_discount=tax_discount_combined,
                 expense_year=expense_year_combined,
@@ -3964,8 +3970,8 @@ class CostOfSales(GeneralCost):
                 start_year=self.start_year,
                 end_year=self.end_year,
                 cost_allocation=self.cost_allocation,
+                cost_type=self.cost_type,
                 description=self.description,
-                is_sunkcost=self.is_sunkcost,
                 tax_portion=self.tax_portion,
                 tax_discount=self.tax_discount,
                 expense_year=self.expense_year,
@@ -3999,8 +4005,8 @@ class CostOfSales(GeneralCost):
                     start_year=self.start_year,
                     end_year=self.end_year,
                     cost_allocation=self.cost_allocation,
+                    cost_type=self.cost_type,
                     description=self.description,
-                    is_sunkcost=self.is_sunkcost,
                     tax_portion=self.tax_portion,
                     tax_discount=self.tax_discount,
                     expense_year=self.expense_year,
