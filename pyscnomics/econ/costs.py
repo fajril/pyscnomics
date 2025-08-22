@@ -397,7 +397,7 @@ class CapitalCost(GeneralCost):
         # Prepare attribute cost_type
         if self.cost_type is None:
             self.cost_type = [
-                CostType.POST_ONSTREAM_COST for _ in range(len(self.expense_year))
+                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
             ]
 
         else:
@@ -408,7 +408,7 @@ class CapitalCost(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.POST_ONSTREAM_COST if pd.isna(val) else val
+                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
                 for _, val in enumerate(self.cost_type)
             ]
 
@@ -1205,7 +1205,7 @@ class Intangible(GeneralCost):
         # Prepare attribute cost_type
         if self.cost_type is None:
             self.cost_type = [
-                CostType.POST_ONSTREAM_COST for _ in range(len(self.expense_year))
+                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
             ]
 
         else:
@@ -1216,7 +1216,7 @@ class Intangible(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.POST_ONSTREAM_COST if pd.isna(val) else val
+                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
                 for _, val in enumerate(self.cost_type)
             ]
 
@@ -1667,7 +1667,7 @@ class OPEX(GeneralCost):
         # Prepare attribute cost_type
         if self.cost_type is None:
             self.cost_type = [
-                CostType.POST_ONSTREAM_COST for _ in range(len(self.expense_year))
+                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
             ]
 
         else:
@@ -1678,7 +1678,7 @@ class OPEX(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.POST_ONSTREAM_COST if pd.isna(val) else val
+                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
                 for _, val in enumerate(self.cost_type)
             ]
 
@@ -2181,7 +2181,7 @@ class ASR(GeneralCost):
         # Prepare attribute cost_type
         if self.cost_type is None:
             self.cost_type = [
-                CostType.POST_ONSTREAM_COST for _ in range(len(self.expense_year))
+                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
             ]
 
         else:
@@ -2192,7 +2192,7 @@ class ASR(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.POST_ONSTREAM_COST if pd.isna(val) else val
+                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
                 for _, val in enumerate(self.cost_type)
             ]
 
@@ -2871,7 +2871,7 @@ class LBT(GeneralCost):
         # Prepare attribute cost_type
         if self.cost_type is None:
             self.cost_type = [
-                CostType.POST_ONSTREAM_COST for _ in range(len(self.expense_year))
+                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
             ]
 
         else:
@@ -2882,7 +2882,7 @@ class LBT(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.POST_ONSTREAM_COST if pd.isna(val) else val
+                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
                 for _, val in enumerate(self.cost_type)
             ]
 
@@ -3668,7 +3668,7 @@ class CostOfSales(GeneralCost):
         # Prepare attribute cost_type
         if self.cost_type is None:
             self.cost_type = [
-                CostType.POST_ONSTREAM_COST for _ in range(len(self.expense_year))
+                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
             ]
 
         else:
@@ -3679,7 +3679,7 @@ class CostOfSales(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.POST_ONSTREAM_COST if pd.isna(val) else val
+                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
                 for _, val in enumerate(self.cost_type)
             ]
 

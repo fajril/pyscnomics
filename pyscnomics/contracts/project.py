@@ -79,6 +79,7 @@ class BaseProject:
         A tuple of CostOfSales objects. Defaults to None.
     """
 
+    # List of required arguments
     start_date: date
     end_date: date
     oil_onstream_date: date = field(default=None)
@@ -92,32 +93,32 @@ class BaseProject:
     lbt_cost: tuple[LBT, ...] = field(default=None)
     cost_of_sales: tuple[CostOfSales, ...] = field(default=None)
 
-    # Attributes to be defined later (associated with project duration)
+    # Attributes associated with project duration
     project_duration: int = field(default=None, init=False)
     project_years: np.ndarray = field(default=None, init=False)
 
-    # Attributes to be defined later (associated with lifting for each fluid types)
+    # Attributes associated with lifting for each fluid types
     _oil_lifting: Lifting = field(default=None, init=False, repr=False)
     _gas_lifting: Lifting = field(default=None, init=False, repr=False)
     _sulfur_lifting: Lifting = field(default=None, init=False, repr=False)
     _electricity_lifting: Lifting = field(default=None, init=False, repr=False)
     _co2_lifting: Lifting = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with revenue for each fluid types)
+    # Attributes associated with revenue for each fluid types
     _oil_revenue: np.ndarray = field(default=None, init=False, repr=False)
     _gas_revenue: np.ndarray = field(default=None, init=False, repr=False)
     _sulfur_revenue: np.ndarray = field(default=None, init=False, repr=False)
     _electricity_revenue: np.ndarray = field(default=None, init=False, repr=False)
     _co2_revenue: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Atributes to be defined later (associated with WAP price)
+    # Atributes associated with WAP price
     _oil_wap_price: np.ndarray = field(default=None, init=False, repr=False)
     _gas_wap_price: np.ndarray = field(default=None, init=False, repr=False)
     _sulfur_wap_price: np.ndarray = field(default=None, init=False, repr=False)
     _electricity_wap_price: np.ndarray = field(default=None, init=False, repr=False)
     _co2_wap_price: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with total cost per component)
+    # Attributes associated with total cost per component
     capital_cost_total: CapitalCost = field(default=None, init=False, repr=False)
     intangible_cost_total: Intangible = field(default=None, init=False, repr=False)
     opex_total: OPEX = field(default=None, init=False, repr=False)
@@ -125,7 +126,7 @@ class BaseProject:
     lbt_cost_total: LBT = field(default=None, init=False, repr=False)
     cost_of_sales_total: CostOfSales = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with costs)
+    # Attributes associated with cost category for each fluid types
     _oil_capital_cost: CapitalCost = field(default=None, init=False, repr=False)
     _gas_capital_cost: CapitalCost = field(default=None, init=False, repr=False)
     _oil_intangible: Intangible = field(default=None, init=False, repr=False)
@@ -139,7 +140,21 @@ class BaseProject:
     _oil_cost_of_sales: CostOfSales = field(default=None, init=False, repr=False)
     _gas_cost_of_sales: CostOfSales = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with sunkcost in each cost categories)
+    # Attributes associated with post onstream cost in each cost categories
+    _oil_capital_postonstream: CapitalCost = field(default=None, init=False, repr=False)
+    _gas_capital_postonstream: CapitalCost = field(default=None, init=False, repr=False)
+    _oil_intangible_postonstream: Intangible = field(default=None, init=False, repr=False)
+    _gas_intangible_postonstream: Intangible = field(default=None, init=False, repr=False)
+    _oil_opex_postonstream: OPEX = field(default=None, init=False, repr=False)
+    _gas_opex_postonstream: OPEX = field(default=None, init=False, repr=False)
+    _oil_asr_postonstream: ASR = field(default=None, init=False, repr=False)
+    _gas_asr_postonstream: ASR = field(default=None, init=False, repr=False)
+    _oil_lbt_postonstream: LBT = field(default=None, init=False, repr=False)
+    _gas_lbt_postonstream: LBT = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_postonstream: CostOfSales = field(default=None, init=False, repr=False)
+    _gas_cost_of_sales_postonstream: CostOfSales = field(default=None, init=False, repr=False)
+
+    # Attributes associated with sunkcost in each cost categories
     _oil_capital_sunk_cost: CapitalCost = field(default=None, init=False, repr=False)
     _gas_capital_sunk_cost: CapitalCost = field(default=None, init=False, repr=False)
     _oil_intangible_sunk_cost: Intangible = field(default=None, init=False, repr=False)
@@ -153,20 +168,37 @@ class BaseProject:
     _oil_cost_of_sales_sunk_cost: CostOfSales = field(default=None, init=False, repr=False)
     _gas_cost_of_sales_sunk_cost: CostOfSales = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with sunk cost)
+    # Attributes associated with preonstream cost in each cost categories
+    _oil_capital_preonstream: CapitalCost = field(default=None, init=False, repr=False)
+    _gas_capital_preonstream: CapitalCost = field(default=None, init=False, repr=False)
+    _oil_intangible_preonstream: Intangible = field(default=None, init=False, repr=False)
+    _gas_intangible_preonstream: Intangible = field(default=None, init=False, repr=False)
+    _oil_opex_preonstream: OPEX = field(default=None, init=False, repr=False)
+    _gas_opex_preonstream: OPEX = field(default=None, init=False, repr=False)
+    _oil_asr_preonstream: ASR = field(default=None, init=False, repr=False)
+    _gas_asr_preonstream: ASR = field(default=None, init=False, repr=False)
+    _oil_lbt_preonstream: LBT = field(default=None, init=False, repr=False)
+    _gas_lbt_preonstream: LBT = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_preonstream: CostOfSales = field(default=None, init=False, repr=False)
+    _gas_cost_of_sales_preonstream: CostOfSales = field(default=None, init=False, repr=False)
+
+    # Attributes associated with sunk costs
     _oil_depreciable_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _gas_depreciable_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_non_depreciable_sunk_cost: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _gas_non_depreciable_sunk_cost: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
+    _oil_non_depreciable_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_non_depreciable_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _gas_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later
-    # (Associated with pre tax expenditures for each cost elements)
+    # Attributes associated with preonstream costs
+    _oil_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_non_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_non_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_preonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_preonstream: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes associated with pre tax expenditures for each cost categories
     _oil_capital_expenditures_pre_tax: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -192,8 +224,7 @@ class BaseProject:
         default=None, init=False, repr=False
     )
 
-    # Attributes to be defined later
-    # (Associated with indirect taxes for each cost element)
+    # Attributes associated with indirect taxes for each cost categories
     _oil_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _oil_intangible_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
@@ -207,8 +238,7 @@ class BaseProject:
     _oil_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later
-    # (Associated with post tax expenditures for each cost elements)
+    # Attributes associated with post tax expenditures for each cost categories
     _oil_capital_expenditures_post_tax: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -234,8 +264,7 @@ class BaseProject:
         default=None, init=False, repr=False
     )
 
-    # Attributes to be defined later
-    # (Associated with total expenditures and indirect taxes for each fluid)
+    # Attributes associated with total expenditures and indirect taxes for each fluid
     _oil_total_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_total_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
     _oil_total_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
@@ -243,20 +272,19 @@ class BaseProject:
     _oil_total_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_total_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with non capital costs)
+    # Attributes associated with non capital costs
     _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with cashflow)
+    # Attributes associated with cashflow
     _oil_cashflow: np.ndarray = field(default=None, init=False, repr=False)
     _gas_cashflow: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with consolidated lifting)
+    # Attributes associated with consolidated profiles
     _consolidated_lifting: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_wap_price: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with consolidated sunk cost)
     _consolidated_depreciable_sunk_cost: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -265,7 +293,14 @@ class BaseProject:
     )
     _consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with consolidated expenditures pre tax)
+    _consolidated_depreciable_preonstream: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_non_depreciable_preonstream: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_preonstream: np.ndarray = field(default=None, init=False, repr=False)
+
     _consolidated_capital_expenditures_pre_tax: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -288,7 +323,6 @@ class BaseProject:
         default=None, init=False, repr=False
     )
 
-    # Attributes to be defined later (associated with consolidated indirect tax)
     _consolidated_capital_indirect_tax: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -305,7 +339,6 @@ class BaseProject:
     )
     _consolidated_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with consolidated expenditures post tax)
     _consolidated_capital_expenditures_post_tax: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -328,7 +361,6 @@ class BaseProject:
         default=None, init=False, repr=False
     )
 
-    # Attributes to be defined later (associated with consolidated cashflow)
     _consolidated_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -685,24 +717,40 @@ class BaseProject:
                     f"instances, not as an/a {self.cost_of_sales.__class__.__qualname__}"
                 )
 
-        # print('\t')
-        # print(f'Filetype: {type(self.capital_cost)}')
-        # print(f'Length: {len(self.capital_cost)}')
-        # print('capital_cost = \n', self.capital_cost)
-
-        # print('\t')
-        # print('=======================================================================')
-
         # Prepare attributes associated with total cost per component
         self.capital_cost_total = reduce(lambda x, y: x + y, self.capital_cost)
-        # self.intangible_cost_total = reduce(lambda x, y: x + y, self.intangible_cost)
+        self.intangible_cost_total = reduce(lambda x, y: x + y, self.intangible_cost)
         # self.opex_total = reduce(lambda x, y: x + y, self.opex)
         # self.asr_cost_total = reduce(lambda x, y: x + y, self.asr_cost)
         # self.lbt_cost_total = reduce(lambda x, y: x + y, self.lbt_cost)
         # self.cost_of_sales_total = reduce(lambda x, y: x + y, self.cost_of_sales)
 
+        print('\t')
+        print(f'Filetype: {type(self.intangible_cost_total)}')
+        print(f'Length: {len(self.intangible_cost_total)}')
+        print('intangible_cost_total = \n', self.intangible_cost_total)
+
+        capital_cost = self._classify_costs_by_fluid(
+            classifier=self._classify_capital_cost_by_fluid
+        )
+        intangible = self._classify_costs_by_fluid(
+            classifier=self._classify_intangible_cost_by_fluid
+        )
+
+        print('\t')
+        print(f'Filetype: {type(capital_cost)}')
+        print(f'Length: {len(capital_cost)}')
+        print('capital_cost = \n', capital_cost)
+
+        print('\t')
+        print(f'Filetype: {type(intangible)}')
+        print(f'Length: {len(intangible)}')
+        print('intangible = \n', intangible)
+
+
+
         # # Prepare attributes associated with costs
-        self._oil_capital_cost = self._get_oil_capital()
+        # self._oil_capital_cost = self._get_oil_capital()
         # self._gas_capital_cost = self._get_gas_capital()
         # self._oil_intangible = self._get_oil_intangible()
         # self._gas_intangible = self._get_gas_intangible()
@@ -714,7 +762,7 @@ class BaseProject:
         # self._gas_lbt = self._get_gas_lbt()
         # self._oil_cost_of_sales = self._get_oil_cost_of_sales()
         # self._gas_cost_of_sales = self._get_gas_cost_of_sales()
-
+        #
         # # Prepare attributes associated with sunk costs
         # self._oil_capital_sunk_cost = self._get_oil_capital_sunk_cost()
         # self._gas_capital_sunk_cost = self._get_gas_capital_sunk_cost()
@@ -1192,6 +1240,91 @@ class BaseProject:
         self._get_electricity_wap_price()
         self._get_co2_wap_price()
 
+    def _classify_capital_cost_by_fluid(self, fluid_type: FluidType) -> CapitalCost:
+
+        cct = self.capital_cost_total
+
+        if fluid_type not in cct.cost_allocation:
+            return CapitalCost(
+                start_year=cct.start_year,
+                end_year=cct.end_year,
+                expense_year=np.array([cct.start_year]),
+                cost=np.array([0]),
+                cost_allocation=[fluid_type],
+            )
+
+        else:
+            allocation_array = np.array(cct.cost_allocation)
+            mask = (allocation_array == fluid_type)
+
+            return CapitalCost(
+                start_year=cct.start_year,
+                end_year=cct.end_year,
+                expense_year=cct.expense_year[mask],
+                cost=cct.cost[mask],
+                cost_allocation=allocation_array[mask].tolist(),
+                cost_type=np.array(cct.cost_type)[mask].tolist(),
+                description=np.array(cct.description)[mask].tolist(),
+                tax_portion=cct.tax_portion[mask],
+                tax_discount=cct.tax_discount[mask],
+                pis_year=cct.pis_year[mask],
+                salvage_value=cct.salvage_value[mask],
+                useful_life=cct.useful_life[mask],
+                depreciation_factor=cct.depreciation_factor[mask],
+                is_ic_applied=np.array(cct.is_ic_applied)[mask].tolist(),
+            )
+
+    def _classify_intangible_cost_by_fluid(self, fluid_type: FluidType) -> Intangible:
+
+        ict = self.intangible_cost_total
+
+        if fluid_type not in ict.cost_allocation:
+            return Intangible(
+                start_year=ict.start_year,
+                end_year=ict.end_year,
+                expense_year=np.array([ict.start_year]),
+                cost=np.array([0]),
+                cost_allocation=[fluid_type],
+            )
+
+        else:
+            allocation_array = np.array(ict.cost_allocation)
+            mask = (allocation_array == fluid_type)
+
+            return Intangible(
+                start_year=ict.start_year,
+                end_year=ict.end_year,
+                expense_year=ict.expense_year[mask],
+                cost=ict.cost[mask],
+                cost_allocation=allocation_array[mask].tolist(),
+                description=np.array(ict.description)[mask].tolist(),
+                cost_type=np.array(ict.cost_type)[mask].tolist(),
+                tax_portion=ict.tax_portion[mask],
+                tax_discount=ict.tax_discount[mask],
+            )
+
+    def _classify_opex_by_fluid(self):
+        pass
+
+    def _classify_asr_cost_by_fluid(self):
+        pass
+
+    def _classify_lbt_cost_by_fluid(self):
+        pass
+
+    def _classify_cost_of_sales_by_fluid(self):
+        pass
+
+    @staticmethod
+    def _classify_costs_by_fluid(classifier):
+
+        fluid_map = {
+            "oil": FluidType.OIL,
+            "gas": FluidType.GAS,
+        }
+
+        return {fluid: classifier(ftype) for fluid, ftype in fluid_map.items()}
+
     def _prepare_cost_types(
         self,
         fluid_type: FluidType,
@@ -1202,74 +1335,25 @@ class BaseProject:
             FluidType.GAS: self.gas_onstream_date.year,
         }
 
-        ct = np.array(cost_obj.cost_type)
-        yrs = cost_obj.expense_year
+        allocation_array = np.array(cost_obj.cost_allocation)
+        cost_type_array = np.array(cost_obj.cost_type)
 
+        ct = cost_type_array[allocation_array == fluid_type]
+        ey = cost_obj.expense_year[allocation_array == fluid_type]
 
-        mask_post_onstream = yrs > onstream_years[fluid_type]
-        mask_sunk_cost = yrs < self.approval_year
-        mask_pre_onstream = (yrs > self.approval_year) & (yrs < onstream_years[fluid_type])
-
-        print('\t')
-        print(f'Filetype: {type(mask_post_onstream)}')
-        print(f'Length: {len(mask_post_onstream)}')
-        print('mask_post_onstream = ', mask_post_onstream)
+        mask_post_onstream = ey > onstream_years[fluid_type]
+        mask_sunk_cost = ey < self.approval_year
+        mask_pre_onstream = (ey > self.approval_year) & (ey < onstream_years[fluid_type])
 
         ct[mask_post_onstream] = CostType.POST_ONSTREAM_COST
         ct[mask_sunk_cost] = CostType.SUNK_COST
         ct[mask_pre_onstream] = CostType.PRE_ONSTREAM_COST
 
-        ct.tolist()
+        # Update the modified subarray back
+        cost_type_array[allocation_array == fluid_type] = ct
 
-        print('\t')
-        print(f'Filetype: {type(ct)}')
-        print(f'Length: {len(ct)}')
-        print('ct = \n', ct)
-
-
-
-        # onstream_years = {
-        #     "oil": self.oil_onstream_date.year,
-        #     "gas": self.gas_onstream_date.year,
-        # }
-        #
-        # ct = np.array(self.capital_cost_total.cost_type)
-        # yrs = self.capital_cost_total.expense_year
-        #
-        # # Create filters
-        # mask_post_onstream = yrs > onstream_years["oil"]
-        # mask_sunk_cost = yrs < self.approval_year
-        # mask_pre_onstream = (yrs > self.approval_year) & (yrs < onstream_years["oil"])
-        #
-        # # Assign cost types
-        # ct[mask_post_onstream] = CostType.POST_ONSTREAM_COST
-        # ct[mask_sunk_cost] = CostType.SUNK_COST
-        # ct[mask_pre_onstream] = CostType.PRE_ONSTREAM_COST
-        #
-        # ct.tolist()
-
-
-        # # Configure cost type indices
-        # id_post_onstream = np.flatnonzero(
-        #     self.capital_cost_total.expense_year > onstream_years["oil"]
-        # )
-        # id_sunk_cost = np.flatnonzero(
-        #     self.capital_cost_total.expense_year < self.approval_year
-        # )
-        # id_pre_onstream = np.flatnonzero(
-        #     np.logical_and(
-        #         self.capital_cost_total.expense_year > self.approval_year,
-        #         self.capital_cost_total.expense_year < onstream_years["oil"]
-        #     )
-        # )
-        #
-        # # Modify the elements of `cost_type`
-        # ct[id_post_onstream] = [CostType.POST_ONSTREAM_COST for _ in range(len(id_post_onstream))]
-        # ct[id_sunk_cost] = [CostType.SUNK_COST for _ in range(len(id_sunk_cost))]
-        # ct[id_pre_onstream] = [CostType.PRE_ONSTREAM_COST for _ in range(len(id_pre_onstream))]
-        #
-        # ct.tolist()
-
+        # Assign back to the object
+        cost_obj.cost_type = cost_type_array.tolist()
 
     def _get_filtered_capital_cost(
         self,
@@ -1317,6 +1401,10 @@ class BaseProject:
 
         cct = self.capital_cost_total
 
+        self._prepare_cost_types(
+            fluid_type=fluid_type, cost_obj=cct
+        )
+
         onstream_years = {
             FluidType.OIL: self.oil_onstream_date.year,
             FluidType.GAS: self.gas_onstream_date.year,
@@ -1325,62 +1413,56 @@ class BaseProject:
         allocation_array = np.array(cct.cost_allocation)
         cost_type_array = np.array(cct.cost_type)
 
-        cost_type_oil = cost_type_array[allocation_array == fluid_type]
-        expense_year_oil = cct.expense_year[allocation_array == fluid_type]
+        cost_type_fluid = cost_type_array[allocation_array == fluid_type]
+        expense_year_fluid = cct.expense_year[allocation_array == fluid_type]
 
-        print('\t')
-        print(f'Filetype: {type(cost_type_oil)}')
-        print(f'Length: {len(cost_type_oil)}')
-        print('cost_type_oil = \n', cost_type_oil)
+        mask_post_onstream = expense_year_fluid > onstream_years[fluid_type]
+        mask_sunk_cost = expense_year_fluid < self.approval_year
+        mask_pre_onstream = (
+            (expense_year_fluid > self.approval_year)
+            & (expense_year_fluid < onstream_years[fluid_type])
+        )
 
-        mask_post_onstream = expense_year_oil > onstream_years[fluid_type]
+        cost_type_fluid[mask_post_onstream] = CostType.POST_ONSTREAM_COST
+        cost_type_fluid[mask_sunk_cost] = CostType.SUNK_COST
+        cost_type_fluid[mask_pre_onstream] = CostType.PRE_ONSTREAM_COST
 
-        print('\t')
-        print(f'Filetype: {type(mask_post_onstream)}')
-        print(f'Length: {len(mask_post_onstream)}')
-        print('mask_post_onstream = \n', mask_post_onstream)
+        cost_type_array = cost_type_fluid.copy()
 
-        cost_type_oil[mask_post_onstream] = CostType.POST_ONSTREAM_COST
+        allocation_array = np.array(cct.cost_allocation)
+        sunkcost_array = np.array(cct.is_sunkcost)
+        mask = np.logical_and(
+            allocation_array == fluid_type,
+            sunkcost_array == include_sunkcost,
+        )
+        indices = np.flatnonzero(mask)
 
-        print('\t')
-        print(f'Filetype: {type(cost_type_oil)}')
-        print(f'Length: {len(cost_type_oil)}')
-        print('cost_type_oil = \n', cost_type_oil)
+        if len(indices) == 0:
+            return CapitalCost(
+                start_year=cct.start_year,
+                end_year=cct.end_year,
+                expense_year=np.array([cct.start_year]),
+                cost=np.array([0]),
+                cost_allocation=[fluid_type],
+                is_sunkcost=[include_sunkcost],
+            )
 
-        # allocation_array = np.array(cct.cost_allocation)
-        # sunkcost_array = np.array(cct.is_sunkcost)
-        # mask = np.logical_and(
-        #     allocation_array == fluid_type,
-        #     sunkcost_array == include_sunkcost,
-        # )
-        # indices = np.flatnonzero(mask)
-        #
-        # if len(indices) == 0:
-        #     return CapitalCost(
-        #         start_year=cct.start_year,
-        #         end_year=cct.end_year,
-        #         expense_year=np.array([cct.start_year]),
-        #         cost=np.array([0]),
-        #         cost_allocation=[fluid_type],
-        #         is_sunkcost=[include_sunkcost],
-        #     )
-        #
-        # return CapitalCost(
-        #     start_year=cct.start_year,
-        #     end_year=cct.end_year,
-        #     expense_year=cct.expense_year[indices],
-        #     cost=cct.cost[indices],
-        #     cost_allocation=np.array(cct.cost_allocation)[indices].tolist(),
-        #     description=np.array(cct.description)[indices].tolist(),
-        #     is_sunkcost=np.array(cct.is_sunkcost)[indices].tolist(),
-        #     tax_portion=cct.tax_portion[indices],
-        #     tax_discount=cct.tax_discount[indices],
-        #     pis_year=cct.pis_year[indices],
-        #     salvage_value=cct.salvage_value[indices],
-        #     useful_life=cct.useful_life[indices],
-        #     depreciation_factor=cct.depreciation_factor[indices],
-        #     is_ic_applied=np.array(cct.is_ic_applied)[indices].tolist(),
-        # )
+        return CapitalCost(
+            start_year=cct.start_year,
+            end_year=cct.end_year,
+            expense_year=cct.expense_year[indices],
+            cost=cct.cost[indices],
+            cost_allocation=np.array(cct.cost_allocation)[indices].tolist(),
+            description=np.array(cct.description)[indices].tolist(),
+            is_sunkcost=np.array(cct.is_sunkcost)[indices].tolist(),
+            tax_portion=cct.tax_portion[indices],
+            tax_discount=cct.tax_discount[indices],
+            pis_year=cct.pis_year[indices],
+            salvage_value=cct.salvage_value[indices],
+            useful_life=cct.useful_life[indices],
+            depreciation_factor=cct.depreciation_factor[indices],
+            is_ic_applied=np.array(cct.is_ic_applied)[indices].tolist(),
+        )
 
     def _get_oil_capital(self) -> CapitalCost:
         """
@@ -1404,11 +1486,11 @@ class BaseProject:
         - This method is a specialized call to `_get_filtered_capital_cost`
           with `fluid_type=FluidType.OIL` and `include_sunkcost=False`.
         """
-        return self._get_filtered_capital_cost(fluid_type=FluidType.OIL)
+        # return self._get_filtered_capital_cost(fluid_type=FluidType.OIL)
 
-        # return self._get_filtered_capital_cost(
-        #     fluid_type=FluidType.OIL, include_sunkcost=False
-        # )
+        return self._get_filtered_capital_cost(
+            fluid_type=FluidType.OIL, include_sunkcost=False
+        )
 
     def _get_gas_capital(self) -> CapitalCost:
         """
@@ -3321,14 +3403,9 @@ class BaseProject:
         # WAP (Weighted Average Price) for each produced fluid
         self._get_wap_price()
 
-        # print('\t')
-        # print(f'Filetype: {type(self.capital_cost_total)}')
-        # print(f'Length: {len(self.capital_cost_total)}')
-        # print('capital_cost_total = \n', self.capital_cost_total)
-
         # # Prepare sunkcost
         # self._get_sunkcost_array()
-
+        #
         # # Calculate pre tax expenditures
         # self._get_expenditures_pre_tax(
         #     year_inflation=year_inflation,

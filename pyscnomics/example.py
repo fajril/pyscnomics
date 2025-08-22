@@ -76,7 +76,7 @@ class ExampleCase:
     def __post_init__(self):
         self._get_lifting_data()
         self._get_capital_cost_data()
-        # self._get_intangible_cost_data()
+        self._get_intangible_cost_data()
         # self._get_opex_data()
         # self._get_asr_cost_data()
         # self._get_lbt_cost_data()
@@ -144,68 +144,22 @@ class ExampleCase:
         self.intangible_mangga = Intangible(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array(
-                [
-                    2023, 2024, 2025, 2026,
-                    2027, 2028, 2029, 2030,
-                ]
-            ),
-            cost=np.array(
-                [
-                    200, 200, 200, 150,
-                    100, 75, 25, 25,
-                ]
-            ),
-            cost_allocation=[
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-            ],
-            cost_type=[
-                CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST,
-            ],
-            tax_portion=np.array(
-                [
-                    1, 1, 1, 1,
-                    1, 1, 1, 1,
-                ]
-            ),
+            expense_year=expense_year_cases["case_1"],
+            cost=cost_cases["case_1"],
+            cost_allocation=cost_allocation_cases["case_1"],
+            cost_type=cost_type_cases["case_1"],
+            tax_portion=tax_portion_cases["case_1"],
         )
 
-        # self.intangible_apel = Intangible(
-        #     start_year=2023,
-        #     end_year=2030,
-        #     expense_year=np.array(
-        #         [
-        #             2023, 2024, 2025, 2026,
-        #             2027, 2028, 2029, 2030,
-        #         ]
-        #     ),
-        #     cost=np.array(
-        #         [
-        #             200, 200, 200, 150,
-        #             100, 75, 25, 25,
-        #         ]
-        #     ),
-        #     cost_allocation=[
-        #         FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
-        #         FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
-        #     ],
-        #     cost_type=[
-        #         np.nan, CostType.SUNK_COST, CostType.SUNK_COST,
-        #         CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-        #         CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-        #         CostType.POST_ONSTREAM_COST,
-        #     ],
-        #     tax_portion=np.array(
-        #         [
-        #             1, 1, 1, 1,
-        #             1, 1, 1, 1,
-        #         ]
-        #     ),
-        # )
+        self.intangible_apel = Intangible(
+            start_year=2023,
+            end_year=2030,
+            expense_year=expense_year_cases["case_2"],
+            cost=cost_cases["case_2"],
+            cost_allocation=cost_allocation_cases["case_2"],
+            cost_type=cost_type_cases["case_2"],
+            tax_portion=tax_portion_cases["case_2"],
+        )
 
     def _get_opex_data(self):
         """

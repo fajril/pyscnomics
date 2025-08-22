@@ -1620,15 +1620,15 @@ class GrossSplit(BaseProject):
         is_pod_1: bool = False,
         approval_year: int = None,
         cum_production_split_offset: float | np.ndarray | None = 0.0,
-        # is_dmo_end_weighted=False,
-        # regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
-        # tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
-        # effective_tax_rate: float | np.ndarray = 0.22,
-        # sunk_cost_reference_year: int = None,
-        # depr_method: DeprMethod = DeprMethod.PSC_DB,
-        # decline_factor: float | int = 2,
-        # amortization: bool = False,
-        # sum_undepreciated_cost: bool = False
+        is_dmo_end_weighted=False,
+        regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
+        tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
+        effective_tax_rate: float | np.ndarray = 0.22,
+        sunk_cost_reference_year: int = None,
+        depr_method: DeprMethod = DeprMethod.PSC_DB,
+        decline_factor: float | int = 2,
+        amortization: bool = False,
+        sum_undepreciated_cost: bool = False
     ):
 
         # Perform initial check to several input arguments
@@ -1661,390 +1661,390 @@ class GrossSplit(BaseProject):
         print(f'Length: {len(self._oil_sunk_cost)}')
         print('_oil_sunk_cost = \n', self._oil_sunk_cost)
 
-        # # Calculate expenditures for every cost components
-        # self._get_expenditures_pre_tax(
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     inflation_rate_applied_to=inflation_rate_applied_to,
-        # )
-        #
-        # # Calculate indirect taxes
-        # self._get_indirect_taxes(tax_rate=vat_rate)
-        #
-        # # Calculate post tax expenditures
-        # self._get_expenditures_post_tax(
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     tax_rate=vat_rate,
-        #     inflation_rate_applied_to=inflation_rate_applied_to,
-        # )
-        #
-        # # Total indirect taxes for OIL and GAS
-        # self._oil_total_indirect_tax = (
-        #         self._oil_capital_indirect_tax
-        #         + self._oil_intangible_indirect_tax
-        #         + self._oil_opex_indirect_tax
-        #         + self._oil_asr_indirect_tax
-        #         + self._oil_lbt_indirect_tax
-        #         + self._oil_cost_of_sales_indirect_tax
-        # )
-        #
-        # self._gas_total_indirect_tax = (
-        #         self._gas_capital_indirect_tax
-        #         + self._gas_intangible_indirect_tax
-        #         + self._gas_opex_indirect_tax
-        #         + self._gas_asr_indirect_tax
-        #         + self._gas_lbt_indirect_tax
-        #         + self._gas_cost_of_sales_indirect_tax
-        # )
-        #
-        # # Get The Other Revenue as the chosen selection
-        # self._get_other_revenue(sulfur_revenue=sulfur_revenue,
-        #                         electricity_revenue=electricity_revenue,
-        #                         co2_revenue=co2_revenue)
-        #
-        # # Depreciation (tangible cost)
-        # (
-        #     self._oil_depreciation,
-        #     self._oil_undepreciated_asset,
-        # ) = self._oil_capital_cost.total_depreciation_rate(
-        #     depr_method=depr_method,
-        #     decline_factor=decline_factor,
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     tax_rate=vat_rate,
-        # )
-        #
-        # (
-        #     self._gas_depreciation,
-        #     self._gas_undepreciated_asset,
-        # ) = self._gas_capital_cost.total_depreciation_rate(
-        #     depr_method=depr_method,
-        #     decline_factor=decline_factor,
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     tax_rate=vat_rate,
-        # )
-        #
-        # # Treatment for small order of number, in example 1e-15
-        # self._oil_undepreciated_asset = np.where(
-        #     self._oil_undepreciated_asset < 1.0e-5, 0, self._oil_undepreciated_asset)
-        # self._gas_undepreciated_asset = np.where(
-        #     self._gas_undepreciated_asset < 1.0e-5, 0, self._gas_undepreciated_asset)
-        #
-        # # Treatment of the un-depreciated asset to be summed up in the last year of the contract or not
-        # if sum_undepreciated_cost is True:
-        #     self._oil_depreciation[-1] = self._oil_depreciation[-1] + self._oil_undepreciated_asset
-        #     self._gas_depreciation[-1] = self._gas_depreciation[-1] + self._gas_undepreciated_asset
-        #
-        #     self._oil_undepreciated_asset = np.zeros_like(self.project_years, dtype=float)
-        #     self._gas_undepreciated_asset = np.zeros_like(self.project_years, dtype=float)
-        # else:
-        #     pass
-        #
-        # # Adding the depreciation with the carry forward depreciation
-        # self._oil_depreciation = self._oil_depreciation + self._oil_carry_forward_depreciation
-        # self._gas_depreciation = self._gas_depreciation + self._gas_carry_forward_depreciation
-        #
-        # # Non Capital Cost
-        # self._oil_non_capital = (
-        #         self._oil_intangible_expenditures_post_tax
-        #         + self._oil_opex_expenditures_post_tax
-        #         + self._oil_asr_expenditures_post_tax
-        #         + self._oil_lbt_expenditures_post_tax
-        # )
-        #
-        # self._gas_non_capital = (
-        #         self._gas_intangible_expenditures_post_tax
-        #         + self._gas_opex_expenditures_post_tax
-        #         + self._gas_asr_expenditures_post_tax
-        #         + self._gas_lbt_expenditures_post_tax
-        # )
-        #
-        # # Get Sunk Cost
-        # self._get_sunk_cost(sunk_cost_reference_year)
-        #
-        # # Amortization Cost
-        # if amortization is True:
-        #     self._oil_amortization = unit_of_production_rate(
-        #         start_year_project=self.start_date.year,
-        #         cost=float(np.sum(self._oil_sunk_cost)),
-        #         prod=self._oil_lifting.get_lifting_rate_ghv_arr(),
-        #         prod_year=self.project_years,
-        #         salvage_value=0.0,
-        #         amortization_len=self.project_duration,)
-        #
-        #     self._gas_amortization = unit_of_production_rate(
-        #         start_year_project=self.start_date.year,
-        #         cost=float(np.sum(self._gas_sunk_cost)),
-        #         prod=self._gas_lifting.get_lifting_rate_ghv_arr(),
-        #         prod_year=self.project_years,
-        #         salvage_value=0.0,
-        #         amortization_len=self.project_duration,)
-        #
-        #     self._oil_sunk_cost = np.zeros_like(self.project_years)
-        #     self._gas_sunk_cost = np.zeros_like(self.project_years)
-        #
-        # else:
-        #     self._oil_amortization = np.zeros_like(self.project_years)
-        #     self._gas_amortization = np.zeros_like(self.project_years)
-        #
-        # # Variable Split. -> Will set the value of _variable_split
-        # self._wrapper_variable_split(regime=regime)
-        #
-        # # Base Split
-        # self._oil_base_split = np.full_like(self.project_years, fill_value=self.base_split_ctr_oil, dtype=float)
-        # self._gas_base_split = np.full_like(self.project_years, fill_value=self.base_split_ctr_gas, dtype=float)
-        #
-        # # Variable Split
-        # self._var_split_array = np.full_like(self.project_years, fill_value=self._variable_split, dtype=float)
-        #
-        # # Calculating the gas production in MMBOE
-        # # Based on the discussion on 28 of June 2024, with YRA in Whatsapp,
-        # # The cum. production used for progressive cum. production split is the sum of production rate and baseline
-        #
-        # prod_gas_boe = self._gas_lifting.get_prod_rate_total_arr() / self.conversion_boe_to_scf
-        #
-        # # Condition when the offset cumulative production array when user input is float
-        # if isinstance(cum_production_split_offset, float) or isinstance(cum_production_split_offset, int):
-        #     offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
-        #     offset_arr[0] = cum_production_split_offset
-        #
-        # else:
-        #     offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
-        #
-        # # Calculating the cumulative production
-        # self._cumulative_prod = np.cumsum(self._oil_lifting.get_prod_rate_total_arr() + prod_gas_boe + offset_arr)
-        #
-        # # Progressive Split
-        # vectorized_get_prog_split = np.vectorize(self._wrapper_progressive_split)
-        #
-        # # Condition when the cum_production_split_offset is filled with np.ndarray
-        # if isinstance(cum_production_split_offset, np.ndarray) and len(cum_production_split_offset) > 1:
-        #     self._oil_prog_price_split, self._oil_prog_cum_split = vectorized_get_prog_split(
-        #         fluid=self._oil_lifting.fluid_type,
-        #         price=self._oil_lifting.get_price_arr(),
-        #         cum=None,
-        #         regime=regime
-        #     )
-        #
-        #     self._oil_prog_split = self._oil_prog_price_split + cum_production_split_offset
-        #
-        #     self._gas_prog_price_split, self._gas_prog_cum_split = vectorized_get_prog_split(
-        #         fluid=self._gas_lifting.fluid_type,
-        #         price=self._gas_lifting.get_price_arr(),
-        #         cum=None,
-        #         regime=regime
-        #     )
-        #
-        #     self._gas_prog_split = self._gas_prog_price_split + cum_production_split_offset
-        #
-        # # Condition when the cum_production_split_offset is not filled
-        # else:
-        #     self._oil_prog_price_split, self._oil_prog_cum_split = vectorized_get_prog_split(
-        #         fluid=self._oil_lifting.fluid_type,
-        #         price=self._oil_lifting.get_price_arr(),
-        #         cum=self._cumulative_prod,
-        #         regime=regime
-        #     )
-        #     self._oil_prog_split = self._oil_prog_price_split + self._oil_prog_cum_split
-        #
-        #     self._gas_prog_price_split, self._gas_prog_cum_split = vectorized_get_prog_split(
-        #         fluid=self._gas_lifting.fluid_type,
-        #         price=self._gas_lifting.get_price_arr(),
-        #         cum=self._cumulative_prod,
-        #         regime=regime
-        #     )
-        #     self._gas_prog_split = self._gas_prog_price_split + self._gas_prog_cum_split
-        #
-        # # Ministerial Discretion
-        # minis_disc_array = np.full_like(self.project_years, fill_value=self.split_ministry_disc, dtype=float)
-        #
-        # # Total Contractor Split
-        # self._oil_ctr_split = (self._oil_base_split + self._var_split_array + self._oil_prog_split +
-        #                        minis_disc_array)
-        # self._gas_ctr_split = (self._gas_base_split + self._var_split_array + self._gas_prog_split +
-        #                        minis_disc_array)
-        #
-        # self._oil_ctr_split_prior_bracket = np.copy(self._oil_ctr_split)
-        # self._gas_ctr_split_prior_bracket = np.copy(self._gas_ctr_split)
-        #
-        # # Add the condition to show the contractor split more than 100%
-        # self._oil_year_maximum_ctr_split = self._get_year_maximum_split(
-        #     ctr_split=self._oil_ctr_split,
-        #     fluid="Oil"
-        # )
-        #
-        # self._gas_year_maximum_ctr_split = self._get_year_maximum_split(
-        #     ctr_split=self._gas_ctr_split,
-        #     fluid="Gas"
-        # )
-        #
-        # # Condition to limit the contractor split is 1.0 at maximum
-        # self._oil_ctr_split = np.where(
-        #     self._oil_ctr_split > np.full_like(self._oil_ctr_split, 1.0),
-        #     np.full_like(self._oil_ctr_split, 1.0),
-        #     self._oil_ctr_split
-        # )
-        #
-        # self._gas_ctr_split = np.where(
-        #     self._gas_ctr_split > np.full_like(self._gas_ctr_split, 1.0),
-        #     np.full_like(self._gas_ctr_split, 1.0),
-        #     self._gas_ctr_split
-        # )
-        #
-        # # Contractor Share
-        # self._oil_ctr_share_before_transfer = self._oil_revenue * self._oil_ctr_split
-        # self._gas_ctr_share_before_transfer = self._gas_revenue * self._gas_ctr_split
-        #
-        # # Government Share
-        # self._oil_gov_share = self._oil_revenue - self._oil_ctr_share_before_transfer
-        # self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
-        #
-        # # Total Investment
-        # self._oil_total_expenses = (
-        #         self._oil_capital_expenditures_post_tax +
-        #         self._oil_intangible_expenditures_post_tax +
-        #         self._oil_opex_expenditures_post_tax +
-        #         self._oil_asr_expenditures_post_tax +
-        #         self._oil_lbt_expenditures_post_tax
-        # )
-        #
-        # self._gas_total_expenses = (
-        #         self._gas_capital_expenditures_post_tax +
-        #         self._gas_intangible_expenditures_post_tax +
-        #         self._gas_opex_expenditures_post_tax +
-        #         self._gas_asr_expenditures_post_tax +
-        #         self._gas_lbt_expenditures_post_tax
-        # )
-        #
-        # # Cost to be Deducted
-        # self._oil_cost_tobe_deducted = (
-        #         self._oil_depreciation +
-        #         self._oil_intangible_expenditures_post_tax +
-        #         self._oil_opex_expenditures_post_tax +
-        #         self._oil_asr_expenditures_post_tax +
-        #         self._oil_lbt_expenditures_post_tax
-        # )
-        #
-        # self._gas_cost_tobe_deducted = (
-        #         self._gas_depreciation +
-        #         self._gas_intangible_expenditures_post_tax +
-        #         self._gas_opex_expenditures_post_tax +
-        #         self._gas_asr_expenditures_post_tax +
-        #         self._gas_lbt_expenditures_post_tax
-        # )
-        #
-        # # Carry Forward Deductible Cost (In PSC Cost Recovery called Unrecovered Cost)
-        # self._oil_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._oil_depreciation,
-        #                                                                non_capital=self._oil_non_capital,
-        #                                                                revenue=self._oil_ctr_share_before_transfer,
-        #                                                                ftp_ctr=np.zeros_like(self.project_years),
-        #                                                                ftp_gov=np.zeros_like(self.project_years),
-        #                                                                ic=np.zeros_like(self.project_years))
-        #
-        # self._gas_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._gas_depreciation,
-        #                                                                non_capital=self._gas_non_capital,
-        #                                                                revenue=self._gas_ctr_share_before_transfer,
-        #                                                                ftp_ctr=np.zeros_like(self.project_years),
-        #                                                                ftp_gov=np.zeros_like(self.project_years),
-        #                                                                ic=np.zeros_like(self.project_years))
-        #
-        # # Deductible Cost (In PSC Cost Recovery called Cost Recovery)
-        # self._oil_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._oil_ctr_share_before_transfer,
-        #                                                       cost_tobe_deducted=self._oil_cost_tobe_deducted,
-        #                                                       carward_deduct_cost=self._oil_carward_deduct_cost)
-        #
-        # self._gas_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._gas_ctr_share_before_transfer,
-        #                                                       cost_tobe_deducted=self._gas_cost_tobe_deducted,
-        #                                                       carward_deduct_cost=self._gas_carward_deduct_cost)
-        #
-        # # Transfer
-        # self._transfer_to_oil, self._transfer_to_gas = psc_tools.get_transfer(
-        #     oil_unrecovered=self._oil_carward_deduct_cost,
-        #     gas_unrecovered=self._gas_carward_deduct_cost,
-        #     oil_ets_pretransfer=self._oil_ctr_share_before_transfer,
-        #     gas_ets_pretransfer=self._gas_ctr_share_before_transfer)
-        #
-        # # Carry Forward Deductible Cost After Transfer
-        # self._oil_carward_cost_aftertf = self._oil_carward_deduct_cost - self._transfer_to_gas
-        # self._gas_carward_cost_aftertf = self._gas_carward_deduct_cost - self._transfer_to_oil
-        #
-        # # Contractor Share After Transfer
-        # self._oil_ctr_share_after_transfer = (self._oil_ctr_share_before_transfer +
-        #                                       self._transfer_to_oil -
-        #                                       self._transfer_to_gas)
-        #
-        # self._gas_ctr_share_after_transfer = (self._gas_ctr_share_before_transfer +
-        #                                       self._transfer_to_gas -
-        #                                       self._transfer_to_oil)
-        #
-        # # Contractor Net Operating Profit
-        # self._oil_net_operating_profit = self._oil_ctr_share_after_transfer - self._oil_deductible_cost
-        # self._gas_net_operating_profit = self._gas_ctr_share_after_transfer - self._gas_deductible_cost
-        #
-        # # DMO
-        # self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo_gross_split(
-        #     onstream_date=self.oil_onstream_date,
-        #     start_date=self.start_date,
-        #     project_years=self.project_years,
-        #     dmo_holiday_duration=self.oil_dmo_holiday_duration,
-        #     dmo_volume_portion=self.oil_dmo_volume_portion,
-        #     dmo_fee_portion=self.oil_dmo_fee_portion,
-        #     price=self._oil_wap_price,
-        #     unrecovered_cost=self._oil_carward_cost_aftertf,
-        #     is_dmo_end_weighted=is_dmo_end_weighted,
-        #     net_operating_profit=self._oil_net_operating_profit,
-        #     contractor_share=self._oil_ctr_share_after_transfer,)
-        #
-        # self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo_gross_split(
-        #     onstream_date=self.gas_onstream_date,
-        #     start_date=self.start_date,
-        #     project_years=self.project_years,
-        #     dmo_holiday_duration=self.gas_dmo_holiday_duration,
-        #     dmo_volume_portion=self.gas_dmo_volume_portion,
-        #     dmo_fee_portion=self.gas_dmo_fee_portion,
-        #     price=self._gas_wap_price,
-        #     unrecovered_cost=self._gas_carward_cost_aftertf,
-        #     is_dmo_end_weighted=is_dmo_end_weighted,
-        #     net_operating_profit=self._gas_net_operating_profit,
-        #     contractor_share=self._gas_ctr_share_after_transfer,)
-        #
-        # # Taxable Income
-        # self._oil_taxable_income = self._oil_net_operating_profit - self._oil_ddmo
-        # self._gas_taxable_income = self._gas_net_operating_profit - self._gas_ddmo
-        #
-        # # Tax Payment
-        # # Generating Tax array if tax_rate argument is a single value not array
-        # if isinstance(effective_tax_rate, float) or isinstance(effective_tax_rate, int):
-        #     self._tax_rate_arr = np.full_like(self.project_years, effective_tax_rate, dtype=float)
-        #
-        # # Generating Tax array based on the tax regime if tax_rate argument is None
-        # if effective_tax_rate is None:
-        #     self._tax_rate_arr = self._get_tax_by_regime(tax_regime=tax_regime)
-        #
-        # elif isinstance(effective_tax_rate, np.ndarray):
-        #     self._tax_rate_arr = effective_tax_rate
-        #
-        # self._oil_tax = self._oil_taxable_income * self._tax_rate_arr
-        # self._gas_tax = self._gas_taxable_income * self._tax_rate_arr
-        #
-        # # Contractor Net Share
-        # self._oil_ctr_net_share = self._oil_taxable_income - self._oil_tax
-        # self._gas_ctr_net_share = self._gas_taxable_income - self._gas_tax
-        #
-        # # Contractor Cash Flow
-        # self._oil_ctr_cashflow = (self._oil_ctr_share_before_transfer - self._oil_total_expenses - self._oil_ddmo -
-        #                           self._oil_tax)
-        # self._gas_ctr_cashflow = (self._gas_ctr_share_before_transfer - self._gas_total_expenses - self._gas_ddmo -
-        #                           self._gas_tax)
-        #
-        # # Government Take
-        # self._oil_government_take = self._oil_gov_share + self._oil_ddmo + self._oil_tax
-        # self._gas_government_take = self._gas_gov_share + self._gas_ddmo + self._gas_tax
-        #
-        # # Prepare consolidated attributes
-        # self._get_consolidated_profiles()
+        # Calculate expenditures for every cost components
+        self._get_expenditures_pre_tax(
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
+        )
+
+        # Calculate indirect taxes
+        self._get_indirect_taxes(tax_rate=vat_rate)
+
+        # Calculate post tax expenditures
+        self._get_expenditures_post_tax(
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            tax_rate=vat_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
+        )
+
+        # Total indirect taxes for OIL and GAS
+        self._oil_total_indirect_tax = (
+                self._oil_capital_indirect_tax
+                + self._oil_intangible_indirect_tax
+                + self._oil_opex_indirect_tax
+                + self._oil_asr_indirect_tax
+                + self._oil_lbt_indirect_tax
+                + self._oil_cost_of_sales_indirect_tax
+        )
+
+        self._gas_total_indirect_tax = (
+                self._gas_capital_indirect_tax
+                + self._gas_intangible_indirect_tax
+                + self._gas_opex_indirect_tax
+                + self._gas_asr_indirect_tax
+                + self._gas_lbt_indirect_tax
+                + self._gas_cost_of_sales_indirect_tax
+        )
+
+        # Get The Other Revenue as the chosen selection
+        self._get_other_revenue(sulfur_revenue=sulfur_revenue,
+                                electricity_revenue=electricity_revenue,
+                                co2_revenue=co2_revenue)
+
+        # Depreciation (tangible cost)
+        (
+            self._oil_depreciation,
+            self._oil_undepreciated_asset,
+        ) = self._oil_capital_cost.total_depreciation_rate(
+            depr_method=depr_method,
+            decline_factor=decline_factor,
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            tax_rate=vat_rate,
+        )
+
+        (
+            self._gas_depreciation,
+            self._gas_undepreciated_asset,
+        ) = self._gas_capital_cost.total_depreciation_rate(
+            depr_method=depr_method,
+            decline_factor=decline_factor,
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            tax_rate=vat_rate,
+        )
+
+        # Treatment for small order of number, in example 1e-15
+        self._oil_undepreciated_asset = np.where(
+            self._oil_undepreciated_asset < 1.0e-5, 0, self._oil_undepreciated_asset)
+        self._gas_undepreciated_asset = np.where(
+            self._gas_undepreciated_asset < 1.0e-5, 0, self._gas_undepreciated_asset)
+
+        # Treatment of the un-depreciated asset to be summed up in the last year of the contract or not
+        if sum_undepreciated_cost is True:
+            self._oil_depreciation[-1] = self._oil_depreciation[-1] + self._oil_undepreciated_asset
+            self._gas_depreciation[-1] = self._gas_depreciation[-1] + self._gas_undepreciated_asset
+
+            self._oil_undepreciated_asset = np.zeros_like(self.project_years, dtype=float)
+            self._gas_undepreciated_asset = np.zeros_like(self.project_years, dtype=float)
+        else:
+            pass
+
+        # Adding the depreciation with the carry forward depreciation
+        self._oil_depreciation = self._oil_depreciation + self._oil_carry_forward_depreciation
+        self._gas_depreciation = self._gas_depreciation + self._gas_carry_forward_depreciation
+
+        # Non Capital Cost
+        self._oil_non_capital = (
+                self._oil_intangible_expenditures_post_tax
+                + self._oil_opex_expenditures_post_tax
+                + self._oil_asr_expenditures_post_tax
+                + self._oil_lbt_expenditures_post_tax
+        )
+
+        self._gas_non_capital = (
+                self._gas_intangible_expenditures_post_tax
+                + self._gas_opex_expenditures_post_tax
+                + self._gas_asr_expenditures_post_tax
+                + self._gas_lbt_expenditures_post_tax
+        )
+
+        # Get Sunk Cost
+        self._get_sunk_cost(sunk_cost_reference_year)
+
+        # Amortization Cost
+        if amortization is True:
+            self._oil_amortization = unit_of_production_rate(
+                start_year_project=self.start_date.year,
+                cost=float(np.sum(self._oil_sunk_cost)),
+                prod=self._oil_lifting.get_lifting_rate_ghv_arr(),
+                prod_year=self.project_years,
+                salvage_value=0.0,
+                amortization_len=self.project_duration,)
+
+            self._gas_amortization = unit_of_production_rate(
+                start_year_project=self.start_date.year,
+                cost=float(np.sum(self._gas_sunk_cost)),
+                prod=self._gas_lifting.get_lifting_rate_ghv_arr(),
+                prod_year=self.project_years,
+                salvage_value=0.0,
+                amortization_len=self.project_duration,)
+
+            self._oil_sunk_cost = np.zeros_like(self.project_years)
+            self._gas_sunk_cost = np.zeros_like(self.project_years)
+
+        else:
+            self._oil_amortization = np.zeros_like(self.project_years)
+            self._gas_amortization = np.zeros_like(self.project_years)
+
+        # Variable Split. -> Will set the value of _variable_split
+        self._wrapper_variable_split(regime=regime)
+
+        # Base Split
+        self._oil_base_split = np.full_like(self.project_years, fill_value=self.base_split_ctr_oil, dtype=float)
+        self._gas_base_split = np.full_like(self.project_years, fill_value=self.base_split_ctr_gas, dtype=float)
+
+        # Variable Split
+        self._var_split_array = np.full_like(self.project_years, fill_value=self._variable_split, dtype=float)
+
+        # Calculating the gas production in MMBOE
+        # Based on the discussion on 28 of June 2024, with YRA in Whatsapp,
+        # The cum. production used for progressive cum. production split is the sum of production rate and baseline
+
+        prod_gas_boe = self._gas_lifting.get_prod_rate_total_arr() / self.conversion_boe_to_scf
+
+        # Condition when the offset cumulative production array when user input is float
+        if isinstance(cum_production_split_offset, float) or isinstance(cum_production_split_offset, int):
+            offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
+            offset_arr[0] = cum_production_split_offset
+
+        else:
+            offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
+
+        # Calculating the cumulative production
+        self._cumulative_prod = np.cumsum(self._oil_lifting.get_prod_rate_total_arr() + prod_gas_boe + offset_arr)
+
+        # Progressive Split
+        vectorized_get_prog_split = np.vectorize(self._wrapper_progressive_split)
+
+        # Condition when the cum_production_split_offset is filled with np.ndarray
+        if isinstance(cum_production_split_offset, np.ndarray) and len(cum_production_split_offset) > 1:
+            self._oil_prog_price_split, self._oil_prog_cum_split = vectorized_get_prog_split(
+                fluid=self._oil_lifting.fluid_type,
+                price=self._oil_lifting.get_price_arr(),
+                cum=None,
+                regime=regime
+            )
+
+            self._oil_prog_split = self._oil_prog_price_split + cum_production_split_offset
+
+            self._gas_prog_price_split, self._gas_prog_cum_split = vectorized_get_prog_split(
+                fluid=self._gas_lifting.fluid_type,
+                price=self._gas_lifting.get_price_arr(),
+                cum=None,
+                regime=regime
+            )
+
+            self._gas_prog_split = self._gas_prog_price_split + cum_production_split_offset
+
+        # Condition when the cum_production_split_offset is not filled
+        else:
+            self._oil_prog_price_split, self._oil_prog_cum_split = vectorized_get_prog_split(
+                fluid=self._oil_lifting.fluid_type,
+                price=self._oil_lifting.get_price_arr(),
+                cum=self._cumulative_prod,
+                regime=regime
+            )
+            self._oil_prog_split = self._oil_prog_price_split + self._oil_prog_cum_split
+
+            self._gas_prog_price_split, self._gas_prog_cum_split = vectorized_get_prog_split(
+                fluid=self._gas_lifting.fluid_type,
+                price=self._gas_lifting.get_price_arr(),
+                cum=self._cumulative_prod,
+                regime=regime
+            )
+            self._gas_prog_split = self._gas_prog_price_split + self._gas_prog_cum_split
+
+        # Ministerial Discretion
+        minis_disc_array = np.full_like(self.project_years, fill_value=self.split_ministry_disc, dtype=float)
+
+        # Total Contractor Split
+        self._oil_ctr_split = (self._oil_base_split + self._var_split_array + self._oil_prog_split +
+                               minis_disc_array)
+        self._gas_ctr_split = (self._gas_base_split + self._var_split_array + self._gas_prog_split +
+                               minis_disc_array)
+
+        self._oil_ctr_split_prior_bracket = np.copy(self._oil_ctr_split)
+        self._gas_ctr_split_prior_bracket = np.copy(self._gas_ctr_split)
+
+        # Add the condition to show the contractor split more than 100%
+        self._oil_year_maximum_ctr_split = self._get_year_maximum_split(
+            ctr_split=self._oil_ctr_split,
+            fluid="Oil"
+        )
+
+        self._gas_year_maximum_ctr_split = self._get_year_maximum_split(
+            ctr_split=self._gas_ctr_split,
+            fluid="Gas"
+        )
+
+        # Condition to limit the contractor split is 1.0 at maximum
+        self._oil_ctr_split = np.where(
+            self._oil_ctr_split > np.full_like(self._oil_ctr_split, 1.0),
+            np.full_like(self._oil_ctr_split, 1.0),
+            self._oil_ctr_split
+        )
+
+        self._gas_ctr_split = np.where(
+            self._gas_ctr_split > np.full_like(self._gas_ctr_split, 1.0),
+            np.full_like(self._gas_ctr_split, 1.0),
+            self._gas_ctr_split
+        )
+
+        # Contractor Share
+        self._oil_ctr_share_before_transfer = self._oil_revenue * self._oil_ctr_split
+        self._gas_ctr_share_before_transfer = self._gas_revenue * self._gas_ctr_split
+
+        # Government Share
+        self._oil_gov_share = self._oil_revenue - self._oil_ctr_share_before_transfer
+        self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
+
+        # Total Investment
+        self._oil_total_expenses = (
+                self._oil_capital_expenditures_post_tax +
+                self._oil_intangible_expenditures_post_tax +
+                self._oil_opex_expenditures_post_tax +
+                self._oil_asr_expenditures_post_tax +
+                self._oil_lbt_expenditures_post_tax
+        )
+
+        self._gas_total_expenses = (
+                self._gas_capital_expenditures_post_tax +
+                self._gas_intangible_expenditures_post_tax +
+                self._gas_opex_expenditures_post_tax +
+                self._gas_asr_expenditures_post_tax +
+                self._gas_lbt_expenditures_post_tax
+        )
+
+        # Cost to be Deducted
+        self._oil_cost_tobe_deducted = (
+                self._oil_depreciation +
+                self._oil_intangible_expenditures_post_tax +
+                self._oil_opex_expenditures_post_tax +
+                self._oil_asr_expenditures_post_tax +
+                self._oil_lbt_expenditures_post_tax
+        )
+
+        self._gas_cost_tobe_deducted = (
+                self._gas_depreciation +
+                self._gas_intangible_expenditures_post_tax +
+                self._gas_opex_expenditures_post_tax +
+                self._gas_asr_expenditures_post_tax +
+                self._gas_lbt_expenditures_post_tax
+        )
+
+        # Carry Forward Deductible Cost (In PSC Cost Recovery called Unrecovered Cost)
+        self._oil_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._oil_depreciation,
+                                                                       non_capital=self._oil_non_capital,
+                                                                       revenue=self._oil_ctr_share_before_transfer,
+                                                                       ftp_ctr=np.zeros_like(self.project_years),
+                                                                       ftp_gov=np.zeros_like(self.project_years),
+                                                                       ic=np.zeros_like(self.project_years))
+
+        self._gas_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._gas_depreciation,
+                                                                       non_capital=self._gas_non_capital,
+                                                                       revenue=self._gas_ctr_share_before_transfer,
+                                                                       ftp_ctr=np.zeros_like(self.project_years),
+                                                                       ftp_gov=np.zeros_like(self.project_years),
+                                                                       ic=np.zeros_like(self.project_years))
+
+        # Deductible Cost (In PSC Cost Recovery called Cost Recovery)
+        self._oil_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._oil_ctr_share_before_transfer,
+                                                              cost_tobe_deducted=self._oil_cost_tobe_deducted,
+                                                              carward_deduct_cost=self._oil_carward_deduct_cost)
+
+        self._gas_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._gas_ctr_share_before_transfer,
+                                                              cost_tobe_deducted=self._gas_cost_tobe_deducted,
+                                                              carward_deduct_cost=self._gas_carward_deduct_cost)
+
+        # Transfer
+        self._transfer_to_oil, self._transfer_to_gas = psc_tools.get_transfer(
+            oil_unrecovered=self._oil_carward_deduct_cost,
+            gas_unrecovered=self._gas_carward_deduct_cost,
+            oil_ets_pretransfer=self._oil_ctr_share_before_transfer,
+            gas_ets_pretransfer=self._gas_ctr_share_before_transfer)
+
+        # Carry Forward Deductible Cost After Transfer
+        self._oil_carward_cost_aftertf = self._oil_carward_deduct_cost - self._transfer_to_gas
+        self._gas_carward_cost_aftertf = self._gas_carward_deduct_cost - self._transfer_to_oil
+
+        # Contractor Share After Transfer
+        self._oil_ctr_share_after_transfer = (self._oil_ctr_share_before_transfer +
+                                              self._transfer_to_oil -
+                                              self._transfer_to_gas)
+
+        self._gas_ctr_share_after_transfer = (self._gas_ctr_share_before_transfer +
+                                              self._transfer_to_gas -
+                                              self._transfer_to_oil)
+
+        # Contractor Net Operating Profit
+        self._oil_net_operating_profit = self._oil_ctr_share_after_transfer - self._oil_deductible_cost
+        self._gas_net_operating_profit = self._gas_ctr_share_after_transfer - self._gas_deductible_cost
+
+        # DMO
+        self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo_gross_split(
+            onstream_date=self.oil_onstream_date,
+            start_date=self.start_date,
+            project_years=self.project_years,
+            dmo_holiday_duration=self.oil_dmo_holiday_duration,
+            dmo_volume_portion=self.oil_dmo_volume_portion,
+            dmo_fee_portion=self.oil_dmo_fee_portion,
+            price=self._oil_wap_price,
+            unrecovered_cost=self._oil_carward_cost_aftertf,
+            is_dmo_end_weighted=is_dmo_end_weighted,
+            net_operating_profit=self._oil_net_operating_profit,
+            contractor_share=self._oil_ctr_share_after_transfer,)
+
+        self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo_gross_split(
+            onstream_date=self.gas_onstream_date,
+            start_date=self.start_date,
+            project_years=self.project_years,
+            dmo_holiday_duration=self.gas_dmo_holiday_duration,
+            dmo_volume_portion=self.gas_dmo_volume_portion,
+            dmo_fee_portion=self.gas_dmo_fee_portion,
+            price=self._gas_wap_price,
+            unrecovered_cost=self._gas_carward_cost_aftertf,
+            is_dmo_end_weighted=is_dmo_end_weighted,
+            net_operating_profit=self._gas_net_operating_profit,
+            contractor_share=self._gas_ctr_share_after_transfer,)
+
+        # Taxable Income
+        self._oil_taxable_income = self._oil_net_operating_profit - self._oil_ddmo
+        self._gas_taxable_income = self._gas_net_operating_profit - self._gas_ddmo
+
+        # Tax Payment
+        # Generating Tax array if tax_rate argument is a single value not array
+        if isinstance(effective_tax_rate, float) or isinstance(effective_tax_rate, int):
+            self._tax_rate_arr = np.full_like(self.project_years, effective_tax_rate, dtype=float)
+
+        # Generating Tax array based on the tax regime if tax_rate argument is None
+        if effective_tax_rate is None:
+            self._tax_rate_arr = self._get_tax_by_regime(tax_regime=tax_regime)
+
+        elif isinstance(effective_tax_rate, np.ndarray):
+            self._tax_rate_arr = effective_tax_rate
+
+        self._oil_tax = self._oil_taxable_income * self._tax_rate_arr
+        self._gas_tax = self._gas_taxable_income * self._tax_rate_arr
+
+        # Contractor Net Share
+        self._oil_ctr_net_share = self._oil_taxable_income - self._oil_tax
+        self._gas_ctr_net_share = self._gas_taxable_income - self._gas_tax
+
+        # Contractor Cash Flow
+        self._oil_ctr_cashflow = (self._oil_ctr_share_before_transfer - self._oil_total_expenses - self._oil_ddmo -
+                                  self._oil_tax)
+        self._gas_ctr_cashflow = (self._gas_ctr_share_before_transfer - self._gas_total_expenses - self._gas_ddmo -
+                                  self._gas_tax)
+
+        # Government Take
+        self._oil_government_take = self._oil_gov_share + self._oil_ddmo + self._oil_tax
+        self._gas_government_take = self._gas_gov_share + self._gas_ddmo + self._gas_tax
+
+        # Prepare consolidated attributes
+        self._get_consolidated_profiles()
 
 
 
