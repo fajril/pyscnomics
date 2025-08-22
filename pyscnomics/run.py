@@ -35,9 +35,9 @@ params_base = {
 pr = BaseProject(
     start_date=date(year=2023, month=1, day=1),
     end_date=date(year=2030, month=12, day=31),
-    oil_onstream_date=date(year=2027, month=1, day=1),
+    oil_onstream_date=date(year=2026, month=1, day=1),
     gas_onstream_date=date(year=2028, month=1, day=1),
-    approval_year=2025,
+    approval_year=2024,
     lifting=tuple([case.lifting_mangga, case.lifting_apel, case.lifting_nanas]),
     capital_cost=tuple([case.capital_mangga, case.capital_apel]),
     intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),

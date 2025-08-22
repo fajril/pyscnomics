@@ -701,10 +701,8 @@ class BaseProject:
         # self.lbt_cost_total = reduce(lambda x, y: x + y, self.lbt_cost)
         # self.cost_of_sales_total = reduce(lambda x, y: x + y, self.cost_of_sales)
 
-        self._validate_cost_types()
-
         # # Prepare attributes associated with costs
-        # self._oil_capital_cost = self._get_oil_capital()
+        self._oil_capital_cost = self._get_oil_capital()
         # self._gas_capital_cost = self._get_gas_capital()
         # self._oil_intangible = self._get_oil_intangible()
         # self._gas_intangible = self._get_gas_intangible()
@@ -716,7 +714,7 @@ class BaseProject:
         # self._gas_lbt = self._get_gas_lbt()
         # self._oil_cost_of_sales = self._get_oil_cost_of_sales()
         # self._gas_cost_of_sales = self._get_gas_cost_of_sales()
-        #
+
         # # Prepare attributes associated with sunk costs
         # self._oil_capital_sunk_cost = self._get_oil_capital_sunk_cost()
         # self._gas_capital_sunk_cost = self._get_gas_capital_sunk_cost()
@@ -1194,22 +1192,29 @@ class BaseProject:
         self._get_electricity_wap_price()
         self._get_co2_wap_price()
 
-    def _validate_cost_types(self):
-
+    def _prepare_cost_types(
+        self,
+        fluid_type: FluidType,
+        cost_obj: CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales,
+    ):
         onstream_years = {
-            "oil": self.oil_onstream_date.year,
-            "gas": self.gas_onstream_date.year,
+            FluidType.OIL: self.oil_onstream_date.year,
+            FluidType.GAS: self.gas_onstream_date.year,
         }
 
-        ct = np.array(self.capital_cost_total.cost_type)
-        yrs = self.capital_cost_total.expense_year
+        ct = np.array(cost_obj.cost_type)
+        yrs = cost_obj.expense_year
 
-        # Create filters
-        mask_post_onstream = yrs > onstream_years["oil"]
+
+        mask_post_onstream = yrs > onstream_years[fluid_type]
         mask_sunk_cost = yrs < self.approval_year
-        mask_pre_onstream = (yrs > self.approval_year) & (yrs < onstream_years["oil"])
+        mask_pre_onstream = (yrs > self.approval_year) & (yrs < onstream_years[fluid_type])
 
-        # Assign cost types
+        print('\t')
+        print(f'Filetype: {type(mask_post_onstream)}')
+        print(f'Length: {len(mask_post_onstream)}')
+        print('mask_post_onstream = ', mask_post_onstream)
+
         ct[mask_post_onstream] = CostType.POST_ONSTREAM_COST
         ct[mask_sunk_cost] = CostType.SUNK_COST
         ct[mask_pre_onstream] = CostType.PRE_ONSTREAM_COST
@@ -1217,48 +1222,59 @@ class BaseProject:
         ct.tolist()
 
         print('\t')
-        print(f'Filetype: {type(mask_sunk_cost)}')
-        print(f'Length: {len(mask_sunk_cost)}')
-        print('mask_sunk_cost = \n', mask_sunk_cost)
+        print(f'Filetype: {type(ct)}')
+        print(f'Length: {len(ct)}')
+        print('ct = \n', ct)
 
 
-        # Configure cost type indices
-        id_post_onstream = np.flatnonzero(
-            self.capital_cost_total.expense_year > onstream_years["oil"]
-        )
-        id_sunk_cost = np.flatnonzero(
-            self.capital_cost_total.expense_year < self.approval_year
-        )
-        id_pre_onstream = np.flatnonzero(
-            np.logical_and(
-                self.capital_cost_total.expense_year > self.approval_year,
-                self.capital_cost_total.expense_year < onstream_years["oil"]
-            )
-        )
 
-        # Modify the elements of `cost_type`
-        ct[id_post_onstream] = [CostType.POST_ONSTREAM_COST for _ in range(len(id_post_onstream))]
-        ct[id_sunk_cost] = [CostType.SUNK_COST for _ in range(len(id_sunk_cost))]
-        ct[id_pre_onstream] = [CostType.PRE_ONSTREAM_COST for _ in range(len(id_pre_onstream))]
+        # onstream_years = {
+        #     "oil": self.oil_onstream_date.year,
+        #     "gas": self.gas_onstream_date.year,
+        # }
+        #
+        # ct = np.array(self.capital_cost_total.cost_type)
+        # yrs = self.capital_cost_total.expense_year
+        #
+        # # Create filters
+        # mask_post_onstream = yrs > onstream_years["oil"]
+        # mask_sunk_cost = yrs < self.approval_year
+        # mask_pre_onstream = (yrs > self.approval_year) & (yrs < onstream_years["oil"])
+        #
+        # # Assign cost types
+        # ct[mask_post_onstream] = CostType.POST_ONSTREAM_COST
+        # ct[mask_sunk_cost] = CostType.SUNK_COST
+        # ct[mask_pre_onstream] = CostType.PRE_ONSTREAM_COST
+        #
+        # ct.tolist()
 
-        ct.tolist()
 
-        # print('\t')
-        # print(f'Filetype: {type(id_pre_onstream)}')
-        # print(f'Length: {len(id_pre_onstream)}')
-        # print('id_pre_onstream = ', id_pre_onstream)
-
-        # print('\t')
-        # print(f'Filetype: {type(ct)}')
-        # print(f'Length: {len(ct)}')
-        # print('ct = \n', ct)
-
+        # # Configure cost type indices
+        # id_post_onstream = np.flatnonzero(
+        #     self.capital_cost_total.expense_year > onstream_years["oil"]
+        # )
+        # id_sunk_cost = np.flatnonzero(
+        #     self.capital_cost_total.expense_year < self.approval_year
+        # )
+        # id_pre_onstream = np.flatnonzero(
+        #     np.logical_and(
+        #         self.capital_cost_total.expense_year > self.approval_year,
+        #         self.capital_cost_total.expense_year < onstream_years["oil"]
+        #     )
+        # )
+        #
+        # # Modify the elements of `cost_type`
+        # ct[id_post_onstream] = [CostType.POST_ONSTREAM_COST for _ in range(len(id_post_onstream))]
+        # ct[id_sunk_cost] = [CostType.SUNK_COST for _ in range(len(id_sunk_cost))]
+        # ct[id_pre_onstream] = [CostType.PRE_ONSTREAM_COST for _ in range(len(id_pre_onstream))]
+        #
+        # ct.tolist()
 
 
     def _get_filtered_capital_cost(
         self,
         fluid_type: FluidType,
-        include_sunkcost: bool,
+        # include_sunkcost: bool,
     ) -> CapitalCost:
         """
         Get capital costs filtered by fluid type and sunk cost inclusion.
@@ -1301,40 +1317,70 @@ class BaseProject:
 
         cct = self.capital_cost_total
 
+        onstream_years = {
+            FluidType.OIL: self.oil_onstream_date.year,
+            FluidType.GAS: self.gas_onstream_date.year,
+        }
+
         allocation_array = np.array(cct.cost_allocation)
-        sunkcost_array = np.array(cct.is_sunkcost)
-        mask = np.logical_and(
-            allocation_array == fluid_type,
-            sunkcost_array == include_sunkcost,
-        )
-        indices = np.flatnonzero(mask)
+        cost_type_array = np.array(cct.cost_type)
 
-        if len(indices) == 0:
-            return CapitalCost(
-                start_year=cct.start_year,
-                end_year=cct.end_year,
-                expense_year=np.array([cct.start_year]),
-                cost=np.array([0]),
-                cost_allocation=[fluid_type],
-                is_sunkcost=[include_sunkcost],
-            )
+        cost_type_oil = cost_type_array[allocation_array == fluid_type]
+        expense_year_oil = cct.expense_year[allocation_array == fluid_type]
 
-        return CapitalCost(
-            start_year=cct.start_year,
-            end_year=cct.end_year,
-            expense_year=cct.expense_year[indices],
-            cost=cct.cost[indices],
-            cost_allocation=np.array(cct.cost_allocation)[indices].tolist(),
-            description=np.array(cct.description)[indices].tolist(),
-            is_sunkcost=np.array(cct.is_sunkcost)[indices].tolist(),
-            tax_portion=cct.tax_portion[indices],
-            tax_discount=cct.tax_discount[indices],
-            pis_year=cct.pis_year[indices],
-            salvage_value=cct.salvage_value[indices],
-            useful_life=cct.useful_life[indices],
-            depreciation_factor=cct.depreciation_factor[indices],
-            is_ic_applied=np.array(cct.is_ic_applied)[indices].tolist(),
-        )
+        print('\t')
+        print(f'Filetype: {type(cost_type_oil)}')
+        print(f'Length: {len(cost_type_oil)}')
+        print('cost_type_oil = \n', cost_type_oil)
+
+        mask_post_onstream = expense_year_oil > onstream_years[fluid_type]
+
+        print('\t')
+        print(f'Filetype: {type(mask_post_onstream)}')
+        print(f'Length: {len(mask_post_onstream)}')
+        print('mask_post_onstream = \n', mask_post_onstream)
+
+        cost_type_oil[mask_post_onstream] = CostType.POST_ONSTREAM_COST
+
+        print('\t')
+        print(f'Filetype: {type(cost_type_oil)}')
+        print(f'Length: {len(cost_type_oil)}')
+        print('cost_type_oil = \n', cost_type_oil)
+
+        # allocation_array = np.array(cct.cost_allocation)
+        # sunkcost_array = np.array(cct.is_sunkcost)
+        # mask = np.logical_and(
+        #     allocation_array == fluid_type,
+        #     sunkcost_array == include_sunkcost,
+        # )
+        # indices = np.flatnonzero(mask)
+        #
+        # if len(indices) == 0:
+        #     return CapitalCost(
+        #         start_year=cct.start_year,
+        #         end_year=cct.end_year,
+        #         expense_year=np.array([cct.start_year]),
+        #         cost=np.array([0]),
+        #         cost_allocation=[fluid_type],
+        #         is_sunkcost=[include_sunkcost],
+        #     )
+        #
+        # return CapitalCost(
+        #     start_year=cct.start_year,
+        #     end_year=cct.end_year,
+        #     expense_year=cct.expense_year[indices],
+        #     cost=cct.cost[indices],
+        #     cost_allocation=np.array(cct.cost_allocation)[indices].tolist(),
+        #     description=np.array(cct.description)[indices].tolist(),
+        #     is_sunkcost=np.array(cct.is_sunkcost)[indices].tolist(),
+        #     tax_portion=cct.tax_portion[indices],
+        #     tax_discount=cct.tax_discount[indices],
+        #     pis_year=cct.pis_year[indices],
+        #     salvage_value=cct.salvage_value[indices],
+        #     useful_life=cct.useful_life[indices],
+        #     depreciation_factor=cct.depreciation_factor[indices],
+        #     is_ic_applied=np.array(cct.is_ic_applied)[indices].tolist(),
+        # )
 
     def _get_oil_capital(self) -> CapitalCost:
         """
@@ -1358,9 +1404,11 @@ class BaseProject:
         - This method is a specialized call to `_get_filtered_capital_cost`
           with `fluid_type=FluidType.OIL` and `include_sunkcost=False`.
         """
-        return self._get_filtered_capital_cost(
-            fluid_type=FluidType.OIL, include_sunkcost=False
-        )
+        return self._get_filtered_capital_cost(fluid_type=FluidType.OIL)
+
+        # return self._get_filtered_capital_cost(
+        #     fluid_type=FluidType.OIL, include_sunkcost=False
+        # )
 
     def _get_gas_capital(self) -> CapitalCost:
         """
