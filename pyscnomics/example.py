@@ -17,36 +17,38 @@ from pyscnomics.econ.costs import (
 )
 
 
-# Example cases
+# Synthetic costs data
 expense_year_cases = {
-    "case_1": np.array([2023, 2024, 2025, 2026, 2027]),
-    "case_2": np.array([2023, 2024, 2025, 2026, 2027]),
+    "oil": np.array([2023, 2024, 2025, 2026, 2027]),
+    "gas": np.array([2023, 2024, 2025, 2026, 2027]),
+    "oil_all_sunkcost": np.array([2023, 2023, 2023, 2023, 2023]),
+    "oil_all_postonstream": np.array([2027, 2028, 2027, 2029, 2030]),
 }
 
 cost_cases = {
-    "case_1": np.array([200, 150, 100, 75, 50]),
-    "case_2": np.array([20, 15, 10, 7.5, 5]),
+    "oil": np.array([200, 150, 100, 75, 50]),
+    "gas": np.array([20, 15, 10, 7.5, 5]),
 }
 
 cost_allocation_cases = {
-    "case_1": [FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
-    "case_2": [FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
+    "oil": [FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+    "gas": [FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
 }
 
 cost_type_cases = {
-    "case_1": [
+    "oil": [
         CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
         CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST
     ],
-    "case_2": [
+    "gas": [
         CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
         CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST
     ],
 }
 
 tax_portion_cases = {
-    "case_1": np.array([0, 0, 0, 0, 0]),
-    "case_2": np.array([0, 0, 0, 0, 0]),
+    "oil": np.array([0, 0, 0, 0, 0]),
+    "gas": np.array([0, 0, 0, 0, 0]),
 }
 
 
@@ -77,10 +79,10 @@ class ExampleCase:
         self._get_lifting_data()
         self._get_capital_cost_data()
         self._get_intangible_cost_data()
-        # self._get_opex_data()
-        # self._get_asr_cost_data()
-        # self._get_lbt_cost_data()
-        # self._get_cost_of_sales_data()
+        self._get_opex_data()
+        self._get_asr_cost_data()
+        self._get_lbt_cost_data()
+        self._get_cost_of_sales_data()
 
     def _get_lifting_data(self):
         """
@@ -120,21 +122,21 @@ class ExampleCase:
         self.capital_mangga = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=expense_year_cases["case_1"],
-            cost=cost_cases["case_1"],
-            cost_allocation=cost_allocation_cases["case_1"],
-            cost_type=cost_type_cases["case_1"],
-            tax_portion=tax_portion_cases["case_1"],
+            expense_year=expense_year_cases["oil_all_sunkcost"],
+            cost=cost_cases["oil"],
+            cost_allocation=cost_allocation_cases["oil"],
+            cost_type=cost_type_cases["oil"],
+            tax_portion=tax_portion_cases["oil"],
         )
 
         self.capital_apel = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=expense_year_cases["case_2"],
-            cost=cost_cases["case_2"],
-            cost_allocation=cost_allocation_cases["case_2"],
-            cost_type=cost_type_cases["case_2"],
-            tax_portion=tax_portion_cases["case_2"],
+            expense_year=expense_year_cases["gas"],
+            cost=cost_cases["gas"],
+            cost_allocation=cost_allocation_cases["gas"],
+            cost_type=cost_type_cases["gas"],
+            tax_portion=tax_portion_cases["gas"],
         )
 
     def _get_intangible_cost_data(self):
@@ -144,21 +146,21 @@ class ExampleCase:
         self.intangible_mangga = Intangible(
             start_year=2023,
             end_year=2030,
-            expense_year=expense_year_cases["case_1"],
-            cost=cost_cases["case_1"],
-            cost_allocation=cost_allocation_cases["case_1"],
-            cost_type=cost_type_cases["case_1"],
-            tax_portion=tax_portion_cases["case_1"],
+            expense_year=expense_year_cases["oil"],
+            cost=cost_cases["oil"],
+            cost_allocation=cost_allocation_cases["oil"],
+            cost_type=cost_type_cases["oil"],
+            tax_portion=tax_portion_cases["oil"],
         )
 
         self.intangible_apel = Intangible(
             start_year=2023,
             end_year=2030,
-            expense_year=expense_year_cases["case_2"],
-            cost=cost_cases["case_2"],
-            cost_allocation=cost_allocation_cases["case_2"],
-            cost_type=cost_type_cases["case_2"],
-            tax_portion=tax_portion_cases["case_2"],
+            expense_year=expense_year_cases["gas"],
+            cost=cost_cases["gas"],
+            cost_allocation=cost_allocation_cases["gas"],
+            cost_type=cost_type_cases["gas"],
+            tax_portion=tax_portion_cases["gas"],
         )
 
     def _get_opex_data(self):
@@ -168,24 +170,21 @@ class ExampleCase:
         self.opex_mangga = OPEX(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024]),
-            fixed_cost=np.array([100, 100, 50, 50]),
-            cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
-            # cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
-            # is_sunkcost=[True, True, True, True],
-            # is_sunkcost=[False, False, False, False],
-            is_sunkcost=[False, False, True, True],
-            tax_portion=np.array([1, 1, 1, 1]),
+            expense_year=expense_year_cases["oil"],
+            fixed_cost=cost_cases["oil"],
+            cost_allocation=cost_allocation_cases["oil"],
+            cost_type=cost_type_cases["oil"],
+            tax_portion=tax_portion_cases["oil"],
         )
 
         self.opex_apel = OPEX(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024]),
-            fixed_cost=np.array([10, 10, 5, 5]),
-            cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
-            is_sunkcost=[False, False, True, True],
-            tax_portion=np.array([1, 1, 1, 1]),
+            expense_year=expense_year_cases["gas"],
+            fixed_cost=cost_cases["gas"],
+            cost_allocation=cost_allocation_cases["gas"],
+            cost_type=cost_type_cases["gas"],
+            tax_portion=tax_portion_cases["gas"],
         )
 
     def _get_asr_cost_data(self):
@@ -195,52 +194,45 @@ class ExampleCase:
         self.asr_mangga = ASR(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([100, 100, 50, 50]),
-            cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
-            # cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
-            # is_sunkcost=[True, True, True, True],
-            # is_sunkcost=[False, False, False, False],
-            is_sunkcost=[False, False, True, True],
-            tax_portion=np.array([1, 1, 1, 1]),
+            expense_year=expense_year_cases["oil"],
+            cost=cost_cases["oil"],
+            cost_allocation=cost_allocation_cases["oil"],
+            cost_type=cost_type_cases["oil"],
+            tax_portion=tax_portion_cases["oil"],
         )
 
         self.asr_apel = ASR(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([10, 10, 5, 5]),
-            cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
-            is_sunkcost=[False, False, True, True],
-            tax_portion=np.array([1, 1, 1, 1]),
+            expense_year=expense_year_cases["gas"],
+            cost=cost_cases["gas"],
+            cost_allocation=cost_allocation_cases["gas"],
+            cost_type=cost_type_cases["gas"],
+            tax_portion=tax_portion_cases["gas"],
         )
 
     def _get_lbt_cost_data(self):
         """
         Generate synthetic data for LBT cost.
         """
-        # Synthetic data: LBT
         self.lbt_mangga = LBT(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([100, 100, 50, 50]),
-            cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
-            # cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
-            # is_sunkcost=[True, True, True, True],
-            # is_sunkcost=[False, False, False, False],
-            is_sunkcost=[False, False, True, True],
-            tax_portion=np.array([1, 1, 1, 1]),
+            expense_year=expense_year_cases["oil"],
+            cost=cost_cases["oil"],
+            cost_allocation=cost_allocation_cases["oil"],
+            cost_type=cost_type_cases["oil"],
+            tax_portion=tax_portion_cases["oil"],
         )
 
         self.lbt_apel = LBT(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([10, 10, 5, 5]),
-            cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
-            is_sunkcost=[False, False, True, True],
-            tax_portion=np.array([1, 1, 1, 1]),
+            expense_year=expense_year_cases["gas"],
+            cost=cost_cases["gas"],
+            cost_allocation=cost_allocation_cases["gas"],
+            cost_type=cost_type_cases["gas"],
+            tax_portion=tax_portion_cases["gas"],
         )
 
     def _get_cost_of_sales_data(self):
@@ -250,20 +242,17 @@ class ExampleCase:
         self.cos_mangga = CostOfSales(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([100, 100, 50, 50]),
-            cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
-            # cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
-            # is_sunkcost=[True, True, True, True],
-            # is_sunkcost=[False, False, False, False],
-            is_sunkcost=[False, False, True, True],
+            expense_year=expense_year_cases["oil"],
+            cost=cost_cases["oil"],
+            cost_allocation=cost_allocation_cases["oil"],
+            cost_type=cost_type_cases["oil"],
         )
 
         self.cos_apel = CostOfSales(
             start_year=2023,
             end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2024]),
-            cost=np.array([10, 10, 5, 5]),
-            cost_allocation=[FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS],
-            is_sunkcost=[False, False, True, True],
+            expense_year=expense_year_cases["gas"],
+            cost=cost_cases["gas"],
+            cost_allocation=cost_allocation_cases["gas"],
+            cost_type=cost_type_cases["gas"],
         )

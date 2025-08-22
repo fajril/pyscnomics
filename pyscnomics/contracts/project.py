@@ -725,27 +725,56 @@ class BaseProject:
         self.lbt_cost_total = reduce(lambda x, y: x + y, self.lbt_cost)
         self.cost_of_sales_total = reduce(lambda x, y: x + y, self.cost_of_sales)
 
-        print('\t')
-        print(f'Filetype: {type(self.intangible_cost_total)}')
-        print(f'Length: {len(self.intangible_cost_total)}')
-        print('intangible_cost_total = \n', self.intangible_cost_total)
+        # Classify cost categories by fluid
+        (
+            capital_cost,
+            intangible,
+            opex,
+            asr,
+            lbt,
+            cost_of_sales,
+        ) = [
+            self._classify_costs_by_fluid(classifier=func)
+            for func in [
+                self._classify_capital_cost_by_fluid,
+                self._classify_intangible_cost_by_fluid,
+                self._classify_opex_by_fluid,
+                self._classify_asr_cost_by_fluid,
+                self._classify_lbt_cost_by_fluid,
+                self._classify_cost_of_sales_by_fluid,
+            ]
+        ]
 
-        capital_cost = self._classify_costs_by_fluid(
-            classifier=self._classify_capital_cost_by_fluid
-        )
-        intangible = self._classify_costs_by_fluid(
-            classifier=self._classify_intangible_cost_by_fluid
-        )
+        print('\t')
+        print(f'Filetype: {type(capital_cost["oil"].cost_type)}')
+        print(f'Length: {len(capital_cost["oil"].cost_type)}')
+        print('oil capital cost = \n', capital_cost["oil"].cost_type)
 
         print('\t')
-        print(f'Filetype: {type(capital_cost)}')
-        print(f'Length: {len(capital_cost)}')
-        print('capital_cost = \n', capital_cost)
+        print(f'Filetype: {type(capital_cost["gas"].cost_type)}')
+        print(f'Length: {len(capital_cost["gas"].cost_type)}')
+        print('gas capital cost = \n', capital_cost["gas"].cost_type)
 
         print('\t')
-        print(f'Filetype: {type(intangible)}')
-        print(f'Length: {len(intangible)}')
-        print('intangible = \n', intangible)
+        print('====================================================================')
+
+        # Modify cost_type in each cost categories, accounting for engineering sense
+        for costs in (capital_cost, intangible, opex, asr, lbt, cost_of_sales):
+            for fluid_type in (FluidType.OIL, FluidType.GAS):
+                self._prepare_cost_types(
+                    cost_obj=costs[fluid_type.name.lower()],
+                    fluid_type=fluid_type,
+                )
+
+        print('\t')
+        print(f'Filetype: {type(capital_cost["oil"].cost_type)}')
+        print(f'Length: {len(capital_cost["oil"].cost_type)}')
+        print('oil capital cost = \n', capital_cost["oil"].cost_type)
+
+        print('\t')
+        print(f'Filetype: {type(capital_cost["gas"].cost_type)}')
+        print(f'Length: {len(capital_cost["gas"].cost_type)}')
+        print('gas capital cost = \n', capital_cost["gas"].cost_type)
 
 
 
@@ -1390,7 +1419,7 @@ class BaseProject:
                 cost=np.array([0]),
                 cost_allocation=[fluid_type],
             )
-        
+
         else:
             allocation_array = np.array(lct.cost_allocation)
             mask = (allocation_array == fluid_type)
@@ -1398,9 +1427,9 @@ class BaseProject:
             return LBT(
                 **kwargs,
                 expense_year=lct.expense_year[mask],
-                cost_allocation=None,
-                cost_type=None,
-                description=None,
+                cost_allocation=allocation_array[mask].tolist(),
+                cost_type=np.array(lct.cost_type)[mask].tolist(),
+                description=np.array(lct.description)[mask].tolist(),
                 tax_portion=lct.tax_portion[mask],
                 tax_discount=lct.tax_discount[mask],
                 final_year=lct.final_year[mask],
@@ -1412,8 +1441,36 @@ class BaseProject:
                 cost=lct.cost[mask],
             )
 
-    def _classify_cost_of_sales_by_fluid(self):
-        pass
+    def _classify_cost_of_sales_by_fluid(self, fluid_type: FluidType) -> CostOfSales:
+
+        cst = self.cost_of_sales_total
+        kwargs = {
+            "start_year": cst.start_year,
+            "end_year": cst.end_year,
+        }
+
+        if fluid_type not in cst.cost_allocation:
+            return CostOfSales(
+                **kwargs,
+                expense_year=np.array([cst.start_year]),
+                cost=np.array([0]),
+                cost_allocation=[fluid_type],
+            )
+
+        else:
+            allocation_array = np.array(cst.cost_allocation)
+            mask = (allocation_array == fluid_type)
+
+            return CostOfSales(
+                **kwargs,
+                expense_year=cst.expense_year[mask],
+                cost=cst.cost[mask],
+                cost_allocation=allocation_array[mask].tolist(),
+                cost_type=np.array(cst.cost_type)[mask].tolist(),
+                description=np.array(cst.description)[mask].tolist(),
+                tax_portion=cst.tax_portion[mask],
+                tax_discount=cst.tax_discount[mask],
+            )
 
     @staticmethod
     def _classify_costs_by_fluid(classifier):
@@ -1425,35 +1482,98 @@ class BaseProject:
 
         return {fluid: classifier(ftype) for fluid, ftype in fluid_map.items()}
 
+    def _validate_approval_year(self, fluid_type: FluidType):
+
+        onstream_year_map = {
+            FluidType.OIL: self.oil_onstream_date.year,
+            FluidType.GAS: self.gas_onstream_date.year,
+        }
+
+        if not isinstance(self.approval_year, int):
+            raise BaseProjectException(
+                f"Attribute approval_year must be an integer, not "
+                f"{self.approval_year.__class__.__qualname__}"
+            )
+
+        if self.approval_year < self.start_date.year:
+            raise BaseProjectException(
+                f"Approval year ({self.approval_year}) is before the project "
+                f"start year ({self.start_date.year})"
+            )
+
+        if self.approval_year > self.end_date.year:
+            raise BaseProjectException(
+                f"Approval year ({self.approval_year}) is after the project "
+                f"end year ({self.end_date.year})"
+            )
+
+        try:
+            onstream_year = onstream_year_map[fluid_type]
+
+        except KeyError:
+            raise BaseProjectException(f"Unsupported fluid type ({fluid_type}) provided")
+
+        if self.approval_year > onstream_year:
+            raise BaseProjectException(
+                f"Approval year ({self.approval_year}) is after {fluid_type} "
+                f"onstream year ({onstream_year})"
+            )
+
     def _prepare_cost_types(
         self,
         fluid_type: FluidType,
         cost_obj: CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales,
     ):
-        onstream_years = {
+
+        # Specify relevant onstream year corresponds to OIL or GAS
+        onstream_year = {
             FluidType.OIL: self.oil_onstream_date.year,
-            FluidType.GAS: self.gas_onstream_date.year,
-        }
+            FluidType.GAS: self.gas_onstream_date.year
+        }[fluid_type]
 
-        allocation_array = np.array(cost_obj.cost_allocation)
-        cost_type_array = np.array(cost_obj.cost_type)
+        # Build masks
+        ct = np.array(cost_obj.cost_type)
+        ey = cost_obj.expense_year
 
-        ct = cost_type_array[allocation_array == fluid_type]
-        ey = cost_obj.expense_year[allocation_array == fluid_type]
+        post_onstream = ey > onstream_year
+        sunk_cost = ey < self.approval_year
+        pre_onstream = (ey > self.approval_year) & (ey < onstream_year)
 
-        mask_post_onstream = ey > onstream_years[fluid_type]
-        mask_sunk_cost = ey < self.approval_year
-        mask_pre_onstream = (ey > self.approval_year) & (ey < onstream_years[fluid_type])
+        # Assign cost types using the masks
+        ct[post_onstream] = CostType.POST_ONSTREAM_COST
+        ct[sunk_cost] = CostType.SUNK_COST
+        ct[pre_onstream] = CostType.PRE_ONSTREAM_COST
 
-        ct[mask_post_onstream] = CostType.POST_ONSTREAM_COST
-        ct[mask_sunk_cost] = CostType.SUNK_COST
-        ct[mask_pre_onstream] = CostType.PRE_ONSTREAM_COST
+        # Validate cost types assignments
+        rules = [
+            (post_onstream, CostType.POST_ONSTREAM_COST, "post-onstream"),
+            (sunk_cost, CostType.SUNK_COST, "sunk cost"),
+            (pre_onstream, CostType.PRE_ONSTREAM_COST, "pre-onstream")
+        ]
 
-        # Update the modified subarray back
-        cost_type_array[allocation_array == fluid_type] = ct
+        for mask, expected, label in rules:
+            if mask.any() and not np.all(ct[mask] == expected):
+                raise BaseProjectException(f"Mismatch in {label} classification")
 
-        # Assign back to the object
-        cost_obj.cost_type = cost_type_array.tolist()
+        # Validate cost types at exact approval year boundary
+        at_approval = (ey == self.approval_year)
+        if (
+            np.any(at_approval)
+            and CostType.POST_ONSTREAM_COST in ct[at_approval]
+        ):
+            raise BaseProjectException(f"Cannot accept POST ONSTREAM at approval year")
+
+        # Validate cost types at exact onstream year boundary
+        at_onstream = (ey == onstream_year)
+        if (
+            self.approval_year < onstream_year
+            and np.any(at_onstream)
+            and CostType.SUNK_COST in ct[at_onstream]
+        ):
+            raise BaseProjectException(f"Cannot accept SUNK COST at onstream year")
+
+        # Modify cost_type attribute of the cost_obj
+        cost_obj.cost_type = ct.tolist()
 
     def _get_filtered_capital_cost(
         self,
