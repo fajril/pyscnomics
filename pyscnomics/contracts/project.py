@@ -720,10 +720,10 @@ class BaseProject:
         # Prepare attributes associated with total cost per component
         self.capital_cost_total = reduce(lambda x, y: x + y, self.capital_cost)
         self.intangible_cost_total = reduce(lambda x, y: x + y, self.intangible_cost)
-        # self.opex_total = reduce(lambda x, y: x + y, self.opex)
-        # self.asr_cost_total = reduce(lambda x, y: x + y, self.asr_cost)
-        # self.lbt_cost_total = reduce(lambda x, y: x + y, self.lbt_cost)
-        # self.cost_of_sales_total = reduce(lambda x, y: x + y, self.cost_of_sales)
+        self.opex_total = reduce(lambda x, y: x + y, self.opex)
+        self.asr_cost_total = reduce(lambda x, y: x + y, self.asr_cost)
+        self.lbt_cost_total = reduce(lambda x, y: x + y, self.lbt_cost)
+        self.cost_of_sales_total = reduce(lambda x, y: x + y, self.cost_of_sales)
 
         print('\t')
         print(f'Filetype: {type(self.intangible_cost_total)}')
@@ -1244,10 +1244,14 @@ class BaseProject:
 
         cct = self.capital_cost_total
 
+        kwargs = {
+            "start_year": cct.start_year,
+            "end_year": cct.end_year,
+        }
+
         if fluid_type not in cct.cost_allocation:
             return CapitalCost(
-                start_year=cct.start_year,
-                end_year=cct.end_year,
+                **kwargs,
                 expense_year=np.array([cct.start_year]),
                 cost=np.array([0]),
                 cost_allocation=[fluid_type],
@@ -1258,8 +1262,7 @@ class BaseProject:
             mask = (allocation_array == fluid_type)
 
             return CapitalCost(
-                start_year=cct.start_year,
-                end_year=cct.end_year,
+                **kwargs,
                 expense_year=cct.expense_year[mask],
                 cost=cct.cost[mask],
                 cost_allocation=allocation_array[mask].tolist(),
@@ -1278,10 +1281,14 @@ class BaseProject:
 
         ict = self.intangible_cost_total
 
+        kwargs = {
+            "start_year": ict.start_year,
+            "end_year": ict.end_year,
+        }
+
         if fluid_type not in ict.cost_allocation:
             return Intangible(
-                start_year=ict.start_year,
-                end_year=ict.end_year,
+                **kwargs,
                 expense_year=np.array([ict.start_year]),
                 cost=np.array([0]),
                 cost_allocation=[fluid_type],
@@ -1292,8 +1299,7 @@ class BaseProject:
             mask = (allocation_array == fluid_type)
 
             return Intangible(
-                start_year=ict.start_year,
-                end_year=ict.end_year,
+                **kwargs,
                 expense_year=ict.expense_year[mask],
                 cost=ict.cost[mask],
                 cost_allocation=allocation_array[mask].tolist(),
@@ -1303,14 +1309,108 @@ class BaseProject:
                 tax_discount=ict.tax_discount[mask],
             )
 
-    def _classify_opex_by_fluid(self):
-        pass
+    def _classify_opex_by_fluid(self, fluid_type: FluidType) -> OPEX:
 
-    def _classify_asr_cost_by_fluid(self):
-        pass
+        ot = self.opex_total
+        kwargs = {
+            "start_year": ot.start_year,
+            "end_year": ot.end_year,
+        }
 
-    def _classify_lbt_cost_by_fluid(self):
-        pass
+        if fluid_type not in ot.cost_allocation:
+            return OPEX(
+                **kwargs,
+                expense_year=np.array([ot.start_year]),
+                fixed_cost=np.array([0]),
+                cost_allocation=[fluid_type],
+            )
+
+        else:
+            allocation_array = np.array(ot.cost_allocation)
+            mask = (allocation_array == fluid_type)
+
+            return OPEX(
+                **kwargs,
+                expense_year=ot.expense_year[mask],
+                cost_allocation=allocation_array[mask].tolist(),
+                cost_type=np.array(ot.cost_type)[mask].tolist(),
+                description=np.array(ot.description)[mask].tolist(),
+                tax_portion=ot.tax_portion[mask],
+                tax_discount=ot.tax_discount[mask],
+                fixed_cost=ot.fixed_cost[mask],
+                prod_rate=ot.prod_rate[mask],
+                cost_per_volume=ot.cost_per_volume[mask],
+            )
+
+    def _classify_asr_cost_by_fluid(self, fluid_type: FluidType) -> ASR:
+
+        act = self.asr_cost_total
+        kwargs = {
+            "start_year": act.start_year,
+            "end_year": act.end_year,
+        }
+
+        if fluid_type not in act.cost_allocation:
+            return ASR(
+                **kwargs,
+                expense_year=np.array([act.start_year]),
+                cost=np.array([0]),
+                cost_allocation=[fluid_type],
+            )
+
+        else:
+            allocation_array = np.array(act.cost_allocation)
+            mask = (allocation_array == fluid_type)
+
+            return ASR(
+                **kwargs,
+                expense_year=act.expense_year[mask],
+                cost=act.cost[mask],
+                cost_allocation=allocation_array[mask].tolist(),
+                cost_type=np.array(act.cost_type)[mask].tolist(),
+                description=np.array(act.description)[mask].tolist(),
+                tax_portion=act.tax_portion[mask],
+                tax_discount=act.tax_discount[mask],
+                final_year=act.final_year[mask],
+                future_rate=act.future_rate[mask],
+            )
+
+    def _classify_lbt_cost_by_fluid(self, fluid_type: FluidType) -> LBT:
+
+        lct = self.lbt_cost_total
+        kwargs = {
+            "start_year": lct.start_year,
+            "end_year": lct.end_year,
+        }
+
+        if fluid_type not in lct.cost_allocation:
+            return LBT(
+                **kwargs,
+                expense_year=np.array([lct.start_year]),
+                cost=np.array([0]),
+                cost_allocation=[fluid_type],
+            )
+        
+        else:
+            allocation_array = np.array(lct.cost_allocation)
+            mask = (allocation_array == fluid_type)
+
+            return LBT(
+                **kwargs,
+                expense_year=lct.expense_year[mask],
+                cost_allocation=None,
+                cost_type=None,
+                description=None,
+                tax_portion=lct.tax_portion[mask],
+                tax_discount=lct.tax_discount[mask],
+                final_year=lct.final_year[mask],
+                utilized_land_area=lct.utilized_land_area[mask],
+                utilized_building_area=lct.utilized_building_area[mask],
+                njop_land=lct.njop_land[mask],
+                njop_building=lct.njop_building[mask],
+                gross_revenue=lct.gross_revenue[mask],
+                cost=lct.cost[mask],
+            )
 
     def _classify_cost_of_sales_by_fluid(self):
         pass
