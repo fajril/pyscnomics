@@ -21,8 +21,8 @@ from pyscnomics.econ.costs import (
 expense_year_cases = {
     "oil": np.array([2023, 2024, 2025, 2026, 2027]),
     "gas": np.array([2023, 2024, 2025, 2026, 2027]),
-    "oil_all_sunkcost": np.array([2023, 2023, 2023, 2023, 2023]),
-    "oil_all_postonstream": np.array([2027, 2028, 2027, 2029, 2030]),
+    "all_sunkcost": np.array([2023, 2023, 2023, 2023, 2023]),
+    "all_postonstream": np.array([2029, 2030, 2029, 2029, 2030]),
 }
 
 cost_cases = {
@@ -122,7 +122,7 @@ class ExampleCase:
         self.capital_mangga = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=expense_year_cases["oil_all_sunkcost"],
+            expense_year=expense_year_cases["all_postonstream"],
             cost=cost_cases["oil"],
             cost_allocation=cost_allocation_cases["oil"],
             cost_type=cost_type_cases["oil"],
@@ -132,7 +132,7 @@ class ExampleCase:
         self.capital_apel = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=expense_year_cases["gas"],
+            expense_year=expense_year_cases["all_postonstream"],
             cost=cost_cases["gas"],
             cost_allocation=cost_allocation_cases["gas"],
             cost_type=cost_type_cases["gas"],

@@ -49,6 +49,21 @@ pr = BaseProject(
 
 # pr.run(**params_base)
 
+# print('\t')
+# print(f'Filetype: {type()}')
+# print(f'Length: {len()}')
+# print()
+
+# print('\t')
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = \n', t1)
+#
+# print('\t')
+# print(f'Filetype: {type(t2)}')
+# print(f'Length: {len(t2)}')
+# print('t2 = \n', t2)
+
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 # kwargs_gs = {

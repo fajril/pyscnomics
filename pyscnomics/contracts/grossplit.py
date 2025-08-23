@@ -1707,7 +1707,7 @@ class GrossSplit(BaseProject):
         (
             self._oil_depreciation,
             self._oil_undepreciated_asset,
-        ) = self._oil_capital_cost.total_depreciation_rate(
+        ) = self._oil_capital_postonstream.total_depreciation_rate(
             depr_method=depr_method,
             decline_factor=decline_factor,
             year_inflation=year_inflation,
@@ -1718,7 +1718,7 @@ class GrossSplit(BaseProject):
         (
             self._gas_depreciation,
             self._gas_undepreciated_asset,
-        ) = self._gas_capital_cost.total_depreciation_rate(
+        ) = self._gas_capital_postonstream.total_depreciation_rate(
             depr_method=depr_method,
             decline_factor=decline_factor,
             year_inflation=year_inflation,

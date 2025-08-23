@@ -586,9 +586,9 @@ class CostRecovery(BaseProject):
 
         # Condition where fluid is Oil:
         if cost_alloc == FluidType.GAS:
-            capital_class = self._gas_capital_cost
+            capital_class = self._gas_capital_postonstream
         else:
-            capital_class = self._oil_capital_cost
+            capital_class = self._oil_capital_postonstream
 
         # Condition when the ic rate is float
         if isinstance(ic_rate, float):
@@ -1398,7 +1398,7 @@ class CostRecovery(BaseProject):
         (
             self._oil_depreciation,
             self._oil_undepreciated_asset,
-        ) = self._oil_capital_cost.total_depreciation_rate(
+        ) = self._oil_capital_postonstream.total_depreciation_rate(
             depr_method=depr_method,
             decline_factor=decline_factor,
             year_inflation=year_inflation,
@@ -1409,7 +1409,7 @@ class CostRecovery(BaseProject):
         (
             self._gas_depreciation,
             self._gas_undepreciated_asset,
-        ) = self._gas_capital_cost.total_depreciation_rate(
+        ) = self._gas_capital_postonstream.total_depreciation_rate(
             depr_method=depr_method,
             decline_factor=decline_factor,
             year_inflation=year_inflation,
