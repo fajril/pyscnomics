@@ -44,3 +44,9 @@ Documentation = "https://github.com/fajril/pyscnomics"
 
 [project.scripts]
 pyscnomics = "pyscnomics.pyscnomics_cli:entry_point"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"pyscnomics" = ["**/*.json"]
