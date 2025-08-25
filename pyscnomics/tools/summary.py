@@ -100,6 +100,18 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
     gas_carry_forward_depreciation = np.sum(contract._gas_carry_forward_depreciation)
     total_carry_forward_depreciation = oil_carry_forward_depreciation + gas_carry_forward_depreciation
 
+    # VAT of each Cost
+    oil_capital_indirect_tax = sum(contract._oil_capital_indirect_tax)
+    oil_intangible_indirect_tax = sum(contract._oil_intangible_indirect_tax)
+    oil_opex_indirect_tax = sum(contract._oil_opex_indirect_tax)
+    oil_asr_indirect_tax = sum(contract._oil_asr_indirect_tax)
+    oil_lbt_indirect_tax = sum(contract._oil_lbt_indirect_tax)
+    gas_capital_indirect_tax = sum(contract._gas_capital_indirect_tax)
+    gas_intangible_indirect_tax = sum(contract._gas_intangible_indirect_tax)
+    gas_opex_indirect_tax = sum(contract._gas_opex_indirect_tax)
+    gas_asr_indirect_tax = sum(contract._gas_asr_indirect_tax)
+    gas_lbt_indirect_tax = sum(contract._gas_lbt_indirect_tax)
+
     # Undepreciated Asset
     if isinstance(contract, (CostRecovery, GrossSplit, Transition)):
         undepreciated_asset_oil = np.sum(contract._oil_undepreciated_asset)
@@ -464,6 +476,16 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'total_cost_of_sales': total_cost_of_sales,
                 'oil_cost_of_sales': oil_cost_of_sales,
                 'gas_cost_of_sales': gas_cost_of_sales,
+                'oil_capital_vat': oil_capital_indirect_tax,
+                'oil_intangible_vat': oil_intangible_indirect_tax,
+                'oil_opex_vat': oil_opex_indirect_tax,
+                'oil_asr_vat': oil_asr_indirect_tax,
+                'oil_lbt_vat': oil_lbt_indirect_tax,
+                'gas_capital_vat': gas_capital_indirect_tax,
+                'gas_intangible_vat': gas_intangible_indirect_tax,
+                'gas_opex_vat': gas_opex_indirect_tax,
+                'gas_asr_vat': gas_asr_indirect_tax,
+                'gas_lbt_vat': gas_lbt_indirect_tax,
                 }
     # Condition where the contract is Gross Split
     if isinstance(contract, GrossSplit):
@@ -552,6 +574,16 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'total_cost_of_sales': total_cost_of_sales,
                 'oil_cost_of_sales': oil_cost_of_sales,
                 'gas_cost_of_sales': gas_cost_of_sales,
+                'oil_capital_vat': oil_capital_indirect_tax,
+                'oil_intangible_vat': oil_intangible_indirect_tax,
+                'oil_opex_vat': oil_opex_indirect_tax,
+                'oil_asr_vat': oil_asr_indirect_tax,
+                'oil_lbt_vat': oil_lbt_indirect_tax,
+                'gas_capital_vat': gas_capital_indirect_tax,
+                'gas_intangible_vat': gas_intangible_indirect_tax,
+                'gas_opex_vat': gas_opex_indirect_tax,
+                'gas_asr_vat': gas_asr_indirect_tax,
+                'gas_lbt_vat': gas_lbt_indirect_tax,
                 }
 
     if isinstance(contract, Transition):
@@ -744,6 +776,19 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'total_indirect_taxes': total_indirect_taxes,
                 'oil_indirect_taxes': oil_indirect_taxes,
                 'gas_indirect_taxes': gas_indirect_taxes,
+                'total_cost_of_sales': total_cost_of_sales,
+                'oil_cost_of_sales': oil_cost_of_sales,
+                'gas_cost_of_sales': gas_cost_of_sales,
+                'oil_capital_vat': oil_capital_indirect_tax,
+                'oil_intangible_vat': oil_intangible_indirect_tax,
+                'oil_opex_vat': oil_opex_indirect_tax,
+                'oil_asr_vat': oil_asr_indirect_tax,
+                'oil_lbt_vat': oil_lbt_indirect_tax,
+                'gas_capital_vat': gas_capital_indirect_tax,
+                'gas_intangible_vat': gas_intangible_indirect_tax,
+                'gas_opex_vat': gas_opex_indirect_tax,
+                'gas_asr_vat': gas_asr_indirect_tax,
+                'gas_lbt_vat': gas_lbt_indirect_tax,
                 }
 
     if isinstance(contract, BaseProject):
@@ -792,6 +837,16 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'total_cost_of_sales': total_cost_of_sales,
                 'oil_cost_of_sales': oil_cost_of_sales,
                 'gas_cost_of_sales': gas_cost_of_sales,
+                'oil_capital_vat': oil_capital_indirect_tax,
+                'oil_intangible_vat': oil_intangible_indirect_tax,
+                'oil_opex_vat': oil_opex_indirect_tax,
+                'oil_asr_vat': oil_asr_indirect_tax,
+                'oil_lbt_vat': oil_lbt_indirect_tax,
+                'gas_capital_vat': gas_capital_indirect_tax,
+                'gas_intangible_vat': gas_intangible_indirect_tax,
+                'gas_opex_vat': gas_opex_indirect_tax,
+                'gas_asr_vat': gas_asr_indirect_tax,
+                'gas_lbt_vat': gas_lbt_indirect_tax,
 
                 # Zero value for the psc terms
                 'gov_gross_share': 0,
