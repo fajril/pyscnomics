@@ -21,7 +21,7 @@ from pyscnomics.econ.costs import (
 expense_year_cases = {
     "oil": np.array([2023, 2024, 2025, 2026, 2027]),
     "gas": np.array([2023, 2024, 2025, 2026, 2027]),
-    "all_sunkcost": np.array([2023, 2023, 2023, 2023, 2023]),
+    "all_sunkcost": np.array([2023, 2024, 2023, 2024, 2023]),
     "all_postonstream": np.array([2029, 2030, 2029, 2029, 2030]),
     "all_preonstream": np.array([2026, 2026, 2026, 2026, 2026]),
 }
@@ -45,6 +45,10 @@ cost_type_cases = {
         CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
         CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST
     ],
+    "all_sunkcost": [
+        CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
+        CostType.SUNK_COST, CostType.SUNK_COST
+    ]
 }
 
 tax_portion_cases = {
@@ -126,14 +130,14 @@ class ExampleCase:
             expense_year=expense_year_cases["all_sunkcost"],
             cost=cost_cases["oil"],
             cost_allocation=cost_allocation_cases["oil"],
-            cost_type=cost_type_cases["oil"],
+            cost_type=cost_type_cases["all_sunkcost"],
             tax_portion=tax_portion_cases["oil"],
         )
 
         self.capital_apel = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=expense_year_cases["all_sunkcost"],
+            expense_year=expense_year_cases["all_postonstream"],
             cost=cost_cases["gas"],
             cost_allocation=cost_allocation_cases["gas"],
             cost_type=cost_type_cases["gas"],

@@ -44,6 +44,12 @@ class SunkCostException(Exception):
     pass
 
 
+class PreonstreamCostException(Exception):
+    """ Exception to be raised for an incorrect preonstream cost configuration """
+
+    pass
+
+
 @dataclass
 class BaseProject:
     """
@@ -1511,71 +1517,67 @@ class BaseProject:
 
     def _validate_approval_year(self, fluid_type: FluidType) -> None:
         """
-        Validate that the project approval year is consistent with project dates
-        and fluid onstream year.
+        Validate and set the POD I approval year against project and fluid timelines.
 
-        This method ensures that the `approval_year` attribute is an integer
-        and falls within the project start and end years. It also checks that
-        the approval year does not exceed the onstream year of the specified fluid type.
+        This method ensures that the approval year is valid relative to the project's
+        start and end dates, as well as the onstream year for the specified fluid type.
+        If `approval_year` is not set (None), it defaults to the fluid's onstream year.
+        Otherwise, it performs consistency checks to prevent invalid approval years.
 
         Parameters
         ----------
         fluid_type : FluidType
-            The fluid type to validate against. Typically one of
-            ``FluidType.OIL`` or ``FluidType.GAS``. Determines which onstream
-            year is used for validation.
+            The fluid type (`FluidType.OIL` or `FluidType.GAS`) used to determine the
+            corresponding onstream year for validation.
 
         Raises
         ------
         BaseProjectException
-            - If `approval_year` is not an integer.
-            - If `approval_year` is before the project start year.
-            - If `approval_year` is after the project end year.
-            - If an unsupported `fluid_type` is provided.
-            - If `approval_year` is after the fluid's onstream year.
+            If `approval_year` is not an integer.
+            If `approval_year` is earlier than the project start year.
+            If `approval_year` is later than the project end year.
+            If `approval_year` is later than the fluid onstream year.
 
         Notes
         -----
-        - The fluid's onstream year is obtained from either `self.oil_onstream_date`
-          or `self.gas_onstream_date` depending on `fluid_type`.
-        - This validation is crucial for ensuring that cost classifications
-          (pre-onstream, post-onstream, sunk) are consistent with project timelines.
+        - If `approval_year` is not provided, it is automatically set to the onstream year
+          of the given fluid type.
+        - The validation prevents approval years outside the project timeframe or inconsistent
+          with the fluid's onstream year.
         """
 
-        onstream_year_map = {
+        onstream_yr = {
             FluidType.OIL: self.oil_onstream_date.year,
             FluidType.GAS: self.gas_onstream_date.year,
-        }
+        }[fluid_type]
 
-        if not isinstance(self.approval_year, int):
-            raise BaseProjectException(
-                f"Attribute approval_year must be an integer, not "
-                f"{self.approval_year.__class__.__qualname__}"
-            )
+        if self.approval_year is None:
+            self.approval_year = onstream_yr
 
-        if self.approval_year < self.start_date.year:
-            raise BaseProjectException(
-                f"Approval year ({self.approval_year}) is before the project "
-                f"start year ({self.start_date.year})"
-            )
+        else:
+            if not isinstance(self.approval_year, int):
+                raise BaseProjectException(
+                    f"Attribute approval_year must be an integer, not "
+                    f"{self.approval_year.__class__.__qualname__}"
+                )
 
-        if self.approval_year > self.end_date.year:
-            raise BaseProjectException(
-                f"Approval year ({self.approval_year}) is after the project "
-                f"end year ({self.end_date.year})"
-            )
+            if self.approval_year < self.start_date.year:
+                raise BaseProjectException(
+                    f"Approval year ({self.approval_year}) is before the project "
+                    f"start year ({self.start_date.year})"
+                )
 
-        try:
-            onstream_year = onstream_year_map[fluid_type]
+            if self.approval_year > self.end_date.year:
+                raise BaseProjectException(
+                    f"Approval year ({self.approval_year}) is after the project "
+                    f"end year ({self.end_date.year})"
+                )
 
-        except KeyError:
-            raise BaseProjectException(f"Unsupported fluid type ({fluid_type}) provided")
-
-        if self.approval_year > onstream_year:
-            raise BaseProjectException(
-                f"Approval year ({self.approval_year}) is after {fluid_type} "
-                f"onstream year ({onstream_year})"
-            )
+            if self.approval_year > onstream_yr:
+                raise BaseProjectException(
+                    f"Approval year ({self.approval_year}) is after "
+                    f"{fluid_type.name.lower()} onstream year ({onstream_yr})"
+                )
 
     def _prepare_cost_types(
         self,
@@ -1680,9 +1682,8 @@ class BaseProject:
         # Modify cost_type attribute of the cost_obj
         cost_obj.cost_type = ct.tolist()
 
-    @staticmethod
     def _filter_capital_cost(
-        cost_obj: CapitalCost, include_cost_type: CostType
+        self, cost_obj: CapitalCost, include_cost_type: CostType
     ) -> CapitalCost:
         """
         Filter a CapitalCost object by a specific cost type.
@@ -1690,7 +1691,7 @@ class BaseProject:
         This method extracts only the entries from `cost_obj` whose
         `cost_type` matches the specified `include_cost_type`. If no
         matching entries exist, it returns a placeholder `CapitalCost`
-        object with zero cost at the project start year.
+        object with zero cost at a default reference year.
 
         Parameters
         ----------
@@ -1712,29 +1713,47 @@ class BaseProject:
 
         Notes
         -----
-        - A default `cost_allocation` is inferred: if
-          ``FluidType.OIL`` exists in the original allocation, it is used;
-          otherwise, ``FluidType.GAS`` is assigned.
-        - All relevant attributes (e.g., `description`, `tax_portion`,
-          `useful_life`, etc.) are filtered consistently using the same
-          boolean mask.
-        - Returned attributes are converted to lists where applicable.
+        -   Default reference year for placeholder objects:
+              * ``CostType.SUNK_COST`` → project start year.
+              * ``CostType.PRE_ONSTREAM_COST`` → project approval year.
+              * ``CostType.POST_ONSTREAM_COST`` → oil or gas onstream year
+                (depending on the `cost_allocation`).
+        -   A default `cost_allocation` is inferred: if
+            ``FluidType.OIL`` exists in the original allocation, it is used;
+            otherwise, ``FluidType.GAS`` is assigned.
+        -   All relevant attributes (e.g., `description`, `tax_portion`,
+            `useful_life`, etc.) are filtered consistently using the same
+            boolean mask.
+        -   Returned attributes are converted to lists where applicable.
         """
 
         kwargs = {
             "start_year": cost_obj.start_year,
             "end_year": cost_obj.end_year,
         }
-        cost_type_array = np.array(cost_obj.cost_type)
-        mask = (cost_type_array == include_cost_type)
+
+        onstream_yr = (
+            self.oil_onstream_date.year if FluidType.OIL in cost_obj.cost_allocation
+            else self.gas_onstream_date.year
+        )
+
         allocation = (
             FluidType.OIL if FluidType.OIL in cost_obj.cost_allocation else FluidType.GAS
         )
 
+        ey = {
+            CostType.SUNK_COST: cost_obj.start_year,
+            CostType.PRE_ONSTREAM_COST: self.approval_year,
+            CostType.POST_ONSTREAM_COST: onstream_yr,
+        }[include_cost_type]
+
+        cost_type_array = np.array(cost_obj.cost_type)
+        mask = (cost_type_array == include_cost_type)
+
         if not np.any(mask):
             return CapitalCost(
                 **kwargs,
-                expense_year=np.array([cost_obj.start_year]),
+                expense_year=np.array([ey]),
                 cost=np.array([0]),
                 cost_allocation=[allocation],
                 cost_type=[include_cost_type],
@@ -1756,9 +1775,8 @@ class BaseProject:
             is_ic_applied=np.array(cost_obj.is_ic_applied)[mask].tolist(),
         )
 
-    @staticmethod
     def _filter_intangible(
-        cost_obj: Intangible, include_cost_type: CostType
+        self, cost_obj: Intangible, include_cost_type: CostType
     ) -> Intangible:
         """
         Filter an Intangible cost object by a specific cost type.
@@ -1766,7 +1784,7 @@ class BaseProject:
         This method extracts only the entries from `cost_obj` whose
         `cost_type` matches the specified `include_cost_type`. If no
         matching entries exist, it returns a placeholder `Intangible`
-        object with zero cost at the project start year.
+        object with zero cost at a default reference year.
 
         Parameters
         ----------
@@ -1788,29 +1806,47 @@ class BaseProject:
 
         Notes
         -----
-        - A default `cost_allocation` is inferred: if
-          ``FluidType.OIL`` exists in the original allocation, it is used;
-          otherwise, ``FluidType.GAS`` is assigned.
-        - All relevant attributes (e.g., `description`, `tax_portion`,
-          `tax_discount`) are filtered consistently using the same
-          boolean mask.
-        - Returned attributes are converted to lists where applicable.
+        -   Default reference year for placeholder objects:
+              * ``CostType.SUNK_COST`` → project start year.
+              * ``CostType.PRE_ONSTREAM_COST`` → project approval year.
+              * ``CostType.POST_ONSTREAM_COST`` → oil or gas onstream year
+                (depending on the `cost_allocation`).
+        -   A default `cost_allocation` is inferred: if
+            ``FluidType.OIL`` exists in the original allocation, it is used;
+            otherwise, ``FluidType.GAS`` is assigned.
+        -   All relevant attributes (e.g., `description`, `tax_portion`,
+            `tax_discount`) are filtered consistently using the same
+            boolean mask.
+        -   Returned attributes are converted to lists where applicable.
         """
 
         kwargs = {
             "start_year": cost_obj.start_year,
             "end_year": cost_obj.end_year,
         }
-        cost_type_array = np.array(cost_obj.cost_type)
-        mask = (cost_type_array == include_cost_type)
+
+        onstream_yr = (
+            self.oil_onstream_date.year if FluidType.OIL in cost_obj.cost_allocation
+            else self.gas_onstream_date.year
+        )
+
         allocation = (
             FluidType.OIL if FluidType.OIL in cost_obj.cost_allocation else FluidType.GAS
         )
 
+        ey = {
+            CostType.SUNK_COST: cost_obj.start_year,
+            CostType.PRE_ONSTREAM_COST: self.approval_year,
+            CostType.POST_ONSTREAM_COST: onstream_yr,
+        }[include_cost_type]
+
+        cost_type_array = np.array(cost_obj.cost_type)
+        mask = (cost_type_array == include_cost_type)
+
         if not np.any(mask):
             return Intangible(
                 **kwargs,
-                expense_year=np.array([cost_obj.start_year]),
+                expense_year=np.array([ey]),
                 cost=np.array([0]),
                 cost_allocation=[allocation],
                 cost_type=[include_cost_type],
@@ -1827,15 +1863,14 @@ class BaseProject:
             tax_discount=cost_obj.tax_discount[mask],
         )
 
-    @staticmethod
-    def _filter_opex(cost_obj: OPEX, include_cost_type: CostType) -> OPEX:
+    def _filter_opex(self, cost_obj: OPEX, include_cost_type: CostType) -> OPEX:
         """
         Filter an OPEX cost object by a specific cost type.
 
         This method extracts only the entries from `cost_obj` whose
         `cost_type` matches the specified `include_cost_type`. If no
         matching entries exist, it returns a placeholder `OPEX` object
-        with zero fixed cost at the project start year.
+        with zero cost at a default reference year.
 
         Parameters
         ----------
@@ -1858,29 +1893,47 @@ class BaseProject:
 
         Notes
         -----
-        - A default `cost_allocation` is inferred: if
-          ``FluidType.OIL`` exists in the original allocation, it is used;
-          otherwise, ``FluidType.GAS`` is assigned.
-        - All relevant attributes (e.g., `description`, `tax_portion`,
-          `tax_discount`, `prod_rate`, `cost_per_volume`) are filtered
-          consistently using the same boolean mask.
-        - Returned attributes are converted to lists where applicable.
+        -   Default reference year for placeholder objects:
+              * ``CostType.SUNK_COST`` → project start year.
+              * ``CostType.PRE_ONSTREAM_COST`` → project approval year.
+              * ``CostType.POST_ONSTREAM_COST`` → oil or gas onstream year
+                (depending on the `cost_allocation`).
+        -   A default `cost_allocation` is inferred: if
+            ``FluidType.OIL`` exists in the original allocation, it is used;
+            otherwise, ``FluidType.GAS`` is assigned.
+        -   All relevant attributes (e.g., `description`, `tax_portion`,
+            `tax_discount`, `prod_rate`, `cost_per_volume`) are filtered
+            consistently using the same boolean mask.
+        -   Returned attributes are converted to lists where applicable.
         """
 
         kwargs = {
             "start_year": cost_obj.start_year,
             "end_year": cost_obj.end_year,
         }
-        cost_type_array = np.array(cost_obj.cost_type)
-        mask = (cost_type_array == include_cost_type)
+
+        onstream_yr = (
+            self.oil_onstream_date.year if FluidType.OIL in cost_obj.cost_allocation
+            else self.gas_onstream_date.year
+        )
+
         allocation = (
             FluidType.OIL if FluidType.OIL in cost_obj.cost_allocation else FluidType.GAS
         )
 
+        ey = {
+            CostType.SUNK_COST: cost_obj.start_year,
+            CostType.PRE_ONSTREAM_COST: self.approval_year,
+            CostType.POST_ONSTREAM_COST: onstream_yr
+        }[include_cost_type]
+
+        cost_type_array = np.array(cost_obj.cost_type)
+        mask = (cost_type_array == include_cost_type)
+
         if not np.any(mask):
             return OPEX(
                 **kwargs,
-                expense_year=np.array([cost_obj.start_year]),
+                expense_year=np.array([ey]),
                 fixed_cost=np.array([0]),
                 cost_allocation=[allocation],
                 cost_type=[include_cost_type],
@@ -1899,15 +1952,15 @@ class BaseProject:
             cost_per_volume=cost_obj.cost_per_volume[mask],
         )
 
-    @staticmethod
-    def _filter_asr(cost_obj: ASR, include_cost_type: CostType) -> ASR:
+    def _filter_asr(self, cost_obj: ASR, include_cost_type: CostType) -> ASR:
         """
-        Filter an ASR (Abandonment and Site Restoration) cost object by a specific cost type.
+        Filter an ASR (Abandonment and Site Restoration) cost object by
+        a specific cost type.
 
         This method extracts only the entries from `cost_obj` whose
         `cost_type` matches the specified `include_cost_type`. If no
         matching entries exist, it returns a placeholder `ASR` object
-        with zero cost at the project start year.
+        with zero cost at a default reference year.
 
         Parameters
         ----------
@@ -1929,29 +1982,47 @@ class BaseProject:
 
         Notes
         -----
-        - A default `cost_allocation` is inferred: if
-          ``FluidType.OIL`` exists in the original allocation, it is used;
-          otherwise, ``FluidType.GAS`` is assigned.
-        - All relevant attributes (e.g., `description`, `tax_portion`,
-          `tax_discount`, `final_year`, `future_rate`) are filtered
-          consistently using the same boolean mask.
-        - Returned attributes are converted to lists where applicable.
+        -   Default reference year for placeholder objects:
+              * ``CostType.SUNK_COST`` → project start year.
+              * ``CostType.PRE_ONSTREAM_COST`` → project approval year.
+              * ``CostType.POST_ONSTREAM_COST`` → oil or gas onstream year
+                (depending on the `cost_allocation`).
+        -   A default `cost_allocation` is inferred: if
+            ``FluidType.OIL`` exists in the original allocation, it is used;
+            otherwise, ``FluidType.GAS`` is assigned.
+        -   All relevant attributes (e.g., `description`, `tax_portion`,
+            `tax_discount`, `final_year`, `future_rate`) are filtered
+            consistently using the same boolean mask.
+        -   Returned attributes are converted to lists where applicable.
         """
 
         kwargs = {
             "start_year": cost_obj.start_year,
             "end_year": cost_obj.end_year,
         }
-        cost_type_array = np.array(cost_obj.cost_type)
-        mask = (cost_type_array == include_cost_type)
+
+        onstream_yr = (
+            self.oil_onstream_date.year if FluidType.OIL in cost_obj.cost_allocation
+            else self.gas_onstream_date.year
+        )
+
         allocation = (
             FluidType.OIL if FluidType.OIL in cost_obj.cost_allocation else FluidType.GAS
         )
 
+        ey = {
+            CostType.SUNK_COST: cost_obj.start_year,
+            CostType.PRE_ONSTREAM_COST: self.approval_year,
+            CostType.POST_ONSTREAM_COST: onstream_yr
+        }[include_cost_type]
+
+        cost_type_array = np.array(cost_obj.cost_type)
+        mask = (cost_type_array == include_cost_type)
+
         if not np.any(mask):
             return ASR(
                 **kwargs,
-                expense_year=np.array([cost_obj.start_year]),
+                expense_year=np.array([ey]),
                 cost=np.array([0]),
                 cost_allocation=[allocation],
                 cost_type=[include_cost_type],
@@ -1970,15 +2041,14 @@ class BaseProject:
             future_rate=cost_obj.future_rate[mask],
         )
 
-    @staticmethod
-    def _filter_lbt(cost_obj: LBT, include_cost_type: CostType) -> LBT:
+    def _filter_lbt(self, cost_obj: LBT, include_cost_type: CostType) -> LBT:
         """
         Filter an LBT (Land and Building Tax) cost object by a specific cost type.
 
         This method extracts only the entries from `cost_obj` whose
         `cost_type` matches the specified `include_cost_type`. If no
         matching entries exist, it returns a placeholder `LBT` object
-        with zero cost at the project start year.
+        with zero cost at a default reference year.
 
         Parameters
         ----------
@@ -2001,31 +2071,49 @@ class BaseProject:
 
         Notes
         -----
-        - A default `cost_allocation` is inferred: if
-          ``FluidType.OIL`` exists in the original allocation, it is used;
-          otherwise, ``FluidType.GAS`` is assigned.
-        - All relevant attributes (e.g., `description`, `tax_portion`,
-          `tax_discount`, `final_year`, `utilized_land_area`,
-          `utilized_building_area`, `njop_land`, `njop_building`,
-          `gross_revenue`, and `cost`) are filtered consistently using
-          the same boolean mask.
-        - Returned attributes are converted to lists where applicable.
+        -   Default reference year for placeholder objects:
+              * ``CostType.SUNK_COST`` → project start year.
+              * ``CostType.PRE_ONSTREAM_COST`` → project approval year.
+              * ``CostType.POST_ONSTREAM_COST`` → oil or gas onstream year
+                (depending on the `cost_allocation`).
+        -   A default `cost_allocation` is inferred: if
+            ``FluidType.OIL`` exists in the original allocation, it is used;
+            otherwise, ``FluidType.GAS`` is assigned.
+        -   All relevant attributes (e.g., `description`, `tax_portion`,
+            `tax_discount`, `final_year`, `utilized_land_area`,
+            `utilized_building_area`, `njop_land`, `njop_building`,
+            `gross_revenue`, and `cost`) are filtered consistently using
+            the same boolean mask.
+        -   Returned attributes are converted to lists where applicable.
         """
 
         kwargs = {
             "start_year": cost_obj.start_year,
             "end_year": cost_obj.end_year,
         }
-        cost_type_array = np.array(cost_obj.cost_type)
-        mask = (cost_type_array == include_cost_type)
+
+        onstream_yr = (
+            self.oil_onstream_date.year if FluidType.OIL in cost_obj.cost_allocation
+            else self.gas_onstream_date.year
+        )
+
         allocation = (
             FluidType.OIL if FluidType.OIL in cost_obj.cost_allocation else FluidType.GAS
         )
 
+        ey = {
+            CostType.SUNK_COST: cost_obj.start_year,
+            CostType.PRE_ONSTREAM_COST: self.approval_year,
+            CostType.POST_ONSTREAM_COST: onstream_yr,
+        }[include_cost_type]
+
+        cost_type_array = np.array(cost_obj.cost_type)
+        mask = (cost_type_array == include_cost_type)
+
         if not np.any(mask):
             return LBT(
                 **kwargs,
-                expense_year=np.array([cost_obj.start_year]),
+                expense_year=np.array([ey]),
                 cost=np.array([0]),
                 cost_allocation=[allocation],
                 cost_type=[include_cost_type],
@@ -2048,9 +2136,8 @@ class BaseProject:
             cost=cost_obj.cost[mask],
         )
 
-    @staticmethod
     def _filter_cost_of_sales(
-        cost_obj: CostOfSales, include_cost_type: CostType
+        self, cost_obj: CostOfSales, include_cost_type: CostType
     ) -> CostOfSales:
         """
         Filter a CostOfSales object by a specific cost type.
@@ -2058,7 +2145,7 @@ class BaseProject:
         This method extracts only the entries from `cost_obj` whose
         `cost_type` matches the specified `include_cost_type`. If no
         matching entries exist, it returns a placeholder `CostOfSales`
-        object with zero cost at the project start year.
+        object with zero cost at a default reference year.
 
         Parameters
         ----------
@@ -2081,29 +2168,47 @@ class BaseProject:
 
         Notes
         -----
-        - A default `cost_allocation` is inferred: if
-          ``FluidType.OIL`` exists in the original allocation, it is used;
-          otherwise, ``FluidType.GAS`` is assigned.
-        - All relevant attributes (`description`, `tax_portion`,
-          `tax_discount`, etc.) are filtered consistently using the
-          same boolean mask.
-        - Returned attributes are converted to lists where applicable.
+        -   Default reference year for placeholder objects:
+              * ``CostType.SUNK_COST`` → project start year.
+              * ``CostType.PRE_ONSTREAM_COST`` → project approval year.
+              * ``CostType.POST_ONSTREAM_COST`` → oil or gas onstream year
+                (depending on the `cost_allocation`).
+        -   A default `cost_allocation` is inferred: if
+            ``FluidType.OIL`` exists in the original allocation, it is used;
+            otherwise, ``FluidType.GAS`` is assigned.
+        -   All relevant attributes (`description`, `tax_portion`,
+            `tax_discount`, etc.) are filtered consistently using the
+            same boolean mask.
+        -   Returned attributes are converted to lists where applicable.
         """
 
         kwargs = {
             "start_year": cost_obj.start_year,
             "end_year": cost_obj.end_year,
         }
-        cost_type_array = np.array(cost_obj.cost_type)
-        mask = (cost_type_array == include_cost_type)
+
+        onstream_yr = (
+            self.oil_onstream_date.year if FluidType.OIL in cost_obj.cost_allocation
+            else self.gas_onstream_date.year
+        )
+
         allocation = (
             FluidType.OIL if FluidType.OIL in cost_obj.cost_allocation else FluidType.GAS
         )
 
+        ey = {
+            CostType.SUNK_COST: cost_obj.start_year,
+            CostType.PRE_ONSTREAM_COST: self.approval_year,
+            CostType.POST_ONSTREAM_COST: onstream_yr,
+        }[include_cost_type]
+
+        cost_type_array = np.array(cost_obj.cost_type)
+        mask = (cost_type_array == include_cost_type)
+
         if not np.any(mask):
             return CostOfSales(
                 **kwargs,
-                expense_year=np.array([cost_obj.start_year]),
+                expense_year=np.array([ey]),
                 cost=np.array([0]),
                 cost_allocation=[allocation],
                 cost_type=[include_cost_type],
@@ -2132,10 +2237,6 @@ class BaseProject:
         If any component's `start_year` is inconsistent with the base project,
         a `BaseProjectException` is raised with a detailed error message
         identifying the mismatched component(s).
-
-        Parameters
-        ----------
-        None
 
         Raises
         ------
@@ -2272,10 +2373,6 @@ class BaseProject:
         a `BaseProjectException` is raised with a detailed error message
         identifying the mismatched component(s).
 
-        Parameters
-        ----------
-        None
-
         Raises
         ------
         BaseProjectException
@@ -2398,121 +2495,209 @@ class BaseProject:
                 f"({self._gas_cost_of_sales_preonstream.end_year})."
             )
 
-    @staticmethod
-    def _validate_sunkcost(
-        fluid_onstream_year: int,
-        sunkcost_objects: list
-    ) -> None:
+    def _validate_sunkcost(self, fluid_type: FluidType, sunkcost_objects: list) -> None:
         """
-        Validate that all sunk cost expense years do not exceed the fluid onstream year.
+        Validate that sunk cost years do not exceed the onstream year.
 
-        This method calculates the maximum expense year for each sunk cost object and
-        verifies that none of them occur after the specified fluid onstream year.
-        If any expense year exceeds the onstream year, a ``SunkCostException`` is raised.
+        This method checks whether the maximum expense year of any sunk cost
+        object occurs after the onstream year for the specified `fluid_type`.
+        If such cases are found, a `SunkCostException` is raised.
 
         Parameters
         ----------
-        fluid_onstream_year : int
-            The year in which the fluid is scheduled to go onstream.
-        sunkcost_objects : list of object
-            A list of sunk cost objects. Each object must have an
-            ``expense_year`` attribute that is array-like and contains
-            the years associated with sunk cost expenses.
+        fluid_type : FluidType
+            The fluid type for which sunk cost validation is performed.
+            Must be either ``FluidType.OIL`` or ``FluidType.GAS``.
+
+        sunkcost_objects : list of CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales
+            A list of sunk cost objects, each containing an ``expense_year``
+            attribute from which the maximum year is extracted.
 
         Raises
         ------
         SunkCostException
-            If any sunk cost's maximum expense year is greater than the
-            provided fluid onstream year.
-        """
-        sunkcost_max_years = np.array([np.max(sc.expense_year) for sc in sunkcost_objects])
+            If any sunk cost object's maximum expense year exceeds the
+            onstream year of the given `fluid_type`.
 
-        if np.any(sunkcost_max_years > fluid_onstream_year):
-            incorrect_years = sunkcost_max_years[sunkcost_max_years > fluid_onstream_year]
+        Notes
+        -----
+        - The onstream year is determined by ``oil_onstream_date.year`` or
+          ``gas_onstream_date.year`` depending on the `fluid_type`.
+        - This validation ensures sunk costs are incurred only before or up
+          to the respective onstream year.
+        """
+
+        onstream_yr = {
+            FluidType.OIL: self.oil_onstream_date.year,
+            FluidType.GAS: self.gas_onstream_date.year,
+        }[fluid_type]
+
+        sunkcost_max_years = np.array([np.max(sc.expense_year) for sc in sunkcost_objects])
+        mask = sunkcost_max_years > onstream_yr
+
+        if np.any(mask):
+            incorrect_years = sunkcost_max_years[mask]
             raise SunkCostException(
-                f"Sunk cost years ({incorrect_years}) exceed onstream year "
-                f"({fluid_onstream_year})"
+                f"Sunk cost years ({incorrect_years}) exceed {fluid_type.name.lower()} "
+                f"onstream year ({onstream_yr})"
             )
 
-    def _get_sunkcost_validation(self):
+    def _validate_preonstream(
+        self, fluid_type: FluidType, preonstream_objects: list
+    ) -> None:
         """
-        Validate sunk cost data for both oil and gas streams.
+        Validate that all pre-onstream cost objects fall within the allowable project years.
 
-        This method checks that all sunk cost items for oil and gas are consistent with
-        their respective onstream years. It calls the internal `_validate_sunkcost`
-        method for each fluid type, passing the appropriate list of sunk cost objects.
+        This method checks that the expense years of each object in `preonstream_objects`
+        lie within the range defined by the project's `approval_year` and the fluid's
+        onstream year. It considers both the minimum and maximum expense years of each
+        object. If any object falls outside this range, an exception is raised.
 
-        Validation ensures:
-        - Sunk cost expense years are not later than the fluid's onstream year.
-        - Objects maintain correct data length and structure after filtering.
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The type of fluid being validated (e.g., `FluidType.OIL` or `FluidType.GAS`).
+            Determines the relevant onstream year for the validation.
 
-        Returns
-        -------
-        None
-            This method performs validation in place and does not return a value.
+        preonstream_objects : list
+            A list of pre-onstream cost objects (e.g., CapitalCost, Intangible, OPEX, ASR,
+            LBT, or CostOfSales). Each object must have an `expense_year` attribute that
+            is iterable (e.g., NumPy array or list) representing the years of expenses.
+
+        Raises
+        ------
+        PreonstreamCostException
+            If any expense year in any object is less than the project's `approval_year`
+            or exceeds the onstream year for the given fluid. The exception message
+            includes the `(min_year, max_year)` ranges that are invalid.
+
+        Notes
+        -----
+        - The method uses both minimum and maximum expense years for each cost object
+          to ensure the entire range is valid.
+        - This is typically used to enforce correct sequencing of pre-onstream costs
+          relative to project approvals and onstream dates.
         """
 
-        # Validate OIL sunkcost
-        self._validate_sunkcost(
-            fluid_onstream_year=self.oil_onstream_date.year,
-            sunkcost_objects=[
+        onstream_yr = {
+            FluidType.OIL: self.oil_onstream_date.year,
+            FluidType.GAS: self.gas_onstream_date.year,
+        }[fluid_type]
+
+        preonstream_max_years = np.array(
+            [np.max(pr.expense_year) for pr in preonstream_objects]
+        )
+
+        preonstream_min_years = np.array(
+            [np.min(pr.expense_year) for pr in preonstream_objects]
+        )
+
+        mask = (
+            (preonstream_min_years < self.approval_year)
+            | (preonstream_max_years > onstream_yr)
+        )
+
+        if np.any(mask):
+            incorrect_years = list(
+                zip(preonstream_min_years[mask], preonstream_max_years[mask])
+            )
+            raise PreonstreamCostException(
+                f"Preonstream years ({incorrect_years}) fall outside the allowable "
+                f"range: {self.approval_year} <= preonstream_years <= {onstream_yr}"
+            )
+
+    def _get_sunkcost_validation(self) -> None:
+        """
+        Validate all sunk cost objects for OIL and GAS fluids.
+
+        This method iterates over all sunk cost objects associated with OIL and GAS and
+        validates that their expense years do not exceed the corresponding fluid's
+        onstream year. Validation is delegated to the `_validate_sunkcost` method.
+
+        Raises
+        ------
+        SunkCostException
+            If any expense year of a sunk cost object exceeds the onstream year for its
+            respective fluid type.
+
+        Notes
+        -----
+        - The method covers all relevant sunk cost categories: capital, intangible,
+          OPEX, ASR, LBT, and cost of sales.
+        - Uses `FluidType.OIL` and `FluidType.GAS` to determine the applicable onstream
+          year for each group of cost objects.
+        - Internally relies on `_validate_sunkcost` for the actual year range checks.
+        """
+
+        fluid_object_map = {
+            FluidType.OIL: [
                 self._oil_capital_sunk_cost,
                 self._oil_intangible_sunk_cost,
                 self._oil_opex_sunk_cost,
                 self._oil_asr_sunk_cost,
                 self._oil_lbt_sunk_cost,
                 self._oil_cost_of_sales_sunk_cost,
-            ]
-        )
-
-        # Validate GAS sunkcost
-        self._validate_sunkcost(
-            fluid_onstream_year=self.gas_onstream_date.year,
-            sunkcost_objects=[
+            ],
+            FluidType.GAS: [
                 self._gas_capital_sunk_cost,
                 self._gas_intangible_sunk_cost,
                 self._gas_opex_sunk_cost,
                 self._gas_asr_sunk_cost,
                 self._gas_lbt_sunk_cost,
                 self._gas_cost_of_sales_sunk_cost,
-            ]
-        )
+            ],
+        }
 
-    def _get_sunkcost_array(self):
+        for ftype, obj in fluid_object_map.items():
+            self._validate_sunkcost(fluid_type=ftype, sunkcost_objects=obj)
+
+    def _get_preonstream_validation(self) -> None:
         """
-        Compute and categorize sunk costs for oil and gas.
+        Validate all pre-onstream cost objects for OIL and GAS fluids.
 
-        This method validates the sunk costs for both oil and gas, then constructs
-        arrays representing various sunk cost categories (capital, intangible,
-        operational, abandonment, tax, and cost of sales). It classifies them into
-        depreciable and non-depreciable categories and calculates total sunk costs
-        for each fluid type.
+        This method iterates over all pre-onstream cost objects associated with OIL and GAS
+        and validates that their expense years fall within the allowable range, from the
+        project approval year up to the corresponding fluid's onstream year. Validation is
+        performed using the `_validate_preonstream` method.
+
+        Raises
+        ------
+        PreonstreamCostException
+            If any pre-onstream cost object's expense year is earlier than the approval year
+            or later than the onstream year for its respective fluid type.
 
         Notes
         -----
-        - Depreciable sunk costs include only capital expenditures.
-        - Non-depreciable sunk costs include intangible, operational, abandonment,
-          tax, and cost of sales expenditures.
-        - All values are computed pre-tax using the `expenditures_pre_tax` method
-          from each sunk cost object.
-
-        Returns
-        -------
-        None
-            This method does not return a value. It sets the following internal
-            attributes:
-            - _oil_depreciable_sunk_cost
-            - _gas_depreciable_sunk_cost
-            - _oil_non_depreciable_sunk_cost
-            - _gas_non_depreciable_sunk_cost
-            - _oil_sunk_cost
-            - _gas_sunk_cost
-
-        See Also
-        --------
-        -   _get_sunkcost_validation : Validates sunk cost data before computation.
-        -   expenditures_pre_tax : Returns the pre-tax expenditures for a cost object.
+        - The method covers all relevant pre-onstream categories: capital, intangible, OPEX,
+          ASR, LBT, and cost of sales.
+        - Uses `FluidType.OIL` and `FluidType.GAS` to determine the applicable onstream
+          year for each group of cost objects.
+        - Internally relies on `_validate_preonstream` for the actual year range checks.
         """
+
+        fluid_object_map = {
+            FluidType.OIL: [
+                self._oil_capital_preonstream,
+                self._oil_intangible_preonstream,
+                self._oil_opex_preonstream,
+                self._oil_asr_preonstream,
+                self._oil_lbt_preonstream,
+                self._oil_cost_of_sales_preonstream,
+            ],
+            FluidType.GAS: [
+                self._gas_capital_preonstream,
+                self._gas_intangible_preonstream,
+                self._gas_opex_preonstream,
+                self._gas_asr_preonstream,
+                self._gas_lbt_preonstream,
+                self._gas_cost_of_sales_preonstream,
+            ]
+        }
+
+        for ftype, obj in fluid_object_map.items():
+            self._validate_preonstream(fluid_type=ftype, preonstream_objects=obj)
+
+    def _get_sunkcost_array(self) -> None:
 
         # Validate OIL and GAS sunkcost
         self._get_sunkcost_validation()
@@ -2556,13 +2741,49 @@ class BaseProject:
             + sunkcost_arr["gas_cost_of_sales"]
         )
 
-        # Defone total sunkcost for OIL and GAS
-        self._oil_sunk_cost = (
-            self._oil_depreciable_sunk_cost + self._oil_non_depreciable_sunk_cost
-        )
+    def _get_preonstream_array(self) -> None:
 
-        self._gas_sunk_cost = (
-            self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
+        # Validate OIL and GAS preonstream
+        self._get_preonstream_validation()
+
+        # Prepare preonstream arrays for each preonstream objects
+        preonstream_map = {
+            "oil_capital": self._oil_capital_preonstream,
+            "gas_capital": self._gas_capital_preonstream,
+            "oil_intangible": self._oil_intangible_preonstream,
+            "gas_intangible": self._gas_intangible_preonstream,
+            "oil_opex": self._oil_opex_preonstream,
+            "gas_opex": self._gas_opex_preonstream,
+            "oil_asr": self._oil_asr_preonstream,
+            "gas_asr": self._gas_asr_preonstream,
+            "oil_lbt": self._oil_lbt_preonstream,
+            "gas_lbt": self._gas_lbt_preonstream,
+            "oil_cost_of_sales": self._oil_cost_of_sales_preonstream,
+            "gas_cost_of_sales": self._gas_cost_of_sales_preonstream,
+        }
+
+        preonstream_arr = {
+            key: val.expenditures_pre_tax() for key, val in preonstream_map.items()
+        }
+
+        # Define depreciable preonstream costs
+        self._oil_depreciable_preonstream = preonstream_arr["oil_capital"]
+        self._gas_depreciable_preonstream = preonstream_arr["gas_capital"]
+
+        # Define non-depreciable preonstream costs
+        self._oil_non_depreciable_preonstream = (
+            preonstream_arr["oil_intangible"]
+            + preonstream_arr["oil_opex"]
+            + preonstream_arr["oil_asr"]
+            + preonstream_arr["oil_lbt"]
+            + preonstream_arr["oil_cost_of_sales"]
+        )
+        self._gas_non_depreciable_preonstream = (
+            preonstream_arr["gas_intangible"]
+            + preonstream_arr["gas_opex"]
+            + preonstream_arr["gas_asr"]
+            + preonstream_arr["gas_lbt"]
+            + preonstream_arr["gas_cost_of_sales"]
         )
 
     def _calc_expenditures(
@@ -3253,8 +3474,37 @@ class BaseProject:
         # WAP (Weighted Average Price) for each produced fluid
         self._get_wap_price()
 
-        # Prepare sunkcost
+        # Prepare preonstream and sunk costs
+        self._get_preonstream_array()
         self._get_sunkcost_array()
+
+        # Define total preonstream and sunk costs
+        self._oil_preonstream = (
+            self._oil_depreciable_preonstream + self._oil_non_depreciable_preonstream
+        )
+
+        self._gas_preonstream = (
+            self._gas_depreciable_preonstream + self._gas_non_depreciable_preonstream
+        )
+
+        self._oil_sunk_cost = (
+            self._oil_depreciable_sunk_cost + self._oil_non_depreciable_sunk_cost
+        )
+
+        self._gas_sunk_cost = (
+            self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
+        )
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_depreciable_sunk_cost)}')
+        print(f'Length: {len(self._oil_depreciable_sunk_cost)}')
+        print('_oil_depreciable_sunk_cost = \n', self._oil_depreciable_sunk_cost)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_depreciable_preonstream)}')
+        print(f'Length: {len(self._oil_depreciable_preonstream)}')
+        print('_oil_depreciable_preonstream = \n', self._oil_depreciable_preonstream)
+
 
         # # Calculate pre tax expenditures
         # self._get_expenditures_pre_tax(
