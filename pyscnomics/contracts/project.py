@@ -2698,6 +2698,36 @@ class BaseProject:
             self._validate_preonstream(fluid_type=ftype, preonstream_objects=obj)
 
     def _get_sunkcost_array(self) -> None:
+        """
+        Validate and prepare sunk cost arrays for OIL and GAS.
+
+        This method validates all sunk cost objects for OIL and GAS
+        using `_get_sunkcost_validation`. It then constructs arrays of
+        pre-tax expenditures for each sunk cost category, aggregates
+        them into depreciable and non-depreciable components, and finally
+        computes the total sunk costs for both fluids.
+    
+        Raises
+        ------
+        SunkCostException
+            If any sunk cost years exceed the respective fluid's onstream year,
+            as enforced by `_get_sunkcost_validation`.
+    
+        Notes
+        -----
+        - Depreciable sunk costs include only capital costs.
+        - Non-depreciable sunk costs are formed by summing intangible,
+          OPEX, ASR, LBT, and cost of sales components.
+        - The following internal attributes are set:
+            * ``_oil_depreciable_sunk_cost``
+            * ``_gas_depreciable_sunk_cost``
+            * ``_oil_non_depreciable_sunk_cost``
+            * ``_gas_non_depreciable_sunk_cost``
+            * ``_oil_sunk_cost`` (total = depreciable + non-depreciable)
+            * ``_gas_sunk_cost`` (total = depreciable + non-depreciable)
+        - Internally relies on each cost object's
+          ``expenditures_pre_tax()`` method to compute expenditures.
+        """
 
         # Validate OIL and GAS sunkcost
         self._get_sunkcost_validation()
@@ -2718,7 +2748,9 @@ class BaseProject:
             "gas_cost_of_sales": self._gas_cost_of_sales_sunk_cost,
         }
 
-        sunkcost_arr = {key: val.expenditures_pre_tax() for key, val in sunkcost_map.items()}
+        sunkcost_arr = {
+            key: val.expenditures_pre_tax() for key, val in sunkcost_map.items()
+        }
 
         # Define depreciable sunk costs
         self._oil_depreciable_sunk_cost = sunkcost_arr["oil_capital"]
@@ -2741,7 +2773,47 @@ class BaseProject:
             + sunkcost_arr["gas_cost_of_sales"]
         )
 
+        # Define total sunk cost
+        self._oil_sunk_cost = (
+            self._oil_depreciable_sunk_cost + self._oil_non_depreciable_sunk_cost
+        )
+
+        self._gas_sunk_cost = (
+            self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
+        )
+
     def _get_preonstream_array(self) -> None:
+        """
+        Validate and prepare pre-onstream cost arrays for OIL and GAS.
+
+        This method validates all pre-onstream cost objects for OIL and GAS
+        using `_get_preonstream_validation`. It then constructs arrays of
+        pre-tax expenditures for each pre-onstream cost category, aggregates
+        them into depreciable and non-depreciable components, and finally
+        computes the total pre-onstream costs for both fluids.
+
+        Raises
+        ------
+        PreonstreamCostException
+            If any pre-onstream years fall outside the allowable range defined
+            by the project approval year and the respective fluid's onstream year,
+            as enforced by `_get_preonstream_validation`.
+
+        Notes
+        -----
+        - Depreciable pre-onstream costs include only capital costs.
+        - Non-depreciable pre-onstream costs are formed by summing intangible,
+          OPEX, ASR, LBT, and cost of sales components.
+        - The following internal attributes are set:
+            * ``_oil_depreciable_preonstream``
+            * ``_gas_depreciable_preonstream``
+            * ``_oil_non_depreciable_preonstream``
+            * ``_gas_non_depreciable_preonstream``
+            * ``_oil_preonstream`` (total = depreciable + non-depreciable)
+            * ``_gas_preonstream`` (total = depreciable + non-depreciable)
+        - Internally relies on each cost object's
+          ``expenditures_pre_tax()`` method to compute expenditures.
+        """
 
         # Validate OIL and GAS preonstream
         self._get_preonstream_validation()
@@ -2784,6 +2856,15 @@ class BaseProject:
             + preonstream_arr["gas_asr"]
             + preonstream_arr["gas_lbt"]
             + preonstream_arr["gas_cost_of_sales"]
+        )
+
+        # Define total preonstream costs
+        self._oil_preonstream = (
+            self._oil_depreciable_preonstream + self._oil_non_depreciable_preonstream
+        )
+
+        self._gas_preonstream = (
+            self._gas_depreciable_preonstream + self._gas_non_depreciable_preonstream
         )
 
     def _calc_expenditures(
@@ -2868,7 +2949,10 @@ class BaseProject:
 
             # Inflation rate applied to OPEX only
             elif inflation_rate_applied_to == InflationAppliedTo.OPEX:
-                if target_attr is self._oil_opex_postonstream or target_attr is self._gas_opex_postonstream:
+                if (
+                    target_attr is self._oil_opex_postonstream
+                    or target_attr is self._gas_opex_postonstream
+                ):
                     return target_attr.expenditures_pre_tax(
                         year_inflation=year_inflation,
                         inflation_rate=inflation_rate,
@@ -2941,7 +3025,10 @@ class BaseProject:
 
             # Inflation rate applied to OPEX only
             elif inflation_rate_applied_to == InflationAppliedTo.OPEX:
-                if target_attr is self._oil_opex_postonstream or target_attr is self._gas_opex_postonstream:
+                if (
+                    target_attr is self._oil_opex_postonstream
+                    or target_attr is self._gas_opex_postonstream
+                ):
                     return target_attr.expenditures_post_tax(
                         year_inflation=year_inflation,
                         inflation_rate=inflation_rate,
@@ -2997,17 +3084,20 @@ class BaseProject:
         inflation_rate_applied_to: InflationAppliedTo | None = None,
     ) -> None:
         """
-        Calculate and assign pre-tax expenditures for various categories, adjusted for inflation.
+        Calculate and assign pre-tax expenditures for various categories,
+        adjusted for inflation.
 
-        This method calculates the pre-tax expenditures for multiple cost categories related
-        to oil and gas, adjusted by the provided inflation rate. The expenditures are then
-        assigned to the corresponding attributes for both oil and gas.
+        This method calculates the pre-tax expenditures for multiple cost
+        categories related to oil and gas, adjusted by the provided inflation
+        rate. The expenditures are then assigned to the corresponding attributes
+        for both oil and gas.
 
         Parameters
         ----------
         year_inflation : np.ndarray, optional
-            A NumPy array representing the years during which inflation is applied to the costs.
-            If not provided, defaults to repeating the `start_year` for all costs.
+            A NumPy array representing the years during which inflation is
+            applied to the costs. If not provided, defaults to repeating the
+            `start_year` for all costs.
         inflation_rate : np.ndarray or float, optional
             The inflation rate(s) to apply to the project costs. If provided as a float,
             a uniform inflation rate is applied. If provided as a NumPy array, different
@@ -3018,9 +3108,8 @@ class BaseProject:
         Returns
         -------
         None
-            This method does not return a value. It updates the following attributes with the
-            calculated pre-tax expenditures:
-
+            This method does not return a value. It updates the following attributes
+            with the calculated pre-tax expenditures:
             -   `_oil_capital_expenditures_pre_tax`
             -   `_gas_capital_expenditures_pre_tax`
             -   `_oil_intangible_expenditures_pre_tax`
@@ -3084,25 +3173,26 @@ class BaseProject:
 
     def _get_indirect_taxes(self, tax_rate: np.ndarray | float = 0.0) -> None:
         """
-        Calculate and assign indirect taxes for various oil and gas expenditure categories.
+        Calculate and assign indirect taxes for various oil and gas
+        expenditure categories.
 
-        This method computes the indirect taxes (such as VAT or other applicable indirect taxes)
-        for multiple categories related to oil and gas. It adjusts these taxes based on the
-        provided tax portion, tax rate, and tax discount.
+        This method computes the indirect taxes (such as VAT or other
+        applicable indirect taxes) for multiple categories related to
+        oil and gas. It adjusts these taxes based on the provided
+        tax portion, tax rate, and tax discount.
 
         Parameters
         ----------
         tax_rate : np.ndarray or float, optional
-            A NumPy array or float representing the tax rate applied to the costs. If not
-            provided, a default rate of 0.0 will be used. When provided as an array, it
-            should match the project years.
+            A NumPy array or float representing the tax rate applied to
+            the costs. If not provided, a default rate of 0.0 will be used.
+            When provided as an array, it should match the project years.
 
         Returns
         -------
         None
-            This method does not return any values. It updates the following attributes with
-            the calculated indirect taxes for oil and gas:
-
+            This method does not return any values. It updates the following
+            attributes with the calculated indirect taxes for oil and gas:
             -   `_oil_capital_indirect_tax`
             -   `_gas_capital_indirect_tax`
             -   `_oil_intangible_indirect_tax`
@@ -3159,19 +3249,22 @@ class BaseProject:
 
     def _get_expenditures_post_tax(self) -> None:
         """
-        Calculate and assign post-tax expenditures for multiple oil and gas cost categories.
+        Calculate and assign post-tax expenditures for multiple oil and gas
+        cost categories.
 
-        This method updates each post-tax expenditure attribute by adding its corresponding
-        pre-tax expenditure and indirect tax values for all cost categories
-        (e.g., capital, intangible, operating, abandonment & site restoration (ASR),
-        land and building tax (LBT), and cost of sales) for both oil and gas.
+        This method updates each post-tax expenditure attribute by adding its
+        corresponding pre-tax expenditure and indirect tax values for all cost
+        categories (e.g., capital, intangible, operating, abandonment & site
+        restoration (ASR), land and building tax (LBT), and cost of sales) for
+        both oil and gas.
 
         Notes
         -----
         The method assumes that:
-            -   Each cost category has corresponding ``*_pre_tax`` and ``*_indirect_tax``
+            -   Each cost category has corresponding ``*_pre_tax`` and
+                ``*_indirect_tax`` attributes.
+            -   Post-tax results will be stored in matching ``*_post_tax``
                 attributes.
-            -   Post-tax results will be stored in matching ``*_post_tax`` attributes.
         """
 
         pre_tax = [
@@ -3475,97 +3568,69 @@ class BaseProject:
         self._get_wap_price()
 
         # Prepare preonstream and sunk costs
-        self._get_preonstream_array()
         self._get_sunkcost_array()
+        self._get_preonstream_array()
 
-        # Define total preonstream and sunk costs
-        self._oil_preonstream = (
-            self._oil_depreciable_preonstream + self._oil_non_depreciable_preonstream
+        # Calculate pre tax expenditures
+        self._get_expenditures_pre_tax(
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
         )
 
-        self._gas_preonstream = (
-            self._gas_depreciable_preonstream + self._gas_non_depreciable_preonstream
+        # Calculate indirect taxes
+        self._get_indirect_taxes(tax_rate=tax_rate)
+
+        # Calculate post tax expenditures
+        self._get_expenditures_post_tax()
+
+        # Other revenue
+        self._get_other_revenue(
+            sulfur_revenue=sulfur_revenue,
+            electricity_revenue=electricity_revenue,
+            co2_revenue=co2_revenue,
         )
 
-        self._oil_sunk_cost = (
-            self._oil_depreciable_sunk_cost + self._oil_non_depreciable_sunk_cost
+        # Total OIL pre-tax expenditures
+        self._oil_total_expenditures_pre_tax = (
+            self._oil_capital_expenditures_pre_tax
+            + self._oil_intangible_expenditures_pre_tax
+            + self._oil_opex_expenditures_pre_tax
+            + self._oil_asr_expenditures_pre_tax
+            + self._oil_lbt_expenditures_pre_tax
+            + self._oil_cost_of_sales_expenditures_pre_tax
         )
 
-        self._gas_sunk_cost = (
-            self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
+        # Total GAS pre-tax expenditures
+        self._gas_total_expenditures_pre_tax = (
+            self._gas_capital_expenditures_pre_tax
+            + self._gas_intangible_expenditures_pre_tax
+            + self._gas_opex_expenditures_pre_tax
+            + self._gas_asr_expenditures_pre_tax
+            + self._gas_lbt_expenditures_pre_tax
+            + self._gas_cost_of_sales_expenditures_pre_tax
+        )
+        
+        # Total OIL indirect taxes
+        self._oil_total_indirect_tax = (
+            self._oil_capital_indirect_tax
+            + self._oil_intangible_indirect_tax
+            + self._oil_opex_indirect_tax
+            + self._oil_asr_indirect_tax
+            + self._oil_lbt_indirect_tax
+            + self._oil_cost_of_sales_indirect_tax
         )
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_depreciable_sunk_cost)}')
-        print(f'Length: {len(self._oil_depreciable_sunk_cost)}')
-        print('_oil_depreciable_sunk_cost = \n', self._oil_depreciable_sunk_cost)
+        # Total GAS indirect taxes
+        self._gas_total_indirect_tax = (
+            self._gas_capital_indirect_tax
+            + self._gas_intangible_indirect_tax
+            + self._gas_opex_indirect_tax
+            + self._gas_asr_indirect_tax
+            + self._gas_lbt_indirect_tax
+            + self._gas_cost_of_sales_indirect_tax
+        )
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_depreciable_preonstream)}')
-        print(f'Length: {len(self._oil_depreciable_preonstream)}')
-        print('_oil_depreciable_preonstream = \n', self._oil_depreciable_preonstream)
-
-
-        # # Calculate pre tax expenditures
-        # self._get_expenditures_pre_tax(
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     inflation_rate_applied_to=inflation_rate_applied_to,
-        # )
-        #
-        # # Calculate indirect taxes
-        # self._get_indirect_taxes(tax_rate=tax_rate)
-        #
-        # # Calculate post tax expenditures
-        # self._get_expenditures_post_tax()
-        #
-        # # Other revenue
-        # self._get_other_revenue(
-        #     sulfur_revenue=sulfur_revenue,
-        #     electricity_revenue=electricity_revenue,
-        #     co2_revenue=co2_revenue,
-        # )
-        #
-        # # Total OIL pre-tax expenditures
-        # self._oil_total_expenditures_pre_tax = (
-        #     self._oil_capital_expenditures_pre_tax
-        #     + self._oil_intangible_expenditures_pre_tax
-        #     + self._oil_opex_expenditures_pre_tax
-        #     + self._oil_asr_expenditures_pre_tax
-        #     + self._oil_lbt_expenditures_pre_tax
-        #     + self._oil_cost_of_sales_expenditures_pre_tax
-        # )
-        #
-        # # Total GAS pre-tax expenditures
-        # self._gas_total_expenditures_pre_tax = (
-        #     self._gas_capital_expenditures_pre_tax
-        #     + self._gas_intangible_expenditures_pre_tax
-        #     + self._gas_opex_expenditures_pre_tax
-        #     + self._gas_asr_expenditures_pre_tax
-        #     + self._gas_lbt_expenditures_pre_tax
-        #     + self._gas_cost_of_sales_expenditures_pre_tax
-        # )
-        #
-        # # Total OIL indirect taxes
-        # self._oil_total_indirect_tax = (
-        #     self._oil_capital_indirect_tax
-        #     + self._oil_intangible_indirect_tax
-        #     + self._oil_opex_indirect_tax
-        #     + self._oil_asr_indirect_tax
-        #     + self._oil_lbt_indirect_tax
-        #     + self._oil_cost_of_sales_indirect_tax
-        # )
-        #
-        # # Total GAS indirect taxes
-        # self._gas_total_indirect_tax = (
-        #     self._gas_capital_indirect_tax
-        #     + self._gas_intangible_indirect_tax
-        #     + self._gas_opex_indirect_tax
-        #     + self._gas_asr_indirect_tax
-        #     + self._gas_lbt_indirect_tax
-        #     + self._gas_cost_of_sales_indirect_tax
-        # )
-        #
         # # Total OIL post-tax expenditures
         # self._oil_total_expenditures_post_tax = (
         #     self._oil_capital_expenditures_post_tax
@@ -3602,7 +3667,7 @@ class BaseProject:
         #     + self._gas_lbt_expenditures_post_tax
         #     + self._gas_cost_of_sales_expenditures_post_tax
         # )
-        #
+
         # # Configure base cashflow for OIL and GAS
         # self._oil_cashflow = (
         #     self._oil_revenue - (self._oil_sunk_cost + self._oil_total_expenditures_post_tax)

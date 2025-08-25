@@ -48,12 +48,16 @@ cost_type_cases = {
     "all_sunkcost": [
         CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
         CostType.SUNK_COST, CostType.SUNK_COST
+    ],
+    "all_postonstream": [
+        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+        CostType.PRE_ONSTREAM_COST, CostType.POST_ONSTREAM_COST
     ]
 }
 
 tax_portion_cases = {
-    "oil": np.array([0, 0, 0, 0, 0]),
-    "gas": np.array([0, 0, 0, 0, 0]),
+    "oil": np.array([1, 1, 1, 1, 1]),
+    "gas": np.array([1, 1, 1, 1, 1]),
 }
 
 
@@ -127,17 +131,17 @@ class ExampleCase:
         self.capital_mangga = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=expense_year_cases["all_sunkcost"],
+            expense_year=expense_year_cases["oil"],
             cost=cost_cases["oil"],
             cost_allocation=cost_allocation_cases["oil"],
-            cost_type=cost_type_cases["all_sunkcost"],
+            cost_type=cost_type_cases["oil"],
             tax_portion=tax_portion_cases["oil"],
         )
 
         self.capital_apel = CapitalCost(
             start_year=2023,
             end_year=2030,
-            expense_year=expense_year_cases["all_postonstream"],
+            expense_year=expense_year_cases["gas"],
             cost=cost_cases["gas"],
             cost_allocation=cost_allocation_cases["gas"],
             cost_type=cost_type_cases["gas"],
