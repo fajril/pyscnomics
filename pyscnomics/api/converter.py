@@ -1417,6 +1417,9 @@ def convert_summary_to_dict(dict_object: dict):
         'total_carry_forward_depreciation': dict_object['total_carry_forward_depreciation'],
         'oil_carry_forward_depreciation': dict_object['oil_carry_forward_depreciation'],
         'gas_carry_forward_depreciation': dict_object['gas_carry_forward_depreciation'],
+        'total_cost_of_sales': dict_object['total_cost_of_sales'],
+        'oil_cost_of_sales': dict_object['oil_cost_of_sales'],
+        'gas_cost_of_sales': dict_object['gas_cost_of_sales'],
     }
     return summary_skk_format
 
