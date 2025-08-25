@@ -370,6 +370,11 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
     ctr_pi = 1 + ctr_pv_ratio
 
+    # Cost of Sales Indicator
+    oil_cost_of_sales = sum(contract._oil_cost_of_sales_expenditures_post_tax)
+    gas_cost_of_sales = sum(contract._gas_cost_of_sales_expenditures_post_tax)
+    total_cost_of_sales = oil_cost_of_sales + gas_cost_of_sales
+
     # Condition where the contract is Cost Recovery
     if isinstance(contract, CostRecovery):
         # Cost Recovery
@@ -456,6 +461,9 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'total_carry_forward_depreciation': total_carry_forward_depreciation,
                 'oil_carry_forward_depreciation': oil_carry_forward_depreciation,
                 'gas_carry_forward_depreciation': gas_carry_forward_depreciation,
+                'total_cost_of_sales': total_cost_of_sales,
+                'oil_cost_of_sales': oil_cost_of_sales,
+                'gas_cost_of_sales': gas_cost_of_sales,
                 }
     # Condition where the contract is Gross Split
     if isinstance(contract, GrossSplit):
@@ -541,6 +549,9 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'total_carry_forward_depreciation': total_carry_forward_depreciation,
                 'oil_carry_forward_depreciation': oil_carry_forward_depreciation,
                 'gas_carry_forward_depreciation': gas_carry_forward_depreciation,
+                'total_cost_of_sales': total_cost_of_sales,
+                'oil_cost_of_sales': oil_cost_of_sales,
+                'gas_cost_of_sales': gas_cost_of_sales,
                 }
 
     if isinstance(contract, Transition):
@@ -778,6 +789,9 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'total_indirect_taxes': total_indirect_taxes,
                 'oil_indirect_taxes': oil_indirect_taxes,
                 'gas_indirect_taxes': gas_indirect_taxes,
+                'total_cost_of_sales': total_cost_of_sales,
+                'oil_cost_of_sales': oil_cost_of_sales,
+                'gas_cost_of_sales': gas_cost_of_sales,
 
                 # Zero value for the psc terms
                 'gov_gross_share': 0,
