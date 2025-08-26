@@ -23,7 +23,7 @@ from pyscnomics.econ.costs import (
     LBT,
     CostOfSales,
 )
-np.set_printoptions(precision=2, suppress=True, linewidth=1_000)
+np.set_printoptions(precision=2, suppress=True, linewidth=200)
 # from pyscnomics.econ.results import CashFlow
 
 
@@ -103,7 +103,6 @@ class BaseProject:
     # Attributes associated with project duration
     project_duration: int = field(default=None, init=False)
     project_years: np.ndarray = field(default=None, init=False)
-    results: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes associated with lifting for each fluid types
     _oil_lifting: Lifting = field(default=None, init=False, repr=False)
@@ -313,7 +312,7 @@ class BaseProject:
     _consolidated_cost_of_sales_expenditures_pre_tax: np.ndarray = field(
         default=None, init=False, repr=False
     )
-    _consolidated_expenditures_pre_tax: np.ndarray = field(
+    _consolidated_total_expenditures_pre_tax: np.ndarray = field(
         default=None, init=False, repr=False
     )
 
@@ -331,7 +330,7 @@ class BaseProject:
     _consolidated_cost_of_sales_indirect_tax: np.ndarray = field(
         default=None, init=False, repr=False
     )
-    _consolidated_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_total_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
 
     _consolidated_capital_expenditures_post_tax: np.ndarray = field(
         default=None, init=False, repr=False
@@ -351,7 +350,7 @@ class BaseProject:
     _consolidated_cost_of_sales_expenditures_post_tax: np.ndarray = field(
         default=None, init=False, repr=False
     )
-    _consolidated_expenditures_post_tax: np.ndarray = field(
+    _consolidated_total_expenditures_post_tax: np.ndarray = field(
         default=None, init=False, repr=False
     )
 
@@ -3469,7 +3468,7 @@ class BaseProject:
                 oil_pre_tax + gas_pre_tax
             )
 
-        self._consolidated_expenditures_pre_tax = (
+        self._consolidated_total_expenditures_pre_tax = (
             self._oil_total_expenditures_pre_tax + self._gas_total_expenditures_pre_tax
         )
 
@@ -3483,7 +3482,7 @@ class BaseProject:
                 oil_indirect_tax + gas_indirect_tax
             )
 
-        self._consolidated_indirect_tax = (
+        self._consolidated_total_indirect_tax = (
             self._oil_total_indirect_tax + self._gas_total_indirect_tax
         )
 
@@ -3497,7 +3496,7 @@ class BaseProject:
                 oil_post_tax + gas_post_tax
             )
 
-        self._consolidated_expenditures_post_tax = (
+        self._consolidated_total_expenditures_post_tax = (
             self._oil_total_expenditures_post_tax + self._gas_total_expenditures_post_tax
         )
 
@@ -3505,27 +3504,103 @@ class BaseProject:
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
         self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
 
-    def get_results(self):
+    def _get_results(self, attrs: tuple) -> np.ndarray:
+        """
+        Construct a 3D NumPy array of results across fluids, years, and attributes.
 
-        attrs_names = [
-            "project_years",
-            "revenue",
-            "sulfur_revenue",
-            "electricity_revenue",
-            "co2_revenue",
-            "wap",
-            "depreciable_sunkcost",
-            "non_depreciable_sunkcost",
-            "depreciable_preonstream",
-            "non_depreciable_preonstream",
-            "sunk_cost",
-            "preonstream_cost",
-        ]
+        This method aggregates oil, gas, and consolidated project attributes into a
+        single 3D results array with the shape ``(n_fluids, project_duration, n_cols)``,
+        where:
+            - ``n_fluids`` corresponds to the number of fluids (oil, gas, consolidated).
+            - ``project_duration`` is the number of years in the project.
+            - ``n_cols`` is the number of attributes provided.
 
-        attrs_by_fluid = (
-            (self.project_years, self.project_years, self.project_years),
-            (self._oil_revenue, self._gas_revenue, self._consolidated_revenue),
-            (self._sulfur_revenue, self._sulfur_revenue, self._sulfur_revenue),
+        Parameters
+        ----------
+        attrs : tuple of tuple of ndarray
+            A nested tuple structure where each inner tuple contains arrays for the
+            three fluids in the following order: ``(oil, gas, consolidated)``.
+            Each array must have shape ``(project_duration,)``.
+
+            Example
+            -------
+            attrs = (
+                (oil_revenue, gas_revenue, consolidated_revenue),
+                (oil_wap_price, gas_wap_price, consolidated_wap_price),
+                ...
+            )
+
+        Returns
+        -------
+        results : numpy.ndarray
+            A 3D array of shape ``(3, project_duration, n_cols)`` containing results
+            for all fluids and attributes:
+            - Axis 0 → fluids (0 = oil, 1 = gas, 2 = consolidated)
+            - Axis 1 → years (project timeline)
+            - Axis 2 → attributes (as passed in ``attrs``)
+        """
+
+        n_fluids = 3
+        n_cols = len(attrs)
+        results = np.full(
+            (n_fluids, self.project_duration, n_cols),
+            fill_value=np.nan, dtype=np.float64
+        )
+
+        for fluid_idx in range(n_fluids):
+            for attr_idx, attr_tuple in enumerate(attrs):
+                results[fluid_idx, :, attr_idx] = attr_tuple[fluid_idx]
+
+        return results
+
+    def get_results_lifting(self) -> np.ndarray:
+        """
+        Construct a 3D NumPy array of lifting-related results for oil, gas,
+        and consolidated fluids.
+
+        This method organizes revenues and weighted average prices (WAP)
+        into a results array with the shape
+        ``(3, project_duration, n_cols)``, where:
+            - Axis 0 → fluids (0 = oil, 1 = gas, 2 = consolidated)
+            - Axis 1 → years (project timeline)
+            - Axis 2 → attributes (defined below)
+
+        Returns
+        -------
+        results : numpy.ndarray
+            A 3D array of shape ``(3, project_duration, 6)`` containing:
+            - ``[:, :, 0]`` → project years
+            - ``[:, :, 1]`` → {fluid} revenue
+            - ``[:, :, 2]`` → sulfur revenue
+            - ``[:, :, 3]`` → electricity revenue
+            - ``[:, :, 4]`` → CO₂ revenue
+            - ``[:, :, 5]`` → {fluid} weighted average price (WAP)
+
+        Notes
+        -----
+        - The placeholder ``{fluid}`` indicates values specific to
+          oil, gas, or consolidated profiles.
+        - All arrays are expected to have the same shape
+          ``(project_duration,)``.
+        - Missing or uncalculated values are represented as ``NaN``.
+        """
+
+        attrs_lifting = (
+            (
+                self.project_years,
+                self.project_years,
+                self.project_years,
+            ),
+            (
+                self._oil_revenue,
+                self._gas_revenue,
+                self._consolidated_revenue,
+            ),
+            (
+                self._sulfur_revenue,
+                self._sulfur_revenue,
+                self._sulfur_revenue,
+            ),
             (
                 self._electricity_revenue,
                 self._electricity_revenue,
@@ -3540,6 +3615,49 @@ class BaseProject:
                 self._oil_wap_price,
                 self._gas_wap_price,
                 self._consolidated_wap_price,
+            ),
+        )
+
+        return self._get_results(attrs=attrs_lifting)
+
+    def get_results_sunk_preonstream_costs(self) -> np.ndarray:
+        """
+        Construct a 3D NumPy array of sunk and pre-onstream cost results
+        for oil, gas, and consolidated fluids.
+
+        This method organizes depreciable and non-depreciable sunk costs
+        and pre-onstream costs into a results array with the shape
+        ``(3, project_duration, n_cols)``, where:
+            - Axis 0 → fluids (0 = oil, 1 = gas, 2 = consolidated)
+            - Axis 1 → years (project timeline)
+            - Axis 2 → attributes (defined below)
+
+        Returns
+        -------
+        results : numpy.ndarray
+            A 3D array of shape ``(3, project_duration, 7)`` containing:
+            - ``[:, :, 0]`` → project years
+            - ``[:, :, 1]`` → {fluid} depreciable sunk cost
+            - ``[:, :, 2]`` → {fluid} non-depreciable sunk cost
+            - ``[:, :, 3]`` → {fluid} depreciable pre-onstream cost
+            - ``[:, :, 4]`` → {fluid} non-depreciable pre-onstream cost
+            - ``[:, :, 5]`` → {fluid} total sunk cost
+            - ``[:, :, 6]`` → {fluid} total pre-onstream cost
+
+        Notes
+        -----
+        - The placeholder ``{fluid}`` indicates values specific to
+          oil, gas, or consolidated profiles.
+        - All arrays are expected to have the same shape
+          ``(project_duration,)``.
+        - Missing or uncalculated values are represented as ``NaN``.
+        """
+
+        attrs_sp_costs = (
+            (
+                self.project_years,
+                self.project_years,
+                self.project_years,
             ),
             (
                 self._oil_depreciable_sunk_cost,
@@ -3570,21 +3688,300 @@ class BaseProject:
                 self._oil_preonstream,
                 self._gas_preonstream,
                 self._consolidated_preonstream,
-            )
+            ),
         )
 
-        n_fluids = 3
-        n_cols = len(attrs_by_fluid)
-        results = np.full(
-            (n_fluids, self.project_duration, n_cols),
-            fill_value=np.nan, dtype=np.float64
+        return self._get_results(attrs=attrs_sp_costs)
+
+    def get_results_expenditures_pre_tax(self) -> np.ndarray:
+        """
+        Construct a 3D NumPy array of pre-tax expenditures
+        for oil, gas, and consolidated fluids.
+
+        This method organizes capital, intangible, operating (opex),
+        abandonment & site restoration (ASR), land and building tax (LBT),
+        and cost of sales expenditures into a results array with the shape
+        ``(3, project_duration, n_cols)``, where:
+            - Axis 0 → fluids (0 = oil, 1 = gas, 2 = consolidated)
+            - Axis 1 → years (project timeline)
+            - Axis 2 → attributes (defined below)
+
+        Returns
+        -------
+        results : numpy.ndarray
+            A 3D array of shape ``(3, project_duration, 7)`` containing:
+            - ``[:, :, 0]`` → project years
+            - ``[:, :, 1]`` → {fluid} capital expenditures (pre-tax)
+            - ``[:, :, 2]`` → {fluid} intangible expenditures (pre-tax)
+            - ``[:, :, 3]`` → {fluid} opex expenditures (pre-tax)
+            - ``[:, :, 4]`` → {fluid} ASR expenditures (pre-tax)
+            - ``[:, :, 5]`` → {fluid} LBT expenditures (pre-tax)
+            - ``[:, :, 6]`` → {fluid} cost of sales expenditures (pre-tax)
+
+        Notes
+        -----
+        - The placeholder ``{fluid}`` indicates values specific to
+          oil, gas, or consolidated profiles.
+        - All arrays are expected to have the same shape
+          ``(project_duration,)``.
+        - Missing or uncalculated values are represented as ``NaN``.
+        """
+
+        attrs_pre_tax = (
+            (
+                self.project_years,
+                self.project_years,
+                self.project_years,
+            ),
+            (
+                self._oil_capital_expenditures_pre_tax,
+                self._gas_capital_expenditures_pre_tax,
+                self._consolidated_capital_expenditures_pre_tax,
+            ),
+            (
+                self._oil_intangible_expenditures_pre_tax,
+                self._gas_intangible_expenditures_pre_tax,
+                self._consolidated_intangible_expenditures_pre_tax,
+            ),
+            (
+                self._oil_opex_expenditures_pre_tax,
+                self._gas_opex_expenditures_pre_tax,
+                self._consolidated_opex_expenditures_pre_tax,
+            ),
+            (
+                self._oil_asr_expenditures_pre_tax,
+                self._gas_asr_expenditures_pre_tax,
+                self._consolidated_asr_expenditures_pre_tax,
+            ),
+            (
+                self._oil_lbt_expenditures_pre_tax,
+                self._gas_lbt_expenditures_pre_tax,
+                self._consolidated_lbt_expenditures_pre_tax,
+            ),
+            (
+                self._oil_cost_of_sales_expenditures_pre_tax,
+                self._gas_cost_of_sales_expenditures_pre_tax,
+                self._consolidated_cost_of_sales_expenditures_pre_tax,
+            ),
         )
 
-        for fluid_idx in range(n_fluids):
-            for attr_idx, attr_tuple in enumerate(attrs_by_fluid):
-                results[fluid_idx, :, attr_idx] = attr_tuple[fluid_idx]
+        return self._get_results(attrs=attrs_pre_tax)
 
-        return results
+    def get_results_indirect_tax(self) -> np.ndarray:
+        """
+        Construct a 3D NumPy array of indirect taxes
+        for oil, gas, and consolidated fluids.
+
+        This method organizes capital, intangible, operating (opex),
+        abandonment & site restoration (ASR), land and building tax (LBT),
+        and cost of sales indirect tax into a results array with the shape
+        ``(3, project_duration, n_cols)``, where:
+            - Axis 0 → fluids (0 = oil, 1 = gas, 2 = consolidated)
+            - Axis 1 → years (project timeline)
+            - Axis 2 → attributes (defined below)
+
+        Returns
+        -------
+        results : numpy.ndarray
+            A 3D array of shape ``(3, project_duration, 7)`` containing:
+            - ``[:, :, 0]`` → project years
+            - ``[:, :, 1]`` → {fluid} capital indirect tax
+            - ``[:, :, 2]`` → {fluid} intangible indirect tax
+            - ``[:, :, 3]`` → {fluid} opex indirect tax
+            - ``[:, :, 4]`` → {fluid} ASR indirect tax
+            - ``[:, :, 5]`` → {fluid} LBT indirect tax
+            - ``[:, :, 6]`` → {fluid} cost of sales indirect tax
+
+        Notes
+        -----
+        - The placeholder ``{fluid}`` indicates values specific to
+          oil, gas, or consolidated profiles.
+        - All arrays are expected to have the same shape
+          ``(project_duration,)``.
+        - Missing or uncalculated values are represented as ``NaN``.
+        """
+
+        attrs_indirect_tax = (
+            (
+                self.project_years,
+                self.project_years,
+                self.project_years,
+            ),
+            (
+                self._oil_capital_indirect_tax,
+                self._gas_capital_indirect_tax,
+                self._consolidated_capital_indirect_tax,
+            ),
+            (
+                self._oil_intangible_indirect_tax,
+                self._gas_intangible_indirect_tax,
+                self._consolidated_intangible_indirect_tax,
+            ),
+            (
+                self._oil_opex_indirect_tax,
+                self._gas_opex_indirect_tax,
+                self._consolidated_opex_indirect_tax,
+            ),
+            (
+                self._oil_asr_indirect_tax,
+                self._gas_asr_indirect_tax,
+                self._consolidated_asr_indirect_tax,
+            ),
+            (
+                self._oil_lbt_indirect_tax,
+                self._gas_lbt_indirect_tax,
+                self._consolidated_lbt_indirect_tax,
+            ),
+            (
+                self._oil_cost_of_sales_indirect_tax,
+                self._gas_cost_of_sales_indirect_tax,
+                self._consolidated_cost_of_sales_indirect_tax,
+            ),
+        )
+
+        return self._get_results(attrs=attrs_indirect_tax)
+
+    def get_results_expenditures_post_tax(self) -> np.ndarray:
+        """
+        Construct a 3D NumPy array of post-tax expenditures
+        for oil, gas, and consolidated fluids.
+
+        This method organizes capital, intangible, operating (opex),
+        abandonment & site restoration (ASR), land and building tax (LBT),
+        and cost of sales post-tax expenditures into a results array
+        with the shape ``(3, project_duration, n_cols)``, where:
+            - Axis 0 → fluids (0 = oil, 1 = gas, 2 = consolidated)
+            - Axis 1 → years (project timeline)
+            - Axis 2 → attributes (defined below)
+
+        Returns
+        -------
+        results : numpy.ndarray
+            A 3D array of shape ``(3, project_duration, 7)`` containing:
+            - ``[:, :, 0]`` → project years
+            - ``[:, :, 1]`` → {fluid} capital expenditures post tax
+            - ``[:, :, 2]`` → {fluid} intangible expenditures post tax
+            - ``[:, :, 3]`` → {fluid} opex expenditures post tax
+            - ``[:, :, 4]`` → {fluid} ASR expenditures post tax
+            - ``[:, :, 5]`` → {fluid} LBT expenditures post tax
+            - ``[:, :, 6]`` → {fluid} cost of sales expenditures post tax
+
+        Notes
+        -----
+        - The placeholder ``{fluid}`` indicates values specific to
+          oil, gas, or consolidated profiles.
+        - All arrays are expected to have the same shape
+          ``(project_duration,)``.
+        - Missing or uncalculated values are represented as ``NaN``.
+        """
+
+        attrs_post_tax = (
+            (
+                self.project_years,
+                self.project_years,
+                self.project_years,
+            ),
+            (
+                self._oil_capital_expenditures_post_tax,
+                self._gas_capital_expenditures_post_tax,
+                self._consolidated_capital_expenditures_post_tax,
+            ),
+            (
+                self._oil_intangible_expenditures_post_tax,
+                self._gas_intangible_expenditures_post_tax,
+                self._consolidated_intangible_expenditures_post_tax,
+            ),
+            (
+                self._oil_opex_expenditures_post_tax,
+                self._gas_opex_expenditures_post_tax,
+                self._consolidated_opex_expenditures_post_tax,
+            ),
+            (
+                self._oil_asr_expenditures_post_tax,
+                self._gas_asr_expenditures_post_tax,
+                self._consolidated_asr_expenditures_post_tax,
+            ),
+            (
+                self._oil_lbt_expenditures_post_tax,
+                self._gas_lbt_expenditures_post_tax,
+                self._consolidated_lbt_expenditures_post_tax,
+            ),
+            (
+                self._oil_cost_of_sales_expenditures_post_tax,
+                self._gas_cost_of_sales_expenditures_post_tax,
+                self._consolidated_cost_of_sales_expenditures_post_tax,
+            ),
+        )
+
+        return self._get_results(attrs=attrs_post_tax)
+
+    def get_results_cashflow(self) -> np.ndarray:
+        """
+        Construct a 3D NumPy array of cashflow results
+        for oil, gas, and consolidated fluids.
+
+        This method aggregates pre-tax expenditures, indirect tax,
+        post-tax expenditures, non-capital components, and cashflow
+        into a structured results array with the shape
+        ``(3, project_duration, n_cols)``, where:
+            - Axis 0 → fluids (0 = oil, 1 = gas, 2 = consolidated)
+            - Axis 1 → years (project timeline)
+            - Axis 2 → attributes (defined below)
+
+        Returns
+        -------
+        results : numpy.ndarray
+            A 3D array of shape ``(3, project_duration, 6)`` containing:
+            - ``[:, :, 0]`` → project years
+            - ``[:, :, 1]`` → {fluid} total expenditures pre tax
+            - ``[:, :, 2]`` → {fluid} total indirect tax
+            - ``[:, :, 3]`` → {fluid} total expenditures post tax
+            - ``[:, :, 4]`` → {fluid} non capital
+            - ``[:, :, 5]`` → {fluid} cashflow
+
+        Notes
+        -----
+        - The placeholder ``{fluid}`` indicates values specific to
+          oil, gas, or consolidated profiles.
+        - All arrays are expected to have the same shape
+          ``(project_duration,)``.
+        - Missing or uncalculated values are represented as ``NaN``.
+        """
+
+        attrs_cashflow = (
+            (
+                self.project_years,
+                self.project_years,
+                self.project_years,
+            ),
+            (
+                self._oil_total_expenditures_pre_tax,
+                self._gas_total_expenditures_pre_tax,
+                self._consolidated_total_expenditures_pre_tax,
+            ),
+            (
+                self._oil_total_indirect_tax,
+                self._gas_total_indirect_tax,
+                self._consolidated_total_indirect_tax,
+            ),
+            (
+                self._oil_total_expenditures_post_tax,
+                self._gas_total_expenditures_post_tax,
+                self._consolidated_total_expenditures_post_tax,
+            ),
+            (
+                self._oil_non_capital,
+                self._gas_non_capital,
+                self._consolidated_non_capital,
+            ),
+            (
+                self._oil_cashflow,
+                self._gas_cashflow,
+                self._consolidated_cashflow,
+            ),
+        )
+
+        return self._get_results(attrs=attrs_cashflow)
 
     def run(
         self,
@@ -3741,14 +4138,6 @@ class BaseProject:
 
         # Prepare consolidated profiles
         self._get_consolidated_profiles()
-
-        # Display results
-        self.results = self.get_results()
-
-        print('\t')
-        print(f'Filetype: {type(self.results)}')
-        print(f'Length: {len(self.results)}')
-        print('results = \n', self.results)
 
     def __len__(self):
         return self.project_duration
