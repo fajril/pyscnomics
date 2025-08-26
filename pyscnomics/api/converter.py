@@ -119,10 +119,6 @@ class CostRecoveryBM(BaseModel):
         The gas Domestic Market Obligation (DMO) fee portion.
     gas_dmo_holiday_duration: float
         The gas Domestic Market Obligation (DMO) Holiday duration.
-    oil_carry_forward_depreciation
-        The oil carry forward depreciation.
-    gas_carry_forward_depreciation
-        The gas carry forward depreciation.
     """
     oil_ftp_is_available: bool = True
     oil_ftp_is_shared: bool = True
@@ -146,8 +142,6 @@ class CostRecoveryBM(BaseModel):
     gas_dmo_volume_portion: float | int | list[float] = 0.25
     gas_dmo_fee_portion: float | int | list[float] = 1
     gas_dmo_holiday_duration: float | int = 60
-    oil_carry_forward_depreciation: float | int | list[float] = 0.0
-    gas_carry_forward_depreciation: float | int | list[float] = 0.0
 
 
 class GrossSplitBM(BaseModel):
@@ -205,10 +199,6 @@ class GrossSplitBM(BaseModel):
         The gas Domestic Market Obligation (DMO) fee portion.
     gas_dmo_holiday_duration: float
         The gas Domestic Market Obligation (DMO) Holiday duration.
-    oil_carry_forward_depreciation
-        The oil carry forward depreciation.
-    gas_carry_forward_depreciation
-        The gas carry forward depreciation.
 
     """
     field_status: str = Field(default=None)
@@ -231,8 +221,6 @@ class GrossSplitBM(BaseModel):
     gas_dmo_volume_portion: float | int | list[float] = 1.0
     gas_dmo_fee_portion: float | int | list[float] = 1.0
     gas_dmo_holiday_duration: float | int = 60
-    oil_carry_forward_depreciation: float | int | list[float] = 0.0
-    gas_carry_forward_depreciation: float | int | list[float] = 0.0
 
 
 class ContractArgumentsBM(BaseModel):
@@ -1414,22 +1402,8 @@ def convert_summary_to_dict(dict_object: dict):
         'total_indirect_taxes': dict_object['total_indirect_taxes'],
         'oil_indirect_taxes': dict_object['oil_indirect_taxes'],
         'gas_indirect_taxes': dict_object['gas_indirect_taxes'],
-        'total_carry_forward_depreciation': dict_object['total_carry_forward_depreciation'],
-        'oil_carry_forward_depreciation': dict_object['oil_carry_forward_depreciation'],
-        'gas_carry_forward_depreciation': dict_object['gas_carry_forward_depreciation'],
-        'total_cost_of_sales': dict_object['total_cost_of_sales'],
-        'oil_cost_of_sales': dict_object['oil_cost_of_sales'],
-        'gas_cost_of_sales': dict_object['gas_cost_of_sales'],
-        'oil_capital_vat': dict_object['oil_capital_vat'],
-        'oil_intangible_vat': dict_object['oil_intangible_vat'],
-        'oil_opex_vat': dict_object['oil_opex_vat'],
-        'oil_asr_vat': dict_object['oil_asr_vat'],
-        'oil_lbt_vat': dict_object['oil_lbt_vat'],
-        'gas_capital_vat': dict_object['gas_capital_vat'],
-        'gas_intangible_vat': dict_object['gas_intangible_vat'],
-        'gas_opex_vat': dict_object['gas_opex_vat'],
-        'gas_asr_vat': dict_object['gas_asr_vat'],
-        'gas_lbt_vat': dict_object['gas_lbt_vat'],
+
+
     }
     return summary_skk_format
 

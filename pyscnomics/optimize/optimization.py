@@ -533,10 +533,7 @@ def adjust_cost_element(
             oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
             gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
             gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
-            gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration,
-            oil_carry_forward_depreciation=contract.oil_carry_forward_depreciation,
-            gas_carry_forward_depreciation=contract.gas_carry_forward_depreciation,
-        )
+            gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration, )
 
     # When the contract is GrossSplit, parsing back the adjusted cost elements to the gross split contract
     elif isinstance(contract, GrossSplit):
@@ -570,10 +567,7 @@ def adjust_cost_element(
             oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
             gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
             gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
-            gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration,
-            oil_carry_forward_depreciation=contract.oil_carry_forward_depreciation,
-            gas_carry_forward_depreciation=contract.gas_carry_forward_depreciation,
-        )
+            gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration, )
 
     # When the contract is not recognized, raise an exception
     else:
