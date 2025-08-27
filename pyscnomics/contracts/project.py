@@ -3531,7 +3531,39 @@ class BaseProject:
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
         self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
 
-    def _get_attrs_for_results(self):
+    def _get_attrs_for_results(self) -> dict:
+        """
+        Collects and organizes project attributes for oil, gas, and consolidated results.
+
+        This method groups key economic and financial attributes (revenues, expenditures,
+        sunk costs, indirect taxes, cashflows, etc.) for oil, gas, and consolidated
+        reporting into structured dictionaries. It also extracts and stores the
+        attribute names as strings for reference.
+
+        Returns
+        -------
+        dict
+            A dictionary with the following structure:
+
+            - "attributes" : dict
+                Keys are "oil", "gas", and "consolidated". Each key maps to a list of
+                attribute values (NumPy arrays or scalars) representing project results.
+
+            - "names" : dict
+                Keys are "oil", "gas", and "consolidated". Each key maps to a list of
+                strings containing the attribute names corresponding to the values in
+                the `"attributes"` dictionary.
+
+        Notes
+        -----
+        - Attributes include revenue, weighted average price (WAP), sunk costs
+          (depreciable and non-depreciable), pre-onstream costs, expenditures
+          (pre-tax and post-tax), indirect taxes, non-capital items, and cashflows.
+        - The `"names"` dictionary is built dynamically by matching the instance's
+          attribute references (`self.<attribute>`) with their names.
+        - This method is primarily intended to support result extraction and
+          DataFrame/array construction for reporting.
+        """
 
         # Specify oil attributes
         oil_attrs = [
@@ -3664,7 +3696,7 @@ class BaseProject:
             "consolidated": consolidated_attrs,
         }
 
-        # Extract attributes' names and store them as a dictionary
+        # Extract attributes names and store them as a dictionary
         attrs_name = {
             key: [_get_attr_name(instance=self, value=val) for val in values]
             for key, values in attrs.items()
@@ -3676,13 +3708,37 @@ class BaseProject:
         }
 
     def _prepare_results(self) -> np.ndarray:
+        """
+        Prepares structured result tables for oil, gas, and consolidated
+        project attributes.
+
+        This method converts project attributes (collected via `_get_attrs_for_results`)
+        into aligned tabular structures. It validates consistency across fluid types,
+        organizes the attributes into a 3D NumPy array, and finally converts them into
+        Pandas DataFrames for each fluid type.
+
+        Returns
+        -------
+        dict of {str: pandas.DataFrame}
+            A dictionary where keys are "oil", "gas", and "consolidated".
+            Each value is a DataFrame of shape `(project_duration, n_cols)` containing:
+            - Rows : Project years
+            - Columns : Attribute names (e.g., revenue, sunk costs, expenditures, cashflow)
+
+        Notes
+        -----
+        - Internally constructs a 3D NumPy array of shape `(3, project_duration, n_cols)`,
+          where dimension 0 corresponds to fluid types ("oil", "gas", "consolidated").
+        - Uses `np.nan` as the default fill value to ensure numerical consistency.
+        - Column labels in the resulting DataFrames are derived from attribute names
+          returned by `_get_attrs_for_results()`.
+        """
 
         # Define attributes and names of the attributes
         attrs = self._get_attrs_for_results()
         attributes = attrs["attributes"]
         names = attrs["names"]
 
-        # Create a 3D NumPy array to store calculation results
         fluids = ["oil", "gas", "consolidated"]
 
         # Ensure consistency
@@ -3690,6 +3746,7 @@ class BaseProject:
         if np.unique(lengths).size != 1:
             raise BaseProjectException("Mismatch in attribute lengths across fluids")
 
+        # Create a 3D NumPy array to store calculation results
         n_cols = lengths[0]
         results = np.full(
             (len(fluids), self.project_duration, n_cols),
@@ -3706,6 +3763,32 @@ class BaseProject:
         }
 
     def get_results(self, chunk_size: int, ftype: str):
+        """
+        Print calculation results for a specified fluid type in chunks.
+
+        This method retrieves the prepared results for the given fluid type and
+        prints them in column-wise chunks to improve readability, especially when
+        the number of columns is large.
+
+        Parameters
+        ----------
+        chunk_size : int
+            The number of columns to display in each printed chunk.
+        ftype : str
+            The fluid type to display results for. Must be one of:
+            {"oil", "gas", "consolidated"}.
+
+        Returns
+        -------
+        None
+            The method prints the results to the console and does not return any value.
+
+        Raises
+        ------
+        KeyError
+            If `ftype` is not one of {"oil", "gas", "consolidated"}.
+        """
+
         df_map = self._prepare_results()
 
         def _prepare_print(chunk_size: int, df: pd.DataFrame):
@@ -3715,11 +3798,7 @@ class BaseProject:
                 print(f"\nColumns {i + 1} to {min(i + chunk_size, len(cols))}:")
                 print(df[cols[i:i + chunk_size]])
 
-        return {
-            "oil": _prepare_print(chunk_size=chunk_size, df=df_map["oil"]),
-            "gas": None,
-            "consolidated": None,
-        }[ftype]
+        _prepare_print(chunk_size=chunk_size, df=df_map[ftype])
 
     def run(
         self,
@@ -3876,8 +3955,6 @@ class BaseProject:
 
         # Prepare consolidated profiles
         self._get_consolidated_profiles()
-
-        self.get_results(chunk_size=5, ftype="oil")
 
     def __len__(self):
         return self.project_duration
