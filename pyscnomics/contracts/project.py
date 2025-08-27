@@ -3,6 +3,7 @@ Configure base project as the foundation (or parent class) for PSC contract.
 """
 
 import numpy as np
+import pandas as pd
 from dataclasses import dataclass, field
 from datetime import date
 from functools import reduce
@@ -11,7 +12,6 @@ from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import (
     FluidType,
     CostType,
-    ExpendituresType,
     OtherRevenue,
     InflationAppliedTo,
 )
@@ -23,7 +23,7 @@ from pyscnomics.econ.costs import (
     LBT,
     CostOfSales,
 )
-np.set_printoptions(precision=2, suppress=True, linewidth=200)
+# np.set_printoptions(precision=2, suppress=True, linewidth=200)
 # from pyscnomics.econ.results import CashFlow
 
 
@@ -45,8 +45,14 @@ class SunkCostException(Exception):
     pass
 
 
-class PreonstreamCostException(Exception):
+class PreOnstreamException(Exception):
     """ Exception to be raised for an incorrect preonstream cost configuration """
+
+    pass
+
+
+class PostOnstreamException(Exception):
+    """ Exception to be raised for incorrect postonstream cost configurations """
 
     pass
 
@@ -2496,36 +2502,39 @@ class BaseProject:
                 f"({self._gas_cost_of_sales_preonstream.end_year})."
             )
 
-    def _validate_sunkcost(self, fluid_type: FluidType, sunkcost_objects: list) -> None:
+    def _validate_sunkcost(
+        self, fluid_type: FluidType, sunkcost_objects: list
+    ) -> None:
         """
-        Validate that sunk cost years do not exceed the onstream year.
+        Validate sunk cost years against approval and onstream year cutoffs.
 
-        This method checks whether the maximum expense year of any sunk cost
-        object occurs after the onstream year for the specified `fluid_type`.
-        If such cases are found, a `SunkCostException` is raised.
+        This method checks whether the maximum expense year of each sunk cost object
+        exceeds the earlier of the project approval year and the fluid onstream year.
+        If any violations are found, a ``SunkCostException`` is raised.
 
         Parameters
         ----------
         fluid_type : FluidType
-            The fluid type for which sunk cost validation is performed.
-            Must be either ``FluidType.OIL`` or ``FluidType.GAS``.
-
-        sunkcost_objects : list of CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales
-            A list of sunk cost objects, each containing an ``expense_year``
-            attribute from which the maximum year is extracted.
+            The type of fluid for which the validation is performed.
+            Must be ``FluidType.OIL`` or ``FluidType.GAS``.
+        sunkcost_objects : list
+            A list of sunk cost objects. Each object is expected to have
+            an ``expense_year`` attribute that can be used with ``numpy.max``.
 
         Raises
         ------
         SunkCostException
-            If any sunk cost object's maximum expense year exceeds the
-            onstream year of the given `fluid_type`.
+            If any sunk cost expense years exceed the cutoff year (the minimum of
+            project approval year and fluid onstream year).
 
         Notes
         -----
-        - The onstream year is determined by ``oil_onstream_date.year`` or
-          ``gas_onstream_date.year`` depending on the `fluid_type`.
-        - This validation ensures sunk costs are incurred only before or up
-          to the respective onstream year.
+        - The cutoff year is defined as ``min(self.approval_year, onstream_year)``.
+        - ``onstream_year`` is determined by ``fluid_type``:
+          * ``FluidType.OIL`` → ``self.oil_onstream_date.year``
+          * ``FluidType.GAS`` → ``self.gas_onstream_date.year``
+        - The method raises an exception immediately if invalid sunk cost years
+          are detected, listing all violating years.
         """
 
         onstream_yr = {
@@ -2534,13 +2543,14 @@ class BaseProject:
         }[fluid_type]
 
         sunkcost_max_years = np.array([np.max(sc.expense_year) for sc in sunkcost_objects])
-        mask = sunkcost_max_years > onstream_yr
+        cutoff_year = min(self.approval_year, onstream_yr)
+        mask = (sunkcost_max_years > cutoff_year)
 
         if np.any(mask):
             incorrect_years = sunkcost_max_years[mask]
             raise SunkCostException(
                 f"Sunk cost years ({incorrect_years}) exceed {fluid_type.name.lower()} "
-                f"onstream year ({onstream_yr})"
+                f"cutoff year ({cutoff_year})"
             )
 
     def _validate_preonstream(
@@ -2602,9 +2612,60 @@ class BaseProject:
             incorrect_years = list(
                 zip(preonstream_min_years[mask], preonstream_max_years[mask])
             )
-            raise PreonstreamCostException(
+            raise PreOnstreamException(
                 f"Preonstream years ({incorrect_years}) fall outside the allowable "
                 f"range: {self.approval_year} <= preonstream_years <= {onstream_yr}"
+            )
+
+    def _validate_postonstream(
+        self, fluid_type: FluidType, postonstream_objects: list
+    ) -> None:
+        """
+        Validate post-onstream cost years against the fluid onstream year.
+
+        This method checks whether the earliest expense year of each
+        post-onstream cost object occurs before the fluid onstream year.
+        If any violations are found, a ``PostOnstreamException`` is raised.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            The type of fluid for which the validation is performed.
+            Must be ``FluidType.OIL`` or ``FluidType.GAS``.
+        postonstream_objects : list
+            A list of post-onstream cost objects. Each object is expected
+            to have an ``expense_year`` attribute that can be used with ``numpy.min``.
+
+        Raises
+        ------
+        PostOnstreamException
+            If any post-onstream expense years occur before the
+            fluid onstream year.
+
+        Notes
+        -----
+        - ``onstream_year`` is determined by ``fluid_type``:
+          * ``FluidType.OIL`` → ``self.oil_onstream_date.year``
+          * ``FluidType.GAS`` → ``self.gas_onstream_date.year``
+        - The method raises an exception immediately if invalid post-onstream
+          years are detected, listing all violating years.
+        """
+
+        onstream_yr = {
+            FluidType.OIL: self.oil_onstream_date.year,
+            FluidType.GAS: self.gas_onstream_date.year,
+        }[fluid_type]
+
+        postonstream_min_years = np.array(
+            [np.min(po.expense_year) for po in postonstream_objects]
+        )
+        mask = (postonstream_min_years < onstream_yr)
+
+        if np.any(mask):
+            incorrect_years = postonstream_min_years[mask]
+            raise PostOnstreamException(
+                f"Postonstream cost years ({incorrect_years}) occur before "
+                f"{fluid_type.name.lower()} onstream year ({onstream_yr}) "
             )
 
     def _get_sunkcost_validation(self) -> None:
@@ -2697,6 +2758,56 @@ class BaseProject:
 
         for ftype, obj in fluid_object_map.items():
             self._validate_preonstream(fluid_type=ftype, preonstream_objects=obj)
+
+    def _get_postonstream_validation(self) -> None:
+        """
+        Validate post-onstream costs for both oil and gas.
+
+        This method gathers all post-onstream cost objects by fluid type
+        (oil and gas) and validates that their expense years do not occur
+        before the corresponding onstream year. Validation is delegated
+        to the ``_validate_postonstream`` method.
+
+        Raises
+        ------
+        PostOnstreamException
+            If any post-onstream expense years occur before the
+            fluid's onstream year.
+
+        Notes
+        -----
+        - Post-onstream cost categories checked:
+          * Capital
+          * Intangible
+          * Operating (OPEX)
+          * Abandonment & Site Restoration (ASR)
+          * Land and Building Tax (LBT)
+          * Cost of Sales
+        - For each ``FluidType`` (``OIL`` and ``GAS``), the corresponding
+          attributes are validated using ``_validate_postonstream``.
+        """
+
+        fluid_object_map = {
+            FluidType.OIL: [
+                self._oil_capital_postonstream,
+                self._oil_intangible_postonstream,
+                self._oil_opex_postonstream,
+                self._oil_asr_postonstream,
+                self._oil_lbt_postonstream,
+                self._oil_cost_of_sales_postonstream,
+            ],
+            FluidType.GAS: [
+                self._gas_capital_postonstream,
+                self._gas_intangible_postonstream,
+                self._gas_opex_postonstream,
+                self._gas_asr_postonstream,
+                self._gas_lbt_postonstream,
+                self._gas_cost_of_sales_postonstream,
+            ],
+        }
+
+        for ftype, obj in fluid_object_map.items():
+            self._validate_postonstream(fluid_type=ftype, postonstream_objects=obj)
 
     def _get_sunkcost_array(self) -> None:
         """
@@ -2868,214 +2979,124 @@ class BaseProject:
             self._gas_depreciable_preonstream + self._gas_non_depreciable_preonstream
         )
 
-    def _calc_expenditures(
+    def _calc_pre_tax_expenditures(
         self,
         target_attr: CapitalCost | Intangible | OPEX | ASR | LBT,
-        expenditures_type: ExpendituresType,
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | int | float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo | None = None,
-        tax_rate: np.ndarray | float = 0.0,
     ) -> np.ndarray:
         """
-        Calculate pre-tax or post-tax expenditures for the given target attribute, with
-        optional inflation and tax adjustments.
+        Calculate pre-tax expenditures with optional inflation adjustments.
 
-        This method calculates expenditures (either pre-tax or post-tax) for a given
-        target attribute, applying inflation rates and taxes based on the specified
-        `expenditures_type` and `inflation_rate_applied_to` parameters.
+        This method computes pre-tax expenditures for a given cost category
+        (e.g., capital, intangible, OPEX, ASR, LBT), applying inflation
+        rates conditionally based on the specified `inflation_rate_applied_to`
+        setting.
+
+        The inflation can be applied selectively to:
+        - Capital expenditures (CAPEX)
+        - Operating expenditures (OPEX)
+        - Both CAPEX and OPEX
+        - Or not applied at all
 
         Parameters
         ----------
-        target_attr : object
-            The target attribute for which expenditures are being calculated
-            (e.g., oil or gas costs).
-        expenditures_type : ExpendituresType
-            Specifies whether to calculate pre-tax or post-tax expenditures.
-            Must be one of `ExpendituresType.PRE_TAX` or `ExpendituresType.POST_TAX`.
-        year_inflation : np.ndarray, optional
-            A NumPy array of inflation rates per year. Default is None.
-        inflation_rate : np.ndarray or float, optional
-            The inflation rate applied to the expenditures. Default is 0.0.
+        target_attr : CapitalCost or Intangible or OPEX or ASR or LBT
+            The cost object representing a specific expenditure category.
+        year_inflation : numpy.ndarray, optional
+            Array of project years aligned with inflation application.
+            Default is ``None`` (no inflation applied by year).
+        inflation_rate : numpy.ndarray or int or float, default=0.0
+            Inflation rate(s) to apply. Can be a scalar (constant rate),
+            a 1D array matching `year_inflation`, or 0.0 (no inflation).
         inflation_rate_applied_to : InflationAppliedTo or None, optional
-            Specifies whether inflation applies to CAPEX, OPEX, both, or none.
-            Must be one of `InflationAppliedTo.CAPEX`, `InflationAppliedTo.OPEX`,
-            `InflationAppliedTo.CAPEX_AND_OPEX`, or `None`. Default is None.
-        tax_rate : np.ndarray or float, optional
-            The tax rate applied for post-tax expenditures. Default is 0.0.
+            Specifies where inflation is applied. Options:
+            - ``None`` : No inflation applied (default).
+            - ``InflationAppliedTo.CAPEX`` : Apply only to CAPEX-related attributes.
+            - ``InflationAppliedTo.OPEX`` : Apply only to OPEX-related attributes.
+            - ``InflationAppliedTo.CAPEX_AND_OPEX`` : Apply to both CAPEX and OPEX.
 
         Returns
         -------
-        np.ndarray
-            The calculated expenditures, either pre-tax or post-tax, depending on
-            the `expenditures_type`.
+        numpy.ndarray
+            Array of pre-tax expenditures, adjusted for inflation according
+            to the specified rules.
 
-        Notes
-        -----
-        -   The method supports applying inflation selectively to CAPEX, OPEX, or both for
-            both pre-tax and post-tax expenditures.
-        -   If inflation is applied only to CAPEX or OPEX, the other expenditure type remains
-            unaffected by inflation.
-        -   Post-tax expenditures include the impact of the specified tax rate.
+        Raises
+        ------
+        BaseProjectException
+            If `inflation_rate_applied_to` is not recognized.
         """
 
-        # For pre-tax expenditures
-        if expenditures_type == ExpendituresType.PRE_TAX:
+        # No inflation rate
+        if inflation_rate_applied_to is None:
+            return target_attr.expenditures_pre_tax(
+                year_inflation=year_inflation,
+                inflation_rate=0.0,
+            )
 
-            # No inflation rate
-            if inflation_rate_applied_to is None:
+        # Inflation rate applied to CAPEX only
+        elif inflation_rate_applied_to == InflationAppliedTo.CAPEX:
+            if (
+                target_attr is self._oil_capital_postonstream
+                or target_attr is self._gas_capital_postonstream
+                or target_attr is self._oil_intangible_postonstream
+                or target_attr is self._gas_intangible_postonstream
+            ):
+                return target_attr.expenditures_pre_tax(
+                    year_inflation=year_inflation,
+                    inflation_rate=inflation_rate,
+                )
+
+            else:
                 return target_attr.expenditures_pre_tax(
                     year_inflation=year_inflation,
                     inflation_rate=0.0,
                 )
 
-            # Inflation rate applied to CAPEX only
-            elif inflation_rate_applied_to == InflationAppliedTo.CAPEX:
-                if (
-                    target_attr is self._oil_capital_postonstream
-                    or target_attr is self._gas_capital_postonstream
-                    or target_attr is self._oil_intangible_postonstream
-                    or target_attr is self._gas_intangible_postonstream
-                ):
-                    return target_attr.expenditures_pre_tax(
-                        year_inflation=year_inflation,
-                        inflation_rate=inflation_rate,
-                    )
-
-                else:
-                    return target_attr.expenditures_pre_tax(
-                        year_inflation=year_inflation,
-                        inflation_rate=0.0,
-                    )
-
-            # Inflation rate applied to OPEX only
-            elif inflation_rate_applied_to == InflationAppliedTo.OPEX:
-                if (
-                    target_attr is self._oil_opex_postonstream
-                    or target_attr is self._gas_opex_postonstream
-                ):
-                    return target_attr.expenditures_pre_tax(
-                        year_inflation=year_inflation,
-                        inflation_rate=inflation_rate,
-                    )
-
-                else:
-                    return target_attr.expenditures_pre_tax(
-                        year_inflation=year_inflation,
-                        inflation_rate=0.0,
-                    )
-
-            # Inflation rate applied to CAPEX and OPEX
-            elif inflation_rate_applied_to == InflationAppliedTo.CAPEX_AND_OPEX:
-                if (
-                    target_attr is self._oil_capital_postonstream
-                    or target_attr is self._gas_capital_postonstream
-                    or target_attr is self._oil_intangible_postonstream
-                    or target_attr is self._gas_intangible_postonstream
-                    or target_attr is self._oil_opex_postonstream
-                    or target_attr is self._gas_opex_postonstream
-                ):
-                    return target_attr.expenditures_pre_tax(
-                        year_inflation=year_inflation,
-                        inflation_rate=inflation_rate
-                    )
-
-                else:
-                    return target_attr.expenditures_pre_tax(
-                        year_inflation=year_inflation,
-                        inflation_rate=0.0,
-                    )
-
-            else:
-                raise BaseProjectException(
-                    f"Parameter inflation_rate_applied_to is not recognized. "
-                    f"Available options are: CAPEX, OPEX, CAPEX and OPEX, or None. "
+        # Inflation rate applied to OPEX only
+        elif inflation_rate_applied_to == InflationAppliedTo.OPEX:
+            if (
+                target_attr is self._oil_opex_postonstream
+                or target_attr is self._gas_opex_postonstream
+            ):
+                return target_attr.expenditures_pre_tax(
+                    year_inflation=year_inflation,
+                    inflation_rate=inflation_rate,
                 )
 
-        # For post-tax expenditures
-        elif expenditures_type == ExpendituresType.POST_TAX:
-
-            # No inflation rate
-            if inflation_rate_applied_to is None:
-                return target_attr.expenditures_post_tax(
+            else:
+                return target_attr.expenditures_pre_tax(
                     year_inflation=year_inflation,
                     inflation_rate=0.0,
-                    tax_rate=tax_rate,
                 )
 
-            # Inflation rate applied to CAPEX only
-            elif inflation_rate_applied_to == InflationAppliedTo.CAPEX:
-                if (
-                    target_attr is self._oil_capital_postonstream
-                    or target_attr is self._gas_capital_postonstream
-                    or target_attr is self._oil_intangible_postonstream
-                    or target_attr is self._gas_intangible_postonstream
-                ):
-                    return target_attr.expenditures_post_tax(
-                        year_inflation=year_inflation,
-                        inflation_rate=inflation_rate,
-                        tax_rate=tax_rate,
-                    )
-
-                else:
-                    return target_attr.expenditures_post_tax(
-                        year_inflation=year_inflation,
-                        inflation_rate=0.0,
-                        tax_rate=tax_rate,
-                    )
-
-            # Inflation rate applied to OPEX only
-            elif inflation_rate_applied_to == InflationAppliedTo.OPEX:
-                if (
-                    target_attr is self._oil_opex_postonstream
-                    or target_attr is self._gas_opex_postonstream
-                ):
-                    return target_attr.expenditures_post_tax(
-                        year_inflation=year_inflation,
-                        inflation_rate=inflation_rate,
-                        tax_rate=tax_rate,
-                    )
-
-                else:
-                    return target_attr.expenditures_post_tax(
-                        year_inflation=year_inflation,
-                        inflation_rate=0.0,
-                        tax_rate=tax_rate,
-                    )
-
-            # Inflation rate applied to CAPEX and OPEX
-            elif inflation_rate_applied_to == InflationAppliedTo.CAPEX_AND_OPEX:
-                if (
-                    target_attr is self._oil_capital_postonstream
-                    or target_attr is self._gas_capital_postonstream
-                    or target_attr is self._oil_intangible_postonstream
-                    or target_attr is self._gas_intangible_postonstream
-                    or target_attr is self._oil_opex_postonstream
-                    or target_attr is self._gas_opex_postonstream
-                ):
-                    return target_attr.expenditures_post_tax(
-                        year_inflation=year_inflation,
-                        inflation_rate=inflation_rate,
-                        tax_rate=tax_rate,
-                    )
-
-                else:
-                    return target_attr.expenditures_post_tax(
-                        year_inflation=year_inflation,
-                        inflation_rate=0.0,
-                        tax_rate=tax_rate,
-                    )
+        # Inflation rate applied to CAPEX and OPEX
+        elif inflation_rate_applied_to == InflationAppliedTo.CAPEX_AND_OPEX:
+            if (
+                target_attr is self._oil_capital_postonstream
+                or target_attr is self._gas_capital_postonstream
+                or target_attr is self._oil_intangible_postonstream
+                or target_attr is self._gas_intangible_postonstream
+                or target_attr is self._oil_opex_postonstream
+                or target_attr is self._gas_opex_postonstream
+            ):
+                return target_attr.expenditures_pre_tax(
+                    year_inflation=year_inflation,
+                    inflation_rate=inflation_rate
+                )
 
             else:
-                raise BaseProjectException(
-                    f"Parameter inflation_rate_applied_to is not recognized. "
-                    f"Available options are: CAPEX, OPEX, CAPEX and OPEX, or None. "
+                return target_attr.expenditures_pre_tax(
+                    year_inflation=year_inflation,
+                    inflation_rate=0.0,
                 )
 
         else:
             raise BaseProjectException(
-                f"Parameter expenditures_type ({expenditures_type}) is not recognized. "
-                f"Choose between ExpendituresType.PRE_TAX or ExpendituresType.POST_TAX. "
+                f"Parameter inflation_rate_applied_to is not recognized. "
+                f"Available options are: CAPEX, OPEX, CAPEX and OPEX, or None. "
             )
 
     def _get_expenditures_pre_tax(
@@ -3125,6 +3146,9 @@ class BaseProject:
             -   `_gas_cost_of_sales_expenditures_pre_tax`
         """
 
+        # Validate OIL and GAS postonstream costs
+        self._get_postonstream_validation()
+
         # Prepare expenditures pre tax associated with capital, intangible,
         # opex, asr, and lbt costs
         (
@@ -3139,9 +3163,8 @@ class BaseProject:
             self._oil_lbt_expenditures_pre_tax,
             self._gas_lbt_expenditures_pre_tax,
         ) = [
-            self._calc_expenditures(
+            self._calc_pre_tax_expenditures(
                 target_attr=attr,
-                expenditures_type=ExpendituresType.PRE_TAX,
                 year_inflation=year_inflation,
                 inflation_rate=inflation_rate,
                 inflation_rate_applied_to=inflation_rate_applied_to,
@@ -3207,6 +3230,10 @@ class BaseProject:
             -   `_oil_cost_of_sales_indirect_tax`
             -   `_gas_cost_of_sales_indirect_tax`
         """
+
+        # Validate OIL and GAS postonstream costs
+        self._get_postonstream_validation()
+
         # Prepare indirect taxes associated with capital, intangible,
         # opex, asr, and lbt costs
         (
@@ -3504,484 +3531,195 @@ class BaseProject:
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
         self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
 
-    def _get_results(self, attrs: tuple) -> np.ndarray:
-        """
-        Construct a 3D NumPy array of results across fluids, years, and attributes.
+    def _get_attrs_for_results(self):
 
-        This method aggregates oil, gas, and consolidated project attributes into a
-        single 3D results array with the shape ``(n_fluids, project_duration, n_cols)``,
-        where:
-            - ``n_fluids`` corresponds to the number of fluids (oil, gas, consolidated).
-            - ``project_duration`` is the number of years in the project.
-            - ``n_cols`` is the number of attributes provided.
+        # Specify oil attributes
+        oil_attrs = [
+            self.project_years,
+            self._oil_revenue,
+            self._sulfur_revenue,
+            self._electricity_revenue,
+            self._co2_revenue,
+            self._oil_wap_price,
+            self._oil_depreciable_sunk_cost,
+            self._oil_non_depreciable_sunk_cost,
+            self._oil_depreciable_preonstream,
+            self._oil_non_depreciable_preonstream,
+            self._oil_sunk_cost,
+            self._oil_preonstream,
+            self._oil_capital_expenditures_pre_tax,
+            self._oil_intangible_expenditures_pre_tax,
+            self._oil_opex_expenditures_pre_tax,
+            self._oil_asr_expenditures_pre_tax,
+            self._oil_lbt_expenditures_pre_tax,
+            self._oil_cost_of_sales_expenditures_pre_tax,
+            self._oil_capital_indirect_tax,
+            self._oil_intangible_indirect_tax,
+            self._oil_opex_indirect_tax,
+            self._oil_asr_indirect_tax,
+            self._oil_lbt_indirect_tax,
+            self._oil_cost_of_sales_indirect_tax,
+            self._oil_capital_expenditures_post_tax,
+            self._oil_intangible_expenditures_post_tax,
+            self._oil_opex_expenditures_post_tax,
+            self._oil_asr_expenditures_post_tax,
+            self._oil_lbt_expenditures_post_tax,
+            self._oil_cost_of_sales_expenditures_post_tax,
+            self._oil_total_expenditures_pre_tax,
+            self._oil_total_indirect_tax,
+            self._oil_total_expenditures_post_tax,
+            self._oil_non_capital,
+            self._oil_cashflow,
+        ]
 
-        Parameters
-        ----------
-        attrs : tuple of tuple of ndarray
-            A nested tuple structure where each inner tuple contains arrays for the
-            three fluids in the following order: ``(oil, gas, consolidated)``.
-            Each array must have shape ``(project_duration,)``.
+        # Specify gas attributes
+        gas_attrs = [
+            self.project_years,
+            self._gas_revenue,
+            self._sulfur_revenue,
+            self._electricity_revenue,
+            self._co2_revenue,
+            self._gas_wap_price,
+            self._gas_depreciable_sunk_cost,
+            self._gas_non_depreciable_sunk_cost,
+            self._gas_depreciable_preonstream,
+            self._gas_non_depreciable_preonstream,
+            self._gas_sunk_cost,
+            self._gas_preonstream,
+            self._gas_capital_expenditures_pre_tax,
+            self._gas_intangible_expenditures_pre_tax,
+            self._gas_opex_expenditures_pre_tax,
+            self._gas_asr_expenditures_pre_tax,
+            self._gas_lbt_expenditures_pre_tax,
+            self._gas_cost_of_sales_expenditures_pre_tax,
+            self._gas_capital_indirect_tax,
+            self._gas_intangible_indirect_tax,
+            self._gas_opex_indirect_tax,
+            self._gas_asr_indirect_tax,
+            self._gas_lbt_indirect_tax,
+            self._gas_cost_of_sales_indirect_tax,
+            self._gas_capital_expenditures_post_tax,
+            self._gas_intangible_expenditures_post_tax,
+            self._gas_opex_expenditures_post_tax,
+            self._gas_asr_expenditures_post_tax,
+            self._gas_lbt_expenditures_post_tax,
+            self._gas_cost_of_sales_expenditures_post_tax,
+            self._gas_total_expenditures_pre_tax,
+            self._gas_total_indirect_tax,
+            self._gas_total_expenditures_post_tax,
+            self._gas_non_capital,
+            self._gas_cashflow,
+        ]
 
-            Example
-            -------
-            attrs = (
-                (oil_revenue, gas_revenue, consolidated_revenue),
-                (oil_wap_price, gas_wap_price, consolidated_wap_price),
-                ...
-            )
+        # Specify consolidated attributes
+        consolidated_attrs = [
+            self.project_years,
+            self._consolidated_revenue,
+            self._sulfur_revenue,
+            self._electricity_revenue,
+            self._co2_revenue,
+            self._consolidated_wap_price,
+            self._consolidated_depreciable_sunk_cost,
+            self._consolidated_non_depreciable_sunk_cost,
+            self._consolidated_depreciable_preonstream,
+            self._consolidated_non_depreciable_preonstream,
+            self._consolidated_sunk_cost,
+            self._consolidated_preonstream,
+            self._consolidated_capital_expenditures_pre_tax,
+            self._consolidated_intangible_expenditures_pre_tax,
+            self._consolidated_opex_expenditures_pre_tax,
+            self._consolidated_asr_expenditures_pre_tax,
+            self._consolidated_lbt_expenditures_pre_tax,
+            self._consolidated_cost_of_sales_expenditures_pre_tax,
+            self._consolidated_capital_indirect_tax,
+            self._consolidated_intangible_indirect_tax,
+            self._consolidated_opex_indirect_tax,
+            self._consolidated_asr_indirect_tax,
+            self._consolidated_lbt_indirect_tax,
+            self._consolidated_cost_of_sales_indirect_tax,
+            self._consolidated_capital_expenditures_post_tax,
+            self._consolidated_intangible_expenditures_post_tax,
+            self._consolidated_opex_expenditures_post_tax,
+            self._consolidated_asr_expenditures_post_tax,
+            self._consolidated_lbt_expenditures_post_tax,
+            self._consolidated_cost_of_sales_expenditures_post_tax,
+            self._consolidated_total_expenditures_pre_tax,
+            self._consolidated_total_indirect_tax,
+            self._consolidated_total_expenditures_post_tax,
+            self._consolidated_non_capital,
+            self._consolidated_cashflow,
+        ]
 
-        Returns
-        -------
-        results : numpy.ndarray
-            A 3D array of shape ``(3, project_duration, n_cols)`` containing results
-            for all fluids and attributes:
-            - Axis 0 → fluids (0 = oil, 1 = gas, 2 = consolidated)
-            - Axis 1 → years (project timeline)
-            - Axis 2 → attributes (as passed in ``attrs``)
-        """
+        # Funtion to extract name of the attributes as strings
+        def _get_attr_name(instance, value):
+            for name, val in vars(instance).items():
+                if val is value:
+                    return f"{name}"
+            return None
 
-        n_fluids = 3
-        n_cols = len(attrs)
+        # Store attributes as a dictionary
+        attrs = {
+            "oil": oil_attrs,
+            "gas": gas_attrs,
+            "consolidated": consolidated_attrs,
+        }
+
+        # Extract attributes' names and store them as a dictionary
+        attrs_name = {
+            key: [_get_attr_name(instance=self, value=val) for val in values]
+            for key, values in attrs.items()
+        }
+
+        return {
+            "attributes": attrs,
+            "names": attrs_name,
+        }
+
+    def _prepare_results(self) -> np.ndarray:
+
+        # Define attributes and names of the attributes
+        attrs = self._get_attrs_for_results()
+        attributes = attrs["attributes"]
+        names = attrs["names"]
+
+        # Create a 3D NumPy array to store calculation results
+        fluids = ["oil", "gas", "consolidated"]
+
+        # Ensure consistency
+        lengths = [len(attributes[f]) for f in fluids]
+        if np.unique(lengths).size != 1:
+            raise BaseProjectException("Mismatch in attribute lengths across fluids")
+
+        n_cols = lengths[0]
         results = np.full(
-            (n_fluids, self.project_duration, n_cols),
+            (len(fluids), self.project_duration, n_cols),
             fill_value=np.nan, dtype=np.float64
         )
 
-        for fluid_idx in range(n_fluids):
-            for attr_idx, attr_tuple in enumerate(attrs):
-                results[fluid_idx, :, attr_idx] = attr_tuple[fluid_idx]
+        for i, key in enumerate(["oil", "gas", "consolidated"]):
+            for idx in range(n_cols):
+                results[i, :, idx] = attributes[key][idx]
 
-        return results
+        return {
+            key: pd.DataFrame(results[i, :, :], columns=names[key])
+            for i, key in enumerate(fluids)
+        }
 
-    def get_results_lifting(self) -> np.ndarray:
-        """
-        Construct a 3D NumPy array of lifting-related results for oil, gas,
-        and consolidated fluids.
+    def get_results(self, chunk_size: int, ftype: str):
+        df_map = self._prepare_results()
 
-        This method organizes revenues and weighted average prices (WAP)
-        into a results array with the shape
-        ``(3, project_duration, n_cols)``, where:
-            - Axis 0 → fluids (0 = oil, 1 = gas, 2 = consolidated)
-            - Axis 1 → years (project timeline)
-            - Axis 2 → attributes (defined below)
+        def _prepare_print(chunk_size: int, df: pd.DataFrame):
+            cols = df.columns.tolist()
 
-        Returns
-        -------
-        results : numpy.ndarray
-            A 3D array of shape ``(3, project_duration, 6)`` containing:
-            - ``[:, :, 0]`` → project years
-            - ``[:, :, 1]`` → {fluid} revenue
-            - ``[:, :, 2]`` → sulfur revenue
-            - ``[:, :, 3]`` → electricity revenue
-            - ``[:, :, 4]`` → CO₂ revenue
-            - ``[:, :, 5]`` → {fluid} weighted average price (WAP)
+            for i in range(0, len(cols), chunk_size):
+                print(f"\nColumns {i + 1} to {min(i + chunk_size, len(cols))}:")
+                print(df[cols[i:i + chunk_size]])
 
-        Notes
-        -----
-        - The placeholder ``{fluid}`` indicates values specific to
-          oil, gas, or consolidated profiles.
-        - All arrays are expected to have the same shape
-          ``(project_duration,)``.
-        - Missing or uncalculated values are represented as ``NaN``.
-        """
-
-        attrs_lifting = (
-            (
-                self.project_years,
-                self.project_years,
-                self.project_years,
-            ),
-            (
-                self._oil_revenue,
-                self._gas_revenue,
-                self._consolidated_revenue,
-            ),
-            (
-                self._sulfur_revenue,
-                self._sulfur_revenue,
-                self._sulfur_revenue,
-            ),
-            (
-                self._electricity_revenue,
-                self._electricity_revenue,
-                self._electricity_revenue,
-            ),
-            (
-                self._co2_revenue,
-                self._co2_revenue,
-                self._co2_revenue,
-            ),
-            (
-                self._oil_wap_price,
-                self._gas_wap_price,
-                self._consolidated_wap_price,
-            ),
-        )
-
-        return self._get_results(attrs=attrs_lifting)
-
-    def get_results_sunk_preonstream_costs(self) -> np.ndarray:
-        """
-        Construct a 3D NumPy array of sunk and pre-onstream cost results
-        for oil, gas, and consolidated fluids.
-
-        This method organizes depreciable and non-depreciable sunk costs
-        and pre-onstream costs into a results array with the shape
-        ``(3, project_duration, n_cols)``, where:
-            - Axis 0 → fluids (0 = oil, 1 = gas, 2 = consolidated)
-            - Axis 1 → years (project timeline)
-            - Axis 2 → attributes (defined below)
-
-        Returns
-        -------
-        results : numpy.ndarray
-            A 3D array of shape ``(3, project_duration, 7)`` containing:
-            - ``[:, :, 0]`` → project years
-            - ``[:, :, 1]`` → {fluid} depreciable sunk cost
-            - ``[:, :, 2]`` → {fluid} non-depreciable sunk cost
-            - ``[:, :, 3]`` → {fluid} depreciable pre-onstream cost
-            - ``[:, :, 4]`` → {fluid} non-depreciable pre-onstream cost
-            - ``[:, :, 5]`` → {fluid} total sunk cost
-            - ``[:, :, 6]`` → {fluid} total pre-onstream cost
-
-        Notes
-        -----
-        - The placeholder ``{fluid}`` indicates values specific to
-          oil, gas, or consolidated profiles.
-        - All arrays are expected to have the same shape
-          ``(project_duration,)``.
-        - Missing or uncalculated values are represented as ``NaN``.
-        """
-
-        attrs_sp_costs = (
-            (
-                self.project_years,
-                self.project_years,
-                self.project_years,
-            ),
-            (
-                self._oil_depreciable_sunk_cost,
-                self._gas_depreciable_sunk_cost,
-                self._consolidated_depreciable_sunk_cost,
-            ),
-            (
-                self._oil_non_depreciable_sunk_cost,
-                self._gas_non_depreciable_sunk_cost,
-                self._consolidated_non_depreciable_sunk_cost,
-            ),
-            (
-                self._oil_depreciable_preonstream,
-                self._gas_depreciable_preonstream,
-                self._consolidated_depreciable_preonstream,
-            ),
-            (
-                self._oil_non_depreciable_preonstream,
-                self._gas_non_depreciable_preonstream,
-                self._consolidated_non_depreciable_preonstream,
-            ),
-            (
-                self._oil_sunk_cost,
-                self._gas_sunk_cost,
-                self._consolidated_sunk_cost,
-            ),
-            (
-                self._oil_preonstream,
-                self._gas_preonstream,
-                self._consolidated_preonstream,
-            ),
-        )
-
-        return self._get_results(attrs=attrs_sp_costs)
-
-    def get_results_expenditures_pre_tax(self) -> np.ndarray:
-        """
-        Construct a 3D NumPy array of pre-tax expenditures
-        for oil, gas, and consolidated fluids.
-
-        This method organizes capital, intangible, operating (opex),
-        abandonment & site restoration (ASR), land and building tax (LBT),
-        and cost of sales expenditures into a results array with the shape
-        ``(3, project_duration, n_cols)``, where:
-            - Axis 0 → fluids (0 = oil, 1 = gas, 2 = consolidated)
-            - Axis 1 → years (project timeline)
-            - Axis 2 → attributes (defined below)
-
-        Returns
-        -------
-        results : numpy.ndarray
-            A 3D array of shape ``(3, project_duration, 7)`` containing:
-            - ``[:, :, 0]`` → project years
-            - ``[:, :, 1]`` → {fluid} capital expenditures (pre-tax)
-            - ``[:, :, 2]`` → {fluid} intangible expenditures (pre-tax)
-            - ``[:, :, 3]`` → {fluid} opex expenditures (pre-tax)
-            - ``[:, :, 4]`` → {fluid} ASR expenditures (pre-tax)
-            - ``[:, :, 5]`` → {fluid} LBT expenditures (pre-tax)
-            - ``[:, :, 6]`` → {fluid} cost of sales expenditures (pre-tax)
-
-        Notes
-        -----
-        - The placeholder ``{fluid}`` indicates values specific to
-          oil, gas, or consolidated profiles.
-        - All arrays are expected to have the same shape
-          ``(project_duration,)``.
-        - Missing or uncalculated values are represented as ``NaN``.
-        """
-
-        attrs_pre_tax = (
-            (
-                self.project_years,
-                self.project_years,
-                self.project_years,
-            ),
-            (
-                self._oil_capital_expenditures_pre_tax,
-                self._gas_capital_expenditures_pre_tax,
-                self._consolidated_capital_expenditures_pre_tax,
-            ),
-            (
-                self._oil_intangible_expenditures_pre_tax,
-                self._gas_intangible_expenditures_pre_tax,
-                self._consolidated_intangible_expenditures_pre_tax,
-            ),
-            (
-                self._oil_opex_expenditures_pre_tax,
-                self._gas_opex_expenditures_pre_tax,
-                self._consolidated_opex_expenditures_pre_tax,
-            ),
-            (
-                self._oil_asr_expenditures_pre_tax,
-                self._gas_asr_expenditures_pre_tax,
-                self._consolidated_asr_expenditures_pre_tax,
-            ),
-            (
-                self._oil_lbt_expenditures_pre_tax,
-                self._gas_lbt_expenditures_pre_tax,
-                self._consolidated_lbt_expenditures_pre_tax,
-            ),
-            (
-                self._oil_cost_of_sales_expenditures_pre_tax,
-                self._gas_cost_of_sales_expenditures_pre_tax,
-                self._consolidated_cost_of_sales_expenditures_pre_tax,
-            ),
-        )
-
-        return self._get_results(attrs=attrs_pre_tax)
-
-    def get_results_indirect_tax(self) -> np.ndarray:
-        """
-        Construct a 3D NumPy array of indirect taxes
-        for oil, gas, and consolidated fluids.
-
-        This method organizes capital, intangible, operating (opex),
-        abandonment & site restoration (ASR), land and building tax (LBT),
-        and cost of sales indirect tax into a results array with the shape
-        ``(3, project_duration, n_cols)``, where:
-            - Axis 0 → fluids (0 = oil, 1 = gas, 2 = consolidated)
-            - Axis 1 → years (project timeline)
-            - Axis 2 → attributes (defined below)
-
-        Returns
-        -------
-        results : numpy.ndarray
-            A 3D array of shape ``(3, project_duration, 7)`` containing:
-            - ``[:, :, 0]`` → project years
-            - ``[:, :, 1]`` → {fluid} capital indirect tax
-            - ``[:, :, 2]`` → {fluid} intangible indirect tax
-            - ``[:, :, 3]`` → {fluid} opex indirect tax
-            - ``[:, :, 4]`` → {fluid} ASR indirect tax
-            - ``[:, :, 5]`` → {fluid} LBT indirect tax
-            - ``[:, :, 6]`` → {fluid} cost of sales indirect tax
-
-        Notes
-        -----
-        - The placeholder ``{fluid}`` indicates values specific to
-          oil, gas, or consolidated profiles.
-        - All arrays are expected to have the same shape
-          ``(project_duration,)``.
-        - Missing or uncalculated values are represented as ``NaN``.
-        """
-
-        attrs_indirect_tax = (
-            (
-                self.project_years,
-                self.project_years,
-                self.project_years,
-            ),
-            (
-                self._oil_capital_indirect_tax,
-                self._gas_capital_indirect_tax,
-                self._consolidated_capital_indirect_tax,
-            ),
-            (
-                self._oil_intangible_indirect_tax,
-                self._gas_intangible_indirect_tax,
-                self._consolidated_intangible_indirect_tax,
-            ),
-            (
-                self._oil_opex_indirect_tax,
-                self._gas_opex_indirect_tax,
-                self._consolidated_opex_indirect_tax,
-            ),
-            (
-                self._oil_asr_indirect_tax,
-                self._gas_asr_indirect_tax,
-                self._consolidated_asr_indirect_tax,
-            ),
-            (
-                self._oil_lbt_indirect_tax,
-                self._gas_lbt_indirect_tax,
-                self._consolidated_lbt_indirect_tax,
-            ),
-            (
-                self._oil_cost_of_sales_indirect_tax,
-                self._gas_cost_of_sales_indirect_tax,
-                self._consolidated_cost_of_sales_indirect_tax,
-            ),
-        )
-
-        return self._get_results(attrs=attrs_indirect_tax)
-
-    def get_results_expenditures_post_tax(self) -> np.ndarray:
-        """
-        Construct a 3D NumPy array of post-tax expenditures
-        for oil, gas, and consolidated fluids.
-
-        This method organizes capital, intangible, operating (opex),
-        abandonment & site restoration (ASR), land and building tax (LBT),
-        and cost of sales post-tax expenditures into a results array
-        with the shape ``(3, project_duration, n_cols)``, where:
-            - Axis 0 → fluids (0 = oil, 1 = gas, 2 = consolidated)
-            - Axis 1 → years (project timeline)
-            - Axis 2 → attributes (defined below)
-
-        Returns
-        -------
-        results : numpy.ndarray
-            A 3D array of shape ``(3, project_duration, 7)`` containing:
-            - ``[:, :, 0]`` → project years
-            - ``[:, :, 1]`` → {fluid} capital expenditures post tax
-            - ``[:, :, 2]`` → {fluid} intangible expenditures post tax
-            - ``[:, :, 3]`` → {fluid} opex expenditures post tax
-            - ``[:, :, 4]`` → {fluid} ASR expenditures post tax
-            - ``[:, :, 5]`` → {fluid} LBT expenditures post tax
-            - ``[:, :, 6]`` → {fluid} cost of sales expenditures post tax
-
-        Notes
-        -----
-        - The placeholder ``{fluid}`` indicates values specific to
-          oil, gas, or consolidated profiles.
-        - All arrays are expected to have the same shape
-          ``(project_duration,)``.
-        - Missing or uncalculated values are represented as ``NaN``.
-        """
-
-        attrs_post_tax = (
-            (
-                self.project_years,
-                self.project_years,
-                self.project_years,
-            ),
-            (
-                self._oil_capital_expenditures_post_tax,
-                self._gas_capital_expenditures_post_tax,
-                self._consolidated_capital_expenditures_post_tax,
-            ),
-            (
-                self._oil_intangible_expenditures_post_tax,
-                self._gas_intangible_expenditures_post_tax,
-                self._consolidated_intangible_expenditures_post_tax,
-            ),
-            (
-                self._oil_opex_expenditures_post_tax,
-                self._gas_opex_expenditures_post_tax,
-                self._consolidated_opex_expenditures_post_tax,
-            ),
-            (
-                self._oil_asr_expenditures_post_tax,
-                self._gas_asr_expenditures_post_tax,
-                self._consolidated_asr_expenditures_post_tax,
-            ),
-            (
-                self._oil_lbt_expenditures_post_tax,
-                self._gas_lbt_expenditures_post_tax,
-                self._consolidated_lbt_expenditures_post_tax,
-            ),
-            (
-                self._oil_cost_of_sales_expenditures_post_tax,
-                self._gas_cost_of_sales_expenditures_post_tax,
-                self._consolidated_cost_of_sales_expenditures_post_tax,
-            ),
-        )
-
-        return self._get_results(attrs=attrs_post_tax)
-
-    def get_results_cashflow(self) -> np.ndarray:
-        """
-        Construct a 3D NumPy array of cashflow results
-        for oil, gas, and consolidated fluids.
-
-        This method aggregates pre-tax expenditures, indirect tax,
-        post-tax expenditures, non-capital components, and cashflow
-        into a structured results array with the shape
-        ``(3, project_duration, n_cols)``, where:
-            - Axis 0 → fluids (0 = oil, 1 = gas, 2 = consolidated)
-            - Axis 1 → years (project timeline)
-            - Axis 2 → attributes (defined below)
-
-        Returns
-        -------
-        results : numpy.ndarray
-            A 3D array of shape ``(3, project_duration, 6)`` containing:
-            - ``[:, :, 0]`` → project years
-            - ``[:, :, 1]`` → {fluid} total expenditures pre tax
-            - ``[:, :, 2]`` → {fluid} total indirect tax
-            - ``[:, :, 3]`` → {fluid} total expenditures post tax
-            - ``[:, :, 4]`` → {fluid} non capital
-            - ``[:, :, 5]`` → {fluid} cashflow
-
-        Notes
-        -----
-        - The placeholder ``{fluid}`` indicates values specific to
-          oil, gas, or consolidated profiles.
-        - All arrays are expected to have the same shape
-          ``(project_duration,)``.
-        - Missing or uncalculated values are represented as ``NaN``.
-        """
-
-        attrs_cashflow = (
-            (
-                self.project_years,
-                self.project_years,
-                self.project_years,
-            ),
-            (
-                self._oil_total_expenditures_pre_tax,
-                self._gas_total_expenditures_pre_tax,
-                self._consolidated_total_expenditures_pre_tax,
-            ),
-            (
-                self._oil_total_indirect_tax,
-                self._gas_total_indirect_tax,
-                self._consolidated_total_indirect_tax,
-            ),
-            (
-                self._oil_total_expenditures_post_tax,
-                self._gas_total_expenditures_post_tax,
-                self._consolidated_total_expenditures_post_tax,
-            ),
-            (
-                self._oil_non_capital,
-                self._gas_non_capital,
-                self._consolidated_non_capital,
-            ),
-            (
-                self._oil_cashflow,
-                self._gas_cashflow,
-                self._consolidated_cashflow,
-            ),
-        )
-
-        return self._get_results(attrs=attrs_cashflow)
+        return {
+            "oil": _prepare_print(chunk_size=chunk_size, df=df_map["oil"]),
+            "gas": None,
+            "consolidated": None,
+        }[ftype]
 
     def run(
         self,
@@ -4138,6 +3876,8 @@ class BaseProject:
 
         # Prepare consolidated profiles
         self._get_consolidated_profiles()
+
+        self.get_results(chunk_size=5, ftype="oil")
 
     def __len__(self):
         return self.project_duration
