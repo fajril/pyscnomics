@@ -276,7 +276,8 @@ class Lifting:
 
     def _get_array(self, target_param: np.ndarray) -> np.ndarray:
         """
-        Aggregates and aligns `target_param` values with the corresponding production years.
+        Aggregates and aligns `target_param` values with the corresponding
+        production years.
 
         This function uses `np.bincount` to sum the values in `target_param` based on
         their associated production year (relative to the project's start year).

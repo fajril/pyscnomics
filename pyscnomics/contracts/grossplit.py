@@ -356,7 +356,7 @@ class GrossSplit(BaseProject):
     def _check_cum_production_split_offset(
         self,
         cum_production_split_offset: float | np.ndarray | None,
-    ):
+    ) -> None:
         """
         Validate the cumulative production split offset.
 
@@ -1299,13 +1299,6 @@ class GrossSplit(BaseProject):
         self._get_sunkcost_array()
         self._get_preonstream_array()
 
-        results = self.get_results_sunk_preonstream_costs()
-
-        print('\t')
-        print(f'Filetype: {type(results)}')
-        print(f'Length: {len(results)}')
-        print('results = \n', results)
-
         # Calculate pre tax expenditures
         self._get_expenditures_pre_tax(
             year_inflation=year_inflation,
@@ -1386,25 +1379,27 @@ class GrossSplit(BaseProject):
             + self._gas_cost_of_sales_expenditures_post_tax
         )
 
+        # Non-capital costs (intangible + opex + asr + lbt + cost of sales)
+        self._oil_non_capital = (
+            self._oil_intangible_expenditures_post_tax
+            + self._oil_opex_expenditures_post_tax
+            + self._oil_asr_expenditures_post_tax
+            + self._oil_lbt_expenditures_post_tax
+            + self._oil_cost_of_sales_expenditures_post_tax
+        )
 
-        # # Total indirect taxes for OIL and GAS
-        # self._oil_total_indirect_tax = (
-        #         self._oil_capital_indirect_tax
-        #         + self._oil_intangible_indirect_tax
-        #         + self._oil_opex_indirect_tax
-        #         + self._oil_asr_indirect_tax
-        #         + self._oil_lbt_indirect_tax
-        #         + self._oil_cost_of_sales_indirect_tax
-        # )
-        #
-        # self._gas_total_indirect_tax = (
-        #         self._gas_capital_indirect_tax
-        #         + self._gas_intangible_indirect_tax
-        #         + self._gas_opex_indirect_tax
-        #         + self._gas_asr_indirect_tax
-        #         + self._gas_lbt_indirect_tax
-        #         + self._gas_cost_of_sales_indirect_tax
-        # )
+        self._gas_non_capital = (
+            self._gas_intangible_expenditures_post_tax
+            + self._gas_opex_expenditures_post_tax
+            + self._gas_asr_expenditures_post_tax
+            + self._gas_lbt_expenditures_post_tax
+            + self._gas_cost_of_sales_expenditures_post_tax
+        )
+
+        print('\t')
+        print(f'Filetype: {type(self._gas_total_expenditures_post_tax)}')
+        print(f'Length: {len(self._gas_total_expenditures_post_tax)}')
+        print('_gas_total_expenditures_post_tax = \n', self._gas_total_expenditures_post_tax)
 
         # # Depreciation (tangible cost)
         # (
@@ -1449,21 +1444,6 @@ class GrossSplit(BaseProject):
         # self._oil_depreciation = self._oil_depreciation + self._oil_carry_forward_depreciation
         # self._gas_depreciation = self._gas_depreciation + self._gas_carry_forward_depreciation
         #
-        # # Non Capital Cost
-        # self._oil_non_capital = (
-        #         self._oil_intangible_expenditures_post_tax
-        #         + self._oil_opex_expenditures_post_tax
-        #         + self._oil_asr_expenditures_post_tax
-        #         + self._oil_lbt_expenditures_post_tax
-        # )
-        #
-        # self._gas_non_capital = (
-        #         self._gas_intangible_expenditures_post_tax
-        #         + self._gas_opex_expenditures_post_tax
-        #         + self._gas_asr_expenditures_post_tax
-        #         + self._gas_lbt_expenditures_post_tax
-        # )
-
         # # Amortization Cost
         # if amortization is True:
         #     self._oil_amortization = unit_of_production_rate(
