@@ -23,7 +23,6 @@ from pyscnomics.econ.costs import (
     LBT,
     CostOfSales,
 )
-# np.set_printoptions(precision=2, suppress=True, linewidth=200)
 # from pyscnomics.econ.results import CashFlow
 
 
@@ -3533,36 +3532,39 @@ class BaseProject:
 
     def _get_attrs_for_results(self) -> dict:
         """
-        Collects and organizes project attributes for oil, gas, and consolidated results.
+        Collect attributes and their corresponding names for oil, gas,
+        and consolidated results.
 
-        This method groups key economic and financial attributes (revenues, expenditures,
-        sunk costs, indirect taxes, cashflows, etc.) for oil, gas, and consolidated
-        reporting into structured dictionaries. It also extracts and stores the
-        attribute names as strings for reference.
+        This method gathers time series attributes (e.g., revenues, expenditures,
+        taxes, sunk costs, and cashflows) for each fluid type (oil, gas, and consolidated)
+        and organizes them into a structured dictionary. It also provides a consistent
+        set of attribute names that can be used for labeling results in further processing
+        or DataFrame construction.
 
         Returns
         -------
         dict
-            A dictionary with the following structure:
+            A dictionary containing two keys:
 
-            - "attributes" : dict
-                Keys are "oil", "gas", and "consolidated". Each key maps to a list of
-                attribute values (NumPy arrays or scalars) representing project results.
+            - ``"attributes"`` : dict
+                Maps each fluid type (``"oil"``, ``"gas"``, ``"consolidated"``)
+                to a list of NumPy arrays or attributes representing project years,
+                revenues, costs, taxes, and cashflows.
 
-            - "names" : dict
-                Keys are "oil", "gas", and "consolidated". Each key maps to a list of
-                strings containing the attribute names corresponding to the values in
-                the `"attributes"` dictionary.
+            - ``"names"`` : list of str
+                A list of attribute names corresponding to the order of attributes
+                in each fluid type. The naming convention uses a placeholder ``f``
+                for the fluid type (e.g., ``f_revenue`` becomes ``oil_revenue``
+                when applied to oil).
 
         Notes
         -----
-        - Attributes include revenue, weighted average price (WAP), sunk costs
-          (depreciable and non-depreciable), pre-onstream costs, expenditures
-          (pre-tax and post-tax), indirect taxes, non-capital items, and cashflows.
-        - The `"names"` dictionary is built dynamically by matching the instance's
-          attribute references (`self.<attribute>`) with their names.
-        - This method is primarily intended to support result extraction and
-          DataFrame/array construction for reporting.
+        - The attributes cover financial elements such as:
+          revenues, weighted average prices, sunk costs, pre-onstream costs,
+          expenditures (capital, intangible, OPEX, ASR, LBT, cost of sales),
+          indirect taxes, total expenditures, and cashflows.
+        - The placeholder ``f`` in the names is dynamically replaced by the
+          fluid type key (``oil``, ``gas``, or ``consolidated``).
         """
 
         # Specify oil attributes
@@ -3682,13 +3684,6 @@ class BaseProject:
             self._consolidated_cashflow,
         ]
 
-        # Funtion to extract name of the attributes as strings
-        def _get_attr_name(instance, value):
-            for name, val in vars(instance).items():
-                if val is value:
-                    return f"{name}"
-            return None
-
         # Store attributes as a dictionary
         attrs = {
             "oil": oil_attrs,
@@ -3696,11 +3691,43 @@ class BaseProject:
             "consolidated": consolidated_attrs,
         }
 
-        # Extract attributes names and store them as a dictionary
-        attrs_name = {
-            key: [_get_attr_name(instance=self, value=val) for val in values]
-            for key, values in attrs.items()
-        }
+        attrs_name = [
+            "years",
+            "f_revenue",
+            "sulfur_revenue",
+            "electricity_revenue",
+            "co2_revenue",
+            "f_wap_price",
+            "f_depre_sunkcost",
+            "f_non_depre_sunkcost",
+            "f_depre_preonstream",
+            "f_non_depre_preonstream",
+            "f_sunkcost",
+            "f_preonstream",
+            "f_capital_exp_pretax",
+            "f_intangible_exp_pretax",
+            "f_opex_exp_pretax",
+            "f_asr_exp_pretax",
+            "f_lbt_exp_pretax",
+            "f_cost_of_sales_exp_pretax",
+            "f_capital_indirect_tax",
+            "f_intangible_indirect_tax",
+            "f_opex_indirect_tax",
+            "f_asr_indirect_tax",
+            "f_lbt_indirect_tax",
+            "f_cost_of_sales_indirect_tax",
+            "f_capital_exp_posttax",
+            "f_intangible_exp_posttax",
+            "f_opex_exp_posttax",
+            "f_asr_exp_posttax",
+            "f_lbt_exp_posttax",
+            "f_cost_of_sales_exp_posttax",
+            "f_total_exp_pretax",
+            "f_total_indirect_tax",
+            "f_total_exp_posttax",
+            "f_non_capital",
+            "f_cashflow",
+        ]
 
         return {
             "attributes": attrs,
@@ -3709,29 +3736,38 @@ class BaseProject:
 
     def _prepare_results(self) -> np.ndarray:
         """
-        Prepares structured result tables for oil, gas, and consolidated
-        project attributes.
+        Prepare and structure calculation results into DataFrames.
 
-        This method converts project attributes (collected via `_get_attrs_for_results`)
-        into aligned tabular structures. It validates consistency across fluid types,
-        organizes the attributes into a 3D NumPy array, and finally converts them into
-        Pandas DataFrames for each fluid type.
+        This method aligns attributes for oil, gas, and consolidated results,
+        validates their consistency, and organizes them into tabular format.
+        Each fluid type is represented as a DataFrame with project years as
+        the index and attribute names as columns.
 
         Returns
         -------
         dict of {str: pandas.DataFrame}
-            A dictionary where keys are "oil", "gas", and "consolidated".
-            Each value is a DataFrame of shape `(project_duration, n_cols)` containing:
-            - Rows : Project years
-            - Columns : Attribute names (e.g., revenue, sunk costs, expenditures, cashflow)
+            A dictionary mapping fluid types to their corresponding results:
+
+            - ``"oil"`` : DataFrame
+                Tabular results for oil, with each column corresponding to a
+                financial or project attribute (e.g., revenue, costs, cashflow).
+            - ``"gas"`` : DataFrame
+                Tabular results for gas, structured in the same way as oil.
+            - ``"consolidated"`` : DataFrame
+                Consolidated results across all fluids, structured similarly.
+
+        Raises
+        ------
+        BaseProjectException
+            If the number of attributes or names is inconsistent across fluid types.
 
         Notes
         -----
-        - Internally constructs a 3D NumPy array of shape `(3, project_duration, n_cols)`,
-          where dimension 0 corresponds to fluid types ("oil", "gas", "consolidated").
-        - Uses `np.nan` as the default fill value to ensure numerical consistency.
-        - Column labels in the resulting DataFrames are derived from attribute names
-          returned by `_get_attrs_for_results()`.
+        - Internally, results are stored in a 3D NumPy array of shape
+          ``(n_fluids, project_duration, n_attributes)`` before being
+          converted to DataFrames.
+        - Column names are derived from the standardized names returned by
+          :meth:`_get_attrs_for_results`.
         """
 
         # Define attributes and names of the attributes
@@ -3742,12 +3778,14 @@ class BaseProject:
         fluids = ["oil", "gas", "consolidated"]
 
         # Ensure consistency
-        lengths = [len(attributes[f]) for f in fluids]
-        if np.unique(lengths).size != 1:
+        attributes_names_length = [len(attributes[f]) for f in fluids]
+        attributes_names_length.append(len(names))
+
+        if np.unique(attributes_names_length).size != 1:
             raise BaseProjectException("Mismatch in attribute lengths across fluids")
 
         # Create a 3D NumPy array to store calculation results
-        n_cols = lengths[0]
+        n_cols = attributes_names_length[0]
         results = np.full(
             (len(fluids), self.project_duration, n_cols),
             fill_value=np.nan, dtype=np.float64
@@ -3758,11 +3796,11 @@ class BaseProject:
                 results[i, :, idx] = attributes[key][idx]
 
         return {
-            key: pd.DataFrame(results[i, :, :], columns=names[key])
+            key: pd.DataFrame(results[i, :, :], columns=names)
             for i, key in enumerate(fluids)
         }
 
-    def get_results(self, chunk_size: int, ftype: str):
+    def get_results(self, ftype: str = "oil", chunk_size: int = 5) -> pd.DataFrame:
         """
         Print calculation results for a specified fluid type in chunks.
 
@@ -3789,13 +3827,17 @@ class BaseProject:
             If `ftype` is not one of {"oil", "gas", "consolidated"}.
         """
 
-        df_map = self._prepare_results()
+        df_map: dict = self._prepare_results()
 
         def _prepare_print(chunk_size: int, df: pd.DataFrame):
             cols = df.columns.tolist()
 
+            print('\t')
+            print(f"Fluid: {ftype}")
+            print(f"========================================================")
+
             for i in range(0, len(cols), chunk_size):
-                print(f"\nColumns {i + 1} to {min(i + chunk_size, len(cols))}:")
+                print(f"\nColumns {i + 1} to {min(i + chunk_size, len(cols))}: ")
                 print(df[cols[i:i + chunk_size]])
 
         _prepare_print(chunk_size=chunk_size, df=df_map[ftype])
