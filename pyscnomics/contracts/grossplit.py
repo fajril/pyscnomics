@@ -788,13 +788,13 @@ class GrossSplit(BaseProject):
         if fluid == FluidType.OIL:
             if price <= 45:
                 ps = 0.05
-            elif 46 < price <= 65:
+            elif 46 < price < 65:
                 ps = -0.0025 * (price - 45) + 0.05 # In the form of y2 = m * (x2 - x1) + y1
-            elif 65 < price <= 85:
+            elif 65 <= price <= 85:
                 ps = 0.0
-            elif 85 < price <= 105:
+            elif 85 < price < 105:
                 ps = -0.0025 * (price - 85) + 0.0 # In the form of y2 = m * (x2 - x1) + y1
-            elif 105 < price:
+            elif 105 <= price:
                 ps = -0.05
             else:
                 ps = 0
@@ -802,13 +802,13 @@ class GrossSplit(BaseProject):
         elif fluid == FluidType.GAS:
             if price <= 4:
                 ps = 0.05
-            elif 4 < price <= 7:
+            elif 4 < price < 7:
                 ps = -0.0025 * (price - 4) + 0.05 # In the form of y2 = m * (x2 - x1) + y1
-            elif 7 < price <= 10:
+            elif 7 <= price <= 10:
                 ps = 0.0
-            elif 10 < price <= 13:
+            elif 10 < price < 13:
                 ps = -0.0025 * (price - 10) + 0.0 # In the form of y2 = m * (x2 - x1) + y1
-            elif 13 < price:
+            elif 13 <= price:
                 ps = -0.05
             else:
                 ps = 0
