@@ -733,53 +733,55 @@ class BaseProject:
             ]
         ]
 
-        # Modify cost_type in each cost categories, accounting for engineering sense
-        costs_list = [
-            capital_cost,
-            intangible,
-            opex,
-            asr,
-            lbt,
-            cost_of_sales,
-        ]
+        self._prepare_cost_types(cost_obj=capital_cost["oil"])
 
-        for costs in costs_list:
-            for ftype in [FluidType.OIL, FluidType.GAS]:
-                self._prepare_cost_types(
-                    cost_obj=costs[ftype.name.lower()],
-                    fluid_type=ftype,
-                )
-
-        # Define postonstream, sunk cost, and preonstream attributes
-        cost_groups = (
-            ("capital", self._filter_capital_cost, capital_cost),
-            ("intangible", self._filter_intangible, intangible),
-            ("opex", self._filter_opex, opex),
-            ("asr", self._filter_asr, asr),
-            ("lbt", self._filter_lbt, lbt),
-            ("cost_of_sales", self._filter_cost_of_sales, cost_of_sales)
-        )
-
-        categories = (
-            ("postonstream", CostType.POST_ONSTREAM_COST),
-            ("sunk_cost", CostType.SUNK_COST),
-            ("preonstream", CostType.PRE_ONSTREAM_COST),
-        )
-
-        for prefix, filter_func, source in cost_groups:
-            for ftype in ("oil", "gas"):
-                for categ, ctype in categories:
-                    setattr(
-                        self,
-                        f"_{ftype}_{prefix}_{categ}",
-                        filter_func(cost_obj=source[ftype], include_cost_type=ctype)
-                    )
-
-        # Raise an exception error if the start year of the project is inconsistent
-        self._check_inconsistent_start_year()
-
-        # Raise an exception error if the end year of the project is inconsistent
-        self._check_inconsistent_end_year()
+        # # Modify cost_type in each cost categories, accounting for engineering sense
+        # costs_list = [
+        #     capital_cost,
+        #     intangible,
+        #     opex,
+        #     asr,
+        #     lbt,
+        #     cost_of_sales,
+        # ]
+        #
+        # for costs in costs_list:
+        #     for ftype in [FluidType.OIL, FluidType.GAS]:
+        #         self._prepare_cost_types(
+        #             cost_obj=costs[ftype.name.lower()],
+        #             fluid_type=ftype,
+        #         )
+        #
+        # # Define postonstream, sunk cost, and preonstream attributes
+        # cost_groups = (
+        #     ("capital", self._filter_capital_cost, capital_cost),
+        #     ("intangible", self._filter_intangible, intangible),
+        #     ("opex", self._filter_opex, opex),
+        #     ("asr", self._filter_asr, asr),
+        #     ("lbt", self._filter_lbt, lbt),
+        #     ("cost_of_sales", self._filter_cost_of_sales, cost_of_sales)
+        # )
+        #
+        # categories = (
+        #     ("postonstream", CostType.POST_ONSTREAM_COST),
+        #     ("sunk_cost", CostType.SUNK_COST),
+        #     ("preonstream", CostType.PRE_ONSTREAM_COST),
+        # )
+        #
+        # for prefix, filter_func, source in cost_groups:
+        #     for ftype in ("oil", "gas"):
+        #         for categ, ctype in categories:
+        #             setattr(
+        #                 self,
+        #                 f"_{ftype}_{prefix}_{categ}",
+        #                 filter_func(cost_obj=source[ftype], include_cost_type=ctype)
+        #             )
+        #
+        # # Raise an exception error if the start year of the project is inconsistent
+        # self._check_inconsistent_start_year()
+        #
+        # # Raise an exception error if the end year of the project is inconsistent
+        # self._check_inconsistent_end_year()
 
     def _get_lifting_by_commodity(self, commodity: FluidType) -> Lifting:
         """
@@ -1521,20 +1523,15 @@ class BaseProject:
 
         return {fluid: classifier(ftype) for fluid, ftype in fluid_map.items()}
 
-    def _validate_approval_year(self, fluid_type: FluidType) -> None:
+    def _validate_approval_year(self) -> None:
         """
         Validate and set the POD I approval year against project and fluid timelines.
 
         This method ensures that the approval year is valid relative to the project's
-        start and end dates, as well as the onstream year for the specified fluid type.
-        If `approval_year` is not set (None), it defaults to the fluid's onstream year.
-        Otherwise, it performs consistency checks to prevent invalid approval years.
-
-        Parameters
-        ----------
-        fluid_type : FluidType
-            The fluid type (`FluidType.OIL` or `FluidType.GAS`) used to determine the
-            corresponding onstream year for validation.
+        start and end dates, as well as the earliest onstream year among the fluids
+        (oil and gas). If `approval_year` is not set (None), it defaults to the
+        earliest fluid onstream year. Otherwise, it performs consistency checks to
+        prevent invalid approval years.
 
         Raises
         ------
@@ -1542,20 +1539,17 @@ class BaseProject:
             If `approval_year` is not an integer.
             If `approval_year` is earlier than the project start year.
             If `approval_year` is later than the project end year.
-            If `approval_year` is later than the fluid onstream year.
+            If `approval_year` is later than the earliest fluid onstream year.
 
         Notes
         -----
-        - If `approval_year` is not provided, it is automatically set to the onstream year
-          of the given fluid type.
-        - The validation prevents approval years outside the project timeframe or inconsistent
-          with the fluid's onstream year.
+        - If `approval_year` is not provided, it is automatically set to the earliest
+          onstream year between oil and gas.
+        - The validation prevents approval years outside the project timeframe or
+          inconsistent with the fluid onstream timeline.
         """
 
-        onstream_yr = {
-            FluidType.OIL: self.oil_onstream_date.year,
-            FluidType.GAS: self.gas_onstream_date.year,
-        }[fluid_type]
+        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
 
         if self.approval_year is None:
             self.approval_year = onstream_yr
@@ -1582,12 +1576,11 @@ class BaseProject:
             if self.approval_year > onstream_yr:
                 raise BaseProjectException(
                     f"Approval year ({self.approval_year}) is after "
-                    f"{fluid_type.name.lower()} onstream year ({onstream_yr})"
+                    f"onstream year ({onstream_yr})"
                 )
 
     def _prepare_cost_types(
         self,
-        fluid_type: FluidType,
         cost_obj: CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales,
     ) -> None:
         """
@@ -1636,26 +1629,62 @@ class BaseProject:
         """
 
         # Validate approval_year
-        self._validate_approval_year(fluid_type=fluid_type)
+        self._validate_approval_year()
 
         # Specify relevant onstream year corresponds to OIL or GAS
-        onstream_year = {
-            FluidType.OIL: self.oil_onstream_date.year,
-            FluidType.GAS: self.gas_onstream_date.year
-        }[fluid_type]
+        onstream_year = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+
+        print('\t')
+        print(f'Filetype: {type(onstream_year)}')
+        print('onstream_year = ', onstream_year)
+
+        # onstream_year = {
+        #     FluidType.OIL: self.oil_onstream_date.year,
+        #     FluidType.GAS: self.gas_onstream_date.year
+        # }[fluid_type]
 
         # Build masks
         ct = np.array(cost_obj.cost_type)
         ey = cost_obj.expense_year
 
+        print('\t')
+        print(f'Filetype: {type(ct)}')
+        print(f'Length: {len(ct)}')
+        print('ct = ', ct)
+
+        print('\t')
+        print(f'Filetype: {type(ey)}')
+        print(f'Length: {len(ey)}')
+        print('ey = ', ey)
+
         post_onstream = ey > onstream_year
         sunk_cost = ey < self.approval_year
         pre_onstream = (ey > self.approval_year) & (ey < onstream_year)
+
+        print('\t')
+        print(f'Filetype: {type(post_onstream)}')
+        print(f'Length: {len(post_onstream)}')
+        print('post_onstream = ', post_onstream)
+
+        print('\t')
+        print(f'Filetype: {type(sunk_cost)}')
+        print(f'Length: {len(sunk_cost)}')
+        print('sunk_cost = ', sunk_cost)
+
+        print('\t')
+        print(f'Filetype: {type(pre_onstream)}')
+        print(f'Length: {len(pre_onstream)}')
+        print('pre_onstream = ', pre_onstream)
 
         # Assign cost types using the masks
         ct[post_onstream] = CostType.POST_ONSTREAM_COST
         ct[sunk_cost] = CostType.SUNK_COST
         ct[pre_onstream] = CostType.PRE_ONSTREAM_COST
+
+        print('\t')
+        print(f'Filetype: {type(ct)}')
+        print(f'Length: {len(ct)}')
+        print('ct = ', ct)
 
         # Validate cost types assignments
         rules = [

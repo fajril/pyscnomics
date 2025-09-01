@@ -55,28 +55,28 @@ class ExampleCase:
         """
         self.lifting_mangga = Lifting(
             start_year=2023,
-            end_year=2035,
-            prod_year=np.array([2026, 2028, 2027, 2028, 2030, 2029]),
-            lifting_rate=np.array([100, 100, 100, 200, 200, 200]),
-            price=np.array([10, 10, 10, 5, 5, 5]),
+            end_year=2034,
+            prod_year=np.array([2030, 2030, 2031, 2031, 2032, 2033]),
+            lifting_rate=np.array([200, 200, 100, 100, 50, 50]),
+            price=np.array([1, 1, 1, 1, 1, 1]),
             fluid_type=FluidType.OIL,
         )
 
         self.lifting_apel = Lifting(
             start_year=2023,
-            end_year=2035,
-            prod_year=np.array([2028, 2028, 2029, 2029, 2030, 2030]),
-            lifting_rate=np.array([10, 10, 10, 20, 20, 20]),
-            price=np.array([2, 2, 2, 1, 1, 1]),
+            end_year=2034,
+            prod_year=np.array([2029, 2029, 2030, 2030, 2031, 2032]),
+            lifting_rate=np.array([20, 20, 10, 10, 5, 5]),
+            price=np.array([1, 1, 1, 1, 1, 1]),
             fluid_type=FluidType.GAS,
         )
 
         self.lifting_nanas = Lifting(
             start_year=2023,
-            end_year=2035,
-            prod_year=np.array([2027, 2028, 2027, 2028, 2030, 2029]),
-            lifting_rate=np.array([10, 10, 10, 20, 20, 20]),
-            price=np.array([2, 2, 2, 1, 1, 1]),
+            end_year=2034,
+            prod_year=np.array([2029, 2029, 2030, 2030, 2031, 2032]),
+            lifting_rate=np.array([20, 20, 10, 10, 5, 5]),
+            price=np.array([1, 1, 1, 1, 1, 1]),
             fluid_type=FluidType.SULFUR,
         )
 
@@ -96,7 +96,7 @@ class ExampleCase:
             cost=np.array(
                 [
                     200, 200, 200, 200, 150, 100,
-                    100, 75, 50, 50, 50, 50, 50,
+                    100, 75, 50, 50, 50, 50,
                 ]
             ),
             cost_allocation=(
@@ -136,7 +136,7 @@ class ExampleCase:
             cost=np.array(
                 [
                     200, 200, 200, 200, 150, 100,
-                    100, 75, 50, 50, 50, 50, 50,
+                    100, 75, 50, 50, 50, 50,
                 ]
             ),
             cost_allocation=(
@@ -180,7 +180,7 @@ class ExampleCase:
             cost=np.array(
                 [
                     200, 200, 200, 200, 150, 100,
-                    100, 75, 50, 50, 50, 50, 50,
+                    100, 75, 50, 50, 50, 50,
                 ]
             ),
             cost_allocation=(
@@ -220,7 +220,7 @@ class ExampleCase:
             cost=np.array(
                 [
                     200, 200, 200, 200, 150, 100,
-                    100, 75, 50, 50, 50, 50, 50,
+                    100, 75, 50, 50, 50, 50,
                 ]
             ),
             cost_allocation=(
@@ -264,7 +264,7 @@ class ExampleCase:
             fixed_cost=np.array(
                 [
                     200, 200, 200, 200, 150, 100,
-                    100, 75, 50, 50, 50, 50, 50,
+                    100, 75, 50, 50, 50, 50,
                 ]
             ),
             cost_allocation=(
@@ -304,7 +304,7 @@ class ExampleCase:
             fixed_cost=np.array(
                 [
                     200, 200, 200, 200, 150, 100,
-                    100, 75, 50, 50, 50, 50, 50,
+                    100, 75, 50, 50, 50, 50,
                 ]
             ),
             cost_allocation=(
@@ -348,7 +348,7 @@ class ExampleCase:
             cost=np.array(
                 [
                     200, 200, 200, 200, 150, 100,
-                    100, 75, 50, 50, 50, 50, 50,
+                    100, 75, 50, 50, 50, 50,
                 ]
             ),
             cost_allocation=(
@@ -388,7 +388,7 @@ class ExampleCase:
             cost=np.array(
                 [
                     200, 200, 200, 200, 150, 100,
-                    100, 75, 50, 50, 50, 50, 50,
+                    100, 75, 50, 50, 50, 50,
                 ]
             ),
             cost_allocation=(
@@ -432,7 +432,7 @@ class ExampleCase:
             cost=np.array(
                 [
                     200, 200, 200, 200, 150, 100,
-                    100, 75, 50, 50, 50, 50, 50,
+                    100, 75, 50, 50, 50, 50,
                 ]
             ),
             cost_allocation=(
@@ -472,7 +472,7 @@ class ExampleCase:
             cost=np.array(
                 [
                     200, 200, 200, 200, 150, 100,
-                    100, 75, 50, 50, 50, 50, 50,
+                    100, 75, 50, 50, 50, 50,
                 ]
             ),
             cost_allocation=(
@@ -516,7 +516,7 @@ class ExampleCase:
             cost=np.array(
                 [
                     200, 200, 200, 200, 150, 100,
-                    100, 75, 50, 50, 50, 50, 50,
+                    100, 75, 50, 50, 50, 50,
                 ]
             ),
             cost_allocation=(
@@ -556,7 +556,7 @@ class ExampleCase:
             cost=np.array(
                 [
                     200, 200, 200, 200, 150, 100,
-                    100, 75, 50, 50, 50, 50, 50,
+                    100, 75, 50, 50, 50, 50,
                 ]
             ),
             cost_allocation=(
