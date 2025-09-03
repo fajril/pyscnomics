@@ -3859,105 +3859,105 @@ class BaseProject:
         # Calculate post tax expenditures
         self._get_expenditures_post_tax()
 
-        # # Other revenue
-        # self._get_other_revenue(
-        #     sulfur_revenue=sulfur_revenue,
-        #     electricity_revenue=electricity_revenue,
-        #     co2_revenue=co2_revenue,
-        # )
-        #
-        # # Total OIL pre-tax expenditures
-        # self._oil_total_expenditures_pre_tax = (
-        #     self._oil_capital_expenditures_pre_tax
-        #     + self._oil_intangible_expenditures_pre_tax
-        #     + self._oil_opex_expenditures_pre_tax
-        #     + self._oil_asr_expenditures_pre_tax
-        #     + self._oil_lbt_expenditures_pre_tax
-        #     + self._oil_cost_of_sales_expenditures_pre_tax
-        # )
-        #
-        # # Total GAS pre-tax expenditures
-        # self._gas_total_expenditures_pre_tax = (
-        #     self._gas_capital_expenditures_pre_tax
-        #     + self._gas_intangible_expenditures_pre_tax
-        #     + self._gas_opex_expenditures_pre_tax
-        #     + self._gas_asr_expenditures_pre_tax
-        #     + self._gas_lbt_expenditures_pre_tax
-        #     + self._gas_cost_of_sales_expenditures_pre_tax
-        # )
-        #
-        # # Total OIL indirect taxes
-        # self._oil_total_indirect_tax = (
-        #     self._oil_capital_indirect_tax
-        #     + self._oil_intangible_indirect_tax
-        #     + self._oil_opex_indirect_tax
-        #     + self._oil_asr_indirect_tax
-        #     + self._oil_lbt_indirect_tax
-        #     + self._oil_cost_of_sales_indirect_tax
-        # )
-        #
-        # # Total GAS indirect taxes
-        # self._gas_total_indirect_tax = (
-        #     self._gas_capital_indirect_tax
-        #     + self._gas_intangible_indirect_tax
-        #     + self._gas_opex_indirect_tax
-        #     + self._gas_asr_indirect_tax
-        #     + self._gas_lbt_indirect_tax
-        #     + self._gas_cost_of_sales_indirect_tax
-        # )
-        #
-        # # Total OIL post-tax expenditures
-        # self._oil_total_expenditures_post_tax = (
-        #     self._oil_capital_expenditures_post_tax
-        #     + self._oil_intangible_expenditures_post_tax
-        #     + self._oil_opex_expenditures_post_tax
-        #     + self._oil_asr_expenditures_post_tax
-        #     + self._oil_lbt_expenditures_post_tax
-        #     + self._oil_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # # Total GAS post-tax expenditures
-        # self._gas_total_expenditures_post_tax = (
-        #     self._gas_capital_expenditures_post_tax
-        #     + self._gas_intangible_expenditures_post_tax
-        #     + self._gas_opex_expenditures_post_tax
-        #     + self._gas_asr_expenditures_post_tax
-        #     + self._gas_lbt_expenditures_post_tax
-        #     + self._gas_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # # Non-capital costs (intangible + opex + asr + lbt + cost of sales)
-        # self._oil_non_capital = (
-        #     self._oil_intangible_expenditures_post_tax
-        #     + self._oil_opex_expenditures_post_tax
-        #     + self._oil_asr_expenditures_post_tax
-        #     + self._oil_lbt_expenditures_post_tax
-        #     + self._oil_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # self._gas_non_capital = (
-        #     self._gas_intangible_expenditures_post_tax
-        #     + self._gas_opex_expenditures_post_tax
-        #     + self._gas_asr_expenditures_post_tax
-        #     + self._gas_lbt_expenditures_post_tax
-        #     + self._gas_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # # Configure base cashflow for OIL and GAS
-        # self._oil_cashflow = self._oil_revenue - (
-        #     self._oil_sunk_cost
-        #     + self._oil_preonstream
-        #     + self._oil_total_expenditures_post_tax
-        # )
-        #
-        # self._gas_cashflow = self._gas_revenue - (
-        #     self._gas_sunk_cost
-        #     + self._gas_preonstream
-        #     + self._gas_total_expenditures_post_tax
-        # )
-        #
-        # # Prepare consolidated profiles
-        # self._get_consolidated_profiles()
+        # Other revenue
+        self._get_other_revenue(
+            sulfur_revenue=sulfur_revenue,
+            electricity_revenue=electricity_revenue,
+            co2_revenue=co2_revenue,
+        )
+
+        # Non-capital costs (intangible + opex + asr + lbt + cost of sales)
+        self._oil_non_capital = (
+            self._oil_intangible_expenditures_post_tax
+            + self._oil_opex_expenditures_post_tax
+            + self._oil_asr_expenditures_post_tax
+            + self._oil_lbt_expenditures_post_tax
+            + self._oil_cost_of_sales_expenditures_post_tax
+        )
+
+        self._gas_non_capital = (
+            self._gas_intangible_expenditures_post_tax
+            + self._gas_opex_expenditures_post_tax
+            + self._gas_asr_expenditures_post_tax
+            + self._gas_lbt_expenditures_post_tax
+            + self._gas_cost_of_sales_expenditures_post_tax
+        )
+
+        # Total OIL pre-tax expenditures
+        self._oil_total_expenditures_pre_tax = (
+            self._oil_capital_expenditures_pre_tax
+            + self._oil_intangible_expenditures_pre_tax
+            + self._oil_opex_expenditures_pre_tax
+            + self._oil_asr_expenditures_pre_tax
+            + self._oil_lbt_expenditures_pre_tax
+            + self._oil_cost_of_sales_expenditures_pre_tax
+        )
+
+        # Total GAS pre-tax expenditures
+        self._gas_total_expenditures_pre_tax = (
+            self._gas_capital_expenditures_pre_tax
+            + self._gas_intangible_expenditures_pre_tax
+            + self._gas_opex_expenditures_pre_tax
+            + self._gas_asr_expenditures_pre_tax
+            + self._gas_lbt_expenditures_pre_tax
+            + self._gas_cost_of_sales_expenditures_pre_tax
+        )
+
+        # Total OIL indirect taxes
+        self._oil_total_indirect_tax = (
+            self._oil_capital_indirect_tax
+            + self._oil_intangible_indirect_tax
+            + self._oil_opex_indirect_tax
+            + self._oil_asr_indirect_tax
+            + self._oil_lbt_indirect_tax
+            + self._oil_cost_of_sales_indirect_tax
+        )
+
+        # Total GAS indirect taxes
+        self._gas_total_indirect_tax = (
+            self._gas_capital_indirect_tax
+            + self._gas_intangible_indirect_tax
+            + self._gas_opex_indirect_tax
+            + self._gas_asr_indirect_tax
+            + self._gas_lbt_indirect_tax
+            + self._gas_cost_of_sales_indirect_tax
+        )
+
+        # Total OIL post-tax expenditures
+        self._oil_total_expenditures_post_tax = (
+            self._oil_capital_expenditures_post_tax
+            + self._oil_intangible_expenditures_post_tax
+            + self._oil_opex_expenditures_post_tax
+            + self._oil_asr_expenditures_post_tax
+            + self._oil_lbt_expenditures_post_tax
+            + self._oil_cost_of_sales_expenditures_post_tax
+        )
+
+        # Total GAS post-tax expenditures
+        self._gas_total_expenditures_post_tax = (
+            self._gas_capital_expenditures_post_tax
+            + self._gas_intangible_expenditures_post_tax
+            + self._gas_opex_expenditures_post_tax
+            + self._gas_asr_expenditures_post_tax
+            + self._gas_lbt_expenditures_post_tax
+            + self._gas_cost_of_sales_expenditures_post_tax
+        )
+
+        # Configure base cashflow for OIL and GAS
+        self._oil_cashflow = self._oil_revenue - (
+            self._oil_sunk_cost
+            + self._oil_preonstream
+            + self._oil_total_expenditures_post_tax
+        )
+
+        self._gas_cashflow = self._gas_revenue - (
+            self._gas_sunk_cost
+            + self._gas_preonstream
+            + self._gas_total_expenditures_post_tax
+        )
+
+        # Prepare consolidated profiles
+        self._get_consolidated_profiles()
 
     def __len__(self):
         return self.project_duration

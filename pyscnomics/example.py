@@ -536,12 +536,6 @@ class ExampleCase:
                     CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
                 ]
             ),
-            tax_portion=np.array(
-                [
-                    1, 1, 1, 1, 1, 1,
-                    1, 1, 1, 1, 1, 1,
-                ]
-            ),
         )
 
         self.cos_apel = CostOfSales(
@@ -574,12 +568,6 @@ class ExampleCase:
                     CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
                     CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
                     CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                ]
-            ),
-            tax_portion=np.array(
-                [
-                    1, 1, 1, 1, 1, 1,
-                    1, 1, 1, 1, 1, 1,
                 ]
             ),
         )

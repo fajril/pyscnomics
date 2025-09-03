@@ -32,7 +32,7 @@ kwargs_pr = {
 }
 
 params_base = {
-    "sulfur_revenue": OtherRevenue.REDUCTION_TO_OIL_OPEX,
+    "sulfur_revenue": OtherRevenue.REDUCTION_TO_GAS_OPEX,
     "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
     "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
     "tax_rate": 0.0,
