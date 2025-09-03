@@ -1261,6 +1261,9 @@ class GrossSplit(BaseProject):
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
         self._consolidated_cashflow = self._oil_ctr_cashflow + self._gas_ctr_cashflow
 
+    def _adjust_cost_types(self, is_pod_1: bool):
+        pass
+
     def run(
         self,
         sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
@@ -1270,8 +1273,8 @@ class GrossSplit(BaseProject):
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
-        is_pod_1: bool = False,
         cum_production_split_offset: float | np.ndarray | None = 0.0,
+        is_pod_1: bool = False,
         # is_dmo_end_weighted=False,
         # regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_20_2019,
         # tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
@@ -1295,111 +1298,16 @@ class GrossSplit(BaseProject):
         # WAP (Weighted Average Price) for each produced fluid
         self._get_wap_price()
 
-        # Prepare preonstream and sunk costs
+        # Validate sunk cost, pre-onstream, and post-onstream objects
+        self._get_cost_objects_validation()
+
+        # Prepare sunk costs and preonstream costs
         self._get_sunkcost_array()
         self._get_preonstream_array()
 
-        # Calculate pre tax expenditures
-        self._get_expenditures_pre_tax(
-            year_inflation=year_inflation,
-            inflation_rate=inflation_rate,
-            inflation_rate_applied_to=inflation_rate_applied_to,
-        )
+        # Calculate (total = depreciable + non_depreciable costs)
+        # for sunk cost and preonstream cost
 
-        # Calculate indirect taxes
-        self._get_indirect_taxes(tax_rate=vat_rate)
-
-        # Calculate post tax expenditures
-        self._get_expenditures_post_tax()
-
-        # Other revenue
-        self._get_other_revenue(
-            sulfur_revenue=sulfur_revenue,
-            electricity_revenue=electricity_revenue,
-            co2_revenue=co2_revenue,
-        )
-
-        # Total OIL pre-tax expenditures
-        self._oil_total_expenditures_pre_tax = (
-            self._oil_capital_expenditures_pre_tax
-            + self._oil_intangible_expenditures_pre_tax
-            + self._oil_opex_expenditures_pre_tax
-            + self._oil_asr_expenditures_pre_tax
-            + self._oil_lbt_expenditures_pre_tax
-            + self._oil_cost_of_sales_expenditures_pre_tax
-        )
-
-        # Total GAS pre-tax expenditures
-        self._gas_total_expenditures_pre_tax = (
-            self._gas_capital_expenditures_pre_tax
-            + self._gas_intangible_expenditures_pre_tax
-            + self._gas_opex_expenditures_pre_tax
-            + self._gas_asr_expenditures_pre_tax
-            + self._gas_lbt_expenditures_pre_tax
-            + self._gas_cost_of_sales_expenditures_pre_tax
-        )
-
-        # Total OIL indirect taxes
-        self._oil_total_indirect_tax = (
-            self._oil_capital_indirect_tax
-            + self._oil_intangible_indirect_tax
-            + self._oil_opex_indirect_tax
-            + self._oil_asr_indirect_tax
-            + self._oil_lbt_indirect_tax
-            + self._oil_cost_of_sales_indirect_tax
-        )
-
-        # Total GAS indirect taxes
-        self._gas_total_indirect_tax = (
-            self._gas_capital_indirect_tax
-            + self._gas_intangible_indirect_tax
-            + self._gas_opex_indirect_tax
-            + self._gas_asr_indirect_tax
-            + self._gas_lbt_indirect_tax
-            + self._gas_cost_of_sales_indirect_tax
-        )
-
-        # Total OIL post-tax expenditures
-        self._oil_total_expenditures_post_tax = (
-            self._oil_capital_expenditures_post_tax
-            + self._oil_intangible_expenditures_post_tax
-            + self._oil_opex_expenditures_post_tax
-            + self._oil_asr_expenditures_post_tax
-            + self._oil_lbt_expenditures_post_tax
-            + self._oil_cost_of_sales_expenditures_post_tax
-        )
-
-        # Total GAS post-tax expenditures
-        self._gas_total_expenditures_post_tax = (
-            self._gas_capital_expenditures_post_tax
-            + self._gas_intangible_expenditures_post_tax
-            + self._gas_opex_expenditures_post_tax
-            + self._gas_asr_expenditures_post_tax
-            + self._gas_lbt_expenditures_post_tax
-            + self._gas_cost_of_sales_expenditures_post_tax
-        )
-
-        # Non-capital costs (intangible + opex + asr + lbt + cost of sales)
-        self._oil_non_capital = (
-            self._oil_intangible_expenditures_post_tax
-            + self._oil_opex_expenditures_post_tax
-            + self._oil_asr_expenditures_post_tax
-            + self._oil_lbt_expenditures_post_tax
-            + self._oil_cost_of_sales_expenditures_post_tax
-        )
-
-        self._gas_non_capital = (
-            self._gas_intangible_expenditures_post_tax
-            + self._gas_opex_expenditures_post_tax
-            + self._gas_asr_expenditures_post_tax
-            + self._gas_lbt_expenditures_post_tax
-            + self._gas_cost_of_sales_expenditures_post_tax
-        )
-
-        print('\t')
-        print(f'Filetype: {type(self._gas_total_expenditures_post_tax)}')
-        print(f'Length: {len(self._gas_total_expenditures_post_tax)}')
-        print('_gas_total_expenditures_post_tax = \n', self._gas_total_expenditures_post_tax)
 
         # # Depreciation (tangible cost)
         # (
