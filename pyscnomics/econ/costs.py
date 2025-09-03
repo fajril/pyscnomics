@@ -781,6 +781,23 @@ class CapitalCost(GeneralCost):
         # The relative difference of pis_year and start_year
         shift_indices = self.pis_year - self.start_year
 
+        overdue = (self.pis_year + self.useful_life - self.end_year - 1).astype(int)
+
+        if np.any(overdue > 0):
+
+            # Some assets have not been fully depreciated by the end of the project.
+            # These assets are overdue by {overdue[overdue > 0]} years.
+            is_overdue = overdue > 0
+            max_overdue = int(np.max(overdue[is_overdue]))
+            overdue_depr_charge = [
+                np.concatenate((row[-i:-i+o], np.zeros(max_overdue-o))) if i > 0
+                else row for row, i,o in zip(depreciation_charge, shift_indices, overdue)
+            ]
+            overdue_depr_charge = np.asarray(overdue_depr_charge)[is_overdue]
+
+        else:
+            overdue_depr_charge = np.zeros([1, 1])
+
         # Modify depreciation_charge so that expenditures are aligned with
         # the corresponding pis_year (or expense_year)
         depreciation_charge = np.array(
@@ -790,9 +807,10 @@ class CapitalCost(GeneralCost):
             ]
         )
 
-        # Calculate undepreciated asset
+        # Calculate total depreciation charge and undepreciated asset
         total_depreciation_charge = depreciation_charge.sum(axis=0)
-        undepreciated_asset = np.sum(cost_adjusted) - np.sum(total_depreciation_charge)
+        undepreciated_asset = overdue_depr_charge.sum(axis=0)
+        # undepreciated_asset = np.sum(cost_adjusted) - np.sum(total_depreciation_charge)
 
         return total_depreciation_charge, undepreciated_asset
 
