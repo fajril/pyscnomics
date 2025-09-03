@@ -2811,20 +2811,12 @@ class BaseProject:
 
     def _get_sunkcost_array(self) -> None:
         """
-        Validate and prepare sunk cost arrays for OIL and GAS.
+        Prepare sunk cost arrays for OIL and GAS.
 
-        This method validates all sunk cost objects for OIL and GAS
-        using `_get_sunkcost_validation`. It then constructs arrays of
-        pre-tax expenditures for each sunk cost category, aggregates
-        them into depreciable and non-depreciable components, and finally
-        computes the total sunk costs for both fluids.
-    
-        Raises
-        ------
-        SunkCostException
-            If any sunk cost years exceed the respective fluid's onstream year,
-            as enforced by `_get_sunkcost_validation`.
-    
+        This method constructs arrays of pre-tax expenditures for each sunk
+        cost category (Capital, Intangible, OPEX, ASR, LBT, and Cost of Sales),
+        aggregates them into depreciable and non-depreciable components.
+
         Notes
         -----
         - Depreciable sunk costs include only capital costs.
@@ -2835,8 +2827,6 @@ class BaseProject:
             * ``_gas_depreciable_sunk_cost``
             * ``_oil_non_depreciable_sunk_cost``
             * ``_gas_non_depreciable_sunk_cost``
-            * ``_oil_sunk_cost`` (total = depreciable + non-depreciable)
-            * ``_gas_sunk_cost`` (total = depreciable + non-depreciable)
         - Internally relies on each cost object's
           ``expenditures_pre_tax()`` method to compute expenditures.
         """
@@ -2861,76 +2851,48 @@ class BaseProject:
             key: val.expenditures_pre_tax() for key, val in sunkcost_map.items()
         }
 
-        print('\t')
-        print(f'Filetype: {type(sunkcost_arr)}')
-        print(f'Length: {len(sunkcost_arr)}')
-        print('sunkcost_arr = \n', sunkcost_arr)
+        # Define depreciable sunk costs
+        self._oil_depreciable_sunk_cost = sunkcost_arr["oil_capital"]
+        self._gas_depreciable_sunk_cost = sunkcost_arr["gas_capital"]
 
-        # # Define depreciable sunk costs
-        # self._oil_depreciable_sunk_cost = sunkcost_arr["oil_capital"]
-        # self._gas_depreciable_sunk_cost = sunkcost_arr["gas_capital"]
-        #
-        # # Define non-depreciable sunk costs
-        # self._oil_non_depreciable_sunk_cost = (
-        #     sunkcost_arr["oil_intangible"]
-        #     + sunkcost_arr["oil_opex"]
-        #     + sunkcost_arr["oil_asr"]
-        #     + sunkcost_arr["oil_lbt"]
-        #     + sunkcost_arr["oil_cost_of_sales"]
-        # )
-        #
-        # self._gas_non_depreciable_sunk_cost = (
-        #     sunkcost_arr["gas_intangible"]
-        #     + sunkcost_arr["gas_opex"]
-        #     + sunkcost_arr["gas_asr"]
-        #     + sunkcost_arr["gas_lbt"]
-        #     + sunkcost_arr["gas_cost_of_sales"]
-        # )
-        #
-        # # Define total sunk cost
-        # self._oil_sunk_cost = (
-        #     self._oil_depreciable_sunk_cost + self._oil_non_depreciable_sunk_cost
-        # )
-        #
-        # self._gas_sunk_cost = (
-        #     self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
-        # )
+        # Define non-depreciable sunk costs
+        self._oil_non_depreciable_sunk_cost = (
+            sunkcost_arr["oil_intangible"]
+            + sunkcost_arr["oil_opex"]
+            + sunkcost_arr["oil_asr"]
+            + sunkcost_arr["oil_lbt"]
+            + sunkcost_arr["oil_cost_of_sales"]
+        )
+
+        self._gas_non_depreciable_sunk_cost = (
+            sunkcost_arr["gas_intangible"]
+            + sunkcost_arr["gas_opex"]
+            + sunkcost_arr["gas_asr"]
+            + sunkcost_arr["gas_lbt"]
+            + sunkcost_arr["gas_cost_of_sales"]
+        )
 
     def _get_preonstream_array(self) -> None:
         """
-        Validate and prepare pre-onstream cost arrays for OIL and GAS.
+        Prepare preonstream cost arrays for OIL and GAS.
 
-        This method validates all pre-onstream cost objects for OIL and GAS
-        using `_get_preonstream_validation`. It then constructs arrays of
-        pre-tax expenditures for each pre-onstream cost category, aggregates
-        them into depreciable and non-depreciable components, and finally
-        computes the total pre-onstream costs for both fluids.
-
-        Raises
-        ------
-        PreonstreamCostException
-            If any pre-onstream years fall outside the allowable range defined
-            by the project approval year and the respective fluid's onstream year,
-            as enforced by `_get_preonstream_validation`.
+        This method constructs arrays of pre-tax expenditures for each preonstream
+        cost category (Capital, Intangible, OPEX, ASR, LBT, and Cost of Sales),
+        aggregates them into depreciable and non-depreciable components.
 
         Notes
         -----
-        - Depreciable pre-onstream costs include only capital costs.
-        - Non-depreciable pre-onstream costs are formed by summing intangible,
+        - Depreciable preonstream costs include only capital costs.
+        - Non-depreciable preonstream costs are formed by summing intangible,
           OPEX, ASR, LBT, and cost of sales components.
         - The following internal attributes are set:
             * ``_oil_depreciable_preonstream``
             * ``_gas_depreciable_preonstream``
             * ``_oil_non_depreciable_preonstream``
             * ``_gas_non_depreciable_preonstream``
-            * ``_oil_preonstream`` (total = depreciable + non-depreciable)
-            * ``_gas_preonstream`` (total = depreciable + non-depreciable)
         - Internally relies on each cost object's
           ``expenditures_pre_tax()`` method to compute expenditures.
         """
-
-        # Validate OIL and GAS preonstream
-        self._get_preonstream_validation()
 
         # Prepare preonstream arrays for each preonstream objects
         preonstream_map = {
@@ -2970,15 +2932,6 @@ class BaseProject:
             + preonstream_arr["gas_asr"]
             + preonstream_arr["gas_lbt"]
             + preonstream_arr["gas_cost_of_sales"]
-        )
-
-        # Define total preonstream costs
-        self._oil_preonstream = (
-            self._oil_depreciable_preonstream + self._oil_non_depreciable_preonstream
-        )
-
-        self._gas_preonstream = (
-            self._gas_depreciable_preonstream + self._gas_non_depreciable_preonstream
         )
 
     def _calc_pre_tax_expenditures(
@@ -3148,9 +3101,6 @@ class BaseProject:
             -   `_gas_cost_of_sales_expenditures_pre_tax`
         """
 
-        # Validate OIL and GAS postonstream costs
-        self._get_postonstream_validation()
-
         # Prepare expenditures pre tax associated with capital, intangible,
         # opex, asr, and lbt costs
         (
@@ -3232,9 +3182,6 @@ class BaseProject:
             -   `_oil_cost_of_sales_indirect_tax`
             -   `_gas_cost_of_sales_indirect_tax`
         """
-
-        # Validate OIL and GAS postonstream costs
-        self._get_postonstream_validation()
 
         # Prepare indirect taxes associated with capital, intangible,
         # opex, asr, and lbt costs
@@ -3887,24 +3834,31 @@ class BaseProject:
         # Validate sunk cost, pre-onstream, and post-onstream objects
         self._get_cost_objects_validation()
 
-        # # Prepare preonstream and sunk costs
-        # self._get_sunkcost_array()
+        # Prepare sunk costs and preonstream costs
+        self._get_sunkcost_array()
+        self._get_preonstream_array()
 
-        # self._get_preonstream_array()
+        # Calculate (total = depreciable + non_depreciable costs)
+        # for sunk cost and preonstream cost
+        for ctype in ["sunk_cost", "preonstream"]:
+            for ftype in ["oil", "gas"]:
+                depreciable = getattr(self, f"_{ftype}_depreciable_{ctype}")
+                non_depreciable = getattr(self, f"_{ftype}_non_depreciable_{ctype}")
+                setattr(self, f"_{ftype}_{ctype}", depreciable + non_depreciable)
 
-        # # Calculate pre tax expenditures
-        # self._get_expenditures_pre_tax(
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     inflation_rate_applied_to=inflation_rate_applied_to,
-        # )
-        #
-        # # Calculate indirect taxes
-        # self._get_indirect_taxes(tax_rate=tax_rate)
-        #
-        # # Calculate post tax expenditures
-        # self._get_expenditures_post_tax()
-        #
+        # Calculate pre tax expenditures
+        self._get_expenditures_pre_tax(
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
+        )
+
+        # Calculate indirect taxes
+        self._get_indirect_taxes(tax_rate=tax_rate)
+
+        # Calculate post tax expenditures
+        self._get_expenditures_post_tax()
+
         # # Other revenue
         # self._get_other_revenue(
         #     sulfur_revenue=sulfur_revenue,
