@@ -791,7 +791,7 @@ class CapitalCost(GeneralCost):
             max_overdue = int(np.max(overdue[is_overdue]))
             overdue_depr_charge = [
                 np.concatenate((row[-i:-i+o], np.zeros(max_overdue-o))) if i > 0
-                else row for row, i,o in zip(depreciation_charge, shift_indices, overdue)
+                else row for row, i, o in zip(depreciation_charge, shift_indices, overdue)
             ]
             overdue_depr_charge = np.asarray(overdue_depr_charge)[is_overdue]
 
