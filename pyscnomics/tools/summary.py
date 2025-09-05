@@ -57,20 +57,20 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
 
     # Defining the same summary parameters for any contract
     # Lifting
-    lifting_oil = np.sum(contract._oil_lifting.get_lifting_rate_arr(), dtype=float)
-    if np.sum(contract._oil_lifting.get_lifting_rate_arr()) == 0:
+    lifting_oil = np.sum(contract._oil_lifting.get_lifting_rate_ghv_arr(), dtype=float)
+    if np.sum(contract._oil_lifting.get_lifting_rate_ghv_arr()) == 0:
         oil_wap = 0.0
     else:
-        oil_wap = np.divide(np.sum(contract._oil_revenue), np.sum(contract._oil_lifting.get_lifting_rate_arr()),
-                            where=np.sum(contract._oil_lifting.get_lifting_rate_arr()) != 0)
+        oil_wap = np.divide(np.sum(contract._oil_revenue), np.sum(contract._oil_lifting.get_lifting_rate_ghv_arr()),
+                            where=np.sum(contract._oil_lifting.get_lifting_rate_ghv_arr()) != 0)
 
-    lifting_gas = np.sum(contract._gas_lifting.get_lifting_rate_arr(), dtype=float)
-    if np.sum(contract._gas_lifting.get_lifting_rate_arr()) == 0:
+    lifting_gas = np.sum(contract._gas_lifting.get_lifting_rate_ghv_arr(), dtype=float)
+    if np.sum(contract._gas_lifting.get_lifting_rate_ghv_arr()) == 0:
         gas_wap = 0.0
     else:
-        gas_wap = np.divide(np.sum(contract._gas_wap_price * contract._gas_lifting.get_lifting_rate_arr() * contract._gas_lifting.get_lifting_ghv_arr()), np.sum(
-            contract._gas_lifting.get_lifting_rate_arr() * contract._gas_lifting.get_lifting_ghv_arr()), where=np.sum(
-            contract._gas_lifting.get_lifting_rate_arr() * contract._gas_lifting.get_lifting_ghv_arr()) != 0)
+        gas_wap = np.divide(np.sum(contract._gas_wap_price * contract._gas_lifting.get_lifting_rate_ghv_arr() * contract._gas_lifting.get_ghv_arr()), np.sum(
+            contract._gas_lifting.get_lifting_rate_ghv_arr() * contract._gas_lifting.get_ghv_arr()), where=np.sum(
+            contract._gas_lifting.get_lifting_rate_ghv_arr() * contract._gas_lifting.get_ghv_arr()) != 0)
 
     # Gross Revenue
     gross_revenue_oil = np.sum(contract._oil_revenue, dtype=float)
@@ -78,16 +78,43 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
     gross_revenue = np.sum(gross_revenue_oil + gross_revenue_gas, dtype=float)
 
     # Sunk Cost
-    sunk_cost = np.sum(contract._oil_sunk_cost + contract._gas_sunk_cost, dtype=float)
+    oil_sunk_cost = (
+            contract._oil_sunk_cost_bulk['Tangible'] +
+            contract._oil_sunk_cost_bulk['Intangible'] +
+            contract._oil_preonstream_cost_bulk['Tangible'] +
+            contract._oil_preonstream_cost_bulk['Intangible']
+    )
+
+    gas_sunk_cost = (
+            contract._gas_sunk_cost_bulk['Tangible'] +
+            contract._gas_sunk_cost_bulk['Intangible'] +
+            contract._gas_preonstream_cost_bulk['Tangible'] +
+            contract._gas_preonstream_cost_bulk['Intangible']
+    )
+
+    sunk_cost = np.sum(oil_sunk_cost + gas_sunk_cost, dtype=float)
 
     # Investment (Capital Cost)
-    sunk_cost_extended = np.concatenate((contract._consolidated_sunk_cost,
-                                         np.zeros(len(contract.project_years) - len(contract._consolidated_sunk_cost))))
+    tangible = np.sum(
+        contract._oil_capital_expenditures_post_tax +
+        contract._gas_capital_expenditures_post_tax +
+        contract._oil_sunk_cost_array['Tangible'] +
+        contract._gas_sunk_cost_array['Tangible'] +
+        contract._oil_preonstream_cost_array['Tangible'] +
+        contract._gas_preonstream_cost_array['Tangible'],
+        dtype=float
+    )
 
-    tangible = np.sum(contract._oil_capital_expenditures_post_tax + contract._gas_capital_expenditures_post_tax)
+    intangible = np.sum(
+        contract._oil_intangible_expenditures_post_tax +
+        contract._gas_intangible_expenditures_post_tax +
+        contract._oil_sunk_cost_array['Intangible'] +
+        contract._gas_sunk_cost_array['Intangible'] +
+        contract._oil_preonstream_cost_array['Intangible'] +
+        contract._gas_preonstream_cost_array['Intangible'],
+        dtype=float
+    )
 
-    intangible = np.sum(contract._oil_intangible_expenditures_post_tax + contract._gas_intangible_expenditures_post_tax - sunk_cost_extended,
-                        dtype=float)
     investment = tangible + intangible
 
     # Indirect Taxes
@@ -99,18 +126,6 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
     oil_carry_forward_depreciation = np.sum(contract._oil_carry_forward_depreciation)
     gas_carry_forward_depreciation = np.sum(contract._gas_carry_forward_depreciation)
     total_carry_forward_depreciation = oil_carry_forward_depreciation + gas_carry_forward_depreciation
-
-    # VAT of each Cost
-    oil_capital_indirect_tax = sum(contract._oil_capital_indirect_tax)
-    oil_intangible_indirect_tax = sum(contract._oil_intangible_indirect_tax)
-    oil_opex_indirect_tax = sum(contract._oil_opex_indirect_tax)
-    oil_asr_indirect_tax = sum(contract._oil_asr_indirect_tax)
-    oil_lbt_indirect_tax = sum(contract._oil_lbt_indirect_tax)
-    gas_capital_indirect_tax = sum(contract._gas_capital_indirect_tax)
-    gas_intangible_indirect_tax = sum(contract._gas_intangible_indirect_tax)
-    gas_opex_indirect_tax = sum(contract._gas_opex_indirect_tax)
-    gas_asr_indirect_tax = sum(contract._gas_asr_indirect_tax)
-    gas_lbt_indirect_tax = sum(contract._gas_lbt_indirect_tax)
 
     # Undepreciated Asset
     if isinstance(contract, (CostRecovery, GrossSplit, Transition)):
@@ -193,8 +208,15 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 contract._oil_capital_expenditures_post_tax +
                 contract._gas_capital_expenditures_post_tax +
                 contract._oil_intangible_expenditures_post_tax +
-                contract._gas_intangible_expenditures_post_tax -
-                sunk_cost_extended
+                contract._gas_intangible_expenditures_post_tax +
+                contract._oil_sunk_cost_array['Tangible'] +
+                contract._gas_sunk_cost_array['Tangible'] +
+                contract._oil_preonstream_cost_array['Tangible'] +
+                contract._gas_preonstream_cost_array['Tangible'] +
+                contract._oil_sunk_cost_array['Intangible'] +
+                contract._gas_sunk_cost_array['Intangible'] +
+                contract._oil_preonstream_cost_array['Intangible'] +
+                contract._gas_preonstream_cost_array['Intangible']
         ),
             cashflow_years=contract.project_years,
             discount_rate=discount_rate,
@@ -227,8 +249,15 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 contract._oil_capital_expenditures_post_tax +
                 contract._gas_capital_expenditures_post_tax +
                 contract._oil_intangible_expenditures_post_tax +
-                contract._gas_intangible_expenditures_post_tax -
-                sunk_cost_extended
+                contract._gas_intangible_expenditures_post_tax +
+                contract._oil_sunk_cost_array['Tangible'] +
+                contract._gas_sunk_cost_array['Tangible'] +
+                contract._oil_preonstream_cost_array['Tangible'] +
+                contract._gas_preonstream_cost_array['Tangible'] +
+                contract._oil_sunk_cost_array['Intangible'] +
+                contract._gas_sunk_cost_array['Intangible'] +
+                contract._oil_preonstream_cost_array['Intangible'] +
+                contract._gas_preonstream_cost_array['Intangible']
         ),
             cashflow_years=contract.project_years,
             discount_rate=discount_rate,
@@ -261,8 +290,15 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 contract._oil_capital_expenditures_post_tax +
                 contract._gas_capital_expenditures_post_tax +
                 contract._oil_intangible_expenditures_post_tax +
-                contract._gas_intangible_expenditures_post_tax -
-                sunk_cost_extended
+                contract._gas_intangible_expenditures_post_tax +
+                contract._oil_sunk_cost_array['Tangible'] +
+                contract._gas_sunk_cost_array['Tangible'] +
+                contract._oil_preonstream_cost_array['Tangible'] +
+                contract._gas_preonstream_cost_array['Tangible'] +
+                contract._oil_sunk_cost_array['Intangible'] +
+                contract._gas_sunk_cost_array['Intangible'] +
+                contract._oil_preonstream_cost_array['Intangible'] +
+                contract._gas_preonstream_cost_array['Intangible']
         ),
             cashflow_years=contract.project_years,
             discount_rate=discount_rate,
@@ -299,8 +335,15 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 contract._oil_capital_expenditures_post_tax +
                 contract._gas_capital_expenditures_post_tax +
                 contract._oil_intangible_expenditures_post_tax +
-                contract._gas_intangible_expenditures_post_tax -
-                sunk_cost_extended
+                contract._gas_intangible_expenditures_post_tax +
+                contract._oil_sunk_cost_array['Tangible'] +
+                contract._gas_sunk_cost_array['Tangible'] +
+                contract._oil_preonstream_cost_array['Tangible'] +
+                contract._gas_preonstream_cost_array['Tangible'] +
+                contract._oil_sunk_cost_array['Intangible'] +
+                contract._gas_sunk_cost_array['Intangible'] +
+                contract._oil_preonstream_cost_array['Intangible'] +
+                contract._gas_preonstream_cost_array['Intangible']
         ),
             cashflow_years=contract.project_years,
             discount_rate=discount_rate,
@@ -337,8 +380,15 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 contract._oil_capital_expenditures_post_tax +
                 contract._gas_capital_expenditures_post_tax +
                 contract._oil_intangible_expenditures_post_tax +
-                contract._gas_intangible_expenditures_post_tax -
-                sunk_cost_extended
+                contract._gas_intangible_expenditures_post_tax +
+                contract._oil_sunk_cost_array['Tangible'] +
+                contract._gas_sunk_cost_array['Tangible'] +
+                contract._oil_preonstream_cost_array['Tangible'] +
+                contract._gas_preonstream_cost_array['Tangible'] +
+                contract._oil_sunk_cost_array['Intangible'] +
+                contract._gas_sunk_cost_array['Intangible'] +
+                contract._oil_preonstream_cost_array['Intangible'] +
+                contract._gas_preonstream_cost_array['Intangible']
         ),
             cashflow_years=contract.project_years,
             discount_rate=discount_rate,
@@ -375,17 +425,19 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
             contract._oil_capital_expenditures_post_tax +
             contract._gas_capital_expenditures_post_tax +
             contract._oil_intangible_expenditures_post_tax +
-            contract._gas_intangible_expenditures_post_tax -
-            sunk_cost_extended
+            contract._gas_intangible_expenditures_post_tax +
+            contract._oil_sunk_cost_array['Tangible'] +
+            contract._gas_sunk_cost_array['Tangible'] +
+            contract._oil_preonstream_cost_array['Tangible'] +
+            contract._gas_preonstream_cost_array['Tangible'] +
+            contract._oil_sunk_cost_array['Intangible'] +
+            contract._gas_sunk_cost_array['Intangible'] +
+            contract._oil_preonstream_cost_array['Intangible'] +
+            contract._gas_preonstream_cost_array['Intangible']
         )
         ctr_pv_ratio = np.divide(ctr_npv, investment_pi, where=investment_pi != 0)
 
     ctr_pi = 1 + ctr_pv_ratio
-
-    # Cost of Sales Indicator
-    oil_cost_of_sales = sum(contract._oil_cost_of_sales_expenditures_post_tax)
-    gas_cost_of_sales = sum(contract._gas_cost_of_sales_expenditures_post_tax)
-    total_cost_of_sales = oil_cost_of_sales + gas_cost_of_sales
 
     # Condition where the contract is Cost Recovery
     if isinstance(contract, CostRecovery):
@@ -473,19 +525,6 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'total_carry_forward_depreciation': total_carry_forward_depreciation,
                 'oil_carry_forward_depreciation': oil_carry_forward_depreciation,
                 'gas_carry_forward_depreciation': gas_carry_forward_depreciation,
-                'total_cost_of_sales': total_cost_of_sales,
-                'oil_cost_of_sales': oil_cost_of_sales,
-                'gas_cost_of_sales': gas_cost_of_sales,
-                'oil_capital_vat': oil_capital_indirect_tax,
-                'oil_intangible_vat': oil_intangible_indirect_tax,
-                'oil_opex_vat': oil_opex_indirect_tax,
-                'oil_asr_vat': oil_asr_indirect_tax,
-                'oil_lbt_vat': oil_lbt_indirect_tax,
-                'gas_capital_vat': gas_capital_indirect_tax,
-                'gas_intangible_vat': gas_intangible_indirect_tax,
-                'gas_opex_vat': gas_opex_indirect_tax,
-                'gas_asr_vat': gas_asr_indirect_tax,
-                'gas_lbt_vat': gas_lbt_indirect_tax,
                 }
     # Condition where the contract is Gross Split
     if isinstance(contract, GrossSplit):
@@ -571,19 +610,6 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'total_carry_forward_depreciation': total_carry_forward_depreciation,
                 'oil_carry_forward_depreciation': oil_carry_forward_depreciation,
                 'gas_carry_forward_depreciation': gas_carry_forward_depreciation,
-                'total_cost_of_sales': total_cost_of_sales,
-                'oil_cost_of_sales': oil_cost_of_sales,
-                'gas_cost_of_sales': gas_cost_of_sales,
-                'oil_capital_vat': oil_capital_indirect_tax,
-                'oil_intangible_vat': oil_intangible_indirect_tax,
-                'oil_opex_vat': oil_opex_indirect_tax,
-                'oil_asr_vat': oil_asr_indirect_tax,
-                'oil_lbt_vat': oil_lbt_indirect_tax,
-                'gas_capital_vat': gas_capital_indirect_tax,
-                'gas_intangible_vat': gas_intangible_indirect_tax,
-                'gas_opex_vat': gas_opex_indirect_tax,
-                'gas_asr_vat': gas_asr_indirect_tax,
-                'gas_lbt_vat': gas_lbt_indirect_tax,
                 }
 
     if isinstance(contract, Transition):
@@ -776,19 +802,6 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'total_indirect_taxes': total_indirect_taxes,
                 'oil_indirect_taxes': oil_indirect_taxes,
                 'gas_indirect_taxes': gas_indirect_taxes,
-                'total_cost_of_sales': total_cost_of_sales,
-                'oil_cost_of_sales': oil_cost_of_sales,
-                'gas_cost_of_sales': gas_cost_of_sales,
-                'oil_capital_vat': oil_capital_indirect_tax,
-                'oil_intangible_vat': oil_intangible_indirect_tax,
-                'oil_opex_vat': oil_opex_indirect_tax,
-                'oil_asr_vat': oil_asr_indirect_tax,
-                'oil_lbt_vat': oil_lbt_indirect_tax,
-                'gas_capital_vat': gas_capital_indirect_tax,
-                'gas_intangible_vat': gas_intangible_indirect_tax,
-                'gas_opex_vat': gas_opex_indirect_tax,
-                'gas_asr_vat': gas_asr_indirect_tax,
-                'gas_lbt_vat': gas_lbt_indirect_tax,
                 }
 
     if isinstance(contract, BaseProject):
@@ -834,19 +847,6 @@ def get_summary(contract: BaseProject | CostRecovery | GrossSplit | Transition,
                 'total_indirect_taxes': total_indirect_taxes,
                 'oil_indirect_taxes': oil_indirect_taxes,
                 'gas_indirect_taxes': gas_indirect_taxes,
-                'total_cost_of_sales': total_cost_of_sales,
-                'oil_cost_of_sales': oil_cost_of_sales,
-                'gas_cost_of_sales': gas_cost_of_sales,
-                'oil_capital_vat': oil_capital_indirect_tax,
-                'oil_intangible_vat': oil_intangible_indirect_tax,
-                'oil_opex_vat': oil_opex_indirect_tax,
-                'oil_asr_vat': oil_asr_indirect_tax,
-                'oil_lbt_vat': oil_lbt_indirect_tax,
-                'gas_capital_vat': gas_capital_indirect_tax,
-                'gas_intangible_vat': gas_intangible_indirect_tax,
-                'gas_opex_vat': gas_opex_indirect_tax,
-                'gas_asr_vat': gas_asr_indirect_tax,
-                'gas_lbt_vat': gas_lbt_indirect_tax,
 
                 # Zero value for the psc terms
                 'gov_gross_share': 0,
@@ -976,24 +976,24 @@ class Summary:
         Parsing the lifting data to the lifting attributes
         """
         # Lifting Oil
-        self.lifting_oil = float(np.sum(self.contract._oil_lifting.get_lifting_rate_arr(), dtype=float))
-        if np.sum(self.contract._oil_lifting.get_lifting_rate_arr()) == 0:
+        self.lifting_oil = float(np.sum(self.contract._oil_lifting.get_lifting_rate_ghv_arr(), dtype=float))
+        if np.sum(self.contract._oil_lifting.get_lifting_rate_ghv_arr()) == 0:
             self.oil_wap = 0.0
         else:
             self.oil_wap = np.divide(np.sum(self.contract._oil_revenue),
-                                np.sum(self.contract._oil_lifting.get_lifting_rate_arr()),
-                                where=np.sum(self.contract._oil_lifting.get_lifting_rate_arr()) != 0)
+                                     np.sum(self.contract._oil_lifting.get_lifting_rate_ghv_arr()),
+                                     where=np.sum(self.contract._oil_lifting.get_lifting_rate_ghv_arr()) != 0)
 
-        self.lifting_gas = float(np.sum(self.contract._gas_lifting.get_lifting_rate_arr(), dtype=float))
+        self.lifting_gas = float(np.sum(self.contract._gas_lifting.get_lifting_rate_ghv_arr(), dtype=float))
 
         # Lifting Gas
-        if np.sum(self.contract._gas_lifting.get_lifting_rate_arr()) == 0:
+        if np.sum(self.contract._gas_lifting.get_lifting_rate_ghv_arr()) == 0:
             self.gas_wap = 0.0
         else:
             self.gas_wap = np.divide(
-                np.sum(self.contract._gas_wap_price * self.contract._gas_lifting.get_lifting_rate_arr()),
-                np.sum(self.contract._gas_lifting.get_lifting_rate_arr()),
-                where=np.sum(self.contract._gas_lifting.get_lifting_rate_arr()) != 0)
+                np.sum(self.contract._gas_wap_price * self.contract._gas_lifting.get_lifting_rate_ghv_arr()),
+                np.sum(self.contract._gas_lifting.get_lifting_rate_ghv_arr()),
+                where=np.sum(self.contract._gas_lifting.get_lifting_rate_ghv_arr()) != 0)
 
     def _get_gross_revenue(self):
         """

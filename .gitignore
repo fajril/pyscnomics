@@ -266,3 +266,5 @@ Temporary Items
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,pycharm,visualstudiocode,python,venv,virtualenv,jupyternotebooks,database,data
 
 /docs/
+sandbox.py
+sandbox.py

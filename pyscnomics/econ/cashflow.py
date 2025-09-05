@@ -9,13 +9,15 @@ from pyscnomics.contracts.transition import Transition
 
 from pyscnomics.econ.selection import NPVSelection, DiscountingMode
 
-from pyscnomics.econ.indicator import (irr,
-                                       npv_nominal_terms,
-                                       npv_real_terms,
-                                       npv_skk_nominal_terms,
-                                       npv_skk_real_terms,
-                                       npv_point_forward,
-                                       pot_psc)
+from pyscnomics.econ.indicator import (
+    irr,
+    npv_nominal_terms,
+    npv_real_terms,
+    npv_skk_nominal_terms,
+    npv_skk_real_terms,
+    npv_point_forward,
+    pot_psc,
+)
 
 
 class CashflowException(Exception):
@@ -58,8 +60,13 @@ class Cashflow:
     pot : float, optional
         The Payback on Time (POT) of the cashflow, defined later (default is None, not included in initialization or representation).
     """
-    contract: (CostRecovery | GrossSplit | Transition |
-               Tuple[Union[CostRecovery, GrossSplit, Transition], ...])
+
+    contract: (
+        CostRecovery
+        | GrossSplit
+        | Transition
+        | Tuple[Union[CostRecovery, GrossSplit, Transition], ...]
+    )
 
     reference_year: int = field(default=None)
     inflation_rate: float = field(default=0.0)
@@ -85,7 +92,9 @@ class Cashflow:
         self.check_run_status()
 
         # Filling the start_year, end_year, and project_years
-        if isinstance(self.contract, (BaseProject, CostRecovery, GrossSplit, Transition)):
+        if isinstance(
+            self.contract, (BaseProject, CostRecovery, GrossSplit, Transition)
+        ):
             self.get_single_project_start_end()
             self.get_single_project_years()
 
@@ -110,7 +119,9 @@ class Cashflow:
         Function to check whether the contract has been run or not.
         """
         # Condition when the contract is a single-value
-        if isinstance(self.contract, (BaseProject, CostRecovery, GrossSplit, Transition)):
+        if isinstance(
+            self.contract, (BaseProject, CostRecovery, GrossSplit, Transition)
+        ):
             if self.contract._consolidated_cashflow is None:
                 raise CashflowException(
                     f"Cashflow dataclass only receive contract that has been run. "
@@ -131,9 +142,7 @@ class Cashflow:
                 else:
                     pass
         else:
-            raise CashflowException(
-                f"Cashflow dataclass only receive psc contract/s."
-            )
+            raise CashflowException(f"Cashflow dataclass only receive psc contract/s.")
 
     def get_single_project_start_end(self):
         """
@@ -153,8 +162,12 @@ class Cashflow:
         """
         Function to parse the self.start_year and self.end_year from the given contracts.
         """
-        self.start_year = min(np.array([cntr.start_date.year for cntr in self.contract], dtype=int))
-        self.end_year = max(np.array([cntr.end_date.year for cntr in self.contract], dtype=int))
+        self.start_year = min(
+            np.array([cntr.start_date.year for cntr in self.contract], dtype=int)
+        )
+        self.end_year = max(
+            np.array([cntr.end_date.year for cntr in self.contract], dtype=int)
+        )
 
     def get_single_project_years(self):
         """
@@ -166,8 +179,12 @@ class Cashflow:
         """
         Function to parse the self.project_years from the given contracts.
         """
-        start_year_arr = min(np.array([cntr.start_date.year for cntr in self.contract], dtype=int))
-        end_year_arr = max(np.array([cntr.end_date.year for cntr in self.contract], dtype=int))
+        start_year_arr = min(
+            np.array([cntr.start_date.year for cntr in self.contract], dtype=int)
+        )
+        end_year_arr = max(
+            np.array([cntr.end_date.year for cntr in self.contract], dtype=int)
+        )
         self.project_years = np.arange(start=start_year_arr, stop=end_year_arr, step=1)
 
     def check_reference_year(self):
@@ -194,7 +211,9 @@ class Cashflow:
         """
         Function to parse self.cashflow from the input of contract/s.
         """
-        if isinstance(self.contract, (BaseProject, CostRecovery, GrossSplit, Transition)):
+        if isinstance(
+            self.contract, (BaseProject, CostRecovery, GrossSplit, Transition)
+        ):
             self.cashflow = self.contract._consolidated_cashflow
 
         elif isinstance(self.contract, tuple):
@@ -231,43 +250,53 @@ class Cashflow:
         """
         # NPV Calculation for SKK Real Terms
         if self.npv_mode == NPVSelection.NPV_SKK_REAL_TERMS:
-            ctr_npv = npv_skk_real_terms(cashflow=self.cashflow,
-                                         cashflow_years=self.project_years,
-                                         discount_rate=self.discount_rate,
-                                         reference_year=self.reference_year,
-                                         discounting_mode=self.discounting_mode)
+            ctr_npv = npv_skk_real_terms(
+                cashflow=self.cashflow,
+                cashflow_years=self.project_years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                discounting_mode=self.discounting_mode,
+            )
 
         # NPV Calculation for SKK Nominal Terms
         elif self.npv_mode == NPVSelection.NPV_SKK_NOMINAL_TERMS:
-            ctr_npv = npv_skk_nominal_terms(cashflow=self.cashflow,
-                                            cashflow_years=self.project_years,
-                                            discount_rate=self.discount_rate,
-                                            discounting_mode=self.discounting_mode)
+            ctr_npv = npv_skk_nominal_terms(
+                cashflow=self.cashflow,
+                cashflow_years=self.project_years,
+                discount_rate=self.discount_rate,
+                discounting_mode=self.discounting_mode,
+            )
 
         # NPV Calculation for Nominal Terms
         elif self.npv_mode == NPVSelection.NPV_NOMINAL_TERMS:
-            ctr_npv = npv_nominal_terms(cashflow=self.cashflow,
-                                        cashflow_years=self.project_years,
-                                        discount_rate=self.discount_rate,
-                                        reference_year=self.reference_year,
-                                        discounting_mode=self.discounting_mode)
+            ctr_npv = npv_nominal_terms(
+                cashflow=self.cashflow,
+                cashflow_years=self.project_years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                discounting_mode=self.discounting_mode,
+            )
 
         # NPV Calculation for Real Terms
         elif self.npv_mode == NPVSelection.NPV_REAL_TERMS:
-            ctr_npv = npv_real_terms(cashflow=self.cashflow,
-                                     cashflow_years=self.project_years,
-                                     discount_rate=self.discount_rate,
-                                     reference_year=self.reference_year,
-                                     inflation_rate=self.inflation_rate,
-                                     discounting_mode=self.discounting_mode)
+            ctr_npv = npv_real_terms(
+                cashflow=self.cashflow,
+                cashflow_years=self.project_years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                inflation_rate=self.inflation_rate,
+                discounting_mode=self.discounting_mode,
+            )
 
         # NPV Calculation for Point Forwards
         elif self.npv_mode == NPVSelection.NPV_POINT_FORWARD:
-            ctr_npv = npv_point_forward(cashflow=self.cashflow,
-                                        cashflow_years=self.project_years,
-                                        discount_rate=self.discount_rate,
-                                        reference_year=self.reference_year,
-                                        discounting_mode=self.discounting_mode)
+            ctr_npv = npv_point_forward(
+                cashflow=self.cashflow,
+                cashflow_years=self.project_years,
+                discount_rate=self.discount_rate,
+                reference_year=self.reference_year,
+                discounting_mode=self.discounting_mode,
+            )
 
         # Condition when the npv_mode is not recognized
         else:
@@ -288,9 +317,11 @@ class Cashflow:
         """
         Function to get the Pay-Out Time (POT) of the obtained cashflow.
         """
-        return pot_psc(cashflow=self.cashflow,
-                       cashflow_years=self.project_years,
-                       reference_year=self.reference_year)
+        return pot_psc(
+            cashflow=self.cashflow,
+            cashflow_years=self.project_years,
+            reference_year=self.reference_year,
+        )
 
     def run(self):
         """
@@ -303,6 +334,3 @@ class Cashflow:
         self.npv = self.get_contract_npv()
         self.irr = self.get_contract_irr()
         self.pot = self.get_contract_pot()
-
-
-

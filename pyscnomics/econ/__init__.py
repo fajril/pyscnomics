@@ -1,14 +1,9 @@
-""" Specify callable classes and methods from package 'econ' """
+"""
+Specify callable classes and methods from package 'econ'
+"""
 
 from .revenue import Lifting
-from .costs import (
-    GeneralCost,
-    CapitalCost,
-    Intangible,
-    OPEX,
-    ASR,
-    CostOfSales
-)
+from .costs import GeneralCost, CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales
 from .depreciation import (
     straight_line_depreciation_rate,
     straight_line_book_value,
@@ -19,6 +14,30 @@ from .depreciation import (
     unit_of_production_rate,
     unit_of_production_book_value,
 )
+from .selection import (
+    ExpendituresType,
+    DeprMethod,
+    FluidType,
+    TaxType,
+    TaxSplitTypeCR,
+    YearReference,
+    TaxRegime,
+    TaxPaymentMode,
+    FTPTaxRegime,
+    GrossSplitRegime,
+    DiscountingMode,
+    ContractType,
+    NPVSelection,
+    OtherRevenue,
+    InflationAppliedTo,
+    OptimizationParameter,
+    OptimizationTarget,
+    VariableSplit522017,
+    VariableSplit082017
+)
+
+
+
 from .selection import (
     DeprMethod,
     FluidType,

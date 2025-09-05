@@ -840,8 +840,9 @@ def convert_list_to_array_float_or_array(data_input: list | float | int | str) -
         return np.array(data_input, dtype=float)
 
 
-def convert_list_to_array_float_or_array_or_none(data_list: list | float | int | str | None
-                                                 ) -> np.ndarray | float | None:
+def convert_list_to_array_float_or_array_or_none(
+    data_list: list | float | int | str | None
+) -> np.ndarray | float | None:
     """
     Function to convert list into array of float, None or array.
 
@@ -1417,19 +1418,6 @@ def convert_summary_to_dict(dict_object: dict):
         'total_carry_forward_depreciation': dict_object['total_carry_forward_depreciation'],
         'oil_carry_forward_depreciation': dict_object['oil_carry_forward_depreciation'],
         'gas_carry_forward_depreciation': dict_object['gas_carry_forward_depreciation'],
-        'total_cost_of_sales': dict_object['total_cost_of_sales'],
-        'oil_cost_of_sales': dict_object['oil_cost_of_sales'],
-        'gas_cost_of_sales': dict_object['gas_cost_of_sales'],
-        'oil_capital_vat': dict_object['oil_capital_vat'],
-        'oil_intangible_vat': dict_object['oil_intangible_vat'],
-        'oil_opex_vat': dict_object['oil_opex_vat'],
-        'oil_asr_vat': dict_object['oil_asr_vat'],
-        'oil_lbt_vat': dict_object['oil_lbt_vat'],
-        'gas_capital_vat': dict_object['gas_capital_vat'],
-        'gas_intangible_vat': dict_object['gas_intangible_vat'],
-        'gas_opex_vat': dict_object['gas_opex_vat'],
-        'gas_asr_vat': dict_object['gas_asr_vat'],
-        'gas_lbt_vat': dict_object['gas_lbt_vat'],
     }
     return summary_skk_format
 

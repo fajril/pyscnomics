@@ -85,19 +85,17 @@ def _negative_cashflow(cashflow: np.ndarray) -> int:
 
         # Condition when there are negative values in the early rows
         if len(neglect_idx) > 1:
-            cf_pseudo = cashflow[neglect_idx[-1] + 1:]
+            cf_pseudo = cashflow[neglect_idx[-1] + 1 :]
             result = np.where(cf_pseudo < 0)[0][0] + len(neglect_idx) - 1
 
         # Condition when there is no negative value in the early rows but there are negative cashflow
         elif len(neglect_idx) == 0 and len(negative_indices) > 0:
             result = negative_indices[0] - 1
 
-
         else:
             result = 1
 
     return result
-
 
 
 def _max_npv(cashflow: np.ndarray) -> int:
