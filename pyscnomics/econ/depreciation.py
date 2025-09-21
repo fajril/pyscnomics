@@ -4,6 +4,7 @@ Calculate depreciation.
 
 import numpy as np
 import pandas as pd
+from pyscnomics.econ.selection import InitialYearAmortizationIncurred
 
 
 class DepreciationException(Exception):
@@ -389,48 +390,54 @@ def psc_declining_balance_book_value(
     return book_value
 
 
-def unit_of_production_rate(
-    start_year_project: int,
-    cost: float,
+def prepare_amortization(
     prod: np.ndarray,
     prod_year: np.ndarray,
-    salvage_value: float = 0.0,
-    amortization_len: int = 0,
-) -> np.ndarray:
+    project_years: np.ndarray,
+    cost: float,
+    salvage_value: float,
+) -> None:
     """
-    Calculates the unit of production amortization schedule based on production data.
+    Validate and preprocess input data for unit-of-production amortization.
+
+    This function ensures that production data (`prod` and `prod_year`) and
+    project information are consistent, properly typed, and within valid ranges.
+    It also checks the logical consistency between `cost` and `salvage_value`.
 
     Parameters
     ----------
-    start_year_project : int
-        The start year of the project.
-    cost : float
-        The initial cost of the asset.
     prod : np.ndarray
-        An array representing production values for each year.
+        Array of production volumes for each production year.
+        NaN values are replaced with zeros and the array is cast to `float64`.
     prod_year : np.ndarray
-        An array representing corresponding years for the production values.
-    salvage_value : float, optional
-        The residual value of the asset at the end of its useful life. Default is 0.0.
-    amortization_len : int, optional
-        The total duration for which amortization should be calculated.
-        If greater than the number of unique years, the amortization schedule is extended
-        with zero values. Default is 0.
+        Array of years corresponding to `prod`. Must be the same length as `prod`.
+        NaN values are not allowed and will raise an exception.
+    project_years : np.ndarray
+        Array representing the valid range of project years.
+        `prod_year` must fall entirely within this range.
+    cost : float
+        The initial cost of the asset being amortized.
+    salvage_value : float
+        The residual value of the asset at the end of its useful life.
+        Must not exceed `cost`.
 
-    Returns
-    -------
-    np.ndarray
-        An array representing the amortization charge for each year.
+    Raises
+    ------
+    UnitOfProductionException
+        If:
+        - `prod` or `prod_year` is not a NumPy array,
+        - `prod` and `prod_year` have unequal lengths,
+        - `prod_year` contains NaN values,
+        - `prod_year` starts before the project start year,
+        - `prod_year` ends after the project end year,
+        - `salvage_value` is greater than `cost`.
 
     Notes
     -----
-    - The function ensures that the amortization charge is allocated correctly based
-      on production values.
-    - It prevents depreciation exceeding `cost - salvage_value` by adjusting the
-      final values.
-    - The function calculates amortization charge using 2 * unit of production method.
-    - If `amortization_len` is greater than the number of unique production years,
-      the schedule is extended with zeros.
+    - This function does not return values but modifies `prod` in place
+      (replacing NaNs with zeros and converting to float64).
+    - It is designed to be used as a validation/preprocessing step before
+      calculating amortization schedules.
     """
 
     # Prepare parameter prod
@@ -472,14 +479,15 @@ def unit_of_production_rate(
         )
 
     # Raise an exception if prod_year is before the start year of the project
-    if min(prod_year) < start_year_project:
+    if min(prod_year) < project_years.min():
         raise UnitOfProductionException(
             f"Production year ({min(prod_year)}) is before the start year "
             f"of the project ({start_year_project})."
         )
 
     # Raise an exception if prod_year is after the end year of the project
-    if max(prod_year) > int(start_year_project + amortization_len - 1):
+    if max(prod_year) > project_years.max():
+        # if max(prod_year) > int(start_year_project + amortization_len - 1):
         raise UnitOfProductionException(
             f"Production year ({max(prod_year)}) is after the end year "
             f"of the project ({int(start_year_project + amortization_len - 1)})"
@@ -490,6 +498,118 @@ def unit_of_production_rate(
         raise UnitOfProductionException(
             f"Salvage value ({salvage_value}) is larger than the associated cost ({cost})."
         )
+
+
+def align_amortization(
+    amortization_charge: np.ndarray,
+    project_years: np.ndarray,
+    target_year: int,
+) -> np.ndarray:
+    """
+    Align amortization charges to start at a given target year.
+
+    Parameters
+    ----------
+    amortization_charge : np.ndarray
+        Array of amortization charges (may include leading zeros).
+    project_years : np.ndarray
+        Array of project years.
+    target_year : int
+        The year where amortization charges should begin.
+
+    Returns
+    -------
+    np.ndarray
+        New amortization charge array aligned with `target_year`.
+    """
+
+    # First index where amortization_charge > 0
+    idx_amort = np.flatnonzero(amortization_charge > 0).min()
+
+    # Find the index of the target year
+    idx_target = int(np.flatnonzero(project_years == target_year))
+
+    # Place the amortization charges starting at the target index
+    capture_amort = amortization_charge[idx_amort:]
+    new_amort = np.zeros_like(project_years, dtype=np.float64)
+    new_amort[idx_target:int(idx_target + len(capture_amort))] = capture_amort
+
+    return new_amort
+
+
+def unit_of_production_rate(
+    project_years: np.ndarray,
+    approval_year: int,
+    cost: float,
+    prod: np.ndarray,
+    prod_year: np.ndarray,
+    initial_amortization_year: InitialYearAmortizationIncurred,
+    salvage_value: float,
+) -> np.ndarray:
+    """
+    Calculate the unit-of-production (UOP) amortization schedule.
+
+    This function applies the double unit-of-production (2×UOP) method to
+    allocate amortization charges across project years, using production
+    volumes as the allocation basis.
+
+    The schedule is aligned either with the project approval year or with
+    the onstream year of production, depending on ``initial_amortization_year``.
+
+    The amortization charges are adjusted to ensure they do not exceed the
+    depreciable cost (``cost - salvage_value``), and any rounding or excess
+    allocation is corrected in the final schedule.
+
+    Parameters
+    ----------
+    project_years : np.ndarray
+        Array of valid project years. Production years must fall within this range.
+    approval_year : int
+        The approval year of the project. Used if amortization begins at the
+        approval year.
+    cost : float
+        The initial cost of the asset to be amortized.
+    prod : np.ndarray
+        Array of production volumes per year. NaN values are replaced with zeros.
+    prod_year : np.ndarray
+        Array of years corresponding to ``prod``. Must be the same length as ``prod``.
+    initial_amortization_year : InitialYearAmortizationIncurred
+        Specifies the reference year to begin amortization.
+        Options include:
+        - ``InitialYearAmortizationIncurred.ONSTREAM_YEAR`` → aligns amortization
+          with the fluid production year.
+        - ``InitialYearAmortizationIncurred.APPROVAL_YEAR`` → aligns amortization
+          with the project approval year.
+    salvage_value : float, default=0.0
+        The residual value of the asset at the end of its useful life.
+        Must not exceed ``cost``.
+
+    Returns
+    -------
+    np.ndarray
+        Amortization charge allocated across project years. The length matches
+        ``project_years``.
+
+    Notes
+    -----
+    - Implements the **double unit-of-production (2×UOP) method**.
+    - Ensures cumulative amortization never exceeds the depreciable base
+      (``cost - salvage_value``).
+    - If amortization is exhausted early, subsequent charges are set to zero.
+    - The final charge is adjusted if needed to absorb rounding differences.
+    - Uses ``np.bincount`` to align production years when amortization begins
+      at onstream year, and ``align_amortization`` when amortization begins
+      at approval year.
+    """
+
+    # Prepare the associated parameters
+    prepare_amortization(
+        prod=prod,
+        prod_year=prod_year,
+        project_years=project_years,
+        cost=cost,
+        salvage_value=salvage_value,
+    )
 
     # Specify cumulative production
     cum_prod = np.sum(prod, dtype=np.float64)
@@ -502,9 +622,9 @@ def unit_of_production_rate(
         )
 
     # Calculate amortization charge (1 * UOP)
-    amortization_charge = np.divide(prod, cum_prod, where=cum_prod != 0) * (
-        cost - salvage_value
-    )
+    amortization_charge = np.divide(
+        prod, cum_prod, where=cum_prod != 0
+    ) * (cost - salvage_value)
 
     # Calculate amortization charge (2 * UOP)
     amortization_charge = 2.0 * amortization_charge
@@ -536,59 +656,109 @@ def unit_of_production_rate(
             f"{remaining_amortization_unique_sum}"
         )
 
-    # Allocate amortization_charge according to their associated year
-    amortization_charge = np.bincount(
-        prod_year - start_year_project, weights=amortization_charge
-    )
+    # Check whether amortization charge array is all zero
+    if np.all(amortization_charge == 0):
+        amortization_charge = amortization_charge
+
+    else:
+        # Allocate amortization_charge according to their associated year
+        if initial_amortization_year == InitialYearAmortizationIncurred.ONSTREAM_YEAR:
+            amortization_charge = np.bincount(
+                prod_year - project_years.min(), weights=amortization_charge
+            )
+
+        elif initial_amortization_year == InitialYearAmortizationIncurred.APPROVAL_YEAR:
+            amortization_charge = align_amortization(
+                amortization_charge=amortization_charge,
+                project_years=project_years,
+                target_year=approval_year,
+            )
+
+        else:
+            raise UnitOfProductionException(
+                f"Unrecognized initial amortization year: "
+                f"{initial_amortization_year.__class__.__qualname__}. "
+            )
 
     # Modify amortization charge, accounting for project duration
-    if amortization_len > len(amortization_charge):
-        extension = np.zeros(amortization_len - len(amortization_charge))
+    if len(amortization_charge) < len(project_years):
+        extension = np.zeros(len(project_years) - len(amortization_charge))
         amortization_charge = np.concatenate((amortization_charge, extension))
 
     return amortization_charge
 
 
 def unit_of_production_book_value(
-    start_year_project: int,
+    project_years: np.ndarray,
+    approval_year: int,
     cost: float,
     prod: np.ndarray,
     prod_year: np.ndarray,
-    salvage_value: float = 0.0,
-    amortization_len: int = 0,
+    initial_amortization_year: InitialYearAmortizationIncurred,
+    salvage_value: float,
 ) -> np.ndarray:
     """
-    Calculate the book value of an asset over time using unit of production method.
+    Calculate the book value of an asset over time using the unit-of-production method.
+
+    This function computes amortization charges using the double unit-of-production
+    (2×UOP) method via :func:`unit_of_production_rate`, and then derives the
+    book value as the difference between initial cost and cumulative amortization.
 
     Parameters
     ----------
-    start_year_project : int
-        The starting year of the project.
+    project_years : np.ndarray
+        Array of valid project years. Book values are aligned to these years.
+    approval_year : int
+        The approval year of the project (used if amortization begins at approval year).
     cost : float
-        Initial cost of the asset.
+        The initial cost of the asset.
     prod : np.ndarray
-        Hydrocarbon production starting from onstream year.
+        Array of hydrocarbon production volumes. NaN values are replaced with zeros.
     prod_year : np.ndarray
-        An array of years corresponding to the hydrocarbon production.
-    salvage_value : float, optional
-        The salvage value of the project at the end of its life (default is 0.0).
-    amortization_len : int, optional
-        The length of the amortization charge array (default is 0).
-        If specified and greater than the calculated length, the array will be extended with zeros.
+        Array of years corresponding to ``prod``. Must be the same length as ``prod``.
+    initial_amortization_year : InitialYearAmortizationIncurred
+        Specifies the reference year to begin amortization.
+        Options include:
+        - ``InitialYearAmortizationIncurred.ONSTREAM_YEAR`` → aligns amortization
+          with the earlier of oil/gas onstream year.
+        - ``InitialYearAmortizationIncurred.APPROVAL_YEAR`` → aligns amortization
+          with the project approval year.
+    salvage_value : float, default=0.0
+        The residual value of the asset at the end of its useful life.
+        Must not exceed ``cost``.
 
     Returns
-    --------
-    book_value: np.ndarray
-        An array containing the calculated book values of the asset over time.
+    -------
+    np.ndarray
+        An array of the asset's book value across ``project_years``.
+        The length matches ``project_years``.
+
+    Raises
+    ------
+    UnitOfProductionException
+        Raised by :func:`unit_of_production_rate` if:
+        - ``prod`` or ``prod_year`` are invalid,
+        - production years fall outside ``project_years``,
+        - salvage value exceeds cost,
+        - cumulative production is non-positive,
+        - an unsupported ``initial_amortization_year`` is provided.
+
+    Notes
+    -----
+    - The book value is calculated as::
+          book_value[t] = cost - cumulative_amortization[t]
+    - Amortization charges are computed using the 2× unit-of-production method.
+    - Ensures book value never falls below salvage value.
     """
 
     amortization_charge = unit_of_production_rate(
-        start_year_project=start_year_project,
+        project_years=project_years,
+        approval_year=approval_year,
         cost=cost,
         prod=prod,
         prod_year=prod_year,
+        initial_amortization_year=initial_amortization_year,
         salvage_value=salvage_value,
-        amortization_len=amortization_len,
     )
 
     book_value = cost - np.cumsum(amortization_charge)

@@ -681,6 +681,14 @@ class VariableSplit132024:
         DEEP_OFFSHORE = "500 <= h <= 1000"
         ULTRADEEP_OFFSHORE = "1000 < h"
 
+    class ReservoirType(Enum):
+        """
+        Reservoir type variable split component
+        """
+
+        MK = "Conventional"
+        MNK = "Unconventional"
+
 
 class ContractSample(Enum):
     """
@@ -751,3 +759,17 @@ class CostType(Enum):
     SUNK_COST = "Sunk Cost"
     PRE_ONSTREAM_COST = "Preonstream Cost"
     POST_ONSTREAM_COST = "Postonstream Cost"
+
+
+class InitialYearAmortizationIncurred(Enum):
+    """ Selection for Initial Year of Amortization Incurred """
+
+    ONSTREAM_YEAR = "Onstream Year"
+    APPROVAL_YEAR = "Approval Year"
+
+
+class InitialYearDepreciationIncurred(Enum):
+    """ Selection for Initial Year of Depreciation Incurred """
+
+    DIRECT = "PIS Year"
+    ONSTREAM_YEAR = "Onstream Year"

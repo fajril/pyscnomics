@@ -565,7 +565,7 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         prod_stage=data['grosssplit']['prod_stage'] if 'prod_stage' in data['grosssplit'] else None,
         co2_content=data['grosssplit']['co2_content'] if 'co2_content' in data['grosssplit'] else None,
         h2s_content=data['grosssplit']['h2s_content'] if 'h2s_content' in data['grosssplit'] else None,
-        field_reserves=data['grosssplit']['field_reserves'] if 'field_reserves' in data['grosssplit'] else None,
+        field_reserves_2024=data['grosssplit']['field_reserves'] if 'field_reserves' in data['grosssplit'] else None,
         base_split_ctr_oil=convert_to_float(target=data['grosssplit']['base_split_ctr_oil']),
         base_split_ctr_gas=convert_to_float(target=data['grosssplit']['base_split_ctr_gas']),
         split_ministry_disc=convert_to_float(target=data['grosssplit']['split_ministry_disc']),

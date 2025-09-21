@@ -11,14 +11,14 @@ from pyscnomics.econ.revenue import Lifting
 
 
 def get_unrec_cost_2b_recovered_costrec(
-        project_years: np.ndarray,
-        depreciation: np.ndarray,
-        non_capital: np.ndarray,
-        revenue: np.ndarray,
-        ftp_ctr: np.ndarray,
-        ftp_gov: np.ndarray,
-        ic: np.ndarray,
-        cr_cap_rate: float,
+    project_years: np.ndarray,
+    depreciation: np.ndarray,
+    non_capital: np.ndarray,
+    revenue: np.ndarray,
+    ftp_ctr: np.ndarray,
+    ftp_gov: np.ndarray,
+    ic: np.ndarray,
+    cr_cap_rate: float,
 ) -> (np.ndarray, np.ndarray, np.ndarray):
     """
     Function to get the Unrecoverable Cost, Cost to be Recovered and Cost Recovery.
@@ -133,12 +133,14 @@ def get_unrec_cost_2b_recovered_costrec(
     return unrecovered_cost, cost_to_be_recovered, cost_recovery
 
 
-def get_unrecovered_cost(depreciation: np.ndarray,
-                         non_capital: np.ndarray,
-                         revenue: np.ndarray,
-                         ftp_ctr: np.ndarray,
-                         ftp_gov: np.ndarray,
-                         ic: np.ndarray) -> np.ndarray:
+def get_unrecovered_cost(
+    depreciation: np.ndarray,
+    non_capital: np.ndarray,
+    revenue: np.ndarray,
+    ftp_ctr: np.ndarray,
+    ftp_gov: np.ndarray,
+    ic: np.ndarray
+) -> np.ndarray:
     """
     A function to get the array of unrecovered cost.
 
@@ -206,11 +208,14 @@ def get_cost_to_be_recovered(unrecovered_cost: np.ndarray) -> np.ndarray:
         The array of cost to be recovered.
     """
     ctr = np.concatenate((np.zeros(1), -np.diff(unrecovered_cost)))
+
     return np.where(ctr > 0, ctr, 0)
 
 
-def get_cost_to_be_recovered_after_tf(unrecovered_cost: np.ndarray,
-                                      transferred_cost: np.ndarray) -> np.ndarray:
+def get_cost_to_be_recovered_after_tf(
+    unrecovered_cost: np.ndarray,
+    transferred_cost: np.ndarray
+) -> np.ndarray:
     """
     A function to get the array of cost to be recovered.
 
@@ -231,10 +236,12 @@ def get_cost_to_be_recovered_after_tf(unrecovered_cost: np.ndarray,
     return result
 
 
-def get_transfer(gas_unrecovered: np.ndarray,
-                 oil_unrecovered: np.ndarray,
-                 gas_ets_pretransfer: np.ndarray,
-                 oil_ets_pretransfer: np.ndarray) -> tuple:
+def get_transfer(
+    gas_unrecovered: np.ndarray,
+    oil_unrecovered: np.ndarray,
+    gas_ets_pretransfer: np.ndarray,
+    oil_ets_pretransfer: np.ndarray
+) -> tuple:
     """
     A function to get the transferred cost between oil and gas.
 
@@ -308,14 +315,17 @@ def get_transfer(gas_unrecovered: np.ndarray,
 #     unrecovered_cost_final = unrecovered_cost + np.cumsum(left_cost)
 #     return unrecovered_cost_final
 
-def get_unrec_cost_after_tf(depreciation,
-                            non_capital,
-                            revenue,
-                            ftp_ctr,
-                            ftp_gov,
-                            ic,
-                            transferred_cost_in,
-                            transferred_cost_out):
+
+def get_unrec_cost_after_tf(
+    depreciation,
+    non_capital,
+    revenue,
+    ftp_ctr,
+    ftp_gov,
+    ic,
+    transferred_cost_in,
+    transferred_cost_out
+):
     unrecovered_cost = np.cumsum(depreciation + non_capital) - np.cumsum(
         revenue - (ftp_ctr + ftp_gov) - ic
     )
@@ -345,9 +355,11 @@ def get_unrec_cost_after_tf(depreciation,
     return unrecovered_cost_final
 
 
-def get_ets_after_transfer(ets_before_transfer: np.ndarray,
-                           trfto: np.ndarray,
-                           unrecovered_after_transfer: np.ndarray):
+def get_ets_after_transfer(
+    ets_before_transfer: np.ndarray,
+    trfto: np.ndarray,
+    unrecovered_after_transfer: np.ndarray
+):
     """
     A function to get the Equity To be Split (ETS) after transfer.
 
@@ -408,21 +420,23 @@ def get_ets_after_transfer(ets_before_transfer: np.ndarray,
 #     return ets_after_transfer
 
 
-def get_dmo(onstream_date: date,
-            start_date: date,
-            project_years: np.ndarray,
-            dmo_holiday_duration: int,
-            dmo_volume_portion: float | np.ndarray,
-            dmo_fee_portion: float | np.ndarray,
-            lifting: Lifting,
-            price: np.ndarray,
-            ctr_pretax_share: float,
-            unrecovered_cost: np.ndarray,
-            is_dmo_end_weighted: bool,
-            ets: np.ndarray | None = None,
-            ctr_ets: np.ndarray | None = None,
-            ctr_ftp: np.ndarray | None = None,
-            post_uu_22_year2001: bool = True,) -> tuple:
+def get_dmo(
+    onstream_date: date,
+    start_date: date,
+    project_years: np.ndarray,
+    dmo_holiday_duration: int,
+    dmo_volume_portion: float | np.ndarray,
+    dmo_fee_portion: float | np.ndarray,
+    lifting: Lifting,
+    price: np.ndarray,
+    ctr_pretax_share: float,
+    unrecovered_cost: np.ndarray,
+    is_dmo_end_weighted: bool,
+    ets: np.ndarray | None = None,
+    ctr_ets: np.ndarray | None = None,
+    ctr_ftp: np.ndarray | None = None,
+    post_uu_22_year2001: bool = True
+) -> tuple:
     """
     A function to get the array of Domestic Market Obligation (DMO).
 
@@ -508,17 +522,18 @@ def get_dmo(onstream_date: date,
 
 
 def get_dmo_gross_split(
-        onstream_date: date,
-        start_date: date,
-        project_years: np.ndarray,
-        dmo_holiday_duration: int,
-        dmo_volume_portion: float,
-        dmo_fee_portion: float,
-        price: np.ndarray,
-        unrecovered_cost: np.ndarray,
-        is_dmo_end_weighted: bool,
-        net_operating_profit: np.ndarray,
-        contractor_share: np.ndarray) -> tuple:
+    onstream_date: date,
+    start_date: date,
+    project_years: np.ndarray,
+    dmo_holiday_duration: int,
+    dmo_volume_portion: float,
+    dmo_fee_portion: float,
+    price: np.ndarray,
+    unrecovered_cost: np.ndarray,
+    is_dmo_end_weighted: bool,
+    net_operating_profit: np.ndarray,
+    contractor_share: np.ndarray
+) -> tuple:
     """
     A function to get the array of Domestic Market Obligation (DMO) in Gross Split contract.
 
@@ -597,9 +612,11 @@ def get_dmo_gross_split(
     return dmo_volume, dmo_fee, ddmo
 
 
-def transfer_treatment(unrecovered_prior_to_cost: np.ndarray,
-                       unrecovered_after_to_cost: np.ndarray,
-                       transfer_prior: np.ndarray):
+def transfer_treatment(
+    unrecovered_prior_to_cost: np.ndarray,
+    unrecovered_after_to_cost: np.ndarray,
+    transfer_prior: np.ndarray
+):
     # Get the cumulative transferred cost
     transfer_cum = np.cumsum(transfer_prior)
 
@@ -623,4 +640,3 @@ def transfer_treatment(unrecovered_prior_to_cost: np.ndarray,
     # input()
 
     return transfer_final
-
