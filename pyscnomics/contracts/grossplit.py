@@ -2430,19 +2430,14 @@ class GrossSplit(BaseProject):
                     depr[c][-1] += undepr[c].sum()
                     undepr[c] = np.zeros([1, 1], dtype=np.float64)
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_depreciations)}')
-        print(f'Length: {len(self._oil_depreciations)}')
-        print('_oil_depreciations = \n', self._oil_depreciations)
-
         # Prepare sunk costs and preonstream costs
         self._get_sunkcost_array()
         self._get_preonstream_array()
 
         print('\t')
-        print(f'Filetype: {type(self._oil_preonstream)}')
-        print(f'Length: {len(self._oil_preonstream)}')
-        print('_oil_preonstream = \n', self._oil_preonstream)
+        print(f'Filetype: {type(self._oil_total_expenses)}')
+        print(f'Length: {len(self._oil_total_expenses)}')
+        print('_oil_total_expenses = \n', self._oil_total_expenses)
 
         # Calculate amortizations
         self._get_amortization(
@@ -2451,12 +2446,24 @@ class GrossSplit(BaseProject):
         )
 
         print('\t')
+        print('================================================================')
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_depreciations)}')
+        print(f'Length: {len(self._oil_depreciations)}')
+        print('_oil_depreciations = \n', self._oil_depreciations)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_undepreciated_assets)}')
+        print(f'Length: {len(self._oil_undepreciated_assets)}')
+        print('_oil_undepreciated_assets = \n', self._oil_undepreciated_assets)
+
+        print('\t')
         print(f'Filetype: {type(self._oil_amortizations)}')
         print(f'Length: {len(self._oil_amortizations)}')
         print('_oil_amortizations = \n', self._oil_amortizations)
 
-        print('\t')
-        print('================================================================')
+
 
         # # Add carry forward depreciation to the total depreciation (for OIL and GAS)
         # self._oil_depreciations["total"] = (
