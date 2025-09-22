@@ -638,6 +638,7 @@ class GrossSplit(BaseProject):
 
         # Modify depreciations for non POD I contract
         if not self.is_pod_1:
+
             # Combine sunk cost and preonstream cost depreciations for non POD I contract,
             # then assign the results as the "modified" sunk cost depreciations
             self._oil_depreciations["sunk_cost"] += self._oil_depreciations["preonstream"]
@@ -2373,11 +2374,10 @@ class GrossSplit(BaseProject):
         reservoir_type_permen_2024: VariableSplit132024.ReservoirType = (
             VariableSplit132024.ReservoirType.MK
         ),
-        # is_dmo_end_weighted=False,
-        # tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
-        # effective_tax_rate: float | np.ndarray = 0.22,
-        # sunk_cost_reference_year: int = None,
-        # amortization: bool = False,
+        is_dmo_end_weighted=False,
+        tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
+        effective_tax_rate: float | np.ndarray = 0.22,
+        amortization: bool = False,
     ):
 
         # Perform initial check to several input arguments
@@ -2407,23 +2407,6 @@ class GrossSplit(BaseProject):
             sulfur_revenue=sulfur_revenue,
             electricity_revenue=electricity_revenue,
             co2_revenue=co2_revenue,
-        )
-
-        # Calculate non-capital costs (intangible + opex + asr + lbt + cost of sales)
-        self._oil_non_capital = (
-            self._oil_intangible_expenditures_post_tax
-            + self._oil_opex_expenditures_post_tax
-            + self._oil_asr_expenditures_post_tax
-            + self._oil_lbt_expenditures_post_tax
-            + self._oil_cost_of_sales_expenditures_post_tax
-        )
-
-        self._gas_non_capital = (
-            self._gas_intangible_expenditures_post_tax
-            + self._gas_opex_expenditures_post_tax
-            + self._gas_asr_expenditures_post_tax
-            + self._gas_lbt_expenditures_post_tax
-            + self._gas_cost_of_sales_expenditures_post_tax
         )
 
         # Total pre-tax expenditures
@@ -2464,25 +2447,6 @@ class GrossSplit(BaseProject):
             + self._gas_cost_of_sales_indirect_tax
         )
 
-        # Total investment (total expenditures post-tax)
-        self._oil_total_expenses = (
-            self._oil_capital_expenditures_post_tax
-            + self._oil_intangible_expenditures_post_tax
-            + self._oil_opex_expenditures_post_tax
-            + self._oil_asr_expenditures_post_tax
-            + self._oil_lbt_expenditures_post_tax
-            + self._oil_cost_of_sales_expenditures_post_tax
-        )
-
-        self._gas_total_expenses = (
-            self._gas_capital_expenditures_post_tax
-            + self._gas_intangible_expenditures_post_tax
-            + self._gas_opex_expenditures_post_tax
-            + self._gas_asr_expenditures_post_tax
-            + self._gas_lbt_expenditures_post_tax
-            + self._gas_cost_of_sales_expenditures_post_tax
-        )
-
         # Prepare sunk costs and preonstream costs
         self._get_sunkcost_array()
         self._get_preonstream_array()
@@ -2518,46 +2482,49 @@ class GrossSplit(BaseProject):
             initial_amortization_year=initial_amortization_year,
         )
 
+        # Specify base split
+        self._wrapper_base_split(regime=regime)
 
+        # Specify variable split
+        self._wrapper_variable_split(
+            regime=regime,
+            reservoir_type=reservoir_type_permen_2024,
+        )
 
-        # # Specify base split
-        # self._wrapper_base_split(regime=regime)
-        #
-        # # Specify variable split
-        # self._wrapper_variable_split(
-        #     regime=regime,
-        #     reservoir_type=reservoir_type_permen_2024,
-        # )
-        #
-        # self._var_split_array = np.full_like(
-        #     self.project_years, fill_value=self._variable_split, dtype=float
-        # )
-        #
-        # # Calculate gas production in MMBOE. Based on discussion with YRA on June 28th, 2024,
-        # # cumulative production used for progressive cumulative production split is defined as
-        # # the sum of production rate and production baseline.
-        # prod_gas_boe = (
-        #     self._gas_lifting.get_prod_rate_total_arr() / self.conversion_boe_to_scf
-        # )
-        #
-        # # Check if the cumulative production split offset length is the same
-        # # with the length of project years
-        # self._check_cum_production_split_offset(
-        #     cum_production_split_offset=cum_production_split_offset
-        # )
-        #
-        # # Adjustment in cumulative production split offset
-        # # when parameter "cum_production_split_offset" is given as a single value.
-        # if (
-        #     isinstance(cum_production_split_offset, float)
-        #     or isinstance(cum_production_split_offset, int)
-        # ):
-        #     offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
-        #     offset_arr[0] = cum_production_split_offset
-        #
-        # else:
-        #     offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
-        #
+        self._var_split_array = np.full_like(
+            self.project_years, fill_value=self._variable_split, dtype=float
+        )
+
+        # Calculate gas production in MMBOE. Based on discussion with YRA on June 28th, 2024,
+        # cumulative production used for progressive cumulative production split is defined as
+        # the sum of production rate and production baseline.
+        prod_gas_boe = (
+            self._gas_lifting.get_prod_rate_total_arr() / self.conversion_boe_to_scf
+        )
+
+        # Check if the cumulative production split offset length is the same
+        # with the length of project years
+        self._check_cum_production_split_offset(
+            cum_production_split_offset=cum_production_split_offset
+        )
+
+        # Adjustment in cumulative production split offset
+        # when parameter "cum_production_split_offset" is given as a single value.
+        if (
+            isinstance(cum_production_split_offset, float)
+            or isinstance(cum_production_split_offset, int)
+        ):
+            offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
+            offset_arr[0] = cum_production_split_offset
+
+        else:
+            offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
+
+        print('\t')
+        print(f'Filetype: {type(offset_arr)}')
+        print(f'Length: {len(offset_arr)}')
+        print('offset_arr = \n', offset_arr)
+
         # # Calculating the cumulative production
         # self._cumulative_prod = np.cumsum(
         #     self._oil_lifting.get_prod_rate_total_arr()
@@ -2679,6 +2646,10 @@ class GrossSplit(BaseProject):
         # self._oil_gov_share = self._oil_revenue - self._oil_ctr_share_before_transfer
         # self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
         #
+        # self.get_results(ftype="oil")
+
+
+
         # # Add carry forward depreciation to the total depreciation (for OIL and GAS)
         # self._oil_depreciations["total"] = (
         #     np.array(list(self._oil_depreciations.values())).sum(axis=0)
@@ -2690,9 +2661,42 @@ class GrossSplit(BaseProject):
         # self._oil_depreciations["total"] += self._oil_carry_forward_depreciation
         # self._gas_depreciations["total"] += self._gas_carry_forward_depreciation
         #
-        # self.get_results(ftype="oil")
-
+        # # Calculate non-capital costs (intangible + opex + asr + lbt + cost of sales)
+        # self._oil_non_capital = (
+        #         self._oil_intangible_expenditures_post_tax
+        #         + self._oil_opex_expenditures_post_tax
+        #         + self._oil_asr_expenditures_post_tax
+        #         + self._oil_lbt_expenditures_post_tax
+        #         + self._oil_cost_of_sales_expenditures_post_tax
+        # )
         #
+        # self._gas_non_capital = (
+        #         self._gas_intangible_expenditures_post_tax
+        #         + self._gas_opex_expenditures_post_tax
+        #         + self._gas_asr_expenditures_post_tax
+        #         + self._gas_lbt_expenditures_post_tax
+        #         + self._gas_cost_of_sales_expenditures_post_tax
+        # )
+        #
+        # # Total investment (total expenditures post-tax)
+        # self._oil_total_expenses = (
+        #         self._oil_capital_expenditures_post_tax
+        #         + self._oil_intangible_expenditures_post_tax
+        #         + self._oil_opex_expenditures_post_tax
+        #         + self._oil_asr_expenditures_post_tax
+        #         + self._oil_lbt_expenditures_post_tax
+        #         + self._oil_cost_of_sales_expenditures_post_tax
+        # )
+        #
+        # self._gas_total_expenses = (
+        #         self._gas_capital_expenditures_post_tax
+        #         + self._gas_intangible_expenditures_post_tax
+        #         + self._gas_opex_expenditures_post_tax
+        #         + self._gas_asr_expenditures_post_tax
+        #         + self._gas_lbt_expenditures_post_tax
+        #         + self._gas_cost_of_sales_expenditures_post_tax
+        # )
+
         # # Cost to be deducted
         #
         # self._oil_cost_tobe_deducted = (
