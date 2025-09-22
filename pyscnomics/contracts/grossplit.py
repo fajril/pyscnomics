@@ -23,7 +23,7 @@ from pyscnomics.econ.selection import (
     VariableSplit082017,
     VariableSplit132024,
 )
-from pyscnomics.econ.depreciation import unit_of_production_rate, unit_of_production_book_value
+from pyscnomics.econ.depreciation import unit_of_production_rate
 
 
 class GrossSplitException(Exception):
@@ -134,9 +134,7 @@ class GrossSplit(BaseProject):
         | VariableSplit132024.FieldLocation
     ) = field(default="Onshore")
 
-    # Arguments associated with base split components
-    # base_split_ctr_oil: float = field(default=0.43)
-    # base_split_ctr_gas: float = field(default=0.48)
+    # Argument associated with ministry discretion
     split_ministry_disc: float = field(default=0.0)
 
     # Arguments associated with DMO
@@ -301,8 +299,6 @@ class GrossSplit(BaseProject):
         max_fraction = 1.0
 
         fraction_attributes = (
-            # ("base_split_ctr_oil", self.base_split_ctr_oil),
-            # ("base_split_ctr_gas", self.base_split_ctr_gas),
             ("split_ministry_disc", self.split_ministry_disc),
             ("oil_dmo_volume_portion", self.oil_dmo_volume_portion),
             ("oil_dmo_fee_portion", self.oil_dmo_fee_portion),
@@ -570,6 +566,66 @@ class GrossSplit(BaseProject):
                     f_depr[c] = depreciations[f][c]
                     f_undepr[c] = undepreciated_assets[f][c]
 
+    def _modify_depreciations(self, sum_undepreciated_cost: bool) -> None:
+        """
+        Modify oil and gas depreciation and undepreciated asset schedules.
+
+        This method applies two adjustments to the internal depreciation
+        and undepreciated asset arrays for both oil and gas:
+
+        1. **Tolerance cleanup**: Very small undepreciated asset values
+           (below a fixed tolerance of ``1e-5``) are set to zero to
+           eliminate numerical noise.
+        2. **Final-year adjustment** (optional): If
+           ``sum_undepreciated_cost=True``, all remaining undepreciated
+           balances are summed and transferred into the final year of
+           the corresponding depreciation schedule. After this transfer,
+           the undepreciated asset arrays are reset to zeros.
+
+        Parameters
+        ----------
+        sum_undepreciated_cost : bool
+            If True, any remaining undepreciated costs are added to the last
+            project year’s depreciation value and the undepreciated assets
+            are cleared. If False, undepreciated balances remain as-is
+            (apart from tolerance cleanup).
+
+        Returns
+        -------
+        None
+            The method updates ``_oil_depreciations``, ``_gas_depreciations``,
+            ``_oil_undepreciated_assets``, and ``_gas_undepreciated_assets``
+            in place.
+
+        Notes
+        -----
+        - Affects the following cost types: ``postonstream``, ``preonstream``,
+          and ``sunk_cost``.
+        - The tolerance threshold is fixed at ``1e-5``.
+        - Depreciations are updated only in the last year if
+          ``sum_undepreciated_cost=True``.
+        """
+
+        undepre_assets = [self._oil_undepreciated_assets, self._gas_undepreciated_assets]
+        cost_types = ["postonstream", "preonstream", "sunk_cost"]
+
+        # Treatment for small order of number (example 1e-5) in undepreciated assets
+        tol = 1.0e-5
+        for asset in undepre_assets:
+            for c in cost_types:
+                asset[c][asset[c] < tol] = 0.0
+
+        # Treatment whether the undepreciated asset is summed up in
+        # the last year of the contract
+        if sum_undepreciated_cost:
+            for depr, undepr in [
+                (self._oil_depreciations, self._oil_undepreciated_assets),
+                (self._gas_depreciations, self._gas_undepreciated_assets)
+            ]:
+                for c in cost_types:
+                    depr[c][-1] += undepr[c].sum()
+                    undepr[c] = np.zeros([1, 1], dtype=float)
+
     def _get_amortization(
         self,
         salvage_value: float,
@@ -579,16 +635,20 @@ class GrossSplit(BaseProject):
         Compute and assign amortization schedules for oil and gas cost types.
 
         This method calculates amortization charges for ``sunk_cost`` and
-        ``preonstream`` expenditures of oil and gas using the unit-of-production
-        (UOP) method. The charges are based on project years, approval year,
-        lifting volumes, and the specified salvage value. Intermediate results
-        are stored in local ``amortizations`` and used to update internal
-        attributes for oil and gas.
+        ``preonstream`` expenditures of oil and gas using the
+        unit-of-production (UOP) method. The charges are based on project
+        years, approval year, lifting volumes, and the specified salvage value.
+        Intermediate results are stored in a local ``amortizations`` dictionary
+        and selectively applied to internal attributes.
+
+        The internal amortization attributes (``_oil_amortizations`` and
+        ``_gas_amortizations``) are initialized with zero arrays for all three
+        cost types: ``sunk_cost``, ``preonstream``, and ``postonstream``.
 
         For projects under a POD I contract type (``self.is_pod_1=True``),
-        the amortization schedules are directly applied to the corresponding
-        internal attributes (``_oil_amortizations`` and ``_gas_amortizations``).
-        Otherwise, these attributes remain initialized as zero arrays.
+        the calculated amortization schedules for ``sunk_cost`` and
+        ``preonstream`` replace the initialized zero arrays. For
+        ``postonstream`` or for non-POD I projects, the arrays remain as zeros.
 
         Parameters
         ----------
@@ -610,13 +670,12 @@ class GrossSplit(BaseProject):
 
         Notes
         -----
-        - Only ``sunk_cost`` and ``preonstream`` cost types are considered.
+        - Only ``sunk_cost`` and ``preonstream`` cost types are calculated.
+        - ``postonstream`` amortizations are always initialized as zeros.
         - Amortization is computed per fluid type (oil and gas) using
           ``unit_of_production_rate``.
         - Lifting volumes are retrieved from the fluid lifting objects
           (``_oil_lifting`` and ``_gas_lifting``).
-        - For POD I projects, amortizations replace the initialized zero arrays.
-          For other project types, the arrays remain as zeros.
         - Results are aligned with the full project years array.
         """
 
@@ -2403,6 +2462,10 @@ class GrossSplit(BaseProject):
             + self._gas_cost_of_sales_expenditures_post_tax
         )
 
+        # Prepare sunk costs and preonstream costs
+        self._get_sunkcost_array()
+        self._get_preonstream_array()
+
         # Calculate depreciations and undepreciated assets
         self._get_depreciation(
             depr_method=depr_method,
@@ -2413,31 +2476,8 @@ class GrossSplit(BaseProject):
             inflation_rate_applied_to=inflation_rate_applied_to,
         )
 
-        # Treatment for small order of number (example 1e-5) in undepreciated assets
-        tol = 1.0e-5
-        for asset in [self._oil_undepreciated_assets, self._gas_undepreciated_assets]:
-            for c in ["postonstream", "preonstream", "sunk_cost"]:
-                asset[c][asset[c] < tol] = 0.0
-
-        # Treatment whether the undepreciated asset is summed up in
-        # the last year of the contract
-        if sum_undepreciated_cost:
-            for depr, undepr in [
-                (self._oil_depreciations, self._oil_undepreciated_assets),
-                (self._gas_depreciations, self._gas_undepreciated_assets),
-            ]:
-                for c in ["postonstream", "preonstream", "sunk_cost"]:
-                    depr[c][-1] += undepr[c].sum()
-                    undepr[c] = np.zeros([1, 1], dtype=np.float64)
-
-        # Prepare sunk costs and preonstream costs
-        self._get_sunkcost_array()
-        self._get_preonstream_array()
-
-        print('\t')
-        print(f'Filetype: {type(self._oil_total_expenses)}')
-        print(f'Length: {len(self._oil_total_expenses)}')
-        print('_oil_total_expenses = \n', self._oil_total_expenses)
+        # Modify depreciations, accounting for the condition in "sum_undepreciated_cost"
+        self._modify_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)
 
         # Calculate amortizations
         self._get_amortization(
@@ -2445,37 +2485,6 @@ class GrossSplit(BaseProject):
             initial_amortization_year=initial_amortization_year,
         )
 
-        print('\t')
-        print('================================================================')
-
-        print('\t')
-        print(f'Filetype: {type(self._oil_depreciations)}')
-        print(f'Length: {len(self._oil_depreciations)}')
-        print('_oil_depreciations = \n', self._oil_depreciations)
-
-        print('\t')
-        print(f'Filetype: {type(self._oil_undepreciated_assets)}')
-        print(f'Length: {len(self._oil_undepreciated_assets)}')
-        print('_oil_undepreciated_assets = \n', self._oil_undepreciated_assets)
-
-        print('\t')
-        print(f'Filetype: {type(self._oil_amortizations)}')
-        print(f'Length: {len(self._oil_amortizations)}')
-        print('_oil_amortizations = \n', self._oil_amortizations)
-
-
-
-        # # Add carry forward depreciation to the total depreciation (for OIL and GAS)
-        # self._oil_depreciations["total"] = (
-        #     np.array(list(self._oil_depreciations.values())).sum(axis=0)
-        # )
-        # self._gas_depreciations["total"] = (
-        #     np.array(list(self._gas_depreciations.values())).sum(axis=0)
-        # )
-        #
-        # self._oil_depreciations["total"] += self._oil_carry_forward_depreciation
-        # self._gas_depreciations["total"] += self._gas_carry_forward_depreciation
-        #
         # # Specify base split
         # self._wrapper_base_split(regime=regime)
         #
@@ -2635,10 +2644,19 @@ class GrossSplit(BaseProject):
         # self._oil_gov_share = self._oil_revenue - self._oil_ctr_share_before_transfer
         # self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
         #
+        # # Add carry forward depreciation to the total depreciation (for OIL and GAS)
+        # self._oil_depreciations["total"] = (
+        #     np.array(list(self._oil_depreciations.values())).sum(axis=0)
+        # )
+        # self._gas_depreciations["total"] = (
+        #     np.array(list(self._gas_depreciations.values())).sum(axis=0)
+        # )
+        #
+        # self._oil_depreciations["total"] += self._oil_carry_forward_depreciation
+        # self._gas_depreciations["total"] += self._gas_carry_forward_depreciation
+        #
         # self.get_results(ftype="oil")
-        #
-        #
-        #
+
         #
         # # Cost to be deducted
         #
