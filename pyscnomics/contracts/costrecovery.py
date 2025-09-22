@@ -121,7 +121,7 @@ class CostRecovery(BaseProject):
     oil_carry_forward_depreciation: float | np.ndarray = field(default=0.0)
     gas_carry_forward_depreciation: float | np.ndarray = field(default=0.0)
 
-    # Attributes to be defined later (associated with carry forward depreciation)
+    # Attributes associated with carry forward depreciation
     _oil_carry_forward_depreciation: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -129,13 +129,13 @@ class CostRecovery(BaseProject):
         default=None, init=False, repr=False
     )
 
-    # Attributes to be defined later (associated with depreciation)
-    _oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
+    # Attributes associated with depreciations and undepreciated assets
+    _oil_depreciations: dict = field(default_factory=lambda: {}, init=False, repr=False)
+    _gas_depreciations: dict = field(default_factory=lambda: {}, init=False, repr=False)
+    _oil_undepreciated_assets: dict = field(default_factory=lambda: {}, init=False, repr=False)
+    _gas_undepreciated_assets: dict = field(default_factory=lambda: {}, init=False, repr=False)
 
-    # Attributes to be defined later (associated with investment credit)
+    # Attributes associated with investment credit
     _oil_ic: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ic_unrecovered: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ic_paid: np.ndarray = field(default=None, init=False, repr=False)
@@ -143,7 +143,7 @@ class CostRecovery(BaseProject):
     _gas_ic_unrecovered: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ic_paid: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with core business logic)
+    # Attributes associated with recoverable and unrecoverable costs
     _oil_unrecovered_before_transfer: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -175,7 +175,7 @@ class CostRecovery(BaseProject):
     _gas_contractor_share: np.ndarray = field(default=None, init=False, repr=False)
     _gas_government_share: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with DMO)
+    # Attributes associated with DMO
     _oil_dmo_volume: np.ndarray = field(default=None, init=False, repr=False)
     _oil_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ddmo: np.ndarray = field(default=None, init=False, repr=False)
@@ -183,14 +183,14 @@ class CostRecovery(BaseProject):
     _gas_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ddmo: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with taxable income)
+    # Attributes associated with taxable income
     _oil_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
     _gas_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
     _tax_rate_arr: np.ndarray = field(default=None, init=False, repr=False)
     _oil_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
     _gas_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes to be defined later (associated with shares)
+    # Attributes associated with shares
     _oil_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
     _oil_contractor_take: np.ndarray = field(default=None, init=False, repr=False)
@@ -198,7 +198,7 @@ class CostRecovery(BaseProject):
     _oil_government_take: np.ndarray = field(default=None, init=False, repr=False)
     _gas_government_take: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Consolidated Attributes
+    # Attributes associated with consolidated profiles
     _consolidated_carry_forward_depreciation: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -377,6 +377,232 @@ class CostRecovery(BaseProject):
 
         self._oil_carry_forward_depreciation = carward_depr["oil_carry_forward_depreciation"]
         self._gas_carry_forward_depreciation = carward_depr["gas_carry_forward_depreciation"]
+
+    def _get_depreciation(
+        self,
+        depr_method: DeprMethod,
+        decline_factor: float | int,
+        year_inflation: np.ndarray,
+        inflation_rate: np.ndarray | int | float,
+        tax_rate: np.ndarray | float,
+        inflation_rate_applied_to: InflationAppliedTo,
+    ) -> None:
+        """
+        Compute and assign depreciation schedules and undepreciated assets
+        for oil and gas cost types.
+
+        This method calculates depreciation and undepreciated asset balances
+        for ``postonstream``, ``preonstream``, and ``sunk_cost`` expenditures
+        under both oil and gas. Depreciation is calculated using the specified
+        method and decline factor, adjusted for inflation and tax effects.
+        Results are aligned with the project years and stored in internal
+        attributes.
+
+        Parameters
+        ----------
+        depr_method : DeprMethod
+            Depreciation method to apply (e.g., straight-line, declining balance).
+        decline_factor : float or int
+            Factor used for declining balance depreciation (e.g., 2 for double
+            declining balance).
+        year_inflation : np.ndarray
+            Array of year-on-year inflation multipliers applied to cost recovery.
+        inflation_rate : np.ndarray or int or float
+            Inflation rate(s) applied to depreciation. Can be a scalar or an array.
+        tax_rate : np.ndarray or float
+            Applicable tax rate(s) used in depreciation calculation.
+        inflation_rate_applied_to : InflationAppliedTo
+            Specifies whether inflation is applied to CAPEX, OPEX, CAPEX and OPEX,
+            or None.
+
+        Returns
+        -------
+        None
+            Updates internal attributes in place:
+            - ``_oil_depreciations`` and ``_gas_depreciations``:
+              dicts of per-year depreciation schedules.
+            - ``_oil_undepreciated_assets`` and ``_gas_undepreciated_assets``:
+              dicts of undepreciated balances.
+
+        Notes
+        -----
+        - Cost types considered: ``postonstream``, ``preonstream``, ``sunk_cost``.
+        - Onstream year alignment is determined by cost type:
+          - ``postonstream`` → depreciation begins immediately (direct).
+          - ``preonstream`` and ``sunk_cost`` → depreciation begins in the
+            onstream year.
+        - Depreciation and undepreciated assets are computed via
+          ``total_depreciation_rate`` of the respective capital objects.
+        - Inflation and tax are incorporated consistently with the
+          ``inflation_rate_applied_to`` policy.
+        """
+
+        # Define the mapping between fluids, cost types, capital objects, and
+        # the initial year of depreciation incurred
+        depr_mapping = {
+            "oil": (
+                (
+                    "postonstream",
+                    self._oil_capital_postonstream,
+                    InitialYearDepreciationIncurred.DIRECT,
+                ),
+                (
+                    "preonstream",
+                    self._oil_capital_preonstream,
+                    InitialYearDepreciationIncurred.ONSTREAM_YEAR,
+                ),
+                (
+                    "sunk_cost",
+                    self._oil_capital_sunk_cost,
+                    InitialYearDepreciationIncurred.ONSTREAM_YEAR,
+                ),
+            ),
+            "gas": (
+                (
+                    "postonstream",
+                    self._gas_capital_postonstream,
+                    InitialYearDepreciationIncurred.DIRECT,
+                ),
+                (
+                    "preonstream",
+                    self._gas_capital_preonstream,
+                    InitialYearDepreciationIncurred.ONSTREAM_YEAR,
+                ),
+                (
+                    "sunk_cost",
+                    self._gas_capital_sunk_cost,
+                    InitialYearDepreciationIncurred.ONSTREAM_YEAR,
+                ),
+            )
+        }
+
+        # Define intermediate attributes:
+        # "depreciations": dict and "undepreciated_assets": dict
+        fluids = ["oil", "gas"]
+        cost_types = ["postonstream", "preonstream", "sunk_cost"]
+
+        depreciations = {f: {c: None for c in cost_types} for f in fluids}
+        undepreciated_assets = {f: {c: None for c in cost_types} for f in fluids}
+
+        for (f, mapping) in depr_mapping.items():
+            for (c, obj, depr_type) in mapping:
+                (
+                    depreciations[f][c],
+                    undepreciated_assets[f][c]
+                ) = obj.total_depreciation_rate(
+                    oil_onstream_year=self.oil_onstream_date.year,
+                    gas_onstream_year=self.gas_onstream_date.year,
+                    initial_depreciation_year=depr_type,
+                    depr_method=depr_method,
+                    decline_factor=decline_factor,
+                    year_inflation=year_inflation,
+                    inflation_rate=inflation_rate,
+                    tax_rate=tax_rate,
+                    inflation_rate_applied_to=inflation_rate_applied_to,
+                )
+
+        # Set initial values for attributes "_oil_depreciations" and "_gas_depreciations"
+        self._oil_depreciations = {
+            c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
+        }
+
+        self._gas_depreciations = {
+            c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
+        }
+
+        # Set initial values for attributes "_oil_undepreciated_assets"
+        # and "_gas_undepreciated_assets"
+        self._oil_undepreciated_assets = {c: None for c in cost_types}
+        self._gas_undepreciated_assets = {c: None for c in cost_types}
+
+        # Set attributes "_oil_depreciations", "_gas_depreciations",
+        # "_oil_undepreciated_assets", and "gas_undepreciated_assets"
+        for f, f_depr, f_undepr in [
+            ("oil", self._oil_depreciations, self._oil_undepreciated_assets),
+            ("gas", self._gas_depreciations, self._gas_undepreciated_assets)
+        ]:
+            for c in cost_types:
+                f_depr[c] = depreciations[f][c]
+                f_undepr[c] = undepreciated_assets[f][c]
+
+    def _get_modified_depreciations(self, sum_undepreciated_cost: bool) -> None:
+        """
+        Modify oil and gas depreciation and undepreciated asset schedules.
+
+        This method applies three sequential adjustments to the internal
+        depreciation and undepreciated asset arrays for both oil and gas:
+
+        1. **Tolerance cleanup**: Very small undepreciated asset values
+           (below a fixed tolerance of ``1e-5``) are set to zero to
+           eliminate numerical noise.
+        2. **Final-year adjustment** (optional): If
+           ``sum_undepreciated_cost=True``, all remaining undepreciated
+           balances are summed and transferred into the final year of the
+           corresponding depreciation schedule. After this transfer,
+           the undepreciated asset arrays are reset to zeros.
+        3. **Depreciation reclassification**: All ``preonstream`` cost
+           depreciations are combined into ``sunk_cost`` depreciations.
+           Once transferred, the ``preonstream`` depreciation arrays are
+           reset to zeros.
+
+        Parameters
+        ----------
+        sum_undepreciated_cost : bool
+            If True, any remaining undepreciated costs are added to the last
+            project year’s depreciation value and the undepreciated assets
+            are cleared. If False, undepreciated balances remain as-is
+            (apart from tolerance cleanup).
+
+        Returns
+        -------
+        None
+            The method updates the following attributes in place:
+
+            - ``_oil_depreciations``
+            - ``_gas_depreciations``
+            - ``_oil_undepreciated_assets``
+            - ``_gas_undepreciated_assets``
+
+        Notes
+        -----
+        - Affects the following cost types: ``postonstream``, ``preonstream``,
+          and ``sunk_cost``.
+        - The tolerance threshold is fixed at ``1e-5``.
+        - Depreciations are updated only in the last year if
+          ``sum_undepreciated_cost=True``.
+        - After modification, all ``preonstream`` depreciation values are
+          reclassified into ``sunk_cost`` and cleared from their original arrays.
+        """
+
+        undepre_assets = [self._oil_undepreciated_assets, self._gas_undepreciated_assets]
+        cost_types = ["postonstream", "preonstream", "sunk_cost"]
+
+        # Treatment for small order of number (example 1e-5) in undepreciated assets
+        tol = 1.0e-5
+        for asset in undepre_assets:
+            for c in cost_types:
+                asset[c][asset[c] < tol] = 0.0
+
+        # Treatment whether the undepreciated asset is summed up in
+        # the last year of the contract
+        if sum_undepreciated_cost:
+            for depr, undepr in [
+                (self._oil_depreciations, self._oil_undepreciated_assets),
+                (self._gas_depreciations, self._gas_undepreciated_assets)
+            ]:
+                for c in cost_types:
+                    depr[c][-1] += undepr[c].sum()
+                    undepr[c] = np.zeros([1, 1], dtype=float)
+
+        # Modify depreciations.
+        # Combine sunk cost and preonstream cost depreciations, then assign
+        # the results as the "modified" sunk cost depreciations
+        self._oil_depreciations["sunk_cost"] += self._oil_depreciations["preonstream"]
+        self._gas_depreciations["sunk_cost"] += self._gas_depreciations["preonstream"]
+
+        # Assign preonstream cost depreciations as zeros
+        self._oil_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
+        self._gas_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
 
     def _get_tax_by_regime(self, tax_regime) -> np.ndarray:
         """
@@ -1366,15 +1592,31 @@ class CostRecovery(BaseProject):
         self._get_sunkcost_array()
         self._get_preonstream_array()
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_depreciable_sunk_cost)}')
-        print(f'Length: {len(self._oil_depreciable_sunk_cost)}')
-        print('_oil_depreciable_sunk_cost = \n', self._oil_depreciable_sunk_cost)
+        # Modify sunk cost and preonstream cost,
+        # Combine sunk cost and preonstream cost, then Assign the result as the
+        # "updated" sunk cost
+        self._oil_sunk_cost += self._oil_preonstream
+        self._gas_sunk_cost += self._gas_preonstream
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_non_depreciable_sunk_cost)}')
-        print(f'Length: {len(self._oil_non_depreciable_sunk_cost)}')
-        print('_oil_non_depreciable_sunk_cost = \n', self._oil_non_depreciable_sunk_cost)
+        # Assign preonstream cost as zeros
+        self._oil_preonstream = np.zeros_like(self.project_years, dtype=float)
+        self._gas_preonstream = np.zeros_like(self.project_years, dtype=float)
+
+        # Calculate depreciations and undepreciated assets
+        self._get_depreciation(
+            depr_method=depr_method,
+            decline_factor=decline_factor,
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            tax_rate=vat_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
+        )
+
+        # Modify depreciations, accounting for various adjustments
+        self._get_modified_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)
+
+
+
 
         # # Calculate FTP
         # self._get_ftp()
@@ -1387,55 +1629,6 @@ class CostRecovery(BaseProject):
         # # Defining the PreTax Split, whether using conventional PreTax or Sliding
         # if self.tax_split_type is not TaxSplitTypeCR.CONVENTIONAL:
         #     self._get_rc_icp_pretax()
-        #
-        # # Depreciation (tangible cost)
-        # (
-        #     self._oil_depreciation,
-        #     self._oil_undepreciated_asset,
-        # ) = self._oil_capital_postonstream.total_depreciation_rate(
-        #     depr_method=depr_method,
-        #     decline_factor=decline_factor,
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     tax_rate=vat_rate,
-        # )
-        #
-        # (
-        #     self._gas_depreciation,
-        #     self._gas_undepreciated_asset,
-        # ) = self._gas_capital_postonstream.total_depreciation_rate(
-        #     depr_method=depr_method,
-        #     decline_factor=decline_factor,
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     tax_rate=vat_rate,
-        # )
-        #
-        # # Treatment for small order of number, in example 1e-15
-        # self._oil_undepreciated_asset = np.where(
-        #     self._oil_undepreciated_asset < 1.0e-5, 0, self._oil_undepreciated_asset
-        # )
-        # self._gas_undepreciated_asset = np.where(
-        #     self._gas_undepreciated_asset < 1.0e-5, 0, self._gas_undepreciated_asset
-        # )
-        #
-        # # Treatment of the un-depreciated asset to be summed up in the last year of the contract or not
-        # if sum_undepreciated_cost is True:
-        #     self._oil_depreciation[-1] = (
-        #         self._oil_depreciation[-1] + self._oil_undepreciated_asset
-        #     )
-        #     self._gas_depreciation[-1] = (
-        #         self._gas_depreciation[-1] + self._gas_undepreciated_asset
-        #     )
-        #
-        #     self._oil_undepreciated_asset = np.zeros_like(
-        #         self.project_years, dtype=float
-        #     )
-        #     self._gas_undepreciated_asset = np.zeros_like(
-        #         self.project_years, dtype=float
-        #     )
-        # else:
-        #     pass
         #
         # # Adding the depreciation with the carry forward depreciation
         # self._oil_depreciation = (

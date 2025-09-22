@@ -109,7 +109,6 @@ case = ExampleCase()
 #     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #     "oil_carry_forward_depreciation": 0.0,
 #     "gas_carry_forward_depreciation": 0.0,
-#     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # }
 #
 # params_gs = {

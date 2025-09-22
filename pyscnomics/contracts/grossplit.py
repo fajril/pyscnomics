@@ -566,21 +566,25 @@ class GrossSplit(BaseProject):
                     f_depr[c] = depreciations[f][c]
                     f_undepr[c] = undepreciated_assets[f][c]
 
-    def _modify_depreciations(self, sum_undepreciated_cost: bool) -> None:
+    def _get_modified_depreciations(self, sum_undepreciated_cost: bool) -> None:
         """
         Modify oil and gas depreciation and undepreciated asset schedules.
 
-        This method applies two adjustments to the internal depreciation
-        and undepreciated asset arrays for both oil and gas:
+        This method applies up to three sequential adjustments to the internal
+        depreciation and undepreciated asset arrays for both oil and gas:
 
         1. **Tolerance cleanup**: Very small undepreciated asset values
            (below a fixed tolerance of ``1e-5``) are set to zero to
            eliminate numerical noise.
         2. **Final-year adjustment** (optional): If
            ``sum_undepreciated_cost=True``, all remaining undepreciated
-           balances are summed and transferred into the final year of
-           the corresponding depreciation schedule. After this transfer,
+           balances are summed and transferred into the final year of the
+           corresponding depreciation schedule. After this transfer,
            the undepreciated asset arrays are reset to zeros.
+        3. **Depreciation reclassification** (*only for non-POD I contracts*):
+           If ``is_pod_1`` is False, all ``preonstream`` cost depreciations
+           are combined into ``sunk_cost`` depreciations. Once transferred,
+           the ``preonstream`` depreciation arrays are reset to zeros.
 
         Parameters
         ----------
@@ -593,9 +597,12 @@ class GrossSplit(BaseProject):
         Returns
         -------
         None
-            The method updates ``_oil_depreciations``, ``_gas_depreciations``,
-            ``_oil_undepreciated_assets``, and ``_gas_undepreciated_assets``
-            in place.
+            The method updates the following attributes in place:
+
+            - ``_oil_depreciations``
+            - ``_gas_depreciations``
+            - ``_oil_undepreciated_assets``
+            - ``_gas_undepreciated_assets``
 
         Notes
         -----
@@ -604,6 +611,9 @@ class GrossSplit(BaseProject):
         - The tolerance threshold is fixed at ``1e-5``.
         - Depreciations are updated only in the last year if
           ``sum_undepreciated_cost=True``.
+        - For contracts that are **not POD I**, all ``preonstream``
+          depreciations are reclassified into ``sunk_cost`` and cleared from
+          their original arrays.
         """
 
         undepre_assets = [self._oil_undepreciated_assets, self._gas_undepreciated_assets]
@@ -625,6 +635,17 @@ class GrossSplit(BaseProject):
                 for c in cost_types:
                     depr[c][-1] += undepr[c].sum()
                     undepr[c] = np.zeros([1, 1], dtype=float)
+
+        # Modify depreciations for non POD I contract
+        if not self.is_pod_1:
+            # Combine sunk cost and preonstream cost depreciations for non POD I contract,
+            # then assign the results as the "modified" sunk cost depreciations
+            self._oil_depreciations["sunk_cost"] += self._oil_depreciations["preonstream"]
+            self._gas_depreciations["sunk_cost"] += self._gas_depreciations["preonstream"]
+
+            # Assign preonstream cost depreciations as zeros
+            self._oil_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
+            self._gas_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
 
     def _get_amortization(
         self,
@@ -2466,6 +2487,18 @@ class GrossSplit(BaseProject):
         self._get_sunkcost_array()
         self._get_preonstream_array()
 
+        # Modify sunk cost and preonstream cost for non-POD I contract
+        if not self.is_pod_1:
+
+            # Combine sunk cost and preonstream cost for non-POD I contract,
+            # Assign the result as the "modified" sunk cost
+            self._oil_sunk_cost += self._oil_preonstream
+            self._gas_sunk_cost += self._gas_preonstream
+
+            # Assign preonstream cost as zeros
+            self._oil_preonstream = np.zeros_like(self.project_years, dtype=float)
+            self._gas_preonstream = np.zeros_like(self.project_years, dtype=float)
+
         # Calculate depreciations and undepreciated assets
         self._get_depreciation(
             depr_method=depr_method,
@@ -2476,14 +2509,16 @@ class GrossSplit(BaseProject):
             inflation_rate_applied_to=inflation_rate_applied_to,
         )
 
-        # Modify depreciations, accounting for the condition in "sum_undepreciated_cost"
-        self._modify_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)
+        # Modify depreciations, accounting for various adjusments
+        self._get_modified_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)
 
         # Calculate amortizations
         self._get_amortization(
             salvage_value=0.0,
             initial_amortization_year=initial_amortization_year,
         )
+
+
 
         # # Specify base split
         # self._wrapper_base_split(regime=regime)
