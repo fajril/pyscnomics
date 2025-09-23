@@ -1942,6 +1942,38 @@ class GrossSplit(BaseProject):
 
         return years_exceed
 
+    def _get_investments(self):
+
+        # Non capital investments (intangible + opex + asr + lbt + cost of sales)
+        self._oil_non_capital = (
+            self._oil_intangible_expenditures_post_tax
+            + self._oil_opex_expenditures_post_tax
+            + self._oil_asr_expenditures_post_tax
+            + self._oil_lbt_expenditures_post_tax
+            + self._oil_cost_of_sales_expenditures_post_tax
+        )
+
+        self._gas_non_capital = (
+            self._gas_intangible_expenditures_post_tax
+            + self._gas_opex_expenditures_post_tax
+            + self._gas_asr_expenditures_post_tax
+            + self._gas_lbt_expenditures_post_tax
+            + self._gas_cost_of_sales_expenditures_post_tax
+        )
+
+        # Total investments (capital + non capital + amortization preonstream)
+        self._oil_total_expenses = (
+            self._oil_amortizations["preonstream"]
+            + self._oil_capital_expenditures_post_tax
+            + self._oil_non_capital
+        )
+
+        self._gas_total_expenses = (
+            self._gas_amortizations["preonstream"]
+            + self._gas_capital_expenditures_post_tax
+            + self._gas_non_capital
+        )
+
     @staticmethod
     def _get_deductible_cost(ctr_gross_share, cost_tobe_deducted, carward_deduct_cost):
 
@@ -2704,91 +2736,38 @@ class GrossSplit(BaseProject):
         self._oil_ctr_share_before_transfer = self._oil_revenue * self._oil_ctr_split
         self._gas_ctr_share_before_transfer = self._gas_revenue * self._gas_ctr_split
 
-        t1 = self._oil_ctr_split
-        t2 = self._oil_ctr_share_before_transfer
+        # Government Share
+        self._oil_gov_share = self._oil_revenue - self._oil_ctr_share_before_transfer
+        self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
 
+        # Calculate investments
+        self._get_investments()
+
+        # Cost to be deducted
+        self._oil_cost_tobe_deducted = (
+            np.array(list(self._oil_depreciations.values())).sum(axis=0)
+            + np.array(list(self._oil_amortizations.values())).sum(axis=0)
+            + self._oil_carry_forward_depreciation
+            + self._oil_non_capital
+        )
+
+        self._gas_cost_tobe_deducted = (
+            np.array(list(self._gas_depreciations.values())).sum(axis=0)
+            + np.array(list(self._gas_amortizations.values())).sum(axis=0)
+            + self._gas_carry_forward_depreciation
+            + self._gas_non_capital
+        )
+
+        t1 = self._gas_cost_tobe_deducted
         print('\t')
         print(f'Filetype: {type(t1)}')
         print(f'Length: {len(t1)}')
         print('t1 = \n', t1)
 
-        print('\t')
-        print(f'Filetype: {type(t2)}')
-        print(f'Length: {len(t2)}')
-        print('t2 = \n', t2)
 
-        # # Government Share
-        # self._oil_gov_share = self._oil_revenue - self._oil_ctr_share_before_transfer
-        # self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
-        #
         # self.get_results(ftype="oil")
 
 
-
-        # # Add carry forward depreciation to the total depreciation (for OIL and GAS)
-        # self._oil_depreciations["total"] = (
-        #     np.array(list(self._oil_depreciations.values())).sum(axis=0)
-        # )
-        # self._gas_depreciations["total"] = (
-        #     np.array(list(self._gas_depreciations.values())).sum(axis=0)
-        # )
-        #
-        # self._oil_depreciations["total"] += self._oil_carry_forward_depreciation
-        # self._gas_depreciations["total"] += self._gas_carry_forward_depreciation
-        #
-        # # Calculate non-capital costs (intangible + opex + asr + lbt + cost of sales)
-        # self._oil_non_capital = (
-        #         self._oil_intangible_expenditures_post_tax
-        #         + self._oil_opex_expenditures_post_tax
-        #         + self._oil_asr_expenditures_post_tax
-        #         + self._oil_lbt_expenditures_post_tax
-        #         + self._oil_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # self._gas_non_capital = (
-        #         self._gas_intangible_expenditures_post_tax
-        #         + self._gas_opex_expenditures_post_tax
-        #         + self._gas_asr_expenditures_post_tax
-        #         + self._gas_lbt_expenditures_post_tax
-        #         + self._gas_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # # Total investment (total expenditures post-tax)
-        # self._oil_total_expenses = (
-        #         self._oil_capital_expenditures_post_tax
-        #         + self._oil_intangible_expenditures_post_tax
-        #         + self._oil_opex_expenditures_post_tax
-        #         + self._oil_asr_expenditures_post_tax
-        #         + self._oil_lbt_expenditures_post_tax
-        #         + self._oil_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # self._gas_total_expenses = (
-        #         self._gas_capital_expenditures_post_tax
-        #         + self._gas_intangible_expenditures_post_tax
-        #         + self._gas_opex_expenditures_post_tax
-        #         + self._gas_asr_expenditures_post_tax
-        #         + self._gas_lbt_expenditures_post_tax
-        #         + self._gas_cost_of_sales_expenditures_post_tax
-        # )
-
-        # # Cost to be deducted
-        #
-        # self._oil_cost_tobe_deducted = (
-        #         self._oil_depreciation +
-        #         self._oil_intangible_expenditures_post_tax +
-        #         self._oil_opex_expenditures_post_tax +
-        #         self._oil_asr_expenditures_post_tax +
-        #         self._oil_lbt_expenditures_post_tax
-        # )
-        #
-        # self._gas_cost_tobe_deducted = (
-        #         self._gas_depreciation +
-        #         self._gas_intangible_expenditures_post_tax +
-        #         self._gas_opex_expenditures_post_tax +
-        #         self._gas_asr_expenditures_post_tax +
-        #         self._gas_lbt_expenditures_post_tax
-        # )
 
         # # Carry Forward Deductible Cost (In PSC Cost Recovery called Unrecovered Cost)
         # self._oil_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._oil_depreciation,

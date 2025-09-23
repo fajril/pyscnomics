@@ -126,7 +126,7 @@ params_gs = {
     "sum_undepreciated_cost": False,
     "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
     "regime": GrossSplitRegime.PERMEN_ESDM_13_2024,
-    "reservoir_type_permen_2024": VariableSplit132024.ReservoirType.MNK,
+    "reservoir_type_permen_2024": VariableSplit132024.ReservoirType.MK,
     "is_dmo_end_weighted": False,
     "tax_regime": TaxRegime.NAILED_DOWN,
     "effective_tax_rate": 0.22,
