@@ -119,8 +119,8 @@ params_gs = {
     "year_inflation": None,
     "inflation_rate": 0.1,
     "inflation_rate_applied_to": None,
-    # "cum_production_split_offset": 20.0,
-    "cum_production_split_offset": np.array([20 for _ in range(10)]),
+    "cum_production_split_offset": 0.2,
+    # "cum_production_split_offset": np.array([0.2 for _ in range(10)]),
     "depr_method": DeprMethod.PSC_DB,
     "decline_factor": 2,
     "sum_undepreciated_cost": False,
@@ -156,6 +156,11 @@ gs.run(**params_gs)
 # print(f'Filetype: {type(t1)}')
 # print(f'Length: {len(t1)}')
 # print('t1 = \n', t1)
+
+# print('\t')
+# print(f'Filetype: {type(t2)}')
+# print(f'Length: {len(t2)}')
+# print('t2 = \n', t2)
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -239,6 +244,11 @@ gs.run(**params_gs)
 # print(f'Filetype: {type(t1)}')
 # print(f'Length: {len(t1)}')
 # print('t1 = \n', t1)
+
+# print('\t')
+# print(f'Filetype: {type(t2)}')
+# print(f'Length: {len(t2)}')
+# print('t2 = \n', t2)
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

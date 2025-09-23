@@ -38,9 +38,9 @@ oil_kwargs = {
     "cost_type": (
                 [
                     CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
+                    CostType.PRE_ONSTREAM_COST, CostType.SUNK_COST,
                     CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                    CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                    CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
+                    CostType.POST_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
                     CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
                 ]
             ),
@@ -74,9 +74,9 @@ gas_kwargs = {
     "cost_type": (
                 [
                     CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
+                    CostType.PRE_ONSTREAM_COST, CostType.SUNK_COST,
                     CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                    CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                    CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
+                    CostType.POST_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
                     CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
                 ]
             ),
@@ -130,7 +130,6 @@ class ExampleCase:
             end_year=2032,
             prod_year=np.array([2030, 2031, 2032]),
             lifting_rate=np.array([100, 100, 100]),
-            # price=np.array([1, 1, 1]),
             price=np.array([120, 120, 120]),
             fluid_type=FluidType.OIL,
         )
@@ -161,8 +160,9 @@ class ExampleCase:
             **oil_kwargs,
             cost=np.array(
                 [
-                    200, 200, 200, 50, 50,
-                    50, 50, 100, 100, 100,
+                    200, 200, 200, 200,
+                    50, 50,
+                    100, 100, 100, 100,
                 ]
             ),
         )
@@ -171,8 +171,9 @@ class ExampleCase:
             **gas_kwargs,
             cost=np.array(
                 [
-                    20, 20, 20, 5, 5,
-                    5, 5, 10, 10, 10,
+                    20, 20, 20, 20,
+                    5, 5,
+                    10, 10, 10, 10,
                 ]
             ),
         )
@@ -185,8 +186,9 @@ class ExampleCase:
             **oil_kwargs,
             cost=np.array(
                 [
-                    200, 200, 200, 50, 50,
-                    50, 50, 100, 100, 100,
+                    200, 200, 200, 200,
+                    50, 50,
+                    100, 100, 100, 100,
                 ]
             ),
         )
@@ -195,8 +197,9 @@ class ExampleCase:
             **gas_kwargs,
             cost=np.array(
                 [
-                    20, 20, 20, 5, 5,
-                    5, 5, 10, 10, 10,
+                    20, 20, 20, 20,
+                    5, 5,
+                    10, 10, 10, 10,
                 ]
             ),
         )
@@ -209,8 +212,9 @@ class ExampleCase:
             **oil_kwargs,
             fixed_cost=np.array(
                 [
-                    200, 200, 200, 50, 50,
-                    50, 50, 100, 100, 100,
+                    200, 200, 200, 200,
+                    50, 50,
+                    100, 100, 100, 100,
                 ]
             ),
         )
@@ -219,8 +223,9 @@ class ExampleCase:
             **gas_kwargs,
             fixed_cost=np.array(
                 [
-                    20, 20, 20, 5, 5,
-                    5, 5, 10, 10, 10,
+                    20, 20, 20, 20,
+                    5, 5,
+                    10, 10, 10, 10,
                 ]
             ),
         )
@@ -233,8 +238,9 @@ class ExampleCase:
             **oil_kwargs,
             cost=np.array(
                 [
-                    200, 200, 200, 50, 50,
-                    50, 50, 100, 100, 100,
+                    200, 200, 200, 200,
+                    50, 50,
+                    100, 100, 100, 100,
                 ]
             ),
         )
@@ -243,8 +249,9 @@ class ExampleCase:
             **gas_kwargs,
             cost=np.array(
                 [
-                    20, 20, 20, 5, 5,
-                    5, 5, 10, 10, 10,
+                    20, 20, 20, 20,
+                    5, 5,
+                    10, 10, 10, 10,
                 ]
             ),
         )
@@ -257,8 +264,9 @@ class ExampleCase:
             **oil_kwargs,
             cost=np.array(
                 [
-                    200, 200, 200, 50, 50,
-                    50, 50, 100, 100, 100,
+                    200, 200, 200, 200,
+                    50, 50,
+                    100, 100, 100, 100,
                 ]
             ),
         )
@@ -267,8 +275,9 @@ class ExampleCase:
             **gas_kwargs,
             cost=np.array(
                 [
-                    20, 20, 20, 5, 5,
-                    5, 5, 10, 10, 10,
+                    20, 20, 20, 20,
+                    5, 5,
+                    10, 10, 10, 10,
                 ]
             ),
         )
@@ -281,8 +290,9 @@ class ExampleCase:
             **oil_kwargs,
             cost=np.array(
                 [
-                    200, 200, 200, 50, 50,
-                    50, 50, 100, 100, 100,
+                    200, 200, 200, 200,
+                    50, 50,
+                    100, 100, 100, 100,
                 ]
             ),
         )
@@ -291,8 +301,9 @@ class ExampleCase:
             **gas_kwargs,
             cost=np.array(
                 [
-                    20, 20, 20, 5, 5,
-                    5, 5, 10, 10, 10,
+                    20, 20, 20, 20,
+                    5, 5,
+                    10, 10, 10, 10,
                 ]
             ),
         )
