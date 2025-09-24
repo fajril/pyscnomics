@@ -151,7 +151,8 @@ def get_unrecovered_cost(
     non_capital: : np.ndarray
         The array containing the non-capital expenditures.
         non_capital expenditures is consisting of:
-        Intangible, Operating Expenditures (OPEX) and Abandonment Site and Restoration (ASR) Expenditures.
+        Intangible, Operating Expenditures (OPEX) and Abandonment Site and Restoration (ASR)
+        Expenditures.
     revenue: np.ndarray
         The array containing the revenue.
     ftp_ctr: np.ndarray
@@ -166,30 +167,39 @@ def get_unrecovered_cost(
         The array of Unrecovered Cost.
     """
 
-    unrecovered_cost = np.cumsum(depreciation + non_capital) - np.cumsum(
-        revenue - (ftp_ctr + ftp_gov) - ic
+    unrecovered_cost = (
+        np.cumsum(depreciation + non_capital)
+        - np.cumsum(revenue - (ftp_ctr + ftp_gov) - ic)
     )
 
     unrecovered_cost = np.where(unrecovered_cost >= 0, unrecovered_cost, 0)
 
     # Condition where there is no revenue but still there is depreciation + non-capital
-    left_cost = np.where(np.logical_and((revenue - ftp_ctr - ftp_gov - ic) < depreciation + non_capital,
-                                        unrecovered_cost == 0),
-                         (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic), 0)
+    left_cost = np.where(
+        np.logical_and(
+            (revenue - ftp_ctr - ftp_gov - ic) < depreciation + non_capital,
+            unrecovered_cost == 0
+        ),
+        (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic),
+        0
+    )
 
     unrecovered_cost_final = unrecovered_cost + left_cost
 
     # Adding the trailing unrecoverable cost into the array
     if np.sum(revenue) == 0:
         pass
+
     else:
         if np.sum(left_cost) == 0:
             pass
+
         else:
             last_non_zero_indices = max(np.nonzero(revenue)[0])
             trailing_cost = np.cumsum(left_cost[last_non_zero_indices:])
 
             unrecovered_cost_final[last_non_zero_indices:] = trailing_cost
+
     return unrecovered_cost_final
 
 

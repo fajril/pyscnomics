@@ -2016,6 +2016,41 @@ class GrossSplit(BaseProject):
         )
 
     def _allocate_sunk_cost(self, sunk_cost: np.ndarray, preonstream: np.ndarray) -> np.ndarray:
+        """
+        Allocate sunk cost and preonstream expenditures to the onstream year.
+
+        This method aggregates the total value of ``sunk_cost`` and
+        ``preonstream`` arrays into a single bulk value and assigns it to
+        the project year corresponding to the earlier of the oil or gas
+        onstream dates. All other years are set to zero.
+
+        Parameters
+        ----------
+        sunk_cost : np.ndarray
+            Array of sunk cost values across project years.
+        preonstream : np.ndarray
+            Array of preonstream cost values across project years.
+
+        Returns
+        -------
+        np.ndarray
+            A 1D array aligned with ``project_years`` where the summed bulk
+            value of ``sunk_cost`` and ``preonstream`` is positioned at the
+            onstream year, with zeros elsewhere.
+
+        Raises
+        ------
+        ValueError
+            If the onstream year does not uniquely match exactly one entry
+            in ``project_years``.
+
+        Notes
+        -----
+        - The onstream year is determined as the earlier of
+          ``oil_onstream_date.year`` and ``gas_onstream_date.year``.
+        - Both ``sunk_cost`` and ``preonstream`` arrays are expected to
+          align with ``project_years`` in length.
+        """
 
         # Calculate bulk value
         bulk_value = float(np.sum(sunk_cost + preonstream))
@@ -2033,27 +2068,63 @@ class GrossSplit(BaseProject):
 
         return arr
 
-    def _get_cost_to_be_deducted(self, sunk_cost_method: SunkCostMethod):
+    def _get_cost_to_be_deducted(self, sunk_cost_method: SunkCostMethod) -> None:
+        """
+        Compute the total cost to be deducted for oil and gas.
+
+        This method aggregates all deductible costs for both oil and gas,
+        including depreciations, amortizations, sunk costs, carry-forward
+        depreciation, and various post-tax expenditures.
+
+        The calculation depends on whether the project is under POD I or
+        non-POD I, and on the chosen sunk cost accounting method.
+
+        Parameters
+        ----------
+        sunk_cost_method : SunkCostMethod
+            Method to allocate sunk costs. Supported options are:
+            - ``SunkCostMethod.DEPRECIATED_TANGIBLE`` : Non-depreciable sunk costs
+              are included together with depreciations and amortizations.
+            - ``SunkCostMethod.POOLED_1ST_YEAR`` : Depreciable sunk costs are
+              pooled at the onstream year and combined with non-depreciable
+              sunk costs, amortizations, and postonstream depreciations.
+
+        Returns
+        -------
+        None
+            Results are stored in the following instance attributes:
+            - ``self._oil_cost_tobe_deducted`` : ndarray of oil costs to be deducted.
+            - ``self._gas_cost_tobe_deducted`` : ndarray of gas costs to be deducted.
+
+        Raises
+        ------
+        KeyError
+            If ``sunk_cost_method`` is not recognized.
+
+        Notes
+        -----
+        - For POD I, costs include all depreciations and amortizations
+          plus carry-forward depreciation and post-tax expenditures.
+        - For non-POD I cases, the inclusion of sunk costs depends on
+          the selected accounting method.
+        - Post-tax expenditures included are intangible, opex, ASR, LBT,
+          and cost of sales.
+
+        See Also
+        --------
+        _allocate_sunk_cost : Helper for allocating sunk costs to the onstream year.
+        """
 
         # Calculates the sum of depreciations and amortizations, namely
-        # sunk cost + preonstream + postonstream, for OIL and GAS, and
-        # stores the result in an intermediate variable "totals": dict.
-        totals = {
-            name: np.array(list(component.values())).sum(axis=0)
-            for (name, component) in [
-                ("oil_depreciations", self._oil_depreciations),
-                ("oil_amortizations", self._oil_amortizations),
-                ("gas_depreciations", self._gas_depreciations),
-                ("gas_amortizations", self._gas_amortizations)
-            ]
-        }
+        # sunk cost + preonstream + postonstream, for OIL and GAS
+        oil_total_depr = np.array(list(self._oil_depreciations.values())).sum(axis=0)
+        oil_total_amor = np.array(list(self._oil_amortizations.values())).sum(axis=0)
+        gas_total_depr = np.array(list(self._gas_depreciations.values())).sum(axis=0)
+        gas_total_amor = np.array(list(self._gas_amortizations.values())).sum(axis=0)
 
-        # Cost to be deducted for POD I
-        if self.is_pod_1:
-            # Calculate cost to be deducted for OIL
-            self._oil_cost_tobe_deducted = (
-                totals["oil_depreciations"]
-                + totals["oil_amortizations"]
+        def _oil_common(*extra):
+            return (
+                np.sum(extra, axis=0)
                 + self._oil_carry_forward_depreciation
                 + self._oil_intangible_expenditures_post_tax
                 + self._oil_opex_expenditures_post_tax
@@ -2062,10 +2133,9 @@ class GrossSplit(BaseProject):
                 + self._oil_cost_of_sales_expenditures_post_tax
             )
 
-            # Calculate cost to be deducted for GAS
-            self._gas_cost_tobe_deducted = (
-                totals["gas_depreciations"]
-                + totals["gas_amortizations"]
+        def _gas_common(*extra):
+            return (
+                np.sum(extra, axis=0)
                 + self._gas_carry_forward_depreciation
                 + self._gas_intangible_expenditures_post_tax
                 + self._gas_opex_expenditures_post_tax
@@ -2074,91 +2144,59 @@ class GrossSplit(BaseProject):
                 + self._gas_cost_of_sales_expenditures_post_tax
             )
 
-        # Cost to be deducted for non-POD I
+        # Specify cost to be deducted for POD I
+        if self.is_pod_1:
+            self._oil_cost_tobe_deducted = _oil_common(oil_total_depr, oil_total_amor)
+            self._gas_cost_tobe_deducted = _gas_common(gas_total_depr, gas_total_amor)
+
+        # Specify cost to be deducted for non POD I
         else:
+            oil_non_dep = self._allocate_sunk_cost(
+                sunk_cost=self._oil_non_depreciable_sunk_cost,
+                preonstream=self._oil_non_depreciable_preonstream,
+            )
+            gas_non_dep = self._allocate_sunk_cost(
+                sunk_cost=self._gas_non_depreciable_sunk_cost,
+                preonstream=self._gas_non_depreciable_preonstream,
+            )
 
-            non_depreciable_sunk_cost = {
-                "oil": self._allocate_sunk_cost(
-                    sunk_cost=self._oil_non_depreciable_sunk_cost,
-                    preonstream=self._oil_non_depreciable_preonstream
-                ),
-                "gas": self._allocate_sunk_cost(
-                    sunk_cost=self._gas_non_depreciable_sunk_cost,
-                    preonstream=self._gas_non_depreciable_preonstream
-                )
-            }
-
-            # Cost to be deducted for sunk cost method: DEPRECIATED TANGIBLE
+            # Option 1: DEPRECIATED TANGIBLE
             if sunk_cost_method == SunkCostMethod.DEPRECIATED_TANGIBLE:
-                # Calculate cost to be deducted for OIL
-                self._oil_cost_tobe_deducted = (
-                    totals["oil_depreciations"]
-                    + totals["oil_amortizations"]
-                    + non_depreciable_sunk_cost["oil"]
-                    + self._oil_carry_forward_depreciation
-                    + self._oil_intangible_expenditures_post_tax
-                    + self._oil_opex_expenditures_post_tax
-                    + self._oil_asr_expenditures_post_tax
-                    + self._oil_lbt_expenditures_post_tax
-                    + self._oil_cost_of_sales_expenditures_post_tax
+                self._oil_cost_tobe_deducted = _oil_common(
+                    oil_total_depr, oil_total_amor, oil_non_dep
+                )
+                self._gas_cost_tobe_deducted = _gas_common(
+                    gas_total_depr, gas_total_amor, gas_non_dep
                 )
 
-                # Calculate cost to be deducted for GAS
-                self._gas_cost_tobe_deducted = (
-                    totals["gas_depreciations"]
-                    + totals["gas_amortizations"]
-                    + non_depreciable_sunk_cost["gas"]
-                    + self._gas_carry_forward_depreciation
-                    + self._gas_intangible_expenditures_post_tax
-                    + self._gas_opex_expenditures_post_tax
-                    + self._gas_asr_expenditures_post_tax
-                    + self._gas_lbt_expenditures_post_tax
-                    + self._gas_cost_of_sales_expenditures_post_tax
-                )
-
-            # Cost to be deducted for sunk cost method: POOLED 1ST YEAR
+            # Option 2: POOLED AT ONSTREAM YEAR
             elif sunk_cost_method == SunkCostMethod.POOLED_1ST_YEAR:
-                depreciable_sunk_cost = {
-                    "oil": self._allocate_sunk_cost(
-                        sunk_cost=self._oil_depreciable_sunk_cost,
-                        preonstream=self._oil_depreciable_preonstream
-                    ),
-                    "gas": self._allocate_sunk_cost(
-                        sunk_cost=self._gas_depreciable_sunk_cost,
-                        preonstream=self._gas_depreciable_preonstream
-                    )
-                }
-
-                # Calculate cost to be deducted for OIL
-                self._oil_cost_tobe_deducted = (
-                    self._oil_depreciations["postonstream"]
-                    + depreciable_sunk_cost["oil"]
-                    + non_depreciable_sunk_cost["oil"]
-                    + totals["oil_amortizations"]
-                    + self._oil_carry_forward_depreciation
-                    + self._oil_intangible_expenditures_post_tax
-                    + self._oil_opex_expenditures_post_tax
-                    + self._oil_asr_expenditures_post_tax
-                    + self._oil_lbt_expenditures_post_tax
-                    + self._oil_cost_of_sales_expenditures_post_tax
+                oil_dep = self._allocate_sunk_cost(
+                    sunk_cost=self._oil_depreciable_sunk_cost,
+                    preonstream=self._oil_depreciable_preonstream,
+                )
+                gas_dep = self._allocate_sunk_cost(
+                    sunk_cost=self._gas_depreciable_sunk_cost,
+                    preonstream=self._gas_depreciable_preonstream,
                 )
 
-                # Calculate cost to be deducted for GAS
-                self._gas_cost_tobe_deducted = (
-                    self._gas_depreciations["postonstream"]
-                    + depreciable_sunk_cost["gas"]
-                    + non_depreciable_sunk_cost["gas"]
-                    + totals["gas_amortizations"]
-                    + self._gas_carry_forward_depreciation
-                    + self._gas_intangible_expenditures_post_tax
-                    + self._gas_opex_expenditures_post_tax
-                    + self._gas_asr_expenditures_post_tax
-                    + self._gas_lbt_expenditures_post_tax
-                    + self._gas_cost_of_sales_expenditures_post_tax
+                self._oil_cost_tobe_deducted = _oil_common(
+                    self._oil_depreciations["postonstream"],
+                    oil_total_amor,
+                    oil_dep,
+                    oil_non_dep,
+                )
+                self._gas_cost_tobe_deducted = _gas_common(
+                    self._gas_depreciations["postonstream"],
+                    gas_total_amor,
+                    gas_dep,
+                    gas_non_dep,
                 )
 
             else:
-                raise KeyError
+                raise KeyError(
+                    f"Unrecognized sunk cost method: {sunk_cost_method.__class__.__qualname__}"
+                )
 
     @staticmethod
     def _get_deductible_cost(ctr_gross_share, cost_tobe_deducted, carward_deduct_cost):
@@ -2934,46 +2972,47 @@ class GrossSplit(BaseProject):
         # Cost to be deducted
         self._get_cost_to_be_deducted(sunk_cost_method=sunk_cost_method)
 
-        # self._oil_cost_tobe_deducted = (
-        #     np.array(list(self._oil_depreciations.values())).sum(axis=0)
-        #     + np.array(list(self._oil_amortizations.values())).sum(axis=0)
-        #     + self._oil_carry_forward_depreciation
-        #     + self._oil_non_capital
-        # )
+        # Oil carry forward deductible cost (in PSC Cost Recovery called Unrecovered Cost)
+        zeros = np.zeros_like(self.project_years, dtype=float)
+        oil_total_depr = np.array(list(self._oil_depreciations.values())).sum(axis=0)
+        oil_total_amor = np.array(list(self._oil_amortizations.values())).sum(axis=0)
 
-        # self._gas_cost_tobe_deducted = (
-        #     np.array(list(self._gas_depreciations.values())).sum(axis=0)
-        #     + np.array(list(self._gas_amortizations.values())).sum(axis=0)
-        #     + self._gas_carry_forward_depreciation
-        #     + self._gas_non_capital
-        # )
-        #
-        # t1 = self._gas_cost_tobe_deducted
-        # print('\t')
-        # print(f'Filetype: {type(t1)}')
-        # print(f'Length: {len(t1)}')
-        # print('t1 = \n', t1)
+        self._oil_carward_deduct_cost = psc_tools.get_unrecovered_cost(
+            depreciation=(
+                oil_total_depr + oil_total_amor + self._oil_carry_forward_depreciation
+            ),
+            non_capital=self._oil_total_non_capital_investment,
+            revenue=self._oil_ctr_share_before_transfer,
+            ftp_ctr=zeros,
+            ftp_gov=zeros,
+            ic=zeros,
+        )
 
+        # Gas carry forward deductible cost (in PSC Cost Recovery called Unrecovered Cost)
+        gas_total_depr = np.array(list(self._gas_depreciations.values())).sum(axis=0)
+        gas_total_amor = np.array(list(self._gas_amortizations.values())).sum(axis=0)
+
+        self._gas_carward_deduct_cost = psc_tools.get_unrecovered_cost(
+            depreciation=(
+                gas_total_depr + gas_total_amor + self._gas_carry_forward_depreciation
+            ),
+            non_capital=self._gas_total_non_capital_investment,
+            revenue=self._gas_ctr_share_before_transfer,
+            ftp_ctr=zeros,
+            ftp_gov=zeros,
+            ic=zeros,
+        )
+
+        t1 = self._oil_carward_deduct_cost
+        print('\t')
+        print(f'Filetype: {type(t1)}')
+        print(f'Length: {len(t1)}')
+        print('t1 = \n', t1)
 
         # self.get_results(ftype="oil")
 
 
 
-        # # Carry Forward Deductible Cost (In PSC Cost Recovery called Unrecovered Cost)
-        # self._oil_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._oil_depreciation,
-        #                                                                non_capital=self._oil_non_capital,
-        #                                                                revenue=self._oil_ctr_share_before_transfer,
-        #                                                                ftp_ctr=np.zeros_like(self.project_years),
-        #                                                                ftp_gov=np.zeros_like(self.project_years),
-        #                                                                ic=np.zeros_like(self.project_years))
-        #
-        # self._gas_carward_deduct_cost = psc_tools.get_unrecovered_cost(depreciation=self._gas_depreciation,
-        #                                                                non_capital=self._gas_non_capital,
-        #                                                                revenue=self._gas_ctr_share_before_transfer,
-        #                                                                ftp_ctr=np.zeros_like(self.project_years),
-        #                                                                ftp_gov=np.zeros_like(self.project_years),
-        #                                                                ic=np.zeros_like(self.project_years))
-        #
         # # Deductible Cost (In PSC Cost Recovery called Cost Recovery)
         # self._oil_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._oil_ctr_share_before_transfer,
         #                                                       cost_tobe_deducted=self._oil_cost_tobe_deducted,
