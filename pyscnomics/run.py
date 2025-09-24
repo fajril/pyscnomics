@@ -96,7 +96,7 @@ kwargs_gs = {
     "oil_onstream_date": date(year=2030, month=1, day=1),
     "gas_onstream_date": date(year=2029, month=1, day=1),
     "approval_year": 2026,
-    "is_pod_1": True,
+    "is_pod_1": False,
     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
     "split_ministry_disc": 0.08,
     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -124,13 +124,14 @@ params_gs = {
     "depr_method": DeprMethod.PSC_DB,
     "decline_factor": 2,
     "sum_undepreciated_cost": False,
-    "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
-    "regime": GrossSplitRegime.PERMEN_ESDM_13_2024,
-    "reservoir_type_permen_2024": VariableSplit132024.ReservoirType.MK,
     "is_dmo_end_weighted": False,
     "tax_regime": TaxRegime.NAILED_DOWN,
     "effective_tax_rate": 0.22,
     "amortization": False,
+    "sunk_cost_method": SunkCostMethod.POOLED_1ST_YEAR,
+    "regime": GrossSplitRegime.PERMEN_ESDM_13_2024,
+    "reservoir_type_permen_2024": VariableSplit132024.ReservoirType.MK,
+    "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
 }
 
 gs = GrossSplit(

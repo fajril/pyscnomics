@@ -22,6 +22,7 @@ from pyscnomics.econ.selection import (
     VariableSplit522017,
     VariableSplit082017,
     VariableSplit132024,
+    SunkCostMethod,
 )
 from pyscnomics.econ.depreciation import unit_of_production_rate
 
@@ -157,8 +158,13 @@ class GrossSplit(BaseProject):
     _gas_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes associated with total expenses
-    _oil_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_total_capital_investment: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_total_non_capital_investment: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_total_capital_investment: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_total_non_capital_investment: np.ndarray = field(default=None, init=False, repr=False)
+
+    # _oil_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
+    # _gas_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes associated with depreciations and undepreciated assets
     _oil_depreciations: dict = field(default_factory=lambda: {}, init=False, repr=False)
@@ -1943,36 +1949,216 @@ class GrossSplit(BaseProject):
         return years_exceed
 
     def _get_investments(self):
+        """
+        Calculate total capital and non-capital investments for oil and gas.
 
-        # Non capital investments (intangible + opex + asr + lbt + cost of sales)
-        self._oil_non_capital = (
-            self._oil_intangible_expenditures_post_tax
+        This method computes the total capital and non-capital investment
+        components separately for oil and gas.
+
+        The capital investment is derived from depreciable pre-onstream costs
+        and capital expenditures after tax.
+
+        The non-capital investment is derived from non-depreciable pre-onstream
+        costs, intangible expenditures, operating expenditures,
+        abandonment site restoration (ASR) costs, land and building tax (LBT),
+        and cost-of-sales expenditures, all considered after tax.
+
+        Returns
+        -------
+        None
+            This method modifies the following attributes in place:
+
+            - ``self._oil_total_capital_investment`` : float
+                Total capital investment for oil.
+            - ``self._oil_total_non_capital_investment`` : float
+                Total non-capital investment for oil.
+            - ``self._gas_total_capital_investment`` : float
+                Total capital investment for gas.
+            - ``self._gas_total_non_capital_investment`` : float
+                Total non-capital investment for gas.
+
+        Notes
+        -----
+        - All input components are assumed to be pre-computed and stored
+          as attributes of the class instance.
+        - Values are post-tax unless specified otherwise.
+        - The calculation follows the cost categorization used in PSC
+          economic evaluations, distinguishing between capital and
+          non-capital investment categories.
+        """
+
+        # Capital and non-capital investments for OIL
+        self._oil_total_capital_investment = (
+            self._oil_depreciable_preonstream + self._oil_capital_expenditures_post_tax
+        )
+
+        self._oil_total_non_capital_investment = (
+            self._oil_non_depreciable_preonstream
+            + self._oil_intangible_expenditures_post_tax
             + self._oil_opex_expenditures_post_tax
             + self._oil_asr_expenditures_post_tax
             + self._oil_lbt_expenditures_post_tax
             + self._oil_cost_of_sales_expenditures_post_tax
         )
 
-        self._gas_non_capital = (
-            self._gas_intangible_expenditures_post_tax
+        # Capital and non-capital investments for GAS
+        self._gas_total_capital_investment = (
+            self._gas_depreciable_preonstream + self._gas_capital_expenditures_post_tax
+        )
+
+        self._gas_total_non_capital_investment = (
+            self._gas_non_depreciable_preonstream
+            + self._gas_intangible_expenditures_post_tax
             + self._gas_opex_expenditures_post_tax
             + self._gas_asr_expenditures_post_tax
             + self._gas_lbt_expenditures_post_tax
             + self._gas_cost_of_sales_expenditures_post_tax
         )
 
-        # Total investments (capital + non capital + amortization preonstream)
-        self._oil_total_expenses = (
-            self._oil_amortizations["preonstream"]
-            + self._oil_capital_expenditures_post_tax
-            + self._oil_non_capital
-        )
+    def _allocate_sunk_cost(self, sunk_cost: np.ndarray, preonstream: np.ndarray) -> np.ndarray:
 
-        self._gas_total_expenses = (
-            self._gas_amortizations["preonstream"]
-            + self._gas_capital_expenditures_post_tax
-            + self._gas_non_capital
-        )
+        # Calculate bulk value
+        bulk_value = float(np.sum(sunk_cost + preonstream))
+
+        # Determine the location of onstream year in project years array
+        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        match = np.flatnonzero(self.project_years == onstream_yr)
+        if match.size != 1:
+            raise ValueError(f"Expected one onstream year match, got {match.size} instead.")
+        onstream_id = int(match[0])
+
+        # Create new array with bulk value positioned at the onstream year
+        arr = np.zeros_like(self.project_years, dtype=float)
+        arr[onstream_id] = bulk_value
+
+        return arr
+
+    def _get_cost_to_be_deducted(self, sunk_cost_method: SunkCostMethod):
+
+        # Calculates the sum of depreciations and amortizations, namely
+        # sunk cost + preonstream + postonstream, for OIL and GAS, and
+        # stores the result in an intermediate variable "totals": dict.
+        totals = {
+            name: np.array(list(component.values())).sum(axis=0)
+            for (name, component) in [
+                ("oil_depreciations", self._oil_depreciations),
+                ("oil_amortizations", self._oil_amortizations),
+                ("gas_depreciations", self._gas_depreciations),
+                ("gas_amortizations", self._gas_amortizations)
+            ]
+        }
+
+        # Cost to be deducted for POD I
+        if self.is_pod_1:
+            # Calculate cost to be deducted for OIL
+            self._oil_cost_tobe_deducted = (
+                totals["oil_depreciations"]
+                + totals["oil_amortizations"]
+                + self._oil_carry_forward_depreciation
+                + self._oil_intangible_expenditures_post_tax
+                + self._oil_opex_expenditures_post_tax
+                + self._oil_asr_expenditures_post_tax
+                + self._oil_lbt_expenditures_post_tax
+                + self._oil_cost_of_sales_expenditures_post_tax
+            )
+
+            # Calculate cost to be deducted for GAS
+            self._gas_cost_tobe_deducted = (
+                totals["gas_depreciations"]
+                + totals["gas_amortizations"]
+                + self._gas_carry_forward_depreciation
+                + self._gas_intangible_expenditures_post_tax
+                + self._gas_opex_expenditures_post_tax
+                + self._gas_asr_expenditures_post_tax
+                + self._gas_lbt_expenditures_post_tax
+                + self._gas_cost_of_sales_expenditures_post_tax
+            )
+
+        # Cost to be deducted for non-POD I
+        else:
+
+            non_depreciable_sunk_cost = {
+                "oil": self._allocate_sunk_cost(
+                    sunk_cost=self._oil_non_depreciable_sunk_cost,
+                    preonstream=self._oil_non_depreciable_preonstream
+                ),
+                "gas": self._allocate_sunk_cost(
+                    sunk_cost=self._gas_non_depreciable_sunk_cost,
+                    preonstream=self._gas_non_depreciable_preonstream
+                )
+            }
+
+            # Cost to be deducted for sunk cost method: DEPRECIATED TANGIBLE
+            if sunk_cost_method == SunkCostMethod.DEPRECIATED_TANGIBLE:
+                # Calculate cost to be deducted for OIL
+                self._oil_cost_tobe_deducted = (
+                    totals["oil_depreciations"]
+                    + totals["oil_amortizations"]
+                    + non_depreciable_sunk_cost["oil"]
+                    + self._oil_carry_forward_depreciation
+                    + self._oil_intangible_expenditures_post_tax
+                    + self._oil_opex_expenditures_post_tax
+                    + self._oil_asr_expenditures_post_tax
+                    + self._oil_lbt_expenditures_post_tax
+                    + self._oil_cost_of_sales_expenditures_post_tax
+                )
+
+                # Calculate cost to be deducted for GAS
+                self._gas_cost_tobe_deducted = (
+                    totals["gas_depreciations"]
+                    + totals["gas_amortizations"]
+                    + non_depreciable_sunk_cost["gas"]
+                    + self._gas_carry_forward_depreciation
+                    + self._gas_intangible_expenditures_post_tax
+                    + self._gas_opex_expenditures_post_tax
+                    + self._gas_asr_expenditures_post_tax
+                    + self._gas_lbt_expenditures_post_tax
+                    + self._gas_cost_of_sales_expenditures_post_tax
+                )
+
+            # Cost to be deducted for sunk cost method: POOLED 1ST YEAR
+            elif sunk_cost_method == SunkCostMethod.POOLED_1ST_YEAR:
+                depreciable_sunk_cost = {
+                    "oil": self._allocate_sunk_cost(
+                        sunk_cost=self._oil_depreciable_sunk_cost,
+                        preonstream=self._oil_depreciable_preonstream
+                    ),
+                    "gas": self._allocate_sunk_cost(
+                        sunk_cost=self._gas_depreciable_sunk_cost,
+                        preonstream=self._gas_depreciable_preonstream
+                    )
+                }
+
+                # Calculate cost to be deducted for OIL
+                self._oil_cost_tobe_deducted = (
+                    self._oil_depreciations["postonstream"]
+                    + depreciable_sunk_cost["oil"]
+                    + non_depreciable_sunk_cost["oil"]
+                    + totals["oil_amortizations"]
+                    + self._oil_carry_forward_depreciation
+                    + self._oil_intangible_expenditures_post_tax
+                    + self._oil_opex_expenditures_post_tax
+                    + self._oil_asr_expenditures_post_tax
+                    + self._oil_lbt_expenditures_post_tax
+                    + self._oil_cost_of_sales_expenditures_post_tax
+                )
+
+                # Calculate cost to be deducted for GAS
+                self._gas_cost_tobe_deducted = (
+                    self._gas_depreciations["postonstream"]
+                    + depreciable_sunk_cost["gas"]
+                    + non_depreciable_sunk_cost["gas"]
+                    + totals["gas_amortizations"]
+                    + self._gas_carry_forward_depreciation
+                    + self._gas_intangible_expenditures_post_tax
+                    + self._gas_opex_expenditures_post_tax
+                    + self._gas_asr_expenditures_post_tax
+                    + self._gas_lbt_expenditures_post_tax
+                    + self._gas_cost_of_sales_expenditures_post_tax
+                )
+
+            else:
+                raise KeyError
 
     @staticmethod
     def _get_deductible_cost(ctr_gross_share, cost_tobe_deducted, carward_deduct_cost):
@@ -2474,16 +2660,17 @@ class GrossSplit(BaseProject):
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
         sum_undepreciated_cost: bool = False,
-        regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_13_2024,
         is_dmo_end_weighted=False,
         tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
         effective_tax_rate: float | np.ndarray = 0.22,
         amortization: bool = False,
-        initial_amortization_year: InitialYearAmortizationIncurred = (
-                InitialYearAmortizationIncurred.ONSTREAM_YEAR
-        ),
+        sunk_cost_method: SunkCostMethod = SunkCostMethod.DEPRECIATED_TANGIBLE,
+        regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_13_2024,
         reservoir_type_permen_2024: VariableSplit132024.ReservoirType = (
                 VariableSplit132024.ReservoirType.MK
+        ),
+        initial_amortization_year: InitialYearAmortizationIncurred = (
+                InitialYearAmortizationIncurred.ONSTREAM_YEAR
         ),
     ):
 
@@ -2740,29 +2927,32 @@ class GrossSplit(BaseProject):
         self._oil_gov_share = self._oil_revenue - self._oil_ctr_share_before_transfer
         self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
 
-        # Calculate investments
+        # Calculate capital and non-capital investments for reporting purposes
+        # (NOT for business logic)
         self._get_investments()
 
         # Cost to be deducted
-        self._oil_cost_tobe_deducted = (
-            np.array(list(self._oil_depreciations.values())).sum(axis=0)
-            + np.array(list(self._oil_amortizations.values())).sum(axis=0)
-            + self._oil_carry_forward_depreciation
-            + self._oil_non_capital
-        )
+        self._get_cost_to_be_deducted(sunk_cost_method=sunk_cost_method)
 
-        self._gas_cost_tobe_deducted = (
-            np.array(list(self._gas_depreciations.values())).sum(axis=0)
-            + np.array(list(self._gas_amortizations.values())).sum(axis=0)
-            + self._gas_carry_forward_depreciation
-            + self._gas_non_capital
-        )
+        # self._oil_cost_tobe_deducted = (
+        #     np.array(list(self._oil_depreciations.values())).sum(axis=0)
+        #     + np.array(list(self._oil_amortizations.values())).sum(axis=0)
+        #     + self._oil_carry_forward_depreciation
+        #     + self._oil_non_capital
+        # )
 
-        t1 = self._gas_cost_tobe_deducted
-        print('\t')
-        print(f'Filetype: {type(t1)}')
-        print(f'Length: {len(t1)}')
-        print('t1 = \n', t1)
+        # self._gas_cost_tobe_deducted = (
+        #     np.array(list(self._gas_depreciations.values())).sum(axis=0)
+        #     + np.array(list(self._gas_amortizations.values())).sum(axis=0)
+        #     + self._gas_carry_forward_depreciation
+        #     + self._gas_non_capital
+        # )
+        #
+        # t1 = self._gas_cost_tobe_deducted
+        # print('\t')
+        # print(f'Filetype: {type(t1)}')
+        # print(f'Length: {len(t1)}')
+        # print('t1 = \n', t1)
 
 
         # self.get_results(ftype="oil")

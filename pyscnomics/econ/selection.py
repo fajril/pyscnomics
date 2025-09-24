@@ -738,9 +738,9 @@ class SunkCostMethod(Enum):
         "Depreciated Tangible Sunk Cost, while the intangible will be pooled in the first year"
     )
     POOLED_1ST_YEAR = "Sunk Cost pooled in the first year"
-    DIRECT = (
-        "Sunk Cost will be directly applied to the cashflow based on the expense year"
-    )
+    # DIRECT = (
+    #     "Sunk Cost will be directly applied to the cashflow based on the expense year"
+    # )
 
 
 class CashflowType(Enum):
