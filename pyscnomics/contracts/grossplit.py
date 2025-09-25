@@ -3125,37 +3125,48 @@ class GrossSplit(BaseProject):
                 self.project_years, effective_tax_rate, dtype=float
             )
 
+        # Generating tax array based on the tax regime if tax_rate argument is None
+        if effective_tax_rate is None:
+            self._tax_rate_arr = self._get_tax_by_regime(tax_regime=tax_regime)
+
+        elif isinstance(effective_tax_rate, np.ndarray):
+            self._tax_rate_arr = effective_tax_rate
+
+        self._oil_tax = self._oil_taxable_income * self._tax_rate_arr
+        self._gas_tax = self._gas_taxable_income * self._tax_rate_arr
+
+        # Contractor Net Share
+        self._oil_ctr_net_share = self._oil_taxable_income - self._oil_tax
+        self._gas_ctr_net_share = self._gas_taxable_income - self._gas_tax
+
+        # Contractor Cash Flow
+        self._oil_ctr_cashflow = (
+            self._oil_ctr_share_before_transfer
+            - self._oil_total_capital_investment
+            - self._oil_total_non_capital_investment
+            - self._oil_ddmo
+            - self._oil_tax
+        )
+
+        self._gas_ctr_cashflow = (
+            self._gas_ctr_share_before_transfer
+            - self._gas_total_capital_investment
+            - self._gas_total_non_capital_investment
+            - self._gas_ddmo
+            - self._gas_tax
+        )
+
+        # Government Take
+        self._oil_government_take = self._oil_gov_share + self._oil_ddmo + self._oil_tax
+        self._gas_government_take = self._gas_gov_share + self._gas_ddmo + self._gas_tax
+
         # self.get_results(ftype="oil")
 
-        t1 = self._tax_rate_arr
+        t1 = self._gas_government_take
         print('\t')
         print(f'Filetype: {type(t1)}')
         print(f'Length: {len(t1)}')
         print('t1 = \n', t1)
 
-        # # Generating Tax array based on the tax regime if tax_rate argument is None
-        # if effective_tax_rate is None:
-        #     self._tax_rate_arr = self._get_tax_by_regime(tax_regime=tax_regime)
-        #
-        # elif isinstance(effective_tax_rate, np.ndarray):
-        #     self._tax_rate_arr = effective_tax_rate
-        #
-        # self._oil_tax = self._oil_taxable_income * self._tax_rate_arr
-        # self._gas_tax = self._gas_taxable_income * self._tax_rate_arr
-        #
-        # # Contractor Net Share
-        # self._oil_ctr_net_share = self._oil_taxable_income - self._oil_tax
-        # self._gas_ctr_net_share = self._gas_taxable_income - self._gas_tax
-        #
-        # # Contractor Cash Flow
-        # self._oil_ctr_cashflow = (self._oil_ctr_share_before_transfer - self._oil_total_expenses - self._oil_ddmo -
-        #                           self._oil_tax)
-        # self._gas_ctr_cashflow = (self._gas_ctr_share_before_transfer - self._gas_total_expenses - self._gas_ddmo -
-        #                           self._gas_tax)
-        #
-        # # Government Take
-        # self._oil_government_take = self._oil_gov_share + self._oil_ddmo + self._oil_tax
-        # self._gas_government_take = self._gas_gov_share + self._gas_ddmo + self._gas_tax
-        #
         # # Prepare consolidated attributes
         # self._get_consolidated_profiles()
