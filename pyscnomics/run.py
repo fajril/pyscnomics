@@ -128,7 +128,7 @@ params_gs = {
     "tax_regime": TaxRegime.NAILED_DOWN,
     "effective_tax_rate": 0.22,
     "amortization": False,
-    "sunk_cost_method": SunkCostMethod.POOLED_1ST_YEAR,
+    "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
     "regime": GrossSplitRegime.PERMEN_ESDM_13_2024,
     "reservoir_type_permen_2024": VariableSplit132024.ReservoirType.MK,
     "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,

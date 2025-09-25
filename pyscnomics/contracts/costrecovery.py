@@ -1637,22 +1637,22 @@ class CostRecovery(BaseProject):
         # self._gas_depreciation = (
         #     self._gas_depreciation + self._gas_carry_forward_depreciation
         # )
-        #
-        # # Non-capital costs (intangible + opex + asr)
-        # self._oil_non_capital = (
-        #     self._oil_intangible_expenditures_post_tax
-        #     + self._oil_opex_expenditures_post_tax
-        #     + self._oil_asr_expenditures_post_tax
-        #     + self._oil_lbt_expenditures_post_tax
-        # )
-        #
-        # self._gas_non_capital = (
-        #     self._gas_intangible_expenditures_post_tax
-        #     + self._gas_opex_expenditures_post_tax
-        #     + self._gas_asr_expenditures_post_tax
-        #     + self._gas_lbt_expenditures_post_tax
-        # )
-        #
+
+        # Non-capital costs (intangible + opex + asr)
+        self._oil_non_capital = (
+            self._oil_intangible_expenditures_post_tax
+            + self._oil_opex_expenditures_post_tax
+            + self._oil_asr_expenditures_post_tax
+            + self._oil_lbt_expenditures_post_tax
+        )
+
+        self._gas_non_capital = (
+            self._gas_intangible_expenditures_post_tax
+            + self._gas_opex_expenditures_post_tax
+            + self._gas_asr_expenditures_post_tax
+            + self._gas_lbt_expenditures_post_tax
+        )
+
         # # Filtering for only the cost that in the bracket of the project years
         # self._oil_depreciation = self._oil_depreciation[
         #     : (self.end_date.year - self.start_date.year + 1)
@@ -1660,7 +1660,7 @@ class CostRecovery(BaseProject):
         # self._gas_depreciation = self._gas_depreciation[
         #     : (self.end_date.year - self.start_date.year + 1)
         # ]
-        #
+
         # # Investment credit
         # self._oil_ic, self._oil_ic_unrecovered, self._oil_ic_paid = self._get_ic(
         #     revenue=self._oil_revenue,

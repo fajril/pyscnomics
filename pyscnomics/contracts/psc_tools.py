@@ -144,27 +144,45 @@ def get_unrecovered_cost(
     """
     A function to get the array of unrecovered cost.
 
+    The unrecovered cost represents the cumulative expenditures (capital and non-capital)
+    that remain unrecovered after accounting for revenue, First Tranche Petroleum (FTP),
+    and Investment Credit (IC).
+
+    The method ensures non-negative values and adjusts for cases where expenditures
+    exceed recoverable revenue, as well as trailing costs.
+
     Parameters
     ----------
-    depreciation: np.ndarray
-        The array containing the depreciated expenditures.
-    non_capital: : np.ndarray
-        The array containing the non-capital expenditures.
-        non_capital expenditures is consisting of:
-        Intangible, Operating Expenditures (OPEX) and Abandonment Site and Restoration (ASR)
-        Expenditures.
-    revenue: np.ndarray
-        The array containing the revenue.
-    ftp_ctr: np.ndarray
-        The array containing the Contractor's First Tranche Petroleum (FTP).
-    ftp_gov: np.ndarray
-        The array containing the Government's FTP.
-    ic: np.ndarray
-        The array containing the Paid Investment Credit (IC).
+    depreciation : np.ndarray
+        Array of capital expenditures subject to depreciation.
+    non_capital : np.ndarray
+        Array of non-capital expenditures, consisting of intangible costs,
+        operating expenditures (OPEX), and abandonment/site restoration (ASR) costs.
+    revenue : np.ndarray
+        Array of gross revenue before cost recovery and profit split.
+    ftp_ctr : np.ndarray
+        Array of Contractor's share of First Tranche Petroleum (FTP).
+    ftp_gov : np.ndarray
+        Array of Government's share of First Tranche Petroleum (FTP).
+    ic : np.ndarray
+        Array of paid Investment Credit (IC).
+
     Returns
     -------
-    out: np.ndarray
-        The array of Unrecovered Cost.
+    np.ndarray
+        Array of unrecovered costs over time. Ensures non-negativity,
+        and includes trailing unrecovered costs when applicable.
+
+    Notes
+    -----
+    - Unrecovered costs are initialized as the cumulative expenditures
+      (depreciation + non-capital) minus cumulative recoverable revenue
+      (revenue - FTP - IC).
+    - Negative values are floored to zero.
+    - If expenditures exceed recoverable revenue in certain periods,
+      the excess is carried forward as unrecovered cost.
+    - When trailing costs exist after the last revenue entry, they are
+      accumulated and appended to the unrecovered cost array.
     """
 
     unrecovered_cost = (
@@ -255,28 +273,45 @@ def get_transfer(
     """
     A function to get the transferred cost between oil and gas.
 
+    Calculate cost transfers between oil and gas based on unrecovered costs
+    and pre-transfer equity-to-be-split (ETS).
+
+    This method determines whether unrecovered costs from one stream (oil or gas)
+    can be covered by available ETS from the other stream. Transfers only occur
+    when one stream has unrecovered costs while the other has none. The transferred
+    amount in each year is the lesser of the unrecovered cost of the receiving stream
+    or the donor stream's ETS before transfer.
+
     Parameters
     ----------
-    gas_unrecovered: np.ndarray
-        The array containing the unrecovered cost from gas.
-    oil_unrecovered: np.ndarray
-        The array containing the unrecovered cost from oil.
-    gas_ets_pretransfer: np.ndarray
-        The array containing the gas's Equity To be Split (ETS) before transfer.
-    oil_ets_pretransfer: np.ndarray
-        The array containing the oil's Equity To be Split (ETS) before transfer.
+    gas_unrecovered : np.ndarray
+        Array of unrecovered costs for gas over time.
+    oil_unrecovered : np.ndarray
+        Array of unrecovered costs for oil over time.
+    gas_ets_pretransfer : np.ndarray
+        Array of gas ETS values before transfer.
+    oil_ets_pretransfer : np.ndarray
+        Array of oil ETS values before transfer.
 
     Returns
     -------
-    out: tuple
-        trf2oil: np.ndarray
-            The transferred cost from gas to oil.
-        trf2gas: np.ndarray
-            The transferred cost from oil to gas.
+    tuple of np.ndarray
+        trf2oil : np.ndarray
+            Amount transferred from gas to oil for each period.
+        trf2gas : np.ndarray
+            Amount transferred from oil to gas for each period.
+
+    Notes
+    -----
+    - Transfers to oil occur only when `oil_unrecovered > 0` and `gas_unrecovered == 0`.
+    - Transfers to gas occur only when `gas_unrecovered > 0` and `oil_unrecovered == 0`.
+    - The transferred cost is capped by both the unrecovered cost of the receiving
+      stream and the donor stream's pre-transfer ETS.
+    - If both oil and gas have unrecovered costs in the same period, no transfer occurs.
     """
 
-    trf2oil = np.zeros_like(oil_unrecovered)
-    trf2gas = np.zeros_like(gas_unrecovered)
+    trf2oil = np.zeros_like(oil_unrecovered, dtype=float)
+    trf2gas = np.zeros_like(gas_unrecovered, dtype=float)
 
     # Transfer to oil
     combined_condition_oil = np.logical_and(

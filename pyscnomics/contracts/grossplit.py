@@ -2199,7 +2199,43 @@ class GrossSplit(BaseProject):
                 )
 
     @staticmethod
-    def _get_deductible_cost(ctr_gross_share, cost_tobe_deducted, carward_deduct_cost):
+    def _get_deductible_cost(
+        ctr_gross_share: np.ndarray,
+        cost_tobe_deducted: np.ndarray,
+        carward_deduct_cost: np.ndarray
+    ) -> np.ndarray:
+        """
+        Calculate deductible cost limited by contractor gross share.
+
+        This method determines the deductible cost in each project year by
+        comparing the contractor's gross share against the sum of current
+        year costs and the carried-forward deductible costs from previous
+        years. The deductible cost is capped at the contractor's gross share.
+
+        Parameters
+        ----------
+        ctr_gross_share : np.ndarray
+            Contractor's gross share per project year.
+        cost_tobe_deducted : np.ndarray
+            Current year cost values to be deducted.
+        carward_deduct_cost : np.ndarray
+            Deductible costs carried forward from previous years. The first
+            year is padded with zero since there is no prior year.
+
+        Returns
+        -------
+        np.ndarray
+            Deductible costs per project year. Each value is the lesser of
+            the contractor's gross share or the sum of the current year cost
+            and the carried-forward cost.
+
+        Notes
+        -----
+        - The carried-forward deductible cost array is shifted by one year,
+          with the first element set to zero.
+        - Ensures that deductible costs never exceed the contractor's gross
+          share in any given year.
+        """
 
         carward_deduct_cost = np.concatenate((np.zeros(1), carward_deduct_cost[:-1]))
 
@@ -3003,49 +3039,60 @@ class GrossSplit(BaseProject):
             ic=zeros,
         )
 
-        t1 = self._oil_carward_deduct_cost
+        # Deductible cost (In PSC Cost Recovery called "cost recovery")
+        self._oil_deductible_cost = self._get_deductible_cost(
+            ctr_gross_share=self._oil_ctr_share_before_transfer,
+            cost_tobe_deducted=self._oil_cost_tobe_deducted,
+            carward_deduct_cost=self._oil_carward_deduct_cost
+        )
+
+        self._gas_deductible_cost = self._get_deductible_cost(
+            ctr_gross_share=self._gas_ctr_share_before_transfer,
+            cost_tobe_deducted=self._gas_cost_tobe_deducted,
+            carward_deduct_cost=self._gas_carward_deduct_cost
+        )
+
+        # Transfer
+        self._transfer_to_oil, self._transfer_to_gas = psc_tools.get_transfer(
+            oil_unrecovered=self._oil_carward_deduct_cost,
+            gas_unrecovered=self._gas_carward_deduct_cost,
+            oil_ets_pretransfer=self._oil_ctr_share_before_transfer,
+            gas_ets_pretransfer=self._gas_ctr_share_before_transfer,
+        )
+
+        # Carry Forward Deductible Cost After Transfer
+        self._oil_carward_cost_aftertf = self._oil_carward_deduct_cost - self._transfer_to_gas
+        self._gas_carward_cost_aftertf = self._gas_carward_deduct_cost - self._transfer_to_oil
+
+        # Contractor Share After Transfer
+        self._oil_ctr_share_after_transfer = (
+            self._oil_ctr_share_before_transfer
+            + self._transfer_to_oil
+            - self._transfer_to_gas
+        )
+
+        self._gas_ctr_share_after_transfer = (
+            self._gas_ctr_share_before_transfer
+            + self._transfer_to_gas
+            - self._transfer_to_oil
+        )
+
+        # Contractor Net Operating Profit
+        self._oil_net_operating_profit = (
+            self._oil_ctr_share_after_transfer - self._oil_deductible_cost
+        )
+        self._gas_net_operating_profit = (
+            self._gas_ctr_share_after_transfer - self._gas_deductible_cost
+        )
+
+        # self.get_results(ftype="oil")
+
+        t1 = self._gas_net_operating_profit
         print('\t')
         print(f'Filetype: {type(t1)}')
         print(f'Length: {len(t1)}')
         print('t1 = \n', t1)
 
-        # self.get_results(ftype="oil")
-
-
-
-        # # Deductible Cost (In PSC Cost Recovery called Cost Recovery)
-        # self._oil_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._oil_ctr_share_before_transfer,
-        #                                                       cost_tobe_deducted=self._oil_cost_tobe_deducted,
-        #                                                       carward_deduct_cost=self._oil_carward_deduct_cost)
-        #
-        # self._gas_deductible_cost = self._get_deductible_cost(ctr_gross_share=self._gas_ctr_share_before_transfer,
-        #                                                       cost_tobe_deducted=self._gas_cost_tobe_deducted,
-        #                                                       carward_deduct_cost=self._gas_carward_deduct_cost)
-        #
-        # # Transfer
-        # self._transfer_to_oil, self._transfer_to_gas = psc_tools.get_transfer(
-        #     oil_unrecovered=self._oil_carward_deduct_cost,
-        #     gas_unrecovered=self._gas_carward_deduct_cost,
-        #     oil_ets_pretransfer=self._oil_ctr_share_before_transfer,
-        #     gas_ets_pretransfer=self._gas_ctr_share_before_transfer)
-        #
-        # # Carry Forward Deductible Cost After Transfer
-        # self._oil_carward_cost_aftertf = self._oil_carward_deduct_cost - self._transfer_to_gas
-        # self._gas_carward_cost_aftertf = self._gas_carward_deduct_cost - self._transfer_to_oil
-        #
-        # # Contractor Share After Transfer
-        # self._oil_ctr_share_after_transfer = (self._oil_ctr_share_before_transfer +
-        #                                       self._transfer_to_oil -
-        #                                       self._transfer_to_gas)
-        #
-        # self._gas_ctr_share_after_transfer = (self._gas_ctr_share_before_transfer +
-        #                                       self._transfer_to_gas -
-        #                                       self._transfer_to_oil)
-        #
-        # # Contractor Net Operating Profit
-        # self._oil_net_operating_profit = self._oil_ctr_share_after_transfer - self._oil_deductible_cost
-        # self._gas_net_operating_profit = self._gas_ctr_share_after_transfer - self._gas_deductible_cost
-        #
         # # DMO
         # self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo_gross_split(
         #     onstream_date=self.oil_onstream_date,
