@@ -60,9 +60,11 @@ def get_unrec_cost_2b_recovered_costrec(
             # Yearly Unrecovered Cost
             yearly_unrecovered_cost[index] = np.where(
                 depreciation[index] + non_capital[index] > (
-                            revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]),
+                    revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]
+                ),
                 depreciation[index] + non_capital[index] - (
-                            revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]),
+                    revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]
+                ),
                 0
             )
 
@@ -97,24 +99,35 @@ def get_unrec_cost_2b_recovered_costrec(
             # Yearly Unrecovered Cost
             yearly_unrecovered_cost[index] = np.where(
                 depreciation[index] + non_capital[index] > (
-                            revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]),
+                    revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]
+                ),
                 depreciation[index] + non_capital[index] - (
-                            revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]),
-                0
+                    revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]
+                ),
+                0,
             )
 
             # Revenue - Cost Yearly
             revenue_minus_cost[index] = np.where(
                 yearly_unrecovered_cost[index] > 0,
                 0,
-                revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index] - depreciation[index] - non_capital[index]
+                (
+                    revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]
+                    - depreciation[index] - non_capital[index]
+                )
             )
 
             # Unrecovered Cost
             unrecovered_cost[index] = np.where(
-                yearly_unrecovered_cost[index] + unrecovered_cost[index - 1] - revenue_minus_cost[index] < 0,
+                (
+                    yearly_unrecovered_cost[index] + unrecovered_cost[index - 1]
+                    - revenue_minus_cost[index] < 0
+                ),
                 0,
-                yearly_unrecovered_cost[index] + unrecovered_cost[index - 1] - revenue_minus_cost[index]
+                (
+                    yearly_unrecovered_cost[index] + unrecovered_cost[index - 1]
+                    - revenue_minus_cost[index]
+                ),
             )
 
             # Cost to be Recovered
@@ -351,12 +364,15 @@ def get_transfer(
 #         revenue - (ftp_ctr + ftp_gov) - ic
 #     )
 #
-#     unrecovered_cost = np.where(unrecovered_cost >= 0, unrecovered_cost - np.cumsum(transferred_cost), 0)
+#     unrecovered_cost = np.where(unrecovered_cost >= 0, unrecovered_cost
+#     - np.cumsum(transferred_cost), 0)
 #
 #     # Condition where there is no revenue but still there is depreciation + non-capital
-#     left_cost = np.where(np.logical_and((revenue - ftp_ctr - ftp_gov - ic) < depreciation + non_capital,
-#                                         unrecovered_cost == 0),
-#                          (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic) - transferred_cost, 0)
+#     left_cost = np.where(
+#       np.logical_and(
+#           (revenue - ftp_ctr - ftp_gov - ic) < depreciation + non_capital,
+#           unrecovered_cost == 0),
+#           (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic) - transferred_cost, 0)
 #     unrecovered_cost_final = unrecovered_cost + np.cumsum(left_cost)
 #     return unrecovered_cost_final
 
@@ -375,13 +391,25 @@ def get_unrec_cost_after_tf(
         revenue - (ftp_ctr + ftp_gov) - ic
     )
 
-    unrecovered_cost = np.where(unrecovered_cost >= 0, unrecovered_cost - np.cumsum(transferred_cost_in) + np.cumsum(transferred_cost_out), 0)
+    unrecovered_cost = np.where(
+        unrecovered_cost >= 0,
+        unrecovered_cost - np.cumsum(transferred_cost_in) + np.cumsum(transferred_cost_out),
+        0
+    )
     unrecovered_cost = np.where(unrecovered_cost >= 0, unrecovered_cost, 0)
 
     # Condition where there is no revenue but still there is depreciation + non-capital
-    left_cost = np.where(np.logical_and((revenue - ftp_ctr - ftp_gov - ic) < depreciation + non_capital,
-                                        unrecovered_cost == 0),
-                         (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic) - transferred_cost_in + transferred_cost_out, 0)
+    left_cost = np.where(
+        np.logical_and(
+            (revenue - ftp_ctr - ftp_gov - ic) < depreciation + non_capital,
+            unrecovered_cost == 0),
+            (
+                (depreciation + non_capital) - (
+                revenue - ftp_ctr - ftp_gov - ic) - transferred_cost_in + transferred_cost_out,
+                0
+            )
+
+            )
     left_cost = np.where(left_cost >= 0, left_cost, 0)
 
     unrecovered_cost_final = unrecovered_cost + left_cost
@@ -460,7 +488,8 @@ def get_ets_after_transfer(
 #     indices = np.equal(unrecovered_after_transfer, 0)
 #
 #     if np.size(indices) > 0:
-#         ets_after_transfer[indices] = ets_before_transfer[indices] - trfto[indices] + trffrom[indices]
+#         ets_after_transfer[indices] =
+#         ets_before_transfer[indices] - trfto[indices] + trffrom[indices]
 #
 #     return ets_after_transfer
 
@@ -580,7 +609,13 @@ def get_dmo_gross_split(
     contractor_share: np.ndarray
 ) -> tuple:
     """
-    A function to get the array of Domestic Market Obligation (DMO) in Gross Split contract.
+    Calculate Domestic Market Obligation (DMO) volumes and fees
+    under a Gross Split Production Sharing Contract (PSC).
+
+    This function determines the DMO volume, the applicable DMO fee,
+    and the difference (net DMO adjustment) by considering DMO holiday
+    rules, unrecovered cost status, contractor share, and end-weighted
+    conditions.
 
     Parameters
     ----------
@@ -589,7 +624,8 @@ def get_dmo_gross_split(
     start_date: date
         The start date of the contract.
     project_years: np.ndarray
-        The array containing the contract years from the beginning until the end of the contract.
+        The array containing the contract years from the beginning until the
+        end of the contract.
     dmo_holiday_duration: int
         The duration of the DMO holiday.
     dmo_volume_portion: float
@@ -609,18 +645,33 @@ def get_dmo_gross_split(
 
     Returns
     -------
-    out: tuple
-        dmo_volume: np.ndarray
-            The array of DMO Volume.
-        dmo_fee: np.ndarray
-            The array of DMO Fee Volume.
-        ddmo: np.ndarray
-            The array of Difference DMO Fee.
+    tuple
+        dmo_volume : np.ndarray
+            DMO volumes per project year, adjusted for net operating profit.
+        dmo_fee : np.ndarray
+            DMO fee values per project year, accounting for holiday rules
+            and end-weighting if applicable.
+        ddmo : np.ndarray
+            Difference between gross DMO (dmo_volume * price) and
+            the DMO fee, representing the contractor's net adjustment.
 
     Notes
     -------
-    The difference with Cost Recovery DMO is that the DMO in Gross Split is using the following formula:
-    DMO Gross Split = IF(net_operating_profit > 0; MIN(DMO Volume Portion * Contractor Share; net_operating_profit); 0)
+    - During the DMO holiday period, no fee is charged.
+    - After the holiday, the DMO fee is calculated as
+      ``dmo_fee_portion * price * dmo_volume`` if unrecovered cost is zero,
+      otherwise full price is applied.
+    - If the DMO holiday ends mid-year and ``is_dmo_end_weighted`` is True,
+      the DMO fee for that year is prorated by the fraction of months
+      before/after the holiday end date.
+    - Key difference with the Cost Recovery DMO:
+      DMO in GrossSplit occupies the following formula:
+
+        DMO Gross Split = IF(
+            net_operating_profit > 0;
+            MIN(DMO Volume Portion * Contractor Share; net_operating_profit);
+            0
+        )
     """
 
     # DMO end date
@@ -635,21 +686,35 @@ def get_dmo_gross_split(
     dmo_holiday = np.where(project_years >= dmo_end_date.year, False, True)
 
     # Calculate the Gross Split DMO
-    dmo_volume = np.where(net_operating_profit > 0,
-                          np.minimum(dmo_volume_portion * contractor_share, net_operating_profit),
-                          0)
-    dmo_volume = np.divide(dmo_volume, price, out=np.zeros_like(dmo_volume, dtype=float), where=price != 0)
+    dmo_volume = np.where(
+        net_operating_profit > 0,
+        np.minimum(dmo_volume_portion * contractor_share, net_operating_profit),
+        0
+    )
+    dmo_volume = np.divide(
+        dmo_volume, price, out=np.zeros_like(dmo_volume, dtype=float), where=price != 0
+    )
 
-    dmo_fee = np.where(np.logical_and(unrecovered_cost == 0, ~dmo_holiday),
-                       dmo_fee_portion * price * dmo_volume,
-                       dmo_volume * price)
+    dmo_fee = np.where(
+        np.logical_and(unrecovered_cost == 0, ~dmo_holiday),
+        dmo_fee_portion * price * dmo_volume,
+        dmo_volume * price
+    )
 
     # Weighted dmo fee condition if the period of dmo is ended in the middle of the year
-    if unrecovered_cost[dmo_indices] > 0 and is_dmo_end_weighted and dmo_holiday[dmo_indices] == False:
+    if (
+        unrecovered_cost[dmo_indices] > 0
+        and is_dmo_end_weighted
+        and not dmo_holiday[dmo_indices]
+    ):
+        month_fraction = dmo_end_date.month / 12
+        base_price = price[dmo_indices]
+        volume = dmo_volume[dmo_indices]
+
         dmo_fee[dmo_indices] = (
-                    dmo_end_date.month / 12 * price[dmo_indices] * dmo_volume[dmo_indices] +
-                    (1 - dmo_end_date.month / 12) * dmo_volume[dmo_indices] *
-                    dmo_fee_portion * price[dmo_indices])
+            month_fraction * base_price * volume
+            + (1 - month_fraction) * volume * dmo_fee_portion * base_price
+        )
 
     # Calculate Net DMO
     ddmo = (dmo_volume * price) - dmo_fee
