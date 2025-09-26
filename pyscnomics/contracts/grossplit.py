@@ -6,7 +6,6 @@ import warnings
 from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
-from functools import reduce
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
@@ -158,13 +157,10 @@ class GrossSplit(BaseProject):
     _gas_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes associated with total expenses
-    _oil_total_capital_investment: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_total_non_capital_investment: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_total_capital_investment: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_total_non_capital_investment: np.ndarray = field(default=None, init=False, repr=False)
-
-    # _oil_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_capital: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_capital: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes associated with depreciations and undepreciated assets
     _oil_depreciations: dict = field(default_factory=lambda: {}, init=False, repr=False)
@@ -1759,15 +1755,15 @@ class GrossSplit(BaseProject):
         ----------
         fluid : FluidType
             Type of fluid, either ``FluidType.OIL`` or ``FluidType.GAS``.
-        prices_arr : ndarray
-            Array of fluid prices. Expressed in USD/bbl for oil
-            and USD/MMBTU for gas.
-        cums_arr : ndarray
-            Array of cumulative production volumes, in units
-            consistent with the selected fluid type.
-        regime : GrossSplitRegime, default=GrossSplitRegime.PERMEN_ESDM_20_2019
-            Fiscal regime under which the progressive split
-            adjustment is applied. Supported regimes are:
+        price : float
+            Fluid price. Expressed in USD/bbl for oil and USD/MMBTU for gas.
+        cum : float or None
+            Cumulative production volume, in units consistent with the selected
+            fluid type. If ``None``, cumulative adjustment may be skipped depending
+            on the regime.
+        regime : GrossSplitRegime
+            Fiscal regime under which the progressive split adjustment is applied.
+            Supported regimes are:
 
             - ``PERMEN_ESDM_8_2017``
             - ``PERMEN_ESDM_52_2017``
@@ -1777,14 +1773,13 @@ class GrossSplit(BaseProject):
 
         Returns
         -------
-        tuple of ndarray
+        tuple of float or ndarray
             A tuple containing:
 
-            - ``prog_price_split`` : ndarray
+            - ``prog_price_split`` : float or ndarray
               Progressive split adjustment due to price.
-            - ``prog_cum_split`` : ndarray
-              Progressive split adjustment due to cumulative
-              production.
+            - ``prog_cum_split`` : float or ndarray
+              Progressive split adjustment due to cumulative production.
 
         Raises
         ------
@@ -1794,15 +1789,13 @@ class GrossSplit(BaseProject):
         Notes
         -----
         - For ``PERMEN_ESDM_08_2017``:
-          Both price- and cumulative-based progressive splits
-          are applied.
+          Both price- and cumulative-based progressive splits are applied.
         - For ``PERMEN_ESDM_52_2017``, ``PERMEN_ESDM_20_2019``,
           and ``PERMEN_ESDM_12_2020``:
-          Progressive splits are determined using the 2017/2019/2020
-          regulation thresholds.
+          Progressive splits are determined using the respective regulation thresholds.
         - For ``PERMEN_ESDM_13_2024``:
-          Only price-based progressive split applies. The cumulative
-          adjustment is set to zero.
+          Only price-based progressive split applies. The cumulative adjustment
+          is explicitly set to zero.
         """
 
         # Specify split adjustment due to oil price and cumulative production
@@ -1950,49 +1943,61 @@ class GrossSplit(BaseProject):
 
     def _get_investments(self):
         """
-        Calculate total capital and non-capital investments for oil and gas.
+        Calculate and categorize total investments for oil and gas.
 
-        This method computes the total capital and non-capital investment
-        components separately for oil and gas.
+        This method computes both capital and non-capital investments for oil and
+        gas separately, and then derives the total investment (expenses) as the
+        sum of these components.
 
-        The capital investment is derived from depreciable pre-onstream costs
-        and capital expenditures after tax.
+        Capital investments are derived from:
+            - Depreciable pre-onstream costs
+            - Capital expenditures (post-tax)
 
-        The non-capital investment is derived from non-depreciable pre-onstream
-        costs, intangible expenditures, operating expenditures,
-        abandonment site restoration (ASR) costs, land and building tax (LBT),
-        and cost-of-sales expenditures, all considered after tax.
+        Non-capital investments are derived from:
+            - Non-depreciable pre-onstream costs
+            - Intangible expenditures (post-tax)
+            - Operating expenditures (post-tax)
+            - Abandonment site restoration (ASR) costs (post-tax)
+            - Land and building tax (LBT) (post-tax)
+            - Cost-of-sales expenditures (post-tax)
 
         Returns
         -------
         None
             This method modifies the following attributes in place:
 
-            - ``self._oil_total_capital_investment`` : float
-                Total capital investment for oil.
-            - ``self._oil_total_non_capital_investment`` : float
-                Total non-capital investment for oil.
-            - ``self._gas_total_capital_investment`` : float
-                Total capital investment for gas.
-            - ``self._gas_total_non_capital_investment`` : float
-                Total non-capital investment for gas.
+            - ``self._oil_capital`` : float
+                Capital investment for oil.
+            - ``self._gas_capital`` : float
+                Capital investment for gas.
+            - ``self._oil_non_capital`` : float
+                Non-capital investment for oil.
+            - ``self._gas_non_capital`` : float
+                Non-capital investment for gas.
+            - ``self._oil_total_expenses`` : float
+                Total investment for oil (capital + non-capital).
+            - ``self._gas_total_expenses`` : float
+                Total investment for gas (capital + non-capital).
 
         Notes
         -----
-        - All input components are assumed to be pre-computed and stored
-          as attributes of the class instance.
+        - All input components are assumed to be pre-computed and stored as
+          attributes of the class instance.
         - Values are post-tax unless specified otherwise.
-        - The calculation follows the cost categorization used in PSC
-          economic evaluations, distinguishing between capital and
-          non-capital investment categories.
+        - The calculation follows PSC economic evaluation conventions by
+          distinguishing capital and non-capital investment categories.
         """
 
-        # Capital and non-capital investments for OIL
-        self._oil_total_capital_investment = (
+        # Capital investments
+        self._oil_capital = (
             self._oil_depreciable_preonstream + self._oil_capital_expenditures_post_tax
         )
+        self._gas_capital = (
+            self._gas_depreciable_preonstream + self._gas_capital_expenditures_post_tax
+        )
 
-        self._oil_total_non_capital_investment = (
+        # Non-capital investments
+        self._oil_non_capital = (
             self._oil_non_depreciable_preonstream
             + self._oil_intangible_expenditures_post_tax
             + self._oil_opex_expenditures_post_tax
@@ -2001,12 +2006,7 @@ class GrossSplit(BaseProject):
             + self._oil_cost_of_sales_expenditures_post_tax
         )
 
-        # Capital and non-capital investments for GAS
-        self._gas_total_capital_investment = (
-            self._gas_depreciable_preonstream + self._gas_capital_expenditures_post_tax
-        )
-
-        self._gas_total_non_capital_investment = (
+        self._gas_non_capital = (
             self._gas_non_depreciable_preonstream
             + self._gas_intangible_expenditures_post_tax
             + self._gas_opex_expenditures_post_tax
@@ -2014,6 +2014,10 @@ class GrossSplit(BaseProject):
             + self._gas_lbt_expenditures_post_tax
             + self._gas_cost_of_sales_expenditures_post_tax
         )
+
+        # Total investments
+        self._oil_total_expenses = self._oil_capital + self._oil_non_capital
+        self._gas_total_expenses = self._gas_capital + self._gas_non_capital
 
     def _allocate_sunk_cost(self, sunk_cost: np.ndarray, preonstream: np.ndarray) -> np.ndarray:
         """
@@ -2333,151 +2337,173 @@ class GrossSplit(BaseProject):
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue
 
         # Attributes associated with consolidated sunkcost
-        self._consolidated_capital_sunk_cost = (
-                self._oil_capital_sunk_cost + self._gas_capital_sunk_cost
+        self._consolidated_depreciable_sunk_cost = (
+            self._oil_depreciable_sunk_cost + self._gas_depreciable_sunk_cost
         )
-        self._consolidated_intangible_sunk_cost = (
-                self._oil_intangible_sunk_cost + self._gas_intangible_sunk_cost
-        )
-        self._consolidated_opex_sunk_cost = (
-                self._oil_opex_sunk_cost + self._gas_opex_sunk_cost
-        )
-        self._consolidated_asr_sunk_cost = self._oil_asr_sunk_cost + self._gas_asr_sunk_cost
-        self._consolidated_lbt_sunk_cost = self._oil_lbt_sunk_preonstream_cost + self._gas_lbt_sunk_cost
-        self._consolidated_cost_of_sales_sunk_cost = (
-                self._oil_cost_of_sales_sunk_cost + self._gas_cost_of_sales_sunk_cost
+        self._consolidated_non_depreciable_sunk_cost = (
+            self._oil_non_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
         )
         self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
 
+        # Attributes associated with consolidated preonstream
+        self._consolidated_depreciable_preonstream = (
+            self._oil_depreciable_preonstream + self._gas_depreciable_preonstream
+        )
+        self._consolidated_non_depreciable_preonstream = (
+            self._oil_non_depreciable_preonstream + self._gas_non_depreciable_preonstream
+        )
+        self._consolidated_preonstream = self._oil_preonstream + self._gas_preonstream
+
+        categories = [
+            "capital",
+            "intangible",
+            "opex",
+            "asr",
+            "lbt",
+            "cost_of_sales"
+        ]
+
         # Attributes associated with consolidated expenditures pre tax
-        self._consolidated_capital_expenditures_pre_tax = (
-                self._oil_capital_expenditures_pre_tax
-                + self._gas_capital_expenditures_pre_tax
-        )
-        self._consolidated_intangible_expenditures_pre_tax = (
-                self._oil_intangible_expenditures_pre_tax
-                + self._gas_intangible_expenditures_pre_tax
-        )
-        self._consolidated_opex_expenditures_pre_tax = (
-                self._oil_opex_expenditures_pre_tax + self._gas_opex_expenditures_pre_tax
-        )
-        self._consolidated_asr_expenditures_pre_tax = (
-                self._oil_asr_expenditures_pre_tax + self._gas_asr_expenditures_pre_tax
-        )
-        self._consolidated_lbt_expenditures_pre_tax = (
-                self._oil_lbt_expenditures_pre_tax + self._gas_lbt_expenditures_pre_tax
-        )
-        self._consolidated_cost_of_sales_expenditures_pre_tax = (
-                self._oil_cost_of_sales_expenditures_pre_tax
-                + self._gas_cost_of_sales_expenditures_pre_tax
-        )
-        self._consolidated_expenditures_pre_tax = (
-                self._oil_total_expenditures_pre_tax + self._gas_total_expenditures_pre_tax
+        for categ in categories:
+            oil_pre_tax = getattr(self, f"_oil_{categ}_expenditures_pre_tax")
+            gas_pre_tax = getattr(self, f"_gas_{categ}_expenditures_pre_tax")
+            setattr(
+                self, f"_consolidated_{categ}_expenditures_pre_tax", oil_pre_tax + gas_pre_tax
+            )
+
+        self._consolidated_total_expenditures_pre_tax = (
+            self._oil_total_expenditures_pre_tax + self._gas_total_expenditures_pre_tax
         )
 
         # Attributes associated with consolidated indirect tax
-        self._consolidated_capital_indirect_tax = (
-                self._oil_capital_indirect_tax + self._gas_capital_indirect_tax
-        )
-        self._consolidated_intangible_indirect_tax = (
-                self._oil_intangible_indirect_tax + self._gas_intangible_indirect_tax
-        )
-        self._consolidated_opex_indirect_tax = (
-                self._oil_opex_indirect_tax + self._gas_opex_indirect_tax
-        )
-        self._consolidated_asr_indirect_tax = (
-                self._oil_asr_indirect_tax + self._gas_asr_indirect_tax
-        )
-        self._consolidated_lbt_indirect_tax = (
-                self._oil_lbt_indirect_tax + self._gas_lbt_indirect_tax
-        )
-        self._consolidated_cost_of_sales_indirect_tax = (
-                self._oil_cost_of_sales_indirect_tax + self._gas_cost_of_sales_indirect_tax
-        )
-        self._consolidated_indirect_tax = (
-                self._oil_total_indirect_tax + self._gas_total_indirect_tax
-        )
 
-        # Attributes associated with consolidated expenditures post tax
-        self._consolidated_capital_expenditures_post_tax = (
-                self._oil_capital_expenditures_post_tax
-                + self._gas_capital_expenditures_post_tax
-        )
-        self._consolidated_intangible_expenditures_post_tax = (
-                self._oil_intangible_expenditures_post_tax
-                + self._gas_intangible_expenditures_post_tax
-        )
-        self._consolidated_opex_expenditures_post_tax = (
-                self._oil_opex_expenditures_post_tax + self._gas_opex_expenditures_post_tax
-        )
-        self._consolidated_asr_expenditures_post_tax = (
-                self._oil_asr_expenditures_post_tax + self._gas_asr_expenditures_post_tax
-        )
-        self._consolidated_lbt_expenditures_post_tax = (
-                self._oil_lbt_expenditures_post_tax + self._gas_lbt_expenditures_post_tax
-        )
-        self._consolidated_cost_of_sales_expenditures_post_tax = (
-                self._oil_cost_of_sales_expenditures_post_tax
-                + self._gas_cost_of_sales_expenditures_post_tax
-        )
 
-        self._consolidated_expenditures_post_tax = (
-                self._oil_total_expenditures_post_tax + self._gas_total_expenditures_post_tax
-        )
+        t1 = self._oil_opex_expenditures_pre_tax
+        print('\t')
+        print(f'Filetype: {type(t1)}')
+        print(f'Length: {len(t1)}')
+        print('t1 = \n', t1)
 
-        # Attribute associated consolidated total expenses
-        self._consolidated_total_expenses = (
-            self._oil_total_expenses + self._gas_total_expenses
-        )
+        t2 = self._gas_opex_expenditures_pre_tax
+        print('\t')
+        print(f'Filetype: {type(t2)}')
+        print(f'Length: {len(t2)}')
+        print('t2 = \n', t2)
 
-        # Attributes associated with depreciation and amortization
-        self._consolidated_amortization = self._oil_amortization + self._gas_amortization
-        self._consolidated_depreciation = self._oil_depreciation + self._gas_depreciation
-        self._consolidated_undepreciated_asset = (
-            self._oil_undepreciated_asset + self._gas_undepreciated_asset
-        )
+        t3 = self._consolidated_opex_expenditures_pre_tax
+        print('\t')
+        print(f'Filetype: {type(t3)}')
+        print(f'Length: {len(t3)}')
+        print('t3 = \n', t3)
 
-        # Attributes associated with core business logics
-        self._consolidated_carry_forward_depreciation = (
-            self._oil_carry_forward_depreciation + self._gas_carry_forward_depreciation
-        )
-        self._consolidated_ctr_share_before_tf = (
-            self._oil_ctr_share_before_transfer + self._gas_ctr_share_before_transfer
-        )
-        self._consolidated_gov_share_before_tf = self._oil_gov_share + self._gas_gov_share
-        self._consolidated_cost_tobe_deducted = (
-            self._oil_cost_tobe_deducted + self._gas_cost_tobe_deducted
-        )
-        self._consolidated_carward_deduct_cost = (
-            self._oil_carward_deduct_cost + self._gas_carward_deduct_cost
-        )
-        self._consolidated_deductible_cost = (
-            self._oil_deductible_cost + self._gas_deductible_cost
-        )
-        self._consolidated_carward_cost_aftertf = (
-            self._oil_carward_cost_aftertf + self._gas_carward_cost_aftertf
-        )
-        self._consolidated_ctr_share_after_transfer = (
-            self._oil_ctr_share_after_transfer + self._gas_ctr_share_after_transfer
-        )
-        self._consolidated_net_operating_profit = (
-            self._oil_net_operating_profit + self._gas_net_operating_profit
-        )
-        self._consolidated_dmo_volume = self._oil_dmo_volume + self._gas_dmo_volume
-        self._consolidated_dmo_fee = self._oil_dmo_fee + self._gas_dmo_fee
-        self._consolidated_ddmo = self._oil_ddmo + self._gas_ddmo
-        self._consolidated_taxable_income = (
-            self._oil_taxable_income + self._gas_taxable_income
-        )
-        self._consolidated_tax_payment = self._oil_tax + self._gas_tax
-        self._consolidated_ctr_net_share = self._oil_ctr_net_share + self._gas_ctr_net_share
-        self._consolidated_government_take = (
-            self._oil_government_take + self._gas_government_take
-        )
 
-        # Attribute associated with consolidated cashflow
-        self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
-        self._consolidated_cashflow = self._oil_ctr_cashflow + self._gas_ctr_cashflow
+
+        # # Attributes associated with consolidated indirect tax
+        # self._consolidated_capital_indirect_tax = (
+        #         self._oil_capital_indirect_tax + self._gas_capital_indirect_tax
+        # )
+        # self._consolidated_intangible_indirect_tax = (
+        #         self._oil_intangible_indirect_tax + self._gas_intangible_indirect_tax
+        # )
+        # self._consolidated_opex_indirect_tax = (
+        #         self._oil_opex_indirect_tax + self._gas_opex_indirect_tax
+        # )
+        # self._consolidated_asr_indirect_tax = (
+        #         self._oil_asr_indirect_tax + self._gas_asr_indirect_tax
+        # )
+        # self._consolidated_lbt_indirect_tax = (
+        #         self._oil_lbt_indirect_tax + self._gas_lbt_indirect_tax
+        # )
+        # self._consolidated_cost_of_sales_indirect_tax = (
+        #         self._oil_cost_of_sales_indirect_tax + self._gas_cost_of_sales_indirect_tax
+        # )
+        # self._consolidated_indirect_tax = (
+        #         self._oil_total_indirect_tax + self._gas_total_indirect_tax
+        # )
+
+
+
+
+        # # Attributes associated with consolidated expenditures post tax
+        # self._consolidated_capital_expenditures_post_tax = (
+        #         self._oil_capital_expenditures_post_tax
+        #         + self._gas_capital_expenditures_post_tax
+        # )
+        # self._consolidated_intangible_expenditures_post_tax = (
+        #         self._oil_intangible_expenditures_post_tax
+        #         + self._gas_intangible_expenditures_post_tax
+        # )
+        # self._consolidated_opex_expenditures_post_tax = (
+        #         self._oil_opex_expenditures_post_tax + self._gas_opex_expenditures_post_tax
+        # )
+        # self._consolidated_asr_expenditures_post_tax = (
+        #         self._oil_asr_expenditures_post_tax + self._gas_asr_expenditures_post_tax
+        # )
+        # self._consolidated_lbt_expenditures_post_tax = (
+        #         self._oil_lbt_expenditures_post_tax + self._gas_lbt_expenditures_post_tax
+        # )
+        # self._consolidated_cost_of_sales_expenditures_post_tax = (
+        #         self._oil_cost_of_sales_expenditures_post_tax
+        #         + self._gas_cost_of_sales_expenditures_post_tax
+        # )
+        #
+        # self._consolidated_expenditures_post_tax = (
+        #         self._oil_total_expenditures_post_tax + self._gas_total_expenditures_post_tax
+        # )
+        #
+        # # Attribute associated consolidated total expenses
+        # self._consolidated_total_expenses = (
+        #     self._oil_total_expenses + self._gas_total_expenses
+        # )
+        #
+        # # Attributes associated with depreciation and amortization
+        # self._consolidated_amortization = self._oil_amortization + self._gas_amortization
+        # self._consolidated_depreciation = self._oil_depreciation + self._gas_depreciation
+        # self._consolidated_undepreciated_asset = (
+        #     self._oil_undepreciated_asset + self._gas_undepreciated_asset
+        # )
+        #
+        # # Attributes associated with core business logics
+        # self._consolidated_carry_forward_depreciation = (
+        #     self._oil_carry_forward_depreciation + self._gas_carry_forward_depreciation
+        # )
+        # self._consolidated_ctr_share_before_tf = (
+        #     self._oil_ctr_share_before_transfer + self._gas_ctr_share_before_transfer
+        # )
+        # self._consolidated_gov_share_before_tf = self._oil_gov_share + self._gas_gov_share
+        # self._consolidated_cost_tobe_deducted = (
+        #     self._oil_cost_tobe_deducted + self._gas_cost_tobe_deducted
+        # )
+        # self._consolidated_carward_deduct_cost = (
+        #     self._oil_carward_deduct_cost + self._gas_carward_deduct_cost
+        # )
+        # self._consolidated_deductible_cost = (
+        #     self._oil_deductible_cost + self._gas_deductible_cost
+        # )
+        # self._consolidated_carward_cost_aftertf = (
+        #     self._oil_carward_cost_aftertf + self._gas_carward_cost_aftertf
+        # )
+        # self._consolidated_ctr_share_after_transfer = (
+        #     self._oil_ctr_share_after_transfer + self._gas_ctr_share_after_transfer
+        # )
+        # self._consolidated_net_operating_profit = (
+        #     self._oil_net_operating_profit + self._gas_net_operating_profit
+        # )
+        # self._consolidated_dmo_volume = self._oil_dmo_volume + self._gas_dmo_volume
+        # self._consolidated_dmo_fee = self._oil_dmo_fee + self._gas_dmo_fee
+        # self._consolidated_ddmo = self._oil_ddmo + self._gas_ddmo
+        # self._consolidated_taxable_income = (
+        #     self._oil_taxable_income + self._gas_taxable_income
+        # )
+        # self._consolidated_tax_payment = self._oil_tax + self._gas_tax
+        # self._consolidated_ctr_net_share = self._oil_ctr_net_share + self._gas_ctr_net_share
+        # self._consolidated_government_take = (
+        #     self._oil_government_take + self._gas_government_take
+        # )
+        #
+        # # Attribute associated with consolidated cashflow
+        # self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
+        # self._consolidated_cashflow = self._oil_ctr_cashflow + self._gas_ctr_cashflow
 
     def _get_attrs_for_results(self) -> dict:
 
@@ -3017,7 +3043,7 @@ class GrossSplit(BaseProject):
             depreciation=(
                 oil_total_depr + oil_total_amor + self._oil_carry_forward_depreciation
             ),
-            non_capital=self._oil_total_non_capital_investment,
+            non_capital=self._oil_non_capital,
             revenue=self._oil_ctr_share_before_transfer,
             ftp_ctr=zeros,
             ftp_gov=zeros,
@@ -3032,7 +3058,7 @@ class GrossSplit(BaseProject):
             depreciation=(
                 gas_total_depr + gas_total_amor + self._gas_carry_forward_depreciation
             ),
-            non_capital=self._gas_total_non_capital_investment,
+            non_capital=self._gas_non_capital,
             revenue=self._gas_ctr_share_before_transfer,
             ftp_ctr=zeros,
             ftp_gov=zeros,
@@ -3119,18 +3145,20 @@ class GrossSplit(BaseProject):
         self._gas_taxable_income = self._gas_net_operating_profit - self._gas_ddmo
 
         # Tax Payment
-        # Generating Tax array if tax_rate argument is a single value not array
-        if isinstance(effective_tax_rate, float) or isinstance(effective_tax_rate, int):
-            self._tax_rate_arr = np.full_like(
-                self.project_years, effective_tax_rate, dtype=float
-            )
-
         # Generating tax array based on the tax regime if tax_rate argument is None
         if effective_tax_rate is None:
             self._tax_rate_arr = self._get_tax_by_regime(tax_regime=tax_regime)
 
-        elif isinstance(effective_tax_rate, np.ndarray):
-            self._tax_rate_arr = effective_tax_rate
+        else:
+            # Generating Tax array if tax_rate argument is a single value not array
+            if isinstance(effective_tax_rate, float) or isinstance(effective_tax_rate, int):
+                self._tax_rate_arr = np.full_like(
+                    self.project_years, effective_tax_rate, dtype=float
+                )
+
+            # Tac rate argument is given as an array
+            elif isinstance(effective_tax_rate, np.ndarray):
+                self._tax_rate_arr = effective_tax_rate
 
         self._oil_tax = self._oil_taxable_income * self._tax_rate_arr
         self._gas_tax = self._gas_taxable_income * self._tax_rate_arr
@@ -3142,16 +3170,14 @@ class GrossSplit(BaseProject):
         # Contractor Cash Flow
         self._oil_ctr_cashflow = (
             self._oil_ctr_share_before_transfer
-            - self._oil_total_capital_investment
-            - self._oil_total_non_capital_investment
+            - self._oil_total_expenses
             - self._oil_ddmo
             - self._oil_tax
         )
 
         self._gas_ctr_cashflow = (
             self._gas_ctr_share_before_transfer
-            - self._gas_total_capital_investment
-            - self._gas_total_non_capital_investment
+            - self._gas_total_expenses
             - self._gas_ddmo
             - self._gas_tax
         )
@@ -3160,13 +3186,7 @@ class GrossSplit(BaseProject):
         self._oil_government_take = self._oil_gov_share + self._oil_ddmo + self._oil_tax
         self._gas_government_take = self._gas_gov_share + self._gas_ddmo + self._gas_tax
 
+        # Prepare consolidated attributes
+        self._get_consolidated_profiles()
+
         # self.get_results(ftype="oil")
-
-        t1 = self._gas_government_take
-        print('\t')
-        print(f'Filetype: {type(t1)}')
-        print(f'Length: {len(t1)}')
-        print('t1 = \n', t1)
-
-        # # Prepare consolidated attributes
-        # self._get_consolidated_profiles()
