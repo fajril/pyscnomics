@@ -240,44 +240,47 @@ class GrossSplit(BaseProject):
     _consolidated_carry_forward_depreciation: np.ndarray = field(
         default=None, init=False, repr=False
     )
-    _consolidated_depreciation: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_undepreciated_asset: np.ndarray = field(
-        default=None, init=False, repr=False
+
+    _consolidated_depreciations: dict = field(default_factory=lambda: {}, init=False, repr=False)
+    _consolidated_undepreciated_assets: dict = field(
+        default_factory=lambda: {}, init=False, repr=False
     )
-    _consolidated_ctr_share_before_tf: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_gov_share_before_tf: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_total_expenses: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_cost_tobe_deducted: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_carward_deduct_cost: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_deductible_cost: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_carward_cost_aftertf: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_ctr_share_after_transfer: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_net_operating_profit: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_dmo_volume: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_ddmo: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_amortization: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_amortizations: dict = field(default_factory=lambda: {}, init=False, repr=False)
+
+
+    # _consolidated_ctr_share_before_tf: np.ndarray = field(
+    #     default=None, init=False, repr=False
+    # )
+    # _consolidated_gov_share_before_tf: np.ndarray = field(
+    #     default=None, init=False, repr=False
+    # )
+    # _consolidated_total_expenses: np.ndarray = field(
+    #     default=None, init=False, repr=False
+    # )
+    # _consolidated_cost_tobe_deducted: np.ndarray = field(
+    #     default=None, init=False, repr=False
+    # )
+    # _consolidated_carward_deduct_cost: np.ndarray = field(
+    #     default=None, init=False, repr=False
+    # )
+    # _consolidated_deductible_cost: np.ndarray = field(
+    #     default=None, init=False, repr=False
+    # )
+    # _consolidated_carward_cost_aftertf: np.ndarray = field(
+    #     default=None, init=False, repr=False
+    # )
+    # _consolidated_ctr_share_after_transfer: np.ndarray = field(
+    #     default=None, init=False, repr=False
+    # )
+    # _consolidated_net_operating_profit: np.ndarray = field(
+    #     default=None, init=False, repr=False
+    # )
+    # _consolidated_dmo_volume: np.ndarray = field(default=None, init=False, repr=False)
+    # _consolidated_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
+    # _consolidated_ddmo: np.ndarray = field(default=None, init=False, repr=False)
+    # _consolidated_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
+    # _consolidated_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
+    # _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
 
     def _check_attributes(self) -> None:
         """
@@ -2363,19 +2366,46 @@ class GrossSplit(BaseProject):
             "cost_of_sales"
         ]
 
-        # Attributes associated with consolidated expenditures pre tax
+        # Attributes associated with consolidated expenditures pre tax,
+        # consolidated indirect tax, and consolidated expenditures post tax
         for categ in categories:
             oil_pre_tax = getattr(self, f"_oil_{categ}_expenditures_pre_tax")
             gas_pre_tax = getattr(self, f"_gas_{categ}_expenditures_pre_tax")
+            oil_indirect_tax = getattr(self, f"_oil_{categ}_indirect_tax")
+            gas_indirect_tax = getattr(self, f"_gas_{categ}_indirect_tax")
+            oil_post_tax = getattr(self, f"_oil_{categ}_expenditures_post_tax")
+            gas_post_tax = getattr(self, f"_gas_{categ}_expenditures_post_tax")
+
+            # Set attributes associated with expenditures pre tax
             setattr(
                 self, f"_consolidated_{categ}_expenditures_pre_tax", oil_pre_tax + gas_pre_tax
+            )
+
+            # Set attributes associated with indirect taxes
+            setattr(
+                self, f"_consolidated_{categ}_indirect_tax", oil_indirect_tax + gas_indirect_tax
+            )
+
+            # Set attributes associated with expenditures post tax
+            setattr(
+                self, f"_consolidated_{categ}_expenditures_post_tax", oil_post_tax + gas_post_tax
             )
 
         self._consolidated_total_expenditures_pre_tax = (
             self._oil_total_expenditures_pre_tax + self._gas_total_expenditures_pre_tax
         )
 
-        # Attributes associated with consolidated indirect tax
+        self._consolidated_total_indirect_tax = (
+            self._oil_total_indirect_tax + self._gas_total_indirect_tax
+        )
+
+        self._consolidated_total_expenses = (
+            self._oil_total_expenses + self._gas_total_expenses
+        )
+
+        # Attributes 
+
+
 
 
         t1 = self._oil_opex_expenditures_pre_tax
@@ -2398,64 +2428,6 @@ class GrossSplit(BaseProject):
 
 
 
-        # # Attributes associated with consolidated indirect tax
-        # self._consolidated_capital_indirect_tax = (
-        #         self._oil_capital_indirect_tax + self._gas_capital_indirect_tax
-        # )
-        # self._consolidated_intangible_indirect_tax = (
-        #         self._oil_intangible_indirect_tax + self._gas_intangible_indirect_tax
-        # )
-        # self._consolidated_opex_indirect_tax = (
-        #         self._oil_opex_indirect_tax + self._gas_opex_indirect_tax
-        # )
-        # self._consolidated_asr_indirect_tax = (
-        #         self._oil_asr_indirect_tax + self._gas_asr_indirect_tax
-        # )
-        # self._consolidated_lbt_indirect_tax = (
-        #         self._oil_lbt_indirect_tax + self._gas_lbt_indirect_tax
-        # )
-        # self._consolidated_cost_of_sales_indirect_tax = (
-        #         self._oil_cost_of_sales_indirect_tax + self._gas_cost_of_sales_indirect_tax
-        # )
-        # self._consolidated_indirect_tax = (
-        #         self._oil_total_indirect_tax + self._gas_total_indirect_tax
-        # )
-
-
-
-
-        # # Attributes associated with consolidated expenditures post tax
-        # self._consolidated_capital_expenditures_post_tax = (
-        #         self._oil_capital_expenditures_post_tax
-        #         + self._gas_capital_expenditures_post_tax
-        # )
-        # self._consolidated_intangible_expenditures_post_tax = (
-        #         self._oil_intangible_expenditures_post_tax
-        #         + self._gas_intangible_expenditures_post_tax
-        # )
-        # self._consolidated_opex_expenditures_post_tax = (
-        #         self._oil_opex_expenditures_post_tax + self._gas_opex_expenditures_post_tax
-        # )
-        # self._consolidated_asr_expenditures_post_tax = (
-        #         self._oil_asr_expenditures_post_tax + self._gas_asr_expenditures_post_tax
-        # )
-        # self._consolidated_lbt_expenditures_post_tax = (
-        #         self._oil_lbt_expenditures_post_tax + self._gas_lbt_expenditures_post_tax
-        # )
-        # self._consolidated_cost_of_sales_expenditures_post_tax = (
-        #         self._oil_cost_of_sales_expenditures_post_tax
-        #         + self._gas_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # self._consolidated_expenditures_post_tax = (
-        #         self._oil_total_expenditures_post_tax + self._gas_total_expenditures_post_tax
-        # )
-        #
-        # # Attribute associated consolidated total expenses
-        # self._consolidated_total_expenses = (
-        #     self._oil_total_expenses + self._gas_total_expenses
-        # )
-        #
         # # Attributes associated with depreciation and amortization
         # self._consolidated_amortization = self._oil_amortization + self._gas_amortization
         # self._consolidated_depreciation = self._oil_depreciation + self._gas_depreciation
