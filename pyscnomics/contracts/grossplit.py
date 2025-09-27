@@ -241,11 +241,15 @@ class GrossSplit(BaseProject):
         default=None, init=False, repr=False
     )
 
-    _consolidated_depreciations: dict = field(default_factory=lambda: {}, init=False, repr=False)
+    _consolidated_depreciations: dict = field(
+        default_factory=lambda: {}, init=False, repr=False
+    )
     _consolidated_undepreciated_assets: dict = field(
         default_factory=lambda: {}, init=False, repr=False
     )
-    _consolidated_amortizations: dict = field(default_factory=lambda: {}, init=False, repr=False)
+    _consolidated_amortizations: dict = field(
+        default_factory=lambda: {}, init=False, repr=False
+    )
 
 
     # _consolidated_ctr_share_before_tf: np.ndarray = field(
@@ -2403,7 +2407,7 @@ class GrossSplit(BaseProject):
             self._oil_total_expenses + self._gas_total_expenses
         )
 
-        # Attributes 
+        # Attributes
 
 
 
