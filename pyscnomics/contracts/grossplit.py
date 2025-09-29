@@ -254,27 +254,31 @@ class GrossSplit(BaseProject):
     _consolidated_cost_tobe_deducted: np.ndarray = field(
         default=None, init=False, repr=False
     )
-    # _consolidated_carward_deduct_cost: np.ndarray = field(
-    #     default=None, init=False, repr=False
-    # )
-    # _consolidated_deductible_cost: np.ndarray = field(
-    #     default=None, init=False, repr=False
-    # )
-    # _consolidated_carward_cost_aftertf: np.ndarray = field(
-    #     default=None, init=False, repr=False
-    # )
-    # _consolidated_ctr_share_after_transfer: np.ndarray = field(
-    #     default=None, init=False, repr=False
-    # )
-    # _consolidated_net_operating_profit: np.ndarray = field(
-    #     default=None, init=False, repr=False
-    # )
-    # _consolidated_dmo_volume: np.ndarray = field(default=None, init=False, repr=False)
-    # _consolidated_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
-    # _consolidated_ddmo: np.ndarray = field(default=None, init=False, repr=False)
-    # _consolidated_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
-    # _consolidated_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
-    # _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_carward_deduct_cost: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_deductible_cost: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_carward_cost_aftertf: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_ctr_share_after_transfer: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_net_operating_profit: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+
+    _consolidated_dmo_volume: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_ddmo: np.ndarray = field(default=None, init=False, repr=False)
+
+    _consolidated_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
+
+    _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_government_take: np.ndarray = field(default=None, init=False, repr=False)
 
     def _check_attributes(self) -> None:
         """
@@ -2350,63 +2354,47 @@ class GrossSplit(BaseProject):
         self._consolidated_cost_tobe_deducted = (
             self._oil_cost_tobe_deducted + self._gas_cost_tobe_deducted
         )
+        self._consolidated_carward_deduct_cost = (
+            self._oil_carward_deduct_cost + self._gas_carward_deduct_cost
+        )
+        self._consolidated_deductible_cost = (
+            self._oil_deductible_cost + self._gas_deductible_cost
+        )
+        self._consolidated_carward_cost_aftertf = (
+            self._oil_carward_cost_aftertf + self._gas_carward_cost_aftertf
+        )
+        self._consolidated_ctr_share_after_transfer = (
+            self._oil_ctr_share_after_transfer + self._gas_ctr_share_after_transfer
+        )
+        self._consolidated_net_operating_profit = (
+            self._oil_net_operating_profit + self._gas_net_operating_profit
+        )
 
-        t1 = self._oil_cost_tobe_deducted
-        t2 = self._gas_cost_tobe_deducted
-        t3 = self._consolidated_cost_tobe_deducted
+        # Attributes associated with DMO
+        self._consolidated_dmo_volume = self._oil_dmo_volume + self._gas_dmo_volume
+        self._consolidated_dmo_fee = self._oil_dmo_fee + self._gas_dmo_fee
+        self._consolidated_ddmo = self._oil_ddmo + self._gas_ddmo
 
-        print('\t')
-        print(f'Filetype: {type(t1)}')
-        print(f'Length: {len(t1)}')
-        print('t1 = \n', t1)
+        # Attributes associated with taxable income
+        self._consolidated_taxable_income = (
+            self._oil_taxable_income + self._gas_taxable_income
+        )
+        self._consolidated_tax_payment = self._oil_tax + self._gas_tax
 
-        print('\t')
-        print(f'Filetype: {type(t2)}')
-        print(f'Length: {len(t2)}')
-        print('t2 = \n', t2)
+        # Attributes associated with contractor and government take
+        self._consolidated_ctr_net_share = self._oil_ctr_net_share + self._gas_ctr_net_share
+        self._consolidated_government_take = (
+            self._oil_government_take + self._gas_government_take
+        )
 
-        print('\t')
-        print(f'Filetype: {type(t3)}')
-        print(f'Length: {len(t3)}')
-        print('t3 = \n', t3)
+        # Attributes associated with consolidated investments
+        self._consolidated_capital = self._oil_capital + self._gas_capital
+        self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
+        self._consolidated_total_expenses = self._oil_total_expenses + self._gas_total_expenses
 
-
-        # self._consolidated_carward_deduct_cost = (
-        #     self._oil_carward_deduct_cost + self._gas_carward_deduct_cost
-        # )
-        # self._consolidated_deductible_cost = (
-        #     self._oil_deductible_cost + self._gas_deductible_cost
-        # )
-        # self._consolidated_carward_cost_aftertf = (
-        #     self._oil_carward_cost_aftertf + self._gas_carward_cost_aftertf
-        # )
-        # self._consolidated_ctr_share_after_transfer = (
-        #     self._oil_ctr_share_after_transfer + self._gas_ctr_share_after_transfer
-        # )
-        # self._consolidated_net_operating_profit = (
-        #     self._oil_net_operating_profit + self._gas_net_operating_profit
-        # )
-        # self._consolidated_dmo_volume = self._oil_dmo_volume + self._gas_dmo_volume
-        # self._consolidated_dmo_fee = self._oil_dmo_fee + self._gas_dmo_fee
-        # self._consolidated_ddmo = self._oil_ddmo + self._gas_ddmo
-
-
-        # self._consolidated_taxable_income = (
-        #     self._oil_taxable_income + self._gas_taxable_income
-        # )
-        # self._consolidated_tax_payment = self._oil_tax + self._gas_tax
-        # self._consolidated_ctr_net_share = self._oil_ctr_net_share + self._gas_ctr_net_share
-        # self._consolidated_government_take = (
-        #     self._oil_government_take + self._gas_government_take
-        # )
-        #
-
-
-
-        # # Attribute associated with consolidated cashflow
-        # self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
-        # self._consolidated_cashflow = self._oil_ctr_cashflow + self._gas_ctr_cashflow
-
+        # Attribute associated with consolidated cashflow
+        self._consolidated_cashflow = self._oil_ctr_cashflow + self._gas_ctr_cashflow
+        
     def _get_attrs_for_results(self) -> dict:
 
         # Specify oil attributes

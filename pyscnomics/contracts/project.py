@@ -3699,10 +3699,12 @@ class BaseProject:
             self._oil_total_expenditures_post_tax + self._gas_total_expenditures_post_tax
         )
 
-        # Attribute associated with consolidated cashflow
+        # Attributes associated with consolidated investments
         self._consolidated_capital = self._oil_capital + self._gas_capital
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
         self._consolidated_total_expenses = self._oil_total_expenses + self._gas_total_expenses
+
+        # Attribute associated with consolidated cashflow
         self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
 
     def _get_attrs_for_results(self) -> dict:
