@@ -181,14 +181,6 @@ class BaseProject:
     _oil_cost_of_sales_sunk_cost: CostOfSales = field(default=None, init=False, repr=False)
     _gas_cost_of_sales_sunk_cost: CostOfSales = field(default=None, init=False, repr=False)
 
-    # Attributes associated with preonstream costs
-    _oil_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_non_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_non_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_preonstream: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_preonstream: np.ndarray = field(default=None, init=False, repr=False)
-
     # Attributes associated with sunk costs
     _oil_depreciable_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _gas_depreciable_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
@@ -196,6 +188,14 @@ class BaseProject:
     _gas_non_depreciable_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
     _gas_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes associated with preonstream costs
+    _oil_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_non_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_non_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_preonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_preonstream: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes associated with pre tax expenditures for each cost categories
     _oil_capital_expenditures_pre_tax: np.ndarray = field(
