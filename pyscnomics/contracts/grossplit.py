@@ -2394,7 +2394,7 @@ class GrossSplit(BaseProject):
 
         # Attribute associated with consolidated cashflow
         self._consolidated_cashflow = self._oil_ctr_cashflow + self._gas_ctr_cashflow
-        
+
     def _get_attrs_for_results(self) -> dict:
 
         # Specify oil attributes
