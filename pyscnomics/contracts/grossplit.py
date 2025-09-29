@@ -156,12 +156,6 @@ class GrossSplit(BaseProject):
     _oil_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _gas_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes associated with total expenses
-    _oil_capital: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_capital: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
-
     # Attributes associated with depreciations and undepreciated assets
     _oil_depreciations: dict = field(default_factory=lambda: {}, init=False, repr=False)
     _gas_depreciations: dict = field(default_factory=lambda: {}, init=False, repr=False)
@@ -250,7 +244,6 @@ class GrossSplit(BaseProject):
     _consolidated_amortizations: dict = field(
         default_factory=lambda: {}, init=False, repr=False
     )
-
 
     # _consolidated_ctr_share_before_tf: np.ndarray = field(
     #     default=None, init=False, repr=False
@@ -1948,84 +1941,6 @@ class GrossSplit(BaseProject):
 
         return years_exceed
 
-    def _get_investments(self):
-        """
-        Calculate and categorize total investments for oil and gas.
-
-        This method computes both capital and non-capital investments for oil and
-        gas separately, and then derives the total investment (expenses) as the
-        sum of these components.
-
-        Capital investments are derived from:
-            - Depreciable pre-onstream costs
-            - Capital expenditures (post-tax)
-
-        Non-capital investments are derived from:
-            - Non-depreciable pre-onstream costs
-            - Intangible expenditures (post-tax)
-            - Operating expenditures (post-tax)
-            - Abandonment site restoration (ASR) costs (post-tax)
-            - Land and building tax (LBT) (post-tax)
-            - Cost-of-sales expenditures (post-tax)
-
-        Returns
-        -------
-        None
-            This method modifies the following attributes in place:
-
-            - ``self._oil_capital`` : float
-                Capital investment for oil.
-            - ``self._gas_capital`` : float
-                Capital investment for gas.
-            - ``self._oil_non_capital`` : float
-                Non-capital investment for oil.
-            - ``self._gas_non_capital`` : float
-                Non-capital investment for gas.
-            - ``self._oil_total_expenses`` : float
-                Total investment for oil (capital + non-capital).
-            - ``self._gas_total_expenses`` : float
-                Total investment for gas (capital + non-capital).
-
-        Notes
-        -----
-        - All input components are assumed to be pre-computed and stored as
-          attributes of the class instance.
-        - Values are post-tax unless specified otherwise.
-        - The calculation follows PSC economic evaluation conventions by
-          distinguishing capital and non-capital investment categories.
-        """
-
-        # Capital investments
-        self._oil_capital = (
-            self._oil_depreciable_preonstream + self._oil_capital_expenditures_post_tax
-        )
-        self._gas_capital = (
-            self._gas_depreciable_preonstream + self._gas_capital_expenditures_post_tax
-        )
-
-        # Non-capital investments
-        self._oil_non_capital = (
-            self._oil_non_depreciable_preonstream
-            + self._oil_intangible_expenditures_post_tax
-            + self._oil_opex_expenditures_post_tax
-            + self._oil_asr_expenditures_post_tax
-            + self._oil_lbt_expenditures_post_tax
-            + self._oil_cost_of_sales_expenditures_post_tax
-        )
-
-        self._gas_non_capital = (
-            self._gas_non_depreciable_preonstream
-            + self._gas_intangible_expenditures_post_tax
-            + self._gas_opex_expenditures_post_tax
-            + self._gas_asr_expenditures_post_tax
-            + self._gas_lbt_expenditures_post_tax
-            + self._gas_cost_of_sales_expenditures_post_tax
-        )
-
-        # Total investments
-        self._oil_total_expenses = self._oil_capital + self._oil_non_capital
-        self._gas_total_expenses = self._gas_capital + self._gas_non_capital
-
     def _allocate_sunk_cost(self, sunk_cost: np.ndarray, preonstream: np.ndarray) -> np.ndarray:
         """
         Allocate sunk cost and preonstream expenditures to the onstream year.
@@ -2408,10 +2323,6 @@ class GrossSplit(BaseProject):
         )
 
         # Attributes
-
-
-
-
         t1 = self._oil_opex_expenditures_pre_tax
         print('\t')
         print(f'Filetype: {type(t1)}')

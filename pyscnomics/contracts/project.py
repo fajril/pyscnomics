@@ -271,9 +271,13 @@ class BaseProject:
     _oil_total_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
     _gas_total_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes associated with non capital costs
+    # Attributes associated with capital costs, non capital costs. and total expenses
+    _oil_capital: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_capital: np.ndarray = field(default=None, init=False, repr=False)
     _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
     _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes associated with cashflow
     _oil_cashflow: np.ndarray = field(default=None, init=False, repr=False)
@@ -360,7 +364,9 @@ class BaseProject:
         default=None, init=False, repr=False
     )
 
+    _consolidated_capital: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_non_capital: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
@@ -2989,6 +2995,171 @@ class BaseProject:
             self._gas_depreciable_preonstream + self._gas_non_depreciable_preonstream
         )
 
+    def _modify_sunk_cost_preonstream(self) -> None:
+        """
+        Update sunk cost and preonstream attributes for oil and gas.
+
+        This method adjusts both depreciable and non-depreciable sunk costs by
+        adding the corresponding preonstream values. After the update, all
+        preonstream attributes are reset to zero arrays. Finally, it recomputes
+        the total sunk cost and preonstream values for oil and gas.
+
+        Notes
+        -----
+        - The method modifies the following attributes in place:
+          * ``_oil_depreciable_sunk_cost``
+          * ``_gas_depreciable_sunk_cost``
+          * ``_oil_non_depreciable_sunk_cost``
+          * ``_gas_non_depreciable_sunk_cost``
+          * ``_oil_depreciable_preonstream``
+          * ``_gas_depreciable_preonstream``
+          * ``_oil_non_depreciable_preonstream``
+          * ``_gas_non_depreciable_preonstream``
+          * ``_oil_sunk_cost``
+          * ``_gas_sunk_cost``
+          * ``_oil_preonstream``
+          * ``_gas_preonstream``
+
+        - After execution, all preonstream attributes are zero arrays of the
+          same shape as ``project_years``.
+
+        Attributes Modified
+        -------------------
+        _oil_depreciable_sunk_cost : ndarray
+            Updated by adding ``_oil_depreciable_preonstream``.
+        _gas_depreciable_sunk_cost : ndarray
+            Updated by adding ``_gas_depreciable_preonstream``.
+        _oil_non_depreciable_sunk_cost : ndarray
+            Updated by adding ``_oil_non_depreciable_preonstream``.
+        _gas_non_depreciable_sunk_cost : ndarray
+            Updated by adding ``_gas_non_depreciable_preonstream``.
+        _oil_depreciable_preonstream : ndarray
+            Reset to zeros after being added to sunk cost.
+        _gas_depreciable_preonstream : ndarray
+            Reset to zeros after being added to sunk cost.
+        _oil_non_depreciable_preonstream : ndarray
+            Reset to zeros after being added to sunk cost.
+        _gas_non_depreciable_preonstream : ndarray
+            Reset to zeros after being added to sunk cost.
+        _oil_sunk_cost : ndarray
+            Recomputed as sum of oil depreciable and non-depreciable sunk costs.
+        _gas_sunk_cost : ndarray
+            Recomputed as sum of gas depreciable and non-depreciable sunk costs.
+        _oil_preonstream : ndarray
+            Reset to zero as sum of oil preonstream components.
+        _gas_preonstream : ndarray
+            Reset to zero as sum of gas preonstream components.
+        """
+
+        # Modify depreciable and non-depreciable expenses for sunk cost
+        self._oil_depreciable_sunk_cost += self._oil_depreciable_preonstream
+        self._gas_depreciable_sunk_cost += self._gas_depreciable_preonstream
+        self._oil_non_depreciable_sunk_cost += self._oil_non_depreciable_preonstream
+        self._gas_non_depreciable_sunk_cost += self._gas_non_depreciable_preonstream
+
+        # Modify depreaciable and non-depreciable expenses for preonstream
+        zeros = np.zeros_like(self.project_years, dtype=float)
+
+        for attr in [
+            "_oil_depreciable_preonstream",
+            "_gas_depreciable_preonstream",
+            "_oil_non_depreciable_preonstream",
+            "_gas_non_depreciable_preonstream",
+        ]:
+            setattr(self, attr, zeros)
+
+        # Modify total sunk cost and preonstream
+        self._oil_sunk_cost = (
+            self._oil_depreciable_sunk_cost + self._oil_non_depreciable_sunk_cost
+        )
+        self._gas_sunk_cost = (
+            self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
+        )
+        self._oil_preonstream = (
+            self._oil_depreciable_preonstream + self._oil_non_depreciable_preonstream
+        )
+        self._gas_preonstream = (
+            self._gas_depreciable_preonstream + self._gas_non_depreciable_preonstream
+        )
+
+    def _get_investments(self) -> None:
+        """
+        Calculate and categorize total investments for oil and gas.
+
+        This method computes both capital and non-capital investments for oil and
+        gas separately, and then derives the total investment (expenses) as the
+        sum of these components.
+
+        Capital investments are derived from:
+            - Depreciable pre-onstream costs
+            - Capital expenditures (post-tax)
+
+        Non-capital investments are derived from:
+            - Non-depreciable pre-onstream costs
+            - Intangible expenditures (post-tax)
+            - Operating expenditures (post-tax)
+            - Abandonment site restoration (ASR) costs (post-tax)
+            - Land and building tax (LBT) (post-tax)
+            - Cost-of-sales expenditures (post-tax)
+
+        Returns
+        -------
+        None
+            This method modifies the following attributes in place:
+
+            - ``self._oil_capital`` : float
+                Capital investment for oil.
+            - ``self._gas_capital`` : float
+                Capital investment for gas.
+            - ``self._oil_non_capital`` : float
+                Non-capital investment for oil.
+            - ``self._gas_non_capital`` : float
+                Non-capital investment for gas.
+            - ``self._oil_total_expenses`` : float
+                Total investment for oil (capital + non-capital).
+            - ``self._gas_total_expenses`` : float
+                Total investment for gas (capital + non-capital).
+
+        Notes
+        -----
+        - All input components are assumed to be pre-computed and stored as
+          attributes of the class instance.
+        - Values are post-tax unless specified otherwise.
+        - The calculation follows PSC economic evaluation conventions by
+          distinguishing capital and non-capital investment categories.
+        """
+
+        # Capital investments
+        self._oil_capital = (
+            self._oil_depreciable_preonstream + self._oil_capital_expenditures_post_tax
+        )
+        self._gas_capital = (
+            self._gas_depreciable_preonstream + self._gas_capital_expenditures_post_tax
+        )
+
+        # Non-capital investments
+        self._oil_non_capital = (
+            self._oil_non_depreciable_preonstream
+            + self._oil_intangible_expenditures_post_tax
+            + self._oil_opex_expenditures_post_tax
+            + self._oil_asr_expenditures_post_tax
+            + self._oil_lbt_expenditures_post_tax
+            + self._oil_cost_of_sales_expenditures_post_tax
+        )
+
+        self._gas_non_capital = (
+            self._gas_non_depreciable_preonstream
+            + self._gas_intangible_expenditures_post_tax
+            + self._gas_opex_expenditures_post_tax
+            + self._gas_asr_expenditures_post_tax
+            + self._gas_lbt_expenditures_post_tax
+            + self._gas_cost_of_sales_expenditures_post_tax
+        )
+
+        # Total investments
+        self._oil_total_expenses = self._oil_capital + self._oil_non_capital
+        self._gas_total_expenses = self._gas_capital + self._gas_non_capital
+
     def _calc_pre_tax_expenditures(
         self,
         target_attr: CapitalCost | Intangible | OPEX | ASR | LBT,
@@ -3431,8 +3602,10 @@ class BaseProject:
         This method combines oil and gas arrays across multiple categories
         (lifting, prices, revenues, sunk costs, pre-onstream costs,
         expenditures, indirect taxes, and cash flows) into consolidated
-        project-level attributes. The aggregation is performed by element-wise
-        addition of the corresponding oil and gas arrays.
+        project-level attributes.
+
+        The aggregation is performed by element-wise addition of the corresponding
+        oil and gas arrays.
 
         Returns
         -------
@@ -3489,50 +3662,47 @@ class BaseProject:
             "cost_of_sales"
         ]
 
-        # Attributes associated with consolidated expenditures pre tax
+        # Attributes associated with consolidated expenditures pre tax,
+        # consolidated indirect tax, and consolidated expenditures post tax
         for categ in categories:
             oil_pre_tax = getattr(self, f"_oil_{categ}_expenditures_pre_tax")
             gas_pre_tax = getattr(self, f"_gas_{categ}_expenditures_pre_tax")
+            oil_indirect_tax = getattr(self, f"_oil_{categ}_indirect_tax")
+            gas_indirect_tax = getattr(self, f"_gas_{categ}_indirect_tax")
+            oil_post_tax = getattr(self, f"_oil_{categ}_expenditures_post_tax")
+            gas_post_tax = getattr(self, f"_gas_{categ}_expenditures_post_tax")
+
+            # Set attributes associated with expenditures pre tax
             setattr(
-                self,
-                f"_consolidated_{categ}_expenditures_pre_tax",
-                oil_pre_tax + gas_pre_tax
+                self, f"_consolidated_{categ}_expenditures_pre_tax", oil_pre_tax + gas_pre_tax
+            )
+
+            # Set attributes associated with indirect taxes
+            setattr(
+                self, f"_consolidated_{categ}_indirect_tax", oil_indirect_tax + gas_indirect_tax
+            )
+
+            # Set attributes associated with expenditures post tax
+            setattr(
+                self, f"_consolidated_{categ}_expenditures_post_tax", oil_post_tax + gas_post_tax
             )
 
         self._consolidated_total_expenditures_pre_tax = (
             self._oil_total_expenditures_pre_tax + self._gas_total_expenditures_pre_tax
         )
 
-        # Attributes associated with consolidated indirect tax
-        for categ in categories:
-            oil_indirect_tax = getattr(self, f"_oil_{categ}_indirect_tax")
-            gas_indirect_tax = getattr(self, f"_gas_{categ}_indirect_tax")
-            setattr(
-                self,
-                f"_consolidated_{categ}_indirect_tax",
-                oil_indirect_tax + gas_indirect_tax
-            )
-
         self._consolidated_total_indirect_tax = (
             self._oil_total_indirect_tax + self._gas_total_indirect_tax
         )
-
-        # Attributes associated with consolidated expenditures post tax
-        for categ in categories:
-            oil_post_tax = getattr(self, f"_oil_{categ}_expenditures_post_tax")
-            gas_post_tax = getattr(self, f"_gas_{categ}_expenditures_post_tax")
-            setattr(
-                self,
-                f"_consolidated_{categ}_expenditures_post_tax",
-                oil_post_tax + gas_post_tax
-            )
 
         self._consolidated_total_expenditures_post_tax = (
             self._oil_total_expenditures_post_tax + self._gas_total_expenditures_post_tax
         )
 
         # Attribute associated with consolidated cashflow
+        self._consolidated_capital = self._oil_capital + self._gas_capital
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
+        self._consolidated_total_expenses = self._oil_total_expenses + self._gas_total_expenses
         self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
 
     def _get_attrs_for_results(self) -> dict:
@@ -3612,6 +3782,15 @@ class BaseProject:
             self._oil_cost_of_sales_expenditures_post_tax,
             self._oil_total_expenditures_post_tax,
             # +++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_sunk_cost,
+            self._oil_capital,
+            self._oil_non_capital,
+            self._oil_total_expenses,
+            # +++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_revenue,
+            self._oil_sunk_cost,
+            self._oil_preonstream,
+            self._oil_capital,
             self._oil_non_capital,
             self._oil_cashflow,
         ]
@@ -3656,6 +3835,15 @@ class BaseProject:
             self._gas_cost_of_sales_expenditures_post_tax,
             self._gas_total_expenditures_post_tax,
             # +++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_sunk_cost,
+            self._gas_capital,
+            self._gas_non_capital,
+            self._gas_total_expenses,
+            # +++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_revenue,
+            self._gas_sunk_cost,
+            self._gas_preonstream,
+            self._gas_capital,
             self._gas_non_capital,
             self._gas_cashflow,
         ]
@@ -3700,6 +3888,15 @@ class BaseProject:
             self._consolidated_cost_of_sales_expenditures_post_tax,
             self._consolidated_total_expenditures_post_tax,
             # +++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_sunk_cost,
+            self._consolidated_capital,
+            self._consolidated_non_capital,
+            self._consolidated_total_expenses,
+            # +++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_revenue,
+            self._consolidated_sunk_cost,
+            self._consolidated_preonstream,
+            self._consolidated_capital,
             self._consolidated_non_capital,
             self._consolidated_cashflow,
         ]
@@ -3750,7 +3947,16 @@ class BaseProject:
             "f_cost_of_sales_exp_posttax",
             "f_total_exp_posttax",
             # +++++++++++++++++++++++++++++++++++++++++++++
-            "f_non_capital",
+            "f_sunk_cost_",
+            "f_capital_",
+            "f_non_capital_",
+            "f_total_expenses",
+            # +++++++++++++++++++++++++++++++++++++++++++++
+            "f_revenue_",
+            "f_sunk_cost__",
+            "f_preonstream_",
+            "f_capital__",
+            "f_non_capital__",
             "f_cashflow",
         ]
 
@@ -3825,7 +4031,7 @@ class BaseProject:
             for i, key in enumerate(fluids)
         }
 
-    def get_results(self, ftype: str = "oil", chunk_size: int = 4) -> pd.DataFrame:
+    def get_results(self, ftype: str = "oil", chunk_size: int = 3) -> pd.DataFrame:
         """
         Print calculation results for a specified fluid type in chunks.
 
@@ -3909,10 +4115,6 @@ class BaseProject:
         # Validate sunk cost, pre-onstream, and post-onstream objects
         self._get_cost_objects_validation()
 
-        # Prepare sunk costs and preonstream costs
-        self._get_sunkcost_array()
-        self._get_preonstream_array()
-
         # Calculate pre tax expenditures
         self._get_expenditures_pre_tax(
             year_inflation=year_inflation,
@@ -3931,23 +4133,6 @@ class BaseProject:
             sulfur_revenue=sulfur_revenue,
             electricity_revenue=electricity_revenue,
             co2_revenue=co2_revenue,
-        )
-
-        # Non-capital costs (intangible + opex + asr + lbt + cost of sales)
-        self._oil_non_capital = (
-            self._oil_intangible_expenditures_post_tax
-            + self._oil_opex_expenditures_post_tax
-            + self._oil_asr_expenditures_post_tax
-            + self._oil_lbt_expenditures_post_tax
-            + self._oil_cost_of_sales_expenditures_post_tax
-        )
-
-        self._gas_non_capital = (
-            self._gas_intangible_expenditures_post_tax
-            + self._gas_opex_expenditures_post_tax
-            + self._gas_asr_expenditures_post_tax
-            + self._gas_lbt_expenditures_post_tax
-            + self._gas_cost_of_sales_expenditures_post_tax
         )
 
         # Total OIL pre-tax expenditures
@@ -4009,6 +4194,14 @@ class BaseProject:
             + self._gas_lbt_expenditures_post_tax
             + self._gas_cost_of_sales_expenditures_post_tax
         )
+
+        # Prepare sunk costs and preonstream costs
+        self._get_sunkcost_array()
+        self._get_preonstream_array()
+        self._modify_sunk_cost_preonstream()
+
+        # Prepare capital, non-capital, and total investments
+        self._get_investments()
 
         # Configure base cashflow for OIL and GAS
         self._oil_cashflow = self._oil_revenue - (
