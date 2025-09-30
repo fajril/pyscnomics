@@ -47,9 +47,57 @@ class CumulativeProductionSplitException(Exception):
 @dataclass
 class GrossSplit(BaseProject):
     """
-    Represents a gross split PSC with start and end dates, lifting information,
-    capital and intangible costs, operational expenses (OPEX), ASR costs,
-    LBT costs, and Cost of Sales.
+    Dataclass that represents Gross Split (GS) contract.
+
+    Parameters
+    ----------
+    field_status:
+        Status of the field development (e.g., "No POD", "POD I").
+    field_loc:
+        Location of the field (e.g., onshore, offshore shallow, offshore deepwater).
+    res_depth:
+        Reservoir depth category in meters.
+    infra_avail:
+        Infrastructure availability near the field (e.g., "Well Developed", "Limited").
+    res_type:
+        Reservoir type (conventional or unconventional).
+    api_oil:
+        API gravity of produced oil, expressed in categories (e.g., "<25", "25–<40").
+    domestic_use :
+        Portion of production allocated for domestic use, in percentage categories.
+    prod_stage :
+        Production stage (primary, secondary, or tertiary recovery).
+    co2_content :
+        CO₂ content of produced hydrocarbons, in mole percentage categories.
+    h2s_content :
+        H₂S content of produced hydrocarbons, in ppm categories.
+    field_reserves_2024 :
+        Field reserves category under the 2024 regulation.
+    infra_avail_2024 :
+        Infrastructure availability category under the 2024 regulation.
+    field_loc_2024 :
+        Field location category under the 2024 regulation.
+    split_ministry_disc : float, default=0.0
+        Ministry discretion adjustment to contractor split (fraction of revenue).
+    oil_dmo_volume_portion : float or np.ndarray, default=0.25
+        Portion of oil production subject to DMO (Domestic Market Obligation).
+    oil_dmo_fee_portion : float or np.ndarray, default=1.0
+        Fraction of oil price paid as DMO fee during the holiday period.
+    oil_dmo_holiday_duration : int, default=60
+        Duration of the oil DMO holiday in months.
+    gas_dmo_volume_portion : float or np.ndarray, default=1.0
+        Portion of gas production subject to DMO.
+    gas_dmo_fee_portion : float or np.ndarray, default=1.0
+        Fraction of gas price paid as DMO fee during the holiday period.
+    gas_dmo_holiday_duration : int, default=60
+        Duration of the gas DMO holiday in months.
+    oil_carry_forward_depreciation : int, float, or np.ndarray, default=0.0
+        Unrecovered depreciation carried forward for oil-related costs.
+    gas_carry_forward_depreciation : int, float, or np.ndarray, default=0.0
+        Unrecovered depreciation carried forward for gas-related costs.
+    conversion_boe_to_scf : float, default=5.615
+        Conversion factor from barrels of oil equivalent (BOE) to standard
+        cubic feet (SCF).
     """
 
     # Arguments associated with variable split components
