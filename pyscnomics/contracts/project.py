@@ -3967,7 +3967,7 @@ class BaseProject:
             "names": attrs_name,
         }
 
-    def _prepare_results(self) -> np.ndarray:
+    def _prepare_results(self) -> dict:
         """
         Prepare and structure calculation results into DataFrames.
 
