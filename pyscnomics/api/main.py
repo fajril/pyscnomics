@@ -1,6 +1,7 @@
 """
 This file is utilized for routing the API.
 """
+
 from fastapi import FastAPI
 from pyscnomics.api.router import router
 
@@ -14,12 +15,7 @@ PySCnomics is the product of join research between Indonesia's Special Task Forc
 
 """
 
-app = FastAPI(
-    title="PySCnomics",
-    description=description,
-    version="1.0.0")
+app = FastAPI(title="PySCnomics", description=description, version="1.0.0")
 
 
 app.include_router(router)
-
-

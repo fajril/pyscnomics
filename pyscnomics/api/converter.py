@@ -1,6 +1,7 @@
 """
 This file containing the tools which utilized by API adapter.
 """
+
 from datetime import datetime, date
 from typing import Dict, Union, Optional, List
 
@@ -9,15 +10,24 @@ import numpy as np
 
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales, LBT
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type
-from pyscnomics.econ.selection import TaxRegime, TaxType, FTPTaxRegime, GrossSplitRegime, LimitMethod, UncertaintyDistribution
-from pyscnomics.tools.helper import (get_inflation_applied_converter,
-                                     get_npv_mode_converter,
-                                     get_discounting_mode_converter,
-                                     get_depreciation_method_converter,
-                                     get_other_revenue_converter,
-                                     get_split_type_converter,
-                                     get_optimization_target_converter,
-                                     get_optimization_parameter_converter)
+from pyscnomics.econ.selection import (
+    TaxRegime,
+    TaxType,
+    FTPTaxRegime,
+    GrossSplitRegime,
+    LimitMethod,
+    UncertaintyDistribution,
+)
+from pyscnomics.tools.helper import (
+    get_inflation_applied_converter,
+    get_npv_mode_converter,
+    get_discounting_mode_converter,
+    get_depreciation_method_converter,
+    get_other_revenue_converter,
+    get_split_type_converter,
+    get_optimization_target_converter,
+    get_optimization_parameter_converter,
+)
 
 
 class SetupBM(BaseModel):
@@ -35,6 +45,7 @@ class SetupBM(BaseModel):
     gas_onstream_date: str | int | None
         The start date of gas production.
     """
+
     start_date: str | int = "01/01/2010"
     end_date: str | int = "31/12/2045"
     oil_onstream_date: str | int | None = None
@@ -61,6 +72,7 @@ class SummaryArgumentsBM(BaseModel):
         The discounting mode used in the NPV calculation. The available option are: [End Year, Mid Year]
 
     """
+
     reference_year: int = 2022
     inflation_rate: float | int | list = 0.1
     discount_rate: float | int = 0.1
@@ -124,6 +136,7 @@ class CostRecoveryBM(BaseModel):
     gas_carry_forward_depreciation
         The gas carry forward depreciation.
     """
+
     oil_ftp_is_available: bool = True
     oil_ftp_is_shared: bool = True
     oil_ftp_portion: float | int | list[float] = 0.2
@@ -211,6 +224,7 @@ class GrossSplitBM(BaseModel):
         The gas carry forward depreciation.
 
     """
+
     field_status: str = Field(default=None)
     field_loc: str = Field(default=None)
     res_depth: str = Field(default=None)
@@ -278,6 +292,7 @@ class ContractArgumentsBM(BaseModel):
         [CAPEX, OPEX, CAPEX AND OPEX]
 
     """
+
     sulfur_revenue: str = "Addition to Oil Revenue"
     electricity_revenue: str = "Addition to Oil Revenue"
     co2_revenue: str = "Addition to Oil Revenue"
@@ -310,6 +325,7 @@ class ContractArgumentsTransitionBM(BaseModel):
     unrec_portion: float
         The unrec portion that will be transferred into second contract.
     """
+
     unrec_portion: float | int
 
 
@@ -338,6 +354,7 @@ class LiftingBM(BaseModel):
     prod_rate_baseline: list[float] | list[int] | None
         The list containing the production rate baseline of the corresponding lifting.
     """
+
     start_year: int
     end_year: int
     lifting_rate: list[float] | list[int]
@@ -347,6 +364,7 @@ class LiftingBM(BaseModel):
     ghv: list[float] | list[int] | None = None
     prod_rate: list[float] | list[int] | None = None
     prod_rate_baseline: list[float] | list[int] | None = None
+
 
 class GeneralCostBM(BaseModel):
     start_year: int
@@ -390,6 +408,7 @@ class IntangibleBM(GeneralCostBM):
     The BaseModel to validate the Intangible input data.
     """
 
+
 class OpexBM(GeneralCostBM):
     """
     The BaseModel to validate the Opex input data.
@@ -403,6 +422,7 @@ class OpexBM(GeneralCostBM):
     cost_per_volume: list
         Cost associated with production of a particular fluid type.
     """
+
     fixed_cost: list[float] | list[int]
     prod_rate: list[float] | list[int] = Field(default=None)
     cost_per_volume: list[float] | list[int] = Field(default=None)
@@ -421,13 +441,18 @@ class AsrBM(GeneralCostBM):
     future_rate
         A list representing the future rate of an ASR asset.
     """
+
     final_year: Optional[Union[List[float], List[int]]] = Field(default=None)
-    future_rate: Optional[Union[List[float], List[int], float, int]] = Field(default=None)
+    future_rate: Optional[Union[List[float], List[int], float, int]] = Field(
+        default=None
+    )
+
 
 class CostOfSalesBM(GeneralCostBM):
     """
     The BaseModel to validate the cost of sales input data.
     """
+
 
 class LbtBM(GeneralCostBM):
     """
@@ -449,12 +474,16 @@ class LbtBM(GeneralCostBM):
         The array of gross revenues.
 
     """
+
     final_year: Optional[Union[List[float], List[int]]] = Field(default=None)
     utilized_land_area: Optional[Union[List[float], List[int]]] = Field(default=None)
-    utilized_building_area: Optional[Union[List[float], List[int]]] = Field(default=None)
+    utilized_building_area: Optional[Union[List[float], List[int]]] = Field(
+        default=None
+    )
     njop_land: Optional[Union[List[float], List[int]]] = Field(default=None)
     njop_building: Optional[Union[List[float], List[int]]] = Field(default=None)
     gross_revenue: Optional[Union[List[float], List[int]]] = Field(default=None)
+
 
 class OptimizationDictBM(BaseModel):
     """
@@ -470,6 +499,7 @@ class OptimizationDictBM(BaseModel):
         The list of float containing the maximum boundary for the optimization variable.
 
     """
+
     parameter: list[str]
     min: list[float] | list[int]
     max: list[float] | list[int]
@@ -488,6 +518,7 @@ class OptimizationBM(BaseModel):
     target_parameter: str
         The targeted optimization parameter.
     """
+
     dict_optimization: OptimizationDictBM
     target_optimization: float | int
     target_parameter: str
@@ -508,6 +539,7 @@ class SensitivityBM(BaseModel):
     base_value: float | int
         The base value for the multipliers. Default is 1.0.
     """
+
     min_deviation: float | int
     max_deviation: float | int
     step: float | int
@@ -523,6 +555,7 @@ class UncertaintyBM(BaseModel):
     run_number: int
         The number of the simulation.
     """
+
     run_number: int
     oil_price_distribution: str
     gas_price_distribution: str
@@ -567,6 +600,7 @@ class LtpBM(BaseModel):
         The fluid type of the corresponding volume. Should be "Oil" or "Gas".
 
     """
+
     volume: float | int
     start_year: int
     end_year: int
@@ -594,6 +628,7 @@ class RpdBM(BaseModel):
     end_year: int
         The end year.
     """
+
     year_rampup: int
     drate: float | int
     q_plateau_ratio: float | int
@@ -642,6 +677,7 @@ class Data(BaseModel):
     result: dict = None
         The result of the running contract.
     """
+
     setup: SetupBM
     summary_arguments: SummaryArgumentsBM
     contract_arguments: ContractArgumentsBM
@@ -685,6 +721,7 @@ class TransitionBM(BaseModel):
     grosssplit: GrossSplitBM = None
         The gross split object in form of GrossSplit BaseModel.
     """
+
     setup: SetupBM
     contract_arguments: ContractArgumentsBM
     lifting: Dict[str, LiftingBM]
@@ -715,6 +752,7 @@ class DataTransition(BaseModel):
     result: dict = None
         The result of the running contract.
     """
+
     contract_1: TransitionBM
     contract_2: TransitionBM
     contract_arguments: ContractArgumentsTransitionBM
@@ -731,9 +769,11 @@ class EconLimit(BaseModel):
     Parameters
     ----------
     """
+
     years: list[int]
     cash_flow: list[int] | list[float]
     method: str
+
 
 class ASRExpendituresBM(BaseModel):
     """
@@ -748,6 +788,7 @@ class ASRExpendituresBM(BaseModel):
     asr : AsrBM
         The asr input in form of AsrBM BaseModel.
     """
+
     start_date: str | int = "01/01/2010"
     end_date: str | int = "01/01/2010"
     asr: AsrBM
@@ -766,6 +807,7 @@ class LBTExpendituresBM(BaseModel):
     lbt : LbtBM
         The lbt input in form of LBT BaseModel.
     """
+
     start_date: str | int = "01/01/2010"
     end_date: str | int = "01/01/2010"
     lbt: LbtBM
@@ -788,11 +830,11 @@ def convert_str_to_date(str_object: str | int) -> date | None:
         return None
     else:
         if isinstance(str_object, str):
-            return datetime.strptime(str_object, '%d/%m/%Y').date()
+            return datetime.strptime(str_object, "%d/%m/%Y").date()
         elif isinstance(str_object, int):
             value = datetime.fromtimestamp(str_object)
-            date_value = value.strftime('%d/%m/%Y')
-            return datetime.strptime(date_value, '%d/%m/%Y').date()
+            date_value = value.strftime("%d/%m/%Y")
+            return datetime.strptime(date_value, "%d/%m/%Y").date()
 
 
 def convert_list_to_array_float(data_list: list) -> np.ndarray:
@@ -812,7 +854,9 @@ def convert_list_to_array_float(data_list: list) -> np.ndarray:
     return np.array(data_list, dtype=float)
 
 
-def convert_list_to_array_float_or_array(data_input: list | float | int | str) -> np.ndarray | float:
+def convert_list_to_array_float_or_array(
+    data_input: list | float | int | str,
+) -> np.ndarray | float:
     """
     The function to convert list or float into float or array of float.
 
@@ -833,7 +877,7 @@ def convert_list_to_array_float_or_array(data_input: list | float | int | str) -
         return (
             float(data_input)
             if isinstance(data_input, int)
-               or (isinstance(data_input, str) and data_input.strip() != "")
+            or (isinstance(data_input, str) and data_input.strip() != "")
             else 0
         )
     else:
@@ -841,7 +885,7 @@ def convert_list_to_array_float_or_array(data_input: list | float | int | str) -
 
 
 def convert_list_to_array_float_or_array_or_none(
-    data_list: list | float | int | str | None
+    data_list: list | float | int | str | None,
 ) -> np.ndarray | float | None:
     """
     Function to convert list into array of float, None or array.
@@ -863,7 +907,7 @@ def convert_list_to_array_float_or_array_or_none(
         return (
             float(data_list)
             if isinstance(data_list, int)
-               or (isinstance(data_list, str) and data_list.strip() != "")
+            or (isinstance(data_list, str) and data_list.strip() != "")
             else None
         )
     elif data_list is None:
@@ -922,24 +966,75 @@ def convert_dict_to_capital(data_raw: dict) -> tuple | None:
     out:
         tuple[CapitalCost] | None
     """
-    capital = tuple([
-        CapitalCost(
-            start_year=data_raw[key]['start_year'],
-            end_year=data_raw[key]['end_year'],
-            cost=np.array(data_raw[key]['cost']),
-            expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
-            cost_allocation=None if 'cost_allocation' not in data_raw[key] or data_raw[key]['cost_allocation'] is None else read_fluid_type(fluid=data_raw[key]['cost_allocation']),
-            description=None if 'description' not in data_raw[key] or data_raw[key]['description'] is None else data_raw[key]['description'],
-            tax_portion=None if 'tax_portion' not in data_raw[key] or data_raw[key]['tax_portion'] is None else np.array(data_raw[key]['tax_portion'], dtype=float),
-            tax_discount=0.0 if 'tax_discount' not in data_raw[key] or data_raw[key]['tax_discount'] is None else np.array(data_raw[key]['tax_discount'], dtype=float),
-            pis_year= None if 'pis_year' not in data_raw[key] or data_raw[key]['pis_year'] is None else np.array(data_raw[key]['pis_year']),
-            salvage_value= None if 'salvage_value' not in data_raw[key] or data_raw[key]['salvage_value'] is None else np.array(data_raw[key]['salvage_value']),
-            useful_life= None if 'useful_life' not in data_raw[key] or data_raw[key]['useful_life'] is None else np.array(data_raw[key]['useful_life']),
-            depreciation_factor= None if 'depreciation_factor' not in data_raw[key] or data_raw[key]['depreciation_factor'] is None else np.array(data_raw[key]['depreciation_factor']),
-            is_ic_applied=None if 'is_ic_applied' not in data_raw[key] or data_raw[key]['is_ic_applied'] is None else data_raw[key]['is_ic_applied'],
+    capital = (
+        tuple(
+            [
+                CapitalCost(
+                    start_year=data_raw[key]["start_year"],
+                    end_year=data_raw[key]["end_year"],
+                    cost=np.array(data_raw[key]["cost"]),
+                    expense_year=np.array(data_raw[key]["expense_year"], dtype=int),
+                    cost_allocation=(
+                        None
+                        if "cost_allocation" not in data_raw[key]
+                        or data_raw[key]["cost_allocation"] is None
+                        else read_fluid_type(fluid=data_raw[key]["cost_allocation"])
+                    ),
+                    description=(
+                        None
+                        if "description" not in data_raw[key]
+                        or data_raw[key]["description"] is None
+                        else data_raw[key]["description"]
+                    ),
+                    tax_portion=(
+                        None
+                        if "tax_portion" not in data_raw[key]
+                        or data_raw[key]["tax_portion"] is None
+                        else np.array(data_raw[key]["tax_portion"], dtype=float)
+                    ),
+                    tax_discount=(
+                        0.0
+                        if "tax_discount" not in data_raw[key]
+                        or data_raw[key]["tax_discount"] is None
+                        else np.array(data_raw[key]["tax_discount"], dtype=float)
+                    ),
+                    pis_year=(
+                        None
+                        if "pis_year" not in data_raw[key]
+                        or data_raw[key]["pis_year"] is None
+                        else np.array(data_raw[key]["pis_year"])
+                    ),
+                    salvage_value=(
+                        None
+                        if "salvage_value" not in data_raw[key]
+                        or data_raw[key]["salvage_value"] is None
+                        else np.array(data_raw[key]["salvage_value"])
+                    ),
+                    useful_life=(
+                        None
+                        if "useful_life" not in data_raw[key]
+                        or data_raw[key]["useful_life"] is None
+                        else np.array(data_raw[key]["useful_life"])
+                    ),
+                    depreciation_factor=(
+                        None
+                        if "depreciation_factor" not in data_raw[key]
+                        or data_raw[key]["depreciation_factor"] is None
+                        else np.array(data_raw[key]["depreciation_factor"])
+                    ),
+                    is_ic_applied=(
+                        None
+                        if "is_ic_applied" not in data_raw[key]
+                        or data_raw[key]["is_ic_applied"] is None
+                        else data_raw[key]["is_ic_applied"]
+                    ),
+                )
+                for key in data_raw.keys()
+            ]
         )
-        for key in data_raw.keys()
-    ]) if data_raw is not None else None
+        if data_raw is not None
+        else None
+    )
 
     return capital
 
@@ -958,18 +1053,45 @@ def convert_dict_to_intangible(data_raw: dict) -> tuple | None:
     out:
         tuple[Intangible] | None
     """
-    intangible = tuple([
-        Intangible(
-            start_year=data_raw[key]['start_year'],
-            end_year=data_raw[key]['end_year'],
-            cost=np.array(data_raw[key]['cost'], dtype=float),
-            expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
-            cost_allocation=None if 'cost_allocation' not in data_raw[key] or data_raw[key]['cost_allocation'] is None else read_fluid_type(fluid=data_raw[key]['cost_allocation']),
-            description=None if 'description' not in data_raw[key] or data_raw[key]['description'] is None else data_raw[key]['description'],
-            tax_portion=None if 'tax_portion' not in data_raw[key] or data_raw[key]['tax_portion'] is None else np.array(data_raw[key]['tax_portion'], dtype=float),
-            tax_discount=0.0 if 'tax_discount' not in data_raw[key] or data_raw[key]['tax_discount'] is None else np.array(data_raw[key]['tax_discount'], dtype=float),)
-        for key in data_raw.keys()
-    ]) if data_raw is not None else None
+    intangible = (
+        tuple(
+            [
+                Intangible(
+                    start_year=data_raw[key]["start_year"],
+                    end_year=data_raw[key]["end_year"],
+                    cost=np.array(data_raw[key]["cost"], dtype=float),
+                    expense_year=np.array(data_raw[key]["expense_year"], dtype=int),
+                    cost_allocation=(
+                        None
+                        if "cost_allocation" not in data_raw[key]
+                        or data_raw[key]["cost_allocation"] is None
+                        else read_fluid_type(fluid=data_raw[key]["cost_allocation"])
+                    ),
+                    description=(
+                        None
+                        if "description" not in data_raw[key]
+                        or data_raw[key]["description"] is None
+                        else data_raw[key]["description"]
+                    ),
+                    tax_portion=(
+                        None
+                        if "tax_portion" not in data_raw[key]
+                        or data_raw[key]["tax_portion"] is None
+                        else np.array(data_raw[key]["tax_portion"], dtype=float)
+                    ),
+                    tax_discount=(
+                        0.0
+                        if "tax_discount" not in data_raw[key]
+                        or data_raw[key]["tax_discount"] is None
+                        else np.array(data_raw[key]["tax_discount"], dtype=float)
+                    ),
+                )
+                for key in data_raw.keys()
+            ]
+        )
+        if data_raw is not None
+        else None
+    )
 
     return intangible
 
@@ -988,21 +1110,61 @@ def convert_dict_to_opex(data_raw: dict) -> tuple | None:
     out:
         tuple[OPEX] | None
     """
-    opex = tuple([
-        OPEX(
-            start_year=data_raw[key]['start_year'],
-            end_year=data_raw[key]['end_year'],
-            expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
-            cost_allocation=None if 'cost_allocation' not in data_raw[key] or data_raw[key]['cost_allocation'] is None else read_fluid_type(fluid=data_raw[key]['cost_allocation']),
-            description=None if 'description' not in data_raw[key] or data_raw[key]['description'] is None else data_raw[key]['description'],
-            tax_portion=None if 'tax_portion' not in data_raw[key] or data_raw[key]['tax_portion'] is None else np.array(data_raw[key]['tax_portion'], dtype=float),
-            tax_discount=0.0 if 'tax_discount' not in data_raw[key] or data_raw[key]['tax_discount'] is None else np.array(data_raw[key]['tax_discount'], dtype=float),
-            fixed_cost=np.array(data_raw[key]['fixed_cost'], dtype=float) if 'fixed_cost' in data_raw[key] else None,
-            prod_rate=None if 'prod_rate' not in data_raw[key] or data_raw[key]['prod_rate'] is None else np.array(data_raw[key]['prod_rate'], dtype=float),
-            cost_per_volume=None if 'cost_per_volume' not in data_raw[key] or data_raw[key]['cost_per_volume'] is None else np.array(data_raw[key]['cost_per_volume'], dtype=float),
+    opex = (
+        tuple(
+            [
+                OPEX(
+                    start_year=data_raw[key]["start_year"],
+                    end_year=data_raw[key]["end_year"],
+                    expense_year=np.array(data_raw[key]["expense_year"], dtype=int),
+                    cost_allocation=(
+                        None
+                        if "cost_allocation" not in data_raw[key]
+                        or data_raw[key]["cost_allocation"] is None
+                        else read_fluid_type(fluid=data_raw[key]["cost_allocation"])
+                    ),
+                    description=(
+                        None
+                        if "description" not in data_raw[key]
+                        or data_raw[key]["description"] is None
+                        else data_raw[key]["description"]
+                    ),
+                    tax_portion=(
+                        None
+                        if "tax_portion" not in data_raw[key]
+                        or data_raw[key]["tax_portion"] is None
+                        else np.array(data_raw[key]["tax_portion"], dtype=float)
+                    ),
+                    tax_discount=(
+                        0.0
+                        if "tax_discount" not in data_raw[key]
+                        or data_raw[key]["tax_discount"] is None
+                        else np.array(data_raw[key]["tax_discount"], dtype=float)
+                    ),
+                    fixed_cost=(
+                        np.array(data_raw[key]["fixed_cost"], dtype=float)
+                        if "fixed_cost" in data_raw[key]
+                        else None
+                    ),
+                    prod_rate=(
+                        None
+                        if "prod_rate" not in data_raw[key]
+                        or data_raw[key]["prod_rate"] is None
+                        else np.array(data_raw[key]["prod_rate"], dtype=float)
+                    ),
+                    cost_per_volume=(
+                        None
+                        if "cost_per_volume" not in data_raw[key]
+                        or data_raw[key]["cost_per_volume"] is None
+                        else np.array(data_raw[key]["cost_per_volume"], dtype=float)
+                    ),
+                )
+                for key in data_raw.keys()
+            ]
         )
-        for key in data_raw.keys()
-    ]) if data_raw is not None else None
+        if data_raw is not None
+        else None
+    )
 
     return opex
 
@@ -1021,24 +1183,60 @@ def convert_dict_to_asr(data_raw: dict) -> tuple:
     out:
         tuple[ASR]
     """
-    asr = tuple([
-        ASR(
-            start_year=data_raw[key]['start_year'],
-            end_year=data_raw[key]['end_year'],
-            cost=np.array(data_raw[key]['cost'], dtype=float),
-            expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
-            cost_allocation=None if 'cost_allocation' not in data_raw[key] or data_raw[key]['cost_allocation'] is None else read_fluid_type(fluid=data_raw[key]['cost_allocation']),
-            description=None if 'description' not in data_raw[key] or data_raw[key]['description'] is None else data_raw[key]['description'],
-            tax_portion=None if 'tax_portion' not in data_raw[key] or data_raw[key]['tax_portion'] is None else np.array(data_raw[key]['tax_portion'], dtype=float),
-            tax_discount=0.0 if 'tax_discount' not in data_raw[key] or data_raw[key]['tax_discount'] is None else np.array(data_raw[key]['tax_discount'], dtype=float),
-            final_year= None if 'final_year' not in data_raw[key] or data_raw[key]['final_year'] is None else np.array(data_raw[key]['final_year'], dtype=float),
-            future_rate=None if 'future_rate' not in data_raw[key] or data_raw[key]['future_rate'] is None else np.array(data_raw[key]['future_rate'],dtype=float),
+    asr = (
+        tuple(
+            [
+                ASR(
+                    start_year=data_raw[key]["start_year"],
+                    end_year=data_raw[key]["end_year"],
+                    cost=np.array(data_raw[key]["cost"], dtype=float),
+                    expense_year=np.array(data_raw[key]["expense_year"], dtype=int),
+                    cost_allocation=(
+                        None
+                        if "cost_allocation" not in data_raw[key]
+                        or data_raw[key]["cost_allocation"] is None
+                        else read_fluid_type(fluid=data_raw[key]["cost_allocation"])
+                    ),
+                    description=(
+                        None
+                        if "description" not in data_raw[key]
+                        or data_raw[key]["description"] is None
+                        else data_raw[key]["description"]
+                    ),
+                    tax_portion=(
+                        None
+                        if "tax_portion" not in data_raw[key]
+                        or data_raw[key]["tax_portion"] is None
+                        else np.array(data_raw[key]["tax_portion"], dtype=float)
+                    ),
+                    tax_discount=(
+                        0.0
+                        if "tax_discount" not in data_raw[key]
+                        or data_raw[key]["tax_discount"] is None
+                        else np.array(data_raw[key]["tax_discount"], dtype=float)
+                    ),
+                    final_year=(
+                        None
+                        if "final_year" not in data_raw[key]
+                        or data_raw[key]["final_year"] is None
+                        else np.array(data_raw[key]["final_year"], dtype=float)
+                    ),
+                    future_rate=(
+                        None
+                        if "future_rate" not in data_raw[key]
+                        or data_raw[key]["future_rate"] is None
+                        else np.array(data_raw[key]["future_rate"], dtype=float)
+                    ),
+                )
+                for key in data_raw.keys()
+            ]
         )
-        for key in data_raw.keys()
-    ]) if data_raw is not None else None
-
+        if data_raw is not None
+        else None
+    )
 
     return asr
+
 
 def convert_dict_to_lbt(data_raw: dict) -> tuple:
     """
@@ -1054,25 +1252,79 @@ def convert_dict_to_lbt(data_raw: dict) -> tuple:
     out:
         tuple[Intangible]
     """
-    lbt = tuple([
-        LBT(
-            start_year=data_raw[key]['start_year'],
-            end_year=data_raw[key]['end_year'],
-            cost=np.array(data_raw[key]['cost'], dtype=float)  if data_raw[key]['cost'] is not None else None,
-            expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
-            cost_allocation=None if 'cost_allocation' not in data_raw[key] or data_raw[key]['cost_allocation'] is None else read_fluid_type(fluid=data_raw[key]['cost_allocation']),
-            description=None if 'description' not in data_raw[key] or data_raw[key]['description'] is None else data_raw[key]['description'],
-            tax_portion=None if 'tax_portion' not in data_raw[key] or data_raw[key]['tax_portion'] is None else np.array(data_raw[key]['tax_portion'], dtype=float),
-            tax_discount=0.0 if 'tax_discount' not in data_raw[key] or data_raw[key]['tax_discount'] is None else np.array(data_raw[key]['tax_discount'], dtype=float),
-            final_year=np.array(data_raw[key]['final_year'], dtype=float) if data_raw[key]['final_year'] is not None else None,
-            utilized_land_area=np.array(data_raw[key]['utilized_land_area'], dtype=float) if data_raw[key]['utilized_land_area'] is not None else None,
-            utilized_building_area=np.array(data_raw[key]['utilized_building_area'], dtype=float) if data_raw[key]['utilized_building_area'] is not None else None,
-            njop_land=np.array(data_raw[key]['njop_land'], dtype=float) if data_raw[key]['njop_land'] is not None else None,
-            njop_building=np.array(data_raw[key]['njop_building'], dtype=float) if data_raw[key]['njop_building'] is not None else None,
-            gross_revenue=np.array(data_raw[key]['gross_revenue'], dtype=float) if data_raw[key]['gross_revenue'] is not None else None,
+    lbt = (
+        tuple(
+            [
+                LBT(
+                    start_year=data_raw[key]["start_year"],
+                    end_year=data_raw[key]["end_year"],
+                    cost=(
+                        np.array(data_raw[key]["cost"], dtype=float)
+                        if data_raw[key]["cost"] is not None
+                        else None
+                    ),
+                    expense_year=np.array(data_raw[key]["expense_year"], dtype=int),
+                    cost_allocation=(
+                        None
+                        if "cost_allocation" not in data_raw[key]
+                        or data_raw[key]["cost_allocation"] is None
+                        else read_fluid_type(fluid=data_raw[key]["cost_allocation"])
+                    ),
+                    description=(
+                        None
+                        if "description" not in data_raw[key]
+                        or data_raw[key]["description"] is None
+                        else data_raw[key]["description"]
+                    ),
+                    tax_portion=(
+                        None
+                        if "tax_portion" not in data_raw[key]
+                        or data_raw[key]["tax_portion"] is None
+                        else np.array(data_raw[key]["tax_portion"], dtype=float)
+                    ),
+                    tax_discount=(
+                        0.0
+                        if "tax_discount" not in data_raw[key]
+                        or data_raw[key]["tax_discount"] is None
+                        else np.array(data_raw[key]["tax_discount"], dtype=float)
+                    ),
+                    final_year=(
+                        np.array(data_raw[key]["final_year"], dtype=float)
+                        if data_raw[key]["final_year"] is not None
+                        else None
+                    ),
+                    utilized_land_area=(
+                        np.array(data_raw[key]["utilized_land_area"], dtype=float)
+                        if data_raw[key]["utilized_land_area"] is not None
+                        else None
+                    ),
+                    utilized_building_area=(
+                        np.array(data_raw[key]["utilized_building_area"], dtype=float)
+                        if data_raw[key]["utilized_building_area"] is not None
+                        else None
+                    ),
+                    njop_land=(
+                        np.array(data_raw[key]["njop_land"], dtype=float)
+                        if data_raw[key]["njop_land"] is not None
+                        else None
+                    ),
+                    njop_building=(
+                        np.array(data_raw[key]["njop_building"], dtype=float)
+                        if data_raw[key]["njop_building"] is not None
+                        else None
+                    ),
+                    gross_revenue=(
+                        np.array(data_raw[key]["gross_revenue"], dtype=float)
+                        if data_raw[key]["gross_revenue"] is not None
+                        else None
+                    ),
+                )
+                for key in data_raw.keys()
+            ]
         )
-        for key in data_raw.keys()
-    ]) if data_raw is not None else None
+        if data_raw is not None
+        else None
+    )
 
     return lbt
 
@@ -1091,19 +1343,45 @@ def convert_dict_to_cost_of_sales(data_raw: dict) -> tuple:
     out:
         tuple[CostOfSales]
     """
-    cos = tuple([
-        CostOfSales(
-            start_year=data_raw[key]['start_year'],
-            end_year=data_raw[key]['end_year'],
-            cost=np.array(data_raw[key]['cost'], dtype=float),
-            expense_year=np.array(data_raw[key]['expense_year'], dtype=int),
-            cost_allocation=None if 'cost_allocation' not in data_raw[key] or data_raw[key]['cost_allocation'] is None else read_fluid_type(fluid=data_raw[key]['cost_allocation']),
-            description=None if 'description' not in data_raw[key] or data_raw[key]['description'] is None else data_raw[key]['description'],
-            tax_portion=None if 'tax_portion' not in data_raw[key] or data_raw[key]['tax_portion'] is None else np.array(data_raw[key]['tax_portion'], dtype=float),
-            tax_discount=0.0 if 'tax_discount' not in data_raw[key] or data_raw[key]['tax_discount'] is None else np.array(data_raw[key]['tax_discount'], dtype=float),
+    cos = (
+        tuple(
+            [
+                CostOfSales(
+                    start_year=data_raw[key]["start_year"],
+                    end_year=data_raw[key]["end_year"],
+                    cost=np.array(data_raw[key]["cost"], dtype=float),
+                    expense_year=np.array(data_raw[key]["expense_year"], dtype=int),
+                    cost_allocation=(
+                        None
+                        if "cost_allocation" not in data_raw[key]
+                        or data_raw[key]["cost_allocation"] is None
+                        else read_fluid_type(fluid=data_raw[key]["cost_allocation"])
+                    ),
+                    description=(
+                        None
+                        if "description" not in data_raw[key]
+                        or data_raw[key]["description"] is None
+                        else data_raw[key]["description"]
+                    ),
+                    tax_portion=(
+                        None
+                        if "tax_portion" not in data_raw[key]
+                        or data_raw[key]["tax_portion"] is None
+                        else np.array(data_raw[key]["tax_portion"], dtype=float)
+                    ),
+                    tax_discount=(
+                        0.0
+                        if "tax_discount" not in data_raw[key]
+                        or data_raw[key]["tax_discount"] is None
+                        else np.array(data_raw[key]["tax_discount"], dtype=float)
+                    ),
+                )
+                for key in data_raw.keys()
+            ]
         )
-        for key in data_raw.keys()
-    ]) if data_raw is not None else None
+        if data_raw is not None
+        else None
+    )
 
     return cos
 
@@ -1252,7 +1530,7 @@ def convert_str_to_ftptaxregime(str_object: str):
     attrs = {
         "PDJP No.20 Tahun 2017": FTPTaxRegime.PDJP_20_2017,
         "Pre PDJP No.20 Tahun 2017": FTPTaxRegime.PRE_PDJP_20_2017,
-        "Direct Mode": FTPTaxRegime.DIRECT_MODE
+        "Direct Mode": FTPTaxRegime.DIRECT_MODE,
     }
 
     for key in attrs.keys():
@@ -1376,48 +1654,52 @@ def convert_summary_to_dict(dict_object: dict):
 
     """
     summary_skk_format = {
-        'lifting_oil': dict_object['lifting_oil'],
-        'oil_wap': dict_object['oil_wap'],
-        'lifting_gas': dict_object['lifting_gas'],
-        'gas_wap': dict_object['gas_wap'],
-        'gross_revenue': dict_object['gross_revenue'],
-        'ctr_gross_share': dict_object['ctr_gross_share'],
-        'sunk_cost': dict_object['sunk_cost'],
-        'investment': dict_object['investment'],
-        'tangible': dict_object['tangible'],
-        'intangible': dict_object['intangible'],
-        'opex_asr_lbt': dict_object['opex_asr_lbt'],
-        'opex': dict_object['opex'],
-        'asr': dict_object['asr'],
-        'cost_recovery/deductible_cost': dict_object['cost_recovery / deductible_cost'],
-        'cost_recovery_over_gross_rev': dict_object['cost_recovery_over_gross_rev'],
-        'unrec_cost': dict_object['unrec_cost'],
-        'unrec_over_gross_rev': dict_object['unrec_over_gross_rev'],
-        'ctr_net_share': dict_object['ctr_net_share'],
-        'ctr_net_share_over_gross_share': dict_object['ctr_net_share_over_gross_share'],
-        'ctr_net_cashflow': dict_object['ctr_net_cashflow'],
-        'ctr_net_cashflow_over_gross_rev': dict_object['ctr_net_cashflow_over_gross_rev'],
-        'ctr_npv': dict_object['ctr_npv'],
-        'ctr_irr': dict_object['ctr_irr'],
-        'ctr_pot': dict_object['ctr_pot'],
-        'ctr_pv_ratio': dict_object['ctr_pv_ratio'],
-        'ctr_pi': dict_object['ctr_pi'],
-        'gov_gross_share': dict_object['gov_gross_share'],
-        'gov_ftp_share': dict_object['gov_ftp_share'],
-        'gov_ddmo': dict_object['gov_ddmo'],
-        'gov_tax_income': dict_object['gov_tax_income'],
-        'gov_take': dict_object['gov_take'],
-        'gov_take_over_gross_rev': dict_object['gov_take_over_gross_rev'],
-        'gov_take_npv': dict_object['gov_take_npv'],
-        'undepreciated_asset_oil': dict_object['undepreciated_asset_oil'],
-        'undepreciated_asset_gas': dict_object['undepreciated_asset_gas'],
-        'undepreciated_asset_total': dict_object['undepreciated_asset_total'],
-        'total_indirect_taxes': dict_object['total_indirect_taxes'],
-        'oil_indirect_taxes': dict_object['oil_indirect_taxes'],
-        'gas_indirect_taxes': dict_object['gas_indirect_taxes'],
-        'total_carry_forward_depreciation': dict_object['total_carry_forward_depreciation'],
-        'oil_carry_forward_depreciation': dict_object['oil_carry_forward_depreciation'],
-        'gas_carry_forward_depreciation': dict_object['gas_carry_forward_depreciation'],
+        "lifting_oil": dict_object["lifting_oil"],
+        "oil_wap": dict_object["oil_wap"],
+        "lifting_gas": dict_object["lifting_gas"],
+        "gas_wap": dict_object["gas_wap"],
+        "gross_revenue": dict_object["gross_revenue"],
+        "ctr_gross_share": dict_object["ctr_gross_share"],
+        "sunk_cost": dict_object["sunk_cost"],
+        "investment": dict_object["investment"],
+        "tangible": dict_object["tangible"],
+        "intangible": dict_object["intangible"],
+        "opex_asr_lbt": dict_object["opex_asr_lbt"],
+        "opex": dict_object["opex"],
+        "asr": dict_object["asr"],
+        "cost_recovery/deductible_cost": dict_object["cost_recovery / deductible_cost"],
+        "cost_recovery_over_gross_rev": dict_object["cost_recovery_over_gross_rev"],
+        "unrec_cost": dict_object["unrec_cost"],
+        "unrec_over_gross_rev": dict_object["unrec_over_gross_rev"],
+        "ctr_net_share": dict_object["ctr_net_share"],
+        "ctr_net_share_over_gross_share": dict_object["ctr_net_share_over_gross_share"],
+        "ctr_net_cashflow": dict_object["ctr_net_cashflow"],
+        "ctr_net_cashflow_over_gross_rev": dict_object[
+            "ctr_net_cashflow_over_gross_rev"
+        ],
+        "ctr_npv": dict_object["ctr_npv"],
+        "ctr_irr": dict_object["ctr_irr"],
+        "ctr_pot": dict_object["ctr_pot"],
+        "ctr_pv_ratio": dict_object["ctr_pv_ratio"],
+        "ctr_pi": dict_object["ctr_pi"],
+        "gov_gross_share": dict_object["gov_gross_share"],
+        "gov_ftp_share": dict_object["gov_ftp_share"],
+        "gov_ddmo": dict_object["gov_ddmo"],
+        "gov_tax_income": dict_object["gov_tax_income"],
+        "gov_take": dict_object["gov_take"],
+        "gov_take_over_gross_rev": dict_object["gov_take_over_gross_rev"],
+        "gov_take_npv": dict_object["gov_take_npv"],
+        "undepreciated_asset_oil": dict_object["undepreciated_asset_oil"],
+        "undepreciated_asset_gas": dict_object["undepreciated_asset_gas"],
+        "undepreciated_asset_total": dict_object["undepreciated_asset_total"],
+        "total_indirect_taxes": dict_object["total_indirect_taxes"],
+        "oil_indirect_taxes": dict_object["oil_indirect_taxes"],
+        "gas_indirect_taxes": dict_object["gas_indirect_taxes"],
+        "total_carry_forward_depreciation": dict_object[
+            "total_carry_forward_depreciation"
+        ],
+        "oil_carry_forward_depreciation": dict_object["oil_carry_forward_depreciation"],
+        "gas_carry_forward_depreciation": dict_object["gas_carry_forward_depreciation"],
     }
     return summary_skk_format
 
@@ -1498,7 +1780,7 @@ def convert_to_float(target=int):
     return float(target)
 
 
-def convert_to_method_limit(target:str):
+def convert_to_method_limit(target: str):
     """
     Function to convert string into LimitMethod selection.
 
@@ -1512,11 +1794,11 @@ def convert_to_method_limit(target:str):
     LimitMethod
 
     """
-    if target == 'Maximum Cumulative Cashflow':
+    if target == "Maximum Cumulative Cashflow":
         return LimitMethod.MAX_CUM_CASHFLOW
-    elif target == 'Maximum NPV':
+    elif target == "Maximum NPV":
         return LimitMethod.MAX_NPV
-    elif target == 'Negative Cashflow':
+    elif target == "Negative Cashflow":
         return LimitMethod.NEGATIVE_CASHFLOW
     else:
         return ValueError("Invalid LimitMethod provided.")
@@ -1537,12 +1819,11 @@ def convert_to_uncertainty_distribution(target: str):
 
     """
     attrs = {
-        'Uniform': UncertaintyDistribution.UNIFORM,
-        'Triangular': UncertaintyDistribution.TRIANGULAR,
-        'Normal': UncertaintyDistribution.NORMAL,
+        "Uniform": UncertaintyDistribution.UNIFORM,
+        "Triangular": UncertaintyDistribution.TRIANGULAR,
+        "Normal": UncertaintyDistribution.NORMAL,
     }
 
     for key in attrs.keys():
         if target == key:
             return attrs[key]
-

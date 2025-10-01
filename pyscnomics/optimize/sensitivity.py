@@ -25,14 +25,15 @@ import pandas as pd
 
 class SensitivityException(Exception):
     """Exception to raise for a misuse of Sensitivity Method"""
+
     pass
 
 
 def _get_multipliers(
-        min_deviation: float,
-        max_deviation: float,
-        base_value: float = 1.0,
-        step: int = 10,
+    min_deviation: float,
+    max_deviation: float,
+    base_value: float = 1.0,
+    step: int = 10,
 ) -> np.ndarray:
     """
     Generate multipliers for different economic parameters within a specified range
@@ -61,12 +62,13 @@ def _get_multipliers(
     max_multipliers = np.linspace(base_value, max_val, step + 1)
     return np.concatenate((min_multipliers, max_multipliers[1:]))
 
+
 def _adjust_element_single_contract(
-        contract: BaseProject | CostRecovery | GrossSplit,
-        contract_arguments: dict,
-        element: str,
-        adjustment_value: float,
-        run_contract:bool = False
+    contract: BaseProject | CostRecovery | GrossSplit,
+    contract_arguments: dict,
+    element: str,
+    adjustment_value: float,
+    run_contract: bool = False,
 ) -> CostRecovery | GrossSplit:
     """
     The function to adjust the element of the contract based on the adjustment_value.
@@ -98,201 +100,241 @@ def _adjust_element_single_contract(
     cos_adjusted = contract.cost_of_sales
     lifting_adjusted = contract.lifting
 
-    if element == 'CAPEX':
+    if element == "CAPEX":
         # Adjusting the Capital Cost of the contract
-        capital_adjusted = tuple([
-            CapitalCost(
-                start_year=tan.start_year,
-                end_year=tan.end_year,
-                cost=tan.cost * adjustment_value,
-                expense_year=tan.expense_year,
-                cost_allocation=tan.cost_allocation,
-                description=tan.description,
-                tax_portion=tan.tax_portion,
-                tax_discount=tan.tax_discount,
-                pis_year=tan.pis_year,
-                salvage_value=tan.salvage_value,
-                useful_life=tan.useful_life,
-                depreciation_factor=tan.depreciation_factor,
-                is_ic_applied=tan.is_ic_applied,
-            ) for tan in contract.capital_cost
-        ])
+        capital_adjusted = tuple(
+            [
+                CapitalCost(
+                    start_year=tan.start_year,
+                    end_year=tan.end_year,
+                    cost=tan.cost * adjustment_value,
+                    expense_year=tan.expense_year,
+                    cost_allocation=tan.cost_allocation,
+                    description=tan.description,
+                    tax_portion=tan.tax_portion,
+                    tax_discount=tan.tax_discount,
+                    pis_year=tan.pis_year,
+                    salvage_value=tan.salvage_value,
+                    useful_life=tan.useful_life,
+                    depreciation_factor=tan.depreciation_factor,
+                    is_ic_applied=tan.is_ic_applied,
+                )
+                for tan in contract.capital_cost
+            ]
+        )
 
         # Adjusting the Intangible cost of the contract
-        intangible_adjusted = tuple([
-            Intangible(
-                start_year=intang.start_year,
-                end_year=intang.end_year,
-                cost=intang.cost * adjustment_value,
-                expense_year=intang.expense_year,
-                cost_allocation=intang.cost_allocation,
-                description=intang.description,
-                tax_portion=intang.tax_portion,
-                tax_discount=intang.tax_discount,
+        intangible_adjusted = tuple(
+            [
+                Intangible(
+                    start_year=intang.start_year,
+                    end_year=intang.end_year,
+                    cost=intang.cost * adjustment_value,
+                    expense_year=intang.expense_year,
+                    cost_allocation=intang.cost_allocation,
+                    description=intang.description,
+                    tax_portion=intang.tax_portion,
+                    tax_discount=intang.tax_discount,
+                )
+                for intang in contract.intangible_cost
+            ]
+        )
 
-            ) for intang in contract.intangible_cost
-        ])
-
-    elif element == 'OPEX':
+    elif element == "OPEX":
         # Adjusting the OPEX cost of the contract
-        opex_adjusted = tuple([
-            OPEX(
-                start_year=opx.start_year,
-                end_year=opx.end_year,
-                expense_year=opx.expense_year,
-                cost_allocation=opx.cost_allocation,
-                description=opx.description,
-                tax_portion=opx.tax_portion,
-                tax_discount=opx.tax_discount,
-                fixed_cost=opx.fixed_cost * adjustment_value,
-                prod_rate=opx.prod_rate,
-                cost_per_volume=opx.cost_per_volume,
-            ) for opx in contract.opex
-        ])
+        opex_adjusted = tuple(
+            [
+                OPEX(
+                    start_year=opx.start_year,
+                    end_year=opx.end_year,
+                    expense_year=opx.expense_year,
+                    cost_allocation=opx.cost_allocation,
+                    description=opx.description,
+                    tax_portion=opx.tax_portion,
+                    tax_discount=opx.tax_discount,
+                    fixed_cost=opx.fixed_cost * adjustment_value,
+                    prod_rate=opx.prod_rate,
+                    cost_per_volume=opx.cost_per_volume,
+                )
+                for opx in contract.opex
+            ]
+        )
 
         # Adjusting the ASR cost of the contract
-        asr_adjusted = tuple([
-            ASR(
-                start_year=asr.start_year,
-                end_year=asr.end_year,
-                cost=asr.cost * adjustment_value,
-                expense_year=asr.expense_year,
-                cost_allocation=asr.cost_allocation,
-                description=asr.description,
-                tax_portion=asr.tax_portion,
-                tax_discount=asr.tax_discount,
-                final_year=asr.final_year,
-                future_rate=asr.future_rate,
-            ) for asr in contract.asr_cost
-        ])
+        asr_adjusted = tuple(
+            [
+                ASR(
+                    start_year=asr.start_year,
+                    end_year=asr.end_year,
+                    cost=asr.cost * adjustment_value,
+                    expense_year=asr.expense_year,
+                    cost_allocation=asr.cost_allocation,
+                    description=asr.description,
+                    tax_portion=asr.tax_portion,
+                    tax_discount=asr.tax_discount,
+                    final_year=asr.final_year,
+                    future_rate=asr.future_rate,
+                )
+                for asr in contract.asr_cost
+            ]
+        )
 
         # Adjusting the LBT of the contract
-        lbt_adjusted = tuple([
-            LBT(
-                start_year=bt.start_year,
-                end_year=bt.end_year,
-                expense_year=bt.expense_year,
-                cost=bt.cost * adjustment_value,
-                cost_allocation=bt.cost_allocation,
-                description=bt.description,
-                tax_portion=bt.tax_portion,
-                tax_discount=bt.tax_discount,
-                final_year=bt.final_year,
-                utilized_land_area=bt.utilized_land_area,
-                utilized_building_area=bt.utilized_building_area,
-                njop_land=bt.njop_land,
-                njop_building=bt.njop_building,
-                gross_revenue=bt.gross_revenue,
-            ) for bt in contract.lbt_cost
-        ])
+        lbt_adjusted = tuple(
+            [
+                LBT(
+                    start_year=bt.start_year,
+                    end_year=bt.end_year,
+                    expense_year=bt.expense_year,
+                    cost=bt.cost * adjustment_value,
+                    cost_allocation=bt.cost_allocation,
+                    description=bt.description,
+                    tax_portion=bt.tax_portion,
+                    tax_discount=bt.tax_discount,
+                    final_year=bt.final_year,
+                    utilized_land_area=bt.utilized_land_area,
+                    utilized_building_area=bt.utilized_building_area,
+                    njop_land=bt.njop_land,
+                    njop_building=bt.njop_building,
+                    gross_revenue=bt.gross_revenue,
+                )
+                for bt in contract.lbt_cost
+            ]
+        )
 
         # Adjusting the Intangible cost of the contract
-        cos_adjusted = tuple([
-            CostOfSales(
-                start_year=cos.start_year,
-                end_year=cos.end_year,
-                cost=cos.cost * adjustment_value,
-                expense_year=cos.expense_year,
-                cost_allocation=cos.cost_allocation,
-                description=cos.description,
-                tax_portion=cos.tax_portion,
-                tax_discount=cos.tax_discount,
+        cos_adjusted = tuple(
+            [
+                CostOfSales(
+                    start_year=cos.start_year,
+                    end_year=cos.end_year,
+                    cost=cos.cost * adjustment_value,
+                    expense_year=cos.expense_year,
+                    cost_allocation=cos.cost_allocation,
+                    description=cos.description,
+                    tax_portion=cos.tax_portion,
+                    tax_discount=cos.tax_discount,
+                )
+                for cos in contract.cost_of_sales
+            ]
+        )
 
-            ) for cos in contract.cost_of_sales
-        ])
-
-    elif element == 'OILPRICE':
+    elif element == "OILPRICE":
         # Adjusting the oil price
-        lifting_adjusted = tuple([
-            Lifting(
-                start_year=lift.start_year,
-                end_year=lift.end_year,
-                lifting_rate=lift.lifting_rate,
-                price=lift.price * adjustment_value if lift.fluid_type is FluidType.OIL else lift.price,
-                prod_year=lift.prod_year,
-                fluid_type=lift.fluid_type,
-                ghv=lift.ghv,
-                prod_rate=lift.prod_rate,
-                prod_rate_baseline=lift.prod_rate_baseline,
-            )
-            for lift in contract.lifting
-        ])
+        lifting_adjusted = tuple(
+            [
+                Lifting(
+                    start_year=lift.start_year,
+                    end_year=lift.end_year,
+                    lifting_rate=lift.lifting_rate,
+                    price=(
+                        lift.price * adjustment_value
+                        if lift.fluid_type is FluidType.OIL
+                        else lift.price
+                    ),
+                    prod_year=lift.prod_year,
+                    fluid_type=lift.fluid_type,
+                    ghv=lift.ghv,
+                    prod_rate=lift.prod_rate,
+                    prod_rate_baseline=lift.prod_rate_baseline,
+                )
+                for lift in contract.lifting
+            ]
+        )
 
-    elif element == 'GASPRICE':
+    elif element == "GASPRICE":
         # Adjusting the oil price
-        lifting_adjusted = tuple([
-            Lifting(
-                start_year=lift.start_year,
-                end_year=lift.end_year,
-                lifting_rate=lift.lifting_rate,
-                price=lift.price * adjustment_value if lift.fluid_type is FluidType.GAS else lift.price,
-                prod_year=lift.prod_year,
-                fluid_type=lift.fluid_type,
-                ghv=lift.ghv,
-                prod_rate=lift.prod_rate,
-                prod_rate_baseline=lift.prod_rate_baseline,
-            )
-            for lift in contract.lifting
-        ])
+        lifting_adjusted = tuple(
+            [
+                Lifting(
+                    start_year=lift.start_year,
+                    end_year=lift.end_year,
+                    lifting_rate=lift.lifting_rate,
+                    price=(
+                        lift.price * adjustment_value
+                        if lift.fluid_type is FluidType.GAS
+                        else lift.price
+                    ),
+                    prod_year=lift.prod_year,
+                    fluid_type=lift.fluid_type,
+                    ghv=lift.ghv,
+                    prod_rate=lift.prod_rate,
+                    prod_rate_baseline=lift.prod_rate_baseline,
+                )
+                for lift in contract.lifting
+            ]
+        )
 
-    elif element == 'LIFTING':
+    elif element == "LIFTING":
         # Adjusting the lifting
-        lifting_adjusted = tuple([
-            Lifting(
-                start_year=lift.start_year,
-                end_year=lift.end_year,
-                lifting_rate=lift.lifting_rate * adjustment_value,
-                price=lift.price,
-                prod_year=lift.prod_year,
-                fluid_type=lift.fluid_type,
-                ghv=lift.ghv,
-                # prod_rate=lift.prod_rate,
-                # prod_rate is being by passed in the routine of sensitivity, thus it will be filled with the lifting value
-                prod_rate_baseline=lift.prod_rate_baseline,
-            )
-            for lift in contract.lifting
-        ])
+        lifting_adjusted = tuple(
+            [
+                Lifting(
+                    start_year=lift.start_year,
+                    end_year=lift.end_year,
+                    lifting_rate=lift.lifting_rate * adjustment_value,
+                    price=lift.price,
+                    prod_year=lift.prod_year,
+                    fluid_type=lift.fluid_type,
+                    ghv=lift.ghv,
+                    # prod_rate=lift.prod_rate,
+                    # prod_rate is being by passed in the routine of sensitivity, thus it will be filled with the lifting value
+                    prod_rate_baseline=lift.prod_rate_baseline,
+                )
+                for lift in contract.lifting
+            ]
+        )
 
-    elif element == 'OILLIFTING':
+    elif element == "OILLIFTING":
         # Adjusting the lifting
-        lifting_adjusted = tuple([
-            Lifting(
-                start_year=lift.start_year,
-                end_year=lift.end_year,
-                lifting_rate=lift.lifting_rate * adjustment_value if lift.fluid_type is FluidType.OIL else lift.lifting_rate,
-                price=lift.price,
-                prod_year=lift.prod_year,
-                fluid_type=lift.fluid_type,
-                ghv=lift.ghv,
-                # prod_rate=lift.prod_rate,
-                # prod_rate is being by passed in the routine of sensitivity, thus it will be filled with the lifting value
-                prod_rate_baseline=lift.prod_rate_baseline,
-            )
-            for lift in contract.lifting
-        ])
+        lifting_adjusted = tuple(
+            [
+                Lifting(
+                    start_year=lift.start_year,
+                    end_year=lift.end_year,
+                    lifting_rate=(
+                        lift.lifting_rate * adjustment_value
+                        if lift.fluid_type is FluidType.OIL
+                        else lift.lifting_rate
+                    ),
+                    price=lift.price,
+                    prod_year=lift.prod_year,
+                    fluid_type=lift.fluid_type,
+                    ghv=lift.ghv,
+                    # prod_rate=lift.prod_rate,
+                    # prod_rate is being by passed in the routine of sensitivity, thus it will be filled with the lifting value
+                    prod_rate_baseline=lift.prod_rate_baseline,
+                )
+                for lift in contract.lifting
+            ]
+        )
 
-    elif element == 'GASLIFTING':
+    elif element == "GASLIFTING":
         # Adjusting the lifting
-        lifting_adjusted = tuple([
-            Lifting(
-                start_year=lift.start_year,
-                end_year=lift.end_year,
-                lifting_rate=lift.lifting_rate * adjustment_value if lift.fluid_type is FluidType.GAS else lift.lifting_rate,
-                price=lift.price,
-                prod_year=lift.prod_year,
-                fluid_type=lift.fluid_type,
-                ghv=lift.ghv,
-                # prod_rate=lift.prod_rate,
-                # prod_rate is being by passed in the routine of sensitivity, thus it will be filled with the lifting value
-                prod_rate_baseline=lift.prod_rate_baseline,
-            )
-            for lift in contract.lifting
-        ])
+        lifting_adjusted = tuple(
+            [
+                Lifting(
+                    start_year=lift.start_year,
+                    end_year=lift.end_year,
+                    lifting_rate=(
+                        lift.lifting_rate * adjustment_value
+                        if lift.fluid_type is FluidType.GAS
+                        else lift.lifting_rate
+                    ),
+                    price=lift.price,
+                    prod_year=lift.prod_year,
+                    fluid_type=lift.fluid_type,
+                    ghv=lift.ghv,
+                    # prod_rate=lift.prod_rate,
+                    # prod_rate is being by passed in the routine of sensitivity, thus it will be filled with the lifting value
+                    prod_rate_baseline=lift.prod_rate_baseline,
+                )
+                for lift in contract.lifting
+            ]
+        )
 
     else:
-        raise SensitivityException(
-            f"The element value, {element}, is not recognized."
-        )
+        raise SensitivityException(f"The element value, {element}, is not recognized.")
 
     # Adjust the contract with the adjusted element
     # On stream date treatment
@@ -412,33 +454,33 @@ def _adjust_element_single_contract(
 
 
 def _adjust_element_transition_contract(
-        contract: Transition,
-        contract_arguments: dict,
-        element: str,
-        adjustment_value: float,
-        run_contract:bool = False,
+    contract: Transition,
+    contract_arguments: dict,
+    element: str,
+    adjustment_value: float,
+    run_contract: bool = False,
 ) -> Transition:
     """
-        The function to adjust the element of the transition contract based on the adjustment_value.
+    The function to adjust the element of the transition contract based on the adjustment_value.
 
-        Parameters
-        ----------
-        contract: Transition
-            The contract which will be adjusted.
-        contract_arguments: dict
-            The contract arguments.
-        element: str
-            The element of the contract that will be adjusted.
-        adjustment_value: float
-            The adjustment value which will be multiplied by the corresponding element.
-        run_contract:bool
-            The option to run the contract or not.
+    Parameters
+    ----------
+    contract: Transition
+        The contract which will be adjusted.
+    contract_arguments: dict
+        The contract arguments.
+    element: str
+        The element of the contract that will be adjusted.
+    adjustment_value: float
+        The adjustment value which will be multiplied by the corresponding element.
+    run_contract:bool
+        The option to run the contract or not.
 
-        Returns
-        -------
-        contract_adjusted: Transition
-            The contract that has been adjusted.
-        """
+    Returns
+    -------
+    contract_adjusted: Transition
+        The contract that has been adjusted.
+    """
     # Retrieving the first contract
     contract_1_adjusted = _adjust_element_single_contract(
         contract=contract.contract1,
@@ -473,12 +515,13 @@ def _adjust_element_transition_contract(
 
     return contract_adjusted
 
+
 def _adjust_contract(
-        contract: BaseProject | CostRecovery | GrossSplit | Transition,
-        contract_arguments: dict,
-        element: str,
-        adjustment_value: float,
-        run_contract:bool = False
+    contract: BaseProject | CostRecovery | GrossSplit | Transition,
+    contract_arguments: dict,
+    element: str,
+    adjustment_value: float,
+    run_contract: bool = False,
 ):
     """
     Function act as the wrapper to get sensitivity of a contract.
@@ -517,16 +560,17 @@ def _adjust_contract(
             run_contract=run_contract,
         )
 
+
 def sensitivity_psc(
-        contract: BaseProject | CostRecovery | GrossSplit | Transition,
-        contract_arguments: dict,
-        summary_arguments: dict,
-        min_deviation: float,
-        max_deviation: float,
-        base_value: float = 1.0,
-        step: int = 10,
-        dataframe_output: bool = True
-)-> dict | pd.DataFrame:
+    contract: BaseProject | CostRecovery | GrossSplit | Transition,
+    contract_arguments: dict,
+    summary_arguments: dict,
+    min_deviation: float,
+    max_deviation: float,
+    base_value: float = 1.0,
+    step: int = 10,
+    dataframe_output: bool = True,
+) -> dict | pd.DataFrame:
     """
     The function to get the sensitivity analysis of a contract.
 
@@ -569,18 +613,18 @@ def sensitivity_psc(
                 contract_arguments=contract_arguments,
                 element=element,
                 adjustment_value=mul,
-                run_contract=True
+                run_contract=True,
             )
             for mul in multipliers
         }
-        for element in ['CAPEX', 'OPEX', 'OILPRICE', 'GASPRICE', 'LIFTING']
+        for element in ["CAPEX", "OPEX", "OILPRICE", "GASPRICE", "LIFTING"]
     }
 
     # Get the summary of each contract in psc_adjusted_dict and contain it in a dictionary
     summary_adjusted_dict = {
         element: {
             mul: get_summary(
-                **{**summary_arguments, 'contract': psc_adjusted_dict[element][mul]}
+                **{**summary_arguments, "contract": psc_adjusted_dict[element][mul]}
             )
             for mul in psc_adjusted_dict[element]
         }
@@ -588,7 +632,14 @@ def sensitivity_psc(
     }
 
     # Retrieve the value for NPV, IRR, PI, POT, Gov Take, and Contractor Share
-    indicator_list = ['ctr_npv', 'ctr_irr', 'ctr_pi', 'ctr_pot', 'gov_take', 'ctr_net_share',]
+    indicator_list = [
+        "ctr_npv",
+        "ctr_irr",
+        "ctr_pi",
+        "ctr_pot",
+        "gov_take",
+        "ctr_net_share",
+    ]
 
     # Transform summary_adjusted_dict into the following structure
     sensitivity_result = {
@@ -605,9 +656,10 @@ def sensitivity_psc(
     if dataframe_output is True:
         # Transform result dictionary into DataFrames
         sensitivity_result_df = {
-            indicator: pd.DataFrame.from_dict(
-                data, orient='index'
-            ).reset_index().rename(columns={'index': 'Factor'}).set_index('Factor')
+            indicator: pd.DataFrame.from_dict(data, orient="index")
+            .reset_index()
+            .rename(columns={"index": "Factor"})
+            .set_index("Factor")
             for indicator, data in sensitivity_result.items()
         }
         return sensitivity_result_df

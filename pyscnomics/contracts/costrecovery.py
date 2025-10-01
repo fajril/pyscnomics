@@ -143,7 +143,7 @@ class CostRecovery(BaseProject):
     _gas_ic_unrecovered: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ic_paid: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes associated with recoverable and unrecoverable costs
+    # Attributes associated with core business logic
     _oil_unrecovered_before_transfer: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -202,10 +202,13 @@ class CostRecovery(BaseProject):
     _consolidated_carry_forward_depreciation: np.ndarray = field(
         default=None, init=False, repr=False
     )
-    _consolidated_depreciation: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_undepreciated_asset: np.ndarray | float = field(
-        default=None, init=False, repr=False
+    _consolidated_depreciations: dict = field(
+        default_factory=lambda: {}, init=False, repr=False
     )
+    _consolidated_undepreciated_assets: dict = field(
+        default_factory=lambda: {}, init=False, repr=False
+    )
+
     _consolidated_ftp: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ftp_ctr: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ftp_gov: np.ndarray = field(default=None, init=False, repr=False)
@@ -241,22 +244,21 @@ class CostRecovery(BaseProject):
     _consolidated_government_share: np.ndarray = field(
         default=None, init=False, repr=False
     )
+
     _consolidated_dmo_volume: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ddmo: np.ndarray = field(default=None, init=False, repr=False)
+
     _consolidated_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_tax_due: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_unpaid_tax_balance: np.ndarray = field(
         default=None, init=False, repr=False
     )
     _consolidated_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
+
     _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_contractor_take: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_government_take: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
+    _consolidated_contractor_take: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_government_take: np.ndarray = field(default=None, init=False, repr=False)
 
     def _check_attributes(self):
         """
@@ -1586,6 +1588,25 @@ class CostRecovery(BaseProject):
             + self._gas_asr_indirect_tax
             + self._gas_lbt_indirect_tax
             + self._gas_cost_of_sales_indirect_tax
+        )
+
+        # Total expenditures post tax
+        self._oil_total_expenditures_post_tax = (
+            self._oil_capital_expenditures_post_tax
+            + self._oil_intangible_expenditures_post_tax
+            + self._oil_opex_expenditures_post_tax
+            + self._oil_asr_expenditures_post_tax
+            + self._oil_lbt_expenditures_post_tax
+            + self._oil_cost_of_sales_expenditures_post_tax
+        )
+
+        self._gas_total_expenditures_post_tax = (
+            self._gas_capital_expenditures_post_tax
+            + self._gas_intangible_expenditures_post_tax
+            + self._gas_opex_expenditures_post_tax
+            + self._gas_asr_expenditures_post_tax
+            + self._gas_lbt_expenditures_post_tax
+            + self._gas_cost_of_sales_expenditures_post_tax
         )
 
         # Prepare sunk costs and preonstream costs

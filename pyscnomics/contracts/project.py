@@ -4200,10 +4200,57 @@ class BaseProject:
         # Prepare sunk costs and preonstream costs
         self._get_sunkcost_array()
         self._get_preonstream_array()
-        self._modify_sunk_cost_preonstream()
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_depreciable_preonstream)}')
+        print(f'Length: {len(self._oil_depreciable_preonstream)}')
+        print('_oil_depreciable_preonstream = \n', self._oil_depreciable_preonstream)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_non_depreciable_preonstream)}')
+        print(f'Length: {len(self._oil_non_depreciable_preonstream)}')
+        print('_oil_non_depreciable_preonstream = \n', self._oil_non_depreciable_preonstream)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_preonstream)}')
+        print(f'Length: {len(self._oil_preonstream)}')
+        print('_oil_preonstream = \n', self._oil_preonstream)
+
+        # self._modify_sunk_cost_preonstream()
+
+        print('\t')
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_depreciable_preonstream)}')
+        print(f'Length: {len(self._oil_depreciable_preonstream)}')
+        print('_oil_depreciable_preonstream = \n', self._oil_depreciable_preonstream)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_non_depreciable_preonstream)}')
+        print(f'Length: {len(self._oil_non_depreciable_preonstream)}')
+        print('_oil_non_depreciable_preonstream = \n', self._oil_non_depreciable_preonstream)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_preonstream)}')
+        print(f'Length: {len(self._oil_preonstream)}')
+        print('_oil_preonstream = \n', self._oil_preonstream)
 
         # Prepare capital, non-capital, and total investments
         self._get_investments()
+
+        print('\t')
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_capital)}')
+        print(f'Length: {len(self._oil_capital)}')
+        print('_oil_capital = \n', self._oil_capital)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_non_capital)}')
+        print(f'Length: {len(self._oil_non_capital)}')
+        print('_oil_non_capital = \n', self._oil_non_capital)
 
         # Configure base cashflow for OIL and GAS
         self._oil_cashflow = self._oil_revenue - (
