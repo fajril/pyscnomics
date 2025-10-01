@@ -3,6 +3,7 @@ Collection of functions to administer sensitivity analysis.
 """
 
 import numpy as np
+import pandas as pd
 
 from pyscnomics.econ import CostOfSales, Lifting, FluidType
 from pyscnomics.io.aggregator import Aggregate
@@ -12,15 +13,13 @@ from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
-
-"""
-This Code is made to detached the sensitivity module in the previous version which depended with the excel 
-into fully able to be run in python. 
-"""
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT
 from pyscnomics.tools.summary import get_summary
 
-import pandas as pd
+"""
+This Code is made to detached the sensitivity module in the previous version which 
+depended with the excel into fully able to be run in python. 
+"""
 
 
 class SensitivityException(Exception):
