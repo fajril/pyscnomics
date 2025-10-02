@@ -135,6 +135,14 @@ class CostRecovery(BaseProject):
     _oil_undepreciated_assets: dict = field(default_factory=lambda: {}, init=False, repr=False)
     _gas_undepreciated_assets: dict = field(default_factory=lambda: {}, init=False, repr=False)
 
+    # Attributes associated with FTP
+    _oil_ftp: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_ftp_ctr: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_ftp_gov: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ftp: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ftp_ctr: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_ftp_gov: np.ndarray = field(default=None, init=False, repr=False)
+
     # Attributes associated with investment credit
     _oil_ic: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ic_unrecovered: np.ndarray = field(default=None, init=False, repr=False)
@@ -208,7 +216,6 @@ class CostRecovery(BaseProject):
     _consolidated_undepreciated_assets: dict = field(
         default_factory=lambda: {}, init=False, repr=False
     )
-
     _consolidated_ftp: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ftp_ctr: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ftp_gov: np.ndarray = field(default=None, init=False, repr=False)
@@ -606,6 +613,219 @@ class CostRecovery(BaseProject):
         self._oil_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
         self._gas_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
 
+    def _get_ftp(self) -> None:
+        """
+        Compute and allocate First Tranche Petroleum (FTP) for oil and gas.
+
+        This method calculates the fraction of oil and gas revenues allocated
+        to First Tranche Petroleum (FTP) based on the Production Sharing
+        Contract (PSC) terms.
+
+        FTP is split between the contractor and the government if sharing applies;
+        otherwise, the government receives the entire portion.
+
+        All FTP-related arrays are first initialized with zeros and then updated
+        if FTP is available.
+
+        Updates
+        -------
+        self._oil_ftp : np.ndarray
+            Total oil FTP before split.
+        self._gas_ftp : np.ndarray
+            Total gas FTP before split.
+        self._oil_ftp_ctr : np.ndarray
+            Contractor's share of oil FTP.
+        self._gas_ftp_ctr : np.ndarray
+            Contractor's share of gas FTP.
+        self._oil_ftp_gov : np.ndarray
+            Government's share of oil FTP.
+        self._gas_ftp_gov : np.ndarray
+            Government's share of gas FTP.
+
+        Notes
+        -----
+        - If ``oil_ftp_is_available`` is ``False``, all oil FTP-related arrays
+          remain zero.
+        - If ``gas_ftp_is_available`` is ``False``, all gas FTP-related arrays
+          remain zero.
+        - If FTP sharing is not applicable, the entire FTP portion is allocated
+          to the government.
+        - Calculations depend on attributes:
+          ``oil_ftp_portion``, ``gas_ftp_portion``,
+          ``oil_ctr_pretax_share``, and ``gas_ctr_pretax_share``.
+        """
+
+        # Initializes FTP arrays with zeros (associated with OIL)
+        self._oil_ftp = np.zeros_like(self.project_years, dtype=float)
+        self._oil_ftp_ctr = np.zeros_like(self.project_years, dtype=float)
+        self._oil_ftp_gov = np.zeros_like(self.project_years, dtype=float)
+
+        # Initializes FTP arrays with zeros (associated with GAS)
+        self._gas_ftp = np.zeros_like(self.project_years, dtype=float)
+        self._gas_ftp_ctr = np.zeros_like(self.project_years, dtype=float)
+        self._gas_ftp_gov = np.zeros_like(self.project_years, dtype=float)
+
+        # Sharing condition if OIL FTP is available.
+        # Fill attributes "_oil_ftp", "_oil_ftp_portion", and "_oil_ftp_gov"
+        if self.oil_ftp_is_available:
+            self._oil_ftp = self.oil_ftp_portion * self._oil_revenue
+            if self.oil_ftp_is_shared:
+                self._oil_ftp_ctr = self.oil_ctr_pretax_share * self._oil_ftp
+            self._oil_ftp_gov = self._oil_ftp - self._oil_ftp_ctr
+
+        # Sharing condition if GAS FTP is available.
+        # Fill attributes "_gas_ftp", "_gas_ftp_portion", and "_gas_ftp_gov"
+        if self.gas_ftp_is_available:
+            self._gas_ftp = self.gas_ftp_portion * self._gas_revenue
+            if self.gas_ftp_is_shared:
+                self._gas_ftp_ctr = self.gas_ctr_pretax_share * self._gas_ftp
+            self._gas_ftp_gov = self._gas_ftp - self._gas_ftp_ctr
+
+    def _apply_cost_of_sales(self, oil_applied: bool, gas_applied: bool) -> None:
+        """
+        Apply cost of sales deductions to oil and gas revenues.
+
+        This method reduces oil and/or gas revenues by their corresponding
+        cost of sales expenditures (after tax), provided that revenue
+        is available. If no revenue is present for a given stream, a
+        CostRecoveryException is raised.
+
+        Parameters
+        ----------
+        oil_applied : bool
+            Whether to apply cost of sales to oil revenue.
+        gas_applied : bool
+            Whether to apply cost of sales to gas revenue.
+
+        Raises
+        ------
+        CostRecoveryException
+            If oil or gas cost of sales is applied but the respective
+            revenue is zero across all project years.
+
+        Notes
+        -----
+        - Revenue arrays (``_oil_revenue`` and ``_gas_revenue``) are
+          updated in place.
+        - Negative revenues are not expected; if all values are zero,
+          it indicates absence of sales, hence the exception.
+        """
+
+        if oil_applied:
+            # Ensure there is at least some positive oil revenue
+            if not np.any(self._oil_revenue > 0):
+                raise CostRecoveryException(
+                    "Oil revenue is zero throughout project years"
+                )
+
+            # Deduct cost of sales (post-tax) from oil revenue
+            self._oil_revenue -= self._oil_cost_of_sales_expenditures_post_tax
+
+        if gas_applied:
+            # Ensure there is at least some positive gas revenue
+            if not np.any(self._gas_revenue > 0):
+                raise CostRecoveryException(
+                    "Gas revenue is zero throughout project years"
+                )
+
+            # Deduct cost of sales (post-tax) from gas revenue
+            self._gas_revenue -= self._gas_cost_of_sales_expenditures_post_tax
+
+    def _get_rc_icp_pretax(self):
+        """
+        A Function to get the value of PreTax Split using Revenue over Cost (RC)
+        or Indonesian Crude Price (ICP) sliding scale.
+
+        Notes
+        -------
+        The structure of the dictionary is as the following:
+        condition_dict =
+        {
+            'condition_1': {'bot_limit': 0,
+                            'top_limit': 1,
+                            'ctr_oil': 0.3137260,
+                            'ctr_gas': 0.5498040,
+                            'gov_oil': 0.686274,
+                            'gov_gas': 0.45098,
+                            'split_ctr_oil': 20,
+                            'split_ctr_gas': 35,
+                            'split_gov_oil': 80,
+                            'split_gov_gas': 65},
+
+            'condition_2': {'bot_limit': 1,
+                            'top_limit': 1.2,
+                            'ctr_oil': 0.27451,
+                            'ctr_gas': 0.509804,
+                            'gov_oil': 0.72549,
+                            'gov_gas': 0.490196,
+                            'split_ctr_oil': 17.5,
+                            'split_ctr_gas': 32.5,
+                            'split_gov_oil': 82.5,
+                            'split_gov_gas': 67.5},
+
+            'condition_3': {'bot_limit': 1.2,
+                            'top_limit': 1.4,
+                            'ctr_oil': 0.235295,
+                            'ctr_gas': 0.470589,
+                            'gov_oil': 0.764705,
+                            'gov_gas': 0.529411,
+                            'split_ctr_oil': 15,
+                            'split_ctr_gas': 30,
+                            'split_gov_oil': 85,
+                            'split_gov_gas': 70}
+        }
+
+        Returns
+        -------
+        Modifying the following Cost Recovery attributes:
+            self.oil_ctr_pretax_share
+            self.gas_ctr_pretax_share
+        """
+
+        # Conditioning the given dictionary
+        length_condition = len(self.condition_dict[list(self.condition_dict.keys())[0]])
+        enum_value = list(range(1, length_condition + 1))
+        condition_dict_new = {}
+        for index, step in enumerate(enum_value):
+            dict_isi = {
+                "bot_limit": self.condition_dict["RC Bottom Limit"][index],
+                "top_limit": self.condition_dict["RC Top Limit"][index],
+                "ctr_oil": self.condition_dict["Pre Tax CTR Oil"][index],
+                "ctr_gas": self.condition_dict["Pre Tax CTR Gas"][index],
+            }
+
+            key_string = "condition_" + str(step)
+            condition_dict_new[key_string] = dict_isi
+
+        self.condition_dict = condition_dict_new
+
+        # Extract relevant values from the condition_dict dictionary
+        bot_limits = np.array(
+            [self.condition_dict[c]["bot_limit"] for c in self.condition_dict]
+        )
+        top_limits = np.array(
+            [self.condition_dict[c]["top_limit"] for c in self.condition_dict]
+        )
+        ctr_oil_values = np.array(
+            [self.condition_dict[c]["ctr_oil"] for c in self.condition_dict]
+        )
+        ctr_gas_values = np.array(
+            [self.condition_dict[c]["ctr_gas"] for c in self.condition_dict]
+        )
+
+        # Create conditions using vectorized comparisons
+        conditions = (bot_limits[:, np.newaxis] < self.indicator_rc_icp_sliding) & (
+            self.indicator_rc_icp_sliding <= top_limits[:, np.newaxis]
+        )
+
+        # Calculate corresponding values using np.select()
+        self.oil_ctr_pretax_share = np.select(
+            conditions, ctr_oil_values[:, np.newaxis], default=np.nan
+        )
+        self.gas_ctr_pretax_share = np.select(
+            conditions, ctr_gas_values[:, np.newaxis], default=np.nan
+        )
+
     def _get_tax_by_regime(self, tax_regime) -> np.ndarray:
         """
         Determine the tax rate array based on the tax regime and project years.
@@ -666,118 +886,6 @@ class CostRecovery(BaseProject):
                 )
 
         return tax_rate_arr
-
-    def _get_rc_icp_pretax(self):
-        """
-        A Function to get the value of PreTax Split using Revenue over Cost (RC) or Indonesian Crude Price (ICP) sliding scale.
-
-        Notes
-        -------
-        The structure of the dictionary is as the following:
-        condition_dict =
-        {
-            'condition_1': {'bot_limit': 0,
-                            'top_limit': 1,
-                            'ctr_oil': 0.3137260,
-                            'ctr_gas': 0.5498040,
-                            'gov_oil': 0.686274,
-                            'gov_gas': 0.45098,
-                            'split_ctr_oil': 20,
-                            'split_ctr_gas': 35,
-                            'split_gov_oil': 80,
-                            'split_gov_gas': 65},
-
-            'condition_2': {'bot_limit': 1,
-                            'top_limit': 1.2,
-                            'ctr_oil': 0.27451,
-                            'ctr_gas': 0.509804,
-                            'gov_oil': 0.72549,
-                            'gov_gas': 0.490196,
-                            'split_ctr_oil': 17.5,
-                            'split_ctr_gas': 32.5,
-                            'split_gov_oil': 82.5,
-                            'split_gov_gas': 67.5},
-
-            'condition_3': {'bot_limit': 1.2,
-                            'top_limit': 1.4,
-                            'ctr_oil': 0.235295,
-                            'ctr_gas': 0.470589,
-                            'gov_oil': 0.764705,
-                            'gov_gas': 0.529411,
-                            'split_ctr_oil': 15,
-                            'split_ctr_gas': 30,
-                            'split_gov_oil': 85,
-                            'split_gov_gas': 70}
-        }
-
-        Returns
-        -------
-        Modifying the following Cost Recovery attributes:
-            self.oil_ctr_pretax_share
-            self.gas_ctr_pretax_share
-
-        """
-        # Conditioning the given dictionary
-        length_condition = len(self.condition_dict[list(self.condition_dict.keys())[0]])
-        enum_value = list(range(1, length_condition + 1))
-        condition_dict_new = {}
-        for index, step in enumerate(enum_value):
-            dict_isi = {
-                "bot_limit": self.condition_dict["RC Bottom Limit"][index],
-                "top_limit": self.condition_dict["RC Top Limit"][index],
-                "ctr_oil": self.condition_dict["Pre Tax CTR Oil"][index],
-                "ctr_gas": self.condition_dict["Pre Tax CTR Gas"][index],
-            }
-
-            key_string = "condition_" + str(step)
-            condition_dict_new[key_string] = dict_isi
-
-        self.condition_dict = condition_dict_new
-
-        # Extract relevant values from the condition_dict dictionary
-        bot_limits = np.array(
-            [self.condition_dict[c]["bot_limit"] for c in self.condition_dict]
-        )
-        top_limits = np.array(
-            [self.condition_dict[c]["top_limit"] for c in self.condition_dict]
-        )
-        ctr_oil_values = np.array(
-            [self.condition_dict[c]["ctr_oil"] for c in self.condition_dict]
-        )
-        ctr_gas_values = np.array(
-            [self.condition_dict[c]["ctr_gas"] for c in self.condition_dict]
-        )
-
-        # Create conditions using vectorized comparisons
-        conditions = (bot_limits[:, np.newaxis] < self.indicator_rc_icp_sliding) & (
-            self.indicator_rc_icp_sliding <= top_limits[:, np.newaxis]
-        )
-
-        # Calculate corresponding values using np.select()
-        self.oil_ctr_pretax_share = np.select(
-            conditions, ctr_oil_values[:, np.newaxis], default=np.nan
-        )
-        self.gas_ctr_pretax_share = np.select(
-            conditions, ctr_gas_values[:, np.newaxis], default=np.nan
-        )
-
-    def _get_ftp(self):
-        self._oil_ftp_ctr = np.zeros_like(self._oil_revenue)
-        self._gas_ftp_ctr = np.zeros_like(self._gas_revenue)
-        self._oil_ftp_gov = np.zeros_like(self._oil_revenue)
-        self._gas_ftp_gov = np.zeros_like(self._gas_revenue)
-
-        if self.oil_ftp_is_available:
-            self._oil_ftp = self.oil_ftp_portion * self._oil_revenue
-            if self.oil_ftp_is_shared:
-                self._oil_ftp_ctr = self.oil_ctr_pretax_share * self._oil_ftp
-            self._oil_ftp_gov = self._oil_ftp - self._oil_ftp_ctr
-
-        if self.gas_ftp_is_available:
-            self._gas_ftp = self.gas_ftp_portion * self._gas_revenue
-            if self.gas_ftp_is_shared:
-                self._gas_ftp_ctr = self.gas_ctr_pretax_share * self._gas_ftp
-            self._gas_ftp_gov = self._gas_ftp - self._gas_ftp_ctr
 
     def _get_ic(
         self,
@@ -1229,45 +1337,7 @@ class CostRecovery(BaseProject):
 
         return unpaid_tax, ctr_tax
 
-    def _apply_cost_of_sales(
-        self, oil_applied: bool = False, gas_applied: bool = False
-    ):
-        """
-        The function to apply the cost of sales.
 
-        Parameters
-        ----------
-        oil_applied: bool
-            The condition when oil is being applied by cost of sales.
-        gas_applied: bool
-            The condition when gas is being applied by cost of sales.
-
-        """
-        # Condition while the oil cost of sales is applied while there is no oil revenue
-        if oil_applied is True and np.sum(self._oil_revenue) <= 0:
-            raise CostRecoveryException(
-                f"The oil revenue is zero or below zero throughout the project years. "
-            )
-        # Condition when the oil cost of sales is applied while there are oil revenues
-        elif oil_applied is True and np.sum(self._oil_revenue) > 0:
-            self._oil_revenue = (
-                self._oil_revenue - self._oil_cost_of_sales_expenditures_post_tax
-            )
-        else:
-            pass
-
-        # Condition while the gas cost of sales is applied while there is no gas revenue
-        if gas_applied is True and np.sum(self._gas_revenue) <= 0:
-            raise CostRecoveryException(
-                f"The gas revenue is zero or below zero throughout the project years."
-            )
-        # Condition when the gas cost of sales is applied while there are gas revenues
-        elif gas_applied is True and np.sum(self._gas_revenue) > 0:
-            self._gas_revenue = (
-                self._gas_revenue - self._gas_cost_of_sales_expenditures_post_tax
-            )
-        else:
-            pass
 
     def _prepare_sunk_cost_contract(self, depr_method, decline_factor):
         # Get the revenue total
@@ -1612,16 +1682,7 @@ class CostRecovery(BaseProject):
         # Prepare sunk costs and preonstream costs
         self._get_sunkcost_array()
         self._get_preonstream_array()
-
-        # Modify sunk cost and preonstream cost,
-        # Combine sunk cost and preonstream cost, then Assign the result as the
-        # "updated" sunk cost
-        self._oil_sunk_cost += self._oil_preonstream
-        self._gas_sunk_cost += self._gas_preonstream
-
-        # Assign preonstream cost as zeros
-        self._oil_preonstream = np.zeros_like(self.project_years, dtype=float)
-        self._gas_preonstream = np.zeros_like(self.project_years, dtype=float)
+        self._modify_sunk_cost_preonstream()
 
         # Calculate depreciations and undepreciated assets
         self._get_depreciation(
@@ -1636,44 +1697,34 @@ class CostRecovery(BaseProject):
         # Modify depreciations, accounting for various adjustments
         self._get_modified_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)
 
+        # Calculate FTP
+        self._get_ftp()
 
-
-
-        # # Calculate FTP
-        # self._get_ftp()
-        #
-        # # Condition when the Cost of Sales for Oil is being applied, which will modify oil or gas revenue
-        # self._apply_cost_of_sales(
-        #     oil_applied=oil_cost_of_sales_applied, gas_applied=gas_cost_of_sales_applied
-        # )
-        #
-        # # Defining the PreTax Split, whether using conventional PreTax or Sliding
-        # if self.tax_split_type is not TaxSplitTypeCR.CONVENTIONAL:
-        #     self._get_rc_icp_pretax()
-        #
-        # # Adding the depreciation with the carry forward depreciation
-        # self._oil_depreciation = (
-        #     self._oil_depreciation + self._oil_carry_forward_depreciation
-        # )
-        # self._gas_depreciation = (
-        #     self._gas_depreciation + self._gas_carry_forward_depreciation
-        # )
-
-        # Non-capital costs (intangible + opex + asr)
-        self._oil_non_capital = (
-            self._oil_intangible_expenditures_post_tax
-            + self._oil_opex_expenditures_post_tax
-            + self._oil_asr_expenditures_post_tax
-            + self._oil_lbt_expenditures_post_tax
+        # Condition when Cost of Sales for Oil is being applied,
+        # which will modify oil or gas revenue
+        self._apply_cost_of_sales(
+            oil_applied=oil_cost_of_sales_applied, gas_applied=gas_cost_of_sales_applied
         )
 
-        self._gas_non_capital = (
-            self._gas_intangible_expenditures_post_tax
-            + self._gas_opex_expenditures_post_tax
-            + self._gas_asr_expenditures_post_tax
-            + self._gas_lbt_expenditures_post_tax
-        )
+        # Defining the PreTax Split, whether using conventional PreTax or Sliding
+        if self.tax_split_type is not TaxSplitTypeCR.CONVENTIONAL:
+            self._get_rc_icp_pretax()
 
+        # # Non-capital costs (intangible + opex + asr)
+        # self._oil_non_capital = (
+        #     self._oil_intangible_expenditures_post_tax
+        #     + self._oil_opex_expenditures_post_tax
+        #     + self._oil_asr_expenditures_post_tax
+        #     + self._oil_lbt_expenditures_post_tax
+        # )
+        #
+        # self._gas_non_capital = (
+        #     self._gas_intangible_expenditures_post_tax
+        #     + self._gas_opex_expenditures_post_tax
+        #     + self._gas_asr_expenditures_post_tax
+        #     + self._gas_lbt_expenditures_post_tax
+        # )
+        #
         # # Filtering for only the cost that in the bracket of the project years
         # self._oil_depreciation = self._oil_depreciation[
         #     : (self.end_date.year - self.start_date.year + 1)
@@ -1696,7 +1747,90 @@ class CostRecovery(BaseProject):
         #     cost_alloc=FluidType.GAS,
         #     ic_rate=self.gas_ic_rate,
         # )
+
+        # # Contractor CashFlow
+        # # Conditional if based on the sunk cost method
+        # if sunk_cost_method == SunkCostMethod.POOLED_1ST_YEAR:
+        #     oil_sunk_cost = np.zeros_like(self.project_years, dtype=float)
+        #     gas_sunk_cost = np.zeros_like(self.project_years, dtype=float)
         #
+        #     # Find the first index where revenue is non-zero
+        #     start_idx_oil = np.argmax(self._oil_revenue != 0)
+        #
+        #     oil_sunk_cost[start_idx_oil] = (
+        #             self._oil_sunk_cost_bulk["Tangible"]
+        #             + self._oil_sunk_cost_bulk["Intangible"]
+        #             + self._oil_preonstream_cost_bulk["Tangible"]
+        #             + self._oil_preonstream_cost_bulk["Intangible"]
+        #     )
+        #
+        #     # Find the first index where revenue is non-zero
+        #     start_idx_gas = np.argmax(self._gas_revenue != 0)
+        #
+        #     gas_sunk_cost[start_idx_gas] = (
+        #             self._gas_sunk_cost_bulk["Tangible"]
+        #             + self._gas_sunk_cost_bulk["Intangible"]
+        #             + self._gas_preonstream_cost_bulk["Tangible"]
+        #             + self._gas_preonstream_cost_bulk["Intangible"]
+        #     )
+        #
+        #     self._oil_cashflow = self._oil_contractor_take - (
+        #             self._oil_capital_expenditures_post_tax
+        #             + self._oil_non_capital
+        #             + oil_sunk_cost
+        #     )
+        #
+        #     self._gas_cashflow = self._gas_contractor_take - (
+        #             self._gas_capital_expenditures_post_tax
+        #             + self._gas_non_capital
+        #             + gas_sunk_cost
+        #     )
+        #
+        # elif sunk_cost_method == SunkCostMethod.DEPRECIATED_TANGIBLE:
+        #     self._oil_cashflow = self._oil_contractor_take - (
+        #             self._oil_capital_expenditures_post_tax
+        #             + self._oil_non_capital
+        #             + self._oil_cost_of_sales_expenditures_post_tax
+        #             + self._oil_sunk_cost_tangible_depreciation_charge
+        #             + self._oil_preonstream_cost_tangible_depreciation_charge
+        #             + self._oil_sunk_cost_array["Intangible"]
+        #             + self._oil_preonstream_cost_array["Intangible"]
+        #     )
+        #
+        #     self._gas_cashflow = self._gas_contractor_take - (
+        #             self._gas_capital_expenditures_post_tax
+        #             + self._gas_non_capital
+        #             + self._gas_cost_of_sales_expenditures_post_tax
+        #             + self._gas_sunk_cost_tangible_depreciation_charge
+        #             + self._gas_preonstream_cost_tangible_depreciation_charge
+        #             + self._gas_sunk_cost_array["Intangible"]
+        #             + self._gas_preonstream_cost_array["Intangible"]
+        #     )
+        #
+        # elif sunk_cost_method == SunkCostMethod.DIRECT:
+        #     self._oil_cashflow = self._oil_contractor_take - (
+        #             self._oil_capital_expenditures_post_tax
+        #             + self._oil_non_capital
+        #             + self._oil_sunk_cost_array["Tangible"]
+        #             + self._oil_preonstream_cost_array["Tangible"]
+        #             + self._oil_sunk_cost_array["Intangible"]
+        #             + self._oil_preonstream_cost_array["Intangible"]
+        #     )
+        #
+        #     self._gas_cashflow = self._gas_contractor_take - (
+        #             self._gas_capital_expenditures_post_tax
+        #             + self._gas_non_capital
+        #             + self._gas_sunk_cost_array["Tangible"]
+        #             + self._gas_preonstream_cost_array["Tangible"]
+        #             + self._gas_sunk_cost_array["Intangible"]
+        #             + self._gas_preonstream_cost_array["Intangible"]
+        #     )
+        #
+        # else:
+        #     raise SunkCostException(
+        #         f" SunkCostMethod: {sunk_cost_method}, is not recognized. It should be from SunkCost method enum"
+        #     )
+
         # (
         #     self._oil_unrecovered_before_transfer,
         #     self._oil_cost_to_be_recovered,
@@ -1726,7 +1860,7 @@ class CostRecovery(BaseProject):
         #     ic=self._gas_ic_paid,
         #     cr_cap_rate=self.gas_cr_cap_rate,
         # )
-        #
+
         # # ETS (Equity to be Split) before transfer/consolidation
         # self._oil_ets_before_transfer = self._get_ets_before_transfer(
         #     revenue=self._oil_revenue,
@@ -1920,89 +2054,6 @@ class CostRecovery(BaseProject):
         #     - self._gas_tax_payment
         #     + self._gas_cost_recovery_after_tf
         # )
-        #
-        # # Contractor CashFlow
-        # # Conditional if based on the sunk cost method
-        # if sunk_cost_method == SunkCostMethod.POOLED_1ST_YEAR:
-        #     oil_sunk_cost = np.zeros_like(self.project_years, dtype=float)
-        #     gas_sunk_cost = np.zeros_like(self.project_years, dtype=float)
-        #
-        #     # Find the first index where revenue is non-zero
-        #     start_idx_oil = np.argmax(self._oil_revenue != 0)
-        #
-        #     oil_sunk_cost[start_idx_oil] = (
-        #         self._oil_sunk_cost_bulk["Tangible"]
-        #         + self._oil_sunk_cost_bulk["Intangible"]
-        #         + self._oil_preonstream_cost_bulk["Tangible"]
-        #         + self._oil_preonstream_cost_bulk["Intangible"]
-        #     )
-        #
-        #     # Find the first index where revenue is non-zero
-        #     start_idx_gas = np.argmax(self._gas_revenue != 0)
-        #
-        #     gas_sunk_cost[start_idx_gas] = (
-        #         self._gas_sunk_cost_bulk["Tangible"]
-        #         + self._gas_sunk_cost_bulk["Intangible"]
-        #         + self._gas_preonstream_cost_bulk["Tangible"]
-        #         + self._gas_preonstream_cost_bulk["Intangible"]
-        #     )
-        #
-        #     self._oil_cashflow = self._oil_contractor_take - (
-        #         self._oil_capital_expenditures_post_tax
-        #         + self._oil_non_capital
-        #         + oil_sunk_cost
-        #     )
-        #
-        #     self._gas_cashflow = self._gas_contractor_take - (
-        #         self._gas_capital_expenditures_post_tax
-        #         + self._gas_non_capital
-        #         + gas_sunk_cost
-        #     )
-        #
-        # elif sunk_cost_method == SunkCostMethod.DEPRECIATED_TANGIBLE:
-        #     self._oil_cashflow = self._oil_contractor_take - (
-        #         self._oil_capital_expenditures_post_tax
-        #         + self._oil_non_capital
-        #         + self._oil_cost_of_sales_expenditures_post_tax
-        #         + self._oil_sunk_cost_tangible_depreciation_charge
-        #         + self._oil_preonstream_cost_tangible_depreciation_charge
-        #         + self._oil_sunk_cost_array["Intangible"]
-        #         + self._oil_preonstream_cost_array["Intangible"]
-        #     )
-        #
-        #     self._gas_cashflow = self._gas_contractor_take - (
-        #         self._gas_capital_expenditures_post_tax
-        #         + self._gas_non_capital
-        #         + self._gas_cost_of_sales_expenditures_post_tax
-        #         + self._gas_sunk_cost_tangible_depreciation_charge
-        #         + self._gas_preonstream_cost_tangible_depreciation_charge
-        #         + self._gas_sunk_cost_array["Intangible"]
-        #         + self._gas_preonstream_cost_array["Intangible"]
-        #     )
-        #
-        # elif sunk_cost_method == SunkCostMethod.DIRECT:
-        #     self._oil_cashflow = self._oil_contractor_take - (
-        #         self._oil_capital_expenditures_post_tax
-        #         + self._oil_non_capital
-        #         + self._oil_sunk_cost_array["Tangible"]
-        #         + self._oil_preonstream_cost_array["Tangible"]
-        #         + self._oil_sunk_cost_array["Intangible"]
-        #         + self._oil_preonstream_cost_array["Intangible"]
-        #     )
-        #
-        #     self._gas_cashflow = self._gas_contractor_take - (
-        #         self._gas_capital_expenditures_post_tax
-        #         + self._gas_non_capital
-        #         + self._gas_sunk_cost_array["Tangible"]
-        #         + self._gas_preonstream_cost_array["Tangible"]
-        #         + self._gas_sunk_cost_array["Intangible"]
-        #         + self._gas_preonstream_cost_array["Intangible"]
-        #     )
-        #
-        # else:
-        #     raise SunkCostException(
-        #         f" SunkCostMethod: {sunk_cost_method}, is not recognized. It should be from SunkCost method enum"
-        #     )
         #
         # # Government Take by Fluid
         # self._oil_government_take = (
