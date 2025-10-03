@@ -135,6 +135,11 @@ class CostRecovery(BaseProject):
     _oil_undepreciated_assets: dict = field(default_factory=lambda: {}, init=False, repr=False)
     _gas_undepreciated_assets: dict = field(default_factory=lambda: {}, init=False, repr=False)
 
+    # Attributes associated with total sunk cost
+    # (sunk cost depreciation + sunk cost non depreciable)
+    _oil_sunk_cost_depre_non_depre: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_sunk_cost_depre_non_depre: np.ndarray = field(default=None, init=False, repr=False)
+
     # Attributes associated with FTP
     _oil_ftp: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ftp_ctr: np.ndarray = field(default=None, init=False, repr=False)
@@ -266,6 +271,28 @@ class CostRecovery(BaseProject):
     _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_contractor_take: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_government_take: np.ndarray = field(default=None, init=False, repr=False)
+
+    def __post_init__(self):
+
+        # Call parent's post init from class BaseProject
+        super().__post_init__()
+
+        # Perform initial check to several input arguments
+        self._check_attributes()
+
+        # Initialize attributes associated with OIL FTP
+        self._oil_ftp = np.zeros_like(self.project_years, dtype=float)
+        self._oil_ftp_ctr = np.zeros_like(self.project_years, dtype=float)
+        self._oil_ftp_gov = np.zeros_like(self.project_years, dtype=float)
+
+        # Initialize attributes associated with GAS FTP
+        self._gas_ftp = np.zeros_like(self.project_years, dtype=float)
+        self._gas_ftp_ctr = np.zeros_like(self.project_years, dtype=float)
+        self._gas_ftp_gov = np.zeros_like(self.project_years, dtype=float)
+
+        # Initialize attributes associated with cumulative sunk cost treatment
+        self._oil_sunk_cost_depre_non_depre = np.zeros_like(self.project_years, dtype=float)
+        self._gas_sunk_cost_depre_non_depre = np.zeros_like(self.project_years, dtype=float)
 
     def _check_attributes(self):
         """
@@ -615,17 +642,14 @@ class CostRecovery(BaseProject):
 
     def _get_ftp(self) -> None:
         """
-        Compute and allocate First Tranche Petroleum (FTP) for oil and gas.
+        Calculate and allocate First Tranche Petroleum (FTP) for oil and gas.
 
-        This method calculates the fraction of oil and gas revenues allocated
-        to First Tranche Petroleum (FTP) based on the Production Sharing
-        Contract (PSC) terms.
+        This method determines the portion of oil and gas revenues allocated to
+        First Tranche Petroleum (FTP) under Production Sharing Contract (PSC) terms.
 
-        FTP is split between the contractor and the government if sharing applies;
-        otherwise, the government receives the entire portion.
-
-        All FTP-related arrays are first initialized with zeros and then updated
-        if FTP is available.
+        If FTP is available, the allocation is split between the contractor and the
+        government based on whether FTP sharing is applicable. If FTP is not shared,
+        the entire FTP portion is assigned to the government.
 
         Updates
         -------
@@ -644,26 +668,14 @@ class CostRecovery(BaseProject):
 
         Notes
         -----
-        - If ``oil_ftp_is_available`` is ``False``, all oil FTP-related arrays
-          remain zero.
-        - If ``gas_ftp_is_available`` is ``False``, all gas FTP-related arrays
-          remain zero.
-        - If FTP sharing is not applicable, the entire FTP portion is allocated
-          to the government.
-        - Calculations depend on attributes:
+        - If ``oil_ftp_is_available`` is ``False``, all oil FTP-related arrays remain zero.
+        - If ``gas_ftp_is_available`` is ``False``, all gas FTP-related arrays remain zero.
+        - If FTP sharing is disabled, the contractor's share remains zero and
+          the government receives the full FTP.
+        - Computation depends on the attributes:
           ``oil_ftp_portion``, ``gas_ftp_portion``,
           ``oil_ctr_pretax_share``, and ``gas_ctr_pretax_share``.
         """
-
-        # Initializes FTP arrays with zeros (associated with OIL)
-        self._oil_ftp = np.zeros_like(self.project_years, dtype=float)
-        self._oil_ftp_ctr = np.zeros_like(self.project_years, dtype=float)
-        self._oil_ftp_gov = np.zeros_like(self.project_years, dtype=float)
-
-        # Initializes FTP arrays with zeros (associated with GAS)
-        self._gas_ftp = np.zeros_like(self.project_years, dtype=float)
-        self._gas_ftp_ctr = np.zeros_like(self.project_years, dtype=float)
-        self._gas_ftp_gov = np.zeros_like(self.project_years, dtype=float)
 
         # Sharing condition if OIL FTP is available.
         # Fill attributes "_oil_ftp", "_oil_ftp_portion", and "_oil_ftp_gov"
@@ -895,7 +907,8 @@ class CostRecovery(BaseProject):
         ic_rate: float | np.ndarray,
     ):
         """
-        The function to apply the Investment Credit (IC) into the capital cost based on the given IC rate.
+        The function to apply the Investment Credit (IC) into the capital cost
+        based on the given IC rate.
 
         Parameters
         ----------
@@ -930,7 +943,7 @@ class CostRecovery(BaseProject):
 
         # Applying the IC calculation to only true value
         ic_arr = np.where(
-            np.asarray(capital_class.is_ic_applied) == True,
+            np.asarray(capital_class.is_ic_applied),
             capital_class.cost * ic_rate,
             0,
         )
@@ -950,6 +963,142 @@ class CostRecovery(BaseProject):
         ic_paid = np.minimum(revenue - ftp, ic_total + ic_unrec_next)
 
         return ic_total, ic_unrecovered, ic_paid
+
+    def _allocate_sunk_cost(
+        self, sunk_cost: np.ndarray, preonstream: np.ndarray
+    ) -> np.ndarray:
+        """
+        Allocate sunk cost and preonstream expenditures to the onstream year.
+
+        This method aggregates the total value of ``sunk_cost`` and
+        ``preonstream`` arrays into a single bulk value and assigns it to
+        the project year corresponding to the earlier of the oil or gas
+        onstream dates. All other years are set to zero.
+
+        This method will be used to support sunk cost treatment configuration.
+
+        Parameters
+        ----------
+        sunk_cost : np.ndarray
+            Array of sunk cost values across project years.
+        preonstream : np.ndarray
+            Array of preonstream cost values across project years.
+
+        Returns
+        -------
+        np.ndarray
+            A 1D array aligned with ``project_years`` where the summed bulk
+            value of ``sunk_cost`` and ``preonstream`` is positioned at the
+            onstream year, with zeros elsewhere.
+
+        Raises
+        ------
+        ValueError
+            If the onstream year does not uniquely match exactly one entry
+            in ``project_years``.
+
+        Notes
+        -----
+        - The onstream year is determined as the earlier of
+          ``oil_onstream_date.year`` and ``gas_onstream_date.year``.
+        - Both ``sunk_cost`` and ``preonstream`` arrays are expected to
+          align with ``project_years`` in length.
+        """
+
+        # Calculate bulk value of (sunk_cost + preonstream)
+        bulk_value = float(np.sum(sunk_cost + preonstream))
+
+        # Determine the location of onstream year in project years array
+        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        match = np.flatnonzero(self.project_years == onstream_yr)
+
+        # Expected only a single match; raise an exception if multiple matches occurs
+        if match.size != 1:
+            raise ValueError(f"Expected one onstream year match, got {match.size} instead")
+
+        onstream_id = int(match[0])
+
+        # Create a new array with bulk value positioned at the onstream year
+        arr = np.zeros_like(self.project_years, dtype=float)
+        arr[onstream_id] = bulk_value
+
+        return arr
+
+    def _apply_sunk_cost_treatment(self, sunk_cost_method: SunkCostMethod) -> None:
+        """
+        Apply sunk cost treatment for both oil and gas based on the selected method.
+
+        This method handles the allocation of non-depreciable and depreciable sunk
+        costs depending on the specified sunk cost treatment method.
+
+        The treatment can either depreciate sunk costs as tangible assets or
+        pool them in the onstream year.
+
+        Parameters
+        ----------
+        sunk_cost_method : SunkCostMethod
+            The method used for treating depreciable sunk cost.
+            Supported options:
+                - SunkCostMethod.DEPRECIATED_TANGIBLE
+                    Adds depreciable sunk cost to the corresponding
+                    depreciation schedules.
+                - SunkCostMethod.POOLED_1ST_YEAR
+                    Pools depreciable sunk cost in the onstream year
+                    through allocation.
+
+        Raises
+        ------
+        CostRecoveryException
+            If the specified `sunk_cost_method` is not recognized.
+
+        Notes
+        -----
+        - Non-depreciable sunk costs are always allocated directly
+          to the pre-onstream period.
+        - Depreciable sunk costs are treated differently depending
+          on the selected method:
+            * **Depreciated Tangible**: Incorporated into depreciation schedules.
+            * **Pooled 1st Year**: Allocated entirely in the onstream year.
+        """
+
+        # Carry out treatment for non depreciable sunk cost
+        oil_non_dep = self._allocate_sunk_cost(
+            sunk_cost=self._oil_non_depreciable_sunk_cost,
+            preonstream=self._oil_non_depreciable_preonstream,
+        )
+        gas_non_dep = self._allocate_sunk_cost(
+            sunk_cost=self._gas_non_depreciable_sunk_cost,
+            preonstream=self._gas_non_depreciable_preonstream,
+        )
+
+        # Specify treatment for depreciable sunk cost for OPTION 1: DEPRECIATED TANGIBLE
+        if sunk_cost_method == SunkCostMethod.DEPRECIATED_TANGIBLE:
+            oil_dep = (
+                self._oil_depreciations["sunk_cost"] + self._oil_depreciations["preonstream"]
+            )
+            gas_dep = (
+                self._gas_depreciations["sunk_cost"] + self._gas_depreciations["preonstream"]
+            )
+
+        # Specify treatment for depreciable sunk cost for OPTION 2: POOLED AT ONSTREAM YEAR
+        elif sunk_cost_method == SunkCostMethod.POOLED_1ST_YEAR:
+            oil_dep = self._allocate_sunk_cost(
+                sunk_cost=self._oil_depreciable_sunk_cost,
+                preonstream=self._oil_depreciable_preonstream,
+            )
+            gas_dep = self._allocate_sunk_cost(
+                sunk_cost=self._gas_depreciable_sunk_cost,
+                preonstream=self._gas_depreciable_preonstream,
+            )
+
+        else:
+            raise CostRecoveryException(
+                f"Sunk cost treatment method ({sunk_cost_method}) is unrecognized"
+            )
+
+        # Specify total depreciable + non depreciable sunk cost
+        self._oil_sunk_cost_depre_non_depre = oil_non_dep + oil_dep
+        self._gas_sunk_cost_depre_non_depre = gas_non_dep + gas_dep
 
     @staticmethod
     def _get_cost_recovery(
@@ -1593,8 +1742,6 @@ class CostRecovery(BaseProject):
         sum_undepreciated_cost: bool = False,
         sunk_cost_method: SunkCostMethod = SunkCostMethod.DEPRECIATED_TANGIBLE,
     ):
-        # Perform initial check to several input arguments
-        self._check_attributes()
 
         # Calculate WAP (Weighted Average Price) for each produced fluid
         self._get_wap_price()
@@ -1710,126 +1857,47 @@ class CostRecovery(BaseProject):
         if self.tax_split_type is not TaxSplitTypeCR.CONVENTIONAL:
             self._get_rc_icp_pretax()
 
-        # # Non-capital costs (intangible + opex + asr)
-        # self._oil_non_capital = (
-        #     self._oil_intangible_expenditures_post_tax
-        #     + self._oil_opex_expenditures_post_tax
-        #     + self._oil_asr_expenditures_post_tax
-        #     + self._oil_lbt_expenditures_post_tax
-        # )
-        #
-        # self._gas_non_capital = (
-        #     self._gas_intangible_expenditures_post_tax
-        #     + self._gas_opex_expenditures_post_tax
-        #     + self._gas_asr_expenditures_post_tax
-        #     + self._gas_lbt_expenditures_post_tax
-        # )
-        #
-        # # Filtering for only the cost that in the bracket of the project years
-        # self._oil_depreciation = self._oil_depreciation[
-        #     : (self.end_date.year - self.start_date.year + 1)
-        # ]
-        # self._gas_depreciation = self._gas_depreciation[
-        #     : (self.end_date.year - self.start_date.year + 1)
-        # ]
+        # Calculate capital and non-capital investments
+        self._get_investments()
 
-        # # Investment credit
-        # self._oil_ic, self._oil_ic_unrecovered, self._oil_ic_paid = self._get_ic(
-        #     revenue=self._oil_revenue,
-        #     ftp=self._oil_ftp,
-        #     cost_alloc=FluidType.OIL,
-        #     ic_rate=self.oil_ic_rate,
-        # )
-        #
-        # self._gas_ic, self._gas_ic_unrecovered, self._gas_ic_paid = self._get_ic(
-        #     revenue=self._gas_revenue,
-        #     ftp=self._gas_ftp,
-        #     cost_alloc=FluidType.GAS,
-        #     ic_rate=self.gas_ic_rate,
-        # )
+        # Investment credit
+        self._oil_ic, self._oil_ic_unrecovered, self._oil_ic_paid = self._get_ic(
+            revenue=self._oil_revenue,
+            ftp=self._oil_ftp,
+            cost_alloc=FluidType.OIL,
+            ic_rate=self.oil_ic_rate,
+        )
 
-        # # Contractor CashFlow
-        # # Conditional if based on the sunk cost method
-        # if sunk_cost_method == SunkCostMethod.POOLED_1ST_YEAR:
-        #     oil_sunk_cost = np.zeros_like(self.project_years, dtype=float)
-        #     gas_sunk_cost = np.zeros_like(self.project_years, dtype=float)
-        #
-        #     # Find the first index where revenue is non-zero
-        #     start_idx_oil = np.argmax(self._oil_revenue != 0)
-        #
-        #     oil_sunk_cost[start_idx_oil] = (
-        #             self._oil_sunk_cost_bulk["Tangible"]
-        #             + self._oil_sunk_cost_bulk["Intangible"]
-        #             + self._oil_preonstream_cost_bulk["Tangible"]
-        #             + self._oil_preonstream_cost_bulk["Intangible"]
-        #     )
-        #
-        #     # Find the first index where revenue is non-zero
-        #     start_idx_gas = np.argmax(self._gas_revenue != 0)
-        #
-        #     gas_sunk_cost[start_idx_gas] = (
-        #             self._gas_sunk_cost_bulk["Tangible"]
-        #             + self._gas_sunk_cost_bulk["Intangible"]
-        #             + self._gas_preonstream_cost_bulk["Tangible"]
-        #             + self._gas_preonstream_cost_bulk["Intangible"]
-        #     )
-        #
-        #     self._oil_cashflow = self._oil_contractor_take - (
-        #             self._oil_capital_expenditures_post_tax
-        #             + self._oil_non_capital
-        #             + oil_sunk_cost
-        #     )
-        #
-        #     self._gas_cashflow = self._gas_contractor_take - (
-        #             self._gas_capital_expenditures_post_tax
-        #             + self._gas_non_capital
-        #             + gas_sunk_cost
-        #     )
-        #
-        # elif sunk_cost_method == SunkCostMethod.DEPRECIATED_TANGIBLE:
-        #     self._oil_cashflow = self._oil_contractor_take - (
-        #             self._oil_capital_expenditures_post_tax
-        #             + self._oil_non_capital
-        #             + self._oil_cost_of_sales_expenditures_post_tax
-        #             + self._oil_sunk_cost_tangible_depreciation_charge
-        #             + self._oil_preonstream_cost_tangible_depreciation_charge
-        #             + self._oil_sunk_cost_array["Intangible"]
-        #             + self._oil_preonstream_cost_array["Intangible"]
-        #     )
-        #
-        #     self._gas_cashflow = self._gas_contractor_take - (
-        #             self._gas_capital_expenditures_post_tax
-        #             + self._gas_non_capital
-        #             + self._gas_cost_of_sales_expenditures_post_tax
-        #             + self._gas_sunk_cost_tangible_depreciation_charge
-        #             + self._gas_preonstream_cost_tangible_depreciation_charge
-        #             + self._gas_sunk_cost_array["Intangible"]
-        #             + self._gas_preonstream_cost_array["Intangible"]
-        #     )
-        #
-        # elif sunk_cost_method == SunkCostMethod.DIRECT:
-        #     self._oil_cashflow = self._oil_contractor_take - (
-        #             self._oil_capital_expenditures_post_tax
-        #             + self._oil_non_capital
-        #             + self._oil_sunk_cost_array["Tangible"]
-        #             + self._oil_preonstream_cost_array["Tangible"]
-        #             + self._oil_sunk_cost_array["Intangible"]
-        #             + self._oil_preonstream_cost_array["Intangible"]
-        #     )
-        #
-        #     self._gas_cashflow = self._gas_contractor_take - (
-        #             self._gas_capital_expenditures_post_tax
-        #             + self._gas_non_capital
-        #             + self._gas_sunk_cost_array["Tangible"]
-        #             + self._gas_preonstream_cost_array["Tangible"]
-        #             + self._gas_sunk_cost_array["Intangible"]
-        #             + self._gas_preonstream_cost_array["Intangible"]
-        #     )
-        #
-        # else:
-        #     raise SunkCostException(
-        #         f" SunkCostMethod: {sunk_cost_method}, is not recognized. It should be from SunkCost method enum"
-        #     )
+        self._gas_ic, self._gas_ic_unrecovered, self._gas_ic_paid = self._get_ic(
+            revenue=self._gas_revenue,
+            ftp=self._gas_ftp,
+            cost_alloc=FluidType.GAS,
+            ic_rate=self.gas_ic_rate,
+        )
+
+        # Apply sunk cost treatment
+        self._apply_sunk_cost_treatment(sunk_cost_method=sunk_cost_method)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_sunk_cost_depre_non_depre)}')
+        print(f'Length: {len(self._oil_sunk_cost_depre_non_depre)}')
+        print('_oil_sunk_cost_depre_non_depre = \n', self._oil_sunk_cost_depre_non_depre)
+
+        oil_capital_total = (
+            self._oil_sunk_cost_depre_non_depre
+            + self._oil_depreciations["postonstream"]
+            + self._oil_carry_forward_depreciation
+            + self._oil_intangible_expenditures_post_tax
+            + self._oil_opex_expenditures_post_tax
+            + self._oil_asr_expenditures_post_tax
+            + self._oil_lbt_expenditures_post_tax
+            + self._oil_cost_of_sales_expenditures_post_tax
+        )
+
+        print('\t')
+        print(f'Filetype: {type(oil_capital_total)}')
+        print(f'Length: {len(oil_capital_total)}')
+        print('oil_depr_total = \n', oil_capital_total)
 
         # (
         #     self._oil_unrecovered_before_transfer,

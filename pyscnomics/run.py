@@ -226,7 +226,7 @@ params_cr = {
     "oil_cost_of_sales_applied": False,
     "gas_cost_of_sales_applied": False,
     "sum_undepreciated_cost": False,
-    "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
+    "sunk_cost_method": SunkCostMethod.POOLED_1ST_YEAR,
 }
 
 cr = CostRecovery(

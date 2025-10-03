@@ -1996,7 +1996,9 @@ class GrossSplit(BaseProject):
 
         return years_exceed
 
-    def _allocate_sunk_cost(self, sunk_cost: np.ndarray, preonstream: np.ndarray) -> np.ndarray:
+    def _allocate_sunk_cost(
+        self, sunk_cost: np.ndarray, preonstream: np.ndarray
+    ) -> np.ndarray:
         """
         Allocate sunk cost and preonstream expenditures to the onstream year.
 
@@ -2039,11 +2041,14 @@ class GrossSplit(BaseProject):
         # Determine the location of onstream year in project years array
         onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
         match = np.flatnonzero(self.project_years == onstream_yr)
+
+        # Expected only a single match; raise an exception if multiple matches occurs
         if match.size != 1:
             raise ValueError(f"Expected one onstream year match, got {match.size} instead.")
+
         onstream_id = int(match[0])
 
-        # Create new array with bulk value positioned at the onstream year
+        # Create a new array with bulk value positioned at the onstream year
         arr = np.zeros_like(self.project_years, dtype=float)
         arr[onstream_id] = bulk_value
 
@@ -3513,8 +3518,7 @@ class GrossSplit(BaseProject):
         self._oil_gov_share = self._oil_revenue - self._oil_ctr_share_before_transfer
         self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
 
-        # Calculate capital and non-capital investments for reporting purposes
-        # (NOT for business logic)
+        # Calculate capital and non-capital investments
         self._get_investments()
 
         # Cost to be deducted
