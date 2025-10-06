@@ -2318,7 +2318,7 @@ class GrossSplit(BaseProject):
         self._consolidated_wap_price = self._oil_wap_price + self._gas_wap_price
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue
 
-        # Attributes associated with consolidated sunkcost
+        # Attributes associated with consolidated sunk cost
         self._consolidated_depreciable_sunk_cost = (
             self._oil_depreciable_sunk_cost + self._gas_depreciable_sunk_cost
         )
@@ -2355,17 +2355,17 @@ class GrossSplit(BaseProject):
             oil_post_tax = getattr(self, f"_oil_{categ}_expenditures_post_tax")
             gas_post_tax = getattr(self, f"_gas_{categ}_expenditures_post_tax")
 
-            # Set attributes associated with expenditures pre tax
+            # Set attributes associated with consolidated expenditures pre tax
             setattr(
                 self, f"_consolidated_{categ}_expenditures_pre_tax", oil_pre_tax + gas_pre_tax
             )
 
-            # Set attributes associated with indirect taxes
+            # Set attributes associated with consolidated indirect taxes
             setattr(
                 self, f"_consolidated_{categ}_indirect_tax", oil_indirect_tax + gas_indirect_tax
             )
 
-            # Set attributes associated with expenditures post tax
+            # Set attributes associated with consolidated expenditures post tax
             setattr(
                 self, f"_consolidated_{categ}_expenditures_post_tax", oil_post_tax + gas_post_tax
             )

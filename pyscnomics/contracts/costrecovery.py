@@ -19,7 +19,7 @@ from pyscnomics.econ.selection import (
     SunkCostMethod,
     InitialYearDepreciationIncurred,
 )
-from pyscnomics.econ.depreciation import unit_of_production_rate
+# from pyscnomics.econ.depreciation import unit_of_production_rate
 
 
 class SunkCostException(Exception):
@@ -219,11 +219,13 @@ class CostRecovery(BaseProject):
     _consolidated_ftp: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ftp_ctr: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ftp_gov: np.ndarray = field(default=None, init=False, repr=False)
+
     _consolidated_ic: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ic_unrecovered: np.ndarray = field(
         default=None, init=False, repr=False
     )
     _consolidated_ic_paid: np.ndarray = field(default=None, init=False, repr=False)
+
     _consolidated_unrecovered_before_transfer: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -245,6 +247,7 @@ class CostRecovery(BaseProject):
     _consolidated_ets_after_transfer: np.ndarray = field(
         default=None, init=False, repr=False
     )
+
     _consolidated_contractor_share: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -1131,7 +1134,8 @@ class CostRecovery(BaseProject):
         non_capital: np.ndarray
             The array containing the non-capital expenditures.
             non_capital expenditures is consisting of:
-            Intangible, Operating Expenditures (OPEX) and Abandonment Site and Restoration (ASR) Expenditures.
+            Intangible, Operating Expenditures (OPEX) and Abandonment Site
+            and Restoration (ASR) Expenditures.
         cost_to_be_recovered: np.ndarray
             The array containing the cost to be recovered.
         cr_cap_rate: float
@@ -1182,6 +1186,7 @@ class CostRecovery(BaseProject):
 
         result = revenue - (ftp_ctr + ftp_gov) - ic - cost_recovery
         tol = np.full_like(result, fill_value=1.0e-5)
+
         return np.where(result < tol, 0, result)
 
     @staticmethod
@@ -1233,6 +1238,7 @@ class CostRecovery(BaseProject):
         )
 
         tol = np.full_like(ets_after_transfer, fill_value=1.0e-5)
+
         return np.where(ets_after_transfer < tol, 0, ets_after_transfer)
 
     @staticmethod
@@ -1275,7 +1281,9 @@ class CostRecovery(BaseProject):
         ftp_tax_regime: FTPTaxRegime = FTPTaxRegime.PRE_PDJP_20_2017,
     ) -> np.ndarray:
         """
-        The function to get the tax payment of the Cost Recovery contract based on the chosen regime.
+        The function to get the tax payment of the Cost Recovery contract based on
+        the chosen regime.
+
         There are three existing regime, they are :
             - PRE_PDJP_20_2017
             - PDJP_20_2017
@@ -1285,16 +1293,16 @@ class CostRecovery(BaseProject):
         ----------
         [1] PRE_PDJP_20_2017
             In general, the tax will be applied after the contractor share is not zero.
-            The taxable object that occurs at the time prior of the applied tax time will be accumulated and weighted
-            on the time when the tax is applied.
+            The taxable object that occurs at the time prior of the applied tax time
+            will be accumulated and weighted on the time when the tax is applied.
 
         [2] PDJP_20_2017
-            The tax will be applied when the cumulative First Tranche Petroleum (FTP) is greater than
-            the unrecoverable cost
+            The tax will be applied when the cumulative First Tranche Petroleum (FTP)
+            is greater than the unrecoverable cost
 
         [3] DIRECT_MODE
-            The tax will be applied regardless the cumulative FTP, unrecoverable cost and Contractor Share condition.
-
+            The tax will be applied regardless the cumulative FTP, unrecoverable cost
+            and Contractor Share condition.
 
         Parameters
         ----------
@@ -1315,7 +1323,6 @@ class CostRecovery(BaseProject):
         -------
         ctr_tax: np.ndarray
             The contractor's tax payment
-
         """
 
         # Tax payment prior to PDJP 2017
@@ -1481,6 +1488,7 @@ class CostRecovery(BaseProject):
         ctr_tax: np.ndarray
             The contractor's tax payment
         """
+
         unpaid_tax = np.zeros_like(ets_ctr, dtype=float)
         unpaid_tax[0] = 0
         ctr_tax = np.zeros_like(ets_ctr, dtype=float)
@@ -1491,29 +1499,23 @@ class CostRecovery(BaseProject):
 
         return unpaid_tax, ctr_tax
 
-
-
-    def _prepare_sunk_cost_contract(self, depr_method, decline_factor):
-        # Get the revenue total
-        all_revenue = self._oil_revenue + self._gas_revenue
-
-        # Find the first index where b is non-zero
-        start_idx = np.argmax(all_revenue != 0)
-
-        # Slice a from that index to the end
-        prod_year = self.project_years[start_idx:]
-
-        # Prepare several attributes associated with sunk cost and preonstream cost
-        self.fit_sunk_preonstream_cost(
-            prod_year=prod_year,
-            prod=self._oil_lifting.prod_rate_total,
-            tax_rate=0.0,
-            depr_method=depr_method,
-            decline_factor=decline_factor,
-            salvage_value=0.0,
-        )
-
     def _get_consolidated_profiles_cr(self, ftp_tax_regime: FTPTaxRegime) -> None:
+        """
+        Consolidate oil and gas profiles into combined attributes.
+
+        This method aggregates oil and gas data for lifting, prices, revenue,
+        sunk costs, expenditures (pre-tax, post-tax), indirect taxes,
+        total expenses, depreciation/amortization, cost recovery logic,
+        tax calculations, and cashflows into consolidated project-level
+        attributes.
+
+        Notes
+        -----
+        The consolidated attributes are computed as element-wise sums of the
+        corresponding oil and gas attributes. No return value is produced;
+        all results are stored in instance variables prefixed with
+        ``_consolidated_``.
+        """
 
         # Attributes associated with consolidated lifting
         self._consolidated_lifting = (
@@ -1532,102 +1534,96 @@ class CostRecovery(BaseProject):
         )
         self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
 
-        # Attributes associated with consolidated expenditures pre tax
-        self._consolidated_capital_expenditures_pre_tax = (
-            self._oil_capital_expenditures_pre_tax
-            + self._gas_capital_expenditures_pre_tax
+        # Attributes associated with consolidated preonstream
+        self._consolidated_depreciable_preonstream = (
+            self._oil_depreciable_preonstream + self._gas_depreciable_preonstream
         )
-        self._consolidated_intangible_expenditures_pre_tax = (
-            self._oil_intangible_expenditures_pre_tax
-            + self._gas_intangible_expenditures_pre_tax
+        self._consolidated_non_depreciable_preonstream = (
+            self._oil_non_depreciable_preonstream + self._gas_non_depreciable_preonstream
         )
-        self._consolidated_opex_expenditures_pre_tax = (
-            self._oil_opex_expenditures_pre_tax + self._gas_opex_expenditures_pre_tax
-        )
-        self._consolidated_asr_expenditures_pre_tax = (
-            self._oil_asr_expenditures_pre_tax + self._gas_asr_expenditures_pre_tax
-        )
-        self._consolidated_lbt_expenditures_pre_tax = (
-            self._oil_lbt_expenditures_pre_tax + self._gas_lbt_expenditures_pre_tax
-        )
-        self._consolidated_cost_of_sales_expenditures_pre_tax = (
-            self._oil_cost_of_sales_expenditures_pre_tax
-            + self._gas_cost_of_sales_expenditures_pre_tax
-        )
-        self._consolidated_expenditures_pre_tax = (
+        self._consolidated_preonstream = self._oil_preonstream + self._gas_preonstream
+
+        categories = [
+            "capital",
+            "intangible",
+            "opex",
+            "asr",
+            "lbt",
+            "cost_of_sales",
+        ]
+
+        # Attributes associated with consolidated expenditures pre tax,
+        # consolidated indirect tax, and consolidated expenditures post tax
+        for categ in categories:
+            oil_pre_tax = getattr(self, f"_oil_{categ}_expenditures_pre_tax")
+            gas_pre_tax = getattr(self, f"_gas_{categ}_expenditures_pre_tax")
+            oil_indirect_tax = getattr(self, f"_oil_{categ}_indirect_tax")
+            gas_indirect_tax = getattr(self, f"_gas_{categ}_indirect_tax")
+            oil_post_tax = getattr(self, f"_oil_{categ}_expenditures_post_tax")
+            gas_post_tax = getattr(self, f"_gas_{categ}_expenditures_post_tax")
+
+            # Set attributes associated with consolidated expenditures pre tax
+            setattr(
+                self,
+                f"_consolidated_{categ}_expenditures_pre_tax",
+                oil_pre_tax + gas_pre_tax
+            )
+
+            # Set attributes associated with consolidated indirect taxes
+            setattr(
+                self,
+                f"_consolidated_{categ}_indirect_tax",
+                oil_indirect_tax + gas_indirect_tax
+            )
+
+            # Set attributes associated with consolidated expenditures post tax
+            setattr(
+                self,
+                f"_consolidated_{categ}_expenditures_post_tax",
+                oil_post_tax + gas_post_tax
+            )
+
+        self._consolidated_total_expenditures_pre_tax = (
             self._oil_total_expenditures_pre_tax + self._gas_total_expenditures_pre_tax
         )
 
-        # Attributes associated with consolidated indirect tax
-        self._consolidated_capital_indirect_tax = (
-            self._oil_capital_indirect_tax + self._gas_capital_indirect_tax
-        )
-        self._consolidated_intangible_indirect_tax = (
-            self._oil_intangible_indirect_tax + self._gas_intangible_indirect_tax
-        )
-        self._consolidated_opex_indirect_tax = (
-            self._oil_opex_indirect_tax + self._gas_opex_indirect_tax
-        )
-        self._consolidated_asr_indirect_tax = (
-            self._oil_asr_indirect_tax + self._gas_asr_indirect_tax
-        )
-        self._consolidated_lbt_indirect_tax = (
-            self._oil_lbt_indirect_tax + self._gas_lbt_indirect_tax
-        )
-        self._consolidated_cost_of_sales_indirect_tax = (
-            self._oil_cost_of_sales_indirect_tax + self._gas_cost_of_sales_indirect_tax
-        )
-        self._consolidated_indirect_tax = (
+        self._consolidated_total_indirect_tax = (
             self._oil_total_indirect_tax + self._gas_total_indirect_tax
         )
 
-        # Attributes associated with consolidated expenditures post tax
-        self._consolidated_capital_expenditures_post_tax = (
-            self._oil_capital_expenditures_post_tax
-            + self._gas_capital_expenditures_post_tax
-        )
-        self._consolidated_intangible_expenditures_post_tax = (
-            self._oil_intangible_expenditures_post_tax
-            + self._gas_intangible_expenditures_post_tax
-        )
-        self._consolidated_opex_expenditures_post_tax = (
-            self._oil_opex_expenditures_post_tax + self._gas_opex_expenditures_post_tax
-        )
-        self._consolidated_asr_expenditures_post_tax = (
-            self._oil_asr_expenditures_post_tax + self._gas_asr_expenditures_post_tax
-        )
-        self._consolidated_lbt_expenditures_post_tax = (
-            self._oil_lbt_expenditures_post_tax + self._gas_lbt_expenditures_post_tax
-        )
-        self._consolidated_cost_of_sales_expenditures_post_tax = (
-            self._oil_cost_of_sales_expenditures_post_tax
-            + self._gas_cost_of_sales_expenditures_post_tax
-        )
-        self._consolidated_expenditures_post_tax = (
+        self._consolidated_total_expenditures_post_tax = (
             self._oil_total_expenditures_post_tax + self._gas_total_expenditures_post_tax
         )
 
-        # Attribute associated with consolidated non capital
-        self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
-
-        # Attributes associated with consolidated depreciation
-        self._consolidated_depreciation = self._oil_depreciation + self._gas_depreciation
-        self._consolidated_undepreciated_asset = (
-            self._oil_undepreciated_asset + self._gas_undepreciated_asset
-        )
+        # Attributes associated with carry forward depreciation
         self._consolidated_carry_forward_depreciation = (
             self._oil_carry_forward_depreciation + self._gas_carry_forward_depreciation
         )
 
-        # Attributes associated with core business logic consolidated profiles
+        # Attributes associated with depreciations and undepreciated assets
+        cost_types = ["sunk_cost", "preonstream", "postonstream"]
+
+        self._consolidated_depreciations = {
+            c: self._oil_depreciations[c] + self._gas_depreciations[c]
+            for c in cost_types
+        }
+
+        self._consolidated_undepreciated_assets = {
+            c: self._oil_undepreciated_assets[c] + self._gas_undepreciated_assets[c]
+            for c in cost_types
+        }
+
+        # Attributes associated with core business logics
         self._consolidated_ftp = self._oil_ftp + self._gas_ftp
         self._consolidated_ftp_ctr = self._oil_ftp_ctr + self._gas_ftp_ctr
         self._consolidated_ftp_gov = self._oil_ftp_gov + self._gas_ftp_gov
+
         self._consolidated_ic = self._oil_ic + self._gas_ic
         self._consolidated_ic_unrecovered = (
             self._oil_ic_unrecovered + self._gas_ic_unrecovered
         )
         self._consolidated_ic_paid = self._oil_ic_paid + self._gas_ic_paid
+
         self._consolidated_unrecovered_before_transfer = (
             self._oil_unrecovered_before_transfer + self._gas_unrecovered_before_transfer
         )
@@ -1650,6 +1646,7 @@ class CostRecovery(BaseProject):
         self._consolidated_ets_after_transfer = (
             self._oil_ets_after_transfer + self._gas_ets_after_transfer
         )
+
         self._consolidated_contractor_share = (
             self._oil_contractor_share + self._gas_contractor_share
         )
@@ -1657,10 +1654,12 @@ class CostRecovery(BaseProject):
             self._oil_government_share + self._gas_government_share
         )
 
-        # Attributes associated with consolidated DMO
+        # Attributes associated with DMO
         self._consolidated_dmo_volume = self._oil_dmo_volume + self._gas_dmo_volume
         self._consolidated_dmo_fee = self._oil_dmo_fee + self._gas_dmo_fee
         self._consolidated_ddmo = self._oil_ddmo + self._gas_ddmo
+
+        # Attributes associated with tax
         self._consolidated_taxable_income = (
             self._oil_taxable_income + self._gas_taxable_income
         )
@@ -1718,12 +1717,12 @@ class CostRecovery(BaseProject):
             + self._consolidated_ddmo
         )
 
-        # self._consolidated_cashflow = self._consolidated_contractor_take - (
-        #     self._consolidated_capital_cost
-        #     + self._consolidated_non_capital
-        #     + self._consolidated_cost_of_sales
-        # )
+        # Attributes associated with consolidated investments
+        self._consolidated_capital = self._oil_capital + self._gas_capital
+        self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
+        self._consolidated_total_expenses = self._oil_total_expenses + self._gas_total_expenses
 
+        # Attribute associated with consolidated cashflow
         self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
 
     def run(
@@ -1951,26 +1950,6 @@ class CostRecovery(BaseProject):
             cr_cap_rate=self.gas_cr_cap_rate,
         )
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_revenue)}')
-        print(f'Length: {len(self._oil_revenue)}')
-        print('_oil_revenue = \n', self._oil_revenue)
-
-        print('\t')
-        print(f'Filetype: {type(self._oil_cost_to_be_recovered)}')
-        print(f'Length: {len(self._oil_cost_to_be_recovered)}')
-        print('_oil_cost_to_be_recovered = \n', self._oil_cost_to_be_recovered)
-
-        print('\t')
-        print(f'Filetype: {type(self._oil_unrecovered_before_transfer)}')
-        print(f'Length: {len(self._oil_unrecovered_before_transfer)}')
-        print('_oil_unrecovered_before_transfer = \n', self._oil_unrecovered_before_transfer)
-
-        print('\t')
-        print(f'Filetype: {type(self._oil_cost_recovery)}')
-        print(f'Length: {len(self._oil_cost_recovery)}')
-        print('_oil_cost_recovery = \n', self._oil_cost_recovery)
-
         # ETS (Equity to be Split) before transfer/consolidation
         self._oil_ets_before_transfer = self._get_ets_before_transfer(
             revenue=self._oil_revenue,
@@ -2064,146 +2043,145 @@ class CostRecovery(BaseProject):
             ets=self._gas_ets_after_transfer, pretax_ctr=self.gas_ctr_pretax_share
         )
 
-        # print('\t')
-        # print(f'Filetype: {type(self._oil_contractor_share)}')
-        # print(f'Length: {len(self._oil_contractor_share)}')
-        # print('_oil_contractor_share = \n', self._oil_contractor_share)
-        #
-        # print('\t')
-        # print(f'Filetype: {type(self._oil_government_share)}')
-        # print(f'Length: {len(self._oil_government_share)}')
-        # print('_oil_government_share = \n', self._oil_government_share)
+        # DMO
+        self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo(
+            onstream_date=self.oil_onstream_date,
+            start_date=self.start_date,
+            project_years=self.project_years,
+            dmo_holiday_duration=self.oil_dmo_holiday_duration,
+            dmo_volume_portion=self.oil_dmo_volume_portion,
+            dmo_fee_portion=self.oil_dmo_fee_portion,
+            lifting=self._oil_lifting,
+            price=self._oil_wap_price,
+            ctr_pretax_share=self.oil_ctr_pretax_share,
+            unrecovered_cost=self._oil_unrecovered_after_transfer,
+            is_dmo_end_weighted=is_dmo_end_weighted,
+            ets=self._oil_ets_after_transfer,
+            ctr_ets=self._oil_contractor_share,
+            ctr_ftp=self._oil_ftp_ctr,
+            post_uu_22_year2001=post_uu_22_year2001,
+        )
 
-        # # DMO
-        # self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo(
-        #     onstream_date=self.oil_onstream_date,
-        #     start_date=self.start_date,
-        #     project_years=self.project_years,
-        #     dmo_holiday_duration=self.oil_dmo_holiday_duration,
-        #     dmo_volume_portion=self.oil_dmo_volume_portion,
-        #     dmo_fee_portion=self.oil_dmo_fee_portion,
-        #     lifting=self._oil_lifting,
-        #     price=self._oil_wap_price,
-        #     ctr_pretax_share=self.oil_ctr_pretax_share,
-        #     unrecovered_cost=self._oil_unrecovered_after_transfer,
-        #     is_dmo_end_weighted=is_dmo_end_weighted,
-        #     ets=self._oil_ets_after_transfer,
-        #     ctr_ets=self._oil_contractor_share,
-        #     ctr_ftp=self._oil_ftp_ctr,
-        #     post_uu_22_year2001=post_uu_22_year2001,
-        # )
-        #
-        # self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo(
-        #     onstream_date=self.gas_onstream_date,
-        #     start_date=self.start_date,
-        #     project_years=self.project_years,
-        #     dmo_holiday_duration=self.gas_dmo_holiday_duration,
-        #     dmo_volume_portion=self.gas_dmo_volume_portion,
-        #     dmo_fee_portion=self.gas_dmo_fee_portion,
-        #     lifting=self._gas_lifting,
-        #     price=self._gas_wap_price,
-        #     ctr_pretax_share=self.gas_ctr_pretax_share,
-        #     unrecovered_cost=self._gas_unrecovered_after_transfer,
-        #     is_dmo_end_weighted=is_dmo_end_weighted,
-        #     ets=self._gas_ets_after_transfer,
-        #     ctr_ets=self._gas_contractor_share,
-        #     ctr_ftp=self._gas_ftp_ctr,
-        #     post_uu_22_year2001=post_uu_22_year2001,
-        # )
-        #
-        # # Adjusting DDMO for Pre PDJP
-        # if ftp_tax_regime is FTPTaxRegime.PRE_PDJP_20_2017:
-        #     self._oil_ddmo = np.where(self._oil_contractor_share > 0, self._oil_ddmo, 0)
-        #     self._gas_ddmo = np.where(self._gas_contractor_share > 0, self._gas_ddmo, 0)
-        #
-        # # Taxable income (also known as Net Contractor Share - NCS)
-        # self._oil_taxable_income = (
-        #     self._oil_ftp_ctr
-        #     + self._oil_contractor_share
-        #     + self._oil_ic_paid
-        #     - self._oil_ddmo
-        # )
-        # self._gas_taxable_income = (
-        #     self._gas_ftp_ctr
-        #     + self._gas_contractor_share
-        #     + self._gas_ic_paid
-        #     - self._gas_ddmo
-        # )
-        #
-        # # Tax Payment
-        # # Generating Tax array if tax_rate argument is a single value not array
-        # if isinstance(effective_tax_rate, float):
-        #     self._tax_rate_arr = np.full_like(
-        #         self.project_years, effective_tax_rate, dtype=float
-        #     )
-        #
-        # # Generating Tax array based on the tax regime if tax_rate argument is None
-        # elif effective_tax_rate is None:
-        #     self._tax_rate_arr = self._get_tax_by_regime(tax_regime=tax_regime)
-        # elif isinstance(effective_tax_rate, np.ndarray):
-        #     self._tax_rate_arr = effective_tax_rate
-        # else:
-        #     self._tax_rate_arr = np.full_like(
-        #         self.project_years, fill_value=0.0, dtype=float
-        #     )
-        #
-        # self._oil_tax_payment = self._get_tax_payment(
-        #     ctr_share=self._oil_contractor_share,
-        #     taxable_income=self._oil_taxable_income,
-        #     tax_rate=self._tax_rate_arr,
-        #     ftp_ctr=self._oil_ftp_ctr,
-        #     unrec_cost=self._oil_unrecovered_after_transfer,
-        #     ftp_tax_regime=ftp_tax_regime,
-        # )
-        #
-        # self._gas_tax_payment = self._get_tax_payment(
-        #     ctr_share=self._gas_contractor_share,
-        #     taxable_income=self._gas_taxable_income,
-        #     tax_rate=self._tax_rate_arr,
-        #     ftp_ctr=self._gas_ftp_ctr,
-        #     unrec_cost=self._gas_unrecovered_after_transfer,
-        #     ftp_tax_regime=ftp_tax_regime,
-        # )
-        #
-        # # Contractor Share
-        # self._oil_ctr_net_share = self._oil_taxable_income - self._oil_tax_payment
-        # self._gas_ctr_net_share = self._gas_taxable_income - self._gas_tax_payment
-        #
-        # # Contractor Take by Fluid
-        # self._oil_contractor_take = (
-        #     self._oil_taxable_income
-        #     - self._oil_tax_payment
-        #     + self._oil_cost_recovery_after_tf
-        # )
-        #
-        # self._gas_contractor_take = (
-        #     self._gas_taxable_income
-        #     - self._gas_tax_payment
-        #     + self._gas_cost_recovery_after_tf
-        # )
-        #
-        # # Government Take by Fluid
-        # self._oil_government_take = (
-        #     self._oil_ftp_gov
-        #     + self._oil_government_share
-        #     + self._oil_tax_payment
-        #     + self._oil_ddmo
-        # )
-        #
-        # self._gas_government_take = (
-        #     self._gas_ftp_gov
-        #     + self._gas_government_share
-        #     + self._gas_tax_payment
-        #     + self._gas_ddmo
-        # )
-        #
-        # # Returning the gross revenue
-        # self._oil_revenue = (
-        #     self._oil_revenue + self._oil_cost_of_sales_expenditures_post_tax
-        # )
-        # self._gas_revenue = (
-        #     self._gas_revenue + self._gas_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # # Consolidated attributes
-        # self._get_consolidated_profiles_cr(ftp_tax_regime=ftp_tax_regime)
+        self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo(
+            onstream_date=self.gas_onstream_date,
+            start_date=self.start_date,
+            project_years=self.project_years,
+            dmo_holiday_duration=self.gas_dmo_holiday_duration,
+            dmo_volume_portion=self.gas_dmo_volume_portion,
+            dmo_fee_portion=self.gas_dmo_fee_portion,
+            lifting=self._gas_lifting,
+            price=self._gas_wap_price,
+            ctr_pretax_share=self.gas_ctr_pretax_share,
+            unrecovered_cost=self._gas_unrecovered_after_transfer,
+            is_dmo_end_weighted=is_dmo_end_weighted,
+            ets=self._gas_ets_after_transfer,
+            ctr_ets=self._gas_contractor_share,
+            ctr_ftp=self._gas_ftp_ctr,
+            post_uu_22_year2001=post_uu_22_year2001,
+        )
+
+        # Adjusting DDMO for Pre PDJP
+        if ftp_tax_regime is FTPTaxRegime.PRE_PDJP_20_2017:
+            self._oil_ddmo = np.where(self._oil_contractor_share > 0, self._oil_ddmo, 0)
+            self._gas_ddmo = np.where(self._gas_contractor_share > 0, self._gas_ddmo, 0)
+
+        # Taxable income (also known as Net Contractor Share)
+        self._oil_taxable_income = (
+            self._oil_ftp_ctr
+            + self._oil_contractor_share
+            + self._oil_ic_paid
+            - self._oil_ddmo
+        )
+
+        self._gas_taxable_income = (
+            self._gas_ftp_ctr
+            + self._gas_contractor_share
+            + self._gas_ic_paid
+            - self._gas_ddmo
+        )
+
+        # Tax Rate
+        # Procedure if information about effective tax rate is not given
+        if effective_tax_rate is None:
+            tax_rate_arr = self._get_tax_by_regime(tax_regime=tax_regime)
+
+        else:
+            # If effective tax rate is given as an array
+            if isinstance(effective_tax_rate, np.ndarray):
+                tax_rate_arr = effective_tax_rate
+
+            # If effective tax rate is given as a single value
+            elif isinstance(effective_tax_rate, (float, int)):
+                tax_rate_arr = np.full_like(
+                    self.project_years, effective_tax_rate, dtype=float
+                )
+            else:
+                tax_rate_arr = np.zeros_like(self.project_years, dtype=float)
+
+        self._tax_rate_arr = tax_rate_arr
+
+        # Tax Payment
+        self._oil_tax_payment = self._get_tax_payment(
+            ctr_share=self._oil_contractor_share,
+            taxable_income=self._oil_taxable_income,
+            tax_rate=self._tax_rate_arr,
+            ftp_ctr=self._oil_ftp_ctr,
+            unrec_cost=self._oil_unrecovered_after_transfer,
+            ftp_tax_regime=ftp_tax_regime,
+        )
+
+        self._gas_tax_payment = self._get_tax_payment(
+            ctr_share=self._gas_contractor_share,
+            taxable_income=self._gas_taxable_income,
+            tax_rate=self._tax_rate_arr,
+            ftp_ctr=self._gas_ftp_ctr,
+            unrec_cost=self._gas_unrecovered_after_transfer,
+            ftp_tax_regime=ftp_tax_regime,
+        )
+
+        # Contractor Share
+        self._oil_ctr_net_share = self._oil_taxable_income - self._oil_tax_payment
+        self._gas_ctr_net_share = self._gas_taxable_income - self._gas_tax_payment
+
+        # Contractor Take by Fluid
+        self._oil_contractor_take = (
+            self._oil_taxable_income
+            - self._oil_tax_payment
+            + self._oil_cost_recovery_after_tf
+        )
+
+        self._gas_contractor_take = (
+            self._gas_taxable_income
+            - self._gas_tax_payment
+            + self._gas_cost_recovery_after_tf
+        )
+
+        # Contractor cashflow
+        self._oil_cashflow = self._oil_contractor_take - self._oil_total_expenses
+        self._gas_cashflow = self._gas_contractor_take - self._gas_total_expenses
+
+        # Government Take by Fluid
+        self._oil_government_take = (
+            self._oil_ftp_gov
+            + self._oil_government_share
+            + self._oil_tax_payment
+            + self._oil_ddmo
+        )
+
+        self._gas_government_take = (
+            self._gas_ftp_gov
+            + self._gas_government_share
+            + self._gas_tax_payment
+            + self._gas_ddmo
+        )
+
+        # Returning the gross revenue
+        self._oil_revenue = (
+            self._oil_revenue + self._oil_cost_of_sales_expenditures_post_tax
+        )
+        self._gas_revenue = (
+            self._gas_revenue + self._gas_cost_of_sales_expenditures_post_tax
+        )
+
+        # Prepare consolidated profiles
+        self._get_consolidated_profiles_cr(ftp_tax_regime=ftp_tax_regime)
