@@ -204,8 +204,8 @@ kwargs_cr = {
     "gas_dmo_fee_portion": 1.0,
     "gas_dmo_holiday_duration": 60,
     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    "oil_carry_forward_depreciation": 100,
-    "gas_carry_forward_depreciation": 50,
+    # "oil_carry_forward_depreciation": 100,
+    # "gas_carry_forward_depreciation": 50,
 }
 
 params_cr = {
