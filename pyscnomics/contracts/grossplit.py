@@ -25,6 +25,9 @@ from pyscnomics.econ.selection import (
 )
 from pyscnomics.econ.depreciation import unit_of_production_rate
 
+pd.set_option("display.max_rows", 200)
+pd.set_option("display.max_columns", 50)
+
 
 class GrossSplitException(Exception):
     """ Exception to be raised for a misuse of GrossSplit class """

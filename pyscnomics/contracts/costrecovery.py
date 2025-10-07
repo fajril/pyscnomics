@@ -19,7 +19,9 @@ from pyscnomics.econ.selection import (
     SunkCostMethod,
     InitialYearDepreciationIncurred,
 )
-# from pyscnomics.econ.depreciation import unit_of_production_rate
+
+pd.set_option("display.max_rows", 200)
+pd.set_option("display.max_columns", 50)
 
 
 class SunkCostException(Exception):
@@ -135,6 +137,12 @@ class CostRecovery(BaseProject):
     _oil_undepreciated_assets: dict = field(default_factory=lambda: {}, init=False, repr=False)
     _gas_undepreciated_assets: dict = field(default_factory=lambda: {}, init=False, repr=False)
 
+    # Attributes associated with total depreciation and total nondepreciable
+    _oil_depr_total: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_depr_total: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_non_depr_total: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_non_depr_total: np.ndarray = field(default=None, init=False, repr=False)
+
     # Attributes associated with FTP
     _oil_ftp: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ftp_ctr: np.ndarray = field(default=None, init=False, repr=False)
@@ -166,6 +174,7 @@ class CostRecovery(BaseProject):
     _gas_ets_before_transfer: np.ndarray = field(default=None, init=False, repr=False)
     _transfer_to_oil: np.ndarray = field(default=None, init=False, repr=False)
     _transfer_to_gas: np.ndarray = field(default=None, init=False, repr=False)
+
     _oil_unrecovered_after_transfer: np.ndarray = field(default=None, init=False, repr=False)
     _gas_unrecovered_after_transfer: np.ndarray = field(default=None, init=False, repr=False)
     _oil_cost_to_be_recovered_after_tf: np.ndarray = field(
@@ -178,6 +187,7 @@ class CostRecovery(BaseProject):
     _gas_cost_recovery_after_tf: np.ndarray = field(default=None, init=False, repr=False)
     _oil_ets_after_transfer: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ets_after_transfer: np.ndarray = field(default=None, init=False, repr=False)
+
     _oil_contractor_share: np.ndarray = field(default=None, init=False, repr=False)
     _oil_government_share: np.ndarray = field(default=None, init=False, repr=False)
     _gas_contractor_share: np.ndarray = field(default=None, init=False, repr=False)
@@ -216,6 +226,9 @@ class CostRecovery(BaseProject):
     _consolidated_undepreciated_assets: dict = field(
         default_factory=lambda: {}, init=False, repr=False
     )
+    _consolidated_depr_total: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_non_depr_total: np.ndarray = field(default=None, init=False, repr=False)
+
     _consolidated_ftp: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ftp_ctr: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_ftp_gov: np.ndarray = field(default=None, init=False, repr=False)
@@ -226,6 +239,9 @@ class CostRecovery(BaseProject):
     )
     _consolidated_ic_paid: np.ndarray = field(default=None, init=False, repr=False)
 
+    _consolidated_cost_to_be_recovered_before_tf: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
     _consolidated_unrecovered_before_transfer: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -235,10 +251,11 @@ class CostRecovery(BaseProject):
     _consolidated_ets_before_transfer: np.ndarray = field(
         default=None, init=False, repr=False
     )
-    _consolidated_unrecovered_after_transfer: np.ndarray = field(
+
+    _consolidated_cost_to_be_recovered_after_tf: np.ndarray = field(
         default=None, init=False, repr=False
     )
-    _consolidated_cost_to_be_recovered_after_tf: np.ndarray = field(
+    _consolidated_unrecovered_after_transfer: np.ndarray = field(
         default=None, init=False, repr=False
     )
     _consolidated_cost_recovery_after_tf: np.ndarray = field(
@@ -271,6 +288,12 @@ class CostRecovery(BaseProject):
     _consolidated_government_take: np.ndarray = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
+        """
+        Handles the following operations/procedures:
+        -   Perform initial check to several input arguments.
+        -   Initialize attributes associated with OIL FTP.
+        -   Initialize attributes associated with GAS FTP.
+        """
 
         # Call parent's post init from class BaseProject
         super().__post_init__()
@@ -288,7 +311,7 @@ class CostRecovery(BaseProject):
         self._gas_ftp_ctr = np.zeros_like(self.project_years, dtype=float)
         self._gas_ftp_gov = np.zeros_like(self.project_years, dtype=float)
 
-    def _check_attributes(self):
+    def _check_attributes(self) -> None:
         """
         Validate and normalize project attributes for fractions, DMO holidays,
         and carry-forward depreciation.
@@ -418,15 +441,17 @@ class CostRecovery(BaseProject):
         inflation_rate_applied_to: InflationAppliedTo,
     ) -> None:
         """
-        Compute and assign depreciation schedules and undepreciated assets
-        for oil and gas cost types.
+        Compute and assign annual depreciation schedules and undepreciated
+        asset balances for oil and gas capital expenditures.
 
-        This method calculates depreciation and undepreciated asset balances
-        for ``postonstream``, ``preonstream``, and ``sunk_cost`` expenditures
-        under both oil and gas. Depreciation is calculated using the specified
-        method and decline factor, adjusted for inflation and tax effects.
-        Results are aligned with the project years and stored in internal
-        attributes.
+        This method calculates yearly depreciation and undepreciated asset values
+        for three cost categories—``postonstream``, ``preonstream``, and
+        ``sunk_cost``—for both oil and gas. The calculation depends on the selected
+        depreciation method, decline factor, and inflation/tax settings.
+
+        Depreciation begins either in the year of expenditure (direct) or
+        in the onstream year, depending on the cost type and PSC rules.
+        Computed results are stored internally in structured dictionaries.
 
         Parameters
         ----------
@@ -448,23 +473,29 @@ class CostRecovery(BaseProject):
         Returns
         -------
         None
-            Updates internal attributes in place:
-            - ``_oil_depreciations`` and ``_gas_depreciations``:
-              dicts of per-year depreciation schedules.
-            - ``_oil_undepreciated_assets`` and ``_gas_undepreciated_assets``:
-              dicts of undepreciated balances.
+            Updates the following internal attributes in place:
+
+            - ``_oil_depreciations`` and ``_gas_depreciations`` : dict of np.ndarray
+                Yearly depreciation amounts for each cost category.
+                Keys: ``postonstream``, ``preonstream``, ``sunk_cost``.
+            - ``_oil_undepreciated_assets`` and ``_gas_undepreciated_assets`` : dict
+                Undepreciated asset balances for each cost category.
 
         Notes
         -----
-        - Cost types considered: ``postonstream``, ``preonstream``, ``sunk_cost``.
-        - Onstream year alignment is determined by cost type:
-          - ``postonstream`` → depreciation begins immediately (direct).
-          - ``preonstream`` and ``sunk_cost`` → depreciation begins in the
-            onstream year.
-        - Depreciation and undepreciated assets are computed via
-          ``total_depreciation_rate`` of the respective capital objects.
-        - Inflation and tax are incorporated consistently with the
-          ``inflation_rate_applied_to`` policy.
+        - Each fluid (oil and gas) includes three cost categories:
+          ``postonstream``, ``preonstream``, and ``sunk_cost``.
+        - The depreciation start year is determined by cost type:
+            * ``postonstream`` → begins in expenditure year (``DIRECT``)
+            * ``preonstream`` and ``sunk_cost`` → begin in onstream year
+        - Inflation and tax adjustments are incorporated according to
+          ``inflation_rate_applied_to``.
+        - Depreciation schedules are calculated using each capital object’s
+          ``total_depreciation_rate()`` method, which returns both the
+          per-year depreciation and remaining undepreciated asset balance.
+        - Results are aligned to the ``project_years`` timeline and stored in:
+            * ``_oil_depreciations`` / ``_gas_depreciations``
+            * ``_oil_undepreciated_assets`` / ``_gas_undepreciated_assets``
         """
 
         # Define the mapping between fluids, cost types, capital objects, and
@@ -737,7 +768,7 @@ class CostRecovery(BaseProject):
             # Deduct cost of sales (post-tax) from gas revenue
             self._gas_revenue -= self._gas_cost_of_sales_expenditures_post_tax
 
-    def _get_rc_icp_pretax(self):
+    def _get_rc_icp_pretax(self) -> None:
         """
         A Function to get the value of PreTax Split using Revenue over Cost (RC)
         or Indonesian Crude Price (ICP) sliding scale.
@@ -899,7 +930,7 @@ class CostRecovery(BaseProject):
         ftp: np.ndarray,
         cost_alloc: FluidType,
         ic_rate: float | np.ndarray,
-    ):
+    ) -> tuple:
         """
         The function to apply the Investment Credit (IC) into the capital cost
         based on the given IC rate.
@@ -1219,7 +1250,6 @@ class CostRecovery(BaseProject):
             The transferred cost into the cashflow.
         transferred_out: np.ndarray
             The transferred cost out from the cashflow.
-
 
         Returns
         -------
@@ -1613,6 +1643,12 @@ class CostRecovery(BaseProject):
             for c in cost_types
         }
 
+        # Attributes associated with total depreciation and total non depreciable
+        self._consolidated_depr_total = self._oil_depr_total + self._gas_depr_total
+        self._consolidated_non_depr_total = (
+            self._oil_non_depr_total + self._gas_non_depr_total
+        )
+
         # Attributes associated with core business logics
         self._consolidated_ftp = self._oil_ftp + self._gas_ftp
         self._consolidated_ftp_ctr = self._oil_ftp_ctr + self._gas_ftp_ctr
@@ -1624,6 +1660,9 @@ class CostRecovery(BaseProject):
         )
         self._consolidated_ic_paid = self._oil_ic_paid + self._gas_ic_paid
 
+        self._consolidated_cost_to_be_recovered_before_tf = (
+            self._oil_cost_to_be_recovered + self._gas_cost_to_be_recovered
+        )
         self._consolidated_unrecovered_before_transfer = (
             self._oil_unrecovered_before_transfer + self._gas_unrecovered_before_transfer
         )
@@ -1633,12 +1672,13 @@ class CostRecovery(BaseProject):
         self._consolidated_ets_before_transfer = (
             self._oil_ets_before_transfer + self._gas_ets_before_transfer
         )
-        self._consolidated_unrecovered_after_transfer = (
-            self._oil_unrecovered_after_transfer + self._gas_unrecovered_after_transfer
-        )
+
         self._consolidated_cost_to_be_recovered_after_tf = (
             self._oil_cost_to_be_recovered_after_tf
             + self._gas_cost_to_be_recovered_after_tf
+        )
+        self._consolidated_unrecovered_after_transfer = (
+            self._oil_unrecovered_after_transfer + self._gas_unrecovered_after_transfer
         )
         self._consolidated_cost_recovery_after_tf = (
             self._oil_cost_recovery_after_tf + self._gas_cost_recovery_after_tf
@@ -1726,521 +1766,563 @@ class CostRecovery(BaseProject):
         self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
 
     def _get_attrs_for_results(self) -> dict:
+        """
+        Collect and organize key oil, gas, and consolidated economic attributes.
 
-        # # Specify oil attributes
+        This method aggregates all relevant post-calculation attributes
+        for oil, gas, and consolidated cases — including revenues,
+        expenditures, depreciation components, cost recovery, tax, and
+        contractor/government take.
+
+        The results are returned in a structured dictionary containing both
+        attribute arrays and their corresponding names.
+
+        Returns
+        -------
+        dict
+            A dictionary containing two keys:
+
+            - **"attributes"** : dict
+                A nested dictionary with three keys:
+
+                - `"oil"` : list of ndarray
+                    All computed oil-related attributes such as revenues,
+                    expenditures, depreciations, cost recovery, tax, and cash flow.
+                - `"gas"` : list of ndarray
+                    All computed gas-related attributes following the same structure
+                    as oil.
+                - `"consolidated"` : list of ndarray
+                    Combined (oil + gas) attributes, including total revenues,
+                    consolidated depreciations, cost recovery, and fiscal results.
+
+            - **"names"** : list of str
+                The list of attribute names corresponding to each element of
+                the arrays stored in `"attributes"`. The names follow a consistent
+                naming convention across all products:
+
+                - Prefix **`f_`** indicates a field-level (oil/gas/consolidated)
+                  attribute.
+                - Suffixes identify attribute type, e.g.:
+                    - `_revenue`, `_tax_payment`, `_cashflow`
+                    - `_depreciable_preonstream`, `_depreciation_postonstream`
+                    - `_cost_recovery_after_tf`, `_contractor_share`
+
+        Notes
+        -----
+        - The method assumes that all prerequisite attributes (e.g.,
+          `_oil_revenue`, `_gas_cost_of_sales_expenditures_pre_tax`,
+          `_consolidated_depreciations`) have been computed and stored
+          within the instance prior to invocation.
+        - The output dictionary is intended for result structuring and
+          post-processing (e.g., table generation, reporting, or export).
+        """
+
+        # Specify oil attributes
         oil_depreciable_postonstream = self._oil_capital_expenditures_post_tax
         oil_non_depreciable_postonstream = (
             self._oil_total_expenditures_post_tax - self._oil_capital_expenditures_post_tax
         )
+        oil_total_depreciations = (
+            np.array(list(self._oil_depreciations.values())).sum(axis=0)
+            + self._oil_carry_forward_depreciation
+        )
 
-        # oil_total_depr = np.array(list(self._oil_depreciations.values())).sum(axis=0)
-        # oil_total_amor = np.array(list(self._oil_amortizations.values())).sum(axis=0)
-        #
-        # oil_attrs = [
-        #     self._oil_revenue,
-        #     self._sulfur_revenue,
-        #     self._electricity_revenue,
-        #     self._co2_revenue,
-        #     self._oil_wap_price,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_depreciable_sunk_cost,
-        #     self._oil_non_depreciable_sunk_cost,
-        #     self._oil_sunk_cost,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_depreciable_preonstream,
-        #     self._oil_non_depreciable_preonstream,
-        #     self._oil_preonstream,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_capital_expenditures_pre_tax,
-        #     self._oil_intangible_expenditures_pre_tax,
-        #     self._oil_opex_expenditures_pre_tax,
-        #     self._oil_asr_expenditures_pre_tax,
-        #     self._oil_lbt_expenditures_pre_tax,
-        #     self._oil_cost_of_sales_expenditures_pre_tax,
-        #     self._oil_total_expenditures_pre_tax,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_capital_indirect_tax,
-        #     self._oil_intangible_indirect_tax,
-        #     self._oil_opex_indirect_tax,
-        #     self._oil_asr_indirect_tax,
-        #     self._oil_lbt_indirect_tax,
-        #     self._oil_cost_of_sales_indirect_tax,
-        #     self._oil_total_indirect_tax,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_capital_expenditures_post_tax,
-        #     self._oil_intangible_expenditures_post_tax,
-        #     self._oil_opex_expenditures_post_tax,
-        #     self._oil_asr_expenditures_post_tax,
-        #     self._oil_lbt_expenditures_post_tax,
-        #     self._oil_cost_of_sales_expenditures_post_tax,
-        #     self._oil_total_expenditures_post_tax,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_depreciable_sunk_cost,
-        #     self._oil_non_depreciable_sunk_cost,
-        #     self._oil_sunk_cost,
-        #     self._oil_depreciations["sunk_cost"],
-        #     self._oil_amortizations["sunk_cost"],
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_depreciable_preonstream,
-        #     self._oil_non_depreciable_preonstream,
-        #     self._oil_preonstream,
-        #     self._oil_depreciations["preonstream"],
-        #     self._oil_amortizations["preonstream"],
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     oil_depreciable_postonstream,
-        #     oil_non_depreciable_postonstream,
-        #     self._oil_total_expenditures_post_tax,
-        #     self._oil_depreciations["postonstream"],
-        #     self._oil_amortizations["postonstream"],
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_depreciations["sunk_cost"],
-        #     self._oil_depreciations["preonstream"],
-        #     self._oil_depreciations["postonstream"],
-        #     oil_total_depr,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_amortizations["sunk_cost"],
-        #     self._oil_amortizations["preonstream"],
-        #     self._oil_amortizations["postonstream"],
-        #     oil_total_amor,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_sunk_cost,
-        #     self._oil_capital,
-        #     self._oil_non_capital,
-        #     self._oil_total_expenses,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_base_split,
-        #     self._var_split_array,
-        #     self._oil_prog_price_split,
-        #     self._oil_prog_cum_split,
-        #     self._oil_prog_split,
-        #     self._ministry_discretion_arr,
-        #     self._oil_ctr_split,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_ctr_split,
-        #     self._oil_revenue,
-        #     self._oil_ctr_share_before_transfer,
-        #     self._oil_gov_share,
-        #     self._oil_cost_tobe_deducted,
-        #     self._oil_carward_deduct_cost,
-        #     self._oil_deductible_cost,
-        #     self._transfer_to_gas,
-        #     self._oil_carward_cost_aftertf,
-        #     self._oil_ctr_share_after_transfer,
-        #     self._oil_net_operating_profit,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_net_operating_profit,
-        #     self._oil_dmo_volume,
-        #     self._oil_dmo_fee,
-        #     self._oil_ddmo,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_taxable_income,
-        #     self._tax_rate_arr,
-        #     self._oil_tax,
-        #     self._oil_ctr_net_share,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_ctr_share_before_transfer,
-        #     self._oil_total_expenses,
-        #     self._oil_ddmo,
-        #     self._oil_tax,
-        #     self._oil_ctr_cashflow,
-        #     self._oil_ctr_net_share,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._oil_gov_share,
-        #     self._oil_ddmo,
-        #     self._oil_tax,
-        #     self._oil_government_take,
-        # ]
-        #
-        # # Specify gas attributes
-        # gas_depreciable_postonstream = self._gas_capital_expenditures_post_tax
-        # gas_non_depreciable_postonstream = (
-        #     self._gas_total_expenditures_post_tax - self._gas_capital_expenditures_post_tax
-        # )
-        #
-        # gas_total_depr = np.array(list(self._gas_depreciations.values())).sum(axis=0)
-        # gas_total_amor = np.array(list(self._gas_amortizations.values())).sum(axis=0)
-        #
-        # gas_attrs = [
-        #     self._gas_revenue,
-        #     self._sulfur_revenue,
-        #     self._electricity_revenue,
-        #     self._co2_revenue,
-        #     self._gas_wap_price,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_depreciable_sunk_cost,
-        #     self._gas_non_depreciable_sunk_cost,
-        #     self._gas_sunk_cost,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_depreciable_preonstream,
-        #     self._gas_non_depreciable_preonstream,
-        #     self._gas_preonstream,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_capital_expenditures_pre_tax,
-        #     self._gas_intangible_expenditures_pre_tax,
-        #     self._gas_opex_expenditures_pre_tax,
-        #     self._gas_asr_expenditures_pre_tax,
-        #     self._gas_lbt_expenditures_pre_tax,
-        #     self._gas_cost_of_sales_expenditures_pre_tax,
-        #     self._gas_total_expenditures_pre_tax,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_capital_indirect_tax,
-        #     self._gas_intangible_indirect_tax,
-        #     self._gas_opex_indirect_tax,
-        #     self._gas_asr_indirect_tax,
-        #     self._gas_lbt_indirect_tax,
-        #     self._gas_cost_of_sales_indirect_tax,
-        #     self._gas_total_indirect_tax,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_capital_expenditures_post_tax,
-        #     self._gas_intangible_expenditures_post_tax,
-        #     self._gas_opex_expenditures_post_tax,
-        #     self._gas_asr_expenditures_post_tax,
-        #     self._gas_lbt_expenditures_post_tax,
-        #     self._gas_cost_of_sales_expenditures_post_tax,
-        #     self._gas_total_expenditures_post_tax,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_depreciable_sunk_cost,
-        #     self._gas_non_depreciable_sunk_cost,
-        #     self._gas_sunk_cost,
-        #     self._gas_depreciations["sunk_cost"],
-        #     self._gas_amortizations["sunk_cost"],
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_depreciable_preonstream,
-        #     self._gas_non_depreciable_preonstream,
-        #     self._gas_preonstream,
-        #     self._gas_undepreciated_assets["preonstream"],
-        #     self._gas_amortizations["preonstream"],
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     gas_depreciable_postonstream,
-        #     gas_non_depreciable_postonstream,
-        #     self._gas_total_expenditures_post_tax,
-        #     self._gas_depreciations["postonstream"],
-        #     self._gas_amortizations["postonstream"],
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_depreciations["sunk_cost"],
-        #     self._gas_depreciations["preonstream"],
-        #     self._gas_depreciations["postonstream"],
-        #     gas_total_depr,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_amortizations["sunk_cost"],
-        #     self._gas_amortizations["preonstream"],
-        #     self._gas_amortizations["postonstream"],
-        #     gas_total_amor,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_sunk_cost,
-        #     self._gas_capital,
-        #     self._gas_non_capital,
-        #     self._gas_total_expenses,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_base_split,
-        #     self._var_split_array,
-        #     self._gas_prog_price_split,
-        #     self._gas_prog_cum_split,
-        #     self._gas_prog_split,
-        #     self._ministry_discretion_arr,
-        #     self._gas_ctr_split,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_ctr_split,
-        #     self._gas_revenue,
-        #     self._gas_ctr_share_before_transfer,
-        #     self._gas_gov_share,
-        #     self._gas_cost_tobe_deducted,
-        #     self._gas_carward_deduct_cost,
-        #     self._gas_deductible_cost,
-        #     self._transfer_to_oil,
-        #     self._gas_carward_cost_aftertf,
-        #     self._gas_ctr_share_after_transfer,
-        #     self._gas_net_operating_profit,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_net_operating_profit,
-        #     self._gas_dmo_volume,
-        #     self._gas_dmo_fee,
-        #     self._gas_ddmo,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_taxable_income,
-        #     self._tax_rate_arr,
-        #     self._gas_tax,
-        #     self._gas_ctr_net_share,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_ctr_share_before_transfer,
-        #     self._gas_total_expenses,
-        #     self._gas_ddmo,
-        #     self._gas_tax,
-        #     self._gas_ctr_cashflow,
-        #     self._gas_ctr_net_share,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._gas_gov_share,
-        #     self._gas_ddmo,
-        #     self._gas_tax,
-        #     self._gas_government_take,
-        # ]
-        #
-        # # Specify consolidated attributes
-        # consolidated_depreciable_postonstream = self._consolidated_capital_expenditures_post_tax
-        # consolidated_non_depreciable_postonstream = (
-        #     self._consolidated_total_expenditures_post_tax
-        #     - self._consolidated_capital_expenditures_post_tax
-        # )
-        #
-        # consolidated_total_depr = np.array(
-        #     list(self._consolidated_depreciations.values())
-        # ).sum(axis=0)
-        # consolidated_total_amor = np.array(
-        #     list(self._consolidated_amortizations.values())
-        # ).sum(axis=0)
-        #
-        # consolidated_attrs = [
-        #     self._consolidated_revenue,
-        #     self._sulfur_revenue,
-        #     self._electricity_revenue,
-        #     self._co2_revenue,
-        #     self._consolidated_wap_price,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._consolidated_depreciable_sunk_cost,
-        #     self._consolidated_non_depreciable_sunk_cost,
-        #     self._consolidated_sunk_cost,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._consolidated_depreciable_preonstream,
-        #     self._consolidated_non_depreciable_preonstream,
-        #     self._consolidated_preonstream,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._consolidated_capital_expenditures_pre_tax,
-        #     self._consolidated_intangible_expenditures_pre_tax,
-        #     self._consolidated_opex_expenditures_pre_tax,
-        #     self._consolidated_asr_expenditures_pre_tax,
-        #     self._consolidated_lbt_expenditures_pre_tax,
-        #     self._consolidated_cost_of_sales_expenditures_pre_tax,
-        #     self._consolidated_total_expenditures_pre_tax,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._consolidated_capital_indirect_tax,
-        #     self._consolidated_intangible_indirect_tax,
-        #     self._consolidated_opex_indirect_tax,
-        #     self._consolidated_asr_indirect_tax,
-        #     self._consolidated_lbt_indirect_tax,
-        #     self._consolidated_cost_of_sales_indirect_tax,
-        #     self._consolidated_total_indirect_tax,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._consolidated_capital_expenditures_post_tax,
-        #     self._consolidated_intangible_expenditures_post_tax,
-        #     self._consolidated_opex_expenditures_post_tax,
-        #     self._consolidated_asr_expenditures_post_tax,
-        #     self._consolidated_lbt_expenditures_post_tax,
-        #     self._consolidated_cost_of_sales_expenditures_post_tax,
-        #     self._consolidated_total_expenditures_post_tax,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._consolidated_depreciable_sunk_cost,
-        #     self._consolidated_non_depreciable_sunk_cost,
-        #     self._consolidated_sunk_cost,
-        #     self._consolidated_depreciations["sunk_cost"],
-        #     self._consolidated_amortizations["sunk_cost"],
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._consolidated_depreciable_preonstream,
-        #     self._consolidated_non_depreciable_preonstream,
-        #     self._consolidated_preonstream,
-        #     self._consolidated_depreciations["preonstream"],
-        #     self._consolidated_amortizations["preonstream"],
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     consolidated_depreciable_postonstream,
-        #     consolidated_non_depreciable_postonstream,
-        #     self._consolidated_total_expenditures_post_tax,
-        #     self._consolidated_depreciations["postonstream"],
-        #     self._consolidated_amortizations["postonstream"],
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._consolidated_depreciations["sunk_cost"],
-        #     self._consolidated_depreciations["preonstream"],
-        #     self._consolidated_depreciations["postonstream"],
-        #     consolidated_total_depr,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._consolidated_amortizations["sunk_cost"],
-        #     self._consolidated_amortizations["preonstream"],
-        #     self._consolidated_amortizations["postonstream"],
-        #     consolidated_total_amor,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._consolidated_sunk_cost,
-        #     self._consolidated_capital,
-        #     self._consolidated_non_capital,
-        #     self._consolidated_total_expenses,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     np.average(
-        #         [self._oil_base_split, self._gas_base_split], axis=0
-        #     ),
-        #     self._var_split_array,
-        #     np.average(
-        #         [self._oil_prog_price_split, self._gas_prog_price_split], axis=0
-        #     ),
-        #     np.average(
-        #         [self._oil_prog_cum_split, self._gas_prog_cum_split], axis=0
-        #     ),
-        #     np.average(
-        #         [self._oil_prog_split, self._gas_prog_split], axis=0
-        #     ),
-        #     self._ministry_discretion_arr,
-        #     np.average([self._oil_ctr_split, self._gas_ctr_split], axis=0),
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     np.average([self._oil_ctr_split, self._gas_ctr_split], axis=0),
-        #     self._consolidated_revenue,
-        #     self._consolidated_ctr_share_before_tf,
-        #     self._consolidated_gov_share_before_tf,
-        #     self._consolidated_cost_tobe_deducted,
-        #     self._consolidated_carward_deduct_cost,
-        #     self._consolidated_deductible_cost,
-        #     np.average([self._transfer_to_oil, self._transfer_to_gas], axis=0),
-        #     self._consolidated_carward_cost_aftertf,
-        #     self._consolidated_ctr_share_after_transfer,
-        #     self._consolidated_net_operating_profit,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._consolidated_net_operating_profit,
-        #     self._consolidated_dmo_volume,
-        #     self._consolidated_dmo_fee,
-        #     self._consolidated_ddmo,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._consolidated_taxable_income,
-        #     self._tax_rate_arr,
-        #     self._consolidated_tax_payment,
-        #     self._consolidated_ctr_net_share,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._consolidated_ctr_share_before_tf,
-        #     self._consolidated_total_expenses,
-        #     self._consolidated_ddmo,
-        #     self._consolidated_tax_payment,
-        #     self._consolidated_cashflow,
-        #     self._consolidated_ctr_net_share,
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        #     self._consolidated_gov_share_before_tf,
-        #     self._consolidated_ddmo,
-        #     self._consolidated_tax_payment,
-        #     self._consolidated_government_take,
-        # ]
-        #
-        # # Store attributes as dictionary
-        # attrs = {
-        #     "oil": oil_attrs,
-        #     "gas": gas_attrs,
-        #     "consolidated": consolidated_attrs,
-        # }
-        #
-        # # Specify names of the attributes
-        # attrs_names = [
-        #     "f_revenue",
-        #     "sulfur_revenue",
-        #     "electricity_revenue",
-        #     "co2_revenue",
-        #     "f_wap_price",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "f_depreciable_sunk_cost",
-        #     "f_non_depreciable_sunk_cost",
-        #     "f_sunk_cost",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "f_depreciable_preonstream",
-        #     "f_non_depreciable_preonstream",
-        #     "f_preonstream",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "f_capital_expend_pre_tax",
-        #     "f_intangible_expend_pre_tax",
-        #     "f_opex_expend_pre_tax",
-        #     "f_asr_expend_pre_tax",
-        #     "f_lbt_expend_pre_tax",
-        #     "f_cost_of_sales_expend_pre_tax",
-        #     "f_total_expend_pre_tax",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "f_capital_indirect_tax",
-        #     "f_intangible_indirect_tax",
-        #     "f_opex_indirect_tax",
-        #     "f_asr_indirect_tax",
-        #     "f_lbt_indirect_tax",
-        #     "f_cost_of_sales_indirect_tax",
-        #     "f_total_indirect_tax",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "f_capital_expenditures_post_tax",
-        #     "f_intangible_expenditures_post_tax",
-        #     "f_opex_expenditures_post_tax",
-        #     "f_asr_expenditures_post_tax",
-        #     "f_lbt_expenditures_post_tax",
-        #     "f_cost_of_sales_expenditures_post_tax",
-        #     "f_total_expenditures_post_tax",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "_f_depreciable_sunk_cost",
-        #     "_f_non_depreciable_sunk_cost",
-        #     "_f_sunk_cost",
-        #     "f_depreciation_sunk_cost",
-        #     "f_amortization_sunk_cost",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "_f_depreciable_preonstream",
-        #     "_f_non_depreciable_preonstream",
-        #     "_f_preonstream",
-        #     "f_depreciation_preonstream",
-        #     "f_amortization_preonstream",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "f_depreciable_postonstream",
-        #     "f_non_depreciable_postonstream",
-        #     "f_postonstream",
-        #     "f_depreciation_postonstream",
-        #     "f_amortization_postonstream",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "_f_depreciation_sunk_cost",
-        #     "_f_depreciation_preonstream",
-        #     "_f_depreciation_postonstream",
-        #     "f_total_depreciation",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "_f_amortization_sunk_cost",
-        #     "_f_amortization_preonstream",
-        #     "_f_amortization_postonstream",
-        #     "f_total_amortization",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "__f_sunk_cost",
-        #     "f_capital",
-        #     "f_non_capital",
-        #     "f_total_expenses",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "f_base_split",
-        #     "variable_split",
-        #     "f_prog_price_split",
-        #     "f_prog_cum_split",
-        #     "f_prog_split",
-        #     "ministry_discretion",
-        #     "f_ctr_split",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "f_ctr_split",
-        #     "_f_revenue",
-        #     "f_ctr_share_before_tf",
-        #     "f_gov_share_before_tf",
-        #     "f_cost_tobe_deducted",
-        #     "f_carward_deduct_cost",
-        #     "f_deductible_cost",
-        #     "transfer_to_gas",
-        #     "f_carward_cost_aftertf",
-        #     "f_ctr_share_after_transfer",
-        #     "f_net_operating_profit",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "f_net_operating_profit",
-        #     "f_dmo_volume",
-        #     "f_dmo_fee",
-        #     "f_ddmo",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "f_taxable_income",
-        #     "tax_rate",
-        #     "f_tax",
-        #     "f_ctr_net_share",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "_f_ctr_share_before_tf",
-        #     "_f_total_expenses",
-        #     "_f_ddmo",
-        #     "_f_tax",
-        #     "f_ctr_cashflow",
-        #     "_f_ctr_net_share",
-        #     # ++++++++++++++++++++++++++++++++++++++++++++++
-        #     "_f_gov_share_before_tf",
-        #     "__f_ddmo",
-        #     "__f_tax",
-        #     "f_government_take",
-        # ]
-        #
-        # return {
-        #     "attributes": attrs,
-        #     "names": attrs_names,
-        # }
+        oil_attrs = [
+            self._oil_revenue,
+            self._sulfur_revenue,
+            self._electricity_revenue,
+            self._co2_revenue,
+            self._oil_wap_price,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_depreciable_sunk_cost,
+            self._oil_non_depreciable_sunk_cost,
+            self._oil_sunk_cost,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_depreciable_preonstream,
+            self._oil_non_depreciable_preonstream,
+            self._oil_preonstream,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_capital_expenditures_pre_tax,
+            self._oil_intangible_expenditures_pre_tax,
+            self._oil_opex_expenditures_pre_tax,
+            self._oil_asr_expenditures_pre_tax,
+            self._oil_lbt_expenditures_pre_tax,
+            self._oil_cost_of_sales_expenditures_pre_tax,
+            self._oil_total_expenditures_pre_tax,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_capital_indirect_tax,
+            self._oil_intangible_indirect_tax,
+            self._oil_opex_indirect_tax,
+            self._oil_asr_indirect_tax,
+            self._oil_lbt_indirect_tax,
+            self._oil_cost_of_sales_indirect_tax,
+            self._oil_total_indirect_tax,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_capital_expenditures_post_tax,
+            self._oil_intangible_expenditures_post_tax,
+            self._oil_opex_expenditures_post_tax,
+            self._oil_asr_expenditures_post_tax,
+            self._oil_lbt_expenditures_post_tax,
+            self._oil_cost_of_sales_expenditures_post_tax,
+            self._oil_total_expenditures_post_tax,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_depreciable_sunk_cost,
+            self._oil_non_depreciable_sunk_cost,
+            self._oil_sunk_cost,
+            self._oil_depreciations["sunk_cost"],
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_depreciable_preonstream,
+            self._oil_non_depreciable_preonstream,
+            self._oil_preonstream,
+            self._oil_depreciations["preonstream"],
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            oil_depreciable_postonstream,
+            oil_non_depreciable_postonstream,
+            self._oil_total_expenditures_post_tax,
+            self._oil_depreciations["postonstream"],
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_depreciations["sunk_cost"],
+            self._oil_depreciations["preonstream"],
+            self._oil_depreciations["postonstream"],
+            self._oil_carry_forward_depreciation,
+            oil_total_depreciations,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_sunk_cost,
+            self._oil_capital,
+            self._oil_non_capital,
+            self._oil_total_expenses,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_depr_total,
+            self._oil_non_depr_total,
+            self._oil_depr_total + self._oil_non_depr_total,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_ftp,
+            self._oil_ftp_ctr,
+            self._oil_ftp_gov,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_ic,
+            self._oil_ic_paid,
+            self._oil_ic_unrecovered,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_cost_to_be_recovered,
+            self._oil_unrecovered_before_transfer,
+            self._oil_cost_recovery,
+            self._oil_ets_before_transfer,
+            self._transfer_to_gas,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_cost_to_be_recovered_after_tf,
+            self._oil_unrecovered_after_transfer,
+            self._oil_cost_recovery_after_tf,
+            self._oil_ets_after_transfer,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_contractor_share,
+            self._oil_government_share,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_dmo_volume,
+            self._oil_dmo_fee,
+            self._oil_ddmo,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_taxable_income,
+            self._tax_rate_arr,
+            self._oil_tax_payment,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._oil_ctr_net_share,
+            self._oil_contractor_take,
+            self._oil_government_take,
+            self._oil_cashflow,
+        ]
+
+        # Specify gas attributes
+        gas_depreciable_postonstream = self._gas_capital_expenditures_post_tax
+        gas_non_depreciable_postonstream = (
+            self._gas_total_expenditures_post_tax - self._gas_capital_expenditures_post_tax
+        )
+        gas_total_depreciations = (
+            np.array(list(self._gas_depreciations.values())).sum(axis=0)
+            + self._gas_carry_forward_depreciation
+        )
+
+        gas_attrs = [
+            self._gas_revenue,
+            self._sulfur_revenue,
+            self._electricity_revenue,
+            self._co2_revenue,
+            self._gas_wap_price,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_depreciable_sunk_cost,
+            self._gas_non_depreciable_sunk_cost,
+            self._gas_sunk_cost,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_depreciable_preonstream,
+            self._gas_non_depreciable_preonstream,
+            self._gas_preonstream,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_capital_expenditures_pre_tax,
+            self._gas_intangible_expenditures_pre_tax,
+            self._gas_opex_expenditures_pre_tax,
+            self._gas_asr_expenditures_pre_tax,
+            self._gas_lbt_expenditures_pre_tax,
+            self._gas_cost_of_sales_expenditures_pre_tax,
+            self._gas_total_expenditures_pre_tax,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_capital_indirect_tax,
+            self._gas_intangible_indirect_tax,
+            self._gas_opex_indirect_tax,
+            self._gas_asr_indirect_tax,
+            self._gas_lbt_indirect_tax,
+            self._gas_cost_of_sales_indirect_tax,
+            self._gas_total_indirect_tax,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_capital_expenditures_post_tax,
+            self._gas_intangible_expenditures_post_tax,
+            self._gas_opex_expenditures_post_tax,
+            self._gas_asr_expenditures_post_tax,
+            self._gas_lbt_expenditures_post_tax,
+            self._gas_cost_of_sales_expenditures_post_tax,
+            self._gas_total_expenditures_post_tax,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_depreciable_sunk_cost,
+            self._gas_non_depreciable_sunk_cost,
+            self._gas_sunk_cost,
+            self._gas_depreciations["sunk_cost"],
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_depreciable_preonstream,
+            self._gas_non_depreciable_preonstream,
+            self._gas_preonstream,
+            self._gas_depreciations["preonstream"],
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            gas_depreciable_postonstream,
+            gas_non_depreciable_postonstream,
+            self._gas_total_expenditures_post_tax,
+            self._gas_depreciations["postonstream"],
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_depreciations["sunk_cost"],
+            self._gas_depreciations["preonstream"],
+            self._gas_depreciations["postonstream"],
+            self._gas_carry_forward_depreciation,
+            gas_total_depreciations,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_sunk_cost,
+            self._gas_capital,
+            self._gas_non_capital,
+            self._gas_total_expenses,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_depr_total,
+            self._gas_non_depr_total,
+            self._gas_depr_total + self._gas_non_depr_total,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_ftp,
+            self._gas_ftp_ctr,
+            self._gas_ftp_gov,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_ic,
+            self._gas_ic_paid,
+            self._gas_ic_unrecovered,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_cost_to_be_recovered,
+            self._gas_unrecovered_before_transfer,
+            self._gas_cost_recovery,
+            self._gas_ets_before_transfer,
+            self._transfer_to_oil,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_cost_to_be_recovered_after_tf,
+            self._gas_unrecovered_after_transfer,
+            self._gas_cost_recovery_after_tf,
+            self._gas_ets_after_transfer,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_contractor_share,
+            self._gas_government_share,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_dmo_volume,
+            self._gas_dmo_fee,
+            self._gas_ddmo,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_taxable_income,
+            self._tax_rate_arr,
+            self._gas_tax_payment,
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            self._gas_ctr_net_share,
+            self._gas_contractor_take,
+            self._gas_government_take,
+            self._gas_cashflow,
+        ]
+
+        # Specify consolidated attributes
+        consolidated_depreciable_postonstream = self._consolidated_capital_expenditures_post_tax
+        consolidated_non_depreciable_postonstream = (
+            self._consolidated_total_expenditures_post_tax
+            - self._consolidated_capital_expenditures_post_tax
+        )
+        consolidated_total_depreciations = (
+            np.array(list(self._consolidated_depreciations.values())).sum(axis=0)
+            + self._consolidated_carry_forward_depreciation
+        )
+
+        consolidated_attrs = [
+            self._consolidated_revenue,
+            self._sulfur_revenue,
+            self._electricity_revenue,
+            self._co2_revenue,
+            self._consolidated_wap_price,
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_depreciable_sunk_cost,
+            self._consolidated_non_depreciable_sunk_cost,
+            self._consolidated_sunk_cost,
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_depreciable_preonstream,
+            self._consolidated_non_depreciable_preonstream,
+            self._consolidated_preonstream,
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_capital_expenditures_pre_tax,
+            self._consolidated_intangible_expenditures_pre_tax,
+            self._consolidated_opex_expenditures_pre_tax,
+            self._consolidated_asr_expenditures_pre_tax,
+            self._consolidated_lbt_expenditures_pre_tax,
+            self._consolidated_cost_of_sales_expenditures_pre_tax,
+            self._consolidated_total_expenditures_pre_tax,
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_capital_indirect_tax,
+            self._consolidated_intangible_indirect_tax,
+            self._consolidated_opex_indirect_tax,
+            self._consolidated_asr_indirect_tax,
+            self._consolidated_lbt_indirect_tax,
+            self._consolidated_cost_of_sales_indirect_tax,
+            self._consolidated_total_indirect_tax,
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_capital_expenditures_post_tax,
+            self._consolidated_intangible_expenditures_post_tax,
+            self._consolidated_opex_expenditures_post_tax,
+            self._consolidated_asr_expenditures_post_tax,
+            self._consolidated_lbt_expenditures_post_tax,
+            self._consolidated_cost_of_sales_expenditures_post_tax,
+            self._consolidated_total_expenditures_post_tax,
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_depreciable_sunk_cost,
+            self._consolidated_non_depreciable_sunk_cost,
+            self._consolidated_sunk_cost,
+            self._consolidated_depreciations["sunk_cost"],
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_depreciable_preonstream,
+            self._consolidated_non_depreciable_preonstream,
+            self._consolidated_preonstream,
+            self._consolidated_depreciations["preonstream"],
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            consolidated_depreciable_postonstream,
+            consolidated_non_depreciable_postonstream,
+            self._consolidated_total_expenditures_post_tax,
+            self._consolidated_depreciations["postonstream"],
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_depreciations["sunk_cost"],
+            self._consolidated_depreciations["preonstream"],
+            self._consolidated_depreciations["postonstream"],
+            self._consolidated_carry_forward_depreciation,
+            consolidated_total_depreciations,
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_sunk_cost,
+            self._consolidated_capital,
+            self._consolidated_non_capital,
+            self._consolidated_total_expenses,
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_depr_total,
+            self._consolidated_non_depr_total,
+            self._consolidated_depr_total + self._consolidated_non_depr_total,
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_ftp,
+            self._consolidated_ftp_ctr,
+            self._consolidated_ftp_gov,
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_ic,
+            self._consolidated_ic_paid,
+            self._consolidated_ic_unrecovered,
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_cost_to_be_recovered_before_tf,
+            self._consolidated_unrecovered_before_transfer,
+            self._consolidated_cost_recovery_before_transfer,
+            self._consolidated_ets_before_transfer,
+            np.average([self._transfer_to_oil, self._transfer_to_gas], axis=0),
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_cost_to_be_recovered_after_tf,
+            self._consolidated_unrecovered_after_transfer,
+            self._consolidated_cost_recovery_after_tf,
+            self._consolidated_ets_after_transfer,
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_contractor_share,
+            self._consolidated_government_share,
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_dmo_volume,
+            self._consolidated_dmo_fee,
+            self._consolidated_ddmo,
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_taxable_income,
+            self._tax_rate_arr,
+            self._consolidated_tax_payment,
+            # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            self._consolidated_ctr_net_share,
+            self._consolidated_contractor_take,
+            self._consolidated_government_take,
+            self._consolidated_cashflow,
+        ]
+
+        # Store attributes as dictionary
+        attrs = {
+            "oil": oil_attrs,
+            "gas": gas_attrs,
+            "consolidated": consolidated_attrs,
+        }
+
+        # Specify names of the attributes
+        attrs_names = [
+            "f_revenue",
+            "sulfur_revenue",
+            "electricity_revenue",
+            "co2_revenue",
+            "f_wap_price",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "f_depreciable_sunk_cost",
+            "f_non_depreciable_sunk_cost",
+            "f_sunk_cost",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "f_depreciable_preonstream",
+            "f_non_depreciable_preonstream",
+            "f_preonstream",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "f_capital_expend_pre_tax",
+            "f_intangible_expend_pre_tax",
+            "f_opex_expend_pre_tax",
+            "f_asr_expend_pre_tax",
+            "f_lbt_expend_pre_tax",
+            "f_cost_of_sales_expend_pre_tax",
+            "f_total_expend_pre_tax",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "f_capital_indirect_tax",
+            "f_intangible_indirect_tax",
+            "f_opex_indirect_tax",
+            "f_asr_indirect_tax",
+            "f_lbt_indirect_tax",
+            "f_cost_of_sales_indirect_tax",
+            "f_total_indirect_tax",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "f_capital_expenditures_post_tax",
+            "f_intangible_expenditures_post_tax",
+            "f_opex_expenditures_post_tax",
+            "f_asr_expenditures_post_tax",
+            "f_lbt_expenditures_post_tax",
+            "f_cost_of_sales_expenditures_post_tax",
+            "f_total_expenditures_post_tax",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "_f_depreciable_sunk_cost",
+            "_f_non_depreciable_sunk_cost",
+            "_f_sunk_cost",
+            "f_depreciation_sunk_cost",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "_f_depreciable_preonstream",
+            "_f_non_depreciable_preonstream",
+            "_f_preonstream",
+            "f_depreciation_preonstream",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "f_depreciable_postonstream",
+            "f_non_depreciable_postonstream",
+            "f_postonstream",
+            "f_depreciation_postonstream",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "_f_depreciation_sunk_cost",
+            "_f_depreciation_preonstream",
+            "_f_depreciation_postonstream",
+            "f_carry_forward_depreciation",
+            "f_total_depreciation",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "__f_sunk_cost",
+            "f_capital",
+            "f_non_capital",
+            "f_total_expenses",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "f_depr_total",
+            "f_non_depr_total",
+            "f_depr_and_non_depr_total",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "f_ftp",
+            "f_ftp_ctr",
+            "f_ftp_gov",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "f_ic",
+            "f_ic_paid",
+            "f_ic_unrecovered",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "f_cost_to_be_recovered",
+            "f_unrecovered_before_transfer",
+            "f_cost_recovery",
+            "f_ets_before_transfer",
+            "transfer",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "f_cost_to_be_recovered_after_tf",
+            "f_unrecovered_after_transfer",
+            "f_cost_recovery_after_tf",
+            "f_ets_after_transfer",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "f_contractor_share",
+            "f_government_share",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "f_dmo_volume",
+            "f_dmo_fee",
+            "f_ddmo",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "f_taxable_income",
+            "tax_rate_arr",
+            "f_tax_payment",
+            # ++++++++++++++++++++++++++++++++++++++++++++++
+            "f_ctr_net_share",
+            "f_contractor_take",
+            "f_government_take",
+            "f_cashflow",
+        ]
+
+        return {
+            "attributes": attrs,
+            "names": attrs_names,
+        }
 
     def _prepare_results(self) -> dict:
+        """
+        Prepare and structure oil, gas, and consolidated calculation results.
+
+        This method transforms all numerical attributes collected from
+        :meth:`_get_attrs_for_results` into pandas DataFrames, one for each
+        fluid stream (`oil`, `gas`, and `consolidated`).
+
+        It ensures attribute consistency across fluids, organizes them into
+        a 3D NumPy array, and returns a dictionary of time-indexed result tables.
+
+        Returns
+        -------
+        dict of pandas.DataFrame
+            A dictionary containing one DataFrame per fluid stream:
+
+            - **"oil"** : DataFrame
+              Oil-related results by project year.
+            - **"gas"** : DataFrame
+              Gas-related results by project year.
+            - **"consolidated"** : DataFrame
+              Consolidated (oil + gas) results by project year.
+
+            Each DataFrame has:
+            - **index** : project years (`self.project_years`)
+            - **columns** : attribute names returned from :meth:`_get_attrs_for_results`
+            - **values** : numerical results (`float64`), possibly containing `NaN`
+              for undefined attributes.
+
+        Raises
+        ------
+        CostRecoveryException
+            If the number of attributes differs across fluid streams or does not
+            match the number of attribute names.
+
+        Notes
+        -----
+        - The method internally validates attribute alignment between
+          `oil`, `gas`, and `consolidated` to prevent structural inconsistencies.
+        - The returned DataFrames are ready for post-processing, reporting,
+          or export (e.g., to Excel or visualization routines).
+        """
 
         # Define the attributes and their names
         attrs = self._get_attrs_for_results()
@@ -2279,6 +2361,7 @@ class CostRecovery(BaseProject):
         This method prepares results using :meth:`_prepare_results`, selects
         the DataFrame corresponding to the specified fluid type, and prints
         the data in column chunks for easier readability in the console.
+
         Chunking helps avoid overly wide printouts when the DataFrame contains
         many attributes. The underlying DataFrame is also returned.
 
@@ -2344,6 +2427,90 @@ class CostRecovery(BaseProject):
         sum_undepreciated_cost: bool = False,
         sunk_cost_method: SunkCostMethod = SunkCostMethod.DEPRECIATED_TANGIBLE,
     ):
+        """
+        Run the full economic evaluation workflow under a Cost Recovery PSC scheme.
+
+        This method executes the complete chain of cost recovery, tax, and equity
+        calculations for both oil and gas streams under the specified fiscal regime.
+        It integrates expenditure inflation adjustments, depreciation, investment credit,
+        FTP (First Tranche Petroleum), DMO (Domestic Market Obligation), cost recovery,
+        transfer between fluids, and final contractor/government take computations.
+
+        The results are stored internally in class attributes and can be retrieved via
+        result-preparation or reporting methods.
+
+        Parameters
+        ----------
+        sulfur_revenue : OtherRevenue, default=OtherRevenue.ADDITION_TO_GAS_REVENUE
+            Allocation rule for sulfur sales revenue (added to oil or gas revenue).
+        electricity_revenue : OtherRevenue, default=OtherRevenue.ADDITION_TO_OIL_REVENUE
+            Allocation rule for electricity sales revenue.
+        co2_revenue : OtherRevenue, default=OtherRevenue.ADDITION_TO_GAS_REVENUE
+            Allocation rule for CO₂ utilization or revenue.
+        vat_rate : float or ndarray of float, default=0.0
+            Value Added Tax rate applied to expenditures.
+        year_inflation : ndarray of float, optional
+            Annual inflation index or factors to adjust costs through project years.
+        inflation_rate : float or ndarray of float, default=0.0
+            Annual inflation rate applied to selected cost categories.
+        inflation_rate_applied_to : InflationAppliedTo or None,
+            default=InflationAppliedTo.CAPEX.
+            Defines which cost category receives inflation adjustment
+            (e.g., CAPEX, OPEX, or all).
+        is_dmo_end_weighted : bool, default=False
+            If True, applies DMO (Domestic Market Obligation) weighting toward
+            the end years.
+        tax_regime : TaxRegime, default=TaxRegime.NAILED_DOWN
+            Defines the applicable tax regime for effective tax rate determination.
+        effective_tax_rate : float, ndarray of float, or None, default=None
+            User-defined effective tax rate; if None, the rate is determined by `tax_regime`.
+        ftp_tax_regime : FTPTaxRegime, default=FTPTaxRegime.PDJP_20_2017
+            Regime defining FTP (First Tranche Petroleum) tax treatment.
+        depr_method : DeprMethod, default=DeprMethod.PSC_DB
+            Depreciation method used for capital recovery (e.g., PSC declining balance).
+        decline_factor : float or int, default=2
+            Decline factor used in declining balance depreciation.
+        post_uu_22_year2001 : bool, default=True
+            Indicates whether the PSC follows the fiscal rules post UU-22/2001.
+        oil_cost_of_sales_applied : bool, default=False
+            If True, applies cost-of-sales adjustment to oil revenue.
+        gas_cost_of_sales_applied : bool, default=False
+            If True, applies cost-of-sales adjustment to gas revenue.
+        sum_undepreciated_cost : bool, default=False
+            If True, sums undepreciated capital costs before computing new depreciation.
+        sunk_cost_method : SunkCostMethod, default=SunkCostMethod.DEPRECIATED_TANGIBLE
+            Defines the treatment of sunk cost (e.g., depreciated tangible or full cost).
+
+        Returns
+        -------
+        None
+            The method modifies internal attributes of the class instance in place.
+            Key resulting attributes include:
+
+            - `_oil_cashflow`, `_gas_cashflow` : ndarray
+                Contractor’s annual cashflow for oil and gas.
+            - `_oil_contractor_take`, `_gas_contractor_take` : ndarray
+                Contractor’s take after cost recovery and taxation.
+            - `_oil_government_take`, `_gas_government_take` : ndarray
+                Government’s total take (FTP + equity + tax + DMO).
+            - `_oil_tax_payment`, `_gas_tax_payment` : ndarray
+                Corporate tax payments by year.
+            - `_oil_revenue`, `_gas_revenue` : ndarray
+                Adjusted gross revenue after applying cost-of-sales.
+            - `_tax_rate_arr` : ndarray
+                Effective tax rate array applied per project year.
+            - `_get_consolidated_profiles_cr()` output
+                Consolidated project results across oil and gas.
+
+        Notes
+        -----
+        - This method should be executed after all pre-onstream data and input arrays
+          (e.g., costs, production, prices) are properly configured.
+        - Internal calculations follow Indonesian PSC conventions, including
+          FTP, DMO, and cost recovery logic.
+        - All intermediate steps (e.g., investment credit, depreciation, sunk cost)
+          are automatically handled.
+        """
 
         # Calculate WAP (Weighted Average Price) for each produced fluid
         self._get_wap_price()
@@ -2481,20 +2648,20 @@ class CostRecovery(BaseProject):
         sunk_cost = self._apply_sunk_cost_treatment(sunk_cost_method=sunk_cost_method)
 
         # Configure total capital cost in the form of depreciations for OIL and GAS
-        oil_depr_total = (
+        self._oil_depr_total = (
             sunk_cost["oil_depreciation"]
             + self._oil_depreciations["postonstream"]
             + self._oil_carry_forward_depreciation
         )
 
-        gas_depr_total = (
+        self._gas_depr_total = (
             sunk_cost["gas_depreciation"]
             + self._gas_depreciations["postonstream"]
             + self._gas_carry_forward_depreciation
         )
 
         # Configure total non-capital cost in the form of non-depreciables for OIL and GAS
-        oil_non_depr_total = (
+        self._oil_non_depr_total = (
             sunk_cost["oil_non_depreciable"]
             + self._oil_intangible_expenditures_post_tax
             + self._oil_opex_expenditures_post_tax
@@ -2503,7 +2670,7 @@ class CostRecovery(BaseProject):
             + self._oil_cost_of_sales_expenditures_post_tax
         )
 
-        gas_non_depr_total = (
+        self._gas_non_depr_total = (
             sunk_cost["gas_non_depreciable"]
             + self._gas_intangible_expenditures_post_tax
             + self._gas_opex_expenditures_post_tax
@@ -2520,8 +2687,8 @@ class CostRecovery(BaseProject):
             self._oil_cost_recovery,
         ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
             project_years=self.project_years,
-            depreciation=oil_depr_total,
-            non_capital=oil_non_depr_total,
+            depreciation=self._oil_depr_total,
+            non_capital=self._oil_non_depr_total,
             # depreciation=self._oil_depreciation,
             # non_capital=self._oil_non_capital,
             revenue=self._oil_revenue,
@@ -2537,8 +2704,8 @@ class CostRecovery(BaseProject):
             self._gas_cost_recovery,
         ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
             project_years=self.project_years,
-            depreciation=gas_depr_total,
-            non_capital=gas_non_depr_total,
+            depreciation=self._gas_depr_total,
+            non_capital=self._gas_non_depr_total,
             # depreciation=self._gas_depreciation,
             # non_capital=self._gas_non_capital,
             revenue=self._gas_revenue,
@@ -2581,8 +2748,8 @@ class CostRecovery(BaseProject):
             self._oil_cost_recovery_after_tf,
         ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
             project_years=self.project_years,
-            depreciation=oil_depr_total,
-            non_capital=oil_non_depr_total,
+            depreciation=self._oil_depr_total,
+            non_capital=self._oil_non_depr_total,
             # depreciation=self._oil_depreciation,
             # non_capital=self._oil_non_capital,
             revenue=self._oil_revenue + self._transfer_to_oil,
@@ -2598,8 +2765,8 @@ class CostRecovery(BaseProject):
             self._gas_cost_recovery_after_tf,
         ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
             project_years=self.project_years,
-            depreciation=gas_depr_total,
-            non_capital=gas_non_depr_total,
+            depreciation=self._gas_depr_total,
+            non_capital=self._gas_non_depr_total,
             # depreciation=self._gas_depreciation,
             # non_capital=self._gas_non_capital,
             revenue=self._gas_revenue + self._transfer_to_gas,

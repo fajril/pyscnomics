@@ -23,7 +23,9 @@ from pyscnomics.econ.costs import (
     LBT,
     CostOfSales,
 )
-# from pyscnomics.econ.results import CashFlow
+
+pd.set_option("display.max_rows", 200)
+pd.set_option("display.max_columns", 50)
 
 
 class BaseProjectException(Exception):
