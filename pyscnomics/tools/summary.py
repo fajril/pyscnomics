@@ -2030,7 +2030,8 @@ class Summary:
 
     def run(self):
         """
-        Function utilized as the function wrapper which will retrieve the economic indicators of the contract.
+        Function utilized as the function wrapper which will retrieve the economic
+        indicators of the contract.
 
         Returns
         -------

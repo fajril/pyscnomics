@@ -19,6 +19,7 @@ from pyscnomics.econ.selection import (
     SunkCostMethod,
 )
 from datetime import date
+from dataclasses import asdict
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.costrecovery import CostRecovery
@@ -241,6 +242,18 @@ cr = CostRecovery(
 )
 
 cr.run(**params_cr)
+
+cr_dict = asdict(obj=cr)
+
+print('\t')
+print(f'Filetype: {type(cr_dict.keys())}')
+print(f'Length: {len(cr_dict.keys())}')
+print('cr_dict = \n', cr_dict.keys())
+
+print('\t')
+print(f'Filetype: {type(cr_dict["_oil_total_expenses"])}')
+print(f'Length: {len(cr_dict["_oil_total_expenses"])}')
+print('cr_dict["_oil_total_expenses"] = \n', cr_dict["_oil_total_expenses"])
 
 # print('\t')
 # print(f'Filetype: {type()}')
