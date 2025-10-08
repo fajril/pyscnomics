@@ -4223,5 +4223,128 @@ class BaseProject:
         # Prepare consolidated profiles
         self._get_consolidated_profiles()
 
+    def get_summary(self):
+
+        kwargs_run = {
+            "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+            "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+            "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+            "tax_rate": 0.0,
+            "year_inflation": None,
+            "inflation_rate": 0.0,
+            "inflation_rate_applied_to": None,
+        }
+
+        self.run(**kwargs_run)
+
+        # Prepare OIL lifting summary
+        oil_lifting_ghv = self._oil_lifting.get_lifting_rate_ghv_arr()
+        oil_lifting_ghv_sum = np.sum(oil_lifting_ghv, dtype=float)
+        if oil_lifting_ghv_sum == 0.0:
+            oil_wap_sum = 0.0
+        else:
+            oil_wap_sum = np.divide(
+                np.sum(self._oil_revenue), oil_lifting_ghv_sum, where=oil_lifting_ghv_sum != 0
+            )
+
+        # Prepare GAS lifting summary
+        gas_lifting_ghv = self._gas_lifting.get_lifting_rate_ghv_arr()
+        gas_ghv = self._gas_lifting.get_ghv_arr()
+        gas_lifting_ghv_sum = np.sum(gas_lifting_ghv, dtype=float)
+        if gas_lifting_ghv_sum == 0.0:
+            gas_wap_sum = 0.0
+        else:
+            gas_wap_sum = np.divide(
+                np.sum(self._gas_wap_price * gas_lifting_ghv * gas_ghv),
+                np.sum(gas_lifting_ghv * gas_ghv),
+                where=np.sum(gas_lifting_ghv * gas_ghv) != 0,
+            )
+
+        # Prepare gross revenue summary
+        oil_gross_revenue_sum = self._oil_revenue.sum(dtype=float)
+        gas_gross_revenue_sum = self._gas_revenue.sum(dtype=float)
+
+        # Prepare sunk cost summary
+        sunk_cost_sum = np.sum(self._oil_sunk_cost + self._gas_sunk_cost, dtype=float)
+
+        # Prepare tangible cost summary
+        tangible_sum = np.sum(
+            self._oil_capital_expenditures_post_tax + self._gas_capital_expenditures_post_tax,
+            dtype=float
+        )
+
+        intangible_sum = np.sum(
+            self._oil_intangible_expenditures_post_tax
+            + self._gas_intangible_expenditures_post_tax,
+            dtype=float
+        )
+
+        investment_sum = tangible_sum + intangible_sum
+
+        # Prepare OPEX summary
+
+        print('\t')
+        print(f'Filetype: {type(tangible_sum)}')
+        print('tangible_sum = ', tangible_sum)
+
+        print('\t')
+        print(f'Filetype: {type(intangible_sum)}')
+        print('intangible_sum = ', intangible_sum)
+
+        print('\t')
+        print(f'Filetype: {type(investment_sum)}')
+        print('investment_sum = ', investment_sum)
+
+
+
+        return {
+            "lifting_oil": oil_lifting_ghv_sum,
+            "oil_wap": oil_wap_sum,
+            "lifting_gas": gas_lifting_ghv_sum,
+            "gas_wap": gas_wap_sum,
+            "gross_revenue": oil_gross_revenue_sum + gas_gross_revenue_sum,
+            "gross_revenue_oil": oil_gross_revenue_sum,
+            "gross_revenue_gas": gas_gross_revenue_sum,
+            "investment": investment_sum,
+            "oil_capex": self._oil_capital.sum(),
+            "gas_capex": self._gas_capital.sum(),
+            "sunk_cost": sunk_cost_sum,
+            "tangible": tangible_sum,
+            "intangible": intangible_sum,
+            "opex_and_asr": None,
+            "opex_asr_lbt": None,
+            "opex": None,
+            "asr": None,
+            "lbt": None,
+            "ctr_npv": None,
+            "ctr_irr": None,
+            "ctr_pot": None,
+            "ctr_pv_ratio": None,
+            "ctr_pi": None,
+            "ctr_gross_share": None,
+            "ctr_net_share": None,
+            "ctr_net_share_over_gross_share": None,
+            "ctr_net_cashflow": None,
+            "ctr_net_cashflow_over_gross_rev": None,
+            "total_indirect_taxes": None,
+            "oil_indirect_taxes": None,
+            "gas_indirect_taxes": None,
+            # Zero values for the PSC terms
+            "gov_gross_share": 0,
+            "cost_recovery / deductible_cost": 0,
+            "cost_recovery_over_gross_rev": 0,
+            "unrec_cost": 0,
+            "unrec_over_gross_rev": 0,
+            "gov_ftp_share": 0,
+            "gov_ddmo": 0,
+            "gov_tax_income": 0,
+            "gov_take": 0,
+            "gov_take_over_gross_rev": 0,
+            "gov_take_npv": 0,
+            "undepreciated_asset_oil": 0,
+            "undepreciated_asset_gas": 0,
+            "undepreciated_asset_total": 0,
+        }
+
     def __len__(self):
         return self.project_duration

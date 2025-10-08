@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 
 import numpy as np
 
@@ -631,6 +631,7 @@ def get_summary(
             "oil_carry_forward_depreciation": oil_carry_forward_depreciation,
             "gas_carry_forward_depreciation": gas_carry_forward_depreciation,
         }
+
     # Condition where the contract is Gross Split
     if isinstance(contract, GrossSplit):
         #  Deductible Cost

@@ -2393,6 +2393,9 @@ class CostRecovery(BaseProject):
 
         df_map: dict = self._prepare_results()
 
+        print('\t')
+        print(df_map["oil"])
+
         def _prepare_print(chunk_size: int, df: pd.DataFrame):
             cols = df.columns.tolist()
 
@@ -2404,7 +2407,7 @@ class CostRecovery(BaseProject):
                 print(f"\nColumns {i + 1} to {min(i + chunk_size, len(cols))}: ")
                 print(df[cols[i:i + chunk_size]])
 
-        _prepare_print(chunk_size=chunk_size, df=df_map[ftype])
+        # _prepare_print(chunk_size=chunk_size, df=df_map[ftype])
 
     def run(
         self,
@@ -2950,3 +2953,6 @@ class CostRecovery(BaseProject):
 
         # Prepare consolidated profiles
         self._get_consolidated_profiles_cr(ftp_tax_regime=ftp_tax_regime)
+
+        self.get_results()
+
