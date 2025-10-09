@@ -14,6 +14,8 @@ from pyscnomics.econ.selection import (
     CostType,
     OtherRevenue,
     InflationAppliedTo,
+    NPVSelection,
+    DiscountingMode,
 )
 from pyscnomics.econ.costs import (
     CapitalCost,
@@ -22,6 +24,15 @@ from pyscnomics.econ.costs import (
     ASR,
     LBT,
     CostOfSales,
+)
+from pyscnomics.econ.indicator import (
+    irr,
+    npv_nominal_terms,
+    npv_real_terms,
+    npv_skk_nominal_terms,
+    npv_skk_real_terms,
+    npv_point_forward,
+    pot_psc,
 )
 
 pd.set_option("display.max_rows", 200)
@@ -54,6 +65,12 @@ class PreOnstreamException(Exception):
 
 class PostOnstreamException(Exception):
     """ Exception to be raised for incorrect postonstream cost configurations """
+
+    pass
+
+
+class BaseProjectSummaryException(Exception):
+    """ Exception to be raised for a misuse of get_summary() method """
 
     pass
 
@@ -4223,7 +4240,14 @@ class BaseProject:
         # Prepare consolidated profiles
         self._get_consolidated_profiles()
 
-    def get_summary(self):
+    def get_summary(
+        self,
+        discount_rate: float = 0.1,
+        npv_mode: NPVSelection = NPVSelection.NPV_SKK_REAL_TERMS,
+        discounting_mode: DiscountingMode = DiscountingMode.END_YEAR,
+        discount_rate_start_year: int | None = None,
+        profitability_discounted: bool = False,
+    ):
 
         kwargs_run = {
             "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
@@ -4236,6 +4260,24 @@ class BaseProject:
         }
 
         self.run(**kwargs_run)
+
+        # Prepare discount rate start year
+        # Cannot have discount rate year before the start year of the project
+        if discount_rate_start_year < self.start_date.year:
+            raise BaseProjectSummaryException(
+                f"The discounting reference year ({discount_rate_start_year}) "
+                f"is before start year of the project ({self.start_date.year})."
+            )
+
+        # Cannot have discount rate year after the end year of the project
+        if discount_rate_start_year > self.end_date.year:
+            raise BaseProjectSummaryException(
+                f"The discounting reference year ({discount_rate_start_year}) "
+                f"is after the end year of the project ({self.end_date.year})."
+            )
+
+        if discount_rate_start_year is None:
+            discount_rate_start_year = self.start_date.year
 
         # Prepare OIL lifting summary
         oil_lifting_ghv = self._oil_lifting.get_lifting_rate_ghv_arr()
@@ -4267,35 +4309,126 @@ class BaseProject:
         # Prepare sunk cost summary
         sunk_cost_sum = np.sum(self._oil_sunk_cost + self._gas_sunk_cost, dtype=float)
 
+        # Prepare preonstream costs
+        preonstream_map = {
+            "oil_intangible": self._oil_intangible_preonstream,
+            "gas_intangible": self._gas_intangible_preonstream,
+            "oil_opex": self._oil_opex_preonstream,
+            "gas_opex": self._gas_opex_preonstream,
+            "oil_asr": self._oil_asr_preonstream,
+            "gas_asr": self._gas_asr_preonstream,
+            "oil_lbt": self._oil_lbt_preonstream,
+            "gas_lbt": self._gas_lbt_preonstream,
+        }
+
+        preonstream_costs = {
+            key: val.expenditures_pre_tax() for key, val in preonstream_map.items()
+        }
+
         # Prepare tangible cost summary
-        tangible_sum = np.sum(
-            self._oil_capital_expenditures_post_tax + self._gas_capital_expenditures_post_tax,
-            dtype=float
+        tangible_cost = (
+            self._oil_capital_expenditures_post_tax
+            + self._gas_capital_expenditures_post_tax
+            + self._oil_depreciable_preonstream
+            + self._gas_depreciable_preonstream
         )
 
-        intangible_sum = np.sum(
+        intangible_cost = (
             self._oil_intangible_expenditures_post_tax
-            + self._gas_intangible_expenditures_post_tax,
-            dtype=float
+            + self._gas_intangible_expenditures_post_tax
+            + preonstream_costs["oil_intangible"]
+            + preonstream_costs["gas_intangible"]
         )
 
+        tangible_sum = tangible_cost.sum(dtype=float)
+        intangible_sum = intangible_cost.sum(dtype=float)
         investment_sum = tangible_sum + intangible_sum
 
         # Prepare OPEX summary
+        opex_cost = (
+            self._oil_opex_expenditures_post_tax
+            + self._gas_opex_expenditures_post_tax
+            + preonstream_costs["oil_opex"]
+            + preonstream_costs["gas_opex"]
+        )
 
-        print('\t')
-        print(f'Filetype: {type(tangible_sum)}')
-        print('tangible_sum = ', tangible_sum)
+        opex_sum = opex_cost.sum(dtype=float)
 
-        print('\t')
-        print(f'Filetype: {type(intangible_sum)}')
-        print('intangible_sum = ', intangible_sum)
+        # Prepare ASR summary
+        asr_cost = (
+            self._oil_asr_expenditures_post_tax
+            + self._gas_asr_expenditures_post_tax
+            + preonstream_costs["oil_asr"]
+            + preonstream_costs["gas_asr"]
+        )
 
-        print('\t')
-        print(f'Filetype: {type(investment_sum)}')
-        print('investment_sum = ', investment_sum)
+        asr_sum = asr_cost.sum(dtype=float)
 
+        # Prepare LBT summary
+        lbt_cost = (
+            self._oil_lbt_expenditures_post_tax
+            + self._gas_lbt_expenditures_post_tax
+            + preonstream_costs["oil_lbt"]
+            + preonstream_costs["gas_lbt"]
+        )
 
+        lbt_sum = lbt_cost.sum(dtype=float)
+
+        # Indirect taxes summary
+        oil_indirect_tax_sum = self._oil_total_indirect_tax.sum(dtype=float)
+        gas_indirect_tax_sum = self._gas_total_indirect_tax.sum(dtype=float)
+
+        # Calculate IRR
+        ctr_irr = irr(cashflow=self._consolidated_cashflow)
+
+        # Calculate NPV
+        # NPV method: SKK real terms
+        if npv_mode == NPVSelection.NPV_SKK_REAL_TERMS:
+
+            # Contractor NPV
+            ctr_npv = npv_skk_real_terms(
+                cashflow=self._consolidated_cashflow,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                discounting_mode=discounting_mode,
+            )
+
+            # Contractor investment NPV
+            investment_npv = npv_skk_real_terms(
+                cashflow=tangible_cost + intangible_cost,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                discounting_mode=discounting_mode,
+            )
+
+        elif npv_mode == NPVSelection.NPV_SKK_NOMINAL_TERMS:
+
+            # Contractor NPV
+            ctr_npv = npv_skk_nominal_terms(
+                cashflow=self._consolidated_cashflow,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                discounting_mode=discounting_mode,
+            )
+
+            # Contractor investment NPV
+            investment_npv = npv_skk_nominal_terms(
+                cashflow=None,
+                cashflow_years=None,
+                discount_rate=None,
+                discounting_mode=None,
+            )
+
+        elif npv_mode == NPVSelection.NPV_NOMINAL_TERMS:
+            pass
+
+        elif npv_mode == NPVSelection.NPV_REAL_TERMS:
+            pass
+
+        else:
+            pass
 
         return {
             "lifting_oil": oil_lifting_ghv_sum,
@@ -4311,13 +4444,13 @@ class BaseProject:
             "sunk_cost": sunk_cost_sum,
             "tangible": tangible_sum,
             "intangible": intangible_sum,
-            "opex_and_asr": None,
-            "opex_asr_lbt": None,
-            "opex": None,
-            "asr": None,
-            "lbt": None,
+            "opex_and_asr": opex_sum + asr_sum,
+            "opex_asr_lbt": opex_sum + asr_sum + lbt_sum,
+            "opex": opex_sum,
+            "asr": asr_sum,
+            "lbt": lbt_sum,
             "ctr_npv": None,
-            "ctr_irr": None,
+            "ctr_irr": ctr_irr,
             "ctr_pot": None,
             "ctr_pv_ratio": None,
             "ctr_pi": None,
@@ -4326,9 +4459,9 @@ class BaseProject:
             "ctr_net_share_over_gross_share": None,
             "ctr_net_cashflow": None,
             "ctr_net_cashflow_over_gross_rev": None,
-            "total_indirect_taxes": None,
-            "oil_indirect_taxes": None,
-            "gas_indirect_taxes": None,
+            "total_indirect_taxes": oil_indirect_tax_sum + gas_indirect_tax_sum,
+            "oil_indirect_taxes": oil_indirect_tax_sum,
+            "gas_indirect_taxes": gas_indirect_tax_sum,
             # Zero values for the PSC terms
             "gov_gross_share": 0,
             "cost_recovery / deductible_cost": 0,

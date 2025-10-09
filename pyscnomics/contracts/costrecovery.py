@@ -2953,6 +2953,3 @@ class CostRecovery(BaseProject):
 
         # Prepare consolidated profiles
         self._get_consolidated_profiles_cr(ftp_tax_regime=ftp_tax_regime)
-
-        self.get_results()
-
