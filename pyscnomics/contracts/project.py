@@ -3986,40 +3986,49 @@ class BaseProject:
             "names": attrs_name,
         }
 
-    def _prepare_results(self) -> dict:
+    def get_results(self) -> dict:
         """
-        Prepare and structure calculation results into DataFrames.
+        Prepare, validate, and structure project results into tabular DataFrames.
 
-        This method aligns attributes for oil, gas, and consolidated results,
-        validates their consistency, and organizes them into tabular format.
-        Each fluid type is represented as a DataFrame with project years as
-        the index and attribute names as columns.
+        This method consolidates computed attributes for oil, gas, and consolidated
+        project results into structured pandas DataFrames.
+
+        It first retrieves standardized attributes and their names, verifies the
+        consistency of attribute dimensions across fluid types, and then populates
+        a 3D NumPy array with the corresponding results.
+
+        Each fluid type is subsequently converted into a dedicated DataFrame indexed
+        by project years.
 
         Returns
         -------
         dict of {str: pandas.DataFrame}
-            A dictionary mapping fluid types to their corresponding results:
+            A dictionary mapping each fluid type to its corresponding tabular results:
 
-            - ``"oil"`` : DataFrame
-                Tabular results for oil, with each column corresponding to a
-                financial or project attribute (e.g., revenue, costs, cashflow).
-            - ``"gas"`` : DataFrame
-                Tabular results for gas, structured in the same way as oil.
-            - ``"consolidated"`` : DataFrame
-                Consolidated results across all fluids, structured similarly.
+            - ``"oil"`` : pandas.DataFrame
+              Financial and operational results for oil, with project years as index
+              and standardized attributes (e.g., revenue, cost, cashflow) as columns.
+            - ``"gas"`` : pandas.DataFrame
+              Equivalent structure for gas-related attributes.
+            - ``"consolidated"`` : pandas.DataFrame
+              Aggregated results combining both oil and gas metrics.
 
         Raises
         ------
         BaseProjectException
-            If the number of attributes or names is inconsistent across fluid types.
+            If the number of attributes or their corresponding names is inconsistent
+            across fluid types.
 
         Notes
         -----
-        - Internally, results are stored in a 3D NumPy array of shape
-          ``(n_fluids, project_duration, n_attributes)`` before being
-          converted to DataFrames.
-        - Column names are derived from the standardized names returned by
-          :meth:`_get_attrs_for_results`.
+        - Internally, all results are first aligned into a 3D NumPy array of shape
+          ``(n_fluids, project_duration, n_attributes)`` before being converted into
+          DataFrames.
+        - Column names are derived from the standardized list of attribute names
+          returned by :meth:`_get_attrs_for_results`.
+        - The index of each DataFrame corresponds to ``self.project_years``.
+        - This function ensures that oil, gas, and consolidated outputs share a
+          consistent structure for downstream analysis or export.
         """
 
         # Define attributes and names of the attributes
@@ -4051,48 +4060,6 @@ class BaseProject:
             key: pd.DataFrame(results[i, :, :], columns=names, index=self.project_years)
             for i, key in enumerate(fluids)
         }
-
-    def get_results(self, ftype: str = "oil", chunk_size: int = 3) -> pd.DataFrame:
-        """
-        Print calculation results for a specified fluid type in chunks.
-
-        This method retrieves the prepared results for the given fluid type and
-        prints them in column-wise chunks to improve readability, especially when
-        the number of columns is large.
-
-        Parameters
-        ----------
-        chunk_size : int
-            The number of columns to display in each printed chunk.
-        ftype : str
-            The fluid type to display results for. Must be one of:
-            {"oil", "gas", "consolidated"}.
-
-        Returns
-        -------
-        None
-            The method prints the results to the console and does not return any value.
-
-        Raises
-        ------
-        KeyError
-            If `ftype` is not one of {"oil", "gas", "consolidated"}.
-        """
-
-        df_map: dict = self._prepare_results()
-
-        def _prepare_print(chunk_size: int, df: pd.DataFrame):
-            cols = df.columns.tolist()
-
-            print('\t')
-            print(f"Fluid: {ftype}")
-            print(f"========================================================")
-
-            for i in range(0, len(cols), chunk_size):
-                print(f"\nColumns {i + 1} to {min(i + chunk_size, len(cols))}: ")
-                print(df[cols[i:i + chunk_size]])
-
-        _prepare_print(chunk_size=chunk_size, df=df_map[ftype])
 
     def run(
         self,
@@ -4246,22 +4213,125 @@ class BaseProject:
         npv_mode: NPVSelection = NPVSelection.NPV_SKK_REAL_TERMS,
         discounting_mode: DiscountingMode = DiscountingMode.END_YEAR,
         discount_rate_start_year: int | None = None,
+        inflation_rate: np.ndarray | float = 0.0,
         profitability_discounted: bool = False,
     ):
+        """
+        Compute the economic summary of a petroleum project under various NPV modes.
 
-        kwargs_run = {
-            "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
-            "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            "tax_rate": 0.0,
-            "year_inflation": None,
-            "inflation_rate": 0.0,
-            "inflation_rate_applied_to": None,
-        }
+        This method calculates key economic indicators such as Net Present Value (NPV),
+        Internal Rate of Return (IRR), Pay-Out Time (POT), Profitability Index (PI),
+        as well as gross revenues, costs, and contractor shares for both oil and gas.
+        It supports multiple discounting approaches (real, nominal, SKK, or point-forward)
+        and allows selection of whether profitability is calculated using discounted
+        or undiscounted investment.
 
-        self.run(**kwargs_run)
+        Parameters
+        ----------
+        discount_rate : float, default=0.1
+            Annual discount rate (as a decimal) used for NPV calculation.
+
+        npv_mode : NPVSelection, default=NPVSelection.NPV_SKK_REAL_TERMS
+            Method used for NPV calculation. Options include:
+            - ``NPV_SKK_REAL_TERMS`` : SKK-based NPV in real terms.
+            - ``NPV_SKK_NOMINAL_TERMS`` : SKK-based NPV in nominal terms.
+            - ``NPV_NOMINAL_TERMS`` : Conventional NPV in nominal terms.
+            - ``NPV_REAL_TERMS`` : Conventional NPV in real terms.
+            - ``NPV_POINT_FORWARD`` : Point-forward NPV where cashflows before
+              the reference year are neglected.
+
+        discounting_mode : DiscountingMode, default=DiscountingMode.END_YEAR
+            Defines when discounting occurs. Typically ``START_YEAR`` or ``END_YEAR``.
+
+        discount_rate_start_year : int or None, optional
+            Year from which the discounting reference is applied. If ``None``,
+            it defaults to the project start year. Must fall between project
+            start and end years.
+
+        inflation_rate : float or np.ndarray, default=0.0
+            Inflation rate(s) applied when using real-term NPV calculations.
+            Can be a scalar or an array corresponding to project years.
+
+        profitability_discounted : bool, default=False
+            If ``True``, the Profitability Index (PI) is calculated using discounted
+            investment. Otherwise, undiscounted investment is used.
+
+        Raises
+        ------
+        BaseProjectSummaryException
+            If the discounting reference year is outside the project duration
+            (i.e., before start year or after end year).
+
+        Returns
+        -------
+        summary : dict of {str: float}
+            A dictionary containing summarized economic indicators and project
+            financial metrics, including (but not limited to):
+
+            **Production & Prices**
+                - ``lifting_oil`` : Total oil lifting (GHV basis).
+                - ``lifting_gas`` : Total gas lifting (GHV basis).
+                - ``oil_wap`` : Weighted average price of oil.
+                - ``gas_wap`` : Weighted average price of gas.
+
+            **Revenue & Costs**
+                - ``gross_revenue`` : Total gross revenue (oil + gas).
+                - ``gross_revenue_oil`` : Oil gross revenue.
+                - ``gross_revenue_gas`` : Gas gross revenue.
+                - ``investment`` : Total investment (tangible + intangible).
+                - ``tangible`` : Total tangible investment.
+                - ``intangible`` : Total intangible investment.
+                - ``opex`` : Total operating expenditures.
+                - ``asr`` : Abandonment and site restoration cost.
+                - ``lbt`` : Land and building tax.
+                - ``sunk_cost`` : Total sunk costs prior to onstream.
+                - ``total_indirect_taxes`` : Total indirect taxes (oil + gas).
+
+            **Economic Indicators**
+                - ``ctr_npv`` : Contractor Net Present Value.
+                - ``ctr_irr`` : Contractor Internal Rate of Return.
+                - ``ctr_pot`` : Contractor Pay-Out Time (POT).
+                - ``ctr_pv_ratio`` : Ratio of contractor NPV to investment.
+                - ``ctr_pi`` : Profitability Index (1 + PV ratio).
+
+            **Contractor Shares**
+                - ``ctr_gross_share`` : Contractor gross revenue share.
+                - ``ctr_net_share`` : Contractor net revenue after costs.
+                - ``ctr_net_share_over_gross_share`` : Ratio of contractor net share
+                  to gross share.
+                - ``ctr_net_cashflow`` : Contractor total net cashflow.
+                - ``ctr_net_cashflow_over_gross_rev`` : Ratio of contractor net
+                  cashflow to gross revenue.
+
+            **Government & PSC Terms**
+                - ``gov_take`` : Government take.
+                - ``gov_take_over_gross_rev`` : Government take over gross revenue.
+                - Other PSC-related outputs (e.g., ``cost_recovery``,
+                  ``unrec_cost``, ``gov_tax_income``) default to zero.
+
+        Notes
+        -----
+        The NPV and other economic indicators depend on the selected ``npv_mode``
+        and discounting assumptions. When using the *point-forward* mode, only cashflows
+        from the reference year onward are considered in NPV and net cashflow calculations.
+        """
+
+        # kwargs_run = {
+        #     "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        #     "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+        #     "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        #     "tax_rate": 0.0,
+        #     "year_inflation": None,
+        #     "inflation_rate": 0.0,
+        #     "inflation_rate_applied_to": None,
+        # }
+        #
+        # self.run(**kwargs_run)
 
         # Prepare discount rate start year
+        if discount_rate_start_year is None:
+            discount_rate_start_year = self.start_date.year
+
         # Cannot have discount rate year before the start year of the project
         if discount_rate_start_year < self.start_date.year:
             raise BaseProjectSummaryException(
@@ -4275,9 +4345,6 @@ class BaseProject:
                 f"The discounting reference year ({discount_rate_start_year}) "
                 f"is after the end year of the project ({self.end_date.year})."
             )
-
-        if discount_rate_start_year is None:
-            discount_rate_start_year = self.start_date.year
 
         # Prepare OIL lifting summary
         oil_lifting_ghv = self._oil_lifting.get_lifting_rate_ghv_arr()
@@ -4403,6 +4470,7 @@ class BaseProject:
                 discounting_mode=discounting_mode,
             )
 
+        # NPV method: SKK nominal terms
         elif npv_mode == NPVSelection.NPV_SKK_NOMINAL_TERMS:
 
             # Contractor NPV
@@ -4415,20 +4483,133 @@ class BaseProject:
 
             # Contractor investment NPV
             investment_npv = npv_skk_nominal_terms(
-                cashflow=None,
-                cashflow_years=None,
-                discount_rate=None,
-                discounting_mode=None,
+                cashflow=tangible_cost + intangible_cost,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                discounting_mode=discounting_mode,
             )
 
+        # NPV method: nominal terms
         elif npv_mode == NPVSelection.NPV_NOMINAL_TERMS:
-            pass
 
+            # Contractor NPV
+            ctr_npv = npv_nominal_terms(
+                cashflow=self._consolidated_cashflow,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                discounting_mode=discounting_mode,
+            )
+
+            # Contractor investment NPV
+            investment_npv = npv_nominal_terms(
+                cashflow=tangible_cost + intangible_cost,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                discounting_mode=discounting_mode,
+            )
+
+        # NPV method: real terms
         elif npv_mode == NPVSelection.NPV_REAL_TERMS:
-            pass
+
+            # Contractor NPV
+            ctr_npv = npv_real_terms(
+                cashflow=self._consolidated_cashflow,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                inflation_rate=inflation_rate,
+                discounting_mode=discounting_mode,
+            )
+
+            # Contractor investment NPV
+            investment_npv = npv_real_terms(
+                cashflow=tangible_cost + intangible_cost,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                inflation_rate=inflation_rate,
+                discounting_mode=discounting_mode,
+            )
+
+        # NPV method: point forward
+        else:
+            # Contractor NPV
+            ctr_npv = npv_point_forward(
+                cashflow=self._consolidated_cashflow,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                discounting_mode=discounting_mode,
+            )
+
+            # Contractor investment NPV
+            investment_npv = npv_point_forward(
+                cashflow=tangible_cost + intangible_cost,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                discounting_mode=discounting_mode,
+            )
+
+        # Contractor present value ratio to the investment NPV
+        # Profitability Index is calculated using discounted investment
+        if profitability_discounted:
+            ctr_pv_ratio = np.divide(ctr_npv, investment_npv, where=investment_npv != 0)
+
+        # Profitability Index is calculated using undiscounted investment
+        else:
+            investment_pi = np.sum(tangible_cost + intangible_cost)
+            ctr_pv_ratio = np.divide(ctr_npv, investment_pi, where=investment_pi != 0)
+
+        ctr_pi = 1 + ctr_pv_ratio
+
+        # Contractor POT
+        ctr_pot = pot_psc(
+            cashflow=self._consolidated_cashflow,
+            cashflow_years=self.project_years,
+            reference_year=discount_rate_start_year,
+        )
+
+        # Contractor net chare
+        ctr_net_share = (
+            oil_gross_revenue_sum
+            + gas_gross_revenue_sum
+            - investment_sum
+            - opex_sum
+            - asr_sum
+            - lbt_sum
+        )
+        ctr_net_share_over_gross_share = (
+            ctr_net_share /
+            (oil_gross_revenue_sum + gas_gross_revenue_sum)
+        )
+
+        # Contractor net cashflow
+        if npv_mode == NPVSelection.NPV_POINT_FORWARD:
+            # Modify contractor net cashflow since the cashflow before discount rate
+            # start year is neglected
+            ref_year_arr = np.full_like(
+                self._consolidated_cashflow, fill_value=discount_rate_start_year
+            )
+            cashflow_point_forward = np.where(
+                self.project_years >= ref_year_arr,
+                self._consolidated_cashflow,
+                0,
+            )
+            gross_revenue_point_forward = np.where(
+                self.project_years >= ref_year_arr,
+                self._consolidated_revenue,
+                0,
+            )
+            ctr_net_cashflow = cashflow_point_forward.sum(dtype=float)
+            gross_revenue_point_forward = gross_revenue_point_forward.sum(dtype=float)
+            ctr_net_cashflow_over_gross_rev = ctr_net_cashflow / gross_revenue_point_forward
 
         else:
-            pass
+            ctr_net_cashflow = ctr_net_share
+            ctr_net_cashflow_over_gross_rev = ctr_net_share_over_gross_share
 
         return {
             "lifting_oil": oil_lifting_ghv_sum,
@@ -4449,16 +4630,16 @@ class BaseProject:
             "opex": opex_sum,
             "asr": asr_sum,
             "lbt": lbt_sum,
-            "ctr_npv": None,
+            "ctr_npv": ctr_npv,
             "ctr_irr": ctr_irr,
-            "ctr_pot": None,
-            "ctr_pv_ratio": None,
-            "ctr_pi": None,
-            "ctr_gross_share": None,
-            "ctr_net_share": None,
-            "ctr_net_share_over_gross_share": None,
-            "ctr_net_cashflow": None,
-            "ctr_net_cashflow_over_gross_rev": None,
+            "ctr_pot": ctr_pot,
+            "ctr_pv_ratio": ctr_pv_ratio,
+            "ctr_pi": ctr_pi,
+            "ctr_gross_share": oil_gross_revenue_sum + gas_gross_revenue_sum,
+            "ctr_net_share": ctr_net_share,
+            "ctr_net_share_over_gross_share": ctr_net_share_over_gross_share,
+            "ctr_net_cashflow": ctr_net_cashflow,
+            "ctr_net_cashflow_over_gross_rev": ctr_net_cashflow_over_gross_rev,
             "total_indirect_taxes": oil_indirect_tax_sum + gas_indirect_tax_sum,
             "oil_indirect_taxes": oil_indirect_tax_sum,
             "gas_indirect_taxes": gas_indirect_tax_sum,

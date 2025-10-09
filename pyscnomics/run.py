@@ -77,9 +77,9 @@ pr = BaseProject(
     cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
 )
 
-# pr.run(**params_base)
+pr.run(**params_base)
 
-pr.get_summary()
+# pr.get_summary()
 
 # print('\t')
 # print(f'Filetype: {type()}')
