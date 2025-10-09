@@ -22,8 +22,19 @@ from pyscnomics.econ.selection import (
     VariableSplit082017,
     VariableSplit132024,
     SunkCostMethod,
+    NPVSelection,
+    DiscountingMode,
 )
 from pyscnomics.econ.depreciation import unit_of_production_rate
+from pyscnomics.econ.indicator import (
+    irr,
+    npv_nominal_terms,
+    npv_real_terms,
+    npv_skk_nominal_terms,
+    npv_skk_real_terms,
+    npv_point_forward,
+    pot_psc,
+)
 
 pd.set_option("display.max_rows", 200)
 pd.set_option("display.max_columns", 50)
@@ -3681,3 +3692,14 @@ class GrossSplit(BaseProject):
 
         # Prepare consolidated attributes
         self._get_consolidated_profiles()
+
+    def get_summary(
+        self,
+        discount_rate: float = 0.1,
+        npv_mode: NPVSelection = NPVSelection.NPV_SKK_REAL_TERMS,
+        discounting_mode: DiscountingMode = DiscountingMode.END_YEAR,
+        discount_rate_start_year: int | None = None,
+        inflation_rate: np.ndarray | float = 0.0,
+        profitability_discounted: bool = False,
+    ):
+        pass
