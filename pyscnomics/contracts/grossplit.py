@@ -58,6 +58,12 @@ class CumulativeProductionSplitException(Exception):
     pass
 
 
+class GrossSplitSummaryException(Exception):
+    """ Exception to be raised for a misuse of get_summary() method """
+
+    pass
+
+
 @dataclass
 class GrossSplit(BaseProject):
     """
@@ -3040,28 +3046,33 @@ class GrossSplit(BaseProject):
             "names": attrs_names,
         }
 
-    def _prepare_results(self) -> dict:
+    def get_results(self) -> dict:
         """
-        Prepare structured economic results for oil, gas, and consolidated cases.
+        Prepare, validate, and structure PSC Gross Split results into tabular
+        DataFrames.
 
-        This method retrieves attributes and their names from
-        :meth:`_get_attrs_for_results`, verifies their consistency across
-        oil, gas, and consolidated cases, and organizes the data into a
-        3D NumPy array. It then converts this array into a dictionary of
-        pandas DataFrames, one for each fluid type, with attributes as
-        columns and project years as the index.
+        This method consolidates computed attributes for oil, gas, and consolidated
+        PSC Gross Split results into structured pandas DataFrames.
+
+        It first retrieves standardized attributes and their names, verifies the
+        consistency of attribute dimensions across fluid types, and then populates
+        a 3D NumPy array with the corresponding results.
+
+        Each fluid type is subsequently converted into a dedicated DataFrame indexed
+        by project years.
 
         Returns
         -------
         dict of {str: pandas.DataFrame}
-            Dictionary containing results for each fluid type:
+            A dictionary mapping each fluid type to its corresponding tabular results:
 
-            - ``"oil"`` : DataFrame
-                Oil attributes across project years.
-            - ``"gas"`` : DataFrame
-                Gas attributes across project years.
-            - ``"consolidated"`` : DataFrame
-                Consolidated attributes (oil + gas) across project years.
+            - ``"oil"`` : pandas.DataFrame
+              Financial and operational results for oil, with project years as index
+              and standardized attributes (e.g., revenue, cost, cashflow) as columns.
+            - ``"gas"`` : pandas.DataFrame
+              Equivalent structure for gas-related attributes.
+            - ``"consolidated"`` : pandas.DataFrame
+              Aggregated results combining both oil and gas metrics.
 
             Each DataFrame has shape ``(project_duration, n_attributes)`` with:
             - Rows indexed by ``self.project_years``.
@@ -3076,10 +3087,14 @@ class GrossSplit(BaseProject):
 
         Notes
         -----
-        - Internally, a 3D NumPy array with shape
-          ``(n_fluids, project_duration, n_attributes)`` is created to
-          temporarily hold the results before converting them into DataFrames.
-        - Missing or unavailable values are initialized as NaN.
+        - Internally, all results are first aligned into a 3D NumPy array of shape
+          ``(n_fluids, project_duration, n_attributes)`` before being converted into
+          DataFrames.
+        - Column names are derived from the standardized list of attribute names
+          returned by :meth:`_get_attrs_for_results`.
+        - The index of each DataFrame corresponds to ``self.project_years``.
+        - This function ensures that oil, gas, and consolidated outputs share a
+          consistent structure for downstream analysis or export.
         """
 
         # Define the attributes and their names
@@ -3111,57 +3126,6 @@ class GrossSplit(BaseProject):
             key: pd.DataFrame(results[i, :, :], columns=names, index=self.project_years)
             for i, key in enumerate(fluids)
         }
-
-    def get_results(self, ftype: str = "oil", chunk_size: int = 3) -> pd.DataFrame:
-        """
-        Retrieve and display economic results for a given fluid type.
-
-        This method prepares results using :meth:`_prepare_results`, selects
-        the DataFrame corresponding to the specified fluid type, and prints
-        the data in column chunks for easier readability in the console.
-        Chunking helps avoid overly wide printouts when the DataFrame contains
-        many attributes. The underlying DataFrame is also returned.
-
-        Parameters
-        ----------
-        ftype : {"oil", "gas", "consolidated"}, default="oil"
-            Fluid type for which results are retrieved. Must be one of:
-            - ``"oil"`` : Oil attributes only
-            - ``"gas"`` : Gas attributes only
-            - ``"consolidated"`` : Combined oil and gas attributes
-        chunk_size : int, default=3
-            Number of columns to display at a time when printing the DataFrame.
-
-        Returns
-        -------
-        pandas.DataFrame
-            Results DataFrame for the specified fluid type. The DataFrame has:
-            - Rows indexed by ``self.project_years``.
-            - Columns corresponding to economic attributes (e.g., revenue,
-              expenditures, taxes, contractor/government share, etc.).
-
-        Notes
-        -----
-        - Printing is for readability only; it does not affect the returned
-          DataFrame.
-        - The method is useful for inspecting results interactively during
-          development or debugging.
-        """
-
-        df_map: dict = self._prepare_results()
-
-        def _prepare_print(chunk_size: int, df: pd.DataFrame):
-            cols = df.columns.tolist()
-
-            print('\t')
-            print(f"Fluid: {ftype}")
-            print(f"========================================================")
-
-            for i in range(0, len(cols), chunk_size):
-                print(f"\nColumns {i + 1} to {min(i + chunk_size, len(cols))}: ")
-                print(df[cols[i:i + chunk_size]])
-
-        _prepare_print(chunk_size=chunk_size, df=df_map[ftype])
 
     def run(
         self,
@@ -3702,4 +3666,166 @@ class GrossSplit(BaseProject):
         inflation_rate: np.ndarray | float = 0.0,
         profitability_discounted: bool = False,
     ):
-        pass
+
+        kwargs_run = {
+            "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+            "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+            "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+            "vat_rate": 0.0,
+            "year_inflation": None,
+            "inflation_rate": 0.0,
+            "inflation_rate_applied_to": InflationAppliedTo.CAPEX,
+            "cum_production_split_offset": 0.0,
+            "depr_method": DeprMethod.PSC_DB,
+            "decline_factor": 2,
+            "sum_undepreciated_cost": False,
+            "is_dmo_end_weighted": False,
+            "tax_regime": TaxRegime.NAILED_DOWN,
+            "effective_tax_rate": 0.22,
+            "amortization": False,
+            "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
+            "regime": GrossSplitRegime.PERMEN_ESDM_13_2024,
+            "reservoir_type_permen_2024": VariableSplit132024.ReservoirType.MK,
+            "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
+        }
+
+        self.run(**kwargs_run)
+
+        # Prepare discount rate start year
+        if discount_rate_start_year is None:
+            discount_rate_start_year = self.start_date.year
+
+        # Cannot have discount rate year before the start year of the project
+        if discount_rate_start_year < self.start_date.year:
+            raise GrossSplitSummaryException(
+                f"The discounting reference year ({discount_rate_start_year}) "
+                f"is before start year of the project ({self.start_date.year})."
+            )
+
+        # Cannot have discount rate year after the end year of the project
+        if discount_rate_start_year > self.end_date.year:
+            raise GrossSplitSummaryException(
+                f"The discounting reference year ({discount_rate_start_year}) "
+                f"is after the end year of the project ({self.end_date.year})."
+            )
+
+        # Prepare OIL lifting summary
+        oil_lifting_ghv = self._oil_lifting.get_lifting_rate_ghv_arr()
+        oil_lifting_ghv_sum = np.sum(oil_lifting_ghv, dtype=float)
+        if oil_lifting_ghv_sum == 0.0:
+            oil_wap_sum = 0.0
+        else:
+            oil_wap_sum = np.divide(
+                np.sum(self._oil_revenue), oil_lifting_ghv_sum, where=oil_lifting_ghv_sum != 0
+            )
+
+        # Prepare GAS lifting summary
+        gas_lifting_ghv = self._gas_lifting.get_lifting_rate_ghv_arr()
+        gas_ghv = self._gas_lifting.get_ghv_arr()
+        gas_lifting_ghv_sum = np.sum(gas_lifting_ghv, dtype=float)
+        if gas_lifting_ghv_sum == 0.0:
+            gas_wap_sum = 0.0
+        else:
+            gas_wap_sum = np.divide(
+                np.sum(self._gas_wap_price * gas_lifting_ghv * gas_ghv),
+                np.sum(gas_lifting_ghv * gas_ghv),
+                where=np.sum(gas_lifting_ghv * gas_ghv) != 0,
+            )
+
+        # Prepare gross revenue summary
+        oil_gross_revenue_sum = self._oil_revenue.sum(dtype=float)
+        gas_gross_revenue_sum = self._gas_revenue.sum(dtype=float)
+        total_gross_revenue_sum = oil_gross_revenue_sum + gas_gross_revenue_sum
+
+        # Prepare sunk cost summary
+        sunk_cost_sum = np.sum(self._oil_sunk_cost + self._gas_sunk_cost, dtype=float)
+
+        # Prepare preonstream costs
+        preonstream_map = {
+            "oil_intangible": self._oil_intangible_preonstream,
+            "gas_intangible": self._gas_intangible_preonstream,
+            "oil_opex": self._oil_opex_preonstream,
+            "gas_opex": self._gas_opex_preonstream,
+            "oil_asr": self._oil_asr_preonstream,
+            "gas_asr": self._gas_asr_preonstream,
+            "oil_lbt": self._oil_lbt_preonstream,
+            "gas_lbt": self._gas_lbt_preonstream,
+        }
+
+        preonstream_costs = {
+            key: val.expenditures_pre_tax() for key, val in preonstream_map.items()
+        }
+
+        # Prepare tangible cost summary
+        tangible_cost = (
+            self._oil_capital_expenditures_post_tax
+            + self._gas_capital_expenditures_post_tax
+            + self._oil_depreciable_preonstream
+            + self._gas_depreciable_preonstream
+        )
+
+        intangible_cost = (
+            self._oil_intangible_expenditures_post_tax
+            + self._gas_intangible_expenditures_post_tax
+            + preonstream_costs["oil_intangible"]
+            + preonstream_costs["gas_intangible"]
+        )
+
+        tangible_sum = tangible_cost.sum(dtype=float)
+        intangible_sum = intangible_cost.sum(dtype=float)
+        investment_sum = tangible_sum + intangible_sum
+
+        # Prepare OPEX summary
+        opex_cost = (
+            self._oil_opex_expenditures_post_tax
+            + self._gas_opex_expenditures_post_tax
+            + preonstream_costs["oil_opex"]
+            + preonstream_costs["gas_opex"]
+        )
+
+        opex_sum = opex_cost.sum(dtype=float)
+
+        # Prepare ASR summary
+        asr_cost = (
+            self._oil_asr_expenditures_post_tax
+            + self._gas_asr_expenditures_post_tax
+            + preonstream_costs["oil_asr"]
+            + preonstream_costs["gas_asr"]
+        )
+
+        asr_sum = asr_cost.sum(dtype=float)
+
+        # Prepare LBT summary
+        lbt_cost = (
+            self._oil_lbt_expenditures_post_tax
+            + self._gas_lbt_expenditures_post_tax
+            + preonstream_costs["oil_lbt"]
+            + preonstream_costs["gas_lbt"]
+        )
+
+        lbt_sum = lbt_cost.sum(dtype=float)
+
+        # Prepare indirect taxes summary
+        oil_indirect_tax_sum = self._oil_total_indirect_tax.sum(dtype=float)
+        gas_indirect_tax_sum = self._gas_total_indirect_tax.sum(dtype=float)
+
+        # Prepare undepreciated assets summary
+        oil_undepreciated_asset_sum = np.sum(
+            [undepr.sum() for undepr in self._oil_undepreciated_assets.values()]
+        )
+        gas_undepreciated_asset_sum = np.sum(
+            [undepr.sum() for undepr in self._gas_undepreciated_assets.values()]
+        )
+        total_undepreciated_asset_sum = (
+            oil_undepreciated_asset_sum + gas_undepreciated_asset_sum
+        )
+
+        # Prepare government DDMO summary
+        gov_ddmo = self._consolidated_ddmo.sum(dtype=float)
+
+        print('\t')
+        print(f'Filetype: {type(gov_ddmo)}')
+        print('gov_ddmo = ', gov_ddmo)
+
+
+
