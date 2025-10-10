@@ -3823,9 +3823,25 @@ class GrossSplit(BaseProject):
         # Prepare government DDMO summary
         gov_ddmo = self._consolidated_ddmo.sum(dtype=float)
 
+        # Prepare government take summary
+        gov_take_income = self._consolidated_tax_payment.sum(dtype=float)
+        gov_take = self._consolidated_government_take.sum(dtype=float)
+        gov_take_over_gross_rev = np.divide(
+            gov_take, total_gross_revenue_sum, where=total_gross_revenue_sum != 0
+        )
+
         print('\t')
-        print(f'Filetype: {type(gov_ddmo)}')
-        print('gov_ddmo = ', gov_ddmo)
+        print(f'Filetype: {type(gov_take)}')
+        print('gov_take = ', gov_take)
+
+        print('\t')
+        print(f'Filetype: {type(gov_take_income)}')
+        print('gov_take_income = ', gov_take_income)
+
+        print('\t')
+        print(f'Filetype: {type(gov_take_over_gross_rev)}')
+        print('gov_take_over_gross_rev = ', gov_take_over_gross_rev)
+
 
 
 
