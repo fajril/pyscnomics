@@ -4207,6 +4207,10 @@ class BaseProject:
         # Prepare consolidated profiles
         self._get_consolidated_profiles()
 
+    @staticmethod
+    def _calc_division(numerator: float, denominator: float, default: float = 0.0):
+        return (numerator / denominator) if denominator != 0 else default
+
     def get_summary(
         self,
         discount_rate: float = 0.1,
