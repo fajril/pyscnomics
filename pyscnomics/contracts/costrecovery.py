@@ -47,6 +47,12 @@ class CostRecoveryException(Exception):
     pass
 
 
+class CostRecoverySummaryException(Exception):
+    """ Exception to be raised for a misuse of get_summary() method """
+
+    pass
+
+
 @dataclass
 class CostRecovery(BaseProject):
     """
@@ -2936,14 +2942,14 @@ class CostRecovery(BaseProject):
 
         # Cannot have discount rate year before the start year of the project
         if discount_rate_start_year < self.start_date.year:
-            raise GrossSplitSummaryException(
+            raise CostRecoverySummaryException(
                 f"The discounting reference year ({discount_rate_start_year}) "
                 f"is before start year of the project ({self.start_date.year})."
             )
 
         # Cannot have discount rate year after the end year of the project
         if discount_rate_start_year > self.end_date.year:
-            raise GrossSplitSummaryException(
+            raise CostRecoverySummaryException(
                 f"The discounting reference year ({discount_rate_start_year}) "
                 f"is after the end year of the project ({self.end_date.year})."
             )
@@ -3260,11 +3266,100 @@ class CostRecovery(BaseProject):
             numerator=unrec_cost, denominator=total_gross_revenue_sum
         )
 
+        # Prepare contractor gross share summary
+        ctr_gross_share_sum = self._consolidated_contractor_share.sum(dtype=float)
 
-        print('\t')
-        print(f'Filetype: {type(unrec_cost)}')
-        print('unrec_cost = ', unrec_cost)
+        # Prepare government gross share summary
+        gov_gross_share_sum = self._consolidated_government_share.sum(dtype=float)
 
-        print('\t')
-        print(f'Filetype: {type(unrec_cost_costrec)}')
-        print('unrec_cost_costrec = ', unrec_cost_costrec)
+        # Prepare contractor net share summary
+        ctr_net_share_sum = self._consolidated_ctr_net_share.sum(dtype=float)
+        ctr_net_share_over_gross_share = self._calc_division(
+            numerator=ctr_net_share_sum, denominator=total_gross_revenue_sum
+        )
+
+        # Prepare contractor net cashflow summary
+        # For NPV POINT FORWARD
+        if npv_mode == NPVSelection.NPV_POINT_FORWARD:
+            ref_year_arr = np.full(
+                self._consolidated_cashflow, fill_value=discount_rate_start_year
+            )
+            cashflow_point_forward = np.where(
+                self.project_years >= ref_year_arr,
+                self._consolidated_cashflow,
+                0,
+            )
+            gross_revenue_point_forward = np.where(
+                self.project_years >= ref_year_arr,
+                self._consolidated_cashflow,
+                0,
+            )
+
+            # Contractor net cashflow
+            ctr_net_cashflow_sum = cashflow_point_forward.sum(dtype=float)
+            ctr_net_cashflow_over_gross_rev = self._calc_division(
+                numerator=ctr_net_cashflow_sum,
+                denominator=gross_revenue_point_forward.sum(dtype=float),
+            )
+
+        # For other NPV calculation methods
+        else:
+            # Contractor net cashflow
+            ctr_net_cashflow_sum = self._consolidated_cashflow.sum(dtype=float)
+            ctr_net_cashflow_over_gross_rev = self._calc_division(
+                numerator=ctr_net_cashflow_sum, denominator=total_gross_revenue_sum
+            )
+
+        return {
+            "lifting_oil": None,
+            "oil_wap": None,
+            "lifting_gas": None,
+            "gas_wap": None,
+            "gross_revenue": None,
+            "gross_revenue_oil": None,
+            "gross_revenue_gas": None,
+            "ctr_gross_share": None,
+            "gov_gross_share": None,
+            "investment": None,
+            "oil_capex": None,
+            "gas_capex": None,
+            "sunk_cost": None,
+            "tangible": None,
+            "intangible": None,
+            "opex_asr_lbt": None,
+            "opex": None,
+            "asr": None,
+            "lbt": None,
+            "cost_recovery / deductible cost": None,
+            "cost_recovery_over_gross_rev": None,
+            "unrec_cost": None,
+            "unrec_over_costrec": None,
+            "unrec_over_gross_rev": None,
+            "ctr_net_share": None,
+            "ctr_net_share_over_gross_share": None,
+            "ctr_net_cashflow": None,
+            "ctr_net_cashflow_over_gross_rev": None,
+            "ctr_npv": None,
+            "ctr_npv_sunk_cost_pooled": None,
+            "ctr_irr": None,
+            "ctr_irr_sunk_cost_pooled": None,
+            "ctr_pot": None,
+            "ctr_pv_ratio": None,
+            "ctr_pi": None,
+            "gov_ftp_share": None,
+            "gov_equity_share": None,
+            "gov_ddmo": None,
+            "gov_tax_income": None,
+            "gov_take": None,
+            "gov_take_over_gross_rev": None,
+            "gov_take_npv": None,
+            "undepreciated_asset_oil": None,
+            "undepreciated_asset_gas": None,
+            "undepreciated_asset_total": None,
+            "total_indirect_taxes": None,
+            "oil_indirect_taxes": None,
+            "gas_indirect_taxes": None,
+            "total_carry_forward_depreciation": None,
+            "oil_carry_forward_depreciation": None,
+            "gas_carry_forward_depreciation": None,
+        }
