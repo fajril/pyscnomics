@@ -18,6 +18,17 @@ from pyscnomics.econ.selection import (
     OtherRevenue,
     SunkCostMethod,
     InitialYearDepreciationIncurred,
+    NPVSelection,
+    DiscountingMode,
+)
+from pyscnomics.econ.indicator import (
+    irr,
+    npv_nominal_terms,
+    npv_real_terms,
+    npv_skk_nominal_terms,
+    npv_skk_real_terms,
+    npv_point_forward,
+    pot_psc,
 )
 
 pd.set_option("display.max_rows", 200)
@@ -2281,34 +2292,38 @@ class CostRecovery(BaseProject):
             "names": attrs_names,
         }
 
-    def _prepare_results(self) -> dict:
+    def get_results(self) -> dict:
         """
-        Prepare and structure oil, gas, and consolidated calculation results.
+        Prepare, validate, and structure PSC Cost Recovery results into tabular
+        DataFrames.
 
-        This method transforms all numerical attributes collected from
-        :meth:`_get_attrs_for_results` into pandas DataFrames, one for each
-        fluid stream (`oil`, `gas`, and `consolidated`).
+        This method consolidates computed attributes for oil, gas, and consolidated
+        PSC Cost Recovery results into structured pandas DataFrames.
 
-        It ensures attribute consistency across fluids, organizes them into
-        a 3D NumPy array, and returns a dictionary of time-indexed result tables.
+        It first retrieves standardized attributes and their names, verifies the
+        consistency of attribute dimensions across fluid types, and then populates
+        a 3D NumPy array with the corresponding results.
+
+        Each fluid type is subsequently converted into a dedicated DataFrame indexed
+        by project years.
 
         Returns
         -------
-        dict of pandas.DataFrame
-            A dictionary containing one DataFrame per fluid stream:
+        dict of {str: pandas.DataFrame}
+            A dictionary mapping each fluid type to its corresponding tabular results:
 
-            - **"oil"** : DataFrame
-              Oil-related results by project year.
-            - **"gas"** : DataFrame
-              Gas-related results by project year.
-            - **"consolidated"** : DataFrame
-              Consolidated (oil + gas) results by project year.
+            - ``"oil"`` : pandas.DataFrame
+              Financial and operational results for oil, with project years as index
+              and standardized attributes (e.g., revenue, cost, cashflow) as columns.
+            - ``"gas"`` : pandas.DataFrame
+              Equivalent structure for gas-related attributes.
+            - ``"consolidated"`` : pandas.DataFrame
+              Aggregated results combining both oil and gas metrics.
 
-            Each DataFrame has:
-            - **index** : project years (`self.project_years`)
-            - **columns** : attribute names returned from :meth:`_get_attrs_for_results`
-            - **values** : numerical results (`float64`), possibly containing `NaN`
-              for undefined attributes.
+            Each DataFrame has shape ``(project_duration, n_attributes)`` with:
+            - Rows indexed by ``self.project_years``.
+            - Columns named according to the attribute names from
+              :meth:`_get_attrs_for_results`.
 
         Raises
         ------
@@ -2318,8 +2333,14 @@ class CostRecovery(BaseProject):
 
         Notes
         -----
-        - The method internally validates attribute alignment between
-          `oil`, `gas`, and `consolidated` to prevent structural inconsistencies.
+        - Internally, all results are first aligned into a 3D NumPy array of shape
+          ``(n_fluids, project_duration, n_attributes)`` before being converted into
+          DataFrames.
+        - Column names are derived from the standardized list of attribute names
+          returned by :meth:`_get_attrs_for_results`.
+        - The index of each DataFrame corresponds to ``self.project_years``.
+        - This function ensures that oil, gas, and consolidated outputs share a
+          consistent structure for downstream analysis or export.
         - The returned DataFrames are ready for post-processing, reporting,
           or export (e.g., to Excel or visualization routines).
         """
@@ -2353,61 +2374,6 @@ class CostRecovery(BaseProject):
             key: pd.DataFrame(results[i, :, :], columns=names, index=self.project_years)
             for i, key in enumerate(fluids)
         }
-
-    def get_results(self, ftype: str = "oil", chunk_size: int = 3) -> pd.DataFrame:
-        """
-        Retrieve and display economic results for a given fluid type.
-
-        This method prepares results using :meth:`_prepare_results`, selects
-        the DataFrame corresponding to the specified fluid type, and prints
-        the data in column chunks for easier readability in the console.
-
-        Chunking helps avoid overly wide printouts when the DataFrame contains
-        many attributes. The underlying DataFrame is also returned.
-
-        Parameters
-        ----------
-        ftype : {"oil", "gas", "consolidated"}, default="oil"
-            Fluid type for which results are retrieved. Must be one of:
-            - ``"oil"`` : Oil attributes only
-            - ``"gas"`` : Gas attributes only
-            - ``"consolidated"`` : Combined oil and gas attributes
-        chunk_size : int, default=3
-            Number of columns to display at a time when printing the DataFrame.
-
-        Returns
-        -------
-        pandas.DataFrame
-            Results DataFrame for the specified fluid type. The DataFrame has:
-            - Rows indexed by ``self.project_years``.
-            - Columns corresponding to economic attributes (e.g., revenue,
-              expenditures, taxes, contractor/government share, etc.).
-
-        Notes
-        -----
-        - Printing is for readability only; it does not affect the returned
-          DataFrame.
-        - The method is useful for inspecting results interactively during
-          development or debugging.
-        """
-
-        df_map: dict = self._prepare_results()
-
-        print('\t')
-        print(df_map["oil"])
-
-        def _prepare_print(chunk_size: int, df: pd.DataFrame):
-            cols = df.columns.tolist()
-
-            print('\t')
-            print(f"Fluid: {ftype}")
-            print(f"========================================================")
-
-            for i in range(0, len(cols), chunk_size):
-                print(f"\nColumns {i + 1} to {min(i + chunk_size, len(cols))}: ")
-                print(df[cols[i:i + chunk_size]])
-
-        # _prepare_print(chunk_size=chunk_size, df=df_map[ftype])
 
     def run(
         self,
@@ -2953,3 +2919,352 @@ class CostRecovery(BaseProject):
 
         # Prepare consolidated profiles
         self._get_consolidated_profiles_cr(ftp_tax_regime=ftp_tax_regime)
+
+    def get_summary(
+        self,
+        discount_rate: float = 0.1,
+        npv_mode: NPVSelection = NPVSelection.NPV_SKK_REAL_TERMS,
+        discounting_mode: DiscountingMode = DiscountingMode.END_YEAR,
+        discount_rate_start_year: int | None = None,
+        inflation_rate: np.ndarray | float = 0.0,
+        profitability_discounted: bool = False,
+    ) -> dict:
+
+        # Prepare discount rate start year
+        if discount_rate_start_year is None:
+            discount_rate_start_year = self.start_date.year
+
+        # Cannot have discount rate year before the start year of the project
+        if discount_rate_start_year < self.start_date.year:
+            raise GrossSplitSummaryException(
+                f"The discounting reference year ({discount_rate_start_year}) "
+                f"is before start year of the project ({self.start_date.year})."
+            )
+
+        # Cannot have discount rate year after the end year of the project
+        if discount_rate_start_year > self.end_date.year:
+            raise GrossSplitSummaryException(
+                f"The discounting reference year ({discount_rate_start_year}) "
+                f"is after the end year of the project ({self.end_date.year})."
+            )
+
+        # Prepare OIL lifting summary
+        oil_lifting_ghv = self._oil_lifting.get_lifting_rate_ghv_arr()
+        oil_lifting_ghv_sum = np.sum(oil_lifting_ghv, dtype=float)
+        oil_wap_sum = self._calc_division(
+            numerator=self._oil_revenue.sum(dtype=float), denominator=oil_lifting_ghv_sum
+        )
+
+        # Prepare GAS lifting summary
+        gas_lifting_ghv = self._gas_lifting.get_lifting_rate_ghv_arr()
+        gas_lifting_ghv_sum = np.sum(gas_lifting_ghv, dtype=float)
+        gas_wap_sum = self._calc_division(
+            numerator=np.sum(self._gas_wap_price * gas_lifting_ghv),
+            denominator=gas_lifting_ghv_sum,
+        )
+
+        # Prepare gross revenue summary
+        oil_gross_revenue_sum = self._oil_revenue.sum(dtype=float)
+        gas_gross_revenue_sum = self._gas_revenue.sum(dtype=float)
+        total_gross_revenue_sum = oil_gross_revenue_sum + gas_gross_revenue_sum
+
+        # Prepare sunk cost summary
+        sunk_cost_sum = np.sum(self._oil_sunk_cost + self._gas_sunk_cost, dtype=float)
+
+        # Prepare preonstream costs
+        preonstream_map = {
+            "oil_intangible": self._oil_intangible_preonstream,
+            "gas_intangible": self._gas_intangible_preonstream,
+            "oil_opex": self._oil_opex_preonstream,
+            "gas_opex": self._gas_opex_preonstream,
+            "oil_asr": self._oil_asr_preonstream,
+            "gas_asr": self._gas_asr_preonstream,
+            "oil_lbt": self._oil_lbt_preonstream,
+            "gas_lbt": self._gas_lbt_preonstream,
+        }
+
+        preonstream_costs = {
+            key: val.expenditures_pre_tax() for key, val in preonstream_map.items()
+        }
+
+        # Prepare tangible and intangible cost summary
+        tangible_cost = (
+                self._oil_capital_expenditures_post_tax
+                + self._gas_capital_expenditures_post_tax
+                + self._oil_depreciable_preonstream
+                + self._gas_depreciable_preonstream
+        )
+
+        intangible_cost = (
+                self._oil_intangible_expenditures_post_tax
+                + self._gas_intangible_expenditures_post_tax
+                + preonstream_costs["oil_intangible"]
+                + preonstream_costs["gas_intangible"]
+        )
+
+        tangible_sum = tangible_cost.sum(dtype=float)
+        intangible_sum = intangible_cost.sum(dtype=float)
+        investment_sum = tangible_sum + intangible_sum
+
+        # Prepare OPEX summary
+        opex_cost = (
+                self._oil_opex_expenditures_post_tax
+                + self._gas_opex_expenditures_post_tax
+                + preonstream_costs["oil_opex"]
+                + preonstream_costs["gas_opex"]
+        )
+
+        opex_sum = opex_cost.sum(dtype=float)
+
+        # Prepare ASR summary
+        asr_cost = (
+                self._oil_asr_expenditures_post_tax
+                + self._gas_asr_expenditures_post_tax
+                + preonstream_costs["oil_asr"]
+                + preonstream_costs["gas_asr"]
+        )
+
+        asr_sum = asr_cost.sum(dtype=float)
+
+        # Prepare LBT summary
+        lbt_cost = (
+                self._oil_lbt_expenditures_post_tax
+                + self._gas_lbt_expenditures_post_tax
+                + preonstream_costs["oil_lbt"]
+                + preonstream_costs["gas_lbt"]
+        )
+
+        lbt_sum = lbt_cost.sum(dtype=float)
+
+        # Prepare indirect taxes summary
+        oil_indirect_tax_sum = self._oil_total_indirect_tax.sum(dtype=float)
+        gas_indirect_tax_sum = self._gas_total_indirect_tax.sum(dtype=float)
+
+        # Prepare carry forward depreciation summary
+        oil_carward_depreciation_sum = self._oil_carry_forward_depreciation.sum(dtype=float)
+        gas_carward_depreciation_sum = self._gas_carry_forward_depreciation.sum(dtype=float)
+        total_carward_depreciation_sum = (
+                oil_carward_depreciation_sum + gas_carward_depreciation_sum
+        )
+
+        # Prepare undepreciated assets summary
+        oil_undepreciated_asset_sum = np.sum(
+            [undepr.sum() for undepr in self._oil_undepreciated_assets.values()]
+        )
+        gas_undepreciated_asset_sum = np.sum(
+            [undepr.sum() for undepr in self._gas_undepreciated_assets.values()]
+        )
+        total_undepreciated_asset_sum = (
+            oil_undepreciated_asset_sum + gas_undepreciated_asset_sum
+        )
+
+        # Prepare government DDMO summary
+        gov_ddmo = self._consolidated_ddmo.sum(dtype=float)
+
+        # Prepare government take summary
+        gov_take_income_sum = self._consolidated_tax_payment.sum(dtype=float)
+        gov_take_sum = self._consolidated_government_take.sum(dtype=float)
+        gov_take_over_gross_rev = self._calc_division(
+            numerator=gov_take_sum, denominator=total_gross_revenue_sum
+        )
+
+        # Calculate IRR
+        ctr_irr = irr(cashflow=self._consolidated_cashflow)
+
+        # Calculate NPV
+        # NPV method: SKK real terms
+        if npv_mode == NPVSelection.NPV_SKK_REAL_TERMS:
+
+            # Contractor NPV
+            ctr_npv = npv_skk_real_terms(
+                cashflow=self._consolidated_cashflow,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                discounting_mode=discounting_mode,
+            )
+
+            # Contractor investment NPV
+            investment_npv = npv_skk_real_terms(
+                cashflow=tangible_cost + intangible_cost,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                discounting_mode=discounting_mode,
+            )
+
+            # Government take NPV
+            gov_take_npv = npv_skk_real_terms(
+                cashflow=self._consolidated_government_take,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                discounting_mode=discounting_mode,
+            )
+
+        # NPV method: SKK nominal terms
+        elif npv_mode == NPVSelection.NPV_SKK_NOMINAL_TERMS:
+
+            # Contractor NPV
+            ctr_npv = npv_skk_nominal_terms(
+                cashflow=self._consolidated_cashflow,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                discounting_mode=discounting_mode,
+            )
+
+            # Contractor investment NPV
+            investment_npv = npv_skk_nominal_terms(
+                cashflow=tangible_cost + intangible_cost,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                discounting_mode=discounting_mode,
+            )
+
+            # Government take NPV
+            gov_take_npv = npv_skk_nominal_terms(
+                cashflow=self._consolidated_government_take,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                discounting_mode=discounting_mode,
+            )
+
+        # NPV method: nominal terms
+        elif npv_mode == NPVSelection.NPV_NOMINAL_TERMS:
+
+            # Contractor NPV
+            ctr_npv = npv_nominal_terms(
+                cashflow=self._consolidated_cashflow,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                discounting_mode=discounting_mode,
+            )
+
+            # Contractor investment NPV
+            investment_npv = npv_nominal_terms(
+                cashflow=tangible_cost + intangible_cost,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                discounting_mode=discounting_mode,
+            )
+
+            # Government take NPV
+            gov_take_npv = npv_nominal_terms(
+                cashflow=self._consolidated_government_take,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                discounting_mode=discounting_mode,
+            )
+
+        # NPV method: real terms
+        elif npv_mode == NPVSelection.NPV_REAL_TERMS:
+
+            # Contractor NPV
+            ctr_npv = npv_real_terms(
+                cashflow=self._consolidated_cashflow,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                inflation_rate=inflation_rate,
+                discounting_mode=discounting_mode,
+            )
+
+            # Contractor investment NPV
+            investment_npv = npv_real_terms(
+                cashflow=tangible_cost + intangible_cost,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                inflation_rate=inflation_rate,
+                discounting_mode=discounting_mode,
+            )
+
+            # Government take NPV
+            gov_take_npv = npv_real_terms(
+                cashflow=self._consolidated_government_take,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                inflation_rate=inflation_rate,
+                discounting_mode=discounting_mode,
+            )
+
+        # NPV method: point forward
+        else:
+            # Contractor NPV
+            ctr_npv = npv_point_forward(
+                cashflow=self._consolidated_cashflow,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                discounting_mode=discounting_mode,
+            )
+
+            # Contractor investment NPV
+            investment_npv = npv_point_forward(
+                cashflow=tangible_cost + intangible_cost,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                discounting_mode=discounting_mode,
+            )
+
+            # Government take NPV
+            gov_take_npv = npv_point_forward(
+                cashflow=self._consolidated_government_take,
+                cashflow_years=self.project_years,
+                discount_rate=discount_rate,
+                reference_year=discount_rate_start_year,
+                discounting_mode=discounting_mode,
+            )
+
+        # Contractor present value ratio to the investment NPV
+        # Profitability Index is calculated using discounted investment
+        if profitability_discounted:
+            ctr_pv_ratio = self._calc_division(numerator=ctr_npv, denominator=investment_npv)
+
+        else:
+            investment_pi = np.sum(tangible_cost + intangible_cost)
+            ctr_pv_ratio = self._calc_division(numerator=ctr_npv, denominator=investment_pi)
+
+        ctr_pi = 1 + ctr_pv_ratio
+
+        # Contractor POT
+        ctr_pot = pot_psc(
+            cashflow=self._consolidated_cashflow,
+            cashflow_years=self.project_years,
+            reference_year=discount_rate_start_year,
+        )
+
+        # Prepare government FTP share summary
+        gov_ftp_share_sum = self._consolidated_ftp_gov.sum(dtype=float)
+
+        # Prepare government equity share summary
+        gov_equity_share_sum = self._consolidated_government_share.sum(dtype=float)
+
+        # Prepare cost recovery summary
+        cost_recovery_sum = self._consolidated_cost_to_be_recovered_after_tf.sum(dtype=float)
+        cost_recovery_over_gross_rev = self._calc_division(
+            numerator=cost_recovery_sum, denominator=total_gross_revenue_sum
+        )
+
+        # Prepare unrecoverable cost summary
+        unrec_cost = self._consolidated_unrecovered_after_transfer[-1]
+        unrec_cost_costrec = self._calc_division(
+            numerator=unrec_cost, denominator=cost_recovery_sum
+        )
+        unrec_over_gross_rev = self._calc_division(
+            numerator=unrec_cost, denominator=total_gross_revenue_sum
+        )
+
+
+        print('\t')
+        print(f'Filetype: {type(unrec_cost)}')
+        print('unrec_cost = ', unrec_cost)
+
+        print('\t')
+        print(f'Filetype: {type(unrec_cost_costrec)}')
+        print('unrec_cost_costrec = ', unrec_cost_costrec)

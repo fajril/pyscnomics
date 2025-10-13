@@ -3095,6 +3095,8 @@ class GrossSplit(BaseProject):
         - The index of each DataFrame corresponds to ``self.project_years``.
         - This function ensures that oil, gas, and consolidated outputs share a
           consistent structure for downstream analysis or export.
+        - The returned DataFrames are ready for post-processing, reporting,
+          or export (e.g., to Excel or visualization routines).
         """
 
         # Define the attributes and their names
@@ -3778,7 +3780,7 @@ class GrossSplit(BaseProject):
             key: val.expenditures_pre_tax() for key, val in preonstream_map.items()
         }
 
-        # Prepare tangible cost summary
+        # Prepare tangible and intangible cost summary
         tangible_cost = (
             self._oil_capital_expenditures_post_tax
             + self._gas_capital_expenditures_post_tax
