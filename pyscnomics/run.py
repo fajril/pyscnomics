@@ -78,7 +78,7 @@ case = ExampleCase()
 # )
 #
 # pr.run(**params_base)
-# pr.get_summary()
+# t1 = pr.get_summary()
 
 # print('\t')
 # print(f'Filetype: {type()}')
@@ -119,21 +119,21 @@ kwargs_gs = {
 }
 
 params_gs = {
-    "sulfur_revenue": OtherRevenue.REDUCTION_TO_OIL_OPEX,
+    "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
     "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
     "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
     "vat_rate": 0.0,
     "year_inflation": None,
-    "inflation_rate": 0.1,
-    "inflation_rate_applied_to": None,
-    "cum_production_split_offset": 0.2,
+    "inflation_rate": 0.0,
+    "inflation_rate_applied_to": InflationAppliedTo.CAPEX,
+    "cum_production_split_offset": 0.0,
     # "cum_production_split_offset": np.array([0.2 for _ in range(10)]),
     "depr_method": DeprMethod.PSC_DB,
     "decline_factor": 2,
     "sum_undepreciated_cost": False,
     "is_dmo_end_weighted": False,
-    "tax_regime": 0.22,
-    "effective_tax_rate": None,
+    "tax_regime": TaxRegime.NAILED_DOWN,
+    "effective_tax_rate": 0.22,
     "amortization": False,
     "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
     "regime": GrossSplitRegime.PERMEN_ESDM_13_2024,
@@ -153,18 +153,18 @@ gs = GrossSplit(
     cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
 )
 
-# gs.run(**params_gs)
-gs.get_summary()
+gs.run(**params_gs)
+t1 = gs.get_summary()
 
 # print('\t')
 # print(f'Filetype: {type()}')
 # print(f'Length: {len()}')
 # print()
 
-# print('\t')
-# print(f'Filetype: {type(t1)}')
-# print(f'Length: {len(t1)}')
-# print('t1 = \n', t1)
+print('\t')
+print(f'Filetype: {type(t1)}')
+print(f'Length: {len(t1)}')
+print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t2)}')

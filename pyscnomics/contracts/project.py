@@ -4209,6 +4209,26 @@ class BaseProject:
 
     @staticmethod
     def _calc_division(numerator: float, denominator: float, default: float = 0.0):
+        """
+        Safely perform division with a zero-denominator check.
+
+        Returns the result of ``numerator / denominator`` if the denominator
+        is nonzero. Otherwise, returns the specified default value.
+
+        Parameters
+        ----------
+        numerator : float
+            The numerator of the division.
+        denominator : float
+            The denominator of the division. If zero, the function returns `default`.
+        default : float, default=0.0
+            The value returned when `denominator` is zero.
+
+        Returns
+        -------
+        float
+            The division result if `denominator` is nonzero; otherwise, `default`.
+        """
         return (numerator / denominator) if denominator != 0 else default
 
     def get_summary(
@@ -4219,7 +4239,7 @@ class BaseProject:
         discount_rate_start_year: int | None = None,
         inflation_rate: np.ndarray | float = 0.0,
         profitability_discounted: bool = False,
-    ):
+    ) -> dict:
         """
         Compute the economic summary of a petroleum project under various NPV modes.
 
@@ -4270,48 +4290,7 @@ class BaseProject:
         -------
         summary : dict of {str: float}
             A dictionary containing summarized economic indicators and project
-            financial metrics, including (but not limited to):
-
-            **Production & Prices**
-                - ``lifting_oil`` : Total oil lifting (GHV basis).
-                - ``lifting_gas`` : Total gas lifting (GHV basis).
-                - ``oil_wap`` : Weighted average price of oil.
-                - ``gas_wap`` : Weighted average price of gas.
-
-            **Revenue & Costs**
-                - ``gross_revenue`` : Total gross revenue (oil + gas).
-                - ``gross_revenue_oil`` : Oil gross revenue.
-                - ``gross_revenue_gas`` : Gas gross revenue.
-                - ``investment`` : Total investment (tangible + intangible).
-                - ``tangible`` : Total tangible investment.
-                - ``intangible`` : Total intangible investment.
-                - ``opex`` : Total operating expenditures.
-                - ``asr`` : Abandonment and site restoration cost.
-                - ``lbt`` : Land and building tax.
-                - ``sunk_cost`` : Total sunk costs prior to onstream.
-                - ``total_indirect_taxes`` : Total indirect taxes (oil + gas).
-
-            **Economic Indicators**
-                - ``ctr_npv`` : Contractor Net Present Value.
-                - ``ctr_irr`` : Contractor Internal Rate of Return.
-                - ``ctr_pot`` : Contractor Pay-Out Time (POT).
-                - ``ctr_pv_ratio`` : Ratio of contractor NPV to investment.
-                - ``ctr_pi`` : Profitability Index (1 + PV ratio).
-
-            **Contractor Shares**
-                - ``ctr_gross_share`` : Contractor gross revenue share.
-                - ``ctr_net_share`` : Contractor net revenue after costs.
-                - ``ctr_net_share_over_gross_share`` : Ratio of contractor net share
-                  to gross share.
-                - ``ctr_net_cashflow`` : Contractor total net cashflow.
-                - ``ctr_net_cashflow_over_gross_rev`` : Ratio of contractor net
-                  cashflow to gross revenue.
-
-            **Government & PSC Terms**
-                - ``gov_take`` : Government take.
-                - ``gov_take_over_gross_rev`` : Government take over gross revenue.
-                - Other PSC-related outputs (e.g., ``cost_recovery``,
-                  ``unrec_cost``, ``gov_tax_income``) default to zero.
+            financial metrics.
 
         Notes
         -----
@@ -4319,18 +4298,6 @@ class BaseProject:
         and discounting assumptions. When using the *point-forward* mode, only cashflows
         from the reference year onward are considered in NPV and net cashflow calculations.
         """
-
-        # kwargs_run = {
-        #     "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-        #     "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
-        #     "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-        #     "tax_rate": 0.0,
-        #     "year_inflation": None,
-        #     "inflation_rate": 0.0,
-        #     "inflation_rate_applied_to": None,
-        # }
-        #
-        # self.run(**kwargs_run)
 
         # Prepare discount rate start year
         if discount_rate_start_year is None:
@@ -4353,29 +4320,22 @@ class BaseProject:
         # Prepare OIL lifting summary
         oil_lifting_ghv = self._oil_lifting.get_lifting_rate_ghv_arr()
         oil_lifting_ghv_sum = np.sum(oil_lifting_ghv, dtype=float)
-        if oil_lifting_ghv_sum == 0.0:
-            oil_wap_sum = 0.0
-        else:
-            oil_wap_sum = np.divide(
-                np.sum(self._oil_revenue), oil_lifting_ghv_sum, where=oil_lifting_ghv_sum != 0
-            )
+        oil_wap_sum = self._calc_division(
+            numerator=self._oil_revenue.sum(dtype=float), denominator=oil_lifting_ghv_sum
+        )
 
         # Prepare GAS lifting summary
         gas_lifting_ghv = self._gas_lifting.get_lifting_rate_ghv_arr()
-        gas_ghv = self._gas_lifting.get_ghv_arr()
         gas_lifting_ghv_sum = np.sum(gas_lifting_ghv, dtype=float)
-        if gas_lifting_ghv_sum == 0.0:
-            gas_wap_sum = 0.0
-        else:
-            gas_wap_sum = np.divide(
-                np.sum(self._gas_wap_price * gas_lifting_ghv * gas_ghv),
-                np.sum(gas_lifting_ghv * gas_ghv),
-                where=np.sum(gas_lifting_ghv * gas_ghv) != 0,
-            )
+        gas_wap_sum = self._calc_division(
+            numerator=np.sum(self._gas_wap_price * gas_lifting_ghv),
+            denominator=gas_lifting_ghv_sum,
+        )
 
         # Prepare gross revenue summary
         oil_gross_revenue_sum = self._oil_revenue.sum(dtype=float)
         gas_gross_revenue_sum = self._gas_revenue.sum(dtype=float)
+        total_gross_revenue_sum = oil_gross_revenue_sum + gas_gross_revenue_sum
 
         # Prepare sunk cost summary
         sunk_cost_sum = np.sum(self._oil_sunk_cost + self._gas_sunk_cost, dtype=float)
@@ -4445,7 +4405,7 @@ class BaseProject:
 
         lbt_sum = lbt_cost.sum(dtype=float)
 
-        # Indirect taxes summary
+        # Prepare indirect taxes summary
         oil_indirect_tax_sum = self._oil_total_indirect_tax.sum(dtype=float)
         gas_indirect_tax_sum = self._gas_total_indirect_tax.sum(dtype=float)
 
@@ -4560,12 +4520,12 @@ class BaseProject:
         # Contractor present value ratio to the investment NPV
         # Profitability Index is calculated using discounted investment
         if profitability_discounted:
-            ctr_pv_ratio = np.divide(ctr_npv, investment_npv, where=investment_npv != 0)
+            ctr_pv_ratio = self._calc_division(numerator=ctr_npv, denominator=investment_npv)
 
         # Profitability Index is calculated using undiscounted investment
         else:
             investment_pi = np.sum(tangible_cost + intangible_cost)
-            ctr_pv_ratio = np.divide(ctr_npv, investment_pi, where=investment_pi != 0)
+            ctr_pv_ratio = self._calc_division(numerator=ctr_npv, denominator=investment_pi)
 
         ctr_pi = 1 + ctr_pv_ratio
 
@@ -4576,8 +4536,8 @@ class BaseProject:
             reference_year=discount_rate_start_year,
         )
 
-        # Contractor net chare
-        ctr_net_share = (
+        # Prepare contractor net share summary
+        ctr_net_share_sum = (
             oil_gross_revenue_sum
             + gas_gross_revenue_sum
             - investment_sum
@@ -4585,12 +4545,12 @@ class BaseProject:
             - asr_sum
             - lbt_sum
         )
-        ctr_net_share_over_gross_share = (
-            ctr_net_share /
-            (oil_gross_revenue_sum + gas_gross_revenue_sum)
+        ctr_net_share_over_gross_share = self._calc_division(
+            numerator=ctr_net_share_sum,
+            denominator=total_gross_revenue_sum,
         )
 
-        # Contractor net cashflow
+        # Prepare contractor net cashflow summary
         if npv_mode == NPVSelection.NPV_POINT_FORWARD:
             # Modify contractor net cashflow since the cashflow before discount rate
             # start year is neglected
@@ -4607,12 +4567,16 @@ class BaseProject:
                 self._consolidated_revenue,
                 0,
             )
-            ctr_net_cashflow = cashflow_point_forward.sum(dtype=float)
-            gross_revenue_point_forward = gross_revenue_point_forward.sum(dtype=float)
-            ctr_net_cashflow_over_gross_rev = ctr_net_cashflow / gross_revenue_point_forward
+
+            # Contractor net cashflow
+            ctr_net_cashflow_sum = cashflow_point_forward.sum(dtype=float)
+            ctr_net_cashflow_over_gross_rev = self._calc_division(
+                numerator=ctr_net_cashflow_sum,
+                denominator=gross_revenue_point_forward.sum(dtype=float),
+            )
 
         else:
-            ctr_net_cashflow = ctr_net_share
+            ctr_net_cashflow_sum = ctr_net_share_sum
             ctr_net_cashflow_over_gross_rev = ctr_net_share_over_gross_share
 
         return {
@@ -4620,7 +4584,7 @@ class BaseProject:
             "oil_wap": oil_wap_sum,
             "lifting_gas": gas_lifting_ghv_sum,
             "gas_wap": gas_wap_sum,
-            "gross_revenue": oil_gross_revenue_sum + gas_gross_revenue_sum,
+            "gross_revenue": total_gross_revenue_sum,
             "gross_revenue_oil": oil_gross_revenue_sum,
             "gross_revenue_gas": gas_gross_revenue_sum,
             "investment": investment_sum,
@@ -4639,10 +4603,10 @@ class BaseProject:
             "ctr_pot": ctr_pot,
             "ctr_pv_ratio": ctr_pv_ratio,
             "ctr_pi": ctr_pi,
-            "ctr_gross_share": oil_gross_revenue_sum + gas_gross_revenue_sum,
-            "ctr_net_share": ctr_net_share,
+            "ctr_gross_share": total_gross_revenue_sum,
+            "ctr_net_share": ctr_net_share_sum,
             "ctr_net_share_over_gross_share": ctr_net_share_over_gross_share,
-            "ctr_net_cashflow": ctr_net_cashflow,
+            "ctr_net_cashflow": ctr_net_cashflow_sum,
             "ctr_net_cashflow_over_gross_rev": ctr_net_cashflow_over_gross_rev,
             "total_indirect_taxes": oil_indirect_tax_sum + gas_indirect_tax_sum,
             "oil_indirect_taxes": oil_indirect_tax_sum,

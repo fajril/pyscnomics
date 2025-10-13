@@ -3362,7 +3362,7 @@ class GrossSplit(BaseProject):
         # cumulative production used for progressive cumulative production split is defined as
         # the sum of production rate and production baseline.
         prod_gas_boe = (
-            self._gas_lifting.get_prod_rate_total_arr() / self.conversion_boe_to_scf
+            (self._gas_lifting.get_prod_rate_total_arr() * 1_000) / self.conversion_boe_to_scf
         )
 
         # Check if the cumulative production split offset length is the same
@@ -3665,31 +3665,61 @@ class GrossSplit(BaseProject):
         discount_rate_start_year: int | None = None,
         inflation_rate: np.ndarray | float = 0.0,
         profitability_discounted: bool = False,
-    ):
+    ) -> dict:
+        """
+        Generate a comprehensive project economic summary under the Gross Split PSC scheme.
 
-        kwargs_run = {
-            "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
-            "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            "vat_rate": 0.0,
-            "year_inflation": None,
-            "inflation_rate": 0.0,
-            "inflation_rate_applied_to": InflationAppliedTo.CAPEX,
-            "cum_production_split_offset": 0.0,
-            "depr_method": DeprMethod.PSC_DB,
-            "decline_factor": 2,
-            "sum_undepreciated_cost": False,
-            "is_dmo_end_weighted": False,
-            "tax_regime": TaxRegime.NAILED_DOWN,
-            "effective_tax_rate": 0.22,
-            "amortization": False,
-            "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
-            "regime": GrossSplitRegime.PERMEN_ESDM_13_2024,
-            "reservoir_type_permen_2024": VariableSplit132024.ReservoirType.MK,
-            "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
-        }
+        This method computes key production, cost, tax, and profitability indicators,
+        and returns the overall project summary in dictionary form.
 
-        self.run(**kwargs_run)
+        The summary includes metrics such as lifting volumes, gross revenues,
+        investment costs, NPV, IRR, PI, and government take.
+
+        Parameters
+        ----------
+        discount_rate : float, default=0.1
+            The discount rate applied for NPV calculations.
+
+        npv_mode : NPVSelection, default=NPVSelection.NPV_SKK_REAL_TERMS
+            The NPV calculation mode. Options include:
+            - ``NPV_SKK_REAL_TERMS`` : SKK Migas real-term NPV.
+            - ``NPV_SKK_NOMINAL_TERMS`` : SKK Migas nominal-term NPV.
+            - ``NPV_NOMINAL_TERMS`` : Standard nominal-term NPV.
+            - ``NPV_REAL_TERMS`` : Standard real-term NPV.
+            - ``NPV_POINT_FORWARD`` : Point-forward NPV.
+
+        discounting_mode : DiscountingMode, default=DiscountingMode.END_YEAR
+            The timing convention for discounting cashflows (e.g., start-year or end-year).
+
+        discount_rate_start_year : int or None, optional
+            The reference year for discounting. If ``None``, the project start year is used.
+            Must lie between project start and end years.
+
+        inflation_rate : float or ndarray, default=0.0
+            Inflation rate(s) applied for real-term NPV calculations. Can be a scalar or
+            array of yearly inflation rates.
+
+        profitability_discounted : bool, default=False
+            If ``True``, the profitability index (PI) is computed using discounted
+            investment (NPV-based). If ``False``, the PI uses undiscounted investment.
+
+        Returns
+        -------
+        summary : dict
+            A dictionary containing the key project summary indicators.
+
+        Raises
+        ------
+        GrossSplitSummaryException
+            If `discount_rate_start_year` is before the project start year or
+            after the project end year.
+
+        Notes
+        -----
+        - This method must run the full model first via :meth:`run` before generating
+          the summary results.
+        - Economic indicators are computed according to SKK Migas evaluation conventions.
+        """
 
         # Prepare discount rate start year
         if discount_rate_start_year is None:
@@ -3712,24 +3742,17 @@ class GrossSplit(BaseProject):
         # Prepare OIL lifting summary
         oil_lifting_ghv = self._oil_lifting.get_lifting_rate_ghv_arr()
         oil_lifting_ghv_sum = np.sum(oil_lifting_ghv, dtype=float)
-        if oil_lifting_ghv_sum == 0.0:
-            oil_wap_sum = 0.0
-        else:
-            oil_wap_sum = self._calc_division(
-                numerator=self._oil_revenue.sum(dtype=float),
-                denominator=oil_lifting_ghv_sum
-            )
+        oil_wap_sum = self._calc_division(
+            numerator=self._oil_revenue.sum(dtype=float), denominator=oil_lifting_ghv_sum
+        )
 
         # Prepare GAS lifting summary
         gas_lifting_ghv = self._gas_lifting.get_lifting_rate_ghv_arr()
         gas_lifting_ghv_sum = np.sum(gas_lifting_ghv, dtype=float)
-        if gas_lifting_ghv_sum == 0.0:
-            gas_wap_sum = 0.0
-        else:
-            gas_wap_sum = self._calc_division(
-                numerator=gas_lifting_ghv_sum,
-                denominator=np.sum(self._gas_wap_price * gas_lifting_ghv)
-            )
+        gas_wap_sum = self._calc_division(
+            numerator=np.sum(self._gas_wap_price * gas_lifting_ghv),
+            denominator=gas_lifting_ghv_sum,
+        )
 
         # Prepare gross revenue summary
         oil_gross_revenue_sum = self._oil_revenue.sum(dtype=float)
@@ -3808,7 +3831,7 @@ class GrossSplit(BaseProject):
         oil_indirect_tax_sum = self._oil_total_indirect_tax.sum(dtype=float)
         gas_indirect_tax_sum = self._gas_total_indirect_tax.sum(dtype=float)
 
-        # Carry forward depreciation
+        # Prepare carry forward depreciation summary
         oil_carward_depreciation_sum = self._oil_carry_forward_depreciation.sum(dtype=float)
         gas_carward_depreciation_sum = self._gas_carry_forward_depreciation.sum(dtype=float)
         total_carward_depreciation_sum = (
@@ -4007,13 +4030,13 @@ class GrossSplit(BaseProject):
             reference_year=discount_rate_start_year,
         )
 
-        # Deductible cost
+        # Prepare deductible cost summary
         deductible_cost_sum = self._consolidated_deductible_cost.sum(dtype=float)
         deductible_cost_over_gross_rev = self._calc_division(
             numerator=deductible_cost_sum, denominator=total_gross_revenue_sum
         )
 
-        # Carry forward cost
+        # Prepare carry forward deductible cost summary
         carry_forward_deductible_cost = self._consolidated_carward_deduct_cost[-1]
         carry_forcost_over_gross_share = self._calc_division(
             numerator=carry_forward_deductible_cost, denominator=total_gross_revenue_sum
@@ -4022,23 +4045,50 @@ class GrossSplit(BaseProject):
             numerator=carry_forward_deductible_cost, denominator=deductible_cost_sum
         )
 
-        # Contractor gross share
+        # Prepare contractor gross share summary
         ctr_gross_share_sum = self._consolidated_gov_share_before_tf.sum(dtype=float)
 
-        # Government gross share
+        # Prepare government gross share summary
         gov_gross_share_sum = self._consolidated_gov_share_before_tf.sum(dtype=float)
 
-        # Contractor net share
+        # Prepare contractor net share summary
         ctr_net_share_sum = self._consolidated_ctr_net_share.sum(dtype=float)
         ctr_net_share_over_gross_share = self._calc_division(
             numerator=ctr_net_share_sum, denominator=total_gross_revenue_sum
         )
 
-        # Contractor net cashflow
-        ctr_net_cashflow_sum = self._consolidated_cashflow.sum(dtype=float)
-        ctr_net_cashflow_over_gross_rev = self._calc_division(
-            numerator=ctr_net_cashflow_sum, denominator=total_gross_revenue_sum
-        )
+        # Prepare contractor net cashflow summary
+        # For NPV POINT FORWARD
+        if npv_mode == NPVSelection.NPV_POINT_FORWARD:
+            # Modify contractor net cashflow since the cashflow before discount rate
+            # start year is neglected
+            ref_year_arr = np.full_like(
+                self._consolidated_cashflow, fill_value=discount_rate_start_year
+            )
+            cashflow_point_forward = np.where(
+                self.project_years >= ref_year_arr,
+                self._consolidated_cashflow,
+                0,
+            )
+            gross_revenue_point_forward = np.where(
+                self.project_years >= ref_year_arr,
+                self._consolidated_cashflow,
+                0,
+            )
+
+            # Contractor net cashflow
+            ctr_net_cashflow_sum = cashflow_point_forward.sum(dtype=float)
+            ctr_net_cashflow_over_gross_rev = self._calc_division(
+                numerator=ctr_net_cashflow_sum,
+                denominator=gross_revenue_point_forward.sum(dtype=float),
+            )
+
+        # For other NPV calculation methods
+        else:
+            ctr_net_cashflow_sum = self._consolidated_cashflow.sum(dtype=float)
+            ctr_net_cashflow_over_gross_rev = self._calc_division(
+                numerator=ctr_net_cashflow_sum, denominator=total_gross_revenue_sum
+            )
 
         return {
             "lifting_oil": oil_lifting_ghv_sum,
