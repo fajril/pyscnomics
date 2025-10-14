@@ -1,3 +1,7 @@
+"""
+Module to handle API router.
+"""
+
 from fastapi import APIRouter
 from pyscnomics.api.adapter import (
     get_baseproject,
@@ -35,7 +39,7 @@ async def read_root():
     """
     Route to get the current running PySCnomics version.
     """
-    return {"Pyscnomics": "Version 1.0.0"}
+    return {"Pyscnomics": "Version 1.4.0"}
 
 
 @router.post("/costrecovery")
@@ -57,7 +61,6 @@ async def calculate_costrecovery(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
     result = get_costrecovery(data=data.model_dump())[0]
     return result
@@ -82,9 +85,10 @@ async def get_costrecovery_detailed(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
+
     result = get_detailed_summary(data=data.model_dump(), contract_type="Cost Recovery")
+
     return result
 
 
@@ -107,7 +111,6 @@ async def get_costrecovery_table(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
     return get_contract_table(data=data.model_dump(), contract_type="Cost Recovery")
 
@@ -131,7 +134,6 @@ async def calculate_costrecovery_optimization(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
     return get_contract_optimization(
         data=data.model_dump(), contract_type="Cost Recovery"
@@ -157,7 +159,6 @@ async def calculate_grosssplit(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
     result = get_grosssplit(data=data.model_dump())[0]
     return result
@@ -182,7 +183,6 @@ async def get_grosssplit_detailed(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
     result = get_detailed_summary(data=data.model_dump(), contract_type="Gross Split")
     return result
@@ -207,7 +207,6 @@ async def get_grosssplit_table(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
     return get_contract_table(data=data.model_dump(), contract_type="Gross Split")
 
@@ -231,7 +230,6 @@ async def calculate_grosssplit_optimization(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
     return get_contract_optimization(
         data=data.model_dump(), contract_type="Gross Split"
@@ -266,10 +264,9 @@ async def calculate_transition(data: DataTransition) -> dict:
         -- asr
     - contract_arguments
     - summary_arguments
-
-
     """
     result = get_transition(data=data.model_dump())[0]
+
     return result
 
 
@@ -292,9 +289,9 @@ async def get_transition_detailed(data: DataTransition) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
     result = get_detailed_summary(data=data.model_dump(), contract_type="Transition")
+
     return result
 
 
@@ -326,7 +323,6 @@ async def get_transition_table(data: DataTransition) -> dict:
         -- asr
     - contract_arguments
     - summary_arguments
-
     """
     return get_contract_table(data=data.model_dump(), contract_type="Transition")
 
@@ -350,7 +346,6 @@ async def calculate_transition_optimization(data: DataTransition) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
     return get_contract_optimization(data=data.model_dump(), contract_type="Transition")
 
@@ -371,7 +366,6 @@ async def calculate_baseproject(data: Data) -> dict:
     - intangible
     - opex
     - asr
-
     """
     result = get_baseproject(data=data.model_dump())[0]
     return result
@@ -393,7 +387,6 @@ async def get_baseproject_table(data: Data) -> dict:
     - intangible
     - opex
     - asr
-
     """
     return get_contract_table(data=data.model_dump(), contract_type="Base Project")
 
@@ -414,9 +407,10 @@ async def get_baseproject_detailed(data: Data) -> dict:
     - intangible
     - opex
     - asr
-
     """
+
     result = get_detailed_summary(data=data.model_dump(), contract_type="Base Project")
+
     return result
 
 
@@ -431,7 +425,6 @@ async def calculate_ltp(data: LtpBM) -> dict:
     start_year: int
     end_year: int
     fluid_type: str
-
     """
     return get_ltp_dict(data=data.model_dump())
 
@@ -473,7 +466,6 @@ async def get_grosssplit_split_information(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
     return get_grosssplit_split(data=data.model_dump())
 
@@ -507,10 +499,9 @@ async def get_transition_split_information(data: DataTransition) -> dict:
         -- asr
     - contract_arguments
     - summary_arguments
-
-
     """
     result = get_transition_split(data=data.model_dump())
+
     return result
 
 

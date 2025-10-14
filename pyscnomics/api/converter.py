@@ -100,7 +100,8 @@ class CostRecoveryBM(BaseModel):
     gas_ftp_portion: float
         The gas ftp portion.
     tax_split_type: str
-        The tax split type used in the contract. The available option are: [Conventional, RC Split, ICP Sliding Scale].
+        The tax split type used in the contract.
+        The available option are: [Conventional, RC Split, ICP Sliding Scale].
     condition_dict: dict
         The condition input for the tax split type except for the conventional split.
     indicator_rc_icp_sliding: list
@@ -1464,7 +1465,8 @@ def convert_str_to_discountingmode(str_object: str):
 
 def convert_str_to_otherrevenue(str_object: str):
     """
-    The function to convert a string representation of other revenue types to the corresponding enum value.
+    The function to convert a string representation of other revenue types
+    to the corresponding enum value.
 
     Parameters
     ----------
@@ -1474,13 +1476,16 @@ def convert_str_to_otherrevenue(str_object: str):
     Returns
     -------
     OtherRevenue or None
-        The enum value corresponding to the provided string representation of other revenue.
-        Returns None if the string does not match any known other revenue types.
+        The enum value corresponding to the provided string representation
+        of other revenue.Returns None if the string does not match any known
+        other revenue types.
 
     Notes
     -----
-    - The function uses a mapping of string representations to OtherRevenue enum values.
-    - If the target string matches a known other revenue type, the corresponding enum value is returned.
+    -   The function uses a mapping of string representations to OtherRevenue
+        enum values.
+    -   If the target string matches a known other revenue type, the corresponding
+        enum value is returned.
     - If the target string does not match any known types, the function returns None.
     """
     return get_other_revenue_converter(target=str_object)

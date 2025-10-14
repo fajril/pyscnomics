@@ -72,7 +72,8 @@ class RDPModelException(Exception):
 
 def get_setup_dict(data: dict) -> tuple:
     """
-    Function to get conversion of the setup input from dictionary into acceptable core engine data format.
+    Function to get conversion of the setup input from dictionary into
+    acceptable core engine data format.
 
     Parameters
     ----------
@@ -225,7 +226,8 @@ def get_summary_object(
 
 def get_costrecovery(data: dict, summary_result: bool = True):
     """
-    The function to get the Summary, Cost Recovery object, contract arguments, and summary arguments used.
+    The function to get the Summary, Cost Recovery object, contract arguments,
+    and summary arguments used.
 
     Parameters
     ----------
@@ -243,8 +245,8 @@ def get_costrecovery(data: dict, summary_result: bool = True):
     contract_arguments_dict: dict
         The contract arguments used in running the contract calculation.
     summary_arguments_dic: dict
-        The summary arguments used in retrieving the executive summary of the contract.
-
+        The summary arguments used in retrieving the executive summary of
+        the contract.
     """
     (
         start_date,
@@ -654,7 +656,8 @@ def get_contract_optimization(data: dict, contract_type: str = "Cost Recovery") 
 
 def get_grosssplit(data: dict, summary_result: bool = True):
     """
-    The function to get the Summary, Gross Split object, contract arguments, and summary arguments used.
+    The function to get the Summary, Gross Split object, contract arguments,
+    and summary arguments used.
 
     Parameters
     ----------
@@ -673,7 +676,6 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         The contract arguments used in running the contract calculation.
     summary_arguments_dic: dict
         The summary arguments used in retrieving the executive summary of the contract.
-
     """
     (
         start_date,
@@ -964,9 +966,7 @@ def add_execution_info(data: dict) -> dict:
     package_version = " "
     try:
         from importlib.metadata import version
-
         package_version = version("pyscnomics")
-
     except:
         pass
 
