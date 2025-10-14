@@ -1,0 +1,54 @@
+{
+  "$id": "monteparam-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table Monte Carlo Parameter Schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer"
+    },
+    "cId": {
+      "$ref": "case-schema.json#/properties/id",
+      "description": "Foreign key referencing Case.id"
+    },
+    "parameter": {
+      "type": "integer",
+      "description": "Parameter Type:  0: Oil Price,  1: Opex,  2: Capex,  3: Cum. Prod,"
+    },
+    "dist": {
+      "type": "integer",
+      "description": "distribution Type=  0: Uniform1: Triangular2: Normal",
+      "default": 2
+    },
+    "min": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "default": null
+    },
+    "max": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "default": null
+    },
+    "stddev": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "id",
+    "cId",
+    "parameter",
+    "dist",
+    "min",
+    "max",
+    "stddev"
+  ]
+}

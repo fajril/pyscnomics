@@ -1,0 +1,27 @@
+{
+  "$id": "optimcfg-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table Optimization Config Schema",
+  "type": "object",
+  "properties": {
+    "cId": {
+      "$ref": "case-schema.json#/properties/id",
+      "description": "Foreign key referencing Case.id"
+    },
+    "target_parameter": {
+      "type": "integer",
+      "description": "Target parameter: 0: NPV, 1: IRR",
+      "default": 0
+    },
+    "target_optimization": {
+      "type": "number",
+      "description": "Target optimization",
+      "default": 0.0
+    }
+  },
+  "required": [
+    "cId",
+    "target_parameter",
+    "target_optimization"
+  ]
+}

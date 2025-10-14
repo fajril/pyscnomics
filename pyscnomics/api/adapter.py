@@ -178,7 +178,8 @@ def get_summary_dict(data: dict) -> dict:
     )
 
     summary_arguments_dict = {
-        "reference_year": reference_year,
+        #"reference_year": reference_year,
+        "discount_rate_start_year": reference_year,
         "inflation_rate": inflation_rate,
         "discount_rate": discount_rate,
         "npv_mode": npv_mode,
@@ -320,12 +321,15 @@ def get_costrecovery(data: dict, summary_result: bool = True):
             data_input=data["costrecovery"]["gas_dmo_fee_portion"]
         ),
         gas_dmo_holiday_duration=data["costrecovery"]["gas_dmo_holiday_duration"],
-        oil_carry_forward_depreciation=convert_list_to_array_float_or_array(
-            data_input=data["costrecovery"]["oil_carry_forward_depreciation"]
-        ),
-        gas_carry_forward_depreciation=convert_list_to_array_float_or_array(
-            data_input=data["costrecovery"]["gas_carry_forward_depreciation"]
-        ),
+        # ==========defaulted to 0.0 for single contract===========
+        #oil_carry_forward_depreciation=convert_list_to_array_float_or_array(
+        #    data_input=data["costrecovery"]["oil_carry_forward_depreciation"]
+        #),
+        #gas_carry_forward_depreciation=convert_list_to_array_float_or_array(
+        #    data_input=data["costrecovery"]["gas_carry_forward_depreciation"]
+        #),
+        oil_carry_forward_depreciation = 0.0,
+        gas_carry_forward_depreciation = 0.0
     )
 
     # Filling the arguments of the contract with the data input
@@ -349,9 +353,10 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         "ftp_tax_regime": convert_str_to_ftptaxregime(
             str_object=data["contract_arguments"]["ftp_tax_regime"]
         ),
-        "sunk_cost_reference_year": data["contract_arguments"][
-            "sunk_cost_reference_year"
-        ],
+        # ===========deleted in 1.4.0============
+        #"sunk_cost_reference_year": data["contract_arguments"][
+        #    "sunk_cost_reference_year"
+        #],
         "depr_method": convert_str_to_depremethod(
             str_object=data["contract_arguments"]["depr_method"]
         ),
@@ -394,9 +399,10 @@ def get_costrecovery(data: dict, summary_result: bool = True):
     if summary_result is True:
         # Filling the summary arguments
         summary_arguments_dict = get_summary_dict(data=data)
-        summary_arguments_dict["contract"] = contract
-        summary = get_summary(**summary_arguments_dict)
-
+        # ==== IGNORED IN 1.4.0 =====
+        #summary_arguments_dict["contract"] = contract
+        #summary = get_summary(**summary_arguments_dict)
+        summary = contract.get_summary(**summary_arguments_dict)
         # Converting the summary format to skk summary format
         summary_skk = convert_summary_to_dict(dict_object=summary)
 
@@ -753,12 +759,12 @@ def get_grosssplit(data: dict, summary_result: bool = True):
             if "field_reserves" in data["grosssplit"]
             else None
         ),
-        base_split_ctr_oil=convert_to_float(
-            target=data["grosssplit"]["base_split_ctr_oil"]
-        ),
-        base_split_ctr_gas=convert_to_float(
-            target=data["grosssplit"]["base_split_ctr_gas"]
-        ),
+        #base_split_ctr_oil=convert_to_float(
+        #    target=data["grosssplit"]["base_split_ctr_oil"]
+        #,
+        #base_split_ctr_gas=convert_to_float(
+        #    target=data["grosssplit"]["base_split_ctr_gas"]
+        #),
         split_ministry_disc=convert_to_float(
             target=data["grosssplit"]["split_ministry_disc"]
         ),
@@ -776,12 +782,15 @@ def get_grosssplit(data: dict, summary_result: bool = True):
             data_input=data["grosssplit"]["gas_dmo_fee_portion"]
         ),
         gas_dmo_holiday_duration=data["grosssplit"]["gas_dmo_holiday_duration"],
-        oil_carry_forward_depreciation=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["oil_carry_forward_depreciation"]
-        ),
-        gas_carry_forward_depreciation=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["gas_carry_forward_depreciation"]
-        ),
+        #oil_carry_forward_depreciation=convert_list_to_array_float_or_array(
+        #    data_input=data["grosssplit"]["oil_carry_forward_depreciation"]
+        #),
+        #gas_carry_forward_depreciation=convert_list_to_array_float_or_array(
+        #    data_input=data["grosssplit"]["gas_carry_forward_depreciation"]
+        #),
+
+        oil_carry_forward_depreciation = 0.0,
+        gas_carry_forward_depreciation = 0.0    
     )
 
     # Filling the arguments of the contract with the data input
@@ -802,9 +811,9 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
             data_list=data["contract_arguments"]["effective_tax_rate"]
         ),
-        "sunk_cost_reference_year": data["contract_arguments"][
-            "sunk_cost_reference_year"
-        ],
+        #"sunk_cost_reference_year": data["contract_arguments"][
+        #    "sunk_cost_reference_year"
+        #],
         "depr_method": convert_str_to_depremethod(
             str_object=data["contract_arguments"]["depr_method"]
         ),
@@ -839,9 +848,9 @@ def get_grosssplit(data: dict, summary_result: bool = True):
     if summary_result is True:
         # Filling the summary arguments
         summary_arguments_dict = get_summary_dict(data=data)
-        summary_arguments_dict["contract"] = contract
-        summary = get_summary(**summary_arguments_dict)
-
+        #summary_arguments_dict["contract"] = contract
+        #summary = get_summary(**summary_arguments_dict)
+        summary = contract.get_summary(**summary_arguments_dict)
         # Converting the summary format to skk summary format
         summary_skk = convert_summary_to_dict(dict_object=summary)
 

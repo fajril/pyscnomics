@@ -1,0 +1,40 @@
+{
+  "$id": "liftingd-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table LiftingD Schema",
+  "type": "object",
+  "properties": {
+    "id": { "type": "integer" },
+
+    "pId": {
+      "$ref": "liftingh-schema.json#/properties/id",
+      "description": "Foreign key referencing LiftingH.id"
+    },
+
+    "year": { "type": ["integer", "null"], "default": null },
+    "base": { "type": ["number", "null"], "default": null },
+    "sales": { "type": ["number", "null"], "default": null },
+    "price": { "type": ["number", "null"], "default": null },
+    "condensate_sales": { "type": ["number", "null"], "default": null },
+    "condensate_price": { "type": ["number", "null"], "default": null },
+    "production": { "type": ["number", "null"], "default": null },
+
+    "gsa": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "vol": { "type": ["number", "null"], "default": null },
+          "ghv": { "type": ["number", "null"], "default": null },
+          "price": { "type": ["number", "null"], "default": null }
+        },
+        "default": { "vol": null, "ghv": null, "price": null }
+      },
+      "default": null
+    },
+
+    "datastate": { "type": "integer", "default": 0 }
+  },
+
+  "required": ["id", "pId", "year"]
+}

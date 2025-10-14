@@ -234,10 +234,14 @@ class GrossSplit(BaseProject):
     _gas_depreciations: dict = field(default_factory=lambda: {}, init=False, repr=False)
     _oil_undepreciated_assets: dict = field(default_factory=lambda: {}, init=False, repr=False)
     _gas_undepreciated_assets: dict = field(default_factory=lambda: {}, init=False, repr=False)
+    _oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes associated with amortization
     _oil_amortizations: dict = field(default_factory=lambda: {}, init=False, repr=False)
     _gas_amortizations: dict = field(default_factory=lambda: {}, init=False, repr=False)
+    _oil_amortization: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_amortization: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes associated with split
     _cumulative_prod: np.ndarray = field(default=None, init=False, repr=False)
@@ -319,6 +323,9 @@ class GrossSplit(BaseProject):
         default_factory=lambda: {}, init=False, repr=False
     )
 
+    _consolidated_depreciation: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_amortization: np.ndarray = field(default=None, init=False, repr=False)
+    
     _consolidated_ctr_share_before_tf: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -2425,6 +2432,9 @@ class GrossSplit(BaseProject):
             for c in cost_types
         }
 
+        self._consolidated_depreciation = self._oil_depreciation + self._gas_depreciation
+        self._consolidated_amortization = self._oil_amortization + self._gas_amortization
+
         # Attributes associated with core business logics
         self._consolidated_ctr_share_before_tf = (
             self._oil_ctr_share_before_transfer + self._gas_ctr_share_before_transfer
@@ -3149,10 +3159,10 @@ class GrossSplit(BaseProject):
         sunk_cost_method: SunkCostMethod = SunkCostMethod.DEPRECIATED_TANGIBLE,
         regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_13_2024,
         reservoir_type_permen_2024: VariableSplit132024.ReservoirType = (
-                VariableSplit132024.ReservoirType.MK
+            VariableSplit132024.ReservoirType.MK
         ),
         initial_amortization_year: InitialYearAmortizationIncurred = (
-                InitialYearAmortizationIncurred.ONSTREAM_YEAR
+            InitialYearAmortizationIncurred.ONSTREAM_YEAR
         ),
     ):
         """
@@ -3346,6 +3356,11 @@ class GrossSplit(BaseProject):
             salvage_value=0.0,
             initial_amortization_year=initial_amortization_year,
         )
+
+        self._oil_depreciation = np.sum([v for v in self._oil_depreciations.values()], axis=0)
+        self._gas_depreciation = np.sum([v for v in self._gas_depreciations.values()], axis=0)
+        self._oil_amortization = np.sum([v for v in self._oil_amortizations.values()], axis=0)
+        self._gas_amortization = np.sum([v for v in self._gas_amortizations.values()], axis=0)
 
         # Specify base split
         self._wrapper_base_split(regime=regime)
@@ -4113,7 +4128,7 @@ class GrossSplit(BaseProject):
             "opex": opex_sum,
             "asr": asr_sum,
             "lbt": lbt_sum,
-            "cost_recovery / deductible cost": deductible_cost_sum,
+            "cost_recovery / deductible_cost": deductible_cost_sum,
             "cost_recovery_over_gross_rev": deductible_cost_over_gross_rev,
             "unrec_cost": carry_forward_deductible_cost,
             "unrec_over_costrec": carry_forcost_over_deductible_cost,

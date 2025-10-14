@@ -1,0 +1,38 @@
+{
+  "$id": "montesummd-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table Monte Carlo Summary Schema",
+  "type": "object",
+  "properties": {
+    "tId": {
+      "type": "integer"
+    },
+
+    "cId": {
+      "$ref": "case-schema.json#/properties/id",
+      "description": "Foreign key referencing Case.id"
+    },
+
+    "target": {
+      "type": "integer",
+      "description": "Target metric: 0=npv, 1=irr, 2=pi, 3=pot, 4=gov_take, 5=ctr_net_share"
+    },
+
+    "p10": {
+      "type": ["number", "null"],
+      "default": null
+    },
+
+    "p50": {
+      "type": ["number", "null"],
+      "default": null
+    },
+
+    "p90": {
+      "type": ["number", "null"],
+      "default": null
+    }
+  },
+
+  "required": ["tId", "cId", "target", "p10", "p50", "p90"]
+}

@@ -1,0 +1,81 @@
+{
+  "$id": "gs-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table GS Schema",
+  "type": "object",
+  "properties": {
+    "id": { "type": "integer" },
+
+    "cId": {
+      "$ref": "case-schema.json#/properties/id",
+      "description": "Foreign key referencing Case.id"
+    },
+    "ctr": {
+      "type": "integer",
+      "description": "indicator 0=contract 1 dan 1=contract 2"
+    },
+
+    "field_status": { 
+        "type": "integer" ,
+        "description": "Status of the field",
+        "default": 0
+    },
+    "field_location": { "type": ["integer", "null"], "default": 0 },
+    "reservoir_depth": { "type": ["number", "null"], "default": 0 },
+    "infrastructure_availability": { "type": ["integer", "null"], "default": 0 },
+    "reservoir_type": { "type": ["integer", "null"], "default": 0 },
+    "co2_content": { "type": ["number", "null"], "default": 1 },
+    "h2s_content": { "type": ["number", "null"], "default": 0 },
+    "oil_api": { "type": ["number", "null"], "default": 0 },
+    "domestic_content_use": { "type": ["integer", "null"], "default": 1 },
+    "production_stage": { "type": ["integer", "null"], "default": 0 },
+    "field_reserves": { "type": ["number", "null"], "default": 0 },
+
+    "ministry_discretion_split": {
+      "type": ["number"],
+      "default": 8.0
+    },
+
+    "oil_base_split": { "type": ["number"], "default": 43.0 },
+    "gas_base_split": { "type": ["number"], "default": 48.0 },
+
+    "dmo_is_weighted": { "type": "boolean", "default": true },
+
+    "OilDMO": { "$ref": "dmo-schema.json" },
+    "GasDMO": { "$ref": "dmo-schema.json" },
+
+    "cum_production_split_offset": {
+      "type": "object",
+      "properties": {
+        "mode": { 
+          "type": "integer",
+          "description": "Mode of the cumulative production split, 0=offset, 1=split table",
+          "default": 0
+        },
+        "offset": { "type": "integer", "default": 25 },
+        "split": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "year": { "type": ["integer", "null"], "default": null },
+              "split": { "type": ["number", "null"], "default": null }
+            }
+          },
+          "default": [{ "year": null, "split": null }]
+        }
+      },
+      "required": ["mode"]
+    },
+
+    "approvalYear": {
+      "type": ["integer", "null"],
+      "default": null
+    }
+  },
+
+  "required": [
+    "id", "cId", "ctr", 
+    "dmo_is_weighted", "OilDMO", "GasDMO"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "$id": "montefg-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table Monte Carlo Simulation Config Schema",
+  "type": "object",
+  "properties": {
+    "cId": {
+      "$ref": "case-schema.json#/properties/id",
+      "description": "Foreign key referencing Case.id"
+    },
+    "numsim": {
+      "type": "integer",
+      "description": "Number of simulations",
+      "default": 1000
+    }
+  },
+  "required": [
+    "cId",
+    "numsim"
+  ]
+}

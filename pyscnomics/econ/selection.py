@@ -734,10 +734,8 @@ class SunkCostMethod(Enum):
     Treatment options for sunk cost.
     """
 
-    DEPRECIATED_TANGIBLE = (
-        "Depreciated Tangible Sunk Cost, while the intangible will be pooled in the first year"
-    )
-    POOLED_1ST_YEAR = "Sunk Cost pooled in the first year"
+    DEPRECIATED_TANGIBLE = "depreciated_tangible"
+    POOLED_1ST_YEAR = "pooled_first_year"
     # DIRECT = (
     #     "Sunk Cost will be directly applied to the cashflow based on the expense year"
     # )
@@ -756,9 +754,9 @@ class CashflowType(Enum):
 class CostType(Enum):
     """ Selection for Cost Type """
 
-    SUNK_COST = "Sunk Cost"
-    PRE_ONSTREAM_COST = "Preonstream Cost"
-    POST_ONSTREAM_COST = "Postonstream Cost"
+    SUNK_COST = "sunk_cost"
+    PRE_ONSTREAM_COST = "preonstream_cost"
+    POST_ONSTREAM_COST = "postonstream_cost"
 
 
 class InitialYearAmortizationIncurred(Enum):

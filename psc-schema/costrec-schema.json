@@ -1,0 +1,130 @@
+{
+  "$id": "costrec-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table Cost Recovery Schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer"
+    },
+    "cId": {
+      "$ref": "case-schema.json#/properties/id",
+      "description": "Foreign key referencing Case.id"
+    },
+    "ctr": {
+      "type": "integer",
+      "description": "indicator 0=contract 1 dan 1=contract 2"
+    },
+    "oil_ftp": {
+      "$ref": "#/$defs/ftp"
+    },
+    "gas_ftp": {
+      "$ref": "#/$defs/ftp"
+    },
+    "TaxSplit": {
+      "type": "object",
+      "properties": {
+        "split_type": {
+          "type": "integer",
+          "default": 0
+        },
+        "pre_tax_ctr_oil": {
+          "type": ["number"],
+          "default": 41.6667
+        },
+        "pre_tax_ctr_gas": {
+          "type": ["number"],
+          "default": 52.0833
+        }
+      },
+      "required": ["split_type", "pre_tax_ctr_oil", "pre_tax_ctr_gas"]
+    },
+    "IC": {
+      "type": "object",
+      "properties": {
+        "ic_availability": { "type": "boolean", "default": false },
+        "ic_oil": { "type": ["number"], "default": 0.0 },
+        "ic_gas": { "type": ["number"], "default": 0.0 }
+      },
+      "required": [ "ic_availability", "ic_oil", "ic_gas" ]
+    },
+    "CR": {
+      "type": "object",
+      "properties": {
+        "oil_cr_cap_rate": { "type": [ "number"], "default": 100.0 },
+        "gas_cr_cap_rate": { "type": [ "number"], "default": 100.0 }
+      }
+    },
+    "RCSlidingScale": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/slidingScale"
+      },
+      "default": [{ "bottom_limit": null, "top_limit": null, "pre_tax_ctr_oil": null, "pre_tax_ctr_gas": null }]
+    },
+    "ICPSlidingScale": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/slidingScale"
+      },
+      "default": [{ "bottom_limit": null, "top_limit": null, "pre_tax_ctr_oil": null, "pre_tax_ctr_gas": null }]
+    },
+    "Indicator": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "year": { "type": ["integer"], "default": null },
+          "indicator": { "type": ["number"], "default": null }
+        }
+      },
+      "default": [{ "year": null, "indicator": null }]
+    },
+    "dmo_is_weighted": { "type": "boolean", "default": false },
+    "OilDMO": { "$ref": "dmo-schema.json" },
+    "GasDMO": { "$ref": "dmo-schema.json" },
+    "post_uu_22_year2001": { "type": "boolean", "default": false },
+    "oil_cost_of_sales_applied": { "type": "boolean", "default": false },
+    "gas_cost_of_sales_applied": { "type": "boolean", "default": false }
+  },
+  "required": [
+    "id",
+    "cId",
+    "ctr",
+    "oil_ftp",
+    "gas_ftp",
+    "TaxSplit",
+    "IC",
+    "RCSlidingScale",
+    "ICPSlidingScale",
+    "Indicator",
+    "dmo_is_weighted",
+    "OilDMO",
+    "GasDMO",
+    "post_uu_22_year2001",
+    "oil_cost_of_sales_applied",
+    "gas_cost_of_sales_applied"
+  ],
+  "$defs": {
+    "ftp": {
+      "type": "object",
+      "properties": {
+        "ftp_availability": {"type": "boolean", "default": true },
+        "ftp_is_shared": {"type": "boolean", "default": true },
+        "ftp_portion": {"type": ["number"], "default": 20 }
+      },
+      "required": ["ftp_availability", "ftp_is_shared", "ftp_portion"]
+    },
+    "slidingScale": {
+      "type": "object",
+      "properties": {
+        "bottom_limit": { "type": ["number", "null"], "default": null },
+          "top_limit": { "type": ["number", "null"],
+            "default": null
+        },
+        "pre_tax_ctr_oil": {"type": ["number","null"], "default": null },
+        "pre_tax_ctr_gas": {"type": ["number","null"], "default": null }
+      }
+    }
+  }
+}

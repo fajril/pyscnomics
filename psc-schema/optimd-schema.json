@@ -1,0 +1,27 @@
+{
+  "$id": "optimd-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table Optimization Detail Schema",
+  "type": "object",
+  "properties": {
+    "id": { "type": "integer" },
+
+    "cId": {
+      "$ref": "case-schema.json#/properties/id",
+      "description": "Foreign key referencing Case.id"
+    },
+
+    "parameter": { 
+      "type": "integer",
+      "description": "Optimization parameter:0: Oil Contractor Pre Tax, 1: Gas Contractor Pre Tax, 2: Oil FTP Portion, 3: Gas FTP Portion, 4: Oil IC, 5: Gas IC, 6: Oil DMO Fee, 7: Gas DMO Fee, 8: VAT Rate, 9: Effective Tax Rate, 10: Ministerial Discretion, 11: Accelerated Depreciation, 12: VAT Discount, 13: LBT Discount"
+    },
+    "pos": { 
+      "type": "integer",
+      "description": "Order priority"
+    },
+    "min": { "type": "number" },
+    "max": { "type": "number" },
+    "include": { "type": "integer" }
+  },
+  "required": ["id", "cId", "parameter", "pos", "min", "max", "include"]
+}

@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 import numpy as np
 
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales, LBT
-from pyscnomics.dataset.sample import assign_lifting, read_fluid_type
+from pyscnomics.dataset.sample import assign_lifting, read_fluid_type, read_cost_type
 from pyscnomics.econ.selection import (
     TaxRegime,
     TaxType,
@@ -975,6 +975,12 @@ def convert_dict_to_capital(data_raw: dict) -> tuple | None:
                     end_year=data_raw[key]["end_year"],
                     cost=np.array(data_raw[key]["cost"]),
                     expense_year=np.array(data_raw[key]["expense_year"], dtype=int),
+                    cost_type=(
+                        None
+                        if "cost_type" not in data_raw[key]
+                        or data_raw[key]["cost_type"] is None
+                        else read_cost_type(cost_type=data_raw[key]["cost_type"])
+                    ),
                     cost_allocation=(
                         None
                         if "cost_allocation" not in data_raw[key]
@@ -1062,6 +1068,12 @@ def convert_dict_to_intangible(data_raw: dict) -> tuple | None:
                     end_year=data_raw[key]["end_year"],
                     cost=np.array(data_raw[key]["cost"], dtype=float),
                     expense_year=np.array(data_raw[key]["expense_year"], dtype=int),
+                    cost_type=(
+                        None
+                        if "cost_type" not in data_raw[key]
+                        or data_raw[key]["cost_type"] is None
+                        else read_cost_type(cost_type=data_raw[key]["cost_type"])
+                    ),
                     cost_allocation=(
                         None
                         if "cost_allocation" not in data_raw[key]
@@ -1118,6 +1130,12 @@ def convert_dict_to_opex(data_raw: dict) -> tuple | None:
                     start_year=data_raw[key]["start_year"],
                     end_year=data_raw[key]["end_year"],
                     expense_year=np.array(data_raw[key]["expense_year"], dtype=int),
+                    cost_type=(
+                        None
+                        if "cost_type" not in data_raw[key]
+                        or data_raw[key]["cost_type"] is None
+                        else read_cost_type(cost_type=data_raw[key]["cost_type"])
+                    ),
                     cost_allocation=(
                         None
                         if "cost_allocation" not in data_raw[key]
@@ -1192,6 +1210,12 @@ def convert_dict_to_asr(data_raw: dict) -> tuple:
                     end_year=data_raw[key]["end_year"],
                     cost=np.array(data_raw[key]["cost"], dtype=float),
                     expense_year=np.array(data_raw[key]["expense_year"], dtype=int),
+                    cost_type=(
+                        None
+                        if "cost_type" not in data_raw[key]
+                        or data_raw[key]["cost_type"] is None
+                        else read_cost_type(cost_type=data_raw[key]["cost_type"])
+                    ),
                     cost_allocation=(
                         None
                         if "cost_allocation" not in data_raw[key]
@@ -1265,6 +1289,12 @@ def convert_dict_to_lbt(data_raw: dict) -> tuple:
                         else None
                     ),
                     expense_year=np.array(data_raw[key]["expense_year"], dtype=int),
+                    cost_type=(
+                        None
+                        if "cost_type" not in data_raw[key]
+                        or data_raw[key]["cost_type"] is None
+                        else read_cost_type(cost_type=data_raw[key]["cost_type"])
+                    ),
                     cost_allocation=(
                         None
                         if "cost_allocation" not in data_raw[key]
@@ -1352,6 +1382,12 @@ def convert_dict_to_cost_of_sales(data_raw: dict) -> tuple:
                     end_year=data_raw[key]["end_year"],
                     cost=np.array(data_raw[key]["cost"], dtype=float),
                     expense_year=np.array(data_raw[key]["expense_year"], dtype=int),
+                    cost_type=(
+                        None
+                        if "cost_type" not in data_raw[key]
+                        or data_raw[key]["cost_type"] is None
+                        else read_cost_type(cost_type=data_raw[key]["cost_type"])
+                    ),
                     cost_allocation=(
                         None
                         if "cost_allocation" not in data_raw[key]

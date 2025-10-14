@@ -178,14 +178,14 @@ def get_table(
         psc_table_consolidated['C_ASR_Expenditures_Pre_Tax'] = contract._consolidated_asr_expenditures_pre_tax
         psc_table_consolidated['C_LBT_Expenditures_Pre_Tax'] = contract._consolidated_lbt_expenditures_pre_tax
         psc_table_consolidated['C_CostOfSales_Expenditures_Pre_Tax'] = contract._consolidated_cost_of_sales_expenditures_pre_tax
-        psc_table_consolidated['C_Total_Expenditures_Pre_Tax'] = contract._consolidated_expenditures_pre_tax
+        psc_table_consolidated['C_Total_Expenditures_Pre_Tax'] = contract._consolidated_total_expenditures_pre_tax
         psc_table_consolidated['C_Capital_Indirect_Tax'] = contract._consolidated_capital_indirect_tax
         psc_table_consolidated['C_Intangible_Indirect_Tax'] = contract._consolidated_intangible_indirect_tax
         psc_table_consolidated['C_Opex_Indirect_Tax'] = contract._consolidated_opex_indirect_tax
         psc_table_consolidated['C_ASR_Indirect_Tax'] = contract._consolidated_asr_indirect_tax
         psc_table_consolidated['C_LBT_Indirect_Tax'] = contract._consolidated_lbt_indirect_tax
         psc_table_consolidated['C_CostOfSales_Indirect_Tax'] = contract._consolidated_cost_of_sales_indirect_tax
-        psc_table_consolidated['C_Total_Indirect_Tax'] = contract._consolidated_indirect_tax
+        psc_table_consolidated['C_Total_Indirect_Tax'] = contract._consolidated_total_indirect_tax
         # psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
 
         return psc_table_oil, psc_table_gas, psc_table_consolidated
@@ -333,14 +333,14 @@ def get_table(
         psc_table_consolidated['C_ASR_Expenditures_Pre_Tax'] = contract._consolidated_asr_expenditures_pre_tax
         psc_table_consolidated['C_LBT_Expenditures_Pre_Tax'] = contract._consolidated_lbt_expenditures_pre_tax
         psc_table_consolidated['C_CostOfSales_Expenditures_Pre_Tax'] = contract._consolidated_cost_of_sales_expenditures_pre_tax
-        psc_table_consolidated['C_Total_Expenditures_Pre_Tax'] = contract._consolidated_expenditures_pre_tax
+        psc_table_consolidated['C_Total_Expenditures_Pre_Tax'] = contract._consolidated_total_expenditures_pre_tax
         psc_table_consolidated['C_Capital_Indirect_Tax'] = contract._consolidated_capital_indirect_tax
         psc_table_consolidated['C_Intangible_Indirect_Tax'] = contract._consolidated_intangible_indirect_tax
         psc_table_consolidated['C_Opex_Indirect_Tax'] = contract._consolidated_opex_indirect_tax
         psc_table_consolidated['C_ASR_Indirect_Tax'] = contract._consolidated_asr_indirect_tax
         psc_table_consolidated['C_LBT_Indirect_Tax'] = contract._consolidated_lbt_indirect_tax
         psc_table_consolidated['C_CostOfSales_Indirect_Tax'] = contract._consolidated_cost_of_sales_indirect_tax
-        psc_table_consolidated['C_Total_Indirect_Tax'] = contract._consolidated_indirect_tax
+        psc_table_consolidated['C_Total_Indirect_Tax'] = contract._consolidated_total_indirect_tax
         # psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
 
         return psc_table_oil, psc_table_gas, psc_table_consolidated

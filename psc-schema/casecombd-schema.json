@@ -1,0 +1,43 @@
+{
+  "$id": "casecombd-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table Case Combine Schema",
+  "type": "object",
+  "properties": {
+    "id": { "type": "integer" },
+    "name": { "type": "string" },
+    "base": { 
+      "type": ["integer", "null"],
+      "default": null
+    },
+    "combiner": { 
+      "type": "array",
+      "items": {
+        "type": ["integer", "null"],
+        "default": null
+      },
+      "default": []
+    },
+    "inflation_rate": {
+        "type": ["number", "null"],
+        "default": null
+    },
+    "discount_rate": {
+        "type": ["number", "null"],
+        "default": null
+    },
+    "reference_year": {
+        "type": ["number", "null"],
+        "default": null
+    },
+    "npv_mode": {
+        "type": ["number", "null"],
+        "default": null
+    },
+    "discounting_mode": {
+        "type": ["number", "null"],
+        "default": null
+    }
+  },    
+  "required": ["id", "name", "base", "combiner"]
+}

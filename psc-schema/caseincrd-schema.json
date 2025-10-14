@@ -1,0 +1,43 @@
+{
+  "$id": "caseincrd-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table Case Incremental Schema",
+  "type": "object",
+  "properties": {
+    "id": { "type": "integer" },
+    "name": { "type": "string" },
+    "base": { 
+      "allOf": [
+          {"$ref": "case-schema.json#/properties/id"},
+          {"default": null}
+      ]
+    },
+    "oppsite": { 
+      "allOf": [
+          {"$ref": "case-schema.json#/properties/id"},
+          {"default": null}
+      ]
+    },
+    "inflation_rate": {
+        "type": ["number", "null"],
+        "default": null
+    },
+    "discount_rate": {
+        "type": ["number", "null"],
+        "default": null
+    },
+    "reference_year": {
+        "type": ["number", "null"],
+        "default": null
+    },
+    "npv_mode": {
+        "type": ["number", "null"],
+        "default": null
+    },
+    "discounting_mode": {
+        "type": ["number", "null"],
+        "default": null
+    }
+  },
+  "required": ["id", "name", "base", "oppsite"]
+}

@@ -153,6 +153,8 @@ class CostRecovery(BaseProject):
     _gas_depreciations: dict = field(default_factory=lambda: {}, init=False, repr=False)
     _oil_undepreciated_assets: dict = field(default_factory=lambda: {}, init=False, repr=False)
     _gas_undepreciated_assets: dict = field(default_factory=lambda: {}, init=False, repr=False)
+    _oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes associated with total depreciation and total nondepreciable
     _oil_depr_total: np.ndarray = field(default=None, init=False, repr=False)
@@ -243,6 +245,7 @@ class CostRecovery(BaseProject):
     _consolidated_undepreciated_assets: dict = field(
         default_factory=lambda: {}, init=False, repr=False
     )
+    _consolidated_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_depr_total: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_non_depr_total: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -1713,6 +1716,8 @@ class CostRecovery(BaseProject):
             for c in cost_types
         }
 
+        self._consolidated_depreciation = self._oil_depreciation + self._gas_depreciation
+
         # Attributes associated with total depreciation and total non depreciable
         self._consolidated_depr_total = self._oil_depr_total + self._gas_depr_total
         self._consolidated_non_depr_total = (
@@ -2641,6 +2646,9 @@ class CostRecovery(BaseProject):
         # Modify depreciations, accounting for various adjustments
         self._get_modified_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)
 
+        self._oil_depreciation = np.sum([v for v in self._oil_depreciations.values()], axis=0)
+        self._gas_depreciation = np.sum([v for v in self._gas_depreciations.values()], axis=0)
+
         # Calculate FTP
         self._get_ftp()
 
@@ -3440,7 +3448,7 @@ class CostRecovery(BaseProject):
             "opex": opex_sum,
             "asr": asr_sum,
             "lbt": lbt_sum,
-            "cost_recovery / deductible cost": cost_recovery_sum,
+            "cost_recovery / deductible_cost": cost_recovery_sum,
             "cost_recovery_over_gross_rev": cost_recovery_over_gross_rev,
             "unrec_cost": unrec_cost,
             "unrec_over_costrec": unrec_over_costrec,

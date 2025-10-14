@@ -1,0 +1,78 @@
+{
+  "$id": "gencfg-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table General Config Schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer"
+    },
+    "cId": {
+      "$ref": "case-schema.json#/properties/id",
+      "description": "Foreign key referencing Case.id"
+    },
+    "start_date_project": {
+      "type": ["integer", "string"],
+      "description": "Tanggal dimulainya proyek dalam UTC timestamp"
+    },
+    "end_date_project": {
+      "type": ["integer", "string"],
+      "description": "Tanggal berakhirnya proyek dalam UTC timestamp"
+    },
+    "start_date_project_second": {
+      "type": ["integer", "null"],
+      "description": "Tanggal dimulainya proyek2 dalam UTC timestamp",
+      "default": null
+    },
+    "end_date_project_second": {
+      "type": ["integer", "null", "string"],
+      "description": "Tanggal berakhirnya proyek2 dalam UTC timestamp",
+      "default": null
+    },
+    "discount_rate_start_year": {
+      "type": ["integer"],
+      "description": "The year the discount rate starts",
+      "default": 2025
+    },
+    "discount_rate": {
+      "type": ["number"],
+      "description": "Nilai diskon, %",
+      "default": 10.0
+    },
+    "inflation_rate_applied_to": {
+      "type": "integer",
+      "description": "The inflation rate is applied to Capex=0, Opex=1, CapexOpex=2 and None=3",
+      "default": 3
+    },
+    "delayAccMode": {
+      "type": "boolean",
+      "description": "If true, the project start date will be based on the start_date_project + delayAccYear",
+      "default": false
+    },
+    "delayAccYear": {
+      "type": ["integer"],
+      "description": "The number of years to delay the project start date, impacting to cost and lifting",
+      "default": 0
+    },
+    "useCOS": {
+      "type": "boolean",
+      "description": "If true, the Cost of Sales (COS) will be used in the project",
+      "default": false
+    },
+    "lbtUseCalc": {
+      "type": "boolean",
+      "description": "If true, the LBT Cost will be used in the project",
+      "default": false
+    }
+  },
+  "required": [
+    "id",
+    "cId",
+    "type_of_contract",
+    "start_date_project",
+    "end_date_project",
+    "discount_rate_start_year",
+    "discount_rate",
+    "inflation_rate_applied_to"
+  ]
+}

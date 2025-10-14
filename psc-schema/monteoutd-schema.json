@@ -1,0 +1,46 @@
+{
+  "$id": "monteoutd-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table Monte Carlo Output Schema",
+  "type": "object",
+  "properties": {
+    "id": {"type": ["number"]},
+    "tId": {"type": ["number"]},
+    "target": {"type": ["number"]},
+    "factor": {
+      "type": ["number", "null"],
+      "default": null
+    },
+
+    "value": {
+      "type": ["number", "null"],
+      "default": null
+    },
+
+    "oil": {
+      "type": ["number", "null"],
+      "default": null
+    },
+
+    "gas": {
+      "type": ["number", "null"],
+      "default": null
+    },
+
+    "opex": {
+      "type": ["number", "null"],
+      "default": null
+    },
+
+    "capex": {
+      "type": ["number", "null"],
+      "default": null
+    },
+
+    "lifting": {
+      "type": ["number", "null"],
+      "default": null
+    }
+  },
+  "required": ["id", "tId", "target"]
+}

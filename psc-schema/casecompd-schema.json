@@ -1,0 +1,23 @@
+{
+  "$id": "casecompd-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table Case Comparison Schema",
+  "type": "object",
+  "properties": {
+    "id": { "type": "integer" },
+    "name": { "type": "string" },
+    "base": { 
+      "type": ["integer", "null"],
+      "default": null
+    },
+    "comparer": { 
+      "type": "array",
+      "items": {
+        "type": ["integer", "null"],
+        "default": null
+      },
+      "default": []
+    }
+  },
+  "required": ["id", "name", "base", "comparer"]
+}

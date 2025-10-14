@@ -1,0 +1,194 @@
+{
+  "$id": "project-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table Project Schema v1",
+  "type": "object",
+  "properties": {
+    "tbCases": {
+      "type": "array",
+      "items": {
+        "$ref": "case-schema.json"
+      },
+      "default": []
+    },
+    "tbGenCfg": {
+      "type": "array",
+      "items": {
+        "$ref": "gencfg-schema.json"
+      },
+      "default": []
+    },
+    "tbCostRec": {
+      "type": "array",
+      "items": {
+        "$ref": "costrec-schema.json"
+      },
+      "default": []
+    },
+    "tbGs": {
+      "type": "array",
+      "items": {
+        "$ref": "gs-schema.json"
+      },
+      "default": []
+    },
+    "tbFiscal": {
+      "type": "array",
+      "items": {
+        "$ref": "fiscal-schema.json"
+      },
+      "default": []
+    },
+    "tbCapCost": {
+      "type": "array",
+      "items": {
+        "$ref": "capcost-schema.json"
+      },
+      "default": []
+    },
+    "tbIntangCost": {
+      "type": "array",
+      "items": {
+        "$ref": "intangcost-schema.json"
+      },
+      "default": []
+    },
+    "tbOpexCost": {
+      "type": "array",
+      "items": {
+        "$ref": "opexcost-schema.json"
+      },
+      "default": []
+    },
+    "tbAsrCost": {
+      "type": "array",
+      "items": {
+        "$ref": "asrcost-schema.json"
+      },
+      "default": []
+    },
+    "tbCosCost": {
+      "type": "array",
+      "items": {
+        "$ref": "coscost-schema.json"
+      },
+      "default": []
+    },
+    "tbLbtCost": {
+      "type": "array",
+      "items": {
+        "$ref": "lbtcost-schema.json"
+      },
+      "default": []
+    },
+    "tbLiftingH": {
+      "type": "array",
+      "items": {
+        "$ref": "liftingh-schema.json"
+      },
+      "default": []
+    },
+    "tbLiftingD": {
+      "type": "array",
+      "items": {
+        "$ref": "liftingd-schema.json"
+      },
+      "default": []
+    },
+    "tbSens": {
+      "type": "array",
+      "items": {
+        "$ref": "senscfg-schema.json"
+      },
+      "default": []
+    },
+    "tbOptH": {
+      "type": "array",
+      "items": {
+        "$ref": "optimcfg-schema.json"
+      },
+      "default": []
+    },
+    "tbOptD": {
+      "type": "array",
+      "items": {
+        "$ref": "optimd-schema.json"
+      },
+      "default": []
+    },
+    "tbMonteH": {
+      "type": "array",
+      "items": {
+        "$ref": "montecfg-schema.json"
+      },
+      "default": []
+    },
+    "tbMonteD": {
+      "type": "array",
+      "items": {
+        "$ref": "monteparam-schema.json"
+      },
+      "default": []
+    },
+    "tbMonteSummD": {
+      "type": "array",
+      "items": {
+        "$ref": "montesummd-schema.json"
+      },
+      "default": []
+    },
+    "tbMonteOutD": {
+      "type": "array",
+      "items": {
+        "$ref": "monteoutd-schema.json"
+      },
+      "default": []
+    },
+    "tbCaseCompD": {
+      "type": "array",
+      "items": {
+        "$ref": "casecompd-schema.json"
+      },
+      "default": []
+    },
+    "tbCaseCombD": {
+      "type": "array",
+      "items": {
+        "$ref": "casecombd-schema.json"
+      },
+      "default": []
+    },
+    "tbCaseIncrD": {
+      "type": "array",
+      "items": {
+        "$ref": "caseincrd-schema.json"
+      },
+      "default": []
+    }
+  },
+  "required": [
+    "tbCases",
+    "tbGenCfg",
+    "tbCostRec",
+    "tbGs",
+    "tbFiscal",
+    "tbCapCost",
+    "tbIntangCost",
+    "tbOpexCost",
+    "tbAsrCost",
+    "tbCosCost",
+    "tbLbtCost",
+    "tbLiftingH",
+    "tbLiftingD",
+    "tbSens",
+    "tbOptH",
+    "tbOptD",
+    "tbMonteH",
+    "tbMonteD",
+    "tbMonteSummD",
+    "tbMonteOutD",
+    "tbCaseCompD",
+    "tbCaseCombD",
+    "tbCaseIncrD"
+  ]
+}

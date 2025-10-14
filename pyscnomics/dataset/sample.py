@@ -11,7 +11,8 @@ from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales
-from pyscnomics.econ.revenue import Lifting, FluidType
+from pyscnomics.econ.revenue import Lifting
+from pyscnomics.econ.selection import FluidType, CostType
 
 
 def get_json_file_names() -> list:
@@ -80,7 +81,7 @@ def read_json_file(file_name: str) -> dict:
 
 def read_fluid_type(fluid: list | str) -> list[FluidType] | FluidType:
     """
-    A function to converting the str input into FluidType Enum class.
+    A function to convert the str input into FluidType Enum class.
 
     Parameters
     ----------
@@ -106,7 +107,6 @@ def read_fluid_type(fluid: list | str) -> list[FluidType] | FluidType:
             return FluidType.CO2
 
     else:
-
         fluid_mapping = {'Oil': FluidType.OIL,
                          'Gas': FluidType.GAS,
                          'Sulfur': FluidType.SULFUR,
@@ -115,6 +115,85 @@ def read_fluid_type(fluid: list | str) -> list[FluidType] | FluidType:
 
         # Replace elements in the list using the mapping
         result = [fluid_mapping[i] for i in fluid if i in fluid_mapping]
+
+        return result
+
+
+def read_cost_type(cost_type: str | list) -> CostType | list[CostType]:
+    """
+    Convert cost type(s) from string representation to corresponding CostType enum.
+
+    This function accepts either a single string or a list of strings representing
+    cost types and returns the corresponding `CostType` enum instance(s).
+    Valid cost type strings include:
+    - "sunk_cost"
+    - "preonstream_cost"
+    - "postonstream_cost"
+
+    Parameters
+    ----------
+    cost_type : str or list of str
+        Cost type(s) to be converted. Can be a single string (e.g., "Sunk Cost")
+        or a list of strings (e.g., ["Sunk Cost", "Postonstream Cost"]).
+
+    Returns
+    -------
+    CostType or list of CostType
+        The corresponding `CostType` enum instance(s) matching the input.
+        Returns a single `CostType` if input is a string, otherwise returns
+        a list of `CostType` objects.
+
+    Raises
+    ------
+    TypeError
+        If `cost_type` is not a string or list, or if any element within the list
+        is not a valid cost type string.
+    KeyError
+        If a string input does not match any recognized cost type.
+
+    Notes
+    -----
+    Valid cost type strings are case-sensitive and must exactly match one of the
+    following:
+    - "sunk_cost"
+    - "preonstream_cost"
+    - "postonstream_cost"
+    """
+
+    # Only allow string or list as the datatype of `cost_type`
+    if not isinstance(cost_type, (str, list)):
+        return TypeError(
+            f"Parameter cost_type must be a string or a list, "
+            f"not {cost_type.__class__.__qualname__}"
+        )
+
+    # Transformation string -> CostType(Enum) for string input
+    if isinstance(cost_type, str):
+        if cost_type == "sunk_cost":
+            return CostType.SUNK_COST
+        elif cost_type == "preonstream_cost":
+            return CostType.PRE_ONSTREAM_COST
+        elif cost_type == "postonstream_cost":
+            return CostType.POST_ONSTREAM_COST
+        else:
+            raise KeyError(f"Parameter cost_type ({cost_type}) is unrecognized")
+
+    # Transformation string -> CostType(Enum) for list input
+    else:
+        cost_type_mapping = {
+            "sunk_cost": CostType.SUNK_COST,
+            "preonstream_cost": CostType.PRE_ONSTREAM_COST,
+            "postonstream_cost": CostType.POST_ONSTREAM_COST,
+        }
+
+        # Replace each string inside the cost_type list into their
+        # corresponding CostType(Enum) counterparts
+        result = [0] * len(cost_type)
+        for i, ct in enumerate(cost_type):
+            if ct in cost_type_mapping.keys():
+                result[i] = cost_type_mapping[ct]
+            else:
+                raise TypeError(f"Invalid cost type: {ct}")
 
         return result
 
