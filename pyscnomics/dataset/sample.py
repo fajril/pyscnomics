@@ -1,3 +1,8 @@
+"""
+A collection of methods to convert string datatype from JSON inputs
+to their corresponding datatypes in the core engine.
+"""
+
 import json
 import os
 import importlib.resources as pkg_resources
@@ -233,45 +238,66 @@ def assign_lifting(data_raw: dict) -> tuple | None:
     -------
     lifting_list: tuple | None
         The list containing the lifting dataclass.
-
     """
-    # Defining the data source and the list container for Lifting. Then, assign them based on their fluid type
+
+    # Defining data source and container for Lifting (container as list datatype).
+    # Then, assign them based on their fluid type
     lifting_data = data_raw['lifting']
+
     if lifting_data is None:
         return None
+
     else:
         lifting_list = []
         for key in lifting_data.keys():
-            # Since the Lifting data for gas has different arguments input, conditional formatting is applied
+            # Since the Lifting data for gas has different arguments input,
+            # conditional formatting is applied
             if 'Gas' in key or 'GSA' in key:
-                lifting = Lifting(start_year=lifting_data[key]["start_year"],
-                                  end_year=lifting_data[key]["end_year"],
-                                  lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
-                                  price=np.array(lifting_data[key]["price"]),
-                                  prod_year=np.array(lifting_data[key]["prod_year"]),
-                                  fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
-                                  ghv=None if lifting_data[key]["ghv"] is None else
-                                  np.array(lifting_data[key]["ghv"]),
-                                  prod_rate=None if lifting_data[key]["prod_rate"] is None or "prod_rate" not in lifting_data[key]
-                                  else np.array(lifting_data[key]["prod_rate"]),
-                                  prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None or "prod_rate_baseline" not in lifting_data[key]
-                                  else np.array(lifting_data[key]["prod_rate_baseline"]),
-                                  )
+                lifting = Lifting(
+                    start_year=lifting_data[key]["start_year"],
+                    end_year=lifting_data[key]["end_year"],
+                    lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
+                    price=np.array(lifting_data[key]["price"]),
+                    prod_year=np.array(lifting_data[key]["prod_year"]),
+                    fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
+                    ghv=(
+                        None if lifting_data[key]["ghv"] is None
+                        else np.array(lifting_data[key]["ghv"])
+                    ),
+                    prod_rate=(
+                        None if lifting_data[key]["prod_rate"] is None
+                        or "prod_rate" not in lifting_data[key]
+                        else np.array(lifting_data[key]["prod_rate"])
+                    ),
+                    prod_rate_baseline=(
+                        None if lifting_data[key]["prod_rate_baseline"] is None
+                        or "prod_rate_baseline" not in lifting_data[key]
+                        else np.array(lifting_data[key]["prod_rate_baseline"])
+                    ),
+                )
 
                 lifting_list.append(lifting)
 
             else:
-                lifting = Lifting(start_year=lifting_data[key]["start_year"],
-                                  end_year=lifting_data[key]["end_year"],
-                                  lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
-                                  price=np.array(lifting_data[key]["price"]),
-                                  prod_year=np.array(lifting_data[key]["prod_year"]),
-                                  fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
-                                  prod_rate=None if lifting_data[key]["prod_rate"] is None or "prod_rate" not in lifting_data[key]
-                                  else np.array(lifting_data[key]["prod_rate"]),
-                                  prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None or "prod_rate_baseline" not in lifting_data[key]
-                                  else np.array(lifting_data[key]["prod_rate_baseline"]),
-                                  )
+                lifting = Lifting(
+                    start_year=lifting_data[key]["start_year"],
+                    end_year=lifting_data[key]["end_year"],
+                    lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
+                    price=np.array(lifting_data[key]["price"]),
+                    prod_year=np.array(lifting_data[key]["prod_year"]),
+                    fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
+                    prod_rate=(
+                        None if lifting_data[key]["prod_rate"] is None
+                        or "prod_rate" not in lifting_data[key]
+                        else np.array(lifting_data[key]["prod_rate"])
+                    ),
+                    prod_rate_baseline=(
+                        None if lifting_data[key]["prod_rate_baseline"] is None
+                        or "prod_rate_baseline" not in lifting_data[key]
+                        else np.array(lifting_data[key]["prod_rate_baseline"])
+                    ),
+                )
+
                 lifting_list.append(lifting)
 
         return tuple(lifting_list)

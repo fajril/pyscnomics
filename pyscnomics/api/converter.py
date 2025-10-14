@@ -832,6 +832,7 @@ def convert_str_to_date(str_object: str | int) -> date | None:
     else:
         if isinstance(str_object, str):
             return datetime.strptime(str_object, "%d/%m/%Y").date()
+
         elif isinstance(str_object, int):
             value = datetime.fromtimestamp(str_object)
             date_value = value.strftime("%d/%m/%Y")

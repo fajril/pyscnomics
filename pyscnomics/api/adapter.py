@@ -53,19 +53,19 @@ from pyscnomics.econ.limit import econ_limit
 
 
 class ContractException(Exception):
-    """Exception to be raised if contract type is misused"""
+    """ Exception to be raised if contract type is misused """
 
     pass
 
 
 class LTPModelException(Exception):
-    """Exception to be raised for an incorrect LTP configurations"""
+    """ Exception to be raised for an incorrect LTP configurations """
 
     pass
 
 
 class RDPModelException(Exception):
-    """Exception to be raised for an incorrect RDP configurations"""
+    """ Exception to be raised for an incorrect RDP configurations """
 
     pass
 
@@ -104,8 +104,8 @@ def get_setup_dict(data: dict) -> tuple:
         The opex cost of the project, in CostOfSales Dataclass format.
     asr: ASR
         The asr cost of the project, in ASR Dataclass format.
-
     """
+
     # Parsing the contract setup into each corresponding variables
     start_date = convert_str_to_date(str_object=data["setup"]["start_date"])
     end_date = convert_str_to_date(str_object=data["setup"]["end_date"])
@@ -115,36 +115,44 @@ def get_setup_dict(data: dict) -> tuple:
     gas_onstream_date = convert_str_to_date(
         str_object=data["setup"].get("gas_onstream_date", None)
     )
+    approval_year = int(data["setup"]["approval_year"])
+    is_pod_1 = data["setup"]["is_pod_1"]
     lifting = convert_dict_to_lifting(data_raw=data) if "lifting" in data else None
-    capital = (
-        convert_dict_to_capital(data_raw=data["capital"]) if "capital" in data else None
-    )
-    intangible = (
-        convert_dict_to_intangible(data_raw=data["intangible"])
-        if "intangible" in data
-        else None
-    )
-    opex = convert_dict_to_opex(data_raw=data["opex"]) if "opex" in data else None
-    asr = convert_dict_to_asr(data_raw=data["asr"]) if "asr" in data else None
-    lbt = convert_dict_to_lbt(data_raw=data["lbt"]) if "lbt" in data else None
-    cost_of_sales = (
-        convert_dict_to_cost_of_sales(data_raw=data["cost_of_sales"])
-        if "cost_of_sales" in data
-        else None
-    )
-    return (
-        start_date,
-        end_date,
-        oil_onstream_date,
-        gas_onstream_date,
-        lifting,
-        capital,
-        intangible,
-        opex,
-        asr,
-        lbt,
-        cost_of_sales,
-    )
+
+    print('\t')
+    print(f'Filetype: {type(approval_year)}')
+    print('approval_year = \n', approval_year)
+
+
+    # capital = (
+    #     convert_dict_to_capital(data_raw=data["capital"]) if "capital" in data else None
+    # )
+    # intangible = (
+    #     convert_dict_to_intangible(data_raw=data["intangible"])
+    #     if "intangible" in data
+    #     else None
+    # )
+    # opex = convert_dict_to_opex(data_raw=data["opex"]) if "opex" in data else None
+    # asr = convert_dict_to_asr(data_raw=data["asr"]) if "asr" in data else None
+    # lbt = convert_dict_to_lbt(data_raw=data["lbt"]) if "lbt" in data else None
+    # cost_of_sales = (
+    #     convert_dict_to_cost_of_sales(data_raw=data["cost_of_sales"])
+    #     if "cost_of_sales" in data
+    #     else None
+    # )
+    # return (
+    #     start_date,
+    #     end_date,
+    #     oil_onstream_date,
+    #     gas_onstream_date,
+    #     lifting,
+    #     capital,
+    #     intangible,
+    #     opex,
+    #     asr,
+    #     lbt,
+    #     cost_of_sales,
+    # )
 
 
 def get_summary_dict(data: dict) -> dict:

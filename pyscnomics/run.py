@@ -300,21 +300,103 @@ case = ExampleCase()
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-from pyscnomics.dataset.sample import read_fluid_type, read_cost_type
+from pyscnomics.api.adapter import get_setup_dict
 
-cost_type_apel = ["sunk_cost", "preonstream_cost", "sunk_cost", "postonstream_cost"]
+data = {
+    "setup": {
+        "start_date": "01/01/2022",
+        "end_date": "31/12/2035",
+        "oil_onstream_date": "01/01/2024",
+        "gas_onstream_date": None,
+        "approval_year": None,
+        "is_pod_1": True,
+    },
+    "summary_arguments": None,
+    "grosssplit": None,
+    "contract_arguments": None,
+    "lifting": {
+        "Oil Oil sources #1": {
+            "start_year": 2022,
+            "end_year": 2035,
+            "prod_rate_baseline": [
+                351000,
+                351000,
+                351000,
+                351000,
+                351000,
+                351000,
+                351000,
+                351000,
+                351000,
+                351000,
+                351000,
+                351000,
+            ],
+            "prod_rate": None,
+            "lifting_rate": [
+                1003.01994465298,
+                1752.43214595637,
+                1660.63017314197,
+                1646.06277634477,
+                1303.30419844135,
+                1206.56398735216,
+                715.464597247899,
+                575.351449953491,
+                385.408188212388,
+                177.896153424466,
+                95.5608132946032,
+                53.0868811432885
+            ],
+            "price": [
+                75,
+                75,
+                75,
+                75,
+                75,
+                75,
+                75,
+                75,
+                75,
+                75,
+                75,
+                75
+            ],
+            "prod_year": [
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034,
+                2035
+            ],
+            "fluid_type": "Oil"
+        }
+    },
+    "capital": None,
+    "intangible": None,
+    "opex": None,
+    "asr": None,
+    "lbt": None,
+    "cost_of_sales": None,
+}
 
-t1 = read_cost_type(cost_type=cost_type_apel)
+get_setup_dict(data=data)
 
 # print('\t')
 # print(f'Filetype: {type()}')
 # print(f'Length: {len()}')
 # print()
 
-print('\t')
-print(f'Filetype: {type(t1)}')
-print(f'Length: {len(t1)}')
-print('t1 = \n', t1)
+# print('\t')
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t2)}')
