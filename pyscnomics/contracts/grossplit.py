@@ -3669,7 +3669,8 @@ class GrossSplit(BaseProject):
         profitability_discounted: bool = False,
     ) -> dict:
         """
-        Generate a comprehensive project economic summary under the Gross Split PSC scheme.
+        Generate a comprehensive project economic summary under the Gross Split
+        PSC scheme.
 
         This method computes key production, cost, tax, and profitability indicators,
         and returns the overall project summary in dictionary form.

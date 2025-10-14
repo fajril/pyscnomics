@@ -884,16 +884,20 @@ class CostRecovery(BaseProject):
         """
         Determine the tax rate array based on the tax regime and project years.
 
-        This method computes the tax rates for the project years depending on the specified
-        `tax_regime`. It uses predefined tax configurations for certain years (2013, 2016, 2020)
-        and allows for specific tax regimes that override these configurations. For tax regimes
-        like `NAILED_DOWN`, the tax rate is fixed based on the start year of the project.
+        This method computes the tax rates for the project years depending on
+        the specified `tax_regime`.
+
+        It uses predefined tax configurations for certain years (2013, 2016, 2020)
+        and allows for specific tax regimes that override these configurations.
+
+        For tax regimes like `NAILED_DOWN`, the tax rate is fixed based on the
+        start year of the project.
 
         Parameters
         ----------
         tax_regime : TaxRegime
-            The tax regime to be applied. It determines how tax rates are selected and can be
-            one of the following:
+            The tax regime to be applied. It determines how tax rates are selected
+            and can be one of the following:
             -   `TaxRegime.UU_07_2021`
             -   `TaxRegime.UU_02_2020`
             -   `TaxRegime.UU_36_2008`
@@ -902,9 +906,9 @@ class CostRecovery(BaseProject):
         Returns
         -------
         tax_rate_arr : np.ndarray
-            A 1D array of tax rates for each project year. The tax rate is determined based on
-            the tax regime and the project's starting year in relation to the predefined tax
-            configurations.
+            A 1D array of tax rates for each project year. The tax rate is determined
+            based on the tax regime and the project's starting year in relation to
+            the predefined tax configurations.
         """
         tax_config = {
             2013: 0.44,
@@ -1434,6 +1438,55 @@ class CostRecovery(BaseProject):
         ctr_share: np.ndarray,
         ddmo: np.ndarray,
     ):
+        """
+        Calculate the contractor's tax payment and unpaid tax under the PDJP
+        (Profit Distribution and Joint Payment) mechanism.
+
+        This method models the tax computation associated with FTP (First Tranche
+        Petroleum) and contractor equity in a production sharing contract (PSC)
+        setting.
+
+        It sequentially evaluates cumulative FTP, determines recoverable and
+        unrecoverable portions, computes tax from FTP and equity shares, and
+        iteratively adjusts for unpaid tax carried over between periods.
+
+        Parameters
+        ----------
+        ftp_ctr : np.ndarray
+            Array of contractor's FTP share for each period.
+        unrec_cost : np.ndarray
+            Array of unrecoverable costs that reduce the taxable FTP portion.
+        tax_rate : np.ndarray
+            Array of applicable tax rates for each period (expressed as a fraction,
+            e.g., 0.3 for 30%).
+        taxable_income : np.ndarray
+            Array of contractor's taxable income before FTP adjustment.
+        ctr_share : np.ndarray
+            Array of contractor's equity share of production for each period.
+        ddmo : np.ndarray
+            Array of domestic market obligation (DMO) deductions or similar
+            non-taxable components.
+
+        Returns
+        -------
+        tax_paid : np.ndarray
+            Array of tax amounts actually paid by the contractor in each period,
+            after accounting for unpaid tax carried forward and DMO adjustments.
+        unpaid_tax : np.ndarray
+            Array of unpaid tax amounts to be carried over to subsequent periods.
+
+        Notes
+        -----
+        The calculation proceeds as follows:
+        1.  Compute cumulative FTP (`ftp_cum_b2`) and the portion of FTP considered
+            taxable after subtracting unrecoverable costs.
+        2.  Calculate tax on FTP (`ftp_tax_paid`) and equity-based tax (`ctr_ets_tax`)
+            depending on whether the contractor share is active.
+        3.  Aggregate tax from FTP and contractor equity (`ctr_tax`).
+        4.  Iteratively determine tax actually paid (`tax_paid`) and unpaid tax
+            carried forward (`unpaid_tax`) per period.
+        """
+
         # Defining the array used in calculation of ftp tax payment
         ftp_cum_b2 = np.cumsum(ftp_ctr)
         ftp_prior_b3 = np.zeros_like(ftp_ctr, dtype=float)
@@ -2935,6 +2988,61 @@ class CostRecovery(BaseProject):
         inflation_rate: np.ndarray | float = 0.0,
         profitability_discounted: bool = False,
     ) -> dict:
+        """
+        Generate a comprehensive project economic summary under the Cost Recovery
+        PSC scheme.
+
+        This method computes key production, cost, tax, and profitability indicators,
+        and returns the overall project summary in dictionary form.
+
+        The summary includes metrics such as lifting volumes, gross revenues,
+        investment costs, NPV, IRR, PI, and government take.
+
+        Parameters
+        ----------
+        discount_rate : float, default=0.1
+            The discount rate applied for NPV calculations.
+
+        npv_mode : NPVSelection, default=NPVSelection.NPV_SKK_REAL_TERMS
+            The NPV calculation mode. Options include:
+            - ``NPV_SKK_REAL_TERMS`` : SKK Migas real-term NPV.
+            - ``NPV_SKK_NOMINAL_TERMS`` : SKK Migas nominal-term NPV.
+            - ``NPV_NOMINAL_TERMS`` : Standard nominal-term NPV.
+            - ``NPV_REAL_TERMS`` : Standard real-term NPV.
+            - ``NPV_POINT_FORWARD`` : Point-forward NPV.
+
+        discounting_mode : DiscountingMode, default=DiscountingMode.END_YEAR
+            The timing convention for discounting cashflows (e.g., start-year or end-year).
+
+        discount_rate_start_year : int or None, optional
+            The reference year for discounting. If ``None``, the project start year is used.
+            Must lie between project start and end years.
+
+        inflation_rate : float or ndarray, default=0.0
+            Inflation rate(s) applied for real-term NPV calculations. Can be a scalar or
+            array of yearly inflation rates.
+
+        profitability_discounted : bool, default=False
+            If ``True``, the profitability index (PI) is computed using discounted
+            investment (NPV-based). If ``False``, the PI uses undiscounted investment.
+
+        Returns
+        -------
+        summary : dict
+            A dictionary containing the key project summary indicators.
+
+        Raises
+        ------
+        CostRecoverySummaryException
+            If `discount_rate_start_year` is before the project start year or
+            after the project end year.
+
+        Notes
+        -----
+        - This method must run the full model first via :meth:`run` before generating
+          the summary results.
+        - Economic indicators are computed according to SKK Migas evaluation conventions.
+        """
 
         # Prepare discount rate start year
         if discount_rate_start_year is None:
@@ -3259,7 +3367,7 @@ class CostRecovery(BaseProject):
 
         # Prepare unrecoverable cost summary
         unrec_cost = self._consolidated_unrecovered_after_transfer[-1]
-        unrec_cost_costrec = self._calc_division(
+        unrec_over_costrec = self._calc_division(
             numerator=unrec_cost, denominator=cost_recovery_sum
         )
         unrec_over_gross_rev = self._calc_division(
@@ -3281,6 +3389,8 @@ class CostRecovery(BaseProject):
         # Prepare contractor net cashflow summary
         # For NPV POINT FORWARD
         if npv_mode == NPVSelection.NPV_POINT_FORWARD:
+            # Modify contractor net cashflow since the cashflow before discount rate
+            # start year is neglected
             ref_year_arr = np.full(
                 self._consolidated_cashflow, fill_value=discount_rate_start_year
             )
@@ -3311,55 +3421,55 @@ class CostRecovery(BaseProject):
             )
 
         return {
-            "lifting_oil": None,
-            "oil_wap": None,
-            "lifting_gas": None,
-            "gas_wap": None,
-            "gross_revenue": None,
-            "gross_revenue_oil": None,
-            "gross_revenue_gas": None,
-            "ctr_gross_share": None,
-            "gov_gross_share": None,
-            "investment": None,
-            "oil_capex": None,
-            "gas_capex": None,
-            "sunk_cost": None,
-            "tangible": None,
-            "intangible": None,
-            "opex_asr_lbt": None,
-            "opex": None,
-            "asr": None,
-            "lbt": None,
-            "cost_recovery / deductible cost": None,
-            "cost_recovery_over_gross_rev": None,
-            "unrec_cost": None,
-            "unrec_over_costrec": None,
-            "unrec_over_gross_rev": None,
-            "ctr_net_share": None,
-            "ctr_net_share_over_gross_share": None,
-            "ctr_net_cashflow": None,
-            "ctr_net_cashflow_over_gross_rev": None,
-            "ctr_npv": None,
-            "ctr_npv_sunk_cost_pooled": None,
-            "ctr_irr": None,
-            "ctr_irr_sunk_cost_pooled": None,
-            "ctr_pot": None,
-            "ctr_pv_ratio": None,
-            "ctr_pi": None,
-            "gov_ftp_share": None,
-            "gov_equity_share": None,
-            "gov_ddmo": None,
-            "gov_tax_income": None,
-            "gov_take": None,
-            "gov_take_over_gross_rev": None,
-            "gov_take_npv": None,
-            "undepreciated_asset_oil": None,
-            "undepreciated_asset_gas": None,
-            "undepreciated_asset_total": None,
-            "total_indirect_taxes": None,
-            "oil_indirect_taxes": None,
-            "gas_indirect_taxes": None,
-            "total_carry_forward_depreciation": None,
-            "oil_carry_forward_depreciation": None,
-            "gas_carry_forward_depreciation": None,
+            "lifting_oil": oil_lifting_ghv_sum,
+            "oil_wap": oil_wap_sum,
+            "lifting_gas": gas_lifting_ghv_sum,
+            "gas_wap": gas_wap_sum,
+            "gross_revenue": total_gross_revenue_sum,
+            "gross_revenue_oil": oil_gross_revenue_sum,
+            "gross_revenue_gas": gas_gross_revenue_sum,
+            "ctr_gross_share": ctr_gross_share_sum,
+            "gov_gross_share": gov_gross_share_sum,
+            "investment": investment_sum,
+            "oil_capex": self._oil_capital.sum(),
+            "gas_capex": self._gas_capital.sum(),
+            "sunk_cost": sunk_cost_sum,
+            "tangible": tangible_sum,
+            "intangible": intangible_sum,
+            "opex_asr_lbt": opex_sum + asr_sum + lbt_sum,
+            "opex": opex_sum,
+            "asr": asr_sum,
+            "lbt": lbt_sum,
+            "cost_recovery / deductible cost": cost_recovery_sum,
+            "cost_recovery_over_gross_rev": cost_recovery_over_gross_rev,
+            "unrec_cost": unrec_cost,
+            "unrec_over_costrec": unrec_over_costrec,
+            "unrec_over_gross_rev": unrec_over_gross_rev,
+            "ctr_net_share": ctr_net_share_sum,
+            "ctr_net_share_over_gross_share": ctr_net_share_over_gross_share,
+            "ctr_net_cashflow": ctr_net_cashflow_sum,
+            "ctr_net_cashflow_over_gross_rev": ctr_net_cashflow_over_gross_rev,
+            "ctr_npv": ctr_npv,
+            "ctr_npv_sunk_cost_pooled": ctr_npv,
+            "ctr_irr": ctr_irr,
+            "ctr_irr_sunk_cost_pooled": ctr_irr,
+            "ctr_pot": ctr_pot,
+            "ctr_pv_ratio": ctr_pv_ratio,
+            "ctr_pi": ctr_pi,
+            "gov_ftp_share": gov_ftp_share_sum,
+            "gov_equity_share": gov_equity_share_sum,
+            "gov_ddmo": gov_ddmo,
+            "gov_tax_income": gov_take_income_sum,
+            "gov_take": gov_take_sum,
+            "gov_take_over_gross_rev": gov_take_over_gross_rev,
+            "gov_take_npv": gov_take_npv,
+            "undepreciated_asset_oil": oil_undepreciated_asset_sum,
+            "undepreciated_asset_gas": gas_undepreciated_asset_sum,
+            "undepreciated_asset_total": total_undepreciated_asset_sum,
+            "total_indirect_taxes": oil_indirect_tax_sum + gas_indirect_tax_sum,
+            "oil_indirect_taxes": oil_indirect_tax_sum,
+            "gas_indirect_taxes": gas_indirect_tax_sum,
+            "total_carry_forward_depreciation": total_carward_depreciation_sum,
+            "oil_carry_forward_depreciation": oil_carward_depreciation_sum,
+            "gas_carry_forward_depreciation": gas_carward_depreciation_sum,
         }
