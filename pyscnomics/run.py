@@ -304,6 +304,7 @@ from pyscnomics.api.adapter import (
     get_setup_dict,
     get_summary_dict,
     get_baseproject,
+    get_costrecovery,
 )
 
 data = {
@@ -324,7 +325,32 @@ data = {
         "profitability_discounted": False,
     },
     "grosssplit": None,
-    "costrecovery": None,
+    "costrecovery": {
+        "oil_ftp_is_available": True,
+        "oil_ftp_is_shared": True,
+        "oil_ftp_portion": 0.1,
+        "gas_ftp_is_available": True,
+        "gas_ftp_is_shared": True,
+        "gas_ftp_portion": 0.1,
+        "tax_split_type": "Conventional",
+        "condition_dict": {},
+        "indicator_rc_icp_sliding": [],
+        "oil_ctr_pretax_share": 0.599359,
+        "gas_ctr_pretax_share": 0.0,
+        "oil_ic_rate": 0.0,
+        "gas_ic_rate": 0.0,
+        "ic_is_available": False,
+        "oil_cr_cap_rate": 1,
+        "gas_cr_cap_rate": 0,
+        "oil_dmo_volume_portion": 0.25,
+        "oil_dmo_fee_portion": 1,
+        "oil_dmo_holiday_duration": 0,
+        "gas_dmo_volume_portion": 1,
+        "gas_dmo_fee_portion": 0.25,
+        "gas_dmo_holiday_duration": 0,
+        "oil_carry_forward_depreciation": 0,
+        "gas_carry_forward_depreciation": 0,
+    },
     "contract_arguments": {
         "sulfur_revenue": "Addition to Oil Revenue",
         "electricity_revenue": "Addition to Oil Revenue",
@@ -956,7 +982,7 @@ data = {
     },
 }
 
-t1 = get_baseproject(data=data, summary_result=False)
+get_costrecovery(data=data, summary_result=True)
 
 # print('\t')
 # print(f'Filetype: {type()}')

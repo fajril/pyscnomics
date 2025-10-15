@@ -425,132 +425,125 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         asr_cost=asr,
         lbt_cost=lbt,
         cost_of_sales=cost_of_sales,
-
         oil_ftp_is_available=data["costrecovery"]["oil_ftp_is_available"],
         oil_ftp_is_shared=data["costrecovery"]["oil_ftp_is_shared"],
         oil_ftp_portion=convert_list_to_array_float_or_array(
             data_input=data["costrecovery"]["oil_ftp_portion"]
         ),
-
-        # gas_ftp_is_available=data["costrecovery"]["gas_ftp_is_available"],
-        # gas_ftp_is_shared=data["costrecovery"]["gas_ftp_is_shared"],
-        # gas_ftp_portion=convert_list_to_array_float_or_array(
-        #     data_input=data["costrecovery"]["gas_ftp_portion"]
+        gas_ftp_is_available=data["costrecovery"]["gas_ftp_is_available"],
+        gas_ftp_is_shared=data["costrecovery"]["gas_ftp_is_shared"],
+        gas_ftp_portion=convert_list_to_array_float_or_array(
+            data_input=data["costrecovery"]["gas_ftp_portion"]
+        ),
+        tax_split_type=convert_str_to_taxsplit(
+            str_object=data["costrecovery"]["tax_split_type"]
+        ),
+        condition_dict=data["costrecovery"]["condition_dict"],
+        indicator_rc_icp_sliding=convert_list_to_array_float(
+            data_list=data["costrecovery"]["indicator_rc_icp_sliding"]
+        ),
+        oil_ctr_pretax_share=convert_list_to_array_float_or_array(
+            data_input=data["costrecovery"]["oil_ctr_pretax_share"]
+        ),
+        gas_ctr_pretax_share=convert_list_to_array_float_or_array(
+            data_input=data["costrecovery"]["gas_ctr_pretax_share"]
+        ),
+        oil_ic_rate=convert_to_float(target=data["costrecovery"]["oil_ic_rate"]),
+        gas_ic_rate=convert_to_float(target=data["costrecovery"]["gas_ic_rate"]),
+        ic_is_available=data["costrecovery"]["ic_is_available"],
+        oil_cr_cap_rate=convert_to_float(
+            target=data["costrecovery"]["oil_cr_cap_rate"]
+        ),
+        gas_cr_cap_rate=convert_to_float(
+            target=data["costrecovery"]["gas_cr_cap_rate"]
+        ),
+        oil_dmo_volume_portion=convert_list_to_array_float_or_array(
+            data_input=data["costrecovery"]["oil_dmo_volume_portion"]
+        ),
+        oil_dmo_fee_portion=convert_list_to_array_float_or_array(
+            data_input=data["costrecovery"]["oil_dmo_fee_portion"]
+        ),
+        oil_dmo_holiday_duration=data["costrecovery"]["oil_dmo_holiday_duration"],
+        gas_dmo_volume_portion=convert_list_to_array_float_or_array(
+            data_input=data["costrecovery"]["gas_dmo_volume_portion"]
+        ),
+        gas_dmo_fee_portion=convert_list_to_array_float_or_array(
+            data_input=data["costrecovery"]["gas_dmo_fee_portion"]
+        ),
+        gas_dmo_holiday_duration=data["costrecovery"]["gas_dmo_holiday_duration"],
+        # ==========defaulted to 0.0 for single contract===========
+        # oil_carry_forward_depreciation=convert_list_to_array_float_or_array(
+        #    data_input=data["costrecovery"]["oil_carry_forward_depreciation"]
         # ),
-        #
-        # tax_split_type=convert_str_to_taxsplit(
-        #     str_object=data["costrecovery"]["tax_split_type"]
+        # gas_carry_forward_depreciation=convert_list_to_array_float_or_array(
+        #    data_input=data["costrecovery"]["gas_carry_forward_depreciation"]
         # ),
-        # condition_dict=data["costrecovery"]["condition_dict"],
-        # indicator_rc_icp_sliding=convert_list_to_array_float(
-        #     data_list=data["costrecovery"]["indicator_rc_icp_sliding"]
-        # ),
-        # oil_ctr_pretax_share=convert_list_to_array_float_or_array(
-        #     data_input=data["costrecovery"]["oil_ctr_pretax_share"]
-        # ),
-        # gas_ctr_pretax_share=convert_list_to_array_float_or_array(
-        #     data_input=data["costrecovery"]["gas_ctr_pretax_share"]
-        # ),
-        # oil_ic_rate=convert_to_float(target=data["costrecovery"]["oil_ic_rate"]),
-        # gas_ic_rate=convert_to_float(target=data["costrecovery"]["gas_ic_rate"]),
-        # ic_is_available=data["costrecovery"]["ic_is_available"],
-        # oil_cr_cap_rate=convert_to_float(
-        #     target=data["costrecovery"]["oil_cr_cap_rate"]
-        # ),
-        # gas_cr_cap_rate=convert_to_float(
-        #     target=data["costrecovery"]["gas_cr_cap_rate"]
-        # ),
-        # oil_dmo_volume_portion=convert_list_to_array_float_or_array(
-        #     data_input=data["costrecovery"]["oil_dmo_volume_portion"]
-        # ),
-        # oil_dmo_fee_portion=convert_list_to_array_float_or_array(
-        #     data_input=data["costrecovery"]["oil_dmo_fee_portion"]
-        # ),
-        # oil_dmo_holiday_duration=data["costrecovery"]["oil_dmo_holiday_duration"],
-        # gas_dmo_volume_portion=convert_list_to_array_float_or_array(
-        #     data_input=data["costrecovery"]["gas_dmo_volume_portion"]
-        # ),
-        # gas_dmo_fee_portion=convert_list_to_array_float_or_array(
-        #     data_input=data["costrecovery"]["gas_dmo_fee_portion"]
-        # ),
-        # gas_dmo_holiday_duration=data["costrecovery"]["gas_dmo_holiday_duration"],
-        # # ==========defaulted to 0.0 for single contract===========
-        # #oil_carry_forward_depreciation=convert_list_to_array_float_or_array(
-        # #    data_input=data["costrecovery"]["oil_carry_forward_depreciation"]
-        # #),
-        # #gas_carry_forward_depreciation=convert_list_to_array_float_or_array(
-        # #    data_input=data["costrecovery"]["gas_carry_forward_depreciation"]
-        # #),
-        # oil_carry_forward_depreciation = 0.0,
-        # gas_carry_forward_depreciation = 0.0
+        oil_carry_forward_depreciation=0.0,
+        gas_carry_forward_depreciation=0.0,
     )
 
-    # print('\t')
-    # print(f'Filetype: {type()}')
-    # print(f'Length: {len()}')
-    # print()
+    # Specify arguments to execute `run()` method of class CostRecovery
+    contract_arguments_dict = {
+        "sulfur_revenue": convert_str_to_otherrevenue(
+            str_object=data["contract_arguments"]["sulfur_revenue"]
+        ),
+        "electricity_revenue": convert_str_to_otherrevenue(
+            str_object=data["contract_arguments"]["electricity_revenue"]
+        ),
+        "co2_revenue": convert_str_to_otherrevenue(
+            str_object=data["contract_arguments"]["co2_revenue"]
+        ),
+        "vat_rate": convert_list_to_array_float_or_array(
+            data_input=data["contract_arguments"]["vat_rate"]
+        ),
+        "inflation_rate": convert_list_to_array_float_or_array(
+            data_input=data["contract_arguments"]["inflation_rate"]
+        ),
+        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
+            str_object=data["contract_arguments"]["inflation_rate_applied_to"]
+        ),
+        "is_dmo_end_weighted": data["contract_arguments"]["is_dmo_end_weighted"],
+        "tax_regime": convert_str_to_taxregime(
+            str_object=data["contract_arguments"]["tax_regime"]
+        ),
+        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
+            data_list=data["contract_arguments"]["effective_tax_rate"]
+        ),
+        "ftp_tax_regime": convert_str_to_ftptaxregime(
+            str_object=data["contract_arguments"]["ftp_tax_regime"]
+        ),
+        # ===========deleted in 1.4.0============
+        # "sunk_cost_reference_year": data["contract_arguments"][
+        #    "sunk_cost_reference_year"
+        # ],
+        "depr_method": convert_str_to_depremethod(
+            str_object=data["contract_arguments"]["depr_method"]
+        ),
+        "decline_factor": data["contract_arguments"]["decline_factor"],
+        "post_uu_22_year2001": (
+            True
+            if "post_uu_22_year2001" not in data["contract_arguments"]
+            else data["contract_arguments"]["post_uu_22_year2001"]
+        ),
+        "oil_cost_of_sales_applied": (
+            False
+            if "oil_cost_of_sales_applied" not in data["contract_arguments"]
+            else data["contract_arguments"]["oil_cost_of_sales_applied"]
+        ),
+        "gas_cost_of_sales_applied": (
+            False
+            if "gas_cost_of_sales_applied" not in data["contract_arguments"]
+            else data["contract_arguments"]["gas_cost_of_sales_applied"]
+        ),
+        "sum_undepreciated_cost": (
+            False
+            if "sum_undepreciated_cost" not in data["contract_arguments"]
+            else data["contract_arguments"]["sum_undepreciated_cost"]
+        ),
+        "sunk_cost_method": None,
+    }
 
-    # # Filling the arguments of the contract with the data input
-    # contract_arguments_dict = {
-    #     "sulfur_revenue": convert_str_to_otherrevenue(
-    #         str_object=data["contract_arguments"]["sulfur_revenue"]
-    #     ),
-    #     "electricity_revenue": convert_str_to_otherrevenue(
-    #         str_object=data["contract_arguments"]["electricity_revenue"]
-    #     ),
-    #     "co2_revenue": convert_str_to_otherrevenue(
-    #         str_object=data["contract_arguments"]["co2_revenue"]
-    #     ),
-    #     "is_dmo_end_weighted": data["contract_arguments"]["is_dmo_end_weighted"],
-    #     "tax_regime": convert_str_to_taxregime(
-    #         str_object=data["contract_arguments"]["tax_regime"]
-    #     ),
-    #     "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
-    #         data_list=data["contract_arguments"]["effective_tax_rate"]
-    #     ),
-    #     "ftp_tax_regime": convert_str_to_ftptaxregime(
-    #         str_object=data["contract_arguments"]["ftp_tax_regime"]
-    #     ),
-    #     # ===========deleted in 1.4.0============
-    #     #"sunk_cost_reference_year": data["contract_arguments"][
-    #     #    "sunk_cost_reference_year"
-    #     #],
-    #     "depr_method": convert_str_to_depremethod(
-    #         str_object=data["contract_arguments"]["depr_method"]
-    #     ),
-    #     "decline_factor": data["contract_arguments"]["decline_factor"],
-    #     "vat_rate": convert_list_to_array_float_or_array(
-    #         data_input=data["contract_arguments"]["vat_rate"]
-    #     ),
-    #     "inflation_rate": convert_list_to_array_float_or_array(
-    #         data_input=data["contract_arguments"]["inflation_rate"]
-    #     ),
-    #     "inflation_rate_applied_to": convert_str_to_inflationappliedto(
-    #         str_object=data["contract_arguments"]["inflation_rate_applied_to"]
-    #     ),
-    #     "post_uu_22_year2001": (
-    #         True
-    #         if "post_uu_22_year2001" not in data["contract_arguments"]
-    #         else data["contract_arguments"]["post_uu_22_year2001"]
-    #     ),
-    #     "oil_cost_of_sales_applied": (
-    #         False
-    #         if "oil_cost_of_sales_applied" not in data["contract_arguments"]
-    #         else data["contract_arguments"]["oil_cost_of_sales_applied"]
-    #     ),
-    #     "gas_cost_of_sales_applied": (
-    #         False
-    #         if "gas_cost_of_sales_applied" not in data["contract_arguments"]
-    #         else data["contract_arguments"]["gas_cost_of_sales_applied"]
-    #     ),
-    #     "sum_undepreciated_cost": (
-    #         False
-    #         if "sum_undepreciated_cost" not in data["contract_arguments"]
-    #         else data["contract_arguments"]["sum_undepreciated_cost"]
-    #     ),
-    # }
-    #
-    # # Running the contract
+    # Execute CostRecovery instance
     # contract.run(**contract_arguments_dict)
     #
     # # Condition when summary is needed
