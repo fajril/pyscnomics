@@ -3448,7 +3448,7 @@ class CostRecovery(BaseProject):
             "opex": opex_sum,
             "asr": asr_sum,
             "lbt": lbt_sum,
-            "cost_recovery / deductible_cost": cost_recovery_sum,
+            "cost_recovery/deductible_cost": cost_recovery_sum,
             "cost_recovery_over_gross_rev": cost_recovery_over_gross_rev,
             "unrec_cost": unrec_cost,
             "unrec_over_costrec": unrec_over_costrec,

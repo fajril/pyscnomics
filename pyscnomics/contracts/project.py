@@ -4613,7 +4613,7 @@ class BaseProject:
             "gas_indirect_taxes": gas_indirect_tax_sum,
             # Zero values for the PSC terms
             "gov_gross_share": 0,
-            "cost_recovery / deductible_cost": 0,
+            "cost_recovery/deductible_cost": 0,
             "cost_recovery_over_gross_rev": 0,
             "unrec_cost": 0,
             "unrec_over_gross_rev": 0,

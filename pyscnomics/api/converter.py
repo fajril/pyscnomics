@@ -816,7 +816,9 @@ class LBTExpendituresBM(BaseModel):
 
 def convert_str_to_date(str_object: str | int) -> date | None:
     """
-    The function to convert string or integer unix timestamp format object into dateformat
+    The function to convert string or integer unix timestamp format object into
+    dateformat.
+
     Parameters
     ----------
     str_object: str | int
@@ -825,8 +827,8 @@ def convert_str_to_date(str_object: str | int) -> date | None:
     Returns
     -------
     date
-
     """
+
     if str_object is None:
         return None
     else:
@@ -837,6 +839,34 @@ def convert_str_to_date(str_object: str | int) -> date | None:
             value = datetime.fromtimestamp(str_object)
             date_value = value.strftime("%d/%m/%Y")
             return datetime.strptime(date_value, "%d/%m/%Y").date()
+
+
+def convert_str_to_int(str_object: str) -> int | None:
+    """
+    Convert a string representation of an integer into an integer type.
+
+    If the input string is ``None``, the function returns ``None`` instead of
+    raising an error. Otherwise, it converts the string to an integer using
+    the built-in ``int()`` function.
+
+    Parameters
+    ----------
+    str_object : str
+        The string to be converted into an integer. If ``None``, no conversion
+        is performed.
+
+    Returns
+    -------
+    int or None
+        The integer converted from the input string, or ``None`` if the input
+        is ``None``.
+    """
+
+    if str_object is None:
+        return None
+
+    else:
+        return int(str_object)
 
 
 def convert_list_to_array_float(data_list: list) -> np.ndarray:
@@ -956,18 +986,72 @@ def convert_dict_to_lifting(data_raw: dict) -> tuple:
 
 def convert_dict_to_capital(data_raw: dict) -> tuple | None:
     """
-    The function to convert a dictionary into tuple of CapitalCost dataclass.
+    Convert a dictionary of capital cost data into a tuple of ``CapitalCost``
+    dataclass instances.
+
+    This function iterates through each key-value pair in the input dictionary and
+    constructs a corresponding ``CapitalCost`` object using the available fields.
+    Missing or ``None`` values in optional fields are handled gracefully by assigning
+    default values (``None`` or ``0.0`` depending on context).
 
     Parameters
     ----------
-    data_raw
-        The dictionary which will be converted into tuple of CapitalCost
+    data_raw : dict
+        A dictionary containing capital cost information for one or more cost items.
+        Each key in the dictionary represents a cost component, and its value should
+        itself be a dictionary with the following possible keys:
+
+        - ``start_year`` : int
+          The first year of the capital cost occurrence.
+        - ``end_year`` : int
+          The last year of the capital cost occurrence.
+        - ``cost`` : array-like
+          The cost values corresponding to each ``expense_year``.
+        - ``expense_year`` : array-like of int
+          The years during which the costs are incurred.
+        - ``cost_type`` : str or None, optional
+          The type of cost (converted via ``read_cost_type`` if provided).
+        - ``cost_allocation`` : str or None, optional
+          The cost allocation type (converted via ``read_fluid_type`` if provided).
+        - ``description`` : str or None, optional
+          A brief description of the cost item.
+        - ``tax_portion`` : array-like of float, optional
+          The tax portion applied to each cost element.
+        - ``tax_discount`` : array-like of float, optional
+          The tax discount factor; defaults to 0.0 if missing.
+        - ``pis_year`` : array-like, optional
+          The year(s) in which project investment spending (PIS) occurs.
+        - ``salvage_value`` : array-like, optional
+          The salvage value associated with the cost item.
+        - ``useful_life`` : array-like, optional
+          The economic life of the asset in years.
+        - ``depreciation_factor`` : array-like, optional
+          The factor used in calculating depreciation.
+        - ``is_ic_applied`` : bool or None, optional
+          Indicates whether investment credit (IC) is applied.
 
     Returns
     -------
-    out:
-        tuple[CapitalCost] | None
+    tuple of CapitalCost or None
+        A tuple containing ``CapitalCost`` instances for each key in ``data_raw``.
+        Returns ``None`` if ``data_raw`` is ``None``.
+
+    Examples
+    --------
+    # >>> data = {
+    # ...     "Platform A": {
+    # ...         "start_year": 2020,
+    # ...         "end_year": 2025,
+    # ...         "cost": [1000, 1200, 800],
+    # ...         "expense_year": [2020, 2021, 2022],
+    # ...         "cost_type": "CAPEX",
+    # ...         "useful_life": [10],
+    # ...     }
+    # ... }
+    # >>> convert_dict_to_capital(data)
+    # (<CapitalCost(start_year=2020, end_year=2025, ... )>,)
     """
+
     capital = (
         tuple(
             [
@@ -1049,18 +1133,67 @@ def convert_dict_to_capital(data_raw: dict) -> tuple | None:
 
 def convert_dict_to_intangible(data_raw: dict) -> tuple | None:
     """
-    The function to convert dictionary into tuple of Intangible dataclass.
+    Convert a dictionary of intangible cost data into a tuple of ``Intangible``
+    dataclass instances.
+
+    This function iterates through each key-value pair in the input dictionary and
+    constructs a corresponding ``Intangible`` object using the available fields.
+    Optional or missing fields are handled gracefully with default values
+    (``None`` or ``0.0``).
+
+    NumPy arrays are used for numerical and sequence data fields to ensure consistency
+    in subsequent calculations.
 
     Parameters
     ----------
-    data_raw: dict
-        The dictionary which will be converted into tuple of Intangible
+    data_raw : dict
+        A dictionary containing intangible cost data for one or more cost components.
+        Each key in the dictionary represents an intangible cost item, and its value
+        should itself be a dictionary with the following possible keys:
+
+        - ``start_year`` : int
+          The first year of the intangible cost occurrence.
+        - ``end_year`` : int
+          The last year of the intangible cost occurrence.
+        - ``cost`` : array-like of float
+          The cost values corresponding to each ``expense_year``.
+        - ``expense_year`` : array-like of int
+          The years during which the costs are incurred.
+        - ``cost_type`` : str or None, optional
+          The type of cost (converted using ``read_cost_type`` if provided).
+        - ``cost_allocation`` : str or None, optional
+          The cost allocation type (converted using ``read_fluid_type`` if provided).
+        - ``description`` : str or None, optional
+          A brief description of the intangible cost item.
+        - ``tax_portion`` : array-like of float, optional
+          The tax portion applied to each cost element.
+        - ``tax_discount`` : array-like of float, optional
+          The tax discount factor; defaults to 0.0 if missing.
 
     Returns
     -------
-    out:
-        tuple[Intangible] | None
+    tuple of Intangible or None
+        A tuple containing ``Intangible`` instances for each key in ``data_raw``.
+        Returns ``None`` if ``data_raw`` is ``None``.
+
+    Examples
+    --------
+    # >>> data = {
+    # ...     "Seismic Study": {
+    # ...         "start_year": 2020,
+    # ...         "end_year": 2022,
+    # ...         "cost": [500, 400, 300],
+    # ...         "expense_year": [2020, 2021, 2022],
+    # ...         "cost_type": "INTANGIBLE",
+    # ...         "tax_portion": [0.8, 0.8, 0.8],
+    # ...     }
+    # ... }
+    # >>> convert_dict_to_intangible(data)
+    # (<Intangible(start_year=2020, end_year=2022, ... )>,)
+    # >>> convert_dict_to_intangible(None)
+    # None
     """
+
     intangible = (
         tuple(
             [
@@ -1112,18 +1245,72 @@ def convert_dict_to_intangible(data_raw: dict) -> tuple | None:
 
 def convert_dict_to_opex(data_raw: dict) -> tuple | None:
     """
-    The function to convert dictionary into tuple of OPEX dataclass.
+    Convert a dictionary of operating expense (OPEX) data into a tuple of
+    ``OPEX`` dataclass instances.
+
+    This function iterates through each key-value pair in the input dictionary and
+    constructs a corresponding ``OPEX`` object using the available fields.
+    Optional or missing fields are handled gracefully by assigning default values
+    (``None`` or ``0.0``).
+
+    Numerical and sequence data are converted to NumPy arrays for consistency in
+    subsequent economic calculations.
 
     Parameters
     ----------
-    data_raw: dict
-        The dictionary which will be converted into tuple of OPEX
+    data_raw : dict
+        A dictionary containing OPEX data for one or more cost components.
+        Each key in the dictionary represents an operating cost item, and its value
+        should itself be a dictionary with the following possible keys:
+
+        - ``start_year`` : int
+          The first year of the OPEX occurrence.
+        - ``end_year`` : int
+          The last year of the OPEX occurrence.
+        - ``expense_year`` : array-like of int
+          The years during which the OPEX costs are incurred.
+        - ``cost_type`` : str or None, optional
+          The type of cost (converted using ``read_cost_type`` if provided).
+        - ``cost_allocation`` : str or None, optional
+          The cost allocation type (converted using ``read_fluid_type`` if provided).
+        - ``description`` : str or None, optional
+          A short description of the OPEX component.
+        - ``tax_portion`` : array-like of float, optional
+          The tax portion applied to each OPEX element.
+        - ``tax_discount`` : array-like of float, optional
+          The tax discount factor; defaults to 0.0 if missing.
+        - ``fixed_cost`` : array-like of float, optional
+          Fixed costs incurred each year, independent of production rate.
+        - ``prod_rate`` : array-like of float, optional
+          The production rate associated with the cost calculation.
+        - ``cost_per_volume`` : array-like of float, optional
+          The variable cost per unit of production (e.g., $/BOE).
 
     Returns
     -------
-    out:
-        tuple[OPEX] | None
+    tuple of OPEX or None
+        A tuple containing ``OPEX`` instances for each key in ``data_raw``.
+        Returns ``None`` if ``data_raw`` is ``None``.
+
+    Examples
+    --------
+    # >>> data = {
+    # ...     "Field Operation": {
+    # ...         "start_year": 2023,
+    # ...         "end_year": 2030,
+    # ...         "expense_year": [2023, 2024, 2025],
+    # ...         "fixed_cost": [1000, 1000, 1000],
+    # ...         "cost_per_volume": [2.5, 2.4, 2.3],
+    # ...         "prod_rate": [500, 600, 700],
+    # ...         "cost_type": "OPEX",
+    # ...     }
+    # ... }
+    # >>> convert_dict_to_opex(data)
+    # (<OPEX(start_year=2023, end_year=2030, ... )>,)
+    # >>> convert_dict_to_opex(None)
+    # None
     """
+
     opex = (
         tuple(
             [
@@ -1191,17 +1378,69 @@ def convert_dict_to_opex(data_raw: dict) -> tuple | None:
 
 def convert_dict_to_asr(data_raw: dict) -> tuple:
     """
-    The function to convert dictionary into tuple of ASR dataclass.
+    Convert a dictionary of Abandonment, Site Restoration (ASR) cost data into
+    a tuple of ``ASR`` dataclass instances.
+
+    This function iterates through each key-value pair in the input dictionary
+    and constructs a corresponding ``ASR`` object using the provided fields.
+    Missing or optional fields are handled gracefully with default values
+    (``None`` or ``0.0``). All numerical and sequence data are converted to
+    NumPy arrays to maintain consistency in subsequent economic evaluations.
 
     Parameters
     ----------
-    data_raw: dict
-        The dictionary which will be converted into tuple of ASR
+    data_raw : dict
+        A dictionary containing ASR (Abandonment and Site Restoration) cost data
+        for one or more cost components.
+        Each key in the dictionary represents a specific ASR cost item, and its value
+        should itself be a dictionary with the following possible keys:
+
+        - ``start_year`` : int
+          The first year of the ASR cost occurrence.
+        - ``end_year`` : int
+          The last year of the ASR cost occurrence.
+        - ``cost`` : array-like of float
+          The ASR cost values corresponding to each ``expense_year``.
+        - ``expense_year`` : array-like of int
+          The years during which ASR costs are incurred.
+        - ``cost_type`` : str or None, optional
+          The type of cost (converted using ``read_cost_type`` if provided).
+        - ``cost_allocation`` : str or None, optional
+          The cost allocation type (converted using ``read_fluid_type`` if provided).
+        - ``description`` : str or None, optional
+          A short description of the ASR item.
+        - ``tax_portion`` : array-like of float, optional
+          The tax portion applied to each ASR cost.
+        - ``tax_discount`` : array-like of float, optional
+          The tax discount factor; defaults to 0.0 if not provided.
+        - ``final_year`` : array-like of float, optional
+          The final year(s) associated with abandonment and site restoration activities.
+        - ``future_rate`` : array-like of float, optional
+          The escalation or discount rate applied to estimate future ASR costs.
 
     Returns
     -------
-    out:
-        tuple[ASR]
+    tuple of ASR or None
+        A tuple containing ``ASR`` instances for each key in ``data_raw``.
+        Returns ``None`` if ``data_raw`` is ``None``.
+
+     Examples
+    --------
+    # >>> data = {
+    # ...     "Well Abandonment": {
+    # ...         "start_year": 2030,
+    # ...         "end_year": 2032,
+    # ...         "cost": [5000, 7000],
+    # ...         "expense_year": [2030, 2031],
+    # ...         "final_year": [2032],
+    # ...         "future_rate": [0.03],
+    # ...         "cost_type": "ASR",
+    # ...     }
+    # ... }
+    # >>> convert_dict_to_asr(data)
+    # (<ASR(start_year=2030, end_year=2032, ... )>,)
+    # >>> convert_dict_to_asr(None)
+    # None
     """
     asr = (
         tuple(
@@ -1266,17 +1505,74 @@ def convert_dict_to_asr(data_raw: dict) -> tuple:
 
 def convert_dict_to_lbt(data_raw: dict) -> tuple:
     """
-    The function to convert dictionary into tuple of LBT dataclass.
+    Convert a raw input dictionary into a tuple of `LBT` objects.
+
+    This function parses a nested dictionary containing Land and Building Tax (LBT)
+    data into a structured tuple of `LBT` class instances. Each dictionary entry
+    must contain the relevant attributes for the `LBT` object, including cost data,
+    years, tax parameters, and NJOP-related fields. Missing or `None` fields are
+    handled gracefully, returning `None` or default values as appropriate.
 
     Parameters
     ----------
-    data_raw: dict
-        The dictionary which will be converted into tuple of Land and Building Tax
+    data_raw : dict
+        A dictionary containing the raw LBT data to be converted.
+        Each key represents a record, and its value must be a dictionary with the
+        following structure:
+
+        - ``start_year`` : int
+          The start year of the LBT cost period.
+        - ``end_year`` : int
+          The end year of the LBT cost period.
+        - ``cost`` : array_like or None
+          The cost values associated with LBT.
+        - ``expense_year`` : array_like of int
+          The corresponding expense years.
+        - ``cost_type`` : str or None
+          The type of cost (converted via ``read_cost_type``).
+        - ``cost_allocation`` : str or None
+          The cost allocation type (converted via ``read_fluid_type``).
+        - ``description`` : str or None
+          Optional description of the cost item.
+        - ``tax_portion`` : array_like of float or None
+          The tax portion applicable to each expense.
+        - ``tax_discount`` : float or array_like of float
+          The tax discount rate; defaults to ``0.0`` if missing.
+        - ``final_year`` : array_like of float or None
+          The final year values associated with the LBT computation.
+        - ``utilized_land_area`` : array_like of float or None
+          The area of land utilized, in square meters.
+        - ``utilized_building_area`` : array_like of float or None
+          The area of building utilized, in square meters.
+        - ``njop_land`` : array_like of float or None
+          The NJOP (taxable value) for land.
+        - ``njop_building`` : array_like of float or None
+          The NJOP (taxable value) for building.
+        - ``gross_revenue`` : array_like of float or None
+          The gross revenue associated with the LBT calculation.
 
     Returns
     -------
-    out:
-        tuple[Intangible]
+    tuple of LBT or None
+        A tuple containing instances of the `LBT` class, each populated with the
+        relevant attributes extracted from ``data_raw``. Returns ``None`` if
+        ``data_raw`` is ``None``.
+
+    Examples
+    --------
+    # >>> data_raw = {
+    # ...     "item1": {
+    # ...         "start_year": 2020,
+    # ...         "end_year": 2025,
+    # ...         "cost": [1000, 1200, 1400],
+    # ...         "expense_year": [2020, 2021, 2022],
+    # ...         "tax_discount": [0.05, 0.05, 0.05],
+    # ...         "njop_land": [200, 220, 250],
+    # ...         "njop_building": [400, 420, 450],
+    # ...     }
+    # ... }
+    # >>> convert_dict_to_lbt(data_raw)
+    # (<LBT object at 0x...>,)
     """
     lbt = (
         tuple(
@@ -1363,18 +1659,62 @@ def convert_dict_to_lbt(data_raw: dict) -> tuple:
 
 def convert_dict_to_cost_of_sales(data_raw: dict) -> tuple:
     """
-    The function to convert dictionary into tuple of CostOfSales dataclass.
+    Convert a raw dictionary into a tuple of `CostOfSales` dataclass instances.
+
+    This function transforms a nested input dictionary containing cost-of-sales data
+    into a structured tuple of `CostOfSales` objects. Each key in the input dictionary
+    represents a cost record, while its value contains attributes such as cost,
+    expense year, cost type, and tax-related information. Missing or ``None`` fields
+    are handled gracefully with default or ``None`` values.
 
     Parameters
     ----------
-    data_raw: dict
-        The dictionary which will be converted into tuple of Cost Of Sales
+    data_raw : dict
+        A dictionary containing raw cost-of-sales data to be converted.
+        Each key corresponds to a record name or identifier, and each value
+        must be a dictionary with the following structure:
+
+        - ``start_year`` : int
+          The starting year of the cost-of-sales period.
+        - ``end_year`` : int
+          The ending year of the cost-of-sales period.
+        - ``cost`` : array_like of float
+          Cost values associated with each expense year.
+        - ``expense_year`` : array_like of int
+          The corresponding years in which the expenses occurred.
+        - ``cost_type`` : str or None
+          The type of cost, converted using :func:`read_cost_type`.
+        - ``cost_allocation`` : str or None
+          The cost allocation type, converted using :func:`read_fluid_type`.
+        - ``description`` : str or None
+          An optional description of the cost item.
+        - ``tax_portion`` : array_like of float or None
+          The portion of cost subject to tax.
+        - ``tax_discount`` : float or array_like of float, default 0.0
+          The applicable tax discount. Defaults to ``0.0`` if missing.
 
     Returns
     -------
-    out:
-        tuple[CostOfSales]
+    tuple of CostOfSales or None
+        A tuple containing instances of the `CostOfSales` dataclass.
+        Returns ``None`` if ``data_raw`` is ``None``.
+
+    Examples
+    --------
+    # >>> data_raw = {
+    # ...     "record1": {
+    # ...         "start_year": 2020,
+    # ...         "end_year": 2023,
+    # ...         "cost": [500, 600, 700],
+    # ...         "expense_year": [2020, 2021, 2022],
+    # ...         "cost_type": "Operating",
+    # ...         "tax_discount": [0.05, 0.05, 0.05]
+    # ...     }
+    # ... }
+    # >>> convert_dict_to_cost_of_sales(data_raw)
+    # (<CostOfSales object at 0x...>,)
     """
+
     cos = (
         tuple(
             [
@@ -1716,9 +2056,7 @@ def convert_summary_to_dict(dict_object: dict):
         "ctr_net_share": dict_object["ctr_net_share"],
         "ctr_net_share_over_gross_share": dict_object["ctr_net_share_over_gross_share"],
         "ctr_net_cashflow": dict_object["ctr_net_cashflow"],
-        "ctr_net_cashflow_over_gross_rev": dict_object[
-            "ctr_net_cashflow_over_gross_rev"
-        ],
+        "ctr_net_cashflow_over_gross_rev": dict_object["ctr_net_cashflow_over_gross_rev"],
         "ctr_npv": dict_object["ctr_npv"],
         "ctr_irr": dict_object["ctr_irr"],
         "ctr_pot": dict_object["ctr_pot"],
@@ -1737,13 +2075,81 @@ def convert_summary_to_dict(dict_object: dict):
         "total_indirect_taxes": dict_object["total_indirect_taxes"],
         "oil_indirect_taxes": dict_object["oil_indirect_taxes"],
         "gas_indirect_taxes": dict_object["gas_indirect_taxes"],
-        "total_carry_forward_depreciation": dict_object[
-            "total_carry_forward_depreciation"
-        ],
+
+        "total_carry_forward_depreciation": dict_object["total_carry_forward_depreciation"],
         "oil_carry_forward_depreciation": dict_object["oil_carry_forward_depreciation"],
         "gas_carry_forward_depreciation": dict_object["gas_carry_forward_depreciation"],
     }
     return summary_skk_format
+
+
+def convert_to_skk_summary_baseproject(dict_object: dict) -> dict:
+    """
+    Convert a BaseProject summary dictionary into SKK-compatible summary format.
+
+    Parameters
+    ----------
+    dict_object : dict
+        The summary dictionary generated from the BaseProject contract,
+        containing various economic indicators such as lifting, cost recovery,
+        government take, and contractor net share.
+
+    Returns
+    -------
+    summary_skk : dict
+        A dictionary containing the BaseProject summary formatted for SKK use.
+
+    Notes
+    -----
+    This function standardizes the BaseProject output to ensure compatibility
+    with SKK Migas reporting format and downstream processing within the
+    economic evaluation framework.
+    """
+
+    return {
+        "lifting_oil": dict_object["lifting_oil"],
+        "oil_wap": dict_object["oil_wap"],
+        "lifting_gas": dict_object["lifting_gas"],
+        "gas_wap": dict_object["gas_wap"],
+        "gross_revenue": dict_object["gross_revenue"],
+        "ctr_gross_share": dict_object["ctr_gross_share"],
+        "sunk_cost": dict_object["sunk_cost"],
+        "investment": dict_object["investment"],
+        "tangible": dict_object["tangible"],
+        "intangible": dict_object["intangible"],
+        "opex_asr_lbt": dict_object["opex_asr_lbt"],
+        "opex": dict_object["opex"],
+        "asr": dict_object["asr"],
+        "cost_recovery/deductible_cost": dict_object["cost_recovery/deductible_cost"],
+        "cost_recovery_over_gross_rev": dict_object["cost_recovery_over_gross_rev"],
+        "unrec_cost": dict_object["unrec_cost"],
+        "unrec_over_gross_rev": dict_object["unrec_over_gross_rev"],
+        "ctr_net_share": dict_object["ctr_net_share"],
+        "ctr_net_share_over_gross_share": dict_object["ctr_net_share_over_gross_share"],
+        "ctr_net_cashflow": dict_object["ctr_net_cashflow"],
+        "ctr_net_cashflow_over_gross_rev": dict_object["ctr_net_cashflow_over_gross_rev"],
+        "ctr_npv": dict_object["ctr_npv"],
+        "ctr_irr": dict_object["ctr_irr"],
+        "ctr_pot": dict_object["ctr_pot"],
+        "ctr_pv_ratio": dict_object["ctr_pv_ratio"],
+        "ctr_pi": dict_object["ctr_pi"],
+        "gov_gross_share": dict_object["gov_gross_share"],
+        "gov_ftp_share": dict_object["gov_ftp_share"],
+        "gov_ddmo": dict_object["gov_ddmo"],
+        "gov_tax_income": dict_object["gov_tax_income"],
+        "gov_take": dict_object["gov_take"],
+        "gov_take_over_gross_rev": dict_object["gov_take_over_gross_rev"],
+        "gov_take_npv": dict_object["gov_take_npv"],
+        "undepreciated_asset_oil": dict_object["undepreciated_asset_oil"],
+        "undepreciated_asset_gas": dict_object["undepreciated_asset_gas"],
+        "undepreciated_asset_total": dict_object["undepreciated_asset_total"],
+        "total_indirect_taxes": dict_object["total_indirect_taxes"],
+        "oil_indirect_taxes": dict_object["oil_indirect_taxes"],
+        "gas_indirect_taxes": dict_object["gas_indirect_taxes"],
+        "total_carry_forward_depreciation": 0.0,
+        "oil_carry_forward_depreciation": 0.0,
+        "gas_carry_forward_depreciation": 0.0,
+    }
 
 
 def convert_str_to_optimization_targetparameter(str_object: str):

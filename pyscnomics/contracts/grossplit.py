@@ -4128,7 +4128,7 @@ class GrossSplit(BaseProject):
             "opex": opex_sum,
             "asr": asr_sum,
             "lbt": lbt_sum,
-            "cost_recovery / deductible_cost": deductible_cost_sum,
+            "cost_recovery/deductible_cost": deductible_cost_sum,
             "cost_recovery_over_gross_rev": deductible_cost_over_gross_rev,
             "unrec_cost": carry_forward_deductible_cost,
             "unrec_over_costrec": carry_forcost_over_deductible_cost,
