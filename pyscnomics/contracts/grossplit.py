@@ -3156,8 +3156,10 @@ class GrossSplit(BaseProject):
         tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
         effective_tax_rate: float | np.ndarray = 0.22,
         amortization: bool = False,
+
         sunk_cost_method: SunkCostMethod = SunkCostMethod.DEPRECIATED_TANGIBLE,
         regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_13_2024,
+
         reservoir_type_permen_2024: VariableSplit132024.ReservoirType = (
             VariableSplit132024.ReservoirType.MK
         ),

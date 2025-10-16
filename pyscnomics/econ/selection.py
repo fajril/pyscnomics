@@ -686,8 +686,8 @@ class VariableSplit132024:
         Reservoir type variable split component
         """
 
-        MK = "Conventional"
-        MNK = "Unconventional"
+        MK = "conventional"
+        MNK = "unconventional"
 
 
 class ContractSample(Enum):
@@ -762,8 +762,8 @@ class CostType(Enum):
 class InitialYearAmortizationIncurred(Enum):
     """ Selection for Initial Year of Amortization Incurred """
 
-    ONSTREAM_YEAR = "Onstream Year"
-    APPROVAL_YEAR = "Approval Year"
+    ONSTREAM_YEAR = "onstream_year"
+    APPROVAL_YEAR = "approval_year"
 
 
 class InitialYearDepreciationIncurred(Enum):

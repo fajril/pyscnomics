@@ -305,6 +305,7 @@ from pyscnomics.api.adapter import (
     get_summary_dict,
     get_baseproject,
     get_costrecovery,
+    get_grosssplit,
 )
 
 data = {
@@ -314,7 +315,7 @@ data = {
         "oil_onstream_date": "01/01/2024",
         "gas_onstream_date": None,
         "approval_year": None,
-        "is_pod_1": False,
+        "is_pod_1": True,
     },
     "summary_arguments": {
         "discount_rate_start_year": 2023,
@@ -324,7 +325,31 @@ data = {
         "discounting_mode": "End Year",
         "profitability_discounted": False,
     },
-    "grosssplit": None,
+    "grosssplit": {
+        "field_status": "No POD",
+        "field_loc": "Onshore",
+        "res_depth": "<=2500",
+        "infra_avail": "Well Developed",
+        "res_type": "Conventional",
+        "api_oil": "<25>",
+        "domestic_use": "50<=x<70",
+        "prod_stage": "Secondary",
+        "co2_content": "<5",
+        "h2s_content": "<100",
+        "field_reserves_2024": "medium",
+        "infra_avail_2024": "partially_available",
+        "field_loc_2024": "Onshore",
+        "split_ministry_disc": 0.08,
+        "oil_dmo_volume_portion": 0.25,
+        "oil_dmo_fee_portion": 1,
+        "oil_dmo_holiday_duration": 60,
+        "gas_dmo_volume_portion": 0.25,
+        "gas_dmo_fee_portion": 0.25,
+        "gas_dmo_holiday_duration": 60,
+        "oil_carry_forward_depreciation": 0.0,
+        "gas_carry_forward_depreciation": 0.0,
+
+    },
     "costrecovery": {
         "oil_ftp_is_available": True,
         "oil_ftp_is_shared": True,
@@ -352,12 +377,25 @@ data = {
         "gas_carry_forward_depreciation": 0,
     },
     "contract_arguments": {
-        "sulfur_revenue": "Addition to Oil Revenue",
+        "sulfur_revenue": "Addition to Gas Revenue",
         "electricity_revenue": "Addition to Oil Revenue",
         "co2_revenue": "Addition to Gas Revenue",
-        "tax_rate": 0.0,
+        "vat_rate": 0.0,
         "inflation_rate": 0.0,
         "inflation_rate_applied_to": "None",
+        "cum_production_split_offset": 0.0,
+        "depr_method": "PSC Declining Balance",
+        "decline_factor": 2,
+        "sum_undepreciated_cost": False,
+        "is_dmo_end_weighted": False,
+        "tax_regime": "nailed down",
+        "effective_tax_rate": 0.22,
+        "amortization": False,
+        "sunk_cost_method": "depreciated_tangible",
+        "regime": "PERMEN_ESDM_13_2024",
+
+        "reservoir_type_permen_2024": "conventional",
+        "initial_amortization_year": "onstream_year",
     },
     "lifting": {
         "Oil Oil sources #1": {
@@ -982,7 +1020,9 @@ data = {
     },
 }
 
-get_costrecovery(data=data, summary_result=True)
+# get_baseproject(data=data, summary_result=True)
+# get_costrecovery(data=data, summary_result=True)
+get_grosssplit(data=data, summary_result=True)
 
 # print('\t')
 # print(f'Filetype: {type()}')

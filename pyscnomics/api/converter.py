@@ -17,6 +17,9 @@ from pyscnomics.econ.selection import (
     GrossSplitRegime,
     LimitMethod,
     UncertaintyDistribution,
+    SunkCostMethod,
+    VariableSplit132024,
+    InitialYearAmortizationIncurred,
 )
 from pyscnomics.tools.helper import (
     get_inflation_applied_converter,
@@ -1868,6 +1871,115 @@ def convert_str_to_otherrevenue(str_object: str):
     return get_other_revenue_converter(target=str_object)
 
 
+def converter_sunk_cost_method(str_obj: str) -> SunkCostMethod:
+    """
+    Convert a string identifier to its corresponding SunkCostMethod enum member.
+
+    Parameters
+    ----------
+    str_obj : str
+        The string representation of the sunk cost method.
+        Must be one of:
+        - "depreciated_tangible"
+        - "pooled_first_year"
+
+    Returns
+    -------
+    SunkCostMethod
+        The corresponding enum member from `SunkCostMethod`.
+
+    Raises
+    ------
+    ValueError
+        If `str_obj` does not match any known sunk cost method.
+    """
+
+    try:
+        return {
+            "depreciated_tangible": SunkCostMethod.DEPRECIATED_TANGIBLE,
+            "pooled_first_year": SunkCostMethod.POOLED_1ST_YEAR,
+        }[str_obj]
+
+    except KeyError:
+        raise ValueError(f"Invalid sunk cost method: {str_obj!r}")
+
+
+def converter_reservoir_type_permen_2024(
+    target_str: str
+) -> VariableSplit132024.ReservoirType:
+    """
+    Convert a string identifier to its corresponding reservoir type defined in
+    Permen ESDM No.13/2024.
+
+    Parameters
+    ----------
+    target_str : str
+        The string representation of the reservoir type.
+        Must be one of:
+        - ``"conventional"`` → MK (Migas Konvensional)
+        - ``"unconventional"`` → MNK (Migas Non-Konvensional)
+
+    Returns
+    -------
+    VariableSplit132024.ReservoirType
+        The corresponding enum member from
+        ``VariableSplit132024.ReservoirType``.
+
+    Raises
+    ------
+    ValueError
+        If the input string does not match any valid reservoir type
+        defined in Permen ESDM No.13/2024.
+    """
+
+    try:
+        return {
+            "conventional": VariableSplit132024.ReservoirType.MK,
+            "unconventional": VariableSplit132024.ReservoirType.MNK,
+        }[target_str]
+
+    except KeyError:
+        raise ValueError(f"Invalid reservoir type permen 2024 method: {target_str!r}")
+
+
+def converter_initial_amortization_year(
+    target_str: str
+) -> InitialYearAmortizationIncurred.ONSTREAM_YEAR:
+    """
+    Convert a string identifier to its corresponding initial amortization
+    year option.
+
+    Parameters
+    ----------
+    target_str : str
+        The string representation of the initial amortization year option.
+        Must be one of:
+        - ``"onstream_year"`` → amortization starts in the onstream year.
+        - ``"approval_year"`` → amortization starts in the approval year.
+
+    Returns
+    -------
+    InitialYearAmortizationIncurred
+        The corresponding enum member from
+        ``InitialYearAmortizationIncurred``.
+
+    Raises
+    ------
+    ValueError
+        If the input string does not match any valid initial amortization
+        year option.
+    """
+
+    try:
+        return {
+            "onstream_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
+            "approval_year": InitialYearAmortizationIncurred.APPROVAL_YEAR,
+        }[target_str]
+
+    except KeyError:
+        raise ValueError(f"Invalid initial amortization year option: {target_str!r}")
+
+
 def convert_str_to_taxregime(str_object: str) -> TaxRegime | None:
     """
     The function to convert string into tax regime selection.
@@ -2049,7 +2161,7 @@ def convert_summary_to_dict(dict_object: dict):
         "opex_asr_lbt": dict_object["opex_asr_lbt"],
         "opex": dict_object["opex"],
         "asr": dict_object["asr"],
-        "cost_recovery/deductible_cost": dict_object["cost_recovery / deductible_cost"],
+        "cost_recovery/deductible_cost": dict_object["cost_recovery/deductible_cost"],
         "cost_recovery_over_gross_rev": dict_object["cost_recovery_over_gross_rev"],
         "unrec_cost": dict_object["unrec_cost"],
         "unrec_over_gross_rev": dict_object["unrec_over_gross_rev"],
@@ -2075,11 +2187,11 @@ def convert_summary_to_dict(dict_object: dict):
         "total_indirect_taxes": dict_object["total_indirect_taxes"],
         "oil_indirect_taxes": dict_object["oil_indirect_taxes"],
         "gas_indirect_taxes": dict_object["gas_indirect_taxes"],
-
         "total_carry_forward_depreciation": dict_object["total_carry_forward_depreciation"],
         "oil_carry_forward_depreciation": dict_object["oil_carry_forward_depreciation"],
         "gas_carry_forward_depreciation": dict_object["gas_carry_forward_depreciation"],
     }
+
     return summary_skk_format
 
 
