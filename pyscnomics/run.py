@@ -310,6 +310,7 @@ from pyscnomics.api.adapter import (
     get_detailed_summary,
     build_grosssplit_instance,
     build_grosssplit_arguments,
+    get_grosssplit_split,
 )
 
 data = {
@@ -1053,9 +1054,9 @@ data = {
     },
 }
 
-# get_baseproject(data=data, summary_result=True)
+t1 = get_baseproject(data=data, summary_result=True)
 # get_costrecovery(data=data, summary_result=True)
-t1 = get_grosssplit(data=data, summary_result=True)
+# get_grosssplit(data=data, summary_result=True)
 
 # print('\t')
 # print(f'Filetype: {type()}')

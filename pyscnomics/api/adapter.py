@@ -254,45 +254,27 @@ def get_summary_dict(data: dict) -> dict:
     return summary_arguments_dict
 
 
-def get_baseproject(data: dict, summary_result: bool = True):
+def build_baseproject_instance(data: dict) -> BaseProject:
     """
-    Construct the Base Project contract, execute its main calculation, and optionally
-    generate the executive summary in SKK format.
+    Build and initialize a Base Project contract instance.
+
+    This function extracts fundamental parameters from the input data,
+    prepares the required keyword arguments, and returns a fully
+    constructed :class:`BaseProject` instance for economic evaluation.
 
     Parameters
     ----------
     data : dict
-        The input data dictionary containing setup information, contract arguments,
-        and summary arguments required to initialize and execute the Base Project.
-    summary_result : bool, default=True
-        If True, the executive summary (`summary_skk`) will be generated.
-        If False, only the contract object and arguments will be returned.
+        Input dictionary containing all parameters necessary to
+        configure a Base Project contract.
 
     Returns
     -------
-    summary_skk : dict or None
-        The executive summary of the Base Project in SKK-compatible format.
-        Returns None if `summary_result` is False.
-    contract : BaseProject
-        The instantiated and executed Base Project contract object.
-    contract_arguments_dict : dict
-        The dictionary of arguments used in executing the `BaseProject.run()` method.
-    summary_arguments_dict : dict or None
-        The dictionary of summary arguments used to generate the executive summary.
-        Returns None if `summary_result` is False.
-
-    Notes
-    -----
-    - This function performs the following key steps:
-
-      1. Parses setup data via :func:`get_setup_dict`.
-      2. Instantiates the :class:`BaseProject` object.
-      3. Executes the contract using the `run()` method.
-      4. Optionally generates an executive summary via :func:`get_summary_dict` and
-         converts it into SKK format using :func:`convert_to_skk_summary_baseproject`.
+    BaseProject
+        Initialized :class:`BaseProject` object ready for evaluation.
     """
 
-    # Specify the required arguments to create an instance of BaseProject
+    # Specify base arguments
     (
         start_date,
         end_date,
@@ -309,44 +291,118 @@ def get_baseproject(data: dict, summary_result: bool = True):
         cost_of_sales,
     ) = get_setup_dict(data=data)
 
-    # Create an instance of BaseProject
-    contract = BaseProject(
-        start_date=start_date,
-        end_date=end_date,
-        oil_onstream_date=oil_onstream_date,
-        gas_onstream_date=gas_onstream_date,
-        approval_year=approval_year,
-        is_pod_1=is_pod_1,
-        lifting=lifting,
-        capital_cost=capital,
-        intangible_cost=intangible,
-        opex=opex,
-        asr_cost=asr,
-        lbt_cost=lbt,
-        cost_of_sales=cost_of_sales,
-    )
+    # Prepare contract attributes for BaseProject
+    contract_kwargs = {
+        # Base parameters
+        "start_date": start_date,
+        "end_date": end_date,
+        "oil_onstream_date": oil_onstream_date,
+        "gas_onstream_date": gas_onstream_date,
+        "approval_year": approval_year,
+        "is_pod_1": is_pod_1,
 
-    # Specify arguments to execute `run()` method of class BaseProject
-    contract_arguments_dict = {
-        "sulfur_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["sulfur_revenue"]
-        ),
-        "electricity_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["electricity_revenue"]
-        ),
-        "co2_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["co2_revenue"]
-        ),
-        "tax_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["vat_rate"]
-        ),
-        "inflation_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["inflation_rate"]
-        ),
-        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
-            str_object=data["contract_arguments"]["inflation_rate_applied_to"]
-        ),
+        # Lifting and costs
+        "lifting": lifting,
+        "capital_cost": capital,
+        "intangible_cost": intangible,
+        "opex": opex,
+        "asr_cost": asr,
+        "lbt_cost": lbt,
+        "cost_of_sales": cost_of_sales,
     }
+
+    return BaseProject(**contract_kwargs)
+
+
+def build_baseproject_arguments(data: dict) -> dict:
+    """
+    Build the argument dictionary for a Base Project contract.
+
+    This function extracts and converts key economic parameters such as
+    revenues, tax rate, and inflation information from the input data,
+    returning a dictionary suitable for initializing or executing a
+    :class:`BaseProject` instance.
+
+    Parameters
+    ----------
+    data : dict
+        Input dictionary containing contract arguments and economic
+        parameters for the Base Project.
+
+    Returns
+    -------
+    dict
+        Dictionary of processed Base Project arguments, ready for use
+        in model evaluation.
+    """
+
+    # Specify abbreviations
+    ca = data["contract_arguments"]
+    f_rev = convert_str_to_otherrevenue
+    f_rate = convert_list_to_array_float_or_array
+    f_infl = convert_str_to_inflationappliedto
+
+    return {
+        # Other revenues
+        "sulfur_revenue": f_rev(str_object=ca["sulfur_revenue"]),
+        "electricity_revenue": f_rev(str_object=ca["electricity_revenue"]),
+        "co2_revenue": f_rev(str_object=ca["co2_revenue"]),
+
+        # VAT and inflation
+        "tax_rate": f_rate(data_input=ca["vat_rate"]),
+        "inflation_rate": f_rate(data_input=ca["inflation_rate"]),
+        "inflation_rate_applied_to": f_infl(str_object=ca["inflation_rate_applied_to"]),
+    }
+
+
+def get_baseproject(data: dict, summary_result: bool = True):
+    """
+    Build, execute, and optionally summarize a Base Project contract evaluation.
+
+    This function prepares all necessary inputs, constructs a :class:`BaseProject`
+    instance, executes its economic evaluation, and optionally generates an
+    executive summary formatted according to SKK Migas standards.
+
+    Parameters
+    ----------
+    data : dict
+        Input dictionary containing setup information, contract arguments,
+        and summary parameters required for Base Project evaluation.
+    summary_result : bool, default=True
+        If ``True``, generate and return the SKK Migas–formatted summary.
+        If ``False``, return only the contract instance and its arguments.
+
+    Returns
+    -------
+    tuple
+        A 4-element tuple containing:
+
+        - **summary_skk** : dict or None
+          Executive summary in SKK-compatible format, or ``None`` if
+          ``summary_result=False``.
+        - **contract** : BaseProject
+          Executed :class:`BaseProject` instance.
+        - **contract_arguments_dict** : dict
+          Dictionary of arguments passed to :meth:`BaseProject.run`.
+        - **summary_arguments_dict** : dict or None
+          Summary argument dictionary, or ``None`` if summary generation
+          was skipped.
+
+    Notes
+    -----
+    The function performs the following key steps:
+
+    1. Instantiates the :class:`BaseProject` object via
+       :func:`build_baseproject_instance`.
+    2. Prepares contract arguments using :func:`build_baseproject_arguments`.
+    3. Executes the contract with :meth:`BaseProject.run`.
+    4. Optionally generates an SKK Migas–formatted summary using
+       :func:`convert_to_skk_summary_baseproject` and appends execution info.
+    """
+
+    # Specify contract and contract arguments
+    contract = build_baseproject_instance(data=data)
+    contract_arguments_dict = build_baseproject_arguments(data=data)
 
     # Execute BaseProject instance
     contract.run(**contract_arguments_dict)
@@ -369,6 +425,14 @@ def get_baseproject(data: dict, summary_result: bool = True):
         summary_arguments_dict = None
 
     return summary_skk, contract, contract_arguments_dict, summary_arguments_dict
+
+
+def build_costrecovery_instance(data: dict):
+    pass
+
+
+def build_costrecovery_arguments(data: dict):
+    pass
 
 
 def get_costrecovery(data: dict, summary_result: bool = True):
@@ -875,7 +939,7 @@ def get_grosssplit(data: dict, summary_result: bool = True) -> tuple:
           Arguments used for summary generation, or None if skipped.
     """
 
-    # Specify contract and contract arguments objects
+    # Specify contract and contract arguments
     contract = build_grosssplit_instance(data=data)
     contract_arguments_dict = build_grosssplit_arguments(data=data)
 
@@ -901,161 +965,39 @@ def get_grosssplit(data: dict, summary_result: bool = True) -> tuple:
     return summary_skk, contract, contract_arguments_dict, summary_arguments_dict
 
 
-def get_grosssplit_split(data: dict):
+def get_grosssplit_split(data: dict) -> dict:
     """
-    The function to get the contractor split information from Gross Split Contract Scheme.
+    Retrieve contractor split information from the Gross Split PSC scheme.
+
+    This function builds and executes a :class:`GrossSplit` contract instance
+    based on the provided input data, then extracts yearly oil and gas
+    split components, including base, variable, progressive, and total splits,
+    as well as the years with maximum contractor split.
+
+    Parameters
+    ----------
+    data : dict
+        Input data containing parameters required for the Gross Split
+        contract evaluation.
+
+    Returns
+    -------
+    dict
+        Dictionary with two main elements:
+
+        - **contractor_split** : dict
+          Yearly contractor split information for oil and gas, including base,
+          variable, and progressive components, indexed by project years.
+
+        - **years_of_maximum_split** : dict
+          Years when the contractor achieved the maximum split for oil and gas.
     """
-    (
-        start_date,
-        end_date,
-        oil_onstream_date,
-        gas_onstream_date,
-        lifting,
-        tangible,
-        intangible,
-        opex,
-        asr,
-        lbt,
-        cost_of_sales,
-    ) = get_setup_dict(data=data)
 
-    contract = GrossSplit(
-        start_date=start_date,
-        end_date=end_date,
-        oil_onstream_date=oil_onstream_date,
-        gas_onstream_date=gas_onstream_date,
-        lifting=lifting,
-        capital_cost=tangible,
-        intangible_cost=intangible,
-        opex=opex,
-        asr_cost=asr,
-        lbt_cost=lbt,
-        field_status=(
-            data["grosssplit"]["field_status"]
-            if "field_status" in data["grosssplit"]
-            else None
-        ),
-        field_loc=(
-            data["grosssplit"]["field_loc"]
-            if "field_loc" in data["grosssplit"]
-            else None
-        ),
-        res_depth=(
-            data["grosssplit"]["res_depth"]
-            if "res_depth" in data["grosssplit"]
-            else None
-        ),
-        infra_avail=(
-            data["grosssplit"]["infra_avail"]
-            if "infra_avail" in data["grosssplit"]
-            else None
-        ),
-        res_type=(
-            data["grosssplit"]["res_type"] if "res_type" in data["grosssplit"] else None
-        ),
-        api_oil=(
-            data["grosssplit"]["api_oil"] if "api_oil" in data["grosssplit"] else None
-        ),
-        domestic_use=(
-            data["grosssplit"]["domestic_use"]
-            if "domestic_use" in data["grosssplit"]
-            else None
-        ),
-        prod_stage=(
-            data["grosssplit"]["prod_stage"]
-            if "prod_stage" in data["grosssplit"]
-            else None
-        ),
-        co2_content=(
-            data["grosssplit"]["co2_content"]
-            if "co2_content" in data["grosssplit"]
-            else None
-        ),
-        h2s_content=(
-            data["grosssplit"]["h2s_content"]
-            if "h2s_content" in data["grosssplit"]
-            else None
-        ),
-        # base_split_ctr_oil=convert_to_float(
-        #     target=data["grosssplit"]["base_split_ctr_oil"]
-        # ),
-        # base_split_ctr_gas=convert_to_float(
-        #     target=data["grosssplit"]["base_split_ctr_gas"]
-        # ),
-        split_ministry_disc=convert_to_float(
-            target=data["grosssplit"]["split_ministry_disc"]
-        ),
-        oil_dmo_volume_portion=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["oil_dmo_volume_portion"]
-        ),
-        oil_dmo_fee_portion=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["oil_dmo_fee_portion"]
-        ),
-        oil_dmo_holiday_duration=data["grosssplit"]["oil_dmo_holiday_duration"],
-        gas_dmo_volume_portion=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["gas_dmo_volume_portion"]
-        ),
-        gas_dmo_fee_portion=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["gas_dmo_fee_portion"]
-        ),
-        gas_dmo_holiday_duration=data["grosssplit"]["gas_dmo_holiday_duration"],
-        oil_carry_forward_depreciation=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["oil_carry_forward_depreciation"]
-        ),
-        gas_carry_forward_depreciation=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["gas_carry_forward_depreciation"]
-        ),
-    )
+    # Specify contract and contract arguments
+    contract = build_grosssplit_instance(data=data)
+    contract_arguments_dict = build_grosssplit_arguments(data=data)
 
-    # Filling the arguments of the contract with the data input
-    contract_arguments_dict = {
-        "sulfur_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["sulfur_revenue"]
-        ),
-        "electricity_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["electricity_revenue"]
-        ),
-        "co2_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["co2_revenue"]
-        ),
-        "is_dmo_end_weighted": data["contract_arguments"]["is_dmo_end_weighted"],
-        "tax_regime": convert_str_to_taxregime(
-            str_object=data["contract_arguments"]["tax_regime"]
-        ),
-        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
-            data_list=data["contract_arguments"]["effective_tax_rate"]
-        ),
-        "sunk_cost_reference_year": data["contract_arguments"][
-            "sunk_cost_reference_year"
-        ],
-        "depr_method": convert_str_to_depremethod(
-            str_object=data["contract_arguments"]["depr_method"]
-        ),
-        "decline_factor": data["contract_arguments"]["decline_factor"],
-        "vat_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["vat_rate"]
-        ),
-        "inflation_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["inflation_rate"]
-        ),
-        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
-            str_object=data["contract_arguments"]["inflation_rate_applied_to"]
-        ),
-        "cum_production_split_offset": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["cum_production_split_offset"]
-        ),
-        "amortization": data["contract_arguments"]["amortization"],
-        "regime": convert_grosssplitregime_to_enum(
-            target=data["contract_arguments"]["regime"]
-        ),
-        "sum_undepreciated_cost": (
-            False
-            if "sum_undepreciated_cost" not in data["contract_arguments"]
-            else data["contract_arguments"]["sum_undepreciated_cost"]
-        ),
-    }
-
-    # Running the contract
+    # Execute GrossSplit intance
     contract.run(**contract_arguments_dict)
 
     # Retrieving the split information
