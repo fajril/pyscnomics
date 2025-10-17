@@ -610,46 +610,40 @@ def get_costrecovery(data: dict, summary_result: bool = True):
     return summary_skk, contract, contract_arguments_dict, summary_arguments_dict
 
 
-def get_grosssplit(data: dict, summary_result: bool = True):
+def build_grosssplit_instance(data: dict) -> GrossSplit:
     """
-    Create and execute a Gross Split contract evaluation based on the given
-    input data, and optionally return the summarized economic results.
+    Build and return an initialized :class:`GrossSplit` contract instance.
 
-    This function prepares all required parameters, instantiates the
-    :class:`GrossSplit` object, executes the contract calculation using the
-    provided arguments, and optionally generates the result summary in
-    SKK Migas format.
+    This function extracts and transforms relevant input parameters from the
+    provided ``data`` dictionary to create a fully configured instance of the
+    :class:`GrossSplit` class.
+
+    It handles type conversion, optional attribute retrieval, nd ensures missing
+    values are safely replaced with defaults when applicable. The returned object
+    is ready for execution through the :meth:`GrossSplit.run` method.
 
     Parameters
     ----------
     data : dict
-        Input dictionary containing all necessary parameters for the
-        Gross Split evaluation.
-
-    summary_result : bool, default=True
-        If ``True``, compute and return the SKK Migas–formatted summary
-        of the Gross Split evaluation results. If ``False``, only the
-        contract instance and input arguments are returned.
+        Dictionary containing the full dataset required to construct a
+        Gross Split PSC (Production Sharing Contract) instance.
 
     Returns
     -------
-    tuple
-        A 4-element tuple containing:
+    GrossSplit
+        A fully configured :class:`GrossSplit` instance initialized with
+        project setup parameters, fiscal settings, and DMO-related attributes.
+        The instance is ready to run the Gross Split PSC economic model.
 
-        - **summary_skk** : dict or None
-          The summarized economic results in SKK Migas format, or
-          ``None`` if ``summary_result=False``.
-        - **contract** : GrossSplit
-          The executed :class:`GrossSplit` instance.
-        - **contract_arguments_dict** : dict
-          The argument dictionary passed to
-          :meth:`GrossSplit.run`.
-        - **summary_arguments_dict** : dict or None
-          The argument dictionary used for summary generation, or
-          ``None`` if summary is not generated.
+    Notes
+    -----
+    - The helper function ``_get_value()`` ensures missing or ``None`` attributes
+      from the input dictionary are replaced with a default value (``None`` by default).
+    - List-type fiscal inputs such as DMO portions are converted to NumPy arrays
+      using :func:`convert_list_to_array_float_or_array`.
     """
 
-    # Specify the required arguments to create an instance of GrossSplit
+    # Specify base arguments
     (
         start_date,
         end_date,
@@ -666,129 +660,224 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         cost_of_sales,
     ) = get_setup_dict(data=data)
 
-    def _establish_attr(
-        target_str: str,
-        target_dict: dict = data["grosssplit"],
-        result: bool | None = None
-    ):
-        """
-        A helper function to prepare Gross Split class's attributes.
-        """
-        return (
-            result if (target_str not in target_dict)
-            or (target_dict[target_str] is None)
-            else target_dict[target_str]
-        )
+    # Specify abbreviations and helper method to be used in instance preparation
+    gs = data["grosssplit"]
+    func = convert_list_to_array_float_or_array
 
-    # Create an instance of GrossSplit
-    contract = GrossSplit(
-        start_date=start_date,
-        end_date=end_date,
-        oil_onstream_date=oil_onstream_date,
-        gas_onstream_date=gas_onstream_date,
-        approval_year=approval_year,
-        is_pod_1=is_pod_1,
-        lifting=lifting,
-        capital_cost=capital,
-        intangible_cost=intangible,
-        opex=opex,
-        asr_cost=asr,
-        lbt_cost=lbt,
-        field_status=_establish_attr(target_str="field_status"),
-        field_loc=_establish_attr(target_str="field_loc"),
-        res_depth=_establish_attr(target_str="res_depth"),
-        infra_avail=_establish_attr(target_str="infra_avail"),
-        res_type=_establish_attr(target_str="res_type"),
-        api_oil=_establish_attr(target_str="api_oil"),
-        domestic_use=_establish_attr(target_str="domestic_use"),
-        prod_stage=_establish_attr(target_str="prod_stage"),
-        co2_content=_establish_attr(target_str="co2_content"),
-        h2s_content=_establish_attr(target_str="h2s_content"),
-        field_reserves_2024=_establish_attr(target_str="field_reserves_2024"),
-        infra_avail_2024=_establish_attr(target_str="infra_avail_2024"),
-        field_loc_2024=_establish_attr(target_str="field_loc_2024"),
-        split_ministry_disc=convert_to_float(
-            target=data["grosssplit"]["split_ministry_disc"]
-        ),
-        oil_dmo_volume_portion=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["oil_dmo_volume_portion"]
-        ),
-        oil_dmo_fee_portion=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["oil_dmo_fee_portion"]
-        ),
-        oil_dmo_holiday_duration=_establish_attr(target_str="oil_dmo_holiday_duration"),
-        gas_dmo_volume_portion=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["gas_dmo_volume_portion"]
-        ),
-        gas_dmo_fee_portion=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["gas_dmo_fee_portion"]
-        ),
-        gas_dmo_holiday_duration=_establish_attr(target_str="gas_dmo_holiday_duration"),
-        oil_carry_forward_depreciation=0.0,
-        gas_carry_forward_depreciation=0.0,
-    )
+    def _get_value(key: str, source: dict = gs, default=None):
+        """
+        Helper function: safely retrieve a value from a dictionary.
 
-    # Specify arguments to execute `run()` method of class GrossSplit
-    contract_arguments_dict = {
-        "sulfur_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["sulfur_revenue"]
-        ),
-        "electricity_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["electricity_revenue"]
-        ),
-        "co2_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["co2_revenue"]
-        ),
-        "vat_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["vat_rate"]
-        ),
-        "inflation_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["inflation_rate"]
-        ),
-        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
-            str_object=data["contract_arguments"]["inflation_rate_applied_to"]
-        ),
-        "cum_production_split_offset": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["cum_production_split_offset"]
-        ),
-        "depr_method": convert_str_to_depremethod(
-            str_object=data["contract_arguments"]["depr_method"]
-        ),
-        "decline_factor": data["contract_arguments"]["decline_factor"],
-        "sum_undepreciated_cost": _establish_attr(
-            target_str="sum_undepreciated_cost",
-            target_dict=data["contract_arguments"],
-            result=False,
-        ),
-        "is_dmo_end_weighted": data["contract_arguments"]["is_dmo_end_weighted"],
-        "tax_regime": convert_str_to_taxregime(
-            str_object=data["contract_arguments"]["tax_regime"]
-        ),
-        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
-            data_list=data["contract_arguments"]["effective_tax_rate"]
-        ),
-        "amortization": _establish_attr(
-            target_str="amortization",
-            target_dict=data["contract_arguments"],
-            result=False,
-        ),
-        "sunk_cost_method": (
-            SunkCostMethod.DEPRECIATED_TANGIBLE if "sunk_cost_method" not in
-            data["contract_arguments"] or data["contract_arguments"]["sunk_cost_method"]
-            is None else converter_sunk_cost_method(
-                str_obj=data["contract_arguments"]["sunk_cost_method"]
-            )
-        ),
-        "regime": convert_grosssplitregime_to_enum(
-            target=data["contract_arguments"]["regime"]
-        ),
-        "reservoir_type_permen_2024": converter_reservoir_type_permen_2024(
-            target_str=data["contract_arguments"]["reservoir_type_permen_2024"]
-        ),
-        "initial_amortization_year": converter_initial_amortization_year(
-            target_str=data["contract_arguments"]["initial_amortization_year"]
-        ),
+        Parameters
+        ----------
+        key : str
+            Key to look up in the dictionary.
+        source : dict, optional
+            Source dictionary. Defaults to ``ca``.
+        default : any, optional
+            Value to return if key is missing or ``None``.
+        """
+        return default if (key not in source) or (source[key] is None) else source[key]
+
+    # Prepare contract attributes for GrossSplit
+    contract_kwargs = {
+        # Base parameters
+        "start_date": start_date,
+        "end_date": end_date,
+        "oil_onstream_date": oil_onstream_date,
+        "gas_onstream_date": gas_onstream_date,
+        "approval_year": approval_year,
+        "is_pod_1": is_pod_1,
+
+        # Lifting and costs
+        "lifting": lifting,
+        "capital_cost": capital,
+        "intangible_cost": intangible,
+        "opex": opex,
+        "asr_cost": asr,
+        "lbt_cost": lbt,
+
+        # Field and reservoir properties
+        "field_status": _get_value(key="field_status"),
+        "field_loc": _get_value(key="field_loc"),
+        "res_depth": _get_value(key="res_depth"),
+        "infra_avail": _get_value(key="infra_avail"),
+        "res_type": _get_value(key="res_type"),
+        "api_oil": _get_value(key="api_oil"),
+        "domestic_use": _get_value(key="domestic_use"),
+        "prod_stage": _get_value(key="prod_stage"),
+        "co2_content": _get_value(key="co2_content"),
+        "h2s_content": _get_value(key="h2s_content"),
+        "field_reserves_2024": _get_value(key="field_reserves_2024"),
+        "infra_avail_2024": _get_value(key="infra_avail_2024"),
+        "field_loc_2024": _get_value(key="field_loc_2024"),
+        "split_ministry_disc": convert_to_float(target=gs["split_ministry_disc"]),
+
+        # DMO parameters
+        "oil_dmo_volume_portion": func(data_input=gs["oil_dmo_volume_portion"]),
+        "oil_dmo_fee_portion": func(data_input=gs["oil_dmo_fee_portion"]),
+        "oil_dmo_holiday_duration": _get_value(key="oil_dmo_holiday_duration"),
+        "gas_dmo_volume_portion": func(data_input=gs["gas_dmo_volume_portion"]),
+        "gas_dmo_fee_portion": func(data_input=gs["gas_dmo_fee_portion"]),
+        "gas_dmo_holiday_duration": _get_value(key="gas_dmo_holiday_duration"),
+
+        # Carry forward depreciation
+        "oil_carry_forward_depreciation": 0.0,
+        "gas_carry_forward_depreciation": 0.0,
     }
+
+    return GrossSplit(**contract_kwargs)
+
+
+def build_grosssplit_arguments(data: dict) -> dict:
+    """
+    Build a dictionary of contract arguments for the Gross Split PSC scheme.
+
+    This function extracts and converts values from the input ``data`` dictionary,
+    applying type conversions and default values as necessary. It prepares a
+    consistent set of parameters to initialize a ``GrossSplit`` instance or to
+    perform economic evaluations under the Gross Split PSC regime.
+
+    Parameters
+    ----------
+    data : dict
+        Input dictionary containing contract-related information. Must include
+        the key ``"contract_arguments"`` that holds all argument values. Expected
+        structure:
+
+        - ``data["contract_arguments"]["sulfur_revenue"]`` : str
+        - ``data["contract_arguments"]["inflation_rate"]`` : list or float
+        - ``data["contract_arguments"]["tax_regime"]`` : str
+        - and so on.
+
+    Returns
+    -------
+    dict
+        A dictionary of processed contract arguments ready for initializing a
+        ``GrossSplit`` instance.
+
+    Notes
+    -----
+    - Missing or ``None`` values are replaced with the specified default in
+      each converter call.
+    - Optional keys are safely accessed using the internal helper method
+      ``_get_value()``, which applies type conversion if a converter is provided.
+    - The returned dictionary is intended for use as keyword arguments in
+      creating a ``GrossSplit`` contract object.
+    """
+
+    # Specify abbreviations and helper method
+    ca = data["contract_arguments"]
+    f_rev = convert_str_to_otherrevenue
+    f_rate = convert_list_to_array_float_or_array
+    f_infl = convert_str_to_inflationappliedto
+    f_depr = convert_str_to_depremethod
+    f_tax = convert_str_to_taxregime
+    f_tax_rate = convert_list_to_array_float_or_array_or_none
+    f_regime = convert_grosssplitregime_to_enum
+    f_2024 = converter_reservoir_type_permen_2024
+    f_amor = converter_initial_amortization_year
+
+    def _get_value(key: str, source: dict = ca, default=None, converter=None):
+        """
+        Helper function:
+        Safely retrieve a value from a dictionary with an optional converter.
+
+        Parameters
+        ----------
+        key : str
+            Key to look up in the dictionary.
+        source : dict, optional
+            Source dictionary. Defaults to ``ca``.
+        default : any, optional
+            Value to return if key is missing or ``None``.
+        converter : callable, optional
+            Function to convert the retrieved value.
+        """
+
+        if converter is None:
+            return (
+                default if (key not in source) or (source[key] is None)
+                else source[key]
+            )
+        else:
+            return (
+                default if (key not in source) or (source[key] is None)
+                else converter(source[key])
+            )
+
+    return {
+        # Other revenues
+        "sulfur_revenue": f_rev(str_object=ca["sulfur_revenue"]),
+        "electricity_revenue": f_rev(str_object=ca["electricity_revenue"]),
+        "co2_revenue": f_rev(str_object=ca["co2_revenue"]),
+
+        # VAT and inflation
+        "vat_rate": f_rate(data_input=ca["vat_rate"]),
+        "inflation_rate": f_rate(data_input=ca["inflation_rate"]),
+        "inflation_rate_applied_to": f_infl(str_object=ca["inflation_rate_applied_to"]),
+
+        # Production offset
+        "cum_production_split_offset": f_rate(data_input=ca["cum_production_split_offset"]),
+
+        # Depreciation
+        "depr_method": f_depr(str_object=ca["depr_method"]),
+        "decline_factor": ca["decline_factor"],
+        "sum_undepreciated_cost": _get_value(key="sum_undepreciated_cost", default=False),
+
+        # DMO and tax
+        "is_dmo_end_weighted": ca["is_dmo_end_weighted"],
+        "tax_regime": f_tax(str_object=ca["tax_regime"]),
+        "effective_tax_rate": f_tax_rate(data_list=ca["effective_tax_rate"]),
+
+        # Sunk cost
+        "amortization": _get_value(key="amortization", default=False),
+        "sunk_cost_method": _get_value(
+            key="sunk_cost_method",
+            default=SunkCostMethod.DEPRECIATED_TANGIBLE,
+            converter=converter_sunk_cost_method,
+        ),
+
+        # Fiscal regime
+        "regime": f_regime(target=ca["regime"]),
+        "reservoir_type_permen_2024": f_2024(target_str=ca["reservoir_type_permen_2024"]),
+        "initial_amortization_year": f_amor(target_str=ca["initial_amortization_year"]),
+    }
+
+
+def get_grosssplit(data: dict, summary_result: bool = True) -> tuple:
+    """
+    Execute a Gross Split PSC evaluation and optionally return the summary results.
+
+    This function builds the contract instance, prepares input arguments, runs
+    the Gross Split model, and optionally generates the SKK Migas–formatted
+    summary.
+
+    Parameters
+    ----------
+    data : dict
+        Input data containing all parameters required for the Gross Split evaluation.
+    summary_result : bool, default=True
+        If True, return the SKK Migas–formatted summary; otherwise, omit it.
+
+    Returns
+    -------
+    tuple
+        (summary_skk, contract, contract_arguments_dict, summary_arguments_dict)
+
+        - **summary_skk** : dict or None
+          Summary of results in SKK Migas format, or None if not requested.
+        - **contract** : GrossSplit
+          Executed Gross Split contract instance.
+        - **contract_arguments_dict** : dict
+          Arguments used in :meth:`GrossSplit.run`.
+        - **summary_arguments_dict** : dict or None
+          Arguments used for summary generation, or None if skipped.
+    """
+
+    # Specify contract and contract arguments objects
+    contract = build_grosssplit_instance(data=data)
+    contract_arguments_dict = build_grosssplit_arguments(data=data)
 
     # Execute GrossSplit instance
     contract.run(**contract_arguments_dict)
@@ -810,6 +899,196 @@ def get_grosssplit(data: dict, summary_result: bool = True):
         summary_arguments_dict = None
 
     return summary_skk, contract, contract_arguments_dict, summary_arguments_dict
+
+
+def get_grosssplit_split(data: dict):
+    """
+    The function to get the contractor split information from Gross Split Contract Scheme.
+    """
+    (
+        start_date,
+        end_date,
+        oil_onstream_date,
+        gas_onstream_date,
+        lifting,
+        tangible,
+        intangible,
+        opex,
+        asr,
+        lbt,
+        cost_of_sales,
+    ) = get_setup_dict(data=data)
+
+    contract = GrossSplit(
+        start_date=start_date,
+        end_date=end_date,
+        oil_onstream_date=oil_onstream_date,
+        gas_onstream_date=gas_onstream_date,
+        lifting=lifting,
+        capital_cost=tangible,
+        intangible_cost=intangible,
+        opex=opex,
+        asr_cost=asr,
+        lbt_cost=lbt,
+        field_status=(
+            data["grosssplit"]["field_status"]
+            if "field_status" in data["grosssplit"]
+            else None
+        ),
+        field_loc=(
+            data["grosssplit"]["field_loc"]
+            if "field_loc" in data["grosssplit"]
+            else None
+        ),
+        res_depth=(
+            data["grosssplit"]["res_depth"]
+            if "res_depth" in data["grosssplit"]
+            else None
+        ),
+        infra_avail=(
+            data["grosssplit"]["infra_avail"]
+            if "infra_avail" in data["grosssplit"]
+            else None
+        ),
+        res_type=(
+            data["grosssplit"]["res_type"] if "res_type" in data["grosssplit"] else None
+        ),
+        api_oil=(
+            data["grosssplit"]["api_oil"] if "api_oil" in data["grosssplit"] else None
+        ),
+        domestic_use=(
+            data["grosssplit"]["domestic_use"]
+            if "domestic_use" in data["grosssplit"]
+            else None
+        ),
+        prod_stage=(
+            data["grosssplit"]["prod_stage"]
+            if "prod_stage" in data["grosssplit"]
+            else None
+        ),
+        co2_content=(
+            data["grosssplit"]["co2_content"]
+            if "co2_content" in data["grosssplit"]
+            else None
+        ),
+        h2s_content=(
+            data["grosssplit"]["h2s_content"]
+            if "h2s_content" in data["grosssplit"]
+            else None
+        ),
+        # base_split_ctr_oil=convert_to_float(
+        #     target=data["grosssplit"]["base_split_ctr_oil"]
+        # ),
+        # base_split_ctr_gas=convert_to_float(
+        #     target=data["grosssplit"]["base_split_ctr_gas"]
+        # ),
+        split_ministry_disc=convert_to_float(
+            target=data["grosssplit"]["split_ministry_disc"]
+        ),
+        oil_dmo_volume_portion=convert_list_to_array_float_or_array(
+            data_input=data["grosssplit"]["oil_dmo_volume_portion"]
+        ),
+        oil_dmo_fee_portion=convert_list_to_array_float_or_array(
+            data_input=data["grosssplit"]["oil_dmo_fee_portion"]
+        ),
+        oil_dmo_holiday_duration=data["grosssplit"]["oil_dmo_holiday_duration"],
+        gas_dmo_volume_portion=convert_list_to_array_float_or_array(
+            data_input=data["grosssplit"]["gas_dmo_volume_portion"]
+        ),
+        gas_dmo_fee_portion=convert_list_to_array_float_or_array(
+            data_input=data["grosssplit"]["gas_dmo_fee_portion"]
+        ),
+        gas_dmo_holiday_duration=data["grosssplit"]["gas_dmo_holiday_duration"],
+        oil_carry_forward_depreciation=convert_list_to_array_float_or_array(
+            data_input=data["grosssplit"]["oil_carry_forward_depreciation"]
+        ),
+        gas_carry_forward_depreciation=convert_list_to_array_float_or_array(
+            data_input=data["grosssplit"]["gas_carry_forward_depreciation"]
+        ),
+    )
+
+    # Filling the arguments of the contract with the data input
+    contract_arguments_dict = {
+        "sulfur_revenue": convert_str_to_otherrevenue(
+            str_object=data["contract_arguments"]["sulfur_revenue"]
+        ),
+        "electricity_revenue": convert_str_to_otherrevenue(
+            str_object=data["contract_arguments"]["electricity_revenue"]
+        ),
+        "co2_revenue": convert_str_to_otherrevenue(
+            str_object=data["contract_arguments"]["co2_revenue"]
+        ),
+        "is_dmo_end_weighted": data["contract_arguments"]["is_dmo_end_weighted"],
+        "tax_regime": convert_str_to_taxregime(
+            str_object=data["contract_arguments"]["tax_regime"]
+        ),
+        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
+            data_list=data["contract_arguments"]["effective_tax_rate"]
+        ),
+        "sunk_cost_reference_year": data["contract_arguments"][
+            "sunk_cost_reference_year"
+        ],
+        "depr_method": convert_str_to_depremethod(
+            str_object=data["contract_arguments"]["depr_method"]
+        ),
+        "decline_factor": data["contract_arguments"]["decline_factor"],
+        "vat_rate": convert_list_to_array_float_or_array(
+            data_input=data["contract_arguments"]["vat_rate"]
+        ),
+        "inflation_rate": convert_list_to_array_float_or_array(
+            data_input=data["contract_arguments"]["inflation_rate"]
+        ),
+        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
+            str_object=data["contract_arguments"]["inflation_rate_applied_to"]
+        ),
+        "cum_production_split_offset": convert_list_to_array_float_or_array(
+            data_input=data["contract_arguments"]["cum_production_split_offset"]
+        ),
+        "amortization": data["contract_arguments"]["amortization"],
+        "regime": convert_grosssplitregime_to_enum(
+            target=data["contract_arguments"]["regime"]
+        ),
+        "sum_undepreciated_cost": (
+            False
+            if "sum_undepreciated_cost" not in data["contract_arguments"]
+            else data["contract_arguments"]["sum_undepreciated_cost"]
+        ),
+    }
+
+    # Running the contract
+    contract.run(**contract_arguments_dict)
+
+    # Retrieving the split information
+    contractor_split = (
+        pd.DataFrame(
+            {
+                "project_years": contract.project_years.tolist(),
+                "oil_base_split": contract._oil_base_split.tolist(),
+                "gas_base_split": contract._gas_base_split.tolist(),
+                "var_split_array": contract._var_split_array.tolist(),
+                "oil_prog_price_split": contract._oil_prog_price_split.tolist(),
+                "gas_prog_price_split": contract._gas_prog_price_split.tolist(),
+                "oil_prog_cumulative_production_split": contract._oil_prog_cum_split.tolist(),
+                "gas_prog_cumulative_production_split": contract._gas_prog_cum_split.tolist(),
+                "oil_prog_total_split": contract._oil_prog_split.tolist(),
+                "gas_prog_total_split": contract._gas_prog_split.tolist(),
+                "oil_ctr_split": contract._oil_ctr_split_prior_bracket.tolist(),
+                "gas_ctr_split": contract._gas_ctr_split_prior_bracket.tolist(),
+            }
+        )
+        .set_index("project_years")
+        .to_dict()
+    )
+
+    years_of_maximum_split = {
+        "oil": contract._oil_year_maximum_ctr_split.tolist(),
+        "gas": contract._gas_year_maximum_ctr_split.tolist(),
+    }
+
+    return {
+        "contractor_split": contractor_split,
+        "years_of_maximum_split": years_of_maximum_split,
+    }
 
 
 def get_transition(data: dict):
@@ -1023,30 +1302,52 @@ def get_contract_table(data: dict, contract_type: str = "Cost Recovery") -> dict
     return table_all_dict
 
 
-def get_detailed_summary(data: dict, contract_type: str):
+def get_detailed_summary(data: dict, contract_type: str) -> dict:
     """
-    Generate a detailed economic summary for a given PSC contract type.
+    Generate a detailed economic summary for a given PSC (Production Sharing Contract)
+    type.
+
+    This method dynamically selects and executes the appropriate PSC computation
+    function (e.g., Cost Recovery, Gross Split, Transition, or Base Project) based
+    on the specified contract type.
+
+    The function returns a detailed economic summary generated from the selected
+    contract model.
+
+    Parameters
+    ----------
+    data : dict
+        Input data containing the economic parameters and production profile required
+        for the PSC evaluation.
+        The expected structure depends on the specific contract type.
+    contract_type : str
+        Type of PSC contract. Must be one of the following:
+            - "Cost Recovery"
+            - "Gross Split"
+            - "Transition"
+            - "Base Project"
+
+    Returns
+    -------
+    dict
+        A dictionary representing the detailed economic summary generated by the
+        selected PSC model. The contents typically include key financial and fiscal
+        indicators such as government take, contractor take, NPV, and other
+        economic metrics derived from the contract's `get_summary` method.
     """
 
-    def _contract_helper(func):
-        (_, contract, _, summary_args) = func(data=data, summary_result=True)
-        return contract, summary_args
+    contract_map = {
+        "Cost Recovery": get_costrecovery,
+        "Gross Split": get_grosssplit,
+        "Transition": get_transition,
+        "Base Project": get_baseproject,
+    }
 
-    if contract_type == "Cost Recovery":
-        contract, summary_args = _contract_helper(func=get_costrecovery)
+    if contract_type not in contract_map:
+        raise ValueError(f"Invalid contract type: {contract_type!r}")
 
-    elif contract_type == "Gross Split":
-        contract, summary_args = _contract_helper(func=get_grosssplit)
-
-    elif contract_type == "Transition":
-        contract, summary_args = _contract_helper(func=get_transition)
-
-    elif contract_type == "Base Project":
-        contract, summary_args = _contract_helper(func=get_baseproject)
-
-    else:
-        contract = None
-        summary_args = None
+    func = contract_map[contract_type]
+    _, contract, _, summary_args = func(data=data, summary_result=True)
 
     return contract.get_summary(**summary_args)
 
@@ -1077,8 +1378,10 @@ def get_ltp(
     # Condition checking for the fluid type for initiating the array of ltp
     if fluid_type == FluidType.OIL:
         rate_ltp = oil_ltp_predict(volume=volume)
+
     elif fluid_type == FluidType.GAS:
         rate_ltp = gas_ltp_predict(volume=volume)
+
     else:
         raise LTPModelException(f"Unsupported Fluid Type {fluid_type} ")
 
@@ -1111,6 +1414,7 @@ def get_ltp_dict(data: dict):
     Returns
     -------
     """
+
     volume = data["volume"]
     start_year = data["start_year"]
     end_year = data["end_year"]
@@ -1202,6 +1506,7 @@ def get_rpd_dict(data: dict):
     Returns
     -------
     """
+
     # Initiating the data input
     year_rampup = data["year_rampup"]
     drate = data["drate"]
@@ -1232,208 +1537,6 @@ def get_rpd_dict(data: dict):
         .set_index("year")
         .to_dict()
     )
-
-
-def get_grosssplit_split(data: dict):
-    """
-    The function to get the contractor split information from Gross Split Contract Scheme.
-
-    Parameters
-    ----------
-    data: dict
-        The dictionary of the data input.
-
-    Returns
-    -------
-    dict
-        The dictionary containing the information of the contractor split.
-
-
-    """
-    (
-        start_date,
-        end_date,
-        oil_onstream_date,
-        gas_onstream_date,
-        lifting,
-        tangible,
-        intangible,
-        opex,
-        asr,
-        lbt,
-        cost_of_sales,
-    ) = get_setup_dict(data=data)
-
-    contract = GrossSplit(
-        start_date=start_date,
-        end_date=end_date,
-        oil_onstream_date=oil_onstream_date,
-        gas_onstream_date=gas_onstream_date,
-        lifting=lifting,
-        capital_cost=tangible,
-        intangible_cost=intangible,
-        opex=opex,
-        asr_cost=asr,
-        lbt_cost=lbt,
-        field_status=(
-            data["grosssplit"]["field_status"]
-            if "field_status" in data["grosssplit"]
-            else None
-        ),
-        field_loc=(
-            data["grosssplit"]["field_loc"]
-            if "field_loc" in data["grosssplit"]
-            else None
-        ),
-        res_depth=(
-            data["grosssplit"]["res_depth"]
-            if "res_depth" in data["grosssplit"]
-            else None
-        ),
-        infra_avail=(
-            data["grosssplit"]["infra_avail"]
-            if "infra_avail" in data["grosssplit"]
-            else None
-        ),
-        res_type=(
-            data["grosssplit"]["res_type"] if "res_type" in data["grosssplit"] else None
-        ),
-        api_oil=(
-            data["grosssplit"]["api_oil"] if "api_oil" in data["grosssplit"] else None
-        ),
-        domestic_use=(
-            data["grosssplit"]["domestic_use"]
-            if "domestic_use" in data["grosssplit"]
-            else None
-        ),
-        prod_stage=(
-            data["grosssplit"]["prod_stage"]
-            if "prod_stage" in data["grosssplit"]
-            else None
-        ),
-        co2_content=(
-            data["grosssplit"]["co2_content"]
-            if "co2_content" in data["grosssplit"]
-            else None
-        ),
-        h2s_content=(
-            data["grosssplit"]["h2s_content"]
-            if "h2s_content" in data["grosssplit"]
-            else None
-        ),
-        base_split_ctr_oil=convert_to_float(
-            target=data["grosssplit"]["base_split_ctr_oil"]
-        ),
-        base_split_ctr_gas=convert_to_float(
-            target=data["grosssplit"]["base_split_ctr_gas"]
-        ),
-        split_ministry_disc=convert_to_float(
-            target=data["grosssplit"]["split_ministry_disc"]
-        ),
-        oil_dmo_volume_portion=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["oil_dmo_volume_portion"]
-        ),
-        oil_dmo_fee_portion=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["oil_dmo_fee_portion"]
-        ),
-        oil_dmo_holiday_duration=data["grosssplit"]["oil_dmo_holiday_duration"],
-        gas_dmo_volume_portion=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["gas_dmo_volume_portion"]
-        ),
-        gas_dmo_fee_portion=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["gas_dmo_fee_portion"]
-        ),
-        gas_dmo_holiday_duration=data["grosssplit"]["gas_dmo_holiday_duration"],
-        oil_carry_forward_depreciation=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["oil_carry_forward_depreciation"]
-        ),
-        gas_carry_forward_depreciation=convert_list_to_array_float_or_array(
-            data_input=data["grosssplit"]["gas_carry_forward_depreciation"]
-        ),
-    )
-
-    # Filling the arguments of the contract with the data input
-    contract_arguments_dict = {
-        "sulfur_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["sulfur_revenue"]
-        ),
-        "electricity_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["electricity_revenue"]
-        ),
-        "co2_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["co2_revenue"]
-        ),
-        "is_dmo_end_weighted": data["contract_arguments"]["is_dmo_end_weighted"],
-        "tax_regime": convert_str_to_taxregime(
-            str_object=data["contract_arguments"]["tax_regime"]
-        ),
-        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
-            data_list=data["contract_arguments"]["effective_tax_rate"]
-        ),
-        "sunk_cost_reference_year": data["contract_arguments"][
-            "sunk_cost_reference_year"
-        ],
-        "depr_method": convert_str_to_depremethod(
-            str_object=data["contract_arguments"]["depr_method"]
-        ),
-        "decline_factor": data["contract_arguments"]["decline_factor"],
-        "vat_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["vat_rate"]
-        ),
-        "inflation_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["inflation_rate"]
-        ),
-        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
-            str_object=data["contract_arguments"]["inflation_rate_applied_to"]
-        ),
-        "cum_production_split_offset": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["cum_production_split_offset"]
-        ),
-        "amortization": data["contract_arguments"]["amortization"],
-        "regime": convert_grosssplitregime_to_enum(
-            target=data["contract_arguments"]["regime"]
-        ),
-        "sum_undepreciated_cost": (
-            False
-            if "sum_undepreciated_cost" not in data["contract_arguments"]
-            else data["contract_arguments"]["sum_undepreciated_cost"]
-        ),
-    }
-
-    # Running the contract
-    contract.run(**contract_arguments_dict)
-
-    # Retrieving the split information
-    contractor_split = (
-        pd.DataFrame(
-            {
-                "project_years": contract.project_years.tolist(),
-                "oil_base_split": contract._oil_base_split.tolist(),
-                "gas_base_split": contract._gas_base_split.tolist(),
-                "var_split_array": contract._var_split_array.tolist(),
-                "oil_prog_price_split": contract._oil_prog_price_split.tolist(),
-                "gas_prog_price_split": contract._gas_prog_price_split.tolist(),
-                "oil_prog_cumulative_production_split": contract._oil_prog_cum_split.tolist(),
-                "gas_prog_cumulative_production_split": contract._gas_prog_cum_split.tolist(),
-                "oil_prog_total_split": contract._oil_prog_split.tolist(),
-                "gas_prog_total_split": contract._gas_prog_split.tolist(),
-                "oil_ctr_split": contract._oil_ctr_split_prior_bracket.tolist(),
-                "gas_ctr_split": contract._gas_ctr_split_prior_bracket.tolist(),
-            }
-        )
-        .set_index("project_years")
-        .to_dict()
-    )
-
-    years_of_maximum_split = {
-        "oil": contract._oil_year_maximum_ctr_split.tolist(),
-        "gas": contract._gas_year_maximum_ctr_split.tolist(),
-    }
-
-    return {
-        "contractor_split": contractor_split,
-        "years_of_maximum_split": years_of_maximum_split,
-    }
 
 
 def get_transition_split(data: dict):

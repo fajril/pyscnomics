@@ -308,6 +308,8 @@ from pyscnomics.api.adapter import (
     get_grosssplit,
     get_contract_table,
     get_detailed_summary,
+    build_grosssplit_instance,
+    build_grosssplit_arguments,
 )
 
 data = {
@@ -1053,9 +1055,7 @@ data = {
 
 # get_baseproject(data=data, summary_result=True)
 # get_costrecovery(data=data, summary_result=True)
-# get_grosssplit(data=data, summary_result=True)
-
-get_detailed_summary(data=data, contract_type="Gross Split")
+t1 = get_grosssplit(data=data, summary_result=True)
 
 # print('\t')
 # print(f'Filetype: {type()}')
@@ -1066,10 +1066,10 @@ get_detailed_summary(data=data, contract_type="Gross Split")
 # print(f'Length: {len()}')
 # print()
 
-# print('\t')
-# print(f'Filetype: {type(t1)}')
-# print(f'Length: {len(t1)}')
-# print('t1 = \n', t1)
+print('\t')
+print(f'Filetype: {type(t1)}')
+print(f'Length: {len(t1)}')
+print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t2)}')
