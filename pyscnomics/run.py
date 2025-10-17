@@ -306,6 +306,8 @@ from pyscnomics.api.adapter import (
     get_baseproject,
     get_costrecovery,
     get_grosssplit,
+    get_contract_table,
+    get_detailed_summary,
 )
 
 data = {
@@ -314,7 +316,7 @@ data = {
         "end_date": "31/12/2035",
         "oil_onstream_date": "01/01/2024",
         "gas_onstream_date": None,
-        "approval_year": None,
+        "approval_year": "2024",
         "is_pod_1": True,
     },
     "summary_arguments": {
@@ -376,6 +378,36 @@ data = {
         "oil_carry_forward_depreciation": 0,
         "gas_carry_forward_depreciation": 0,
     },
+    # # ======================================= Base Project
+    # "contract_arguments": {
+    #     "sulfur_revenue": "Addition to Gas Revenue",
+    #     "electricity_revenue": "Addition to Oil Revenue",
+    #     "co2_revenue": "Addition to Gas Revenue",
+    #     "vat_rate": 0.0,
+    #     "inflation_rate": 0.0,
+    #     "inflation_rate_applied_to": "None",
+    # },
+    # # ======================================= Cost Recovery
+    # "contract_arguments": {
+    #     "sulfur_revenue": "Addition to Gas Revenue",
+    #     "electricity_revenue": "Addition to Oil Revenue",
+    #     "co2_revenue": "Addition to Gas Revenue",
+    #     "vat_rate": 0.0,
+    #     "inflation_rate": 0.0,
+    #     "inflation_rate_applied_to": "None",
+    #     "is_dmo_end_weighted": False,
+    #     "tax_regime": "nailed down",
+    #     "effective_tax_rate": 0.376,
+    #     "ftp_tax_regime": "Direct Mode",
+    #     "depr_method": "PSC Declining Balance",
+    #     "decline_factor": 2,
+    #     "post_uu_22_year2001": True,
+    #     "oil_cost_of_sales_applied": False,
+    #     "gas_cost_of_sales_applied": False,
+    #     "sum_undepreciated_cost": True,
+    #     "sunk_cost_method": "depreciated_tangible",
+    # },
+    # ========================================= Gross Split
     "contract_arguments": {
         "sulfur_revenue": "Addition to Gas Revenue",
         "electricity_revenue": "Addition to Oil Revenue",
@@ -393,7 +425,6 @@ data = {
         "amortization": False,
         "sunk_cost_method": "depreciated_tangible",
         "regime": "PERMEN_ESDM_13_2024",
-
         "reservoir_type_permen_2024": "conventional",
         "initial_amortization_year": "onstream_year",
     },
@@ -1022,7 +1053,13 @@ data = {
 
 # get_baseproject(data=data, summary_result=True)
 # get_costrecovery(data=data, summary_result=True)
-get_grosssplit(data=data, summary_result=True)
+# get_grosssplit(data=data, summary_result=True)
+
+get_detailed_summary(data=data, contract_type="Gross Split")
+
+# print('\t')
+# print(f'Filetype: {type()}')
+# print()
 
 # print('\t')
 # print(f'Filetype: {type()}')

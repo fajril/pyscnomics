@@ -11,7 +11,7 @@ from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.optimize import sensitivity_psc, uncertainty_psc
-from pyscnomics.tools.summary import get_summary
+# from pyscnomics.tools.summary import get_summary
 from pyscnomics.tools.table import get_table
 from pyscnomics.optimize.optimization import optimize_psc
 from pyscnomics.optimize.optimization_transition import (
@@ -338,7 +338,7 @@ def get_baseproject(data: dict, summary_result: bool = True):
             str_object=data["contract_arguments"]["co2_revenue"]
         ),
         "tax_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["tax_rate"]
+            data_input=data["contract_arguments"]["vat_rate"]
         ),
         "inflation_rate": convert_list_to_array_float_or_array(
             data_input=data["contract_arguments"]["inflation_rate"]
@@ -528,7 +528,7 @@ def get_costrecovery(data: dict, summary_result: bool = True):
             str_object=data["contract_arguments"]["co2_revenue"]
         ),
         "vat_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["tax_rate"]
+            data_input=data["contract_arguments"]["vat_rate"]
         ),
         "inflation_rate": convert_list_to_array_float_or_array(
             data_input=data["contract_arguments"]["inflation_rate"]
@@ -921,12 +921,21 @@ def add_execution_info(data: dict) -> dict:
     execution_date = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
     # Defining the PySCnomics Version
-    package_version = " "
+    from importlib.metadata import version, PackageNotFoundError
+
     try:
-        from importlib.metadata import version
         package_version = version("pyscnomics")
-    except:
-        pass
+
+    except PackageNotFoundError:
+        package_version = "unknown"
+
+    # The following codes are replaced in version 1.4.0
+    # package_version = " "
+    # try:
+    #     from importlib.metadata import version
+    #     package_version = version("pyscnomics")
+    # except:
+    #     pass
 
     # Parsing the data into the data output
     execution_info = {
@@ -948,13 +957,15 @@ def get_contract_table(data: dict, contract_type: str = "Cost Recovery") -> dict
     data: dict
         The dictionary of the data input.
     contract_type: str
-        The option for the contract type. The available option are: ['Cost Recovery', 'Gross Split']
+        The option for the contract type.
+        The available option are: ['Cost Recovery', 'Gross Split']
 
     Returns
     -------
     table_all_dict: dict
         The dictionary containing the oil, gas and consolidated cash flow table.
     """
+
     # Adjusting the variable to the corresponding contract type
     if contract_type == "Cost Recovery":
         contract = get_costrecovery(data=data)[1]
@@ -1012,200 +1023,32 @@ def get_contract_table(data: dict, contract_type: str = "Cost Recovery") -> dict
     return table_all_dict
 
 
-def get_contract_optimization(data: dict, contract_type: str = "Cost Recovery") -> dict:
-    """
-    The function to run contract optimization. Resulting optimization result
-    in dictionary format.
-
-    Parameters
-    ----------
-    data: dict
-        The dictionary of the data input.
-    contract_type: str
-        The option for the contract type. The available option are:
-        ['Cost Recovery', 'Gross Split']
-
-    Returns
-    -------
-    result_parameters: dict
-        The result of the optimization in dictionary format
-
-    """
-    if "optimization_arguments" not in data:
-        raise ContractException(
-            "The payload does not have the optimization_arguments key"
-        )
-
-    if data["optimization_arguments"] is None:
-        raise ContractException(
-            "The payload optimization_arguments does not have any values"
-        )
-
-    # Converting the parameters in dict_optimization to the corresponding enum
-    optimization_parameters = [
-        convert_str_to_optimization_parameters(str_object=i)
-        for i in data["optimization_arguments"]["dict_optimization"]["parameter"]
-    ]
-
-    # Generating the dictionary of the optimization arguments
-    dict_optimization = {
-        "parameter": optimization_parameters,
-        "min": convert_list_to_array_float(
-            data_list=data["optimization_arguments"]["dict_optimization"]["min"]
-        ),
-        "max": convert_list_to_array_float(
-            data_list=data["optimization_arguments"]["dict_optimization"]["max"]
-        ),
-    }
-
-    # Filling the optimization arguments with target_optimization and target_parameter,
-    target_optimization_value = data["optimization_arguments"]["target_optimization"]
-    target_parameter = convert_str_to_optimization_targetparameter(
-        str_object=data["optimization_arguments"]["target_parameter"]
-    )
-
-    # Retrieving the contract, contract_arguments_dict,
-    # summary_arguments_dict based on the contract type
-    if contract_type == "Cost Recovery":
-        contract = get_costrecovery(data=data)[1]
-        contract_arguments = get_costrecovery(data=data)[2]
-        summary_argument = get_costrecovery(data=data)[3]
-
-    elif contract_type == "Gross Split":
-        contract = get_grosssplit(data=data)[1]
-        contract_arguments = get_grosssplit(data=data)[2]
-        summary_argument = get_grosssplit(data=data)[3]
-
-    elif contract_type == "Transition":
-        contract = get_transition(data=data)[1]
-        contract_arguments = get_transition(data=data)[2]
-        summary_argument = get_transition(data=data)[3]
-
-    else:
-        contract = NotImplemented
-        contract_arguments = NotImplemented
-        summary_argument = NotImplemented
-
-    if contract_type == "Transition":
-        # Retrieve the original useful life of the capital cost
-        useful_life_original = (
-            contract.contract2.capital_cost_total.useful_life.tolist()
-        )
-
-        list_str, list_params_value, result_optimization, list_executed_contract = (
-            optimize_psc_trans(
-                dict_optimization=dict_optimization,
-                contract=contract,
-                contract_arguments=contract_arguments,
-                target_optimization_value=target_optimization_value,
-                summary_argument=summary_argument,
-                target_parameter=target_parameter,
-            )
-        )
-
-    else:
-        # Retrieve the original useful life of the capital cost
-        useful_life_original = contract.capital_cost_total.useful_life.tolist()
-        list_str, list_params_value, result_optimization, list_executed_contract = (
-            optimize_psc(
-                dict_optimization=dict_optimization,
-                contract=contract,
-                contract_arguments=contract_arguments,
-                target_optimization_value=target_optimization_value,
-                summary_argument=summary_argument,
-                target_parameter=target_parameter,
-            )
-        )
-
-    # Treatment to add the useful life of optimization into the result
-    def get_enum_index(enum_list: list, element: any) -> int | None:
-        """
-        Function to get the index of the OptimizationParameter.DEPRECIATION_ACCELERATION.
-
-        Parameters
-        ----------
-        enum_list: list
-            The source of list.
-        element: any
-            The corresponding element
-        Returns
-        -------
-        out : int | None
-        """
-        try:
-            return enum_list.index(element)
-        except ValueError:
-            return None
-
-    # Get the index of the depreciation optimization parameter
-    index_depreciation = get_enum_index(
-        enum_list=optimization_parameters,
-        element=OptimizationParameter.DEPRECIATION_ACCELERATION,
-    )
-
-    # Adding condition of the contract type for retrieving the optimized contract
-    if contract_type == "Transition":
-        contract_optimized = list_executed_contract[-1].contract2
-    else:
-        contract_optimized = list_executed_contract[-1]
-
-    # Adding the information of optimized useful life into the list_params_value
-    if index_depreciation is not None:
-        optimized_capital_cost = {
-            "year": contract_optimized.capital_cost_total.expense_year.tolist(),
-            "cost_allocation": contract_optimized.capital_cost_total.cost_allocation,
-            "cost": contract_optimized.capital_cost_total.cost.tolist(),
-            "pis_year": contract_optimized.capital_cost_total.pis_year.tolist(),
-            "useful_life_original": useful_life_original,
-            "useful_life_optimized": contract_optimized.capital_cost_total.useful_life.tolist(),
-            "description": contract_optimized.capital_cost_total.description,
-        }
-
-        # Adding optimized_capital_cost into the result of the optimization
-        list_params_value[index_depreciation] = {
-            "depreciation acceleration": list_params_value[index_depreciation],
-            "optimized_useful_life": optimized_capital_cost,
-        }
-
-    # Forming the optimization result into a dictionary object
-    optimization_result = {
-        "list_str": list_str,
-        "list_params_value": list_params_value,
-    }
-
-    # Converting the result into dictionary format
-    result_parameters = (
-        pd.DataFrame(optimization_result).set_index("list_str").to_dict()
-    )
-    result_parameters["optimization_result"] = result_optimization
-
-    # Adding the execution info
-    result_parameters = add_execution_info(data=result_parameters)
-
-    return result_parameters
-
-
 def get_detailed_summary(data: dict, contract_type: str):
     """
     Generate a detailed economic summary for a given PSC contract type.
     """
 
+    def _contract_helper(func):
+        (_, contract, _, summary_args) = func(data=data, summary_result=True)
+        return contract, summary_args
+
     if contract_type == "Cost Recovery":
-        summary_args = get_costrecovery(data=data, summary_result=True)[3]
+        contract, summary_args = _contract_helper(func=get_costrecovery)
 
     elif contract_type == "Gross Split":
-        summary_args = get_grosssplit(data=data, summary_result=True)[3]
+        contract, summary_args = _contract_helper(func=get_grosssplit)
 
     elif contract_type == "Transition":
-        summary_args = get_transition(data=data)[3]
+        contract, summary_args = _contract_helper(func=get_transition)
 
     elif contract_type == "Base Project":
-        summary_args = get_baseproject(data=data, summary_result=True)[3]
+        contract, summary_args = _contract_helper(func=get_baseproject)
 
     else:
+        contract = None
         summary_args = None
 
-    return get_summary(**summary_args)
+    return contract.get_summary(**summary_args)
 
 
 def get_ltp(
@@ -1702,11 +1545,10 @@ def get_transition_split(data: dict):
     return result
 
 
-def get_economic_limit(
-    data: dict,
-):
+def get_economic_limit(data: dict):
     """
-    The function to get the information of economic limit years from a cashflow using selected method.
+    The function to get the information of economic limit years from
+    a cashflow using selected method.
 
     Parameters
     ----------
@@ -1721,6 +1563,7 @@ def get_economic_limit(
     cash_flow = np.array(data["cash_flow"], dtype=float)
     method = convert_to_method_limit(target=data["method"])
     index_limit = econ_limit(cashflow=cash_flow, method=method)
+
     return years[index_limit]
 
 
@@ -1855,7 +1698,181 @@ def get_lbt_expenditures(data: dict) -> dict:
         }
     )
     df = df.set_index("project_years").to_dict()
+
     return df
+
+
+def get_contract_optimization(data: dict, contract_type: str = "Cost Recovery") -> dict:
+    """
+    The function to run contract optimization. Resulting optimization result
+    in dictionary format.
+
+    Parameters
+    ----------
+    data: dict
+        The dictionary of the data input.
+    contract_type: str
+        The option for the contract type. The available option are:
+        ['Cost Recovery', 'Gross Split']
+
+    Returns
+    -------
+    result_parameters: dict
+        The result of the optimization in dictionary format
+
+    """
+    if "optimization_arguments" not in data:
+        raise ContractException(
+            "The payload does not have the optimization_arguments key"
+        )
+
+    if data["optimization_arguments"] is None:
+        raise ContractException(
+            "The payload optimization_arguments does not have any values"
+        )
+
+    # Converting the parameters in dict_optimization to the corresponding enum
+    optimization_parameters = [
+        convert_str_to_optimization_parameters(str_object=i)
+        for i in data["optimization_arguments"]["dict_optimization"]["parameter"]
+    ]
+
+    # Generating the dictionary of the optimization arguments
+    dict_optimization = {
+        "parameter": optimization_parameters,
+        "min": convert_list_to_array_float(
+            data_list=data["optimization_arguments"]["dict_optimization"]["min"]
+        ),
+        "max": convert_list_to_array_float(
+            data_list=data["optimization_arguments"]["dict_optimization"]["max"]
+        ),
+    }
+
+    # Filling the optimization arguments with target_optimization and target_parameter,
+    target_optimization_value = data["optimization_arguments"]["target_optimization"]
+    target_parameter = convert_str_to_optimization_targetparameter(
+        str_object=data["optimization_arguments"]["target_parameter"]
+    )
+
+    # Retrieving the contract, contract_arguments_dict,
+    # summary_arguments_dict based on the contract type
+    if contract_type == "Cost Recovery":
+        contract = get_costrecovery(data=data)[1]
+        contract_arguments = get_costrecovery(data=data)[2]
+        summary_argument = get_costrecovery(data=data)[3]
+
+    elif contract_type == "Gross Split":
+        contract = get_grosssplit(data=data)[1]
+        contract_arguments = get_grosssplit(data=data)[2]
+        summary_argument = get_grosssplit(data=data)[3]
+
+    elif contract_type == "Transition":
+        contract = get_transition(data=data)[1]
+        contract_arguments = get_transition(data=data)[2]
+        summary_argument = get_transition(data=data)[3]
+
+    else:
+        contract = NotImplemented
+        contract_arguments = NotImplemented
+        summary_argument = NotImplemented
+
+    if contract_type == "Transition":
+        # Retrieve the original useful life of the capital cost
+        useful_life_original = (
+            contract.contract2.capital_cost_total.useful_life.tolist()
+        )
+
+        list_str, list_params_value, result_optimization, list_executed_contract = (
+            optimize_psc_trans(
+                dict_optimization=dict_optimization,
+                contract=contract,
+                contract_arguments=contract_arguments,
+                target_optimization_value=target_optimization_value,
+                summary_argument=summary_argument,
+                target_parameter=target_parameter,
+            )
+        )
+
+    else:
+        # Retrieve the original useful life of the capital cost
+        useful_life_original = contract.capital_cost_total.useful_life.tolist()
+        list_str, list_params_value, result_optimization, list_executed_contract = (
+            optimize_psc(
+                dict_optimization=dict_optimization,
+                contract=contract,
+                contract_arguments=contract_arguments,
+                target_optimization_value=target_optimization_value,
+                summary_argument=summary_argument,
+                target_parameter=target_parameter,
+            )
+        )
+
+    # Treatment to add the useful life of optimization into the result
+    def get_enum_index(enum_list: list, element: any) -> int | None:
+        """
+        Function to get the index of the OptimizationParameter.DEPRECIATION_ACCELERATION.
+
+        Parameters
+        ----------
+        enum_list: list
+            The source of list.
+        element: any
+            The corresponding element
+        Returns
+        -------
+        out : int | None
+        """
+        try:
+            return enum_list.index(element)
+        except ValueError:
+            return None
+
+    # Get the index of the depreciation optimization parameter
+    index_depreciation = get_enum_index(
+        enum_list=optimization_parameters,
+        element=OptimizationParameter.DEPRECIATION_ACCELERATION,
+    )
+
+    # Adding condition of the contract type for retrieving the optimized contract
+    if contract_type == "Transition":
+        contract_optimized = list_executed_contract[-1].contract2
+    else:
+        contract_optimized = list_executed_contract[-1]
+
+    # Adding the information of optimized useful life into the list_params_value
+    if index_depreciation is not None:
+        optimized_capital_cost = {
+            "year": contract_optimized.capital_cost_total.expense_year.tolist(),
+            "cost_allocation": contract_optimized.capital_cost_total.cost_allocation,
+            "cost": contract_optimized.capital_cost_total.cost.tolist(),
+            "pis_year": contract_optimized.capital_cost_total.pis_year.tolist(),
+            "useful_life_original": useful_life_original,
+            "useful_life_optimized": contract_optimized.capital_cost_total.useful_life.tolist(),
+            "description": contract_optimized.capital_cost_total.description,
+        }
+
+        # Adding optimized_capital_cost into the result of the optimization
+        list_params_value[index_depreciation] = {
+            "depreciation acceleration": list_params_value[index_depreciation],
+            "optimized_useful_life": optimized_capital_cost,
+        }
+
+    # Forming the optimization result into a dictionary object
+    optimization_result = {
+        "list_str": list_str,
+        "list_params_value": list_params_value,
+    }
+
+    # Converting the result into dictionary format
+    result_parameters = (
+        pd.DataFrame(optimization_result).set_index("list_str").to_dict()
+    )
+    result_parameters["optimization_result"] = result_optimization
+
+    # Adding the execution info
+    result_parameters = add_execution_info(data=result_parameters)
+
+    return result_parameters
 
 
 def get_sensitivity(data: dict, contract_type: str):

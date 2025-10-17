@@ -29,6 +29,7 @@ def get_table(
         Dataframe of Gas Cashflow
         Dataframe of Consolidated Cashflow
     """
+
     if isinstance(contract, CostRecovery):
         psc_table_oil = pd.DataFrame()
         psc_table_oil['Year'] = contract.project_years
