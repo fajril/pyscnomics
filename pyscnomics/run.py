@@ -1062,7 +1062,7 @@ data = {
 # get_costrecovery(data=data, summary_result=True)
 # get_grosssplit(data=data, summary_result=True)
 
-t1 = get_asr_expenditures(data=data)
+get_grosssplit_split(data=data)
 
 # print('\t')
 # print(f'Filetype: {type()}')
@@ -1073,10 +1073,10 @@ t1 = get_asr_expenditures(data=data)
 # print(f'Length: {len()}')
 # print()
 
-print('\t')
-print(f'Filetype: {type(t1)}')
-print(f'Length: {len(t1)}')
-print('t1 = \n', t1)
+# print('\t')
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t2)}')

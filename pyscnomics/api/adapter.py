@@ -1044,22 +1044,25 @@ def get_grosssplit_split(data: dict) -> dict:
     # Execute GrossSplit intance
     contract.run(**contract_arguments_dict)
 
+    # Convert contract to a dictionary using vars() --> cad = contract as dictionary
+    cad = vars(contract)
+
     # Retrieving the split information
     contractor_split = (
         pd.DataFrame(
             {
                 "project_years": contract.project_years.tolist(),
-                "oil_base_split": contract._oil_base_split.tolist(),
-                "gas_base_split": contract._gas_base_split.tolist(),
-                "var_split_array": contract._var_split_array.tolist(),
-                "oil_prog_price_split": contract._oil_prog_price_split.tolist(),
-                "gas_prog_price_split": contract._gas_prog_price_split.tolist(),
-                "oil_prog_cumulative_production_split": contract._oil_prog_cum_split.tolist(),
-                "gas_prog_cumulative_production_split": contract._gas_prog_cum_split.tolist(),
-                "oil_prog_total_split": contract._oil_prog_split.tolist(),
-                "gas_prog_total_split": contract._gas_prog_split.tolist(),
-                "oil_ctr_split": contract._oil_ctr_split_prior_bracket.tolist(),
-                "gas_ctr_split": contract._gas_ctr_split_prior_bracket.tolist(),
+                "oil_base_split": cad["_oil_base_split"].tolist(),
+                "gas_base_split": cad["_gas_base_split"].tolist(),
+                "var_split_array": cad["_var_split_array"].tolist(),
+                "oil_prog_price_split": cad["_oil_prog_price_split"].tolist(),
+                "gas_prog_price_split": cad["_gas_prog_price_split"].tolist(),
+                "oil_prog_cumulative_production_split": cad["_oil_prog_cum_split"].tolist(),
+                "gas_prog_cumulative_production_split": cad["_gas_prog_cum_split"].tolist(),
+                "oil_prog_total_split": cad["_oil_prog_split"].tolist(),
+                "gas_prog_total_split": cad["_gas_prog_split"].tolist(),
+                "oil_ctr_split": cad["_oil_ctr_split_prior_bracket"].tolist(),
+                "gas_ctr_split": cad["_gas_ctr_split_prior_bracket"].tolist(),
             }
         )
         .set_index("project_years")
@@ -1067,8 +1070,8 @@ def get_grosssplit_split(data: dict) -> dict:
     )
 
     years_of_maximum_split = {
-        "oil": contract._oil_year_maximum_ctr_split.tolist(),
-        "gas": contract._gas_year_maximum_ctr_split.tolist(),
+        "oil": cad["_oil_year_maximum_ctr_split"].tolist(),
+        "gas": cad["_gas_year_maximum_ctr_split"].tolist(),
     }
 
     return {
