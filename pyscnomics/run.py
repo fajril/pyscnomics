@@ -311,6 +311,10 @@ from pyscnomics.api.adapter import (
     build_grosssplit_instance,
     build_grosssplit_arguments,
     get_grosssplit_split,
+    build_costrecovery_instance,
+    build_costrecovery_arguments,
+    get_asr_expenditures,
+    get_lbt_expenditures,
 )
 
 data = {
@@ -1054,9 +1058,11 @@ data = {
     },
 }
 
-t1 = get_baseproject(data=data, summary_result=True)
+# get_baseproject(data=data, summary_result=True)
 # get_costrecovery(data=data, summary_result=True)
 # get_grosssplit(data=data, summary_result=True)
+
+t1 = get_asr_expenditures(data=data)
 
 # print('\t')
 # print(f'Filetype: {type()}')

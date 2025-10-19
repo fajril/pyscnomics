@@ -427,71 +427,40 @@ def get_baseproject(data: dict, summary_result: bool = True):
     return summary_skk, contract, contract_arguments_dict, summary_arguments_dict
 
 
-def build_costrecovery_instance(data: dict):
-    pass
-
-
-def build_costrecovery_arguments(data: dict):
-    pass
-
-
-def get_costrecovery(data: dict, summary_result: bool = True):
+def build_costrecovery_instance(data: dict) -> CostRecovery:
     """
-    Generate Cost Recovery contract, its execution results, and relevant
-    arguments for analysis or reporting.
+    Build and return a fully configured `CostRecovery` contract instance.
 
-    This function creates and executes a ``CostRecovery`` contract instance
-    using the provided input data.
-
-    It handles the setup of required parameters, executes the contract calculation,
-    and optionally generates the summary results for reporting, following
-    the form typically used by SKK Migas.
+    This function extracts setup parameters and cost recovery–specific
+    attributes from the input data dictionary, applies the necessary
+    type conversions, and initializes the `CostRecovery` object with
+    the prepared keyword arguments.
 
     Parameters
     ----------
     data : dict
-        Dictionary containing all input data required to initialize and
-        execute the cost recovery contract. It must include the following
-        nested sections:
-        - ``costrecovery`` : configuration for contract setup
-          (e.g., FTP parameters, tax split type, DMO parameters).
-        - ``contract_arguments`` : arguments controlling contract execution
-          (e.g., tax regime, depreciation method, inflation rate).
-
-    summary_result : bool, default=True
-        If ``True``, generates the summary results and SKK-style executive
-        summary. If ``False``, only the contract object and arguments are
-        returned without summary computation.
+        Input data dictionary containing setup parameters and
+        `costrecovery`-specific contract attributes. Must include
+        sections such as `lifting`, `capital`, `opex`, and
+        `costrecovery`.
 
     Returns
     -------
-    summary_skk : dict or None
-        The SKK-style executive summary of the contract if
-        ``summary_result=True``. Returns ``None`` otherwise.
-    contract : CostRecovery
-        The instantiated and executed ``CostRecovery`` contract object.
-    contract_arguments_dict : dict
-        Dictionary of arguments passed to ``CostRecovery.run()``.
-    summary_arguments_dict : dict or None
-        Dictionary of arguments used in generating the summary. Returns
-        ``None`` if ``summary_result=False``.
+    CostRecovery
+        The instantiated `CostRecovery` contract object, ready for
+        execution using its `run()` method.
 
     Notes
     -----
-    This function automates the end-to-end process of building and executing
-    a Cost Recovery contract under the Production Sharing Contract (PSC)
-    scheme, including:
-
-    - Extracting setup parameters from the input dictionary.
-    - Converting user-provided strings into enumerations and arrays.
-    - Running the contract calculation.
-    - Optionally preparing an SKK-style executive summary.
-
-    It is typically used as the main entry point for evaluating
-    cost-recovery-based PSC contracts programmatically.
+    - Setup parameters (dates, lifting, and costs) are parsed via
+      :func:`get_setup_dict`.
+    - Conversion utilities like :func:`convert_list_to_array_float_or_array`
+      and :func:`convert_str_to_taxsplit` are used for type coercion.
+    - The function prepares all base, FTP, split, investment credit,
+      DMO, and depreciation parameters required for initialization.
     """
 
-    # Specify the required arguments to create an instance of CostRecovery
+    # Specify base arguments
     (
         start_date,
         end_date,
@@ -508,144 +477,219 @@ def get_costrecovery(data: dict, summary_result: bool = True):
         cost_of_sales,
     ) = get_setup_dict(data=data)
 
-    # Create an instance of CostRecovery
-    contract = CostRecovery(
-        start_date=start_date,
-        end_date=end_date,
-        oil_onstream_date=oil_onstream_date,
-        gas_onstream_date=gas_onstream_date,
-        approval_year=approval_year,
-        is_pod_1=is_pod_1,
-        lifting=lifting,
-        capital_cost=capital,
-        intangible_cost=intangible,
-        opex=opex,
-        asr_cost=asr,
-        lbt_cost=lbt,
-        cost_of_sales=cost_of_sales,
-        oil_ftp_is_available=data["costrecovery"]["oil_ftp_is_available"],
-        oil_ftp_is_shared=data["costrecovery"]["oil_ftp_is_shared"],
-        oil_ftp_portion=convert_list_to_array_float_or_array(
-            data_input=data["costrecovery"]["oil_ftp_portion"]
-        ),
-        gas_ftp_is_available=data["costrecovery"]["gas_ftp_is_available"],
-        gas_ftp_is_shared=data["costrecovery"]["gas_ftp_is_shared"],
-        gas_ftp_portion=convert_list_to_array_float_or_array(
-            data_input=data["costrecovery"]["gas_ftp_portion"]
-        ),
-        tax_split_type=convert_str_to_taxsplit(
-            str_object=data["costrecovery"]["tax_split_type"]
-        ),
-        condition_dict=data["costrecovery"]["condition_dict"],
-        indicator_rc_icp_sliding=convert_list_to_array_float(
-            data_list=data["costrecovery"]["indicator_rc_icp_sliding"]
-        ),
-        oil_ctr_pretax_share=convert_list_to_array_float_or_array(
-            data_input=data["costrecovery"]["oil_ctr_pretax_share"]
-        ),
-        gas_ctr_pretax_share=convert_list_to_array_float_or_array(
-            data_input=data["costrecovery"]["gas_ctr_pretax_share"]
-        ),
-        oil_ic_rate=convert_to_float(target=data["costrecovery"]["oil_ic_rate"]),
-        gas_ic_rate=convert_to_float(target=data["costrecovery"]["gas_ic_rate"]),
-        ic_is_available=data["costrecovery"]["ic_is_available"],
-        oil_cr_cap_rate=convert_to_float(
-            target=data["costrecovery"]["oil_cr_cap_rate"]
-        ),
-        gas_cr_cap_rate=convert_to_float(
-            target=data["costrecovery"]["gas_cr_cap_rate"]
-        ),
-        oil_dmo_volume_portion=convert_list_to_array_float_or_array(
-            data_input=data["costrecovery"]["oil_dmo_volume_portion"]
-        ),
-        oil_dmo_fee_portion=convert_list_to_array_float_or_array(
-            data_input=data["costrecovery"]["oil_dmo_fee_portion"]
-        ),
-        oil_dmo_holiday_duration=data["costrecovery"]["oil_dmo_holiday_duration"],
-        gas_dmo_volume_portion=convert_list_to_array_float_or_array(
-            data_input=data["costrecovery"]["gas_dmo_volume_portion"]
-        ),
-        gas_dmo_fee_portion=convert_list_to_array_float_or_array(
-            data_input=data["costrecovery"]["gas_dmo_fee_portion"]
-        ),
-        gas_dmo_holiday_duration=data["costrecovery"]["gas_dmo_holiday_duration"],
-        # ==========defaulted to 0.0 for single contract===========
-        # oil_carry_forward_depreciation=convert_list_to_array_float_or_array(
-        #    data_input=data["costrecovery"]["oil_carry_forward_depreciation"]
-        # ),
-        # gas_carry_forward_depreciation=convert_list_to_array_float_or_array(
-        #    data_input=data["costrecovery"]["gas_carry_forward_depreciation"]
-        # ),
-        oil_carry_forward_depreciation=0.0,
-        gas_carry_forward_depreciation=0.0,
-    )
+    # Specify abbreviations
+    cr = data["costrecovery"]
+    f_rate = convert_list_to_array_float_or_array
+    f_split = convert_str_to_taxsplit
+    f_icp = convert_list_to_array_float
+    f_float = convert_to_float
 
-    # Specify arguments to execute `run()` method of class CostRecovery
-    contract_arguments_dict = {
-        "sulfur_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["sulfur_revenue"]
-        ),
-        "electricity_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["electricity_revenue"]
-        ),
-        "co2_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["co2_revenue"]
-        ),
-        "vat_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["vat_rate"]
-        ),
-        "inflation_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["inflation_rate"]
-        ),
-        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
-            str_object=data["contract_arguments"]["inflation_rate_applied_to"]
-        ),
-        "is_dmo_end_weighted": data["contract_arguments"]["is_dmo_end_weighted"],
-        "tax_regime": convert_str_to_taxregime(
-            str_object=data["contract_arguments"]["tax_regime"]
-        ),
-        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
-            data_list=data["contract_arguments"]["effective_tax_rate"]
-        ),
-        "ftp_tax_regime": convert_str_to_ftptaxregime(
-            str_object=data["contract_arguments"]["ftp_tax_regime"]
-        ),
-        # ===========deleted in 1.4.0============
-        # "sunk_cost_reference_year": data["contract_arguments"][
-        #    "sunk_cost_reference_year"
-        # ],
-        "depr_method": convert_str_to_depremethod(
-            str_object=data["contract_arguments"]["depr_method"]
-        ),
-        "decline_factor": data["contract_arguments"]["decline_factor"],
-        "post_uu_22_year2001": (
-            True
-            if "post_uu_22_year2001" not in data["contract_arguments"]
-            else data["contract_arguments"]["post_uu_22_year2001"]
-        ),
-        "oil_cost_of_sales_applied": (
-            False
-            if "oil_cost_of_sales_applied" not in data["contract_arguments"]
-            else data["contract_arguments"]["oil_cost_of_sales_applied"]
-        ),
-        "gas_cost_of_sales_applied": (
-            False
-            if "gas_cost_of_sales_applied" not in data["contract_arguments"]
-            else data["contract_arguments"]["gas_cost_of_sales_applied"]
-        ),
-        "sum_undepreciated_cost": (
-            False
-            if "sum_undepreciated_cost" not in data["contract_arguments"]
-            else data["contract_arguments"]["sum_undepreciated_cost"]
-        ),
-        "sunk_cost_method": (
-            SunkCostMethod.DEPRECIATED_TANGIBLE if "sunk_cost_method" not in
-            data["contract_arguments"] or data["contract_arguments"]["sunk_cost_method"]
-            is None else converter_sunk_cost_method(
-                str_obj=data["contract_arguments"]["sunk_cost_method"]
+    # Prepare contract attributes for CostRecovery
+    contract_kwargs = {
+        # Base parameters
+        "start_date": start_date,
+        "end_date": end_date,
+        "oil_onstream_date": oil_onstream_date,
+        "gas_onstream_date": gas_onstream_date,
+        "approval_year": approval_year,
+        "is_pod_1": is_pod_1,
+
+        # Lifting and costs
+        "lifting": lifting,
+        "capital_cost": capital,
+        "intangible_cost": intangible,
+        "opex": opex,
+        "asr_cost": asr,
+        "lbt_cost": lbt,
+        "cost_of_sales": cost_of_sales,
+
+        # FTP
+        "oil_ftp_is_available": cr["oil_ftp_is_available"],
+        "oil_ftp_is_shared": cr["oil_ftp_is_shared"],
+        "oil_ftp_portion": f_rate(data_input=cr["oil_ftp_portion"]),
+        "gas_ftp_is_available": cr["gas_ftp_is_available"],
+        "gas_ftp_is_shared": cr["gas_ftp_is_shared"],
+        "gas_ftp_portion": f_rate(data_input=cr["gas_ftp_portion"]),
+
+        # Split
+        "tax_split_type": f_split(str_object=cr["tax_split_type"]),
+        "condition_dict": cr["condition_dict"],
+        "indicator_rc_icp_sliding": f_icp(data_list=cr["indicator_rc_icp_sliding"]),
+        "oil_ctr_pretax_share": f_rate(data_input=cr["oil_ctr_pretax_share"]),
+        "gas_ctr_pretax_share": f_rate(data_input=cr["gas_ctr_pretax_share"]),
+
+        # Investment credit and cap rate
+        "oil_ic_rate": f_float(target=cr["oil_ic_rate"]),
+        "gas_ic_rate": f_float(target=cr["gas_ic_rate"]),
+        "ic_is_available": cr["ic_is_available"],
+        "oil_cr_cap_rate": f_float(target=cr["oil_cr_cap_rate"]),
+        "gas_cr_cap_rate": f_float(target=cr["gas_cr_cap_rate"]),
+
+        # DMO
+        "oil_dmo_volume_portion": f_rate(data_input=cr["oil_dmo_volume_portion"]),
+        "oil_dmo_fee_portion": f_rate(data_input=cr["oil_dmo_fee_portion"]),
+        "oil_dmo_holiday_duration": cr["oil_dmo_holiday_duration"],
+        "gas_dmo_volume_portion": f_rate(data_input=cr["gas_dmo_volume_portion"]),
+        "gas_dmo_fee_portion": f_rate(data_input=cr["gas_dmo_fee_portion"]),
+        "gas_dmo_holiday_duration": cr["gas_dmo_holiday_duration"],
+
+        # Carry forward depreciation
+        "oil_carry_forward_depreciation": 0.0,
+        "gas_carry_forward_depreciation": 0.0,
+    }
+
+    return CostRecovery(**contract_kwargs)
+
+
+def build_costrecovery_arguments(data: dict) -> dict:
+    """
+    Build and return the argument dictionary required to execute a
+    `CostRecovery` contract.
+
+    This function extracts contract-level parameters from the input
+    data dictionary, performs necessary type conversions, and prepares
+    all supporting arguments related to revenue, FTP, VAT, inflation,
+    tax, depreciation, and cost of sales. The resulting dictionary can
+    be directly passed to the `CostRecovery.run()` method.
+
+    Parameters
+    ----------
+    data : dict
+        Input data dictionary containing the section `contract_arguments`
+        with all parameter definitions required for the cost recovery
+        contract setup.
+
+    Returns
+    -------
+    dict
+        Dictionary of processed arguments to initialize or execute
+        the `CostRecovery` contract.
+
+    Notes
+    -----
+    - Type conversion functions such as
+      :func:`convert_str_to_otherrevenue`, :func:`convert_str_to_taxregime`,
+      and :func:`convert_str_to_depremethod` are used for input parsing.
+    - Internal helper function `_get_value()` safely retrieves dictionary
+      values and applies optional conversion or defaults when keys are
+      missing or `None`.
+    - Covers the following parameter groups:
+        * Other revenues (e.g., sulfur, electricity, CO₂)
+        * FTP and tax regimes
+        * VAT and inflation parameters
+        * Depreciation configuration
+        * DMO weighting and cost-of-sales flags
+        * Sunk cost handling
+    """
+
+    # Specify abbreviations and helper method
+    ca = data["contract_arguments"]
+    f_rev = convert_str_to_otherrevenue
+    f_rate = convert_list_to_array_float_or_array
+    f_infl = convert_str_to_inflationappliedto
+    f_tax = convert_str_to_taxregime
+    f_tax_rate = convert_list_to_array_float_or_array_or_none
+    f_ftp = convert_str_to_ftptaxregime
+    f_depr = convert_str_to_depremethod
+
+    def _get_value(key: str, source: dict = ca, default=True, converter=None):
+        """
+        Helper function:
+        Safely retrieve a value from a dictionary with an optional converter.
+
+        Parameters
+        ----------
+        key : str
+            Key to look up in the dictionary.
+        source : dict, optional
+            Source dictionary. Defaults to ``ca``.
+        default : any, optional
+            Value to return if key is missing or ``None``.
+        converter : callable, optional
+            Function to convert the retrieved value.
+        """
+        if converter is None:
+            return (
+                default if (key not in source) or (source[key] is None)
+                else source[key]
             )
+        else:
+            return (
+                default if (key not in source) or (source[key] is None)
+                else converter(source[key])
+            )
+
+    return {
+        # Other revenues
+        "sulfur_revenue": f_rev(str_object=ca["sulfur_revenue"]),
+        "electricity_revenue": f_rev(str_object=ca["electricity_revenue"]),
+        "co2_revenue": f_rev(str_object=ca["co2_revenue"]),
+
+        # FTP
+        "ftp_tax_regime": f_ftp(str_object=ca["ftp_tax_regime"]),
+
+        # VAT and inflation
+        "vat_rate": f_rate(data_input=ca["vat_rate"]),
+        "inflation_rate": f_rate(data_input=ca["inflation_rate"]),
+        "inflation_rate_applied_to": f_infl(str_object=ca["inflation_rate_applied_to"]),
+
+        # DMO and tax
+        "is_dmo_end_weighted": ca["is_dmo_end_weighted"],
+        "tax_regime": f_tax(str_object=ca["tax_regime"]),
+        "effective_tax_rate": f_tax_rate(data_list=ca["effective_tax_rate"]),
+        "post_uu_22_year2001": _get_value(key="post_uu_22_year2001"),
+
+        # Depreciation
+        "depr_method": f_depr(str_object=ca["depr_method"]),
+        "decline_factor": ca["decline_factor"],
+        "sum_undepreciated_cost": _get_value(key="sum_undepreciated_cost", default=False),
+
+        # Cost of sales
+        "oil_cost_of_sales_applied": _get_value(key="oil_cost_of_sales_applied", default=False),
+        "gas_cost_of_sales_applied": _get_value(key="gas_cost_of_sales_applied", default=False),
+
+        # Sunk cost
+        "sunk_cost_method": _get_value(
+            key="sunk_cost_method",
+            default=SunkCostMethod.DEPRECIATED_TANGIBLE,
+            converter=converter_sunk_cost_method,
         ),
     }
+
+
+def get_costrecovery(data: dict, summary_result: bool = True):
+    """
+    Execute a Cost Recovery PSC evaluation and optionally return the summary results.
+
+    This function builds the contract instance, prepares input arguments, runs
+    the Cost Recovery model, and optionally generates the SKK Migas–formatted
+    summary.
+
+    Parameters
+    ----------
+    data : dict
+        Input data containing all parameters required for the Cost Recovery evaluation.
+    summary_result : bool, default=True
+        If True, return the SKK Migas–formatted summary; otherwise, omit it.
+
+    Returns
+    -------
+    tuple
+        (summary_skk, contract, contract_arguments_dict, summary_arguments_dict)
+
+        - **summary_skk** : dict or None
+          Summary of results in SKK Migas format, or None if not requested.
+        - **contract** : CostRecovery
+          Executed Cost Recovery contract instance.
+        - **contract_arguments_dict** : dict
+          Arguments used in :meth:`CostRecovery.run`.
+        - **summary_arguments_dict** : dict or None
+          Arguments used for summary generation, or None if skipped.
+    """
+
+    # Specify contract and contract arguments
+    contract = build_costrecovery_instance(data=data)
+    contract_arguments_dict = build_costrecovery_arguments(data=data)
 
     # Execute CostRecovery instance
     contract.run(**contract_arguments_dict)
@@ -1604,6 +1648,7 @@ def get_economic_limit(data: dict):
     int
         The index
     """
+
     years = np.array(data["years"], dtype=int)
     cash_flow = np.array(data["cash_flow"], dtype=float)
     method = convert_to_method_limit(target=data["method"])
@@ -1614,31 +1659,57 @@ def get_economic_limit(data: dict):
 
 def get_asr_expenditures(data: dict) -> dict:
     """
-    The Function to get the expenditures of an ASR cost.
+    Compute and return the post-tax ASR (Abandonment, Site Restoration)
+    expenditures from the given input data.
+
+    This function constructs a pseudo Base Project environment using
+    the provided ASR and setup data, runs the project simulation,
+    and extracts the ASR expenditures for oil and gas over project years.
 
     Parameters
     ----------
-    data: dict
+    data : dict
+        Input data dictionary containing at least the following keys:
+        - ``asr`` : ASR-related cost data.
+        - ``setup`` : Dictionary with setup information
+          (e.g., start/end date, onstream dates).
+        - ``lifting`` : Lifting profile or data for oil and gas.
 
     Returns
     -------
     dict
-        The dictionary of ASR expenditures.
+        Dictionary of ASR expenditures with project years as keys and
+        sub-dictionaries containing:
+        - ``oil_asr_expenditures`` : Post-tax ASR expenditures for oil.
+        - ``gas_asr_expenditures`` : Post-tax ASR expenditures for gas.
 
+    Notes
+    -----
+    - The function internally mimics a Base Project execution by
+      constructing a minimal pseudo-input structure compatible with
+      :func:`get_baseproject`.
+    - ASR expenditures are extracted from the executed contract object
+      and converted into a dictionary using a Pandas DataFrame.
+    - No profitability or inflation adjustments are applied.
     """
+
     # Initiating the asr data
     asr_pseudo = {"asr": data["asr"]}
 
     # Mimics the baseproject data
+    _setup = data["setup"]
+
     data_pseudo = {
         "setup": {
-            "start_date": data["start_date"],
-            "end_date": data["end_date"],
-            "oil_onstream_date": None,
-            "gas_onstream_date": None,
+            "start_date": _setup["start_date"],
+            "end_date": _setup["end_date"],
+            "oil_onstream_date": _setup["oil_onstream_date"],
+            "gas_onstream_date": _setup["gas_onstream_date"],
+            "approval_year": None,
+            "is_pod_1": False,
         },
         "summary_arguments": {
-            "reference_year": None,
+            "discount_rate_start_year": None,
             "inflation_rate": 0.0,
             "discount_rate": 0.1,
             "npv_mode": "Full Cycle Nominal Terms",
@@ -1649,63 +1720,100 @@ def get_asr_expenditures(data: dict) -> dict:
             "sulfur_revenue": "Addition to Gas Revenue",
             "electricity_revenue": "Addition to Oil Revenue",
             "co2_revenue": "Addition to Gas Revenue",
-            "sunk_cost_reference_year": None,
-            "year_inflation": 0,
+            # "sunk_cost_reference_year": None,
+            # "year_inflation": 0,
             "inflation_rate": 0,
             "vat_rate": 0,
             "inflation_rate_applied_to": "CAPEX",
         },
-        "lifting": None,
+        "lifting": data["lifting"],
         "capital": None,
         "intangible": None,
         "opex": None,
-        "asr": asr_pseudo,
+        "asr": asr_pseudo["asr"],
         "lbt": None,
         "cost_of_sales": None,
     }
 
     # Parsing the data into base project dataclass
-    contract = get_baseproject(data=data_pseudo, summary_result=False)[1]
+    # contract = get_baseproject(data=data_pseudo, summary_result=False)[1]
+    _, contract, contract_arguments, _ = get_baseproject(
+        data=data_pseudo, summary_result=False
+    )
+
+    # Convert BaseProject instance into dictionary using method `vars()`
+    contract_as_dict = vars(contract)
 
     # Returning the ASR Expenditures
     df = pd.DataFrame(
         {
             "project_years": contract.project_years,
-            "oil_asr_expenditures": contract._oil_asr_expenditures_post_tax,
-            "gas_asr_expenditures": contract._gas_asr_expenditures_post_tax,
+            "oil_asr_expenditures": contract_as_dict["_oil_asr_expenditures_post_tax"],
+            "gas_asr_expenditures": contract_as_dict["_gas_asr_expenditures_post_tax"],
+            # "oil_asr_expenditures": contract._oil_asr_expenditures_post_tax,
+            # "gas_asr_expenditures": contract._gas_asr_expenditures_post_tax,
         }
     )
+
     df = df.set_index("project_years").to_dict()
+
     return df
 
 
 def get_lbt_expenditures(data: dict) -> dict:
     """
-    The Function to get the expenditures of an LBT cost.
+    Compute and return the post-tax ASR (Abandonment, Site Restoration)
+    expenditures from the given input data.
+
+    This function constructs a pseudo Base Project environment using
+    the provided ASR and setup data, runs the project simulation,
+    and extracts the ASR expenditures for oil and gas over project years.
 
     Parameters
     ----------
-    data: dict
+    data : dict
+        Input data dictionary containing at least the following keys:
+        - ``asr`` : ASR-related cost data.
+        - ``setup`` : Dictionary with setup information
+          (e.g., start/end date, onstream dates).
+        - ``lifting`` : Lifting profile or data for oil and gas.
 
     Returns
     -------
     dict
-        The dictionary of LBT expenditures.
+        Dictionary of ASR expenditures with project years as keys and
+        sub-dictionaries containing:
+        - ``oil_asr_expenditures`` : Post-tax ASR expenditures for oil.
+        - ``gas_asr_expenditures`` : Post-tax ASR expenditures for gas.
 
+    Notes
+    -----
+    - The function internally mimics a Base Project execution by
+      constructing a minimal pseudo-input structure compatible with
+      :func:`get_baseproject`.
+    - ASR expenditures are extracted from the executed contract object
+      and converted into a dictionary using a Pandas DataFrame.
+    - No profitability or inflation adjustments are applied.
     """
+
     # Initiating the LBT data
     lbt_pseudo = {"lbt": data["lbt"]}
 
     # Mimics the baseproject data
+    _setup = data["setup"]
+
+    # Mimics the baseproject data
     data_pseudo = {
         "setup": {
-            "start_date": data["start_date"],
-            "end_date": data["end_date"],
-            "oil_onstream_date": None,
-            "gas_onstream_date": None,
+            "start_date": _setup["start_date"],
+            "end_date": _setup["end_date"],
+            "oil_onstream_date": _setup["oil_onstream_date"],
+            "gas_onstream_date": _setup["gas_onstream_date"],
+            "approval_year": None,
+            "is_pod_1": False,
         },
         "summary_arguments": {
-            "reference_year": None,
+            "discount_rate_start_year": None,
             "inflation_rate": 0.0,
             "discount_rate": 0.1,
             "npv_mode": "Full Cycle Nominal Terms",
@@ -1716,32 +1824,41 @@ def get_lbt_expenditures(data: dict) -> dict:
             "sulfur_revenue": "Addition to Gas Revenue",
             "electricity_revenue": "Addition to Oil Revenue",
             "co2_revenue": "Addition to Gas Revenue",
-            "sunk_cost_reference_year": None,
-            "year_inflation": 0,
+            # "sunk_cost_reference_year": None,
+            # "year_inflation": 0,
             "inflation_rate": 0,
             "vat_rate": 0,
             "inflation_rate_applied_to": "CAPEX",
         },
-        "lifting": None,
+        "lifting": data["lifting"],
         "capital": None,
         "intangible": None,
         "opex": None,
         "asr": None,
-        "lbt": lbt_pseudo,
+        "lbt": lbt_pseudo["lbt"],
         "cost_of_sales": None,
     }
 
     # Parsing the data into base project dataclass
-    contract = get_baseproject(data=data_pseudo, summary_result=False)[1]
+    # contract = get_baseproject(data=data_pseudo, summary_result=False)[1]
+    _, contract, contract_arguments, _ = get_baseproject(
+        data=data_pseudo, summary_result=False
+    )
+
+    # Convert BaseProject instance into dictionary using method `vars()`
+    contract_as_dict = vars(contract)
 
     # Returning the LBT Expenditures
     df = pd.DataFrame(
         {
             "project_years": contract.project_years,
-            "oil_lbt_expenditures": contract._oil_lbt_expenditures_post_tax,
-            "gas_lbt_expenditures": contract._gas_lbt_expenditures_post_tax,
+            "oil_lbt_expenditures": contract_as_dict["_oil_lbt_expenditures_post_tax"],
+            "gas_lbt_expenditures": contract_as_dict["_gas_lbt_expenditures_post_tax"],
+            # "oil_lbt_expenditures": contract._oil_lbt_expenditures_post_tax,
+            # "gas_lbt_expenditures": contract._gas_lbt_expenditures_post_tax,
         }
     )
+
     df = df.set_index("project_years").to_dict()
 
     return df
