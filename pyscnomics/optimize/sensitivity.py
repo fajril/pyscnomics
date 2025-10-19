@@ -1,13 +1,16 @@
 """
 Collection of functions to administer sensitivity analysis.
+
+This Code is made to detached the sensitivity module in the previous version which
+depended with the excel into fully able to be run in python.
 """
 
 import numpy as np
 import pandas as pd
 
 from pyscnomics.econ import CostOfSales, Lifting, FluidType
-from pyscnomics.io.aggregator import Aggregate
-from pyscnomics.optimize.adjuster import AdjustData
+# from pyscnomics.io.aggregator import Aggregate
+# from pyscnomics.optimize.adjuster import AdjustData
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
@@ -16,14 +19,9 @@ from pyscnomics.contracts.transition import Transition
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT
 from pyscnomics.tools.summary import get_summary
 
-"""
-This Code is made to detached the sensitivity module in the previous version which 
-depended with the excel into fully able to be run in python. 
-"""
-
 
 class SensitivityException(Exception):
-    """Exception to raise for a misuse of Sensitivity Method"""
+    """ Exception to be raised for a misuse of Sensitivity Method """
 
     pass
 
@@ -53,6 +51,7 @@ def _get_multipliers(
     multipliers: np.ndarray
         A NumPy array containing multipliers for different economic factors.
     """
+
     # Specify the minimum and maximum values
     min_val = base_value - min_deviation
     max_val = base_value + max_deviation
@@ -277,7 +276,8 @@ def _adjust_element_single_contract(
                     fluid_type=lift.fluid_type,
                     ghv=lift.ghv,
                     # prod_rate=lift.prod_rate,
-                    # prod_rate is being by passed in the routine of sensitivity, thus it will be filled with the lifting value
+                    # prod_rate is being by passed in the routine of sensitivity,
+                    # thus it will be filled with the lifting value
                     prod_rate_baseline=lift.prod_rate_baseline,
                 )
                 for lift in contract.lifting
@@ -301,7 +301,8 @@ def _adjust_element_single_contract(
                     fluid_type=lift.fluid_type,
                     ghv=lift.ghv,
                     # prod_rate=lift.prod_rate,
-                    # prod_rate is being by passed in the routine of sensitivity, thus it will be filled with the lifting value
+                    # prod_rate is being by passed in the routine of sensitivity,
+                    # thus it will be filled with the lifting value
                     prod_rate_baseline=lift.prod_rate_baseline,
                 )
                 for lift in contract.lifting
@@ -325,7 +326,8 @@ def _adjust_element_single_contract(
                     fluid_type=lift.fluid_type,
                     ghv=lift.ghv,
                     # prod_rate=lift.prod_rate,
-                    # prod_rate is being by passed in the routine of sensitivity, thus it will be filled with the lifting value
+                    # prod_rate is being by passed in the routine of sensitivity,
+                    # thus it will be filled with the lifting value
                     prod_rate_baseline=lift.prod_rate_baseline,
                 )
                 for lift in contract.lifting
@@ -347,7 +349,8 @@ def _adjust_element_single_contract(
     else:
         gas_onstream_date = contract.gas_onstream_date
 
-    # When the contract is CostRecovery, parsing back the adjusted cost elements to the cost recovery contract
+    # When the contract is CostRecovery, parsing back the adjusted cost elements
+    # to the cost recovery contract
     if isinstance(contract, CostRecovery):
         contract_adjusted = CostRecovery(
             start_date=contract.start_date,
@@ -387,7 +390,8 @@ def _adjust_element_single_contract(
             gas_carry_forward_depreciation=contract.gas_carry_forward_depreciation,
         )
 
-    # When the contract is GrossSplit, parsing back the adjusted cost elements to the gross split contract
+    # When the contract is GrossSplit, parsing back the adjusted cost elements
+    # to the gross split contract
     elif isinstance(contract, GrossSplit):
         contract_adjusted = GrossSplit(
             start_date=contract.start_date,
