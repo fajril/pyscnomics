@@ -1,8 +1,8 @@
 """
 Collection of functions to administer sensitivity analysis.
 
-This Code is made to detached the sensitivity module in the previous version which
-depended with the excel into fully able to be run in python.
+This Code is made to detached the sensitivity module in the previous version
+which depended with the excel into fully able to be run in python.
 """
 
 import numpy as np
@@ -33,32 +33,327 @@ def _get_multipliers(
     step: int = 10,
 ) -> np.ndarray:
     """
-    Generate multipliers for different economic parameters within a specified range
-    for sensitivity study.
+    Generate an array of multipliers symmetrically distributed around a base value.
+
+    The multipliers are created using linear spacing between
+    ``base_value - min_deviation`` and ``base_value + max_deviation``.
+
+    The lower and upper ranges are combined into a single one-dimensional
+    array, excluding the duplicated base value at the center.
 
     Parameters
     ----------
-    min_deviation: float
-        The minimum deviation from the base value.
-    max_deviation: float
-        The maximum deviation from the base value.
-    base_value: float, optional
-        The base value for the multipliers. Default is 1.0.
-    step: int, optional
-        The number of steps to create multipliers. Default is 10.
+    min_deviation : float
+        The deviation below the base value.
+        Must be non-negative.
+    max_deviation : float
+        The deviation above the base value.
+        Must be non-negative.
+    base_value : float, optional
+        The central reference value around which the multipliers are generated.
+        Default is ``1.0``.
+    step : int, optional
+        The number of intervals used to generate linearly spaced values
+        on each side of the base value. Must be greater than zero.
+        Default is ``10``.
+
     Returns
     -------
-    multipliers: np.ndarray
-        A NumPy array containing multipliers for different economic factors.
+    np.ndarray
+        A one-dimensional NumPy array containing the combined multipliers.
+        The array starts from ``base_value - min_deviation`` and ends at
+        ``base_value + max_deviation``.
+
+    Raises
+    ------
+    SensitivityException
+        If ``min_deviation`` or ``max_deviation`` is negative, or if ``step``
+        is less than or equal to zero.
     """
+
+    # Throw exceptions for unsuitable input data
+    if min_deviation < 0 or max_deviation < 0:
+        raise SensitivityException("Deviations must be non negative.")
+
+    if step <= 0:
+        raise SensitivityException("Step must be greater than zero.")
 
     # Specify the minimum and maximum values
     min_val = base_value - min_deviation
     max_val = base_value + max_deviation
 
-    min_multipliers = np.linspace(min_val, base_value, step + 1)
-    max_multipliers = np.linspace(base_value, max_val, step + 1)
-    return np.concatenate((min_multipliers, max_multipliers[1:]))
+    # Create an array of minimum and maximum values
+    lower_mults = np.linspace(min_val, base_value, step + 1)
+    upper_mults = np.linspace(base_value, max_val, step + 1)
+
+    # Combine `min_multipliers` with `max_multipliers into a single array`
+    return np.concatenate((lower_mults, upper_mults[1:]))
+
+
+def _prepare_adjusted_parameters_single_contract(
+    contract: BaseProject | CostRecovery | GrossSplit,
+    adjustment_value: float,
+    element: str,
+) -> dict:
+    """
+    Prepare adjusted economic parameters for a single contract instance.
+
+    This function applies a proportional adjustment to one category of cost or
+    production-related data within a given contract object. The specific parameter
+    to adjust (CAPEX, OPEX, oil/gas price, or oil/gas lifting rate) is controlled
+    by the ``element`` argument. All other parameters remain unchanged.
+
+    The function supports contract types based on the Indonesian Production
+    Sharing Contract (PSC) schemes: ``BaseProject``, ``CostRecovery``, and ``GrossSplit``.
+
+    Parameters
+    ----------
+    contract : BaseProject or CostRecovery or GrossSplit
+        The contract instance containing economic data to be adjusted. The object
+        must define attributes such as ``capital_cost``, ``intangible_cost``,
+        ``opex``, and ``lifting``.
+    adjustment_value : float
+        The multiplier applied to the selected parameter. For instance, ``1.1``
+        represents a +10% increase, while ``0.9`` represents a −10% decrease.
+    element : {"CAPEX", "OPEX", "OILPRICE", "GASPRICE", "OILLIFTING", "GASLIFTING"}
+        The target economic component to adjust:
+
+        - ``"CAPEX"`` — Scales both capital and intangible costs.
+        - ``"OPEX"`` — Scales operating costs (fixed and per-volume).
+        - ``"OILPRICE"`` — Scales the oil price component in the lifting data.
+        - ``"GASPRICE"`` — Scales the gas price component in the lifting data.
+        - ``"OILLIFTING"`` — Scales the oil lifting rate component.
+        - ``"GASLIFTING"`` — Scales the gas lifting rate component.
+
+    Returns
+    -------
+    dict
+        A dictionary of adjusted contract components containing the same structure
+        as the original contract attributes:
+        ```python
+        {
+            "capital": tuple[CapitalCost],
+            "intangible": tuple[Intangible],
+            "opex": tuple[OPEX],
+            "lifting": tuple[Lifting],
+        }
+        ```
+        Each tuple contains new instances of the corresponding data class, updated
+        according to the specified adjustment factor.
+
+    Notes
+    -----
+    - The adjustment is **multiplicative**, not additive.
+    - Unselected components are returned unchanged.
+    - This function is designed for **economic sensitivity analysis** in upstream
+      oil and gas modeling, where parameter variation is required to assess project
+      robustness.
+    - Internally, a helper function ``_adjust_lifting()`` is used to handle lifting-
+      related modifications efficiently.
+    """
+
+    # Default values
+    capital_adjusted = contract.capital_cost
+    intangible_adjusted = contract.intangible_cost
+    opex_adjusted = contract.opex
+    lifting_adjusted = contract.lifting
+
+    # Helper function to assist lifting adjustment
+    def _adjust_lifting(fluid_type: FluidType, target_field: str):
+        return tuple(
+            [
+                Lifting(
+                    start_year=lft.start_year,
+                    end_year=lft.end_year,
+                    lifting_rate=(
+                        lft.lifting_rate * adjustment_value
+                        if target_field == "lifting_rate" and lft.fluid_type is fluid_type
+                        else lft.lifting_rate
+                    ),
+                    price=(
+                        lft.price * adjustment_value
+                        if target_field == "price" and lft.fluid_type is fluid_type
+                        else lft.price
+                    ),
+                    prod_year=lft.prod_year,
+                    fluid_type=lft.fluid_type,
+                    ghv=lft.ghv,
+                    prod_rate=lft.prod_rate,
+                    prod_rate_baseline=lft.prod_rate_baseline,
+                )
+                for lft in Lifting
+            ]
+        )
+
+    # Adjustment to CAPEX cost (capital + intangible costs),
+    # modify the `cost` attribute of class CapitalCost and Intangible
+    if element == "CAPEX":
+        capital_adjusted = tuple(
+            [
+                CapitalCost(
+                    start_year=cap.start_year,
+                    end_year=cap.end_year,
+                    expense_year=cap.expense_year,
+                    cost=cap.cost * adjustment_value,
+                    cost_allocation=cap.cost_allocation,
+                    cost_type=cap.cost_type,
+                    description=cap.description,
+                    tax_portion=cap.tax_portion,
+                    tax_discount=cap.tax_discount,
+                    pis_year=cap.pis_year,
+                    salvage_value=cap.salvage_value,
+                    useful_life=cap.useful_life,
+                    depreciation_factor=cap.depreciation_factor,
+                    is_ic_applied=cap.is_ic_applied,
+                )
+                for cap in contract.capital_cost
+            ]
+        )
+
+        intangible_adjusted = tuple(
+            [
+                Intangible(
+                    start_year=intang.start_year,
+                    end_year=intang.end_year,
+                    cost=intang.cost * adjustment_value,
+                    cost_type=intang.cost_type,
+                    expense_year=intang.expense_year,
+                    cost_allocation=intang.cost_allocation,
+                    description=intang.description,
+                    tax_portion=intang.tax_portion,
+                    tax_discount=intang.tax_discount,
+                )
+                for intang in contract.intangible_cost
+            ]
+        )
+
+    # Adjustment to OPEX cost, modify the `cost` attribute of class OPEX
+    elif element == "OPEX":
+        opex_adjusted = tuple(
+            [
+                OPEX(
+                    start_year=opx.start_year,
+                    end_year=opx.end_year,
+                    expense_year=opx.expense_year,
+                    cost_allocation=opx.cost_allocation,
+                    cost_type=opx.cost_type,
+                    description=opx.description,
+                    tax_portion=opx.tax_portion,
+                    tax_discount=opx.tax_discount,
+                    fixed_cost=opx.fixed_cost * adjustment_value,
+                    prod_rate=opx.prod_rate,
+                    cost_per_volume=opx.cost_per_volume * adjustment_value,
+                )
+                for opx in contract.opex
+            ]
+        )
+
+    # Adjustment to oil price; modify the `price` attribute of class Lifting
+    elif element == "OILPRICE":
+        lifting_adjusted = _adjust_lifting(fluid_type=FluidType.OIL, target_field="price")
+
+    # Adjustment to gas price; modify the `price` attribute of class Lifting
+    elif element == "GASPRICE":
+        lifting_adjusted = _adjust_lifting(fluid_type=FluidType.GAS, target_field="price")
+
+    # Adjustment to oil lifting; modify the `lifting_rate` attribute of class Lifting
+    elif element == "OILLIFTING":
+        lifting_adjusted = _adjust_lifting(
+            fluid_type=FluidType.OIL, target_field="lifting_rate"
+        )
+
+    # Adjustment to gas lifting; modify the `lifting_rate` attribute of class Lifting
+    elif element == "GASLIFTING":
+        lifting_adjusted = _adjust_lifting(
+            fluid_type=FluidType.GAS, target_field="lifting_rate"
+        )
+
+    else:
+        raise SensitivityException(f"Invalid element: {element!r}")
+
+    return {
+        "capital": capital_adjusted,
+        "intangible": intangible_adjusted,
+        "opex": opex_adjusted,
+        "lifting": lifting_adjusted,
+    }
+
+
+def _prepare_onstream_dates_single_contract(
+    contract: BaseProject | CostRecovery | GrossSplit
+) -> dict:
+    """
+    Prepare oil and gas onstream dates for a single contract instance.
+
+    This function determines the onstream dates for oil and gas by checking
+    whether the corresponding revenue attributes (`_oil_revenue` and `_gas_revenue`)
+    contain nonzero values. If the total revenue for a fluid type is zero,
+    the onstream date is set to ``None``. Otherwise, the onstream date is retrieved
+    from the contract's respective onstream date attribute.
+
+    Parameters
+    ----------
+    contract : BaseProject or CostRecovery or GrossSplit
+        The contract instance containing oil and gas revenue information,
+        as well as the corresponding onstream date attributes.
+
+    Returns
+    -------
+    dict
+        A dictionary containing the oil and gas onstream dates, with the following keys:
+
+        - ``"oil"`` : datetime or None
+          The oil onstream date, or ``None`` if `_oil_revenue` equals zero.
+        - ``"gas"`` : datetime or None
+          The gas onstream date, or ``None`` if `_gas_revenue` equals zero.
+
+    Notes
+    -----
+    - The function dynamically accesses contract attributes using :func:`getattr`.
+    - It assumes the contract object exposes attributes:
+      ``_oil_revenue``, ``_gas_revenue``, ``oil_onstream_date``, and ``gas_onstream_date``.
+    """
+    def _get_onstream_date(target_str: str, default: str):
+        value = getattr(contract, target_str)
+        total = value.sum() if hasattr(value, "sum") else value
+        return None if total == 0 else getattr(contract, default)
+
+    return {
+        "oil": _get_onstream_date(target_str="_oil_revenue", default="oil_onstream_date"),
+        "gas": _get_onstream_date(target_str="_gas_revenue", default="gas_onstream_date"),
+    }
+
+
+def _adjust_element_single_contract_new(
+    contract: BaseProject | CostRecovery | GrossSplit,
+    contract_arguments: dict,
+    element: str,
+    adjustment_value: float,
+    run_contract: bool = False,
+):
+
+    # Prepare adjusted parameters
+    params_adjusted = _prepare_adjusted_parameters_single_contract(
+        contract=contract,
+        adjustment_value=adjustment_value,
+        element=element,
+    )
+
+    # Prepare onstream dates
+    onstream_date = _prepare_onstream_dates_single_contract(contract=contract)
+
+    # Create a new contract instance
+    if isinstance(contract, BaseProject):
+        pass
+
+    elif isinstance(contract, CostRecovery):
+        pass
+
+    elif isinstance(contract, GrossSplit):
+        pass
+
+    else:
+        raise SensitivityException
 
 
 def _adjust_element_single_contract(
@@ -566,8 +861,8 @@ def _adjust_contract(
 
 def sensitivity_psc(
     contract: BaseProject | CostRecovery | GrossSplit | Transition,
-    contract_arguments: dict,
-    summary_arguments: dict,
+    # contract_arguments: dict,
+    # summary_arguments: dict,
     min_deviation: float,
     max_deviation: float,
     base_value: float = 1.0,
@@ -600,6 +895,7 @@ def sensitivity_psc(
     out: dict | pd.DataFrame
         The sensitivity result
     """
+
     # Get the multipliers
     multipliers = _get_multipliers(
         min_deviation=min_deviation,
@@ -608,64 +904,70 @@ def sensitivity_psc(
         step=step,
     )
 
-    # Adjust the element of the contract and contain it in a list
-    psc_adjusted_dict = {
-        element: {
-            mul: _adjust_contract(
-                contract=contract,
-                contract_arguments=contract_arguments,
-                element=element,
-                adjustment_value=mul,
-                run_contract=True,
-            )
-            for mul in multipliers
-        }
-        for element in ["CAPEX", "OPEX", "OILPRICE", "GASPRICE", "LIFTING"]
-    }
+    t1 = _prepare_onstream_dates_single_contract(contract=contract)
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
 
-    # Get the summary of each contract in psc_adjusted_dict and contain it in a dictionary
-    summary_adjusted_dict = {
-        element: {
-            mul: get_summary(
-                **{**summary_arguments, "contract": psc_adjusted_dict[element][mul]}
-            )
-            for mul in psc_adjusted_dict[element]
-        }
-        for element in psc_adjusted_dict.keys()
-    }
+    # # Adjust the element of the contract and contain it in a list
+    # psc_adjusted_dict = {
+    #     element: {
+    #         mul: _adjust_contract(
+    #             contract=contract,
+    #             contract_arguments=contract_arguments,
+    #             element=element,
+    #             adjustment_value=mul,
+    #             run_contract=True,
+    #         )
+    #         for mul in multipliers
+    #     }
+    #     for element in ["CAPEX", "OPEX", "OILPRICE", "GASPRICE", "LIFTING"]
+    # }
 
-    # Retrieve the value for NPV, IRR, PI, POT, Gov Take, and Contractor Share
-    indicator_list = [
-        "ctr_npv",
-        "ctr_irr",
-        "ctr_pi",
-        "ctr_pot",
-        "gov_take",
-        "ctr_net_share",
-    ]
+    # # Get the summary of each contract in psc_adjusted_dict and contain it in a dictionary
+    # summary_adjusted_dict = {
+    #     element: {
+    #         mul: get_summary(
+    #             **{**summary_arguments, "contract": psc_adjusted_dict[element][mul]}
+    #         )
+    #         for mul in psc_adjusted_dict[element]
+    #     }
+    #     for element in psc_adjusted_dict.keys()
+    # }
 
-    # Transform summary_adjusted_dict into the following structure
-    sensitivity_result = {
-        indicator: {
-            multiplier: {
-                element: summary_adjusted_dict[element][multiplier].get(indicator, None)
-                for element in summary_adjusted_dict
-            }
-            for multiplier in summary_adjusted_dict[next(iter(summary_adjusted_dict))]
-        }
-        for indicator in indicator_list
-    }
-
-    if dataframe_output is True:
-        # Transform result dictionary into DataFrames
-        sensitivity_result_df = {
-            indicator: pd.DataFrame.from_dict(data, orient="index")
-            .reset_index()
-            .rename(columns={"index": "Factor"})
-            .set_index("Factor")
-            for indicator, data in sensitivity_result.items()
-        }
-        return sensitivity_result_df
-
-    else:
-        return sensitivity_result
+    # # Retrieve the value for NPV, IRR, PI, POT, Gov Take, and Contractor Share
+    # indicator_list = [
+    #     "ctr_npv",
+    #     "ctr_irr",
+    #     "ctr_pi",
+    #     "ctr_pot",
+    #     "gov_take",
+    #     "ctr_net_share",
+    # ]
+    #
+    # # Transform summary_adjusted_dict into the following structure
+    # sensitivity_result = {
+    #     indicator: {
+    #         multiplier: {
+    #             element: summary_adjusted_dict[element][multiplier].get(indicator, None)
+    #             for element in summary_adjusted_dict
+    #         }
+    #         for multiplier in summary_adjusted_dict[next(iter(summary_adjusted_dict))]
+    #     }
+    #     for indicator in indicator_list
+    # }
+    #
+    # if dataframe_output is True:
+    #     # Transform result dictionary into DataFrames
+    #     sensitivity_result_df = {
+    #         indicator: pd.DataFrame.from_dict(data, orient="index")
+    #         .reset_index()
+    #         .rename(columns={"index": "Factor"})
+    #         .set_index("Factor")
+    #         for indicator, data in sensitivity_result.items()
+    #     }
+    #     return sensitivity_result_df
+    #
+    # else:
+    #     return sensitivity_result

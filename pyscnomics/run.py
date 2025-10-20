@@ -47,36 +47,36 @@ case = ExampleCase()
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-# kwargs_pr = {
-#     "start_date": date(year=2023, month=1, day=1),
-#     "end_date": date(year=2032, month=12, day=31),
-#     "oil_onstream_date": date(year=2030, month=1, day=1),
-#     "gas_onstream_date": date(year=2029, month=1, day=1),
-#     "approval_year": 2026,
-#     "is_pod_1": False,
-# }
-#
-# params_base = {
-#     "sulfur_revenue": OtherRevenue.REDUCTION_TO_GAS_OPEX,
-#     "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
-#     "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-#     "tax_rate": 0.0,
-#     "year_inflation": None,
-#     "inflation_rate": 0.0,
-#     "inflation_rate_applied_to": None,
-# }
-#
-# pr = BaseProject(
-#     **kwargs_pr,
-#     lifting=tuple([case.lifting_mangga, case.lifting_apel, case.lifting_nanas]),
-#     capital_cost=tuple([case.capital_mangga, case.capital_apel]),
-#     intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),
-#     opex=tuple([case.opex_mangga, case.opex_apel]),
-#     asr_cost=tuple([case.asr_mangga, case.asr_apel]),
-#     lbt_cost=tuple([case.lbt_mangga, case.lbt_apel]),
-#     cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
-# )
-#
+kwargs_pr = {
+    "start_date": date(year=2023, month=1, day=1),
+    "end_date": date(year=2032, month=12, day=31),
+    "oil_onstream_date": date(year=2030, month=1, day=1),
+    "gas_onstream_date": date(year=2029, month=1, day=1),
+    "approval_year": 2026,
+    "is_pod_1": False,
+}
+
+params_base = {
+    "sulfur_revenue": OtherRevenue.REDUCTION_TO_GAS_OPEX,
+    "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+    "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+    "tax_rate": 0.0,
+    "year_inflation": None,
+    "inflation_rate": 0.0,
+    "inflation_rate_applied_to": None,
+}
+
+pr = BaseProject(
+    **kwargs_pr,
+    lifting=tuple([case.lifting_mangga, case.lifting_apel, case.lifting_nanas]),
+    capital_cost=tuple([case.capital_mangga, case.capital_apel]),
+    intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),
+    opex=tuple([case.opex_mangga, case.opex_apel]),
+    asr_cost=tuple([case.asr_mangga, case.asr_apel]),
+    lbt_cost=tuple([case.lbt_mangga, case.lbt_apel]),
+    cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
+)
+
 # pr.run(**params_base)
 # t1 = pr.get_summary()
 
@@ -1062,11 +1062,35 @@ data = {
 # get_costrecovery(data=data, summary_result=True)
 # get_grosssplit(data=data, summary_result=True)
 
-get_grosssplit_split(data=data)
-
 # print('\t')
 # print(f'Filetype: {type()}')
+# print(f'Length: {len()}')
 # print()
+
+# print('\t')
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = \n', t1)
+
+# print('\t')
+# print(f'Filetype: {type(t2)}')
+# print(f'Length: {len(t2)}')
+# print('t2 = \n', t2)
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+from pyscnomics.optimize import sensitivity_psc
+
+deviation = {
+    "min": 0.2,
+    "max": 0.2,
+}
+
+sensitivity_psc(
+    contract=pr,
+    min_deviation=deviation["min"],
+    max_deviation=deviation["max"],
+)
 
 # print('\t')
 # print(f'Filetype: {type()}')
@@ -1082,3 +1106,4 @@ get_grosssplit_split(data=data)
 # print(f'Filetype: {type(t2)}')
 # print(f'Length: {len(t2)}')
 # print('t2 = \n', t2)
+
