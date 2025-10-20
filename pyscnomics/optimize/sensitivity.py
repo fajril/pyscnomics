@@ -1057,12 +1057,25 @@ def sensitivity_psc(
         for element in ["CAPEX", "OPEX", "OILPRICE", "GASPRICE", "OILLIFTING", "GASLIFTING"]
     }
 
-    print('\t')
-    print(f'Filetype: {type(psc_adjusted_dict["CAPEX"][0.8])}')
-    print(f'Length: {len(psc_adjusted_dict["CAPEX"][0.8])}')
-    print('psc_adjusted_dict = \n', psc_adjusted_dict["CAPEX"][0.8])
+    # print('\t')
+    # print(f'Filetype: {type(psc_adjusted_dict["CAPEX"][0.8])}')
+    # print(f'Length: {len(psc_adjusted_dict["CAPEX"][0.8])}')
+    # print('psc_adjusted_dict = \n', psc_adjusted_dict["CAPEX"][0.8])
 
     # Get the summary of each contract in psc_adjusted_dict and contain it in a dictionary
+    summary_adjusted_dict = {
+        element: {
+            mul: psc_adjusted_dict[element][mul].get_summary(**summary_arguments)
+            for mul in psc_adjusted_dict[element]
+        }
+        for element in psc_adjusted_dict.keys()
+    }
+
+    print('\t')
+    print(f'Filetype: {type(summary_adjusted_dict["CAPEX"][1.2])}')
+    print(f'Length: {len(summary_adjusted_dict["CAPEX"][1.2])}')
+    print('summary_adjusted_dict["CAPEX"][1.2] = \n', summary_adjusted_dict["CAPEX"][1.2])
+
     # summary_adjusted_dict = {
     #     element: {
     #         mul: get_summary(
@@ -1073,38 +1086,49 @@ def sensitivity_psc(
     #     for element in psc_adjusted_dict.keys()
     # }
 
-    # # Retrieve the value for NPV, IRR, PI, POT, Gov Take, and Contractor Share
-    # indicator_list = [
-    #     "ctr_npv",
-    #     "ctr_irr",
-    #     "ctr_pi",
-    #     "ctr_pot",
-    #     "gov_take",
-    #     "ctr_net_share",
-    # ]
-    #
-    # # Transform summary_adjusted_dict into the following structure
-    # sensitivity_result = {
-    #     indicator: {
-    #         multiplier: {
-    #             element: summary_adjusted_dict[element][multiplier].get(indicator, None)
-    #             for element in summary_adjusted_dict
-    #         }
-    #         for multiplier in summary_adjusted_dict[next(iter(summary_adjusted_dict))]
-    #     }
-    #     for indicator in indicator_list
-    # }
-    #
-    # if dataframe_output is True:
-    #     # Transform result dictionary into DataFrames
-    #     sensitivity_result_df = {
-    #         indicator: pd.DataFrame.from_dict(data, orient="index")
-    #         .reset_index()
-    #         .rename(columns={"index": "Factor"})
-    #         .set_index("Factor")
-    #         for indicator, data in sensitivity_result.items()
-    #     }
-    #     return sensitivity_result_df
-    #
+    # Retrieve the value for NPV, IRR, PI, POT, Gov Take, and Contractor Share
+    indicator_list = [
+        "ctr_npv",
+        "ctr_irr",
+        "ctr_pi",
+        "ctr_pot",
+        "gov_take",
+        "ctr_net_share",
+    ]
+
+    # Transform summary_adjusted_dict into the following structure
+    sensitivity_result = {
+        indicator: {
+            multiplier: {
+                element: summary_adjusted_dict[element][multiplier].get(indicator, None)
+                for element in summary_adjusted_dict
+            }
+            for multiplier in summary_adjusted_dict[next(iter(summary_adjusted_dict))]
+        }
+        for indicator in indicator_list
+    }
+
+    # print('\t')
+    # print(f'Filetype: {type(sensitivity_result)}')
+    # print(f'Length: {len(sensitivity_result)}')
+    # print('sensitivity_result = \n', sensitivity_result)
+
+    if dataframe_output is True:
+        # Transform result dictionary into DataFrames
+        sensitivity_result_df = {
+            indicator: pd.DataFrame.from_dict(data, orient="index")
+            .reset_index()
+            .rename(columns={"index": "Factor"})
+            .set_index("Factor")
+            for indicator, data in sensitivity_result.items()
+        }
+
+        print('\t')
+        print(f'Filetype: {type(sensitivity_result_df)}')
+        print(f'Length: {len(sensitivity_result_df)}')
+        print('sensitivity_result_df = \n', sensitivity_result_df)
+
+        # return sensitivity_result_df
+
     # else:
     #     return sensitivity_result

@@ -1084,8 +1084,8 @@ data = {
 from pyscnomics.optimize import sensitivity_psc
 
 deviation = {
-    "min": 0.2,
-    "max": 0.2,
+    "min": 0.4,
+    "max": 0.4,
 }
 
 sensitivity_psc(
