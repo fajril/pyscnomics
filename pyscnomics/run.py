@@ -17,6 +17,8 @@ from pyscnomics.econ.selection import (
     TaxRegime,
     FTPTaxRegime,
     SunkCostMethod,
+    NPVSelection,
+    DiscountingMode,
 )
 from datetime import date
 from dataclasses import asdict
@@ -385,15 +387,15 @@ data = {
         "oil_carry_forward_depreciation": 0,
         "gas_carry_forward_depreciation": 0,
     },
-    # # ======================================= Base Project
-    # "contract_arguments": {
-    #     "sulfur_revenue": "Addition to Gas Revenue",
-    #     "electricity_revenue": "Addition to Oil Revenue",
-    #     "co2_revenue": "Addition to Gas Revenue",
-    #     "vat_rate": 0.0,
-    #     "inflation_rate": 0.0,
-    #     "inflation_rate_applied_to": "None",
-    # },
+    # ======================================= Base Project
+    "contract_arguments": {
+        "sulfur_revenue": "Addition to Gas Revenue",
+        "electricity_revenue": "Addition to Oil Revenue",
+        "co2_revenue": "Addition to Gas Revenue",
+        "vat_rate": 0.0,
+        "inflation_rate": 0.0,
+        "inflation_rate_applied_to": "None",
+    },
     # # ======================================= Cost Recovery
     # "contract_arguments": {
     #     "sulfur_revenue": "Addition to Gas Revenue",
@@ -414,27 +416,27 @@ data = {
     #     "sum_undepreciated_cost": True,
     #     "sunk_cost_method": "depreciated_tangible",
     # },
-    # ========================================= Gross Split
-    "contract_arguments": {
-        "sulfur_revenue": "Addition to Gas Revenue",
-        "electricity_revenue": "Addition to Oil Revenue",
-        "co2_revenue": "Addition to Gas Revenue",
-        "vat_rate": 0.0,
-        "inflation_rate": 0.0,
-        "inflation_rate_applied_to": "None",
-        "cum_production_split_offset": 0.0,
-        "depr_method": "PSC Declining Balance",
-        "decline_factor": 2,
-        "sum_undepreciated_cost": False,
-        "is_dmo_end_weighted": False,
-        "tax_regime": "nailed down",
-        "effective_tax_rate": 0.22,
-        "amortization": False,
-        "sunk_cost_method": "depreciated_tangible",
-        "regime": "PERMEN_ESDM_13_2024",
-        "reservoir_type_permen_2024": "conventional",
-        "initial_amortization_year": "onstream_year",
-    },
+    # # ========================================= Gross Split
+    # "contract_arguments": {
+    #     "sulfur_revenue": "Addition to Gas Revenue",
+    #     "electricity_revenue": "Addition to Oil Revenue",
+    #     "co2_revenue": "Addition to Gas Revenue",
+    #     "vat_rate": 0.0,
+    #     "inflation_rate": 0.0,
+    #     "inflation_rate_applied_to": "None",
+    #     "cum_production_split_offset": 0.0,
+    #     "depr_method": "PSC Declining Balance",
+    #     "decline_factor": 2,
+    #     "sum_undepreciated_cost": False,
+    #     "is_dmo_end_weighted": False,
+    #     "tax_regime": "nailed down",
+    #     "effective_tax_rate": 0.22,
+    #     "amortization": False,
+    #     "sunk_cost_method": "depreciated_tangible",
+    #     "regime": "PERMEN_ESDM_13_2024",
+    #     "reservoir_type_permen_2024": "conventional",
+    #     "initial_amortization_year": "onstream_year",
+    # },
     "lifting": {
         "Oil Oil sources #1": {
             "start_year": 2022,
@@ -1088,6 +1090,22 @@ deviation = {
 
 sensitivity_psc(
     contract=pr,
+    contract_arguments={
+        "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+        "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        "tax_rate": 0.0,
+        "inflation_rate": 0.0,
+        "inflation_rate_applied_to": None,
+    },
+    summary_arguments={
+        "discount_rate_start_year": 2023,
+        "inflation_rate": 0.0,
+        "discount_rate": 0.1,
+        "npv_mode": NPVSelection.NPV_SKK_NOMINAL_TERMS,
+        "discounting_mode": DiscountingMode.END_YEAR,
+        "profitability_discounted": False,
+    },
     min_deviation=deviation["min"],
     max_deviation=deviation["max"],
 )

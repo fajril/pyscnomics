@@ -178,10 +178,10 @@ def _prepare_adjusted_parameters_single_contract(
                     prod_year=lft.prod_year,
                     fluid_type=lft.fluid_type,
                     ghv=lft.ghv,
-                    prod_rate=lft.prod_rate,
+                    # prod_rate=lft.prod_rate,
                     prod_rate_baseline=lft.prod_rate_baseline,
                 )
-                for lft in Lifting
+                for lft in contract.lifting
             ]
         )
 
@@ -324,13 +324,42 @@ def _prepare_onstream_dates_single_contract(
     }
 
 
-def _adjust_element_single_contract_new(
+def _adjust_element_single_contract(
     contract: BaseProject | CostRecovery | GrossSplit,
     contract_arguments: dict,
     element: str,
     adjustment_value: float,
     run_contract: bool = False,
 ):
+    """
+    Adjusts a single parameter of a PSC contract and creates a new adjusted contract instance.
+
+    This function modifies a specified element (e.g., lifting, cost, or onstream parameter)
+    for a given contract instance (`BaseProject`, `CostRecovery`, or `GrossSplit`).
+    It reconstructs a new contract with updated parameters and optionally executes
+    the economic run with the provided contract arguments.
+
+    Parameters
+    ----------
+    contract : BaseProject or CostRecovery or GrossSplit
+        The contract instance to be adjusted.
+    contract_arguments : dict
+        Arguments required for running the contract model.
+        Passed to the contract's ``run()`` method if ``run_contract`` is ``True``.
+    element : str
+        The name of the parameter element to be adjusted.
+        Typically refers to a key in the contract parameter dictionary.
+    adjustment_value : float
+        The adjustment factor or value applied to the specified element.
+    run_contract : bool, default=False
+        Whether to execute the contract immediately after adjustment.
+
+    Returns
+    -------
+    BaseProject or CostRecovery or GrossSplit
+        A new contract instance with adjusted parameters. If ``run_contract=True``,
+        the returned instance will contain post-run results.
+    """
 
     # Prepare adjusted parameters
     params_adjusted = _prepare_adjusted_parameters_single_contract(
@@ -342,56 +371,126 @@ def _adjust_element_single_contract_new(
     # Prepare onstream dates
     onstream_date = _prepare_onstream_dates_single_contract(contract=contract)
 
+    # Specify the required arguments to create an instance of BaseProject
+    base_project_kwargs = {
+        # Base parameters
+        "start_date": contract.start_date,
+        "end_date": contract.end_date,
+        "oil_onstream_date": onstream_date["oil"],
+        "gas_onstream_date": onstream_date["gas"],
+        "approval_year": contract.approval_year,
+        "is_pod_1": contract.is_pod_1,
+
+        # Lifting and costs
+        "lifting": params_adjusted["lifting"],
+        "capital_cost": params_adjusted["capital"],
+        "intangible_cost": params_adjusted["intangible"],
+        "opex": params_adjusted["opex"],
+        "asr_cost": contract.asr_cost,
+        "lbt_cost": contract.lbt_cost,
+        "cost_of_sales": contract.cost_of_sales,
+    }
+
     # Create a new instance of BaseProject
     if isinstance(contract, BaseProject):
-
-        # Specify the required arguments to create an instance of BaseProject
-        base_project_kwargs = {
-            "start_date": contract.start_date,
-            "end_date": contract.end_date,
-            "oil_onstream_date": onstream_date["oil"],
-            "gas_onstream_date": onstream_date["gas"],
-            "approval_year": contract.approval_year,
-            "is_pod_1": contract.is_pod_1,
-            "lifting": params_adjusted["lifting"],
-            "capital_cost": params_adjusted["capital"],
-            "intangible_cost": params_adjusted["intangible"],
-            "opex": params_adjusted["opex"],
-            "asr_cost": contract.asr_cost,
-            "lbt_cost": contract.lbt_cost,
-            "cost_of_sales": contract.cost_of_sales,
-        }
-
-        # Create an instance of BaseProject
         contract_adjusted = BaseProject(**base_project_kwargs)
 
     # Create a new instance of CostRecovery
     elif isinstance(contract, CostRecovery):
 
+        # Specify the required arguments to create an instance of CostRecovery
         cost_recovery_kwargs = {
-            "start_date": None,
-            "end_date": None,
-            "oil_onstream_date": None,
-            "gas_onstream_date": None,
-            "approval_year": None,
-            "is_pod_1": None,
-            "lifting": None,
-            "capital_cost": None,
-            "intangible_cost": None,
-            "opex": None,
-            "asr_cost": None,
-            "lbt_cost": None,
-            "cost_of_sales": None,
+            # Base parameters, lifting, and costs
+            **base_project_kwargs,
+
+            # FTP
+            "oil_ftp_is_available": contract.oil_ftp_is_available,
+            "oil_ftp_is_shared": contract.oil_ftp_is_shared,
+            "oil_ftp_portion": contract.oil_ftp_portion,
+            "gas_ftp_is_available": contract.gas_ftp_is_available,
+            "gas_ftp_is_shared": contract.gas_ftp_is_shared,
+            "gas_ftp_portion": contract.gas_ftp_portion,
+
+            # Split
+            "tax_split_type": contract.tax_split_type,
+            "condition_dict": contract.condition_dict,
+            "indicator_rc_icp_sliding": contract.indicator_rc_icp_sliding,
+            "oil_ctr_pretax_share": contract.oil_ctr_pretax_share,
+            "gas_ctr_pretax_share": contract.gas_ctr_pretax_share,
+
+            # Investment credit and cap rate
+            "oil_ic_rate": contract.oil_ic_rate,
+            "gas_ic_rate": contract.gas_ic_rate,
+            "ic_is_available": contract.ic_is_available,
+            "oil_cr_cap_rate": contract.oil_cr_cap_rate,
+            "gas_cr_cap_rate": contract.gas_cr_cap_rate,
+
+            # DMO
+            "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
+            "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
+            "oil_dmo_holiday_duration": contract.oil_dmo_holiday_duration,
+            "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
+            "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
+            "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
+
+            # Carry forward depreciation
+            "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
+            "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
         }
 
+        contract_adjusted = CostRecovery(**cost_recovery_kwargs)
+
+    # Create a new instance of GrossSplit
     elif isinstance(contract, GrossSplit):
-        pass
+
+        # Specify the required arguments to create an instance of GrossSplit
+        gross_split_kwargs = {
+            # Base parameters, lifting, and costs
+            **base_project_kwargs,
+
+            # Field and reservoir properties
+            "field_status": contract.field_status,
+            "field_loc": contract.field_loc,
+            "res_depth": contract.res_depth,
+            "infra_avail": contract.infra_avail,
+            "res_type": contract.res_type,
+            "api_oil": contract.api_oil,
+            "domestic_use": contract.domestic_use,
+            "prod_stage": contract.prod_stage,
+            "co2_content": contract.co2_content,
+            "h2s_content": contract.h2s_content,
+            "field_reserves_2024": contract.field_reserves_2024,
+            "infra_avail_2024": contract.infra_avail_2024,
+            "field_loc_2024": contract.field_loc_2024,
+            "split_ministry_disc": contract.split_ministry_disc,
+
+            # DMO parameters
+            "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
+            "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
+            "oil_dmo_holiday_duration": contract.oil_dmo_holiday_duration,
+            "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
+            "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
+            "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
+
+            # Carry forward depreciation
+            "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
+            "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
+        }
+
+        contract_adjusted = GrossSplit(**gross_split_kwargs)
 
     else:
-        raise SensitivityException
+        raise SensitivityException(
+            f"Invalid contract type: {contract.__class__.__qualname__}"
+        )
+
+    if run_contract:
+        contract_adjusted.run(**contract_arguments)
+
+    return contract_adjusted
 
 
-def _adjust_element_single_contract(
+def _adjust_element_single_contract_old(
     contract: BaseProject | CostRecovery | GrossSplit,
     contract_arguments: dict,
     element: str,
@@ -710,12 +809,14 @@ def _adjust_element_single_contract(
             ic_is_available=contract.ic_is_available,
             oil_cr_cap_rate=contract.oil_cr_cap_rate,
             gas_cr_cap_rate=contract.gas_cr_cap_rate,
+
             oil_dmo_volume_portion=contract.oil_dmo_volume_portion,
             oil_dmo_fee_portion=contract.oil_dmo_fee_portion,
             oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
             gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
             gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
             gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration,
+
             oil_carry_forward_depreciation=contract.oil_carry_forward_depreciation,
             gas_carry_forward_depreciation=contract.gas_carry_forward_depreciation,
         )
@@ -748,12 +849,14 @@ def _adjust_element_single_contract(
             base_split_ctr_oil=contract.base_split_ctr_oil,
             base_split_ctr_gas=contract.base_split_ctr_gas,
             split_ministry_disc=contract.split_ministry_disc,
+
             oil_dmo_volume_portion=contract.oil_dmo_volume_portion,
             oil_dmo_fee_portion=contract.oil_dmo_fee_portion,
             oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
             gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
             gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
             gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration,
+
             oil_carry_forward_depreciation=contract.oil_carry_forward_depreciation,
             gas_carry_forward_depreciation=contract.gas_carry_forward_depreciation,
         )
@@ -896,8 +999,8 @@ def _adjust_contract(
 
 def sensitivity_psc(
     contract: BaseProject | CostRecovery | GrossSplit | Transition,
-    # contract_arguments: dict,
-    # summary_arguments: dict,
+    contract_arguments: dict,
+    summary_arguments: dict,
     min_deviation: float,
     max_deviation: float,
     base_value: float = 1.0,
@@ -939,28 +1042,27 @@ def sensitivity_psc(
         step=step,
     )
 
-    t1 = _prepare_onstream_dates_single_contract(contract=contract)
+    # Adjust the element of the contract and contain it in a list
+    psc_adjusted_dict = {
+        element: {
+            mul: _adjust_contract(
+                contract=contract,
+                contract_arguments=contract_arguments,
+                element=element,
+                adjustment_value=mul,
+                run_contract=True,
+            )
+            for mul in multipliers
+        }
+        for element in ["CAPEX", "OPEX", "OILPRICE", "GASPRICE", "OILLIFTING", "GASLIFTING"]
+    }
+
     print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    print(f'Filetype: {type(psc_adjusted_dict["CAPEX"][0.8])}')
+    print(f'Length: {len(psc_adjusted_dict["CAPEX"][0.8])}')
+    print('psc_adjusted_dict = \n', psc_adjusted_dict["CAPEX"][0.8])
 
-    # # Adjust the element of the contract and contain it in a list
-    # psc_adjusted_dict = {
-    #     element: {
-    #         mul: _adjust_contract(
-    #             contract=contract,
-    #             contract_arguments=contract_arguments,
-    #             element=element,
-    #             adjustment_value=mul,
-    #             run_contract=True,
-    #         )
-    #         for mul in multipliers
-    #     }
-    #     for element in ["CAPEX", "OPEX", "OILPRICE", "GASPRICE", "LIFTING"]
-    # }
-
-    # # Get the summary of each contract in psc_adjusted_dict and contain it in a dictionary
+    # Get the summary of each contract in psc_adjusted_dict and contain it in a dictionary
     # summary_adjusted_dict = {
     #     element: {
     #         mul: get_summary(
