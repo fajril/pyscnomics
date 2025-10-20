@@ -342,12 +342,47 @@ def _adjust_element_single_contract_new(
     # Prepare onstream dates
     onstream_date = _prepare_onstream_dates_single_contract(contract=contract)
 
-    # Create a new contract instance
+    # Create a new instance of BaseProject
     if isinstance(contract, BaseProject):
-        pass
 
+        # Specify the required arguments to create an instance of BaseProject
+        base_project_kwargs = {
+            "start_date": contract.start_date,
+            "end_date": contract.end_date,
+            "oil_onstream_date": onstream_date["oil"],
+            "gas_onstream_date": onstream_date["gas"],
+            "approval_year": contract.approval_year,
+            "is_pod_1": contract.is_pod_1,
+            "lifting": params_adjusted["lifting"],
+            "capital_cost": params_adjusted["capital"],
+            "intangible_cost": params_adjusted["intangible"],
+            "opex": params_adjusted["opex"],
+            "asr_cost": contract.asr_cost,
+            "lbt_cost": contract.lbt_cost,
+            "cost_of_sales": contract.cost_of_sales,
+        }
+
+        # Create an instance of BaseProject
+        contract_adjusted = BaseProject(**base_project_kwargs)
+
+    # Create a new instance of CostRecovery
     elif isinstance(contract, CostRecovery):
-        pass
+
+        cost_recovery_kwargs = {
+            "start_date": None,
+            "end_date": None,
+            "oil_onstream_date": None,
+            "gas_onstream_date": None,
+            "approval_year": None,
+            "is_pod_1": None,
+            "lifting": None,
+            "capital_cost": None,
+            "intangible_cost": None,
+            "opex": None,
+            "asr_cost": None,
+            "lbt_cost": None,
+            "cost_of_sales": None,
+        }
 
     elif isinstance(contract, GrossSplit):
         pass
