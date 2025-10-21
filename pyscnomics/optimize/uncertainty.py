@@ -42,12 +42,12 @@ from pyscnomics.api.converter import (
 
 
 class MonteCarloException(Exception):
-    """Exception to be raised for a misuse of MonteCarlo class"""
+    """ Exception to be raised for a misuse of MonteCarlo class """
 
     pass
 
 
-################################################ Uncertainty Detached ################################################
+# ++++++++++++++++++++++++++++++++++++++++++++++++ Uncertainty Detached
 def get_setup_dict(data: dict) -> tuple:
     """
     Function to get conversion of the setup input from dictionary into acceptable core engine data format.
@@ -608,7 +608,8 @@ def get_multipliers_montecarlo(
     std_dev: float,
 ) -> np.ndarray:
     """
-    Generate an array of multipliers for Monte Carlo simulation based on the specified distribution.
+    Generate an array of multipliers for Monte Carlo simulation based on
+    the specified distribution.
 
     Parameters
     ----------
@@ -636,74 +637,77 @@ def get_multipliers_montecarlo(
     - For "Triangular" distribution, the function uses a triangular random variable.
     - For "Normal" distribution, the function uses a truncated normal random variable.
     """
+
+    # Validate input: cannot have zero mean value
+    if mean_value == 0:
+        raise ValueError(f"Cannot have zero mean value")
+
+    # Validate input: filter incorrect assignment of `max_value` and/or `min_value`
+    if max_value <= min_value:
+        raise ValueError(
+            f"Paramater max_value must be greater than min_value"
+        )
+
     # Uniform distribution
     if distribution == "Uniform":
-        # Modify minimum and maximum values
-        params = [min_value, max_value]
-        attrs_updated = {
-            key: float(params[i] / mean_value)
-            for i, key in enumerate(["min_value", "max_value"])
-        }
+        # Normalize parameters
+        min_ratio, max_ratio = [float(v / mean_value) for v in (min_value, max_value)]
 
-        # Determine multipliers
+        # Draw samples, then assign them as `multipliers`
         multipliers = uniform.rvs(
-            loc=attrs_updated["min_value"],
-            scale=attrs_updated["max_value"] - attrs_updated["min_value"],
+            loc=min_ratio,
+            scale=max_ratio - min_ratio,
             size=run_number,
         )
 
     # Triangular distribution
     elif distribution == "Triangular":
-        # Modify minimum and maximum values
-        params = [min_value, mean_value, max_value]
-        attrs_updated = {
-            key: float(params[i] / mean_value)
-            for i, key in enumerate(["min_value", "mean_value", "max_value"])
-        }
+        # Normalize parameters
+        (
+            min_ratio,
+            mean_ratio,
+            max_ratio
+        ) = [float(v / mean_value) for v in (min_value, mean_value, max_value)]
 
         # Determine mode (central point)
-        c = (attrs_updated["mean_value"] - attrs_updated["min_value"]) / (
-            attrs_updated["max_value"] - attrs_updated["min_value"]
-        )
+        c = (mean_ratio - min_ratio) / (max_ratio - min_ratio)
 
-        # Determine multipliers
+        # Draw samples, then assign them as `multipliers`
         multipliers = triang.rvs(
             c=c,
-            loc=attrs_updated["min_value"],
-            scale=attrs_updated["max_value"] - attrs_updated["min_value"],
+            loc=min_ratio,
+            scale=max_ratio - min_ratio,
             size=run_number,
         )
 
     # Normal distribution
     elif distribution == "Normal":
-        # Modify minimum and maximum values
-        params = [min_value, mean_value, max_value, std_dev]
-        attrs_updated = {
-            key: float(params[i] / mean_value)
-            for i, key in enumerate(["min_value", "mean_value", "max_value", "std_dev"])
-        }
+        # Validate input: cannot have zero standard deviation
+        if std_dev == 0:
+            raise ValueError(f"Cannot have zero standard deviation")
+
+        # Normalize parameters
+        (
+            min_ratio,
+            mean_ratio,
+            max_ratio,
+            std_ratio
+        ) = [float(v / mean_value) for v in (min_value, mean_value, max_value, std_dev)]
 
         # Determine z-values
-        zvalues = {
-            key: float(
-                (attrs_updated[key] - attrs_updated["mean_value"])
-                / attrs_updated["std_dev"]
-            )
-            for key in ["min_value", "mean_value", "max_value"]
-        }
+        z_min = (min_ratio - mean_ratio) / std_ratio
+        z_max = (max_ratio - mean_ratio) / std_ratio
 
-        # Determine multipliers
+        # Draw samples, then assign them as `multipliers`
         multipliers_init = truncnorm.rvs(
-            a=zvalues["min_value"],
-            b=zvalues["max_value"],
-            loc=zvalues["mean_value"],
+            a=z_min,
+            b=z_max,
+            loc=0,
             scale=1,
             size=run_number,
         )
 
-        multipliers = (multipliers_init * attrs_updated["std_dev"]) + attrs_updated[
-            "mean_value"
-        ]
+        multipliers = (multipliers_init * std_ratio) + mean_ratio
 
     else:
         raise MonteCarloException(

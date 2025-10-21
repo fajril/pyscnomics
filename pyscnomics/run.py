@@ -1070,24 +1070,18 @@ data = {
 # get_baseproject(data=data, summary_result=True)
 # get_costrecovery(data=data, summary_result=True)
 # get_grosssplit(data=data, summary_result=True)
-t1 = get_sensitivity(data=data, contract_type="Cost Recovery")
 
 # print('\t')
 # print(f'Filetype: {type()}')
 # print(f'Length: {len()}')
 # print()
 
-print('\t')
-print(f'Filetype: {type(t1)}')
-print(f'Length: {len(t1)}')
-print('t1 = \n', t1)
-
 # print('\t')
 # print(f'Filetype: {type(t2)}')
 # print(f'Length: {len(t2)}')
 # print('t2 = \n', t2)
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# SENSITIVITY +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 # from pyscnomics.optimize import sensitivity_psc
 #
@@ -1133,4 +1127,26 @@ print('t1 = \n', t1)
 # print(f'Filetype: {type(t2)}')
 # print(f'Length: {len(t2)}')
 # print('t2 = \n', t2)
+
+# UNCERTAINTY +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+from pyscnomics.optimize.uncertainty import (
+    get_multipliers_montecarlo
+)
+
+mult_kwargs = {
+    "run_number": 10,
+    "distribution": "Normal",
+    "min_value": 1.0,
+    "mean_value": 1.0,
+    "max_value": 9.0,
+    "std_dev": 4.0,
+}
+
+t1 = get_multipliers_montecarlo(**mult_kwargs)
+
+print('\t')
+print(f'Filetype: {type(t1)}')
+print(f'Length: {len(t1)}')
+print('t1 = \n', t1)
 
