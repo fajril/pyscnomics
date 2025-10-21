@@ -317,6 +317,7 @@ from pyscnomics.api.adapter import (
     build_costrecovery_arguments,
     get_asr_expenditures,
     get_lbt_expenditures,
+    get_sensitivity,
 )
 
 data = {
@@ -387,16 +388,7 @@ data = {
         "oil_carry_forward_depreciation": 0,
         "gas_carry_forward_depreciation": 0,
     },
-    # ======================================= Base Project
-    "contract_arguments": {
-        "sulfur_revenue": "Addition to Gas Revenue",
-        "electricity_revenue": "Addition to Oil Revenue",
-        "co2_revenue": "Addition to Gas Revenue",
-        "vat_rate": 0.0,
-        "inflation_rate": 0.0,
-        "inflation_rate_applied_to": "None",
-    },
-    # # ======================================= Cost Recovery
+    # # ======================================= Base Project
     # "contract_arguments": {
     #     "sulfur_revenue": "Addition to Gas Revenue",
     #     "electricity_revenue": "Addition to Oil Revenue",
@@ -404,18 +396,27 @@ data = {
     #     "vat_rate": 0.0,
     #     "inflation_rate": 0.0,
     #     "inflation_rate_applied_to": "None",
-    #     "is_dmo_end_weighted": False,
-    #     "tax_regime": "nailed down",
-    #     "effective_tax_rate": 0.376,
-    #     "ftp_tax_regime": "Direct Mode",
-    #     "depr_method": "PSC Declining Balance",
-    #     "decline_factor": 2,
-    #     "post_uu_22_year2001": True,
-    #     "oil_cost_of_sales_applied": False,
-    #     "gas_cost_of_sales_applied": False,
-    #     "sum_undepreciated_cost": True,
-    #     "sunk_cost_method": "depreciated_tangible",
     # },
+    # ======================================= Cost Recovery
+    "contract_arguments": {
+        "sulfur_revenue": "Addition to Gas Revenue",
+        "electricity_revenue": "Addition to Oil Revenue",
+        "co2_revenue": "Addition to Gas Revenue",
+        "vat_rate": 0.0,
+        "inflation_rate": 0.0,
+        "inflation_rate_applied_to": "None",
+        "is_dmo_end_weighted": False,
+        "tax_regime": "nailed down",
+        "effective_tax_rate": 0.376,
+        "ftp_tax_regime": "Direct Mode",
+        "depr_method": "PSC Declining Balance",
+        "decline_factor": 2,
+        "post_uu_22_year2001": True,
+        "oil_cost_of_sales_applied": False,
+        "gas_cost_of_sales_applied": False,
+        "sum_undepreciated_cost": True,
+        "sunk_cost_method": "depreciated_tangible",
+    },
     # # ========================================= Gross Split
     # "contract_arguments": {
     #     "sulfur_revenue": "Addition to Gas Revenue",
@@ -1058,21 +1059,28 @@ data = {
             "tax_discount": [0],
         }
     },
+    "sensitivity_arguments": {
+        "min_deviation": 0.25,
+        "max_deviation": 0.25,
+        "base_value": 1,
+        "step": 10,
+    },
 }
 
 # get_baseproject(data=data, summary_result=True)
 # get_costrecovery(data=data, summary_result=True)
 # get_grosssplit(data=data, summary_result=True)
+t1 = get_sensitivity(data=data, contract_type="Cost Recovery")
 
 # print('\t')
 # print(f'Filetype: {type()}')
 # print(f'Length: {len()}')
 # print()
 
-# print('\t')
-# print(f'Filetype: {type(t1)}')
-# print(f'Length: {len(t1)}')
-# print('t1 = \n', t1)
+print('\t')
+print(f'Filetype: {type(t1)}')
+print(f'Length: {len(t1)}')
+print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t2)}')
@@ -1081,34 +1089,35 @@ data = {
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-from pyscnomics.optimize import sensitivity_psc
-
-deviation = {
-    "min": 0.4,
-    "max": 0.4,
-}
-
-sensitivity_psc(
-    contract=pr,
-    contract_arguments={
-        "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-        "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
-        "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-        "tax_rate": 0.0,
-        "inflation_rate": 0.0,
-        "inflation_rate_applied_to": None,
-    },
-    summary_arguments={
-        "discount_rate_start_year": 2023,
-        "inflation_rate": 0.0,
-        "discount_rate": 0.1,
-        "npv_mode": NPVSelection.NPV_SKK_NOMINAL_TERMS,
-        "discounting_mode": DiscountingMode.END_YEAR,
-        "profitability_discounted": False,
-    },
-    min_deviation=deviation["min"],
-    max_deviation=deviation["max"],
-)
+# from pyscnomics.optimize import sensitivity_psc
+#
+# deviation = {
+#     "min": 0.4,
+#     "max": 0.4,
+# }
+#
+# t1 = sensitivity_psc(
+#     contract=pr,
+#     contract_arguments={
+#         "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+#         "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+#         "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+#         "tax_rate": 0.0,
+#         "inflation_rate": 0.0,
+#         "inflation_rate_applied_to": None,
+#     },
+#     summary_arguments={
+#         "discount_rate_start_year": 2023,
+#         "inflation_rate": 0.0,
+#         "discount_rate": 0.1,
+#         "npv_mode": NPVSelection.NPV_SKK_NOMINAL_TERMS,
+#         "discounting_mode": DiscountingMode.END_YEAR,
+#         "profitability_discounted": False,
+#     },
+#     min_deviation=deviation["min"],
+#     max_deviation=deviation["max"],
+#     dataframe_output=False,
+# )
 
 # print('\t')
 # print(f'Filetype: {type()}')

@@ -2041,6 +2041,46 @@ def get_contract_optimization(data: dict, contract_type: str = "Cost Recovery") 
 
 
 def get_sensitivity(data: dict, contract_type: str):
+    """
+    Run sensitivity analysis for a given PSC contract type.
+
+    This function retrieves the appropriate contract instance, contract arguments,
+    and summary arguments based on the specified `contract_type`, and then performs
+    a sensitivity analysis using the `sensitivity_psc` function. The analysis adjusts
+    selected economic parameters (CAPEX, OPEX, OILPRICE, GASPRICE, OILLIFTING, GASLIFTING)
+    according to the sensitivity configuration provided in the input dictionary.
+
+    Parameters
+    ----------
+    data : dict
+        A dictionary containing the full project input payload.
+    contract_type : str
+        The type of PSC contract to be evaluated. Accepted values include:
+        - `"Base Project"`
+        - `"Cost Recovery"`
+        - `"Gross Split"`
+        - `"Transition"`
+
+    Returns
+    -------
+    dict
+        A nested dictionary containing sensitivity results for several key indicators.
+
+    Notes
+    -----
+    - Internally, this function calls one of the following constructors based on
+      `contract_type`:
+        * `get_baseproject(data)`
+        * `get_costrecovery(data)`
+        * `get_grosssplit(data)`
+        * `get_transition(data)`
+    - Each constructor is assumed to return a tuple whose elements include:
+        `(status, contract_object, contract_arguments, summary_arguments)`.
+    - The sensitivity analysis is performed by calling `sensitivity_psc(...)` with
+      `dataframe_output=False`, so the result is returned as a dictionary rather than
+      a collection of DataFrames.
+    """
+
     if "sensitivity_arguments" not in data:
         raise ContractException(
             "The payload does not have the sensitivity_arguments key"
@@ -2051,22 +2091,27 @@ def get_sensitivity(data: dict, contract_type: str):
             "The payload sensitivity_arguments does not have any values"
         )
 
-    # Retrieving the contract, contract_arguments_dict, summary_arguments_dict based on the contract type
+    # Retrieving the contract, contract_arguments_dict,
+    # summary_arguments_dict based on the contract type
+    # CostRecovery
     if contract_type == "Cost Recovery":
         contract = get_costrecovery(data=data)[1]
         contract_arguments = get_costrecovery(data=data)[2]
         summary_argument = get_costrecovery(data=data)[3]
 
+    # GrossSplit
     elif contract_type == "Gross Split":
         contract = get_grosssplit(data=data)[1]
         contract_arguments = get_grosssplit(data=data)[2]
         summary_argument = get_grosssplit(data=data)[3]
 
+    # Transition
     elif contract_type == "Transition":
         contract = get_transition(data=data)[1]
         contract_arguments = get_transition(data=data)[2]
         summary_argument = get_transition(data=data)[3]
 
+    # BaseProject
     else:
         contract = get_baseproject(data=data)[1]
         contract_arguments = get_baseproject(data=data)[2]
