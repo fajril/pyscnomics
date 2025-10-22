@@ -1083,45 +1083,45 @@ data = {
 
 # SENSITIVITY +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-# from pyscnomics.optimize import sensitivity_psc
-#
-# deviation = {
-#     "min": 0.4,
-#     "max": 0.4,
-# }
-#
-# t1 = sensitivity_psc(
-#     contract=pr,
-#     contract_arguments={
-#         "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-#         "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
-#         "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-#         "tax_rate": 0.0,
-#         "inflation_rate": 0.0,
-#         "inflation_rate_applied_to": None,
-#     },
-#     summary_arguments={
-#         "discount_rate_start_year": 2023,
-#         "inflation_rate": 0.0,
-#         "discount_rate": 0.1,
-#         "npv_mode": NPVSelection.NPV_SKK_NOMINAL_TERMS,
-#         "discounting_mode": DiscountingMode.END_YEAR,
-#         "profitability_discounted": False,
-#     },
-#     min_deviation=deviation["min"],
-#     max_deviation=deviation["max"],
-#     dataframe_output=False,
-# )
+from pyscnomics.optimize import sensitivity_psc
+
+deviation = {
+    "min": 0.4,
+    "max": 0.4,
+}
+
+t1 = sensitivity_psc(
+    contract=pr,
+    contract_arguments={
+        "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+        "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        "tax_rate": 0.0,
+        "inflation_rate": 0.0,
+        "inflation_rate_applied_to": None,
+    },
+    summary_arguments={
+        "discount_rate_start_year": 2023,
+        "inflation_rate": 0.0,
+        "discount_rate": 0.1,
+        "npv_mode": NPVSelection.NPV_SKK_NOMINAL_TERMS,
+        "discounting_mode": DiscountingMode.END_YEAR,
+        "profitability_discounted": False,
+    },
+    min_deviation=deviation["min"],
+    max_deviation=deviation["max"],
+    dataframe_output=True,
+)
 
 # print('\t')
 # print(f'Filetype: {type()}')
 # print(f'Length: {len()}')
 # print()
 
-# print('\t')
-# print(f'Filetype: {type(t1)}')
-# print(f'Length: {len(t1)}')
-# print('t1 = \n', t1)
+print('\t')
+print(f'Filetype: {type(t1)}')
+print(f'Length: {len(t1)}')
+print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t2)}')
@@ -1130,22 +1130,22 @@ data = {
 
 # UNCERTAINTY +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-from pyscnomics.optimize.uncertainty import (
-    get_multipliers_montecarlo,
-    uncertainty_psc,
-    min_mean_max_retriever,
-)
-
-mult_kwargs = {
-    "run_number": 50,
-    "distribution": "LogNormal",
-    "min_value": 1,
-    "mean_value": 50,
-    "max_value": 100,
-    "std_dev": 20,
-}
-
-uncertainty_psc(contract=pr, verbose=True)
+# from pyscnomics.optimize.uncertainty import (
+#     get_multipliers_montecarlo,
+#     uncertainty_psc,
+#     min_mean_max_retriever,
+# )
+#
+# mult_kwargs = {
+#     "run_number": 50,
+#     "distribution": "LogNormal",
+#     "min_value": 1,
+#     "mean_value": 50,
+#     "max_value": 100,
+#     "std_dev": 20,
+# }
+#
+# uncertainty_psc(contract=pr, verbose=True)
 
 # t1 = min_mean_max_retriever(
 #     contract=pr,
