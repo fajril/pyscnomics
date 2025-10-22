@@ -709,11 +709,54 @@ def get_multipliers_montecarlo(
 
         multipliers = (multipliers_init * std_ratio) + mean_ratio
 
+    # Log normal distribution
+    elif distribution == "LogNormal":
+        # Validate input: cannot have zero standard deviation
+        if std_dev == 0:
+            raise ValueError(f"Cannot have zero standard deviation")
+
+        # Validate input
+        if min_value <= 0 or mean_value <= 0 or max_value <= 0:
+            raise ValueError("All input must be positive for a log-normal distribution")
+
+        # Normalize parameters
+        (
+            min_ratio,
+            mean_ratio,
+            max_ratio,
+            std_ratio
+        ) = [float(v / mean_value) for v in (min_value, mean_value, max_value, std_dev)]
+
+        # Convert to log-space
+        log_min = np.log(min_ratio)
+        log_mean = np.log(mean_ratio)
+        log_max = np.log(mean_ratio)
+        log_std = std_ratio / mean_ratio
+
+        # Determine z-values in log-space
+        z_min = (log_min - log_mean) / log_std
+        z_max = (log_max - log_mean) / log_std
+
+        if z_min > z_max:
+            raise ValueError(f"Invalid truncation bounds: z_min = {z_min}, z_max = {z_max}")
+
+        # Draw truncated normal samples in log-space
+        log_samples = truncnorm.rvs(
+            a=z_min,
+            b=z_max,
+            loc=0,
+            scale=1,
+            size=run_number,
+        )
+
+        # Transform back
+        multipliers = np.exp((log_samples * log_std) + log_mean)
+
     else:
         raise MonteCarloException(
-            f"The type of distribution is unavailable. "
+            f"The type of distribution is unrecognized. "
             f"Please select type of distribution between: "
-            f"(i) Uniform, (ii) Triangular, or (iii) Normal."
+            f"Uniform, Triangular, Normal, and LogNormal."
         )
 
     return multipliers
@@ -737,86 +780,131 @@ def min_mean_max_retriever(
     -------
     out: dict
     """
-    # Retrieve Min, Mean, and Max for CAPEX
-    min_capex = np.min(
-        np.concatenate(
-            (contract.capital_cost_total.cost, contract.intangible_cost_total.cost)
-        )
-    )
-    mean_capex = np.average(
-        np.concatenate(
-            (contract.capital_cost_total.cost, contract.intangible_cost_total.cost)
-        )
-    )
-    max_capex = np.max(
-        np.concatenate(
-            (contract.capital_cost_total.cost, contract.intangible_cost_total.cost)
-        )
-    )
 
-    # Retrieve Min, Mean, and Max for OPEX
-    min_opex = np.min(
-        np.concatenate(
-            (
+    # Helper function
+    def _calc_statistics(outer_func, inner_func, arrays_list):
+        """
+        Apply an inner function to each array, then combine the results
+        using an outer function.
+
+        Parameters
+        ----------
+        outer_func : callable
+            Function to combine results, e.g. `min`, `max`, `np.mean`.
+        inner_func : callable
+            Function applied to each array, e.g. `np.min`, `np.max`, `np.mean`.
+        arrays_list : list of array-like
+            Sequence of arrays to evaluate.
+
+        Returns
+        -------
+        float
+            Result after applying both functions.
+        """
+
+        return outer_func([inner_func(arr) for arr in arrays_list])
+
+    def _make_mapping(is_price, arrays):
+        """
+        Build a min–mean–max mapping for the given arrays.
+
+        Parameters
+        ----------
+        is_price : bool
+            If True, use only NumPy functions; otherwise mix built-in and NumPy functions.
+        arrays : list of array-like
+            Arrays to evaluate.
+        """
+
+        if is_price:
+            return (
+                (np.min, arrays),
+                (np.mean, arrays),
+                (np.max, arrays)
+            )
+
+        else:
+            return (
+                (min, np.min, arrays),
+                (np.mean, np.mean, arrays),
+                (max, np.max, arrays)
+            )
+
+    def _get_results(mapping_entry, is_price=False):
+        """
+        Compute minimum, mean, and maximum results for a mapping entry.
+
+        Parameters
+        ----------
+        mapping_entry : list of tuple
+            Sequence of tuples representing statistical operations.
+            For non-price data: each tuple is (outer_func, inner_func, arrays).
+            For price data: each tuple is (func, arrays).
+        is_price : bool, default=False
+            If True, apply only single-level NumPy functions for price data;
+            otherwise, apply nested inner and outer functions.
+
+        Returns
+        -------
+        list of float
+            Computed statistical results (min, mean, and max values).
+        """
+
+        if is_price:
+            return [func(arr) for func, arr in mapping_entry]
+        else:
+            return [_calc_statistics(out, inn, arr) for out, inn, arr in mapping_entry]
+
+    # Specify mapping variables
+    mapping = {
+        "capex": _make_mapping(
+            is_price=False,
+            arrays=[
+                contract.capital_cost_total.cost,
+                contract.intangible_cost_total.cost
+            ]
+        ),
+        "opex": _make_mapping(
+            is_price=False,
+            arrays=[
                 contract.opex_total.cost,
                 contract.asr_cost_total.cost,
                 contract.lbt_cost_total.cost,
-                contract.cost_of_sales_total.cost,
-            )
+                contract.cost_of_sales_total.cost
+            ]
+        ),
+        "lifting": _make_mapping(
+            is_price=False,
+            arrays=[
+                getattr(contract, f"_oil_lifting").lifting_rate,
+                getattr(contract, f"_gas_lifting").lifting_rate
+            ]
+        ),
+        "oil_price": _make_mapping(
+            is_price=True,
+            arrays=getattr(contract, f"_oil_lifting").price
+        ),
+        "gas_price": _make_mapping(
+            is_price=True,
+            arrays=getattr(contract, f"_gas_lifting").price
         )
+    }
+
+    # Retrieve min, mean, and max for several parameters
+    (min_capex, mean_capex, max_capex) = _get_results(mapping_entry=mapping["capex"])
+    (min_opex, mean_opex, max_opex) = _get_results(mapping_entry=mapping["opex"])
+    (min_lifting, mean_lifting, max_lifting) = _get_results(
+        mapping_entry=mapping["lifting"]
     )
-    mean_opex = np.average(
-        np.concatenate(
-            (
-                contract.opex_total.cost,
-                contract.asr_cost_total.cost,
-                contract.lbt_cost_total.cost,
-                contract.cost_of_sales_total.cost,
-            )
-        )
+    (min_oil_price, mean_oil_price, max_oil_price) = _get_results(
+        mapping_entry=mapping["oil_price"], is_price=True
     )
-    max_opex = np.max(
-        np.concatenate(
-            (
-                contract.opex_total.cost,
-                contract.asr_cost_total.cost,
-                contract.lbt_cost_total.cost,
-                contract.cost_of_sales_total.cost,
-            )
-        )
+    (min_gas_price, mean_gas_price, max_gas_price) = _get_results(
+        mapping_entry=mapping["gas_price"], is_price=True
     )
 
-    # Retrieve Min, Mean, and Max for Oil Price
-    min_oil_price = np.min(contract._oil_lifting.price)
-    mean_oil_price = np.average(contract._oil_lifting.price)
-    max_oil_price = np.max(contract._oil_lifting.price)
-
-    # Retrieve Min, Mean, Max for Gas Price
-    min_gas_price = np.min(contract._gas_lifting.price)
-    mean_gas_price = np.average(contract._gas_lifting.price)
-    max_gas_price = np.max(contract._gas_lifting.price)
-
-    # Retrieve Min, Mean, Max for Oil Lifting
-    min_lifting = np.min(
-        [
-            np.min(contract._oil_lifting.lifting_rate),
-            np.min(contract._gas_lifting.lifting_rate),
-        ]
-    )
-    mean_lifting = np.mean(
-        [
-            np.mean(contract._oil_lifting.lifting_rate),
-            np.mean(contract._gas_lifting.lifting_rate),
-        ]
-    )
-    max_lifting = np.max(
-        [
-            np.max(contract._oil_lifting.lifting_rate),
-            np.max(contract._gas_lifting.lifting_rate),
-        ]
-    )
-
-    result = {
+    # Create a dictionary of results
+    results = {
         "min_capex": min_capex,
         "mean_capex": mean_capex,
         "max_capex": max_capex,
@@ -836,11 +924,11 @@ def min_mean_max_retriever(
 
     if verbose is True:
         print("Parameter used:")
-        for key, value in result.items():
+        for key, value in results.items():
             print(key, ": ", value)
         print("")
 
-    return result
+    return results
 
 
 class ProcessMonte:
@@ -1093,9 +1181,9 @@ class ProcessMonte:
 
 def uncertainty_psc(
     contract: BaseProject | CostRecovery | GrossSplit | Transition,
-    contract_arguments: dict,
-    summary_arguments: dict,
-    run_number: int = 10,
+    # contract_arguments: dict,
+    # summary_arguments: dict,
+    # run_number: int = 10,
     min_oil_price: float = None,
     mean_oil_price: float = None,
     max_oil_price: float = None,
@@ -1159,93 +1247,98 @@ def uncertainty_psc(
         if min_max_mean_std[element] is None:
             min_max_mean_std[element] = min_max_mean_original[element]
 
-    # Iterate over the dictionary
-    for key in list(min_max_mean_std.keys()):
-        if key.startswith("min_"):
-            # Base key (e.g., 'capex', 'opex', etc.)
-            base = key[4:]
-            min_key = f"min_{base}"
-            mean_key = f"mean_{base}"
-            max_key = f"max_{base}"
+    print('\t')
+    print(f'Filetype: {type(min_max_mean_std)}')
+    print(f'Length: {len(min_max_mean_std)}')
+    print('min_max_mean_std = \n', min_max_mean_std)
 
-            # Check if min, mean, and max values are the same
-            if (
-                min_key in min_max_mean_std
-                and mean_key in min_max_mean_std
-                and max_key in min_max_mean_std
-                and min_max_mean_std[min_key]
-                == min_max_mean_std[mean_key]
-                == min_max_mean_std[max_key]
-            ):
-                # Adjust min and max values
-                min_max_mean_std[min_key] = (
-                    0.8 * min_max_mean_std[min_key]
-                )  # Set min to 0.8 of the min
-                min_max_mean_std[max_key] = (
-                    1.2 * min_max_mean_std[max_key]
-                )  # Set max to 1.2 of the max
-
-    parameter = [
-        {
-            "id": 0,
-            "dist": oil_price_distribution,
-            "min": min_max_mean_std["min_oil_price"],
-            "base": min_max_mean_std["mean_oil_price"],
-            "max": min_max_mean_std["max_oil_price"],
-            "stddev": oil_price_stddev,
-        },
-        {
-            "id": 1,
-            "dist": gas_price_distribution,
-            "min": min_max_mean_std["min_gas_price"],
-            "base": min_max_mean_std["mean_gas_price"],
-            "max": min_max_mean_std["max_gas_price"],
-            "stddev": gas_price_stddev,
-        },
-        {
-            "id": 2,
-            "dist": opex_distribution,
-            "min": min_max_mean_std["min_opex"],
-            "base": min_max_mean_std["mean_opex"],
-            "max": min_max_mean_std["max_opex"],
-            "stddev": opex_stddev,
-        },
-        {
-            "id": 3,
-            "dist": capex_distribution,
-            "min": min_max_mean_std["min_capex"],
-            "base": min_max_mean_std["mean_capex"],
-            "max": min_max_mean_std["max_capex"],
-            "stddev": capex_stddev,
-        },
-        {
-            "id": 4,
-            "dist": lifting_distribution,
-            "min": min_max_mean_std["min_lifting"],
-            "base": min_max_mean_std["mean_lifting"],
-            "max": min_max_mean_std["max_lifting"],
-            "stddev": lifting_stddev,
-        },
-    ]
-
-    # Condition when there is no gas produced
-    fluid_produced = [lift.fluid_type.value for lift in contract.lifting]
-    if FluidType.GAS not in fluid_produced:
-        del parameter[1]
-
-    # Constructing the contract key
-    contract_dict = get_contract_attributes(
-        contract=contract,
-        contract_arguments=contract_arguments,
-        summary_arguments=summary_arguments,
-    )
-
-    # Executing the montecarlo
-    monte = ProcessMonte(
-        contract_type,
-        contract_dict,
-        run_number,
-        parameter,
-    )
-
-    return monte.calculate()
+    # # Iterate over the dictionary
+    # for key in list(min_max_mean_std.keys()):
+    #     if key.startswith("min_"):
+    #         # Base key (e.g., 'capex', 'opex', etc.)
+    #         base = key[4:]
+    #         min_key = f"min_{base}"
+    #         mean_key = f"mean_{base}"
+    #         max_key = f"max_{base}"
+    #
+    #         # Check if min, mean, and max values are the same
+    #         if (
+    #             min_key in min_max_mean_std
+    #             and mean_key in min_max_mean_std
+    #             and max_key in min_max_mean_std
+    #             and min_max_mean_std[min_key]
+    #             == min_max_mean_std[mean_key]
+    #             == min_max_mean_std[max_key]
+    #         ):
+    #             # Adjust min and max values
+    #             min_max_mean_std[min_key] = (
+    #                 0.8 * min_max_mean_std[min_key]
+    #             )  # Set min to 0.8 of the min
+    #             min_max_mean_std[max_key] = (
+    #                 1.2 * min_max_mean_std[max_key]
+    #             )  # Set max to 1.2 of the max
+    #
+    # parameter = [
+    #     {
+    #         "id": 0,
+    #         "dist": oil_price_distribution,
+    #         "min": min_max_mean_std["min_oil_price"],
+    #         "base": min_max_mean_std["mean_oil_price"],
+    #         "max": min_max_mean_std["max_oil_price"],
+    #         "stddev": oil_price_stddev,
+    #     },
+    #     {
+    #         "id": 1,
+    #         "dist": gas_price_distribution,
+    #         "min": min_max_mean_std["min_gas_price"],
+    #         "base": min_max_mean_std["mean_gas_price"],
+    #         "max": min_max_mean_std["max_gas_price"],
+    #         "stddev": gas_price_stddev,
+    #     },
+    #     {
+    #         "id": 2,
+    #         "dist": opex_distribution,
+    #         "min": min_max_mean_std["min_opex"],
+    #         "base": min_max_mean_std["mean_opex"],
+    #         "max": min_max_mean_std["max_opex"],
+    #         "stddev": opex_stddev,
+    #     },
+    #     {
+    #         "id": 3,
+    #         "dist": capex_distribution,
+    #         "min": min_max_mean_std["min_capex"],
+    #         "base": min_max_mean_std["mean_capex"],
+    #         "max": min_max_mean_std["max_capex"],
+    #         "stddev": capex_stddev,
+    #     },
+    #     {
+    #         "id": 4,
+    #         "dist": lifting_distribution,
+    #         "min": min_max_mean_std["min_lifting"],
+    #         "base": min_max_mean_std["mean_lifting"],
+    #         "max": min_max_mean_std["max_lifting"],
+    #         "stddev": lifting_stddev,
+    #     },
+    # ]
+    #
+    # # Condition when there is no gas produced
+    # fluid_produced = [lift.fluid_type.value for lift in contract.lifting]
+    # if FluidType.GAS not in fluid_produced:
+    #     del parameter[1]
+    #
+    # # Constructing the contract key
+    # contract_dict = get_contract_attributes(
+    #     contract=contract,
+    #     contract_arguments=contract_arguments,
+    #     summary_arguments=summary_arguments,
+    # )
+    #
+    # # Executing the montecarlo
+    # monte = ProcessMonte(
+    #     contract_type,
+    #     contract_dict,
+    #     run_number,
+    #     parameter,
+    # )
+    #
+    # return monte.calculate()

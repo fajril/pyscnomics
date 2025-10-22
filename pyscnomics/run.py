@@ -1131,22 +1131,38 @@ data = {
 # UNCERTAINTY +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 from pyscnomics.optimize.uncertainty import (
-    get_multipliers_montecarlo
+    get_multipliers_montecarlo,
+    uncertainty_psc,
+    min_mean_max_retriever,
 )
 
 mult_kwargs = {
-    "run_number": 10,
-    "distribution": "Normal",
-    "min_value": 1.0,
-    "mean_value": 1.0,
-    "max_value": 9.0,
-    "std_dev": 4.0,
+    "run_number": 50,
+    "distribution": "LogNormal",
+    "min_value": 1,
+    "mean_value": 50,
+    "max_value": 100,
+    "std_dev": 20,
 }
 
-t1 = get_multipliers_montecarlo(**mult_kwargs)
+uncertainty_psc(contract=pr, verbose=True)
 
-print('\t')
-print(f'Filetype: {type(t1)}')
-print(f'Length: {len(t1)}')
-print('t1 = \n', t1)
+# t1 = min_mean_max_retriever(
+#     contract=pr,
+#     verbose=True
+# )
 
+# print('\t')
+# print(f'Filetype: {type()}')
+# print(f'Length: {len()}')
+# print()
+
+# print('\t')
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = \n', t1)
+
+# print('\t')
+# print(f'Filetype: {type(t2)}')
+# print(f'Length: {len(t2)}')
+# print('t2 = \n', t2)

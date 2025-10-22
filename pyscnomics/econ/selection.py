@@ -718,6 +718,7 @@ class UncertaintyDistribution(Enum):
     UNIFORM = "Uniform"
     TRIANGULAR = "Triangular"
     NORMAL = "Normal"
+    LOGNORMAL = "LogNormal"
 
 
 class SunkCostInvestmentType(Enum):

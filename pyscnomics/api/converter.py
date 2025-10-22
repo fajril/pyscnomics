@@ -2366,24 +2366,39 @@ def convert_to_method_limit(target: str):
 
 def convert_to_uncertainty_distribution(target: str):
     """
-    Function to convert string into Uncertainty Distribution selection.
+    Convert a string label into the corresponding distribution enum.
 
     Parameters
     ----------
-    target: dict
-        The target that will be converted.
+    target : str
+        The name of the uncertainty distribution.
+        Accepted values are:
+        - "Uniform"
+        - "Triangular"
+        - "Normal"
+        - "LogNormal"
 
     Returns
     -------
     UncertaintyDistribution
+        The corresponding `UncertaintyDistribution` enum value.
 
+    Raises
+    ------
+    ValueError
+        If the input string does not match any valid distribution type.
     """
-    attrs = {
+    mapping = {
         "Uniform": UncertaintyDistribution.UNIFORM,
         "Triangular": UncertaintyDistribution.TRIANGULAR,
         "Normal": UncertaintyDistribution.NORMAL,
+        "LogNormal": UncertaintyDistribution.LOGNORMAL,
     }
 
-    for key in attrs.keys():
-        if target == key:
-            return attrs[key]
+    try:
+        return mapping[target]
+    except KeyError:
+        raise ValueError(
+            f"Invalid distribution: {target!r}. "
+            f"Expected one of {list(mapping.keys())}."
+        )
