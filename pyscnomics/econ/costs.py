@@ -868,13 +868,20 @@ class CapitalCost(GeneralCost):
             # Some assets have not been fully depreciated by the end of the project.
             # These assets are overdue by {overdue[is_overdue]} years.
             max_overdue = int(np.max(overdues[is_overdue]))
-            overdue_depr_charge = np.array(
-                [
-                    np.concatenate((row[-i:-i + o], np.zeros(max_overdue - o))) if i > 0
-                    else row for row, i, o in zip(depreciation_charge, shift_indices, overdues)
-                    if o > 0
-                ]
+            full_depr_charge = np.zeros(
+                [depreciation_charge.shape[0], depreciation_charge.shape[1] + max_overdue]
             )
+            # useful_life = self.useful_life.astype(int)
+            for i, charge in enumerate(depreciation_charge):
+                # (
+                #     full_depr_charge[i, shift_indices[i]:shift_indices[i] + useful_life[i]]
+                # ) = charge[useful_life[i]]
+                if shift_indices[i]+charge.shape[0] > full_depr_charge.shape[1]:
+                    max_idx = full_depr_charge.shape[1]-shift_indices[i]
+                    charge = charge[:max_idx]
+                full_depr_charge[i, shift_indices[i]:shift_indices[i]+charge.shape[0]] = charge
+
+            overdue_depr_charge = full_depr_charge[:, self.end_year-self.start_year+1:]
 
         else:
             overdue_depr_charge = np.zeros([1, 1])
