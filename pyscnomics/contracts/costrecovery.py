@@ -2961,6 +2961,7 @@ class CostRecovery(BaseProject):
                 ets_after[0] = ets_pre_trf[i, 0] - trf_to[1]
                 unrec_after[1] = unrec_pre_trf[i, 1] - trf_to[1]
                 recov_after[1] = rec_pre_trf[i, 1] + trf_to[1]
+
             elif ets_pre_trf[i, 1] > 0 and unrec_pre_trf[i, 0] > 0:
                 trf_to[0] = np.minimum(ets_pre_trf[i, 1], unrec_pre_trf[i, 0])
                 ets_after[1] = ets_pre_trf[i, 1] - trf_to[0]
@@ -3182,12 +3183,12 @@ class CostRecovery(BaseProject):
         )
 
         # Returning the gross revenue
-        self._oil_revenue = (
-            self._oil_revenue + self._oil_cost_of_sales_expenditures_post_tax
-        )
-        self._gas_revenue = (
-            self._gas_revenue + self._gas_cost_of_sales_expenditures_post_tax
-        )
+        # self._oil_revenue = (
+        #     self._oil_revenue + self._oil_cost_of_sales_expenditures_post_tax
+        # )
+        # self._gas_revenue = (
+        #     self._gas_revenue + self._gas_cost_of_sales_expenditures_post_tax
+        # )
 
         # Prepare consolidated profiles
         self._get_consolidated_profiles_cr(ftp_tax_regime=ftp_tax_regime)
