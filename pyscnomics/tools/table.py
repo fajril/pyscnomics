@@ -48,12 +48,13 @@ def get_table(
         psc_table_oil['FTP_GOV'] = contract._oil_ftp_gov
         psc_table_oil['Investment_Credit'] = contract._oil_ic_paid
         psc_table_oil['Unrecovered_Cost'] = contract._oil_unrecovered_before_transfer
-        psc_table_oil['Cost_to_Be_Recovered'] = contract._oil_cost_to_be_recovered
+        #psc_table_oil['Cost_to_Be_Recovered'] = contract._oil_cost_to_be_recovered
+        psc_table_oil['Recoverable_Cost'] = contract._oil_recoverable_cost
         psc_table_oil['Cost_Recovery'] = contract._oil_cost_recovery
         psc_table_oil['ETS_Before_Transfer'] = contract._oil_ets_before_transfer
         psc_table_oil['Transfer_to_Gas'] = contract._transfer_to_gas
         psc_table_oil['Unrec_after_Transfer'] = contract._oil_unrecovered_after_transfer
-        psc_table_oil['Cost_To_Be_Recovered_After_TF'] = contract._oil_cost_to_be_recovered_after_tf
+        #psc_table_oil['Cost_To_Be_Recovered_After_TF'] = contract._oil_cost_to_be_recovered_after_tf
         psc_table_oil['Cost_Recovery_After_TF'] = contract._oil_cost_recovery_after_tf
         psc_table_oil['ETS_After_Transfer'] = contract._oil_ets_after_transfer
         psc_table_oil['Contractor_Share'] = contract._oil_contractor_share
@@ -100,12 +101,13 @@ def get_table(
         psc_table_gas['FTP_GOV'] = contract._gas_ftp_gov
         psc_table_gas['Investment_Credit'] = contract._gas_ic_paid
         psc_table_gas['Unrecovered_Cost'] = contract._gas_unrecovered_before_transfer
-        psc_table_gas['Cost_to_Be_Recovered'] = contract._gas_cost_to_be_recovered
+        #psc_table_gas['Cost_to_Be_Recovered'] = contract._gas_cost_to_be_recovered
+        psc_table_gas['Recoverable_Cost'] = contract._gas_recoverable_cost
         psc_table_gas['Cost_Recovery'] = contract._gas_cost_recovery
         psc_table_gas['ETS_Before_Transfer'] = contract._gas_ets_before_transfer
         psc_table_gas['Transfer_to_Oil'] = contract._transfer_to_oil
         psc_table_gas['Unrec_after_Transfer'] = contract._gas_unrecovered_after_transfer
-        psc_table_gas['Cost_To_Be_Recovered_After_TF'] = contract._gas_cost_to_be_recovered_after_tf
+        #psc_table_gas['Cost_To_Be_Recovered_After_TF'] = contract._gas_cost_to_be_recovered_after_tf
         psc_table_gas['Cost_Recovery_After_TF'] = contract._gas_cost_recovery_after_tf
         psc_table_gas['ETS_After_Transfer'] = contract._gas_ets_after_transfer
         psc_table_gas['Contractor_Share'] = contract._gas_contractor_share
@@ -155,8 +157,10 @@ def get_table(
         psc_table_consolidated['C_Cost_Recovery'] = contract._consolidated_cost_recovery_before_transfer
         psc_table_consolidated['C_ETS_before_TF'] = contract._consolidated_ets_before_transfer
         psc_table_consolidated['C_Unrecovered_after_TF'] = contract._consolidated_unrecovered_after_transfer
+        #psc_table_consolidated[
+        #    'C_Cost_to_be_Recovered_after_TF'] = contract._consolidated_cost_to_be_recovered_after_tf
         psc_table_consolidated[
-            'C_Cost_to_be_Recovered_after_TF'] = contract._consolidated_cost_to_be_recovered_after_tf
+            'C_Recoverable_Cost'] = contract._consolidated_recoverable_cost
         psc_table_consolidated['C_Cost_Recovery_after_TF'] = contract._consolidated_cost_recovery_after_tf
         psc_table_consolidated['C_ETS_after_TF'] = contract._consolidated_ets_after_transfer
         psc_table_consolidated['C_Contractor_Share'] = contract._consolidated_contractor_share
@@ -371,13 +375,13 @@ def get_table(
             psc_table_oil_1['FTP_GOV'] = contract._contract1_transitioned._oil_ftp_gov
             psc_table_oil_1['Investment_Credit'] = contract._contract1_transitioned._oil_ic_paid
             psc_table_oil_1['Unrecovered_Cost'] = contract._contract1_transitioned._oil_unrecovered_before_transfer
-            psc_table_oil_1['Cost_to_Be_Recovered'] = contract._contract1_transitioned._oil_cost_to_be_recovered
+            #psc_table_oil_1['Cost_to_Be_Recovered'] = contract._contract1_transitioned._oil_cost_to_be_recovered
             psc_table_oil_1['Cost_Recovery'] = contract._contract1_transitioned._oil_cost_recovery
             psc_table_oil_1['ETS_Before_Transfer'] = contract._contract1_transitioned._oil_ets_before_transfer
             psc_table_oil_1['Transfer_to_Gas'] = contract._contract1_transitioned._transfer_to_gas
             psc_table_oil_1['Unrec_after_Transfer'] = contract._contract1_transitioned._oil_unrecovered_after_transfer
-            psc_table_oil_1[
-                'Cost_To_Be_Recovered_After_TF'] = contract._contract1_transitioned._oil_cost_to_be_recovered_after_tf
+            #psc_table_oil_1[
+            #    'Cost_To_Be_Recovered_After_TF'] = contract._contract1_transitioned._oil_cost_to_be_recovered_after_tf
             psc_table_oil_1['Cost_Recovery_After_TF'] = contract._contract1_transitioned._oil_cost_recovery_after_tf
             psc_table_oil_1['ETS_After_Transfer'] = contract._contract1_transitioned._oil_ets_after_transfer
             psc_table_oil_1['Contractor_Share'] = contract._contract1_transitioned._oil_contractor_share
@@ -423,13 +427,13 @@ def get_table(
             psc_table_gas_1['FTP_GOV'] = contract._contract1_transitioned._gas_ftp_gov
             psc_table_gas_1['Investment_Credit'] = contract._contract1_transitioned._gas_ic_paid
             psc_table_gas_1['Unrecovered_Cost'] = contract._contract1_transitioned._gas_unrecovered_before_transfer
-            psc_table_gas_1['Cost_to_Be_Recovered'] = contract._contract1_transitioned._gas_cost_to_be_recovered
+            #psc_table_gas_1['Cost_to_Be_Recovered'] = contract._contract1_transitioned._gas_cost_to_be_recovered
             psc_table_gas_1['Cost_Recovery'] = contract._contract1_transitioned._gas_cost_recovery
             psc_table_gas_1['ETS_Before_Transfer'] = contract._contract1_transitioned._gas_ets_before_transfer
             psc_table_gas_1['Transfer_to_Oil'] = contract._contract1_transitioned._transfer_to_oil
             psc_table_gas_1['Unrec_after_Transfer'] = contract._contract1_transitioned._gas_unrecovered_after_transfer
-            psc_table_gas_1[
-                'Cost_To_Be_Recovered_After_TF'] = contract._contract1_transitioned._gas_cost_to_be_recovered_after_tf
+            #psc_table_gas_1[
+            #    'Cost_To_Be_Recovered_After_TF'] = contract._contract1_transitioned._gas_cost_to_be_recovered_after_tf
             psc_table_gas_1['Cost_Recovery_After_TF'] = contract._contract1_transitioned._gas_cost_recovery_after_tf
             psc_table_gas_1['ETS_After_Transfer'] = contract._contract1_transitioned._gas_ets_after_transfer
             psc_table_gas_1['Contractor_Share'] = contract._contract1_transitioned._gas_contractor_share
@@ -483,8 +487,8 @@ def get_table(
                 'C_ETS_before_TF'] = contract._contract1_transitioned._consolidated_ets_before_transfer
             psc_table_consolidated_1[
                 'C_Unrecovered_after_TF'] = contract._contract1_transitioned._consolidated_unrecovered_after_transfer
-            psc_table_consolidated_1[
-                'C_Cost_to_be_Recovered_after_TF'] = contract._contract1_transitioned._consolidated_cost_to_be_recovered_after_tf
+            #psc_table_consolidated_1[
+            #    'C_Cost_to_be_Recovered_after_TF'] = contract._contract1_transitioned._consolidated_cost_to_be_recovered_after_tf
             psc_table_consolidated_1[
                 'C_Cost_Recovery_after_TF'] = contract._contract1_transitioned._consolidated_cost_recovery_after_tf
             psc_table_consolidated_1[
@@ -693,13 +697,14 @@ def get_table(
             psc_table_oil_2['FTP_GOV'] = contract._contract2_transitioned._oil_ftp_gov
             psc_table_oil_2['Investment_Credit'] = contract._contract2_transitioned._oil_ic_paid
             psc_table_oil_2['Unrecovered_Cost'] = contract._contract2_transitioned._oil_unrecovered_before_transfer
-            psc_table_oil_2['Cost_to_Be_Recovered'] = contract._contract2_transitioned._oil_cost_to_be_recovered
+            #psc_table_oil_2['Cost_to_Be_Recovered'] = contract._contract2_transitioned._oil_cost_to_be_recovered
+            psc_table_oil_2['Recoverable_Cost'] = contract._contract2_transitioned._oil_recoverable_cost
             psc_table_oil_2['Cost_Recovery'] = contract._contract2_transitioned._oil_cost_recovery
             psc_table_oil_2['ETS_Before_Transfer'] = contract._contract2_transitioned._oil_ets_before_transfer
             psc_table_oil_2['Transfer_to_Gas'] = contract._contract2_transitioned._transfer_to_gas
             psc_table_oil_2['Unrec_after_Transfer'] = contract._contract2_transitioned._oil_unrecovered_after_transfer
-            psc_table_oil_2[
-                'Cost_To_Be_Recovered_After_TF'] = contract._contract2_transitioned._oil_cost_to_be_recovered_after_tf
+            #psc_table_oil_2[
+            #    'Cost_To_Be_Recovered_After_TF'] = contract._contract2_transitioned._oil_cost_to_be_recovered_after_tf
             psc_table_oil_2['Cost_Recovery_After_TF'] = contract._contract2_transitioned._oil_cost_recovery_after_tf
             psc_table_oil_2['ETS_After_Transfer'] = contract._contract2_transitioned._oil_ets_after_transfer
             psc_table_oil_2['Contractor_Share'] = contract._contract2_transitioned._oil_contractor_share
@@ -745,13 +750,13 @@ def get_table(
             psc_table_gas_2['FTP_GOV'] = contract._contract2_transitioned._gas_ftp_gov
             psc_table_gas_2['Investment_Credit'] = contract._contract2_transitioned._gas_ic_paid
             psc_table_gas_2['Unrecovered_Cost'] = contract._contract2_transitioned._gas_unrecovered_before_transfer
-            psc_table_gas_2['Cost_to_Be_Recovered'] = contract._contract2_transitioned._gas_cost_to_be_recovered
+            #psc_table_gas_2['Cost_to_Be_Recovered'] = contract._contract2_transitioned._gas_cost_to_be_recovered
             psc_table_gas_2['Cost_Recovery'] = contract._contract2_transitioned._gas_cost_recovery
             psc_table_gas_2['ETS_Before_Transfer'] = contract._contract2_transitioned._gas_ets_before_transfer
             psc_table_gas_2['Transfer_to_Oil'] = contract._contract2_transitioned._transfer_to_oil
             psc_table_gas_2['Unrec_after_Transfer'] = contract._contract2_transitioned._gas_unrecovered_after_transfer
-            psc_table_gas_2[
-                'Cost_To_Be_Recovered_After_TF'] = contract._contract2_transitioned._gas_cost_to_be_recovered_after_tf
+            #psc_table_gas_2[
+            #    'Cost_To_Be_Recovered_After_TF'] = contract._contract2_transitioned._gas_cost_to_be_recovered_after_tf
             psc_table_gas_2['Cost_Recovery_After_TF'] = contract._contract2_transitioned._gas_cost_recovery_after_tf
             psc_table_gas_2['ETS_After_Transfer'] = contract._contract2_transitioned._gas_ets_after_transfer
             psc_table_gas_2['Contractor_Share'] = contract._contract2_transitioned._gas_contractor_share
@@ -805,8 +810,8 @@ def get_table(
                 'C_ETS_before_TF'] = contract._contract2_transitioned._consolidated_ets_before_transfer
             psc_table_consolidated_2[
                 'C_Unrecovered_after_TF'] = contract._contract2_transitioned._consolidated_unrecovered_after_transfer
-            psc_table_consolidated_2[
-                'C_Cost_to_be_Recovered_after_TF'] = contract._contract2_transitioned._consolidated_cost_to_be_recovered_after_tf
+            #psc_table_consolidated_2[
+            #    'C_Cost_to_be_Recovered_after_TF'] = contract._contract2_transitioned._consolidated_cost_to_be_recovered_after_tf
             psc_table_consolidated_2[
                 'C_Cost_Recovery_after_TF'] = contract._contract2_transitioned._consolidated_cost_recovery_after_tf
             psc_table_consolidated_2[

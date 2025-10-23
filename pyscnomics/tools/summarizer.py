@@ -367,7 +367,7 @@ class Summary:
                 'oil_depreciation': contract._oil_depreciation,
                 'oil_non_capital': contract._oil_non_capital,
                 'oil_sunk_cost': contract._oil_sunk_cost,
-                'oil_undepreciated_asset': contract._oil_undepreciated_asset,
+                'oil_undepreciated_asset': contract._oil_sum_undepreciated_asset,
                 'oil_carry_forward_depreciation': contract._oil_carry_forward_depreciation,
                 'gas_depreciable': contract._gas_capital_expenditures_post_tax,
                 'gas_intangible': contract._gas_intangible_expenditures_post_tax,
@@ -377,7 +377,7 @@ class Summary:
                 'gas_depreciation': contract._gas_depreciation,
                 'gas_non_capital': contract._gas_non_capital,
                 'gas_sunk_cost': contract._gas_sunk_cost,
-                'gas_undepreciated_asset': contract._gas_undepreciated_asset,
+                'gas_undepreciated_asset': contract._gas_sum_undepreciated_asset,
                 'gas_carry_forward_depreciation': contract._gas_carry_forward_depreciation,
                 'consolidated_depreciable': contract._oil_capital_expenditures_post_tax + contract._gas_capital_expenditures_post_tax,
                 'consolidated_intangible': contract._oil_intangible_expenditures_post_tax + contract._gas_intangible_expenditures_post_tax,
@@ -387,7 +387,7 @@ class Summary:
                 'consolidated_depreciation': contract._oil_depreciation + contract._gas_depreciation,
                 'consolidated_non_capital': contract._oil_non_capital + contract._gas_non_capital,
                 'consolidated_sunk_cost': contract._oil_sunk_cost + contract._gas_sunk_cost,
-                'consolidated_undepreciated_asset': contract._oil_undepreciated_asset + contract._gas_undepreciated_asset,
+                'consolidated_undepreciated_asset': contract._oil_sum_undepreciated_asset + contract._gas_sum_undepreciated_asset,
                 'consolidated_carry_forward_depreciation': contract._consolidated_carry_forward_depreciation,
             }
             for idx, contract in enumerate(self.contract)
@@ -722,7 +722,8 @@ class Summary:
         exclude: list = ['contract', 'reference_year', 'inflation_rate', 'discount_rate', 'npv_mode',
                          'discounting_mode', 'profitability_discounted', ]
         data_dict = {key: value.tolist() if isinstance(value, np.ndarray) else value for key, value in self.__dict__.items() if key not in exclude}
-        return pd.DataFrame(data_dict)  # Convert filtered dictionary to DataFrame
+        #return pd.DataFrame(data_dict)  # Convert filtered dictionary to DataFrame
+        return data_dict
 
     def case_combine(self):
         self.run(mode='combine')
