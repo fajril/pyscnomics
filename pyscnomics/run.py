@@ -49,35 +49,35 @@ case = ExampleCase()
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-# kwargs_pr = {
-#     "start_date": date(year=2023, month=1, day=1),
-#     "end_date": date(year=2032, month=12, day=31),
-#     "oil_onstream_date": date(year=2030, month=1, day=1),
-#     "gas_onstream_date": date(year=2029, month=1, day=1),
-#     "approval_year": 2026,
-#     "is_pod_1": False,
-# }
-#
-# params_base = {
-#     "sulfur_revenue": OtherRevenue.REDUCTION_TO_GAS_OPEX,
-#     "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
-#     "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-#     "tax_rate": 0.0,
-#     "year_inflation": None,
-#     "inflation_rate": 0.0,
-#     "inflation_rate_applied_to": None,
-# }
-#
-# pr = BaseProject(
-#     **kwargs_pr,
-#     lifting=tuple([case.lifting_mangga, case.lifting_apel, case.lifting_nanas]),
-#     capital_cost=tuple([case.capital_mangga, case.capital_apel]),
-#     intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),
-#     opex=tuple([case.opex_mangga, case.opex_apel]),
-#     asr_cost=tuple([case.asr_mangga, case.asr_apel]),
-#     lbt_cost=tuple([case.lbt_mangga, case.lbt_apel]),
-#     cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
-# )
+kwargs_pr = {
+    "start_date": date(year=2023, month=1, day=1),
+    "end_date": date(year=2032, month=12, day=31),
+    "oil_onstream_date": date(year=2030, month=1, day=1),
+    "gas_onstream_date": date(year=2029, month=1, day=1),
+    "approval_year": 2026,
+    "is_pod_1": False,
+}
+
+params_base = {
+    "sulfur_revenue": OtherRevenue.REDUCTION_TO_GAS_OPEX,
+    "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+    "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+    "tax_rate": 0.0,
+    "year_inflation": None,
+    "inflation_rate": 0.0,
+    "inflation_rate_applied_to": None,
+}
+
+pr = BaseProject(
+    **kwargs_pr,
+    lifting=tuple([case.lifting_mangga, case.lifting_apel, case.lifting_nanas]),
+    capital_cost=tuple([case.capital_mangga, case.capital_apel]),
+    intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),
+    opex=tuple([case.opex_mangga, case.opex_apel]),
+    asr_cost=tuple([case.asr_mangga, case.asr_apel]),
+    lbt_cost=tuple([case.lbt_mangga, case.lbt_apel]),
+    cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
+)
 
 # pr.run(**params_base)
 # t1 = pr.get_summary()
@@ -99,74 +99,74 @@ case = ExampleCase()
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-kwargs_gs = {
-    "start_date": date(year=2023, month=1, day=1),
-    "end_date": date(year=2032, month=12, day=31),
-    "oil_onstream_date": date(year=2030, month=1, day=1),
-    "gas_onstream_date": date(year=2029, month=1, day=1),
-    "approval_year": 2026,
-    "is_pod_1": True,
-    # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    "split_ministry_disc": 0.08,
-    # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    "oil_dmo_volume_portion": 0.25,
-    "oil_dmo_fee_portion": 1.0,
-    "gas_dmo_volume_portion": 1.0,
-    "gas_dmo_fee_portion": 1.0,
-    "oil_dmo_holiday_duration": 60,
-    "gas_dmo_holiday_duration": 60,
-    # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    "oil_carry_forward_depreciation": 0.0,
-    "gas_carry_forward_depreciation": 0.0,
-}
-
-params_gs = {
-    "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-    "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
-    "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-    "vat_rate": 0.0,
-    "year_inflation": None,
-    "inflation_rate": 0.0,
-    "inflation_rate_applied_to": InflationAppliedTo.CAPEX,
-    "cum_production_split_offset": 0.0,
-    # "cum_production_split_offset": np.array([0.2 for _ in range(10)]),
-    "depr_method": DeprMethod.PSC_DB,
-    "decline_factor": 2,
-    "sum_undepreciated_cost": False,
-    "is_dmo_end_weighted": False,
-    "tax_regime": TaxRegime.NAILED_DOWN,
-    "effective_tax_rate": 0.22,
-    "amortization": False,
-    "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
-    "regime": GrossSplitRegime.PERMEN_ESDM_13_2024,
-    "reservoir_type_permen_2024": VariableSplit132024.ReservoirType.MK,
-    "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
-}
-
-gs = GrossSplit(
-    **kwargs_gs,
-    # lifting=tuple([case.lifting_mangga, case.lifting_apel, case.lifting_nanas]),
-    lifting=tuple([case.lifting_mangga, case.lifting_apel]),
-    capital_cost=tuple([case.capital_mangga, case.capital_apel]),
-    intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),
-    opex=tuple([case.opex_mangga, case.opex_apel]),
-    asr_cost=tuple([case.asr_mangga, case.asr_apel]),
-    lbt_cost=tuple([case.lbt_mangga, case.lbt_apel]),
-    cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
-)
-
-gs.run(**params_gs)
-t1 = gs.get_summary()
+# kwargs_gs = {
+#     "start_date": date(year=2023, month=1, day=1),
+#     "end_date": date(year=2032, month=12, day=31),
+#     "oil_onstream_date": date(year=2030, month=1, day=1),
+#     "gas_onstream_date": date(year=2029, month=1, day=1),
+#     "approval_year": 2026,
+#     "is_pod_1": True,
+#     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#     "split_ministry_disc": 0.08,
+#     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#     "oil_dmo_volume_portion": 0.25,
+#     "oil_dmo_fee_portion": 1.0,
+#     "gas_dmo_volume_portion": 1.0,
+#     "gas_dmo_fee_portion": 1.0,
+#     "oil_dmo_holiday_duration": 60,
+#     "gas_dmo_holiday_duration": 60,
+#     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#     "oil_carry_forward_depreciation": 0.0,
+#     "gas_carry_forward_depreciation": 0.0,
+# }
+#
+# params_gs = {
+#     "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+#     "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+#     "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+#     "vat_rate": 0.0,
+#     "year_inflation": None,
+#     "inflation_rate": 0.0,
+#     "inflation_rate_applied_to": InflationAppliedTo.CAPEX,
+#     "cum_production_split_offset": 0.0,
+#     # "cum_production_split_offset": np.array([0.2 for _ in range(10)]),
+#     "depr_method": DeprMethod.PSC_DB,
+#     "decline_factor": 2,
+#     "sum_undepreciated_cost": False,
+#     "is_dmo_end_weighted": False,
+#     "tax_regime": TaxRegime.NAILED_DOWN,
+#     "effective_tax_rate": 0.22,
+#     "amortization": False,
+#     "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
+#     "regime": GrossSplitRegime.PERMEN_ESDM_13_2024,
+#     "reservoir_type_permen_2024": VariableSplit132024.ReservoirType.MK,
+#     "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
+# }
+#
+# gs = GrossSplit(
+#     **kwargs_gs,
+#     # lifting=tuple([case.lifting_mangga, case.lifting_apel, case.lifting_nanas]),
+#     lifting=tuple([case.lifting_mangga, case.lifting_apel]),
+#     capital_cost=tuple([case.capital_mangga, case.capital_apel]),
+#     intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),
+#     opex=tuple([case.opex_mangga, case.opex_apel]),
+#     asr_cost=tuple([case.asr_mangga, case.asr_apel]),
+#     lbt_cost=tuple([case.lbt_mangga, case.lbt_apel]),
+#     cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
+# )
+#
+# gs.run(**params_gs)
+# t1 = gs.get_summary()
 
 # print('\t')
 # print(f'Filetype: {type()}')
 # print(f'Length: {len()}')
 # print()
 
-print('\t')
-print(f'Filetype: {type(t1)}')
-print(f'Length: {len(t1)}')
-print('t1 = \n', t1)
+# print('\t')
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = \n', t1)
 
 # print('\t')
 # print(f'Filetype: {type(t2)}')
@@ -247,7 +247,7 @@ print('t1 = \n', t1)
 # )
 #
 # cr.run(**params_cr)
-# cr.get_summary()
+# t1 = cr.get_summary()
 
 # print('\t')
 # print(f'Filetype: {type()}')
@@ -1091,7 +1091,7 @@ data = {
 #     "max": 0.4,
 # }
 #
-# sensitivity_psc(
+# t1 = sensitivity_psc(
 #     contract=pr,
 #     contract_arguments={
 #         "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
@@ -1131,27 +1131,56 @@ data = {
 
 # UNCERTAINTY +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-# from pyscnomics.optimize.uncertainty import (
-#     get_multipliers_montecarlo,
-#     uncertainty_psc,
-#     min_mean_max_retriever,
-# )
-#
-# mult_kwargs = {
-#     "run_number": 50,
-#     "distribution": "LogNormal",
-#     "min_value": 1,
-#     "mean_value": 50,
-#     "max_value": 100,
-#     "std_dev": 20,
-# }
-#
-# uncertainty_psc(contract=pr, verbose=True)
+from pyscnomics.econ.selection import UncertaintyDistribution
+from pyscnomics.optimize.uncertainty import (
+    get_multipliers_montecarlo,
+    uncertainty_psc,
+    min_mean_max_retriever,
+)
 
-# t1 = min_mean_max_retriever(
-#     contract=pr,
-#     verbose=True
-# )
+kwargs_mult = {
+    "run_number": 50,
+    "distribution": "LogNormal",
+    "min_value": 1,
+    "mean_value": 50,
+    "max_value": 100,
+    "std_dev": 20,
+}
+
+kwargs_uncertainty = {
+    "contract": pr,
+    "contract_arguments": None,
+    "summary_arguments": None,
+    "run_number": None,
+    "min_oil_price": 45,
+    "mean_oil_price": 60,
+    "max_oil_price": 80,
+    "min_gas_price": None,
+    "mean_gas_price": None,
+    "max_gas_price": None,
+    "min_opex": None,
+    "mean_opex": None,
+    "max_opex": None,
+    "min_capex": 100,
+    "mean_capex": 150,
+    "max_capex": 200,
+    "min_lifting": None,
+    "mean_lifting": None,
+    "max_lifting": None,
+    "oil_price_stddev": 1.25,
+    "gas_price_stddev": 1.25,
+    "opex_stddev": 1.25,
+    "capex_stddev": 1.25,
+    "lifting_stddev": 1.25,
+    "oil_price_distribution": UncertaintyDistribution.UNIFORM,
+    "gas_price_distribution": UncertaintyDistribution.UNIFORM,
+    "opex_distribution": UncertaintyDistribution.TRIANGULAR,
+    "capex_distribution": UncertaintyDistribution.NORMAL,
+    "lifting_distribution": UncertaintyDistribution.LOGNORMAL,
+    "verbose": False,
+}
+
+uncertainty_psc(**kwargs_uncertainty)
 
 # print('\t')
 # print(f'Filetype: {type()}')

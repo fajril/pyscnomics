@@ -767,18 +767,38 @@ def min_mean_max_retriever(
     verbose: bool = False,
 ):
     """
-    Function to get the value of min, max and stddev of each montecarlo elements.
+    Retrieve the minimum, mean, and maximum values of selected Monte Carlo simulation
+    elements from a given PSC contract object.
+
+    The function computes summary statistics (min, mean, max) for several key economic
+    and production-related quantities, including CAPEX, OPEX, lifting volumes, and
+    oil/gas prices.
 
     Parameters
     ----------
     contract : BaseProject | CostRecovery | GrossSplit | Transition
-        The observed contract object
-    verbose: bool
-        The option to print the min, mean and max.
+        The PSC contract object containing Monte Carlo simulation outputs.
+    verbose : bool, default=False
+        If True, prints the computed min, mean, and max values for each parameter.
 
     Returns
     -------
-    out: dict
+    dict
+        Dictionary containing the minimum, mean, and maximum values for each parameter:
+
+        - ``min_capex``, ``mean_capex``, ``max_capex``
+        - ``min_opex``, ``mean_opex``, ``max_opex``
+        - ``min_lifting``, ``mean_lifting``, ``max_lifting``
+        - ``min_oil_price``, ``mean_oil_price``, ``max_oil_price``
+        - ``min_gas_price``, ``mean_gas_price``, ``max_gas_price``
+
+    Notes
+    -----
+    - The function uses nested functional mappings to compute statistics:
+      non-price elements (CAPEX, OPEX, lifting) combine multiple arrays via built-in
+      and NumPy functions, while price elements use direct NumPy operations.
+    - The helper functions `_calc_statistics`, `_make_mapping`, and `_get_results`
+      modularize the computation for readability and consistency.
     """
 
     # Helper function
@@ -1181,9 +1201,9 @@ class ProcessMonte:
 
 def uncertainty_psc(
     contract: BaseProject | CostRecovery | GrossSplit | Transition,
-    # contract_arguments: dict,
-    # summary_arguments: dict,
-    # run_number: int = 10,
+    contract_arguments: dict,
+    summary_arguments: dict,
+    run_number: int = 10,
     min_oil_price: float = None,
     mean_oil_price: float = None,
     max_oil_price: float = None,
@@ -1247,80 +1267,104 @@ def uncertainty_psc(
         if min_max_mean_std[element] is None:
             min_max_mean_std[element] = min_max_mean_original[element]
 
-    print('\t')
-    print(f'Filetype: {type(min_max_mean_std)}')
-    print(f'Length: {len(min_max_mean_std)}')
-    print('min_max_mean_std = \n', min_max_mean_std)
+    # Default multipliers for min and max values
+    min_factor, max_factor = (0.8, 1.2)
 
-    # # Iterate over the dictionary
-    # for key in list(min_max_mean_std.keys()):
-    #     if key.startswith("min_"):
-    #         # Base key (e.g., 'capex', 'opex', etc.)
-    #         base = key[4:]
-    #         min_key = f"min_{base}"
-    #         mean_key = f"mean_{base}"
-    #         max_key = f"max_{base}"
-    #
-    #         # Check if min, mean, and max values are the same
-    #         if (
-    #             min_key in min_max_mean_std
-    #             and mean_key in min_max_mean_std
-    #             and max_key in min_max_mean_std
-    #             and min_max_mean_std[min_key]
-    #             == min_max_mean_std[mean_key]
-    #             == min_max_mean_std[max_key]
-    #         ):
-    #             # Adjust min and max values
-    #             min_max_mean_std[min_key] = (
-    #                 0.8 * min_max_mean_std[min_key]
-    #             )  # Set min to 0.8 of the min
-    #             min_max_mean_std[max_key] = (
-    #                 1.2 * min_max_mean_std[max_key]
-    #             )  # Set max to 1.2 of the max
-    #
-    # parameter = [
-    #     {
-    #         "id": 0,
-    #         "dist": oil_price_distribution,
-    #         "min": min_max_mean_std["min_oil_price"],
-    #         "base": min_max_mean_std["mean_oil_price"],
-    #         "max": min_max_mean_std["max_oil_price"],
-    #         "stddev": oil_price_stddev,
-    #     },
-    #     {
-    #         "id": 1,
-    #         "dist": gas_price_distribution,
-    #         "min": min_max_mean_std["min_gas_price"],
-    #         "base": min_max_mean_std["mean_gas_price"],
-    #         "max": min_max_mean_std["max_gas_price"],
-    #         "stddev": gas_price_stddev,
-    #     },
-    #     {
-    #         "id": 2,
-    #         "dist": opex_distribution,
-    #         "min": min_max_mean_std["min_opex"],
-    #         "base": min_max_mean_std["mean_opex"],
-    #         "max": min_max_mean_std["max_opex"],
-    #         "stddev": opex_stddev,
-    #     },
-    #     {
-    #         "id": 3,
-    #         "dist": capex_distribution,
-    #         "min": min_max_mean_std["min_capex"],
-    #         "base": min_max_mean_std["mean_capex"],
-    #         "max": min_max_mean_std["max_capex"],
-    #         "stddev": capex_stddev,
-    #     },
-    #     {
-    #         "id": 4,
-    #         "dist": lifting_distribution,
-    #         "min": min_max_mean_std["min_lifting"],
-    #         "base": min_max_mean_std["mean_lifting"],
-    #         "max": min_max_mean_std["max_lifting"],
-    #         "stddev": lifting_stddev,
-    #     },
-    # ]
-    #
+    # Check for equal values of min, mean, and max, then specify adjustments
+    bases = [key[4:] for key in min_max_mean_std if key.startswith("min_")]
+    for base in bases:
+        min_key, mean_key, max_key = f"min_{base}", f"mean_{base}", f"max_{base}"
+
+        if not all([k in min_max_mean_std for k in [min_key, mean_key, max_key]]):
+            continue
+
+        min_val, mean_val, max_val = (
+            min_max_mean_std[min_key],
+            min_max_mean_std[mean_key],
+            min_max_mean_std[max_key],
+        )
+
+        # Adjust if min == mean == max
+        if min_val == mean_val == max_val:
+            min_max_mean_std[min_key] = min_factor * min_val
+            min_max_mean_std[max_key] = max_factor * max_val
+
+    """ 
+    Former approach:
+    # Iterate over the dictionary
+    for key in list(min_max_mean_std.keys()):
+        if key.startswith("min_"):
+            base = key[4:]  # Base key (e.g., 'capex', 'opex', etc.)
+
+            min_key = f"min_{base}"
+            mean_key = f"mean_{base}"
+            max_key = f"max_{base}"
+
+            # Check if min, mean, and max values are the same
+            if (
+                min_key in min_max_mean_std
+                and mean_key in min_max_mean_std
+                and max_key in min_max_mean_std
+                and min_max_mean_std[min_key]
+                == min_max_mean_std[mean_key]
+                == min_max_mean_std[max_key]
+            ):
+                # Adjust min and max values
+                # +++ Set min to 0.8 of the min
+                min_max_mean_std[min_key] = (0.8 * min_max_mean_std[min_key])
+
+                # +++ Set max to 1.2 of the max
+                min_max_mean_std[max_key] = (1.2 * min_max_mean_std[max_key])
+    """
+
+    parameter = [
+        {
+            "id": 0,
+            "dist": oil_price_distribution,
+            "min": min_max_mean_std["min_oil_price"],
+            "base": min_max_mean_std["mean_oil_price"],
+            "max": min_max_mean_std["max_oil_price"],
+            "stddev": oil_price_stddev,
+        },
+        {
+            "id": 1,
+            "dist": gas_price_distribution,
+            "min": min_max_mean_std["min_gas_price"],
+            "base": min_max_mean_std["mean_gas_price"],
+            "max": min_max_mean_std["max_gas_price"],
+            "stddev": gas_price_stddev,
+        },
+        {
+            "id": 2,
+            "dist": opex_distribution,
+            "min": min_max_mean_std["min_opex"],
+            "base": min_max_mean_std["mean_opex"],
+            "max": min_max_mean_std["max_opex"],
+            "stddev": opex_stddev,
+        },
+        {
+            "id": 3,
+            "dist": capex_distribution,
+            "min": min_max_mean_std["min_capex"],
+            "base": min_max_mean_std["mean_capex"],
+            "max": min_max_mean_std["max_capex"],
+            "stddev": capex_stddev,
+        },
+        {
+            "id": 4,
+            "dist": lifting_distribution,
+            "min": min_max_mean_std["min_lifting"],
+            "base": min_max_mean_std["mean_lifting"],
+            "max": min_max_mean_std["max_lifting"],
+            "stddev": lifting_stddev,
+        },
+    ]
+
+    print('\t')
+    print(f'Filetype: {type(parameter[1])}')
+    print(f'Length: {len(parameter[1])}')
+    print('parameter = \n', parameter[1])
+
     # # Condition when there is no gas produced
     # fluid_produced = [lift.fluid_type.value for lift in contract.lifting]
     # if FluidType.GAS not in fluid_produced:
