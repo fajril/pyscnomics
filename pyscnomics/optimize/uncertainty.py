@@ -1372,13 +1372,13 @@ def uncertainty_psc(
     print(f'Length: {len(parameter)}')
     print('parameter = \n', parameter)
 
-    # # Constructing the contract key
-    # contract_dict = get_contract_attributes(
-    #     contract=contract,
-    #     contract_arguments=contract_arguments,
-    #     summary_arguments=summary_arguments,
-    # )
-    #
+    # Constructing the contract key
+    contract_dict = get_contract_attributes(
+        contract=contract,
+        contract_arguments=contract_arguments,
+        summary_arguments=summary_arguments,
+    )
+
     # # Executing the montecarlo
     # monte = ProcessMonte(
     #     contract_type,

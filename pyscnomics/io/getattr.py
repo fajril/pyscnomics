@@ -10,11 +10,32 @@ from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
-from pyscnomics.econ import TaxSplitTypeCR, NPVSelection, DiscountingMode, OtherRevenue, DeprMethod, FTPTaxRegime, \
-    TaxRegime, InflationAppliedTo, GrossSplitRegime
+from pyscnomics.econ import (
+    TaxSplitTypeCR,
+    NPVSelection,
+    DiscountingMode,
+    OtherRevenue,
+    DeprMethod,
+    FTPTaxRegime,
+    TaxRegime,
+    InflationAppliedTo,
+    GrossSplitRegime
+)
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales
-from pyscnomics.econ.selection import FluidType, VariableSplit082017, VariableSplit522017
+from pyscnomics.econ.costs import (
+    CapitalCost,
+    Intangible,
+    OPEX,
+    ASR,
+    LBT,
+    CostOfSales
+)
+from pyscnomics.econ.selection import (
+    FluidType,
+    VariableSplit082017,
+    VariableSplit522017,
+    VariableSplit132024,
+)
 
 
 class GetAttrException(Exception):
@@ -23,7 +44,86 @@ class GetAttrException(Exception):
     pass
 
 
-def convert_enum_fluid(objects: FluidType):
+def _helper_convert_enum_to_str(enum_target, enum_type, enum_mapping) -> str:
+    """
+    Convert an enum member to its corresponding string representation.
+
+    This helper function provides a generic way to map enum members to
+    string values with proper type validation and error handling.
+
+    Parameters
+    ----------
+    enum_target : Any
+        The enum member to convert to string representation.
+    enum_type : type
+        The expected enum class type for validation.
+    enum_mapping : dict
+        Dictionary mapping enum members to their string representations.
+        Keys should be instances of `enum_type`, values should be strings.
+
+    Returns
+    -------
+    str
+        String representation of the enum member as defined in `enum_mapping`.
+
+    Raises
+    ------
+    GetAttrException
+        If `enum_target` is not an instance of `enum_type`.
+        If `enum_target` is not found as a key in `enum_mapping`.
+
+    Notes
+    -----
+    This function is designed as an internal helper to reduce code duplication
+    when converting multiple enum types to string representations.
+    """
+
+    # Filter incorrect input
+    if not isinstance(enum_target, enum_type):
+        raise GetAttrException(
+            f"Parameter must be a {enum_type.__name__!r} instance, "
+            f"not {enum_target.__class__.__qualname__!r}"
+        )
+
+    try:
+        return enum_mapping[enum_target]
+    except KeyError:
+        raise GetAttrException(f"Invalid {enum_type.__name__!r} object: {enum_target!r} ")
+
+
+def convert_enum_fluid(objects: FluidType) -> str:
+    """
+    Convert FluidType enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : FluidType
+        The FluidType enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the FluidType enum member.
+        Possible values: 'Oil', 'Gas', 'Sulfur', 'Electricity', 'CO2'.
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a FluidType instance.
+        If `objects` is not a recognized FluidType enum member.
+
+    Notes
+    -----
+    This function uses a dictionary-based mapping approach for optimal
+    performance (O(1) lookup time) compared to the previous if-elif chain.
+
+    The implementation delegates to a shared helper function
+    `_helper_convert_enum_to_str` for consistent error handling and validation
+    across similar enum converters.
+    """
+
+    """
+    Former approach:
     if objects is FluidType.OIL:
         result = 'Oil'
     elif objects is FluidType.GAS:
@@ -38,10 +138,55 @@ def convert_enum_fluid(objects: FluidType):
         raise GetAttrException(
             f"{objects} is not recognized"
         )
-
     return result
+    """
 
-def convert_enum_taxsplit(objects: TaxSplitTypeCR):
+    # Core mapping: an instance of FluidType -> its corresponding string
+    mapping = {
+        FluidType.OIL: "Oil",
+        FluidType.GAS: "Gas",
+        FluidType.SULFUR: "Sulfur",
+        FluidType.ELECTRICITY: "Electricity",
+        FluidType.CO2: "CO2",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=FluidType, enum_mapping=mapping
+    )
+
+
+def convert_enum_taxsplit(objects: TaxSplitTypeCR) -> str:
+    """
+    Convert TaxSplitTypeCR enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : TaxSplitTypeCR
+        The TaxSplitTypeCR enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the TaxSplitTypeCR enum member.
+        Possible values: 'Conventional', 'ICP Sliding Scale', 'R/C'.
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a TaxSplitTypeCR instance.
+        If `objects` is not a recognized TaxSplitTypeCR enum member.
+
+    Notes
+    -----
+    This function uses a dictionary-based mapping approach for optimal
+    performance (O(1) lookup time) compared to the previous if-elif chain.
+
+    The implementation delegates to a shared helper function `_helper_convert_enum_to_str`
+    for consistent error handling and validation across similar enum converters.
+    """
+
+    """
+    # Former approach
     if objects is TaxSplitTypeCR.CONVENTIONAL:
         result = 'Conventional'
     elif objects is TaxSplitTypeCR.SLIDING_SCALE:
@@ -53,8 +198,58 @@ def convert_enum_taxsplit(objects: TaxSplitTypeCR):
             f"{objects} is not recognized"
         )
     return result
+    """
 
-def convert_enum_npv(objects: NPVSelection):
+    # Core mapping
+    mapping = {
+        TaxSplitTypeCR.CONVENTIONAL: "Conventional",
+        TaxSplitTypeCR.SLIDING_SCALE: "ICP Sliding Scale",
+        TaxSplitTypeCR.R2C: "R/C"
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=TaxSplitTypeCR, enum_mapping=mapping
+    )
+
+
+def convert_enum_npv(objects: NPVSelection) -> str:
+    """
+    Convert NPVSelection enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : NPVSelection
+        The NPVSelection enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the NPVSelection enum member.
+        Possible values:
+        - 'SKK Full Cycle Real Terms'
+        - 'SKK Full Cycle Nominal Terms'
+        - 'Full Cycle Real Terms'
+        - 'Full Cycle Nominal Terms'
+        - 'Point Forward'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a NPVSelection instance.
+        If `objects` is not a recognized NPVSelection enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         NPVSelection.NPV_SKK_REAL_TERMS:"SKK Full Cycle Real Terms",
         NPVSelection.NPV_SKK_NOMINAL_TERMS:"SKK Full Cycle Nominal Terms",
@@ -66,8 +261,57 @@ def convert_enum_npv(objects: NPVSelection):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
 
-def convert_enum_discountingmode(objects: DiscountingMode):
+    # Core mapping
+    mapping = {
+        NPVSelection.NPV_SKK_REAL_TERMS: "SKK Full Cycle Real Terms",
+        NPVSelection.NPV_SKK_NOMINAL_TERMS: "SKK Full Cycle Nominal Terms",
+        NPVSelection.NPV_REAL_TERMS: "Full Cycle Real Terms",
+        NPVSelection.NPV_NOMINAL_TERMS: "Full Cycle Nominal Terms",
+        NPVSelection.NPV_POINT_FORWARD: "Point Forward",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=NPVSelection, enum_mapping=mapping
+    )
+
+
+def convert_enum_discountingmode(objects: DiscountingMode) -> str:
+    """
+    Convert DiscountingMode enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : DiscountingMode
+        The DiscountingMode enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the DiscountingMode enum member.
+        Possible values:
+        - 'End Year'
+        - 'Mid Year'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a DiscountingMode instance.
+        If `objects` is not a recognized DiscountingMode enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         DiscountingMode.END_YEAR: "End Year",
         DiscountingMode.MID_YEAR: "Mid Year",
@@ -76,8 +320,56 @@ def convert_enum_discountingmode(objects: DiscountingMode):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
 
-def convert_enum_otherrevenue(objects: OtherRevenue):
+    # Core mapping
+    mapping = {
+        DiscountingMode.END_YEAR: "End Year",
+        DiscountingMode.MID_YEAR: "Mid Year",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=DiscountingMode, enum_mapping=mapping
+    )
+
+
+def convert_enum_otherrevenue(objects: OtherRevenue) -> str:
+    """
+    Convert OtherRevenue enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : OtherRevenue
+        The OtherRevenue enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the OtherRevenue enum member.
+        Possible values:
+        - 'Addition to Oil Revenue'
+        - 'Addition to Gas Revenue'
+        - 'Reduction to Oil OPEX'
+        - 'Reduction to Gas OPEX'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a OtherRevenue instance.
+        If `objects` is not a recognized OtherRevenue enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         OtherRevenue.ADDITION_TO_OIL_REVENUE: "Addition to Oil Revenue",
         OtherRevenue.ADDITION_TO_GAS_REVENUE: "Addition to Gas Revenue",
@@ -88,8 +380,58 @@ def convert_enum_otherrevenue(objects: OtherRevenue):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
 
-def convert_enum_depreciationmethod(objects: DeprMethod):
+    # Core mapping
+    mapping = {
+        OtherRevenue.ADDITION_TO_OIL_REVENUE: "Addition to Oil Revenue",
+        OtherRevenue.ADDITION_TO_GAS_REVENUE: "Addition to Gas Revenue",
+        OtherRevenue.REDUCTION_TO_OIL_OPEX: "Reduction to Oil OPEX",
+        OtherRevenue.REDUCTION_TO_GAS_OPEX: "Reduction to Gas OPEX",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=OtherRevenue, enum_mapping=mapping
+    )
+
+
+def convert_enum_depreciationmethod(objects: DeprMethod) -> str:
+    """
+    Convert DeprMethod enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : DeprMethod
+        The DeprMethod enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the DeprMethod enum member.
+        Possible values:
+        - 'PSC Declining Balance'
+        - 'Declining Balance'
+        - 'Unit Of Production'
+        - 'Straight Line'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a DeprMethod instance.
+        If `objects` is not a recognized DeprMethod enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         DeprMethod.PSC_DB: "PSC Declining Balance",
         DeprMethod.DB: "Declining Balance",
@@ -100,8 +442,56 @@ def convert_enum_depreciationmethod(objects: DeprMethod):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
 
-def convert_enum_ftptaxregime(objects: FTPTaxRegime):
+    # Core mapping
+    mapping = {
+        DeprMethod.PSC_DB: "PSC Declining Balance",
+        DeprMethod.DB: "Declining Balance",
+        DeprMethod.UOP: "Unit Of Production",
+        DeprMethod.SL: "Straight Line",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=DeprMethod, enum_mapping=mapping
+    )
+
+
+def convert_enum_ftptaxregime(objects: FTPTaxRegime) -> str:
+    """
+    Convert FTPTaxRegime enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : FTPTaxRegime
+        The FTPTaxRegime enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the FTPTaxRegime enum member.
+        Possible values:
+        - 'PDJP No.20 Tahun 2017'
+        - 'Pre PDJP No.20 Tahun 2017'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a FTPTaxRegime instance.
+        If `objects` is not a recognized FTPTaxRegime enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         FTPTaxRegime.PDJP_20_2017: "PDJP No.20 Tahun 2017",
         FTPTaxRegime.PRE_PDJP_20_2017: "Pre PDJP No.20 Tahun 2017",
@@ -110,8 +500,57 @@ def convert_enum_ftptaxregime(objects: FTPTaxRegime):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
 
-def convert_enum_taxregime(objects: TaxRegime):
+    # Core mapping
+    mapping = {
+        FTPTaxRegime.PDJP_20_2017: "PDJP No.20 Tahun 2017",
+        FTPTaxRegime.PRE_PDJP_20_2017: "Pre PDJP No.20 Tahun 2017",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=FTPTaxRegime, enum_mapping=mapping
+    )
+
+
+def convert_enum_taxregime(objects: TaxRegime) -> str:
+    """
+    Convert TaxRegime enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : TaxRegime
+        The TaxRegime enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the TaxRegime enum member.
+        Possible values:
+        - 'nailed down'
+        - 'prevailing'
+        - 'UU No.36 Tahun 2008'
+        - 'UU No.02 Tahun 2020'
+        - 'UU No.07 Tahun 2021'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a TaxRegime instance.
+        If `objects` is not a recognized TaxRegime enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         TaxRegime.NAILED_DOWN: "nailed down",
         TaxRegime.PREVAILING: "prevailing",
@@ -123,8 +562,58 @@ def convert_enum_taxregime(objects: TaxRegime):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
 
-def convert_enum_inflationappliedto(objects: InflationAppliedTo):
+    # Core mapping
+    mapping = {
+        TaxRegime.NAILED_DOWN: "nailed down",
+        TaxRegime.PREVAILING: "prevailing",
+        TaxRegime.UU_36_2008: "UU No.36 Tahun 2008",
+        TaxRegime.UU_02_2020: "UU No.02 Tahun 2020",
+        TaxRegime.UU_07_2021: "UU No.07 Tahun 2021",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=TaxRegime, enum_mapping=mapping
+    )
+
+
+def convert_enum_inflationappliedto(objects: InflationAppliedTo) -> str:
+    """
+    Convert InflationAppliedTo enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : InflationAppliedTo
+        The InflationAppliedTo enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the InflationAppliedTo enum member.
+        Possible values:
+        - 'CAPEX'
+        - 'OPEX'
+        - 'CAPEX AND OPEX'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a InflationAppliedTo instance.
+        If `objects` is not a recognized InflationAppliedTo enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         InflationAppliedTo.CAPEX: "CAPEX",
         InflationAppliedTo.OPEX: "OPEX",
@@ -134,8 +623,58 @@ def convert_enum_inflationappliedto(objects: InflationAppliedTo):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
 
-def convert_enum_gsregime(objects: GrossSplitRegime):
+    # Core mapping
+    mapping = {
+        InflationAppliedTo.CAPEX: "CAPEX",
+        InflationAppliedTo.OPEX: "OPEX",
+        InflationAppliedTo.CAPEX_AND_OPEX: "CAPEX AND OPEX",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=InflationAppliedTo, enum_mapping=mapping
+    )
+
+
+def convert_enum_gsregime(objects: GrossSplitRegime) -> str:
+    """
+    Convert GrossSplitRegime enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : GrossSplitRegime
+        The GrossSplitRegime enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the GrossSplitRegime enum member.
+        Possible values:
+        - 'PERMEN_ESDM_8_2017'
+        - 'PERMEN_ESDM_52_2017'
+        - 'PERMEN_ESDM_20_2019'
+        - 'PERMEN_ESDM_12_2020'
+        - 'PERMEN_ESDM_13_2024'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a GrossSplitRegime instance.
+        If `objects` is not a recognized GrossSplitRegime enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         GrossSplitRegime.PERMEN_ESDM_8_2017: "PERMEN_ESDM_8_2017",
         GrossSplitRegime.PERMEN_ESDM_52_2017: "PERMEN_ESDM_52_2017",
@@ -146,77 +685,170 @@ def convert_enum_gsregime(objects: GrossSplitRegime):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
+
+    # Core mapping
+    mapping = {
+        GrossSplitRegime.PERMEN_ESDM_8_2017: "PERMEN_ESDM_8_2017",
+        GrossSplitRegime.PERMEN_ESDM_52_2017: "PERMEN_ESDM_52_2017",
+        GrossSplitRegime.PERMEN_ESDM_20_2019: "PERMEN_ESDM_20_2019",
+        GrossSplitRegime.PERMEN_ESDM_12_2020: "PERMEN_ESDM_12_2020",
+        GrossSplitRegime.PERMEN_ESDM_13_2024: "PERMEN_ESDM_13_2024",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=GrossSplitRegime, enum_mapping=mapping
+    )
+
 
 def convert_object(objects):
+    """
+    Convert various object types to their serializable representations.
+
+    This function serves as a universal converter that handles multiple data types
+    including dates, NumPy arrays, and various enum types used in the financial
+    modeling system. It ensures objects are converted to JSON-serializable formats.
+
+    Parameters
+    ----------
+    objects : Any
+        The object to convert to a serializable representation.
+        Supported types include:
+        - date objects
+        - numpy.ndarray
+        - FluidType enum
+        - TaxSplitTypeCR enum
+        - NPVSelection enum
+        - DiscountingMode enum
+        - OtherRevenue enum
+        - DeprMethod enum
+        - FTPTaxRegime enum
+        - TaxRegime enum
+        - InflationAppliedTo enum
+        - GrossSplitRegime enum
+        - VariableSplit522017 enums
+        - VariableSplit082017 enums
+        - VariableSplit132024 enums
+
+    Returns
+    -------
+    Any
+        Serializable representation of the input object:
+        - date -> str in 'YYYY-MM-DD' format
+        - numpy.ndarray -> list
+        - Enum types -> str representation via dedicated converters
+        - VariableSplit enums -> direct enum value
+        - Other types -> returned as-is
+
+    Notes
+    -----
+    This function provides a centralized conversion point for serialization
+    purposes, particularly useful for preparing data for JSON serialization
+    or API responses.
+
+    The function uses dedicated converter functions for specific enum types
+    to ensure consistent string representations across the application.
+    """
+
+    # Object is date
     if isinstance(objects, date):
         return objects.strftime('%Y-%m-%d')
 
+    # Object is numpy.ndarray
     elif isinstance(objects, np.ndarray):
         return objects.tolist()
 
+    # Object is FluidType
     elif isinstance(objects, FluidType):
         return convert_enum_fluid(objects=objects)
 
+    # Object is TaxSplitTypeCR
     elif isinstance(objects, TaxSplitTypeCR):
         return convert_enum_taxsplit(objects=objects)
 
+    # Object is NPVSelection
     elif isinstance(objects, NPVSelection):
         return convert_enum_npv(objects=objects)
 
+    # Object is DiscountingMode
     elif isinstance(objects, DiscountingMode):
         return convert_enum_discountingmode(objects=objects)
 
+    # Object is OtherRevenue
     elif isinstance(objects, OtherRevenue):
         return convert_enum_otherrevenue(objects=objects)
 
+    # Object is DeprMethod
     elif isinstance(objects, DeprMethod):
         return convert_enum_depreciationmethod(objects=objects)
 
+    # Object is FTPTaxRegime
     elif isinstance(objects, FTPTaxRegime):
         return convert_enum_ftptaxregime(objects=objects)
 
+    # Object is TaxRegime
     elif isinstance(objects, TaxRegime):
         return convert_enum_taxregime(objects=objects)
 
+    # Object is InflationAppliedTo
     elif isinstance(objects, InflationAppliedTo):
         return convert_enum_inflationappliedto(objects=objects)
 
+    # Object is GrossSplitRegime
     elif isinstance(objects, GrossSplitRegime):
         return convert_enum_gsregime(objects=objects)
 
+    # Object is VariableSplit522017
     elif isinstance(objects, (
-            VariableSplit522017.FieldStatus,
-            VariableSplit522017.FieldLocation,
-            VariableSplit522017.ReservoirDepth,
-            VariableSplit522017.InfrastructureAvailability,
-            VariableSplit522017.ReservoirType,
-            VariableSplit522017.CO2Content,
-            VariableSplit522017.H2SContent,
-            VariableSplit522017.APIOil,
-            VariableSplit522017.DomesticUse,
-            VariableSplit522017.ProductionStage,
+        VariableSplit522017.FieldStatus,
+        VariableSplit522017.FieldLocation,
+        VariableSplit522017.ReservoirDepth,
+        VariableSplit522017.InfrastructureAvailability,
+        VariableSplit522017.ReservoirType,
+        VariableSplit522017.CO2Content,
+        VariableSplit522017.H2SContent,
+        VariableSplit522017.APIOil,
+        VariableSplit522017.DomesticUse,
+        VariableSplit522017.ProductionStage,
     )):
         return objects.value
 
+    # Object is VariableSplit082017
     elif isinstance(objects, (
-            VariableSplit082017.FieldStatus,
-            VariableSplit082017.FieldLocation,
-            VariableSplit082017.ReservoirDepth,
-            VariableSplit082017.InfrastructureAvailability,
-            VariableSplit082017.ReservoirType,
-            VariableSplit082017.CO2Content,
-            VariableSplit082017.H2SContent,
-            VariableSplit082017.APIOil,
-            VariableSplit082017.DomesticUse,
-            VariableSplit082017.ProductionStage,
+        VariableSplit082017.FieldStatus,
+        VariableSplit082017.FieldLocation,
+        VariableSplit082017.ReservoirDepth,
+        VariableSplit082017.InfrastructureAvailability,
+        VariableSplit082017.ReservoirType,
+        VariableSplit082017.CO2Content,
+        VariableSplit082017.H2SContent,
+        VariableSplit082017.APIOil,
+        VariableSplit082017.DomesticUse,
+        VariableSplit082017.ProductionStage,
+    )):
+        return objects.value
+
+    # Object is VariableSplit132024
+    elif isinstance(objects, (
+        VariableSplit132024.InfrastructureAvailability,
+        VariableSplit132024.FieldReservesAmount,
+        VariableSplit132024.FieldLocation,
+        VariableSplit132024.ReservoirType,
     )):
         return objects.value
 
     else:
         return objects
 
+
 def construct_lifting_attr(lifting: tuple[Lifting]):
-    fluid_types = [(str(lift.fluid_type.value) + ' ' + str(index)).capitalize() for index, lift in enumerate(lifting)]
+    fluid_types = (
+        [
+            (str(lift.fluid_type.value) + ' ' + str(index)).capitalize()
+            for index, lift in enumerate(lifting)
+        ]
+    )
+
     liftings = [vars(lift) for lift in lifting]
 
     for lift in liftings:
@@ -225,7 +857,17 @@ def construct_lifting_attr(lifting: tuple[Lifting]):
 
     return dict(zip(fluid_types, liftings))
 
-def construct_cost_attr(cost: tuple[CapitalCost] | tuple[Intangible] | tuple[OPEX] | tuple[ASR] | tuple[LBT] | tuple[CostOfSales]):
+
+def construct_cost_attr(
+    cost: (
+        tuple[CapitalCost]
+        | tuple[Intangible]
+        | tuple[OPEX]
+        | tuple[ASR]
+        | tuple[LBT]
+        | tuple[CostOfSales]
+    )
+):
     cost_key = ['Cost ' + str(index) for index, _ in enumerate(cost)]
     costs = [vars(cst) for cst in cost]
 
@@ -235,24 +877,39 @@ def construct_cost_attr(cost: tuple[CapitalCost] | tuple[Intangible] | tuple[OPE
                 cst[key] = [convert_enum_fluid(objects=fluid) for fluid in cst[key]]
             else:
                 cst[key] = convert_object(objects=item)
+
     return dict(zip(cost_key, costs))
 
+
 def construct_setup_attr(contract: BaseProject | CostRecovery | GrossSplit | Transition):
+
     fluid_produced = [lift.fluid_type for lift in contract.lifting]
+
     return {
         "start_date": contract.start_date.strftime("%d/%m/%Y"),
         "end_date": contract.end_date.strftime("%d/%m/%Y"),
-        "oil_onstream_date": None if FluidType.OIL not in fluid_produced else contract.oil_onstream_date.strftime("%d/%m/%Y"),
-        "gas_onstream_date": None if FluidType.GAS not in fluid_produced else contract.gas_onstream_date.strftime("%d/%m/%Y"),
+        "oil_onstream_date": (
+            None if FluidType.OIL not in fluid_produced
+            else contract.oil_onstream_date.strftime("%d/%m/%Y")
+        ),
+        "gas_onstream_date": (
+            None if FluidType.GAS not in fluid_produced
+            else contract.gas_onstream_date.strftime("%d/%m/%Y")
+        ),
     }
 
+
 def construct_summary_arguments_attr(summary_arguments: dict):
+
     for key, value in summary_arguments.items():
         summary_arguments[key] = convert_object(objects=value)
+
     return summary_arguments
 
+
 def construct_costrecovery_attr(contract: CostRecovery):
-    cr_setup =  {
+
+    cr_setup = {
         'oil_ftp_is_available': contract.oil_ftp_is_available,
         'oil_ftp_is_shared': contract.oil_ftp_is_shared,
         'oil_ftp_portion': contract.oil_ftp_portion,
@@ -282,10 +939,16 @@ def construct_costrecovery_attr(contract: CostRecovery):
 
     return cr_setup
 
+
 def construct_costrecovery_arguments_attr(contract_arguments: dict):
+
     cr_arguments = {
-        "sulfur_revenue": contract_arguments.get("sulfur_revenue", "Addition to Oil Revenue"),
-        "electricity_revenue": contract_arguments.get("electricity_revenue", "Addition to Oil Revenue"),
+        "sulfur_revenue": (
+            contract_arguments.get("sulfur_revenue", "Addition to Oil Revenue")
+        ),
+        "electricity_revenue": (
+            contract_arguments.get("electricity_revenue", "Addition to Oil Revenue")
+        ),
         "co2_revenue": contract_arguments.get("co2_revenue", "Addition to Oil Revenue"),
         "is_dmo_end_weighted": contract_arguments.get("is_dmo_end_weighted", False),
         "tax_regime": contract_arguments.get("tax_regime", "nailed down"),
@@ -336,6 +999,7 @@ def construct_grosssplit_attr(contract: GrossSplit):
 
     return gs_setup
 
+
 def construct_grosssplit_arguments_attr(contract_arguments: dict):
     gs_arguments = {
         "sulfur_revenue": contract_arguments.get("sulfur_revenue", "Addition to Oil Revenue"),
@@ -361,6 +1025,7 @@ def construct_grosssplit_arguments_attr(contract_arguments: dict):
 
     return gs_arguments
 
+
 def construct_transition_attr(contract: Transition):
     if isinstance(contract.contract1, CostRecovery):
         contract_1 = construct_costrecovery_attr(contract=contract.contract1)
@@ -382,6 +1047,7 @@ def construct_transition_attr(contract: Transition):
 
     return contract_1, contract_2
 
+
 def construct_transition_arguments(contract_arguments: dict):
     trans_arguments = {
         "unrec_portion": contract_arguments["unrec_portion"],
@@ -391,6 +1057,7 @@ def construct_transition_arguments(contract_arguments: dict):
         trans_arguments[key] = convert_object(objects=value)
 
     return trans_arguments
+
 
 def construct_baseproject_arguments_attr(contract_arguments: dict):
     bp_arguments = {
@@ -474,10 +1141,3 @@ def get_contract_attributes(
     attr['cost_of_sales'] = construct_cost_attr(cost=contract.cost_of_sales)
 
     return attr
-
-
-
-
-
-
-

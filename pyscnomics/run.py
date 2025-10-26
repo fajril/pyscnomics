@@ -49,6 +49,32 @@ case = ExampleCase()
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+from pyscnomics.io.getattr import (
+    convert_enum_fluid,
+    convert_enum_npv,
+    convert_enum_gsregime,
+    convert_object,
+)
+
+t1 = convert_object(objects=VariableSplit132024.ReservoirType.MNK)
+
+# print('\t')
+# print(f'Filetype: {type()}')
+# print(f'Length: {len()}')
+# print()
+
+print('\t')
+print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+print('t1 = \n', t1)
+
+# print('\t')
+# print(f'Filetype: {type(t2)}')
+# print(f'Length: {len(t2)}')
+# print('t2 = \n', t2)
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 kwargs_pr = {
     "start_date": date(year=2023, month=1, day=1),
     "end_date": date(year=2032, month=12, day=31),
@@ -1132,56 +1158,56 @@ data = {
 
 # UNCERTAINTY +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-from pyscnomics.econ.selection import UncertaintyDistribution
-from pyscnomics.optimize.uncertainty import (
-    get_multipliers_montecarlo,
-    uncertainty_psc,
-    min_mean_max_retriever,
-)
-
-kwargs_mult = {
-    "run_number": 50,
-    "distribution": "LogNormal",
-    "min_value": 1,
-    "mean_value": 50,
-    "max_value": 100,
-    "std_dev": 20,
-}
-
-kwargs_uncertainty = {
-    "contract": pr,
-    "contract_arguments": None,
-    "summary_arguments": None,
-    "run_number": None,
-    "min_oil_price": 45,
-    "mean_oil_price": 60,
-    "max_oil_price": 80,
-    "min_gas_price": None,
-    "mean_gas_price": None,
-    "max_gas_price": None,
-    "min_opex": None,
-    "mean_opex": None,
-    "max_opex": None,
-    "min_capex": 100,
-    "mean_capex": 150,
-    "max_capex": 200,
-    "min_lifting": None,
-    "mean_lifting": None,
-    "max_lifting": None,
-    "oil_price_stddev": 1.25,
-    "gas_price_stddev": 1.25,
-    "opex_stddev": 1.25,
-    "capex_stddev": 1.25,
-    "lifting_stddev": 1.25,
-    "oil_price_distribution": UncertaintyDistribution.UNIFORM,
-    "gas_price_distribution": UncertaintyDistribution.UNIFORM,
-    "opex_distribution": UncertaintyDistribution.TRIANGULAR,
-    "capex_distribution": UncertaintyDistribution.NORMAL,
-    "lifting_distribution": UncertaintyDistribution.LOGNORMAL,
-    "verbose": False,
-}
-
-uncertainty_psc(**kwargs_uncertainty)
+# from pyscnomics.econ.selection import UncertaintyDistribution
+# from pyscnomics.optimize.uncertainty import (
+#     get_multipliers_montecarlo,
+#     uncertainty_psc,
+#     min_mean_max_retriever,
+# )
+#
+# kwargs_mult = {
+#     "run_number": 50,
+#     "distribution": "LogNormal",
+#     "min_value": 1,
+#     "mean_value": 50,
+#     "max_value": 100,
+#     "std_dev": 20,
+# }
+#
+# kwargs_uncertainty = {
+#     "contract": pr,
+#     "contract_arguments": None,
+#     "summary_arguments": None,
+#     "run_number": None,
+#     "min_oil_price": 45,
+#     "mean_oil_price": 60,
+#     "max_oil_price": 80,
+#     "min_gas_price": None,
+#     "mean_gas_price": None,
+#     "max_gas_price": None,
+#     "min_opex": None,
+#     "mean_opex": None,
+#     "max_opex": None,
+#     "min_capex": 100,
+#     "mean_capex": 150,
+#     "max_capex": 200,
+#     "min_lifting": None,
+#     "mean_lifting": None,
+#     "max_lifting": None,
+#     "oil_price_stddev": 1.25,
+#     "gas_price_stddev": 1.25,
+#     "opex_stddev": 1.25,
+#     "capex_stddev": 1.25,
+#     "lifting_stddev": 1.25,
+#     "oil_price_distribution": UncertaintyDistribution.UNIFORM,
+#     "gas_price_distribution": UncertaintyDistribution.UNIFORM,
+#     "opex_distribution": UncertaintyDistribution.TRIANGULAR,
+#     "capex_distribution": UncertaintyDistribution.NORMAL,
+#     "lifting_distribution": UncertaintyDistribution.LOGNORMAL,
+#     "verbose": False,
+# }
+#
+# uncertainty_psc(**kwargs_uncertainty)
 
 # print('\t')
 # print(f'Filetype: {type()}')
