@@ -1360,16 +1360,18 @@ def uncertainty_psc(
         },
     ]
 
-    print('\t')
-    print(f'Filetype: {type(parameter[1])}')
-    print(f'Length: {len(parameter[1])}')
-    print('parameter = \n', parameter[1])
-
-    # # Condition when there is no gas produced
+    # Delete key '1' from `parameter` when no GAS is produced
+    fluid_produced = [lft.fluid_type for lft in contract.lifting]
     # fluid_produced = [lift.fluid_type.value for lift in contract.lifting]
-    # if FluidType.GAS not in fluid_produced:
-    #     del parameter[1]
-    #
+
+    if FluidType.GAS not in fluid_produced:
+        del parameter[1]
+
+    print('\t')
+    print(f'Filetype: {type(parameter)}')
+    print(f'Length: {len(parameter)}')
+    print('parameter = \n', parameter)
+
     # # Constructing the contract key
     # contract_dict = get_contract_attributes(
     #     contract=contract,
