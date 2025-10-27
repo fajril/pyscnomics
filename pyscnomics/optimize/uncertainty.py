@@ -1234,10 +1234,13 @@ def uncertainty_psc(
     # Translating the contract type before parsing into ProcessMonte class
     if isinstance(contract, CostRecovery):
         contract_type = 1
+
     elif isinstance(contract, GrossSplit):
         contract_type = 2
+
     elif isinstance(contract, Transition):
         contract_type = 3
+
     else:
         contract_type = 0
 
