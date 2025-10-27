@@ -19,7 +19,7 @@ from pyscnomics.econ import (
     FTPTaxRegime,
     TaxRegime,
     InflationAppliedTo,
-    GrossSplitRegime
+    GrossSplitRegime,
 )
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import (
@@ -35,6 +35,8 @@ from pyscnomics.econ.selection import (
     VariableSplit082017,
     VariableSplit522017,
     VariableSplit132024,
+    SunkCostMethod,
+    InitialYearAmortizationIncurred,
 )
 
 
@@ -701,6 +703,67 @@ def convert_enum_gsregime(objects: GrossSplitRegime) -> str:
     )
 
 
+def convert_enum_sunk_cost_method(objects: SunkCostMethod) -> str:
+    """
+    Convert a `SunkCostMethod` enum to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : SunkCostMethod
+        The sunk cost method enum to be converted.
+
+    Returns
+    -------
+    str
+        The string representation of the given `SunkCostMethod` value.
+    """
+
+    # Core mapping
+    mapping = {
+        SunkCostMethod.DEPRECIATED_TANGIBLE: "depreciated_tangible",
+        SunkCostMethod.POOLED_1ST_YEAR: "pooled_first_year",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=SunkCostMethod, enum_mapping=mapping
+    )
+
+
+def convert_enum_initial_amortization_year(
+    objects: InitialYearAmortizationIncurred
+) -> str:
+    """
+    Convert InitialYearAmortizationIncurred enum to string representation.
+
+    Maps enum values to their corresponding string identifiers for use in
+    amortization calculations and data processing.
+
+    Parameters
+    ----------
+    objects : InitialYearAmortizationIncurred
+        Enum value representing the initial year basis for amortization.
+
+    Returns
+    -------
+    str
+        String representation of the enum value:
+        - "onstream_year" for ONSTREAM_YEAR
+        - "approval_year" for APPROVAL_YEAR
+    """
+
+    # Core mapping
+    mapping = {
+        InitialYearAmortizationIncurred.ONSTREAM_YEAR: "onstream_year",
+        InitialYearAmortizationIncurred.APPROVAL_YEAR: "approval_year",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects,
+        enum_type=InitialYearAmortizationIncurred,
+        enum_mapping=mapping,
+    )
+
+
 def convert_object(objects):
     """
     Convert various object types to their serializable representations.
@@ -798,6 +861,14 @@ def convert_object(objects):
     elif isinstance(objects, GrossSplitRegime):
         return convert_enum_gsregime(objects=objects)
 
+    # Object is SunkCostMethod
+    elif isinstance(objects, SunkCostMethod):
+        return convert_enum_sunk_cost_method(objects=objects)
+
+    # Object is InitialAmortizationIncurred
+    elif isinstance(objects, InitialYearAmortizationIncurred):
+        return convert_enum_initial_amortization_year(objects=objects)
+
     # Object is VariableSplit522017
     elif isinstance(objects, (
         VariableSplit522017.FieldStatus,
@@ -841,7 +912,41 @@ def convert_object(objects):
         return objects
 
 
-def construct_lifting_attr(lifting: tuple[Lifting]):
+def _prepare_args(target_arg, default, contract_arguments: dict):
+    return contract_arguments.get(target_arg, default)
+
+
+def construct_lifting_attr(lifting: tuple[Lifting]) -> dict:
+    """
+    Construct a dictionary containing processed lifting attributes for each fluid type.
+
+    This function iterates through a tuple of `Lifting` objects, extracts their
+    attributes, converts each attribute using `convert_object()`, and returns
+    a dictionary mapping descriptive fluid type names (e.g., "Oil 0", "Gas 1")
+    to the corresponding processed lifting data.
+
+    Parameters
+    ----------
+    lifting : tuple of Lifting
+        A tuple containing one or more `Lifting` objects. Each object represents
+        lifting data for a specific fluid type.
+
+    Returns
+    -------
+    dict
+        A dictionary where:
+        - Keys are strings describing each fluid type with an index suffix
+          (e.g., `"Oil 0"`, `"Gas 1"`).
+        - Values are dictionaries of processed lifting attributes for each fluid type.
+
+    Notes
+    -----
+    - Each attribute of the `Lifting` object is converted using the
+      `convert_object()` function.
+    - The function assumes that each `Lifting` object has a `fluid_type`
+      attribute with a `.value` property that can be converted to string.
+    """
+
     fluid_types = (
         [
             (str(lift.fluid_type.value) + ' ' + str(index)).capitalize()
@@ -868,12 +973,41 @@ def construct_cost_attr(
         | tuple[CostOfSales]
     )
 ):
-    cost_key = ['Cost ' + str(index) for index, _ in enumerate(cost)]
+    """
+    Construct a dictionary containing processed cost attributes for each cost entry.
+
+    This function takes a tuple of cost objects (e.g., `CapitalCost`, `OPEX`, `LBT`),
+    converts their attributes using helper functions, and returns a dictionary
+    mapping each cost entry to a structured dictionary of processed attributes.
+
+    Parameters
+    ----------
+    cost : tuple of CapitalCost or Intangible or OPEX or ASR or LBT or CostOfSales
+        A tuple containing one or more cost objects representing different
+        types of project expenditures.
+
+    Returns
+    -------
+    dict
+        A dictionary where:
+        - Keys are strings identifying each cost entry with an index suffix
+          (e.g., `"Cost 0"`, `"Cost 1"`).
+        - Values are dictionaries of processed cost attributes for each entry.
+
+    Notes
+    -----
+    - Each attribute of the cost object is converted using `convert_object()`,
+      except for `cost_allocation`, which is processed with `convert_enum_fluid()`.
+    - The function assumes that each cost object supports attribute extraction
+      via `vars()`.
+    """
+
+    cost_key = ["Cost " + str(index) for index, _ in enumerate(cost)]
     costs = [vars(cst) for cst in cost]
 
     for cst in costs:
         for key, item in cst.items():
-            if key == 'cost_allocation':
+            if key == "cost_allocation":
                 cst[key] = [convert_enum_fluid(objects=fluid) for fluid in cst[key]]
             else:
                 cst[key] = convert_object(objects=item)
@@ -882,24 +1016,113 @@ def construct_cost_attr(
 
 
 def construct_setup_attr(contract: BaseProject | CostRecovery | GrossSplit | Transition):
+    """
+    Construct setup attributes dictionary for contract data.
+
+    This function processes contract information to create a standardized
+    dictionary of setup attributes with formatted dates and fluid type
+    validation.
+
+    Parameters
+    ----------
+    contract : BaseProject | CostRecovery | GrossSplit | Transition
+        Contract object containing lifting data, dates, and fluid information.
+        Must have the following attributes:
+        - lifting: Iterable of objects with fluid_type attribute
+        - start_date: Contract start date
+        - end_date: Contract end date
+        - oil_onstream_date: Oil production start date
+        - gas_onstream_date: Gas production start date
+
+    Returns
+    -------
+    dict
+        Dictionary containing formatted contract setup attributes with keys:
+        - start_date : str
+            Contract start date formatted as "DD/MM/YYYY"
+        - end_date : str
+            Contract end date formatted as "DD/MM/YYYY"
+        - oil_onstream_date : str or None
+            Oil production start date formatted as "DD/MM/YYYY" if oil is
+            produced, otherwise None
+        - gas_onstream_date : str or None
+            Gas production start date formatted as "DD/MM/YYYY" if gas is
+            produced, otherwise None
+
+    Notes
+    -----
+    - Dates are formatted to "DD/MM/YYYY" string format
+    - Onstream dates are only included if the corresponding fluid type
+      is present in the contract's lifting data
+    - Uses helper function `_get_date` for fluid type validation and
+      date formatting
+    """
 
     fluid_produced = [lift.fluid_type for lift in contract.lifting]
+
+    def _get_date(fluid_type: FluidType, onstream_date: date):
+        """
+        Get formatted onstream date if fluid type is produced.
+
+        Helper function to validate fluid production and format the
+        corresponding onstream date.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            Type of fluid (OIL or GAS) to check for production
+        onstream_date : datetime
+            Date when production for the fluid type begins
+
+        Returns
+        -------
+        str or None
+            Formatted date string "DD/MM/YYYY" if fluid type is produced,
+            otherwise None
+        """
+        return (
+            None if fluid_type not in fluid_produced
+            else onstream_date.strftime("%d/%m/%Y")
+        )
+
+    args = {
+        "oil": (FluidType.OIL, contract.oil_onstream_date),
+        "gas": (FluidType.GAS, contract.gas_onstream_date),
+    }
 
     return {
         "start_date": contract.start_date.strftime("%d/%m/%Y"),
         "end_date": contract.end_date.strftime("%d/%m/%Y"),
-        "oil_onstream_date": (
-            None if FluidType.OIL not in fluid_produced
-            else contract.oil_onstream_date.strftime("%d/%m/%Y")
-        ),
-        "gas_onstream_date": (
-            None if FluidType.GAS not in fluid_produced
-            else contract.gas_onstream_date.strftime("%d/%m/%Y")
-        ),
+        "oil_onstream_date": _get_date(*args["oil"]),
+        "gas_onstream_date": _get_date(*args["gas"]),
     }
 
 
 def construct_summary_arguments_attr(summary_arguments: dict):
+    """
+    Process summary arguments by converting all values using convert_object.
+
+    This function iterates through all key-value pairs in the input dictionary
+    and applies the `convert_object` function to each value, modifying the
+    dictionary in place.
+
+    Parameters
+    ----------
+    summary_arguments : dict
+        Dictionary containing summary arguments where values need to be
+        processed/converted. The dictionary will be modified in place.
+
+    Returns
+    -------
+    dict
+        The same dictionary object with all values processed by `convert_object`.
+        The dictionary is modified in place and returned for method chaining.
+
+    Notes
+    -----
+    - This function modifies the input dictionary in place
+    - The specific conversion behavior depends on the `convert_object` function
+    """
 
     for key, value in summary_arguments.items():
         summary_arguments[key] = convert_object(objects=value)
@@ -908,30 +1131,64 @@ def construct_summary_arguments_attr(summary_arguments: dict):
 
 
 def construct_costrecovery_attr(contract: CostRecovery):
+    """
+    Extract and convert CostRecovery contract attributes to a dictionary.
+
+    Processes CostRecovery contract object attributes across multiple categories
+    including FTP, splits, investment credits, DMO, and depreciation. All values
+    are processed through convert_object.
+
+    Parameters
+    ----------
+    contract : CostRecovery
+        CostRecovery contract object containing attributes for FTP, tax splits,
+        investment credits, DMO, and depreciation settings.
+
+    Returns
+    -------
+    dict
+        Dictionary containing converted CostRecovery attributes with keys for:
+        - FTP settings (oil/gas availability, sharing, portions)
+        - Tax splits and contractor shares
+        - Investment credit rates and cap rates
+        - DMO volumes, fees, and holidays
+        - Carry forward depreciation values
+    """
 
     cr_setup = {
-        'oil_ftp_is_available': contract.oil_ftp_is_available,
-        'oil_ftp_is_shared': contract.oil_ftp_is_shared,
-        'oil_ftp_portion': contract.oil_ftp_portion,
-        'gas_ftp_is_available': contract.gas_ftp_is_available,
-        'gas_ftp_is_shared': contract.gas_ftp_is_shared,
-        'gas_ftp_portion': contract.gas_ftp_portion,
-        'tax_split_type': contract.tax_split_type,
-        'condition_dict': contract.condition_dict,
-        'indicator_rc_icp_sliding': contract.indicator_rc_icp_sliding,
-        'oil_ctr_pretax_share': contract.oil_ctr_pretax_share,
-        'gas_ctr_pretax_share': contract.gas_ctr_pretax_share,
-        'oil_ic_rate': contract.oil_ic_rate,
-        'gas_ic_rate': contract.gas_ic_rate,
-        'ic_is_available': contract.ic_is_available,
-        'oil_cr_cap_rate': contract.oil_cr_cap_rate,
-        'gas_cr_cap_rate': contract.gas_cr_cap_rate,
-        'oil_dmo_volume_portion': contract.oil_dmo_volume_portion,
-        'oil_dmo_fee_portion': contract.oil_dmo_fee_portion,
-        'oil_dmo_holiday_duration': contract.oil_dmo_holiday_duration,
-        'gas_dmo_volume_portion': contract.gas_dmo_volume_portion,
-        'gas_dmo_fee_portion': contract.gas_dmo_fee_portion,
-        'gas_dmo_holiday_duration': contract.gas_dmo_holiday_duration,
+        # FTP
+        "oil_ftp_is_available": contract.oil_ftp_is_available,
+        "oil_ftp_is_shared": contract.oil_ftp_is_shared,
+        "oil_ftp_portion": contract.oil_ftp_portion,
+        "gas_ftp_is_available": contract.gas_ftp_is_available,
+        "gas_ftp_is_shared": contract.gas_ftp_is_shared,
+        "gas_ftp_portion": contract.gas_ftp_portion,
+
+        # Split
+        "tax_split_type": contract.tax_split_type,
+        "condition_dict": contract.condition_dict,
+        "indicator_rc_icp_sliding": contract.indicator_rc_icp_sliding,
+        "oil_ctr_pretax_share": contract.oil_ctr_pretax_share,
+        "gas_ctr_pretax_share": contract.gas_ctr_pretax_share,
+
+        # Investment credit and cap rate
+        "oil_ic_rate": contract.oil_ic_rate,
+        "gas_ic_rate": contract.gas_ic_rate,
+        "ic_is_available": contract.ic_is_available,
+        "oil_cr_cap_rate": contract.oil_cr_cap_rate,
+        "gas_cr_cap_rate": contract.gas_cr_cap_rate,
+
+        # DMO
+        "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
+        "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
+        "oil_dmo_holiday_duration": contract.oil_dmo_holiday_duration,
+        "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
+        "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
+        "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
+
+        # Carry forward depreciation
+        "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
+        "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
     }
 
     for key, value in cr_setup.items():
@@ -941,29 +1198,48 @@ def construct_costrecovery_attr(contract: CostRecovery):
 
 
 def construct_costrecovery_arguments_attr(contract_arguments: dict):
+    """
+    Construct processed Cost Recovery contract arguments with default values applied.
+
+    Parameters
+    ----------
+    contract_arguments : dict
+        Dictionary containing user-defined Cost Recovery parameters.
+
+    Returns
+    -------
+    dict
+        Dictionary of processed contract arguments where missing keys are filled
+        with default values and all entries are converted using `convert_object()`.
+
+    Notes
+    -----
+    - Default values are defined in an internal mapping.
+    - Each argument is processed using `convert_object()` for type consistency.
+    """
+
+    mapping_args = {
+        "sulfur_revenue": ("sulfur_revenue", "Addition to Oil Revenue"),
+        "electricity_revenue": ("electricity_revenue", "Addition to Oil Revenue"),
+        "co2_revenue": ("co2_revenue", "Addition to Oil Revenue"),
+        "vat_rate": ("vat_rate", 0.0),
+        "inflation_rate": ("inflation_rate", 0.0),
+        "inflation_rate_applied_to": ("inflation_rate_applied_to", None),
+        "is_dmo_end_weighted": ("is_dmo_end_weighted", False),
+        "tax_regime": ("tax_regime", "nailed down"),
+        "effective_tax_rate": ("effective_tax_rate", None),
+        "ftp_tax_regime": ("ftp_tax_regime", "PDJP No.20 Tahun 2017"),
+        "depr_method": ("depr_method", "PSC Declining Balance"),
+        "decline_factor": ("decline_factor", 2),
+        "post_uu_22_year2001": ("post_uu_22_year2001", True),
+        "oil_cost_of_sales_applied": ("oil_cost_of_sales_applied", False),
+        "gas_cost_of_sales_applied": ("gas_cost_of_sales_applied", False),
+        "sum_undepreciated_cost": ("sum_undepreciated_cost", True),
+        "sunk_cost_method": ("sunk_cost_method", "depreciated_tangible"),
+    }
 
     cr_arguments = {
-        "sulfur_revenue": (
-            contract_arguments.get("sulfur_revenue", "Addition to Oil Revenue")
-        ),
-        "electricity_revenue": (
-            contract_arguments.get("electricity_revenue", "Addition to Oil Revenue")
-        ),
-        "co2_revenue": contract_arguments.get("co2_revenue", "Addition to Oil Revenue"),
-        "is_dmo_end_weighted": contract_arguments.get("is_dmo_end_weighted", False),
-        "tax_regime": contract_arguments.get("tax_regime", "nailed down"),
-        "effective_tax_rate": contract_arguments.get("effective_tax_rate", None),
-        "ftp_tax_regime": contract_arguments.get("ftp_tax_regime", "PDJP No.20 Tahun 2017"),
-        "sunk_cost_reference_year": contract_arguments.get("sunk_cost_reference_year", None),
-        "depr_method": contract_arguments.get("depr_method", "PSC Declining Balance"),
-        "decline_factor": contract_arguments.get("decline_factor", 2),
-        "vat_rate": contract_arguments.get("vat_rate", 0.0),
-        "inflation_rate": contract_arguments.get("inflation_rate", 0.0),
-        "inflation_rate_applied_to": contract_arguments.get("inflation_rate_applied_to", None),
-        "post_uu_22_year2001": contract_arguments.get("post_uu_22_year2001", True),
-        "sum_undepreciated_cost": contract_arguments.get("sum_undepreciated_cost", True),
-        "oil_cost_of_sales_applied": contract_arguments.get("oil_cost_of_sales_applied", False),
-        "gas_cost_of_sales_applied": contract_arguments.get("gas_cost_of_sales_applied", False),
+        key: _prepare_args(*val, contract_arguments) for key, val in mapping_args.items()
     }
 
     for key, value in cr_arguments.items():
@@ -971,8 +1247,32 @@ def construct_costrecovery_arguments_attr(contract_arguments: dict):
 
     return cr_arguments
 
+
 def construct_grosssplit_attr(contract: GrossSplit):
+    """
+    Construct a dictionary of processed Gross Split contract attributes.
+
+    Parameters
+    ----------
+    contract : GrossSplit
+        The Gross Split contract object containing field, reservoir, DMO,
+        and depreciation parameters.
+
+    Returns
+    -------
+    dict
+        Dictionary of processed Gross Split attributes, where all values
+        are converted using `convert_object()`.
+
+    Notes
+    -----
+    - Includes key contract attributes such as field/reservoir properties,
+      DMO parameters, and carry-forward depreciation.
+    - Ensures type consistency by processing all values with `convert_object()`.
+    """
+
     gs_setup = {
+        # Field and reservoir properties
         "field_status": contract.field_status,
         "field_loc": contract.field_loc,
         "res_depth": contract.res_depth,
@@ -983,15 +1283,22 @@ def construct_grosssplit_attr(contract: GrossSplit):
         "prod_stage": contract.prod_stage,
         "co2_content": contract.co2_content,
         "h2s_content": contract.h2s_content,
-        "base_split_ctr_oil": contract.base_split_ctr_oil,
-        "base_split_ctr_gas": contract.base_split_ctr_gas,
+        "field_reserves_2024": contract.field_reserves_2024,
+        "infra_avail_2024": contract.infra_avail_2024,
+        "field_loc_2024": contract.field_loc_2024,
         "split_ministry_disc": contract.split_ministry_disc,
+
+        # DMO parameters
         "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
         "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
         "oil_dmo_holiday_duration": contract.oil_dmo_holiday_duration,
         "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
         "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
         "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
+
+        # Carry forward depreciation
+        "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
+        "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
     }
 
     for key, value in gs_setup.items():
@@ -1000,30 +1307,96 @@ def construct_grosssplit_attr(contract: GrossSplit):
     return gs_setup
 
 
-def construct_grosssplit_arguments_attr(contract_arguments: dict):
+def construct_grosssplit_arguments_attr(contract_arguments: dict) -> dict:
+    """
+    Construct processed Gross Split contract arguments with default values applied.
+
+    Parameters
+    ----------
+    contract_arguments : dict
+        Dictionary containing user-defined Gross Split parameters.
+
+    Returns
+    -------
+    dict
+        Dictionary of processed contract arguments where missing keys are filled
+        with default values and all entries are converted using `convert_object()`.
+
+    Notes
+    -----
+    - Default values are defined in an internal mapping.
+    - Ensures type consistency through `convert_object()`.
+    """
+
+    mapping_args = {
+        "sulfur_revenue": ("sulfur_revenue", "Addition to Oil Revenue"),
+        "electricity_revenue": ("electricity_revenue", "Addition to Oil Revenue"),
+        "co2_revenue": ("co2_revenue", "Addition to Oil Revenue"),
+        "vat_rate": ("vat_rate", 0.0),
+        "inflation_rate": ("inflation_rate", 0.0),
+        "inflation_rate_applied_to": ("inflation_rate_applied_to", None),
+        "cum_production_split_offset": ("cum_production_split_offset", None),
+        "depr_method": ("depr_method", "PSC Declining Balance"),
+        "decline_factor": ("decline_factor", 2),
+        "sum_undepreciated_cost": ("sum_undepreciated_cost", True),
+        "is_dmo_end_weighted": ("is_dmo_end_weighted", False),
+        "tax_regime": ("tax_regime", "nailed down"),
+        "effective_tax_rate": ("effective_tax_rate", 0.22),
+        "amortization": ("amortization", False),
+        "sunk_cost_method": ("sunk_cost_method", "depreciated_tangible"),
+        "regime": ("regime", "PERMEN_ESDM_12_2020"),
+        "reservoir_type_permen_2024": ("reservoir_type_permen_2024", "conventional"),
+        "initial_amortization_year": ("initial_amortization_year", "onstream_year"),
+    }
+
     gs_arguments = {
-        "sulfur_revenue": contract_arguments.get("sulfur_revenue", "Addition to Oil Revenue"),
-        "electricity_revenue": contract_arguments.get("electricity_revenue", "Addition to Oil Revenue"),
-        "co2_revenue": contract_arguments.get("co2_revenue", "Addition to Oil Revenue"),
-        "is_dmo_end_weighted": contract_arguments.get("is_dmo_end_weighted", False),
-        "tax_regime": contract_arguments.get("tax_regime", "nailed down"),
-        "effective_tax_rate": contract_arguments.get("effective_tax_rate", 0.22),
-        "sunk_cost_reference_year": contract_arguments.get("sunk_cost_reference_year", None),
-        "depr_method": contract_arguments.get("depr_method", "PSC Declining Balance"),
-        "decline_factor": contract_arguments.get("decline_factor", 2),
-        "vat_rate": contract_arguments.get("vat_rate", 0.0),
-        "inflation_rate": contract_arguments.get("inflation_rate", 0.0),
-        "inflation_rate_applied_to": contract_arguments.get("inflation_rate_applied_to", None),
-        "cum_production_split_offset": contract_arguments.get("cum_production_split_offset", None),
-        "amortization": contract_arguments.get("amortization", False),
-        "regime": contract_arguments.get("regime", "PERMEN_ESDM_12_2020"),
-        "sum_undepreciated_cost": contract_arguments.get("sum_undepreciated_cost", True),
+        key: _prepare_args(*val, contract_arguments) for key, val in mapping_args.items()
     }
 
     for key, value in gs_arguments.items():
         gs_arguments[key] = convert_object(objects=value)
 
     return gs_arguments
+
+
+def construct_baseproject_arguments_attr(contract_arguments: dict) -> dict:
+    """
+    Process BaseProject contract arguments with mapping and conversion.
+
+    Maps and converts contract arguments for BaseProject using predefined
+    mappings and applies object conversion to all values.
+
+    Parameters
+    ----------
+    contract_arguments : dict
+        Raw contract arguments dictionary.
+
+    Returns
+    -------
+    dict
+        Processed BaseProject arguments with keys: sulfur_revenue,
+        electricity_revenue, co2_revenue, tax_rate, year_inflation,
+        inflation_rate, inflation_rate_applied_to.
+    """
+
+    mapping_args = {
+        "sulfur_revenue": ("sulfur_revenue", "Addition to Oil Revenue"),
+        "electricity_revenue": ("electricity_revenue", "Addition to Oil Revenue"),
+        "co2_revenue": ("co2_revenue", "Addition to Oil Revenue"),
+        "tax_rate": ("tax_rate", 0.0),
+        "year_inflation": ("year_inflation", None),
+        "inflation_rate": ("inflation_rate", 0.0),
+        "inflation_rate_applied_to": ("inflation_rate_applied_to", None),
+    }
+
+    bp_arguments = {
+        key: _prepare_args(*val, contract_arguments) for key, val in mapping_args.items()
+    }
+
+    for key, value in bp_arguments.items():
+        bp_arguments[key] = convert_object(objects=value)
+
+    return bp_arguments
 
 
 def construct_transition_attr(contract: Transition):
@@ -1059,85 +1432,88 @@ def construct_transition_arguments(contract_arguments: dict):
     return trans_arguments
 
 
-def construct_baseproject_arguments_attr(contract_arguments: dict):
-    bp_arguments = {
-        "sulfur_revenue": contract_arguments.get("sulfur_revenue", "Addition to Oil Revenue"),
-        "electricity_revenue": contract_arguments.get("electricity_revenue", "Addition to Oil Revenue"),
-        "co2_revenue": contract_arguments.get("co2_revenue", "Addition to Oil Revenue"),
-        "sunk_cost_reference_year": contract_arguments.get("sunk_cost_reference_year", None),
-        "year_inflation": contract_arguments.get("year_inflation", None),
-        "inflation_rate": contract_arguments.get("inflation_rate", 0.0),
-        "tax_rate": contract_arguments.get("tax_rate", 0.0),
-        "inflation_rate_applied_to": contract_arguments.get("inflation_rate_applied_to", None),
-    }
-
-    for key, value in bp_arguments.items():
-        bp_arguments[key] = convert_object(objects=value)
-
-    return bp_arguments
-
-
 def get_contract_attributes(
-        contract: BaseProject | CostRecovery | GrossSplit | Transition,
-        contract_arguments: dict,
-        summary_arguments: dict,
+    contract: BaseProject | CostRecovery | GrossSplit | Transition,
+    contract_arguments: dict,
+    summary_arguments: dict,
 ) -> dict:
     """
-    Function to get the attributes of a contract in a defined json compatible format.
+    Construct a comprehensive dictionary of contract attributes in JSON-compatible format.
+
+    This function aggregates various components of a petroleum contract—
+    including setup, arguments, lifting data, and cost structures—into a
+    unified dictionary ready for JSON serialization.
 
     Parameters
     ----------
-    contract: BaseProject | CostRecovery | GrossSplit | Transition
-        The contract which the attributes will be retrieved in compatible json format.
-    contract_arguments: dict
-        The contract arguments
-    summary_arguments: dict
-        The summary arguments of the contract.
+    contract : BaseProject or CostRecovery or GrossSplit or Transition
+        The contract object whose attributes will be extracted and processed.
+    contract_arguments : dict
+        Dictionary containing user-defined or default contract argument values.
+    summary_arguments : dict
+        Dictionary containing summary-level configuration of the contract.
 
     Returns
     -------
-    out: dict
-        The dictionary containing the contract attributes in json compatible format.
+    dict
+        A dictionary containing all contract attributes in a JSON-compatible
+        structure. The content and structure depend on the contract type.
+
+    Notes
+    -----
+    - Automatically detects contract type and calls the corresponding
+      attribute-construction functions.
+    - Includes setup, summary arguments, contract-specific attributes,
+      lifting data, and cost structures.
+    - Ensures that all elements are processed through `convert_object()`
+      for JSON compatibility.
     """
 
     # Constructing the setup and summary arguments key
     attr = {
-        'setup': construct_setup_attr(contract=contract),
-        'summary_arguments': construct_summary_arguments_attr(summary_arguments=summary_arguments),
+        "setup": construct_setup_attr(contract=contract),
+        "summary_arguments": construct_summary_arguments_attr(
+            summary_arguments=summary_arguments
+        ),
     }
 
     # Constructing the contract config key
     if isinstance(contract, CostRecovery):
-        attr['costrecovery'] = construct_costrecovery_attr(contract=contract)
-        attr['contract_arguments'] = construct_costrecovery_arguments_attr(contract_arguments=contract_arguments)
+        attr["costrecovery"] = construct_costrecovery_attr(contract=contract)
+        attr["contract_arguments"] = construct_costrecovery_arguments_attr(
+            contract_arguments=contract_arguments
+        )
+
     elif isinstance(contract, GrossSplit):
-        attr['grosssplit'] = construct_grosssplit_attr(contract=contract)
-        attr['contract_arguments'] = construct_grosssplit_arguments_attr(contract_arguments=contract_arguments)
+        attr["grosssplit"] = construct_grosssplit_attr(contract=contract)
+        attr["contract_arguments"] = construct_grosssplit_arguments_attr(
+            contract_arguments=contract_arguments
+        )
+
     elif isinstance(contract, Transition):
-        attr['contract_1'], attr['contract_2'] = construct_transition_attr(contract=contract)
-        attr['contract_arguments'] = construct_transition_arguments(contract_arguments=contract_arguments)
+        attr["contract_1"], attr["contract_2"] = construct_transition_attr(contract=contract)
+        attr["contract_arguments"] = construct_transition_arguments(
+            contract_arguments=contract_arguments
+        )
+
     elif isinstance(contract, BaseProject):
-        attr['contract_arguments'] = construct_baseproject_arguments_attr(contract_arguments=contract_arguments)
+        attr["contract_arguments"] = construct_baseproject_arguments_attr(
+            contract_arguments=contract_arguments
+        )
 
-    # Constructing the lifting key
-    attr['lifting'] = construct_lifting_attr(lifting=contract.lifting)
+    # Mapping for lifting and costs assignments
+    mapping_lifting_costs = (
+        ("lifting", construct_lifting_attr, contract.lifting),
+        ("capital", construct_cost_attr, contract.capital_cost),
+        ("intangible", construct_cost_attr, contract.intangible_cost),
+        ("opex", construct_cost_attr, contract.opex),
+        ("asr", construct_cost_attr, contract.asr_cost),
+        ("lbt", construct_cost_attr, contract.lbt_cost),
+        ("cost_of_sales", construct_cost_attr, contract.cost_of_sales),
+    )
 
-    # Constructing the capital key
-    attr['capital'] = construct_cost_attr(cost=contract.capital_cost)
-
-    # Constructing the intangible key
-    attr['intangible'] = construct_cost_attr(cost=contract.intangible_cost)
-
-    # Constructing the opex key
-    attr['opex'] = construct_cost_attr(cost=contract.opex)
-
-    # Constructing the asr key
-    attr['asr'] = construct_cost_attr(cost=contract.asr_cost)
-
-    # Constructing the lbt key
-    attr['lbt'] = construct_cost_attr(cost=contract.lbt_cost)
-
-    # Constructing the cost of sales key
-    attr['cost_of_sales'] = construct_cost_attr(cost=contract.cost_of_sales)
+    # Add `attr` members for lifting and costs
+    for (section, builder_func, source_data) in mapping_lifting_costs:
+        attr[section] = builder_func(source_data)
 
     return attr

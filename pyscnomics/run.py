@@ -20,6 +20,24 @@ from pyscnomics.econ.selection import (
     NPVSelection,
     DiscountingMode,
 )
+
+from pyscnomics.io.getattr import (
+    convert_enum_fluid,
+    convert_enum_npv,
+    convert_enum_gsregime,
+    convert_object,
+    construct_lifting_attr,
+    construct_cost_attr,
+    construct_setup_attr,
+    construct_summary_arguments_attr,
+    construct_costrecovery_attr,
+    construct_costrecovery_arguments_attr,
+    construct_grosssplit_attr,
+    construct_grosssplit_arguments_attr,
+    construct_baseproject_arguments_attr,
+    get_contract_attributes,
+)
+
 from datetime import date
 from dataclasses import asdict
 from pyscnomics.contracts.project import BaseProject
@@ -33,71 +51,141 @@ from pyscnomics.econ.costs import CapitalCost
 
 case = ExampleCase()
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# BASE PROJECT +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-# params = {
-#     "depr_method": DeprMethod.PSC_DB,
-#     "decline_factor": 2,
-#     "year_inflation": None,
-#     "inflation_rate": 0.01,
-#     "tax_rate": 0.0,
-#     "inflation_rate_applied_to": InflationAppliedTo.OPEX,
+# kwargs_pr = {
+#     "start_date": date(year=2023, month=1, day=1),
+#     "end_date": date(year=2032, month=12, day=31),
+#     "oil_onstream_date": date(year=2030, month=1, day=1),
+#     "gas_onstream_date": date(year=2029, month=1, day=1),
+#     "approval_year": 2026,
+#     "is_pod_1": False,
 # }
 #
-# capital_mangga = case.capital_mangga
-# t1 = capital_mangga.total_depreciation_rate(**params)
+# params_pr = {
+#     "sulfur_revenue": OtherRevenue.REDUCTION_TO_GAS_OPEX,
+#     "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+#     "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+#     "tax_rate": 0.0,
+#     "year_inflation": None,
+#     "inflation_rate": 0.0,
+#     "inflation_rate_applied_to": None,
+# }
+#
+# summary_pr = {
+#     "discount_rate": 0.1,
+#     "npv_mode": NPVSelection.NPV_SKK_REAL_TERMS,
+#     "discounting_mode": DiscountingMode.END_YEAR,
+#     "discount_rate_start_year": None,
+#     "inflation_rate": 0.0,
+#     "profitability_discounted": False,
+# }
+#
+# pr = BaseProject(
+#     **kwargs_pr,
+#     lifting=tuple([case.lifting_mangga, case.lifting_apel, case.lifting_nanas]),
+#     capital_cost=tuple([case.capital_mangga, case.capital_apel]),
+#     intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),
+#     opex=tuple([case.opex_mangga, case.opex_apel]),
+#     asr_cost=tuple([case.asr_mangga, case.asr_apel]),
+#     lbt_cost=tuple([case.lbt_mangga, case.lbt_apel]),
+#     cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
+# )
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-from pyscnomics.io.getattr import (
-    convert_enum_fluid,
-    convert_enum_npv,
-    convert_enum_gsregime,
-    convert_object,
-)
-
-t1 = convert_object(objects=VariableSplit132024.ReservoirType.MNK)
+# pr.run(**params_pr)
+# pr.get_summary()
+# get_contract_attributes(
+#     contract=pr, contract_arguments=params_pr, summary_arguments=summary_pr
+# )
 
 # print('\t')
 # print(f'Filetype: {type()}')
 # print(f'Length: {len()}')
 # print()
 
-print('\t')
-print(f'Filetype: {type(t1)}')
-# print(f'Length: {len(t1)}')
-print('t1 = \n', t1)
-
 # print('\t')
-# print(f'Filetype: {type(t2)}')
-# print(f'Length: {len(t2)}')
-# print('t2 = \n', t2)
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = \n', t1)
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# GROSS SPLIT ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-kwargs_pr = {
+kwargs_gs = {
+    # Base Parameters
     "start_date": date(year=2023, month=1, day=1),
     "end_date": date(year=2032, month=12, day=31),
     "oil_onstream_date": date(year=2030, month=1, day=1),
     "gas_onstream_date": date(year=2029, month=1, day=1),
     "approval_year": 2026,
-    "is_pod_1": False,
+    "is_pod_1": True,
+
+    # Field and reservoir properties
+    "field_status": VariableSplit082017.FieldStatus.NO_POD,
+    "field_loc": VariableSplit082017.FieldLocation.ONSHORE,
+    "res_depth": VariableSplit082017.ReservoirDepth.LESSEQUAL_2500,
+    "infra_avail": VariableSplit082017.InfrastructureAvailability.WELL_DEVELOPED,
+    "res_type": VariableSplit082017.ReservoirType.CONVENTIONAL,
+    "api_oil": VariableSplit082017.APIOil.LESSTHAN_25,
+    "domestic_use": VariableSplit082017.DomesticUse.EQUAL_50_UNTIL_LESSTHAN_70,
+    "prod_stage": VariableSplit082017.ProductionStage.SECONDARY,
+    "co2_content": VariableSplit082017.CO2Content.LESSTHAN_5,
+    "h2s_content": VariableSplit082017.H2SContent.LESSTHAN_100,
+    "field_reserves_2024": VariableSplit132024.FieldReservesAmount.HIGH,
+    "infra_avail_2024": VariableSplit132024.InfrastructureAvailability.AVAILABLE,
+    "field_loc_2024": VariableSplit132024.FieldLocation.ONSHORE,
+
+    # Ministry discretion
+    "split_ministry_disc": 0.08,
+
+    # DMO
+    "oil_dmo_volume_portion": 0.25,
+    "oil_dmo_fee_portion": 1.0,
+    "gas_dmo_volume_portion": 1.0,
+    "gas_dmo_fee_portion": 1.0,
+    "oil_dmo_holiday_duration": 60,
+    "gas_dmo_holiday_duration": 60,
+
+    # Carry forward depreciation
+    "oil_carry_forward_depreciation": 0.0,
+    "gas_carry_forward_depreciation": 0.0,
 }
 
-params_base = {
-    "sulfur_revenue": OtherRevenue.REDUCTION_TO_GAS_OPEX,
+params_gs = {
+    "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
     "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
     "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-    "tax_rate": 0.0,
+    "vat_rate": 0.0,
     "year_inflation": None,
     "inflation_rate": 0.0,
-    "inflation_rate_applied_to": None,
+    "inflation_rate_applied_to": InflationAppliedTo.CAPEX,
+    "cum_production_split_offset": 0.0,
+    # "cum_production_split_offset": np.array([0.2 for _ in range(10)]),
+    "depr_method": DeprMethod.PSC_DB,
+    "decline_factor": 2,
+    "sum_undepreciated_cost": False,
+    "is_dmo_end_weighted": False,
+    "tax_regime": TaxRegime.NAILED_DOWN,
+    "effective_tax_rate": 0.22,
+    "amortization": False,
+    "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
+    "regime": GrossSplitRegime.PERMEN_ESDM_13_2024,
+    "reservoir_type_permen_2024": VariableSplit132024.ReservoirType.MK,
+    "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
 }
 
-pr = BaseProject(
-    **kwargs_pr,
-    lifting=tuple([case.lifting_mangga]),
+summary_gs = {
+    "discount_rate": 0.1,
+    "npv_mode": NPVSelection.NPV_SKK_REAL_TERMS,
+    "discounting_mode": DiscountingMode.END_YEAR,
+    "discount_rate_start_year": None,
+    "inflation_rate": 0.0,
+    "profitability_discounted": False,
+}
+
+gs = GrossSplit(
+    **kwargs_gs,
     # lifting=tuple([case.lifting_mangga, case.lifting_apel, case.lifting_nanas]),
+    lifting=tuple([case.lifting_mangga, case.lifting_apel]),
     capital_cost=tuple([case.capital_mangga, case.capital_apel]),
     intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),
     opex=tuple([case.opex_mangga, case.opex_apel]),
@@ -106,84 +194,13 @@ pr = BaseProject(
     cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
 )
 
-# pr.run(**params_base)
-# t1 = pr.get_summary()
-
-# print('\t')
-# print(f'Filetype: {type()}')
-# print(f'Length: {len()}')
-# print()
-
-# print('\t')
-# print(f'Filetype: {type(t1)}')
-# print(f'Length: {len(t1)}')
-# print('t1 = \n', t1)
-
-# print('\t')
-# print(f'Filetype: {type(t2)}')
-# print(f'Length: {len(t2)}')
-# print('t2 = \n', t2)
-
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-# kwargs_gs = {
-#     "start_date": date(year=2023, month=1, day=1),
-#     "end_date": date(year=2032, month=12, day=31),
-#     "oil_onstream_date": date(year=2030, month=1, day=1),
-#     "gas_onstream_date": date(year=2029, month=1, day=1),
-#     "approval_year": 2026,
-#     "is_pod_1": True,
-#     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#     "split_ministry_disc": 0.08,
-#     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#     "oil_dmo_volume_portion": 0.25,
-#     "oil_dmo_fee_portion": 1.0,
-#     "gas_dmo_volume_portion": 1.0,
-#     "gas_dmo_fee_portion": 1.0,
-#     "oil_dmo_holiday_duration": 60,
-#     "gas_dmo_holiday_duration": 60,
-#     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#     "oil_carry_forward_depreciation": 0.0,
-#     "gas_carry_forward_depreciation": 0.0,
-# }
-#
-# params_gs = {
-#     "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-#     "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
-#     "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-#     "vat_rate": 0.0,
-#     "year_inflation": None,
-#     "inflation_rate": 0.0,
-#     "inflation_rate_applied_to": InflationAppliedTo.CAPEX,
-#     "cum_production_split_offset": 0.0,
-#     # "cum_production_split_offset": np.array([0.2 for _ in range(10)]),
-#     "depr_method": DeprMethod.PSC_DB,
-#     "decline_factor": 2,
-#     "sum_undepreciated_cost": False,
-#     "is_dmo_end_weighted": False,
-#     "tax_regime": TaxRegime.NAILED_DOWN,
-#     "effective_tax_rate": 0.22,
-#     "amortization": False,
-#     "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
-#     "regime": GrossSplitRegime.PERMEN_ESDM_13_2024,
-#     "reservoir_type_permen_2024": VariableSplit132024.ReservoirType.MK,
-#     "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
-# }
-#
-# gs = GrossSplit(
-#     **kwargs_gs,
-#     # lifting=tuple([case.lifting_mangga, case.lifting_apel, case.lifting_nanas]),
-#     lifting=tuple([case.lifting_mangga, case.lifting_apel]),
-#     capital_cost=tuple([case.capital_mangga, case.capital_apel]),
-#     intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),
-#     opex=tuple([case.opex_mangga, case.opex_apel]),
-#     asr_cost=tuple([case.asr_mangga, case.asr_apel]),
-#     lbt_cost=tuple([case.lbt_mangga, case.lbt_apel]),
-#     cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
-# )
-#
 # gs.run(**params_gs)
-# t1 = gs.get_summary()
+# gs.get_summary()
+get_contract_attributes(
+    contract=gs,
+    contract_arguments=params_gs,
+    summary_arguments=summary_gs,
+)
 
 # print('\t')
 # print(f'Filetype: {type()}')
@@ -195,12 +212,7 @@ pr = BaseProject(
 # print(f'Length: {len(t1)}')
 # print('t1 = \n', t1)
 
-# print('\t')
-# print(f'Filetype: {type(t2)}')
-# print(f'Length: {len(t2)}')
-# print('t2 = \n', t2)
-
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# COST RECOVERY ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 # kwargs_cr = {
 #     "start_date": date(year=2023, month=1, day=1),
@@ -236,8 +248,8 @@ pr = BaseProject(
 #     "gas_dmo_fee_portion": 1.0,
 #     "gas_dmo_holiday_duration": 60,
 #     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#     # "oil_carry_forward_depreciation": 100,
-#     # "gas_carry_forward_depreciation": 50,
+#     "oil_carry_forward_depreciation": 0.0,
+#     "gas_carry_forward_depreciation": 0.0,
 # }
 #
 # params_cr = {
@@ -258,7 +270,16 @@ pr = BaseProject(
 #     "oil_cost_of_sales_applied": False,
 #     "gas_cost_of_sales_applied": False,
 #     "sum_undepreciated_cost": False,
-#     "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
+#     "sunk_cost_method": SunkCostMethod.POOLED_1ST_YEAR,
+# }
+#
+# summary_cr = {
+#     "discount_rate": 0.1,
+#     "npv_mode": NPVSelection.NPV_SKK_REAL_TERMS,
+#     "discounting_mode": DiscountingMode.END_YEAR,
+#     "discount_rate_start_year": None,
+#     "inflation_rate": 0.0,
+#     "profitability_discounted": False,
 # }
 #
 # cr = CostRecovery(
@@ -272,45 +293,13 @@ pr = BaseProject(
 #     lbt_cost=tuple([case.lbt_mangga, case.lbt_apel]),
 #     cost_of_sales=tuple([case.cos_mangga, case.cos_apel]),
 # )
-#
+
 # cr.run(**params_cr)
-# t1 = cr.get_summary()
-
-# print('\t')
-# print(f'Filetype: {type()}')
-# print(f'Length: {len()}')
-# print()
-
-# print('\t')
-# print(f'Filetype: {type(t1)}')
-# print(f'Length: {len(t1)}')
-# print('t1 = \n', t1)
-
-# print('\t')
-# print(f'Filetype: {type(t2)}')
-# print(f'Length: {len(t2)}')
-# print('t2 = \n', t2)
-
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-# t1 = posc.sunk_cost_amortization_charge(
-#     tax_rate=0.1,
-#     fluid_type=FluidType.GAS,
-#     investment_config=SunkCostInvestmentType.INTANGIBLE,
-#     prod_year=np.array([2027, 2028]),
-#     prod=np.array([50, 1_000]),
-#     salvage_value=0.0,
-#     amortization_len=8,
-# )
-#
-# t2 = posc.preonstream_cost_amortization_charge(
-#     tax_rate=0.1,
-#     fluid_type=FluidType.GAS,
-#     investment_config=SunkCostInvestmentType.INTANGIBLE,
-#     prod_year=np.array([2027, 2028]),
-#     prod=np.array([50, 1_000]),
-#     salvage_value=0.0,
-#     amortization_len=8,
+# cr.get_summary()
+# get_contract_attributes(
+#     contract=cr,
+#     contract_arguments=params_cr,
+#     summary_arguments=summary_cr,
 # )
 
 # print('\t')
@@ -323,12 +312,7 @@ pr = BaseProject(
 # print(f'Length: {len(t1)}')
 # print('t1 = \n', t1)
 
-# print('\t')
-# print(f'Filetype: {type(t2)}')
-# print(f'Length: {len(t2)}')
-# print('t2 = \n', t2)
-
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# API +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 from pyscnomics.api.adapter import (
     get_setup_dict,
@@ -425,27 +409,7 @@ data = {
     #     "inflation_rate": 0.0,
     #     "inflation_rate_applied_to": "None",
     # },
-    # ======================================= Cost Recovery
-    "contract_arguments": {
-        "sulfur_revenue": "Addition to Gas Revenue",
-        "electricity_revenue": "Addition to Oil Revenue",
-        "co2_revenue": "Addition to Gas Revenue",
-        "vat_rate": 0.0,
-        "inflation_rate": 0.0,
-        "inflation_rate_applied_to": "None",
-        "is_dmo_end_weighted": False,
-        "tax_regime": "nailed down",
-        "effective_tax_rate": 0.376,
-        "ftp_tax_regime": "Direct Mode",
-        "depr_method": "PSC Declining Balance",
-        "decline_factor": 2,
-        "post_uu_22_year2001": True,
-        "oil_cost_of_sales_applied": False,
-        "gas_cost_of_sales_applied": False,
-        "sum_undepreciated_cost": True,
-        "sunk_cost_method": "depreciated_tangible",
-    },
-    # # ========================================= Gross Split
+    # # ======================================= Cost Recovery
     # "contract_arguments": {
     #     "sulfur_revenue": "Addition to Gas Revenue",
     #     "electricity_revenue": "Addition to Oil Revenue",
@@ -453,19 +417,39 @@ data = {
     #     "vat_rate": 0.0,
     #     "inflation_rate": 0.0,
     #     "inflation_rate_applied_to": "None",
-    #     "cum_production_split_offset": 0.0,
-    #     "depr_method": "PSC Declining Balance",
-    #     "decline_factor": 2,
-    #     "sum_undepreciated_cost": False,
     #     "is_dmo_end_weighted": False,
     #     "tax_regime": "nailed down",
-    #     "effective_tax_rate": 0.22,
-    #     "amortization": False,
+    #     "effective_tax_rate": 0.376,
+    #     "ftp_tax_regime": "Direct Mode",
+    #     "depr_method": "PSC Declining Balance",
+    #     "decline_factor": 2,
+    #     "post_uu_22_year2001": True,
+    #     "oil_cost_of_sales_applied": False,
+    #     "gas_cost_of_sales_applied": False,
+    #     "sum_undepreciated_cost": True,
     #     "sunk_cost_method": "depreciated_tangible",
-    #     "regime": "PERMEN_ESDM_13_2024",
-    #     "reservoir_type_permen_2024": "conventional",
-    #     "initial_amortization_year": "onstream_year",
     # },
+    # ========================================= Gross Split
+    "contract_arguments": {
+        "sulfur_revenue": "Addition to Gas Revenue",
+        "electricity_revenue": "Addition to Oil Revenue",
+        "co2_revenue": "Addition to Gas Revenue",
+        "vat_rate": 0.0,
+        "inflation_rate": 0.0,
+        "inflation_rate_applied_to": "None",
+        "cum_production_split_offset": 0.0,
+        "depr_method": "PSC Declining Balance",
+        "decline_factor": 2,
+        "sum_undepreciated_cost": False,
+        "is_dmo_end_weighted": False,
+        "tax_regime": "nailed down",
+        "effective_tax_rate": 0.22,
+        "amortization": False,
+        "sunk_cost_method": "depreciated_tangible",
+        "regime": "PERMEN_ESDM_13_2024",
+        "reservoir_type_permen_2024": "conventional",
+        "initial_amortization_year": "onstream_year",
+    },
     "lifting": {
         "Oil Oil sources #1": {
             "start_year": 2022,
@@ -1105,9 +1089,9 @@ data = {
 # print()
 
 # print('\t')
-# print(f'Filetype: {type(t2)}')
-# print(f'Length: {len(t2)}')
-# print('t2 = \n', t2)
+# print(f'Filetype: {type(t1)}')
+# print(f'Length: {len(t1)}')
+# print('t1 = \n', t1)
 
 # SENSITIVITY +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1150,11 +1134,6 @@ data = {
 # print(f'Filetype: {type(t1)}')
 # print(f'Length: {len(t1)}')
 # print('t1 = \n', t1)
-
-# print('\t')
-# print(f'Filetype: {type(t2)}')
-# print(f'Length: {len(t2)}')
-# print('t2 = \n', t2)
 
 # UNCERTAINTY +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1218,8 +1197,3 @@ data = {
 # print(f'Filetype: {type(t1)}')
 # print(f'Length: {len(t1)}')
 # print('t1 = \n', t1)
-
-# print('\t')
-# print(f'Filetype: {type(t2)}')
-# print(f'Length: {len(t2)}')
-# print('t2 = \n', t2)
