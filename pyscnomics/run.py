@@ -1143,6 +1143,7 @@ from pyscnomics.optimize.uncertainty import (
     uncertainty_psc,
     get_setup_dict,
     get_summary_dict,
+    get_baseproject,
     min_mean_max_retriever,
 )
 
@@ -1189,14 +1190,15 @@ kwargs_uncertainty = {
 }
 
 # uncertainty_psc(**kwargs_uncertainty)
-get_summary_dict(data=data)
+# get_summary_dict(data=data)
+t1 = get_baseproject(data=data)
 
 # print('\t')
 # print(f'Filetype: {type()}')
 # print(f'Length: {len()}')
 # print()
 
-# print('\t')
-# print(f'Filetype: {type(t1)}')
-# print(f'Length: {len(t1)}')
-# print('t1 = \n', t1)
+print('\t')
+print(f'Filetype: {type(t1)}')
+print(f'Length: {len(t1)}')
+print('t1 = \n', t1)
