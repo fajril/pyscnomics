@@ -1444,7 +1444,7 @@ def uncertainty_psc(
     # Executing the montecarlo
     kwargs_monte = {
         "contract_type": contract_type,
-        "contract": contract,
+        "contract": contract_dict,
         "params": parameter,
         "numSim": run_number,
     }
