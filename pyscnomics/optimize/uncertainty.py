@@ -1,6 +1,8 @@
 """
 Collection of functions to administer Monte Carlo simulation.
-The code below is the modification of the code from PSCnomics. The routine and result of this module is maintaining the
+The code below is the modification of the code from PSCnomics.
+
+The routine and result of this module is maintaining the
 requirements of the PSCnomics.
 """
 
@@ -952,46 +954,100 @@ def min_mean_max_retriever(
 
 
 class ProcessMonte:
+    """
+    Prepare and execute Monte Carlo simulation for uncertainty assessment.
+    """
     target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
 
-    def __init__(self, type, contract, numSim, params):
-        self.type = type
+    def __init__(self, contract_type, contract, numSim, params):
+        """
+        Initialize a Monte Carlo simulation handler for the given contract type.
+
+        This constructor prepares the base contract, identifies whether gas is included
+        as a lifting commodity, and initializes Monte Carlo multipliers for each
+        uncertain parameter based on the specified probability distributions.
+
+        Parameters
+        ----------
+        contract_type : str or Enum
+            The type of production sharing contract (e.g., "CostRecovery", "GrossSplit",
+            or other contract category identifiers).
+        contract : BaseProject or CostRecovery or GrossSplit or Transition
+            The base contract object that serves as the reference for all Monte Carlo
+            simulation runs.
+        numSim : int
+            The total number of Monte Carlo simulation runs to be executed.
+        params : list of dict
+            A list of parameter specifications, where each element is a dictionary
+            describing a stochastic variable. Each dictionary must include:
+                - ``"id"`` : int
+                    Unique identifier of the parameter.
+                - ``"dist"`` : Enum or object
+                    The probability distribution type for sampling (e.g., Uniform, Normal).
+                - ``"min"`` : float
+                    The minimum possible value of the parameter.
+                - ``"base"`` : float
+                    The base or mean value of the parameter.
+                - ``"max"`` : float
+                    The maximum possible value of the parameter.
+                - ``"stddev"`` : float
+                    The standard deviation (applicable for distributions requiring it).
+        Notes
+        -----
+        -   The function ``get_multipliers_montecarlo`` is used internally to sample
+            multipliers for each parameter based on the provided statistical definitions.
+        -   The ``hasGas`` flag is set to ``True`` if any parameter has an identifier
+            equal to 1, indicating that gas is part of the evaluated contract.
+        """
+
+        self.type = contract_type
         self.numSim = numSim
         self.baseContract = contract
         self.parameter = params
         self.hasGas = False
-        for i in range(len(self.parameter)):
+
+        # Modify attribute `hasGas` if GAS is present as a lifting commodity
+        for i, _ in enumerate(self.parameter):
             if self.parameter[i]["id"] == 1:
                 self.hasGas = True
                 break
 
-        # Get multipliers
-        self.multipliers = np.ones([self.numSim, len(self.parameter)], dtype=np.float64)
+        # Prepare multipliers
+        self.multipliers = np.ones(
+            [self.numSim, len(self.parameter)], dtype=np.float64
+        )
 
-        for i in range(len(self.parameter)):
+        for i, param in enumerate(self.parameter):
             self.multipliers[:, i] = get_multipliers_montecarlo(
                 run_number=self.numSim,
-                distribution=(self.parameter[i]["dist"].value),
-                min_value=self.parameter[i]["min"],
-                mean_value=self.parameter[i]["base"],
-                max_value=self.parameter[i]["max"],
-                std_dev=self.parameter[i]["stddev"],
+                distribution=param["dist"].value,
+                min_value=param["min"],
+                mean_value=param["base"],
+                max_value=param["max"],
+                std_dev=param["stddev"],
             )
 
     def Adjust_Data(self, multipliers: np.ndarray):
+
         Adj_Contract = copy.deepcopy(self.baseContract)
 
         def Adj_Partial_Data(
-            contract_: dict, par: str, key: str, multiplier: float, datakeys: list = []
+            contract_: dict,
+            par: str,
+            key: str,
+            multiplier: float,
+            datakeys: list = [],
         ):
             for item_key in contract_[key].keys():
                 item = contract_[key][item_key]
+
                 if (
                     par == "Lifting"
                     and key == "lifting"
                     and item["fluid_type"] == "Gas"
                 ):
                     continue
+
                 if key == "lifting":
                     if (
                         (par == "Oil Price" and item["fluid_type"] == "Oil")
@@ -1013,6 +1069,7 @@ class ProcessMonte:
                             np.array(item[data_key]) * multiplier
                         ).tolist()
 
+        # Specify contract based on contract type
         # for iloop in range(2 if self.type >= 3 else 1):
         contract_ = (
             # Adj_Contract if self.type < 3 else Adj_Contract[f"contract_{iloop+1}"]
@@ -1020,12 +1077,15 @@ class ProcessMonte:
             if self.type < 3
             else Adj_Contract[f"contract_{2}"]
         )
+
         for i in range(len(self.parameter)):
             # OIl
             if self.parameter[i]["id"] == 0:
                 Adj_Partial_Data(contract_, "Oil Price", "lifting", multipliers[i])
+
             elif self.parameter[i]["id"] == 1:
                 Adj_Partial_Data(contract_, "Gas Price", "lifting", multipliers[i])
+
             elif self.parameter[i]["id"] == 2:
                 Adj_Partial_Data(
                     contract_,
@@ -1055,6 +1115,7 @@ class ProcessMonte:
                     multipliers[i],
                     ["cost"],
                 )
+
             elif self.parameter[i]["id"] == 3:
                 Adj_Partial_Data(
                     contract_, "CAPEX", "capital", multipliers[i], ["cost"]
@@ -1117,32 +1178,35 @@ class ProcessMonte:
             [self.numSim, len(self.target) + len(self.parameter)], dtype=np.float64
         )
 
-        # # Execute MonteCarlo simulation
-        # client = Client()
-        # b = db.from_sequence(range(self.numSim), partition_size=100)
-        # futures = b.map(self.calcContract).compute()
-        # # print(futures)
-        # for res in futures:
-        #     # for res in outcalcmonte.get():
-        #     results[res["n"], 0 : len(self.target)] = res["output"]
-        #     results[res["n"], len(self.target) :] = [
-        #         self.multipliers[res["n"], index] * item["base"]
-        #         for index, item in enumerate(self.parameter)
-        #     ]
-        #
-        # client.close()
+        """
+        # Former approach
+        # Execute MonteCarlo simulation
+        client = Client()
+        b = db.from_sequence(range(self.numSim), partition_size=100)
+        futures = b.map(self.calcContract).compute()
+        # print(futures)
+        for res in futures:
+            # for res in outcalcmonte.get():
+            results[res["n"], 0 : len(self.target)] = res["output"]
+            results[res["n"], len(self.target) :] = [
+                self.multipliers[res["n"], index] * item["base"]
+                for index, item in enumerate(self.parameter)
+            ]
 
-        # Use ProcessPoolExecutor for parallel execution
-        # import concurrent.futures
-        # with concurrent.futures.ProcessPoolExecutor() as executor:
-        #     futures = [executor.submit(self.calcContract, n) for n in range(self.numSim)]
-        #     for future in concurrent.futures.as_completed(futures):
-        #         res = future.result()
-        #         results[res["n"], 0: len(self.target)] = res["output"]
-        #         results[res["n"], len(self.target):] = [
-        #             self.multipliers[res["n"], index] * item["base"]
-        #             for index, item in enumerate(self.parameter)
-        #         ]
+        client.close()
+
+        Use ProcessPoolExecutor for parallel execution
+        import concurrent.futures
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            futures = [executor.submit(self.calcContract, n) for n in range(self.numSim)]
+            for future in concurrent.futures.as_completed(futures):
+                res = future.result()
+                results[res["n"], 0: len(self.target)] = res["output"]
+                results[res["n"], len(self.target):] = [
+                    self.multipliers[res["n"], index] * item["base"]
+                    for index, item in enumerate(self.parameter)
+                ]
+        """
 
         # Execute MonteCarlo simulation using pathos multiprocessing
         from pathos.multiprocessing import ProcessingPool as Pool
@@ -1370,11 +1434,6 @@ def uncertainty_psc(
     if FluidType.GAS not in fluid_produced:
         del parameter[1]
 
-    print('\t')
-    print(f'Filetype: {type(parameter)}')
-    print(f'Length: {len(parameter)}')
-    print('parameter = \n', parameter)
-
     # Constructing the contract key
     contract_dict = get_contract_attributes(
         contract=contract,
@@ -1382,12 +1441,26 @@ def uncertainty_psc(
         summary_arguments=summary_arguments,
     )
 
-    # # Executing the montecarlo
+    # Executing the montecarlo
+    kwargs_monte = {
+        "contract_type": contract_type,
+        "contract": contract,
+        "params": parameter,
+        "numSim": run_number,
+    }
+
+    monte = ProcessMonte(**kwargs_monte)
+
+    mult = np.array([round(0.1 * i, 1) for i in range(1, run_number + 1)])
+    monte.Adjust_Data(multipliers=mult)
+
+    # monte.calculate()
+
     # monte = ProcessMonte(
     #     contract_type,
     #     contract_dict,
     #     run_number,
     #     parameter,
     # )
-    #
+
     # return monte.calculate()

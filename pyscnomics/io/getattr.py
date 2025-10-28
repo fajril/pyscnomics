@@ -4,7 +4,7 @@ Handles the routine to get the attributes of a contract object.
 import numpy as np
 
 from datetime import date
-from enum import Enum
+# from enum import Enum
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
@@ -1400,10 +1400,16 @@ def construct_baseproject_arguments_attr(contract_arguments: dict) -> dict:
 
 
 def construct_transition_attr(contract: Transition):
+    """
+    Construct a dictionary of processed Transition contract attributes
+    """
+
     if isinstance(contract.contract1, CostRecovery):
         contract_1 = construct_costrecovery_attr(contract=contract.contract1)
+
     elif isinstance(contract.contract1, GrossSplit):
         contract_1 = construct_grosssplit_attr(contract=contract.contract1)
+
     else:
         raise GetAttrException(
             f"The contract: {type(contract.contract1)} type is not recognized"
@@ -1411,8 +1417,10 @@ def construct_transition_attr(contract: Transition):
 
     if isinstance(contract.contract1, CostRecovery):
         contract_2 = construct_costrecovery_attr(contract=contract.contract2)
+
     elif isinstance(contract.contract1, GrossSplit):
         contract_2 = construct_grosssplit_attr(contract=contract.contract2)
+
     else:
         raise GetAttrException(
             f"The contract: {type(contract.contract2)} type is not recognized"
@@ -1422,6 +1430,10 @@ def construct_transition_attr(contract: Transition):
 
 
 def construct_transition_arguments(contract_arguments: dict):
+    """
+    Construct processed Transition contract arguments with default values applied
+    """
+
     trans_arguments = {
         "unrec_portion": contract_arguments["unrec_portion"],
     }
