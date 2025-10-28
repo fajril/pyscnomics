@@ -19,19 +19,9 @@ from pyscnomics.econ import FluidType
 from pyscnomics.econ.selection import UncertaintyDistribution
 from pyscnomics.io.getattr import get_contract_attributes
 from pyscnomics.api.converter import (
-    convert_to_float,
-    convert_str_to_taxsplit,
-    convert_list_to_array_float,
-    convert_str_to_otherrevenue,
-    convert_str_to_taxregime,
-    convert_list_to_array_float_or_array_or_none,
-    convert_str_to_ftptaxregime,
-    convert_str_to_depremethod,
-    convert_list_to_array_float_or_array,
-    convert_str_to_inflationappliedto,
-    convert_str_to_npvmode,
-    convert_str_to_discountingmode,
     convert_str_to_date,
+    convert_str_to_int,
+    convert_list_to_array_float_or_array,
     convert_dict_to_lifting,
     convert_dict_to_capital,
     convert_dict_to_intangible,
@@ -39,7 +29,28 @@ from pyscnomics.api.converter import (
     convert_dict_to_asr,
     convert_dict_to_lbt,
     convert_dict_to_cost_of_sales,
+    convert_list_to_array_float,
+    convert_list_to_array_float_or_array_or_none,
+    convert_str_to_taxsplit,
+    convert_str_to_npvmode,
+    convert_str_to_discountingmode,
+    convert_str_to_otherrevenue,
+    convert_str_to_taxregime,
+    convert_str_to_ftptaxregime,
+    convert_str_to_depremethod,
+    convert_str_to_inflationappliedto,
+    convert_summary_to_dict,
+    convert_str_to_optimization_parameters,
+    convert_str_to_optimization_targetparameter,
     convert_grosssplitregime_to_enum,
+    convert_to_float,
+    read_fluid_type,
+    convert_to_method_limit,
+    convert_to_uncertainty_distribution,
+    convert_to_skk_summary_baseproject,
+    converter_sunk_cost_method,
+    converter_reservoir_type_permen_2024,
+    converter_initial_amortization_year,
 )
 
 
@@ -50,41 +61,127 @@ class MonteCarloException(Exception):
 
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++ Uncertainty Detached
+
 def get_setup_dict(data: dict) -> tuple:
     """
-    Function to get conversion of the setup input from dictionary into acceptable core engine data format.
+    Convert the setup section of the input dictionary into structured core
+    engine data.
+
+    This function parses the setup information and cost-related sections
+    (e.g., capital, intangible, opex, ASR, LBT, and cost of sales)
+    from the input dictionary into standardized dataclass-based objects.
+    It ensures each section conforms to the expected internal data structure
+    used by the core economic engine.
 
     Parameters
     ----------
-    data: dict
-        The dictionary of the data input
+    data : dict
+        The full project setup dictionary containing general setup information
+        (e.g., start/end dates, approval year, POD status) and financial data
+        such as capital, intangible, opex, ASR, LBT, and cost-of-sales details.
+
+        Expected structure example:
+            {
+                "setup": {
+                    "start_date": "2020-01-01",
+                    "end_date": "2035-12-31",
+                    "approval_year": "2020",
+                    "is_pod_1": True,
+                    "oil_onstream_date": "2022-06-01",
+                    "gas_onstream_date": "2023-01-01"
+                },
+                "capital": {...},
+                "intangible": {...},
+                "opex": {...},
+                "asr": {...},
+                "lbt": {...},
+                "cost_of_sales": {...},
+                "lifting": {...}
+            }
 
     Returns
     -------
-    start_date: date
-        The start date of the project.
-    end_date: date
-        The end date of the project.
-    oil_onstream_date: date
-        The oil onstream date.
-    gas_onstream_date: date
-        The gas onstream date.
-    lifting: Lifting
-        The lifting of the project, in Lifting Dataclass format.
-    capital: Tangible
-        The capital cost of the project, in Tangible Dataclass format.
-    intangible: Intangible
-        The intangible cost of the project, in Intangible Dataclass format.
-    opex: OPEX
-        The opex cost of the project, in OPEX Dataclass format.
-    lbt: LBT
-        The land and building tax of the project, in LBT Dataclass format.
-    cost_of_sales: CostOfSales
-        The opex cost of the project, in CostOfSales Dataclass format.
-    asr: ASR
-        The asr cost of the project, in ASR Dataclass format.
+    tuple
+        A tuple containing parsed and converted project setup components:
 
+        - **start_date** : `datetime.date`
+          Project start date.
+        - **end_date** : `datetime.date`
+          Project end date.
+        - **oil_onstream_date** : `datetime.date` or `None`
+          Oil production start date, if available.
+        - **gas_onstream_date** : `datetime.date` or `None`
+          Gas production start date, if available.
+        - **approval_year** : `int` or `None`
+          Project approval year.
+        - **is_pod_1** : `bool`
+          Indicator whether the project is POD-1.
+        - **lifting** : `Lifting` or `None`
+          Lifting configuration, converted using `convert_dict_to_lifting()`.
+        - **capital** : `CapitalCost` or `None`
+          Capital expenditure data, converted using `convert_dict_to_capital()`.
+        - **intangible** : `Intangible` or `None`
+          Intangible expenditure data, converted using `convert_dict_to_intangible()`.
+        - **opex** : `OPEX` or `None`
+          Operating expenditure data, converted using `convert_dict_to_opex()`.
+        - **asr** : `ASR` or `None`
+          Abandonment and Site Restoration data, converted using `convert_dict_to_asr()`.
+        - **lbt** : `LBT` or `None`
+          Land and Building Tax data, converted using `convert_dict_to_lbt()`.
+        - **cost_of_sales** : `CostOfSales` or `None`
+          Cost of sales data, converted using `convert_dict_to_cost_of_sales()`.
     """
+
+    # Specify abbreviation for selected functions and variables
+    se = data["setup"]
+    intang = data["intangible"]
+    cos = data["cost_of_sales"]
+    to_date = convert_str_to_date
+    to_int = convert_str_to_int
+    to_lft = convert_dict_to_lifting
+    to_cap = convert_dict_to_capital
+    to_intang = convert_dict_to_intangible
+    to_opex = convert_dict_to_opex
+    to_asr = convert_dict_to_asr
+    to_lbt = convert_dict_to_lbt
+    to_cos = convert_dict_to_cost_of_sales
+
+    # Parsing the contract setup into each corresponding variables
+    start_date = to_date(str_object=se["start_date"])
+    end_date = to_date(str_object=se["end_date"])
+    oil_onstream_date = to_date(str_object=se.get("oil_onstream_date", None))
+    gas_onstream_date = to_date(str_object=se.get("gas_onstream_date", None))
+    approval_year = to_int(str_object=se["approval_year"])
+    is_pod_1 = se["is_pod_1"]
+    lifting = to_lft(data_raw=data) if "lifting" in data else None
+    capital = to_cap(data_raw=data["capital"] if "capital" in data else None)
+    intangible = to_intang(data_raw=intang if "intangible" in data else None)
+    opex = to_opex(data_raw=data["opex"]) if "opex" in data else None
+    asr = to_asr(data_raw=data["asr"]) if "asr" in data else None
+    lbt = to_lbt(data_raw=data["lbt"]) if "lbt" in data else None
+    cost_of_sales = to_cos(data_raw=cos if "cost_of_sales" in data else None)
+
+    return (
+        start_date,
+        end_date,
+        oil_onstream_date,
+        gas_onstream_date,
+        approval_year,
+        is_pod_1,
+        lifting,
+        capital,
+        intangible,
+        opex,
+        asr,
+        lbt,
+        cost_of_sales,
+    )
+
+
+"""
+Former Approach
+---------------
+def get_setup_dict(data: dict) -> tuple:
     # Parsing the contract setup into each corresponding variables
     start_date = convert_str_to_date(str_object=data["setup"]["start_date"])
     end_date = convert_str_to_date(str_object=data["setup"]["end_date"])
@@ -114,21 +211,78 @@ def get_setup_dict(data: dict) -> tuple:
         lbt,
         cost_of_sales,
     )
+"""
 
 
 def get_summary_dict(data: dict) -> dict:
     """
-    Function to get the summary arguments from the dictionary data input.
+    Extract and convert summary-related parameters from the input dictionary
+    into a standardized format accepted by the core engine.
+
     Parameters
     ----------
-    data: dict
-        The dictionary of the data input
+    data : dict
+        The input data dictionary containing the `"summary_arguments"` key,
+        which stores summary-level project parameters.
 
     Returns
     -------
-    summary_arguments_dict: dict
-        The summary argument in the core engine acceptable format.
+    summary_arguments_dict : dict
+        A dictionary containing the processed summary arguments in the
+        core engine–compatible format, with the following keys:
+
+        - **discount_rate_start_year** : int or None
+          The project year at which the discount rate becomes effective.
+        - **inflation_rate** : float or None
+          The annual inflation rate applied to cost and revenue projections.
+        - **discount_rate** : float
+          The discount rate used in NPV calculation (default is 0.1 if unspecified).
+        - **npv_mode** : NPVMode
+          The NPV mode converted from string representation
+          (default is `"Full Cycle Nominal Terms"`).
+        - **discounting_mode** : DiscountingMode
+          The discounting mode converted from string representation
+          (default is `"discounting_mode"` if unspecified).
+        - **profitability_discounted** : bool
+          Flag indicating whether profitability metrics should be discounted
+          (default is `False`).
+
+    Notes
+    -----
+    - Missing keys in the `"summary_arguments"` section of the input are
+      replaced with predefined default values where applicable.
+    - String-based parameters such as `"npv_mode"` and `"discounting_mode"`
+      are converted into their corresponding enumeration types via helper
+      functions (e.g., `convert_str_to_npvmode()`).
     """
+
+    # Specify abbreviations for selected functions and variables
+    to_npv = convert_str_to_npvmode
+    to_dm = convert_str_to_discountingmode
+    sa = data["summary_arguments"]
+
+    # Fill get_summary() argument with input data
+    discount_rate_start_year = sa.get("discount_rate_start_year", None)
+    inflation_rate = sa.get("inflation_rate", None)
+    discount_rate = sa.get("discount_rate", 0.1)
+    npv_mode = to_npv(str_object=sa.get("npv_mode", "Full Cycle Nominal Terms"))
+    discounting_mode = to_dm(str_object=sa.get("discounting_mode", "discounting_mode"))
+    profitability_discounted = sa.get("profitability_discounted", False)
+
+    summary_arguments_dict = {
+        "discount_rate_start_year": discount_rate_start_year,
+        "inflation_rate": inflation_rate,
+        "discount_rate": discount_rate,
+        "npv_mode": npv_mode,
+        "discounting_mode": discounting_mode,
+        "profitability_discounted": profitability_discounted,
+    }
+
+    return summary_arguments_dict
+
+
+"""
+def get_summary_dict(data: dict) -> dict:
     # Filling the argument with the input data
     reference_year = data["summary_arguments"].get("reference_year", None)
     inflation_rate = data["summary_arguments"].get("inflation_rate", None)
@@ -153,22 +307,174 @@ def get_summary_dict(data: dict) -> dict:
     }
 
     return summary_arguments_dict
+"""
 
 
-def get_baseproject(data: dict):
+def build_baseproject_instance(data: dict) -> BaseProject:
     """
-    The function to get the Summary, Base Project object, contract arguments, and summary arguments used.
+    Build and initialize a Base Project contract instance.
+
+    This function extracts fundamental parameters from the input data,
+    prepares the required keyword arguments, and returns a fully
+    constructed :class:`BaseProject` instance for economic evaluation.
 
     Parameters
     ----------
-    data: dict
-        The dictionary of the data input.
+    data : dict
+        Input dictionary containing all parameters necessary to
+        configure a Base Project contract.
 
     Returns
     -------
-    summary_skk: dict
-        The executive summary of the contract.
+    BaseProject
+        Initialized :class:`BaseProject` object ready for evaluation.
     """
+
+    # Specify base arguments
+    (
+        start_date,
+        end_date,
+        oil_onstream_date,
+        gas_onstream_date,
+        approval_year,
+        is_pod_1,
+        lifting,
+        capital,
+        intangible,
+        opex,
+        asr,
+        lbt,
+        cost_of_sales,
+    ) = get_setup_dict(data=data)
+
+    # Prepare contract attributes for BaseProject
+    contract_kwargs = {
+        # Base parameters
+        "start_date": start_date,
+        "end_date": end_date,
+        "oil_onstream_date": oil_onstream_date,
+        "gas_onstream_date": gas_onstream_date,
+        "approval_year": approval_year,
+        "is_pod_1": is_pod_1,
+
+        # Lifting and costs
+        "lifting": lifting,
+        "capital_cost": capital,
+        "intangible_cost": intangible,
+        "opex": opex,
+        "asr_cost": asr,
+        "lbt_cost": lbt,
+        "cost_of_sales": cost_of_sales,
+    }
+
+    return BaseProject(**contract_kwargs)
+
+
+def build_baseproject_arguments(data: dict) -> dict:
+    """
+    Build the argument dictionary for a Base Project contract.
+
+    This function extracts and converts key economic parameters such as
+    revenues, tax rate, and inflation information from the input data,
+    returning a dictionary suitable for initializing or executing a
+    :class:`BaseProject` instance.
+
+    Parameters
+    ----------
+    data : dict
+        Input dictionary containing contract arguments and economic
+        parameters for the Base Project.
+
+    Returns
+    -------
+    dict
+        Dictionary of processed Base Project arguments, ready for use
+        in model evaluation.
+    """
+
+    # Specify abbreviations
+    ca = data["contract_arguments"]
+    f_rev = convert_str_to_otherrevenue
+    f_rate = convert_list_to_array_float_or_array
+    f_infl = convert_str_to_inflationappliedto
+
+    return {
+        # Other revenues
+        "sulfur_revenue": f_rev(str_object=ca["sulfur_revenue"]),
+        "electricity_revenue": f_rev(str_object=ca["electricity_revenue"]),
+        "co2_revenue": f_rev(str_object=ca["co2_revenue"]),
+
+        # VAT and inflation
+        "tax_rate": f_rate(data_input=ca["vat_rate"]),
+        "inflation_rate": f_rate(data_input=ca["inflation_rate"]),
+        "inflation_rate_applied_to": f_infl(str_object=ca["inflation_rate_applied_to"]),
+    }
+
+
+def get_baseproject(data: dict, summary_result: bool = True):
+    """
+    Build, execute, and optionally summarize a Base Project contract evaluation.
+
+    This function prepares all necessary inputs, constructs a :class:`BaseProject`
+    instance, executes its economic evaluation, and optionally generates an
+    executive summary formatted according to SKK Migas standards.
+
+    Parameters
+    ----------
+    data : dict
+        Input dictionary containing setup information, contract arguments,
+        and summary parameters required for Base Project evaluation.
+    summary_result : bool, default=True
+        If ``True``, generate and return the SKK Migas–formatted summary.
+        If ``False``, return only the contract instance and its arguments.
+
+    Returns
+    -------
+    tuple
+        A 4-element tuple containing:
+
+        - **summary_skk** : dict or None
+          Executive summary in SKK-compatible format, or ``None`` if
+          ``summary_result=False``.
+        - **contract** : BaseProject
+          Executed :class:`BaseProject` instance.
+        - **contract_arguments_dict** : dict
+          Dictionary of arguments passed to :meth:`BaseProject.run`.
+        - **summary_arguments_dict** : dict or None
+          Summary argument dictionary, or ``None`` if summary generation
+          was skipped.
+
+    Notes
+    -----
+    The function performs the following key steps:
+
+    1. Instantiates the :class:`BaseProject` object via
+       :func:`build_baseproject_instance`.
+    2. Prepares contract arguments using :func:`build_baseproject_arguments`.
+    3. Executes the contract with :meth:`BaseProject.run`.
+    4. Optionally generates an SKK Migas–formatted summary using
+       :func:`convert_to_skk_summary_baseproject` and appends execution info.
+    """
+
+    # Specify contract and contract arguments
+    contract = build_baseproject_instance(data=data)
+    contract_arguments_dict = build_baseproject_arguments(data=data)
+
+    # Execute BaseProject instance
+    contract.run(**contract_arguments_dict)
+
+    # Fill summary arguments
+    summary_arguments_dict = get_summary_dict(data=data)
+    summary_arguments_dict["contract"] = contract
+    summary = contract.get_summary(**summary_arguments_dict)
+
+    return summary
+
+
+"""
+Former approach
+---------------
+def get_baseproject(data: dict):
     (
         start_date,
         end_date,
@@ -225,6 +531,7 @@ def get_baseproject(data: dict):
     summary_arguments_dict = get_summary_dict(data=data)
     summary_arguments_dict["contract"] = contract
     return get_summary(**summary_arguments_dict)
+"""
 
 
 def get_costrecovery(data: dict):
@@ -1027,7 +1334,59 @@ class ProcessMonte:
                 std_dev=param["stddev"],
             )
 
-    def adjust_data(self, multipliers: np.ndarray):
+    def Adjust_Data(self, multipliers: np.ndarray):
+        """
+        Adjusts contract economic data based on parameter-specific multipliers.
+
+        This function creates a deep copy of the base contract and applies
+        multiplicative adjustments to relevant data fields (e.g., price, cost,
+        lifting rate) according to the provided multipliers.
+
+        Each multiplier corresponds to a target parameter (Oil Price, Gas Price,
+        OPEX, CAPEX, or Lifting) defined in `self.parameter`.
+
+        The adjustment is performed through an internal helper function
+        ``_adjust_partial_data()``, which handles both lifting-related attributes
+        and other cost or operational components.
+
+        Parameters
+        ----------
+        multipliers : np.ndarray
+            A one-dimensional array of scaling factors applied to contract attributes.
+            Each element in `multipliers` corresponds to a specific target parameter,
+            as defined in `self.parameter`. The order of parameters typically follows:
+            1. Oil Price
+            2. Gas Price
+            3. OPEX
+            4. CAPEX
+            5. Lifting
+
+        Returns
+        -------
+        dict
+            A deep-copied and multiplier-adjusted version of the base contract data,
+            where relevant numerical attributes have been scaled according to the
+            provided multipliers.
+
+        Notes
+        -----
+        - The adjustment process depends on the parameter `id` in `self.parameter`:
+
+          | Parameter ID | Target Parameter | Affected Keys / Attributes
+          |--------------|------------------|----------------------------------------
+          | 0            | Oil Price        | ``lifting → price`` (for Oil)
+          | 1            | Gas Price        | ``lifting → price`` (for Gas)
+          | 2            | OPEX             | ``opex → fixed_cost, cost_per_volume``;
+                                              ``asr``, ``lbt``, and
+                                              ``cost_of_sales → cost``
+          | 3            | CAPEX            | ``capital`` and ``intangible → cost``
+          | 4            | Lifting          | ``lifting → lifting_rate, prod_rate``
+                                                (excluding Gas)
+
+        - A deep copy is used to ensure the original base contract remains unmodified.
+        - For contracts with multiple sub-contracts (i.e., when ``self.type >= 3``),
+          the adjustment is performed on ``contract_adjusted["contract_2"]``.
+        """
 
         contract_adjusted: dict = copy.deepcopy(self.baseContract)
 
@@ -1038,6 +1397,37 @@ class ProcessMonte:
             multiplier: float,
             datakeys: list | None = None,
         ):
+            """
+            Helper function to apply partial data adjustment to selected contract
+            attributes.
+
+            Scales numeric list values in a contract dictionary according to the
+            specified target parameter and multiplier. Supports both lifting-related
+            and general cost adjustments.
+
+            Parameters
+            ----------
+            contract_ : dict
+                Contract data containing nested elements (e.g., 'lifting', 'opex', 'capex').
+            target_param : str
+                Target parameter to adjust, such as "Oil Price", "Gas Price", or "Lifting".
+            key : str
+                Contract section name under which target data are stored.
+            multiplier : float
+                Multiplicative factor applied to target values.
+            datakeys : list of str, optional
+                Field names to adjust for non-lifting sections. Defaults to an empty list.
+
+            Notes
+            -----
+            -   For `key='lifting'`, the adjusted fields depend on `target_param` and
+                `fluid_type`:
+                    - "Oil Price" (Oil) → `'price'`
+                    - "Gas Price" (Gas) → `'price'`
+                    - "Lifting" → `'lifting_rate'`, `'prod_rate'` (excluding Gas)
+            -   For other sections, all fields in `datakeys` are adjusted.
+            """
+
             if datakeys is None:
                 datakeys = []
 
@@ -1054,59 +1444,118 @@ class ProcessMonte:
                 if key == "lifting":
                     if target_param == "Oil Price" and item["fluid_type"] == "Oil":
                         target_keys = ["price"]
-                    elif target_param
+                    elif target_param == "Gas Price" and item["fluid_type"] == "Gas":
+                        target_keys = ["price"]
+                    elif target_param == "Lifting":
+                        target_keys = ["lifting_rate", "prod_rate"]
+                    else:
+                        continue
 
-        # def adjust_partial_data(
-        #     contract_: dict,
-        #     par: str,
-        #     key: str,
-        #     multiplier: float,
-        #     datakeys: list | None = None,
-        # ):
-        #
-        #     for item_key in contract_[key].keys():
-        #         item: dict = contract_[key][item_key]
-        #
-        #         if (
-        #             par == "Lifting"
-        #             and key == "lifting"
-        #             and item["fluid_type"] == "Gas"
-        #         ):
-        #             continue
-        #
-        #         if key == "lifting":
-        #             if (
-        #                 (par == "Oil Price" and item["fluid_type"] == "Oil")
-        #                 or (par == "Gas Price" and item["fluid_type"] == "Gas")
-        #                 or par == "Lifting"
-        #             ):
-        #                 lifting_key = (
-        #                     ["price"] if par == "Oil Price" or par == "Gas Price"
-        #                     else ["lifting_rate", "prod_rate"]
-        #                 )
-        #
-        #                 for lft_key in lifting_key:
-        #                     item[lft_key] = (np.array(item[lft_key]) * multiplier).tolist()
-        #
-        #         else:
-        #             for data_key in datakeys:
-        #                 item[data_key] = (np.array(item[data_key]) * multiplier).tolist()
+                else:
+                    target_keys = datakeys
 
+                for k in target_keys:
+                    if k in item:
+                        item[k] = (np.array(item[k]) * multiplier).tolist()
 
         # Specify attribute `contract_` based on `contract_type`
         contract_ = (
             contract_adjusted if self.type < 3 else contract_adjusted[f"contract_{2}"]
         )
 
-        _adjust_partial_data(
-            contract_=contract_,
-            target_param="Lifting",
-            key="lifting",
-            multiplier=0.5,
-            datakeys=None,
-        )
+        # Contract adjustments per single run simulation (i.e., per row)
+        for i, val in enumerate(self.parameter):
 
+            # Target parameter: Oil Price
+            if val["id"] == 0:
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="Oil Price",
+                    key="lifting",
+                    multiplier=multipliers[i]
+                )
 
+            # Target parameter: Gas Price
+            elif val["id"] == 1:
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="Gas Price",
+                    key="lifting",
+                    multiplier=multipliers[i],
+                )
+
+            # Target parameter: OPEX
+            elif val["id"] == 2:
+                # Adjust class OPEX
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="OPEX",
+                    key="opex",
+                    multiplier=multipliers[i],
+                    datakeys=["fixed_cost", "cost_per_volume"],
+                )
+
+                # Adjust class ASR
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="ASR",
+                    key="asr",
+                    multiplier=multipliers[i],
+                    datakeys=["cost"],
+                )
+
+                # Adjust class LBT
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="LBT",
+                    key="lbt",
+                    multiplier=multipliers[i],
+                    datakeys=["cost"],
+                )
+
+                # Adjust class CostOfSales
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="COS",
+                    key="cost_of_sales",
+                    multiplier=multipliers[i],
+                    datakeys=["cost"],
+                )
+
+            # Target parameter: CAPEX
+            elif val["id"] == 3:
+                # Adjust class CapitalCost
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="CAPEX",
+                    key="capital",
+                    multiplier=multipliers[i],
+                    datakeys=["cost"],
+                )
+
+                # Adjust class Intangible
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="CAPEX",
+                    key="intangible",
+                    multiplier=multipliers[i],
+                    datakeys=["cost"],
+                )
+
+            # Target parameter: Lifting
+            elif val["id"] == 4:
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="Lifting",
+                    key="lifting",
+                    multiplier=multipliers[i],
+                )
+
+        return contract_adjusted
+
+    """
+    Former approach
+    ---------------
     def Adjust_Data(self, multipliers: np.ndarray):
 
         Adj_Contract = copy.deepcopy(self.baseContract)
@@ -1207,10 +1656,12 @@ class ProcessMonte:
                 Adj_Partial_Data(contract_, "Lifting", "lifting", multipliers[i])
 
         return Adj_Contract
+    """
 
     def calcContract(self, n: int):
+
         try:
-            print(f"Monte Progress:{n}", flush=True)
+            print(f"Monte Progress: {n}", flush=True)
             # time.sleep(100)
 
             dataAdj = self.Adjust_Data(self.multipliers[n, :])
@@ -1531,9 +1982,27 @@ def uncertainty_psc(
 
     monte = ProcessMonte(**kwargs_monte)
 
-    mult = np.array([round(0.1 * i, 1) for i in range(1, run_number + 1)])
-    monte.adjust_data(multipliers=mult)
+    values = np.array([0.5, 0.25, 0.1, 2.0])
+    mult = np.repeat(values[:, np.newaxis], len(parameter), axis=1)
 
+    print('\t')
+    print(f'Filetype: {type(mult)}')
+    print(f'Shape: {mult.shape}')
+    print('mult = \n', mult)
+
+    print('\t')
+    print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+
+    contract_adjusted = monte.Adjust_Data(multipliers=mult[0, :])
+    # print('\t')
+    # print(f'Filetype: {type(contract_adjusted["capital"])}')
+    # print(f'Length: {len(contract_adjusted["capital"])}')
+    # print('contract_adjusted = \n', contract_adjusted["capital"])
+
+    print('\t')
+    print(f'Filetype: {type(contract_adjusted["lifting"])}')
+    print(f'Length: {len(contract_adjusted["lifting"])}')
+    print('contract_adjusted = \n', contract_adjusted["lifting"])
 
     # monte.calculate()
 

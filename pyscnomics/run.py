@@ -1141,6 +1141,8 @@ from pyscnomics.econ.selection import UncertaintyDistribution
 from pyscnomics.optimize.uncertainty import (
     get_multipliers_montecarlo,
     uncertainty_psc,
+    get_setup_dict,
+    get_summary_dict,
     min_mean_max_retriever,
 )
 
@@ -1186,7 +1188,8 @@ kwargs_uncertainty = {
     "verbose": False,
 }
 
-uncertainty_psc(**kwargs_uncertainty)
+# uncertainty_psc(**kwargs_uncertainty)
+get_summary_dict(data=data)
 
 # print('\t')
 # print(f'Filetype: {type()}')
