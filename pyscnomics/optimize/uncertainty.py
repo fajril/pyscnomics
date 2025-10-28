@@ -1027,6 +1027,86 @@ class ProcessMonte:
                 std_dev=param["stddev"],
             )
 
+    def adjust_data(self, multipliers: np.ndarray):
+
+        contract_adjusted: dict = copy.deepcopy(self.baseContract)
+
+        def _adjust_partial_data(
+            contract_: dict,
+            target_param: str,
+            key: str,
+            multiplier: float,
+            datakeys: list | None = None,
+        ):
+            if datakeys is None:
+                datakeys = []
+
+            for item_key, item in contract_[key].items():
+
+                # Skip GAS lifting adjustment for "Lifting" target parameter
+                if (
+                    target_param == "Lifting" and key == "lifting"
+                    and item["fluid_type"] == "Gas"
+                ):
+                    continue
+
+                # Perform adjustment to lifting attributes
+                if key == "lifting":
+                    if target_param == "Oil Price" and item["fluid_type"] == "Oil":
+                        target_keys = ["price"]
+                    elif target_param
+
+        # def adjust_partial_data(
+        #     contract_: dict,
+        #     par: str,
+        #     key: str,
+        #     multiplier: float,
+        #     datakeys: list | None = None,
+        # ):
+        #
+        #     for item_key in contract_[key].keys():
+        #         item: dict = contract_[key][item_key]
+        #
+        #         if (
+        #             par == "Lifting"
+        #             and key == "lifting"
+        #             and item["fluid_type"] == "Gas"
+        #         ):
+        #             continue
+        #
+        #         if key == "lifting":
+        #             if (
+        #                 (par == "Oil Price" and item["fluid_type"] == "Oil")
+        #                 or (par == "Gas Price" and item["fluid_type"] == "Gas")
+        #                 or par == "Lifting"
+        #             ):
+        #                 lifting_key = (
+        #                     ["price"] if par == "Oil Price" or par == "Gas Price"
+        #                     else ["lifting_rate", "prod_rate"]
+        #                 )
+        #
+        #                 for lft_key in lifting_key:
+        #                     item[lft_key] = (np.array(item[lft_key]) * multiplier).tolist()
+        #
+        #         else:
+        #             for data_key in datakeys:
+        #                 item[data_key] = (np.array(item[data_key]) * multiplier).tolist()
+
+
+        # Specify attribute `contract_` based on `contract_type`
+        contract_ = (
+            contract_adjusted if self.type < 3 else contract_adjusted[f"contract_{2}"]
+        )
+
+        _adjust_partial_data(
+            contract_=contract_,
+            target_param="Lifting",
+            key="lifting",
+            multiplier=0.5,
+            datakeys=None,
+        )
+
+
     def Adjust_Data(self, multipliers: np.ndarray):
 
         Adj_Contract = copy.deepcopy(self.baseContract)
@@ -1452,7 +1532,8 @@ def uncertainty_psc(
     monte = ProcessMonte(**kwargs_monte)
 
     mult = np.array([round(0.1 * i, 1) for i in range(1, run_number + 1)])
-    monte.Adjust_Data(multipliers=mult)
+    monte.adjust_data(multipliers=mult)
+
 
     # monte.calculate()
 
