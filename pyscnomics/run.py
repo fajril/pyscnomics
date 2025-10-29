@@ -1151,9 +1151,6 @@ from pyscnomics.optimize.uncertainty import (
 from pyscnomics.io.getattr import construct_cost_attr
 
 
-construct_cost_attr(cost=pr.capital_cost)
-
-
 kwargs_mult = {
     "run_number": 50,
     "distribution": "LogNormal",
@@ -1196,7 +1193,7 @@ kwargs_uncertainty = {
     "verbose": False,
 }
 
-# uncertainty_psc(**kwargs_uncertainty)
+uncertainty_psc(**kwargs_uncertainty)
 # get_summary_dict(data=data)
 # get_baseproject(data)
 

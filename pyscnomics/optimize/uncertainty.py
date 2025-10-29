@@ -405,7 +405,7 @@ def build_baseproject_arguments(data: dict) -> dict:
         "co2_revenue": f_rev(str_object=ca["co2_revenue"]),
 
         # VAT and inflation
-        "tax_rate": f_rate(data_input=ca["vat_rate"]),
+        "tax_rate": f_rate(data_input=ca["tax_rate"]),
         "inflation_rate": f_rate(data_input=ca["inflation_rate"]),
         "inflation_rate_applied_to": f_infl(str_object=ca["inflation_rate_applied_to"]),
     }
@@ -433,15 +433,15 @@ def get_baseproject(data: dict) -> dict:
 
     # Specify contract and contract arguments
     contract = build_baseproject_instance(data=data)
-    # contract_arguments_dict = build_baseproject_arguments(data=data)
+    contract_arguments_dict = build_baseproject_arguments(data=data)
 
-    # # Execute BaseProject instance
-    # contract.run(**contract_arguments_dict)
-    #
-    # # Fill summary arguments
-    # summary_arguments_dict = get_summary_dict(data=data)
-    #
-    # return contract.get_summary(**summary_arguments_dict)
+    # Execute BaseProject instance
+    contract.run(**contract_arguments_dict)
+
+    # Fill summary arguments
+    summary_arguments_dict = get_summary_dict(data=data)
+
+    return contract.get_summary(**summary_arguments_dict)
 
 
 """
@@ -2157,6 +2157,11 @@ class ProcessMonte:
         # Execute the corresponding contract and return the result in terms of summary
         csummary = get_baseproject(data=dataAdj)
 
+        print('\t')
+        print(f'Filetype: {type(csummary)}')
+        print(f'Length: {len(csummary)}')
+        print('csummary = \n', csummary)
+
         # try:
         #     print(f"Monte Progress: {n}")
         #     # print(f"Monte Progress: {n}", flush=True)
@@ -2481,11 +2486,6 @@ def uncertainty_psc(
         contract_arguments=contract_arguments,
         summary_arguments=summary_arguments,
     )
-
-    print('\t')
-    print(f'Filetype: {type(contract_dict)}')
-    print(f'Length: {len(contract_dict)}, Keys: {contract_dict.keys()}')
-    print(contract_dict["setup"])
 
     # Executing the montecarlo
     kwargs_monte = {
