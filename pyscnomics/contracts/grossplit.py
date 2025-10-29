@@ -238,6 +238,7 @@ class GrossSplit(BaseProject):
     _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
     _oil_sum_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
     _gas_sum_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
+
     # Attributes associated with amortization
     _oil_amortizations: dict = field(default_factory=lambda: {}, init=False, repr=False)
     _gas_amortizations: dict = field(default_factory=lambda: {}, init=False, repr=False)

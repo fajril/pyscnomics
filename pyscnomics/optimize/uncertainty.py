@@ -2147,77 +2147,84 @@ class ProcessMonte:
 
     def calcContract(self, n: int):
 
-        # Specify adjusted data by calling the "Adjust_Data()" method
-        dataAdj = self.Adjust_Data(self.multipliers[n, :])
+        # # Specify adjusted data by calling the "Adjust_Data()" method
+        # dataAdj = self.Adjust_Data(self.multipliers[n, :])
+        #
+        # # Execute the corresponding contract and return the result in terms of summary
+        # csummary = get_baseproject(data=dataAdj)
 
-        print('\t')
-        print(f'Filetype: {type(dataAdj)}')
-        print('dataAdj = \n', dataAdj)
+        try:
+            print(f"Monte Progress: {n}", flush=True)
+            # time.sleep(100)
 
-        # Execute the corresponding contract and return the result in terms of summary
-        csummary = get_baseproject(data=dataAdj)
+            # Specify adjusted data by calling the "Adjust_Data()" method
+            dataAdj = self.Adjust_Data(self.multipliers[n, :])
 
-        print('\t')
-        print(f'Filetype: {type(csummary)}')
-        print(f'Length: {len(csummary)}')
-        print('csummary = \n', csummary)
+            # print('\t')
+            # print(f'Filetype: {type(dataAdj)}')
+            # print(f'Length: {len(dataAdj)}')
+            # print(f'Keys: {dataAdj.keys()}')
+            #
+            # print('\t')
+            # print('dataAdj = \n', dataAdj["grosssplit"])
+            #
+            # print('\t')
+            # print('dataAdj = \n', dataAdj["contract_arguments"])
 
-        # try:
-        #     print(f"Monte Progress: {n}")
-        #     # print(f"Monte Progress: {n}", flush=True)
-        #     # time.sleep(100)
-        #
-        #     # Specify adjusted data by calling the "Adjust_Data()" method
-        #     dataAdj = self.Adjust_Data(self.multipliers[n, :])
-        #
-        #     print('\t')
-        #     print('contract_type = ', self.type)
-        #
-        #     # Execute the corresponding contract and return the result in terms of summary
-        #     csummary = get_baseproject(data=dataAdj)
-        #
-        #     # csummary = (
-        #     #     get_costrecovery(data=dataAdj) if self.type == 1
-        #     #     else (
-        #     #         get_grosssplit(data=dataAdj) if self.type == 2
-        #     #         else (
-        #     #             get_transition(data=dataAdj) if self.type >= 3
-        #     #             else get_baseproject(data=dataAdj)
-        #     #         )
-        #     #     )
-        #     # )
-        #
-        #     print('\t')
-        #     print(f'Filetype: {type(csummary)}')
-        #     print(f'Length: {len(csummary)}')
-        #     print('csummary = \n', csummary)
-        #
-        #
-        # #     del dataAdj
-        # #     return {
-        # #         "n": n,
-        # #         "output": (
-        # #             csummary["ctr_npv"],
-        # #             csummary["ctr_irr"],
-        # #             csummary["ctr_pi"],
-        # #             csummary["ctr_pot"],
-        # #             csummary["gov_take"],
-        # #             csummary["ctr_net_share"],
-        # #         ),
-        # #     }
-        # except Exception as err:
-        #     print(f"Error: {err}")
+            # Execute the corresponding contract and return the result in terms of summary
+            mapping_summary = {
+                1: get_costrecovery,
+                2: get_grosssplit,
+                3: get_transition,
+            }
+
+            csummary = mapping_summary.get(self.type, get_baseproject)(data=dataAdj)
+
+            """
+            Former approach
+            ---------------
+            csummary = (
+                get_costrecovery(data=dataAdj) if self.type == 1
+                else (
+                    get_grosssplit(data=dataAdj) if self.type == 2
+                    else (
+                        get_transition(data=dataAdj) if self.type >= 3
+                        else get_baseproject(data=dataAdj)
+                    )
+                )
+            )
+            """
+
+            print('\t')
+            print(f'Filetype: {type(csummary)}')
+            print(f'Length: {len(csummary)}')
+            print('csummary = \n', csummary)
+
+        #     del dataAdj
         #     return {
         #         "n": n,
         #         "output": (
-        #             0,
-        #             0,
-        #             0,
-        #             0,
-        #             0,
-        #             0,
+        #             csummary["ctr_npv"],
+        #             csummary["ctr_irr"],
+        #             csummary["ctr_pi"],
+        #             csummary["ctr_pot"],
+        #             csummary["gov_take"],
+        #             csummary["ctr_net_share"],
         #         ),
         #     }
+        except Exception as err:
+            print(f"Error: {err}")
+            return {
+                "n": n,
+                "output": (
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                ),
+            }
 
     def calculate(self):
         results = np.zeros(

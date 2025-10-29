@@ -796,6 +796,78 @@ def convert_enum_initial_amortization_year(
     )
 
 
+def convert_enum_var_split_13_2024(
+    objects: (
+        VariableSplit132024.InfrastructureAvailability
+        | VariableSplit132024.FieldReservesAmount
+        | VariableSplit132024.FieldLocation
+    )
+) -> str:
+    """
+    Convert a VariableSplit132024 enum instance to its string representation.
+
+    Parameters
+    ----------
+    objects : (
+        VariableSplit132024.InfrastructureAvailability |
+        VariableSplit132024.FieldReservesAmount |
+        VariableSplit132024.FieldLocation |
+        VariableSplit132024.ReservoirType
+    )
+        Enum member representing a variable split category.
+
+    Returns
+    -------
+    str
+        String equivalent of the given enum value.
+
+    Notes
+    -----
+    The function uses centralized mapping for each VariableSplit132024 subclass
+    and delegates conversion to `_helper_convert_enum_to_str`. Raises
+    `TypeError` for unsupported enum types.
+    """
+
+    # Define short aliases
+    VS = VariableSplit132024
+    infra = VS.InfrastructureAvailability
+    reserves = VS.FieldReservesAmount
+    loc = VS.FieldLocation
+    rtype = VS.ReservoirType
+
+    # Centralized mapping configuration
+    mapping_dict = {
+        infra: {
+            infra.NOT_AVAILABLE: "not_available",
+            infra.PARTIALLY_AVAILABLE: "partially_available",
+            infra.AVAILABLE: "not_available",
+        },
+        reserves: {
+            reserves.LOW: "low",
+            reserves.MEDIUM: "medium",
+            reserves.HIGH: "high",
+        },
+        loc: {
+            loc.ONSHORE: "Onshore",
+            loc.SHALLOW_OFFSHORE: "shallow_offshore",
+            loc.DEEP_OFFSHORE: "deep_offshore",
+            loc.ULTRADEEP_OFFSHORE: "ultradeep_offshore"
+        },
+        rtype: {
+            rtype.MK: "conventional",
+            rtype.MNK: "unconventional",
+        }
+    }
+
+    for enum_type, mapping in mapping_dict.items():
+        if isinstance(objects, enum_type):
+            return _helper_convert_enum_to_str(
+                enum_target=objects, enum_type=enum_type, enum_mapping=mapping
+            )
+
+    raise TypeError(f"Unsupported enum type: {objects.__class__.__qualname__!r}")
+
+
 def convert_object(objects):
     """
     Convert various object types to their serializable representations.
@@ -942,7 +1014,7 @@ def convert_object(objects):
         VariableSplit132024.FieldLocation,
         VariableSplit132024.ReservoirType,
     )):
-        return objects.value
+        return convert_enum_var_split_13_2024(objects=objects)
 
     else:
         return objects
