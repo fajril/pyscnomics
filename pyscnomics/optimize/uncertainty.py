@@ -1821,7 +1821,7 @@ class ProcessMonte:
                 std_dev=param["stddev"],
             )
 
-    def Adjust_Data(self, multipliers: np.ndarray):
+    def Adjust_Data(self, multipliers: np.ndarray) -> dict:
         """
         Adjusts contract economic data based on parameter-specific multipliers.
 
@@ -2145,31 +2145,37 @@ class ProcessMonte:
         return Adj_Contract
     """
 
-    def calcContract(self, n: int):
+    def calcContract(self, n: int) -> dict:
+        """
+        Execute a Monte Carlo simulation for the selected contract type and
+        return key economic metrics.
 
-        # # Specify adjusted data by calling the "Adjust_Data()" method
-        # dataAdj = self.Adjust_Data(self.multipliers[n, :])
-        #
-        # # Execute the corresponding contract and return the result in terms of summary
-        # csummary = get_baseproject(data=dataAdj)
+        Parameters
+        ----------
+        n : int
+            Simulation index used to select the corresponding multiplier set
+            for data adjustment.
 
+        Returns
+        -------
+        dict
+            A dictionary with keys:
+            - 'n': int, the simulation index.
+            - 'output': tuple of float, containing
+              (ctr_npv, ctr_irr, ctr_pi, ctr_pot, gov_take, ctr_net_share).
+
+        Notes
+        -----
+        The function automatically selects and runs the appropriate contract evaluation
+        (Cost Recovery, Gross Split, Transition, or Base Project) based on ``self.type``.
+        In case of an error, zeros are returned for all output metrics.
+        """
         try:
             print(f"Monte Progress: {n}", flush=True)
             # time.sleep(100)
 
             # Specify adjusted data by calling the "Adjust_Data()" method
             dataAdj = self.Adjust_Data(self.multipliers[n, :])
-
-            # print('\t')
-            # print(f'Filetype: {type(dataAdj)}')
-            # print(f'Length: {len(dataAdj)}')
-            # print(f'Keys: {dataAdj.keys()}')
-            #
-            # print('\t')
-            # print('dataAdj = \n', dataAdj["grosssplit"])
-            #
-            # print('\t')
-            # print('dataAdj = \n', dataAdj["contract_arguments"])
 
             # Execute the corresponding contract and return the result in terms of summary
             mapping_summary = {
@@ -2195,25 +2201,24 @@ class ProcessMonte:
             )
             """
 
-            print('\t')
-            print(f'Filetype: {type(csummary)}')
-            print(f'Length: {len(csummary)}')
-            print('csummary = \n', csummary)
+            del dataAdj
 
-        #     del dataAdj
-        #     return {
-        #         "n": n,
-        #         "output": (
-        #             csummary["ctr_npv"],
-        #             csummary["ctr_irr"],
-        #             csummary["ctr_pi"],
-        #             csummary["ctr_pot"],
-        #             csummary["gov_take"],
-        #             csummary["ctr_net_share"],
-        #         ),
-        #     }
+            return {
+                "n": n,
+                "output": (
+                    csummary["ctr_npv"],
+                    csummary["ctr_irr"],
+                    csummary["ctr_pi"],
+                    csummary["ctr_pot"],
+                    csummary["gov_take"],
+                    csummary["ctr_net_share"],
+                ),
+            }
+
         except Exception as err:
+
             print(f"Error: {err}")
+
             return {
                 "n": n,
                 "output": (
@@ -2227,9 +2232,25 @@ class ProcessMonte:
             }
 
     def calculate(self):
+
+        print('\t')
+        print(f'Filetype: {type(self.target)}')
+        print(f'Length: {len(self.target)}')
+        print('target = ', self.target)
+
+        print('\t')
+        print(f'Filetype: {type(self.parameter)}')
+        print(f'Length: {len(self.parameter)}')
+        print('parameter = ', self.parameter)
+
         results = np.zeros(
             [self.numSim, len(self.target) + len(self.parameter)], dtype=np.float64
         )
+
+        print('\t')
+        print(f'Filetype: {type(results)}')
+        print(f'Shape: {results.shape}')
+        print('results = \n', results)
 
         """
         # Former approach
@@ -2261,59 +2282,60 @@ class ProcessMonte:
                 ]
         """
 
-        # Execute MonteCarlo simulation using pathos multiprocessing
-        from pathos.multiprocessing import ProcessingPool as Pool
-
-        with Pool() as pool:
-            futures = pool.map(self.calcContract, range(self.numSim))
-
-        for res in futures:
-            results[res["n"], 0 : len(self.target)] = res["output"]
-            results[res["n"], len(self.target) :] = [
-                self.multipliers[res["n"], index] * item["base"]
-                for index, item in enumerate(self.parameter)
-            ]
-
-        # Sorted the results
-        results_sorted = np.take_along_axis(
-            arr=results,
-            indices=np.argsort(results, axis=0),
-            axis=0,
-        )
-        # Specify probability
-        prob = np.arange(1, self.numSim + 1, dtype=np.float64) / self.numSim
-
-        # Arrange the results
-        results_arranged = np.concatenate((prob[:, np.newaxis], results_sorted), axis=1)
-
-        # Calculate P10, P50, P90
-        percentiles = np.percentile(
-            a=results_arranged,
-            q=[10, 50, 90],
-            method="higher",
-            axis=0,
-        )
-
-        # Determine indices of data
-        indices = np.linspace(0, self.numSim, 101)[0:-1].astype(int)
-        indices[0] = 1
-        if indices[-1] != self.numSim - 1:
-            indices = np.append(indices, int(self.numSim - 1))
-
-        # Final outcomes
-        outcomes = {
-            "params": (
-                ["Oil Price", "Gas Price", "Opex", "Capex", "Cum. prod."]
-                if self.hasGas
-                else ["Oil Price", "Opex", "Capex", "Cum. prod."]
-            ),
-            "results": results_arranged[indices, :].tolist(),
-            "P10": percentiles[0, :].tolist(),
-            "P50": percentiles[1, :].tolist(),
-            "P90": percentiles[2, :].tolist(),
-        }
-
-        return outcomes
+        # # Execute MonteCarlo simulation using pathos multiprocessing
+        # from pathos.multiprocessing import ProcessingPool as Pool
+        #
+        # with Pool() as pool:
+        #     futures = pool.map(self.calcContract, range(self.numSim))
+        #
+        # for res in futures:
+        #     results[res["n"], 0 : len(self.target)] = res["output"]
+        #     results[res["n"], len(self.target) :] = [
+        #         self.multipliers[res["n"], index] * item["base"]
+        #         for index, item in enumerate(self.parameter)
+        #     ]
+        #
+        # # Sorted the results
+        # results_sorted = np.take_along_axis(
+        #     arr=results,
+        #     indices=np.argsort(results, axis=0),
+        #     axis=0,
+        # )
+        #
+        # # Specify probability
+        # prob = np.arange(1, self.numSim + 1, dtype=np.float64) / self.numSim
+        #
+        # # Arrange the results
+        # results_arranged = np.concatenate((prob[:, np.newaxis], results_sorted), axis=1)
+        #
+        # # Calculate P10, P50, P90
+        # percentiles = np.percentile(
+        #     a=results_arranged,
+        #     q=[10, 50, 90],
+        #     method="higher",
+        #     axis=0,
+        # )
+        #
+        # # Determine indices of data
+        # indices = np.linspace(0, self.numSim, 101)[0:-1].astype(int)
+        # indices[0] = 1
+        # if indices[-1] != self.numSim - 1:
+        #     indices = np.append(indices, int(self.numSim - 1))
+        #
+        # # Final outcomes
+        # outcomes = {
+        #     "params": (
+        #         ["Oil Price", "Gas Price", "Opex", "Capex", "Cum. prod."]
+        #         if self.hasGas
+        #         else ["Oil Price", "Opex", "Capex", "Cum. prod."]
+        #     ),
+        #     "results": results_arranged[indices, :].tolist(),
+        #     "P10": percentiles[0, :].tolist(),
+        #     "P50": percentiles[1, :].tolist(),
+        #     "P90": percentiles[2, :].tolist(),
+        # }
+        #
+        # return outcomes
 
 
 def uncertainty_psc(
@@ -2504,22 +2526,31 @@ def uncertainty_psc(
 
     monte = ProcessMonte(**kwargs_monte)
 
-    values = np.array([0.5, 0.25, 0.1, 2.0])
-    mult = np.repeat(values[:, np.newaxis], len(parameter), axis=1)
+    """
+    Former approach
+    ---------------
+    monte = ProcessMonte(
+        contract_type,
+        contract_dict,
+        run_number,
+        parameter,
+    )
+    """
 
-    print('\t')
-    print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+    # calc_contract = monte.calcContract(n=0)
+    monte.calculate()
 
-    calc_contract = monte.calcContract(n=0)
-
-
-    # monte.calculate()
-
-    # monte = ProcessMonte(
-    #     contract_type,
-    #     contract_dict,
-    #     run_number,
-    #     parameter,
-    # )
+    # n_list = [0, 1, 2]
+    # calc_contract = [0 for _ in range(len(n_list))]
+    # for n in n_list:
+    #     calc_contract[n] = monte.calcContract(n)
+    #
+    #     print('\t')
+    #     print(f'Filetype: {type(calc_contract[n])}')
+    #     print(f'Length: {len(calc_contract[n])}')
+    #     print('calc_contract = \n', calc_contract[n])
+    #
+    #     print('\t')
+    #     print('===============================================================')
 
     # return monte.calculate()
