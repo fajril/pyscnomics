@@ -859,7 +859,8 @@ def convert_enum_var_split_13_2024(
         }
     }
 
-    #
+    # Dynamic conversion of enum to string representation based on input object's datatype
+    # ("InfrastructureAvailability", "FieldReservesAmount", "FieldLocation", or "ReservoirType")
     for enum_type, mapping in mapping_dict.items():
         if isinstance(objects, enum_type):
             return _helper_convert_enum_to_str(
