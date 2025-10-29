@@ -835,7 +835,7 @@ def convert_enum_var_split_13_2024(
     loc = VS.FieldLocation
     rtype = VS.ReservoirType
 
-    # Centralized mapping configuration
+    # Mapping datatype, enum, and string representation
     mapping_dict = {
         infra: {
             infra.NOT_AVAILABLE: "not_available",
@@ -859,6 +859,7 @@ def convert_enum_var_split_13_2024(
         }
     }
 
+    #
     for enum_type, mapping in mapping_dict.items():
         if isinstance(objects, enum_type):
             return _helper_convert_enum_to_str(
