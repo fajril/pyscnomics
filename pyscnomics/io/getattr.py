@@ -32,6 +32,7 @@ from pyscnomics.econ.costs import (
 )
 from pyscnomics.econ.selection import (
     FluidType,
+    CostType,
     VariableSplit082017,
     VariableSplit522017,
     VariableSplit132024,
@@ -154,6 +155,37 @@ def convert_enum_fluid(objects: FluidType) -> str:
 
     return _helper_convert_enum_to_str(
         enum_target=objects, enum_type=FluidType, enum_mapping=mapping
+    )
+
+
+def convert_enum_cost_type(objects: CostType) -> str:
+    """
+    Convert a CostType enum member to its string representation.
+
+    Parameters
+    ----------
+    objects : CostType
+        Target cost type enum.
+
+    Returns
+    -------
+    str
+        Corresponding cost type string.
+
+    Notes
+    -----
+    The conversion uses a predefined mapping and `_helper_convert_enum_to_str`.
+    """
+
+    # Core mapping: an instance of CostType -> its corresponding string
+    mapping = {
+        CostType.SUNK_COST: "sunk_cost",
+        CostType.PRE_ONSTREAM_COST: "preonstream_cost",
+        CostType.POST_ONSTREAM_COST: "postonstream_cost",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=CostType, enum_mapping=mapping
     )
 
 
@@ -825,6 +857,10 @@ def convert_object(objects):
     elif isinstance(objects, FluidType):
         return convert_enum_fluid(objects=objects)
 
+    # Object is CostType
+    elif isinstance(objects, CostType):
+        return convert_enum_cost_type(objects=objects)
+
     # Object is TaxSplitTypeCR
     elif isinstance(objects, TaxSplitTypeCR):
         return convert_enum_taxsplit(objects=objects)
@@ -974,91 +1010,87 @@ def construct_cost_attr(
     )
 ):
     """
-    Construct a dictionary containing processed cost attributes for each cost entry.
-
-    This function takes a tuple of cost objects (e.g., `CapitalCost`, `OPEX`, `LBT`),
-    converts their attributes using helper functions, and returns a dictionary
-    mapping each cost entry to a structured dictionary of processed attributes.
+    Construct a dictionary of processed cost attributes from cost objects.
 
     Parameters
     ----------
-    cost : tuple of CapitalCost or Intangible or OPEX or ASR or LBT or CostOfSales
-        A tuple containing one or more cost objects representing different
-        types of project expenditures.
+    cost : tuple of CapitalCost, Intangible, OPEX, ASR, LBT, or CostOfSales
+        Tuple of cost objects representing different expenditure types.
 
     Returns
     -------
     dict
-        A dictionary where:
-        - Keys are strings identifying each cost entry with an index suffix
-          (e.g., `"Cost 0"`, `"Cost 1"`).
-        - Values are dictionaries of processed cost attributes for each entry.
+        Dictionary mapping each cost entry (e.g., "Cost 0", "Cost 1") to its
+        processed attributes.
 
     Notes
     -----
-    - Each attribute of the cost object is converted using `convert_object()`,
-      except for `cost_allocation`, which is processed with `convert_enum_fluid()`.
-    - The function assumes that each cost object supports attribute extraction
-      via `vars()`.
+    Each cost object's attributes are converted using `convert_object()`,
+    with `cost_allocation` handled by `convert_enum_fluid()` and `cost_type`
+    by `convert_enum_cost_type()`.
     """
 
+    # Define key for each cost instances
     cost_key = ["Cost " + str(index) for index, _ in enumerate(cost)]
+
+    # Convert every cost instances into their correponding dictionaries
     costs = [vars(cst) for cst in cost]
 
+    # Modify cost attributes (as dictionaries)
     for cst in costs:
+        for key, val in cst.items():
+            if key == "cost_allocation":
+                cst[key] = [convert_enum_fluid(objects=fluid) for fluid in cst[key]]
+
+            elif key == "cost_type":
+                cst[key] = [convert_enum_cost_type(objects=ct) for ct in cst[key]]
+
+            else:
+                cst[key] = convert_object(objects=val)
+
+    """
+    Former approach
+    ---------------
+        for cst in costs:
         for key, item in cst.items():
             if key == "cost_allocation":
                 cst[key] = [convert_enum_fluid(objects=fluid) for fluid in cst[key]]
             else:
                 cst[key] = convert_object(objects=item)
+    """
 
     return dict(zip(cost_key, costs))
 
 
 def construct_setup_attr(contract: BaseProject | CostRecovery | GrossSplit | Transition):
     """
-    Construct setup attributes dictionary for contract data.
-
-    This function processes contract information to create a standardized
-    dictionary of setup attributes with formatted dates and fluid type
-    validation.
+    Construct a standardized dictionary of setup attributes for a contract.
 
     Parameters
     ----------
     contract : BaseProject | CostRecovery | GrossSplit | Transition
-        Contract object containing lifting data, dates, and fluid information.
-        Must have the following attributes:
-        - lifting: Iterable of objects with fluid_type attribute
-        - start_date: Contract start date
-        - end_date: Contract end date
-        - oil_onstream_date: Oil production start date
-        - gas_onstream_date: Gas production start date
+        Contract object containing lifting data, contract dates, and onstream information.
 
     Returns
     -------
     dict
-        Dictionary containing formatted contract setup attributes with keys:
+        Dictionary containing formatted setup attributes:
         - start_date : str
-            Contract start date formatted as "DD/MM/YYYY"
         - end_date : str
-            Contract end date formatted as "DD/MM/YYYY"
         - oil_onstream_date : str or None
-            Oil production start date formatted as "DD/MM/YYYY" if oil is
-            produced, otherwise None
         - gas_onstream_date : str or None
-            Gas production start date formatted as "DD/MM/YYYY" if gas is
-            produced, otherwise None
+        - approval_year : int or None
+        - is_pod_1 : bool
 
     Notes
     -----
-    - Dates are formatted to "DD/MM/YYYY" string format
-    - Onstream dates are only included if the corresponding fluid type
-      is present in the contract's lifting data
-    - Uses helper function `_get_date` for fluid type validation and
-      date formatting
+    - Dates are formatted as "DD/MM/YYYY".
+    - Onstream dates are included only if the fluid type is produced.
+    - Attribute assignment uses `_prepare_setup_attr` for validation.
     """
 
     fluid_produced = [lift.fluid_type for lift in contract.lifting]
+    contract_attrs = list(vars(contract).keys())
 
     def _get_date(fluid_type: FluidType, onstream_date: date):
         """
@@ -1085,9 +1117,35 @@ def construct_setup_attr(contract: BaseProject | CostRecovery | GrossSplit | Tra
             else onstream_date.strftime("%d/%m/%Y")
         )
 
+    def _prepare_setup_attr(target, source, default):
+        """
+        Select appropriate attribute value from source or fallback to default.
+
+        Parameters
+        ----------
+        target : str
+            Attribute name to check in the contract attribute list.
+        source : Any
+            Candidate value to assign if valid (not None).
+        default : Any
+            Default value to use if `target` not found or `source` is None.
+
+        Returns
+        -------
+        Any
+            Selected attribute value, either `source` or `default`.
+        """
+        return (
+            default if (target not in contract_attrs) or (source is None)
+            else source
+        )
+
+    # Mapping variables
     args = {
         "oil": (FluidType.OIL, contract.oil_onstream_date),
         "gas": (FluidType.GAS, contract.gas_onstream_date),
+        "approval_year": ("approval_year", contract.approval_year, None),
+        "is_pod_1": ("is_pod_1", contract.is_pod_1, False),
     }
 
     return {
@@ -1095,6 +1153,8 @@ def construct_setup_attr(contract: BaseProject | CostRecovery | GrossSplit | Tra
         "end_date": contract.end_date.strftime("%d/%m/%Y"),
         "oil_onstream_date": _get_date(*args["oil"]),
         "gas_onstream_date": _get_date(*args["gas"]),
+        "approval_year": _prepare_setup_attr(*args["approval_year"]),
+        "is_pod_1": _prepare_setup_attr(*args["is_pod_1"]),
     }
 
 

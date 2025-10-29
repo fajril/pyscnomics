@@ -176,10 +176,13 @@ def read_cost_type(cost_type: str | list) -> CostType | list[CostType]:
     if isinstance(cost_type, str):
         if cost_type == "sunk_cost":
             return CostType.SUNK_COST
+
         elif cost_type == "preonstream_cost":
             return CostType.PRE_ONSTREAM_COST
+
         elif cost_type == "postonstream_cost":
             return CostType.POST_ONSTREAM_COST
+
         else:
             raise KeyError(f"Parameter cost_type ({cost_type}) is unrecognized")
 

@@ -433,15 +433,15 @@ def get_baseproject(data: dict) -> dict:
 
     # Specify contract and contract arguments
     contract = build_baseproject_instance(data=data)
-    contract_arguments_dict = build_baseproject_arguments(data=data)
+    # contract_arguments_dict = build_baseproject_arguments(data=data)
 
-    # Execute BaseProject instance
-    contract.run(**contract_arguments_dict)
-
-    # Fill summary arguments
-    summary_arguments_dict = get_summary_dict(data=data)
-
-    return contract.get_summary(**summary_arguments_dict)
+    # # Execute BaseProject instance
+    # contract.run(**contract_arguments_dict)
+    #
+    # # Fill summary arguments
+    # summary_arguments_dict = get_summary_dict(data=data)
+    #
+    # return contract.get_summary(**summary_arguments_dict)
 
 
 """
@@ -2151,9 +2151,6 @@ class ProcessMonte:
         dataAdj = self.Adjust_Data(self.multipliers[n, :])
 
         print('\t')
-        print('contract_type = ', self.type)
-
-        print('\t')
         print(f'Filetype: {type(dataAdj)}')
         print('dataAdj = \n', dataAdj)
 
@@ -2485,6 +2482,11 @@ def uncertainty_psc(
         summary_arguments=summary_arguments,
     )
 
+    print('\t')
+    print(f'Filetype: {type(contract_dict)}')
+    print(f'Length: {len(contract_dict)}, Keys: {contract_dict.keys()}')
+    print(contract_dict["setup"])
+
     # Executing the montecarlo
     kwargs_monte = {
         "contract_type": contract_type,
@@ -2497,11 +2499,6 @@ def uncertainty_psc(
 
     values = np.array([0.5, 0.25, 0.1, 2.0])
     mult = np.repeat(values[:, np.newaxis], len(parameter), axis=1)
-
-    print('\t')
-    print(f'Filetype: {type(mult)}')
-    print(f'Shape: {mult.shape}')
-    print('mult = \n', mult)
 
     print('\t')
     print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
