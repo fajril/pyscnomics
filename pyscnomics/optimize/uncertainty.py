@@ -16,7 +16,7 @@ from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.econ import FluidType
-from pyscnomics.econ.selection import UncertaintyDistribution
+from pyscnomics.econ.selection import UncertaintyDistribution, SunkCostMethod
 from pyscnomics.io.getattr import get_contract_attributes
 from pyscnomics.api.converter import (
     convert_str_to_date,
@@ -411,36 +411,24 @@ def build_baseproject_arguments(data: dict) -> dict:
     }
 
 
-def get_baseproject(data: dict):
+def get_baseproject(data: dict) -> dict:
     """
-    Build and execute a Base Project contract evaluation.
+    Build, execute, and summarize a Base Project contract evaluation.
 
-    This function prepares the necessary inputs, constructs a
-    :class:`BaseProject` instance, executes its economic evaluation,
-    and generates an executive summary in SKK Migas–compatible format.
+    This function constructs a :class:`BaseProject` instance using the provided
+    input data, executes its economic evaluation, and generates a summary of the
+    results.
 
     Parameters
     ----------
     data : dict
-        Input dictionary containing setup information, contract arguments,
-        and summary parameters required for Base Project evaluation.
+        Dictionary containing setup information, contract parameters, and summary
+        configuration.
 
     Returns
     -------
     dict
-        Executive summary in SKK Migas–compatible format.
-
-    Notes
-    -----
-    The function performs the following key steps:
-
-    1. Instantiates a :class:`BaseProject` object using
-       :func:`build_baseproject_instance`.
-    2. Prepares contract arguments with :func:`build_baseproject_arguments`.
-    3. Executes the contract evaluation using :meth:`BaseProject.run`.
-    4. Retrieves summary arguments through :func:`get_summary_dict`.
-    5. Generates the SKK Migas–formatted summary via
-       :meth:`BaseProject.get_summary`.
+        Summary of the Base Project contract evaluation.
     """
 
     # Specify contract and contract arguments
@@ -453,10 +441,7 @@ def get_baseproject(data: dict):
     # Fill summary arguments
     summary_arguments_dict = get_summary_dict(data=data)
 
-    summary = contract.get_summary(**summary_arguments_dict)
-    summary_arguments_dict["contract"] = contract
-
-    return summary
+    return contract.get_summary(**summary_arguments_dict)
 
 
 """
@@ -752,20 +737,43 @@ def build_costrecovery_arguments(data: dict) -> dict:
     }
 
 
-def get_costrecovery(data: dict):
+def get_costrecovery(data: dict) -> dict:
     """
-    The function to get the Summary, Cost Recovery object, contract arguments, and summary arguments used.
+    Build, execute, and summarize a Cost Recovery contract evaluation.
+
+    This function constructs a :class:`CostRecovery` instance using the provided
+    input data, executes its economic evaluation, and generates a summary of the
+    results.
 
     Parameters
     ----------
-    data: dict
-        The dictionary of the data input.
+    data : dict
+        Dictionary containing setup information, contract parameters, and summary
+        configuration.
 
     Returns
     -------
-    summary_skk: dict
-        The executive summary of the contract.
+    dict
+        Summary of the Cost Recovery contract evaluation.
     """
+
+    # Specify contract and contract arguments
+    contract = build_costrecovery_instance(data=data)
+    contract_arguments_dict = build_costrecovery_arguments(data=data)
+
+    # Execute CostRecovery instance
+    contract.run(**contract_arguments_dict)
+
+    # Fill summary arguments
+    summary_arguments_dict = get_summary_dict(data=data)
+
+    return contract.get_summary(**summary_arguments_dict)
+
+
+"""
+Former approach
+---------------
+def get_costrecovery(data: dict):
     (
         start_date,
         end_date,
@@ -912,22 +920,281 @@ def get_costrecovery(data: dict):
     summary_arguments_dict = get_summary_dict(data=data)
     summary_arguments_dict["contract"] = contract
     return get_summary(**summary_arguments_dict)
+"""
 
 
-def get_grosssplit(data: dict):
+def build_grosssplit_instance(data: dict) -> GrossSplit:
     """
-    The function to get the Summary, Gross Split object, contract arguments, and summary arguments used.
+    Build and return an initialized :class:`GrossSplit` contract instance.
+
+    This function extracts and transforms relevant input parameters from the
+    provided ``data`` dictionary to create a fully configured instance of the
+    :class:`GrossSplit` class.
+
+    It handles type conversion, optional attribute retrieval, nd ensures missing
+    values are safely replaced with defaults when applicable. The returned object
+    is ready for execution through the :meth:`GrossSplit.run` method.
 
     Parameters
     ----------
-    data: dict
-        The dictionary of the data input.
+    data : dict
+        Dictionary containing the full dataset required to construct a
+        Gross Split PSC (Production Sharing Contract) instance.
 
     Returns
     -------
-    summary_skk: dict
-        The executive summary of the contract.
+    GrossSplit
+        A fully configured :class:`GrossSplit` instance initialized with
+        project setup parameters, fiscal settings, and DMO-related attributes.
+        The instance is ready to run the Gross Split PSC economic model.
+
+    Notes
+    -----
+    - The helper function ``_get_value()`` ensures missing or ``None`` attributes
+      from the input dictionary are replaced with a default value (``None`` by default).
+    - List-type fiscal inputs such as DMO portions are converted to NumPy arrays
+      using :func:`convert_list_to_array_float_or_array`.
     """
+
+    # Specify base arguments
+    (
+        start_date,
+        end_date,
+        oil_onstream_date,
+        gas_onstream_date,
+        approval_year,
+        is_pod_1,
+        lifting,
+        capital,
+        intangible,
+        opex,
+        asr,
+        lbt,
+        cost_of_sales,
+    ) = get_setup_dict(data=data)
+
+    # Specify abbreviations and helper method to be used in instance preparation
+    gs = data["grosssplit"]
+    func = convert_list_to_array_float_or_array
+
+    def _get_value(key: str, source: dict = gs, default=None):
+        """
+        Helper function: safely retrieve a value from a dictionary.
+
+        Parameters
+        ----------
+        key : str
+            Key to look up in the dictionary.
+        source : dict, optional
+            Source dictionary. Defaults to ``ca``.
+        default : any, optional
+            Value to return if key is missing or ``None``.
+        """
+        return default if (key not in source) or (source[key] is None) else source[key]
+
+    # Prepare contract attributes for GrossSplit
+    contract_kwargs = {
+        # Base parameters
+        "start_date": start_date,
+        "end_date": end_date,
+        "oil_onstream_date": oil_onstream_date,
+        "gas_onstream_date": gas_onstream_date,
+        "approval_year": approval_year,
+        "is_pod_1": is_pod_1,
+
+        # Lifting and costs
+        "lifting": lifting,
+        "capital_cost": capital,
+        "intangible_cost": intangible,
+        "opex": opex,
+        "asr_cost": asr,
+        "lbt_cost": lbt,
+
+        # Field and reservoir properties
+        "field_status": _get_value(key="field_status"),
+        "field_loc": _get_value(key="field_loc"),
+        "res_depth": _get_value(key="res_depth"),
+        "infra_avail": _get_value(key="infra_avail"),
+        "res_type": _get_value(key="res_type"),
+        "api_oil": _get_value(key="api_oil"),
+        "domestic_use": _get_value(key="domestic_use"),
+        "prod_stage": _get_value(key="prod_stage"),
+        "co2_content": _get_value(key="co2_content"),
+        "h2s_content": _get_value(key="h2s_content"),
+        "field_reserves_2024": _get_value(key="field_reserves_2024"),
+        "infra_avail_2024": _get_value(key="infra_avail_2024"),
+        "field_loc_2024": _get_value(key="field_loc_2024"),
+        "split_ministry_disc": convert_to_float(target=gs["split_ministry_disc"]),
+
+        # DMO parameters
+        "oil_dmo_volume_portion": func(data_input=gs["oil_dmo_volume_portion"]),
+        "oil_dmo_fee_portion": func(data_input=gs["oil_dmo_fee_portion"]),
+        "oil_dmo_holiday_duration": _get_value(key="oil_dmo_holiday_duration"),
+        "gas_dmo_volume_portion": func(data_input=gs["gas_dmo_volume_portion"]),
+        "gas_dmo_fee_portion": func(data_input=gs["gas_dmo_fee_portion"]),
+        "gas_dmo_holiday_duration": _get_value(key="gas_dmo_holiday_duration"),
+
+        # Carry forward depreciation
+        "oil_carry_forward_depreciation": 0.0,
+        "gas_carry_forward_depreciation": 0.0,
+    }
+
+    return GrossSplit(**contract_kwargs)
+
+
+def build_grosssplit_arguments(data: dict) -> dict:
+    """
+    Build a dictionary of contract arguments for the Gross Split PSC scheme.
+
+    This function extracts and converts values from the input ``data`` dictionary,
+    applying type conversions and default values as necessary. It prepares a
+    consistent set of parameters to initialize a ``GrossSplit`` instance or to
+    perform economic evaluations under the Gross Split PSC regime.
+
+    Parameters
+    ----------
+    data : dict
+        Input dictionary containing contract-related information. Must include
+        the key ``"contract_arguments"`` that holds all argument values. Expected
+        structure:
+
+        - ``data["contract_arguments"]["sulfur_revenue"]`` : str
+        - ``data["contract_arguments"]["inflation_rate"]`` : list or float
+        - ``data["contract_arguments"]["tax_regime"]`` : str
+        - and so on.
+
+    Returns
+    -------
+    dict
+        A dictionary of processed contract arguments ready for initializing a
+        ``GrossSplit`` instance.
+
+    Notes
+    -----
+    - Missing or ``None`` values are replaced with the specified default in
+      each converter call.
+    - Optional keys are safely accessed using the internal helper method
+      ``_get_value()``, which applies type conversion if a converter is provided.
+    - The returned dictionary is intended for use as keyword arguments in
+      creating a ``GrossSplit`` contract object.
+    """
+
+    # Specify abbreviations and helper method
+    ca = data["contract_arguments"]
+    f_rev = convert_str_to_otherrevenue
+    f_rate = convert_list_to_array_float_or_array
+    f_infl = convert_str_to_inflationappliedto
+    f_depr = convert_str_to_depremethod
+    f_tax = convert_str_to_taxregime
+    f_tax_rate = convert_list_to_array_float_or_array_or_none
+    f_regime = convert_grosssplitregime_to_enum
+    f_2024 = converter_reservoir_type_permen_2024
+    f_amor = converter_initial_amortization_year
+
+    def _get_value(key: str, source: dict = ca, default=None, converter=None):
+        """
+        Helper function:
+        Safely retrieve a value from a dictionary with an optional converter.
+
+        Parameters
+        ----------
+        key : str
+            Key to look up in the dictionary.
+        source : dict, optional
+            Source dictionary. Defaults to ``ca``.
+        default : any, optional
+            Value to return if key is missing or ``None``.
+        converter : callable, optional
+            Function to convert the retrieved value.
+        """
+
+        if converter is None:
+            return (
+                default if (key not in source) or (source[key] is None)
+                else source[key]
+            )
+        else:
+            return (
+                default if (key not in source) or (source[key] is None)
+                else converter(source[key])
+            )
+
+    return {
+        # Other revenues
+        "sulfur_revenue": f_rev(str_object=ca["sulfur_revenue"]),
+        "electricity_revenue": f_rev(str_object=ca["electricity_revenue"]),
+        "co2_revenue": f_rev(str_object=ca["co2_revenue"]),
+
+        # VAT and inflation
+        "vat_rate": f_rate(data_input=ca["vat_rate"]),
+        "inflation_rate": f_rate(data_input=ca["inflation_rate"]),
+        "inflation_rate_applied_to": f_infl(str_object=ca["inflation_rate_applied_to"]),
+
+        # Production offset
+        "cum_production_split_offset": f_rate(data_input=ca["cum_production_split_offset"]),
+
+        # Depreciation
+        "depr_method": f_depr(str_object=ca["depr_method"]),
+        "decline_factor": ca["decline_factor"],
+        "sum_undepreciated_cost": _get_value(key="sum_undepreciated_cost", default=False),
+
+        # DMO and tax
+        "is_dmo_end_weighted": ca["is_dmo_end_weighted"],
+        "tax_regime": f_tax(str_object=ca["tax_regime"]),
+        "effective_tax_rate": f_tax_rate(data_list=ca["effective_tax_rate"]),
+
+        # Sunk cost
+        "amortization": _get_value(key="amortization", default=False),
+        "sunk_cost_method": _get_value(
+            key="sunk_cost_method",
+            default=SunkCostMethod.DEPRECIATED_TANGIBLE,
+            converter=converter_sunk_cost_method,
+        ),
+
+        # Fiscal regime
+        "regime": f_regime(target=ca["regime"]),
+        "reservoir_type_permen_2024": f_2024(target_str=ca["reservoir_type_permen_2024"]),
+        "initial_amortization_year": f_amor(target_str=ca["initial_amortization_year"]),
+    }
+
+
+def get_grosssplit(data: dict) -> dict:
+    """
+    Build, execute, and summarize a Gross Split contract evaluation.
+
+    This function constructs a :class:`GrossSplit` instance using the provided
+    input data, executes its economic evaluation, and generates a summary of the
+    results.
+
+    Parameters
+    ----------
+    data : dict
+        Dictionary containing setup information, contract parameters, and summary
+        configuration.
+
+    Returns
+    -------
+    dict
+        Summary of the Gross Split contract evaluation.
+    """
+
+    # Specify contract and contract arguments
+    contract = build_grosssplit_instance(data=data)
+    contract_arguments_dict = build_grosssplit_arguments(data=data)
+
+    # Execute GrossSplit instance
+    contract.run(**contract_arguments_dict)
+
+    # Fill summary arguments
+    summary_arguments_dict = get_summary_dict(data=data)
+
+    return contract.get_summary(**summary_arguments_dict)
+
+
+"""
+Former Approach
+---------------
+def get_grosssplit(data: dict):
     (
         start_date,
         end_date,
@@ -1049,11 +1316,13 @@ def get_grosssplit(data: dict):
     summary_arguments_dict = get_summary_dict(data=data)
     summary_arguments_dict["contract"] = contract
     return get_summary(**summary_arguments_dict)
+"""
 
 
 def get_transition(data: dict):
     """
-    The function to get the Summary, Transition object, contract arguments, and summary arguments used.
+    The function to get the Summary, Transition object, contract arguments,
+    and summary arguments used.
 
     Parameters
     ----------
@@ -1878,49 +2147,75 @@ class ProcessMonte:
 
     def calcContract(self, n: int):
 
-        try:
-            print(f"Monte Progress: {n}", flush=True)
-            # time.sleep(100)
+        # Specify adjusted data by calling the "Adjust_Data()" method
+        dataAdj = self.Adjust_Data(self.multipliers[n, :])
 
-            dataAdj = self.Adjust_Data(self.multipliers[n, :])
-            csummary = (
-                get_costrecovery(data=dataAdj)
-                if self.type == 1
-                else (
-                    get_grosssplit(data=dataAdj)
-                    if self.type == 2
-                    else (
-                        get_transition(data=dataAdj)
-                        if self.type >= 3
-                        else get_baseproject(data=dataAdj)
-                    )
-                )
-            )
-            del dataAdj
-            return {
-                "n": n,
-                "output": (
-                    csummary["ctr_npv"],
-                    csummary["ctr_irr"],
-                    csummary["ctr_pi"],
-                    csummary["ctr_pot"],
-                    csummary["gov_take"],
-                    csummary["ctr_net_share"],
-                ),
-            }
-        except Exception as err:
-            print(f"Error: {err}")
-            return {
-                "n": n,
-                "output": (
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                ),
-            }
+        print('\t')
+        print('contract_type = ', self.type)
+
+        print('\t')
+        print(f'Filetype: {type(dataAdj)}')
+        print('dataAdj = \n', dataAdj)
+
+        # Execute the corresponding contract and return the result in terms of summary
+        csummary = get_baseproject(data=dataAdj)
+
+        # try:
+        #     print(f"Monte Progress: {n}")
+        #     # print(f"Monte Progress: {n}", flush=True)
+        #     # time.sleep(100)
+        #
+        #     # Specify adjusted data by calling the "Adjust_Data()" method
+        #     dataAdj = self.Adjust_Data(self.multipliers[n, :])
+        #
+        #     print('\t')
+        #     print('contract_type = ', self.type)
+        #
+        #     # Execute the corresponding contract and return the result in terms of summary
+        #     csummary = get_baseproject(data=dataAdj)
+        #
+        #     # csummary = (
+        #     #     get_costrecovery(data=dataAdj) if self.type == 1
+        #     #     else (
+        #     #         get_grosssplit(data=dataAdj) if self.type == 2
+        #     #         else (
+        #     #             get_transition(data=dataAdj) if self.type >= 3
+        #     #             else get_baseproject(data=dataAdj)
+        #     #         )
+        #     #     )
+        #     # )
+        #
+        #     print('\t')
+        #     print(f'Filetype: {type(csummary)}')
+        #     print(f'Length: {len(csummary)}')
+        #     print('csummary = \n', csummary)
+        #
+        #
+        # #     del dataAdj
+        # #     return {
+        # #         "n": n,
+        # #         "output": (
+        # #             csummary["ctr_npv"],
+        # #             csummary["ctr_irr"],
+        # #             csummary["ctr_pi"],
+        # #             csummary["ctr_pot"],
+        # #             csummary["gov_take"],
+        # #             csummary["ctr_net_share"],
+        # #         ),
+        # #     }
+        # except Exception as err:
+        #     print(f"Error: {err}")
+        #     return {
+        #         "n": n,
+        #         "output": (
+        #             0,
+        #             0,
+        #             0,
+        #             0,
+        #             0,
+        #             0,
+        #         ),
+        #     }
 
     def calculate(self):
         results = np.zeros(
@@ -2211,16 +2506,8 @@ def uncertainty_psc(
     print('\t')
     print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
-    contract_adjusted = monte.Adjust_Data(multipliers=mult[0, :])
-    # print('\t')
-    # print(f'Filetype: {type(contract_adjusted["capital"])}')
-    # print(f'Length: {len(contract_adjusted["capital"])}')
-    # print('contract_adjusted = \n', contract_adjusted["capital"])
+    calc_contract = monte.calcContract(n=0)
 
-    print('\t')
-    print(f'Filetype: {type(contract_adjusted["lifting"])}')
-    print(f'Length: {len(contract_adjusted["lifting"])}')
-    print('contract_adjusted = \n', contract_adjusted["lifting"])
 
     # monte.calculate()
 
