@@ -2143,7 +2143,8 @@ def get_uncertainty(data: dict, contract_type: str):
             "The payload uncertainty_arguments does not have any values"
         )
 
-    # Retrieving the contract, contract_arguments_dict, summary_arguments_dict based on the contract type
+    # Retrieving the contract, contract_arguments_dict,
+    # summary_arguments_dict based on the contract type
     if contract_type == "Cost Recovery":
         contract = get_costrecovery(data=data)[1]
         contract_arguments = get_costrecovery(data=data)[2]

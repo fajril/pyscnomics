@@ -1,5 +1,8 @@
 
 import numpy as np
+import multiprocessing as mp
+from pathos.pools import ProcessPool as Pool
+
 from pyscnomics.econ.selection import (
     FluidType,
     DeprMethod,
@@ -1166,7 +1169,7 @@ kwargs_uncertainty = {
     "contract": pr,
     "contract_arguments": params_pr,
     "summary_arguments": summary_pr,
-    "run_number": 10,
+    "run_number": 100,
     "min_oil_price": 45,
     "mean_oil_price": 60,
     "max_oil_price": 80,
@@ -1195,7 +1198,15 @@ kwargs_uncertainty = {
     "verbose": False,
 }
 
-uncertainty_psc(**kwargs_uncertainty)
+if __name__ == "__main__":
+    mp.freeze_support()
+
+    t1 = uncertainty_psc(**kwargs_uncertainty)
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
+
 # get_summary_dict(data=data)
 # get_baseproject(data)
 

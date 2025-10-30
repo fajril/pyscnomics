@@ -8,6 +8,7 @@ requirements of the PSCnomics.
 
 import copy
 import os
+import traceback
 import numpy as np
 from scipy.stats import uniform, triang, truncnorm
 from pathos.pools import ProcessPool as Pool
@@ -41,19 +42,20 @@ from pyscnomics.api.converter import (
     convert_str_to_ftptaxregime,
     convert_str_to_depremethod,
     convert_str_to_inflationappliedto,
-    convert_summary_to_dict,
-    convert_str_to_optimization_parameters,
-    convert_str_to_optimization_targetparameter,
     convert_grosssplitregime_to_enum,
     convert_to_float,
-    read_fluid_type,
-    convert_to_method_limit,
-    convert_to_uncertainty_distribution,
-    convert_to_skk_summary_baseproject,
     converter_sunk_cost_method,
     converter_reservoir_type_permen_2024,
     converter_initial_amortization_year,
+    # read_fluid_type,
+    # convert_to_method_limit,
+    # convert_to_uncertainty_distribution,
+    # convert_to_skk_summary_baseproject,
+    # convert_summary_to_dict,
+    # convert_str_to_optimization_parameters,
+    # convert_str_to_optimization_targetparameter,
 )
+np.set_printoptions(suppress=True, precision=4)
 
 
 class MonteCarloException(Exception):
@@ -1809,22 +1811,22 @@ class ProcessMonte:
                 break
 
         # Prepare multipliers
-        # self.multipliers = np.ones(
-        #     [self.numSim, len(self.parameter)], dtype=np.float64
-        # )
-        #
-        # for i, param in enumerate(self.parameter):
-        #     self.multipliers[:, i] = get_multipliers_montecarlo(
-        #         run_number=self.numSim,
-        #         distribution=param["dist"].value,
-        #         min_value=param["min"],
-        #         mean_value=param["base"],
-        #         max_value=param["max"],
-        #         std_dev=param["stddev"],
-        #     )
+        self.multipliers = np.ones(
+            [self.numSim, len(self.parameter)], dtype=np.float64
+        )
 
-        mults = np.array([0.5, 0.25, 0.1])
-        self.multipliers = np.repeat(mults[:, np.newaxis], len(self.parameter), axis=1)
+        for i, param in enumerate(self.parameter):
+            self.multipliers[:, i] = get_multipliers_montecarlo(
+                run_number=self.numSim,
+                distribution=param["dist"].value,
+                min_value=param["min"],
+                mean_value=param["base"],
+                max_value=param["max"],
+                std_dev=param["stddev"],
+            )
+
+        # mults = np.array([0.5, 0.25, 0.1])
+        # self.multipliers = np.repeat(mults[:, np.newaxis], len(self.parameter), axis=1)
 
     def Adjust_Data(self, multipliers: np.ndarray) -> dict:
         """
@@ -2176,7 +2178,7 @@ class ProcessMonte:
         In case of an error, zeros are returned for all output metrics.
         """
         try:
-            print(f"Monte Progress: {n}", flush=True)
+            # print(f"Monte Progress: {n}", flush=True)
             # time.sleep(100)
 
             # Specify adjusted data by calling the "Adjust_Data()" method
@@ -2236,9 +2238,57 @@ class ProcessMonte:
                 ),
             }
 
-    def calculate_single_core(self):
+    def get_outcomes(self, results: np.ndarray) -> dict:
 
-        row_number = self.multipliers.shape[0]
+        row_number = self.numSim
+
+        # Sort results in ascending manner
+        results_sorted = np.take_along_axis(
+            arr=results,
+            indices=np.argsort(results, axis=0),
+            axis=0
+        )
+
+        # Specify probability
+        prob = np.arange(1, row_number + 1, dtype=float) / row_number
+
+        # Arrange the results
+        results_arranged = np.concatenate(
+            (prob[:, np.newaxis], results_sorted), axis=1
+        )
+
+        # Calculate P10, P50, P90
+        percentiles = np.percentile(
+            a=results_arranged,
+            q=[10, 50, 90],
+            method="higher",
+            axis=0,
+        )
+
+        # Determine indices of data
+        indices = np.linspace(0, row_number, 101)[0:-1].astype(int)
+        indices[0] = 1
+        if indices[-1] != row_number - 1:
+            indices = np.append(indices, int(row_number - 1))
+
+        # Final outcomes
+        outcomes = {
+            "params": (
+                ["Oil Price", "Gas Price", "Opex", "Capex", "Cum. prod."]
+                if self.hasGas
+                else ["Oil Price", "Opex", "Capex", "Cum. prod."]
+            ),
+            "results": results_arranged[indices, :].tolist(),
+            "P10": percentiles[0, :].tolist(),
+            "P50": percentiles[1, :].tolist(),
+            "P90": percentiles[2, :].tolist(),
+        }
+
+        return outcomes
+
+    def calculate_single_core(self) -> dict:
+
+        row_number = self.numSim
 
         # Designate a container to store Monte Carlo simulation result
         results: np.ndarray = np.zeros(
@@ -2246,6 +2296,7 @@ class ProcessMonte:
         )
 
         for n in range(row_number):
+
             # Execute Monte Carlo simulation by calling function calcContract()
             out = self.calcContract(n)
             rnum = out["n"]
@@ -2263,68 +2314,64 @@ class ProcessMonte:
                 for idx, items in enumerate(self.parameter)
             ]
 
-        # Sort results in ascending manner
-        results_sorted = np.take_along_axis(
-            arr=results,
-            indices=np.argsort(results, axis=0),
-            axis=0
+        # Get the outcomes of Monte Carlo simulation
+        return self.get_outcomes(results=results)
+
+    def calculate_multi_cores(self) -> dict:
+
+        row_number = self.numSim
+
+        # Specify the number of active CPU
+        n_processes = os.cpu_count() - 1
+
+        # Designate a container to store Monte Carlo simulation result
+        results: np.ndarray = np.zeros(
+            [row_number, len(self.target) + len(self.parameter)], dtype=float
         )
 
-        print('\t')
-        print(f'Filetype: {type(results)}')
-        print(f'Shape: {results.shape}')
+        def worker(n):
+            out = self.calcContract(n)
+            rnum = out["n"]
+            output = out["output"]
+            multipliers = [
+                self.multipliers[rnum, idx] * items["base"]
+                for idx, items in enumerate(self.parameter)
+            ]
+            return rnum, output, multipliers
 
-        print('\t')
-        print('results[:, 0:6] = \n', results[:, 0:6])
-        print('\t')
-        print('results[:, 6:] = \n', results[:, 6:])
+        # Instantiate pathos pool
+        pl = Pool(nodes=n_processes)
 
-        print('\t')
-        print(f'Filetype: {type(results_sorted)}')
-        print(f'Length: {len(results_sorted)}')
-        print('results_sorted = \n', results_sorted)
+        # Map each Monte Carlo run in parallel
+        results_list = pl.map(worker, range(row_number))
 
-    def calculate_multi_cores(self):
-        pass
+        # Close the pool instance
+        pl.close()
+        pl.join()
 
-    def calculate(self):
+        for rnum, output, mult in results_list:
+
+            # Columns 0 until 5:
+            # Fill with NPV, IRR, PI, POT, gov_take, and ctr_net_share, respectively
+            results[rnum, 0:len(self.target)] = output
+
+            # Column 6 until 11:
+            # Fill with the multipliers associated with:
+            # oil price, gas price, opex, capex, and lifting, accordingly
+            results[rnum, len(self.target):] = mult
+
+        return self.get_outcomes(results=results)
+
+    """
+    Former approach
+    ---------------
+        def calculate(self):
 
         # Designate a container to store Monte Carlo simulation results
         results = np.zeros(
             [self.numSim, len(self.target) + len(self.parameter)], dtype=np.float64
         )
-
-        """
-        Former approach
-        ---------------
-        # Execute MonteCarlo simulation
-        client = Client()
-        b = db.from_sequence(range(self.numSim), partition_size=100)
-        futures = b.map(self.calcContract).compute()
-        # print(futures)
-        for res in futures:
-            # for res in outcalcmonte.get():
-            results[res["n"], 0 : len(self.target)] = res["output"]
-            results[res["n"], len(self.target) :] = [
-                self.multipliers[res["n"], index] * item["base"]
-                for index, item in enumerate(self.parameter)
-            ]
-
-        client.close()
-
-        Use ProcessPoolExecutor for parallel execution
-        import concurrent.futures
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            futures = [executor.submit(self.calcContract, n) for n in range(self.numSim)]
-            for future in concurrent.futures.as_completed(futures):
-                res = future.result()
-                results[res["n"], 0: len(self.target)] = res["output"]
-                results[res["n"], len(self.target):] = [
-                    self.multipliers[res["n"], index] * item["base"]
-                    for index, item in enumerate(self.parameter)
-                ]
-        """
-
+        
         # Execute MonteCarlo simulation using pathos multiprocessing
         from pathos.multiprocessing import ProcessingPool as Pool
 
@@ -2379,6 +2426,7 @@ class ProcessMonte:
         }
 
         return outcomes
+    """
 
 
 def uncertainty_psc(
@@ -2412,7 +2460,7 @@ def uncertainty_psc(
     capex_distribution: UncertaintyDistribution = UncertaintyDistribution.NORMAL,
     lifting_distribution: UncertaintyDistribution = UncertaintyDistribution.NORMAL,
     verbose: bool = True,
-):
+) -> dict:
     # Translating the contract type before parsing into ProcessMonte class
     if isinstance(contract, CostRecovery):
         contract_type = 1
@@ -2545,12 +2593,6 @@ def uncertainty_psc(
         },
     ]
 
-    print('\t')
-    print('parameter["base"]: ')
-    for i, adict in enumerate(parameter):
-        print(f'{i} = ', adict["base"])
-    print('\t')
-
     # Delete key '1' from `parameter` when no GAS is produced
     fluid_produced = [lft.fluid_type for lft in contract.lifting]
     # fluid_produced = [lift.fluid_type.value for lift in contract.lifting]
@@ -2574,32 +2616,17 @@ def uncertainty_psc(
     }
 
     monte = ProcessMonte(**kwargs_monte)
-    monte.calculate_single_core()
 
-    """
-    Former approach
-    ---------------
-    monte = ProcessMonte(
-        contract_type,
-        contract_dict,
-        run_number,
-        parameter,
-    )
-    """
+    # Use multiprocessing if run_number is large (i.e. larger than 400)
+    try:
+        if run_number <= 400:
+            return monte.calculate_single_core()
+        else:
+            return monte.calculate_multi_cores()
 
-    # calc_contract = monte.calcContract(n=0)
+    # Should error occurs, return back to serial processing
+    except Exception as e:
+        print(f"[Warning] Parallel mode failed: {e}")
+        print(traceback.format_exc(limit=2))
 
-    # n_list = [0, 1, 2]
-    # calc_contract = [0 for _ in range(len(n_list))]
-    # for n in n_list:
-    #     calc_contract[n] = monte.calcContract(n)
-    #
-    #     print('\t')
-    #     print(f'Filetype: {type(calc_contract[n])}')
-    #     print(f'Length: {len(calc_contract[n])}')
-    #     print('calc_contract = \n', calc_contract[n])
-    #
-    #     print('\t')
-    #     print('===============================================================')
-
-    # return monte.calculate()
+        return monte.calculate_single_core()
