@@ -83,7 +83,7 @@ summary_pr = {
 
 pr = BaseProject(
     **kwargs_pr,
-    lifting=tuple([case.lifting_mangga, case.lifting_apel, case.lifting_nanas]),
+    lifting=tuple([case.lifting_mangga, case.lifting_apel]),
     capital_cost=tuple([case.capital_mangga, case.capital_apel]),
     intangible_cost=tuple([case.intangible_mangga, case.intangible_apel]),
     opex=tuple([case.opex_mangga, case.opex_apel]),
