@@ -2132,6 +2132,8 @@ def get_sensitivity(data: dict, contract_type: str):
 
 
 def get_uncertainty(data: dict, contract_type: str):
+
+    # Filter unwanted inputs
     if "uncertainty_arguments" not in data:
         raise ContractException(
             "The payload does not have the uncertainty_arguments key"
@@ -2165,49 +2167,57 @@ def get_uncertainty(data: dict, contract_type: str):
         summary_argument = get_baseproject(data=data)[3]
 
     # Constructing the sensitivity arguments
+    ua = data["uncertainty_arguments"]
+
     uncertainty_args = {
+        # Base parameters
         "contract": contract,
         "contract_arguments": contract_arguments,
         "summary_arguments": summary_argument,
-        "run_number": data["uncertainty_arguments"]["run_number"],
-        "min_oil_price": data["uncertainty_arguments"]["min_oil_price"],
-        "mean_oil_price": data["uncertainty_arguments"]["mean_oil_price"],
-        "max_oil_price": data["uncertainty_arguments"]["max_oil_price"],
-        "min_gas_price": data["uncertainty_arguments"]["min_gas_price"],
-        "mean_gas_price": data["uncertainty_arguments"]["mean_gas_price"],
-        "max_gas_price": data["uncertainty_arguments"]["max_gas_price"],
-        "min_opex": data["uncertainty_arguments"]["min_opex"],
-        "mean_opex": data["uncertainty_arguments"]["mean_opex"],
-        "max_opex": data["uncertainty_arguments"]["max_opex"],
-        "min_capex": data["uncertainty_arguments"]["min_capex"],
-        "mean_capex": data["uncertainty_arguments"]["mean_capex"],
-        "max_capex": data["uncertainty_arguments"]["max_capex"],
-        "min_lifting": data["uncertainty_arguments"]["min_lifting"],
-        "mean_lifting": data["uncertainty_arguments"]["mean_lifting"],
-        "max_lifting": data["uncertainty_arguments"]["max_lifting"],
-        "oil_price_stddev": data["uncertainty_arguments"]["oil_price_stddev"],
-        "gas_price_stddev": data["uncertainty_arguments"]["gas_price_stddev"],
-        "opex_stddev": data["uncertainty_arguments"]["opex_stddev"],
-        "capex_stddev": data["uncertainty_arguments"]["capex_stddev"],
-        "lifting_stddev": data["uncertainty_arguments"]["lifting_stddev"],
-        "oil_price_distribution": convert_to_uncertainty_distribution(
-            target=data["uncertainty_arguments"]["oil_price_distribution"]
-        ),
-        "gas_price_distribution": convert_to_uncertainty_distribution(
-            target=data["uncertainty_arguments"]["gas_price_distribution"]
-        ),
-        "opex_distribution": convert_to_uncertainty_distribution(
-            target=data["uncertainty_arguments"]["opex_distribution"]
-        ),
-        "capex_distribution": convert_to_uncertainty_distribution(
-            target=data["uncertainty_arguments"]["capex_distribution"]
-        ),
-        "lifting_distribution": convert_to_uncertainty_distribution(
-            target=data["uncertainty_arguments"]["lifting_distribution"]
-        ),
+        "run_number": ua["run_number"],
+
+        # Statistics parameters for OIL PRICE
+        "min_oil_price": ua["min_oil_price"],
+        "mean_oil_price": ua["mean_oil_price"],
+        "max_oil_price": ua["max_oil_price"],
+
+        # Statistics parameters for GAS PRICE
+        "min_gas_price": ua["min_gas_price"],
+        "mean_gas_price": ua["mean_gas_price"],
+        "max_gas_price": ua["max_gas_price"],
+
+        # "min_opex": data["uncertainty_arguments"]["min_opex"],
+        # "mean_opex": data["uncertainty_arguments"]["mean_opex"],
+        # "max_opex": data["uncertainty_arguments"]["max_opex"],
+        # "min_capex": data["uncertainty_arguments"]["min_capex"],
+        # "mean_capex": data["uncertainty_arguments"]["mean_capex"],
+        # "max_capex": data["uncertainty_arguments"]["max_capex"],
+        # "min_lifting": data["uncertainty_arguments"]["min_lifting"],
+        # "mean_lifting": data["uncertainty_arguments"]["mean_lifting"],
+        # "max_lifting": data["uncertainty_arguments"]["max_lifting"],
+        # "oil_price_stddev": data["uncertainty_arguments"]["oil_price_stddev"],
+        # "gas_price_stddev": data["uncertainty_arguments"]["gas_price_stddev"],
+        # "opex_stddev": data["uncertainty_arguments"]["opex_stddev"],
+        # "capex_stddev": data["uncertainty_arguments"]["capex_stddev"],
+        # "lifting_stddev": data["uncertainty_arguments"]["lifting_stddev"],
+        # "oil_price_distribution": convert_to_uncertainty_distribution(
+        #     target=data["uncertainty_arguments"]["oil_price_distribution"]
+        # ),
+        # "gas_price_distribution": convert_to_uncertainty_distribution(
+        #     target=data["uncertainty_arguments"]["gas_price_distribution"]
+        # ),
+        # "opex_distribution": convert_to_uncertainty_distribution(
+        #     target=data["uncertainty_arguments"]["opex_distribution"]
+        # ),
+        # "capex_distribution": convert_to_uncertainty_distribution(
+        #     target=data["uncertainty_arguments"]["capex_distribution"]
+        # ),
+        # "lifting_distribution": convert_to_uncertainty_distribution(
+        #     target=data["uncertainty_arguments"]["lifting_distribution"]
+        # ),
     }
 
-    return uncertainty_psc(**uncertainty_args)
+    # return uncertainty_psc(**uncertainty_args)
 
 
 # def get_summary_object(
