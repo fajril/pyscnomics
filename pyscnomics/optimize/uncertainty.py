@@ -2501,7 +2501,7 @@ def uncertainty_psc(
     opex_distribution: UncertaintyDistribution = UncertaintyDistribution.NORMAL,
     capex_distribution: UncertaintyDistribution = UncertaintyDistribution.NORMAL,
     lifting_distribution: UncertaintyDistribution = UncertaintyDistribution.NORMAL,
-    verbose: bool = True,
+    verbose: bool = False,
 ) -> dict:
     """
     Perform Monte Carlo uncertainty analysis for a PSC economic model.

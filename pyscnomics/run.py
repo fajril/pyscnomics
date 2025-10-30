@@ -2,6 +2,7 @@
 import numpy as np
 import multiprocessing as mp
 from pathos.pools import ProcessPool as Pool
+import time as tm
 
 from pyscnomics.econ.selection import (
     FluidType,
@@ -343,9 +344,8 @@ data = {
         "gas_dmo_volume_portion": 0.25,
         "gas_dmo_fee_portion": 0.25,
         "gas_dmo_holiday_duration": 60,
-        "oil_carry_forward_depreciation": 0.0,
+        "oil_carry_forward_depreciation": [50, 20, 100],
         "gas_carry_forward_depreciation": 0.0,
-
     },
     "costrecovery": {
         "oil_ftp_is_available": True,
@@ -373,7 +373,7 @@ data = {
         "oil_carry_forward_depreciation": 0,
         "gas_carry_forward_depreciation": 0,
     },
-    # ======================================= Base Project
+    # # ======================================= Base Project
     # "contract_arguments": {
     #     "sulfur_revenue": "Addition to Gas Revenue",
     #     "electricity_revenue": "Addition to Oil Revenue",
@@ -1051,7 +1051,7 @@ data = {
         "step": 10,
     },
     "uncertainty_arguments": {
-        "run_number": 100,
+        "run_number": 500,
         "min_oil_price": 45,
         "mean_oil_price": 60,
         "max_oil_price": 80,
@@ -1064,7 +1064,7 @@ data = {
         "min_capex": 100,
         "mean_capex": 150,
         "max_capex": 200,
-        "min_lifting": None,
+        "min_lifting": 200,
         "mean_lifting": None,
         "max_lifting": None,
         "oil_price_stddev": 40,
@@ -1179,14 +1179,21 @@ data = {
 # }
 
 if __name__ == "__main__":
-    get_uncertainty(data=data, contract_type="Cost Recovery")
+
+    ti = tm.time()
+    t1 = get_uncertainty(data=data, contract_type="Cost Recovery")
+    tf = tm.time()
+
+    print('\t')
+    print('Success!')
+    print(f'Calculation took {tf - ti} seconds')
 
     # print('\t')
     # print(f'Filetype: {type()}')
     # print(f'Length: {len()}')
     # print()
 
-    # print('\t')
-    # print(f'Filetype: {type(t1)}')
-    # print(f'Length: {len(t1)}')
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
     # print('t1 = \n', t1)

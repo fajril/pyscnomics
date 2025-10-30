@@ -540,6 +540,7 @@ def convert_enum_ftptaxregime(objects: FTPTaxRegime) -> str:
     mapping = {
         FTPTaxRegime.PDJP_20_2017: "PDJP No.20 Tahun 2017",
         FTPTaxRegime.PRE_PDJP_20_2017: "Pre PDJP No.20 Tahun 2017",
+        FTPTaxRegime.DIRECT_MODE: "Direct Mode",
     }
 
     return _helper_convert_enum_to_str(

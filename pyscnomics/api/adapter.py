@@ -2132,6 +2132,28 @@ def get_sensitivity(data: dict, contract_type: str):
 
 
 def get_uncertainty(data: dict, contract_type: str):
+    """
+    Run Monte Carlo uncertainty analysis for a specified PSC contract type.
+
+    This function extracts contract setup, statistical parameters, and
+    uncertainty configurations from the input data, then executes
+    probabilistic simulations through `uncertainty_psc()`.
+
+    Returns
+    -------
+    dict
+        Dictionary containing probabilistic results (P10, P50, P90) and
+        simulation details.
+
+    Notes
+    -----
+    - Supported contract types: "Base Project", "Cost Recovery",
+      "Gross Split", and "Transition".
+    - Each uncertainty parameter (e.g., oil price, gas price, CAPEX, OPEX,
+      lifting) is simulated using its mean, range, standard deviation,
+      and selected probability distribution.
+    - Raises `ContractException` if `uncertainty_arguments` are missing or invalid.
+    """
 
     # Filter unwanted inputs
     if "uncertainty_arguments" not in data:
@@ -2166,10 +2188,18 @@ def get_uncertainty(data: dict, contract_type: str):
         contract_arguments = get_baseproject(data=data)[2]
         summary_argument = get_baseproject(data=data)[3]
 
-    # Constructing the sensitivity arguments
-    ua = data["uncertainty_arguments"]
+    # Helper function
+    def _convert_distribution_enum_to_str(target: str):
+        return convert_to_uncertainty_distribution(
+            target=data["uncertainty_arguments"][target]
+        )
 
-    uncertainty_args = {
+    # Abbreviations
+    ua = data["uncertainty_arguments"]
+    to_str = _convert_distribution_enum_to_str
+
+    # Constructing the sensitivity arguments
+    uncertainty_kwargs = {
         # Base parameters
         "contract": contract,
         "contract_arguments": contract_arguments,
@@ -2186,38 +2216,37 @@ def get_uncertainty(data: dict, contract_type: str):
         "mean_gas_price": ua["mean_gas_price"],
         "max_gas_price": ua["max_gas_price"],
 
-        # "min_opex": data["uncertainty_arguments"]["min_opex"],
-        # "mean_opex": data["uncertainty_arguments"]["mean_opex"],
-        # "max_opex": data["uncertainty_arguments"]["max_opex"],
-        # "min_capex": data["uncertainty_arguments"]["min_capex"],
-        # "mean_capex": data["uncertainty_arguments"]["mean_capex"],
-        # "max_capex": data["uncertainty_arguments"]["max_capex"],
-        # "min_lifting": data["uncertainty_arguments"]["min_lifting"],
-        # "mean_lifting": data["uncertainty_arguments"]["mean_lifting"],
-        # "max_lifting": data["uncertainty_arguments"]["max_lifting"],
-        # "oil_price_stddev": data["uncertainty_arguments"]["oil_price_stddev"],
-        # "gas_price_stddev": data["uncertainty_arguments"]["gas_price_stddev"],
-        # "opex_stddev": data["uncertainty_arguments"]["opex_stddev"],
-        # "capex_stddev": data["uncertainty_arguments"]["capex_stddev"],
-        # "lifting_stddev": data["uncertainty_arguments"]["lifting_stddev"],
-        # "oil_price_distribution": convert_to_uncertainty_distribution(
-        #     target=data["uncertainty_arguments"]["oil_price_distribution"]
-        # ),
-        # "gas_price_distribution": convert_to_uncertainty_distribution(
-        #     target=data["uncertainty_arguments"]["gas_price_distribution"]
-        # ),
-        # "opex_distribution": convert_to_uncertainty_distribution(
-        #     target=data["uncertainty_arguments"]["opex_distribution"]
-        # ),
-        # "capex_distribution": convert_to_uncertainty_distribution(
-        #     target=data["uncertainty_arguments"]["capex_distribution"]
-        # ),
-        # "lifting_distribution": convert_to_uncertainty_distribution(
-        #     target=data["uncertainty_arguments"]["lifting_distribution"]
-        # ),
+        # Statistics parameters for OPEX
+        "min_opex": ua["min_opex"],
+        "mean_opex": ua["mean_opex"],
+        "max_opex": ua["max_opex"],
+
+        # Statistics parameters for CAPEX
+        "min_capex": ua["min_capex"],
+        "mean_capex": ua["mean_capex"],
+        "max_capex": ua["max_capex"],
+
+        # Statistics parameters for Lifting
+        "min_lifting": ua["min_lifting"],
+        "mean_lifting": ua["mean_lifting"],
+        "max_lifting": ua["max_lifting"],
+
+        # Standard deviations
+        "oil_price_stddev": ua["oil_price_stddev"],
+        "gas_price_stddev": ua["gas_price_stddev"],
+        "opex_stddev": ua["opex_stddev"],
+        "capex_stddev": ua["capex_stddev"],
+        "lifting_stddev": ua["lifting_stddev"],
+
+        # Distribution
+        "oil_price_distribution": to_str("oil_price_distribution"),
+        "gas_price_distribution": to_str("gas_price_distribution"),
+        "opex_distribution": to_str("opex_distribution"),
+        "capex_distribution": to_str("capex_distribution"),
+        "lifting_distribution": to_str("lifting_distribution"),
     }
 
-    # return uncertainty_psc(**uncertainty_args)
+    return uncertainty_psc(**uncertainty_kwargs)
 
 
 # def get_summary_object(
