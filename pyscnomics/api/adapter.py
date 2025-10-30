@@ -1884,7 +1884,6 @@ def get_contract_optimization(data: dict, contract_type: str = "Cost Recovery") 
     -------
     result_parameters: dict
         The result of the optimization in dictionary format
-
     """
     if "optimization_arguments" not in data:
         raise ContractException(

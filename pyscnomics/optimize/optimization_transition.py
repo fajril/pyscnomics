@@ -318,7 +318,8 @@ def adjust_cost_element(
     else:
         gas_onstream_date = contract.contract2.gas_onstream_date
 
-    # When the contract is CostRecovery, parsing back the adjusted cost elements to the cost recovery contract
+    # When the contract is CostRecovery, parsing back the adjusted cost elements
+    # to the cost recovery contract
     if isinstance(contract.contract2, CostRecovery):
         contract2_adjusted = CostRecovery(
             start_date=contract.contract2.start_date,
@@ -358,7 +359,8 @@ def adjust_cost_element(
             gas_carry_forward_depreciation=contract.contract2.gas_carry_forward_depreciation,
         )
 
-    # When the contract is GrossSplit, parsing back the adjusted cost elements to the gross split contract
+    # When the contract is GrossSplit, parsing back the adjusted cost elements
+    # to the gross split contract
     elif isinstance(contract.contract2, GrossSplit):
         contract2_adjusted = GrossSplit(
             start_date=contract.contract2.start_date,
@@ -417,13 +419,14 @@ def optimize_psc_core(
     target_parameter: OptimizationTarget = OptimizationTarget.IRR,
 ) -> (list, list, float, list):
     """
-    The function to get contract variable(s) that resulting the desired target or contract's economic target.
+    The function to get contract variable(s) that resulting the desired target or
+    contract's economic target.
 
     Parameters
     ----------
     dict_optimization: dict
-        The optimization dictionary that containing the information about minimum boundary and upper boundary
-        of the optimized parameters.
+        The optimization dictionary that containing the information about minimum
+        boundary and upper boundary of the optimized parameters.
     contract: Transition
         The contract object.
     contract_arguments: dict
@@ -437,12 +440,14 @@ def optimize_psc_core(
 
     Notes
     -------
-    The dictionary of dict_optimization should be at least having the structure as the following:
+    The dictionary of dict_optimization should be at least having the structure as
+    the following:
         dict_optimization = {'parameters': list[OptimizationParameter],
                              'min': np.ndarray,
                              'max': np.ndarray}
 
-        'parameters' keys containing the enum list of the variable that will be optimized to achieve the target.
+        'parameters' keys containing the enum list of the variable that will be
+        optimized to achieve the target.
         'min' keys containing the minimum value of each parameter.
         'max' keys containing the minimum value of each parameter.
 
@@ -480,7 +485,8 @@ def optimize_psc_core(
     # Changing the parameters list[str] into list[OptimizationParameters(Enum)]
     list_params = dict_optimization["parameter"]
 
-    # Defining Base Value list to contain value of optimized parameters and status of the optimization
+    # Defining Base Value list to contain value of optimized parameters
+    # and status of the optimization
     list_params_value = ["Base Value"] * len(list_params)
 
     # Defining the empty result of optimization target, will be defined later

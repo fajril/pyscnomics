@@ -64,8 +64,6 @@ class MonteCarloException(Exception):
     pass
 
 
-# ++++++++++++++++++++++++++++++++++++++++++++++++ Uncertainty Detached
-
 def get_setup_dict(data: dict) -> tuple:
     """
     Convert the setup section of the input dictionary into structured core
@@ -1830,56 +1828,26 @@ class ProcessMonte:
 
     def Adjust_Data(self, multipliers: np.ndarray) -> dict:
         """
-        Adjusts contract economic data based on parameter-specific multipliers.
+        Apply parameter-based multipliers to adjust contract economic data.
 
-        This function creates a deep copy of the base contract and applies
-        multiplicative adjustments to relevant data fields (e.g., price, cost,
-        lifting rate) according to the provided multipliers.
-
-        Each multiplier corresponds to a target parameter (Oil Price, Gas Price,
-        OPEX, CAPEX, or Lifting) defined in `self.parameter`.
-
-        The adjustment is performed through an internal helper function
-        ``_adjust_partial_data()``, which handles both lifting-related attributes
-        and other cost or operational components.
+        Creates a deep copy of the base contract and scales relevant fields
+        (price, cost, lifting rate) according to the provided multipliers.
 
         Parameters
         ----------
         multipliers : np.ndarray
-            A one-dimensional array of scaling factors applied to contract attributes.
-            Each element in `multipliers` corresponds to a specific target parameter,
-            as defined in `self.parameter`. The order of parameters typically follows:
-            1. Oil Price
-            2. Gas Price
-            3. OPEX
-            4. CAPEX
-            5. Lifting
+            Array of scaling factors for target parameters
+            (Oil Price, Gas Price, OPEX, CAPEX, Lifting).
 
         Returns
         -------
         dict
-            A deep-copied and multiplier-adjusted version of the base contract data,
-            where relevant numerical attributes have been scaled according to the
-            provided multipliers.
+            Deep-copied contract with adjusted economic attributes.
 
         Notes
         -----
-        - The adjustment process depends on the parameter `id` in `self.parameter`:
-
-          | Parameter ID | Target Parameter | Affected Keys / Attributes
-          |--------------|------------------|----------------------------------------
-          | 0            | Oil Price        | ``lifting → price`` (for Oil)
-          | 1            | Gas Price        | ``lifting → price`` (for Gas)
-          | 2            | OPEX             | ``opex → fixed_cost, cost_per_volume``;
-                                              ``asr``, ``lbt``, and
-                                              ``cost_of_sales → cost``
-          | 3            | CAPEX            | ``capital`` and ``intangible → cost``
-          | 4            | Lifting          | ``lifting → lifting_rate, prod_rate``
-                                                (excluding Gas)
-
-        - A deep copy is used to ensure the original base contract remains unmodified.
-        - For contracts with multiple sub-contracts (i.e., when ``self.type >= 3``),
-          the adjustment is performed on ``contract_adjusted["contract_2"]``.
+        The adjustment is performed using an internal helper function and
+        does not modify the original base contract.
         """
 
         contract_adjusted: dict = copy.deepcopy(self.baseContract)
@@ -1895,31 +1863,26 @@ class ProcessMonte:
             Helper function to apply partial data adjustment to selected contract
             attributes.
 
-            Scales numeric list values in a contract dictionary according to the
-            specified target parameter and multiplier. Supports both lifting-related
-            and general cost adjustments.
+            Scales numeric fields in the specified section (e.g., 'lifting', 'opex',
+            'capex') based on the target parameter and multiplier.
 
             Parameters
             ----------
             contract_ : dict
-                Contract data containing nested elements (e.g., 'lifting', 'opex', 'capex').
+                Contract data structure to modify.
             target_param : str
-                Target parameter to adjust, such as "Oil Price", "Gas Price", or "Lifting".
+                Parameter to adjust (e.g., "Oil Price", "Gas Price", "Lifting").
             key : str
-                Contract section name under which target data are stored.
+                Section name containing target data.
             multiplier : float
-                Multiplicative factor applied to target values.
+                Scaling factor applied to numeric fields.
             datakeys : list of str, optional
-                Field names to adjust for non-lifting sections. Defaults to an empty list.
+                Field names to adjust for non-lifting sections.
 
             Notes
             -----
-            -   For `key='lifting'`, the adjusted fields depend on `target_param` and
-                `fluid_type`:
-                    - "Oil Price" (Oil) → `'price'`
-                    - "Gas Price" (Gas) → `'price'`
-                    - "Lifting" → `'lifting_rate'`, `'prod_rate'` (excluding Gas)
-            -   For other sections, all fields in `datakeys` are adjusted.
+            Lifting adjustments depend on `target_param` and `fluid_type`;
+            other sections use `datakeys`.
             """
 
             if datakeys is None:
@@ -1934,7 +1897,7 @@ class ProcessMonte:
                 ):
                     continue
 
-                # Perform adjustment to lifting attributes
+                # Specify target keys for lifting-related target
                 if key == "lifting":
                     if target_param == "Oil Price" and item["fluid_type"] == "Oil":
                         target_keys = ["price"]
@@ -1945,9 +1908,11 @@ class ProcessMonte:
                     else:
                         continue
 
+                # Specify target keys for non-lifting targets
                 else:
                     target_keys = datakeys
 
+                # Adjust target attributes by multiplication with the prescribed multipliers
                 for k in target_keys:
                     if k in item:
                         item[k] = (np.array(item[k]) * multiplier).tolist()
@@ -2239,6 +2204,33 @@ class ProcessMonte:
             }
 
     def get_outcomes(self, results: np.ndarray) -> dict:
+        """
+        Compute and summarize probabilistic outcomes from Monte Carlo results.
+
+        The function sorts simulation results, assigns cumulative probabilities,
+        and computes key percentiles (P10, P50, P90) to summarize uncertainty.
+
+        Parameters
+        ----------
+        results : np.ndarray
+            Array of simulation results with shape (numSim, n_variables).
+
+        Returns
+        -------
+        dict
+            Dictionary containing:
+            - **params** : list of str
+                Names of economic parameters considered.
+            - **results** : list of list
+                Sorted results with corresponding cumulative probabilities.
+            - **P10**, **P50**, **P90** : list of float
+                Percentile values representing optimistic, median, and
+                conservative outcomes.
+
+        Notes
+        -----
+        If `self.hasGas` is True, gas-related parameters are included.
+        """
 
         row_number = self.numSim
 
@@ -2287,6 +2279,23 @@ class ProcessMonte:
         return outcomes
 
     def calculate_single_core(self) -> dict:
+        """
+        Run Monte Carlo simulation sequentially on a single CPU core.
+
+        Executes multiple contract evaluations in series, storing key
+        economic indicators and parameter multipliers for each iteration.
+
+        Returns
+        -------
+        dict
+            Dictionary of summarized outcomes from all simulations, including:
+            - **params** : list of str
+                Names of economic parameters.
+            - **results** : list of list
+                Simulation results with cumulative probabilities.
+            - **P10**, **P50**, **P90** : list of float
+                Key percentiles summarizing uncertainty in results.
+        """
 
         row_number = self.numSim
 
@@ -2318,18 +2327,50 @@ class ProcessMonte:
         return self.get_outcomes(results=results)
 
     def calculate_multi_cores(self) -> dict:
+        """
+        Run Monte Carlo simulation in parallel using multiple CPU cores.
+
+        Distributes contract evaluations across available processors and
+        aggregates results for percentile-based outcome analysis.
+
+        Returns
+        -------
+        dict
+            Dictionary of summarized outcomes including:
+            - **params** : list of str
+                Economic parameter names.
+            - **results** : list of list
+                Combined simulation results with cumulative probabilities.
+            - **P10**, **P50**, **P90** : list of float
+                Key percentiles representing uncertainty ranges.
+        """
 
         row_number = self.numSim
 
         # Specify the number of active CPU
         n_processes = os.cpu_count() - 1
 
-        # Designate a container to store Monte Carlo simulation result
+        # Designate a container to store Monte Carlo simulation results
         results: np.ndarray = np.zeros(
             [row_number, len(self.target) + len(self.parameter)], dtype=float
         )
 
+        # Specify a helper function
         def worker(n):
+            """
+            Run a single Monte Carlo iteration.
+
+            Parameters
+            ----------
+            n : int
+                Simulation index.
+
+            Returns
+            -------
+            tuple
+                (rnum, output, multipliers) containing the run index,
+                economic results, and parameter multipliers.
+            """
             out = self.calcContract(n)
             rnum = out["n"]
             output = out["output"]
@@ -2337,6 +2378,7 @@ class ProcessMonte:
                 self.multipliers[rnum, idx] * items["base"]
                 for idx, items in enumerate(self.parameter)
             ]
+
             return rnum, output, multipliers
 
         # Instantiate pathos pool
@@ -2461,6 +2503,30 @@ def uncertainty_psc(
     lifting_distribution: UncertaintyDistribution = UncertaintyDistribution.NORMAL,
     verbose: bool = True,
 ) -> dict:
+    """
+    Perform Monte Carlo uncertainty analysis for a PSC economic model.
+
+    Generates probabilistic outcomes (P10, P50, P90) by varying key
+    parameters—oil price, gas price, OPEX, CAPEX, and lifting—according
+    to defined distributions and standard deviations.
+
+    Returns
+    -------
+    dict
+        Summary of probabilistic outcomes including P10, P50, P90, and
+        associated simulation results.
+
+    Notes
+    -----
+    The function builds and executes a PSC contract (BaseProject,
+    CostRecovery, GrossSplit, or Transition) across multiple simulation
+    runs. Each run applies random multipliers to key parameters,
+    evaluates the economic results, and aggregates them to estimate
+    uncertainty ranges.
+
+    Automatically switches to parallel mode when `run_number > 400`.
+    """
+
     # Translating the contract type before parsing into ProcessMonte class
     if isinstance(contract, CostRecovery):
         contract_type = 1

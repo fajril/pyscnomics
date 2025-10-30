@@ -1,5 +1,4 @@
 """
-[EXPERIMENTAL]
 Configuration to undertake optimization study.
 """
 
