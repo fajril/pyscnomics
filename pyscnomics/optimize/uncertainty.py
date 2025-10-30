@@ -2693,6 +2693,6 @@ def uncertainty_psc(
     # Should error occurs, return back to serial processing
     except Exception as e:
         print(f"[Warning] Parallel mode failed: {e}")
-        print(traceback.format_exc(limit=2))
+        # print(traceback.format_exc(limit=2))
 
         return monte.calculate_single_core()
