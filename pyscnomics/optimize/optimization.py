@@ -396,11 +396,6 @@ def adjust_cost_element(
     lbt_adjusted = contract.lbt_cost
     cos_adjusted = contract.cost_of_sales
 
-    print('\t')
-    print(f'Filetype: {type(capital_adjusted)}')
-    print(f'Length: {len(capital_adjusted)}')
-    print('capital_adjusted = \n', capital_adjusted)
-
     # Condition when the VAT of each cost element will be adjusted
     if adjustment_variable == OptimizationParameter.VAT_DISCOUNT:
         # Adjusting the Capital Cost of the contract
@@ -412,6 +407,7 @@ def adjust_cost_element(
                     cost=tan.cost,
                     expense_year=tan.expense_year,
                     cost_allocation=tan.cost_allocation,
+                    cost_type=tan.cost_type,
                     description=tan.description,
                     tax_portion=tan.tax_portion,
                     tax_discount=adjustment_value,
@@ -434,6 +430,7 @@ def adjust_cost_element(
                     cost=intang.cost,
                     expense_year=intang.expense_year,
                     cost_allocation=intang.cost_allocation,
+                    cost_type=intang.cost_type,
                     description=intang.description,
                     tax_portion=intang.tax_portion,
                     tax_discount=adjustment_value,
@@ -450,6 +447,7 @@ def adjust_cost_element(
                     end_year=opx.end_year,
                     expense_year=opx.expense_year,
                     cost_allocation=opx.cost_allocation,
+                    cost_type=opx.cost_type,
                     description=opx.description,
                     tax_portion=opx.tax_portion,
                     tax_discount=adjustment_value,
@@ -470,6 +468,7 @@ def adjust_cost_element(
                     cost=asr.cost,
                     expense_year=asr.expense_year,
                     cost_allocation=asr.cost_allocation,
+                    cost_type=asr.cost_type,
                     description=asr.description,
                     tax_portion=asr.tax_portion,
                     tax_discount=adjustment_value,
@@ -490,6 +489,7 @@ def adjust_cost_element(
                     expense_year=bt.expense_year,
                     cost=bt.cost,
                     cost_allocation=bt.cost_allocation,
+                    cost_type=bt.cost_type,
                     description=bt.description,
                     tax_portion=bt.tax_portion,
                     tax_discount=adjustment_value,
@@ -538,8 +538,15 @@ def adjust_cost_element(
         )
 
     # On stream date treatment
+
+    # Approach 2
+    if np.sum(getattr(contract, f"_oil_revenue")) == 0:
+        oil_onstream_date = None
+
+    # Approach 1
     if np.sum(contract._oil_revenue) == 0:
         oil_onstream_date = None
+
     else:
         oil_onstream_date = contract.oil_onstream_date
 
@@ -548,7 +555,8 @@ def adjust_cost_element(
     else:
         gas_onstream_date = contract.gas_onstream_date
 
-    # When the contract is CostRecovery, parsing back the adjusted cost elements to the cost recovery contract
+    # When the contract is CostRecovery, parsing back the adjusted cost elements
+    # to the cost recovery contract
     if isinstance(contract, CostRecovery):
         contract_adjusted = CostRecovery(
             start_date=contract.start_date,
@@ -588,7 +596,8 @@ def adjust_cost_element(
             gas_carry_forward_depreciation=contract.gas_carry_forward_depreciation,
         )
 
-    # When the contract is GrossSplit, parsing back the adjusted cost elements to the gross split contract
+    # When the contract is GrossSplit, parsing back the adjusted cost elements
+    # to the gross split contract
     elif isinstance(contract, GrossSplit):
         contract_adjusted = GrossSplit(
             start_date=contract.start_date,
@@ -654,11 +663,12 @@ def adjust_useful_life_years(adjustment_value: float, useful_life_array: np.ndar
     -------
     The minimum useful life is 2 years.
     """
+
     # Catch the useful life below 2 years
     index_below = np.argwhere(useful_life_array < 2).ravel()
     if len(index_below) > 0:
         raise OptimizationException(
-            f"Useful life at index {index_below} , is/are below 2 years"
+            f"Useful life at index {index_below}, is/are below 2 years"
         )
 
     # Defining the acceleration rate

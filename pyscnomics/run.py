@@ -1,12 +1,14 @@
+"""
+Execute calculations
+"""
 
-import numpy as np
-import multiprocessing as mp
-from pathos.pools import ProcessPool as Pool
-import time as tm
 from pyscnomics.poolData import (
     get_summary_args_class,
     synthetic_data_class,
     synthetic_data_dict,
+)
+from pyscnomics.optimize.optimization import (
+    adjust_cost_element,
 )
 
 
@@ -14,19 +16,14 @@ if __name__ == "__main__":
 
     cr, gs, bp = "cost_recovery", "gross_split", "base_project"
 
+    # Specify contract type
+    contract_type = cr
+
     # Generate synthetic data
-    data_as_class = synthetic_data_class(contract_type=cr)
-    data_as_dict = synthetic_data_dict(contract_type=cr)
+    data_as_class = synthetic_data_class(contract_type)
+    data_as_dict = synthetic_data_dict(contract_type)
 
-    print('\t')
-    print(f'Filetype: {type(data_as_class)}')
-    print(f'Length: {len(data_as_class)}')
-    print('data_as_class = \n', data_as_class)
-
-    print('\t')
-    print(f'Filetype: {type(data_as_dict)}')
-    print(f'Length: {len(data_as_dict)}')
-    print('data_as_dict = \n', data_as_dict)
+    adjust_cost_element(contract=data_as_class)
 
     # print('\t')
     # print(f'Filetype: {type()}')
