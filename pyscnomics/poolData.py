@@ -3,7 +3,26 @@ A collection of operations to run optimization module.
 """
 
 import numpy as np
+from datetime import date
 from pyscnomics.example import ExampleCase
+from pyscnomics.contracts.project import BaseProject
+from pyscnomics.contracts.costrecovery import CostRecovery
+from pyscnomics.contracts.grossplit import GrossSplit
+from pyscnomics.econ.selection import (
+    TaxSplitTypeCR,
+    OtherRevenue,
+    InflationAppliedTo,
+    TaxRegime,
+    FTPTaxRegime,
+    DeprMethod,
+    SunkCostMethod,
+    InitialYearAmortizationIncurred,
+    GrossSplitRegime,
+    VariableSplit082017,
+    VariableSplit132024,
+    NPVSelection,
+    DiscountingMode,
+)
 from pyscnomics.optimize.optimization import adjust_cost_element
 
 
@@ -12,8 +31,319 @@ case = ExampleCase()
 
 
 # Synthetic data: class format
+def get_lifting_costs_class() -> dict:
+    """
+    Collect and group cost components for multiple project cases.
+
+    Returns
+    -------
+    dict
+        Dictionary containing tuples of cost elements for each field, including
+        lifting, capital, intangible, opex, ASR, LBT, and cost of sales.
+    """
+
+    lifting = tuple([case.lifting_mangga, case.lifting_apel])
+    capital_cost = tuple([case.capital_mangga, case.capital_apel])
+    intangible_cost = tuple([case.intangible_mangga, case.intangible_apel])
+    opex = tuple([case.opex_mangga, case.opex_apel])
+    asr_cost = tuple([case.asr_mangga, case.asr_apel])
+    lbt_cost = tuple([case.lbt_mangga, case.lbt_apel])
+    cost_of_sales = tuple([case.cos_mangga, case.cos_apel])
+
+    return {
+        "lifting": lifting,
+        "capital_cost": capital_cost,
+        "intangible_cost": intangible_cost,
+        "opex": opex,
+        "asr_cost": asr_cost,
+        "lbt_cost": lbt_cost,
+        "cost_of_sales": cost_of_sales,
+    }
 
 
+def get_kwargs_class(contract_type: str) -> dict:
+    """
+    Return default argument mappings for the given PSC contract type.
+
+    Parameters
+    ----------
+    contract_type : str
+        One of {"base_project", "cost_recovery", "gross_split"}.
+
+    Returns
+    -------
+    dict
+        Dictionary of keyword arguments for initializing the contract class.
+
+    Raises
+    ------
+    ValueError
+        If the contract type is unrecognized.
+    """
+
+    # Base Project
+    kwargs_base_project = {
+        # Base parameters
+        "start_date": date(year=2023, month=1, day=1),
+        "end_date": date(year=2032, month=12, day=31),
+        "oil_onstream_date": date(year=2030, month=1, day=1),
+        "gas_onstream_date": date(year=2029, month=1, day=1),
+        "approval_year": 2026,
+        "is_pod_1": False,
+    }
+
+    # Cost recovery
+    kwargs_cost_recovery = {
+        # Base parameters
+        **kwargs_base_project,
+
+        # FTP
+        "oil_ftp_is_available": True,
+        "oil_ftp_is_shared": True,
+        "oil_ftp_portion": 0.2,
+        "gas_ftp_is_available": True,
+        "gas_ftp_is_shared": True,
+        "gas_ftp_portion": 0.2,
+
+        # Tax split
+        "tax_split_type": TaxSplitTypeCR.CONVENTIONAL,
+        "condition_dict": dict,
+        "indicator_rc_icp_sliding": None,
+        "oil_ctr_pretax_share": 0.25,
+        "gas_ctr_pretax_share": 0.5,
+
+        # Investment credit
+        "oil_ic_rate": 0.0,
+        "gas_ic_rate": 0.0,
+        "ic_is_available": False,
+        "oil_cr_cap_rate": 1.0,
+        "gas_cr_cap_rate": 1.0,
+
+        # DMO
+        "oil_dmo_volume_portion": 0.25,
+        "oil_dmo_fee_portion": 0.25,
+        "oil_dmo_holiday_duration": 60,
+        "gas_dmo_volume_portion": 1.0,
+        "gas_dmo_fee_portion": 1.0,
+        "gas_dmo_holiday_duration": 60,
+
+        # Carry forward depreciation
+        "oil_carry_forward_depreciation": 0.0,
+        "gas_carry_forward_depreciation": 0.0,
+    }
+
+    # Gross Split
+    VS_08 = VariableSplit082017
+    VS_13 = VariableSplit132024
+
+    kwargs_gross_split = {
+        # Base Parameters
+        **kwargs_base_project,
+
+        # Field and reservoir properties
+        "field_status": VS_08.FieldStatus.NO_POD,
+        "field_loc": VS_08.FieldLocation.ONSHORE,
+        "res_depth": VS_08.ReservoirDepth.LESSEQUAL_2500,
+        "infra_avail": VS_08.InfrastructureAvailability.WELL_DEVELOPED,
+        "res_type": VS_08.ReservoirType.CONVENTIONAL,
+        "api_oil": VS_08.APIOil.LESSTHAN_25,
+        "domestic_use": VS_08.DomesticUse.EQUAL_50_UNTIL_LESSTHAN_70,
+        "prod_stage": VS_08.ProductionStage.SECONDARY,
+        "co2_content": VS_08.CO2Content.LESSTHAN_5,
+        "h2s_content": VS_08.H2SContent.LESSTHAN_100,
+        "field_reserves_2024": VS_13.FieldReservesAmount.MEDIUM,
+        "infra_avail_2024": VS_13.InfrastructureAvailability.PARTIALLY_AVAILABLE,
+        "field_loc_2024": VS_13.FieldLocation.ONSHORE,
+
+        # Ministry discretion
+        "split_ministry_disc": 0.08,
+
+        # DMO
+        "oil_dmo_volume_portion": 0.25,
+        "oil_dmo_fee_portion": 1.0,
+        "gas_dmo_volume_portion": 1.0,
+        "gas_dmo_fee_portion": 1.0,
+        "oil_dmo_holiday_duration": 60,
+        "gas_dmo_holiday_duration": 60,
+
+        # Carry forward depreciation
+        "oil_carry_forward_depreciation": 0.0,
+        "gas_carry_forward_depreciation": 0.0,
+    }
+
+    # Pooled kwargs
+    kwargs_contract = {
+        "base_project": kwargs_base_project,
+        "cost_recovery": kwargs_cost_recovery,
+        "gross_split": kwargs_gross_split,
+    }
+
+    try:
+        return kwargs_contract[contract_type]
+
+    except KeyError:
+        raise ValueError(f"Unrecognized contract type: {contract_type!r}")
+
+
+def get_params_class(contract_type: str) -> dict:
+    """
+    Retrieve contract-specific parameter settings for PSC evaluation.
+
+    Parameters
+    ----------
+    contract_type : str
+        One of {"base_project", "cost_recovery", "gross_split"}.
+
+    Returns
+    -------
+    dict
+        Parameter dictionary defining fiscal, revenue, tax, and cost
+        assumptions for the specified contract type.
+
+    Notes
+    -----
+    The function selects from predefined parameter sets aligned with
+    Indonesian PSC schemes. Raises a ValueError if the contract type
+    is unrecognized.
+    """
+
+    # Base Project
+    params_base_project = {
+        "sulfur_revenue": OtherRevenue.REDUCTION_TO_GAS_OPEX,
+        "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+        "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        "tax_rate": 0.0,
+        "year_inflation": None,
+        "inflation_rate": 0.0,
+        "inflation_rate_applied_to": None,
+    }
+
+    # Cost Recovery
+    params_cost_recovery = {
+        "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        "electricity_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        "vat_rate": 0.0,
+        "year_inflation": None,
+        "inflation_rate": 0.0,
+        "inflation_rate_applied_to": None,
+        "is_dmo_end_weighted": False,
+        "tax_regime": TaxRegime.NAILED_DOWN,
+        "effective_tax_rate": None,
+        "ftp_tax_regime": FTPTaxRegime.PDJP_20_2017,
+        "depr_method": DeprMethod.PSC_DB,
+        "decline_factor": 2,
+        "post_uu_22_year2001": True,
+        "oil_cost_of_sales_applied": False,
+        "gas_cost_of_sales_applied": False,
+        "sum_undepreciated_cost": False,
+        "sunk_cost_method": SunkCostMethod.POOLED_1ST_YEAR,
+    }
+
+    # Gross Split
+    params_gross_split = {
+        "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+        "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+        "vat_rate": 0.0,
+        "inflation_rate": 0.0,
+        "inflation_rate_applied_to": InflationAppliedTo.CAPEX,
+        "cum_production_split_offset": 0.0,
+        "depr_method": DeprMethod.PSC_DB,
+        "decline_factor": 2,
+        "sum_undepreciated_cost": False,
+        "is_dmo_end_weighted": False,
+        "tax_regime": TaxRegime.NAILED_DOWN,
+        "effective_tax_rate": 0.22,
+        "amortization": False,
+        "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
+        "regime": GrossSplitRegime.PERMEN_ESDM_13_2024,
+        "reservoir_type_permen_2024": VariableSplit132024.ReservoirType.MK,
+        "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
+    }
+
+    # Pooled params
+    params = {
+        "base_project": params_base_project,
+        "cost_recovery": params_cost_recovery,
+        "gross_split": params_gross_split,
+    }
+
+    try:
+        return params[contract_type]
+
+    except KeyError:
+        raise ValueError(f"Unrecognized contract type: {contract_type!r}")
+
+
+def get_summary_args_class() -> dict:
+    """
+    Define default summary arguments for PSC economic evaluation.
+
+    Returns
+    -------
+    dict
+        Dictionary containing default settings for NPV calculation,
+        discounting, and inflation parameters.
+
+    Notes
+    -----
+    The returned arguments are typically used in project summary
+    and economic indicator computations.
+    """
+
+    return {
+        "discount_rate": 0.1,
+        "npv_mode": NPVSelection.NPV_SKK_NOMINAL_TERMS,
+        "discounting_mode": DiscountingMode.END_YEAR,
+        "discount_rate_start_year": 2023,
+        "inflation_rate": 0.0,
+        "profitability_discounted": False,
+    }
+
+
+def synthetic_data_class(
+    contract_type: str
+) -> CostRecovery | GrossSplit | BaseProject:
+    """
+    Generate a synthetic contract instance for testing or benchmarking.
+
+    Parameters
+    ----------
+    contract_type : str
+        Type of contract to instantiate. Must be one of:
+        ``"cost_recovery"``, ``"gross_split"``, or ``"base_project"``.
+
+    Returns
+    -------
+    CostRecovery or GrossSplit or BaseProject
+        A fully initialized contract instance with predefined arguments,
+        parameters, and lifting cost settings.
+
+    Notes
+    -----
+    The function combines default arguments and parameters to
+    create representative PSC contract objects for simulation or validation.
+    """
+
+    mapping = {
+        "cost_recovery": (
+            CostRecovery,
+            get_kwargs_class("cost_recovery"),
+        ),
+        "gross_split": (
+            GrossSplit,
+            get_kwargs_class("gross_split"),
+        ),
+        "base_project": (
+            BaseProject,
+            get_kwargs_class("base_project"),
+        ),
+    }
+
+    ctr = mapping[contract_type]
+
+    return ctr[0](**ctr[1], **get_lifting_costs_class())
 
 
 # Synthetic data: dictionary format
@@ -845,23 +1175,3 @@ def synthetic_data_dict(contract_type: str) -> dict:
     )
 
     return {key: val for key, val in mapping_data}
-
-
-if __name__ == "__main__":
-
-    # Generate data
-    contracts_types = ["base_project", "cost_recovery", "gross_split"]
-    data_as_dict = synthetic_data_dict(contract_type=contracts_types[1])
-
-
-
-    # print('\t')
-    # print(f'Filetype: {type()}')
-    # print(f'Length: {len()}')
-    # print()
-
-    # print('\t')
-    # print(f'Filetype: {type(t1)}')
-    # print(f'Length: {len(t1)}')
-    # print('t1 = \n', t1)
-
