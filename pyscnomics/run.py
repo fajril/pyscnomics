@@ -1178,21 +1178,21 @@ data = {
 #     "verbose": False,
 # }
 
-if __name__ == "__main__":
-    ti = tm.time()
-    t1 = get_uncertainty(data=data, contract_type="Cost Recovery")
-    tf = tm.time()
+# OPTIMIZATION +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    print('\t')
-    print('Success!')
-    print(f'Calculation took {tf - ti} seconds')
+from pyscnomics.optimize.optimization import adjust_cost_element
+
+
+
+if __name__ == "__main__":
+    get_uncertainty(data=data, contract_type="Cost Recovery")
 
     # print('\t')
     # print(f'Filetype: {type()}')
     # print(f'Length: {len()}')
     # print()
 
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
+    # print('\t')
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
     # print('t1 = \n', t1)
