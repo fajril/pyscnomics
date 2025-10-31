@@ -8,10 +8,11 @@ requirements of the PSCnomics.
 
 import copy
 import os
-import traceback
+# import traceback
 import numpy as np
 from scipy.stats import uniform, triang, truncnorm
 from pathos.pools import ProcessPool as Pool
+from pathos.helpers import mp
 
 from pyscnomics.tools.summary import get_summary
 from pyscnomics.contracts.project import BaseProject
@@ -2345,10 +2346,12 @@ class ProcessMonte:
                 Key percentiles representing uncertainty ranges.
         """
 
+        mp.freeze_support()
+
         row_number = self.numSim
 
         # Specify the number of active CPU
-        n_processes = os.cpu_count() - 1
+        n_processes = max(1, int(os.cpu_count() / 2))
 
         # Designate a container to store Monte Carlo simulation results
         results: np.ndarray = np.zeros(

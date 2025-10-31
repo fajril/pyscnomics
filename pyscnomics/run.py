@@ -1051,7 +1051,7 @@ data = {
         "step": 10,
     },
     "uncertainty_arguments": {
-        "run_number": 500,
+        "run_number": 10_000,
         "min_oil_price": 45,
         "mean_oil_price": 60,
         "max_oil_price": 80,
@@ -1179,7 +1179,6 @@ data = {
 # }
 
 if __name__ == "__main__":
-
     ti = tm.time()
     t1 = get_uncertainty(data=data, contract_type="Cost Recovery")
     tf = tm.time()
