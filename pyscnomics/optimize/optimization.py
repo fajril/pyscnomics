@@ -8,7 +8,7 @@ from scipy.optimize import minimize_scalar
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.econ.selection import OptimizationParameter, OptimizationTarget
-from pyscnomics.tools.summary import get_summary
+# from pyscnomics.tools.summary import get_summary
 
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT
 
@@ -60,88 +60,88 @@ def adjust_contract(
             adjustment_variable=OptimizationParameter.VAT_DISCOUNT,
         )
 
-    # # When the optimization is LBT
-    # elif variable is OptimizationParameter.LBT_DISCOUNT:
-    #     contract = adjust_cost_element(
-    #         contract=contract,
-    #         adjustment_value=value,
-    #         adjustment_variable=OptimizationParameter.LBT_DISCOUNT,
-    #     )
-    #
-    # elif variable is OptimizationParameter.DEPRECIATION_ACCELERATION:
-    #     contract = adjust_cost_element(
-    #         contract=contract,
-    #         adjustment_value=value,
-    #         adjustment_variable=OptimizationParameter.DEPRECIATION_ACCELERATION,
-    #     )
-    #
-    # # The condition when contract is Cost Recovery
-    # if isinstance(contract, CostRecovery):
-    #     # Changing the attributes of the contract based on the chosen variable
-    #     if variable is OptimizationParameter.OIL_CTR_PRETAX:
-    #         contract.oil_ctr_pretax_share = value
-    #
-    #     if variable is OptimizationParameter.GAS_CTR_PRETAX:
-    #         contract.gas_ctr_pretax_share = value
-    #
-    #     if variable is OptimizationParameter.OIL_FTP_PORTION:
-    #         contract.oil_ftp_portion = value
-    #
-    #     if variable is OptimizationParameter.GAS_FTP_PORTION:
-    #         contract.gas_ftp_portion = value
-    #
-    #     if variable is OptimizationParameter.OIL_IC:
-    #         contract.oil_ic_rate = value
-    #
-    #     if variable is OptimizationParameter.GAS_IC:
-    #         contract.gas_ic_rate = value
-    #
-    #     if variable is OptimizationParameter.OIL_DMO_FEE:
-    #         contract.oil_dmo_fee_portion = value
-    #
-    #     if variable is OptimizationParameter.GAS_DMO_FEE:
-    #         contract.gas_dmo_fee_portion = value
-    #
-    #     if variable is OptimizationParameter.VAT_RATE:
-    #         contract_arguments["vat_rate"] = value
-    #
-    #     if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
-    #         contract_arguments["effective_tax_rate"] = value
-    #
-    # # The condition when contract is Gross Split
-    # if isinstance(contract, GrossSplit):
-    #     # Changing the attributes of the contract based on the chosen variable
-    #     if variable is OptimizationParameter.MINISTERIAL_DISCRETION:
-    #         contract.split_ministry_disc = value
-    #
-    #     if variable is OptimizationParameter.OIL_DMO_FEE:
-    #         contract.oil_dmo_fee_portion = value
-    #
-    #     if variable is OptimizationParameter.GAS_DMO_FEE:
-    #         contract.gas_dmo_fee_portion = value
-    #
-    #     if variable is OptimizationParameter.VAT_RATE:
-    #         contract_arguments["vat_rate"] = value
-    #
-    #     if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
-    #         contract_arguments["effective_tax_rate"] = value
-    #
-    # # Running the contract
-    # contract.run(**contract_arguments)
-    #
-    # # Get the summary of the new contract and get its value of the targeted optimization
-    # summary_argument["contract"] = contract
-    # result_psc = get_summary(**summary_argument)[target_parameter]
-    #
-    # return result_psc, contract
+    # When the optimization is LBT
+    elif variable is OptimizationParameter.LBT_DISCOUNT:
+        contract = adjust_cost_element(
+            contract=contract,
+            adjustment_value=value,
+            adjustment_variable=OptimizationParameter.LBT_DISCOUNT,
+        )
+
+    elif variable is OptimizationParameter.DEPRECIATION_ACCELERATION:
+        contract = adjust_cost_element(
+            contract=contract,
+            adjustment_value=value,
+            adjustment_variable=OptimizationParameter.DEPRECIATION_ACCELERATION,
+        )
+
+    # The condition when contract is Cost Recovery
+    if isinstance(contract, CostRecovery):
+        # Changing the attributes of the contract based on the chosen variable
+        if variable is OptimizationParameter.OIL_CTR_PRETAX:
+            contract.oil_ctr_pretax_share = value
+
+        if variable is OptimizationParameter.GAS_CTR_PRETAX:
+            contract.gas_ctr_pretax_share = value
+
+        if variable is OptimizationParameter.OIL_FTP_PORTION:
+            contract.oil_ftp_portion = value
+
+        if variable is OptimizationParameter.GAS_FTP_PORTION:
+            contract.gas_ftp_portion = value
+
+        if variable is OptimizationParameter.OIL_IC:
+            contract.oil_ic_rate = value
+
+        if variable is OptimizationParameter.GAS_IC:
+            contract.gas_ic_rate = value
+
+        if variable is OptimizationParameter.OIL_DMO_FEE:
+            contract.oil_dmo_fee_portion = value
+
+        if variable is OptimizationParameter.GAS_DMO_FEE:
+            contract.gas_dmo_fee_portion = value
+
+        if variable is OptimizationParameter.VAT_RATE:
+            contract_arguments["vat_rate"] = value
+
+        if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
+            contract_arguments["effective_tax_rate"] = value
+
+    # The condition when contract is Gross Split
+    if isinstance(contract, GrossSplit):
+        # Changing the attributes of the contract based on the chosen variable
+        if variable is OptimizationParameter.MINISTERIAL_DISCRETION:
+            contract.split_ministry_disc = value
+
+        if variable is OptimizationParameter.OIL_DMO_FEE:
+            contract.oil_dmo_fee_portion = value
+
+        if variable is OptimizationParameter.GAS_DMO_FEE:
+            contract.gas_dmo_fee_portion = value
+
+        if variable is OptimizationParameter.VAT_RATE:
+            contract_arguments["vat_rate"] = value
+
+        if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
+            contract_arguments["effective_tax_rate"] = value
+
+    # Running the contract
+    contract.run(**contract_arguments)
+
+    # Get the summary of the new contract and get its value of the targeted optimization
+    summary_argument["contract"] = contract
+    result_psc = get_summary(**summary_argument)[target_parameter]
+
+    return result_psc, contract
 
 
 def optimize_psc_core(
-    dict_optimization: dict,
     contract: CostRecovery | GrossSplit,
     contract_arguments: dict,
-    target_optimization_value: float,
     summary_argument: dict,
+    target_optimization_value: float,
+    dict_optimization: dict,
     target_parameter: OptimizationTarget = OptimizationTarget.IRR,
 ) -> (list, list, float, list):
     """
@@ -396,6 +396,10 @@ def adjust_cost_element(
     lbt_adjusted = contract.lbt_cost
     cos_adjusted = contract.cost_of_sales
 
+    print('\t')
+    print(f'Filetype: {type(capital_adjusted[0].tax_discount)}')
+    print('tax_discount = ', capital_adjusted[0].tax_discount)
+
     # Condition when the VAT of each cost element will be adjusted
     if adjustment_variable == OptimizationParameter.VAT_DISCOUNT:
         # Adjusting the Capital Cost of the contract
@@ -479,168 +483,175 @@ def adjust_cost_element(
             ]
         )
 
-    elif adjustment_variable == OptimizationParameter.LBT_DISCOUNT:
-        # Adjusting the LBT of the contract
-        lbt_adjusted = tuple(
-            [
-                LBT(
-                    start_year=bt.start_year,
-                    end_year=bt.end_year,
-                    expense_year=bt.expense_year,
-                    cost=bt.cost,
-                    cost_allocation=bt.cost_allocation,
-                    cost_type=bt.cost_type,
-                    description=bt.description,
-                    tax_portion=bt.tax_portion,
-                    tax_discount=adjustment_value,
-                    final_year=bt.final_year,
-                    utilized_land_area=bt.utilized_land_area,
-                    utilized_building_area=bt.utilized_building_area,
-                    njop_land=bt.njop_land,
-                    njop_building=bt.njop_building,
-                    gross_revenue=bt.gross_revenue,
-                )
-                for bt in contract.lbt_cost
-            ]
-        )
+    print('\t')
+    print('========================================================================')
 
-    elif adjustment_variable == OptimizationParameter.DEPRECIATION_ACCELERATION:
-        # Adjusting the useful life of the capital cost of the contract
-        capital_adjusted = tuple(
-            [
-                CapitalCost(
-                    start_year=tan.start_year,
-                    end_year=tan.end_year,
-                    cost=tan.cost,
-                    expense_year=tan.expense_year,
-                    cost_allocation=tan.cost_allocation,
-                    description=tan.description,
-                    tax_portion=tan.tax_portion,
-                    tax_discount=tan.tax_discount,
-                    pis_year=tan.pis_year,
-                    salvage_value=tan.salvage_value,
-                    useful_life=adjust_useful_life_years(
-                        adjustment_value=adjustment_value,
-                        useful_life_array=tan.useful_life,
-                    ),
-                    depreciation_factor=tan.depreciation_factor,
-                    is_ic_applied=tan.is_ic_applied,
-                )
-                for tan in contract.capital_cost
-            ]
-        )
+    print('\t')
+    print(f'Filetype: {type(capital_adjusted[0].tax_discount)}')
+    print('tax_discount = ', capital_adjusted[0].tax_discount)
 
-    # Condition when the chosen option is not recognized
-    else:
-        raise OptimizationException(
-            f"Adjustment Variable {adjustment_variable} "
-            f"do not exist. It should be VAT or LBT in string data type"
-        )
-
-    # On stream date treatment
-
-    # Approach 2
-    if np.sum(getattr(contract, f"_oil_revenue")) == 0:
-        oil_onstream_date = None
-
-    # Approach 1
-    if np.sum(contract._oil_revenue) == 0:
-        oil_onstream_date = None
-
-    else:
-        oil_onstream_date = contract.oil_onstream_date
-
-    if np.sum(contract._gas_revenue) == 0:
-        gas_onstream_date = None
-    else:
-        gas_onstream_date = contract.gas_onstream_date
-
-    # When the contract is CostRecovery, parsing back the adjusted cost elements
-    # to the cost recovery contract
-    if isinstance(contract, CostRecovery):
-        contract_adjusted = CostRecovery(
-            start_date=contract.start_date,
-            end_date=contract.end_date,
-            oil_onstream_date=oil_onstream_date,
-            gas_onstream_date=gas_onstream_date,
-            lifting=contract.lifting,
-            capital_cost=capital_adjusted,
-            intangible_cost=intangible_adjusted,
-            opex=opex_adjusted,
-            asr_cost=asr_adjusted,
-            lbt_cost=lbt_adjusted,
-            cost_of_sales=cos_adjusted,
-            oil_ftp_is_available=contract.oil_ftp_is_available,
-            oil_ftp_is_shared=contract.oil_ftp_is_shared,
-            oil_ftp_portion=contract.oil_ftp_portion,
-            gas_ftp_is_available=contract.gas_ftp_is_available,
-            gas_ftp_is_shared=contract.gas_ftp_is_shared,
-            gas_ftp_portion=contract.gas_ftp_portion,
-            tax_split_type=contract.tax_split_type,
-            condition_dict=contract.condition_dict,
-            indicator_rc_icp_sliding=contract.indicator_rc_icp_sliding,
-            oil_ctr_pretax_share=contract.oil_ctr_pretax_share,
-            gas_ctr_pretax_share=contract.gas_ctr_pretax_share,
-            oil_ic_rate=contract.oil_ic_rate,
-            gas_ic_rate=contract.gas_ic_rate,
-            ic_is_available=contract.ic_is_available,
-            oil_cr_cap_rate=contract.oil_cr_cap_rate,
-            gas_cr_cap_rate=contract.gas_cr_cap_rate,
-            oil_dmo_volume_portion=contract.oil_dmo_volume_portion,
-            oil_dmo_fee_portion=contract.oil_dmo_fee_portion,
-            oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
-            gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
-            gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
-            gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration,
-            oil_carry_forward_depreciation=contract.oil_carry_forward_depreciation,
-            gas_carry_forward_depreciation=contract.gas_carry_forward_depreciation,
-        )
-
-    # When the contract is GrossSplit, parsing back the adjusted cost elements
-    # to the gross split contract
-    elif isinstance(contract, GrossSplit):
-        contract_adjusted = GrossSplit(
-            start_date=contract.start_date,
-            end_date=contract.end_date,
-            oil_onstream_date=oil_onstream_date,
-            gas_onstream_date=gas_onstream_date,
-            lifting=contract.lifting,
-            capital_cost=capital_adjusted,
-            intangible_cost=intangible_adjusted,
-            opex=opex_adjusted,
-            asr_cost=asr_adjusted,
-            lbt_cost=lbt_adjusted,
-            cost_of_sales=cos_adjusted,
-            field_status=contract.field_status,
-            field_loc=contract.field_loc,
-            res_depth=contract.res_depth,
-            infra_avail=contract.infra_avail,
-            res_type=contract.res_type,
-            api_oil=contract.api_oil,
-            domestic_use=contract.domestic_use,
-            prod_stage=contract.prod_stage,
-            co2_content=contract.co2_content,
-            h2s_content=contract.h2s_content,
-            base_split_ctr_oil=contract.base_split_ctr_oil,
-            base_split_ctr_gas=contract.base_split_ctr_gas,
-            split_ministry_disc=contract.split_ministry_disc,
-            oil_dmo_volume_portion=contract.oil_dmo_volume_portion,
-            oil_dmo_fee_portion=contract.oil_dmo_fee_portion,
-            oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
-            gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
-            gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
-            gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration,
-            oil_carry_forward_depreciation=contract.oil_carry_forward_depreciation,
-            gas_carry_forward_depreciation=contract.gas_carry_forward_depreciation,
-        )
-
-    # When the contract is not recognized, raise an exception
-    else:
-        raise OptimizationException(
-            f"Contract Type {type(contract)} , is not recognized for optimization module"
-        )
-
-    return contract_adjusted
+    # elif adjustment_variable == OptimizationParameter.LBT_DISCOUNT:
+    #     # Adjusting the LBT of the contract
+    #     lbt_adjusted = tuple(
+    #         [
+    #             LBT(
+    #                 start_year=bt.start_year,
+    #                 end_year=bt.end_year,
+    #                 expense_year=bt.expense_year,
+    #                 cost=bt.cost,
+    #                 cost_allocation=bt.cost_allocation,
+    #                 cost_type=bt.cost_type,
+    #                 description=bt.description,
+    #                 tax_portion=bt.tax_portion,
+    #                 tax_discount=adjustment_value,
+    #                 final_year=bt.final_year,
+    #                 utilized_land_area=bt.utilized_land_area,
+    #                 utilized_building_area=bt.utilized_building_area,
+    #                 njop_land=bt.njop_land,
+    #                 njop_building=bt.njop_building,
+    #                 gross_revenue=bt.gross_revenue,
+    #             )
+    #             for bt in contract.lbt_cost
+    #         ]
+    #     )
+    #
+    # elif adjustment_variable == OptimizationParameter.DEPRECIATION_ACCELERATION:
+    #     # Adjusting the useful life of the capital cost of the contract
+    #     capital_adjusted = tuple(
+    #         [
+    #             CapitalCost(
+    #                 start_year=tan.start_year,
+    #                 end_year=tan.end_year,
+    #                 cost=tan.cost,
+    #                 expense_year=tan.expense_year,
+    #                 cost_allocation=tan.cost_allocation,
+    #                 description=tan.description,
+    #                 tax_portion=tan.tax_portion,
+    #                 tax_discount=tan.tax_discount,
+    #                 pis_year=tan.pis_year,
+    #                 salvage_value=tan.salvage_value,
+    #                 useful_life=adjust_useful_life_years(
+    #                     adjustment_value=adjustment_value,
+    #                     useful_life_array=tan.useful_life,
+    #                 ),
+    #                 depreciation_factor=tan.depreciation_factor,
+    #                 is_ic_applied=tan.is_ic_applied,
+    #             )
+    #             for tan in contract.capital_cost
+    #         ]
+    #     )
+    #
+    # # Condition when the chosen option is not recognized
+    # else:
+    #     raise OptimizationException(
+    #         f"Adjustment Variable {adjustment_variable} "
+    #         f"do not exist. It should be VAT or LBT in string data type"
+    #     )
+    #
+    # # On stream date treatment
+    #
+    # # Approach 2
+    # if np.sum(getattr(contract, f"_oil_revenue")) == 0:
+    #     oil_onstream_date = None
+    #
+    # # Approach 1
+    # if np.sum(contract._oil_revenue) == 0:
+    #     oil_onstream_date = None
+    #
+    # else:
+    #     oil_onstream_date = contract.oil_onstream_date
+    #
+    # if np.sum(contract._gas_revenue) == 0:
+    #     gas_onstream_date = None
+    # else:
+    #     gas_onstream_date = contract.gas_onstream_date
+    #
+    # # When the contract is CostRecovery, parsing back the adjusted cost elements
+    # # to the cost recovery contract
+    # if isinstance(contract, CostRecovery):
+    #     contract_adjusted = CostRecovery(
+    #         start_date=contract.start_date,
+    #         end_date=contract.end_date,
+    #         oil_onstream_date=oil_onstream_date,
+    #         gas_onstream_date=gas_onstream_date,
+    #         lifting=contract.lifting,
+    #         capital_cost=capital_adjusted,
+    #         intangible_cost=intangible_adjusted,
+    #         opex=opex_adjusted,
+    #         asr_cost=asr_adjusted,
+    #         lbt_cost=lbt_adjusted,
+    #         cost_of_sales=cos_adjusted,
+    #         oil_ftp_is_available=contract.oil_ftp_is_available,
+    #         oil_ftp_is_shared=contract.oil_ftp_is_shared,
+    #         oil_ftp_portion=contract.oil_ftp_portion,
+    #         gas_ftp_is_available=contract.gas_ftp_is_available,
+    #         gas_ftp_is_shared=contract.gas_ftp_is_shared,
+    #         gas_ftp_portion=contract.gas_ftp_portion,
+    #         tax_split_type=contract.tax_split_type,
+    #         condition_dict=contract.condition_dict,
+    #         indicator_rc_icp_sliding=contract.indicator_rc_icp_sliding,
+    #         oil_ctr_pretax_share=contract.oil_ctr_pretax_share,
+    #         gas_ctr_pretax_share=contract.gas_ctr_pretax_share,
+    #         oil_ic_rate=contract.oil_ic_rate,
+    #         gas_ic_rate=contract.gas_ic_rate,
+    #         ic_is_available=contract.ic_is_available,
+    #         oil_cr_cap_rate=contract.oil_cr_cap_rate,
+    #         gas_cr_cap_rate=contract.gas_cr_cap_rate,
+    #         oil_dmo_volume_portion=contract.oil_dmo_volume_portion,
+    #         oil_dmo_fee_portion=contract.oil_dmo_fee_portion,
+    #         oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
+    #         gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
+    #         gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
+    #         gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration,
+    #         oil_carry_forward_depreciation=contract.oil_carry_forward_depreciation,
+    #         gas_carry_forward_depreciation=contract.gas_carry_forward_depreciation,
+    #     )
+    #
+    # # When the contract is GrossSplit, parsing back the adjusted cost elements
+    # # to the gross split contract
+    # elif isinstance(contract, GrossSplit):
+    #     contract_adjusted = GrossSplit(
+    #         start_date=contract.start_date,
+    #         end_date=contract.end_date,
+    #         oil_onstream_date=oil_onstream_date,
+    #         gas_onstream_date=gas_onstream_date,
+    #         lifting=contract.lifting,
+    #         capital_cost=capital_adjusted,
+    #         intangible_cost=intangible_adjusted,
+    #         opex=opex_adjusted,
+    #         asr_cost=asr_adjusted,
+    #         lbt_cost=lbt_adjusted,
+    #         cost_of_sales=cos_adjusted,
+    #         field_status=contract.field_status,
+    #         field_loc=contract.field_loc,
+    #         res_depth=contract.res_depth,
+    #         infra_avail=contract.infra_avail,
+    #         res_type=contract.res_type,
+    #         api_oil=contract.api_oil,
+    #         domestic_use=contract.domestic_use,
+    #         prod_stage=contract.prod_stage,
+    #         co2_content=contract.co2_content,
+    #         h2s_content=contract.h2s_content,
+    #         base_split_ctr_oil=contract.base_split_ctr_oil,
+    #         base_split_ctr_gas=contract.base_split_ctr_gas,
+    #         split_ministry_disc=contract.split_ministry_disc,
+    #         oil_dmo_volume_portion=contract.oil_dmo_volume_portion,
+    #         oil_dmo_fee_portion=contract.oil_dmo_fee_portion,
+    #         oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
+    #         gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
+    #         gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
+    #         gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration,
+    #         oil_carry_forward_depreciation=contract.oil_carry_forward_depreciation,
+    #         gas_carry_forward_depreciation=contract.gas_carry_forward_depreciation,
+    #     )
+    #
+    # # When the contract is not recognized, raise an exception
+    # else:
+    #     raise OptimizationException(
+    #         f"Contract Type {type(contract)} , is not recognized for optimization module"
+    #     )
+    #
+    # return contract_adjusted
 
 
 def adjust_useful_life_years(adjustment_value: float, useful_life_array: np.ndarray):
@@ -706,13 +717,16 @@ def optimize_psc(
     target_parameter: OptimizationTarget = OptimizationTarget.IRR,
 ) -> (list, list, float, list):
     """
-    The function to get contract variable(s) that resulting the desired target or contract's economic target.
+    The function to get contract variable(s) that resulting the desired target
+    or contract's economic target.
+
     Within this function will utilize the optimize_psc_core.
 
     Parameters
     ----------
     dict_optimization: dict
-        The optimization dictionary that containing the information about minimum boundary and upper boundary
+        The optimization dictionary that containing the information about minimum
+        boundary and upper boundary
         of the optimized parameters.
     contract: CostRecovery | GrossSplit
         The contract object.
@@ -727,15 +741,16 @@ def optimize_psc(
 
     Notes
     -------
-    The dictionary of dict_optimization should be at least having the structure as the following:
+    The dictionary of dict_optimization should be at least having the structure
+    as the following:
         dict_optimization = {'parameters': list[OptimizationParameter],
                              'min': np.ndarray,
                              'max': np.ndarray}
 
-        'parameters' keys containing the enum list of the variable that will be optimized to achieve the target.
+        'parameters' keys containing the enum list of the variable that will be
+        optimized to achieve the target.
         'min' keys containing the minimum value of each parameter.
         'max' keys containing the minimum value of each parameter.
-
 
     Returns
     -------
@@ -877,6 +892,7 @@ def optimize_psc(
 
     # Running the contract using the adjusted contract argument when the VAT is multi values
     if len(pseudo_dict["index_in_parameter"]) > 0:
+
         contract.run(**contract_arguments_adjusted)
 
         #  Replacing the executed contract from the optimization function into the adjusted contract

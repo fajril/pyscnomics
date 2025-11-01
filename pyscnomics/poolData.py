@@ -2,7 +2,7 @@
 A collection of operations to run optimization module.
 """
 
-import numpy as np
+# import numpy as np
 from datetime import date
 from pyscnomics.example import ExampleCase
 from pyscnomics.contracts.project import BaseProject
@@ -23,8 +23,6 @@ from pyscnomics.econ.selection import (
     NPVSelection,
     DiscountingMode,
 )
-from pyscnomics.optimize.optimization import adjust_cost_element
-
 
 # Create an instance of synthetic data
 case = ExampleCase()
@@ -185,7 +183,7 @@ def get_kwargs_class(contract_type: str) -> dict:
         raise ValueError(f"Unrecognized contract type: {contract_type!r}")
 
 
-def get_params_class(contract_type: str) -> dict:
+def get_contract_arguments_class(contract_type: str) -> dict:
     """
     Retrieve contract-specific parameter settings for PSC evaluation.
 
@@ -276,7 +274,7 @@ def get_params_class(contract_type: str) -> dict:
         raise ValueError(f"Unrecognized contract type: {contract_type!r}")
 
 
-def get_summary_args_class() -> dict:
+def get_summary_arguments_class() -> dict:
     """
     Define default summary arguments for PSC economic evaluation.
 
@@ -422,6 +420,10 @@ def contract_arguments_dict(contract_type: str) -> dict:
 
     except KeyError:
         raise ValueError(f"Unrecognized contract type: {contract_type!r}")
+
+
+def optimization_arguments_dict():
+    pass
 
 
 def synthetic_data_dict(contract_type: str) -> dict:
