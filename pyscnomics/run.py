@@ -14,6 +14,7 @@ from pyscnomics.econ.selection import (
 )
 from pyscnomics.optimize.optimization import (
     adjust_cost_element,
+    adjust_contract,
     optimize_psc_core,
 )
 
@@ -31,17 +32,20 @@ if __name__ == "__main__":
     contract_as_class = synthetic_data_class(contract)
     contract_as_dict = synthetic_data_dict(contract)
 
-    adjust_cost_element(
+    adjust_contract(
         contract=contract_as_class,
-        adjustment_value=1,
-        adjustment_variable=OptimizationParameter.VAT_DISCOUNT,
+        contract_arguments=contract_arguments,
+        summary_argument=summary_arguments,
+        variable=OptimizationParameter.VAT_DISCOUNT,
+        value=0.5,
+        target_parameter=None,
     )
 
     # print('\t')
     # print(f'Filetype: {type()}')
     # print(f'Length: {len()}')
     # print()
-    #
+
     # print('\t')
     # print(f'Filetype: {type(t1)}')
     # print(f'Length: {len(t1)}')

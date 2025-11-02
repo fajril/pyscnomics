@@ -41,7 +41,8 @@ def get_lifting_costs_class() -> dict:
     """
 
     lifting = tuple([case.lifting_mangga, case.lifting_apel])
-    capital_cost = tuple([case.capital_mangga, case.capital_apel])
+    capital_cost = tuple([case.capital_mangga])
+    # capital_cost = tuple([case.capital_mangga, case.capital_apel])
     intangible_cost = tuple([case.intangible_mangga, case.intangible_apel])
     opex = tuple([case.opex_mangga, case.opex_apel])
     asr_cost = tuple([case.asr_mangga, case.asr_apel])
