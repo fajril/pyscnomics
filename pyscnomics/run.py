@@ -9,7 +9,7 @@ from pyscnomics.poolData import (
     synthetic_data_dict,
     optimization_arguments_dict,
 )
-from pyscnomics.dataset.poolData1 import PrepareLiftingCostsAsClass
+from pyscnomics.dataset.poolDataAsClass import PrepareLiftingCostsAsClass
 from pyscnomics.econ.selection import (
     OptimizationParameter,
     OptimizationTarget,
