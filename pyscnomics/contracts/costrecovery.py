@@ -3317,17 +3317,17 @@ class CostRecovery(BaseProject):
 
         # Prepare tangible and intangible cost summary
         tangible_cost = (
-                self._oil_capital_expenditures_post_tax
-                + self._gas_capital_expenditures_post_tax
-                + self._oil_depreciable_preonstream
-                + self._gas_depreciable_preonstream
+            self._oil_capital_expenditures_post_tax
+            + self._gas_capital_expenditures_post_tax
+            + self._oil_depreciable_preonstream
+            + self._gas_depreciable_preonstream
         )
 
         intangible_cost = (
-                self._oil_intangible_expenditures_post_tax
-                + self._gas_intangible_expenditures_post_tax
-                + preonstream_costs["oil_intangible"]
-                + preonstream_costs["gas_intangible"]
+            self._oil_intangible_expenditures_post_tax
+            + self._gas_intangible_expenditures_post_tax
+            + preonstream_costs["oil_intangible"]
+            + preonstream_costs["gas_intangible"]
         )
 
         tangible_sum = tangible_cost.sum(dtype=float)
@@ -3336,30 +3336,30 @@ class CostRecovery(BaseProject):
 
         # Prepare OPEX summary
         opex_cost = (
-                self._oil_opex_expenditures_post_tax
-                + self._gas_opex_expenditures_post_tax
-                + preonstream_costs["oil_opex"]
-                + preonstream_costs["gas_opex"]
+            self._oil_opex_expenditures_post_tax
+            + self._gas_opex_expenditures_post_tax
+            + preonstream_costs["oil_opex"]
+            + preonstream_costs["gas_opex"]
         )
 
         opex_sum = opex_cost.sum(dtype=float)
 
         # Prepare ASR summary
         asr_cost = (
-                self._oil_asr_expenditures_post_tax
-                + self._gas_asr_expenditures_post_tax
-                + preonstream_costs["oil_asr"]
-                + preonstream_costs["gas_asr"]
+            self._oil_asr_expenditures_post_tax
+            + self._gas_asr_expenditures_post_tax
+            + preonstream_costs["oil_asr"]
+            + preonstream_costs["gas_asr"]
         )
 
         asr_sum = asr_cost.sum(dtype=float)
 
         # Prepare LBT summary
         lbt_cost = (
-                self._oil_lbt_expenditures_post_tax
-                + self._gas_lbt_expenditures_post_tax
-                + preonstream_costs["oil_lbt"]
-                + preonstream_costs["gas_lbt"]
+            self._oil_lbt_expenditures_post_tax
+            + self._gas_lbt_expenditures_post_tax
+            + preonstream_costs["oil_lbt"]
+            + preonstream_costs["gas_lbt"]
         )
 
         lbt_sum = lbt_cost.sum(dtype=float)
@@ -3372,7 +3372,7 @@ class CostRecovery(BaseProject):
         oil_carward_depreciation_sum = self._oil_carry_forward_depreciation.sum(dtype=float)
         gas_carward_depreciation_sum = self._gas_carry_forward_depreciation.sum(dtype=float)
         total_carward_depreciation_sum = (
-                oil_carward_depreciation_sum + gas_carward_depreciation_sum
+            oil_carward_depreciation_sum + gas_carward_depreciation_sum
         )
 
         # Prepare undepreciated assets summary

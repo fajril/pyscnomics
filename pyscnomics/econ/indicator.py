@@ -119,9 +119,7 @@ def xnpv(
     return pyxirr.xnpv(disc_rate, dates=dates, amounts=cashflow)
 
 
-def irr(
-    cashflow: np.ndarray,
-) -> float:
+def irr(cashflow: np.ndarray) -> float:
     """
     Calculate the Internal Rate of Return (IRR) of a series of cashflows.
 
@@ -143,6 +141,7 @@ def irr(
       If the IRR is greater than the discount rate, the investment
       is considered financially attractive.
     """
+
     # Condition where all the cashflow is positive
     if np.all(cashflow >= 0) or np.all(cashflow <= 0):
         irr_result = 0
