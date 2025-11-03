@@ -36,9 +36,9 @@ if __name__ == "__main__":
         contract=contract_as_class,
         contract_arguments=contract_arguments,
         summary_argument=summary_arguments,
-        variable=OptimizationParameter.VAT_DISCOUNT,
+        variable=OptimizationParameter.MINISTERIAL_DISCRETION,
         value=0.5,
-        target_parameter=None,
+        target_parameter="ctr_npv",
     )
 
     # print('\t')

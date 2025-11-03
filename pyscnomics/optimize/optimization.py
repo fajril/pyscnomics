@@ -28,28 +28,36 @@ def adjust_contract(
     target_parameter: str,
 ) -> (CostRecovery | GrossSplit, dict):
     """
-    The function used to adjust the variable within a psc contract object.
-    This function will be used by optimize_psc().
+    Adjusts a PSC contract variable and re-runs the contract to obtain the
+    updated target parameter value.
 
     Parameters
     ----------
-    contract: CostRecovery | GrossSplit
-        The contract object.
-    contract_arguments: dict
-        The contract arguments that passed on the fly .run() of the contract dataclass.
-    variable: OptimizationParameter
-        The enum selection of variable that will be changed.
-    value: float
-        The new value of the variable that will be replaced.
-    summary_argument: dict
-        The dictionary containing the arguments that passed summary function.
-    target_parameter: str
-        The string of the targeted parameter.
+    contract : CostRecovery or GrossSplit
+        The PSC contract instance to be modified.
+    contract_arguments : dict
+        Arguments passed to the contract's ``.run()`` method.
+    summary_argument : dict
+        Arguments passed to the summary function.
+    variable : OptimizationParameter
+        The optimization variable (enum) to be adjusted.
+    value : float
+        The new value assigned to the selected variable.
+    target_parameter : str
+        The target parameter name extracted from the summary output.
 
     Returns
     -------
-    out: tuple
-        The result of the target parameter and contract object that has been modified and run.
+    result_psc : float
+        Updated value of the target parameter after contract execution.
+    contract : CostRecovery or GrossSplit
+        The modified and executed contract instance.
+
+    Notes
+    -----
+    Supports both ``CostRecovery`` and ``GrossSplit`` PSC types.
+    Cost-related variables (e.g., VAT or LBT discounts) are adjusted via
+    ``adjust_cost_element()`` before re-running the contract.
     """
 
     # Optimization parameter is VAT
@@ -76,70 +84,73 @@ def adjust_contract(
             adjustment_variable=OptimizationParameter.DEPRECIATION_ACCELERATION,
         )
 
-    print('\t')
-    print(f'Filetype: {type(contract)}')
-    print(f'Length: {len(contract)}')
-    print('contract = \n', contract)
+    # The condition when contract is Cost Recovery
+    if isinstance(contract, CostRecovery):
+        # Changing the attributes of the contract based on the chosen variable
+        if variable is OptimizationParameter.OIL_CTR_PRETAX:
+            contract.oil_ctr_pretax_share = value
 
-    # # The condition when contract is Cost Recovery
-    # if isinstance(contract, CostRecovery):
-    #     # Changing the attributes of the contract based on the chosen variable
-    #     if variable is OptimizationParameter.OIL_CTR_PRETAX:
-    #         contract.oil_ctr_pretax_share = value
-    #
-    #     if variable is OptimizationParameter.GAS_CTR_PRETAX:
-    #         contract.gas_ctr_pretax_share = value
-    #
-    #     if variable is OptimizationParameter.OIL_FTP_PORTION:
-    #         contract.oil_ftp_portion = value
-    #
-    #     if variable is OptimizationParameter.GAS_FTP_PORTION:
-    #         contract.gas_ftp_portion = value
-    #
-    #     if variable is OptimizationParameter.OIL_IC:
-    #         contract.oil_ic_rate = value
-    #
-    #     if variable is OptimizationParameter.GAS_IC:
-    #         contract.gas_ic_rate = value
-    #
-    #     if variable is OptimizationParameter.OIL_DMO_FEE:
-    #         contract.oil_dmo_fee_portion = value
-    #
-    #     if variable is OptimizationParameter.GAS_DMO_FEE:
-    #         contract.gas_dmo_fee_portion = value
-    #
-    #     if variable is OptimizationParameter.VAT_RATE:
-    #         contract_arguments["vat_rate"] = value
-    #
-    #     if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
-    #         contract_arguments["effective_tax_rate"] = value
-    #
-    # # The condition when contract is Gross Split
-    # if isinstance(contract, GrossSplit):
-    #     # Changing the attributes of the contract based on the chosen variable
-    #     if variable is OptimizationParameter.MINISTERIAL_DISCRETION:
-    #         contract.split_ministry_disc = value
-    #
-    #     if variable is OptimizationParameter.OIL_DMO_FEE:
-    #         contract.oil_dmo_fee_portion = value
-    #
-    #     if variable is OptimizationParameter.GAS_DMO_FEE:
-    #         contract.gas_dmo_fee_portion = value
-    #
-    #     if variable is OptimizationParameter.VAT_RATE:
-    #         contract_arguments["vat_rate"] = value
-    #
-    #     if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
-    #         contract_arguments["effective_tax_rate"] = value
-    #
-    # # Running the contract
-    # contract.run(**contract_arguments)
-    #
-    # # Get the summary of the new contract and get its value of the targeted optimization
-    # summary_argument["contract"] = contract
-    # result_psc = get_summary(**summary_argument)[target_parameter]
-    #
-    # return result_psc, contract
+        if variable is OptimizationParameter.GAS_CTR_PRETAX:
+            contract.gas_ctr_pretax_share = value
+
+        if variable is OptimizationParameter.OIL_FTP_PORTION:
+            contract.oil_ftp_portion = value
+
+        if variable is OptimizationParameter.GAS_FTP_PORTION:
+            contract.gas_ftp_portion = value
+
+        if variable is OptimizationParameter.OIL_IC:
+            contract.oil_ic_rate = value
+
+        if variable is OptimizationParameter.GAS_IC:
+            contract.gas_ic_rate = value
+
+        if variable is OptimizationParameter.OIL_DMO_FEE:
+            contract.oil_dmo_fee_portion = value
+
+        if variable is OptimizationParameter.GAS_DMO_FEE:
+            contract.gas_dmo_fee_portion = value
+
+        if variable is OptimizationParameter.VAT_RATE:
+            contract_arguments["vat_rate"] = value
+
+        if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
+            contract_arguments["effective_tax_rate"] = value
+
+    # The condition when contract is Gross Split
+    elif isinstance(contract, GrossSplit):
+        # Changing the attributes of the contract based on the chosen variable
+        if variable is OptimizationParameter.MINISTERIAL_DISCRETION:
+            contract.split_ministry_disc = value
+
+        if variable is OptimizationParameter.OIL_DMO_FEE:
+            contract.oil_dmo_fee_portion = value
+
+        if variable is OptimizationParameter.GAS_DMO_FEE:
+            contract.gas_dmo_fee_portion = value
+
+        if variable is OptimizationParameter.VAT_RATE:
+            contract_arguments["vat_rate"] = value
+
+        if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
+            contract_arguments["effective_tax_rate"] = value
+
+    # Running the contract
+    contract.run(**contract_arguments)
+
+    # Get the summary of the new contract and get its value of the targeted optimization
+    result_psc = contract.get_summary(**summary_argument)[target_parameter]
+
+    """
+    Former approach
+    ---------------
+    summary_argument["contract"] = contract
+    result_psc = get_summary(**summary_argument)[target_parameter]
+
+    return result_psc, contract
+    """
+
+    return result_psc, contract
 
 
 def optimize_psc_core(
