@@ -72,6 +72,7 @@ cost_oil_kwargs = {
     ),
 }
 
+
 @dataclass
 class PrepareLiftingCosts:
     lifting: dict = field(default_factory=lambda: {}, init=False, repr=False)
@@ -263,11 +264,6 @@ class PrepareLiftingCosts:
                 "tax_portion": None,
             },
         }
-
-
-
-
-
 
         # Capital cost data for GAS
         capital_cost_gas = {}
