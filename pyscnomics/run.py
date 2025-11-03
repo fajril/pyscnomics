@@ -16,6 +16,7 @@ from pyscnomics.optimize.optimization import (
     adjust_cost_element,
     adjust_contract,
     optimize_psc_core,
+    optimize_psc,
 )
 
 
@@ -32,13 +33,13 @@ if __name__ == "__main__":
     contract_as_class = synthetic_data_class(contract)
     contract_as_dict = synthetic_data_dict(contract)
 
-    adjust_contract(
+    optimize_psc(
+        dict_optimization=None,
         contract=contract_as_class,
         contract_arguments=contract_arguments,
+        target_optimization_value=0.5,
         summary_argument=summary_arguments,
-        variable=OptimizationParameter.MINISTERIAL_DISCRETION,
-        value=0.5,
-        target_parameter="ctr_npv",
+        target_parameter=OptimizationTarget.IRR,
     )
 
     # print('\t')

@@ -41,8 +41,7 @@ def get_lifting_costs_class() -> dict:
     """
 
     lifting = tuple([case.lifting_mangga, case.lifting_apel])
-    capital_cost = tuple([case.capital_mangga])
-    # capital_cost = tuple([case.capital_mangga, case.capital_apel])
+    capital_cost = tuple([case.capital_mangga, case.capital_apel])
     intangible_cost = tuple([case.intangible_mangga, case.intangible_apel])
     opex = tuple([case.opex_mangga, case.opex_apel])
     asr_cost = tuple([case.asr_mangga, case.asr_apel])
@@ -236,7 +235,7 @@ def get_contract_arguments_class(contract_type: str) -> dict:
         "oil_cost_of_sales_applied": False,
         "gas_cost_of_sales_applied": False,
         "sum_undepreciated_cost": False,
-        "sunk_cost_method": SunkCostMethod.POOLED_1ST_YEAR,
+        "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
     }
 
     # Gross Split

@@ -307,6 +307,9 @@ def optimize_psc_core(
             bounds = (dict_optimization["min"][index], dict_optimization["max"][index])
 
             def objective_run(new_value):
+                """
+                A helper function to execute an updated contract
+                """
                 result_psc_obj, executed_contract = adjust_contract(
                     contract=psc,
                     contract_arguments=contract_arguments,
@@ -317,6 +320,7 @@ def optimize_psc_core(
                 )
 
                 result_obj = abs(result_psc_obj - target_optimization_value)
+
                 return result_obj
 
             # Optimization of the objective function
@@ -874,8 +878,15 @@ def optimize_psc(
     """
 
     # Get the summary of the base case
+    contract.run(**contract_arguments)
+    summary_base = contract.get_summary(**summary_argument)
+
+    """
+    Former approach
+    ---------------
     summary_argument["contract"] = contract
     summary_base = get_summary(**summary_argument)
+    """
 
     # Retrieve the economic indicator of the base case corresponding to the chosen indicator
     if target_parameter == OptimizationTarget.IRR:
@@ -908,7 +919,8 @@ def optimize_psc(
             and selection in dict_optimization["parameter"]
         ):
 
-            # Get the index of the min and max of the selection values and store it in the pseudo_dict
+            # Get the index of the min and max of the selection values and
+            # store it in the pseudo_dict
             index_pseudo = dict_optimization["parameter"].index(selection)
             pseudo_dict["index_in_parameter"].append(index_pseudo)
 
@@ -923,7 +935,8 @@ def optimize_psc(
             contract_arguments_pseudo = contract_arguments.copy()
             summary_argument_pseudo = summary_argument.copy()
 
-            # Retrieving the result_optim_pseudo which it will be used as base for resul_optim_new
+            # Retrieving the result_optim_pseudo which it will be used
+            # as base for resul_optim_new
             optim_base_result = optimize_psc_core(
                 dict_optimization=dict_opt_pseudo,
                 contract=contract,
@@ -935,7 +948,8 @@ def optimize_psc(
 
             variable_value_pseudo = optim_base_result[1][0]
 
-            # Replacing the original multiple variable value into single value of variable_value_pseudo
+            # Replacing the original multiple variable value into single value of
+            # variable_value_pseudo
             contract_arguments_new[key] = variable_value_pseudo
 
             # Storing the variable_value_pseudo into the pseudo_dict
@@ -968,7 +982,8 @@ def optimize_psc(
     for key, pseudo_value, index in zip(
         pseudo_dict["key"], pseudo_dict["value"], pseudo_dict["index_in_parameter"]
     ):
-        # The condition when the optimization value is "Base Value", do not need to change the form
+        # The condition when the optimization value is "Base Value",
+        # do not need to change the form
         if isinstance(list_params_value[index], str):
             pass
 
@@ -984,12 +999,14 @@ def optimize_psc(
                 where=list_params_value[index] != 0,
             )
 
-            # Defining the proportioned argument based on the obtained factor: factor * VATi
+            # Defining the proportioned argument based on the obtained factor:
+            # factor * VATi
             transformed_value = contract_arguments[key] * np.full_like(
                 contract_arguments_new[key], fill_value=factor, dtype=float
             )
 
-            # Deforming the array into a list due to the consistency of the optimization result
+            # Deforming the array into a list due to the consistency of
+            # the optimization result
             list_params_value[index] = transformed_value.tolist()
 
             contract_arguments_adjusted[key] = transformed_value
@@ -998,17 +1015,25 @@ def optimize_psc(
         else:
             pass
 
-    # Running the contract using the adjusted contract argument when the VAT is multi values
+    # Running the contract using the adjusted contract argument when
+    # the VAT is multi values
     if len(pseudo_dict["index_in_parameter"]) > 0:
 
         contract.run(**contract_arguments_adjusted)
 
-        #  Replacing the executed contract from the optimization function into the adjusted contract
+        #  Replacing the executed contract from the optimization function
+        #  into the adjusted contract
         list_executed_contract[-1] = contract
 
         # Retrieving the summary of the contract
+        summary_optimized = contract.get_summary(**summary_argument)
+
+        """
+        Former approach
+        ---------------
         summary_argument["contract"] = contract
         summary_optimized = get_summary(**summary_argument)
+        """
 
         #  Retrieving the corresponding target value
         if target_parameter == OptimizationTarget.IRR:
