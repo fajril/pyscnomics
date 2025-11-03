@@ -423,7 +423,24 @@ def contract_arguments_dict(contract_type: str) -> dict:
 
 
 def optimization_arguments_dict():
-    pass
+    """
+    Returns a dictionary containing default optimization settings.
+
+    Returns
+    -------
+    dict
+        Dictionary with target parameter, target value, and optimization
+        variable configuration (name, minimum, and maximum limits).
+    """
+    return {
+        "target_parameter": "IRR",
+        "target_value": 0.3,
+        "dict_optimization": {
+            "parameter": "VAT Discount",
+            "min": 0.1,
+            "max": 0.6,
+        },
+    }
 
 
 def synthetic_data_dict(contract_type: str) -> dict:
