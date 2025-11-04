@@ -223,7 +223,7 @@ class GrossSplit(BaseProject):
     gas_carry_forward_depreciation: int | float | np.ndarray = field(default=0.0)
 
     # Attribute associated with unit conversion
-    conversion_boe_to_scf: float = field(default=5.615, init=False, repr=False)
+    conversion_boe_to_scf: float = field(default=5.8, init=False, repr=False)
 
     # Attributes associated with carry forward depreciation
     _oil_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
@@ -3409,7 +3409,7 @@ class GrossSplit(BaseProject):
         # cumulative production used for progressive cumulative production split is defined as
         # the sum of production rate and production baseline.
         prod_gas_boe = (
-            (self._gas_lifting.get_prod_rate_total_arr() * 1_000) / self.conversion_boe_to_scf
+            self._gas_lifting.get_prod_rate_total_arr() / self.conversion_boe_to_scf
         )
 
         # Check if the cumulative production split offset length is the same
@@ -3554,8 +3554,6 @@ class GrossSplit(BaseProject):
         oil_total_depr = np.array(list(self._oil_depreciations.values())).sum(axis=0)
         oil_total_amor = np.array(list(self._oil_amortizations.values())).sum(axis=0)
 
-        """
-        """
         self._oil_carward_deduct_cost = psc_tools.get_unrecovered_cost(
             depreciation=(
                 oil_total_depr + oil_total_amor + self._oil_carry_forward_depreciation

@@ -32,7 +32,26 @@ lft_cst = PrepareLiftingCostsAsClass()
 
 target = PoolData.BENUANG
 
-def get_lifting_costs_map(target: PoolData):
+
+def get_lifting_costs_map(target: PoolData) -> dict:
+    """
+    Retrieve a structured mapping of lifting-related cost components for a given pool.
+
+    Parameters
+    ----------
+    target : PoolData
+        The pool or field identifier used to access specific cost data.
+
+    Returns
+    -------
+    dict
+        A nested dictionary containing lifting, capital, intangible, opex, ASR, LBT,
+        and cost of sales values for both oil and gas.
+
+    Notes
+    -----
+    Each cost category includes separate entries for oil and gas, indexed by the given pool.
+    """
     return {
         "lifting": {
             "oil": lft_cst.lifting["oil"][target],
@@ -84,16 +103,8 @@ def get_lifting_costs_class(target: PoolData) -> dict:
     intangible_cost = tuple([data["intangible"]["oil"], data["intangible"]["gas"]])
     opex = tuple([data["opex"]["oil"], data["opex"]["gas"]])
     asr_cost = tuple([data["asr"]["oil"], data["asr"]["gas"]])
-    lbt_cost = tuple([data["lbt"]["oil"]  ])
-
-
-    lifting = tuple([case.lifting_mangga, case.lifting_apel])
-    capital_cost = tuple([case.capital_mangga, case.capital_apel])
-    intangible_cost = tuple([case.intangible_mangga, case.intangible_apel])
-    opex = tuple([case.opex_mangga, case.opex_apel])
-    asr_cost = tuple([case.asr_mangga, case.asr_apel])
-    lbt_cost = tuple([case.lbt_mangga, case.lbt_apel])
-    cost_of_sales = tuple([case.cos_mangga, case.cos_apel])
+    lbt_cost = tuple([data["lbt"]["oil"], data["lbt"]["gas"]])
+    cost_of_sales = tuple([data["cos"]["oil"], data["cos"]["gas"]])
 
     return {
         "lifting": lifting,
@@ -106,7 +117,7 @@ def get_lifting_costs_class(target: PoolData) -> dict:
     }
 
 
-def get_kwargs_class(contract_type: str) -> dict:
+def get_kwargs_class(contract_type: str, target: PoolData) -> dict:
     """
     Return default argument mappings for the given PSC contract type.
 
@@ -129,12 +140,22 @@ def get_kwargs_class(contract_type: str) -> dict:
     # Base Project
     kwargs_base_project = {
         # Base parameters
-        "start_date": date(year=2023, month=1, day=1),
-        "end_date": date(year=2032, month=12, day=31),
-        "oil_onstream_date": date(year=2030, month=1, day=1),
-        "gas_onstream_date": date(year=2029, month=1, day=1),
-        "approval_year": 2026,
-        "is_pod_1": False,
+        PoolData.DUMMY: {
+            "start_date": date(year=2023, month=1, day=1),
+            "end_date": date(year=2032, month=12, day=31),
+            "oil_onstream_date": date(year=2030, month=1, day=1),
+            "gas_onstream_date": date(year=2029, month=1, day=1),
+            "approval_year": 2026,
+            "is_pod_1": False,
+        },
+        PoolData.BENUANG: {
+            "start_date": date(year=2023, month=1, day=1),
+            "end_date": date(year=2032, month=12, day=31),
+            "oil_onstream_date": date(year=2030, month=1, day=1),
+            "gas_onstream_date": date(year=2029, month=1, day=1),
+            "approval_year": 2026,
+            "is_pod_1": False,
+        },
     }
 
     # Cost recovery
