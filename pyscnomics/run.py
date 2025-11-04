@@ -21,32 +21,39 @@ from pyscnomics.optimize.optimization import (
     optimize_psc_core,
     optimize_psc,
 )
+from pyscnomics.dataset.case1 import case1_base_project
 
 
 if __name__ == "__main__":
 
-    cr, gs, bp = "cost_recovery", "gross_split", "base_project"
+    data = case1_base_project
 
-    # Specify contract type
-    contract = bp
-    contract_arguments = get_contract_arguments_class(contract)
-    summary_arguments = get_summary_arguments_class()
-    # optimization_arguments = optimization_arguments_dict()
+    print('\t')
+    print(f'Filetype: {type(data)}')
+    print('data = \n', data)
 
-    # Generate synthetic data
-    contract_as_class = synthetic_data_class(contract)
-    contract_as_dict = synthetic_data_dict(contract)
-
-    data = PrepareLiftingCostsAsClass()
-
-    t1 = data.asr_cost
+    # cr, gs, bp = "cost_recovery", "gross_split", "base_project"
+    #
+    # # Specify contract type
+    # contract = bp
+    # contract_arguments = get_contract_arguments_class(contract)
+    # summary_arguments = get_summary_arguments_class()
+    # # optimization_arguments = optimization_arguments_dict()
+    #
+    # # Generate synthetic data
+    # contract_as_class = synthetic_data_class(contract)
+    # contract_as_dict = synthetic_data_dict(contract)
+    #
+    # data = PrepareLiftingCostsAsClass()
+    #
+    # t1 = data.asr_cost
 
     # print('\t')
     # print(f'Filetype: {type()}')
     # print(f'Length: {len()}')
     # print()
 
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1["oil"])
+    # print('\t')
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
+    # print('t1 = \n', t1["oil"])
