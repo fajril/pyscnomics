@@ -772,3 +772,9 @@ class InitialYearDepreciationIncurred(Enum):
 
     DIRECT = "PIS Year"
     ONSTREAM_YEAR = "Onstream Year"
+
+
+class PoolData(Enum):
+
+    DUMMY = "dummy"
+    BENUANG = "benuang"

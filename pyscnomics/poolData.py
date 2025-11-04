@@ -22,14 +22,51 @@ from pyscnomics.econ.selection import (
     VariableSplit132024,
     NPVSelection,
     DiscountingMode,
+    PoolData,
 )
+from pyscnomics.dataset.poolDataAsClass import PrepareLiftingCostsAsClass
+
 
 # Create an instance of synthetic data
-case = ExampleCase()
+lft_cst = PrepareLiftingCostsAsClass()
+
+target = PoolData.BENUANG
+
+def get_lifting_costs_map(target: PoolData):
+    return {
+        "lifting": {
+            "oil": lft_cst.lifting["oil"][target],
+            "gas": lft_cst.lifting["gas"][target],
+        },
+        "capital": {
+            "oil": lft_cst.capital_cost["oil"][target],
+            "gas": lft_cst.capital_cost["gas"][target],
+        },
+        "intangible": {
+            "oil": lft_cst.intangible_cost["oil"][target],
+            "gas": lft_cst.intangible_cost["gas"][target],
+        },
+        "opex": {
+            "oil": lft_cst.opex["oil"][target],
+            "gas": lft_cst.opex["gas"][target],
+        },
+        "asr": {
+            "oil": lft_cst.asr_cost["oil"][target],
+            "gas": lft_cst.asr_cost["gas"][target],
+        },
+        "lbt": {
+            "oil": lft_cst.lbt_cost["oil"][target],
+            "gas": lft_cst.lbt_cost["gas"][target],
+        },
+        "cos": {
+            "oil": lft_cst.cost_of_sales["oil"][target],
+            "gas": lft_cst.cost_of_sales["gas"][target],
+        },
+    }
 
 
 # Synthetic data: class format
-def get_lifting_costs_class() -> dict:
+def get_lifting_costs_class(target: PoolData) -> dict:
     """
     Collect and group cost components for multiple project cases.
 
@@ -39,6 +76,16 @@ def get_lifting_costs_class() -> dict:
         Dictionary containing tuples of cost elements for each field, including
         lifting, capital, intangible, opex, ASR, LBT, and cost of sales.
     """
+
+    data = get_lifting_costs_map(target=target)
+
+    lifting = tuple([data["lifting"]["oil"], data["lifting"]["gas"]])
+    capital_cost = tuple([data["capital"]["oil"], data["capital"]["gas"]])
+    intangible_cost = tuple([data["intangible"]["oil"], data["intangible"]["gas"]])
+    opex = tuple([data["opex"]["oil"], data["opex"]["gas"]])
+    asr_cost = tuple([data["asr"]["oil"], data["asr"]["gas"]])
+    lbt_cost = tuple([data["lbt"]["oil"]  ])
+
 
     lifting = tuple([case.lifting_mangga, case.lifting_apel])
     capital_cost = tuple([case.capital_mangga, case.capital_apel])

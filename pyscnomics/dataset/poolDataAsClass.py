@@ -6,7 +6,7 @@ import numpy as np
 from datetime import date
 from dataclasses import dataclass, field
 
-from pyscnomics.econ.selection import FluidType, CostType
+from pyscnomics.econ.selection import FluidType, CostType, PoolData
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import (
     CapitalCost,
@@ -145,7 +145,7 @@ class PrepareLiftingCostsAsClass:
 
         # Lifting data for OIL
         lifting_oil = {
-            "dummy": Lifting(
+            PoolData.DUMMY: Lifting(
                 start_year=2023,
                 end_year=2032,
                 prod_year=np.array([2030, 2031, 2032]),
@@ -153,7 +153,7 @@ class PrepareLiftingCostsAsClass:
                 price=np.array([120, 120, 120]),
                 fluid_type=FluidType.OIL,
             ),
-            "benuang": Lifting(
+            PoolData.BENUANG: Lifting(
                 start_year=2023,
                 end_year=2037,
                 prod_year=np.array(
@@ -178,7 +178,7 @@ class PrepareLiftingCostsAsClass:
 
         # Lifting data for GAS
         lifting_gas = {
-            "dummy": Lifting(
+            PoolData.DUMMY: Lifting(
                 start_year=2023,
                 end_year=2032,
                 prod_year=np.array([2029, 2030, 2031]),
@@ -186,7 +186,7 @@ class PrepareLiftingCostsAsClass:
                 price=np.array([1, 1, 1]),
                 fluid_type=FluidType.GAS,
             ),
-            "benuang": Lifting(
+            PoolData.BENUANG: Lifting(
                 start_year=2023,
                 end_year=2037,
                 prod_year=np.array(
@@ -221,7 +221,7 @@ class PrepareLiftingCostsAsClass:
 
         # Lifting data for SULFUR
         lifting_sulfur = {
-            "dummy": Lifting(
+            PoolData.DUMMY: Lifting(
                 start_year=2023,
                 end_year=2032,
                 prod_year=np.array([2030, 2031, 2032]),
@@ -229,19 +229,19 @@ class PrepareLiftingCostsAsClass:
                 price=np.array([1, 1, 1]),
                 fluid_type=FluidType.SULFUR,
             ),
-            "benuang": None,
+            PoolData.BENUANG: None,
         }
 
         # Lifting data for electricity
         lifting_electricity = {
-            "dummy": None,
-            "benuang": None,
+            PoolData.DUMMY: None,
+            PoolData.BENUANG: None,
         }
 
         # Lifting data for CO2
         lifting_co2 = {
-            "dummy": None,
-            "benuang": None,
+            PoolData.DUMMY: None,
+            PoolData.BENUANG: None,
         }
 
         # Specify attribute lifting
@@ -260,7 +260,7 @@ class PrepareLiftingCostsAsClass:
 
         # Capital cost data (OIL)
         capital_cost_oil = {
-            "dummy": CapitalCost(
+            PoolData.DUMMY: CapitalCost(
                 **get_cost_kwargs_dummy()["oil"],
                 cost=np.array(
                     [
@@ -269,7 +269,7 @@ class PrepareLiftingCostsAsClass:
                     ]
                 )
             ),
-            "benuang": CapitalCost(
+            PoolData.BENUANG: CapitalCost(
                 start_year=2023,
                 end_year=2037,
                 expense_year=np.array(
@@ -325,7 +325,7 @@ class PrepareLiftingCostsAsClass:
 
         # Capital cost data (GAS)
         capital_cost_gas = {
-            "dummy": CapitalCost(
+            PoolData.DUMMY: CapitalCost(
                 **get_cost_kwargs_dummy()["gas"],
                 cost=np.array(
                     [
@@ -334,7 +334,7 @@ class PrepareLiftingCostsAsClass:
                     ]
                 )
             ),
-            "benuang": CapitalCost(
+            PoolData.BENUANG: CapitalCost(
                 start_year=2023,
                 end_year=2037,
                 expense_year=np.array(
@@ -400,7 +400,7 @@ class PrepareLiftingCostsAsClass:
 
         # Intangible cost data (OIL)
         intangible_oil = {
-            "dummy": Intangible(
+            PoolData.DUMMY: Intangible(
                 **get_cost_kwargs_dummy()["oil"],
                 cost=np.array(
                     [
@@ -409,12 +409,47 @@ class PrepareLiftingCostsAsClass:
                     ]
                 ),
             ),
-            "benuang": None,
+            PoolData.BENUANG: Intangible(
+                start_year=2023,
+                end_year=2037,
+                expense_year=np.array(
+                    [
+                        2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033
+                    ]
+                ),
+                cost=np.array(
+                    [
+                        46849.00562, 41944.72775, 22099.70561, 23079.23951, 21928.15442,
+                        718.934075, 978.88238, 830.661181, 1863.113433, 1594.436516
+                    ]
+                ),
+                cost_allocation=(
+                    [
+                        FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                        FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                        FluidType.OIL, FluidType.OIL
+                    ]
+                ),
+                cost_type=(
+                    [
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST
+                    ]
+                ),
+                tax_portion=np.array(
+                    [
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                    ]
+                ),
+            ),
         }
 
         # Intangible cost data (GAS)
         intangible_gas = {
-            "dummy": Intangible(
+            PoolData.DUMMY: Intangible(
                 **get_cost_kwargs_dummy()["gas"],
                 cost=np.array(
                     [
@@ -423,7 +458,42 @@ class PrepareLiftingCostsAsClass:
                     ]
                 )
             ),
-            "benuang": None,
+            PoolData.BENUANG: Intangible(
+                start_year=2023,
+                end_year=2037,
+                expense_year=np.array(
+                    [
+                        2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033
+                    ]
+                ),
+                cost=np.array(
+                    [
+                        8404.941309, 7679.705323, 5695.079368, 10093.16847, 12217.94999,
+                        399.956189, 588.722239, 482.813158, 1156.510758, 755.344445
+                    ]
+                ),
+                cost_allocation=(
+                    [
+                        FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                        FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                        FluidType.GAS, FluidType.GAS
+                    ]
+                ),
+                cost_type=(
+                    [
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST
+                    ]
+                ),
+                tax_portion=np.array(
+                    [
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                    ]
+                ),
+            ),
         }
 
         # Assign attribute intangible_cost
@@ -439,7 +509,7 @@ class PrepareLiftingCostsAsClass:
 
         # OPEX data (OIL)
         opex_oil = {
-            "dummy": OPEX(
+            PoolData.DUMMY: OPEX(
                 **get_cost_kwargs_dummy()["oil"],
                 fixed_cost=np.array(
                     [
@@ -448,12 +518,49 @@ class PrepareLiftingCostsAsClass:
                     ]
                 )
             ),
-            "benuang": None,
+            PoolData.BENUANG: OPEX(
+                start_year=2023,
+                end_year=2037,
+                expense_year=np.array(
+                    [
+                        2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035
+                    ]
+                ),
+                fixed_cost=np.array(
+                    [
+                        785.7212242, 4351.968932, 4703.91775, 6325.825984, 6390.700982,
+                        6575.827111, 4434.656934, 4938.484606, 8351.939437, 3282.075895,
+                        3226.479026, 3468.367892
+                    ]
+                ),
+                cost_allocation=(
+                    [
+                        FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                        FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                        FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL
+                    ]
+                ),
+                cost_type=(
+                    [
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST
+                    ]
+                ),
+                tax_portion=np.array(
+                    [
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                    ]
+                ),
+            ),
         }
 
         # OPEX data (GAS)
         opex_gas = {
-            "dummy": OPEX(
+            PoolData.DUMMY: OPEX(
                 **get_cost_kwargs_dummy()["gas"],
                 fixed_cost=np.array(
                     [
@@ -462,7 +569,44 @@ class PrepareLiftingCostsAsClass:
                     ]
                 )
             ),
-            "benuang": None,
+            PoolData.BENUANG: OPEX(
+                start_year=2023,
+                end_year=2037,
+                expense_year=np.array(
+                    [
+                        2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035
+                    ]
+                ),
+                fixed_cost=np.array(
+                    [
+                        140.96224, 796.806673, 1212.196461, 2766.452827, 3560.776868,
+                        3658.253024, 2667.104051, 2870.44273, 5184.39062, 1554.842585,
+                        1582.693399, 1983.719401
+                    ]
+                ),
+                cost_allocation=(
+                    [
+                        FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                        FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                        FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS
+                    ]
+                ),
+                cost_type=(
+                    [
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST
+                    ]
+                ),
+                tax_portion=np.array(
+                    [
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                    ]
+                ),
+            ),
         }
 
         # Assign attribute OPEX
@@ -478,7 +622,7 @@ class PrepareLiftingCostsAsClass:
 
         # ASR data (OIL)
         asr_oil = {
-            "dummy": ASR(
+            PoolData.DUMMY: ASR(
                 **get_cost_kwargs_dummy()["oil"],
                 cost=np.array(
                     [
@@ -487,12 +631,52 @@ class PrepareLiftingCostsAsClass:
                     ]
                 ),
             ),
-            "benuang": None,
+            PoolData.BENUANG: ASR(
+                start_year=2023,
+                end_year=2037,
+                expense_year=np.array(
+                    [
+                        2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035
+                    ]
+                ),
+                cost=np.array(
+                    [
+                        173.28832, 316.4429143, 387.4743104, 688.6020255, 717.0204906,
+                        726.1726918, 708.4741216, 779.1434817, 770.3641929, 730.4658999
+                    ]
+                ),
+                cost_allocation=(
+                    [
+                        FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                        FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                        FluidType.OIL, FluidType.OIL
+                    ]
+                ),
+                cost_type=(
+                    [
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                    ]
+                ),
+                final_year=np.array(
+                    [
+                        2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035
+                    ]
+                ),
+                tax_portion=np.array(
+                    [
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                    ]
+                ),
+            ),
         }
 
         # ASR data (GAS)
         asr_gas = {
-            "dummy": ASR(
+            PoolData.DUMMY: ASR(
                 **get_cost_kwargs_dummy()["gas"],
                 cost=np.array(
                     [
@@ -501,7 +685,48 @@ class PrepareLiftingCostsAsClass:
                     ]
                 )
             ),
-            "benuang": None,
+            PoolData.BENUANG: ASR(
+                start_year=2023,
+                end_year=2037,
+                expense_year=np.array(
+                    [
+                        2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035
+                    ]
+                ),
+                cost=np.array(
+                    [
+                        44.65628428, 138.3889467, 215.8933058, 383.081915,
+                        431.2325133, 422.0803121, 439.7788823, 369.1095222,
+                        377.8888109, 417.7871039,
+                    ]
+                ),
+                cost_allocation=(
+                    [
+                        FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                        FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                        FluidType.GAS, FluidType.GAS
+                    ]
+                ),
+                cost_type=(
+                    [
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST
+                    ]
+                ),
+                final_year=np.array(
+                    [
+                        2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035
+                    ]
+                ),
+                tax_portion=np.array(
+                    [
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                    ]
+                ),
+            ),
         }
 
         # Assign attribute asr_cost
@@ -517,7 +742,7 @@ class PrepareLiftingCostsAsClass:
 
         # LBT data (OIL)
         lbt_oil = {
-            "dummy": LBT(
+            PoolData.DUMMY: LBT(
                 **get_cost_kwargs_dummy()["oil"],
                 cost=np.array(
                     [
@@ -526,12 +751,12 @@ class PrepareLiftingCostsAsClass:
                     ]
                 )
             ),
-            "benuang": None,
+            PoolData.BENUANG: None,
         }
 
         # LBT data (GAS)
         lbt_gas = {
-            "dummy": LBT(
+            PoolData.DUMMY: LBT(
                 **get_cost_kwargs_dummy()["gas"],
                 cost=np.array(
                     [
@@ -540,7 +765,7 @@ class PrepareLiftingCostsAsClass:
                     ]
                 )
             ),
-            "benuang": None,
+            PoolData.BENUANG: None,
         }
 
         # Assign attribute lbt_cost
@@ -556,7 +781,7 @@ class PrepareLiftingCostsAsClass:
 
         # Cost of sales data (OIL)
         cos_oil = {
-            "dummy": CostOfSales(
+            PoolData.DUMMY: CostOfSales(
                 **get_cost_kwargs_dummy()["oil"],
                 cost=np.array(
                     [
@@ -565,12 +790,12 @@ class PrepareLiftingCostsAsClass:
                     ]
                 )
             ),
-            "benuang": None,
+            PoolData.BENUANG: None,
         }
 
         # Cost of sales data (GAS)
         cos_gas = {
-            "dummy": CostOfSales(
+            PoolData.DUMMY: CostOfSales(
                 **get_cost_kwargs_dummy()["gas"],
                 cost=np.array(
                     [
@@ -579,7 +804,7 @@ class PrepareLiftingCostsAsClass:
                     ]
                 )
             ),
-            "benuang": None,
+            PoolData.BENUANG: None,
         }
 
         # Assign attribute cost_of_sales
