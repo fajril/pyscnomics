@@ -14,6 +14,7 @@ from pyscnomics.econ.selection import (
     OptimizationParameter,
     OptimizationTarget,
     PoolData,
+    ContractType,
 )
 from pyscnomics.optimize.optimization import (
     adjust_cost_element,
@@ -21,16 +22,15 @@ from pyscnomics.optimize.optimization import (
     optimize_psc_core,
     optimize_psc,
 )
-from pyscnomics.dataset.case1 import case1_base_project
+from pyscnomics.dataset.case1 import Case1
 
 
 if __name__ == "__main__":
 
-    data = case1_base_project
+    ctr = ContractType.BASE_PROJECT
 
-    print('\t')
-    print(f'Filetype: {type(data)}')
-    print('data = \n', data)
+    data = Case1(contract_type=ctr)
+    data.fit_dict()
 
     # cr, gs, bp = "cost_recovery", "gross_split", "base_project"
     #
@@ -56,4 +56,4 @@ if __name__ == "__main__":
     # print('\t')
     # print(f'Filetype: {type(t1)}')
     # print(f'Length: {len(t1)}')
-    # print('t1 = \n', t1["oil"])
+    # print('t1 = \n', t1)

@@ -236,8 +236,13 @@ class ContractType(Enum):
         Gross Split (GS) contract type.
     """
 
-    COST_RECOVERY = "Cost Recovery (CR)"
-    GROSS_SPLIT = "Gross Split (GS)"
+    COST_RECOVERY = "Cost Recovery"
+    GROSS_SPLIT = "Gross Split"
+    BASE_PROJECT = "Base Project"
+    TRANSITION_CR_TO_CR = "Transition CR - CR"
+    TRAMSITION_CR_TO_GS = "Transition CR - GS"
+    TRANSITION_GS_TO_CR = "Transition GS - CR"
+    TRANSITION_GS_TO_GS = "Transition GS - GS"
 
 
 class NPVSelection(Enum):
