@@ -904,12 +904,12 @@ class Case1:
         }
 
         # Create per-fluid class instances
-        data = {key: _create_instance(*vals) for key, vals in mapping.items()}
+        lft_cst = {key: _create_instance(*vals) for key, vals in mapping.items()}
 
         # Merge keyword arguments
         kwargs_merged = {
             **self.kwargs_contract,
-            **{key: tuple(val.values()) for key, val in data.items()}
+            **{key: tuple(val.values()) for key, val in lft_cst.items()}
         }
 
         # Return contract instance
