@@ -779,7 +779,8 @@ class InitialYearDepreciationIncurred(Enum):
     ONSTREAM_YEAR = "Onstream Year"
 
 
-class PoolData(Enum):
+class ExampleCases(Enum):
+    """ Selection for example data case """
 
-    DUMMY = "dummy"
-    BENUANG = "benuang"
+    CASE_0 = "dummy"
+    CASE_1 = "benuang"

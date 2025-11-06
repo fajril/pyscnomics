@@ -22,233 +22,230 @@ from pyscnomics.econ.selection import (
     VariableSplit132024,
     NPVSelection,
     DiscountingMode,
-    PoolData,
 )
-from pyscnomics.dataset.poolDataAsClass import PrepareLiftingCostsAsClass
+# from pyscnomics.dataset.poolDataAsClass import PrepareLiftingCostsAsClass
 
 
 # Create an instance of synthetic data
-lft_cst = PrepareLiftingCostsAsClass()
-
-target = PoolData.BENUANG
+# lft_cst = PrepareLiftingCostsAsClass()
 
 
-def get_lifting_costs_map(target: PoolData) -> dict:
-    """
-    Retrieve a structured mapping of lifting-related cost components for a given pool.
-
-    Parameters
-    ----------
-    target : PoolData
-        The pool or field identifier used to access specific cost data.
-
-    Returns
-    -------
-    dict
-        A nested dictionary containing lifting, capital, intangible, opex, ASR, LBT,
-        and cost of sales values for both oil and gas.
-
-    Notes
-    -----
-    Each cost category includes separate entries for oil and gas, indexed by the given pool.
-    """
-    return {
-        "lifting": {
-            "oil": lft_cst.lifting["oil"][target],
-            "gas": lft_cst.lifting["gas"][target],
-        },
-        "capital": {
-            "oil": lft_cst.capital_cost["oil"][target],
-            "gas": lft_cst.capital_cost["gas"][target],
-        },
-        "intangible": {
-            "oil": lft_cst.intangible_cost["oil"][target],
-            "gas": lft_cst.intangible_cost["gas"][target],
-        },
-        "opex": {
-            "oil": lft_cst.opex["oil"][target],
-            "gas": lft_cst.opex["gas"][target],
-        },
-        "asr": {
-            "oil": lft_cst.asr_cost["oil"][target],
-            "gas": lft_cst.asr_cost["gas"][target],
-        },
-        "lbt": {
-            "oil": lft_cst.lbt_cost["oil"][target],
-            "gas": lft_cst.lbt_cost["gas"][target],
-        },
-        "cos": {
-            "oil": lft_cst.cost_of_sales["oil"][target],
-            "gas": lft_cst.cost_of_sales["gas"][target],
-        },
-    }
+# def get_lifting_costs_map(target: PoolData) -> dict:
+#     """
+#     Retrieve a structured mapping of lifting-related cost components for a given pool.
+#
+#     Parameters
+#     ----------
+#     target : PoolData
+#         The pool or field identifier used to access specific cost data.
+#
+#     Returns
+#     -------
+#     dict
+#         A nested dictionary containing lifting, capital, intangible, opex, ASR, LBT,
+#         and cost of sales values for both oil and gas.
+#
+#     Notes
+#     -----
+#     Each cost category includes separate entries for oil and gas, indexed by the given pool.
+#     """
+#     return {
+#         "lifting": {
+#             "oil": lft_cst.lifting["oil"][target],
+#             "gas": lft_cst.lifting["gas"][target],
+#         },
+#         "capital": {
+#             "oil": lft_cst.capital_cost["oil"][target],
+#             "gas": lft_cst.capital_cost["gas"][target],
+#         },
+#         "intangible": {
+#             "oil": lft_cst.intangible_cost["oil"][target],
+#             "gas": lft_cst.intangible_cost["gas"][target],
+#         },
+#         "opex": {
+#             "oil": lft_cst.opex["oil"][target],
+#             "gas": lft_cst.opex["gas"][target],
+#         },
+#         "asr": {
+#             "oil": lft_cst.asr_cost["oil"][target],
+#             "gas": lft_cst.asr_cost["gas"][target],
+#         },
+#         "lbt": {
+#             "oil": lft_cst.lbt_cost["oil"][target],
+#             "gas": lft_cst.lbt_cost["gas"][target],
+#         },
+#         "cos": {
+#             "oil": lft_cst.cost_of_sales["oil"][target],
+#             "gas": lft_cst.cost_of_sales["gas"][target],
+#         },
+#     }
 
 
 # Synthetic data: class format
-def get_lifting_costs_class(target: PoolData) -> dict:
-    """
-    Collect and group cost components for multiple project cases.
+# def get_lifting_costs_class(target: PoolData) -> dict:
+#     """
+#     Collect and group cost components for multiple project cases.
+#
+#     Returns
+#     -------
+#     dict
+#         Dictionary containing tuples of cost elements for each field, including
+#         lifting, capital, intangible, opex, ASR, LBT, and cost of sales.
+#     """
+#
+#     data = get_lifting_costs_map(target=target)
+#
+#     lifting = tuple([data["lifting"]["oil"], data["lifting"]["gas"]])
+#     capital_cost = tuple([data["capital"]["oil"], data["capital"]["gas"]])
+#     intangible_cost = tuple([data["intangible"]["oil"], data["intangible"]["gas"]])
+#     opex = tuple([data["opex"]["oil"], data["opex"]["gas"]])
+#     asr_cost = tuple([data["asr"]["oil"], data["asr"]["gas"]])
+#     lbt_cost = tuple([data["lbt"]["oil"], data["lbt"]["gas"]])
+#     cost_of_sales = tuple([data["cos"]["oil"], data["cos"]["gas"]])
+#
+#     return {
+#         "lifting": lifting,
+#         "capital_cost": capital_cost,
+#         "intangible_cost": intangible_cost,
+#         "opex": opex,
+#         "asr_cost": asr_cost,
+#         "lbt_cost": lbt_cost,
+#         "cost_of_sales": cost_of_sales,
+#     }
 
-    Returns
-    -------
-    dict
-        Dictionary containing tuples of cost elements for each field, including
-        lifting, capital, intangible, opex, ASR, LBT, and cost of sales.
-    """
 
-    data = get_lifting_costs_map(target=target)
-
-    lifting = tuple([data["lifting"]["oil"], data["lifting"]["gas"]])
-    capital_cost = tuple([data["capital"]["oil"], data["capital"]["gas"]])
-    intangible_cost = tuple([data["intangible"]["oil"], data["intangible"]["gas"]])
-    opex = tuple([data["opex"]["oil"], data["opex"]["gas"]])
-    asr_cost = tuple([data["asr"]["oil"], data["asr"]["gas"]])
-    lbt_cost = tuple([data["lbt"]["oil"], data["lbt"]["gas"]])
-    cost_of_sales = tuple([data["cos"]["oil"], data["cos"]["gas"]])
-
-    return {
-        "lifting": lifting,
-        "capital_cost": capital_cost,
-        "intangible_cost": intangible_cost,
-        "opex": opex,
-        "asr_cost": asr_cost,
-        "lbt_cost": lbt_cost,
-        "cost_of_sales": cost_of_sales,
-    }
-
-
-def get_kwargs_class(contract_type: str, target: PoolData) -> dict:
-    """
-    Return default argument mappings for the given PSC contract type.
-
-    Parameters
-    ----------
-    contract_type : str
-        One of {"base_project", "cost_recovery", "gross_split"}.
-
-    Returns
-    -------
-    dict
-        Dictionary of keyword arguments for initializing the contract class.
-
-    Raises
-    ------
-    ValueError
-        If the contract type is unrecognized.
-    """
-
-    # Base Project
-    kwargs_base_project = {
-        # Base parameters
-        PoolData.DUMMY: {
-            "start_date": date(year=2023, month=1, day=1),
-            "end_date": date(year=2032, month=12, day=31),
-            "oil_onstream_date": date(year=2030, month=1, day=1),
-            "gas_onstream_date": date(year=2029, month=1, day=1),
-            "approval_year": 2026,
-            "is_pod_1": False,
-        },
-        PoolData.BENUANG: {
-            "start_date": date(year=2023, month=1, day=1),
-            "end_date": date(year=2032, month=12, day=31),
-            "oil_onstream_date": date(year=2030, month=1, day=1),
-            "gas_onstream_date": date(year=2029, month=1, day=1),
-            "approval_year": 2026,
-            "is_pod_1": False,
-        },
-    }
-
-    # Cost recovery
-    kwargs_cost_recovery = {
-        # Base parameters
-        **kwargs_base_project,
-
-        # FTP
-        "oil_ftp_is_available": True,
-        "oil_ftp_is_shared": True,
-        "oil_ftp_portion": 0.2,
-        "gas_ftp_is_available": True,
-        "gas_ftp_is_shared": True,
-        "gas_ftp_portion": 0.2,
-
-        # Tax split
-        "tax_split_type": TaxSplitTypeCR.CONVENTIONAL,
-        "condition_dict": dict,
-        "indicator_rc_icp_sliding": None,
-        "oil_ctr_pretax_share": 0.25,
-        "gas_ctr_pretax_share": 0.5,
-
-        # Investment credit
-        "oil_ic_rate": 0.0,
-        "gas_ic_rate": 0.0,
-        "ic_is_available": False,
-        "oil_cr_cap_rate": 1.0,
-        "gas_cr_cap_rate": 1.0,
-
-        # DMO
-        "oil_dmo_volume_portion": 0.25,
-        "oil_dmo_fee_portion": 0.25,
-        "oil_dmo_holiday_duration": 60,
-        "gas_dmo_volume_portion": 1.0,
-        "gas_dmo_fee_portion": 1.0,
-        "gas_dmo_holiday_duration": 60,
-
-        # Carry forward depreciation
-        "oil_carry_forward_depreciation": 0.0,
-        "gas_carry_forward_depreciation": 0.0,
-    }
-
-    # Gross Split
-    VS_08 = VariableSplit082017
-    VS_13 = VariableSplit132024
-
-    kwargs_gross_split = {
-        # Base Parameters
-        **kwargs_base_project,
-
-        # Field and reservoir properties
-        "field_status": VS_08.FieldStatus.NO_POD,
-        "field_loc": VS_08.FieldLocation.ONSHORE,
-        "res_depth": VS_08.ReservoirDepth.LESSEQUAL_2500,
-        "infra_avail": VS_08.InfrastructureAvailability.WELL_DEVELOPED,
-        "res_type": VS_08.ReservoirType.CONVENTIONAL,
-        "api_oil": VS_08.APIOil.LESSTHAN_25,
-        "domestic_use": VS_08.DomesticUse.EQUAL_50_UNTIL_LESSTHAN_70,
-        "prod_stage": VS_08.ProductionStage.SECONDARY,
-        "co2_content": VS_08.CO2Content.LESSTHAN_5,
-        "h2s_content": VS_08.H2SContent.LESSTHAN_100,
-        "field_reserves_2024": VS_13.FieldReservesAmount.MEDIUM,
-        "infra_avail_2024": VS_13.InfrastructureAvailability.PARTIALLY_AVAILABLE,
-        "field_loc_2024": VS_13.FieldLocation.ONSHORE,
-
-        # Ministry discretion
-        "split_ministry_disc": 0.08,
-
-        # DMO
-        "oil_dmo_volume_portion": 0.25,
-        "oil_dmo_fee_portion": 1.0,
-        "gas_dmo_volume_portion": 1.0,
-        "gas_dmo_fee_portion": 1.0,
-        "oil_dmo_holiday_duration": 60,
-        "gas_dmo_holiday_duration": 60,
-
-        # Carry forward depreciation
-        "oil_carry_forward_depreciation": 0.0,
-        "gas_carry_forward_depreciation": 0.0,
-    }
-
-    # Pooled kwargs
-    kwargs_contract = {
-        "base_project": kwargs_base_project,
-        "cost_recovery": kwargs_cost_recovery,
-        "gross_split": kwargs_gross_split,
-    }
-
-    try:
-        return kwargs_contract[contract_type]
-
-    except KeyError:
-        raise ValueError(f"Unrecognized contract type: {contract_type!r}")
+# def get_kwargs_class(contract_type: str, target: PoolData) -> dict:
+#     """
+#     Return default argument mappings for the given PSC contract type.
+#
+#     Parameters
+#     ----------
+#     contract_type : str
+#         One of {"base_project", "cost_recovery", "gross_split"}.
+#
+#     Returns
+#     -------
+#     dict
+#         Dictionary of keyword arguments for initializing the contract class.
+#
+#     Raises
+#     ------
+#     ValueError
+#         If the contract type is unrecognized.
+#     """
+#
+#     # Base Project
+#     kwargs_base_project = {
+#         # Base parameters
+#         PoolData.DUMMY: {
+#             "start_date": date(year=2023, month=1, day=1),
+#             "end_date": date(year=2032, month=12, day=31),
+#             "oil_onstream_date": date(year=2030, month=1, day=1),
+#             "gas_onstream_date": date(year=2029, month=1, day=1),
+#             "approval_year": 2026,
+#             "is_pod_1": False,
+#         },
+#         PoolData.BENUANG: {
+#             "start_date": date(year=2023, month=1, day=1),
+#             "end_date": date(year=2032, month=12, day=31),
+#             "oil_onstream_date": date(year=2030, month=1, day=1),
+#             "gas_onstream_date": date(year=2029, month=1, day=1),
+#             "approval_year": 2026,
+#             "is_pod_1": False,
+#         },
+#     }
+#
+#     # Cost recovery
+#     kwargs_cost_recovery = {
+#         # Base parameters
+#         **kwargs_base_project,
+#
+#         # FTP
+#         "oil_ftp_is_available": True,
+#         "oil_ftp_is_shared": True,
+#         "oil_ftp_portion": 0.2,
+#         "gas_ftp_is_available": True,
+#         "gas_ftp_is_shared": True,
+#         "gas_ftp_portion": 0.2,
+#
+#         # Tax split
+#         "tax_split_type": TaxSplitTypeCR.CONVENTIONAL,
+#         "condition_dict": dict,
+#         "indicator_rc_icp_sliding": None,
+#         "oil_ctr_pretax_share": 0.25,
+#         "gas_ctr_pretax_share": 0.5,
+#
+#         # Investment credit
+#         "oil_ic_rate": 0.0,
+#         "gas_ic_rate": 0.0,
+#         "ic_is_available": False,
+#         "oil_cr_cap_rate": 1.0,
+#         "gas_cr_cap_rate": 1.0,
+#
+#         # DMO
+#         "oil_dmo_volume_portion": 0.25,
+#         "oil_dmo_fee_portion": 0.25,
+#         "oil_dmo_holiday_duration": 60,
+#         "gas_dmo_volume_portion": 1.0,
+#         "gas_dmo_fee_portion": 1.0,
+#         "gas_dmo_holiday_duration": 60,
+#
+#         # Carry forward depreciation
+#         "oil_carry_forward_depreciation": 0.0,
+#         "gas_carry_forward_depreciation": 0.0,
+#     }
+#
+#     # Gross Split
+#     VS_08 = VariableSplit082017
+#     VS_13 = VariableSplit132024
+#
+#     kwargs_gross_split = {
+#         # Base Parameters
+#         **kwargs_base_project,
+#
+#         # Field and reservoir properties
+#         "field_status": VS_08.FieldStatus.NO_POD,
+#         "field_loc": VS_08.FieldLocation.ONSHORE,
+#         "res_depth": VS_08.ReservoirDepth.LESSEQUAL_2500,
+#         "infra_avail": VS_08.InfrastructureAvailability.WELL_DEVELOPED,
+#         "res_type": VS_08.ReservoirType.CONVENTIONAL,
+#         "api_oil": VS_08.APIOil.LESSTHAN_25,
+#         "domestic_use": VS_08.DomesticUse.EQUAL_50_UNTIL_LESSTHAN_70,
+#         "prod_stage": VS_08.ProductionStage.SECONDARY,
+#         "co2_content": VS_08.CO2Content.LESSTHAN_5,
+#         "h2s_content": VS_08.H2SContent.LESSTHAN_100,
+#         "field_reserves_2024": VS_13.FieldReservesAmount.MEDIUM,
+#         "infra_avail_2024": VS_13.InfrastructureAvailability.PARTIALLY_AVAILABLE,
+#         "field_loc_2024": VS_13.FieldLocation.ONSHORE,
+#
+#         # Ministry discretion
+#         "split_ministry_disc": 0.08,
+#
+#         # DMO
+#         "oil_dmo_volume_portion": 0.25,
+#         "oil_dmo_fee_portion": 1.0,
+#         "gas_dmo_volume_portion": 1.0,
+#         "gas_dmo_fee_portion": 1.0,
+#         "oil_dmo_holiday_duration": 60,
+#         "gas_dmo_holiday_duration": 60,
+#
+#         # Carry forward depreciation
+#         "oil_carry_forward_depreciation": 0.0,
+#         "gas_carry_forward_depreciation": 0.0,
+#     }
+#
+#     # Pooled kwargs
+#     kwargs_contract = {
+#         "base_project": kwargs_base_project,
+#         "cost_recovery": kwargs_cost_recovery,
+#         "gross_split": kwargs_gross_split,
+#     }
+#
+#     try:
+#         return kwargs_contract[contract_type]
+#
+#     except KeyError:
+#         raise ValueError(f"Unrecognized contract type: {contract_type!r}")
 
 
 def get_contract_arguments_class(contract_type: str) -> dict:
@@ -368,48 +365,48 @@ def get_summary_arguments_class() -> dict:
     }
 
 
-def synthetic_data_class(
-    contract_type: str
-) -> CostRecovery | GrossSplit | BaseProject:
-    """
-    Generate a synthetic contract instance for testing or benchmarking.
-
-    Parameters
-    ----------
-    contract_type : str
-        Type of contract to instantiate. Must be one of:
-        ``"cost_recovery"``, ``"gross_split"``, or ``"base_project"``.
-
-    Returns
-    -------
-    CostRecovery or GrossSplit or BaseProject
-        A fully initialized contract instance with predefined arguments,
-        parameters, and lifting cost settings.
-
-    Notes
-    -----
-    The function combines default arguments and parameters to
-    create representative PSC contract objects for simulation or validation.
-    """
-
-    mapping = {
-        "cost_recovery": (
-            CostRecovery,
-            get_kwargs_class("cost_recovery"),
-        ),
-        "gross_split": (
-            GrossSplit,
-            get_kwargs_class("gross_split"),
-        ),
-        "base_project": (
-            BaseProject,
-            get_kwargs_class("base_project"),
-        ),
-    }
-
-    ctr = mapping[contract_type]
-
-    return ctr[0](**ctr[1], **get_lifting_costs_class())
+# def synthetic_data_class(
+#     contract_type: str
+# ) -> CostRecovery | GrossSplit | BaseProject:
+#     """
+#     Generate a synthetic contract instance for testing or benchmarking.
+#
+#     Parameters
+#     ----------
+#     contract_type : str
+#         Type of contract to instantiate. Must be one of:
+#         ``"cost_recovery"``, ``"gross_split"``, or ``"base_project"``.
+#
+#     Returns
+#     -------
+#     CostRecovery or GrossSplit or BaseProject
+#         A fully initialized contract instance with predefined arguments,
+#         parameters, and lifting cost settings.
+#
+#     Notes
+#     -----
+#     The function combines default arguments and parameters to
+#     create representative PSC contract objects for simulation or validation.
+#     """
+#
+#     mapping = {
+#         "cost_recovery": (
+#             CostRecovery,
+#             get_kwargs_class("cost_recovery"),
+#         ),
+#         "gross_split": (
+#             GrossSplit,
+#             get_kwargs_class("gross_split"),
+#         ),
+#         "base_project": (
+#             BaseProject,
+#             get_kwargs_class("base_project"),
+#         ),
+#     }
+#
+#     ctr = mapping[contract_type]
+#
+#     return ctr[0](**ctr[1], **get_lifting_costs_class())
 
 
 # Synthetic data: dictionary format

@@ -12,7 +12,6 @@ from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.econ.selection import (
     FluidType,
     CostType,
-    PoolData,
     VariableSplit082017,
     VariableSplit522017,
     VariableSplit132024,
@@ -166,7 +165,7 @@ class Case1:
 
         # Store lifting as the class's attribute: "lifting"
         self.lifting = {
-            "instance": {
+            "class": {
                 "oil": Lifting(**lifting_oil),
                 "gas": Lifting(**lifting_gas),
             },
@@ -308,7 +307,7 @@ class Case1:
 
         # Store capital costs as the class's attribute: "capital"
         self.capital = {
-            "instance": {
+            "class": {
                 "oil": CapitalCost(**capital_oil),
                 "gas": CapitalCost(**capital_gas),
             },

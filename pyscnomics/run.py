@@ -3,17 +3,14 @@ Execute calculations
 """
 
 from pyscnomics.poolData import (
-    synthetic_data_class,
     get_contract_arguments_class,
     get_summary_arguments_class,
     synthetic_data_dict,
     optimization_arguments_dict,
 )
-from pyscnomics.dataset.poolDataAsClass import PrepareLiftingCostsAsClass
 from pyscnomics.econ.selection import (
     OptimizationParameter,
     OptimizationTarget,
-    PoolData,
     ContractType,
 )
 from pyscnomics.optimize.optimization import (
@@ -30,7 +27,17 @@ if __name__ == "__main__":
     ctr = ContractType.BASE_PROJECT
 
     data = Case1(contract_type=ctr)
-    data.fit_dict()
+    t1 = data.capital
+
+    print('\t')
+    print(f'Filetype: {type(t1["class"])}')
+    print(f'Length: {len(t1["class"])}')
+    print('t1["class"] = \n', t1["class"])
+
+    print('\t')
+    print(f'Filetype: {type(t1["dict"])}')
+    print(f'Length: {len(t1["dict"])}')
+    print('t1["dict] = \n', t1["dict"])
 
     # cr, gs, bp = "cost_recovery", "gross_split", "base_project"
     #
