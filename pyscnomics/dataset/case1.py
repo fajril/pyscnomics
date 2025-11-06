@@ -37,6 +37,11 @@ from pyscnomics.econ.costs import (
     LBT,
     CostOfSales,
 )
+from pyscnomics.io.getattr import (
+    convert_object,
+    construct_lifting_attr,
+    construct_cost_attr,
+)
 
 
 @dataclass
@@ -55,8 +60,9 @@ class Case1:
     lbt: dict = field(default_factory=lambda: {}, init=False, repr=False)
     cost_of_sales: dict = field(default_factory=lambda: {}, init=False, repr=False)
 
-    kwargs_contract: dict = field(default_factory=lambda: {}, init=False, repr=False)
-    contract_arguments: ContractType = field(default_factory=lambda: {}, init=False, repr=False)
+    setup_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
+    class_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
+    contract_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
     summary_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
 
     def __post_init__(self):
@@ -75,34 +81,22 @@ class Case1:
         self.get_intangible()
         self.get_opex()
         self.get_asr()
-        self.get_lbt()
-        self.get_cost_of_sales()
-        self.get_kwargs()
+        self.get_setup_arguments()
+        self.get_class_arguments()
         self.get_contract_arguments()
         self.get_summary_arguments()
 
     def get_lifting(self) -> None:
         """
-        Create and assign lifting data for oil and gas.
+        Initialize and assign lifting data for oil and gas.
 
-        Constructs lifting data for oil and gas as dictionaries, then
-        instantiates corresponding `Lifting` objects. Both raw data and
-        object instances are stored in `self.lifting`.
+        Creates raw lifting data dictionaries for each fluid type and
+        stores them in `self.lifting`.
 
         Returns
         -------
         None
-            Updates `self.lifting` with lifting data and instances.
-
-        Attributes
-        ----------
-        self.lifting : dict
-            Contains two sections:
-
-            - **"instance"** : dict of {str: Lifting}
-                Lifting object instances for "oil" and "gas".
-            - **"dict"** : dict of {str: dict}
-                Raw lifting data used to initialize each instance.
+            Updates `self.lifting` with oil and gas lifting data.
         """
 
         # Prepare lifting data: OIL
@@ -165,37 +159,21 @@ class Case1:
 
         # Store lifting as the class's attribute: "lifting"
         self.lifting = {
-            "class": {
-                "oil": Lifting(**lifting_oil),
-                "gas": Lifting(**lifting_gas),
-            },
-            "dict": {
-                "oil": lifting_oil,
-                "gas": lifting_gas,
-            }
+            "oil": lifting_oil,
+            "gas": lifting_gas,
         }
 
     def get_capital(self) -> None:
         """
-        Create and assign capital cost data for oil and gas.
+        Initialize and assign capital cost data for oil and gas.
 
-        Builds capital cost data as dictionaries and initializes
-        corresponding `CapitalCost` objects. Both raw data and instances
-        are stored in `self.capital`.
+        Creates raw capital cost dictionaries for each fluid type and
+        stores them in `self.capital`.
 
         Returns
         -------
         None
-            Updates `self.capital` with capital cost data and instances.
-
-        Attributes
-        ----------
-        self.capital : dict
-            Contains two sections:
-            - **"instance"** : dict of {str: CapitalCost}
-                Capital cost object instances for "oil" and "gas".
-            - **"dict"** : dict of {str: dict}
-                Raw capital cost data used to initialize each instance.
+            Updates `self.capital` with oil and gas capital cost data.
         """
 
         # Prepare capital data: OIL
@@ -307,37 +285,21 @@ class Case1:
 
         # Store capital costs as the class's attribute: "capital"
         self.capital = {
-            "class": {
-                "oil": CapitalCost(**capital_oil),
-                "gas": CapitalCost(**capital_gas),
-            },
-            "dict": {
-                "oil": capital_oil,
-                "gas": capital_gas,
-            },
+            "oil": capital_oil,
+            "gas": capital_gas,
         }
 
     def get_intangible(self) -> None:
         """
-        Create and assign intangible cost data for oil and gas.
+        Initialize and assign intangible cost data for oil and gas.
 
-        Builds intangible cost data as dictionaries and initializes
-        corresponding `Intangible` objects. Both raw data and instances
-        are stored in `self.intangible`.
+        Creates raw intangible cost dictionaries for each fluid type and
+        stores them in `self.intangible`.
 
         Returns
         -------
         None
-            Updates `self.intangible` with intangible cost data and instances.
-
-        Attributes
-        ----------
-        self.intangible : dict
-            Contains two sections:
-            - **"instance"** : dict of {str: Intangible}
-                Intangible cost object instances for "oil" and "gas".
-            - **"dict"** : dict of {str: dict}
-                Raw intangible cost data used to initialize each instance.
+            Updates `self.intangible` with oil and gas intangible cost data.
         """
 
         # Prepare intangible cost: OIL
@@ -418,36 +380,21 @@ class Case1:
 
         # Store intangible costs as the class's attribute: "intangible"
         self.intangible = {
-            "instance": {
-                "oil": Intangible(**intangible_oil),
-                "gas": Intangible(**intangible_gas),
-            },
-            "dict": {
-                "oil": intangible_oil,
-                "gas": intangible_gas,
-            },
+            "oil": intangible_oil,
+            "gas": intangible_gas,
         }
 
     def get_opex(self) -> None:
         """
-        Create and assign operating expenditure (OPEX) data for oil and gas.
+        Initialize and assign OPEX data for oil and gas.
 
-        Builds OPEX data as dictionaries and initializes corresponding
-        `OPEX` objects. Both raw data and instances are stored in `self.opex`.
+        Creates raw operating expenditure dictionaries for each fluid type and
+        stores them in `self.opex`.
 
         Returns
         -------
         None
-            Updates `self.opex` with OPEX data and instances.
-
-        Attributes
-        ----------
-        self.opex : dict
-            Contains two sections:
-            - **"instance"** : dict of {str: OPEX}
-                OPEX object instances for "oil" and "gas".
-            - **"dict"** : dict of {str: dict}
-                Raw OPEX data used to initialize each instance.
+            Updates `self.opex` with oil and gas OPEX data.
         """
 
         # Prepare opex: OIL
@@ -532,36 +479,21 @@ class Case1:
 
         # Store opex as the class's attributes: "opex"
         self.opex = {
-            "instance": {
-                "oil": OPEX(**opex_oil),
-                "gas": OPEX(**opex_gas),
-            },
-            "dict": {
-                "oil": opex_oil,
-                "gas": opex_gas,
-            },
+            "oil": opex_oil,
+            "gas": opex_gas,
         }
 
     def get_asr(self) -> None:
         """
-        Create and assign Abandonment and Site Restoration (ASR) cost data for oil and gas.
+        Initialize and assign ASR cost data for oil and gas.
 
-        Builds ASR cost data as dictionaries and initializes corresponding
-        `ASR` objects. Both raw data and instances are stored in `self.asr`.
+        Creates raw Abandonment and Site Restoration (ASR) cost dictionaries
+        for each fluid type and stores them in `self.asr`.
 
         Returns
         -------
         None
-            Updates `self.asr` with ASR cost data and instances.
-
-        Attributes
-        ----------
-        self.asr : dict
-            Contains two sections:
-            - **"instance"** : dict of {str: ASR}
-                ASR object instances for "oil" and "gas".
-            - **"dict"** : dict of {str: dict}
-                Raw ASR cost data used to initialize each instance.
+            Updates `self.asr` with oil and gas ASR cost data.
         """
 
         # Prepare ASR: OIL
@@ -653,118 +585,41 @@ class Case1:
 
         # Store ASR costs as the class's attribute: "asr"
         self.asr = {
-            "instance": {
-                "oil": ASR(**oil_asr),
-                "gas": ASR(**gas_asr),
-            },
-            "dict": {
-                "oil": oil_asr,
-                "gas": gas_asr,
-            },
+            "oil": oil_asr,
+            "gas": gas_asr,
         }
 
-    def get_lbt(self) -> None:
-        """
-        Create and assign Land and Building Tax (LBT) cost data for oil and gas.
-        """
+    def get_setup_arguments(self) -> dict:
 
-        # Prepare LBT cost: OIL
-        lbt_oil = None
-
-        # Prepare LBT cost: GAS
-        lbt_gas = None
-
-        # Store LBT costs as the class's attribute: "lbt"
-        self.lbt = {
-            "instance": {
-                "oil": None,
-                "gas": None,
-            },
-            "dict": {
-                "oil": lbt_oil,
-                "gas": lbt_gas,
-            },
+        self.setup_arguments = {
+            "start_date": date(year=2023, month=1, day=1),
+            "end_date": date(year=2037, month=12, day=31),
+            "oil_onstream_date": date(year=2024, month=1, day=1),
+            "gas_onstream_date": date(year=2024, month=1, day=1),
+            "approval_year": 2026,
+            "is_pod_1": False,
         }
 
-    def get_cost_of_sales(self) -> None:
+    def get_class_arguments(self) -> dict:
         """
-        Create and assign cost of sales for oil and gas.
-        """
+        Build and assign keyword arguments based on the contract type.
 
-        # Prepare COS: OIL
-        cos_oil = None
-
-        # Prepare COS: GAS
-        cos_gas = None
-
-        # Store COS as the class's attribute: "cost_of_sales"
-        self.cost_of_sales = {
-            "instance": {
-                "oil": None,
-                "gas": None,
-            },
-            "dict": {
-                "oil": cos_oil,
-                "gas": cos_gas,
-            },
-        }
-
-    def get_kwargs(self) -> dict:
-        """
-        Build and return keyword argument dictionaries for each contract type.
-
-        Constructs predefined keyword arguments for Base Project, Cost Recovery,
-        and Gross Split contracts based on stored cost dictionaries and lifting data.
+        Constructs predefined keyword argument dictionaries for Base Project,
+        Cost Recovery, and Gross Split contracts using stored cost and lifting data.
 
         Returns
         -------
         dict
-            Keyword argument dictionary matching the current contract type.
+            Keyword argument dictionary for the current contract type.
 
         Raises
         ------
         ValueError
-            If the specified contract type is not recognized.
-
-        Notes
-        -----
-        The returned dictionary includes base parameters (dates, lifting, and costs)
-        and contract-specific parameters (e.g., FTP, DMO, investment credit, tax split).
+            If the contract type is not recognized.
         """
-
-        lft = self.lifting["dict"]
-        cap = self.capital["dict"]
-        intang = self.intangible["dict"]
-        opx = self.opex["dict"]
-        asr = self.asr["dict"]
-        lbt = self.lbt["dict"]
-        cos = self.cost_of_sales["dict"]
-
-        # Base project
-        kwargs_base_project = {
-            # Base parameters
-            "start_date": date(year=2023, month=1, day=1),
-            "end_date": date(year=2032, month=12, day=31),
-            "oil_onstream_date": date(year=2030, month=1, day=1),
-            "gas_onstream_date": date(year=2029, month=1, day=1),
-            "approval_year": 2026,
-            "is_pod_1": False,
-
-            # Lifting and costs
-            "lifting": tuple([lft["oil"], lft["gas"]]),
-            "capital_cost": tuple([cap["oil"], cap["gas"]]),
-            "intangible_cost": tuple([intang["oil"], intang["gas"]]),
-            "opex": tuple([opx["oil"], opx["gas"]]),
-            "asr_cost": tuple([asr["oil"], asr["gas"]]),
-            "lbt_cost": tuple([lbt["oil"], lbt["gas"]]),
-            "cost_of_sales": tuple([cos["oil"], cos["gas"]]),
-        }
 
         # Cost recovery
         kwargs_cost_recovery = {
-            # Base parameters
-            **kwargs_base_project,
-
             # FTP
             "oil_ftp_is_available": True,
             "oil_ftp_is_shared": True,
@@ -803,10 +658,8 @@ class Case1:
         # Gross split
         VS_08 = VariableSplit082017
         VS_13 = VariableSplit132024
-        kwargs_gross_split = {
-            # Base parameters
-            **kwargs_base_project,
 
+        kwargs_gross_split = {
             # Field and reservoir properties
             "field_status": VS_08.FieldStatus.NO_POD,
             "field_loc": VS_08.FieldLocation.ONSHORE,
@@ -838,46 +691,41 @@ class Case1:
             "gas_carry_forward_depreciation": 0.0,
         }
 
-        self.kwargs_contract = {
-            ContractType.BASE_PROJECT: kwargs_base_project,
+        # Mapping contract kwargs based on contract type
+        class_args_map = {
+            ContractType.BASE_PROJECT: {},
             ContractType.COST_RECOVERY: kwargs_cost_recovery,
             ContractType.GROSS_SPLIT: kwargs_gross_split,
         }
 
         try:
-            self.kwargs_contract[self.contract_type]
+            self.class_arguments = class_args_map[self.contract_type]
 
         except KeyError:
             raise ValueError(f"Unrecognized contract type: {self.contract_type!r}")
 
     def get_contract_arguments(self) -> dict:
         """
-        Build and return contract argument dictionaries for each contract type.
+        Build and assign contract arguments based on the contract type.
 
         Constructs predefined argument sets for Base Project, Cost Recovery,
-        and Gross Split contracts, including fiscal, inflation, depreciation,
-        and revenue configurations.
+        and Gross Split contracts covering fiscal, depreciation, and revenue settings.
 
         Returns
         -------
         dict
-            Argument dictionary corresponding to the current contract type.
+            Argument dictionary for the current contract type.
 
         Raises
         ------
         ValueError
-            If the specified contract type is not recognized.
-
-        Notes
-        -----
-        The returned dictionary defines parameters such as tax regime,
-        depreciation method, inflation settings, DMO handling, and other revenues.
+            If the contract type is not recognized.
         """
 
         # Base project
         args_base_project = {
-            "sulfur_revenue": OtherRevenue.REDUCTION_TO_GAS_OPEX,
-            "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+            "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+            "electricity_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
             "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
             "tax_rate": 0.0,
             "year_inflation": None,
@@ -887,13 +735,7 @@ class Case1:
 
         # Cost recovery
         args_cost_recovery = {
-            "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            "electricity_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            "vat_rate": 0.0,
-            "year_inflation": None,
-            "inflation_rate": 0.0,
-            "inflation_rate_applied_to": None,
+            **args_base_project,
             "is_dmo_end_weighted": False,
             "tax_regime": TaxRegime.NAILED_DOWN,
             "effective_tax_rate": None,
@@ -909,12 +751,7 @@ class Case1:
 
         # Base project
         args_gross_split = {
-            "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
-            "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            "vat_rate": 0.0,
-            "inflation_rate": 0.0,
-            "inflation_rate_applied_to": InflationAppliedTo.CAPEX,
+            **args_base_project,
             "cum_production_split_offset": 0.0,
             "depr_method": DeprMethod.PSC_DB,
             "decline_factor": 2,
@@ -964,15 +801,126 @@ class Case1:
             "profitability_discounted": False,
         }
 
-    def fit_dict(self):
+    def as_dict(self):
+        """
+        Convert all contract-related attributes into a structured dictionary.
 
-        t1 = self.kwargs_contract
+        The method converts setup, summary, contract, and class arguments, as well as
+        cost and lifting data, into serializable dictionary forms. Each component is
+        processed through helper converters and class constructors depending on the
+        contract type.
 
-        print('\t')
-        print(f'Filetype: {type(t1)}')
-        print(f'Length: {len(t1)}')
-        print('t1 = \n', t1)
+        Returns
+        -------
+        dict
+            A dictionary containing all converted and structured contract data,
+            including setup, summary, contract arguments, cost components,
+            and lifting information.
+        """
 
+        def _converter(source: dict):
+            return {key: convert_object(objects=val) for key, val in source.items()}
 
-    def fit_instance(self):
-        pass
+        def _construct_cost_attributes(source: dict, Cls):
+            items = tuple([Cls(**val) for val in source.values()])
+            return construct_cost_attr(cost=items)
+
+        # Convert "setup_arguments", "summary_arguments", and "contract_arguments"
+        setup = _converter(source=self.setup_arguments)
+        summary_arguments = _converter(source=self.summary_arguments)
+        contract_arguments = _converter(source=self.contract_arguments)
+
+        # Convert "class_arguments"
+        converter_class_args = _converter(source=self.class_arguments)
+        grosssplit = (
+            converter_class_args
+            if self.contract_type == ContractType.GROSS_SPLIT
+            else None
+        )
+        cost_recovery = (
+            converter_class_args
+            if self.contract_type == ContractType.COST_RECOVERY
+            else None
+        )
+
+        # Convert "lifting"
+        lifting = construct_lifting_attr(
+            lifting=tuple([Lifting(**lft) for lft in self.lifting.values()])
+        )
+
+        # Convert "capital", "intangible", "opex", "asr"
+        capital = _construct_cost_attributes(self.capital, CapitalCost)
+        intangible = _construct_cost_attributes(self.intangible, Intangible)
+        opex = _construct_cost_attributes(self.opex, OPEX)
+        asr = _construct_cost_attributes(self.asr, ASR)
+
+        # Mapping converted data
+        mapping_data = (
+            ("setup", setup),
+            ("summary_arguments", summary_arguments),
+            ("contract_arguments", contract_arguments),
+            ("grosssplit", grosssplit),
+            ("cost_recovery", cost_recovery),
+            ("lifting", lifting),
+            ("capital", capital),
+            ("intangible", intangible),
+            ("opex", opex),
+            ("asr", asr),
+        )
+
+        return {key: val for key, val in mapping_data}
+
+    def as_class(self):
+        """
+        Construct and return the contract object based on the current contract type.
+
+        Builds per-fluid instances of lifting and cost classes, merges them with
+        contract keyword arguments, and returns the corresponding contract instance.
+
+        Returns
+        -------
+        BaseProject | CostRecovery | GrossSplit
+            Instantiated contract object based on the current contract type.
+
+        Raises
+        ------
+        ValueError
+            If the contract type is not recognized.
+        """
+
+        # A helper function to create an instance of lifting and costs
+        fluids = ["oil", "gas"]
+
+        def _create_instance(cls_target, source):
+            return {fl: cls_target(**source[fl]) for fl in fluids}
+
+        # Define mappings between class types and their corresponding attributes
+        mapping = {
+            "lifting": (Lifting, self.lifting),
+            "capital_cost": (CapitalCost, self.capital),
+            "intangible_cost": (Intangible, self.intangible),
+            "opex": (OPEX, self.opex),
+            "asr_cost": (ASR, self.asr),
+        }
+
+        # Create per-fluid class instances
+        data = {key: _create_instance(*vals) for key, vals in mapping.items()}
+
+        # Merge keyword arguments
+        kwargs_merged = {
+            **self.kwargs_contract,
+            **{key: tuple(val.values()) for key, val in data.items()}
+        }
+
+        # Return contract instance
+        if self.contract_type == ContractType.BASE_PROJECT:
+            return BaseProject(**kwargs_merged)
+
+        elif self.contract_type == ContractType.COST_RECOVERY:
+            return CostRecovery(**kwargs_merged)
+
+        elif self.contract_type == ContractType.GROSS_SPLIT:
+            return GrossSplit(**kwargs_merged)
+
+        else:
+            raise ValueError(f"Unrecognized contract type: {self.contract_type!r}")

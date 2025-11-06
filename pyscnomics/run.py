@@ -24,24 +24,14 @@ from pyscnomics.dataset.case1 import Case1
 
 if __name__ == "__main__":
 
-    ctr = ContractType.BASE_PROJECT
+    ctr = ContractType.GROSS_SPLIT
 
     data = Case1(contract_type=ctr)
-    t1 = data.capital
-
-    print('\t')
-    print(f'Filetype: {type(t1["class"])}')
-    print(f'Length: {len(t1["class"])}')
-    print('t1["class"] = \n', t1["class"])
-
-    print('\t')
-    print(f'Filetype: {type(t1["dict"])}')
-    print(f'Length: {len(t1["dict"])}')
-    print('t1["dict] = \n', t1["dict"])
+    t1 = data.as_dict()
 
     # cr, gs, bp = "cost_recovery", "gross_split", "base_project"
     #
-    # # Specify contract type
+    # Specify contract type
     # contract = bp
     # contract_arguments = get_contract_arguments_class(contract)
     # summary_arguments = get_summary_arguments_class()
@@ -60,7 +50,7 @@ if __name__ == "__main__":
     # print(f'Length: {len()}')
     # print()
 
-    # print('\t')
-    # print(f'Filetype: {type(t1)}')
-    # print(f'Length: {len(t1)}')
-    # print('t1 = \n', t1)
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
