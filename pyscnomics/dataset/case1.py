@@ -1,5 +1,5 @@
 """
-A collection of required data for CASE 1: DUMMY
+A collection of data for CASE 1
 """
 
 import numpy as np
@@ -13,7 +13,7 @@ from pyscnomics.econ.selection import (
     FluidType,
     CostType,
     VariableSplit082017,
-    VariableSplit522017,
+    # VariableSplit522017,
     VariableSplit132024,
     TaxSplitTypeCR,
     ContractType,
@@ -22,7 +22,7 @@ from pyscnomics.econ.selection import (
     FTPTaxRegime,
     DeprMethod,
     SunkCostMethod,
-    InflationAppliedTo,
+    # InflationAppliedTo,
     GrossSplitRegime,
     InitialYearAmortizationIncurred,
     NPVSelection,
@@ -34,8 +34,8 @@ from pyscnomics.econ.costs import (
     Intangible,
     OPEX,
     ASR,
-    LBT,
-    CostOfSales,
+    # LBT,
+    # CostOfSales,
 )
 from pyscnomics.io.getattr import (
     convert_object,
@@ -46,6 +46,17 @@ from pyscnomics.io.getattr import (
 
 @dataclass
 class Case1:
+    """
+    Example case 1
+    ---------------
+    A dataclass which stores data representing a case study for economic
+    PSC evaluation.
+
+    Parameters
+    ----------
+    contract_type: ContractType
+        Type of contract. Selection: BaseProject, CostRecovery, or GrossSplit.
+    """
 
     contract_type: ContractType
 
@@ -57,8 +68,6 @@ class Case1:
     intangible: dict = field(default_factory=lambda: {}, init=False, repr=False)
     opex: dict = field(default_factory=lambda: {}, init=False, repr=False)
     asr: dict = field(default_factory=lambda: {}, init=False, repr=False)
-    lbt: dict = field(default_factory=lambda: {}, init=False, repr=False)
-    cost_of_sales: dict = field(default_factory=lambda: {}, init=False, repr=False)
 
     setup_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
     class_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
@@ -76,6 +85,7 @@ class Case1:
             -   Prepare lbt data
             -   Prepare cost of sales data
         """
+
         self.get_lifting()
         self.get_capital()
         self.get_intangible()
@@ -590,6 +600,18 @@ class Case1:
         }
 
     def get_setup_arguments(self) -> dict:
+        """
+        Define and return setup-related project arguments.
+
+        Initializes key project setup parameters such as start and end dates,
+        onstream dates, approval year, and POD status.
+
+        Returns
+        -------
+        dict
+            Dictionary containing project setup parameters including
+            start/end dates, onstream dates, approval year, and POD flag.
+        """
 
         self.setup_arguments = {
             "start_date": date(year=2023, month=1, day=1),
@@ -602,20 +624,29 @@ class Case1:
 
     def get_class_arguments(self) -> dict:
         """
-        Build and assign keyword arguments based on the contract type.
+        Define and assign keyword arguments specific to the contract type.
 
-        Constructs predefined keyword argument dictionaries for Base Project,
-        Cost Recovery, and Gross Split contracts using stored cost and lifting data.
+        Builds predefined argument dictionaries for Base Project, Cost Recovery,
+        and Gross Split contracts. Includes parameters governing FTP, DMO,
+        tax splits, investment credits, depreciation, and variable split factors.
 
         Returns
         -------
         dict
-            Keyword argument dictionary for the current contract type.
+            Contract-specific keyword argument dictionary used for initializing
+            the corresponding contract class.
 
         Raises
         ------
         ValueError
-            If the contract type is not recognized.
+            If the specified contract type is not recognized.
+
+        Notes
+        -----
+        The selected argument set depends on ``self.contract_type``.
+        - Cost Recovery contracts include fiscal and FTP configurations.
+        - Gross Split contracts include field, reservoir, and variable split parameters.
+        - Base Project contracts are initialized with minimal or default arguments.
         """
 
         # Cost recovery
@@ -801,7 +832,7 @@ class Case1:
             "profitability_discounted": False,
         }
 
-    def as_dict(self):
+    def as_dict(self) -> dict:
         """
         Convert all contract-related attributes into a structured dictionary.
 
@@ -870,57 +901,58 @@ class Case1:
 
         return {key: val for key, val in mapping_data}
 
-    def as_class(self):
+    def as_class(self) -> CostRecovery | GrossSplit | BaseProject:
         """
-        Construct and return the contract object based on the current contract type.
+        Convert stored attributes into a contract class instance.
 
-        Builds per-fluid instances of lifting and cost classes, merges them with
-        contract keyword arguments, and returns the corresponding contract instance.
+        Creates per-fluid instances of lifting and cost components, merges them
+        with setup and contract-specific arguments, and returns the corresponding
+        contract object (BaseProject, CostRecovery, or GrossSplit).
 
         Returns
         -------
-        BaseProject | CostRecovery | GrossSplit
-            Instantiated contract object based on the current contract type.
+        CostRecovery | GrossSplit | BaseProject
+            Initialized contract instance.
 
         Raises
         ------
         ValueError
-            If the contract type is not recognized.
+            If the specified contract type is not recognized.
         """
 
-        # A helper function to create an instance of lifting and costs
         fluids = ["oil", "gas"]
 
-        def _create_instance(cls_target, source):
-            return {fl: cls_target(**source[fl]) for fl in fluids}
-
-        # Define mappings between class types and their corresponding attributes
-        mapping = {
-            "lifting": (Lifting, self.lifting),
-            "capital_cost": (CapitalCost, self.capital),
-            "intangible_cost": (Intangible, self.intangible),
-            "opex": (OPEX, self.opex),
-            "asr_cost": (ASR, self.asr),
+        # Create per fluid instances for lifting and each cost category
+        instances = {
+            "lifting": {fl: Lifting(**self.lifting[fl]) for fl in fluids},
+            "capital": {fl: CapitalCost(**self.capital[fl]) for fl in fluids},
+            "intangible": {fl: Intangible(**self.intangible[fl]) for fl in fluids},
+            "opex": {fl: OPEX(**self.opex[fl]) for fl in fluids},
+            "asr": {fl: ASR(**self.asr[fl]) for fl in fluids},
         }
 
-        # Create per-fluid class instances
-        lft_cst = {key: _create_instance(*vals) for key, vals in mapping.items()}
+        # Construct tuples from the created instances
+        instances_as_tuple = {
+            "lifting": tuple([lft for lft in instances["lifting"].values()]),
+            "capital_cost": tuple([cap for cap in instances["capital"].values()]),
+            "intangible_cost": tuple([itg for itg in instances["intangible"].values()]),
+            "opex": tuple([op for op in instances["opex"].values()]),
+            "asr_cost": tuple([ar for ar in instances["asr"].values()]),
+        }
 
-        # Merge keyword arguments
+        # Merge keyword arguments to create an instance of contract
         kwargs_merged = {
-            **self.kwargs_contract,
-            **{key: tuple(val.values()) for key, val in lft_cst.items()}
+            **self.setup_arguments,     # setup arguments
+            **instances_as_tuple,       # lifting and costs arguments
+            **self.class_arguments,     # class's arguments
         }
 
-        # Return contract instance
-        if self.contract_type == ContractType.BASE_PROJECT:
-            return BaseProject(**kwargs_merged)
-
-        elif self.contract_type == ContractType.COST_RECOVERY:
+        # Create and return the appropriate contract instance
+        if self.contract_type == ContractType.COST_RECOVERY:
             return CostRecovery(**kwargs_merged)
-
         elif self.contract_type == ContractType.GROSS_SPLIT:
             return GrossSplit(**kwargs_merged)
-
+        elif self.contract_type == ContractType.BASE_PROJECT:
+            return BaseProject(**kwargs_merged)
         else:
             raise ValueError(f"Unrecognized contract type: {self.contract_type!r}")

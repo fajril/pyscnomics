@@ -24,10 +24,34 @@ from pyscnomics.dataset.case1 import Case1
 
 if __name__ == "__main__":
 
-    ctr = ContractType.GROSS_SPLIT
+    ctr = ContractType.BASE_PROJECT
 
     data = Case1(contract_type=ctr)
+
     t1 = data.as_dict()
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
+
+    print('\t')
+    print('=====================================================')
+
+    t2 = data.contract_arguments
+    print('\t')
+    print(f'Filetype: {type(t2)}')
+    print(f'Length: {len(t2)}')
+    print('t2 = \n', t2)
+
+    print('\t')
+    print('=====================================================')
+
+    t3 = data.summary_arguments
+    print('\t')
+    print(f'Filetype: {type(t3)}')
+    print(f'Length: {len(t3)}')
+    print('t3 = \n', t3)
+
 
     # cr, gs, bp = "cost_recovery", "gross_split", "base_project"
     #
@@ -40,17 +64,13 @@ if __name__ == "__main__":
     # # Generate synthetic data
     # contract_as_class = synthetic_data_class(contract)
     # contract_as_dict = synthetic_data_dict(contract)
-    #
-    # data = PrepareLiftingCostsAsClass()
-    #
-    # t1 = data.asr_cost
 
     # print('\t')
     # print(f'Filetype: {type()}')
     # print(f'Length: {len()}')
     # print()
 
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    # print('\t')
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
+    # print('t1 = \n', t1)
