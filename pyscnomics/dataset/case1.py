@@ -1,5 +1,5 @@
 """
-A collection of data for CASE 1
+CASE 1
 """
 
 import numpy as np
