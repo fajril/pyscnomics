@@ -43,6 +43,7 @@ webRouter = APIRouter(prefix='/web-api')
 
 log = logging.getLogger()
 
+
 def getLastTracebackLine(exc: Exception) -> str:
   try:
     base_path = os.getcwd()
@@ -52,6 +53,7 @@ def getLastTracebackLine(exc: Exception) -> str:
     return trace_str.replace(base_path, '')
   except Exception as e:
     return f"{exc}"  
+
 
 def print_traceback(exc: Exception, base_path: str = os.getcwd(), use_root_print: bool = False):
   tb_str = traceback.format_exc()
@@ -71,12 +73,14 @@ def print_traceback(exc: Exception, base_path: str = os.getcwd(), use_root_print
     print(f"\n[{user_id_ctx.get()}]")
     print(f"{type(exc).__name__}: {exc}")
 
+
 def makeHttpException(exc: Exception, status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR, base_path: str = os.getcwd(), use_root_print: bool = False):
   print_traceback(exc, base_path=base_path, use_root_print=use_root_print)
   raise HTTPException(
       status_code=status_code,
       detail=f"PyscErr: {getLastTracebackLine(exc)}"
   )
+
 
 @webRouter.put('/get_summary') 
 async def get_summary(request: Request, data: dict = Body(...)):
@@ -106,6 +110,7 @@ async def get_summary(request: Request, data: dict = Body(...)):
     except Exception as err:
       makeHttpException(err)
 
+
 @webRouter.put('/get_quick_info')
 async def get_quick_info(request: Request, data: dict = Body(...)):
     try:
@@ -122,6 +127,7 @@ async def get_quick_info(request: Request, data: dict = Body(...)):
         }
     except Exception as err:
       makeHttpException(err)
+
 
 @webRouter.put('/get_summary_cf') 
 async def get_summary_cf(request: Request, data: dict = Body(...)):
@@ -166,7 +172,8 @@ async def get_summary_card(request: Request, data: dict = Body(...)):
         }
     except Exception as err:
       makeHttpException(err)
-    
+
+
 @webRouter.put('/get_summary_card_sens') 
 async def get_summary_card_sens(request: Request, data: dict = Body(...)):
     try:
@@ -198,6 +205,7 @@ async def calc_sens(request: Request, data: dict = Body(...)):
         }
     except Exception as err:
       makeHttpException(err)
+
 
 @webRouter.put('/calc_optim') 
 async def calc_optim(request: Request, data: dict = Body(...)):
@@ -394,6 +402,7 @@ async def calc_optim(request: Request, data: dict = Body(...)):
     except Exception as err:
       makeHttpException(err)
 
+
 @webRouter.put('/calc_monte') 
 async def calc_monte(request: Request, data: dict = Body(...)):
     try:
@@ -407,6 +416,7 @@ async def calc_monte(request: Request, data: dict = Body(...)):
         }
     except Exception as err:
       makeHttpException(err)
+
 
 @webRouter.put('/get_compare') 
 async def get_compare(request: Request, data: dict = Body(...)):
@@ -432,6 +442,7 @@ async def get_compare(request: Request, data: dict = Body(...)):
         }
     except Exception as err:
       makeHttpException(err)
+
 
 @webRouter.put('/get_combine', response_class=JSONResponse) 
 async def get_combine(request: Request, data: dict = Body(...)):
@@ -485,6 +496,7 @@ async def get_combine(request: Request, data: dict = Body(...)):
     except Exception as err:
       makeHttpException(err)
 
+
 @webRouter.put('/get_increment') 
 async def get_increment(request: Request, data: dict = Body(...)):
     try:
@@ -533,6 +545,7 @@ async def get_increment(request: Request, data: dict = Body(...)):
         }
     except Exception as err:
       makeHttpException(err)
+
 
 @webRouter.put('/calc_rpd') 
 async def calc_rpd(request: Request, data: dict = Body(...)):
@@ -606,6 +619,7 @@ async def get_cf(request: Request, data: dict = Body(...)):
     except Exception as err:
       makeHttpException(err)
 
+
 @webRouter.put('/get_ecolimit') 
 async def get_ecolimit(request: Request, data: dict = Body(...)):
     try:
@@ -633,6 +647,7 @@ async def pick_case_psc(request: Request, case_ids: str, file: UploadFile = File
   except Exception as err:
     makeHttpException(err)
 
+
 @webRouter.put('/get_psc_case')
 async def get_psc_case(request: Request, file: UploadFile = File(...)):
     try:
@@ -645,6 +660,7 @@ async def get_psc_case(request: Request, file: UploadFile = File(...)):
     except Exception as err:
       makeHttpException(err)
 
+
 @webRouter.put('/uppack_psc')
 async def uppack_psc(request: Request, file: UploadFile = File(...)):
     try:
@@ -656,6 +672,7 @@ async def uppack_psc(request: Request, file: UploadFile = File(...)):
         }
     except Exception as err:
       makeHttpException(err)
+
 
 @webRouter.put('/unpack_allpsc')
 async def unpack_allpsc(request: Request, file: UploadFile = File(...)):
@@ -695,6 +712,7 @@ async def unpack_allpsc(request: Request, file: UploadFile = File(...)):
 
   except Exception as err:
     makeHttpException(err)
+
 
 @webRouter.put('/pack_psc')
 async def pack_psc(request: Request, data = Body(...)):
@@ -747,6 +765,7 @@ async def extract_psc(request: Request, file: UploadFile = File(...)):
     except Exception as err:
       makeHttpException(err)
 
+
 @webRouter.get('/get_logger', response_class=JSONResponse) 
 async def get_logger(request: Request):
     try:
@@ -791,6 +810,7 @@ async def get_logger(request: Request):
     except Exception as err:
       makeHttpException(err, use_root_print=True)
 
+
 @webRouter.put('/get_multiver_psc_case')
 async def get_multi_psc_case(request: Request, file: UploadFile = File(...)):
   try:
@@ -814,6 +834,7 @@ async def get_multi_psc_case(request: Request, file: UploadFile = File(...)):
     }
   except Exception as err:
     makeHttpException(err)
+
 
 @webRouter.put('/get_multiver_psc_datacase')
 async def get_multiver_psc_datacase(request: Request, case_ids: str, file: UploadFile = File(...)):

@@ -19,6 +19,8 @@ from pyscnomics.optimize.optimization import (
     optimize_psc_core,
     optimize_psc,
 )
+
+from pyscnomics.dataset.case0 import Case0
 from pyscnomics.dataset.case1 import Case1
 
 
@@ -26,32 +28,16 @@ if __name__ == "__main__":
 
     ctr = ContractType.BASE_PROJECT
 
-    data = Case1(contract_type=ctr)
-
-    t1 = data.as_dict()
+    data = Case0(contract_type=ctr)
+    t1 = data.opex
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')
+    print(f'Keys: {t1.keys()}')
     print('t1 = \n', t1)
 
     print('\t')
     print('=====================================================')
-
-    t2 = data.contract_arguments
-    print('\t')
-    print(f'Filetype: {type(t2)}')
-    print(f'Length: {len(t2)}')
-    print('t2 = \n', t2)
-
-    print('\t')
-    print('=====================================================')
-
-    t3 = data.summary_arguments
-    print('\t')
-    print(f'Filetype: {type(t3)}')
-    print(f'Length: {len(t3)}')
-    print('t3 = \n', t3)
-
 
     # cr, gs, bp = "cost_recovery", "gross_split", "base_project"
     #

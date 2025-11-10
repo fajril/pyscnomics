@@ -488,7 +488,6 @@ class Summary:
 
         return values[indices]
 
-
     def _parse_dict(self, source):
         for idx, cntrct in source.items():
             for key in cntrct:
@@ -530,15 +529,15 @@ class Summary:
         return merged
 
     def _parsing_attributes(
-            self,
-            lifting: dict,
-            revenue: dict,
-            cost_expenditure_pretax: dict,
-            cost_indirect_tax: dict,
-            cost_expenditure_posttax: dict,
-            cost_contract: dict,
-            psc_terms: dict,
-            cr_terms: dict,
+        self,
+        lifting: dict,
+        revenue: dict,
+        cost_expenditure_pretax: dict,
+        cost_indirect_tax: dict,
+        cost_expenditure_posttax: dict,
+        cost_contract: dict,
+        psc_terms: dict,
+        cr_terms: dict,
     ):
         # Lifting Attributes
         self.oil_lifting = lifting['oil_lifting']

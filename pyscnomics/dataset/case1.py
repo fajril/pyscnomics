@@ -47,15 +47,22 @@ from pyscnomics.io.getattr import (
 @dataclass
 class Case1:
     """
-    Example case 1
-    ---------------
-    A dataclass which stores data representing a case study for economic
-    PSC evaluation.
+    Dataclass representing a PSC economic evaluation case.
+
+    This class stores essential data components for Production Sharing Contract (PSC)
+    economic evaluation, including lifting profiles, costs, and configuration parameters.
+    It automatically initializes its dependent attributes upon instantiation.
 
     Parameters
     ----------
-    contract_type: ContractType
-        Type of contract. Selection: BaseProject, CostRecovery, or GrossSplit.
+    contract_type : ContractType
+        Type of contract to evaluate. Options include BaseProject, CostRecovery,
+        or GrossSplit.
+
+    Notes
+    -----
+    The class automatically initializes its attributes (e.g., lifting, capital,
+    intangible, opex, and ASR) through internal setup methods executed in `__post_init__`.
     """
 
     contract_type: ContractType
@@ -76,14 +83,16 @@ class Case1:
 
     def __post_init__(self):
         """
-        Handles the following operations:
-            -   Prepare lifting data
-            -   Prepare capital data
-            -   Prepare intangible data
-            -   Prepare opex data
-            -   Prepare asr data
-            -   Prepare lbt data
-            -   Prepare cost of sales data
+        Initialize dependent attributes after dataclass instantiation.
+
+        This method is automatically executed after the dataclass fields are initialized.
+        It populates key attributes related to lifting, costs, and configuration by
+        invoking the corresponding setup methods.
+
+        Notes
+        -----
+        The method ensures that the class instance is fully initialized with all
+        required data structures before further operations.
         """
 
         self.get_lifting()
