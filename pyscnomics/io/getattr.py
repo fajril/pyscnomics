@@ -922,7 +922,8 @@ def convert_object(objects):
 
     # Object is date
     if isinstance(objects, date):
-        return objects.strftime('%Y-%m-%d')
+        return objects.strftime("%d/%m/%Y")
+        # return objects.strftime('%Y-%m-%d')
 
     # Object is numpy.ndarray
     elif isinstance(objects, np.ndarray):

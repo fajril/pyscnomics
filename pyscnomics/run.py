@@ -19,6 +19,11 @@ from pyscnomics.optimize.optimization import (
     optimize_psc_core,
     optimize_psc,
 )
+from pyscnomics.api.adapter import (
+    get_costrecovery,
+    get_grosssplit,
+    get_baseproject,
+)
 
 from pyscnomics.dataset.case0 import Case0
 from pyscnomics.dataset.case1 import Case1
@@ -27,17 +32,29 @@ from pyscnomics.dataset.case1 import Case1
 if __name__ == "__main__":
 
     ctr = ContractType.BASE_PROJECT
-
     data = Case0(contract_type=ctr)
-    t1 = data.opex
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print(f'Keys: {t1.keys()}')
-    print('t1 = \n', t1)
+
+    # Run case as class's instance
+    contract = data.as_class()
+    contract_arguments = data.contract_arguments
+    summary_arguments = data.summary_arguments
+
+    contract.run(**contract_arguments)
+    results = contract.get_summary(**summary_arguments)
 
     print('\t')
-    print('=====================================================')
+    print(f'Filetype: {type(results)}')
+    print(f'Length: {len(results)}')
+    print('results = \n', results)
+
+    # Run case as dictionary
+    # mapping_run_dict = {
+    #     ContractType.COST_RECOVERY: get_costrecovery,
+    #     ContractType.GROSS_SPLIT: get_grosssplit,
+    #     ContractType.BASE_PROJECT: get_baseproject,
+    # }
+    #
+    # run_as_dict = mapping_run_dict[ctr](data=data)
 
     # cr, gs, bp = "cost_recovery", "gross_split", "base_project"
     #
