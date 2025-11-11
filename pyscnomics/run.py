@@ -2,12 +2,6 @@
 Execute calculations
 """
 
-from pyscnomics.poolData import (
-    get_contract_arguments_class,
-    get_summary_arguments_class,
-    synthetic_data_dict,
-    optimization_arguments_dict,
-)
 from pyscnomics.econ.selection import (
     OptimizationParameter,
     OptimizationTarget,
