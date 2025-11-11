@@ -29,44 +29,88 @@ from pyscnomics.dataset.case0 import Case0
 from pyscnomics.dataset.case1 import Case1
 
 
+def execute_contract(cls, contract_type, run_as_dict):
+    """
+    Execute a contract simulation either as a dictionary or as a class instance.
+
+    Parameters
+    ----------
+    cls : type
+        The class constructor used to initialize the contract object.
+    contract_type : ContractType
+        Type of the contract to execute, e.g., COST_RECOVERY, GROSS_SPLIT, or BASE_PROJECT.
+    run_as_dict : bool
+        If True, execute the contract using dictionary-based inputs;
+        otherwise, execute using the class instance.
+
+    Returns
+    -------
+    dict
+        Summary results of the contract execution, including key performance indicators.
+
+    Raises
+    ------
+    ValueError
+        If an invalid contract type is provided.
+    """
+
+    data = cls(contract_type)
+
+    # Run contract as dictionary
+    if run_as_dict:
+        # Prepare contract, contract_arguments, and summary_arguments
+        contract = data.as_dict()
+        contract_arguments = data.contract_arguments
+        summary_arguments = data.summary_arguments
+
+        # Execute the contract and return the results in terms of summary
+        if contract_type == ContractType.COST_RECOVERY:
+            return get_costrecovery(data=contract, summary_result=True)[0]
+
+        elif contract_type == ContractType.GROSS_SPLIT:
+            return get_grosssplit(data=contract, summary_result=True)[0]
+
+        elif contract_type == ContractType.BASE_PROJECT:
+            return get_baseproject(data=contract, summary_result=True)[0]
+
+        else:
+            raise ValueError(f"Invalid contract type: {contract_type!r}")
+
+    # Run contract as instance
+    else:
+        # Prepare contract, contract_arguments, and summary_arguments
+        contract = data.as_class()
+        contract_arguments = data.contract_arguments
+        summary_arguments = data.summary_arguments
+
+        # Run the contract
+        contract.run(**contract_arguments)
+
+        # Return the results in terms of summary
+        return contract.get_summary(**summary_arguments)
+
+
 if __name__ == "__main__":
 
-    ctr = ContractType.BASE_PROJECT
-    data = Case0(contract_type=ctr)
+    kwargs_execute = {
+        "cls": Case0,
+        "contract_type": ContractType.GROSS_SPLIT,
+        "run_as_dict": True,
+    }
 
-    # Run case as class's instance
-    contract = data.as_class()
-    contract_arguments = data.contract_arguments
-    summary_arguments = data.summary_arguments
-
-    contract.run(**contract_arguments)
-    results = contract.get_summary(**summary_arguments)
-
+    t1 = execute_contract(**kwargs_execute)
     print('\t')
-    print(f'Filetype: {type(results)}')
-    print(f'Length: {len(results)}')
-    print('results = \n', results)
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
 
-    # Run case as dictionary
-    # mapping_run_dict = {
-    #     ContractType.COST_RECOVERY: get_costrecovery,
-    #     ContractType.GROSS_SPLIT: get_grosssplit,
-    #     ContractType.BASE_PROJECT: get_baseproject,
-    # }
+    # # Run case as class's instance
+    # contract = data.as_class()
+    # contract_arguments = data.contract_arguments
+    # summary_arguments = data.summary_arguments
     #
-    # run_as_dict = mapping_run_dict[ctr](data=data)
-
-    # cr, gs, bp = "cost_recovery", "gross_split", "base_project"
-    #
-    # Specify contract type
-    # contract = bp
-    # contract_arguments = get_contract_arguments_class(contract)
-    # summary_arguments = get_summary_arguments_class()
-    # # optimization_arguments = optimization_arguments_dict()
-    #
-    # # Generate synthetic data
-    # contract_as_class = synthetic_data_class(contract)
-    # contract_as_dict = synthetic_data_dict(contract)
+    # contract.run(**contract_arguments)
+    # results = contract.get_summary(**summary_arguments)
 
     # print('\t')
     # print(f'Filetype: {type()}')

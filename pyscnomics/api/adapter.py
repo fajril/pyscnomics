@@ -349,7 +349,7 @@ def build_baseproject_arguments(data: dict) -> dict:
         "co2_revenue": f_rev(str_object=ca["co2_revenue"]),
 
         # VAT and inflation
-        "tax_rate": f_rate(data_input=ca["vat_rate"]),
+        "vat_rate": f_rate(data_input=ca["vat_rate"]),
         "inflation_rate": f_rate(data_input=ca["inflation_rate"]),
         "inflation_rate_applied_to": f_infl(str_object=ca["inflation_rate_applied_to"]),
     }
