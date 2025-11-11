@@ -4066,7 +4066,7 @@ class BaseProject:
         sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
         electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
         co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
-        tax_rate: np.ndarray | float = 0.0,
+        vat_rate: np.ndarray | float = 0.0,
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo = None,
@@ -4087,7 +4087,7 @@ class BaseProject:
             How electricity revenue is allocated.
         co2_revenue : OtherRevenue, default=OtherRevenue.ADDITION_TO_GAS_REVENUE
             How CO₂ revenue is allocated.
-        tax_rate : np.ndarray or float, default=0.0
+        vat_rate : np.ndarray or float, default=0.0
             Indirect tax rate(s) applied to applicable expenditures.
         year_inflation : np.ndarray, optional
             Array specifying the inflation year for each time step.
@@ -4111,7 +4111,7 @@ class BaseProject:
         )
 
         # Calculate indirect taxes
-        self._get_indirect_taxes(tax_rate=tax_rate)
+        self._get_indirect_taxes(tax_rate=vat_rate)
 
         # Calculate post tax expenditures
         self._get_expenditures_post_tax()

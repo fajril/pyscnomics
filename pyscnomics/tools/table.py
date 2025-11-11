@@ -84,6 +84,7 @@ def get_table(
         psc_table_oil['Total_Indirect_Tax'] = contract._oil_total_indirect_tax
         # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
 
+
         psc_table_gas = pd.DataFrame()
         psc_table_gas['Year'] = contract.project_years
         psc_table_gas['Lifting'] = contract._gas_lifting.get_lifting_rate_ghv_arr()
@@ -136,6 +137,7 @@ def get_table(
         psc_table_gas['CostOfSales_Indirect_Tax'] = contract._gas_cost_of_sales_indirect_tax
         psc_table_gas['Total_Indirect_Tax'] = contract._gas_total_indirect_tax
         # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
+
 
         psc_table_consolidated = pd.DataFrame()
         psc_table_consolidated['Year'] = contract.project_years

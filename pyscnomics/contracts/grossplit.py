@@ -223,7 +223,7 @@ class GrossSplit(BaseProject):
     gas_carry_forward_depreciation: int | float | np.ndarray = field(default=0.0)
 
     # Attribute associated with unit conversion
-    conversion_boe_to_scf: float = field(default=5.8, init=False, repr=False)
+    conversion_boe_to_scf: float = field(default=5.615, init=False, repr=False)
 
     # Attributes associated with carry forward depreciation
     _oil_carry_forward_depreciation: np.ndarray = field(default=None, init=False, repr=False)
@@ -3174,14 +3174,13 @@ class GrossSplit(BaseProject):
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
         sum_undepreciated_cost: bool = False,
-        is_dmo_end_weighted=False,
+        is_dmo_end_weighted: bool = False,
         tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
         effective_tax_rate: float | np.ndarray = 0.22,
         amortization: bool = False,
-
         sunk_cost_method: SunkCostMethod = SunkCostMethod.DEPRECIATED_TANGIBLE,
-        regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_13_2024,
 
+        regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_13_2024,
         reservoir_type_permen_2024: VariableSplit132024.ReservoirType = (
             VariableSplit132024.ReservoirType.MK
         ),
@@ -3409,7 +3408,7 @@ class GrossSplit(BaseProject):
         # cumulative production used for progressive cumulative production split is defined as
         # the sum of production rate and production baseline.
         prod_gas_boe = (
-            self._gas_lifting.get_prod_rate_total_arr() / self.conversion_boe_to_scf
+            self._gas_lifting.get_prod_rate_total_arr() * 1_000. / self.conversion_boe_to_scf
         )
 
         # Check if the cumulative production split offset length is the same
@@ -3445,7 +3444,6 @@ class GrossSplit(BaseProject):
             isinstance(cum_production_split_offset, np.ndarray)
             and len(cum_production_split_offset) > 1
         ):
-
             # Define attributes "_oil_prog_price_split", "_oil_prog_cum_split",
             # "_oil_prog_split"
             (
@@ -3476,7 +3474,6 @@ class GrossSplit(BaseProject):
 
         # Condition when the cum_production_split_offset is not filled
         else:
-
             # Define attributes "_oil_prog_price_split", "_oil_prog_cum_split",
             # "_oil_prog_split"
             (
