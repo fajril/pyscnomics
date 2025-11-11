@@ -60,8 +60,8 @@ def execute_contract(cls, contract_type, run_as_dict):
     if run_as_dict:
         # Prepare contract, contract_arguments, and summary_arguments
         contract = data.as_dict()
-        contract_arguments = data.contract_arguments
-        summary_arguments = data.summary_arguments
+        # contract_arguments = data.contract_arguments
+        # summary_arguments = data.summary_arguments
 
         # Execute the contract and return the results in terms of summary
         if contract_type == ContractType.COST_RECOVERY:
@@ -93,8 +93,8 @@ def execute_contract(cls, contract_type, run_as_dict):
 if __name__ == "__main__":
 
     kwargs_execute = {
-        "cls": Case0,
-        "contract_type": ContractType.GROSS_SPLIT,
+        "cls": Case1,
+        "contract_type": ContractType.COST_RECOVERY,
         "run_as_dict": True,
     }
 

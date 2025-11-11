@@ -76,6 +76,7 @@ class Case1:
     opex: dict = field(default_factory=lambda: {}, init=False, repr=False)
     asr: dict = field(default_factory=lambda: {}, init=False, repr=False)
 
+    # Attributes associated with arguments
     setup_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
     class_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
     contract_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
@@ -83,16 +84,17 @@ class Case1:
 
     def __post_init__(self):
         """
-        Initialize dependent attributes after dataclass instantiation.
+        Initialize all contract components after object creation.
 
-        This method is automatically executed after the dataclass fields are initialized.
-        It populates key attributes related to lifting, costs, and configuration by
-        invoking the corresponding setup methods.
+        This method automatically populates key contract attributes such as
+        lifting, capital, operating costs, fiscal terms, and summary parameters
+        immediately after class instantiation.
 
         Notes
         -----
-        The method ensures that the class instance is fully initialized with all
-        required data structures before further operations.
+        - Ensures all essential arguments and cost components are initialized.
+        - Designed to maintain object consistency without requiring manual setup calls.
+        - Typically executed automatically after dataclass initialization.
         """
 
         self.get_lifting()
@@ -107,10 +109,12 @@ class Case1:
 
     def get_lifting(self) -> None:
         """
-        Initialize and assign lifting data for oil and gas.
+        Initialize and store lifting data for each fluid type.
 
-        Creates raw lifting data dictionaries for each fluid type and
-        stores them in `self.lifting`.
+        This method prepares sample lifting datasets for oil and gas,
+        including production years, lifting rates, and prices.
+
+        The resulting data are stored in the class attribute `self.lifting`.
 
         Returns
         -------
@@ -176,7 +180,7 @@ class Case1:
             "fluid_type": FluidType.GAS,
         }
 
-        # Store lifting as the class's attribute: "lifting"
+        # Store lifting data as the class's attribute: "self.lifting"
         self.lifting = {
             "oil": lifting_oil,
             "gas": lifting_gas,
@@ -184,10 +188,11 @@ class Case1:
 
     def get_capital(self) -> None:
         """
-        Initialize and assign capital cost data for oil and gas.
+        Initialize and store capital cost data for oil and gas.
 
-        Creates raw capital cost dictionaries for each fluid type and
-        stores them in `self.capital`.
+        This method defines yearly capital expenditures for oil and gas,
+        including expense years, cost values, allocation, cost types, and
+        tax portions, then stores them in the `self.capital` attribute.
 
         Returns
         -------
@@ -310,10 +315,11 @@ class Case1:
 
     def get_intangible(self) -> None:
         """
-        Initialize and assign intangible cost data for oil and gas.
+        Initialize and store intangible cost data for oil and gas.
 
-        Creates raw intangible cost dictionaries for each fluid type and
-        stores them in `self.intangible`.
+        This method defines yearly intangible expenditures for oil and gas,
+        including expense years, cost values, allocation, cost types, and
+        tax portions, then stores them in the `self.intangible` attribute.
 
         Returns
         -------
@@ -405,10 +411,11 @@ class Case1:
 
     def get_opex(self) -> None:
         """
-        Initialize and assign OPEX data for oil and gas.
+        Initialize and store operating expenditure (OPEX) data for oil and gas.
 
-        Creates raw operating expenditure dictionaries for each fluid type and
-        stores them in `self.opex`.
+        Defines yearly OPEX information such as expense years, fixed costs,
+        allocation, cost type, and tax portion for both oil and gas, then
+        stores them in the `self.opex` attribute.
 
         Returns
         -------
@@ -504,10 +511,12 @@ class Case1:
 
     def get_asr(self) -> None:
         """
-        Initialize and assign ASR cost data for oil and gas.
+        Initialize and store Abandonment and Site Restoration (ASR) cost data
+        for oil and gas.
 
-        Creates raw Abandonment and Site Restoration (ASR) cost dictionaries
-        for each fluid type and stores them in `self.asr`.
+        Defines yearly ASR information such as expense years, cost values,
+        cost allocation, cost type, and tax portion for both oil and gas,
+        then stores them in the `self.asr` attribute.
 
         Returns
         -------
@@ -608,20 +617,22 @@ class Case1:
             "gas": gas_asr,
         }
 
-    def get_setup_arguments(self) -> dict:
+    def get_setup_arguments(self) -> None:
         """
-        Define and return setup-related project arguments.
+        Initialize and store general project setup parameters.
 
-        Initializes key project setup parameters such as start and end dates,
-        onstream dates, approval year, and POD status.
+        Defines key timeline attributes such as start/end dates, onstream dates,
+        approval year, and POD status, and assigns them to `self.setup_arguments`.
 
         Returns
         -------
-        dict
-            Dictionary containing project setup parameters including
-            start/end dates, onstream dates, approval year, and POD flag.
-        """
+        None
 
+        Notes
+        -----
+        The setup arguments are used as baseline project parameters and may be
+        referenced by other methods for scheduling and economic calculations.
+        """
         self.setup_arguments = {
             "start_date": date(year=2023, month=1, day=1),
             "end_date": date(year=2037, month=12, day=31),
@@ -631,19 +642,18 @@ class Case1:
             "is_pod_1": False,
         }
 
-    def get_class_arguments(self) -> dict:
+    def get_class_arguments(self) -> None:
         """
-        Define and assign keyword arguments specific to the contract type.
+        Initialize and assign contract-specific keyword arguments.
 
-        Builds predefined argument dictionaries for Base Project, Cost Recovery,
-        and Gross Split contracts. Includes parameters governing FTP, DMO,
-        tax splits, investment credits, depreciation, and variable split factors.
+        Defines predefined argument sets for Base Project, Cost Recovery, and
+        Gross Split contracts, including fiscal terms, DMO, FTP, taxation,
+        investment credits, and depreciation parameters. The selected arguments
+        are stored in `self.class_arguments`.
 
         Returns
         -------
-        dict
-            Contract-specific keyword argument dictionary used for initializing
-            the corresponding contract class.
+        None
 
         Raises
         ------
@@ -652,10 +662,10 @@ class Case1:
 
         Notes
         -----
-        The selected argument set depends on ``self.contract_type``.
-        - Cost Recovery contracts include fiscal and FTP configurations.
-        - Gross Split contracts include field, reservoir, and variable split parameters.
-        - Base Project contracts are initialized with minimal or default arguments.
+        The argument set depends on ``self.contract_type``:
+        - **Base Project**: Uses minimal or default parameters.
+        - **Cost Recovery**: Includes FTP, DMO, fiscal, and tax configurations.
+        - **Gross Split**: Includes reservoir, field, and variable split parameters.
         """
 
         # Cost recovery
@@ -744,22 +754,30 @@ class Case1:
         except KeyError:
             raise ValueError(f"Unrecognized contract type: {self.contract_type!r}")
 
-    def get_contract_arguments(self) -> dict:
+    def get_contract_arguments(self) -> None:
         """
-        Build and assign contract arguments based on the contract type.
+        Initialize and assign contract-level arguments.
 
-        Constructs predefined argument sets for Base Project, Cost Recovery,
-        and Gross Split contracts covering fiscal, depreciation, and revenue settings.
+        Defines predefined argument sets for Base Project, Cost Recovery,
+        and Gross Split contracts, including fiscal terms, depreciation,
+        tax regime, and revenue configurations. The selected arguments are
+        stored in `self.contract_arguments`.
 
         Returns
         -------
-        dict
-            Argument dictionary for the current contract type.
+        None
 
         Raises
         ------
         ValueError
-            If the contract type is not recognized.
+            If the specified contract type is not recognized.
+
+        Notes
+        -----
+        The argument set depends on ``self.contract_type``:
+        - **Base Project**: Includes core parameters and basic revenue setup.
+        - **Cost Recovery**: Adds tax regime, depreciation, and FTP parameters.
+        - **Gross Split**: Adds fiscal regime, split configuration, and amortization terms.
         """
 
         # Base project
@@ -767,7 +785,7 @@ class Case1:
             "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
             "electricity_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
             "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            "tax_rate": 0.0,
+            "vat_rate": 0.0,
             "year_inflation": None,
             "inflation_rate": 0.0,
             "inflation_rate_applied_to": None,
@@ -819,19 +837,18 @@ class Case1:
         except KeyError:
             raise ValueError(f"Unrecognized contract type: {self.contract_type!r}")
 
-    def get_summary_arguments(self) -> dict:
+    def get_summary_arguments(self) -> None:
         """
-        Define and assign project summary arguments.
+        Initialize and assign project summary parameters.
 
-        Sets key economic parameters for NPV and profitability evaluation,
-        including discount rate, inflation, and discounting mode.
+        Defines key economic parameters for NPV and profitability evaluation,
+        including discount rate, inflation, and discounting mode. The parameters
+        are stored in `self.summary_arguments`.
 
         Returns
         -------
-        dict
-            Dictionary containing summary argument values.
+        None
         """
-
         self.summary_arguments = {
             "discount_rate": 0.1,
             "npv_mode": NPVSelection.NPV_SKK_NOMINAL_TERMS,
@@ -843,80 +860,89 @@ class Case1:
 
     def as_dict(self) -> dict:
         """
-        Convert all contract-related attributes into a structured dictionary.
+        Convert all contract-related data into a structured dictionary.
 
-        The method converts setup, summary, contract, and class arguments, as well as
-        cost and lifting data, into serializable dictionary forms. Each component is
-        processed through helper converters and class constructors depending on the
-        contract type.
+        Aggregates setup, summary, contract, and class arguments, along with
+        cost and lifting components, into a unified, serializable dictionary.
+        Data are processed through helper converters and constructors
+        depending on the contract type.
 
         Returns
         -------
         dict
-            A dictionary containing all converted and structured contract data,
-            including setup, summary, contract arguments, cost components,
-            and lifting information.
+            Structured dictionary containing setup, summary, contract arguments,
+            class-specific parameters, lifting data, and cost components.
+
+        Notes
+        -----
+        - Conversion logic depends on ``self.contract_type``.
+        - Cost and lifting data are instantiated from their respective classes
+          before conversion.
+        - The resulting dictionary is serialization-ready for further processing
+          or export.
         """
 
+        # Helper function to convert data stored in an argument dictionary
         def _converter(source: dict):
             return {key: convert_object(objects=val) for key, val in source.items()}
 
-        def _construct_cost_attributes(source: dict, Cls):
-            items = tuple([Cls(**val) for val in source.values()])
-            return construct_cost_attr(cost=items)
-
-        # Convert "setup_arguments", "summary_arguments", and "contract_arguments"
+        # Convert data in "setup_arguments", "summary_arguments", and "contract_arguments"
         setup = _converter(source=self.setup_arguments)
         summary_arguments = _converter(source=self.summary_arguments)
         contract_arguments = _converter(source=self.contract_arguments)
 
-        # Convert "class_arguments"
-        converter_class_args = _converter(source=self.class_arguments)
-        grosssplit = (
-            converter_class_args
+        # Convert data in "class_arguments"
+        gs = (
+            _converter(source=self.class_arguments)
             if self.contract_type == ContractType.GROSS_SPLIT
             else None
         )
-        cost_recovery = (
-            converter_class_args
+
+        cr = (
+            _converter(source=self.class_arguments)
             if self.contract_type == ContractType.COST_RECOVERY
             else None
         )
 
-        # Convert "lifting"
+        # Convert data in "lifting"
         lifting = construct_lifting_attr(
             lifting=tuple([Lifting(**lft) for lft in self.lifting.values()])
         )
 
-        # Convert "capital", "intangible", "opex", "asr"
-        capital = _construct_cost_attributes(self.capital, CapitalCost)
-        intangible = _construct_cost_attributes(self.intangible, Intangible)
-        opex = _construct_cost_attributes(self.opex, OPEX)
-        asr = _construct_cost_attributes(self.asr, ASR)
+        # Convert data in "capital", "intangible", "opex", and "asr"
+        # Helper method to convert data associated with costs
+        def _construct_cost_attributes(source: dict, Cls):
+            items = tuple([Cls(**val) for val in source.values()])
+            return construct_cost_attr(cost=items)
+
+        cap = _construct_cost_attributes(source=self.capital, Cls=CapitalCost)
+        itg = _construct_cost_attributes(source=self.intangible, Cls=Intangible)
+        op = _construct_cost_attributes(source=self.opex, Cls=OPEX)
+        asr = _construct_cost_attributes(source=self.asr, Cls=ASR)
 
         # Mapping converted data
-        mapping_data = (
+        mapping_converted_data = (
             ("setup", setup),
             ("summary_arguments", summary_arguments),
             ("contract_arguments", contract_arguments),
-            ("grosssplit", grosssplit),
-            ("cost_recovery", cost_recovery),
+            ("grosssplit", gs),
+            ("costrecovery", cr),
             ("lifting", lifting),
-            ("capital", capital),
-            ("intangible", intangible),
-            ("opex", opex),
+            ("capital", cap),
+            ("intangible", itg),
+            ("opex", op),
             ("asr", asr),
         )
 
-        return {key: val for key, val in mapping_data}
+        return {key: val for key, val in mapping_converted_data}
 
     def as_class(self) -> CostRecovery | GrossSplit | BaseProject:
         """
-        Convert stored attributes into a contract class instance.
+        Convert stored data into a contract class instance.
 
-        Creates per-fluid instances of lifting and cost components, merges them
-        with setup and contract-specific arguments, and returns the corresponding
-        contract object (BaseProject, CostRecovery, or GrossSplit).
+        Combines setup, class arguments, and per-fluid lifting and cost
+        components to instantiate the appropriate contract class
+        (BaseProject, CostRecovery, or GrossSplit).
 
         Returns
         -------
@@ -927,26 +953,32 @@ class Case1:
         ------
         ValueError
             If the specified contract type is not recognized.
+
+        Notes
+        -----
+        - Cost and lifting data are instantiated per fluid (oil and gas).
+        - The created instance reflects the structure defined by
+          ``self.contract_type``.
         """
 
         fluids = ["oil", "gas"]
 
         # Create per fluid instances for lifting and each cost category
         instances = {
-            "lifting": {fl: Lifting(**self.lifting[fl]) for fl in fluids},
-            "capital": {fl: CapitalCost(**self.capital[fl]) for fl in fluids},
-            "intangible": {fl: Intangible(**self.intangible[fl]) for fl in fluids},
-            "opex": {fl: OPEX(**self.opex[fl]) for fl in fluids},
-            "asr": {fl: ASR(**self.asr[fl]) for fl in fluids},
+            "lifting": {f: Lifting(**self.lifting[f]) for f in fluids},
+            "capital": {f: CapitalCost(**self.capital[f]) for f in fluids},
+            "intangible": {f: Intangible(**self.intangible[f]) for f in fluids},
+            "opex": {f: OPEX(**self.opex[f]) for f in fluids},
+            "asr": {f: ASR(**self.asr[f]) for f in fluids},
         }
 
         # Construct tuples from the created instances
         instances_as_tuple = {
-            "lifting": tuple([lft for lft in instances["lifting"].values()]),
-            "capital_cost": tuple([cap for cap in instances["capital"].values()]),
-            "intangible_cost": tuple([itg for itg in instances["intangible"].values()]),
-            "opex": tuple([op for op in instances["opex"].values()]),
-            "asr_cost": tuple([ar for ar in instances["asr"].values()]),
+            "lifting": tuple(instances["lifting"].values()),
+            "capital_cost": tuple(instances["capital"].values()),
+            "intangible_cost": tuple(instances["intangible"].values()),
+            "opex": tuple(instances["opex"].values()),
+            "asr_cost": tuple(instances["asr"].values()),
         }
 
         # Merge keyword arguments to create an instance of contract
