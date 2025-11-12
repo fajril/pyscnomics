@@ -18,7 +18,7 @@ from pyscnomics.api.adapter import (
     get_grosssplit,
     get_baseproject,
 )
-
+from pyscnomics.tools.table_new import get_table
 from pyscnomics.dataset.case0 import Case0
 from pyscnomics.dataset.case1 import Case1
 
@@ -57,15 +57,18 @@ def execute_contract(cls, contract_type, run_as_dict):
         # contract_arguments = data.contract_arguments
         # summary_arguments = data.summary_arguments
 
-        # Execute the contract and return the results in terms of summary
+        # Execute the contract and return the results in terms of a dictionary
         if contract_type == ContractType.COST_RECOVERY:
-            return get_costrecovery(data=contract, summary_result=True)[0]
+            cr = get_costrecovery(data=contract, summary_result=True)
+            return {"contract": cr[1], "summary": cr[0]}
 
         elif contract_type == ContractType.GROSS_SPLIT:
-            return get_grosssplit(data=contract, summary_result=True)[0]
+            gs = get_grosssplit(data=contract, summary_result=True)
+            return {"contract": gs[1], "summary": gs[0]}
 
         elif contract_type == ContractType.BASE_PROJECT:
-            return get_baseproject(data=contract, summary_result=True)[0]
+            bp = get_baseproject(data=contract, summary_result=True)
+            return {"contract": bp[1], "summary": bp[0]}
 
         else:
             raise ValueError(f"Invalid contract type: {contract_type!r}")
@@ -81,22 +84,27 @@ def execute_contract(cls, contract_type, run_as_dict):
         contract.run(**contract_arguments)
 
         # Return the results in terms of summary
-        return contract.get_summary(**summary_arguments)
+        return {
+            "contract": contract,
+            "summary": contract.get_summary(**summary_arguments)
+        }
 
 
 if __name__ == "__main__":
 
+    # Specify arguments to run "execute_contract()"
     kwargs_execute = {
-        "cls": Case1,
-        "contract_type": ContractType.COST_RECOVERY,
-        "run_as_dict": True,
+        "cls": Case0,
+        "contract_type": ContractType.BASE_PROJECT,
+        "run_as_dict": False,
     }
 
-    t1 = execute_contract(**kwargs_execute)
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    # Results in terms of "contract" and "summary"
+    ctr = execute_contract(**kwargs_execute)
+    contract = ctr["contract"]
+    summary = ctr["summary"]
+
+    get_table(contract=contract)
 
     # # Run case as class's instance
     # contract = data.as_class()

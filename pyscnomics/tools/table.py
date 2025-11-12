@@ -1033,8 +1033,8 @@ def get_table(
         psc_table_oil['Opex'] = contract._oil_opex_expenditures_post_tax
         psc_table_oil['ASR'] = contract._oil_asr_expenditures_post_tax
         psc_table_oil['LBT'] = contract._oil_lbt_expenditures_post_tax
-        psc_table_oil['Cashflow'] = contract._oil_cashflow
 
+        psc_table_oil['Cashflow'] = contract._oil_cashflow
         psc_table_oil['Capital_Expenditures_Pre_Tax'] = contract._oil_capital_expenditures_pre_tax
         psc_table_oil['Intangible_Expenditures_Pre_Tax'] = contract._oil_intangible_expenditures_pre_tax
         psc_table_oil['Opex_Expenditures_Pre_Tax'] = contract._oil_opex_expenditures_pre_tax
@@ -1050,6 +1050,7 @@ def get_table(
         psc_table_oil['CostOfSales_Indirect_Tax'] = contract._oil_cost_of_sales_indirect_tax
         psc_table_oil['Total_Indirect_Tax'] = contract._oil_total_indirect_tax
 
+
         psc_table_gas = pd.DataFrame()
         psc_table_gas['Years'] = contract.project_years
         psc_table_gas['Lifting'] = contract._gas_lifting.get_lifting_rate_ghv_arr()
@@ -1061,7 +1062,6 @@ def get_table(
         psc_table_gas['ASR'] = contract._gas_asr_expenditures_post_tax
         psc_table_gas['LBT'] = contract._gas_lbt_expenditures_post_tax
         psc_table_gas['Cashflow'] = contract._gas_cashflow
-
         psc_table_gas['Capital_Expenditures_Pre_Tax'] = contract._gas_capital_expenditures_pre_tax
         psc_table_gas['Intangible_Expenditures_Pre_Tax'] = contract._gas_intangible_expenditures_pre_tax
         psc_table_gas['Opex_Expenditures_Pre_Tax'] = contract._gas_opex_expenditures_pre_tax
@@ -1076,6 +1076,7 @@ def get_table(
         psc_table_gas['LBT_Indirect_Tax'] = contract._gas_lbt_indirect_tax
         psc_table_gas['CostOfSales_Indirect_Tax'] = contract._gas_cost_of_sales_indirect_tax
         psc_table_gas['Total_Indirect_Tax'] = contract._gas_total_indirect_tax
+
 
         psc_table_consolidated = pd.DataFrame()
         psc_table_consolidated['Years'] = contract.project_years
@@ -1095,7 +1096,6 @@ def get_table(
                                          contract._gas_asr_expenditures_post_tax)
         psc_table_consolidated['Cashflow'] = (contract._oil_cashflow +
                                               contract._gas_cashflow)
-
         psc_table_consolidated['Capital_Expenditures_Pre_Tax'] = contract._oil_capital_expenditures_pre_tax + contract._gas_capital_expenditures_pre_tax
         psc_table_consolidated['Intangible_Expenditures_Pre_Tax'] = contract._oil_intangible_expenditures_pre_tax + contract._gas_intangible_expenditures_pre_tax
         psc_table_consolidated['Opex_Expenditures_Pre_Tax'] = contract._oil_opex_expenditures_pre_tax + contract._gas_opex_expenditures_pre_tax
@@ -1110,5 +1110,6 @@ def get_table(
         psc_table_consolidated['LBT_Indirect_Tax'] = contract._oil_lbt_indirect_tax + contract._gas_lbt_indirect_tax
         psc_table_consolidated['CostOfSales_Indirect_Tax'] = contract._oil_cost_of_sales_indirect_tax + contract._gas_cost_of_sales_indirect_tax
         psc_table_consolidated['Total_Indirect_Tax'] = contract._oil_total_indirect_tax + contract._gas_total_indirect_tax
+
 
         return psc_table_oil, psc_table_gas, psc_table_consolidated
