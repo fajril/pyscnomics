@@ -1033,7 +1033,6 @@ def get_table(
         psc_table_oil['Opex'] = contract._oil_opex_expenditures_post_tax
         psc_table_oil['ASR'] = contract._oil_asr_expenditures_post_tax
         psc_table_oil['LBT'] = contract._oil_lbt_expenditures_post_tax
-
         psc_table_oil['Cashflow'] = contract._oil_cashflow
         psc_table_oil['Capital_Expenditures_Pre_Tax'] = contract._oil_capital_expenditures_pre_tax
         psc_table_oil['Intangible_Expenditures_Pre_Tax'] = contract._oil_intangible_expenditures_pre_tax
