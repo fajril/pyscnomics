@@ -152,6 +152,11 @@ def get_table_costrecovery_oil(contract: CostRecovery) -> pd.DataFrame:
         # Attributes associated with expenditures post tax
         **post_tax,
 
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_oil_capital", cr),
+        "expenses_non_capital": _assign_attr("_oil_non_capital", cr),
+        "expenses_total": _assign_attr("_oil_total_expenses", cr),
+
         # Attributes associated with depreciations
         "depreciations_sunk_cost": depreciations["sunk_cost"],
         "depreciations_preonstream": depreciations["preonstream"],
@@ -167,21 +172,34 @@ def get_table_costrecovery_oil(contract: CostRecovery) -> pd.DataFrame:
         "unrecovered_cost": _assign_attr("_oil_unrecovered_before_transfer", cr),
         "recoverable_cost": _assign_attr("_oil_recoverable_cost", cr),
         "cost_recovery": _assign_attr("_oil_cost_recovery", cr),
+        "ets_before_transfer": _assign_attr("_oil_ets_before_transfer", cr),
+        "transfer_to_gas": _assign_attr("_transfer_to_gas", cr),
+        "unrec_after_transfer": _assign_attr("_oil_unrecovered_after_transfer", cr),
+        "cost_recovery_after_tf": _assign_attr("_oil_cost_recovery_after_tf", cr),
+        "ets_after_transfer": _assign_attr("_oil_ets_after_transfer", cr),
+        "contractor_share": _assign_attr("_oil_contractor_share", cr),
+        "government_share": _assign_attr("_oil_government_share", cr),
 
-        "ets_before_transfer": _assign_attr(""),
-        "transfer_to_gas": _assign_attr(),
-        "unrec_after_transfer": _assign_attr(),
-        "cost_recovery_after_tf": _assign_attr(),
-        "ets_after_transfer": _assign_attr(),
-        "contractor_share": _assign_attr(),
-        "government_share": _assign_attr(),
+        # Attributes associated with DMO
+        "dmo_volume": _assign_attr("_oil_dmo_volume", cr),
+        "dmo_fee": _assign_attr("_oil_dmo_fee", cr),
+        "ddmo": _assign_attr("_oil_ddmo", cr),
 
+        # Attributes associated with taxable income
+        "taxable_income": _assign_attr("_oil_taxable_income", cr),
+        "tax_payment": _assign_attr("_oil_tax_payment", cr),
+
+        # Attributes associated with government and contractor shares
+        "contractor_net_share": _assign_attr("_oil_ctr_net_share", cr),
+        "government_take": _assign_attr("_oil_government_take", cr),
+
+        # Attributes associated with cashflow
+        "cashflow": _assign_attr("_oil_cashflow", cr),
+        "cum_cashflow": np.cumsum(_assign_attr("_oil_cashflow", cr)),
     }
 
-    print('\t')
-    print(f'Filetype: {type(table_oil)}')
-    print(f'Length: {len(table_oil)}')
-    print('table_oil = \n', table_oil)
+    # Convert OIL cashflow table into pandas DataFrame
+    return pd.DataFrame(table_oil)
 
 
 def get_table_costrecovery_gas(contract: CostRecovery) -> pd.DataFrame:
