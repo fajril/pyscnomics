@@ -42,7 +42,9 @@ def get_table(
         psc_table_oil['ASR'] = contract._oil_asr_expenditures_post_tax
         psc_table_oil['LBT'] = contract._oil_lbt_expenditures_post_tax
         psc_table_oil['Depreciation'] = contract._oil_depreciation
+
         psc_table_oil['Non_Capital'] = contract._oil_non_capital
+
         psc_table_oil['FTP'] = contract._oil_ftp
         psc_table_oil['FTP_CTR'] = contract._oil_ftp_ctr
         psc_table_oil['FTP_GOV'] = contract._oil_ftp_gov
@@ -51,6 +53,7 @@ def get_table(
         #psc_table_oil['Cost_to_Be_Recovered'] = contract._oil_cost_to_be_recovered
         psc_table_oil['Recoverable_Cost'] = contract._oil_recoverable_cost
         psc_table_oil['Cost_Recovery'] = contract._oil_cost_recovery
+
         psc_table_oil['ETS_Before_Transfer'] = contract._oil_ets_before_transfer
         psc_table_oil['Transfer_to_Gas'] = contract._transfer_to_gas
         psc_table_oil['Unrec_after_Transfer'] = contract._oil_unrecovered_after_transfer
@@ -59,6 +62,8 @@ def get_table(
         psc_table_oil['ETS_After_Transfer'] = contract._oil_ets_after_transfer
         psc_table_oil['Contractor_Share'] = contract._oil_contractor_share
         psc_table_oil['Government_Share'] = contract._oil_government_share
+
+
         psc_table_oil['DMO_Volume'] = contract._oil_dmo_volume
         psc_table_oil['DMO_Fee'] = contract._oil_dmo_fee
         psc_table_oil['DDMO'] = contract._oil_ddmo
@@ -68,6 +73,7 @@ def get_table(
         psc_table_oil['Cashflow'] = contract._oil_cashflow
         psc_table_oil['Cum_Cashflow'] = np.cumsum(contract._oil_cashflow)
         psc_table_oil['Government_Take'] = contract._oil_government_take
+
         psc_table_oil['Capital_Expenditures_Pre_Tax'] = contract._oil_capital_expenditures_pre_tax
         psc_table_oil['Intangible_Expenditures_Pre_Tax'] = contract._oil_intangible_expenditures_pre_tax
         psc_table_oil['Opex_Expenditures_Pre_Tax'] = contract._oil_opex_expenditures_pre_tax
