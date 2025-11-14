@@ -648,12 +648,24 @@ def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
     ]
 
     # Prepare attributes associated with expenditures pre tax
+    pre_tax = {
+        f"{cat}_expenditures_pre_tax": _assign_attr(
+            f"_oil_{cat}_expenditures_pre_tax", gs
+        )
+        for cat in categories
+    }
 
     # Prepare attributes associated with indirect tax
+    indirect_tax = {
+        f"{cat}_indirect_tax": _assign_attr(f"_oil_{cat}_indirect_tax", gs)
+        for cat in categories
+    }
 
     # Prepare attributes associated with postonstream costs (or expenditures post tax)
-
-
+    post_tax = {
+        f"{cat}_postonstream": _assign_attr(f"_oil_{cat}_expenditures_post_tax", gs)
+        for cat in categories
+    }
 
     # Specify cashflow table for OIL
     table_oil: dict = {
@@ -683,6 +695,14 @@ def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
         "postonstream_non_depreciable": oil_non_depreciable_postonstream,
         "postonstream": oil_postonstream,
 
+        # Attributes associated with expenditures pre tax
+        **pre_tax,
+
+        # Attributes associated with indirect tax
+        **indirect_tax,
+
+        # Attributes associated with expenditures post tax
+        **post_tax,
 
     }
 

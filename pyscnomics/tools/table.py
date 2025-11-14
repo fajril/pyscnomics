@@ -208,6 +208,7 @@ def get_table(
         psc_table_oil['Opex'] = contract._oil_opex_expenditures_post_tax
         psc_table_oil['ASR'] = contract._oil_asr_expenditures_post_tax
         psc_table_oil['LBT'] = contract._oil_lbt_expenditures_post_tax
+
         psc_table_oil['Revenue'] = contract._oil_revenue
         psc_table_oil['Base_Split'] = contract._oil_base_split
         psc_table_oil['Variable_Split'] = contract._var_split_array
