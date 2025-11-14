@@ -203,7 +203,15 @@ def get_table_costrecovery_oil(contract: CostRecovery) -> pd.DataFrame:
 
 
 def get_table_costrecovery_gas(contract: CostRecovery) -> pd.DataFrame:
-    pass
+
+    cr = contract
+
+    # Specify postonstream attributes for GAS
+    gas_depreciable_postonstream = _assign_attr(
+        "_gas_capital_expenditures_post_tax", cr
+    )
+
+
 
 
 def get_table_costrecovery_consolidated(contract: CostRecovery) -> pd.DataFrame:
@@ -627,10 +635,14 @@ def get_table(
 ) -> tuple:
 
     if isinstance(contract, CostRecovery):
-        print("ADITYA")
         psc_table_oil = get_table_costrecovery_oil(contract=contract)
         psc_table_gas = get_table_costrecovery_gas(contract=contract)
         psc_table_consolidated = get_table_costrecovery_consolidated(contract=contract)
+
+        print('\t')
+        print(f'Filetype: {type(psc_table_oil)}')
+        print(f'Length: {len(psc_table_oil)}')
+        print('psc_table_oil = \n', psc_table_oil)
 
 
     elif isinstance(contract, GrossSplit):
