@@ -95,7 +95,7 @@ if __name__ == "__main__":
     # Specify arguments to run "execute_contract()"
     kwargs_execute = {
         "cls": Case0,
-        "contract_type": ContractType.COST_RECOVERY,
+        "contract_type": ContractType.GROSS_SPLIT,
         "run_as_dict": False,
     }
 

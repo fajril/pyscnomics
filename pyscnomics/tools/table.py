@@ -176,12 +176,9 @@ def get_table(
         psc_table_consolidated['C_Tax_Payment'] = contract._consolidated_tax_payment
         psc_table_consolidated['C_CTR_Net_Share'] = contract._consolidated_ctr_net_share
         psc_table_consolidated['C_Contractor_Take'] = contract._consolidated_contractor_take
-
-
         psc_table_consolidated['C_Cashflow'] = contract._consolidated_cashflow
         psc_table_consolidated['cum_C_Cashflow'] = np.cumsum(contract._consolidated_cashflow)
         psc_table_consolidated['C_Government_take'] = contract._consolidated_government_take
-
         psc_table_consolidated['C_Capital_Expenditures_Pre_Tax'] = contract._consolidated_capital_expenditures_pre_tax
         psc_table_consolidated['C_Intangible_Expenditures_Pre_Tax'] = contract._consolidated_intangible_expenditures_pre_tax
         psc_table_consolidated['C_Opex_Expenditures_Pre_Tax'] = contract._consolidated_opex_expenditures_pre_tax
@@ -207,6 +204,7 @@ def get_table(
         psc_table_oil['Price'] = contract._oil_wap_price
         psc_table_oil['Depreciable'] = contract._oil_capital_expenditures_post_tax
         psc_table_oil['Intangible'] = contract._oil_intangible_expenditures_post_tax
+
         psc_table_oil['Opex'] = contract._oil_opex_expenditures_post_tax
         psc_table_oil['ASR'] = contract._oil_asr_expenditures_post_tax
         psc_table_oil['LBT'] = contract._oil_lbt_expenditures_post_tax
@@ -254,6 +252,7 @@ def get_table(
         psc_table_oil['CostOfSales_Indirect_Tax'] = contract._oil_cost_of_sales_indirect_tax
         psc_table_oil['Total_Indirect_Tax'] = contract._oil_total_indirect_tax
         # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
+
 
         psc_table_gas = pd.DataFrame()
         psc_table_gas['Years'] = contract.project_years
@@ -308,6 +307,7 @@ def get_table(
         psc_table_gas['CostOfSales_Indirect_Tax'] = contract._gas_cost_of_sales_indirect_tax
         psc_table_gas['Total_Indirect_Tax'] = contract._gas_total_indirect_tax
         # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
+
 
         psc_table_consolidated = pd.DataFrame()
         psc_table_consolidated['Years'] = contract.project_years
