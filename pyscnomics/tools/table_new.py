@@ -46,6 +46,24 @@ def _assign_attr(
 
 
 def get_table_costrecovery_oil(contract: CostRecovery) -> pd.DataFrame:
+    """
+    Build the oil cashflow table for a CostRecovery contract.
+
+    Compiles yearly oil-related economic attributes—including lifting,
+    revenues, expenditures (pre-tax, post-tax, indirect tax), sunk costs,
+    depreciations, FTP components, cost recovery mechanics, DMO, taxation,
+    government/contractor shares, and cashflow—into a pandas DataFrame.
+
+    Parameters
+    ----------
+    contract : CostRecovery
+        Contract instance containing all oil economic attributes.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Tabular oil cashflow data indexed by project years.
+    """
 
     cr = contract
 
@@ -68,7 +86,7 @@ def get_table_costrecovery_oil(contract: CostRecovery) -> pd.DataFrame:
 
     oil_postonstream = oil_depreciable_postonstream + oil_non_depreciable_postonstream
 
-    # A list of cost categories
+    # Specify a list of cost categories
     categories = [
         "capital",
         "intangible",
@@ -78,7 +96,7 @@ def get_table_costrecovery_oil(contract: CostRecovery) -> pd.DataFrame:
         "cost_of_sales"
     ]
 
-    # Assign attributes associated with expenditures pre tax
+    # Prepare attributes associated with expenditures pre tax
     pre_tax = {
         f"{cat}_expenditures_pre_tax": _assign_attr(
             f"_oil_{cat}_expenditures_pre_tax", cr
@@ -86,19 +104,19 @@ def get_table_costrecovery_oil(contract: CostRecovery) -> pd.DataFrame:
         for cat in categories
     }
 
-    # Assign attributes associated with indirect tax
+    # Prepare attributes associated with indirect tax
     indirect_tax = {
         f"{cat}_indirect_tax": _assign_attr(f"_oil_{cat}_indirect_tax", cr)
         for cat in categories
     }
 
-    # Assign attributes associated with postonstream costs (or expenditures post tax)
+    # Prepare attributes associated with postonstream costs (or expenditures post tax)
     post_tax = {
         f"{cat}_postonstream": _assign_attr(f"_oil_{cat}_expenditures_post_tax", cr)
         for cat in categories
     }
 
-    # Assign attribute associated with depreciations
+    # Prepare attribute associated with depreciations
     depreciations = _assign_attr(f"_oil_depreciations", cr)
 
     # Specify cashflow table for OIL
@@ -203,6 +221,25 @@ def get_table_costrecovery_oil(contract: CostRecovery) -> pd.DataFrame:
 
 
 def get_table_costrecovery_gas(contract: CostRecovery) -> pd.DataFrame:
+    """
+    Build the gas cashflow table for a CostRecovery contract.
+
+    Collects yearly gas-related economic attributes—including lifting,
+    revenues, expenditures (pre-tax, post-tax, indirect tax), sunk costs,
+    depreciations, FTP components, cost recovery mechanics, DMO, taxation,
+    government/contractor shares, and cashflow—and compiles them into a
+    pandas DataFrame.
+
+    Parameters
+    ----------
+    contract : CostRecovery
+        Contract instance containing all gas economic attributes.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Tabular gas cashflow data indexed by project years.
+    """
 
     cr = contract
 
@@ -211,11 +248,342 @@ def get_table_costrecovery_gas(contract: CostRecovery) -> pd.DataFrame:
         "_gas_capital_expenditures_post_tax", cr
     )
 
+    gas_non_depreciable_postonstream = np.array(
+        [
+            _assign_attr(at, cr) for at in [
+                "_gas_intangible_expenditures_post_tax",
+                "_gas_opex_expenditures_post_tax",
+                "_gas_asr_expenditures_post_tax",
+                "_gas_lbt_expenditures_post_tax",
+                "_gas_cost_of_sales_expenditures_post_tax",
+            ]
+        ]
+    ).sum(axis=0)
 
+    gas_postonstream = gas_depreciable_postonstream + gas_non_depreciable_postonstream
+
+    # Specify a list of cost categories
+    categories = [
+        "capital",
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales",
+    ]
+
+    # Prepare attributes associated with expenditures pre tax
+    pre_tax = {
+        f"{cat}_expenditures_pre_tax": _assign_attr(
+            f"_gas_{cat}_expenditures_pre_tax", cr
+        )
+        for cat in categories
+    }
+
+    # Prepare attributes associated with indirect tax
+    indirect_tax = {
+        f"{cat}_indirect_tax": _assign_attr(f"_gas_{cat}_indirect_tax", cr)
+        for cat in categories
+    }
+
+    # Prepare attributes associated with postonstream costs (or expenditures post tax)
+    post_tax = {
+        f"{cat}_postonstream": _assign_attr(f"_gas_{cat}_expenditures_post_tax", cr)
+        for cat in categories
+    }
+
+    # Prepare attribute associated with depreciations
+    depreciations = _assign_attr("_gas_depreciations", cr)
+
+    # Specify cashflow table for GAS
+    table_gas: dict = {
+        # Basic attributes
+        "years": cr.project_years,
+        "lifting": _assign_attr("_gas_lifting", cr, True),
+        "price": _assign_attr("_gas_wap_price", cr),
+        "revenue": _assign_attr("_gas_revenue", cr),
+
+        # Attributes associated with sulfur commodity
+        "lifting_sulfur": _assign_attr("_sulfur_lifting", cr, True),
+        "price_sulfur": _assign_attr("_sulfur_wap_price", cr),
+        "revenue_sulfur": _assign_attr("_sulfur_revenue", cr),
+
+        # Attributes associated with electricity commodity
+        "lifting_electricity": _assign_attr("_electricity_lifting", cr, True),
+        "price_electricity": _assign_attr("_electricity_wap_price", cr),
+        "revenue_electricity": _assign_attr("_electricity_revenue", cr),
+
+        # Attributes associated with CO2 commodity
+        "lifting_co2": _assign_attr("_co2_lifting", cr, True),
+        "price_co2": _assign_attr("_co2_wap_price", cr),
+        "revenue_co2": _assign_attr("_co2_revenue", cr),
+
+        # Attributes associated with sunk cost
+        "sunk_cost_depreciable": _assign_attr("_gas_depreciable_sunk_cost", cr),
+        "sunk_cost_non_depreciable": _assign_attr("_gas_non_depreciable_sunk_cost", cr),
+        "sunk_cost": _assign_attr("_gas_sunk_cost", cr),
+
+        # Attributes associated with preonstream cost
+        "preonstream_depreciable": _assign_attr("_gas_depreciable_preonstream", cr),
+        "preonstream_non_depreciable": _assign_attr(
+            "_gas_non_depreciable_preonstream", cr
+        ),
+        "preonstream": _assign_attr("_gas_preonstream", cr),
+
+        # Attribute associated with postonstream cost
+        "postonstream_depreciable": gas_depreciable_postonstream,
+        "postonstream_non_depreciable": gas_non_depreciable_postonstream,
+        "postonstream": gas_postonstream,
+
+        # Attributes associated with expenditures pre tax
+        **pre_tax,
+
+        # Attributes associated with indirect tax
+        **indirect_tax,
+
+        # Attributes associated with expenditures post tax
+        **post_tax,
+
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_gas_capital", cr),
+        "expenses_non_capital": _assign_attr("_gas_non_capital", cr),
+        "expenses_total": _assign_attr("_gas_total_expenses", cr),
+
+        # Attributes associated with depreciations
+        "depreciations_sunk_cost": depreciations["sunk_cost"],
+        "depreciations_preonstream": depreciations["preonstream"],
+        "depreciations_postonstream": depreciations["postonstream"],
+
+        # Attributes associated with FTP
+        "ftp": _assign_attr("_gas_ftp", cr),
+        "ftp_ctr": _assign_attr("_gas_ftp_ctr", cr),
+        "ftp_gov": _assign_attr("_gas_ftp_gov", cr),
+
+        # Attributes associated with core business logic
+        "investment_credit": _assign_attr("_gas_ic_paid", cr),
+        "unrecovered_cost": _assign_attr("_gas_unrecovered_before_transfer", cr),
+        "recoverable_cost": _assign_attr("_gas_recoverable_cost", cr),
+        "cost_recovery": _assign_attr("_gas_cost_recovery", cr),
+        "ets_before_transfer": _assign_attr("_gas_ets_before_transfer", cr),
+        "transfer_to_oil": _assign_attr("_transfer_to_oil", cr),
+        "unrec_after_transfer": _assign_attr("_gas_unrecovered_after_transfer", cr),
+        "cost_recovery_after_tf": _assign_attr("_gas_cost_recovery_after_tf", cr),
+        "ets_after_transfer": _assign_attr("_gas_ets_after_transfer", cr),
+        "contractor_share": _assign_attr("_gas_contractor_share", cr),
+        "government_share": _assign_attr("_gas_government_share", cr),
+
+        # Attributes associated with DMO
+        "dmo_volume": _assign_attr("_gas_dmo_volume", cr),
+        "dmo_fee": _assign_attr("_gas_dmo_fee", cr),
+        "ddmo": _assign_attr("_gas_ddmo", cr),
+
+        # Attributes associated with taxable income
+        "taxable_income": _assign_attr("_gas_taxable_income", cr),
+        "tax_payment": _assign_attr("_gas_tax_payment", cr),
+
+        # Attributes associated with government and contractor shares
+        "contractor_net_share": _assign_attr("_gas_ctr_net_share", cr),
+        "government_take": _assign_attr("_gas_government_take", cr),
+
+        # Attributes associated with cashflow
+        "cashflow": _assign_attr("_gas_cashflow", cr),
+        "cum_cashflow": np.cumsum(_assign_attr("_gas_cashflow", cr)),
+    }
+
+    # Convert GAS cashflow table into pandas DataFrame
+    return pd.DataFrame(table_gas)
 
 
 def get_table_costrecovery_consolidated(contract: CostRecovery) -> pd.DataFrame:
-    pass
+    """
+    Build the consolidated cashflow table for a CostRecovery contract.
+
+    Aggregates oil and gas economic components into a unified consolidated
+    table, including lifting, revenues, expenditures (pre-tax, post-tax,
+    indirect tax), sunk and preonstream costs, depreciations, FTP components,
+    cost recovery mechanics, DMO, taxation, government/contractor shares,
+    and cashflow.
+
+    Parameters
+    ----------
+    contract : CostRecovery
+        Contract instance containing consolidated economic attributes.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Tabular consolidated cashflow data indexed by project years.
+    """
+
+    cr = contract
+
+    # Specify postonstream attributes for CONSOLIDATED
+    consolidated_depreciable_postonstream = _assign_attr(
+        "_consolidated_capital_expenditures_post_tax", cr
+    )
+
+    consolidated_non_depreciable_postonstream = np.array(
+        [
+            _assign_attr(at, cr) for at in [
+                "_consolidated_intangible_expenditures_post_tax",
+                "_consolidated_opex_expenditures_post_tax",
+                "_consolidated_asr_expenditures_post_tax",
+                "_consolidated_lbt_expenditures_post_tax",
+                "_consolidated_cost_of_sales_expenditures_post_tax",
+            ]
+        ]
+    ).sum(axis=0)
+
+    consolidated_postonstream = (
+        consolidated_depreciable_postonstream + consolidated_non_depreciable_postonstream
+    )
+
+    # Specify a list of cost categories
+    categories = [
+        "capital",
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales"
+    ]
+
+    # Prepare attributes associated with expenditures pre tax
+    pre_tax = {
+        f"{cat}_expenditures_pre_tax": _assign_attr(
+            f"_consolidated_{cat}_expenditures_pre_tax", cr
+        )
+        for cat in categories
+    }
+
+    # Prepare attributes associated with indirect tax
+    indirect_tax = {
+        f"{cat}_indirect_tax": _assign_attr(
+            f"_consolidated_{cat}_indirect_tax", cr
+        )
+        for cat in categories
+    }
+
+    # Prepare attributes associated with postonstream costs (or expenditures post tax)
+    post_tax = {
+        f"{cat}_postonstream": _assign_attr(
+            f"_consolidated_{cat}_expenditures_post_tax", cr
+        )
+        for cat in categories
+    }
+
+    # Prepare attribute associated with depreciations
+    depreciations = _assign_attr("_consolidated_depreciations", cr)
+
+    # Specify cashflow table for CONSOLIDATED
+    table_consolidated: dict = {
+        # Basic attributes
+        "years": cr.project_years,
+        "lifting": _assign_attr("_consolidated_lifting", cr),
+        "price": _assign_attr("_consolidated_wap_price", cr),
+        "revenue": _assign_attr("_consolidated_revenue", cr),
+
+        # Attributes associated with sulfur commodity
+        "lifting_sulfur": _assign_attr("_sulfur_lifting", cr, True),
+        "price_sulfur": _assign_attr("_sulfur_wap_price", cr),
+        "revenue_sulfur": _assign_attr("_sulfur_revenue", cr),
+
+        # Attributes associated with electricity commodity
+        "lifting_electricity": _assign_attr("_electricity_lifting", cr, True),
+        "price_electricity": _assign_attr("_electricity_wap_price", cr),
+        "revenue_electricity": _assign_attr("_electricity_revenue", cr),
+
+        # Attributes associated with CO2 commodity
+        "lifting_co2": _assign_attr("_co2_lifting", cr, True),
+        "price_co2": _assign_attr("_co2_wap_price", cr),
+        "revenue_co2": _assign_attr("_co2_revenue", cr),
+
+        # Attributes associated with sunk cost
+        "sunk_cost_depreciable": _assign_attr("_consolidated_depreciable_sunk_cost", cr),
+        "sunk_cost_non_depreciable": _assign_attr(
+            "_consolidated_non_depreciable_sunk_cost", cr
+        ),
+        "sunk_cost": _assign_attr("_consolidated_sunk_cost", cr),
+
+        # Attributes associated with preonstream cost
+        "preonstream_depreciable": _assign_attr(
+            "_consolidated_depreciable_preonstream", cr
+        ),
+        "preonstream_non_depreciable": _assign_attr(
+            "_consolidated_non_depreciable_preonstream", cr
+        ),
+        "preonstream": _assign_attr("_consolidated_preonstream", cr),
+
+        # Attributes associated with postonstream cost
+        "postonstream_depreciable": consolidated_depreciable_postonstream,
+        "postonstream_non_depreciable": consolidated_non_depreciable_postonstream,
+        "postonstream": consolidated_postonstream,
+
+        # Attributes associated with expenditures pre tax
+        **pre_tax,
+
+        # Attributes associated with indirect tax
+        **indirect_tax,
+
+        # Attributes associated with expenditures post tax
+        **post_tax,
+
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_consolidated_capital", cr),
+        "expenses_non_capital": _assign_attr("_consolidated_non_capital", cr),
+        "expenses_total": _assign_attr("_consolidated_total_expenses", cr),
+
+        # Attributes associated with depreciations
+        "depreciations_sunk_cost": depreciations["sunk_cost"],
+        "depreciations_preonstream": depreciations["preonstream"],
+        "depreciations_postonstream": depreciations["postonstream"],
+
+        # Attributes associated with FTP
+        "ftp": _assign_attr("_consolidated_ftp", cr),
+        "ftp_ctr": _assign_attr("_consolidated_ftp_ctr", cr),
+        "ftp_gov": _assign_attr("_consolidated_ftp_gov", cr),
+
+        # Attributes associated with core business logic
+        "investment_credit": _assign_attr("_consolidated_ic_paid", cr),
+        "unrecovered_cost": _assign_attr(
+            "_consolidated_unrecovered_before_transfer", cr
+        ),
+        "recoverable_cost": _assign_attr("_consolidated_recoverable_cost", cr),
+        "cost_recovery": _assign_attr(
+            "_consolidated_cost_recovery_before_transfer", cr
+        ),
+        "ets_before_transfer": _assign_attr("_consolidated_ets_before_transfer", cr),
+        "unrec_after_transfer": _assign_attr(
+            "_consolidated_unrecovered_after_transfer", cr
+        ),
+        "cost_recovery_after_tf": _assign_attr(
+            "_consolidated_cost_recovery_after_tf", cr
+        ),
+        "ets_after_transfer": _assign_attr("_consolidated_ets_after_transfer", cr),
+        "contractor_share": _assign_attr("_consolidated_contractor_share", cr),
+        "government_share": _assign_attr("_consolidated_government_share", cr),
+
+        # Attributes associated with DMO
+        "dmo_volume": _assign_attr("_consolidated_dmo_volume", cr),
+        "dmo_fee": _assign_attr("_consolidated_dmo_fee", cr),
+        "ddmo": _assign_attr("_consolidated_ddmo", cr),
+
+        # Attributes associated with taxable income
+        "taxable_income": _assign_attr("_consolidated_taxable_income", cr),
+        "tax_payment": _assign_attr("_consolidated_tax_payment", cr),
+
+        # Attributes associated with government and contractor shares
+        "contractor_net_share": _assign_attr("_consolidated_ctr_net_share", cr),
+        "contractor_take": _assign_attr("_consolidated_contractor_take", cr),
+        "government_take": _assign_attr("_consolidated_government_take", cr),
+
+        # Attributes associated with cashflow
+        "cashflow": _assign_attr("_consolidated_cashflow", cr),
+        "cum_cashflow": np.cumsum(_assign_attr("_consolidated_cashflow", cr)),
+    }
+
+    # Convert CONSOLIDATED cashflow table into pandas DataFrame
+    return pd.DataFrame(table_consolidated)
 
 
 def get_table_baseproject_oil(contract: BaseProject) -> pd.DataFrame:
@@ -634,27 +1002,25 @@ def get_table(
     contract: CostRecovery | GrossSplit | BaseProject | Transition,
 ) -> tuple:
 
+    # Construct OIL, GAS, and CONSOLIDATED cashflow tables for CR contract
     if isinstance(contract, CostRecovery):
         psc_table_oil = get_table_costrecovery_oil(contract=contract)
         psc_table_gas = get_table_costrecovery_gas(contract=contract)
         psc_table_consolidated = get_table_costrecovery_consolidated(contract=contract)
+        return psc_table_oil, psc_table_gas, psc_table_consolidated
 
-        print('\t')
-        print(f'Filetype: {type(psc_table_oil)}')
-        print(f'Length: {len(psc_table_oil)}')
-        print('psc_table_oil = \n', psc_table_oil)
-
-
+    # Construct OIL, GAS, and CONSOLIDATED cashflow tables for GS contract
     elif isinstance(contract, GrossSplit):
         pass
 
+    # Construct OIL, GAS, and CONSOLIDATED cashflow tables for transition contract
     elif isinstance(contract, Transition):
         pass
 
+    # Construct OIL, GAS, and CONSOLIDATED cashflow tables for base project contract
     elif isinstance(contract, BaseProject):
         psc_table_oil = get_table_baseproject_oil(contract=contract)
         psc_table_gas = get_table_baseproject_gas(contract=contract)
         psc_table_consolidated = get_table_baseproject_consolidated(contract=contract)
-
         return psc_table_oil, psc_table_gas, psc_table_consolidated
 

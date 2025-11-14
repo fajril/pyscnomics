@@ -1627,8 +1627,8 @@ class CostRecovery(BaseProject):
 
         # Attributes associated with consolidated lifting
         self._consolidated_lifting = (
-            self._oil_lifting.get_lifting_rate_arr()
-            + self._gas_lifting.get_lifting_rate_arr()
+            self._oil_lifting.get_lifting_rate_ghv_arr()
+            + self._gas_lifting.get_lifting_rate_ghv_arr()
         )
         self._consolidated_wap_price = self._oil_wap_price + self._gas_wap_price
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue

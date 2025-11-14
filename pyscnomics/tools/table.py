@@ -176,9 +176,12 @@ def get_table(
         psc_table_consolidated['C_Tax_Payment'] = contract._consolidated_tax_payment
         psc_table_consolidated['C_CTR_Net_Share'] = contract._consolidated_ctr_net_share
         psc_table_consolidated['C_Contractor_Take'] = contract._consolidated_contractor_take
+
+
         psc_table_consolidated['C_Cashflow'] = contract._consolidated_cashflow
         psc_table_consolidated['cum_C_Cashflow'] = np.cumsum(contract._consolidated_cashflow)
         psc_table_consolidated['C_Government_take'] = contract._consolidated_government_take
+
         psc_table_consolidated['C_Capital_Expenditures_Pre_Tax'] = contract._consolidated_capital_expenditures_pre_tax
         psc_table_consolidated['C_Intangible_Expenditures_Pre_Tax'] = contract._consolidated_intangible_expenditures_pre_tax
         psc_table_consolidated['C_Opex_Expenditures_Pre_Tax'] = contract._consolidated_opex_expenditures_pre_tax
