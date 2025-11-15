@@ -13,6 +13,7 @@ from pyscnomics.contracts.transition import Transition
 
 non_petroleum_commodities = ["sulfur", "electricity", "co2"]
 
+
 def _assign_attr(
     attr: str,
     contract: CostRecovery | GrossSplit | BaseProject,
@@ -51,6 +52,33 @@ def get_non_petroleum_commodity(
     commodity: str,
     contract: CostRecovery | GrossSplit | BaseProject | Transition,
 ) -> dict:
+    """
+    Retrieve lifting, price, and revenue data for a non-petroleum commodity.
+
+    Validates the commodity name and extracts its associated economic
+    attributes from the contract object using standardized attribute naming
+    (e.g., ``_sulfur_lifting``, ``_sulfur_wap_price``, ``_sulfur_revenue``).
+
+    Parameters
+    ----------
+    commodity : str
+        Name of the non-petroleum commodity (e.g., ``"sulfur"``,
+        ``"electricity"``, ``"co2"``). Must be listed in
+        ``non_petroleum_commodities``.
+    contract : CostRecovery or GrossSplit or BaseProject or Transition
+        Contract instance providing commodity-specific attributes.
+
+    Returns
+    -------
+    dict
+        Dictionary containing lifting, price, and revenue arrays for the
+        specified commodity.
+
+    Raises
+    ------
+    ValueError
+        If the commodity name is not recognized.
+    """
 
     if commodity not in non_petroleum_commodities:
         raise ValueError(f"Invalid non-petroleum commodity: {commodity!r}")
@@ -658,20 +686,6 @@ def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
     # Prepare attribute associated with amortizations
     amortizations = _assign_attr("_oil_amortizations", gs)
 
-    print('\t')
-    print(f'Filetype: {type(depreciations)}')
-    print(f'Length: {len(depreciations)}')
-    print('depreciations = \n', depreciations)
-
-    print('\t')
-    print(f'Filetype: {type(amortizations)}')
-    print(f'Length: {len(amortizations)}')
-    print('amortizations = \n', amortizations)
-
-    print('\t')
-    print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-
-
     # Specify cashflow table for OIL
     table_oil: dict = {
         # Basic attributes
@@ -715,28 +729,182 @@ def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
         "expenses_total": _assign_attr("_oil_total_expenses", gs),
 
         # Attributes associated with depreciations
-        "depreciations_sunk_cost": None,
-        "depreciations_preonstream": None,
-        "depreciations_postonstream": None,
+        "depreciations_sunk_cost": depreciations["sunk_cost"],
+        "depreciations_preonstream": depreciations["preonstream"],
+        "depreciations_postonstream": depreciations["postonstream"],
 
         # Attributes associated with amortizations
-        "amortizations_sunk_cost": None,
-        "amortizations_preonstream": None,
-        "amortizations_postonstream": None,
+        "amortizations_sunk_cost": amortizations["sunk_cost"],
+        "amortizations_preonstream": amortizations["preonstream"],
+        "amortizations_postonstream": amortizations["postonstream"],
 
+        # Attributes associated with splits
+        "base_split": _assign_attr("_oil_base_split", gs),
+        "variable_split": _assign_attr("_var_split_array", gs),
+        "progressive_price_split": _assign_attr("_oil_prog_price_split", gs),
+        "progressive_cum_prod_split": _assign_attr("_oil_prog_cum_split", gs),
+        "progressive_split": _assign_attr("_oil_prog_split", gs),
+        "contractor_split": _assign_attr("_oil_ctr_split", gs),
+
+        # Attributes associated with shares
+        "contractor_share": _assign_attr("_oil_ctr_share_before_transfer", gs),
+        "government_share": _assign_attr("_oil_gov_share", gs),
+
+        # Attributes associated with business logic
+        "cost_to_be_deducted": _assign_attr("_oil_cost_tobe_deducted", gs),
+        "carry_forward_cost": _assign_attr("_oil_carward_deduct_cost", gs),
+        "deductible_cost": _assign_attr("_oil_deductible_cost", gs),
+        "transfer_to_gas": _assign_attr("_transfer_to_gas", gs),
+        "carry_forward_cost_after_tf": _assign_attr("_oil_carward_cost_aftertf", gs),
+        "profit_pre_transfer": _assign_attr("_oil_profit_pre_transfer", gs),
+        "ctr_net_operating_profit": _assign_attr("_oil_net_operating_profit", gs),
+
+        # Attributes associated with DMO
+        "dmo_volume": _assign_attr("_oil_dmo_volume", gs),
+        "dmo_fee": _assign_attr("_oil_dmo_fee", gs),
+        "ddmo": _assign_attr("_oil_ddmo", gs),
+
+        # Attributes associated with taxable income
+        "taxable_income": _assign_attr("_oil_taxable_income", gs),
+        "tax": _assign_attr("_oil_tax", gs),
+
+        # Attributes associated with government and contractor shares
+        "net_ctr_share": _assign_attr("_oil_ctr_net_share", gs),
+        "government_take": _assign_attr("_oil_government_take", gs),
+
+        # Attribute associated with cashflow
+        "ctr_cashflow": _assign_attr("_oil_ctr_cashflow", gs),
+        "cum_cashflow": np.cumsum(_assign_attr("_oil_ctr_cashflow", gs)),
+    }
+
+    # Convert OIL cashflow table into pandas DataFrame
+    return pd.DataFrame(table_oil)
+
+
+def get_table_grosssplit_gas(contract: GrossSplit) -> pd.DataFrame:
+
+    gs = contract
+
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, gs) for com in non_petroleum_commodities
+    ]
+
+    # Prepare postonstream attributes for GAS
+    gas_depreciable_postonstream = _assign_attr(
+        "_gas_capital_expenditures_post_tax", gs
+    )
+
+    gas_non_depreciable_postonstream = np.array(
+        [
+            _assign_attr(at, gs) for at in [
+                "_gas_intangible_expenditures_post_tax",
+                "_gas_opex_expenditures_post_tax",
+                "_gas_asr_expenditures_post_tax",
+                "_gas_lbt_expenditures_post_tax",
+                "_gas_cost_of_sales_expenditures_post_tax",
+            ]
+        ]
+    ).sum(axis=0)
+
+    gas_postonstream = gas_depreciable_postonstream + gas_non_depreciable_postonstream
+
+    # Specify a list of cost categories
+    categories = [
+        "capital",
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales"
+    ]
+
+    # Prepare attributes associated with expenditures pre tax
+    pre_tax = {
+        f"{cat}_expenditures_pre_tax": _assign_attr(
+            f"_gas_{cat}_expenditures_pre_tax", gs
+        )
+        for cat in categories
+    }
+
+    # Prepare attributes associated with indirect tax
+    indirect_tax = {
+        f"{cat}_indirect_tax": _assign_attr(f"_gas_{cat}_indirect_tax", gs)
+        for cat in categories
+    }
+
+    # Prepare attributes associated with postonstream costs (or expenditures post tax)
+    post_tax = {
+        f"{cat}_postonstream": _assign_attr(f"_gas_{cat}_expenditures_post_tax", gs)
+        for cat in categories
+    }
+
+    # Prepare attribute associated with depreciations
+    depreciations = _assign_attr("_gas_depreciations", gs)
+
+    # Prepare attribute associated with amortizations
+    amortizations = _assign_attr("_gas_amortizations", gs)
+
+    # Specify cashflow table for GAS
+    table_gas: dict = {
+        # Basic attributes
+        "years": gs.project_years,
+        "lifting": _assign_attr("_gas_lifting", gs, True),
+        "price": _assign_attr("_gas_wap_price", gs),
+        "revenue": _assign_attr("_gas_revenue", gs),
+
+        # Attributes associated with sulfur, electricity, and CO2 commodities
+        **sulfur,
+        **electricity,
+        **co2,
+
+        # Attributes associated with sunk cost
+        "sunk_cost_depreciable": _assign_attr("_gas_depreciable_sunk_cost", gs),
+        "sunk_cost_non_depreciable": _assign_attr("_gas_non_depreciable_sunk_cost", gs),
+        "sunk_cost": _assign_attr("_gas_sunk_cost", gs),
+
+        # Attributes associated with preonstream cost
+        "preonstream_depreciable": _assign_attr("_gas_depreciable_preonstream", gs),
+        "preonstream_non_depreciable": _assign_attr(
+            "_gas_non_depreciable_preonstream", gs
+        ),
+        "preonstream": _assign_attr("_gas_preonstream", gs),
+
+        # Attributes associated with postonstream cost
+        "postonstream_depreciable": gas_depreciable_postonstream,
+        "postonstream_non_depreciable": gas_non_depreciable_postonstream,
+        "postonstream": gas_postonstream,
+
+        # Attributes associated with expenditures pre tax
+        **pre_tax,
+
+        # Attributes associated with indirect tax
+        **indirect_tax,
+
+        # Attributes associated with expenditures post tax
+        **post_tax,
+
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_gas_capital", gs),
+        "expenses_non_capital": _assign_attr("_gas_non_capital", gs),
+        "expenses_total": _assign_attr("_gas_total_expenses", gs),
+
+        # Attributes associated with depreciations
+        "depreciations_sunk_cost": depreciations["sunk_cost"],
+        "depreciations_preonstream": depreciations["preonstream"],
+        "depreciations_postonstream": depreciations["postonstream"],
+
+        # Attributes associated with amortizations
+        "amortizations_sunk_cost": amortizations["sunk_cost"],
+        "amortizations_preonstream": amortizations["preonstream"],
+        "amortizations_postonstream": amortizations["postonstream"],
 
     }
 
     print('\t')
-    print(f'Filetype: {type(table_oil)}')
-    print(f'Length: {len(table_oil)}')
-    print('table_oil = \n', table_oil)
-
-
-
-
-def get_table_grosssplit_gas(contract: GrossSplit) -> pd.DataFrame:
-    pass
+    print(f'Filetype: {type(table_gas)}')
+    print(f'Length: {len(table_gas)}')
+    print('table_gas = \n', table_gas)
 
 
 def get_table_grosssplit_consolidated(contract: GrossSplit) -> pd.DataFrame:
@@ -1032,7 +1200,7 @@ def get_table_baseproject_gas(contract: BaseProject) -> pd.DataFrame:
     return pd.DataFrame(table_gas)
 
 
-def get_table_baseproject_consolidated(contract) -> pd.DataFrame:
+def get_table_baseproject_consolidated(contract: BaseProject) -> pd.DataFrame:
     """
     Construct the consolidated base project cashflow table for a BaseProject contract.
 
@@ -1200,6 +1368,10 @@ def get_table(
         psc_table_gas = get_table_grosssplit_gas(contract=contract)
         psc_table_consolidated = get_table_grosssplit_consolidated(contract=contract)
 
+        # print('\t')
+        # print(f'Filetype: {type(psc_table_oil)}')
+        # print(f'Length: {len(psc_table_oil)}')
+        # print('psc_table_oil = \n', psc_table_oil)
 
     # Construct OIL, GAS, and CONSOLIDATED cashflow tables for transition contract
     elif isinstance(contract, Transition):

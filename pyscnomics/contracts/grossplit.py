@@ -261,11 +261,13 @@ class GrossSplit(BaseProject):
     _oil_ctr_split: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ctr_split: np.ndarray = field(default=None, init=False, repr=False)
 
-    # Attributes associated with core business logic
+    # Attributes associated with shares
     _oil_ctr_share_before_transfer: np.ndarray = field(default=None, init=False, repr=False)
     _gas_ctr_share_before_transfer: np.ndarray = field(default=None, init=False, repr=False)
     _oil_gov_share: np.ndarray = field(default=None, init=False, repr=False)
     _gas_gov_share: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes associated with core business logic
     _oil_cost_tobe_deducted: np.ndarray = field(default=None, init=False, repr=False)
     _gas_cost_tobe_deducted: np.ndarray = field(default=None, init=False, repr=False)
     _oil_carward_deduct_cost: np.ndarray = field(default=None, init=False, repr=False)

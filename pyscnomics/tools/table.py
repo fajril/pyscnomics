@@ -208,7 +208,6 @@ def get_table(
         psc_table_oil['ASR'] = contract._oil_asr_expenditures_post_tax
         psc_table_oil['LBT'] = contract._oil_lbt_expenditures_post_tax
         psc_table_oil['Revenue'] = contract._oil_revenue
-        
         psc_table_oil['Base_Split'] = contract._oil_base_split
         psc_table_oil['Variable_Split'] = contract._var_split_array
         psc_table_oil['Progressive_Price_Split'] = contract._oil_prog_price_split
@@ -234,9 +233,12 @@ def get_table(
         psc_table_oil['Taxable_Income'] = contract._oil_taxable_income
         psc_table_oil['Tax'] = contract._oil_tax
         psc_table_oil['Net_CTR_Share'] = contract._oil_ctr_net_share
+
         psc_table_oil['CTR_Cash_Flow'] = contract._oil_ctr_cashflow
         psc_table_oil['Cum_Cash_Flow'] = np.cumsum(contract._oil_ctr_cashflow)
         psc_table_oil['Government_Take'] = contract._oil_government_take
+
+
         psc_table_oil['Capital_Expenditures_Pre_Tax'] = contract._oil_capital_expenditures_pre_tax
         psc_table_oil['Intangible_Expenditures_Pre_Tax'] = contract._oil_intangible_expenditures_pre_tax
         psc_table_oil['Opex_Expenditures_Pre_Tax'] = contract._oil_opex_expenditures_pre_tax
@@ -252,6 +254,7 @@ def get_table(
         psc_table_oil['CostOfSales_Indirect_Tax'] = contract._oil_cost_of_sales_indirect_tax
         psc_table_oil['Total_Indirect_Tax'] = contract._oil_total_indirect_tax
         # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
+
 
 
         psc_table_gas = pd.DataFrame()
@@ -307,6 +310,7 @@ def get_table(
         psc_table_gas['CostOfSales_Indirect_Tax'] = contract._gas_cost_of_sales_indirect_tax
         psc_table_gas['Total_Indirect_Tax'] = contract._gas_total_indirect_tax
         # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
+
 
 
         psc_table_consolidated = pd.DataFrame()
