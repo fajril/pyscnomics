@@ -90,6 +90,11 @@ def get_table_costrecovery_oil(contract: CostRecovery) -> pd.DataFrame:
 
     cr = contract
 
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, cr) for com in non_petroleum_commodities
+    ]
+
     # Specify postonstream attributes for OIL
     oil_depreciable_postonstream = _assign_attr(
         "_oil_capital_expenditures_post_tax", cr
@@ -150,20 +155,10 @@ def get_table_costrecovery_oil(contract: CostRecovery) -> pd.DataFrame:
         "price": _assign_attr("_oil_wap_price", cr),
         "revenue": _assign_attr("_oil_revenue", cr),
 
-        # Attributes associated with sulfur commodity
-        "lifting_sulfur": _assign_attr("_sulfur_lifting", cr, True),
-        "price_sulfur": _assign_attr("_sulfur_wap_price", cr),
-        "revenue_sulfur": _assign_attr("_sulfur_revenue", cr),
-
-        # Attributes associated with electricity commodity
-        "lifting_electricity": _assign_attr("_electricity_lifting", cr, True),
-        "price_electricity": _assign_attr("_electricity_wap_price", cr),
-        "revenue_electricity": _assign_attr("_electricity_revenue", cr),
-
-        # Attributes associated with CO2 commodity
-        "lifting_co2": _assign_attr("_co2_lifting", cr, True),
-        "price_co2": _assign_attr("_co2_wap_price", cr),
-        "revenue_co2": _assign_attr("_co2_revenue", cr),
+        # Attributes associated with sulfur, electricity, and CO2 commodities
+        **sulfur,
+        **electricity,
+        **co2,
 
         # Attributes associated with sunk cost
         "sunk_cost_depreciable": _assign_attr("_oil_depreciable_sunk_cost", cr),
@@ -266,6 +261,11 @@ def get_table_costrecovery_gas(contract: CostRecovery) -> pd.DataFrame:
 
     cr = contract
 
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, cr) for com in non_petroleum_commodities
+    ]
+
     # Specify postonstream attributes for GAS
     gas_depreciable_postonstream = _assign_attr(
         "_gas_capital_expenditures_post_tax", cr
@@ -326,20 +326,10 @@ def get_table_costrecovery_gas(contract: CostRecovery) -> pd.DataFrame:
         "price": _assign_attr("_gas_wap_price", cr),
         "revenue": _assign_attr("_gas_revenue", cr),
 
-        # Attributes associated with sulfur commodity
-        "lifting_sulfur": _assign_attr("_sulfur_lifting", cr, True),
-        "price_sulfur": _assign_attr("_sulfur_wap_price", cr),
-        "revenue_sulfur": _assign_attr("_sulfur_revenue", cr),
-
-        # Attributes associated with electricity commodity
-        "lifting_electricity": _assign_attr("_electricity_lifting", cr, True),
-        "price_electricity": _assign_attr("_electricity_wap_price", cr),
-        "revenue_electricity": _assign_attr("_electricity_revenue", cr),
-
-        # Attributes associated with CO2 commodity
-        "lifting_co2": _assign_attr("_co2_lifting", cr, True),
-        "price_co2": _assign_attr("_co2_wap_price", cr),
-        "revenue_co2": _assign_attr("_co2_revenue", cr),
+        # Attributes associated with sulfur, electricity, and CO2 commodities
+        **sulfur,
+        **electricity,
+        **co2,
 
         # Attributes associated with sunk cost
         "sunk_cost_depreciable": _assign_attr("_gas_depreciable_sunk_cost", cr),
@@ -440,6 +430,11 @@ def get_table_costrecovery_consolidated(contract: CostRecovery) -> pd.DataFrame:
 
     cr = contract
 
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, cr) for com in non_petroleum_commodities
+    ]
+
     # Specify postonstream attributes for CONSOLIDATED
     consolidated_depreciable_postonstream = _assign_attr(
         "_consolidated_capital_expenditures_post_tax", cr
@@ -506,20 +501,10 @@ def get_table_costrecovery_consolidated(contract: CostRecovery) -> pd.DataFrame:
         "price": _assign_attr("_consolidated_wap_price", cr),
         "revenue": _assign_attr("_consolidated_revenue", cr),
 
-        # Attributes associated with sulfur commodity
-        "lifting_sulfur": _assign_attr("_sulfur_lifting", cr, True),
-        "price_sulfur": _assign_attr("_sulfur_wap_price", cr),
-        "revenue_sulfur": _assign_attr("_sulfur_revenue", cr),
-
-        # Attributes associated with electricity commodity
-        "lifting_electricity": _assign_attr("_electricity_lifting", cr, True),
-        "price_electricity": _assign_attr("_electricity_wap_price", cr),
-        "revenue_electricity": _assign_attr("_electricity_revenue", cr),
-
-        # Attributes associated with CO2 commodity
-        "lifting_co2": _assign_attr("_co2_lifting", cr, True),
-        "price_co2": _assign_attr("_co2_wap_price", cr),
-        "revenue_co2": _assign_attr("_co2_revenue", cr),
+        # Attributes associated with sulfur, electricity, and CO2 commodities
+        **sulfur,
+        **electricity,
+        **co2,
 
         # Attributes associated with sunk cost
         "sunk_cost_depreciable": _assign_attr("_consolidated_depreciable_sunk_cost", cr),
@@ -667,6 +652,26 @@ def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
         for cat in categories
     }
 
+    # Prepare attribute associated with depreciations
+    depreciations = _assign_attr("_oil_depreciations", gs)
+
+    # Prepare attribute associated with amortizations
+    amortizations = _assign_attr("_oil_amortizations", gs)
+
+    print('\t')
+    print(f'Filetype: {type(depreciations)}')
+    print(f'Length: {len(depreciations)}')
+    print('depreciations = \n', depreciations)
+
+    print('\t')
+    print(f'Filetype: {type(amortizations)}')
+    print(f'Length: {len(amortizations)}')
+    print('amortizations = \n', amortizations)
+
+    print('\t')
+    print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+
+
     # Specify cashflow table for OIL
     table_oil: dict = {
         # Basic attributes
@@ -675,7 +680,7 @@ def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
         "price": _assign_attr("_oil_wap_price", gs),
         "revenue": _assign_attr("_oil_revenue", gs),
 
-        # Attributes associated with sulfur, electricity, and CO2 commodity
+        # Attributes associated with sulfur, electricity, and CO2 commodities
         **sulfur,
         **electricity,
         **co2,
@@ -703,6 +708,22 @@ def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
 
         # Attributes associated with expenditures post tax
         **post_tax,
+
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_oil_capital", gs),
+        "expenses_non_capital": _assign_attr("_oil_non_capital", gs),
+        "expenses_total": _assign_attr("_oil_total_expenses", gs),
+
+        # Attributes associated with depreciations
+        "depreciations_sunk_cost": None,
+        "depreciations_preonstream": None,
+        "depreciations_postonstream": None,
+
+        # Attributes associated with amortizations
+        "amortizations_sunk_cost": None,
+        "amortizations_preonstream": None,
+        "amortizations_postonstream": None,
+
 
     }
 
@@ -755,6 +776,11 @@ def get_table_baseproject_oil(contract: BaseProject) -> pd.DataFrame:
     """
 
     bp = contract
+
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, bp) for com in non_petroleum_commodities
+    ]
 
     # Specify postonstream attributes for OIL
     oil_depreciable_postonstream = _assign_attr(
@@ -815,11 +841,14 @@ def get_table_baseproject_oil(contract: BaseProject) -> pd.DataFrame:
         "price":  _assign_attr("_oil_wap_price", bp),
         "revenue": _assign_attr("_oil_revenue", bp),
 
+        # Attributes associated with sulfur, electricity, and CO2 commodities
+        **sulfur,
+        **electricity,
+        **co2,
+
         # Attributes associated with sunk cost
         "sunk_cost_depreciable": _assign_attr("_oil_depreciable_sunk_cost", bp),
-        "sunk_cost_non_depreciable": _assign_attr(
-            "_oil_non_depreciable_sunk_cost", bp
-        ),
+        "sunk_cost_non_depreciable": _assign_attr("_oil_non_depreciable_sunk_cost", bp),
         "sunk_cost": _assign_attr("_oil_sunk_cost", bp),
 
         # Attributes associated with preonstream cost
@@ -893,6 +922,11 @@ def get_table_baseproject_gas(contract: BaseProject) -> pd.DataFrame:
 
     bp = contract
 
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, bp) for com in non_petroleum_commodities
+    ]
+
     # Specify postonstream attributes for GAS
     gas_depreciable_postonstream = _assign_attr(
         "_gas_capital_expenditures_post_tax", bp
@@ -949,6 +983,11 @@ def get_table_baseproject_gas(contract: BaseProject) -> pd.DataFrame:
         "lifting": _assign_attr("_gas_lifting", bp, True),
         "price": _assign_attr("_gas_wap_price", bp),
         "revenue": _assign_attr("_gas_revenue", bp),
+
+        # Attributes associated with sulfur, electricity, and CO2 commodities
+        **sulfur,
+        **electricity,
+        **co2,
 
         # Attributes associated with sunk cost
         "sunk_cost_depreciable": _assign_attr("_gas_depreciable_sunk_cost", bp),
@@ -1028,6 +1067,11 @@ def get_table_baseproject_consolidated(contract) -> pd.DataFrame:
 
     bp = contract
 
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, bp) for com in non_petroleum_commodities
+    ]
+
     # Specify postonstream attributes for CONSOLIDATED
     consolidated_depreciable_postonstream = _assign_attr(
         "_consolidated_capital_expenditures_post_tax", bp
@@ -1088,6 +1132,11 @@ def get_table_baseproject_consolidated(contract) -> pd.DataFrame:
         "lifting": _assign_attr("_consolidated_lifting", bp),
         "price": _assign_attr("_consolidated_wap_price", bp),
         "revenue": _assign_attr("_consolidated_revenue", bp),
+
+        # Attributes associated with sulfur, electricity, and CO2 commodities
+        **sulfur,
+        **electricity,
+        **co2,
 
         # Attributes associated with sunk cost
         "sunk_cost_depreciable": _assign_attr(
