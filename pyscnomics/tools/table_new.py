@@ -627,6 +627,30 @@ def get_table_costrecovery_consolidated(contract: CostRecovery) -> pd.DataFrame:
 
 
 def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
+    """
+    Build the OIL cashflow table for a GrossSplit contract.
+
+    Assembles lifting, revenue, cost components, taxes, depreciation,
+    amortization, progressive/variable splits, government–contractor shares,
+    and cashflow values. Non-petroleum commodity data (sulfur, electricity,
+    CO₂) is included using `get_non_petroleum_commodity`.
+
+    Parameters
+    ----------
+    contract : GrossSplit
+        Contract instance providing OIL-related economic attributes.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Cashflow table for OIL, containing prices, revenues, costs,
+        taxes, splits, shares, and cashflow metrics.
+
+    Notes
+    -----
+    Attribute access is standardized through ``_assign_attr`` and category-based
+    dictionary expansions for cost components.
+    """
 
     gs = contract
 
@@ -788,6 +812,31 @@ def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
 
 
 def get_table_grosssplit_gas(contract: GrossSplit) -> pd.DataFrame:
+    """
+    Build the GAS cashflow table for a GrossSplit contract.
+
+    Collects lifting, revenue, cost components, indirect taxes,
+    depreciations, amortizations, progressive/variable splits, contractor
+    and government shares, and cashflow-related values. Non-petroleum
+    commodity data (sulfur, electricity, CO₂) is included via
+    `get_non_petroleum_commodity`.
+
+    Parameters
+    ----------
+    contract : GrossSplit
+        Contract instance supplying GAS-related economic attributes.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Cashflow table for GAS, including prices, revenues, cost categories,
+        taxes, splits, shares, and contractor cashflow metrics.
+
+    Notes
+    -----
+    Attributes are populated through ``_assign_attr`` and expanded using
+    category-based dictionaries for pre-tax, indirect-tax, and post-tax costs.
+    """
 
     gs = contract
 
@@ -949,6 +998,30 @@ def get_table_grosssplit_gas(contract: GrossSplit) -> pd.DataFrame:
 
 
 def get_table_grosssplit_consolidated(contract: GrossSplit) -> pd.DataFrame:
+    """
+    Build the CONSOLIDATED cashflow table for a GrossSplit contract.
+
+    Aggregates lifting, revenue, cost components (pre-tax, indirect-tax,
+    post-tax), depreciations, amortizations, contractor/government shares,
+    and cashflow metrics. Includes sulfur, electricity, and CO₂ data via
+    `get_non_petroleum_commodity`.
+
+    Parameters
+    ----------
+    contract : GrossSplit
+        Contract instance providing consolidated economic attributes.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Consolidated cashflow table containing revenues, costs, taxes,
+        shares, and cashflow values.
+
+    Notes
+    -----
+    Cost components are expanded using category-based dictionaries, and all
+    economic attributes are retrieved through ``_assign_attr`` for consistency.
+    """
 
     gs = contract
 
@@ -956,6 +1029,67 @@ def get_table_grosssplit_consolidated(contract: GrossSplit) -> pd.DataFrame:
     sulfur, electricity, co2 = [
         get_non_petroleum_commodity(com, gs) for com in non_petroleum_commodities
     ]
+
+    # Specify postonstream attributes for CONSOLIDATED
+    consolidated_depreciable_postonstream = _assign_attr(
+        "_consolidated_capital_expenditures_post_tax", gs
+    )
+
+    consolidated_non_depreciable_postonstream = np.array(
+        [
+            _assign_attr(at, gs) for at in [
+                "_consolidated_intangible_expenditures_post_tax",
+                "_consolidated_opex_expenditures_post_tax",
+                "_consolidated_asr_expenditures_post_tax",
+                "_consolidated_lbt_expenditures_post_tax",
+                "_consolidated_cost_of_sales_expenditures_post_tax",
+            ]
+        ]
+    ).sum(axis=0)
+
+    consolidated_postonstream = (
+        consolidated_depreciable_postonstream + consolidated_non_depreciable_postonstream
+    )
+
+    # Specify a list of cost categories
+    categories = [
+        "capital",
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales"
+    ]
+
+    # Prepare attributes associated with expenditures pre tax
+    pre_tax = {
+        f"{cat}_expenditures_pre_tax": _assign_attr(
+            f"_consolidated_{cat}_expenditures_pre_tax", gs
+        )
+        for cat in categories
+    }
+
+    # Prepare attributes associated with indirect tax
+    indirect_tax = {
+        f"{cat}_indirect_tax": _assign_attr(
+            f"_consolidated_{cat}_indirect_tax", gs
+        )
+        for cat in categories
+    }
+
+    # Prepare attributes associated with postonstream costs (or expenditures post tax)
+    post_tax = {
+        f"{cat}_postonstream": _assign_attr(
+            f"_consolidated_{cat}_expenditures_post_tax", gs
+        )
+        for cat in categories
+    }
+
+    # Prepare attribute associated with depreciations
+    depreciations = _assign_attr("_consolidated_depreciations", gs)
+
+    # Prepare attribute associated with amortizations
+    amortizations = _assign_attr("_consolidated_amortizations", gs)
 
     # Specify cashflow table for CONSOLIDATED
     table_consolidated: dict = {
@@ -970,13 +1104,86 @@ def get_table_grosssplit_consolidated(contract: GrossSplit) -> pd.DataFrame:
         **electricity,
         **co2,
 
+        # Attributes associated with sunk cost
+        "sunk_cost_depreciable": _assign_attr("_consolidated_depreciable_sunk_cost", gs),
+        "sunk_cost_non_depreciable": _assign_attr(
+            "_consolidated_non_depreciable_sunk_cost", gs
+        ),
+        "sunk_cost": _assign_attr("_consolidated_sunk_cost", gs),
 
+        # Attributes associated with preonstream cost
+        "preonstream_depreciable": _assign_attr(
+            "_consolidated_depreciable_preonstream", gs
+        ),
+        "preonstream_non_depreciable": _assign_attr(
+            "_consolidated_non_depreciable_preonstream", gs
+        ),
+        "preonstream": _assign_attr("_consolidated_preonstream", gs),
+
+        # Attributes associated with postonstream cost
+        "postonstream_depreciable": consolidated_depreciable_postonstream,
+        "postonstream_non_depreciable": consolidated_non_depreciable_postonstream,
+        "postonstream": consolidated_postonstream,
+
+        # Attributes associated with expenditures pre tax
+        **pre_tax,
+
+        # Attributes associated with indirect tax
+        **indirect_tax,
+
+        # Attributes associated with expenditures post tax
+        **post_tax,
+
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_consolidated_capital", gs),
+        "expenses_non_capital": _assign_attr("_consolidated_non_capital", gs),
+        "expenses_total": _assign_attr("_consolidated_total_expenses", gs),
+
+        # Attributes associated with depreciations
+        "depreciations_sunk_cost": depreciations["sunk_cost"],
+        "depreciations_preonstream": depreciations["preonstream"],
+        "depreciations_postonstream": depreciations["postonstream"],
+
+        # Attributes associated with amortizations
+        "amortizations_sunk_cost": amortizations["sunk_cost"],
+        "amortizations_preonstream": amortizations["preonstream"],
+        "amortizations_postonstream": amortizations["postonstream"],
+
+        # Attributes associated with shares
+        "contractor_share": _assign_attr("_consolidated_ctr_share_before_tf", gs),
+        "government_share": _assign_attr("_consolidated_gov_share_before_tf", gs),
+
+        # Attributes associated with business logic
+        "cost_to_be_deducted": _assign_attr("_consolidated_cost_tobe_deducted", gs),
+        "carry_forward_cost": _assign_attr("_consolidated_carward_deduct_cost", gs),
+        "deductible_cost": _assign_attr("_consolidated_deductible_cost", gs),
+        "carry_forward_cost_after_tf": _assign_attr(
+            "_consolidated_carward_cost_aftertf", gs
+        ),
+        "ctr_net_operating_profit": _assign_attr(
+            "_consolidated_net_operating_profit", gs
+        ),
+
+        # Attributes associated with DMO
+        "dmo_volume": _assign_attr("_consolidated_dmo_volume", gs),
+        "dmo_fee": _assign_attr("_consolidated_dmo_fee", gs),
+        "ddmo": _assign_attr("_consolidated_ddmo", gs),
+
+        # Attributes associated with taxable income
+        "taxable_income": _assign_attr("_consolidated_taxable_income", gs),
+        "tax": _assign_attr("_consolidated_tax_payment", gs),
+
+        # Attributes associated with government and contractor shares
+        "net_ctr_share": _assign_attr("_consolidated_ctr_net_share", gs),
+        "government_take": _assign_attr("_consolidated_government_take", gs),
+
+        # Attributes associated with cashflow
+        "ctr_cashflow": _assign_attr("_consolidated_cashflow", gs),
+        "cum_cashflow": np.cumsum(_assign_attr("_consolidated_cashflow", gs)),
     }
 
-    print('\t')
-    print(f'Filetype: {type(table_consolidated)}')
-    print(f'Length: {len(table_consolidated)}')
-    print('table_consolidated = \n', table_consolidated)
+    # Convert CONSOLIDATED cashflow table into pandas DataFrame
+    return pd.DataFrame(table_consolidated)
 
 
 def get_table_baseproject_oil(contract: BaseProject) -> pd.DataFrame:
@@ -1422,6 +1629,29 @@ def get_table_baseproject_consolidated(contract: BaseProject) -> pd.DataFrame:
 def get_table(
     contract: CostRecovery | GrossSplit | BaseProject | Transition,
 ) -> tuple:
+    """
+    Generate OIL, GAS, and CONSOLIDATED cashflow tables for a PSC contract.
+
+    Depending on the contract type (CostRecovery, GrossSplit, BaseProject, or
+    Transition), this function dispatches to the appropriate table-construction
+    routines and returns the three corresponding cashflow tables.
+
+    Parameters
+    ----------
+    contract : CostRecovery or GrossSplit or BaseProject or Transition
+        PSC contract instance for which cashflow tables are generated.
+
+    Returns
+    -------
+    tuple of pandas.DataFrame
+        A tuple containing:
+        - oil_table : DataFrame
+            Cashflow table for OIL stream.
+        - gas_table : DataFrame
+            Cashflow table for GAS stream.
+        - consolidated_table : DataFrame
+            Consolidated cashflow table combining OIL and GAS.
+    """
 
     # Construct OIL, GAS, and CONSOLIDATED cashflow tables for CR contract
     if isinstance(contract, CostRecovery):
@@ -1435,11 +1665,7 @@ def get_table(
         psc_table_oil = get_table_grosssplit_oil(contract=contract)
         psc_table_gas = get_table_grosssplit_gas(contract=contract)
         psc_table_consolidated = get_table_grosssplit_consolidated(contract=contract)
-
-        # print('\t')
-        # print(f'Filetype: {type(psc_table_gas)}')
-        # print(f'Length: {len(psc_table_gas)}')
-        # print('psc_table_gas = \n', psc_table_gas)
+        return psc_table_oil, psc_table_gas, psc_table_consolidated
 
     # Construct OIL, GAS, and CONSOLIDATED cashflow tables for transition contract
     elif isinstance(contract, Transition):
@@ -1451,4 +1677,3 @@ def get_table(
         psc_table_gas = get_table_baseproject_gas(contract=contract)
         psc_table_consolidated = get_table_baseproject_consolidated(contract=contract)
         return psc_table_oil, psc_table_gas, psc_table_consolidated
-

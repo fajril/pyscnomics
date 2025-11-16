@@ -282,11 +282,9 @@ def get_table(
         psc_table_gas['Carry_Forward_Cost_after_TF'] = contract._gas_carward_cost_aftertf
         psc_table_gas['CTR_Share_After_TF'] = contract._gas_ctr_share_after_transfer
         psc_table_gas['CTR_Net_Operating_Profit'] = contract._gas_net_operating_profit
-
         psc_table_gas['DMO_Volume'] = contract._gas_dmo_volume
         psc_table_gas['DMO_Fee'] = contract._gas_dmo_fee
         psc_table_gas['DDMO'] = contract._gas_ddmo
-
         psc_table_gas['Taxable_Income'] = contract._gas_taxable_income
         psc_table_gas['Tax'] = contract._gas_tax
         psc_table_gas['Net_CTR_Share'] = contract._gas_ctr_net_share
