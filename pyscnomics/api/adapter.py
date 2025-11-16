@@ -1237,19 +1237,23 @@ def get_contract_table(data: dict, contract_type: str = "Cost Recovery") -> dict
     # Adjusting the variable to the corresponding contract type
     if contract_type == "Cost Recovery":
         contract = get_costrecovery(data=data)[1]
-        year_column = "Year"
+        year_column = "years"
+        # year_column = "Year"
 
     elif contract_type == "Gross Split":
         contract = get_grosssplit(data=data)[1]
-        year_column = "Years"
+        year_column = "years"
+        # year_column = "Years"
 
     elif contract_type == "Base Project":
         contract = get_baseproject(data=data)[1]
-        year_column = "Years"
+        year_column = "years"
+        # year_column = "Years"
 
     else:
         contract = get_transition(data=data)[1]
-        year_column = "Year"
+        year_column = "years"
+        # year_column = "Year"
 
     # Condition when the contract is Transition
     if contract_type == "Transition":

@@ -1,5 +1,5 @@
 """
-This code is used to generate the cashflow dataframe of a contract.
+A collection of procedures to generate cashflow of a contract in the form of DataFrame.
 """
 
 import pandas as pd
@@ -9,1108 +9,1671 @@ from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 
+pd.set_option("display.max_rows", None)
+pd.set_option("display.max_columns", 200)
+pd.set_option("display.width", 200)
 
-def get_table(
-    contract: BaseProject | CostRecovery | GrossSplit | Transition
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame] | \
-     tuple[list[pd.DataFrame], list[pd.DataFrame], list[pd.DataFrame]]:
+
+# Define sulfur, electricity, and CO2 as non-petroleum commodities
+non_petroleum_commodities = ["sulfur", "electricity", "co2"]
+
+
+def _assign_attr(
+    attr: str,
+    contract: CostRecovery | GrossSplit | BaseProject,
+    is_lifting: bool = False
+):
     """
-    A function to get the dataframe of the executed PSC object.
+    Retrieve an attribute from a contract object and optionally extract its lifting rate.
 
     Parameters
     ----------
-    contract: CostRecovery | GrossSplit | Transition
-        the psc object that its dataframe will be generated
+    attr : str
+        Name of the attribute to retrieve from the contract object.
+    contract : CostRecovery or GrossSplit or BaseProject
+        Contract instance containing the target attribute.
+    is_lifting : bool, default=False
+        If True, return the lifting rate array using
+        `value.get_lifting_rate_ghv_arr()`; otherwise, return the attribute value itself.
 
     Returns
     -------
-    out: tuple
-        Dataframe of Oil Cashflow
-        Dataframe of Gas Cashflow
-        Dataframe of Consolidated Cashflow
+    Any
+        The retrieved attribute or its lifting rate array if `is_lifting` is True.
+
+    Notes
+    -----
+    This function simplifies attribute access from contract objects while
+    handling lifting-related attributes consistently.
     """
 
+    value = getattr(contract, attr)
+
+    return value.get_lifting_rate_ghv_arr() if is_lifting else value
+
+
+def get_non_petroleum_commodity(
+    commodity: str,
+    contract: CostRecovery | GrossSplit | BaseProject | Transition,
+) -> dict:
+    """
+    Retrieve lifting, price, and revenue data for a non-petroleum commodity.
+
+    Validates the commodity name and extracts its associated economic
+    attributes from the contract object using standardized attribute naming
+    (e.g., ``_sulfur_lifting``, ``_sulfur_wap_price``, ``_sulfur_revenue``).
+
+    Parameters
+    ----------
+    commodity : str
+        Name of the non-petroleum commodity (e.g., ``"sulfur"``,
+        ``"electricity"``, ``"co2"``). Must be listed in
+        ``non_petroleum_commodities``.
+    contract : CostRecovery or GrossSplit or BaseProject or Transition
+        Contract instance providing commodity-specific attributes.
+
+    Returns
+    -------
+    dict
+        Dictionary containing lifting, price, and revenue arrays for the
+        specified commodity.
+
+    Raises
+    ------
+    ValueError
+        If the commodity name is not recognized.
+    """
+
+    if commodity not in non_petroleum_commodities:
+        raise ValueError(f"Invalid non-petroleum commodity: {commodity!r}")
+
+    return {
+        f"lifting_{commodity}": _assign_attr(
+            attr=f"_{commodity}_lifting", contract=contract, is_lifting=True
+        ),
+        f"price_{commodity}": _assign_attr(
+            attr=f"_{commodity}_wap_price", contract=contract
+        ),
+        f"revenue_{commodity}": _assign_attr(
+            attr=f"_{commodity}_revenue", contract=contract
+        )
+    }
+
+
+def get_table_costrecovery_oil(contract: CostRecovery) -> pd.DataFrame:
+    """
+    Build the oil cashflow table for a CostRecovery contract.
+
+    Compiles yearly oil-related economic attributes—including lifting,
+    revenues, expenditures (pre-tax, post-tax, indirect tax), sunk costs,
+    depreciations, FTP components, cost recovery mechanics, DMO, taxation,
+    government/contractor shares, and cashflow—into a pandas DataFrame.
+
+    Parameters
+    ----------
+    contract : CostRecovery
+        Contract instance containing all oil economic attributes.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Tabular oil cashflow data indexed by project years.
+    """
+
+    cr = contract
+
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, cr) for com in non_petroleum_commodities
+    ]
+
+    # Specify postonstream attributes for OIL
+    oil_depreciable_postonstream = _assign_attr(
+        "_oil_capital_expenditures_post_tax", cr
+    )
+
+    oil_non_depreciable_postonstream = np.array(
+        [
+            _assign_attr(at, cr) for at in [
+                "_oil_intangible_expenditures_post_tax",
+                "_oil_opex_expenditures_post_tax",
+                "_oil_asr_expenditures_post_tax",
+                "_oil_lbt_expenditures_post_tax",
+                "_oil_cost_of_sales_expenditures_post_tax",
+            ]
+        ]
+    ).sum(axis=0)
+
+    oil_postonstream = oil_depreciable_postonstream + oil_non_depreciable_postonstream
+
+    # Specify a list of cost categories
+    categories = [
+        "capital",
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales"
+    ]
+
+    # Prepare attributes associated with expenditures pre tax
+    pre_tax = {
+        f"{cat}_expenditures_pre_tax": _assign_attr(
+            f"_oil_{cat}_expenditures_pre_tax", cr
+        )
+        for cat in categories
+    }
+
+    # Prepare attributes associated with indirect tax
+    indirect_tax = {
+        f"{cat}_indirect_tax": _assign_attr(f"_oil_{cat}_indirect_tax", cr)
+        for cat in categories
+    }
+
+    # Prepare attributes associated with postonstream costs (or expenditures post tax)
+    post_tax = {
+        f"{cat}_postonstream": _assign_attr(f"_oil_{cat}_expenditures_post_tax", cr)
+        for cat in categories
+    }
+
+    # Prepare attribute associated with depreciations
+    depreciations = _assign_attr(f"_oil_depreciations", cr)
+
+    # Specify cashflow table for OIL
+    table_oil: dict = {
+        # Basic attributes
+        "years": cr.project_years,
+        "lifting": _assign_attr("_oil_lifting", cr, True),
+        "price": _assign_attr("_oil_wap_price", cr),
+        "revenue": _assign_attr("_oil_revenue", cr),
+
+        # Attributes associated with sulfur, electricity, and CO2 commodities
+        **sulfur,
+        **electricity,
+        **co2,
+
+        # Attributes associated with sunk cost
+        "sunk_cost_depreciable": _assign_attr("_oil_depreciable_sunk_cost", cr),
+        "sunk_cost_non_depreciable": _assign_attr(
+            "_oil_non_depreciable_sunk_cost", cr
+        ),
+        "sunk_cost": _assign_attr("_oil_sunk_cost", cr),
+
+        # Attributes associated with preonstream cost
+        "preonstream_depreciable": _assign_attr("_oil_depreciable_preonstream", cr),
+        "preonstream_non_depreciable": _assign_attr(
+            "_oil_non_depreciable_preonstream", cr
+        ),
+        "preonstream": _assign_attr("_oil_preonstream", cr),
+
+        # Attributes associated with postonstream cost
+        "postonstream_depreciable": oil_depreciable_postonstream,
+        "postonstream_non_depreciable": oil_non_depreciable_postonstream,
+        "postonstream": oil_postonstream,
+
+        # Attributes associated with expenditures pre tax
+        **pre_tax,
+
+        # Attributes associated with indirect tax
+        **indirect_tax,
+
+        # Attributes associated with expenditures post tax
+        **post_tax,
+
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_oil_capital", cr),
+        "expenses_non_capital": _assign_attr("_oil_non_capital", cr),
+        "expenses_total": _assign_attr("_oil_total_expenses", cr),
+
+        # Attributes associated with depreciations
+        "depreciations_sunk_cost": depreciations["sunk_cost"],
+        "depreciations_preonstream": depreciations["preonstream"],
+        "depreciations_postonstream": depreciations["postonstream"],
+
+        # Attributes associated with FTP
+        "ftp": _assign_attr("_oil_ftp", cr),
+        "ftp_ctr": _assign_attr("_oil_ftp_ctr", cr),
+        "ftp_gov": _assign_attr("_oil_ftp_gov", cr),
+
+        # Attributes associated with core business logic
+        "investment_credit": _assign_attr("_oil_ic_paid", cr),
+        "unrecovered_cost": _assign_attr("_oil_unrecovered_before_transfer", cr),
+        "recoverable_cost": _assign_attr("_oil_recoverable_cost", cr),
+        "cost_recovery": _assign_attr("_oil_cost_recovery", cr),
+        "ets_before_transfer": _assign_attr("_oil_ets_before_transfer", cr),
+        "transfer_to_gas": _assign_attr("_transfer_to_gas", cr),
+        "unrec_after_transfer": _assign_attr("_oil_unrecovered_after_transfer", cr),
+        "cost_recovery_after_tf": _assign_attr("_oil_cost_recovery_after_tf", cr),
+        "ets_after_transfer": _assign_attr("_oil_ets_after_transfer", cr),
+        "contractor_share": _assign_attr("_oil_contractor_share", cr),
+        "government_share": _assign_attr("_oil_government_share", cr),
+
+        # Attributes associated with DMO
+        "dmo_volume": _assign_attr("_oil_dmo_volume", cr),
+        "dmo_fee": _assign_attr("_oil_dmo_fee", cr),
+        "ddmo": _assign_attr("_oil_ddmo", cr),
+
+        # Attributes associated with taxable income
+        "taxable_income": _assign_attr("_oil_taxable_income", cr),
+        "tax_payment": _assign_attr("_oil_tax_payment", cr),
+
+        # Attributes associated with government and contractor shares
+        "contractor_net_share": _assign_attr("_oil_ctr_net_share", cr),
+        "government_take": _assign_attr("_oil_government_take", cr),
+
+        # Attributes associated with cashflow
+        "cashflow": _assign_attr("_oil_cashflow", cr),
+        "cum_cashflow": np.cumsum(_assign_attr("_oil_cashflow", cr)),
+    }
+
+    # Convert OIL cashflow table into pandas DataFrame
+    return pd.DataFrame(table_oil)
+
+
+def get_table_costrecovery_gas(contract: CostRecovery) -> pd.DataFrame:
+    """
+    Build the gas cashflow table for a CostRecovery contract.
+
+    Collects yearly gas-related economic attributes—including lifting,
+    revenues, expenditures (pre-tax, post-tax, indirect tax), sunk costs,
+    depreciations, FTP components, cost recovery mechanics, DMO, taxation,
+    government/contractor shares, and cashflow—and compiles them into a
+    pandas DataFrame.
+
+    Parameters
+    ----------
+    contract : CostRecovery
+        Contract instance containing all gas economic attributes.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Tabular gas cashflow data indexed by project years.
+    """
+
+    cr = contract
+
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, cr) for com in non_petroleum_commodities
+    ]
+
+    # Specify postonstream attributes for GAS
+    gas_depreciable_postonstream = _assign_attr(
+        "_gas_capital_expenditures_post_tax", cr
+    )
+
+    gas_non_depreciable_postonstream = np.array(
+        [
+            _assign_attr(at, cr) for at in [
+                "_gas_intangible_expenditures_post_tax",
+                "_gas_opex_expenditures_post_tax",
+                "_gas_asr_expenditures_post_tax",
+                "_gas_lbt_expenditures_post_tax",
+                "_gas_cost_of_sales_expenditures_post_tax",
+            ]
+        ]
+    ).sum(axis=0)
+
+    gas_postonstream = gas_depreciable_postonstream + gas_non_depreciable_postonstream
+
+    # Specify a list of cost categories
+    categories = [
+        "capital",
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales",
+    ]
+
+    # Prepare attributes associated with expenditures pre tax
+    pre_tax = {
+        f"{cat}_expenditures_pre_tax": _assign_attr(
+            f"_gas_{cat}_expenditures_pre_tax", cr
+        )
+        for cat in categories
+    }
+
+    # Prepare attributes associated with indirect tax
+    indirect_tax = {
+        f"{cat}_indirect_tax": _assign_attr(f"_gas_{cat}_indirect_tax", cr)
+        for cat in categories
+    }
+
+    # Prepare attributes associated with postonstream costs (or expenditures post tax)
+    post_tax = {
+        f"{cat}_postonstream": _assign_attr(f"_gas_{cat}_expenditures_post_tax", cr)
+        for cat in categories
+    }
+
+    # Prepare attribute associated with depreciations
+    depreciations = _assign_attr("_gas_depreciations", cr)
+
+    # Specify cashflow table for GAS
+    table_gas: dict = {
+        # Basic attributes
+        "years": cr.project_years,
+        "lifting": _assign_attr("_gas_lifting", cr, True),
+        "price": _assign_attr("_gas_wap_price", cr),
+        "revenue": _assign_attr("_gas_revenue", cr),
+
+        # Attributes associated with sulfur, electricity, and CO2 commodities
+        **sulfur,
+        **electricity,
+        **co2,
+
+        # Attributes associated with sunk cost
+        "sunk_cost_depreciable": _assign_attr("_gas_depreciable_sunk_cost", cr),
+        "sunk_cost_non_depreciable": _assign_attr("_gas_non_depreciable_sunk_cost", cr),
+        "sunk_cost": _assign_attr("_gas_sunk_cost", cr),
+
+        # Attributes associated with preonstream cost
+        "preonstream_depreciable": _assign_attr("_gas_depreciable_preonstream", cr),
+        "preonstream_non_depreciable": _assign_attr(
+            "_gas_non_depreciable_preonstream", cr
+        ),
+        "preonstream": _assign_attr("_gas_preonstream", cr),
+
+        # Attribute associated with postonstream cost
+        "postonstream_depreciable": gas_depreciable_postonstream,
+        "postonstream_non_depreciable": gas_non_depreciable_postonstream,
+        "postonstream": gas_postonstream,
+
+        # Attributes associated with expenditures pre tax
+        **pre_tax,
+
+        # Attributes associated with indirect tax
+        **indirect_tax,
+
+        # Attributes associated with expenditures post tax
+        **post_tax,
+
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_gas_capital", cr),
+        "expenses_non_capital": _assign_attr("_gas_non_capital", cr),
+        "expenses_total": _assign_attr("_gas_total_expenses", cr),
+
+        # Attributes associated with depreciations
+        "depreciations_sunk_cost": depreciations["sunk_cost"],
+        "depreciations_preonstream": depreciations["preonstream"],
+        "depreciations_postonstream": depreciations["postonstream"],
+
+        # Attributes associated with FTP
+        "ftp": _assign_attr("_gas_ftp", cr),
+        "ftp_ctr": _assign_attr("_gas_ftp_ctr", cr),
+        "ftp_gov": _assign_attr("_gas_ftp_gov", cr),
+
+        # Attributes associated with core business logic
+        "investment_credit": _assign_attr("_gas_ic_paid", cr),
+        "unrecovered_cost": _assign_attr("_gas_unrecovered_before_transfer", cr),
+        "recoverable_cost": _assign_attr("_gas_recoverable_cost", cr),
+        "cost_recovery": _assign_attr("_gas_cost_recovery", cr),
+        "ets_before_transfer": _assign_attr("_gas_ets_before_transfer", cr),
+        "transfer_to_oil": _assign_attr("_transfer_to_oil", cr),
+        "unrec_after_transfer": _assign_attr("_gas_unrecovered_after_transfer", cr),
+        "cost_recovery_after_tf": _assign_attr("_gas_cost_recovery_after_tf", cr),
+        "ets_after_transfer": _assign_attr("_gas_ets_after_transfer", cr),
+        "contractor_share": _assign_attr("_gas_contractor_share", cr),
+        "government_share": _assign_attr("_gas_government_share", cr),
+
+        # Attributes associated with DMO
+        "dmo_volume": _assign_attr("_gas_dmo_volume", cr),
+        "dmo_fee": _assign_attr("_gas_dmo_fee", cr),
+        "ddmo": _assign_attr("_gas_ddmo", cr),
+
+        # Attributes associated with taxable income
+        "taxable_income": _assign_attr("_gas_taxable_income", cr),
+        "tax_payment": _assign_attr("_gas_tax_payment", cr),
+
+        # Attributes associated with government and contractor shares
+        "contractor_net_share": _assign_attr("_gas_ctr_net_share", cr),
+        "government_take": _assign_attr("_gas_government_take", cr),
+
+        # Attributes associated with cashflow
+        "cashflow": _assign_attr("_gas_cashflow", cr),
+        "cum_cashflow": np.cumsum(_assign_attr("_gas_cashflow", cr)),
+    }
+
+    # Convert GAS cashflow table into pandas DataFrame
+    return pd.DataFrame(table_gas)
+
+
+def get_table_costrecovery_consolidated(contract: CostRecovery) -> pd.DataFrame:
+    """
+    Build the consolidated cashflow table for a CostRecovery contract.
+
+    Aggregates oil and gas economic components into a unified consolidated
+    table, including lifting, revenues, expenditures (pre-tax, post-tax,
+    indirect tax), sunk and preonstream costs, depreciations, FTP components,
+    cost recovery mechanics, DMO, taxation, government/contractor shares,
+    and cashflow.
+
+    Parameters
+    ----------
+    contract : CostRecovery
+        Contract instance containing consolidated economic attributes.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Tabular consolidated cashflow data indexed by project years.
+    """
+
+    cr = contract
+
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, cr) for com in non_petroleum_commodities
+    ]
+
+    # Specify postonstream attributes for CONSOLIDATED
+    consolidated_depreciable_postonstream = _assign_attr(
+        "_consolidated_capital_expenditures_post_tax", cr
+    )
+
+    consolidated_non_depreciable_postonstream = np.array(
+        [
+            _assign_attr(at, cr) for at in [
+                "_consolidated_intangible_expenditures_post_tax",
+                "_consolidated_opex_expenditures_post_tax",
+                "_consolidated_asr_expenditures_post_tax",
+                "_consolidated_lbt_expenditures_post_tax",
+                "_consolidated_cost_of_sales_expenditures_post_tax",
+            ]
+        ]
+    ).sum(axis=0)
+
+    consolidated_postonstream = (
+        consolidated_depreciable_postonstream + consolidated_non_depreciable_postonstream
+    )
+
+    # Specify a list of cost categories
+    categories = [
+        "capital",
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales"
+    ]
+
+    # Prepare attributes associated with expenditures pre tax
+    pre_tax = {
+        f"{cat}_expenditures_pre_tax": _assign_attr(
+            f"_consolidated_{cat}_expenditures_pre_tax", cr
+        )
+        for cat in categories
+    }
+
+    # Prepare attributes associated with indirect tax
+    indirect_tax = {
+        f"{cat}_indirect_tax": _assign_attr(
+            f"_consolidated_{cat}_indirect_tax", cr
+        )
+        for cat in categories
+    }
+
+    # Prepare attributes associated with postonstream costs (or expenditures post tax)
+    post_tax = {
+        f"{cat}_postonstream": _assign_attr(
+            f"_consolidated_{cat}_expenditures_post_tax", cr
+        )
+        for cat in categories
+    }
+
+    # Prepare attribute associated with depreciations
+    depreciations = _assign_attr("_consolidated_depreciations", cr)
+
+    # Specify cashflow table for CONSOLIDATED
+    table_consolidated: dict = {
+        # Basic attributes
+        "years": cr.project_years,
+        "lifting": _assign_attr("_consolidated_lifting", cr),
+        "price": _assign_attr("_consolidated_wap_price", cr),
+        "revenue": _assign_attr("_consolidated_revenue", cr),
+
+        # Attributes associated with sulfur, electricity, and CO2 commodities
+        **sulfur,
+        **electricity,
+        **co2,
+
+        # Attributes associated with sunk cost
+        "sunk_cost_depreciable": _assign_attr("_consolidated_depreciable_sunk_cost", cr),
+        "sunk_cost_non_depreciable": _assign_attr(
+            "_consolidated_non_depreciable_sunk_cost", cr
+        ),
+        "sunk_cost": _assign_attr("_consolidated_sunk_cost", cr),
+
+        # Attributes associated with preonstream cost
+        "preonstream_depreciable": _assign_attr(
+            "_consolidated_depreciable_preonstream", cr
+        ),
+        "preonstream_non_depreciable": _assign_attr(
+            "_consolidated_non_depreciable_preonstream", cr
+        ),
+        "preonstream": _assign_attr("_consolidated_preonstream", cr),
+
+        # Attributes associated with postonstream cost
+        "postonstream_depreciable": consolidated_depreciable_postonstream,
+        "postonstream_non_depreciable": consolidated_non_depreciable_postonstream,
+        "postonstream": consolidated_postonstream,
+
+        # Attributes associated with expenditures pre tax
+        **pre_tax,
+
+        # Attributes associated with indirect tax
+        **indirect_tax,
+
+        # Attributes associated with expenditures post tax
+        **post_tax,
+
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_consolidated_capital", cr),
+        "expenses_non_capital": _assign_attr("_consolidated_non_capital", cr),
+        "expenses_total": _assign_attr("_consolidated_total_expenses", cr),
+
+        # Attributes associated with depreciations
+        "depreciations_sunk_cost": depreciations["sunk_cost"],
+        "depreciations_preonstream": depreciations["preonstream"],
+        "depreciations_postonstream": depreciations["postonstream"],
+
+        # Attributes associated with FTP
+        "ftp": _assign_attr("_consolidated_ftp", cr),
+        "ftp_ctr": _assign_attr("_consolidated_ftp_ctr", cr),
+        "ftp_gov": _assign_attr("_consolidated_ftp_gov", cr),
+
+        # Attributes associated with core business logic
+        "investment_credit": _assign_attr("_consolidated_ic_paid", cr),
+        "unrecovered_cost": _assign_attr(
+            "_consolidated_unrecovered_before_transfer", cr
+        ),
+        "recoverable_cost": _assign_attr("_consolidated_recoverable_cost", cr),
+        "cost_recovery": _assign_attr(
+            "_consolidated_cost_recovery_before_transfer", cr
+        ),
+        "ets_before_transfer": _assign_attr("_consolidated_ets_before_transfer", cr),
+        "unrec_after_transfer": _assign_attr(
+            "_consolidated_unrecovered_after_transfer", cr
+        ),
+        "cost_recovery_after_tf": _assign_attr(
+            "_consolidated_cost_recovery_after_tf", cr
+        ),
+        "ets_after_transfer": _assign_attr("_consolidated_ets_after_transfer", cr),
+        "contractor_share": _assign_attr("_consolidated_contractor_share", cr),
+        "government_share": _assign_attr("_consolidated_government_share", cr),
+
+        # Attributes associated with DMO
+        "dmo_volume": _assign_attr("_consolidated_dmo_volume", cr),
+        "dmo_fee": _assign_attr("_consolidated_dmo_fee", cr),
+        "ddmo": _assign_attr("_consolidated_ddmo", cr),
+
+        # Attributes associated with taxable income
+        "taxable_income": _assign_attr("_consolidated_taxable_income", cr),
+        "tax_payment": _assign_attr("_consolidated_tax_payment", cr),
+
+        # Attributes associated with government and contractor shares
+        "contractor_net_share": _assign_attr("_consolidated_ctr_net_share", cr),
+        "contractor_take": _assign_attr("_consolidated_contractor_take", cr),
+        "government_take": _assign_attr("_consolidated_government_take", cr),
+
+        # Attributes associated with cashflow
+        "cashflow": _assign_attr("_consolidated_cashflow", cr),
+        "cum_cashflow": np.cumsum(_assign_attr("_consolidated_cashflow", cr)),
+    }
+
+    # Convert CONSOLIDATED cashflow table into pandas DataFrame
+    return pd.DataFrame(table_consolidated)
+
+
+def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
+    """
+    Build the OIL cashflow table for a GrossSplit contract.
+
+    Assembles lifting, revenue, cost components, taxes, depreciation,
+    amortization, progressive/variable splits, government–contractor shares,
+    and cashflow values. Non-petroleum commodity data (sulfur, electricity,
+    CO₂) is included using `get_non_petroleum_commodity`.
+
+    Parameters
+    ----------
+    contract : GrossSplit
+        Contract instance providing OIL-related economic attributes.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Cashflow table for OIL, containing prices, revenues, costs,
+        taxes, splits, shares, and cashflow metrics.
+
+    Notes
+    -----
+    Attribute access is standardized through ``_assign_attr`` and category-based
+    dictionary expansions for cost components.
+    """
+
+    gs = contract
+
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, gs) for com in non_petroleum_commodities
+    ]
+
+    # Prepare postonstream attributes for OIL
+    oil_depreciable_postonstream = _assign_attr(
+        "_oil_capital_expenditures_post_tax", gs
+    )
+
+    oil_non_depreciable_postonstream = np.array(
+        [
+            _assign_attr(at, gs) for at in [
+                "_oil_intangible_expenditures_post_tax",
+                "_oil_opex_expenditures_post_tax",
+                "_oil_asr_expenditures_post_tax",
+                "_oil_lbt_expenditures_post_tax",
+                "_oil_cost_of_sales_expenditures_post_tax",
+            ]
+        ]
+    ).sum(axis=0)
+
+    oil_postonstream = oil_depreciable_postonstream + oil_non_depreciable_postonstream
+
+    # Specify a list of cost categories
+    categories = [
+        "capital",
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales"
+    ]
+
+    # Prepare attributes associated with expenditures pre tax
+    pre_tax = {
+        f"{cat}_expenditures_pre_tax": _assign_attr(
+            f"_oil_{cat}_expenditures_pre_tax", gs
+        )
+        for cat in categories
+    }
+
+    # Prepare attributes associated with indirect tax
+    indirect_tax = {
+        f"{cat}_indirect_tax": _assign_attr(f"_oil_{cat}_indirect_tax", gs)
+        for cat in categories
+    }
+
+    # Prepare attributes associated with postonstream costs (or expenditures post tax)
+    post_tax = {
+        f"{cat}_postonstream": _assign_attr(f"_oil_{cat}_expenditures_post_tax", gs)
+        for cat in categories
+    }
+
+    # Prepare attribute associated with depreciations
+    depreciations = _assign_attr("_oil_depreciations", gs)
+
+    # Prepare attribute associated with amortizations
+    amortizations = _assign_attr("_oil_amortizations", gs)
+
+    # Specify cashflow table for OIL
+    table_oil: dict = {
+        # Basic attributes
+        "years": gs.project_years,
+        "lifting": _assign_attr("_oil_lifting", gs, True),
+        "price": _assign_attr("_oil_wap_price", gs),
+        "revenue": _assign_attr("_oil_revenue", gs),
+
+        # Attributes associated with sulfur, electricity, and CO2 commodities
+        **sulfur,
+        **electricity,
+        **co2,
+
+        # Attributes associated with sunk cost
+        "sunk_cost_depreciable": _assign_attr("_oil_depreciable_sunk_cost", gs),
+        "sunk_cost_non_depreciable": _assign_attr("_oil_non_depreciable_sunk_cost", gs),
+        "sunk_cost": _assign_attr("_oil_sunk_cost", gs),
+
+        # Attributes associated with preonstream cost
+        "preonstream_depreciable": _assign_attr("_oil_depreciable_preonstream", gs),
+        "preonstream_non_depreciable": _assign_attr(
+            "_oil_non_depreciable_preonstream", gs
+        ),
+        "preonstream": _assign_attr("_oil_preonstream", gs),
+
+        # Attributes associated with postonstream cost
+        "postonstream_depreciable": oil_depreciable_postonstream,
+        "postonstream_non_depreciable": oil_non_depreciable_postonstream,
+        "postonstream": oil_postonstream,
+
+        # Attributes associated with expenditures pre tax
+        **pre_tax,
+
+        # Attributes associated with indirect tax
+        **indirect_tax,
+
+        # Attributes associated with expenditures post tax
+        **post_tax,
+
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_oil_capital", gs),
+        "expenses_non_capital": _assign_attr("_oil_non_capital", gs),
+        "expenses_total": _assign_attr("_oil_total_expenses", gs),
+
+        # Attributes associated with depreciations
+        "depreciations_sunk_cost": depreciations["sunk_cost"],
+        "depreciations_preonstream": depreciations["preonstream"],
+        "depreciations_postonstream": depreciations["postonstream"],
+
+        # Attributes associated with amortizations
+        "amortizations_sunk_cost": amortizations["sunk_cost"],
+        "amortizations_preonstream": amortizations["preonstream"],
+        "amortizations_postonstream": amortizations["postonstream"],
+
+        # Attributes associated with splits
+        "base_split": _assign_attr("_oil_base_split", gs),
+        "variable_split": _assign_attr("_var_split_array", gs),
+        "progressive_price_split": _assign_attr("_oil_prog_price_split", gs),
+        "progressive_cum_prod_split": _assign_attr("_oil_prog_cum_split", gs),
+        "progressive_split": _assign_attr("_oil_prog_split", gs),
+        "contractor_split": _assign_attr("_oil_ctr_split", gs),
+
+        # Attributes associated with shares
+        "contractor_share": _assign_attr("_oil_ctr_share_before_transfer", gs),
+        "government_share": _assign_attr("_oil_gov_share", gs),
+
+        # Attributes associated with business logic
+        "cost_to_be_deducted": _assign_attr("_oil_cost_tobe_deducted", gs),
+        "carry_forward_cost": _assign_attr("_oil_carward_deduct_cost", gs),
+        "deductible_cost": _assign_attr("_oil_deductible_cost", gs),
+        "transfer_to_gas": _assign_attr("_transfer_to_gas", gs),
+        "carry_forward_cost_after_tf": _assign_attr("_oil_carward_cost_aftertf", gs),
+        "profit_pre_transfer": _assign_attr("_oil_profit_pre_transfer", gs),
+        "ctr_net_operating_profit": _assign_attr("_oil_net_operating_profit", gs),
+
+        # Attributes associated with DMO
+        "dmo_volume": _assign_attr("_oil_dmo_volume", gs),
+        "dmo_fee": _assign_attr("_oil_dmo_fee", gs),
+        "ddmo": _assign_attr("_oil_ddmo", gs),
+
+        # Attributes associated with taxable income
+        "taxable_income": _assign_attr("_oil_taxable_income", gs),
+        "tax": _assign_attr("_oil_tax", gs),
+
+        # Attributes associated with government and contractor shares
+        "net_ctr_share": _assign_attr("_oil_ctr_net_share", gs),
+        "government_take": _assign_attr("_oil_government_take", gs),
+
+        # Attribute associated with cashflow
+        "ctr_cashflow": _assign_attr("_oil_ctr_cashflow", gs),
+        "cum_cashflow": np.cumsum(_assign_attr("_oil_ctr_cashflow", gs)),
+    }
+
+    # Convert OIL cashflow table into pandas DataFrame
+    return pd.DataFrame(table_oil)
+
+
+def get_table_grosssplit_gas(contract: GrossSplit) -> pd.DataFrame:
+    """
+    Build the GAS cashflow table for a GrossSplit contract.
+
+    Collects lifting, revenue, cost components, indirect taxes,
+    depreciations, amortizations, progressive/variable splits, contractor
+    and government shares, and cashflow-related values. Non-petroleum
+    commodity data (sulfur, electricity, CO₂) is included via
+    `get_non_petroleum_commodity`.
+
+    Parameters
+    ----------
+    contract : GrossSplit
+        Contract instance supplying GAS-related economic attributes.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Cashflow table for GAS, including prices, revenues, cost categories,
+        taxes, splits, shares, and contractor cashflow metrics.
+
+    Notes
+    -----
+    Attributes are populated through ``_assign_attr`` and expanded using
+    category-based dictionaries for pre-tax, indirect-tax, and post-tax costs.
+    """
+
+    gs = contract
+
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, gs) for com in non_petroleum_commodities
+    ]
+
+    # Prepare postonstream attributes for GAS
+    gas_depreciable_postonstream = _assign_attr(
+        "_gas_capital_expenditures_post_tax", gs
+    )
+
+    gas_non_depreciable_postonstream = np.array(
+        [
+            _assign_attr(at, gs) for at in [
+                "_gas_intangible_expenditures_post_tax",
+                "_gas_opex_expenditures_post_tax",
+                "_gas_asr_expenditures_post_tax",
+                "_gas_lbt_expenditures_post_tax",
+                "_gas_cost_of_sales_expenditures_post_tax",
+            ]
+        ]
+    ).sum(axis=0)
+
+    gas_postonstream = gas_depreciable_postonstream + gas_non_depreciable_postonstream
+
+    # Specify a list of cost categories
+    categories = [
+        "capital",
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales"
+    ]
+
+    # Prepare attributes associated with expenditures pre tax
+    pre_tax = {
+        f"{cat}_expenditures_pre_tax": _assign_attr(
+            f"_gas_{cat}_expenditures_pre_tax", gs
+        )
+        for cat in categories
+    }
+
+    # Prepare attributes associated with indirect tax
+    indirect_tax = {
+        f"{cat}_indirect_tax": _assign_attr(f"_gas_{cat}_indirect_tax", gs)
+        for cat in categories
+    }
+
+    # Prepare attributes associated with postonstream costs (or expenditures post tax)
+    post_tax = {
+        f"{cat}_postonstream": _assign_attr(f"_gas_{cat}_expenditures_post_tax", gs)
+        for cat in categories
+    }
+
+    # Prepare attribute associated with depreciations
+    depreciations = _assign_attr("_gas_depreciations", gs)
+
+    # Prepare attribute associated with amortizations
+    amortizations = _assign_attr("_gas_amortizations", gs)
+
+    # Specify cashflow table for GAS
+    table_gas: dict = {
+        # Basic attributes
+        "years": gs.project_years,
+        "lifting": _assign_attr("_gas_lifting", gs, True),
+        "price": _assign_attr("_gas_wap_price", gs),
+        "revenue": _assign_attr("_gas_revenue", gs),
+
+        # Attributes associated with sulfur, electricity, and CO2 commodities
+        **sulfur,
+        **electricity,
+        **co2,
+
+        # Attributes associated with sunk cost
+        "sunk_cost_depreciable": _assign_attr("_gas_depreciable_sunk_cost", gs),
+        "sunk_cost_non_depreciable": _assign_attr("_gas_non_depreciable_sunk_cost", gs),
+        "sunk_cost": _assign_attr("_gas_sunk_cost", gs),
+
+        # Attributes associated with preonstream cost
+        "preonstream_depreciable": _assign_attr("_gas_depreciable_preonstream", gs),
+        "preonstream_non_depreciable": _assign_attr(
+            "_gas_non_depreciable_preonstream", gs
+        ),
+        "preonstream": _assign_attr("_gas_preonstream", gs),
+
+        # Attributes associated with postonstream cost
+        "postonstream_depreciable": gas_depreciable_postonstream,
+        "postonstream_non_depreciable": gas_non_depreciable_postonstream,
+        "postonstream": gas_postonstream,
+
+        # Attributes associated with expenditures pre tax
+        **pre_tax,
+
+        # Attributes associated with indirect tax
+        **indirect_tax,
+
+        # Attributes associated with expenditures post tax
+        **post_tax,
+
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_gas_capital", gs),
+        "expenses_non_capital": _assign_attr("_gas_non_capital", gs),
+        "expenses_total": _assign_attr("_gas_total_expenses", gs),
+
+        # Attributes associated with depreciations
+        "depreciations_sunk_cost": depreciations["sunk_cost"],
+        "depreciations_preonstream": depreciations["preonstream"],
+        "depreciations_postonstream": depreciations["postonstream"],
+
+        # Attributes associated with amortizations
+        "amortizations_sunk_cost": amortizations["sunk_cost"],
+        "amortizations_preonstream": amortizations["preonstream"],
+        "amortizations_postonstream": amortizations["postonstream"],
+
+        # Attributes associated with splits
+        "base_split": _assign_attr("_gas_base_split", gs),
+        "variable_split": _assign_attr("_var_split_array", gs),
+        "progressive_price_split": _assign_attr("_gas_prog_price_split", gs),
+        "progressive_cum_prod_split": _assign_attr("_gas_prog_cum_split", gs),
+        "progressive_split": _assign_attr("_gas_prog_split", gs),
+        "contractor_split": _assign_attr("_gas_ctr_split", gs),
+
+        # Attributes associated with shares
+        "contractor_share": _assign_attr("_gas_ctr_share_before_transfer", gs),
+        "government_share": _assign_attr("_gas_gov_share", gs),
+
+        # Attributes associated with business logic
+        "cost_to_be_deducted": _assign_attr("_gas_cost_tobe_deducted", gs),
+        "carry_forward_cost": _assign_attr("_gas_carward_deduct_cost", gs),
+        "deductible_cost": _assign_attr("_gas_deductible_cost", gs),
+        "transfer_to_oil": _assign_attr("_transfer_to_oil", gs),
+        "carry_forward_cost_after_tf": _assign_attr("_gas_carward_cost_aftertf", gs),
+        "profit_pre_transfer": _assign_attr("_gas_profit_pre_transfer", gs),
+        "ctr_net_operating_profit": _assign_attr("_gas_net_operating_profit", gs),
+
+        # Attributes associated with DMO
+        "dmo_volume": _assign_attr("_gas_dmo_volume", gs),
+        "dmo_fee": _assign_attr("_gas_dmo_fee", gs),
+        "ddmo": _assign_attr("_gas_ddmo", gs),
+
+        # Attributes associated with taxable income
+        "taxable_income": _assign_attr("_gas_taxable_income", gs),
+        "tax": _assign_attr("_gas_tax", gs),
+
+        # Attributes associated with government and contractor shares
+        "net_ctr_share": _assign_attr("_gas_ctr_net_share", gs),
+        "government_take": _assign_attr("_gas_government_take", gs),
+
+        # Attributes associated with cashflow
+        "ctr_cashflow": _assign_attr("_gas_ctr_cashflow", gs),
+        "cum_cashflow": np.cumsum(_assign_attr("_gas_ctr_cashflow", gs)),
+    }
+
+    # Convert GAS cashflow table into pandas DataFrame
+    return pd.DataFrame(table_gas)
+
+
+def get_table_grosssplit_consolidated(contract: GrossSplit) -> pd.DataFrame:
+    """
+    Build the CONSOLIDATED cashflow table for a GrossSplit contract.
+
+    Aggregates lifting, revenue, cost components (pre-tax, indirect-tax,
+    post-tax), depreciations, amortizations, contractor/government shares,
+    and cashflow metrics. Includes sulfur, electricity, and CO₂ data via
+    `get_non_petroleum_commodity`.
+
+    Parameters
+    ----------
+    contract : GrossSplit
+        Contract instance providing consolidated economic attributes.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Consolidated cashflow table containing revenues, costs, taxes,
+        shares, and cashflow values.
+
+    Notes
+    -----
+    Cost components are expanded using category-based dictionaries, and all
+    economic attributes are retrieved through ``_assign_attr`` for consistency.
+    """
+
+    gs = contract
+
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, gs) for com in non_petroleum_commodities
+    ]
+
+    # Specify postonstream attributes for CONSOLIDATED
+    consolidated_depreciable_postonstream = _assign_attr(
+        "_consolidated_capital_expenditures_post_tax", gs
+    )
+
+    consolidated_non_depreciable_postonstream = np.array(
+        [
+            _assign_attr(at, gs) for at in [
+                "_consolidated_intangible_expenditures_post_tax",
+                "_consolidated_opex_expenditures_post_tax",
+                "_consolidated_asr_expenditures_post_tax",
+                "_consolidated_lbt_expenditures_post_tax",
+                "_consolidated_cost_of_sales_expenditures_post_tax",
+            ]
+        ]
+    ).sum(axis=0)
+
+    consolidated_postonstream = (
+        consolidated_depreciable_postonstream + consolidated_non_depreciable_postonstream
+    )
+
+    # Specify a list of cost categories
+    categories = [
+        "capital",
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales"
+    ]
+
+    # Prepare attributes associated with expenditures pre tax
+    pre_tax = {
+        f"{cat}_expenditures_pre_tax": _assign_attr(
+            f"_consolidated_{cat}_expenditures_pre_tax", gs
+        )
+        for cat in categories
+    }
+
+    # Prepare attributes associated with indirect tax
+    indirect_tax = {
+        f"{cat}_indirect_tax": _assign_attr(
+            f"_consolidated_{cat}_indirect_tax", gs
+        )
+        for cat in categories
+    }
+
+    # Prepare attributes associated with postonstream costs (or expenditures post tax)
+    post_tax = {
+        f"{cat}_postonstream": _assign_attr(
+            f"_consolidated_{cat}_expenditures_post_tax", gs
+        )
+        for cat in categories
+    }
+
+    # Prepare attribute associated with depreciations
+    depreciations = _assign_attr("_consolidated_depreciations", gs)
+
+    # Prepare attribute associated with amortizations
+    amortizations = _assign_attr("_consolidated_amortizations", gs)
+
+    # Specify cashflow table for CONSOLIDATED
+    table_consolidated: dict = {
+        # Basic attributes
+        "years": gs.project_years,
+        "lifting": _assign_attr("_consolidated_lifting", gs),
+        "price": _assign_attr("_consolidated_wap_price", gs),
+        "revenue": _assign_attr("_consolidated_revenue", gs),
+
+        # Attributes associated with sulfur, electricity, and CO2
+        **sulfur,
+        **electricity,
+        **co2,
+
+        # Attributes associated with sunk cost
+        "sunk_cost_depreciable": _assign_attr("_consolidated_depreciable_sunk_cost", gs),
+        "sunk_cost_non_depreciable": _assign_attr(
+            "_consolidated_non_depreciable_sunk_cost", gs
+        ),
+        "sunk_cost": _assign_attr("_consolidated_sunk_cost", gs),
+
+        # Attributes associated with preonstream cost
+        "preonstream_depreciable": _assign_attr(
+            "_consolidated_depreciable_preonstream", gs
+        ),
+        "preonstream_non_depreciable": _assign_attr(
+            "_consolidated_non_depreciable_preonstream", gs
+        ),
+        "preonstream": _assign_attr("_consolidated_preonstream", gs),
+
+        # Attributes associated with postonstream cost
+        "postonstream_depreciable": consolidated_depreciable_postonstream,
+        "postonstream_non_depreciable": consolidated_non_depreciable_postonstream,
+        "postonstream": consolidated_postonstream,
+
+        # Attributes associated with expenditures pre tax
+        **pre_tax,
+
+        # Attributes associated with indirect tax
+        **indirect_tax,
+
+        # Attributes associated with expenditures post tax
+        **post_tax,
+
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_consolidated_capital", gs),
+        "expenses_non_capital": _assign_attr("_consolidated_non_capital", gs),
+        "expenses_total": _assign_attr("_consolidated_total_expenses", gs),
+
+        # Attributes associated with depreciations
+        "depreciations_sunk_cost": depreciations["sunk_cost"],
+        "depreciations_preonstream": depreciations["preonstream"],
+        "depreciations_postonstream": depreciations["postonstream"],
+
+        # Attributes associated with amortizations
+        "amortizations_sunk_cost": amortizations["sunk_cost"],
+        "amortizations_preonstream": amortizations["preonstream"],
+        "amortizations_postonstream": amortizations["postonstream"],
+
+        # Attributes associated with shares
+        "contractor_share": _assign_attr("_consolidated_ctr_share_before_tf", gs),
+        "government_share": _assign_attr("_consolidated_gov_share_before_tf", gs),
+
+        # Attributes associated with business logic
+        "cost_to_be_deducted": _assign_attr("_consolidated_cost_tobe_deducted", gs),
+        "carry_forward_cost": _assign_attr("_consolidated_carward_deduct_cost", gs),
+        "deductible_cost": _assign_attr("_consolidated_deductible_cost", gs),
+        "carry_forward_cost_after_tf": _assign_attr(
+            "_consolidated_carward_cost_aftertf", gs
+        ),
+        "ctr_net_operating_profit": _assign_attr(
+            "_consolidated_net_operating_profit", gs
+        ),
+
+        # Attributes associated with DMO
+        "dmo_volume": _assign_attr("_consolidated_dmo_volume", gs),
+        "dmo_fee": _assign_attr("_consolidated_dmo_fee", gs),
+        "ddmo": _assign_attr("_consolidated_ddmo", gs),
+
+        # Attributes associated with taxable income
+        "taxable_income": _assign_attr("_consolidated_taxable_income", gs),
+        "tax": _assign_attr("_consolidated_tax_payment", gs),
+
+        # Attributes associated with government and contractor shares
+        "net_ctr_share": _assign_attr("_consolidated_ctr_net_share", gs),
+        "government_take": _assign_attr("_consolidated_government_take", gs),
+
+        # Attributes associated with cashflow
+        "ctr_cashflow": _assign_attr("_consolidated_cashflow", gs),
+        "cum_cashflow": np.cumsum(_assign_attr("_consolidated_cashflow", gs)),
+    }
+
+    # Convert CONSOLIDATED cashflow table into pandas DataFrame
+    return pd.DataFrame(table_consolidated)
+
+
+def get_table_baseproject_oil(contract: BaseProject) -> pd.DataFrame:
+    """
+    Construct the base project cashflow table for oil in a BaseProject contract.
+
+    The function extracts key oil-related attributes from the contract, including
+    lifting, revenue, expenditures, indirect taxes, sunk costs, and pre-/post-onstream
+    components. It consolidates them into a structured pandas DataFrame for
+    downstream economic analysis.
+
+    Parameters
+    ----------
+    contract : BaseProject
+        The contract instance containing all oil-related financial and production
+        attributes.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A DataFrame containing the oil cashflow table with columns for project years,
+        lifting, prices, revenues, sunk costs, pre-/post-onstream costs, expenditures
+        (pre-tax, indirect tax, post-tax), expenses, and net cashflow.
+
+    Notes
+    -----
+    - The function internally uses `_assign_attr` to fetch attributes from the contract.
+    - Post-onstream costs are split into depreciable and non-depreciable components.
+    - Expenditure categories include: capital, intangible, opex, ASR, LBT, and
+      cost of sales.
+    - The resulting DataFrame serves as a base input for project-level
+      economic evaluations.
+    """
+
+    bp = contract
+
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, bp) for com in non_petroleum_commodities
+    ]
+
+    # Specify postonstream attributes for OIL
+    oil_depreciable_postonstream = _assign_attr(
+        "_oil_capital_expenditures_post_tax", bp
+    )
+
+    oil_non_depreciable_postonstream = np.array(
+        [
+            _assign_attr(at, bp) for at in [
+                "_oil_intangible_expenditures_post_tax",
+                "_oil_opex_expenditures_post_tax",
+                "_oil_asr_expenditures_post_tax",
+                "_oil_lbt_expenditures_post_tax",
+                "_oil_cost_of_sales_expenditures_post_tax",
+            ]
+        ]
+    ).sum(axis=0)
+
+    oil_postonstream = oil_depreciable_postonstream + oil_non_depreciable_postonstream
+
+    # A list of cost categories
+    categories = [
+        "capital",
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales"
+    ]
+
+    # Assign attributes associated with expenditures pre tax
+    pre_tax = {
+        f"{cat}_expenditures_pre_tax": _assign_attr(
+            f"_oil_{cat}_expenditures_pre_tax", bp
+        )
+        for cat in categories
+    }
+
+    # Assign attributes associated with indirect tax
+    indirect_tax = {
+        f"{cat}_indirect_tax": _assign_attr(f"_oil_{cat}_indirect_tax", bp)
+        for cat in categories
+    }
+
+    # Assign attributes associated with postonstream costs (or expenditures post tax)
+    post_tax = {
+        f"{cat}_postonstream": _assign_attr(
+            f"_oil_{cat}_expenditures_post_tax", bp
+        )
+        for cat in categories
+    }
+
+    # Specify cashflow table for OIL
+    table_oil: dict = {
+        # Basic attributes
+        "years": bp.project_years,
+        "lifting": _assign_attr("_oil_lifting", bp, True),
+        "price":  _assign_attr("_oil_wap_price", bp),
+        "revenue": _assign_attr("_oil_revenue", bp),
+
+        # Attributes associated with sulfur, electricity, and CO2 commodities
+        **sulfur,
+        **electricity,
+        **co2,
+
+        # Attributes associated with sunk cost
+        "sunk_cost_depreciable": _assign_attr("_oil_depreciable_sunk_cost", bp),
+        "sunk_cost_non_depreciable": _assign_attr("_oil_non_depreciable_sunk_cost", bp),
+        "sunk_cost": _assign_attr("_oil_sunk_cost", bp),
+
+        # Attributes associated with preonstream cost
+        "preonstream_depreciable": _assign_attr(
+            "_oil_depreciable_preonstream", bp
+        ),
+        "preonstream_non_depreciable": _assign_attr(
+            "_oil_non_depreciable_preonstream", bp
+        ),
+        "preonstream": _assign_attr("_oil_preonstream", bp),
+
+        # Attributes associated with postonstream cost
+        "postonstream_depreciable": oil_depreciable_postonstream,
+        "postonstream_non_depreciable": oil_non_depreciable_postonstream,
+        "postonstream": oil_postonstream,
+
+        # Attributes associated with expenditures pre tax
+        **pre_tax,
+
+        # Attributes associated with indirect tax
+        **indirect_tax,
+
+        # Attributes associated with expenditures post tax
+        **post_tax,
+
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_oil_capital", bp),
+        "expenses_non_capital": _assign_attr("_oil_non_capital", bp),
+        "expenses_total": _assign_attr("_oil_total_expenses", bp),
+
+        # Attribute associated with cashflow
+        "cashflow": _assign_attr("_oil_cashflow", bp),
+    }
+
+    # Convert OIL cashflow table into pandas DataFrame
+    return pd.DataFrame(table_oil)
+
+
+def get_table_baseproject_gas(contract: BaseProject) -> pd.DataFrame:
+    """
+    Construct the base project cashflow table for gas in a BaseProject contract.
+
+    This function extracts gas-related economic attributes from the contract,
+    including lifting, price, revenue, sunk costs, pre-/post-onstream expenditures,
+    indirect taxes, and total cashflow. The extracted data are compiled into a
+    structured pandas DataFrame suitable for economic analysis and reporting.
+
+    Parameters
+    ----------
+    contract : BaseProject
+        The BaseProject contract instance containing gas production and
+        financial attributes.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A DataFrame representing the gas cashflow table with columns for
+        project years, lifting, prices, revenues, sunk costs, pre-/post-onstream
+        costs, expenditures (pre-tax, indirect tax, post-tax), expenses, and
+        overall cashflow.
+
+    Notes
+    -----
+    - `_assign_attr` is used internally to retrieve contract attributes.
+    - Post-onstream costs are separated into depreciable and non-depreciable components.
+    - Expenditure categories include: capital, intangible, opex, ASR, LBT,
+      and cost of sales.
+    - The resulting DataFrame provides the core structure for gas-related
+      project economic evaluation.
+    """
+
+    bp = contract
+
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, bp) for com in non_petroleum_commodities
+    ]
+
+    # Specify postonstream attributes for GAS
+    gas_depreciable_postonstream = _assign_attr(
+        "_gas_capital_expenditures_post_tax", bp
+    )
+
+    gas_non_depreciable_postonstream = np.array(
+        [
+            _assign_attr(at, bp) for at in [
+                "_gas_intangible_expenditures_post_tax",
+                "_gas_opex_expenditures_post_tax",
+                "_gas_asr_expenditures_post_tax",
+                "_gas_lbt_expenditures_post_tax",
+                "_gas_cost_of_sales_expenditures_post_tax",
+            ]
+        ]
+    ).sum(axis=0)
+
+    gas_postonstream = gas_depreciable_postonstream + gas_non_depreciable_postonstream
+
+    # A list of cost categories
+    categories = [
+        "capital",
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales"
+    ]
+
+    # Assign attributes associated with expenditures pre tax
+    pre_tax = {
+        f"{cat}_expenditures_pre_tax": _assign_attr(
+            f"_gas_{cat}_expenditures_pre_tax", bp
+        )
+        for cat in categories
+    }
+
+    # Assign attributes associated with indirect tax
+    indirect_tax = {
+        f"{cat}_indirect_tax": _assign_attr(f"_gas_{cat}_indirect_tax", bp)
+        for cat in categories
+    }
+
+    # Assign attributes associated with postonstream costs (or expenditures post tax)
+    post_tax = {
+        f"{cat}_postonstream": _assign_attr(f"_gas_{cat}_expenditures_post_tax", bp)
+        for cat in categories
+    }
+
+    # Specify cashflow table for GAS
+    table_gas: dict = {
+        # Basic attributes
+        "years": bp.project_years,
+        "lifting": _assign_attr("_gas_lifting", bp, True),
+        "price": _assign_attr("_gas_wap_price", bp),
+        "revenue": _assign_attr("_gas_revenue", bp),
+
+        # Attributes associated with sulfur, electricity, and CO2 commodities
+        **sulfur,
+        **electricity,
+        **co2,
+
+        # Attributes associated with sunk cost
+        "sunk_cost_depreciable": _assign_attr("_gas_depreciable_sunk_cost", bp),
+        "sunk_cost_non_depreciable": _assign_attr(
+            "_gas_non_depreciable_sunk_cost", bp
+        ),
+        "sunk_cost": _assign_attr("_gas_sunk_cost", bp),
+
+        # Attributes associated with preonstream cost
+        "preonstream_depreciable": _assign_attr(
+            "_gas_depreciable_preonstream", bp
+        ),
+        "preonstream_non_depreciable": _assign_attr(
+            "_gas_non_depreciable_preonstream", bp
+        ),
+        "preonstream": _assign_attr("_gas_preonstream", bp),
+
+        # Attributes associated with postonstream cost
+        "postonstream_depreciable": gas_depreciable_postonstream,
+        "postonstream_non_depreciable": gas_non_depreciable_postonstream,
+        "postonstream": gas_postonstream,
+
+        # Attributes associated with expenditures pre tax
+        **pre_tax,
+
+        # Attributes associated with indirect tax
+        **indirect_tax,
+
+        # Attributes associated with postonstream costs
+        **post_tax,
+
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_gas_capital", bp),
+        "expenses_non_capital": _assign_attr("_gas_non_capital", bp),
+        "expenses_total": _assign_attr("_gas_total_expenses", bp),
+
+        # Attribute associated with cashflow
+        "cashflow": _assign_attr("_gas_cashflow", bp),
+    }
+
+    # Convert GAS cashflow table into pandas DataFrame
+    return pd.DataFrame(table_gas)
+
+
+def get_table_baseproject_consolidated(contract: BaseProject) -> pd.DataFrame:
+    """
+    Construct the consolidated base project cashflow table for a BaseProject contract.
+
+    This function compiles consolidated financial and production data from the
+    contract, including lifting, prices, revenues, sunk costs, pre-/post-onstream
+    expenditures, indirect taxes, and total cashflow. The resulting data are
+    structured into a pandas DataFrame for overall project-level economic analysis.
+
+    Parameters
+    ----------
+    contract : BaseProject
+        The BaseProject contract instance containing consolidated production
+        and financial attributes.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A DataFrame representing the consolidated cashflow table, including
+        project years, lifting, prices, revenues, sunk costs, pre-/post-onstream
+        costs, expenditures (pre-tax, indirect tax, post-tax), expenses, and
+        total cashflow.
+
+    Notes
+    -----
+    - `_assign_attr` is used internally to extract attributes from the contract.
+    - Post-onstream costs are divided into depreciable and non-depreciable parts.
+    - Expenditure categories include: capital, intangible, opex, ASR, LBT,
+      and cost of sales.
+    - The consolidated table integrates oil and gas components into a unified
+      cashflow representation for the entire project.
+    """
+
+    bp = contract
+
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, bp) for com in non_petroleum_commodities
+    ]
+
+    # Specify postonstream attributes for CONSOLIDATED
+    consolidated_depreciable_postonstream = _assign_attr(
+        "_consolidated_capital_expenditures_post_tax", bp
+    )
+
+    consolidated_non_depreciable_postonstream = np.array(
+        [
+            _assign_attr(at, bp) for at in [
+                "_consolidated_intangible_expenditures_post_tax",
+                "_consolidated_opex_expenditures_post_tax",
+                "_consolidated_asr_expenditures_post_tax",
+                "_consolidated_lbt_expenditures_post_tax",
+                "_consolidated_cost_of_sales_expenditures_post_tax",
+            ]
+        ]
+    ).sum(axis=0)
+
+    consolidated_postonstream = (
+        consolidated_depreciable_postonstream + consolidated_non_depreciable_postonstream
+    )
+
+    # A list of cost categories
+    categories = [
+        "capital",
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales"
+    ]
+
+    # Assign attributes associated with expenditures pre tax
+    pre_tax = {
+        f"{cat}_expenditures_pre_tax": _assign_attr(
+            f"_consolidated_{cat}_expenditures_pre_tax", bp
+        )
+        for cat in categories
+    }
+
+    # Assign attributes associated with indirect tax
+    indirect_tax = {
+        f"{cat}_indirect_tax": _assign_attr(f"_consolidated_{cat}_indirect_tax", bp)
+        for cat in categories
+    }
+
+    # Assign attributes associated with postonstream costs (or expenditures post tax)
+    post_tax = {
+        f"{cat}_postonstream": _assign_attr(
+            f"_consolidated_{cat}_expenditures_post_tax", bp
+        )
+        for cat in categories
+    }
+
+    # Specify cashflow table for CONSOLIDATED
+    table_consolidated: dict = {
+        # Basic attributes
+        "years": bp.project_years,
+        "lifting": _assign_attr("_consolidated_lifting", bp),
+        "price": _assign_attr("_consolidated_wap_price", bp),
+        "revenue": _assign_attr("_consolidated_revenue", bp),
+
+        # Attributes associated with sulfur, electricity, and CO2 commodities
+        **sulfur,
+        **electricity,
+        **co2,
+
+        # Attributes associated with sunk cost
+        "sunk_cost_depreciable": _assign_attr(
+            "_consolidated_depreciable_sunk_cost", bp
+        ),
+        "sunk_cost_non_depreciable": _assign_attr(
+            "_consolidated_non_depreciable_sunk_cost", bp
+        ),
+        "sunk_cost": _assign_attr("_consolidated_sunk_cost", bp),
+
+        # Attributes associated with preonstream cost
+        "preonstream_depreciable": _assign_attr(
+            "_consolidated_depreciable_preonstream", bp
+        ),
+        "preonstream_non_depreciable": _assign_attr(
+            "_consolidated_non_depreciable_preonstream", bp
+        ),
+        "preonstream": _assign_attr("_consolidated_preonstream", bp),
+
+        # Attributes associated with postonstream cost
+        "postonstream_depreciable": consolidated_depreciable_postonstream,
+        "postonstream_non_depreciable": consolidated_non_depreciable_postonstream,
+        "postonstream": consolidated_postonstream,
+
+        # Attributes associated with expenditures pre tax
+        **pre_tax,
+
+        # Attributes associated with indirect tax
+        **indirect_tax,
+
+        # Attributes associated with postonstream costs
+        **post_tax,
+
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_consolidated_capital", bp),
+        "expenses_non_capital": _assign_attr("_consolidated_non_capital", bp),
+        "expenses_total": _assign_attr("_consolidated_total_expenses", bp),
+
+        # Attribute associated with cashflow
+        "cashflow": _assign_attr("_consolidated_cashflow", bp),
+    }
+
+    # Convert CONSOLIDATED cashflow table into pandas DataFrame
+    return pd.DataFrame(table_consolidated)
+
+
+def get_table(
+    contract: CostRecovery | GrossSplit | BaseProject | Transition,
+) -> tuple:
+    """
+    Generate OIL, GAS, and CONSOLIDATED cashflow tables for a PSC contract.
+
+    Depending on the contract type (CostRecovery, GrossSplit, BaseProject, or
+    Transition), this function dispatches to the appropriate table-construction
+    routines and returns the three corresponding cashflow tables.
+
+    Parameters
+    ----------
+    contract : CostRecovery or GrossSplit or BaseProject or Transition
+        PSC contract instance for which cashflow tables are generated.
+
+    Returns
+    -------
+    tuple of pandas.DataFrame
+        A tuple containing:
+        - oil_table : DataFrame
+            Cashflow table for OIL stream.
+        - gas_table : DataFrame
+            Cashflow table for GAS stream.
+        - consolidated_table : DataFrame
+            Consolidated cashflow table combining OIL and GAS.
+    """
+
+    # Construct OIL, GAS, and CONSOLIDATED cashflow tables for CR contract
     if isinstance(contract, CostRecovery):
-        psc_table_oil = pd.DataFrame()
-        psc_table_oil['Year'] = contract.project_years
-        psc_table_oil['Lifting'] = contract._oil_lifting.get_lifting_rate_ghv_arr()
-        psc_table_oil['Price'] = contract._oil_wap_price
-        psc_table_oil['Revenue'] = contract._oil_revenue
-        psc_table_oil['Depreciable'] = contract._oil_capital_expenditures_post_tax
-        psc_table_oil['Intangible'] = contract._oil_intangible_expenditures_post_tax
-        psc_table_oil['Opex'] = contract._oil_opex_expenditures_post_tax
-        psc_table_oil['ASR'] = contract._oil_asr_expenditures_post_tax
-        psc_table_oil['LBT'] = contract._oil_lbt_expenditures_post_tax
-        psc_table_oil['Depreciation'] = contract._oil_depreciation
-        psc_table_oil['Non_Capital'] = contract._oil_non_capital
-        psc_table_oil['FTP'] = contract._oil_ftp
-        psc_table_oil['FTP_CTR'] = contract._oil_ftp_ctr
-        psc_table_oil['FTP_GOV'] = contract._oil_ftp_gov
-        psc_table_oil['Investment_Credit'] = contract._oil_ic_paid
-        psc_table_oil['Unrecovered_Cost'] = contract._oil_unrecovered_before_transfer
-        #psc_table_oil['Cost_to_Be_Recovered'] = contract._oil_cost_to_be_recovered
-        psc_table_oil['Recoverable_Cost'] = contract._oil_recoverable_cost
-        psc_table_oil['Cost_Recovery'] = contract._oil_cost_recovery
-        psc_table_oil['ETS_Before_Transfer'] = contract._oil_ets_before_transfer
-        psc_table_oil['Transfer_to_Gas'] = contract._transfer_to_gas
-        psc_table_oil['Unrec_after_Transfer'] = contract._oil_unrecovered_after_transfer
-        #psc_table_oil['Cost_To_Be_Recovered_After_TF'] = contract._oil_cost_to_be_recovered_after_tf
-        psc_table_oil['Cost_Recovery_After_TF'] = contract._oil_cost_recovery_after_tf
-        psc_table_oil['ETS_After_Transfer'] = contract._oil_ets_after_transfer
-        psc_table_oil['Contractor_Share'] = contract._oil_contractor_share
-        psc_table_oil['Government_Share'] = contract._oil_government_share
-        psc_table_oil['DMO_Volume'] = contract._oil_dmo_volume
-        psc_table_oil['DMO_Fee'] = contract._oil_dmo_fee
-        psc_table_oil['DDMO'] = contract._oil_ddmo
-        psc_table_oil['Taxable_Income'] = contract._oil_taxable_income
-        psc_table_oil['Tax_Payment'] = contract._oil_tax_payment
-        psc_table_oil['Contractor_Net_Share'] = contract._oil_ctr_net_share
-        psc_table_oil['Cashflow'] = contract._oil_cashflow
-        psc_table_oil['Cum_Cashflow'] = np.cumsum(contract._oil_cashflow)
-        psc_table_oil['Government_Take'] = contract._oil_government_take
-        psc_table_oil['Capital_Expenditures_Pre_Tax'] = contract._oil_capital_expenditures_pre_tax
-        psc_table_oil['Intangible_Expenditures_Pre_Tax'] = contract._oil_intangible_expenditures_pre_tax
-        psc_table_oil['Opex_Expenditures_Pre_Tax'] = contract._oil_opex_expenditures_pre_tax
-        psc_table_oil['ASR_Expenditures_Pre_Tax'] = contract._oil_asr_expenditures_pre_tax
-        psc_table_oil['LBT_Expenditures_Pre_Tax'] = contract._oil_lbt_expenditures_pre_tax
-        psc_table_oil['CostOfSales_Expenditures_Pre_Tax'] = contract._oil_cost_of_sales_expenditures_pre_tax
-        psc_table_oil['Total_Expenditures_Pre_Tax'] = contract._oil_total_expenditures_pre_tax
-        psc_table_oil['Capital_Indirect_Tax'] = contract._oil_capital_indirect_tax
-        psc_table_oil['Intangible_Indirect_Tax'] = contract._oil_intangible_indirect_tax
-        psc_table_oil['Opex_Indirect_Tax'] = contract._oil_opex_indirect_tax
-        psc_table_oil['ASR_Indirect_Tax'] = contract._oil_asr_indirect_tax
-        psc_table_oil['LBT_Indirect_Tax'] = contract._oil_lbt_indirect_tax
-        psc_table_oil['CostOfSales_Indirect_Tax'] = contract._oil_cost_of_sales_indirect_tax
-        psc_table_oil['Total_Indirect_Tax'] = contract._oil_total_indirect_tax
-        # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
-
-
-        psc_table_gas = pd.DataFrame()
-        psc_table_gas['Year'] = contract.project_years
-        psc_table_gas['Lifting'] = contract._gas_lifting.get_lifting_rate_ghv_arr()
-        psc_table_gas['Price'] = contract._gas_wap_price
-        psc_table_gas['Revenue'] = contract._gas_revenue
-        psc_table_gas['Depreciable'] = contract._gas_capital_expenditures_post_tax
-        psc_table_gas['Intangible'] = contract._gas_intangible_expenditures_post_tax
-        psc_table_gas['Opex'] = contract._gas_opex_expenditures_post_tax
-        psc_table_gas['ASR'] = contract._gas_asr_expenditures_post_tax
-        psc_table_gas['LBT'] = contract._gas_lbt_expenditures_post_tax
-        psc_table_gas['Depreciation'] = contract._gas_depreciation
-        psc_table_gas['Non_Capital'] = contract._gas_non_capital
-        psc_table_gas['FTP'] = contract._gas_ftp
-        psc_table_gas['FTP_CTR'] = contract._gas_ftp_ctr
-        psc_table_gas['FTP_GOV'] = contract._gas_ftp_gov
-        psc_table_gas['Investment_Credit'] = contract._gas_ic_paid
-        psc_table_gas['Unrecovered_Cost'] = contract._gas_unrecovered_before_transfer
-        #psc_table_gas['Cost_to_Be_Recovered'] = contract._gas_cost_to_be_recovered
-        psc_table_gas['Recoverable_Cost'] = contract._gas_recoverable_cost
-        psc_table_gas['Cost_Recovery'] = contract._gas_cost_recovery
-        psc_table_gas['ETS_Before_Transfer'] = contract._gas_ets_before_transfer
-        psc_table_gas['Transfer_to_Oil'] = contract._transfer_to_oil
-        psc_table_gas['Unrec_after_Transfer'] = contract._gas_unrecovered_after_transfer
-        #psc_table_gas['Cost_To_Be_Recovered_After_TF'] = contract._gas_cost_to_be_recovered_after_tf
-        psc_table_gas['Cost_Recovery_After_TF'] = contract._gas_cost_recovery_after_tf
-        psc_table_gas['ETS_After_Transfer'] = contract._gas_ets_after_transfer
-        psc_table_gas['Contractor_Share'] = contract._gas_contractor_share
-        psc_table_gas['Government_Share'] = contract._gas_government_share
-        psc_table_gas['DMO_Volume'] = contract._gas_dmo_volume
-        psc_table_gas['DMO_Fee'] = contract._gas_dmo_fee
-        psc_table_gas['DDMO'] = contract._gas_ddmo
-        psc_table_gas['Taxable_Income'] = contract._gas_taxable_income
-        psc_table_gas['Tax_Payment'] = contract._gas_tax_payment
-        psc_table_gas['Contractor_Net_Share'] = contract._gas_ctr_net_share
-        psc_table_gas['Cashflow'] = contract._gas_cashflow
-        psc_table_gas['Cum_Cashflow'] = np.cumsum(contract._gas_cashflow)
-        psc_table_gas['Government_Take'] = contract._gas_government_take
-        psc_table_gas['Capital_Expenditures_Pre_Tax'] = contract._gas_capital_expenditures_pre_tax
-        psc_table_gas['Intangible_Expenditures_Pre_Tax'] = contract._gas_intangible_expenditures_pre_tax
-        psc_table_gas['Opex_Expenditures_Pre_Tax'] = contract._gas_opex_expenditures_pre_tax
-        psc_table_gas['ASR_Expenditures_Pre_Tax'] = contract._gas_asr_expenditures_pre_tax
-        psc_table_gas['LBT_Expenditures_Pre_Tax'] = contract._gas_lbt_expenditures_pre_tax
-        psc_table_gas['CostOfSales_Expenditures_Pre_Tax'] = contract._gas_cost_of_sales_expenditures_pre_tax
-        psc_table_gas['Total_Expenditures_Pre_Tax'] = contract._gas_total_expenditures_pre_tax
-        psc_table_gas['Capital_Indirect_Tax'] = contract._gas_capital_indirect_tax
-        psc_table_gas['Intangible_Indirect_Tax'] = contract._gas_intangible_indirect_tax
-        psc_table_gas['Opex_Indirect_Tax'] = contract._gas_opex_indirect_tax
-        psc_table_gas['ASR_Indirect_Tax'] = contract._gas_asr_indirect_tax
-        psc_table_gas['LBT_Indirect_Tax'] = contract._gas_lbt_indirect_tax
-        psc_table_gas['CostOfSales_Indirect_Tax'] = contract._gas_cost_of_sales_indirect_tax
-        psc_table_gas['Total_Indirect_Tax'] = contract._gas_total_indirect_tax
-        # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
-
-
-        psc_table_consolidated = pd.DataFrame()
-        psc_table_consolidated['Year'] = contract.project_years
-        psc_table_consolidated['Lifting_oil'] = contract._oil_lifting.get_lifting_rate_ghv_arr()
-        psc_table_consolidated['Lifting_gas'] = contract._gas_lifting.get_lifting_rate_ghv_arr()
-        psc_table_consolidated['C_Revenue'] = contract._consolidated_revenue
-        psc_table_consolidated['C_Depreciable'] = contract._consolidated_capital_expenditures_post_tax
-        psc_table_consolidated['C_Intangible'] = contract._consolidated_intangible_expenditures_post_tax
-        psc_table_consolidated['C_Opex'] = contract._consolidated_opex_expenditures_post_tax
-        psc_table_consolidated['C_ASR'] = contract._consolidated_asr_expenditures_post_tax
-        psc_table_consolidated['C_Depreciation'] = contract._consolidated_depreciation
-        psc_table_consolidated['C_Non_Capital'] = contract._consolidated_non_capital
-        psc_table_consolidated['C_FTP'] = contract._consolidated_ftp
-        psc_table_consolidated['C_FTP_CTR'] = contract._consolidated_ftp_ctr
-        psc_table_consolidated['C_FTP_GOV'] = contract._consolidated_ftp_gov
-        psc_table_consolidated['C_IC'] = contract._consolidated_ic
-        psc_table_consolidated[
-            'C_Unrecovered_before_TF'] = contract._consolidated_unrecovered_before_transfer
-        psc_table_consolidated['C_Cost_Recovery'] = contract._consolidated_cost_recovery_before_transfer
-        psc_table_consolidated['C_ETS_before_TF'] = contract._consolidated_ets_before_transfer
-        psc_table_consolidated['C_Unrecovered_after_TF'] = contract._consolidated_unrecovered_after_transfer
-        #psc_table_consolidated[
-        #    'C_Cost_to_be_Recovered_after_TF'] = contract._consolidated_cost_to_be_recovered_after_tf
-        psc_table_consolidated[
-            'C_Recoverable_Cost'] = contract._consolidated_recoverable_cost
-        psc_table_consolidated['C_Cost_Recovery_after_TF'] = contract._consolidated_cost_recovery_after_tf
-        psc_table_consolidated['C_ETS_after_TF'] = contract._consolidated_ets_after_transfer
-        psc_table_consolidated['C_Contractor_Share'] = contract._consolidated_contractor_share
-        psc_table_consolidated['C_Government_Share'] = contract._consolidated_government_share
-        psc_table_consolidated['C_DMO_Volume'] = contract._consolidated_dmo_volume
-        psc_table_consolidated['C_DMO_Fee'] = contract._consolidated_dmo_fee
-        psc_table_consolidated['C_DDMO'] = contract._consolidated_ddmo
-        psc_table_consolidated['C_Taxable_Income'] = contract._consolidated_taxable_income
-        psc_table_consolidated['C_Tax_Due'] = contract._consolidated_tax_due
-        psc_table_consolidated['C_Unpaid_Tax_Balance'] = contract._consolidated_unpaid_tax_balance
-        psc_table_consolidated['C_Tax_Payment'] = contract._consolidated_tax_payment
-        psc_table_consolidated['C_CTR_Net_Share'] = contract._consolidated_ctr_net_share
-        psc_table_consolidated['C_Contractor_Take'] = contract._consolidated_contractor_take
-        psc_table_consolidated['C_Cashflow'] = contract._consolidated_cashflow
-        psc_table_consolidated['cum_C_Cashflow'] = np.cumsum(contract._consolidated_cashflow)
-        psc_table_consolidated['C_Government_take'] = contract._consolidated_government_take
-        psc_table_consolidated['C_Capital_Expenditures_Pre_Tax'] = contract._consolidated_capital_expenditures_pre_tax
-        psc_table_consolidated['C_Intangible_Expenditures_Pre_Tax'] = contract._consolidated_intangible_expenditures_pre_tax
-        psc_table_consolidated['C_Opex_Expenditures_Pre_Tax'] = contract._consolidated_opex_expenditures_pre_tax
-        psc_table_consolidated['C_ASR_Expenditures_Pre_Tax'] = contract._consolidated_asr_expenditures_pre_tax
-        psc_table_consolidated['C_LBT_Expenditures_Pre_Tax'] = contract._consolidated_lbt_expenditures_pre_tax
-        psc_table_consolidated['C_CostOfSales_Expenditures_Pre_Tax'] = contract._consolidated_cost_of_sales_expenditures_pre_tax
-        psc_table_consolidated['C_Total_Expenditures_Pre_Tax'] = contract._consolidated_total_expenditures_pre_tax
-        psc_table_consolidated['C_Capital_Indirect_Tax'] = contract._consolidated_capital_indirect_tax
-        psc_table_consolidated['C_Intangible_Indirect_Tax'] = contract._consolidated_intangible_indirect_tax
-        psc_table_consolidated['C_Opex_Indirect_Tax'] = contract._consolidated_opex_indirect_tax
-        psc_table_consolidated['C_ASR_Indirect_Tax'] = contract._consolidated_asr_indirect_tax
-        psc_table_consolidated['C_LBT_Indirect_Tax'] = contract._consolidated_lbt_indirect_tax
-        psc_table_consolidated['C_CostOfSales_Indirect_Tax'] = contract._consolidated_cost_of_sales_indirect_tax
-        psc_table_consolidated['C_Total_Indirect_Tax'] = contract._consolidated_total_indirect_tax
-        # psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
-
+        psc_table_oil = get_table_costrecovery_oil(contract=contract)
+        psc_table_gas = get_table_costrecovery_gas(contract=contract)
+        psc_table_consolidated = get_table_costrecovery_consolidated(contract=contract)
         return psc_table_oil, psc_table_gas, psc_table_consolidated
 
+    # Construct OIL, GAS, and CONSOLIDATED cashflow tables for GS contract
     elif isinstance(contract, GrossSplit):
-        psc_table_oil = pd.DataFrame()
-        psc_table_oil['Years'] = contract.project_years
-        psc_table_oil['Lifting'] = contract._oil_lifting.get_lifting_rate_ghv_arr()
-        psc_table_oil['Price'] = contract._oil_wap_price
-        psc_table_oil['Depreciable'] = contract._oil_capital_expenditures_post_tax
-        psc_table_oil['Intangible'] = contract._oil_intangible_expenditures_post_tax
-        psc_table_oil['Opex'] = contract._oil_opex_expenditures_post_tax
-        psc_table_oil['ASR'] = contract._oil_asr_expenditures_post_tax
-        psc_table_oil['LBT'] = contract._oil_lbt_expenditures_post_tax
-        psc_table_oil['Revenue'] = contract._oil_revenue
-        psc_table_oil['Base_Split'] = contract._oil_base_split
-        psc_table_oil['Variable_Split'] = contract._var_split_array
-        psc_table_oil['Progressive_Price_Split'] = contract._oil_prog_price_split
-        psc_table_oil['Progressive_Cumulative_Production_Split'] = contract._oil_prog_cum_split
-        psc_table_oil['Progressive_Split'] = contract._oil_prog_split
-        psc_table_oil['Contractor_Split'] = contract._oil_ctr_split
-        psc_table_oil['Contractor_Share'] = contract._oil_ctr_share_before_transfer
-        psc_table_oil['Government_Share'] = contract._oil_gov_share
-        psc_table_oil['Depreciation'] = contract._oil_depreciation
-        psc_table_oil['Amortization'] = contract._oil_amortization
-        psc_table_oil['Non_Capital'] = contract._oil_non_capital
-        psc_table_oil['Total_Expenses'] = contract._oil_total_expenses
-        psc_table_oil['Cost_To_Be_Deducted'] = contract._oil_cost_tobe_deducted
-        psc_table_oil['Carry_Forward_Cost'] = contract._oil_carward_deduct_cost
-        psc_table_oil['Deductible_Cost'] = contract._oil_deductible_cost
-        psc_table_oil['Transfer_To_Gas'] = contract._transfer_to_gas
-        psc_table_oil['Carry_Forward_Cost_after_TF'] = contract._oil_carward_cost_aftertf
-        psc_table_oil['CTR_Share_After_TF'] = contract._oil_ctr_share_after_transfer
-        psc_table_oil['CTR_Net_Operating_Profit'] = contract._oil_net_operating_profit
-        psc_table_oil['DMO_Volume'] = contract._oil_dmo_volume
-        psc_table_oil['DMO_Fee'] = contract._oil_dmo_fee
-        psc_table_oil['DDMO'] = contract._oil_ddmo
-        psc_table_oil['Taxable_Income'] = contract._oil_taxable_income
-        psc_table_oil['Tax'] = contract._oil_tax
-        psc_table_oil['Net_CTR_Share'] = contract._oil_ctr_net_share
-        psc_table_oil['CTR_Cash_Flow'] = contract._oil_ctr_cashflow
-        psc_table_oil['Cum_Cash_Flow'] = np.cumsum(contract._oil_ctr_cashflow)
-        psc_table_oil['Government_Take'] = contract._oil_government_take
-        psc_table_oil['Capital_Expenditures_Pre_Tax'] = contract._oil_capital_expenditures_pre_tax
-        psc_table_oil['Intangible_Expenditures_Pre_Tax'] = contract._oil_intangible_expenditures_pre_tax
-        psc_table_oil['Opex_Expenditures_Pre_Tax'] = contract._oil_opex_expenditures_pre_tax
-        psc_table_oil['ASR_Expenditures_Pre_Tax'] = contract._oil_asr_expenditures_pre_tax
-        psc_table_oil['LBT_Expenditures_Pre_Tax'] = contract._oil_lbt_expenditures_pre_tax
-        psc_table_oil['CostOfSales_Expenditures_Pre_Tax'] = contract._oil_cost_of_sales_expenditures_pre_tax
-        psc_table_oil['Total_Expenditures_Pre_Tax'] = contract._oil_total_expenditures_pre_tax
-        psc_table_oil['Capital_Indirect_Tax'] = contract._oil_capital_indirect_tax
-        psc_table_oil['Intangible_Indirect_Tax'] = contract._oil_intangible_indirect_tax
-        psc_table_oil['Opex_Indirect_Tax'] = contract._oil_opex_indirect_tax
-        psc_table_oil['ASR_Indirect_Tax'] = contract._oil_asr_indirect_tax
-        psc_table_oil['LBT_Indirect_Tax'] = contract._oil_lbt_indirect_tax
-        psc_table_oil['CostOfSales_Indirect_Tax'] = contract._oil_cost_of_sales_indirect_tax
-        psc_table_oil['Total_Indirect_Tax'] = contract._oil_total_indirect_tax
-        # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
-
-
-        psc_table_gas = pd.DataFrame()
-        psc_table_gas['Years'] = contract.project_years
-        psc_table_gas['Lifting'] = contract._gas_lifting.get_lifting_rate_ghv_arr()
-        psc_table_gas['Price'] = contract._gas_wap_price
-        psc_table_gas['Depreciable'] = contract._gas_capital_expenditures_post_tax
-        psc_table_gas['Intangible'] = contract._gas_intangible_expenditures_post_tax
-        psc_table_gas['Opex'] = contract._gas_opex_expenditures_post_tax
-        psc_table_gas['ASR'] = contract._gas_asr_expenditures_post_tax
-        psc_table_gas['LBT'] = contract._gas_lbt_expenditures_post_tax
-        psc_table_gas['Revenue'] = contract._gas_revenue
-        psc_table_gas['Base_Split'] = contract._gas_base_split
-        psc_table_gas['Progressive_Price_Split'] = contract._gas_prog_price_split
-        psc_table_gas['Progressive_Cumulative_Production_Split'] = contract._gas_prog_cum_split
-        psc_table_gas['Variable_Split'] = contract._var_split_array
-        psc_table_gas['Progressive_Split'] = contract._gas_prog_split
-        psc_table_gas['Contractor_Split'] = contract._gas_ctr_split
-        psc_table_gas['Contractor_Share'] = contract._gas_ctr_share_before_transfer
-        psc_table_gas['Government_Share'] = contract._gas_gov_share
-        psc_table_gas['Depreciation'] = contract._gas_depreciation
-        psc_table_gas['Amortization'] = contract._gas_amortization
-        psc_table_gas['Non_Capital'] = contract._gas_non_capital
-        psc_table_gas['Total_Expenses'] = contract._gas_total_expenses
-        psc_table_gas['Cost_To_Be_Deducted'] = contract._gas_cost_tobe_deducted
-        psc_table_gas['Carry_Forward_Cost'] = contract._gas_carward_deduct_cost
-        psc_table_gas['Deductible_Cost'] = contract._gas_deductible_cost
-        psc_table_gas['Transfer_to_Oil'] = contract._transfer_to_oil
-        psc_table_gas['Carry_Forward_Cost_after_TF'] = contract._gas_carward_cost_aftertf
-        psc_table_gas['CTR_Share_After_TF'] = contract._gas_ctr_share_after_transfer
-        psc_table_gas['CTR_Net_Operating_Profit'] = contract._gas_net_operating_profit
-        psc_table_gas['DMO_Volume'] = contract._gas_dmo_volume
-        psc_table_gas['DMO_Fee'] = contract._gas_dmo_fee
-        psc_table_gas['DDMO'] = contract._gas_ddmo
-        psc_table_gas['Taxable_Income'] = contract._gas_taxable_income
-        psc_table_gas['Tax'] = contract._gas_tax
-        psc_table_gas['Net_CTR_Share'] = contract._gas_ctr_net_share
-        psc_table_gas['CTR_Cash_Flow'] = contract._gas_ctr_cashflow
-        psc_table_gas['Cum_Cashflow'] = np.cumsum(contract._gas_ctr_cashflow)
-        psc_table_gas['Government_Take'] = contract._gas_government_take
-        psc_table_gas['Capital_Expenditures_Pre_Tax'] = contract._gas_capital_expenditures_pre_tax
-        psc_table_gas['Intangible_Expenditures_Pre_Tax'] = contract._gas_intangible_expenditures_pre_tax
-        psc_table_gas['Opex_Expenditures_Pre_Tax'] = contract._gas_opex_expenditures_pre_tax
-        psc_table_gas['ASR_Expenditures_Pre_Tax'] = contract._gas_asr_expenditures_pre_tax
-        psc_table_gas['LBT_Expenditures_Pre_Tax'] = contract._gas_lbt_expenditures_pre_tax
-        psc_table_gas['CostOfSales_Expenditures_Pre_Tax'] = contract._gas_cost_of_sales_expenditures_pre_tax
-        psc_table_gas['Total_Expenditures_Pre_Tax'] = contract._gas_total_expenditures_pre_tax
-        psc_table_gas['Capital_Indirect_Tax'] = contract._gas_capital_indirect_tax
-        psc_table_gas['Intangible_Indirect_Tax'] = contract._gas_intangible_indirect_tax
-        psc_table_gas['Opex_Indirect_Tax'] = contract._gas_opex_indirect_tax
-        psc_table_gas['ASR_Indirect_Tax'] = contract._gas_asr_indirect_tax
-        psc_table_gas['LBT_Indirect_Tax'] = contract._gas_lbt_indirect_tax
-        psc_table_gas['CostOfSales_Indirect_Tax'] = contract._gas_cost_of_sales_indirect_tax
-        psc_table_gas['Total_Indirect_Tax'] = contract._gas_total_indirect_tax
-        # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
-
-
-        psc_table_consolidated = pd.DataFrame()
-        psc_table_consolidated['Years'] = contract.project_years
-        psc_table_consolidated['C_Lifting_Oil'] = contract._oil_lifting.get_lifting_rate_ghv_arr()
-        psc_table_consolidated['C_Lifting_Gas'] = contract._gas_lifting.get_lifting_rate_ghv_arr()
-        psc_table_consolidated['C_Revenue'] = contract._consolidated_revenue
-        psc_table_consolidated['C_Government_Share'] = contract._consolidated_ctr_share_before_tf
-        psc_table_consolidated['C_Contractor_Share'] = contract._consolidated_gov_share_before_tf
-        psc_table_consolidated['C_Depreciation'] = contract._consolidated_depreciation
-        psc_table_consolidated['C_Amortization'] = contract._consolidated_amortization
-        psc_table_consolidated['C_Opex'] = contract._consolidated_opex_expenditures_post_tax
-        psc_table_consolidated['C_ASR'] = contract._consolidated_asr_expenditures_post_tax
-        psc_table_consolidated['C_Non_Capital'] = contract._consolidated_non_capital
-        psc_table_consolidated['C_Total_Expenses'] = contract._consolidated_total_expenses
-        psc_table_consolidated['C_Cost_To_Be_Deducted'] = contract._consolidated_cost_tobe_deducted
-        psc_table_consolidated['C_Carry_Forward_Cost'] = contract._consolidated_carward_deduct_cost
-        psc_table_consolidated['C_Deductible_Cost'] = contract._consolidated_deductible_cost
-        psc_table_consolidated['C_Carry_Forward_Cost_after_TF'] = contract._consolidated_carward_cost_aftertf
-        psc_table_consolidated['C_CTR_Share_After'] = contract._consolidated_ctr_share_after_transfer
-        psc_table_consolidated['C_CTR_Net_Operating_Profit'] = contract._consolidated_net_operating_profit
-        psc_table_consolidated['C_DMO_Volume'] = contract._consolidated_dmo_volume
-        psc_table_consolidated['C_DMO_Fee'] = contract._consolidated_dmo_fee
-        psc_table_consolidated['C_DDMO'] = contract._consolidated_ddmo
-        psc_table_consolidated['C_Taxable_Income'] = contract._consolidated_taxable_income
-        psc_table_consolidated['C_Tax'] = contract._consolidated_tax_payment
-        psc_table_consolidated['C_Net_CTR_Share'] = contract._consolidated_ctr_net_share
-        psc_table_consolidated['C_CashFlow'] = contract._consolidated_cashflow
-        psc_table_consolidated['C_Government_Take'] = contract._consolidated_government_take
-        psc_table_consolidated['cum_C_CashFlow'] = np.cumsum(contract._consolidated_cashflow)
-        psc_table_consolidated['C_Capital_Expenditures_Pre_Tax'] = contract._consolidated_capital_expenditures_pre_tax
-        psc_table_consolidated['C_Intangible_Expenditures_Pre_Tax'] = contract._consolidated_intangible_expenditures_pre_tax
-        psc_table_consolidated['C_Opex_Expenditures_Pre_Tax'] = contract._consolidated_opex_expenditures_pre_tax
-        psc_table_consolidated['C_ASR_Expenditures_Pre_Tax'] = contract._consolidated_asr_expenditures_pre_tax
-        psc_table_consolidated['C_LBT_Expenditures_Pre_Tax'] = contract._consolidated_lbt_expenditures_pre_tax
-        psc_table_consolidated['C_CostOfSales_Expenditures_Pre_Tax'] = contract._consolidated_cost_of_sales_expenditures_pre_tax
-        psc_table_consolidated['C_Total_Expenditures_Pre_Tax'] = contract._consolidated_total_expenditures_pre_tax
-        psc_table_consolidated['C_Capital_Indirect_Tax'] = contract._consolidated_capital_indirect_tax
-        psc_table_consolidated['C_Intangible_Indirect_Tax'] = contract._consolidated_intangible_indirect_tax
-        psc_table_consolidated['C_Opex_Indirect_Tax'] = contract._consolidated_opex_indirect_tax
-        psc_table_consolidated['C_ASR_Indirect_Tax'] = contract._consolidated_asr_indirect_tax
-        psc_table_consolidated['C_LBT_Indirect_Tax'] = contract._consolidated_lbt_indirect_tax
-        psc_table_consolidated['C_CostOfSales_Indirect_Tax'] = contract._consolidated_cost_of_sales_indirect_tax
-        psc_table_consolidated['C_Total_Indirect_Tax'] = contract._consolidated_total_indirect_tax
-        # psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
-
+        psc_table_oil = get_table_grosssplit_oil(contract=contract)
+        psc_table_gas = get_table_grosssplit_gas(contract=contract)
+        psc_table_consolidated = get_table_grosssplit_consolidated(contract=contract)
         return psc_table_oil, psc_table_gas, psc_table_consolidated
 
+    # Construct OIL, GAS, and CONSOLIDATED cashflow tables for transition contract
     elif isinstance(contract, Transition):
-        psc_table_oil_1 = pd.DataFrame()
-        psc_table_oil_2 = pd.DataFrame()
-        psc_table_gas_1 = pd.DataFrame()
-        psc_table_gas_2 = pd.DataFrame()
-        psc_table_consolidated_1 = pd.DataFrame()
-        psc_table_consolidated_2 = pd.DataFrame()
+        pass
 
-        if isinstance(contract.contract1, CostRecovery):
-            psc_table_oil_1['Year'] = contract._contract1_transitioned.project_years
-            psc_table_oil_1['Lifting'] = contract._contract1_transitioned._oil_lifting.get_lifting_rate_ghv_arr()
-            psc_table_oil_1['Price'] = contract._contract1_transitioned._oil_wap_price
-            psc_table_oil_1['Revenue'] = contract._contract1_transitioned._oil_revenue
-            psc_table_oil_1['Depreciable'] = contract._contract1_transitioned._oil_capital_expenditures_post_tax
-            psc_table_oil_1['Intangible'] = contract._contract1_transitioned._oil_intangible_expenditures_post_tax
-            psc_table_oil_1['Opex'] = contract._contract1_transitioned._oil_opex_expenditures_post_tax
-            psc_table_oil_1['ASR'] = contract._contract1_transitioned._oil_asr_expenditures_post_tax
-            psc_table_oil_1['LBT'] = contract._contract1_transitioned._oil_lbt_expenditures_post_tax
-            psc_table_oil_1['Depreciation'] = contract._contract1_transitioned._oil_depreciation
-            psc_table_oil_1['Non_Capital'] = contract._contract1_transitioned._oil_non_capital
-            psc_table_oil_1['FTP'] = contract._contract1_transitioned._oil_ftp
-            psc_table_oil_1['FTP_CTR'] = contract._contract1_transitioned._oil_ftp_ctr
-            psc_table_oil_1['FTP_GOV'] = contract._contract1_transitioned._oil_ftp_gov
-            psc_table_oil_1['Investment_Credit'] = contract._contract1_transitioned._oil_ic_paid
-            psc_table_oil_1['Unrecovered_Cost'] = contract._contract1_transitioned._oil_unrecovered_before_transfer
-            #psc_table_oil_1['Cost_to_Be_Recovered'] = contract._contract1_transitioned._oil_cost_to_be_recovered
-            psc_table_oil_1['Cost_Recovery'] = contract._contract1_transitioned._oil_cost_recovery
-            psc_table_oil_1['ETS_Before_Transfer'] = contract._contract1_transitioned._oil_ets_before_transfer
-            psc_table_oil_1['Transfer_to_Gas'] = contract._contract1_transitioned._transfer_to_gas
-            psc_table_oil_1['Unrec_after_Transfer'] = contract._contract1_transitioned._oil_unrecovered_after_transfer
-            #psc_table_oil_1[
-            #    'Cost_To_Be_Recovered_After_TF'] = contract._contract1_transitioned._oil_cost_to_be_recovered_after_tf
-            psc_table_oil_1['Cost_Recovery_After_TF'] = contract._contract1_transitioned._oil_cost_recovery_after_tf
-            psc_table_oil_1['ETS_After_Transfer'] = contract._contract1_transitioned._oil_ets_after_transfer
-            psc_table_oil_1['Contractor_Share'] = contract._contract1_transitioned._oil_contractor_share
-            psc_table_oil_1['Government_Share'] = contract._contract1_transitioned._oil_government_share
-            psc_table_oil_1['DMO_Volume'] = contract._contract1_transitioned._oil_dmo_volume
-            psc_table_oil_1['DMO_Fee'] = contract._contract1_transitioned._oil_dmo_fee
-            psc_table_oil_1['DDMO'] = contract._contract1_transitioned._oil_ddmo
-            psc_table_oil_1['Taxable_Income'] = contract._contract1_transitioned._oil_taxable_income
-            psc_table_oil_1['Tax_Payment'] = contract._contract1_transitioned._oil_tax_payment
-            psc_table_oil_1['Contractor_Net_Share'] = contract._contract1_transitioned._oil_ctr_net_share
-            psc_table_oil_1['Cashflow'] = contract._contract1_transitioned._oil_cashflow
-            psc_table_oil_1['Cum._Cashflow'] = np.cumsum(contract._contract1_transitioned._oil_cashflow)
-            psc_table_oil_1['Government_Take'] = contract._contract1_transitioned._oil_government_take
-            psc_table_oil_1['Capital_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_capital_expenditures_pre_tax
-            psc_table_oil_1['Intangible_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_intangible_expenditures_pre_tax
-            psc_table_oil_1['Opex_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_opex_expenditures_pre_tax
-            psc_table_oil_1['ASR_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_asr_expenditures_pre_tax
-            psc_table_oil_1['LBT_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_lbt_expenditures_pre_tax
-            psc_table_oil_1['CostOfSales_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_cost_of_sales_expenditures_pre_tax
-            psc_table_oil_1['Total_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_total_expenditures_pre_tax
-            psc_table_oil_1['Capital_Indirect_Tax'] = contract._contract1_transitioned._oil_capital_indirect_tax
-            psc_table_oil_1['Intangible_Indirect_Tax'] = contract._contract1_transitioned._oil_intangible_indirect_tax
-            psc_table_oil_1['Opex_Indirect_Tax'] = contract._contract1_transitioned._oil_opex_indirect_tax
-            psc_table_oil_1['ASR_Indirect_Tax'] = contract._contract1_transitioned._oil_asr_indirect_tax
-            psc_table_oil_1['LBT_Indirect_Tax'] = contract._contract1_transitioned._oil_lbt_indirect_tax
-            psc_table_oil_1['CostOfSales_Indirect_Tax'] = contract._contract1_transitioned._oil_cost_of_sales_indirect_tax
-            psc_table_oil_1['Total_Indirect_Tax'] = contract._contract1_transitioned._oil_total_indirect_tax
-            # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
-
-            psc_table_gas_1['Year'] = contract._contract1_transitioned.project_years
-            psc_table_gas_1['Lifting'] = contract._contract1_transitioned._gas_lifting.get_lifting_rate_ghv_arr()
-            psc_table_gas_1['Price'] = contract._contract1_transitioned._gas_wap_price
-            psc_table_gas_1['Revenue'] = contract._contract1_transitioned._gas_revenue
-            psc_table_gas_1['Depreciable'] = contract._contract1_transitioned._gas_capital_expenditures_post_tax
-            psc_table_gas_1['Intangible'] = contract._contract1_transitioned._gas_intangible_expenditures_post_tax
-            psc_table_gas_1['Opex'] = contract._contract1_transitioned._gas_opex_expenditures_post_tax
-            psc_table_gas_1['ASR'] = contract._contract1_transitioned._gas_asr_expenditures_post_tax
-            psc_table_gas_1['LBT'] = contract._contract1_transitioned._gas_lbt_expenditures_post_tax
-            psc_table_gas_1['Depreciation'] = contract._contract1_transitioned._gas_depreciation
-            psc_table_gas_1['Non_Capital'] = contract._contract1_transitioned._gas_non_capital
-            psc_table_gas_1['FTP'] = contract._contract1_transitioned._gas_ftp
-            psc_table_gas_1['FTP_CTR'] = contract._contract1_transitioned._gas_ftp_ctr
-            psc_table_gas_1['FTP_GOV'] = contract._contract1_transitioned._gas_ftp_gov
-            psc_table_gas_1['Investment_Credit'] = contract._contract1_transitioned._gas_ic_paid
-            psc_table_gas_1['Unrecovered_Cost'] = contract._contract1_transitioned._gas_unrecovered_before_transfer
-            #psc_table_gas_1['Cost_to_Be_Recovered'] = contract._contract1_transitioned._gas_cost_to_be_recovered
-            psc_table_gas_1['Cost_Recovery'] = contract._contract1_transitioned._gas_cost_recovery
-            psc_table_gas_1['ETS_Before_Transfer'] = contract._contract1_transitioned._gas_ets_before_transfer
-            psc_table_gas_1['Transfer_to_Oil'] = contract._contract1_transitioned._transfer_to_oil
-            psc_table_gas_1['Unrec_after_Transfer'] = contract._contract1_transitioned._gas_unrecovered_after_transfer
-            #psc_table_gas_1[
-            #    'Cost_To_Be_Recovered_After_TF'] = contract._contract1_transitioned._gas_cost_to_be_recovered_after_tf
-            psc_table_gas_1['Cost_Recovery_After_TF'] = contract._contract1_transitioned._gas_cost_recovery_after_tf
-            psc_table_gas_1['ETS_After_Transfer'] = contract._contract1_transitioned._gas_ets_after_transfer
-            psc_table_gas_1['Contractor_Share'] = contract._contract1_transitioned._gas_contractor_share
-            psc_table_gas_1['Government_Share'] = contract._contract1_transitioned._gas_government_share
-            psc_table_gas_1['DMO_Volume'] = contract._contract1_transitioned._gas_dmo_volume
-            psc_table_gas_1['DMO_Fee'] = contract._contract1_transitioned._gas_dmo_fee
-            psc_table_gas_1['DDMO'] = contract._contract1_transitioned._gas_ddmo
-            psc_table_gas_1['Taxable_Income'] = contract._contract1_transitioned._gas_taxable_income
-            psc_table_gas_1['Tax_Payment'] = contract._contract1_transitioned._gas_tax_payment
-            psc_table_gas_1['Contractor_Net_Share'] = contract._contract1_transitioned._gas_ctr_net_share
-            psc_table_gas_1['Cashflow'] = contract._contract1_transitioned._gas_cashflow
-            psc_table_gas_1['Cum._Cashflow'] = np.cumsum(contract._contract1_transitioned._gas_cashflow)
-            psc_table_gas_1['Government_Take'] = contract._contract1_transitioned._gas_government_take
-            psc_table_gas_1['Capital_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_capital_expenditures_pre_tax
-            psc_table_gas_1['Intangible_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_intangible_expenditures_pre_tax
-            psc_table_gas_1['Opex_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_opex_expenditures_pre_tax
-            psc_table_gas_1['ASR_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_asr_expenditures_pre_tax
-            psc_table_gas_1['LBT_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_lbt_expenditures_pre_tax
-            psc_table_gas_1['CostOfSales_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_cost_of_sales_expenditures_pre_tax
-            psc_table_gas_1['Total_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_total_expenditures_pre_tax
-            psc_table_gas_1['Capital_Indirect_Tax'] = contract._contract1_transitioned._gas_capital_indirect_tax
-            psc_table_gas_1['Intangible_Indirect_Tax'] = contract._contract1_transitioned._gas_intangible_indirect_tax
-            psc_table_gas_1['Opex_Indirect_Tax'] = contract._contract1_transitioned._gas_opex_indirect_tax
-            psc_table_gas_1['ASR_Indirect_Tax'] = contract._contract1_transitioned._gas_asr_indirect_tax
-            psc_table_gas_1['LBT_Indirect_Tax'] = contract._contract1_transitioned._gas_lbt_indirect_tax
-            psc_table_gas_1['CostOfSales_Indirect_Tax'] = contract._contract1_transitioned._gas_cost_of_sales_indirect_tax
-            psc_table_gas_1['Total_Indirect_Tax'] = contract._contract1_transitioned._gas_total_indirect_tax
-            # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
-
-            psc_table_consolidated_1['Year'] = contract._contract1_transitioned.project_years
-            psc_table_consolidated_1[
-                'Lifting_oil'] = contract._contract1_transitioned._oil_lifting.get_lifting_rate_ghv_arr()
-            psc_table_consolidated_1[
-                'Lifting_gas'] = contract._contract1_transitioned._gas_lifting.get_lifting_rate_ghv_arr()
-            psc_table_consolidated_1['C_Revenue'] = contract._contract1_transitioned._consolidated_revenue
-            psc_table_consolidated_1['C_Depreciable'] = contract._contract1_transitioned._consolidated_capital_expenditures_post_tax
-            psc_table_consolidated_1['C_Intangible'] = contract._contract1_transitioned._consolidated_intangible_expenditures_post_tax
-            psc_table_consolidated_1['C_Opex'] = contract._contract1_transitioned._consolidated_opex_expenditures_post_tax
-            psc_table_consolidated_1['C_ASR'] = contract._contract1_transitioned._consolidated_asr_expenditures_post_tax
-            psc_table_consolidated_1['C_Depreciation'] = contract._contract1_transitioned._consolidated_depreciation
-            psc_table_consolidated_1['C_Non_Capital'] = contract._contract1_transitioned._consolidated_non_capital
-            psc_table_consolidated_1['C_FTP'] = contract._contract1_transitioned._consolidated_ftp
-            psc_table_consolidated_1['C_FTP_CTR'] = contract._contract1_transitioned._consolidated_ftp_ctr
-            psc_table_consolidated_1['C_FTP_GOV'] = contract._contract1_transitioned._consolidated_ftp_gov
-            psc_table_consolidated_1['C_IC'] = contract._contract1_transitioned._consolidated_ic
-            psc_table_consolidated_1[
-                'C_Unrecovered_before_TF'] = contract._contract1_transitioned._consolidated_unrecovered_before_transfer
-            psc_table_consolidated_1[
-                'C_Cost_Recovery'] = contract._contract1_transitioned._consolidated_cost_recovery_before_transfer
-            psc_table_consolidated_1[
-                'C_ETS_before_TF'] = contract._contract1_transitioned._consolidated_ets_before_transfer
-            psc_table_consolidated_1[
-                'C_Unrecovered_after_TF'] = contract._contract1_transitioned._consolidated_unrecovered_after_transfer
-            #psc_table_consolidated_1[
-            #    'C_Cost_to_be_Recovered_after_TF'] = contract._contract1_transitioned._consolidated_cost_to_be_recovered_after_tf
-            psc_table_consolidated_1[
-                'C_Cost_Recovery_after_TF'] = contract._contract1_transitioned._consolidated_cost_recovery_after_tf
-            psc_table_consolidated_1[
-                'C_ETS_after_TF'] = contract._contract1_transitioned._consolidated_ets_after_transfer
-            psc_table_consolidated_1[
-                'C_Contractor_Share'] = contract._contract1_transitioned._consolidated_contractor_share
-            psc_table_consolidated_1[
-                'C_Government_Share'] = contract._contract1_transitioned._consolidated_government_share
-            psc_table_consolidated_1['C_DMO_Volume'] = contract._contract1_transitioned._consolidated_dmo_volume
-            psc_table_consolidated_1['C_DMO_Fee'] = contract._contract1_transitioned._consolidated_dmo_fee
-            psc_table_consolidated_1['C_DDMO'] = contract._contract1_transitioned._consolidated_ddmo
-            psc_table_consolidated_1['C_Taxable_Income'] = contract._contract1_transitioned._consolidated_taxable_income
-            psc_table_consolidated_1['C_Tax_Due'] = contract._contract1_transitioned._consolidated_tax_due
-            psc_table_consolidated_1[
-                'C_Unpaid_Tax_Balance'] = contract._contract1_transitioned._consolidated_unpaid_tax_balance
-            psc_table_consolidated_1['C_Tax_Payment'] = contract._contract1_transitioned._consolidated_tax_payment
-            psc_table_consolidated_1['C_CTR_Net_Share'] = contract._contract1_transitioned._consolidated_ctr_net_share
-            psc_table_consolidated_1[
-                'C_Contractor_Take'] = contract._contract1_transitioned._consolidated_contractor_take
-            psc_table_consolidated_1['C_Cashflow'] = contract._contract1_transitioned._consolidated_cashflow
-            psc_table_consolidated_1['cum. C_Cashflow'] = np.cumsum(contract._contract1_transitioned._consolidated_cashflow)
-            psc_table_consolidated_1['C_Government_take'] = contract._contract1_transitioned._consolidated_government_take
-            psc_table_consolidated_1['C_Capital_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_capital_expenditures_pre_tax
-            psc_table_consolidated_1['C_Intangible_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_intangible_expenditures_pre_tax
-            psc_table_consolidated_1['C_Opex_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_opex_expenditures_pre_tax
-            psc_table_consolidated_1['C_ASR_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_asr_expenditures_pre_tax
-            psc_table_consolidated_1['C_LBT_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_lbt_expenditures_pre_tax
-            psc_table_consolidated_1['C_CostOfSales_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_cost_of_sales_expenditures_pre_tax
-            psc_table_consolidated_1['C_Total_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_expenditures_pre_tax
-            psc_table_consolidated_1['C_Capital_Indirect_Tax'] = contract._contract1_transitioned._consolidated_capital_indirect_tax
-            psc_table_consolidated_1['C_Intangible_Indirect_Tax'] = contract._contract1_transitioned._consolidated_intangible_indirect_tax
-            psc_table_consolidated_1['C_Opex_Indirect_Tax'] = contract._contract1_transitioned._consolidated_opex_indirect_tax
-            psc_table_consolidated_1['C_ASR_Indirect_Tax'] = contract._contract1_transitioned._consolidated_asr_indirect_tax
-            psc_table_consolidated_1['C_LBT_Indirect_Tax'] = contract._contract1_transitioned._consolidated_lbt_indirect_tax
-            psc_table_consolidated_1['C_CostOfSales_Indirect_Tax'] = contract._contract1_transitioned._consolidated_cost_of_sales_indirect_tax
-            psc_table_consolidated_1['C_Total_Indirect_Tax'] = contract._contract1_transitioned._consolidated_indirect_tax
-            # psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
-
-        elif isinstance(contract.contract1, GrossSplit):
-            psc_table_oil_1['Years'] = contract._contract1_transitioned.project_years
-            psc_table_oil_1['Lifting'] = contract._contract1_transitioned._oil_lifting.get_lifting_rate_ghv_arr()
-            psc_table_oil_1['Price'] = contract._contract1_transitioned._oil_wap_price
-            psc_table_oil_1['Depreciable'] = contract._contract1_transitioned._oil_capital_expenditures_post_tax
-            psc_table_oil_1['Intangible'] = contract._contract1_transitioned._oil_intangible_expenditures_post_tax
-            psc_table_oil_1['Opex'] = contract._contract1_transitioned._oil_opex_expenditures_post_tax
-            psc_table_oil_1['ASR'] = contract._contract1_transitioned._oil_asr_expenditures_post_tax
-            psc_table_oil_1['LBT'] = contract._contract1_transitioned._oil_lbt_expenditures_post_tax
-            psc_table_oil_1['Revenue'] = contract._contract1_transitioned._oil_revenue
-            psc_table_oil_1['Base_Split'] = contract._contract1_transitioned._oil_base_split
-            psc_table_oil_1['Variable_Split'] = contract._contract1_transitioned._var_split_array
-            psc_table_oil_1['Base_Split'] = contract._contract1_transitioned._oil_base_split
-            psc_table_oil_1['Progressive_Price_Split'] = contract._contract1_transitioned._oil_prog_price_split
-            psc_table_oil_1['Progressive_Cumulative_Production_Split'] = contract._contract1_transitioned._oil_prog_cum_split
-            psc_table_oil_1['Progressive_Split'] = contract._contract1_transitioned._oil_prog_split
-            psc_table_oil_1['Contractor_Split'] = contract._contract1_transitioned._oil_ctr_split
-            psc_table_oil_1['Contractor_Share'] = contract._contract1_transitioned._oil_ctr_share_before_transfer
-            psc_table_oil_1['Government_Share'] = contract._contract1_transitioned._oil_gov_share
-            psc_table_oil_1['Depreciation'] = contract._contract1_transitioned._oil_depreciation
-            psc_table_oil_1['Amortization'] = contract._contract1_transitioned._oil_amortization
-            psc_table_oil_1['Non_Capital'] = contract._contract1_transitioned._oil_non_capital
-            psc_table_oil_1['Total_Expenses'] = contract._contract1_transitioned._oil_total_expenses
-            psc_table_oil_1['Cost_To_Be_Deducted'] = contract._contract1_transitioned._oil_cost_tobe_deducted
-            psc_table_oil_1['Carry_Forward_Cost'] = contract._contract1_transitioned._oil_carward_deduct_cost
-            psc_table_oil_1['Deductible_Cost'] = contract._contract1_transitioned._oil_deductible_cost
-            psc_table_oil_1['Transfer_To_Gas'] = contract._contract1_transitioned._transfer_to_gas
-            psc_table_oil_1['Carry_Forward_Cost_after_TF'] = contract._contract1_transitioned._oil_carward_cost_aftertf
-            psc_table_oil_1['CTR_Share_After_TF'] = contract._contract1_transitioned._oil_ctr_share_after_transfer
-            psc_table_oil_1['CTR_Net_Operating_Profit'] = contract._contract1_transitioned._oil_net_operating_profit
-            psc_table_oil_1['DMO_Volume'] = contract._contract1_transitioned._oil_dmo_volume
-            psc_table_oil_1['DMO_Fee'] = contract._contract1_transitioned._oil_dmo_fee
-            psc_table_oil_1['DDMO'] = contract._contract1_transitioned._oil_ddmo
-            psc_table_oil_1['Taxable_Income'] = contract._contract1_transitioned._oil_taxable_income
-            psc_table_oil_1['Tax'] = contract._contract1_transitioned._oil_tax
-            psc_table_oil_1['Net_CTR_Share'] = contract._contract1_transitioned._oil_ctr_net_share
-            psc_table_oil_1['CTR_Cash_Flow'] = contract._contract1_transitioned._oil_ctr_cashflow
-            psc_table_oil_1['Cum_Cash_Flow'] = np.cumsum(contract._contract1_transitioned._oil_ctr_cashflow)
-            psc_table_oil_1['Government_Take'] = contract._contract1_transitioned._oil_government_take
-            psc_table_oil_1['Capital_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_capital_expenditures_pre_tax
-            psc_table_oil_1['Intangible_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_intangible_expenditures_pre_tax
-            psc_table_oil_1['Opex_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_opex_expenditures_pre_tax
-            psc_table_oil_1['ASR_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_asr_expenditures_pre_tax
-            psc_table_oil_1['LBT_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_lbt_expenditures_pre_tax
-            psc_table_oil_1['CostOfSales_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_cost_of_sales_expenditures_pre_tax
-            psc_table_oil_1['Total_Expenditures_Pre_Tax'] = contract._contract1_transitioned._oil_total_expenditures_pre_tax
-            psc_table_oil_1['Capital_Indirect_Tax'] = contract._contract1_transitioned._oil_capital_indirect_tax
-            psc_table_oil_1['Intangible_Indirect_Tax'] = contract._contract1_transitioned._oil_intangible_indirect_tax
-            psc_table_oil_1['Opex_Indirect_Tax'] = contract._contract1_transitioned._oil_opex_indirect_tax
-            psc_table_oil_1['ASR_Indirect_Tax'] = contract._contract1_transitioned._oil_asr_indirect_tax
-            psc_table_oil_1['LBT_Indirect_Tax'] = contract._contract1_transitioned._oil_lbt_indirect_tax
-            psc_table_oil_1['CostOfSales_Indirect_Tax'] = contract._contract1_transitioned._oil_cost_of_sales_indirect_tax
-            psc_table_oil_1['Total_Indirect_Tax'] = contract._contract1_transitioned._oil_total_indirect_tax
-            # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
-
-            psc_table_gas_1['Years'] = contract.project_years
-            psc_table_gas_1['Lifting'] = contract._contract1_transitioned._gas_lifting.get_lifting_rate_ghv_arr()
-            psc_table_gas_1['Price'] = contract._contract1_transitioned._gas_wap_price
-            psc_table_gas_1['Depreciable'] = contract._contract1_transitioned._gas_capital_expenditures_post_tax
-            psc_table_gas_1['Intangible'] = contract._contract1_transitioned._gas_intangible_expenditures_post_tax
-            psc_table_gas_1['Opex'] = contract._contract1_transitioned._gas_opex_expenditures_post_tax
-            psc_table_gas_1['ASR'] = contract._contract1_transitioned._gas_asr_expenditures_post_tax
-            psc_table_gas_1['LBT'] = contract._contract1_transitioned._gas_lbt_expenditures_post_tax
-            psc_table_gas_1['Revenue'] = contract._contract1_transitioned._gas_revenue
-            psc_table_gas_1['Base_Split'] = contract._contract1_transitioned._gas_base_split
-            psc_table_gas_1['Variable_Split'] = contract._contract1_transitioned._var_split_array
-            psc_table_gas_1['Base_Split'] = contract._contract1_transitioned._gas_base_split
-            psc_table_gas_1['Progressive_Price_Split'] = contract._contract1_transitioned._gas_prog_price_split
-            psc_table_gas_1['Progressive_Cumulative_Production_Split'] = contract._contract1_transitioned._gas_prog_cum_split
-            psc_table_gas_1['Progressive_Split'] = contract._contract1_transitioned._gas_prog_split
-            psc_table_gas_1['Contractor_Split'] = contract._contract1_transitioned._gas_ctr_split
-            psc_table_gas_1['Contractor_Share'] = contract._contract1_transitioned._gas_ctr_share_before_transfer
-            psc_table_gas_1['Government_Share'] = contract._contract1_transitioned._gas_gov_share
-            psc_table_gas_1['Depreciation'] = contract._contract1_transitioned._gas_depreciation
-            psc_table_gas_1['Amortization'] = contract._contract1_transitioned._gas_amortization
-            psc_table_gas_1['Non_Capital'] = contract._contract1_transitioned._gas_non_capital
-            psc_table_gas_1['Total_Expenses'] = contract._contract1_transitioned._gas_total_expenses
-            psc_table_gas_1['Cost_To_Be_Deducted'] = contract._contract1_transitioned._gas_cost_tobe_deducted
-            psc_table_gas_1['Carry_Forward_Cost'] = contract._contract1_transitioned._gas_carward_deduct_cost
-            psc_table_gas_1['Deductible_Cost'] = contract._contract1_transitioned._gas_deductible_cost
-            psc_table_gas_1['Transfer_to_Oil'] = contract._contract1_transitioned._transfer_to_oil
-            psc_table_gas_1['Carry_Forward_Cost_after_TF'] = contract._contract1_transitioned._gas_carward_cost_aftertf
-            psc_table_gas_1['CTR_Share_After_TF'] = contract._contract1_transitioned._gas_ctr_share_after_transfer
-            psc_table_gas_1['CTR_Net_Operating_Profit'] = contract._contract1_transitioned._gas_net_operating_profit
-            psc_table_gas_1['DMO_Volume'] = contract._contract1_transitioned._gas_dmo_volume
-            psc_table_gas_1['DMO_Fee'] = contract._contract1_transitioned._gas_dmo_fee
-            psc_table_gas_1['DDMO'] = contract._contract1_transitioned._gas_ddmo
-            psc_table_gas_1['Taxable_Income'] = contract._contract1_transitioned._gas_taxable_income
-            psc_table_gas_1['Tax'] = contract._contract1_transitioned._gas_tax
-            psc_table_gas_1['Net_CTR_Share'] = contract._contract1_transitioned._gas_ctr_net_share
-            psc_table_gas_1['CTR_Cash_Flow'] = contract._contract1_transitioned._gas_ctr_cashflow
-            psc_table_gas_1['Cum_Cash_Flow'] = np.cumsum(contract._contract2_transitioned._gas_ctr_cashflow)
-            psc_table_gas_1['Government_Take'] = contract._contract2_transitioned._gas_government_take
-            psc_table_gas_1['Capital_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_capital_expenditures_pre_tax
-            psc_table_gas_1['Intangible_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_intangible_expenditures_pre_tax
-            psc_table_gas_1['Opex_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_opex_expenditures_pre_tax
-            psc_table_gas_1['ASR_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_asr_expenditures_pre_tax
-            psc_table_gas_1['LBT_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_lbt_expenditures_pre_tax
-            psc_table_gas_1['CostOfSales_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_cost_of_sales_expenditures_pre_tax
-            psc_table_gas_1['Total_Expenditures_Pre_Tax'] = contract._contract1_transitioned._gas_total_expenditures_pre_tax
-            psc_table_gas_1['Capital_Indirect_Tax'] = contract._contract1_transitioned._gas_capital_indirect_tax
-            psc_table_gas_1['Intangible_Indirect_Tax'] = contract._contract1_transitioned._gas_intangible_indirect_tax
-            psc_table_gas_1['Opex_Indirect_Tax'] = contract._contract1_transitioned._gas_opex_indirect_tax
-            psc_table_gas_1['ASR_Indirect_Tax'] = contract._contract1_transitioned._gas_asr_indirect_tax
-            psc_table_gas_1['LBT_Indirect_Tax'] = contract._contract1_transitioned._gas_lbt_indirect_tax
-            psc_table_gas_1['CostOfSales_Indirect_Tax'] = contract._contract1_transitioned._gas_cost_of_sales_indirect_tax
-            psc_table_gas_1['Total_Indirect_Tax'] = contract._contract1_transitioned._gas_total_indirect_tax
-            # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
-
-            psc_table_consolidated_1['Years'] = contract._contract1_transitioned.project_years
-            psc_table_consolidated_1['C_Lifting_Oil'] = contract._contract1_transitioned._oil_lifting.get_lifting_rate_ghv_arr()
-            psc_table_consolidated_1['C_Lifting_Gas'] = contract._contract1_transitioned._gas_lifting.get_lifting_rate_ghv_arr()
-            psc_table_consolidated_1['C_Revenue'] = contract._contract1_transitioned._consolidated_revenue
-            psc_table_consolidated_1['C_Government_Share'] = contract._contract1_transitioned._consolidated_ctr_share_before_tf
-            psc_table_consolidated_1['C_Contractor_Share'] = contract._contract1_transitioned._consolidated_gov_share_before_tf
-            psc_table_consolidated_1['C_Depreciation'] = contract._contract1_transitioned._consolidated_depreciation
-            psc_table_consolidated_1['C_Amortization'] = contract._contract1_transitioned._consolidated_amortization
-            psc_table_consolidated_1['C_Opex'] = contract._contract1_transitioned._consolidated_opex_expenditures_post_tax
-            psc_table_consolidated_1['C_ASR'] = contract._contract1_transitioned._consolidated_asr_expenditures_post_tax
-            psc_table_consolidated_1['C_Non_Capital'] = contract._contract1_transitioned._consolidated_non_capital
-            psc_table_consolidated_1['C_Total_Expenses'] = contract._contract1_transitioned._consolidated_total_expenses
-            psc_table_consolidated_1['C_Cost_To_Be_Deducted'] = contract._contract1_transitioned._consolidated_cost_tobe_deducted
-            psc_table_consolidated_1['C_Carry_Forward_Cost'] = contract._contract1_transitioned._consolidated_carward_deduct_cost
-            psc_table_consolidated_1['C_Deductible_Cost'] = contract._contract1_transitioned._consolidated_deductible_cost
-            psc_table_consolidated_1['C_Carry_Forward_Cost_after_TF'] = contract._contract1_transitioned._consolidated_carward_cost_aftertf
-            psc_table_consolidated_1['C_CTR_Share_After'] = contract._contract1_transitioned._consolidated_ctr_share_after_transfer
-            psc_table_consolidated_1['C_CTR_Net_Operating_Profit'] = contract._contract1_transitioned._consolidated_net_operating_profit
-            psc_table_consolidated_1['C_DMO_Volume'] = contract._contract1_transitioned._consolidated_dmo_volume
-            psc_table_consolidated_1['C_DMO_Fee'] = contract._contract1_transitioned._consolidated_dmo_fee
-            psc_table_consolidated_1['C_DDMO'] = contract._contract1_transitioned._consolidated_ddmo
-            psc_table_consolidated_1['C_Taxable_Income'] = contract._contract1_transitioned._consolidated_taxable_income
-            psc_table_consolidated_1['C_Tax'] = contract._contract1_transitioned._consolidated_tax_payment
-            psc_table_consolidated_1['C_Net_CTR_Share'] = contract._contract1_transitioned._consolidated_ctr_net_share
-            psc_table_consolidated_1['C_CashFlow'] = contract._contract1_transitioned._consolidated_cashflow
-            psc_table_consolidated_1['C_Government_Take'] = contract._contract1_transitioned._consolidated_government_take
-            psc_table_consolidated_1['cum_C_CashFlow'] = np.cumsum(
-                contract._contract2_transitioned._consolidated_cashflow)
-            psc_table_consolidated_1['C_Capital_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_capital_expenditures_pre_tax
-            psc_table_consolidated_1['C_Intangible_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_intangible_expenditures_pre_tax
-            psc_table_consolidated_1['C_Opex_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_opex_expenditures_pre_tax
-            psc_table_consolidated_1['C_ASR_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_asr_expenditures_pre_tax
-            psc_table_consolidated_1['C_LBT_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_lbt_expenditures_pre_tax
-            psc_table_consolidated_1['C_CostOfSales_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_cost_of_sales_expenditures_pre_tax
-            psc_table_consolidated_1['C_Total_Expenditures_Pre_Tax'] = contract._contract1_transitioned._consolidated_expenditures_pre_tax
-            psc_table_consolidated_1['C_Capital_Indirect_Tax'] = contract._contract1_transitioned._consolidated_capital_indirect_tax
-            psc_table_consolidated_1['C_Intangible_Indirect_Tax'] = contract._contract1_transitioned._consolidated_intangible_indirect_tax
-            psc_table_consolidated_1['C_Opex_Indirect_Tax'] = contract._contract1_transitioned._consolidated_opex_indirect_tax
-            psc_table_consolidated_1['C_ASR_Indirect_Tax'] = contract._contract1_transitioned._consolidated_asr_indirect_tax
-            psc_table_consolidated_1['C_LBT_Indirect_Tax'] = contract._contract1_transitioned._consolidated_lbt_indirect_tax
-            psc_table_consolidated_1['C_CostOfSales_Indirect_Tax'] = contract._contract1_transitioned._consolidated_cost_of_sales_indirect_tax
-            psc_table_consolidated_1['C_Total_Indirect_Tax'] = contract._contract1_transitioned._consolidated_indirect_tax
-            # psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
-
-        if isinstance(contract.contract2, CostRecovery):
-            psc_table_oil_2['Year'] = contract._contract2_transitioned.project_years
-            psc_table_oil_2['Lifting'] = contract._contract2_transitioned._oil_lifting.get_lifting_rate_ghv_arr()
-            psc_table_oil_2['Price'] = contract._contract2_transitioned._oil_wap_price
-            psc_table_oil_2['Revenue'] = contract._contract2_transitioned._oil_revenue
-            psc_table_oil_2['Depreciable'] = contract._contract2_transitioned._oil_capital_expenditures_post_tax
-            psc_table_oil_2['Intangible'] = contract._contract2_transitioned._oil_intangible_expenditures_post_tax
-            psc_table_oil_2['Opex'] = contract._contract2_transitioned._oil_opex_expenditures_post_tax
-            psc_table_oil_2['ASR'] = contract._contract2_transitioned._oil_asr_expenditures_post_tax
-            psc_table_oil_2['LBT'] = contract._contract2_transitioned._oil_lbt_expenditures_post_tax
-            psc_table_oil_2['Depreciation'] = contract._contract2_transitioned._oil_depreciation
-            psc_table_oil_2['Non_Capital'] = contract._contract2_transitioned._oil_non_capital
-            psc_table_oil_2['FTP'] = contract._contract2_transitioned._oil_ftp
-            psc_table_oil_2['FTP_CTR'] = contract._contract2_transitioned._oil_ftp_ctr
-            psc_table_oil_2['FTP_GOV'] = contract._contract2_transitioned._oil_ftp_gov
-            psc_table_oil_2['Investment_Credit'] = contract._contract2_transitioned._oil_ic_paid
-            psc_table_oil_2['Unrecovered_Cost'] = contract._contract2_transitioned._oil_unrecovered_before_transfer
-            #psc_table_oil_2['Cost_to_Be_Recovered'] = contract._contract2_transitioned._oil_cost_to_be_recovered
-            psc_table_oil_2['Recoverable_Cost'] = contract._contract2_transitioned._oil_recoverable_cost
-            psc_table_oil_2['Cost_Recovery'] = contract._contract2_transitioned._oil_cost_recovery
-            psc_table_oil_2['ETS_Before_Transfer'] = contract._contract2_transitioned._oil_ets_before_transfer
-            psc_table_oil_2['Transfer_to_Gas'] = contract._contract2_transitioned._transfer_to_gas
-            psc_table_oil_2['Unrec_after_Transfer'] = contract._contract2_transitioned._oil_unrecovered_after_transfer
-            #psc_table_oil_2[
-            #    'Cost_To_Be_Recovered_After_TF'] = contract._contract2_transitioned._oil_cost_to_be_recovered_after_tf
-            psc_table_oil_2['Cost_Recovery_After_TF'] = contract._contract2_transitioned._oil_cost_recovery_after_tf
-            psc_table_oil_2['ETS_After_Transfer'] = contract._contract2_transitioned._oil_ets_after_transfer
-            psc_table_oil_2['Contractor_Share'] = contract._contract2_transitioned._oil_contractor_share
-            psc_table_oil_2['Government_Share'] = contract._contract2_transitioned._oil_government_share
-            psc_table_oil_2['DMO_Volume'] = contract._contract2_transitioned._oil_dmo_volume
-            psc_table_oil_2['DMO_Fee'] = contract._contract2_transitioned._oil_dmo_fee
-            psc_table_oil_2['DDMO'] = contract._contract2_transitioned._oil_ddmo
-            psc_table_oil_2['Taxable_Income'] = contract._contract2_transitioned._oil_taxable_income
-            psc_table_oil_2['Tax_Payment'] = contract._contract2_transitioned._oil_tax_payment
-            psc_table_oil_2['Contractor_Net_Share'] = contract._contract2_transitioned._oil_ctr_net_share
-            psc_table_oil_2['Cashflow'] = contract._contract2_transitioned._oil_cashflow
-            psc_table_oil_2['Cum._Cashflow'] = np.cumsum(contract._contract2_transitioned._oil_cashflow)
-            psc_table_oil_2['Government_Take'] = contract._contract2_transitioned._oil_government_take
-            psc_table_oil_2['Capital_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_capital_expenditures_pre_tax
-            psc_table_oil_2['Intangible_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_intangible_expenditures_pre_tax
-            psc_table_oil_2['Opex_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_opex_expenditures_pre_tax
-            psc_table_oil_2['ASR_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_asr_expenditures_pre_tax
-            psc_table_oil_2['LBT_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_lbt_expenditures_pre_tax
-            psc_table_oil_2['CostOfSales_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_cost_of_sales_expenditures_pre_tax
-            psc_table_oil_2['Total_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_total_expenditures_pre_tax
-            psc_table_oil_2['Capital_Indirect_Tax'] = contract._contract2_transitioned._oil_capital_indirect_tax
-            psc_table_oil_2['Intangible_Indirect_Tax'] = contract._contract2_transitioned._oil_intangible_indirect_tax
-            psc_table_oil_2['Opex_Indirect_Tax'] = contract._contract2_transitioned._oil_opex_indirect_tax
-            psc_table_oil_2['ASR_Indirect_Tax'] = contract._contract2_transitioned._oil_asr_indirect_tax
-            psc_table_oil_2['LBT_Indirect_Tax'] = contract._contract2_transitioned._oil_lbt_indirect_tax
-            psc_table_oil_2['CostOfSales_Indirect_Tax'] = contract._contract2_transitioned._oil_cost_of_sales_indirect_tax
-            psc_table_oil_2['Total_Indirect_Tax'] = contract._contract2_transitioned._oil_total_indirect_tax
-            # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
-
-            psc_table_gas_2['Year'] = contract._contract2_transitioned.project_years
-            psc_table_gas_2['Lifting'] = contract._contract2_transitioned._gas_lifting.get_lifting_rate_ghv_arr()
-            psc_table_gas_2['Price'] = contract._contract2_transitioned._gas_wap_price
-            psc_table_gas_2['Revenue'] = contract._contract2_transitioned._gas_revenue
-            psc_table_gas_2['Depreciable'] = contract._contract2_transitioned._gas_capital_expenditures_post_tax
-            psc_table_gas_2['Intangible'] = contract._contract2_transitioned._gas_intangible_expenditures_post_tax
-            psc_table_gas_2['Opex'] = contract._contract2_transitioned._gas_opex_expenditures_post_tax
-            psc_table_gas_2['ASR'] = contract._contract2_transitioned._gas_asr_expenditures_post_tax
-            psc_table_gas_2['LBT'] = contract._contract2_transitioned._gas_lbt_expenditures_post_tax
-            psc_table_gas_2['Depreciation'] = contract._contract2_transitioned._gas_depreciation
-            psc_table_gas_2['Non_Capital'] = contract._contract2_transitioned._gas_non_capital
-            psc_table_gas_2['FTP'] = contract._contract2_transitioned._gas_ftp
-            psc_table_gas_2['FTP_CTR'] = contract._contract2_transitioned._gas_ftp_ctr
-            psc_table_gas_2['FTP_GOV'] = contract._contract2_transitioned._gas_ftp_gov
-            psc_table_gas_2['Investment_Credit'] = contract._contract2_transitioned._gas_ic_paid
-            psc_table_gas_2['Unrecovered_Cost'] = contract._contract2_transitioned._gas_unrecovered_before_transfer
-            #psc_table_gas_2['Cost_to_Be_Recovered'] = contract._contract2_transitioned._gas_cost_to_be_recovered
-            psc_table_gas_2['Cost_Recovery'] = contract._contract2_transitioned._gas_cost_recovery
-            psc_table_gas_2['ETS_Before_Transfer'] = contract._contract2_transitioned._gas_ets_before_transfer
-            psc_table_gas_2['Transfer_to_Oil'] = contract._contract2_transitioned._transfer_to_oil
-            psc_table_gas_2['Unrec_after_Transfer'] = contract._contract2_transitioned._gas_unrecovered_after_transfer
-            #psc_table_gas_2[
-            #    'Cost_To_Be_Recovered_After_TF'] = contract._contract2_transitioned._gas_cost_to_be_recovered_after_tf
-            psc_table_gas_2['Cost_Recovery_After_TF'] = contract._contract2_transitioned._gas_cost_recovery_after_tf
-            psc_table_gas_2['ETS_After_Transfer'] = contract._contract2_transitioned._gas_ets_after_transfer
-            psc_table_gas_2['Contractor_Share'] = contract._contract2_transitioned._gas_contractor_share
-            psc_table_gas_2['Government_Share'] = contract._contract2_transitioned._gas_government_share
-            psc_table_gas_2['DMO_Volume'] = contract._contract2_transitioned._gas_dmo_volume
-            psc_table_gas_2['DMO_Fee'] = contract._contract2_transitioned._gas_dmo_fee
-            psc_table_gas_2['DDMO'] = contract._contract2_transitioned._gas_ddmo
-            psc_table_gas_2['Taxable_Income'] = contract._contract2_transitioned._gas_taxable_income
-            psc_table_gas_2['Tax_Payment'] = contract._contract2_transitioned._gas_tax_payment
-            psc_table_gas_2['Contractor_Net_Share'] = contract._contract2_transitioned._gas_ctr_net_share
-            psc_table_gas_2['Cashflow'] = contract._contract2_transitioned._gas_cashflow
-            psc_table_gas_2['Cum._Cashflow'] = np.cumsum(contract._contract2_transitioned._gas_cashflow)
-            psc_table_gas_2['Government_Take'] = contract._contract2_transitioned._gas_government_take
-            psc_table_gas_2['Capital_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_capital_expenditures_pre_tax
-            psc_table_gas_2['Intangible_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_intangible_expenditures_pre_tax
-            psc_table_gas_2['Opex_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_opex_expenditures_pre_tax
-            psc_table_gas_2['ASR_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_asr_expenditures_pre_tax
-            psc_table_gas_2['LBT_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_lbt_expenditures_pre_tax
-            psc_table_gas_2['CostOfSales_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_cost_of_sales_expenditures_pre_tax
-            psc_table_gas_2['Total_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_total_expenditures_pre_tax
-            psc_table_gas_2['Capital_Indirect_Tax'] = contract._contract2_transitioned._gas_capital_indirect_tax
-            psc_table_gas_2['Intangible_Indirect_Tax'] = contract._contract2_transitioned._gas_intangible_indirect_tax
-            psc_table_gas_2['Opex_Indirect_Tax'] = contract._contract2_transitioned._gas_opex_indirect_tax
-            psc_table_gas_2['ASR_Indirect_Tax'] = contract._contract2_transitioned._gas_asr_indirect_tax
-            psc_table_gas_2['LBT_Indirect_Tax'] = contract._contract2_transitioned._gas_lbt_indirect_tax
-            psc_table_gas_2['CostOfSales_Indirect_Tax'] = contract._contract2_transitioned._gas_cost_of_sales_indirect_tax
-            psc_table_gas_2['Total_Indirect_Tax'] = contract._contract2_transitioned._gas_total_indirect_tax
-            # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
-
-            psc_table_consolidated_2['Year'] = contract._contract2_transitioned.project_years
-            psc_table_consolidated_2[
-                'Lifting_oil'] = contract._contract2_transitioned._oil_lifting.get_lifting_rate_ghv_arr()
-            psc_table_consolidated_2[
-                'Lifting_gas'] = contract._contract2_transitioned._gas_lifting.get_lifting_rate_ghv_arr()
-            psc_table_consolidated_2['C_Revenue'] = contract._contract2_transitioned._consolidated_revenue
-            psc_table_consolidated_2['C_Depreciable'] = contract._contract2_transitioned._consolidated_capital_expenditures_post_tax
-            psc_table_consolidated_2['C_Intangible'] = contract._contract2_transitioned._consolidated_intangible_expenditures_post_tax
-            psc_table_consolidated_2['C_Opex'] = contract._contract2_transitioned._consolidated_opex_expenditures_post_tax
-            psc_table_consolidated_2['C_ASR'] = contract._contract2_transitioned._consolidated_asr_expenditures_post_tax
-            psc_table_consolidated_2['C_Depreciation'] = contract._contract2_transitioned._consolidated_depreciation
-            psc_table_consolidated_2['C_Non_Capital'] = contract._contract2_transitioned._consolidated_non_capital
-            psc_table_consolidated_2['C_FTP'] = contract._contract2_transitioned._consolidated_ftp
-            psc_table_consolidated_2['C_FTP_CTR'] = contract._contract2_transitioned._consolidated_ftp_ctr
-            psc_table_consolidated_2['C_FTP_GOV'] = contract._contract2_transitioned._consolidated_ftp_gov
-            psc_table_consolidated_2['C_IC'] = contract._contract2_transitioned._consolidated_ic
-            psc_table_consolidated_2[
-                'C_Unrecovered_before_TF'] = contract._contract2_transitioned._consolidated_unrecovered_before_transfer
-            psc_table_consolidated_2[
-                'C_Cost_Recovery'] = contract._contract2_transitioned._consolidated_cost_recovery_before_transfer
-            psc_table_consolidated_2[
-                'C_ETS_before_TF'] = contract._contract2_transitioned._consolidated_ets_before_transfer
-            psc_table_consolidated_2[
-                'C_Unrecovered_after_TF'] = contract._contract2_transitioned._consolidated_unrecovered_after_transfer
-            #psc_table_consolidated_2[
-            #    'C_Cost_to_be_Recovered_after_TF'] = contract._contract2_transitioned._consolidated_cost_to_be_recovered_after_tf
-            psc_table_consolidated_2[
-                'C_Cost_Recovery_after_TF'] = contract._contract2_transitioned._consolidated_cost_recovery_after_tf
-            psc_table_consolidated_2[
-                'C_ETS_after_TF'] = contract._contract2_transitioned._consolidated_ets_after_transfer
-            psc_table_consolidated_2[
-                'C_Contractor_Share'] = contract._contract2_transitioned._consolidated_contractor_share
-            psc_table_consolidated_2[
-                'C_Government_Share'] = contract._contract2_transitioned._consolidated_government_share
-            psc_table_consolidated_2['C_DMO_Volume'] = contract._contract2_transitioned._consolidated_dmo_volume
-            psc_table_consolidated_2['C_DMO_Fee'] = contract._contract2_transitioned._consolidated_dmo_fee
-            psc_table_consolidated_2['C_DDMO'] = contract._contract2_transitioned._consolidated_ddmo
-            psc_table_consolidated_2['C_Taxable_Income'] = contract._contract2_transitioned._consolidated_taxable_income
-            psc_table_consolidated_2['C_Tax_Due'] = contract._contract2_transitioned._consolidated_tax_due
-            psc_table_consolidated_2[
-                'C_Unpaid_Tax_Balance'] = contract._contract2_transitioned._consolidated_unpaid_tax_balance
-            psc_table_consolidated_2['C_Tax_Payment'] = contract._contract2_transitioned._consolidated_tax_payment
-            psc_table_consolidated_2['C_CTR_Net_Share'] = contract._contract2_transitioned._consolidated_ctr_net_share
-            psc_table_consolidated_2[
-                'C_Contractor_Take'] = contract._contract2_transitioned._consolidated_contractor_take
-            psc_table_consolidated_2['C_Cashflow'] = contract._contract2_transitioned._consolidated_cashflow
-            psc_table_consolidated_2['cum. C_Cashflow'] = np.cumsum(
-                contract._contract2_transitioned._consolidated_cashflow)
-            psc_table_consolidated_2[
-                'C_Government_take'] = contract._contract2_transitioned._consolidated_government_take
-            psc_table_consolidated_2['C_Capital_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_capital_expenditures_pre_tax
-            psc_table_consolidated_2['C_Intangible_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_intangible_expenditures_pre_tax
-            psc_table_consolidated_2['C_Opex_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_opex_expenditures_pre_tax
-            psc_table_consolidated_2['C_ASR_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_asr_expenditures_pre_tax
-            psc_table_consolidated_2['C_LBT_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_lbt_expenditures_pre_tax
-            psc_table_consolidated_2['C_CostOfSales_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_cost_of_sales_expenditures_pre_tax
-            psc_table_consolidated_2['C_Total_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_expenditures_pre_tax
-            psc_table_consolidated_2['C_Capital_Indirect_Tax'] = contract._contract2_transitioned._consolidated_capital_indirect_tax
-            psc_table_consolidated_2['C_Intangible_Indirect_Tax'] = contract._contract2_transitioned._consolidated_intangible_indirect_tax
-            psc_table_consolidated_2['C_Opex_Indirect_Tax'] = contract._contract2_transitioned._consolidated_opex_indirect_tax
-            psc_table_consolidated_2['C_ASR_Indirect_Tax'] = contract._contract2_transitioned._consolidated_asr_indirect_tax
-            psc_table_consolidated_2['C_LBT_Indirect_Tax'] = contract._contract2_transitioned._consolidated_lbt_indirect_tax
-            psc_table_consolidated_2['C_CostOfSales_Indirect_Tax'] = contract._contract2_transitioned._consolidated_cost_of_sales_indirect_tax
-            psc_table_consolidated_2['C_Total_Indirect_Tax'] = contract._contract2_transitioned._consolidated_indirect_tax
-            # psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
-
-        elif isinstance(contract.contract2, GrossSplit):
-            psc_table_oil_2['Years'] = contract._contract2_transitioned.project_years
-            psc_table_oil_2['Lifting'] = contract._contract2_transitioned._oil_lifting.get_lifting_rate_ghv_arr()
-            psc_table_oil_2['Price'] = contract._contract2_transitioned._oil_wap_price
-            psc_table_oil_2['Depreciable'] = contract._contract2_transitioned._oil_capital_expenditures_post_tax
-            psc_table_oil_2['Intangible'] = contract._contract2_transitioned._oil_intangible_expenditures_post_tax
-            psc_table_oil_2['Opex'] = contract._contract2_transitioned._oil_opex_expenditures_post_tax
-            psc_table_oil_2['ASR'] = contract._contract2_transitioned._oil_asr_expenditures_post_tax
-            psc_table_gas_2['LBT'] = contract._contract2_transitioned._gas_lbt_expenditures_post_tax
-            psc_table_oil_2['Revenue'] = contract._contract2_transitioned._oil_revenue
-            psc_table_oil_2['Base_Split'] = contract._contract2_transitioned._oil_base_split
-            psc_table_oil_2['Variable_Split'] = contract._contract2_transitioned._var_split_array
-            psc_table_oil_2['Progressive_Price_Split'] = contract._contract2_transitioned._oil_prog_price_split
-            psc_table_oil_2['Progressive_Cumulative_Production_Split'] = contract._contract2_transitioned._oil_prog_cum_split
-            psc_table_oil_2['Progressive_Split'] = contract._contract2_transitioned._oil_prog_split
-            psc_table_oil_2['Contractor_Split'] = contract._contract2_transitioned._oil_ctr_split
-            psc_table_oil_2['Contractor_Share'] = contract._contract2_transitioned._oil_ctr_share_before_transfer
-            psc_table_oil_2['Government_Share'] = contract._contract2_transitioned._oil_gov_share
-            psc_table_oil_2['Depreciation'] = contract._contract2_transitioned._oil_depreciation
-            psc_table_oil_2['Amortization'] = contract._contract2_transitioned._oil_amortization
-            psc_table_oil_2['Non_Capital'] = contract._contract2_transitioned._oil_non_capital
-            psc_table_oil_2['Total_Expenses'] = contract._contract2_transitioned._oil_total_expenses
-            psc_table_oil_2['Cost_To_Be_Deducted'] = contract._contract2_transitioned._oil_cost_tobe_deducted
-            psc_table_oil_2['Carry_Forward_Cost'] = contract._contract2_transitioned._oil_carward_deduct_cost
-            psc_table_oil_2['Deductible_Cost'] = contract._contract2_transitioned._oil_deductible_cost
-            psc_table_oil_2['Transfer_To_Gas'] = contract._contract2_transitioned._transfer_to_gas
-            psc_table_oil_2['Carry_Forward_Cost_after_TF'] = contract._contract2_transitioned._oil_carward_cost_aftertf
-            psc_table_oil_2['CTR_Share_After_TF'] = contract._contract2_transitioned._oil_ctr_share_after_transfer
-            psc_table_oil_2['CTR_Net_Operating_Profit'] = contract._contract2_transitioned._oil_net_operating_profit
-            psc_table_oil_2['DMO_Volume'] = contract._contract2_transitioned._oil_dmo_volume
-            psc_table_oil_2['DMO_Fee'] = contract._contract2_transitioned._oil_dmo_fee
-            psc_table_oil_2['DDMO'] = contract._contract2_transitioned._oil_ddmo
-            psc_table_oil_2['Taxable_Income'] = contract._contract2_transitioned._oil_taxable_income
-            psc_table_oil_2['Tax'] = contract._contract2_transitioned._oil_tax
-            psc_table_oil_2['Net_CTR_Share'] = contract._contract2_transitioned._oil_ctr_net_share
-            psc_table_oil_2['CTR_Cash_Flow'] = contract._contract2_transitioned._oil_ctr_cashflow
-            psc_table_oil_2['Cum_Cash_Flow'] = np.cumsum(contract._contract2_transitioned._oil_ctr_cashflow)
-            psc_table_oil_2['Government_Take'] = contract._contract2_transitioned._oil_government_take
-            psc_table_oil_2['Capital_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_capital_expenditures_pre_tax
-            psc_table_oil_2['Intangible_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_intangible_expenditures_pre_tax
-            psc_table_oil_2['Opex_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_opex_expenditures_pre_tax
-            psc_table_oil_2['ASR_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_asr_expenditures_pre_tax
-            psc_table_oil_2['LBT_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_lbt_expenditures_pre_tax
-            psc_table_oil_2['CostOfSales_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_cost_of_sales_expenditures_pre_tax
-            psc_table_oil_2['Total_Expenditures_Pre_Tax'] = contract._contract2_transitioned._oil_total_expenditures_pre_tax
-            psc_table_oil_2['Capital_Indirect_Tax'] = contract._contract2_transitioned._oil_capital_indirect_tax
-            psc_table_oil_2['Intangible_Indirect_Tax'] = contract._contract2_transitioned._oil_intangible_indirect_tax
-            psc_table_oil_2['Opex_Indirect_Tax'] = contract._contract2_transitioned._oil_opex_indirect_tax
-            psc_table_oil_2['ASR_Indirect_Tax'] = contract._contract2_transitioned._oil_asr_indirect_tax
-            psc_table_oil_2['LBT_Indirect_Tax'] = contract._contract2_transitioned._oil_lbt_indirect_tax
-            psc_table_oil_2['CostOfSales_Indirect_Tax'] = contract._contract2_transitioned._oil_cost_of_sales_indirect_tax
-            psc_table_oil_2['Total_Indirect_Tax'] = contract._contract2_transitioned._oil_total_indirect_tax
-            # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
-
-            psc_table_gas_2['Years'] = contract.project_years
-            psc_table_gas_2['Lifting'] = contract._contract2_transitioned._gas_lifting.get_lifting_rate_ghv_arr()
-            psc_table_gas_2['Price'] = contract._contract2_transitioned._gas_wap_price
-            psc_table_gas_2['Depreciable'] = contract._contract2_transitioned._gas_capital_expenditures_post_tax
-            psc_table_gas_2['Intangible'] = contract._contract2_transitioned._gas_intangible_expenditures_post_tax
-            psc_table_gas_2['Opex'] = contract._contract2_transitioned._gas_opex_expenditures_post_tax
-            psc_table_gas_2['ASR'] = contract._contract2_transitioned._gas_asr_expenditures_post_tax
-            psc_table_gas_2['LBT'] = contract._contract2_transitioned._gas_lbt_expenditures_post_tax
-            psc_table_gas_2['Revenue'] = contract._contract2_transitioned._gas_revenue
-            psc_table_gas_2['Base_Split'] = contract._contract2_transitioned._gas_base_split
-            psc_table_gas_2['Variable_Split'] = contract._contract2_transitioned._var_split_array
-            psc_table_gas_2['Progressive_Price_Split'] = contract._contract2_transitioned._gas_prog_price_split
-            psc_table_gas_2['Progressive_Cumulative_Production_Split'] = contract._contract2_transitioned._gas_prog_cum_split
-            psc_table_gas_2['Progressive_Split'] = contract._contract2_transitioned._gas_prog_split
-            psc_table_gas_2['Contractor_Split'] = contract._contract2_transitioned._gas_ctr_split
-            psc_table_gas_2['Contractor_Share'] = contract._contract2_transitioned._gas_ctr_share_before_transfer
-            psc_table_gas_2['Government_Share'] = contract._contract2_transitioned._gas_gov_share
-            psc_table_gas_2['Depreciation'] = contract._contract2_transitioned._gas_depreciation
-            psc_table_gas_2['Amortization'] = contract._contract2_transitioned._gas_amortization
-            psc_table_gas_2['Non_Capital'] = contract._contract2_transitioned._gas_non_capital
-            psc_table_gas_2['Total_Expenses'] = contract._contract2_transitioned._gas_total_expenses
-            psc_table_gas_2['Cost_To_Be_Deducted'] = contract._contract2_transitioned._gas_cost_tobe_deducted
-            psc_table_gas_2['Carry_Forward_Cost'] = contract._contract2_transitioned._gas_carward_deduct_cost
-            psc_table_gas_2['Deductible_Cost'] = contract._contract2_transitioned._gas_deductible_cost
-            psc_table_gas_2['Transfer_to_Oil'] = contract._contract2_transitioned._transfer_to_oil
-            psc_table_gas_2['Carry_Forward_Cost_after_TF'] = contract._contract2_transitioned._gas_carward_cost_aftertf
-            psc_table_gas_2['CTR_Share_After_TF'] = contract._contract2_transitioned._gas_ctr_share_after_transfer
-            psc_table_gas_2['CTR_Net_Operating_Profit'] = contract._contract2_transitioned._gas_net_operating_profit
-            psc_table_gas_2['DMO_Volume'] = contract._contract2_transitioned._gas_dmo_volume
-            psc_table_gas_2['DMO_Fee'] = contract._contract2_transitioned._gas_dmo_fee
-            psc_table_gas_2['DDMO'] = contract._contract2_transitioned._gas_ddmo
-            psc_table_gas_2['Taxable_Income'] = contract._contract2_transitioned._gas_taxable_income
-            psc_table_gas_2['Tax'] = contract._contract2_transitioned._gas_tax
-            psc_table_gas_2['Net_CTR_Share'] = contract._contract2_transitioned._gas_ctr_net_share
-            psc_table_gas_2['CTR_Cash_Flow'] = contract._contract2_transitioned._gas_ctr_cashflow
-            psc_table_gas_2['Cum_Cash_Flow'] = np.cumsum(contract._contract2_transitioned._gas_ctr_cashflow)
-            psc_table_gas_2['Government_Take'] = contract._contract2_transitioned._gas_government_take
-            psc_table_gas_2['Capital_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_capital_expenditures_pre_tax
-            psc_table_gas_2['Intangible_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_intangible_expenditures_pre_tax
-            psc_table_gas_2['Opex_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_opex_expenditures_pre_tax
-            psc_table_gas_2['ASR_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_asr_expenditures_pre_tax
-            psc_table_gas_2['LBT_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_lbt_expenditures_pre_tax
-            psc_table_gas_2['CostOfSales_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_cost_of_sales_expenditures_pre_tax
-            psc_table_gas_2['Total_Expenditures_Pre_Tax'] = contract._contract2_transitioned._gas_total_expenditures_pre_tax
-            psc_table_gas_2['Capital_Indirect_Tax'] = contract._contract2_transitioned._gas_capital_indirect_tax
-            psc_table_gas_2['Intangible_Indirect_Tax'] = contract._contract2_transitioned._gas_intangible_indirect_tax
-            psc_table_gas_2['Opex_Indirect_Tax'] = contract._contract2_transitioned._gas_opex_indirect_tax
-            psc_table_gas_2['ASR_Indirect_Tax'] = contract._contract2_transitioned._gas_asr_indirect_tax
-            psc_table_gas_2['LBT_Indirect_Tax'] = contract._contract2_transitioned._gas_lbt_indirect_tax
-            psc_table_gas_2['CostOfSales_Indirect_Tax'] = contract._contract2_transitioned._gas_cost_of_sales_indirect_tax
-            psc_table_gas_2['Total_Indirect_Tax'] = contract._contract2_transitioned._gas_total_indirect_tax
-            # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
-
-            psc_table_consolidated_2['Years'] = contract._contract2_transitioned.project_years
-            psc_table_consolidated_2[
-                'C_Lifting_Oil'] = contract._contract2_transitioned._oil_lifting.get_lifting_rate_ghv_arr()
-            psc_table_consolidated_2[
-                'C_Lifting_Gas'] = contract._contract2_transitioned._gas_lifting.get_lifting_rate_ghv_arr()
-            psc_table_consolidated_2['C_Revenue'] = contract._contract2_transitioned._consolidated_revenue
-            psc_table_consolidated_2[
-                'C_Government_Share'] = contract._contract2_transitioned._consolidated_ctr_share_before_tf
-            psc_table_consolidated_2[
-                'C_Contractor_Share'] = contract._contract2_transitioned._consolidated_gov_share_before_tf
-            psc_table_consolidated_2['C_Depreciation'] = contract._contract2_transitioned._consolidated_depreciation
-            psc_table_consolidated_2['C_Amortization'] = contract._contract2_transitioned._consolidated_amortization
-            psc_table_consolidated_2['C_Opex'] = contract._contract2_transitioned._consolidated_opex_expenditures_post_tax
-            psc_table_consolidated_2['C_ASR'] = contract._contract2_transitioned._consolidated_asr_expenditures_post_tax
-            psc_table_consolidated_2['C_Non_Capital'] = contract._contract2_transitioned._consolidated_non_capital
-            psc_table_consolidated_2['C_Total_Expenses'] = contract._contract2_transitioned._consolidated_total_expenses
-            psc_table_consolidated_2[
-                'C_Cost_To_Be_Deducted'] = contract._contract2_transitioned._consolidated_cost_tobe_deducted
-            psc_table_consolidated_2[
-                'C_Carry_Forward_Cost'] = contract._contract2_transitioned._consolidated_carward_deduct_cost
-            psc_table_consolidated_2[
-                'C_Deductible_Cost'] = contract._contract2_transitioned._consolidated_deductible_cost
-            psc_table_consolidated_2[
-                'C_Carry_Forward_Cost_after_TF'] = contract._contract2_transitioned._consolidated_carward_cost_aftertf
-            psc_table_consolidated_2[
-                'C_CTR_Share_After'] = contract._contract2_transitioned._consolidated_ctr_share_after_transfer
-            psc_table_consolidated_2[
-                'C_CTR_Net_Operating_Profit'] = contract._contract2_transitioned._consolidated_net_operating_profit
-            psc_table_consolidated_2['C_DMO_Volume'] = contract._contract2_transitioned._consolidated_dmo_volume
-            psc_table_consolidated_2['C_DMO_Fee'] = contract._contract2_transitioned._consolidated_dmo_fee
-            psc_table_consolidated_2['C_DDMO'] = contract._contract2_transitioned._consolidated_ddmo
-            psc_table_consolidated_2['C_Taxable_Income'] = contract._contract2_transitioned._consolidated_taxable_income
-            psc_table_consolidated_2['C_Tax'] = contract._contract2_transitioned._consolidated_tax_payment
-            psc_table_consolidated_2['C_Net_CTR_Share'] = contract._contract2_transitioned._consolidated_ctr_net_share
-            psc_table_consolidated_2['C_CashFlow'] = contract._contract2_transitioned._consolidated_cashflow
-            psc_table_consolidated_2[
-                'C_Government_Take'] = contract._contract2_transitioned._consolidated_government_take
-            psc_table_consolidated_2['cum_C_CashFlow'] = np.cumsum(
-                contract._contract2_transitioned._consolidated_cashflow)
-            psc_table_consolidated_2['C_Capital_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_capital_expenditures_pre_tax
-            psc_table_consolidated_2['C_Intangible_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_intangible_expenditures_pre_tax
-            psc_table_consolidated_2['C_Opex_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_opex_expenditures_pre_tax
-            psc_table_consolidated_2['C_ASR_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_asr_expenditures_pre_tax
-            psc_table_consolidated_2['C_LBT_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_lbt_expenditures_pre_tax
-            psc_table_consolidated_2['C_CostOfSales_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_cost_of_sales_expenditures_pre_tax
-            psc_table_consolidated_2['C_Total_Expenditures_Pre_Tax'] = contract._contract2_transitioned._consolidated_expenditures_pre_tax
-            psc_table_consolidated_2['C_Capital_Indirect_Tax'] = contract._contract2_transitioned._consolidated_capital_indirect_tax
-            psc_table_consolidated_2['C_Intangible_Indirect_Tax'] = contract._contract2_transitioned._consolidated_intangible_indirect_tax
-            psc_table_consolidated_2['C_Opex_Indirect_Tax'] = contract._contract2_transitioned._consolidated_opex_indirect_tax
-            psc_table_consolidated_2['C_ASR_Indirect_Tax'] = contract._contract2_transitioned._consolidated_asr_indirect_tax
-            psc_table_consolidated_2['C_LBT_Indirect_Tax'] = contract._contract2_transitioned._consolidated_lbt_indirect_tax
-            psc_table_consolidated_2['C_CostOfSales_Indirect_Tax'] = contract._contract2_transitioned._consolidated_cost_of_sales_indirect_tax
-            psc_table_consolidated_2['C_Total_Indirect_Tax'] = contract._contract2_transitioned._consolidated_indirect_tax
-            # psc_table_consolidated.loc['Column_Total'] = psc_table_consolidated.sum(numeric_only=True, axis=0)
-
-        psc_table_oil = [psc_table_oil_1, psc_table_oil_2]
-        psc_table_gas = [psc_table_gas_1, psc_table_gas_2]
-        psc_table_consolidated = [psc_table_consolidated_1, psc_table_consolidated_2]
-
-        return psc_table_oil, psc_table_gas, psc_table_consolidated
-
+    # Construct OIL, GAS, and CONSOLIDATED cashflow tables for base project contract
     elif isinstance(contract, BaseProject):
-        psc_table_oil = pd.DataFrame()
-        psc_table_oil['Years'] = contract.project_years
-        psc_table_oil['Lifting'] = contract._oil_lifting.get_lifting_rate_ghv_arr()
-        psc_table_oil['Price'] = contract._oil_wap_price
-        psc_table_oil['Revenue'] = contract._oil_revenue
-        psc_table_oil['Tangible'] = contract._oil_capital_expenditures_post_tax
-        psc_table_oil['Intangible'] = contract._oil_intangible_expenditures_post_tax
-        psc_table_oil['Opex'] = contract._oil_opex_expenditures_post_tax
-        psc_table_oil['ASR'] = contract._oil_asr_expenditures_post_tax
-        psc_table_oil['LBT'] = contract._oil_lbt_expenditures_post_tax
-        psc_table_oil['Cashflow'] = contract._oil_cashflow
-        psc_table_oil['Capital_Expenditures_Pre_Tax'] = contract._oil_capital_expenditures_pre_tax
-        psc_table_oil['Intangible_Expenditures_Pre_Tax'] = contract._oil_intangible_expenditures_pre_tax
-        psc_table_oil['Opex_Expenditures_Pre_Tax'] = contract._oil_opex_expenditures_pre_tax
-        psc_table_oil['ASR_Expenditures_Pre_Tax'] = contract._oil_asr_expenditures_pre_tax
-        psc_table_oil['LBT_Expenditures_Pre_Tax'] = contract._oil_lbt_expenditures_pre_tax
-        psc_table_oil['CostOfSales_Expenditures_Pre_Tax'] = contract._oil_cost_of_sales_expenditures_pre_tax
-        psc_table_oil['Total_Expenditures_Pre_Tax'] = contract._oil_total_expenditures_pre_tax
-        psc_table_oil['Capital_Indirect_Tax'] = contract._oil_capital_indirect_tax
-        psc_table_oil['Intangible_Indirect_Tax'] = contract._oil_intangible_indirect_tax
-        psc_table_oil['Opex_Indirect_Tax'] = contract._oil_opex_indirect_tax
-        psc_table_oil['ASR_Indirect_Tax'] = contract._oil_asr_indirect_tax
-        psc_table_oil['LBT_Indirect_Tax'] = contract._oil_lbt_indirect_tax
-        psc_table_oil['CostOfSales_Indirect_Tax'] = contract._oil_cost_of_sales_indirect_tax
-        psc_table_oil['Total_Indirect_Tax'] = contract._oil_total_indirect_tax
-
-
-        psc_table_gas = pd.DataFrame()
-        psc_table_gas['Years'] = contract.project_years
-        psc_table_gas['Lifting'] = contract._gas_lifting.get_lifting_rate_ghv_arr()
-        psc_table_gas['Price'] = contract._gas_wap_price
-        psc_table_gas['Revenue'] = contract._gas_revenue
-        psc_table_gas['Tangible'] = contract._gas_capital_expenditures_post_tax
-        psc_table_gas['Intangible'] = contract._gas_intangible_expenditures_post_tax
-        psc_table_gas['Opex'] = contract._gas_opex_expenditures_post_tax
-        psc_table_gas['ASR'] = contract._gas_asr_expenditures_post_tax
-        psc_table_gas['LBT'] = contract._gas_lbt_expenditures_post_tax
-        psc_table_gas['Cashflow'] = contract._gas_cashflow
-        psc_table_gas['Capital_Expenditures_Pre_Tax'] = contract._gas_capital_expenditures_pre_tax
-        psc_table_gas['Intangible_Expenditures_Pre_Tax'] = contract._gas_intangible_expenditures_pre_tax
-        psc_table_gas['Opex_Expenditures_Pre_Tax'] = contract._gas_opex_expenditures_pre_tax
-        psc_table_gas['ASR_Expenditures_Pre_Tax'] = contract._gas_asr_expenditures_pre_tax
-        psc_table_gas['LBT_Expenditures_Pre_Tax'] = contract._gas_lbt_expenditures_pre_tax
-        psc_table_gas['CostOfSales_Expenditures_Pre_Tax'] = contract._gas_cost_of_sales_expenditures_pre_tax
-        psc_table_gas['Total_Expenditures_Pre_Tax'] = contract._gas_total_expenditures_pre_tax
-        psc_table_gas['Capital_Indirect_Tax'] = contract._gas_capital_indirect_tax
-        psc_table_gas['Intangible_Indirect_Tax'] = contract._gas_intangible_indirect_tax
-        psc_table_gas['Opex_Indirect_Tax'] = contract._gas_opex_indirect_tax
-        psc_table_gas['ASR_Indirect_Tax'] = contract._gas_asr_indirect_tax
-        psc_table_gas['LBT_Indirect_Tax'] = contract._gas_lbt_indirect_tax
-        psc_table_gas['CostOfSales_Indirect_Tax'] = contract._gas_cost_of_sales_indirect_tax
-        psc_table_gas['Total_Indirect_Tax'] = contract._gas_total_indirect_tax
-
-
-        psc_table_consolidated = pd.DataFrame()
-        psc_table_consolidated['Years'] = contract.project_years
-        psc_table_consolidated['Lifting'] = (contract._oil_lifting.get_lifting_rate_ghv_arr() +
-                                             contract._gas_lifting.get_lifting_rate_ghv_arr())
-        psc_table_consolidated['Price'] = (contract._oil_wap_price +
-                                           contract._gas_wap_price)
-        psc_table_consolidated['Revenue'] = (contract._oil_revenue +
-                                             contract._gas_revenue)
-        psc_table_consolidated['Tangible'] = (contract._oil_capital_expenditures_post_tax +
-                                              contract._gas_capital_expenditures_post_tax)
-        psc_table_consolidated['Intangible'] = (contract._oil_intangible_expenditures_post_tax +
-                                                contract._gas_intangible_expenditures_post_tax)
-        psc_table_consolidated['Opex'] = (contract._oil_opex_expenditures_post_tax +
-                                          contract._gas_opex_expenditures_post_tax)
-        psc_table_consolidated['ASR'] = (contract._oil_asr_expenditures_post_tax +
-                                         contract._gas_asr_expenditures_post_tax)
-        psc_table_consolidated['Cashflow'] = (contract._oil_cashflow +
-                                              contract._gas_cashflow)
-        psc_table_consolidated['Capital_Expenditures_Pre_Tax'] = contract._oil_capital_expenditures_pre_tax + contract._gas_capital_expenditures_pre_tax
-        psc_table_consolidated['Intangible_Expenditures_Pre_Tax'] = contract._oil_intangible_expenditures_pre_tax + contract._gas_intangible_expenditures_pre_tax
-        psc_table_consolidated['Opex_Expenditures_Pre_Tax'] = contract._oil_opex_expenditures_pre_tax + contract._gas_opex_expenditures_pre_tax
-        psc_table_consolidated['ASR_Expenditures_Pre_Tax'] = contract._oil_asr_expenditures_pre_tax + contract._gas_asr_expenditures_pre_tax
-        psc_table_consolidated['LBT_Expenditures_Pre_Tax'] = contract._oil_lbt_expenditures_pre_tax + contract._gas_lbt_expenditures_pre_tax
-        psc_table_consolidated['CostOfSales_Expenditures_Pre_Tax'] = contract._oil_cost_of_sales_expenditures_pre_tax + contract._gas_cost_of_sales_expenditures_pre_tax
-        psc_table_consolidated['Total_Expenditures_Pre_Tax'] = contract._oil_total_expenditures_pre_tax + contract._gas_total_expenditures_pre_tax
-        psc_table_consolidated['Capital_Indirect_Tax'] = contract._oil_capital_indirect_tax + contract._gas_capital_indirect_tax
-        psc_table_consolidated['Intangible_Indirect_Tax'] = contract._oil_intangible_indirect_tax + contract._gas_intangible_indirect_tax
-        psc_table_consolidated['Opex_Indirect_Tax'] = contract._oil_opex_indirect_tax + contract._gas_opex_indirect_tax
-        psc_table_consolidated['ASR_Indirect_Tax'] = contract._oil_asr_indirect_tax + contract._gas_asr_indirect_tax
-        psc_table_consolidated['LBT_Indirect_Tax'] = contract._oil_lbt_indirect_tax + contract._gas_lbt_indirect_tax
-        psc_table_consolidated['CostOfSales_Indirect_Tax'] = contract._oil_cost_of_sales_indirect_tax + contract._gas_cost_of_sales_indirect_tax
-        psc_table_consolidated['Total_Indirect_Tax'] = contract._oil_total_indirect_tax + contract._gas_total_indirect_tax
-
-
+        psc_table_oil = get_table_baseproject_oil(contract=contract)
+        psc_table_gas = get_table_baseproject_gas(contract=contract)
+        psc_table_consolidated = get_table_baseproject_consolidated(contract=contract)
         return psc_table_oil, psc_table_gas, psc_table_consolidated
