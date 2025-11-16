@@ -949,7 +949,34 @@ def get_table_grosssplit_gas(contract: GrossSplit) -> pd.DataFrame:
 
 
 def get_table_grosssplit_consolidated(contract: GrossSplit) -> pd.DataFrame:
-    pass
+
+    gs = contract
+
+    # Prepare non-petroleum commodities data
+    sulfur, electricity, co2 = [
+        get_non_petroleum_commodity(com, gs) for com in non_petroleum_commodities
+    ]
+
+    # Specify cashflow table for CONSOLIDATED
+    table_consolidated: dict = {
+        # Basic attributes
+        "years": gs.project_years,
+        "lifting": _assign_attr("_consolidated_lifting", gs),
+        "price": _assign_attr("_consolidated_wap_price", gs),
+        "revenue": _assign_attr("_consolidated_revenue", gs),
+
+        # Attributes associated with sulfur, electricity, and CO2
+        **sulfur,
+        **electricity,
+        **co2,
+
+
+    }
+
+    print('\t')
+    print(f'Filetype: {type(table_consolidated)}')
+    print(f'Length: {len(table_consolidated)}')
+    print('table_consolidated = \n', table_consolidated)
 
 
 def get_table_baseproject_oil(contract: BaseProject) -> pd.DataFrame:
@@ -1409,10 +1436,10 @@ def get_table(
         psc_table_gas = get_table_grosssplit_gas(contract=contract)
         psc_table_consolidated = get_table_grosssplit_consolidated(contract=contract)
 
-        print('\t')
-        print(f'Filetype: {type(psc_table_gas)}')
-        print(f'Length: {len(psc_table_gas)}')
-        print('psc_table_gas = \n', psc_table_gas)
+        # print('\t')
+        # print(f'Filetype: {type(psc_table_gas)}')
+        # print(f'Length: {len(psc_table_gas)}')
+        # print('psc_table_gas = \n', psc_table_gas)
 
     # Construct OIL, GAS, and CONSOLIDATED cashflow tables for transition contract
     elif isinstance(contract, Transition):

@@ -2498,13 +2498,13 @@ class GrossSplit(BaseProject):
         # =================================================================================
 
         self._consolidated_opex = (
-                self._oil_opex_expenditures_post_tax + self._gas_opex_expenditures_post_tax
+            self._oil_opex_expenditures_post_tax + self._gas_opex_expenditures_post_tax
         )
         self._consolidated_asr = (
-                self._oil_asr_expenditures_post_tax + self._gas_asr_expenditures_post_tax
+            self._oil_asr_expenditures_post_tax + self._gas_asr_expenditures_post_tax
         )
         self._consolidated_lbt = (
-                self._oil_lbt_expenditures_post_tax + self._gas_lbt_expenditures_post_tax
+            self._oil_lbt_expenditures_post_tax + self._gas_lbt_expenditures_post_tax
         )
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
 
