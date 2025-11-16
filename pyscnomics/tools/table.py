@@ -233,12 +233,9 @@ def get_table(
         psc_table_oil['Taxable_Income'] = contract._oil_taxable_income
         psc_table_oil['Tax'] = contract._oil_tax
         psc_table_oil['Net_CTR_Share'] = contract._oil_ctr_net_share
-
         psc_table_oil['CTR_Cash_Flow'] = contract._oil_ctr_cashflow
         psc_table_oil['Cum_Cash_Flow'] = np.cumsum(contract._oil_ctr_cashflow)
         psc_table_oil['Government_Take'] = contract._oil_government_take
-
-
         psc_table_oil['Capital_Expenditures_Pre_Tax'] = contract._oil_capital_expenditures_pre_tax
         psc_table_oil['Intangible_Expenditures_Pre_Tax'] = contract._oil_intangible_expenditures_pre_tax
         psc_table_oil['Opex_Expenditures_Pre_Tax'] = contract._oil_opex_expenditures_pre_tax
@@ -254,7 +251,6 @@ def get_table(
         psc_table_oil['CostOfSales_Indirect_Tax'] = contract._oil_cost_of_sales_indirect_tax
         psc_table_oil['Total_Indirect_Tax'] = contract._oil_total_indirect_tax
         # psc_table_oil.loc['Column_Total'] = psc_table_oil.sum(numeric_only=True, axis=0)
-
 
 
         psc_table_gas = pd.DataFrame()
@@ -286,9 +282,11 @@ def get_table(
         psc_table_gas['Carry_Forward_Cost_after_TF'] = contract._gas_carward_cost_aftertf
         psc_table_gas['CTR_Share_After_TF'] = contract._gas_ctr_share_after_transfer
         psc_table_gas['CTR_Net_Operating_Profit'] = contract._gas_net_operating_profit
+
         psc_table_gas['DMO_Volume'] = contract._gas_dmo_volume
         psc_table_gas['DMO_Fee'] = contract._gas_dmo_fee
         psc_table_gas['DDMO'] = contract._gas_ddmo
+
         psc_table_gas['Taxable_Income'] = contract._gas_taxable_income
         psc_table_gas['Tax'] = contract._gas_tax
         psc_table_gas['Net_CTR_Share'] = contract._gas_ctr_net_share
@@ -310,7 +308,6 @@ def get_table(
         psc_table_gas['CostOfSales_Indirect_Tax'] = contract._gas_cost_of_sales_indirect_tax
         psc_table_gas['Total_Indirect_Tax'] = contract._gas_total_indirect_tax
         # psc_table_gas.loc['Column_Total'] = psc_table_gas.sum(numeric_only=True, axis=0)
-
 
 
         psc_table_consolidated = pd.DataFrame()

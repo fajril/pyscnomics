@@ -4,13 +4,17 @@ A collection of procedures to generate cashflow of a contract in the form of Dat
 
 import pandas as pd
 import numpy as np
-from dataclasses import asdict
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 
+pd.set_option("display.max_rows", None)
+pd.set_option("display.max_columns", 200)
+pd.set_option("display.width", 200)
 
+
+# Define sulfur, electricity, and CO2 as non-petroleum commodities
 non_petroleum_commodities = ["sulfur", "electricity", "co2"]
 
 
@@ -706,7 +710,9 @@ def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
 
         # Attributes associated with preonstream cost
         "preonstream_depreciable": _assign_attr("_oil_depreciable_preonstream", gs),
-        "preonstream_non_depreciable": _assign_attr("_oil_non_depreciable_preonstream", gs),
+        "preonstream_non_depreciable": _assign_attr(
+            "_oil_non_depreciable_preonstream", gs
+        ),
         "preonstream": _assign_attr("_oil_preonstream", gs),
 
         # Attributes associated with postonstream cost
@@ -899,12 +905,47 @@ def get_table_grosssplit_gas(contract: GrossSplit) -> pd.DataFrame:
         "amortizations_preonstream": amortizations["preonstream"],
         "amortizations_postonstream": amortizations["postonstream"],
 
+        # Attributes associated with splits
+        "base_split": _assign_attr("_gas_base_split", gs),
+        "variable_split": _assign_attr("_var_split_array", gs),
+        "progressive_price_split": _assign_attr("_gas_prog_price_split", gs),
+        "progressive_cum_prod_split": _assign_attr("_gas_prog_cum_split", gs),
+        "progressive_split": _assign_attr("_gas_prog_split", gs),
+        "contractor_split": _assign_attr("_gas_ctr_split", gs),
+
+        # Attributes associated with shares
+        "contractor_share": _assign_attr("_gas_ctr_share_before_transfer", gs),
+        "government_share": _assign_attr("_gas_gov_share", gs),
+
+        # Attributes associated with business logic
+        "cost_to_be_deducted": _assign_attr("_gas_cost_tobe_deducted", gs),
+        "carry_forward_cost": _assign_attr("_gas_carward_deduct_cost", gs),
+        "deductible_cost": _assign_attr("_gas_deductible_cost", gs),
+        "transfer_to_oil": _assign_attr("_transfer_to_oil", gs),
+        "carry_forward_cost_after_tf": _assign_attr("_gas_carward_cost_aftertf", gs),
+        "profit_pre_transfer": _assign_attr("_gas_profit_pre_transfer", gs),
+        "ctr_net_operating_profit": _assign_attr("_gas_net_operating_profit", gs),
+
+        # Attributes associated with DMO
+        "dmo_volume": _assign_attr("_gas_dmo_volume", gs),
+        "dmo_fee": _assign_attr("_gas_dmo_fee", gs),
+        "ddmo": _assign_attr("_gas_ddmo", gs),
+
+        # Attributes associated with taxable income
+        "taxable_income": _assign_attr("_gas_taxable_income", gs),
+        "tax": _assign_attr("_gas_tax", gs),
+
+        # Attributes associated with government and contractor shares
+        "net_ctr_share": _assign_attr("_gas_ctr_net_share", gs),
+        "government_take": _assign_attr("_gas_government_take", gs),
+
+        # Attributes associated with cashflow
+        "ctr_cashflow": _assign_attr("_gas_ctr_cashflow", gs),
+        "cum_cashflow": np.cumsum(_assign_attr("_gas_ctr_cashflow", gs)),
     }
 
-    print('\t')
-    print(f'Filetype: {type(table_gas)}')
-    print(f'Length: {len(table_gas)}')
-    print('table_gas = \n', table_gas)
+    # Convert GAS cashflow table into pandas DataFrame
+    return pd.DataFrame(table_gas)
 
 
 def get_table_grosssplit_consolidated(contract: GrossSplit) -> pd.DataFrame:
@@ -1368,10 +1409,10 @@ def get_table(
         psc_table_gas = get_table_grosssplit_gas(contract=contract)
         psc_table_consolidated = get_table_grosssplit_consolidated(contract=contract)
 
-        # print('\t')
-        # print(f'Filetype: {type(psc_table_oil)}')
-        # print(f'Length: {len(psc_table_oil)}')
-        # print('psc_table_oil = \n', psc_table_oil)
+        print('\t')
+        print(f'Filetype: {type(psc_table_gas)}')
+        print(f'Length: {len(psc_table_gas)}')
+        print('psc_table_gas = \n', psc_table_gas)
 
     # Construct OIL, GAS, and CONSOLIDATED cashflow tables for transition contract
     elif isinstance(contract, Transition):
