@@ -11,7 +11,7 @@ from pyscnomics.contracts.transition import Transition
 
 pd.set_option("display.max_rows", None)
 pd.set_option("display.max_columns", 200)
-pd.set_option("display.width", 200)
+pd.set_option("display.width", 150)
 
 
 # Define sulfur, electricity, and CO2 as non-petroleum commodities
