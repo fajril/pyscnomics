@@ -782,5 +782,5 @@ class InitialYearDepreciationIncurred(Enum):
 class ExampleCases(Enum):
     """ Selection for example data case """
 
-    CASE_0 = "dummy"
+    CASE_0 = "dummy_oil_base_project"
     CASE_1 = "benuang"

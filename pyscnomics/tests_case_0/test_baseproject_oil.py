@@ -10,6 +10,16 @@ from pyscnomics.tests_case_0.preparation import execute_contract
 from pyscnomics.tools.table import get_table
 
 
+# Specify cost types
+cost_types = [
+    "capital",
+    "intangible",
+    "opex",
+    "asr",
+    "lbt",
+    "cost_of_sales",
+]
+
 # Specify arguments to run function "execute_contract()"
 kwargs_execute = {
     "cls": Case0,
@@ -275,6 +285,13 @@ def test_preonstream_cost():
 
 
 def test_postonstream_cost():
+    """
+    Test the correctness of postonstream cost calculations.
+
+    Verifies that calculated depreciable, non-depreciable, and total
+    postonstream costs match their expected NumPy arrays using
+    ``np.testing.assert_allclose``.
+    """
 
     postonstream = {
         "calculated": {
@@ -299,26 +316,123 @@ def test_postonstream_cost():
 
 
 def test_expenditures_pre_tax():
+    """
+    Test the correctness of pre-tax expenditure calculations.
+
+    Ensures that calculated pre-tax expenditures for all cost types
+    (capital, intangible, opex, asr, lbt, cost_of_sales) match their
+    expected NumPy arrays using ``np.testing.assert_allclose``.
+    """
 
     pre_tax = {
         "calculated": {
-            "capital_expenditures_pre_tax": None
+            ct: _calc_attr(attr=f"{ct}_expenditures_pre_tax") for ct in cost_types
         },
-        "expected": None,
+        "expected": {
+            ct: np.array([0, 0, 0, 0, 0, 0, 100, 100, 100, 100]) for ct in cost_types
+        },
     }
+
+    calc = pre_tax["calculated"]
+    expected = pre_tax["expected"]
+
+    # Execute testings
+    np.testing.assert_allclose(calc["capital"], expected["capital"])
+    np.testing.assert_allclose(calc["intangible"], expected["intangible"])
+    np.testing.assert_allclose(calc["opex"], expected["opex"])
+    np.testing.assert_allclose(calc["asr"], expected["asr"])
+    np.testing.assert_allclose(calc["lbt"], expected["lbt"])
+    np.testing.assert_allclose(calc["cost_of_sales"], expected["cost_of_sales"])
 
 
 def test_indirect_tax():
-    pass
+    """
+    Test the correctness of indirect tax calculations.
+
+    Verifies that calculated indirect tax values for all cost types
+    (capital, intangible, opex, asr, lbt, cost_of_sales) match the
+    expected zero-valued NumPy arrays using ``np.testing.assert_allclose``.
+
+    Notes
+    -----
+    - ``_calc_attr`` retrieves each ``<cost_type>_indirect_tax`` attribute.
+    - Expected arrays are all zeros, indicating no indirect tax applied.
+    """
+
+    indirect_tax = {
+        "calculated": {ct: _calc_attr(attr=f"{ct}_indirect_tax") for ct in cost_types},
+        "expected": {ct: np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) for ct in cost_types},
+    }
+
+    calc = indirect_tax["calculated"]
+    expected = indirect_tax["expected"]
+
+    # Execute testings
+    np.testing.assert_allclose(calc["capital"], expected["capital"])
+    np.testing.assert_allclose(calc["intangible"], expected["intangible"])
+    np.testing.assert_allclose(calc["opex"], expected["opex"])
+    np.testing.assert_allclose(calc["asr"], expected["asr"])
+    np.testing.assert_allclose(calc["lbt"], expected["lbt"])
+    np.testing.assert_allclose(calc["cost_of_sales"], expected["cost_of_sales"])
 
 
 def test_expeditures_post_tax():
-    pass
+    """
+    Test the correctness of post-tax expenditure calculations.
+
+    Verifies that calculated post-tax expenditures for all cost types
+    (capital, intangible, opex, asr, lbt, cost_of_sales) match the
+    expected NumPy arrays using ``np.testing.assert_allclose``.
+
+    Notes
+    -----
+    - ``_calc_attr`` retrieves each ``<cost_type>_postonstream`` attribute.
+    - Expected arrays contain a uniform post-tax expenditure profile.
+    """
+
+    post_tax = {
+        "calculated": {ct: _calc_attr(attr=f"{ct}_postonstream") for ct in cost_types},
+        "expected": {
+            ct: np.array([0, 0, 0, 0, 0, 0, 100, 100, 100, 100]) for ct in cost_types
+        },
+    }
+
+    calc = post_tax["calculated"]
+    expected = post_tax["expected"]
+
+    # Execute testings
+    np.testing.assert_allclose(calc["capital"], expected["capital"])
+    np.testing.assert_allclose(calc["intangible"], expected["intangible"])
+    np.testing.assert_allclose(calc["opex"], expected["opex"])
+    np.testing.assert_allclose(calc["asr"], expected["asr"])
+    np.testing.assert_allclose(calc["lbt"], expected["lbt"])
+    np.testing.assert_allclose(calc["cost_of_sales"], expected["cost_of_sales"])
 
 
 def test_expenses():
-    pass
+
+    expenses = {
+        "calculated": {
+            "capital": None,
+            "non_capital": None,
+            "total": None,
+        },
+        "expected": {
+            "capital": None,
+            "non_capital": None,
+            "total": None,
+        },
+    }
 
 
 def test_cashflow():
-    pass
+
+    cashfl = {
+        "calculated": _calc_attr(attr="cashflow"),
+        "expected": None,
+    }
+
+    print('\t')
+    print(f'Filetype: {type(cashfl)}')
+    print(f'Length: {len(cashfl)}')
+    print('cashfl = \n', cashfl)
