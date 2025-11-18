@@ -93,23 +93,20 @@ def execute_contract(cls, contract_type, run_as_dict):
 
 if __name__ == "__main__":
 
-    # Specify arguments to run "execute_contract()"
-    kwargs_execute = {
-        "cls": Case0,
-        "contract_type": ContractType.GROSS_SPLIT,
-        "run_as_dict": True,
-    }
+    data = Case1(contract_type=ContractType.COST_RECOVERY)
+    data.as_dict()
 
-    # Results in terms of "contract" and "summary"
-    ctr = execute_contract(**kwargs_execute)
-    contract = ctr["contract"]
-    summary = ctr["summary"]
-
-    t1 = get_contract_table(data=contract, contract_type="Gross Split")
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    # # Specify arguments to run "execute_contract()"
+    # kwargs_execute = {
+    #     "cls": Case1,
+    #     "contract_type": ContractType.COST_RECOVERY,
+    #     "run_as_dict": False,
+    # }
+    #
+    # # Results in terms of "contract" and "summary"
+    # ctr = execute_contract(**kwargs_execute)
+    # contract = ctr["contract"]
+    # summary = ctr["summary"]
 
     # get_table(contract=contract)
 

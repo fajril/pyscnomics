@@ -6,7 +6,7 @@ import pytest
 import numpy as np
 from pyscnomics.econ.selection import ContractType
 from pyscnomics.dataset.case0 import Case0
-from pyscnomics.tests_case_0.preparation import execute_contract
+from pyscnomics.validation.preparation import execute_contract
 from pyscnomics.tools.table import get_table
 
 
@@ -410,29 +410,60 @@ def test_expeditures_post_tax():
 
 
 def test_expenses():
+    """
+    Test the correctness of capital, non-capital, and total expense calculations.
+
+    Verifies that calculated expense arrays match their expected values for
+    capital, non-capital, and total expenses using ``np.testing.assert_allclose``.
+
+    Notes
+    -----
+    - ``_calc_attr`` retrieves ``expenses_capital``, ``expenses_non_capital``,
+      and ``expenses_total``.
+    - Expected arrays encode the benchmark expense profiles.
+    """
 
     expenses = {
         "calculated": {
-            "capital": None,
-            "non_capital": None,
-            "total": None,
+            "capital": _calc_attr(attr="expenses_capital"),
+            "non_capital": _calc_attr(attr="expenses_non_capital"),
+            "total": _calc_attr(attr="expenses_total"),
         },
         "expected": {
-            "capital": None,
-            "non_capital": None,
-            "total": None,
+            "capital": np.array([0, 0, 0, 0, 0, 0, 100, 100, 100, 100]),
+            "non_capital": np.array([0, 0, 0, 0, 0, 0, 500, 500, 500, 500]),
+            "total": np.array([0, 0, 0, 0, 0, 0, 600, 600, 600, 600]),
         },
     }
+
+    calc = expenses["calculated"]
+    expected = expenses["expected"]
+
+    # Execute testings
+    np.testing.assert_allclose(calc["capital"], expected["capital"])
+    np.testing.assert_allclose(calc["non_capital"], expected["non_capital"])
+    np.testing.assert_allclose(calc["total"], expected["total"])
 
 
 def test_cashflow():
+    """
+    Test the correctness of total project cashflow computation.
+
+    Ensures that the calculated cashflow array matches the expected
+    values using ``np.testing.assert_allclose``.
+
+    Notes
+    -----
+    - ``_calc_attr("cashflow")`` retrieves the model-generated cashflow.
+    - Expected values represent the predefined project cashflow profile.
+    """
 
     cashfl = {
         "calculated": _calc_attr(attr="cashflow"),
-        "expected": None,
+        "expected": np.array(
+            [-1_200, -1_200, -1_200, -1_200, -300, -300, -600, 11_400, 11_400, 11_400]
+        ),
     }
 
-    print('\t')
-    print(f'Filetype: {type(cashfl)}')
-    print(f'Length: {len(cashfl)}')
-    print('cashfl = \n', cashfl)
+    # Execute testing
+    np.testing.assert_allclose(cashfl["calculated"], cashfl["expected"])
