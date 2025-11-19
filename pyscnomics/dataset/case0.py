@@ -980,7 +980,7 @@ class Case0:
             "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
         }
 
-        # Base project
+        # Gross split
         args_gross_split = {
             **args_base_project,
             "cum_production_split_offset": 0.0,

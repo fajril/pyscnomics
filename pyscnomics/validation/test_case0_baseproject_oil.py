@@ -2,7 +2,7 @@
 A collection of unit testings for CASE 0: Dummy
 """
 
-import pytest
+# import pytest
 import numpy as np
 from pyscnomics.econ.selection import ContractType
 from pyscnomics.dataset.case0 import Case0
