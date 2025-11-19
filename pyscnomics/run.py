@@ -94,7 +94,11 @@ def execute_contract(cls, contract_type, run_as_dict):
 if __name__ == "__main__":
 
     data = Case1(contract_type=ContractType.COST_RECOVERY)
-    data.as_dict()
+    t1 = data.as_dict()
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
 
     # # Specify arguments to run "execute_contract()"
     # kwargs_execute = {

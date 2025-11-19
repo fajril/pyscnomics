@@ -47,7 +47,7 @@ from pyscnomics.io.getattr import (
 @dataclass
 class Case0:
     """
-    A container class for building and managing base case contract data.
+    A container class for building and managing contract data for CASE 0.
 
     This class initializes predefined datasets for lifting, capital, intangible,
     and other economic parameters based on the selected contract type. It provides

@@ -783,5 +783,6 @@ class ExampleCases(Enum):
     """ Selection for example data case """
 
     CASE_0 = "base_project_dummy_oil"
-    CASE_1 = "cost_recovery_gross_split_field_P_oil"
-    CASE_2 = "benuang"
+    CASE_1 = "cost_recovery_field_P_oil"
+    CASE_2 = "gross_split_field_P_oil"
+    CASE_3 = "benuang"
