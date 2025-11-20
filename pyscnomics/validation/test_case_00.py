@@ -5,7 +5,7 @@ A collection of unit testings for CASE 0: Dummy
 # import pytest
 import numpy as np
 from pyscnomics.econ.selection import ContractType
-from pyscnomics.dataset.case0 import Case0
+from pyscnomics.dataset.case_00 import Case00
 from pyscnomics.validation.preparation import execute_contract
 from pyscnomics.tools.table import get_table
 
@@ -22,7 +22,7 @@ cost_types = [
 
 # Specify arguments to run function "execute_contract()"
 kwargs_execute = {
-    "cls": Case0,
+    "cls": Case00,
     "contract_type": ContractType.BASE_PROJECT,
     "run_as_dict": True,
 }

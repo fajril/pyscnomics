@@ -45,7 +45,7 @@ from pyscnomics.io.getattr import (
 
 
 @dataclass
-class Case1:
+class CaseXX:
     """
     Dataclass representing a PSC economic evaluation case.
 

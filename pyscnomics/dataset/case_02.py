@@ -45,12 +45,12 @@ from pyscnomics.io.getattr import (
 
 
 @dataclass
-class Case2:
+class Case02:
     """
-    A container class for building and managing contract data for CASE 2.
+    A container class for building and managing contract data for CASE 02.
 
     This class initializes predefined datasets for lifting, capital, intangible,
-    and other economic parameters for CASE 2.
+    and other economic parameters for CASE 02.
 
     Parameters
     ----------

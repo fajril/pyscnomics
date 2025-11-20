@@ -20,9 +20,9 @@ from pyscnomics.api.adapter import (
     get_contract_table,
 )
 from pyscnomics.tools.table import get_table
-from pyscnomics.dataset.case0 import Case0
-from pyscnomics.dataset.case1 import Case1
-from pyscnomics.dataset.case2 import Case2
+from pyscnomics.dataset.case_00 import Case00
+from pyscnomics.dataset.case_01 import Case01
+from pyscnomics.dataset.case_02 import Case02
 
 
 def execute_contract(cls, contract_type, run_as_dict):
@@ -94,8 +94,8 @@ def execute_contract(cls, contract_type, run_as_dict):
 
 if __name__ == "__main__":
 
-    data = Case2()
-    t1 = data.as_dict()
+    data = Case02()
+    t1 = data.as_class()
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')

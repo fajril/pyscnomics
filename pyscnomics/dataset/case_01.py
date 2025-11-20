@@ -45,7 +45,7 @@ from pyscnomics.io.getattr import (
 
 
 @dataclass
-class Case1:
+class Case01:
     """
     A container class for building and managing contract data for CASE 1.
 
