@@ -78,19 +78,30 @@ class Case2:
 
     def __post_init__(self):
         """
-        Initialize all contract components after object creation.
+        Finalize contract initialization after dataclass construction.
 
-        This method automatically populates key contract attributes such as
-        lifting, capital, operating costs, fiscal terms, and summary parameters
-        immediately after class instantiation.
+        This method validates that the selected contract type is appropriate for
+        CASE 2 (i.e., ``ContractType.GROSS_SPLIT``), and initializes all core
+        contract components immediately after object creation.
+
+        It automatically computes lifting, expenditures, fiscal terms, and contract
+        metadata so no additional setup calls are required.
 
         Notes
         -----
-        - Ensures all essential arguments and cost components are initialized.
-        - Designed to maintain object consistency without requiring manual setup calls.
-        - Typically executed automatically after dataclass initialization.
+        - Raises a ``ValueError`` if ``contract_type`` is not ``ContractType.GROSS_SPLIT``.
+        - Ensures consistent initialization of all cost components and parameters.
+        - Executed automatically after dataclass instantiation.
         """
 
+        # Only allows GrossSplit as the corresponding contract for CASE 2
+        if self.contract_type is not ContractType.GROSS_SPLIT:
+            raise ValueError(
+                f"Contract type for CASE 2 must be ContractType.GROSS_SPLIT, "
+                f"not {self.contract_type}"
+            )
+
+        # Initializes attributes
         self.get_lifting()
         self.get_capital()
         self.get_intangible()
@@ -480,32 +491,46 @@ class Case2:
             raise ValueError(f"Unrecognized contract type: {self.contract_type!r}")
 
     def get_contract_arguments(self) -> None:
+        """
+        Assign contract-level arguments based on contract type.
+
+        Selects predefined parameter dictionaries for Base Project,
+        Gross Split, or Cost Recovery contracts and stores the selected
+        mapping in ``self.contract_arguments``.
+
+        Notes
+        -----
+        - Base Project and Gross Split share core revenue and inflation
+          settings; Gross Split extends these with depreciation, tax,
+          amortization, and regime parameters.
+        - Raises a ``ValueError`` if ``self.contract_type`` is invalid.
+        """
+
         # Base project
         args_base_project = {
-            "sulfur_revenue": None,
-            "electricity_revenue": None,
-            "co2_revenue": None,
-            "vat_rate": None,
+            "sulfur_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+            "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+            "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+            "vat_rate": 0.0,
             "year_inflation": None,
-            "inflation_rate": None,
+            "inflation_rate": 0.0,
             "inflation_rate_applied_to": None,
         }
 
         # Gross split
         args_gross_split = {
             **args_base_project,
-            "cum_production_split_offset": None,
-            "depr_method": None,
-            "decline_factor": None,
-            "sum_undepreciated_cost": None,
-            "is_dmo_end_weighted": None,
-            "tax_regime": None,
-            "effective_tax_rate": None,
-            "amortization": None,
-            "sunk_cost_method": None,
-            "regime": None,
-            "reservoir_type_permen_2024": None,
-            "initial_amortization_year": None,
+            "cum_production_split_offset": 0.0,
+            "depr_method": DeprMethod.PSC_DB,
+            "decline_factor": 2,
+            "sum_undepreciated_cost": True,
+            "is_dmo_end_weighted": True,
+            "tax_regime": TaxRegime.PREVAILING,
+            "effective_tax_rate": 0.2,
+            "amortization": True,
+            "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
+            "regime": GrossSplitRegime.PERMEN_ESDM_12_2020,
+            "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
         }
 
         # Pooled args
@@ -521,12 +546,171 @@ class Case2:
         except KeyError:
             raise ValueError(f"Unrecognized contract type: {self.contract_type!r}")
 
-    def get_summary_arguments(self):
-        pass
+    def get_summary_arguments(self) -> None:
+        """
+        Define and store economic summary configuration parameters.
 
-    def as_dict(self):
-        pass
+        Sets up key parameters for project evaluation such as discount rate,
+        NPV mode, and discounting convention, and assigns them to
+        `self.summary_arguments`.
 
-    def as_class(self):
-        pass
+        Notes
+        -----
+        These parameters control how economic indicators like NPV and
+        profitability are calculated in the financial evaluation.
+        """
 
+        self.summary_arguments = {
+            "discount_rate": 0.1,
+            "npv_mode": NPVSelection.NPV_POINT_FORWARD,
+            "discounting_mode": DiscountingMode.MID_YEAR,
+            "discount_rate_start_year": 2022,
+            "inflation_rate": 0.0,
+            "profitability_discounted": False,
+        }
+
+    def as_dict(self) -> dict:
+        """
+        Convert all contract data into a JSON-ready dictionary.
+
+        This method transforms internal contract attributes—such as setup data,
+        summary parameters, contract arguments, lifting profiles, and cost
+        components—into a fully serializable dictionary representation. Objects are
+        converted into primitive types using helper converters so the output can be
+        safely exported (e.g., to JSON).
+
+        Returns
+        -------
+        dict
+            A dictionary containing JSON-ready representations of all contract
+            components. The structure includes:
+
+            - ``setup`` : dict
+              Converted setup parameters.
+
+            - ``summary_arguments`` : dict
+              Summary-level arguments prepared for serialization.
+
+            - ``contract_arguments`` : dict
+              Contract-specific arguments.
+
+            - ``grosssplit`` : dict or None
+              Converted class-level arguments for Gross Split contracts; ``None``
+              for all other contract types.
+
+            - ``lifting`` : dict
+              Converted lifting attributes.
+
+            - ``capital`` : dict
+              Capital cost data.
+
+            - ``intangible`` : dict
+              Intangible expenditure data.
+
+            - ``opex`` : dict
+              Operating expenditure data.
+
+            - ``asr`` : dict
+              Abandonment, site restoration, and related cost data.
+
+            - ``lbt`` : dict
+              Land and building tax cost data.
+        """
+
+        # Helper function to convert data stored in an argument dictionary
+        def _converter(source: dict):
+            return {key: convert_object(objects=val) for key, val in source.items()}
+
+        # Convert data in "setup_arguments", "summary_arguments", and "contract_arguments"
+        setup: dict = _converter(source=self.setup_arguments)
+        summary_arguments: dict = _converter(source=self.summary_arguments)
+        contract_arguments: dict = _converter(source=self.contract_arguments)
+
+        # Convert data in "class_arguments"
+        gs: dict = (
+            _converter(source=self.class_arguments)
+            if self.contract_type == ContractType.GROSS_SPLIT
+            else None
+        )
+
+        # Convert data in "lifting"
+        lifting: dict = construct_lifting_attr(
+            lifting=tuple([Lifting(**lft) for lft in self.lifting.values()])
+        )
+
+        # Convert data in "capital", "intangible", "opex", and "asr"
+        # Helper method to convert data associated with costs
+        def _construct_cost_attributes(source: dict, Cls):
+            items = tuple([Cls(**val) for val in source.values()])
+            return construct_cost_attr(cost=items)
+
+        cap: dict = _construct_cost_attributes(source=self.capital, Cls=CapitalCost)
+        intang: dict = _construct_cost_attributes(source=self.intangible, Cls=Intangible)
+        op: dict = _construct_cost_attributes(source=self.opex, Cls=OPEX)
+        asr: dict = _construct_cost_attributes(source=self.asr, Cls=ASR)
+        lbt: dict = _construct_cost_attributes(source=self.lbt, Cls=LBT)
+
+        # Mapping converted data
+        mapping: tuple = (
+            ("setup", setup),
+            ("summary_arguments", summary_arguments),
+            ("contract_arguments", contract_arguments),
+            ("grosssplit", gs),
+            ("lifting", lifting),
+            ("capital", cap),
+            ("intangible", intang),
+            ("opex", op),
+            ("asr", asr),
+            ("lbt", lbt),
+        )
+
+        # Return dictionary of json-ready data
+        return {key: val for key, val in mapping}
+
+    def as_class(self) -> GrossSplit:
+        """
+        Build and return a contract class instance.
+
+        Creates per-fluid objects for lifting and cost components, merges them
+        with setup and contract-level arguments, and initializes a ``GrossSplit``
+        contract instance.
+
+        Notes
+        -----
+        - Currently supports only ``ContractType.GROSS_SPLIT``; raises
+          ``ValueError`` for other types.
+        - Lifting, capital, intangible, OPEX, ASR, and LBT data are converted
+          into their respective component classes before assembly.
+        """
+
+        fl: list = ["oil"]
+
+        # Create per fluid instances for lifting and each cost category
+        instances = {
+            "lifting": {f: Lifting(**self.lifting[f]) for f in fl},
+            "capital": {f: CapitalCost(**self.capital[f]) for f in fl},
+            "intangible": {f: Intangible(**self.intangible[f]) for f in fl},
+            "opex": {f: OPEX(**self.opex[f]) for f in fl},
+            "asr": {f: ASR(**self.asr[f]) for f in fl},
+            "lbt": {f: LBT(**self.lbt[f]) for f in fl},
+        }
+
+        # Construct tuples from the created instances
+        instances_modified = {
+            "lifting": tuple(instances["lifting"].values()),
+            "capital_cost": tuple(instances["capital"].values()),
+            "intangible_cost": tuple(instances["intangible"].values()),
+            "opex": tuple(instances["opex"].values()),
+            "asr_cost": tuple(instances["asr"].values()),
+            "lbt_cost": tuple(instances["lbt"].values()),
+        }
+
+        # Merge keyword arguments to create an instance of contract
+        kwargs_merged = {
+            **self.setup_arguments,     # setup arguments
+            **instances_modified,       # lifting and costs arguments
+            **self.class_arguments,     # class's arguments
+        }
+
+        # Return an instance of GrossSplit
+        return GrossSplit(**kwargs_merged)

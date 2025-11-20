@@ -77,19 +77,30 @@ class Case1:
 
     def __post_init__(self):
         """
-        Initialize all contract components after object creation.
+        Finalize contract initialization after dataclass construction.
 
-        This method automatically populates key contract attributes such as
-        lifting, capital, operating costs, fiscal terms, and summary parameters
-        immediately after class instantiation.
+        Validates that the selected contract type matches CASE 1
+        (``ContractType.COST_RECOVERY``) and initializes all major contract
+        components immediately after object creation.
+
+        This method automatically computes lifting, expenditures, fiscal parameters,
+        and contract metadata so no manual setup steps are required.
 
         Notes
         -----
-        - Ensures all essential arguments and cost components are initialized.
-        - Designed to maintain object consistency without requiring manual setup calls.
-        - Typically executed automatically after dataclass initialization.
+        - Raises a ``ValueError`` if ``contract_type`` is not ``ContractType.COST_RECOVERY``.
+        - Ensures consistent initialization of all cost components and model parameters.
+        - Executed automatically after dataclass instantiation.
         """
 
+        # Only allows CostRecovery as the corresponding contract for CASE 1
+        if self.contract_type != ContractType.COST_RECOVERY:
+            raise ValueError(
+                f"Contract type for CASE 1 must be ContractType.COST_RECOVERY, "
+                f"not {self.contract_type}"
+            )
+
+        # Initializes attributes
         self.get_lifting()
         self.get_capital()
         self.get_intangible()
@@ -497,19 +508,47 @@ class Case1:
 
     def as_dict(self) -> dict:
         """
-        Convert all contract data into a fully processed dictionary.
+        Convert all contract data into a JSON-ready dictionary.
 
-        Transforms setup, summary, contract, class-level arguments, lifting, and
-        cost components into dictionary form using the appropriate conversion
-        utilities and returns a unified mapping.
+        This method transforms internal contract attributes—such as setup data,
+        summary parameters, contract arguments, lifting profiles, and cost
+        components—into a fully serializable dictionary representation. Objects are
+        converted into primitive types using helper converters so the output can be
+        safely exported (e.g., to JSON).
 
-        Notes
-        -----
-        - Applies object conversion to each argument group.
-        - Handles cost recovery arguments only when the contract type is
-          ``ContractType.COST_RECOVERY``.
-        - Lifting and cost categories are reconstructed via their respective
-          component classes before conversion.
+        Returns
+        -------
+        dict
+            A dictionary containing JSON-ready representations of all contract
+            components. The structure includes:
+
+            - ``setup`` : dict
+              Converted setup parameters.
+
+            - ``summary_arguments`` : dict
+              Summary-level arguments prepared for serialization.
+
+            - ``contract_arguments`` : dict
+              Contract-specific arguments.
+
+            - ``grosssplit`` : dict or None
+              Converted class-level arguments for Gross Split contracts; ``None``
+              for all other contract types.
+
+            - ``lifting`` : dict
+              Converted lifting attributes.
+
+            - ``capital`` : dict
+              Capital cost data.
+
+            - ``intangible`` : dict
+              Intangible expenditure data.
+
+            - ``opex`` : dict
+              Operating expenditure data.
+
+            - ``asr`` : dict
+              Abandonment, site restoration, and related cost data.
         """
 
         # Helper function to convert data stored in an argument dictionary
@@ -559,19 +598,19 @@ class Case1:
 
         return {key: val for key, val in mapping_converted}
 
-    def as_class(self) -> CostRecovery | GrossSplit | BaseProject:
+    def as_class(self) -> CostRecovery:
         """
-        Construct and return the contract object for the selected contract type.
+        Build and return a ``CostRecovery`` contract instance.
 
-        Instantiates per-fluid lifting and cost components, merges them with
-        setup and class-level arguments, and creates the appropriate contract
-        instance (``CostRecovery``, ``GrossSplit``, or ``BaseProject``).
+        Creates per-fluid lifting and cost component objects, merges them with
+        setup and class-level arguments, and initializes a ``CostRecovery``
+        contract.
 
         Notes
         -----
         - Only the ``"oil"`` fluid is processed.
-        - All component dictionaries are expanded into keyword arguments.
-        - Raises ``ValueError`` for unsupported contract types.
+        - Component dictionaries are expanded into keyword arguments.
+        - Raises ``ValueError`` if the contract type is not ``ContractType.COST_RECOVERY``.
         """
 
         fl: list = ["oil"]
@@ -601,12 +640,5 @@ class Case1:
             **self.class_arguments,     # class's arguments
         }
 
-        # Create and return the appropriate contract instance
-        if self.contract_type == ContractType.COST_RECOVERY:
-            return CostRecovery(**kwargs_merged)
-        elif self.contract_type == ContractType.GROSS_SPLIT:
-            return GrossSplit(**kwargs_merged)
-        elif self.contract_type == ContractType.BASE_PROJECT:
-            return BaseProject(**kwargs_merged)
-        else:
-            raise ValueError(f"Unrecognized contract type: {self.contract_type!r}")
+        # Create and return an instance of CostRecovery
+        return CostRecovery(**kwargs_merged)
