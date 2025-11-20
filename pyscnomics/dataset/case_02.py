@@ -1,28 +1,28 @@
 """
-CASE 2
+CASE 02
 """
 
 import numpy as np
 from datetime import date
 from dataclasses import dataclass, field
 
-from pyscnomics.contracts.project import BaseProject
-from pyscnomics.contracts.costrecovery import CostRecovery
+# from pyscnomics.contracts.project import BaseProject
+# from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.econ.selection import (
     FluidType,
     CostType,
-    VariableSplit082017,
+    # VariableSplit082017,
     VariableSplit522017,
-    VariableSplit132024,
-    TaxSplitTypeCR,
+    # VariableSplit132024,
+    # TaxSplitTypeCR,
     ContractType,
     OtherRevenue,
     TaxRegime,
-    FTPTaxRegime,
+    # FTPTaxRegime,
     DeprMethod,
     SunkCostMethod,
-    InflationAppliedTo,
+    # InflationAppliedTo,
     GrossSplitRegime,
     InitialYearAmortizationIncurred,
     NPVSelection,
@@ -35,7 +35,7 @@ from pyscnomics.econ.costs import (
     OPEX,
     ASR,
     LBT,
-    CostOfSales,
+    # CostOfSales,
 )
 from pyscnomics.io.getattr import (
     convert_object,
