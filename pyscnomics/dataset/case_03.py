@@ -121,10 +121,68 @@ class Case03:
         pass
 
     def get_setup_arguments(self) -> None:
-        pass
+        """
+        Define and store general setup arguments for the project.
+
+        Initializes key project timeline parameters such as start and end dates,
+        onstream dates for oil and gas, approval year, and POD-1 status, then
+        stores them in the `self.setup_arguments` attribute.
+        """
+        self.setup_arguments = {
+            "start_date": date(year=2022, month=1, day=1),
+            "end_date": date(year=2041, month=12, day=31),
+            "oil_onstream_date": date(year=2024, month=1, day=1),
+            "gas_onstream_date": None,
+            "approval_year": None,
+            "is_pod_1": False,
+        }
 
     def get_class_arguments(self) -> None:
-        pass
+
+        # Gross split regime
+        VS_08 = VariableSplit082017
+
+        kwargs_gross_split = {
+            # Field and reservoir properties
+            "field_status": None,
+            "field_loc": None,
+            "res_depth": None,
+            "infra_avail": None,
+            "res_type": None,
+            "api_oil": None,
+            "domestic_use": None,
+            "prod_stage": None,
+            "co2_content": None,
+            "h2s_content": None,
+
+            # Ministry discretion
+            "split_ministry_disc": None,
+
+            # DMO
+            "oil_dmo_volume_portion": None,
+            "oil_dmo_fee_portion": None,
+            "oil_dmo_holiday_duration": None,
+            "gas_dmo_volume_portion": None,
+            "gas_dmo_fee_portion": None,
+            "gas_dmo_holiday_duration": None,
+
+            # Carry forward depreciation
+            "oil_carry_forward_depreciation": None,
+            "gas_carry_forward_depreciation": None,
+        }
+
+        # Class argument's mapping
+        class_args_map = {
+            ContractType.COST_RECOVERY: {},
+            ContractType.GROSS_SPLIT: kwargs_gross_split,
+            ContractType.BASE_PROJECT: {},
+        }
+
+        try:
+            self.class_arguments = class_args_map[self.contract_type]
+
+        except KeyError:
+            raise ValueError(f"Unrecognized contract type: {self.contract_type!r}")
 
     def get_contract_arguments(self) -> None:
         pass

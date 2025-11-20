@@ -422,7 +422,7 @@ class Case02:
 
         self.setup_arguments = {
             "start_date": date(year=2022, month=1, day=1),
-            "end_date": date(year=2035, month=1, day=1),
+            "end_date": date(year=2035, month=12, day=31),
             "oil_onstream_date": date(year=2024, month=1, day=1),
             "gas_onstream_date": None,
             "approval_year": None,
