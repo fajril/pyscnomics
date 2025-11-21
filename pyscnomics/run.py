@@ -95,8 +95,8 @@ def execute_contract(cls, contract_type, run_as_dict):
 
 if __name__ == "__main__":
 
-    data = Case03()
-    t1 = data.setup_arguments
+    data = Case03(contract_type=ContractType.GROSS_SPLIT)
+    t1 = data.opex
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')

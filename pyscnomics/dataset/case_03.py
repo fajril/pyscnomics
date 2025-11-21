@@ -5,6 +5,8 @@ CASE 03
 import numpy as np
 from datetime import date
 from dataclasses import dataclass, field
+from functools import reduce
+from itertools import chain
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
@@ -103,16 +105,377 @@ class Case03:
         self.get_summary_arguments()
 
     def get_lifting(self) -> None:
-        pass
+        """
+        Initialize the lifting profile for oil production.
+
+        Defines the annual oil lifting schedule—including production years, lifting
+        rates, prices, and fluid type—and assigns the resulting structure to
+        ``self.lifting``. The data span 2022–2041 and represent the base lifting
+        assumptions used in contract and economic calculations.
+
+        Returns
+        -------
+        None
+            Updates ``self.lifting`` in place.
+        """
+
+        # Prepare lifting data: OIL
+        lifting_oil = {
+            "start_year": 2022,
+            "end_year": 2041,
+            "prod_year": np.array(
+                [
+                    2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031,
+                    2032, 2033, 2034, 2035, 2036, 2037, 2038, 2039, 2040, 2041
+                ]
+            ),
+            "lifting_rate": np.array(
+                [
+                    0.0, 0.0, 1109.76, 2899.99, 3936.48, 3565.12, 2466.51, 1917.88,
+                    1583.69, 1357.06, 1167.95, 1019.10, 901.50, 815.53, 735.83,
+                    657.22, 615.44, 585.86, 557.64, 328.02
+                ]
+            ),
+            "price": np.array(
+                [
+                    69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69,
+                    69, 69, 69, 69, 69
+                ]
+            ),
+            "fluid_type": FluidType.OIL,
+        }
+
+        # Store lifting data as the class's attribute: "self.lifting"
+        self.lifting = {"oil": lifting_oil}
 
     def get_capital(self) -> None:
-        pass
+        """
+        Initialize capital expenditure data for oil.
+
+        Constructs the capital cost profile—including expense years, cost amounts,
+        cost allocation, PIS years, useful life, depreciation factors, tax portions,
+        and descriptive labels—and assigns it to ``self.capital``. The data span
+        2022–2041 and represent post-onstream capital expenditures used in fiscal
+        and depreciation calculations.
+
+        Returns
+        -------
+        None
+            Updates ``self.capital`` in place.
+        """
+
+        # Prepare capital data: OIL
+        capital_oil = {
+            "start_year": 2022,
+            "end_year": 2041,
+            "expense_year": np.array([2023, 2024, 2025, 2026, 2023, 2024, 2025, 2026]),
+            "cost": np.array(
+                [
+                    2804.42, 22850, 27109.48, 15063.18, 2935.44, 41706.1, 51200.25, 22869.6
+                ]
+            ),
+            "cost_allocation": [
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL
+            ],
+            "pis_year": np.array([2024, 2024, 2025, 2026, 2024, 2024, 2025, 2026]),
+            "useful_life": np.array([5, 5, 5, 5, 5, 5, 5, 5]),
+            "depreciation_factor": np.array([0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]),
+            "cost_type": [
+                CostType.SUNK_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.SUNK_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST
+            ],
+            "tax_portion": np.array([1, 1, 1, 1, 1, 1, 1, 1]),
+            "description": [
+                "Tang DWO", "Tang DWO", "Tang DWO", "Tang DWO", "PF", "PF", "PF", "PF"
+            ],
+        }
+
+        # Store capital costs as the class's attribute: "self.capital"
+        self.capital = {"oil": capital_oil}
 
     def get_intangible(self) -> None:
-        pass
+        """
+        Initialize intangible expenditure data for oil.
+
+        Defines the intangible cost profile—including expense years, cost amounts,
+        cost allocation, cost type, tax portions, and descriptions—and assigns it to
+        ``self.intangible``. These values represent sunk and post-onstream
+        intangible expenditures used in fiscal and cost-recovery calculations.
+
+        Returns
+        -------
+        None
+            Updates ``self.intangible`` in place.
+        """
+
+        # Prepare intangible cost: OIL
+        intangible_oil = {
+            "start_year": 2022,
+            "end_year": 2041,
+            "expense_year": np.array([2023, 2024, 2025, 2026]),
+            "cost": np.array([12827.5575, 116290.7349, 186723.1887, 102764.0144]),
+            "cost_allocation": [
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL
+            ],
+            "cost_type": [
+                CostType.SUNK_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST
+            ],
+            "tax_portion": np.array([1, 1, 1, 1]),
+            "description": ["Intang DWO", "Intang DWO", "Intang DWO", "Intang DWO"],
+        }
+
+        # Store intangible cost as the class's attribute: "self.intangible"
+        self.intangible = {"oil": intangible_oil}
 
     def get_opex(self) -> None:
-        pass
+        """
+        Construct and store the operating expenditure (OPEX) dataset for oil.
+
+        Builds individual OPEX components—WIWS, operation and maintenance,
+        electricity, and carbon tax—each defined by yearly cost attributes.
+        These components are then combined into a single consolidated OPEX
+        dictionary using `_combine`, which concatenates NumPy array fields
+        and flattens list fields.
+
+        The final merged OPEX structure is stored under ``self.opex["oil"]``.
+
+        Notes
+        -----
+        - Numerical fields (``expense_year``, ``fixed_cost``, ``tax_portion``)
+          are concatenated as NumPy arrays.
+        - Categorical fields (``cost_allocation``, ``cost_type``, ``description``)
+          are flattened into Python lists.
+        """
+
+        # OPEX WIWS
+        wiws = {
+            "expense_year": np.array(
+                [
+                    2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031,
+                    2032, 2033, 2034, 2035, 2036, 2037, 2038, 2039, 2040, 2041,
+                ]
+            ),
+            "fixed_cost": np.array(
+                [
+                    0, 0, 310.7241078, 1024.549761, 1654.395925, 1797.161056,
+                    1797.161056, 1797.161056, 1797.161056, 1797.161056, 1780.365158,
+                    1713.181567, 1654.395925, 1612.406181, 1562.018488, 1503.232846,
+                    1436.049255, 1427.651306, 1427.651306, 1410.855408
+                ]
+            ),
+            "cost_allocation": [
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL
+            ],
+            "cost_type": [
+                CostType.SUNK_COST, CostType.SUNK_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST
+            ],
+            "tax_portion": np.array(
+                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            ),
+            "description": [
+                "OPEX WIWS", "OPEX WIWS", "OPEX WIWS", "OPEX WIWS", "OPEX WIWS",
+                "OPEX WIWS", "OPEX WIWS", "OPEX WIWS", "OPEX WIWS", "OPEX WIWS",
+                "OPEX WIWS", "OPEX WIWS", "OPEX WIWS", "OPEX WIWS", "OPEX WIWS",
+                "OPEX WIWS", "OPEX WIWS", "OPEX WIWS", "OPEX WIWS", "OPEX WIWS"
+            ],
+        }
+
+        # OPEX operation
+        operation = {
+            "expense_year": np.array(
+                [
+                    2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031,
+                    2032, 2033, 2034, 2035, 2036, 2037, 2038, 2039, 2040, 2041
+                ]
+            ),
+            "fixed_cost": np.array(
+                [
+                    0, 0, 93.99623328, 295.6253904, 467.722378, 508.4673573, 509.3369801,
+                    508.402422, 508.4347049, 508.2551227, 500.4444166, 478.1836374,
+                    458.8633128, 446.2216302, 430.2434006, 410.0402278, 390.9620195,
+                    388.6757859, 389.3266767, 380.6260563
+                ]
+            ),
+            "cost_allocation": [
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL
+            ],
+            "cost_type": [
+                CostType.SUNK_COST, CostType.SUNK_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST
+            ],
+            "tax_portion": np.array(
+                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            ),
+            "description": [
+                "OPEX Operation and Maintenance", "OPEX Operation and Maintenance",
+                "OPEX Operation and Maintenance", "OPEX Operation and Maintenance",
+                "OPEX Operation and Maintenance", "OPEX Operation and Maintenance",
+                "OPEX Operation and Maintenance", "OPEX Operation and Maintenance",
+                "OPEX Operation and Maintenance", "OPEX Operation and Maintenance",
+                "OPEX Operation and Maintenance", "OPEX Operation and Maintenance",
+                "OPEX Operation and Maintenance", "OPEX Operation and Maintenance",
+                "OPEX Operation and Maintenance", "OPEX Operation and Maintenance",
+                "OPEX Operation and Maintenance", "OPEX Operation and Maintenance",
+                "OPEX Operation and Maintenance", "OPEX Operation and Maintenance"
+            ],
+        }
+
+        # OPEX electricity
+        electricity = {
+            "expense_year": np.array(
+                [
+                    2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031,
+                    2032, 2033, 2034, 2035, 2036, 2037, 2038, 2039, 2040, 2041,
+                ]
+            ),
+            "fixed_cost": np.array(
+                [
+                    0, 0, 1203.698502, 2520.801891, 3063.054019, 3367.41954,
+                    3375.643238, 3360.633473, 3364.007193, 3345.239959, 2912.238201,
+                    2528.318526, 2137.237408, 1978.967933, 1632.74114, 1221.239368,
+                    1088.030519, 1081.677592, 1084.037437, 705.5804279
+                ]
+            ),
+            "cost_allocation": [
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL
+            ],
+            "cost_type": [
+                CostType.SUNK_COST, CostType.SUNK_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST
+            ],
+            "tax_portion": np.array(
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            ),
+            "description": [
+                "OPEX Electricity", "OPEX Electricity", "OPEX Electricity", "OPEX Electricity",
+                "OPEX Electricity", "OPEX Electricity", "OPEX Electricity", "OPEX Electricity",
+                "OPEX Electricity", "OPEX Electricity", "OPEX Electricity", "OPEX Electricity",
+                "OPEX Electricity", "OPEX Electricity", "OPEX Electricity", "OPEX Electricity",
+                "OPEX Electricity", "OPEX Electricity", "OPEX Electricity", "OPEX Electricity"
+            ],
+        }
+
+        # OPEX carbon tax
+        cartax = {
+            "expense_year": np.array(
+                [
+                    2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031,
+                    2032, 2033, 2034, 2035, 2036, 2037, 2038, 2039, 2040, 2041,
+                ]
+            ),
+            "fixed_cost": np.array(
+                [
+                    0, 0, 0, 86.34313551, 117.203278, 106.1464782, 73.4369768,
+                    57.10211745, 47.1521686, 40.40472871, 34.77400465, 30.34241466,
+                    26.84090537, 24.28143326, 21.90835802, 19.56788226, 18.3238454,
+                    17.44323657, 16.603004, 9.766410286
+                ]
+            ),
+            "cost_allocation": [
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL
+            ],
+            "cost_type": [
+                CostType.SUNK_COST, CostType.SUNK_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST
+            ],
+            "tax_portion": np.array(
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            ),
+            "description": [
+                "OPEX Carbon Tax", "OPEX Carbon Tax", "OPEX Carbon Tax", "OPEX Carbon Tax",
+                "OPEX Carbon Tax", "OPEX Carbon Tax", "OPEX Carbon Tax", "OPEX Carbon Tax",
+                "OPEX Carbon Tax", "OPEX Carbon Tax", "OPEX Carbon Tax", "OPEX Carbon Tax",
+                "OPEX Carbon Tax", "OPEX Carbon Tax", "OPEX Carbon Tax", "OPEX Carbon Tax",
+                "OPEX Carbon Tax", "OPEX Carbon Tax", "OPEX Carbon Tax", "OPEX Carbon Tax"
+            ],
+        }
+
+        # # Prepare opex OIL: Combine WIWS + Operation + Electricity + Carbon Tax
+        attrs_numpy: set = {"expense_year", "fixed_cost", "tax_portion"}
+        sources = [wiws, operation, electricity, cartax]
+
+        def _combine(target: str):
+            """
+            Combine the values of a given key from multiple source dictionaries.
+
+            Parameters
+            ----------
+            target : str
+                Key to extract from each source.
+
+            Returns
+            -------
+            numpy.ndarray or list
+                Concatenated NumPy array if `target` is listed in `attrs_numpy`,
+                otherwise a flattened list created from all source values.
+            """
+            items = [src[target] for src in sources]
+            if target in attrs_numpy:
+                return np.concatenate(items)
+            return list(chain.from_iterable(items))
+
+        opex_oil = {
+            "start_year": 2022,
+            "end_year": 2041,
+            "expense_year": _combine(target="expense_year"),
+            "fixed_cost": _combine(target="fixed_cost"),
+            "cost_allocation": _combine(target="cost_allocation"),
+            "cost_type": _combine(target="cost_type"),
+            "tax_portion": _combine(target="tax_portion"),
+            "description": _combine(target="description"),
+        }
+
+        # Store opex as class's attribute: "self.opex"
+        self.opex = {"oil": opex_oil}
 
     def get_asr(self) -> None:
         pass
@@ -138,57 +501,137 @@ class Case03:
         }
 
     def get_class_arguments(self) -> None:
+        """
+        Set class-level parameters for the Gross Split PSC.
+
+        Builds the dictionary of VS_08 (Variable Split 08/2017) inputs—including
+        reservoir descriptors, operational conditions, ministry discretion, DMO
+        terms, and depreciation settings—and assigns it to
+        ``self.class_arguments``.
+
+        Returns
+        -------
+        None
+            Updates ``self.class_arguments`` in place.
+        """
 
         # Gross split regime
         VS_08 = VariableSplit082017
 
         kwargs_gross_split = {
             # Field and reservoir properties
-            "field_status": None,
-            "field_loc": None,
-            "res_depth": None,
-            "infra_avail": None,
-            "res_type": None,
-            "api_oil": None,
-            "domestic_use": None,
-            "prod_stage": None,
-            "co2_content": None,
-            "h2s_content": None,
+            "field_status": VS_08.FieldStatus.NO_POD,
+            "field_loc": VS_08.FieldLocation.ONSHORE,
+            "res_depth": VS_08.ReservoirDepth.LESSEQUAL_2500,
+            "infra_avail": VS_08.InfrastructureAvailability.WELL_DEVELOPED,
+            "res_type": VS_08.ReservoirType.CONVENTIONAL,
+            "api_oil": VS_08.APIOil.LESSTHAN_25,
+            "domestic_use": VS_08.DomesticUse.EQUAL_50_UNTIL_LESSTHAN_70,
+            "prod_stage": VS_08.ProductionStage.SECONDARY,
+            "co2_content": VS_08.CO2Content.LESSTHAN_5,
+            "h2s_content": VS_08.H2SContent.LESSTHAN_100,
 
             # Ministry discretion
-            "split_ministry_disc": None,
+            "split_ministry_disc": 0.08,
 
             # DMO
-            "oil_dmo_volume_portion": None,
-            "oil_dmo_fee_portion": None,
-            "oil_dmo_holiday_duration": None,
-            "gas_dmo_volume_portion": None,
-            "gas_dmo_fee_portion": None,
-            "gas_dmo_holiday_duration": None,
+            "oil_dmo_volume_portion": 0.25,
+            "oil_dmo_fee_portion": 1.0,
+            "oil_dmo_holiday_duration": 60,
 
             # Carry forward depreciation
-            "oil_carry_forward_depreciation": None,
-            "gas_carry_forward_depreciation": None,
+            "oil_carry_forward_depreciation": 0.0,
+            "gas_carry_forward_depreciation": 0.0,
         }
 
-        # Class argument's mapping
-        class_args_map = {
-            ContractType.COST_RECOVERY: {},
-            ContractType.GROSS_SPLIT: kwargs_gross_split,
-            ContractType.BASE_PROJECT: {},
-        }
-
-        try:
-            self.class_arguments = class_args_map[self.contract_type]
-
-        except KeyError:
-            raise ValueError(f"Unrecognized contract type: {self.contract_type!r}")
+        # Assign kwargs_gross_split as attribute "self.class_arguments"
+        self.class_arguments = kwargs_gross_split
 
     def get_contract_arguments(self) -> None:
-        pass
+        """
+        Build and assign contract-level arguments for Gross Split PSC evaluation.
+
+        This method constructs the full set of fiscal and economic parameters used
+        during contract execution. It starts with base-project settings (e.g.,
+        revenue classification, VAT, inflation) and extends them with Gross
+        Split–specific terms such as tax regime, depreciation method,
+        amortization rules, and cumulative production split adjustments. The final
+        dictionary is stored in ``self.contract_arguments``.
+
+        Returns
+        -------
+        None
+            Updates ``self.contract_arguments`` in place.
+        """
+
+        # Base project
+        args_base_project = {
+            "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+            "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
+            "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
+            "vat_rate": np.array(
+                [
+                    0.11, 0.11, 0.11, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12,
+                    0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12
+                ]
+            ),
+            "year_inflation": None,
+            "inflation_rate": np.array(
+                [
+                    0.0, 0., 0.0, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02,
+                    0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02
+                ]
+            ),
+            "inflation_rate_applied_to": InflationAppliedTo.CAPEX,
+        }
+
+        # Gross split
+        args_gross_split = {
+            **args_base_project,
+            "cum_production_split_offset": 0.0,
+            "depr_method": DeprMethod.PSC_DB,
+            "decline_factor": 2,
+            "sum_undepreciated_cost": True,
+            "is_dmo_end_weighted": True,
+            "tax_regime": TaxRegime.NAILED_DOWN,
+            "effective_tax_rate": 0.22,
+            "amortization": False,
+            "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
+            "regime": GrossSplitRegime.PERMEN_ESDM_8_2017,
+            "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
+        }
+
+        # Assign "args_gross_split" as the class's attribute "self.contract_arguments"
+        self.contract_arguments = args_gross_split
 
     def get_summary_arguments(self) -> None:
-        pass
+        """
+        Set summary-level economic parameters for project evaluation.
+
+        Initializes the dictionary of high-level financial settings—such as the
+        discount rate, NPV mode, discounting convention, inflation profile, and
+        profitability options—and assigns it to ``self.summary_arguments`` for use
+        in summary and valuation calculations.
+
+        Returns
+        -------
+        None
+            Updates ``self.summary_arguments`` in place.
+        """
+
+        self.summary_arguments = {
+            "discount_rate": 0.1,
+            "npv_mode": NPVSelection.NPV_NOMINAL_TERMS,
+            "discounting_mode": DiscountingMode.END_YEAR,
+            "discount_rate_start_year": 2023,
+            "inflation_rate": np.array(
+                [
+                    0.0, 0., 0.0, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02,
+                    0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02
+                ]
+            ),
+            "profitability_discounted": False,
+        }
 
     def as_dict(self) -> None:
         pass
