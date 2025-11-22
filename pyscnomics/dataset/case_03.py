@@ -237,6 +237,7 @@ class Case03:
 
         Builds individual OPEX components—WIWS, operation and maintenance,
         electricity, and carbon tax—each defined by yearly cost attributes.
+
         These components are then combined into a single consolidated OPEX
         dictionary using `_combine`, which concatenates NumPy array fields
         and flattens list fields.
@@ -445,23 +446,28 @@ class Case03:
 
         def _combine(target: str):
             """
-            Combine the values of a given key from multiple source dictionaries.
+            Merge values for a specified key across multiple source dictionaries.
 
             Parameters
             ----------
             target : str
-                Key to extract from each source.
+                Key to extract and merge from each source.
 
             Returns
             -------
             numpy.ndarray or list
-                Concatenated NumPy array if `target` is listed in `attrs_numpy`,
-                otherwise a flattened list created from all source values.
+                Concatenated NumPy array if ``target`` is in ``attrs_numpy``;
+                otherwise a single list formed by sequentially adding list items.
+
+            Notes
+            -----
+            - All sources are assumed to contain ``target``.
+            - List merging uses ``reduce`` with element-wise concatenation.
             """
             items = [src[target] for src in sources]
             if target in attrs_numpy:
                 return np.concatenate(items)
-            return list(chain.from_iterable(items))
+            return reduce(lambda a, b: a + b, items)
 
         opex_oil = {
             "start_year": 2022,
@@ -478,10 +484,123 @@ class Case03:
         self.opex = {"oil": opex_oil}
 
     def get_asr(self) -> None:
-        pass
+        """
+        Construct and store the abandonment, site restoration (ASR) cost
+        dataset for oil.
+
+        Defines yearly ASR cost attributes—including expense year, cost,
+        allocation, cost type, and tax portion—and stores the resulting
+        structure under ``self.asr["oil"]``.
+
+        Notes
+        -----
+        - Numerical fields are stored as NumPy arrays.
+        - Categorical fields are stored as Python lists.
+        - Covers the full project period from 2022 to 2041.
+        """
+
+        # Prepare ASR: OIL
+        asr_oil = {
+            "start_year": 2022,
+            "end_year": 2041,
+            "expense_year": np.array(
+                [
+                    2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031,
+                    2032, 2033, 2034, 2035, 2036, 2037, 2038, 2039, 2040, 2041
+                ]
+            ),
+            "cost": np.array(
+                [
+                    0, 0, 385.937354, 1324.703891, 2204.797519, 2417.584601, 2417.584601,
+                    2417.584601, 2417.584601, 2417.584601, 2417.584601, 2417.584601,
+                    2417.584601, 2417.584601, 2417.584601, 2417.584601, 2417.584601,
+                    2417.584601, 2417.584601, 2417.584601
+                ]
+            ),
+            "cost_allocation": [
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL
+            ],
+            "cost_type": [
+                CostType.SUNK_COST, CostType.SUNK_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST
+            ],
+            "tax_portion": np.array(
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            ),
+        }
+
+        # Store ASR cost as class's attribute: "self.asr"
+        self.asr = {"oil": asr_oil}
 
     def get_lbt(self) -> None:
-        pass
+        """
+        Construct and store the land and building tax (LBT) dataset for oil.
+
+        Defines yearly LBT attributes—including expense year, cost,
+        allocation, cost type, and tax portion—for the 2022–2041 period
+        and stores the resulting structure under ``self.lbt["oil"]``.
+
+        Notes
+        -----
+        - Numerical fields are stored as NumPy arrays.
+        - Categorical fields are stored as Python lists.
+        - All entries are assigned to the oil stream.
+        """
+
+        # Prepare LBT: OIL
+        lbt_oil = {
+            "start_year": 2022,
+            "end_year": 2041,
+            "expense_year": np.array(
+                [
+                    2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031,
+                    2032, 2033, 2034, 2035, 2036, 2037, 2038, 2039, 2040, 2041
+                ]
+            ),
+            "cost": np.array(
+                [
+                    0, 0, 0, 1537.599994, 4017.990147, 5454.071285, 4939.541527,
+                    3417.400207, 2657.255194, 2194.232903, 1880.239823, 1618.213274,
+                    1411.988601, 1249.045366, 1129.939966, 1019.508571, 910.5941967,
+                    852.7027638, 811.7235058, 772.6231632
+                ]
+            ),
+            "cost_allocation": [
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL
+            ],
+            "cost_type": [
+                CostType.SUNK_COST, CostType.SUNK_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST
+            ],
+            "tax_portion": np.array(
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            ),
+        }
+
+        # Store LBT cost data as class's attribute "self.lbt"
+        self.lbt = {"oil": lbt_oil}
 
     def get_setup_arguments(self) -> None:
         """
@@ -491,6 +610,7 @@ class Case03:
         onstream dates for oil and gas, approval year, and POD-1 status, then
         stores them in the `self.setup_arguments` attribute.
         """
+
         self.setup_arguments = {
             "start_date": date(year=2022, month=1, day=1),
             "end_date": date(year=2041, month=12, day=31),
@@ -636,5 +756,15 @@ class Case03:
     def as_dict(self) -> None:
         pass
 
-    def as_class(self) -> None:
-        pass
+    def as_class(self) -> GrossSplit:
+        fl: list = ["oil"]
+
+        # Create per fluid instances for lifting and each cost category
+        instances = {
+            "lifting": {f: Lifting(**self.lifting[f]) for f in fl},
+            "capital": None,
+            "intangible": None,
+            "opex": None,
+            "asr": None,
+            "lbt": None,
+        }
