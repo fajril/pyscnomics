@@ -24,6 +24,7 @@ from pyscnomics.dataset.case_00 import Case00
 from pyscnomics.dataset.case_01 import Case01
 from pyscnomics.dataset.case_02 import Case02
 from pyscnomics.dataset.case_03 import Case03
+from pyscnomics.dataset.case_04 import Case04
 
 
 def execute_contract(cls, contract_type, run_as_dict):
@@ -95,9 +96,8 @@ def execute_contract(cls, contract_type, run_as_dict):
 
 if __name__ == "__main__":
 
-    data = Case03()
-
-    t1 = data.as_dict()
+    data = Case04()
+    t1 = data.class_arguments
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')
