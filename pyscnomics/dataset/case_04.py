@@ -16,7 +16,7 @@ from pyscnomics.econ.selection import (
     CostType,
     # VariableSplit082017,
     VariableSplit522017,
-    # VariableSplit132024,
+    VariableSplit132024,
     # TaxSplitTypeCR,
     ContractType,
     OtherRevenue,
@@ -531,19 +531,37 @@ class Case04:
 
         # Gross split regime
         VS_52 = VariableSplit522017
+        VS_13 = VariableSplit132024
 
         kwargs_gross_split = {
             # Field and reservoir properties
-            "field_status": VS_52.FieldStatus.NO_POD,
-            "field_loc": VS_52.FieldLocation.ONSHORE,
-            "res_depth": VS_52.ReservoirDepth.LESSEQUAL_2500,
-            "infra_avail": VS_52.InfrastructureAvailability.WELL_DEVELOPED,
-            "res_type": VS_52.ReservoirType.CONVENTIONAL,
-            "api_oil": VS_52.APIOil.EQUALGREATERTHAN_25,
-            "domestic_use": VS_52.DomesticUse.EQUAL_70_UNTIL_LESSTHAN_100,
-            "prod_stage": VS_52.ProductionStage.SECONDARY,
-            "co2_content": VS_52.CO2Content.LESSTHAN_5,
-            "h2s_content": VS_52.H2SContent.LESSTHAN_100,
+            "field_status": "No POD",
+            "field_loc": "Onshore",
+            "res_depth": "<=2500",
+            "infra_avail": "Well Developed",
+            "res_type": "Conventional",
+            "api_oil": ">=25",
+            "domestic_use": "70<=x<100",
+            "prod_stage": "Secondary",
+            "co2_content": "<5",
+            "h2s_content": "<100",
+            "field_reserves_2024": VS_13.FieldReservesAmount.MEDIUM,
+            "infra_avail_2024": VS_13.InfrastructureAvailability.PARTIALLY_AVAILABLE,
+            "field_loc_2024": VS_13.FieldLocation.ONSHORE,
+
+            # "field_status": VS_52.FieldStatus.NO_POD,
+            # "field_loc": VS_52.FieldLocation.ONSHORE,
+            # "res_depth": VS_52.ReservoirDepth.LESSEQUAL_2500,
+            # "infra_avail": VS_52.InfrastructureAvailability.WELL_DEVELOPED,
+            # "res_type": VS_52.ReservoirType.CONVENTIONAL,
+            # "api_oil": VS_52.APIOil.EQUALGREATERTHAN_25,
+            # "domestic_use": VS_52.DomesticUse.EQUAL_70_UNTIL_LESSTHAN_100,
+            # "prod_stage": VS_52.ProductionStage.SECONDARY,
+            # "co2_content": VS_52.CO2Content.LESSTHAN_5,
+            # "h2s_content": VS_52.H2SContent.LESSTHAN_100,
+            # "field_reserves_2024": VS_13.FieldReservesAmount.MEDIUM,
+            # "infra_avail_2024": VS_13.InfrastructureAvailability.PARTIALLY_AVAILABLE,
+            # "field_loc_2024": VS_13.FieldLocation.ONSHORE,
 
             # Ministry discretion
             "split_ministry_disc": 0.0,
@@ -552,9 +570,13 @@ class Case04:
             "oil_dmo_volume_portion": 0.25,
             "oil_dmo_fee_portion": 1.0,
             "oil_dmo_holiday_duration": 60,
+            "gas_dmo_volume_portion": 0.25,
+            "gas_dmo_fee_portion": 1.0,
+            "gas_dmo_holiday_duration": 60,
 
             # Carry forward depreciation
             "oil_carry_forward_depreciation": 0.0,
+            "gas_carry_forward_depreciation": 0.0,
         }
 
         # Assign kwargs_gross_split as attribute "self.class_arguments"
@@ -607,7 +629,8 @@ class Case04:
             "effective_tax_rate": 0.22,
             "amortization": True,
             "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
-            "regime": GrossSplitRegime.PERMEN_ESDM_52_2017,
+            "regime": GrossSplitRegime.PERMEN_ESDM_13_2024,
+            "reservoir_type_permen_2024": VariableSplit132024.ReservoirType.MK,
             "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
         }
 

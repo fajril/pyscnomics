@@ -97,7 +97,7 @@ def execute_contract(cls, contract_type, run_as_dict):
 if __name__ == "__main__":
 
     data = Case04()
-    t1 = data.as_dict()
+    data.as_dict()
 
     # # Specify arguments to run "execute_contract()"
     # kwargs_execute = {
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     # print(f'Length: {len()}')
     # print()
 
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    # print('\t')
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
+    # print('t1 = \n', t1)

@@ -984,8 +984,8 @@ def get_grosssplit(data: dict, summary_result: bool = True) -> tuple:
     """
 
     # Specify contract and contract arguments
-    contract = build_grosssplit_instance(data=data)
-    contract_arguments_dict = build_grosssplit_arguments(data=data)
+    contract: GrossSplit = build_grosssplit_instance(data=data)
+    contract_arguments_dict: dict = build_grosssplit_arguments(data=data)
 
     # Execute GrossSplit instance
     contract.run(**contract_arguments_dict)
