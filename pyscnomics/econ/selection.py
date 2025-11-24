@@ -459,7 +459,7 @@ class VariableSplit522017:
         """
         Field Status variable split component.
         """
-        
+
         POD_I = "Plan of Development I"
         POD_II = "Plan of Development II"
         NO_POD = "No Plan of Development"

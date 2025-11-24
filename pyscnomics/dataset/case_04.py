@@ -535,22 +535,8 @@ class Case04:
 
         kwargs_gross_split = {
             # Field and reservoir properties
-            "field_status": "No POD",
-            "field_loc": "Onshore",
-            "res_depth": "<=2500",
-            "infra_avail": "Well Developed",
-            "res_type": "Conventional",
-            "api_oil": ">=25",
-            "domestic_use": "70<=x<100",
-            "prod_stage": "Secondary",
-            "co2_content": "<5",
-            "h2s_content": "<100",
-            "field_reserves_2024": VS_13.FieldReservesAmount.MEDIUM,
-            "infra_avail_2024": VS_13.InfrastructureAvailability.PARTIALLY_AVAILABLE,
-            "field_loc_2024": VS_13.FieldLocation.ONSHORE,
-
-            # "field_status": VS_52.FieldStatus.NO_POD,
-            # "field_loc": VS_52.FieldLocation.ONSHORE,
+            "field_status": VS_52.FieldStatus.NO_POD,
+            "field_loc": VS_52.FieldLocation.ONSHORE,
             # "res_depth": VS_52.ReservoirDepth.LESSEQUAL_2500,
             # "infra_avail": VS_52.InfrastructureAvailability.WELL_DEVELOPED,
             # "res_type": VS_52.ReservoirType.CONVENTIONAL,
@@ -562,21 +548,21 @@ class Case04:
             # "field_reserves_2024": VS_13.FieldReservesAmount.MEDIUM,
             # "infra_avail_2024": VS_13.InfrastructureAvailability.PARTIALLY_AVAILABLE,
             # "field_loc_2024": VS_13.FieldLocation.ONSHORE,
-
-            # Ministry discretion
-            "split_ministry_disc": 0.0,
-
-            # DMO: None,
-            "oil_dmo_volume_portion": 0.25,
-            "oil_dmo_fee_portion": 1.0,
-            "oil_dmo_holiday_duration": 60,
-            "gas_dmo_volume_portion": 0.25,
-            "gas_dmo_fee_portion": 1.0,
-            "gas_dmo_holiday_duration": 60,
-
-            # Carry forward depreciation
-            "oil_carry_forward_depreciation": 0.0,
-            "gas_carry_forward_depreciation": 0.0,
+            #
+            # # Ministry discretion
+            # "split_ministry_disc": 0.0,
+            #
+            # # DMO: None,
+            # "oil_dmo_volume_portion": 0.25,
+            # "oil_dmo_fee_portion": 1.0,
+            # "oil_dmo_holiday_duration": 60,
+            # "gas_dmo_volume_portion": 0.25,
+            # "gas_dmo_fee_portion": 1.0,
+            # "gas_dmo_holiday_duration": 60,
+            #
+            # # Carry forward depreciation
+            # "oil_carry_forward_depreciation": 0.0,
+            # "gas_carry_forward_depreciation": 0.0,
         }
 
         # Assign kwargs_gross_split as attribute "self.class_arguments"
@@ -704,39 +690,44 @@ class Case04:
             else None
         )
 
-        # Convert data in "lifting"
-        lifting: dict = construct_lifting_attr(
-            lifting=tuple([Lifting(**lft) for lft in self.lifting.values()])
-        )
+        print('\t')
+        print(f'Filetype: {type(gs)}')
+        print(f'Length: {len(gs)}')
+        print('gs = \n', gs)
 
-        # Convert data in "capital", "intangible", "opex", and "asr"
-        # Helper method to convert data associated with costs
-        def _construct_cost_attributes(source: dict, Cls):
-            items = tuple([Cls(**val) for val in source.values()])
-            return construct_cost_attr(cost=items)
-
-        cap: dict = _construct_cost_attributes(source=self.capital, Cls=CapitalCost)
-        intang: dict = _construct_cost_attributes(source=self.intangible, Cls=Intangible)
-        op: dict = _construct_cost_attributes(source=self.opex, Cls=OPEX)
-        asr: dict = _construct_cost_attributes(source=self.asr, Cls=ASR)
-        lbt: dict = _construct_cost_attributes(source=self.lbt, Cls=LBT)
-
-        # Mapping converted data
-        mapping: tuple = (
-            ("setup", setup),
-            ("summary_arguments", summary_arguments),
-            ("contract_arguments", contract_arguments),
-            ("grosssplit", gs),
-            ("lifting", lifting),
-            ("capital", cap),
-            ("intangible", intang),
-            ("opex", op),
-            ("asr", asr),
-            ("lbt", lbt),
-        )
-
-        # Return dictionary of json-ready data
-        return {key: val for key, val in mapping}
+        # # Convert data in "lifting"
+        # lifting: dict = construct_lifting_attr(
+        #     lifting=tuple([Lifting(**lft) for lft in self.lifting.values()])
+        # )
+        #
+        # # Convert data in "capital", "intangible", "opex", and "asr"
+        # # Helper method to convert data associated with costs
+        # def _construct_cost_attributes(source: dict, Cls):
+        #     items = tuple([Cls(**val) for val in source.values()])
+        #     return construct_cost_attr(cost=items)
+        #
+        # cap: dict = _construct_cost_attributes(source=self.capital, Cls=CapitalCost)
+        # intang: dict = _construct_cost_attributes(source=self.intangible, Cls=Intangible)
+        # op: dict = _construct_cost_attributes(source=self.opex, Cls=OPEX)
+        # asr: dict = _construct_cost_attributes(source=self.asr, Cls=ASR)
+        # lbt: dict = _construct_cost_attributes(source=self.lbt, Cls=LBT)
+        #
+        # # Mapping converted data
+        # mapping: tuple = (
+        #     ("setup", setup),
+        #     ("summary_arguments", summary_arguments),
+        #     ("contract_arguments", contract_arguments),
+        #     ("grosssplit", gs),
+        #     ("lifting", lifting),
+        #     ("capital", cap),
+        #     ("intangible", intang),
+        #     ("opex", op),
+        #     ("asr", asr),
+        #     ("lbt", lbt),
+        # )
+        #
+        # # Return dictionary of json-ready data
+        # return {key: val for key, val in mapping}
 
     def as_class(self) -> GrossSplit:
         """

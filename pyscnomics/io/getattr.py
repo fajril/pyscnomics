@@ -797,6 +797,103 @@ def convert_enum_initial_amortization_year(
     )
 
 
+def convert_enum_var_split_08_2017(
+    objects: (
+        VariableSplit522017.FieldStatus
+        | VariableSplit522017.FieldLocation
+        | VariableSplit522017.ReservoirDepth
+        | VariableSplit522017.InfrastructureAvailability
+        | VariableSplit522017.ReservoirType
+        | VariableSplit522017.CO2Content
+        | VariableSplit522017.H2SContent
+        | VariableSplit522017.APIOil
+        | VariableSplit522017.DomesticUse
+        | VariableSplit522017.ProductionStage
+    )
+) -> str:
+
+    # Define short aliases
+    VS = VariableSplit522017
+    fstatus = VS.FieldStatus
+    floc = VS.FieldLocation
+    rdepth = VS.ReservoirDepth
+    infra = VS.InfrastructureAvailability
+    rtype = VS.ReservoirType
+    co2 = VS.CO2Content
+    h2s = VS.H2SContent
+    api = VS.APIOil
+    dom_use = VS.DomesticUse
+    prod_stg = VS.ProductionStage
+
+    # Mapping datatype, enum, and string representation
+    mapping_dict = {
+        fstatus: {
+            fstatus.POD_I: "POD I",
+            fstatus.POD_II: "POD II",
+            fstatus.NO_POD: "No POD",
+        },
+        floc: {
+            floc.ONSHORE: "Onshore",
+            floc.OFFSHORE_0_UNTIL_LESSEQUAL_20: "Offshore (0<h<=20)",
+            floc.OFFSHORE_20_UNTIL_LESSEQUAL_50: "Offshore (20<h<=50)",
+            floc.OFFSHORE_50_UNTIL_LESSEQUAL_150: "Offshore (50<h<=150)",
+            floc.OFFSHORE_150_UNTIL_LESSEQUAL_1000: "Offshore (150<h<=1000)",
+            floc.OFFSHORE_GREATERTHAN_1000: "Offshore (h>1000)",
+        },
+        rdepth: {
+            rdepth.LESSEQUAL_2500: "<=2500",
+            rdepth.GREATERTHAN_2500: ">2500",
+        },
+        infra: {
+            infra.WELL_DEVELOPED: "Well Developed",
+            infra.NEW_FRONTIER_OFFSHORE: "New Frontier Offshore",
+            infra.NEW_FRONTIER_ONSHORE: "New Frontier Onshore",
+        },
+        rtype: {
+            rtype.CONVENTIONAL: "Conventional",
+            rtype.NON_CONVENTIONAL: "Non Conventional",
+        },
+        co2: {
+            co2.LESSTHAN_5: "<5",
+            co2.EQUAL_5_UNTIL_LESSTHAN_10: "5<=x<10",
+            co2.EQUAL_10_UNTIL_LESSTHAN_20: "10<=x<20",
+            co2.EQUAL_20_UNTIL_LESSTHAN_40: "20<=x<40",
+            co2.EQUAL_40_UNTIL_LESSTHAN_60: "40<=x<60",
+            co2.EQUALGREATERTHAN_60: "x>=60",
+        },
+        h2s: {
+            h2s.LESSTHAN_100: "<100",
+            h2s.EQUAL_100_UNTIL_LESSTHAN_1000: "100<=x<1000",
+            h2s.EQUAL_1000_UNTIL_LESSTHAN_2000: "1000<=x<2000",
+            h2s.EQUAL_2000_UNTIL_LESSTHAN_3000: "2000<=x<3000",
+            h2s.EQUAL_3000_UNTIL_LESSTHAN_4000: "3000<=x<4000",
+            h2s.EQUALGREATERTHAN_4000: "x>=4000",
+        },
+        api: {
+            api.LESSTHAN_25: "<25",
+            api.EQUALGREATERTHAN_25: ">=25",
+        },
+        dom_use: {
+            dom_use.EQUAL_30_UNTIL_LESSTHAN_50: "30<=x<50",
+            dom_use.EQUAL_50_UNTIL_LESSTHAN_70: "50<=x<70",
+            dom_use.EQUAL_70_UNTIL_LESSTHAN_100: "70<=x<100",
+        },
+        prod_stg: {
+            prod_stg.PRIMARY: "Primary",
+            prod_stg.SECONDARY: "Secondary",
+            prod_stg.TERTIARY: "Tertiary",
+        },
+    }
+
+    for enum_type, mapping in mapping_dict.items():
+        if isinstance(objects, enum_type):
+            return None
+
+
+def convert_enum_var_split_52_2017():
+    pass
+
+
 def convert_enum_var_split_13_2024(
     objects: (
         VariableSplit132024.InfrastructureAvailability

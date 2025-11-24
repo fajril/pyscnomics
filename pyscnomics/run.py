@@ -64,15 +64,15 @@ def execute_contract(cls, contract_type, run_as_dict):
         # Execute the contract and return the results in terms of a dictionary
         if contract_type == ContractType.COST_RECOVERY:
             cr = get_costrecovery(data=contract, summary_result=True)
-            return {"contract": contract, "summary": cr[0]}
+            return {"data": contract, "contract": cr[1], "summary": cr[0]}
 
         elif contract_type == ContractType.GROSS_SPLIT:
             gs = get_grosssplit(data=contract, summary_result=True)
-            return {"contract": contract, "summary": gs[0]}
+            return {"data": contract, "contract": gs[1], "summary": gs[0]}
 
         elif contract_type == ContractType.BASE_PROJECT:
             bp = get_baseproject(data=contract, summary_result=True)
-            return {"contract": contract, "summary": bp[0]}
+            return {"data": contract, "contract": bp[1], "summary": bp[0]}
 
         else:
             raise ValueError(f"Invalid contract type: {contract_type!r}")
@@ -98,6 +98,14 @@ if __name__ == "__main__":
 
     data = Case04()
     data.as_dict()
+
+    # kwargs_execute = {
+    #     "cls": Case04,
+    #     "contract_type": ContractType.GROSS_SPLIT,
+    #     "run_as_dict": True,
+    # }
+    #
+    # ctr = execute_contract(**kwargs_execute)
 
     # # Specify arguments to run "execute_contract()"
     # kwargs_execute = {
