@@ -451,7 +451,7 @@ class Case03:
             ],
         }
 
-        # # Prepare opex OIL: Combine WIWS + Operation + Electricity + Carbon Tax
+        # Prepare opex OIL: Combine WIWS + Operation + Electricity + Carbon Tax
         attrs_numpy: set = {"expense_year", "fixed_cost", "tax_portion"}
         sources = [wiws, operation, electricity, cartax]
 
