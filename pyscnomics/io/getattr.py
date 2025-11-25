@@ -799,6 +799,135 @@ def convert_enum_initial_amortization_year(
 
 def convert_enum_var_split_08_2017(
     objects: (
+        VariableSplit082017.FieldStatus
+        | VariableSplit082017.FieldLocation
+        | VariableSplit082017.ReservoirDepth
+        | VariableSplit082017.InfrastructureAvailability
+        | VariableSplit082017.ReservoirType
+        | VariableSplit082017.CO2Content
+        | VariableSplit082017.H2SContent
+        | VariableSplit082017.APIOil
+        | VariableSplit082017.DomesticUse
+        | VariableSplit082017.ProductionStage
+    )
+) -> str:
+    """
+    Convert an enumeration value from VariableSplit082017 into its string representation.
+
+    This function maps enum members defined under the VariableSplit082017 scheme
+    (e.g., FieldStatus, FieldLocation, ReservoirDepth) to their corresponding
+    human-readable string labels used in split-variable reporting for GR 08/2017.
+
+    Parameters
+    ----------
+    objects : VariableSplit082017.<Enum>
+        An instance of one of the supported enumeration types:
+        ``FieldStatus``, ``FieldLocation``, ``ReservoirDepth``,
+        ``InfrastructureAvailability``, ``ReservoirType``, ``CO2Content``,
+        ``H2SContent``, ``APIOil``, ``DomesticUse``, or ``ProductionStage``.
+
+    Returns
+    -------
+    str
+        The string representation associated with the given enumeration value.
+
+    Raises
+    ------
+    TypeError
+        If ``objects`` is not an instance of any supported VariableSplit082017
+        enumeration class.
+
+    Notes
+    -----
+    The mapping follows the classification categories specified in
+    Government Regulation No. 08/2017 (Indonesia), commonly used for
+    economic evaluation and upstream variable-split calculations.
+    """
+
+    # Define short aliases
+    VS = VariableSplit082017
+    fstatus = VS.FieldStatus
+    floc = VS.FieldLocation
+    rdepth = VS.ReservoirDepth
+    infra = VS.InfrastructureAvailability
+    rtype = VS.ReservoirType
+    co2 = VS.CO2Content
+    h2s = VS.H2SContent
+    api = VS.APIOil
+    dom_use = VS.DomesticUse
+    prod_stg = VS.ProductionStage
+
+    # Mapping datatype, enum, and string representation
+    mapping_dict = {
+        fstatus: {
+            fstatus.POD_I: "POD I",
+            fstatus.POD_II: "POD II",
+            fstatus.POFD: "POFD",
+            fstatus.NO_POD: "No POD",
+        },
+        floc: {
+            floc.ONSHORE: "Onshore",
+            floc.OFFSHORE_0_UNTIL_LESSEQUAL_20: "Offshore (0<h<=20)",
+            floc.OFFSHORE_20_UNTIL_LESSEQUAL_50: "Offshore (20<h<=50)",
+            floc.OFFSHORE_50_UNTIL_LESSEQUAL_150: "Offshore (50<h<=150)",
+            floc.OFFSHORE_150_UNTIL_LESSEQUAL_1000: "Offshore (150<h<=1000)",
+            floc.OFFSHORE_GREATERTHAN_1000: "Offshore (h>1000)",
+        },
+        rdepth: {
+            rdepth.LESSEQUAL_2500: "<=2500",
+            rdepth.GREATERTHAN_2500: ">2500",
+        },
+        infra: {
+            infra.WELL_DEVELOPED: "Well Developed",
+            infra.NEW_FRONTIER: "New Frontier",
+        },
+        rtype: {
+            rtype.CONVENTIONAL: "Conventional",
+            rtype.NON_CONVENTIONAL: "Non Conventional",
+        },
+        co2: {
+            co2.LESSTHAN_5: "<5",
+            co2.EQUAL_5_UNTIL_LESSTHAN_10: "5<=x<10",
+            co2.EQUAL_10_UNTIL_LESSTHAN_20: "10<=x<20",
+            co2.EQUAL_20_UNTIL_LESSTHAN_40: "20<=x<40",
+            co2.EQUAL_40_UNTIL_LESSTHAN_60: "40<=x<60",
+            co2.EQUALGREATERTHAN_60: "x>=60",
+        },
+        h2s: {
+            h2s.LESSTHAN_100: "<100",
+            h2s.EQUAL_100_UNTIL_LESSTHAN_300: "100<=x<300",
+            h2s.EQUAL_300_UNTIL_LESSTHAN_500: "300<=x<500",
+            h2s.EQUALGREATERTHAN_500: "x>=500",
+        },
+        api: {
+            api.LESSTHAN_25: "<25",
+            api.EQUALGREATERTHAN_25: ">=25",
+        },
+        dom_use: {
+            dom_use.LESSTHAN_30: "<30",
+            dom_use.EQUAL_30_UNTIL_LESSTHAN_50: "30<=x<50",
+            dom_use.EQUAL_50_UNTIL_LESSTHAN_70: "50<=x<70",
+            dom_use.EQUAL_70_UNTIL_LESSTHAN_100: "70<=x<100",
+        },
+        prod_stg: {
+            prod_stg.PRIMARY: "Primary",
+            prod_stg.SECONDARY: "Secondary",
+            prod_stg.TERTIARY: "Tertiary",
+        },
+    }
+
+    # Dynamic conversion of enum to string representation based on input object's datatype
+    for enum_type, mapping in mapping_dict.items():
+        if isinstance(objects, enum_type):
+            return _helper_convert_enum_to_str(
+                enum_target=objects, enum_type=enum_type, enum_mapping=mapping
+            )
+
+    raise TypeError(f"Unsupported enum type: {objects.__class__.__qualname__!r}")
+
+
+def convert_enum_var_split_52_2017(
+    objects: (
         VariableSplit522017.FieldStatus
         | VariableSplit522017.FieldLocation
         | VariableSplit522017.ReservoirDepth
@@ -811,6 +940,38 @@ def convert_enum_var_split_08_2017(
         | VariableSplit522017.ProductionStage
     )
 ) -> str:
+    """
+    Convert an enumeration value from VariableSplit522017 into its string representation.
+
+    This function maps enum members defined under the VariableSplit522017 specification
+    (e.g., FieldStatus, FieldLocation, ReservoirDepth) to their corresponding
+    human-readable string labels used in split-variable reporting for GR 52/2017.
+
+    Parameters
+    ----------
+    objects : VariableSplit522017.<Enum>
+        An instance of one of the supported enumeration types:
+        ``FieldStatus``, ``FieldLocation``, ``ReservoirDepth``,
+        ``InfrastructureAvailability``, ``ReservoirType``, ``CO2Content``,
+        ``H2SContent``, ``APIOil``, ``DomesticUse``, or ``ProductionStage``.
+
+    Returns
+    -------
+    str
+        The string representation associated with the given enumeration value.
+
+    Raises
+    ------
+    TypeError
+        If ``objects`` does not belong to any supported VariableSplit522017
+        enumeration class.
+
+    Notes
+    -----
+    The mapping is defined according to the value ranges and classifications
+    specified in Government Regulation No. 52/2017 (Indonesia), commonly
+    used for economic evaluation and variable-split categorization.
+    """
 
     # Define short aliases
     VS = VariableSplit522017
@@ -885,13 +1046,14 @@ def convert_enum_var_split_08_2017(
         },
     }
 
+    # Dynamic conversion of enum to string representation based on input object's datatype
     for enum_type, mapping in mapping_dict.items():
         if isinstance(objects, enum_type):
-            return None
+            return _helper_convert_enum_to_str(
+                enum_target=objects, enum_type=enum_type, enum_mapping=mapping
+            )
 
-
-def convert_enum_var_split_52_2017():
-    pass
+    raise TypeError(f"Unsupported enum type: {objects.__class__.__qualname__!r}")
 
 
 def convert_enum_var_split_13_2024(
@@ -1091,7 +1253,7 @@ def convert_object(objects):
         VariableSplit522017.DomesticUse,
         VariableSplit522017.ProductionStage,
     )):
-        return objects.value
+        return convert_enum_var_split_52_2017(objects=objects)
 
     # Object is VariableSplit082017
     elif isinstance(objects, (
@@ -1106,7 +1268,7 @@ def convert_object(objects):
         VariableSplit082017.DomesticUse,
         VariableSplit082017.ProductionStage,
     )):
-        return objects.value
+        return convert_enum_var_split_08_2017(objects=objects)
 
     # Object is VariableSplit132024
     elif isinstance(objects, (

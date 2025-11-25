@@ -6,6 +6,9 @@ from pyscnomics.econ.selection import (
     OptimizationParameter,
     OptimizationTarget,
     ContractType,
+    VariableSplit082017,
+    VariableSplit522017,
+    VariableSplit132024,
 )
 from pyscnomics.optimize.optimization import (
     adjust_cost_element,
@@ -98,6 +101,9 @@ if __name__ == "__main__":
 
     data = Case04()
     data.as_dict()
+
+    # from pyscnomics.io.getattr import convert_enum_var_split_52_2017
+    # en = convert_enum_var_split_52_2017(objects=VariableSplit522017.FieldStatus.NO_POD)
 
     # kwargs_execute = {
     #     "cls": Case04,
