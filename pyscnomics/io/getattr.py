@@ -1778,7 +1778,7 @@ def construct_baseproject_arguments_attr(contract_arguments: dict) -> dict:
         "sulfur_revenue": ("sulfur_revenue", "Addition to Oil Revenue"),
         "electricity_revenue": ("electricity_revenue", "Addition to Oil Revenue"),
         "co2_revenue": ("co2_revenue", "Addition to Oil Revenue"),
-        "tax_rate": ("tax_rate", 0.0),
+        "vat_rate": ("vat_rate", 0.0),
         "year_inflation": ("year_inflation", None),
         "inflation_rate": ("inflation_rate", 0.0),
         "inflation_rate_applied_to": ("inflation_rate_applied_to", None),

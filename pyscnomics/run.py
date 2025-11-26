@@ -2,6 +2,7 @@
 Execute calculations
 """
 
+import pandas as pd
 from pyscnomics.econ.selection import (
     OptimizationParameter,
     OptimizationTarget,
@@ -10,6 +11,9 @@ from pyscnomics.econ.selection import (
     VariableSplit522017,
     VariableSplit132024,
 )
+from pyscnomics.contracts.project import BaseProject
+from pyscnomics.contracts.costrecovery import CostRecovery
+from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.optimize.optimization import (
     adjust_cost_element,
     adjust_contract,
@@ -23,11 +27,9 @@ from pyscnomics.api.adapter import (
     get_contract_table,
 )
 from pyscnomics.tools.table import get_table
-from pyscnomics.dataset.case_00 import Case00
+from pyscnomics.dataset.case_00A import Case00A
 from pyscnomics.dataset.case_01 import Case01
 from pyscnomics.dataset.case_02 import Case02
-from pyscnomics.dataset.case_03 import Case03
-from pyscnomics.dataset.case_04 import Case04
 
 
 def execute_contract(cls, contract_type, run_as_dict):
@@ -67,15 +69,33 @@ def execute_contract(cls, contract_type, run_as_dict):
         # Execute the contract and return the results in terms of a dictionary
         if contract_type == ContractType.COST_RECOVERY:
             cr = get_costrecovery(data=contract, summary_result=True)
-            return {"data": contract, "contract": cr[1], "summary": cr[0]}
+            return {
+                "data": contract,
+                "contract": cr[1],
+                "contract_arguments": cr[2],
+                "summary_arguments": cr[3],
+                "summary": cr[0],
+            }
 
         elif contract_type == ContractType.GROSS_SPLIT:
             gs = get_grosssplit(data=contract, summary_result=True)
-            return {"data": contract, "contract": gs[1], "summary": gs[0]}
+            return {
+                "data": contract,
+                "contract": gs[1],
+                "contract_arguments": gs[2],
+                "summary_arguments": gs[3],
+                "summary": gs[0],
+            }
 
         elif contract_type == ContractType.BASE_PROJECT:
             bp = get_baseproject(data=contract, summary_result=True)
-            return {"data": contract, "contract": bp[1], "summary": bp[0]}
+            return {
+                "data": contract,
+                "contract": bp[1],
+                "contract_arguments": bp[2],
+                "summary_arguments": bp[3],
+                "summary": bp[0],
+            }
 
         else:
             raise ValueError(f"Invalid contract type: {contract_type!r}")
@@ -93,39 +113,34 @@ def execute_contract(cls, contract_type, run_as_dict):
         # Return the results in terms of summary
         return {
             "contract": contract,
-            "summary": contract.get_summary(**summary_arguments)
+            "contract_arguments": contract_arguments,
+            "summary_arguments": summary_arguments,
+            "summary": contract.get_summary(**summary_arguments),
         }
 
 
 if __name__ == "__main__":
 
-    data = Case04()
-    data.as_dict()
+    kwargs_execute = {
+        "cls": Case00A,
+        "contract_type": ContractType.GROSS_SPLIT,
+        "run_as_dict": True,
+    }
 
-    # from pyscnomics.io.getattr import convert_enum_var_split_52_2017
-    # en = convert_enum_var_split_52_2017(objects=VariableSplit522017.FieldStatus.NO_POD)
+    ctr = execute_contract(**kwargs_execute)
 
-    # kwargs_execute = {
-    #     "cls": Case04,
-    #     "contract_type": ContractType.GROSS_SPLIT,
-    #     "run_as_dict": True,
-    # }
-    #
-    # ctr = execute_contract(**kwargs_execute)
+    data: dict = ctr["data"]
+    contract: BaseProject = ctr["contract"]
+    contract_arguments: dict = ctr["contract_arguments"]
+    summary_arguments: dict = ctr["summary_arguments"]
+    summary: dict = ctr["summary"]
+    cashflow_table: pd.DataFrame = get_table(contract=contract)[0]
 
-    # # Specify arguments to run "execute_contract()"
-    # kwargs_execute = {
-    #     "cls": Case1,
-    #     "contract_type": ContractType.COST_RECOVERY,
-    #     "run_as_dict": False,
-    # }
-    #
-    # # Results in terms of "contract" and "summary"
-    # ctr = execute_contract(**kwargs_execute)
-    # contract = ctr["contract"]
-    # summary = ctr["summary"]
-
-    # get_table(contract=contract)
+    t1 = cashflow_table
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
 
     # # Run case as class's instance
     # contract = data.as_class()

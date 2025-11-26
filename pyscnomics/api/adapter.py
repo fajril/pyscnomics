@@ -2050,9 +2050,11 @@ def get_sensitivity(data: dict, contract_type: str):
 
     This function retrieves the appropriate contract instance, contract arguments,
     and summary arguments based on the specified `contract_type`, and then performs
-    a sensitivity analysis using the `sensitivity_psc` function. The analysis adjusts
-    selected economic parameters (CAPEX, OPEX, OILPRICE, GASPRICE, OILLIFTING, GASLIFTING)
-    according to the sensitivity configuration provided in the input dictionary.
+    a sensitivity analysis using the `sensitivity_psc` function.
+
+    The analysis adjusts selected economic parameters (CAPEX, OPEX, OILPRICE, GASPRICE,
+    ILLIFTING, GASLIFTING) according to the sensitivity configuration provided in the
+    input dictionary.
 
     Parameters
     ----------

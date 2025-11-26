@@ -27,6 +27,7 @@ from pyscnomics.econ.selection import (
     InitialYearAmortizationIncurred,
     NPVSelection,
     DiscountingMode,
+    UncertaintyDistribution,
 )
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import (
@@ -86,6 +87,10 @@ class Case00A:
     contract_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
     summary_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
 
+    # Attributes associated with sensitivity, uncertainty, and optimization arguments
+    sensitivity_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
+    uncertainty_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
+
     def __post_init__(self):
         """
         Initialize all contract components after object creation.
@@ -112,6 +117,8 @@ class Case00A:
         self.get_class_arguments()
         self.get_contract_arguments()
         self.get_summary_arguments()
+        self.get_sensitivity_arguments()
+        self.get_uncertainty_arguments()
 
     def get_lifting(self) -> None:
         """
@@ -1032,6 +1039,46 @@ class Case00A:
             "profitability_discounted": False,
         }
 
+    def get_sensitivity_arguments(self) -> None:
+
+        self.sensitivity_arguments = {
+            "min_deviation": 0.25,
+            "max_deviation": 0.25,
+            "base_value": 1,
+            "step": 10,
+        }
+
+    def get_uncertainty_arguments(self) -> None:
+
+        self.uncertainty_arguments = {
+            "run_number": 1000,
+            "min_oil_price": None,
+            "mean_oil_price": None,
+            "max_oil_price": None,
+            "min_gas_price": None,
+            "mean_gas_price": None,
+            "max_gas_price": None,
+            "min_opex": None,
+            "mean_opex": None,
+            "max_opex": None,
+            "min_capex": None,
+            "mean_capex": None,
+            "max_capex": None,
+            "min_lifting": None,
+            "mean_lifting": None,
+            "max_lifting": None,
+            "oil_price_stddev": 1.25,
+            "gas_price_stddev": 1.25,
+            "opex_stddev": 1.25,
+            "capex_stddev": 1.25,
+            "lifting_stddev": 1.25,
+            "oil_price_distribution": "Normal",
+            "gas_price_distribution": "Normal",
+            "opex_distribution": "Normal",
+            "capex_distribution": "Normal",
+            "lifting_distribution": "Normal",
+        }
+
     def as_dict(self) -> dict:
         """
         Convert all contract-related attributes into a unified dictionary format.
@@ -1101,6 +1148,8 @@ class Case00A:
             ("asr", asr),
             ("lbt", lbt),
             ("cost_of_sales", cos),
+            ("sensitivity_arguments", self.sensitivity_arguments),
+            ("uncertainty_arguments", self.uncertainty_arguments),
         )
 
         return {key: val for key, val in mapping_converted_data}
