@@ -27,18 +27,18 @@ from pyscnomics.api.adapter import (
     get_contract_table,
 )
 from pyscnomics.tools.table import get_table
-from pyscnomics.api.adapter import get_sensitivity, get_uncertainty
+from pyscnomics.api.adapter import get_sensitivity, get_uncertainty, get_contract_optimization
 from pyscnomics.dataset.case_00A import Case00A
 
 
 if __name__ == "__main__":
 
-    case = Case00A(contract_type=ContractType.BASE_PROJECT)
+    case = Case00A(contract_type=ContractType.GROSS_SPLIT)
     data = case.as_dict()
 
-    t1 = get_uncertainty(data=data, contract_type="Base Project")
-
+    # t1 = get_uncertainty(data=data, contract_type="Base Project")
     # t1 = get_sensitivity(data=data, contract_type="Base Project")
+    t1 = get_contract_optimization(data=data, contract_type="Gross Split")
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')

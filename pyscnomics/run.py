@@ -123,7 +123,7 @@ if __name__ == "__main__":
 
     kwargs_execute = {
         "cls": Case00A,
-        "contract_type": ContractType.GROSS_SPLIT,
+        "contract_type": ContractType.BASE_PROJECT,
         "run_as_dict": True,
     }
 
@@ -136,7 +136,7 @@ if __name__ == "__main__":
     summary: dict = ctr["summary"]
     cashflow_table: pd.DataFrame = get_table(contract=contract)[0]
 
-    t1 = cashflow_table
+    t1 = summary
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')
