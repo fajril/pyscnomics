@@ -1,5 +1,5 @@
 """
-CASE 0
+CASE_00A
 """
 
 import numpy as np
@@ -45,7 +45,7 @@ from pyscnomics.io.getattr import (
 
 
 @dataclass
-class Case00:
+class Case00A:
     """
     A container class for building and managing contract data for CASE 0.
 

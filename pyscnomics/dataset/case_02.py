@@ -1,10 +1,12 @@
 """
-CASE 02
+CASE_02
 """
 
 import numpy as np
 from datetime import date
 from dataclasses import dataclass, field
+# from functools import reduce
+# from itertools import chain
 
 # from pyscnomics.contracts.project import BaseProject
 # from pyscnomics.contracts.costrecovery import CostRecovery
@@ -14,7 +16,7 @@ from pyscnomics.econ.selection import (
     CostType,
     # VariableSplit082017,
     VariableSplit522017,
-    # VariableSplit132024,
+    VariableSplit132024,
     # TaxSplitTypeCR,
     ContractType,
     OtherRevenue,
@@ -47,10 +49,10 @@ from pyscnomics.io.getattr import (
 @dataclass
 class Case02:
     """
-    A container class for building and managing contract data for CASE 02.
+    A container class for building and managing contract data for CASE 04.
 
     This class initializes predefined datasets for lifting, capital, intangible,
-    and other economic parameters for CASE 02.
+    and other economic parameters for CASE 04.
 
     Parameters
     ----------
@@ -78,10 +80,10 @@ class Case02:
 
     def __post_init__(self):
         """
-        Finalize contract initialization after dataclass construction.
+        Arrange contract initialization after dataclass construction.
 
         This method validates that the selected contract type is appropriate for
-        CASE 2 (i.e., ``ContractType.GROSS_SPLIT``), and initializes all core
+        CASE 03 (i.e., ``ContractType.GROSS_SPLIT``), and initializes all core
         contract components immediately after object creation.
 
         It automatically computes lifting, expenditures, fiscal terms, and contract
@@ -94,10 +96,10 @@ class Case02:
         - Executed automatically after dataclass instantiation.
         """
 
-        # Only allows GrossSplit as the corresponding contract for CASE 2
+        # Only allows GrossSplit as the corresponding contract for CASE 04
         if self.contract_type is not ContractType.GROSS_SPLIT:
             raise ValueError(
-                f"Contract type for CASE 2 must be ContractType.GROSS_SPLIT, "
+                f"Contract type for CASE 04 must be ContractType.GROSS_SPLIT, "
                 f"not {self.contract_type}"
             )
 
@@ -115,33 +117,55 @@ class Case02:
 
     def get_lifting(self) -> None:
         """
-        Prepare and store oil lifting data.
+        Prepare and store lifting data for the oil stream.
 
-        Assembles yearly oil lifting information (production years, rates, and
-        prices) and stores it in the ``self.lifting`` attribute under the key
-        ``"oil"``. This method does not return a value.
+        Populates the ``self.lifting`` attribute with annual production,
+        lifting rates, prices, and baseline production rates over the
+        contract period.
+
+        Returns
+        -------
+        None
+            The lifting data are stored internally under ``self.lifting["oil"]``.
         """
 
         # Prepare lifting data: OIL
         lifting_oil = {
             "start_year": 2022,
-            "end_year": 2035,
+            "end_year": 2059,
             "prod_year": np.array(
-                [2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035]
+                [
+                    2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033,
+                    2034, 2035, 2036, 2037, 2038, 2039, 2040, 2041, 2042, 2043,
+                    2044, 2045, 2046, 2047, 2048, 2049, 2050, 2051, 2052, 2053,
+                    2054, 2055, 2056, 2057, 2058, 2059
+                ]
             ),
             "lifting_rate": np.array(
                 [
-                    1003.01994465298, 1752.43214595637, 1660.63017314197, 1646.06277634477,
-                    1303.30419844135, 1206.56398735216, 715.464597247899, 575.351449953491,
-                    385.408188212388, 177.896153424466, 95.5608132946032, 53.0868811432885
+                    30.7496489541442, 91.3691250096681, 105.2117737416, 97.139262621418,
+                    90.533729362489, 85.5792058078332, 82.1767593439732, 80.0882775790857,
+                    79.879371564412, 79.4464749677659, 77.5683213452095, 71.638954251559,
+                    65.1294562028971, 58.9095677329961, 53.6991479763489, 49.6650737250467,
+                    46.6963360741145, 43.8233608711693, 41.471939632469, 37.0017482431865,
+                    34.9082578255658, 35.2733186573718, 33.8063034227161, 31.9699848194289,
+                    29.9664106553551, 28.030659603899, 26.4891113187661, 21.994061356818,
+                    18.3657109734312, 15.5130066438716, 14.6478842083992, 14.1974383820702,
+                    13.8538282850916, 13.434870745507, 13.0705202140086, 12.7837967284562
                 ]
             ),
-            "price": np.array([75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75]),
+            "price": np.array(
+                [
+                    60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60,
+                    60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60,
+                    60, 60, 60, 60
+                ]
+            ),
             "fluid_type": FluidType.OIL,
             "prod_rate_baseline": np.array(
                 [
-                    351_000, 351_000, 351_000, 351_000, 351_000, 351_000, 351_000,
-                    351_000, 351_000, 351_000, 351_000, 351_000
+                    0, 0, 0, 0, 0, 30000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    30000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                 ]
             ),
         }
@@ -151,47 +175,34 @@ class Case02:
 
     def get_capital(self) -> None:
         """
-        Prepare and store oil capital cost data.
+        Prepare and store capital cost data for the oil stream.
 
-        Assembles predefined capital expenditure information (years, costs,
-        depreciation attributes, and metadata) and stores it in the
-        ``self.capital`` attribute under the key ``"oil"``.
+        Populates the ``self.capital`` attribute with annual expenditure,
+        depreciation parameters, cost types, and tax-related attributes
+        for all capital items.
 
-        Notes
-        -----
-        - Covers expense years 2024–2028 with a project span of 2022–2035.
-        - All costs are allocated to ``FluidType.OIL`` and marked as
-          ``CostType.POST_ONSTREAM_COST``.
-        - Depreciation factors assume a 5-year useful life at 25% per year.
+        Returns
+        -------
+        None
+            The capital cost data are stored internally under ``self.capital["oil"]``.
         """
 
         # Prepare capital data: OIL
         capital_oil = {
             "start_year": 2022,
-            "end_year": 2035,
-            "expense_year": np.array([2024, 2025, 2026, 2027, 2028]),
-            "cost": np.array(
-                [
-                    46770.5618086779, 39367.6743830341, 14092.6047468454,
-                    146.200209593186, 205.10626669388
-                ]
-            ),
-            "cost_allocation": [
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL
-            ],
-            "pis_year": np.array([2024, 2025, 2026, 2027, 2028]),
-            "useful_life": np.array([5, 5, 5, 5, 5]),
-            "depreciation_factor": np.array([0.25, 0.25, 0.25, 0.25, 0.25]),
+            "end_year": 2059,
+            "expense_year": np.array([2024, 2025, 2024, 2025]),
+            "cost": np.array([428.144, 798.591, 345.992135389933, 528.104270779866]),
+            "cost_allocation": [FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL],
+            "pis_year": np.array([2024, 2025, 2024, 2025]),
+            "useful_life": np.array([5, 5, 5, 5]),
+            "depreciation_factor": np.array([0.25, 0.25, 0.25, 0.25]),
             "cost_type": [
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST
             ],
-            "tax_portion": np.array([0, 0, 0, 0, 0]),
-            "description": [
-                "Tang DWO", "Tang DWO", "Tang DWO", "Tang DWO", "Tang DWO"
-            ],
+            "tax_portion": np.array([1.0, 1.0, 1.0, 1.0]),
+            "description": ["Tang DWO", "Tang DWO", "PF", "PF"],
         }
 
         # Store capital costs as the class's attribute: "self.capital"
@@ -199,44 +210,27 @@ class Case02:
 
     def get_intangible(self) -> None:
         """
-        Prepare and store oil intangible cost data.
-
-        Assembles predefined intangible expenditures (expense years, costs,
-        allocation, cost types, and metadata) and assigns them to the
-        ``self.intangible`` attribute under the key ``"oil"``.
+        Populate the intangible (non-capital) cost components for the OIL stream.
 
         Notes
         -----
-        - Covers expense years 2024–2028 within a 2022–2035 project period.
-        - All costs are allocated to ``FluidType.OIL`` and categorized as
-          ``CostType.POST_ONSTREAM_COST``.
-        - Tax portion is fixed at zero for all items.
+        - Covers intangible post-onstream expenditures only.
+        - All values are stored as raw arrays/lists to match downstream
+          consumption in the Intangible cost model.
+        - The resulting dictionary is assigned to ``self.intangible`` with the key
+          ``"oil"``.
         """
 
         # Prepare intangible cost: OIL
         intangible_oil = {
             "start_year": 2022,
-            "end_year": 2035,
-            "expense_year": np.array([2024, 2025, 2026, 2027, 2028]),
-            "cost": np.array(
-                [
-                    138_789.463632672, 64_991.8968456878, 1_017.66466282672,
-                    1_109.75384628443, 1_724.02172015002
-                ]
-            ),
-            "cost_allocation": [
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL
-            ],
-            "cost_type": [
-                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST
-            ],
-            "tax_portion": np.array([0, 0, 0, 0, 0]),
-            "description": [
-                "Intang DWO", "Intang DWO", "Intang DWO", "Intang DWO", "Intang DWO"
-            ],
+            "end_year": 2059,
+            "expense_year": np.array([2024, 2025]),
+            "cost": np.array([3176.383, 6605.103]),
+            "cost_allocation": [FluidType.OIL, FluidType.OIL],
+            "cost_type": [CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST],
+            "tax_portion": np.array([1.0, 1.0]),
+            "description": ["Intang DWO", "Intang DWO"],
         }
 
         # Store intangible cost as the class's attribute: "self.intangible"
@@ -244,113 +238,174 @@ class Case02:
 
     def get_opex(self) -> None:
         """
-        Prepare and store oil operating expenditure (OPEX) data.
-
-        Assembles predefined OPEX information (expense years, fixed costs,
-        allocation, cost types, and metadata) and stores it under the
-        ``self.opex`` attribute with the key ``"oil"``.
+        Populate the operating expenditure (OPEX) components for the OIL stream.
 
         Notes
         -----
-        - Covers expense years 2023–2035 within a 2022–2035 project timeline.
-        - Allocation is fully assigned to ``FluidType.OIL``.
-        - Cost types include both ``CostType.PRE_ONSTREAM_COST`` and
-          ``CostType.POST_ONSTREAM_COST``.
-        - Tax portion is zero for all cost entries.
+        - Covers routine post-onstream OPEX from 2024–2059.
+        - Arrays must remain aligned by index across all fields
+          (expense year, fixed cost, allocation, cost type, etc.).
+        - The resulting dictionary is stored under ``self.opex["oil"]``.
         """
 
-        # Prepare opex: OIL
+        # Prepare opex OIL
         opex_oil = {
             "start_year": 2022,
-            "end_year": 2035,
+            "end_year": 2059,
             "expense_year": np.array(
                 [
-                    2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030,
-                    2031, 2032, 2033, 2034, 2035
+                    2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033,
+                    2034, 2035, 2036, 2037, 2038, 2039, 2040, 2041, 2042, 2043,
+                    2044, 2045, 2046, 2047, 2048, 2049, 2050, 2051, 2052, 2053,
+                    2054, 2055, 2056, 2057, 2058, 2059
                 ]
             ),
             "fixed_cost": np.array(
                 [
-                    0, 971.292234114079, 2457.37777867217, 3101.47410075184, 3499.0467473904,
-                    3643.77149457785, 4144.81094457935, 4557.10420220148, 3879.78558891758,
-                    3433.61380883011, 3469.40440315405, 1683.43593564488, 491.387568792144
+                    284.471152404579, 1081.03004928944, 973.33516123829, 898.654746363262,
+                    837.545637078258, 791.710348769426, 760.233636042965, 740.912673539638,
+                    738.980042216689, 734.975229221796, 717.600054428802, 662.746293572023,
+                    602.525625224242, 544.984193011494, 496.781557758799, 459.461530045152,
+                    431.997144288848, 405.418676091361, 383.665207927897, 342.310573347367,
+                    322.943274795874, 326.320525563078, 312.748874224231, 295.760723561501,
+                    277.225258254821, 259.31723812759, 245.056066632169, 203.471460424194,
+                    169.904865357406, 143.513927063785, 135.510506388743, 131.343341960208,
+                    128.164536231039, 124.288676240834, 120.917996603837, 118.265460294294
                 ]
             ),
             "cost_allocation": [
                 FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
                 FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL
             ],
             "cost_type": [
-                CostType.PRE_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST
             ],
-            "tax_portion": np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            "tax_portion": np.array(
+                [
+                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+            ),
             "description": [
-                "all OPEX", "all OPEX", "all OPEX", "all OPEX", "all OPEX", "all OPEX",
-                "all OPEX", "all OPEX", "all OPEX", "all OPEX", "all OPEX", "all OPEX",
-                "all OPEX"
+                "OPEX Rutin", "OPEX Rutin", "OPEX Rutin", "OPEX Rutin", "OPEX Rutin",
+                "OPEX Rutin", "OPEX Rutin", "OPEX Rutin", "OPEX Rutin", "OPEX Rutin",
+                "OPEX Rutin", "OPEX Rutin", "OPEX Rutin", "OPEX Rutin", "OPEX Rutin",
+                "OPEX Rutin", "OPEX Rutin", "OPEX Rutin", "OPEX Rutin", "OPEX Rutin",
+                "OPEX Rutin", "OPEX Rutin", "OPEX Rutin", "OPEX Rutin", "OPEX Rutin",
+                "OPEX Rutin", "OPEX Rutin", "OPEX Rutin", "OPEX Rutin", "OPEX Rutin",
+                "OPEX Rutin", "OPEX Rutin", "OPEX Rutin", "OPEX Rutin", "OPEX Rutin",
+                "OPEX Rutin"
             ],
         }
 
-        # Store opex as class's attribute: "self.opex"
+        # Store opex oil as class's attribute: "self.opex"
         self.opex = {"oil": opex_oil}
 
     def get_asr(self) -> None:
         """
-        Prepare and store abandonment and site restoration (ASR) costs.
-
-        Constructs ASR data for oil — including timing, yearly costs,
-        allocations, and cost-type classification — and stores it under
-        ``self.asr`` with the key ``"oil"``.
+        Populate the Abandonment and Site Restoration (ASR) cost components for OIL.
 
         Notes
         -----
-        - Timeline covers 2022–2035; expenses occur from 2023 onward.
-        - All costs are allocated to ``FluidType.OIL``.
-        - The first cost entry is pre-onstream; subsequent entries are classified
-          as ``CostType.POST_ONSTREAM_COST``.
-        - Cost data is provided as NumPy arrays for vectorized operations.
+        - Loads ASR costs for 2024–2059 with constant annual values.
+        - ``final_year`` mirrors ``expense_year`` and indicates the ASR liability year.
+        - ASR is treated as non-taxable (``tax_portion = 0``).
+        - All fields must remain index-aligned across arrays.
+        - Stored under ``self.asr["oil"]``.
         """
 
         # Prepare ASR: OIL
         asr_oil = {
             "start_year": 2022,
-            "end_year": 2035,
+            "end_year": 2059,
             "expense_year": np.array(
                 [
-                    2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031,
-                    2032, 2033, 2034, 2035
+                    2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034,
+                    2035, 2036, 2037, 2038, 2039, 2040, 2041, 2042, 2043, 2044, 2045,
+                    2046, 2047, 2048, 2049, 2050, 2051, 2052, 2053, 2054, 2055, 2056,
+                    2057, 2058, 2059
                 ]
             ),
             "cost": np.array(
                 [
-                    0, 478.57133137928, 838.67985905111, 1136.99948801868,
-                    1136.99948801868, 1136.99948801868, 1136.99948801868,
-                    1136.99948801868, 1136.99948801868, 1136.99948801868,
-                    1136.99948801868, 1136.99948801868, 1136.99948801868
+                    28.1677060157542, 28.1677060157542, 28.1677060157542, 28.1677060157542,
+                    28.1677060157542, 28.1677060157542, 28.1677060157542, 28.1677060157542,
+                    28.1677060157542, 28.1677060157542, 28.1677060157542, 28.1677060157542,
+                    28.1677060157542, 28.1677060157542, 28.1677060157542, 28.1677060157542,
+                    28.1677060157542, 28.1677060157542, 28.1677060157542, 28.1677060157542,
+                    28.1677060157542, 28.1677060157542, 28.1677060157542, 28.1677060157542,
+                    28.1677060157542, 28.1677060157542, 28.1677060157542, 28.1677060157542,
+                    28.1677060157542, 28.1677060157542, 28.1677060157542, 28.1677060157542,
+                    28.1677060157542, 28.1677060157542, 28.1677060157542, 28.1677060157542
                 ]
             ),
             "cost_allocation": [
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
                 FluidType.OIL
             ],
             "cost_type": [
-                CostType.PRE_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST
             ],
+            "final_year": np.array(
+                [
+                    2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034,
+                    2035, 2036, 2037, 2038, 2039, 2040, 2041, 2042, 2043, 2044, 2045,
+                    2046, 2047, 2048, 2049, 2050, 2051, 2052, 2053, 2054, 2055, 2056,
+                    2057, 2058, 2059
+                ]
+            ),
+            "tax_portion": np.array(
+                [
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+            ),
         }
 
         # Store ASR cost as class's attribute: "self.asr"
@@ -358,55 +413,78 @@ class Case02:
 
     def get_lbt(self) -> None:
         """
-        Prepare and store land and building tax (LBT) costs.
-
-        Builds LBT cost data for oil — including cost timeline, yearly
-        values, allocation, and cost-type classification — and stores it
-        under ``self.lbt`` with the key ``"oil"``.
+        Populate the Land and Building Tax (LBT) cost components for the OIL stream.
 
         Notes
         -----
-        - Cost timeline spans 2022–2035; expenses occur from 2023 onward.
-        - All entries are allocated to ``FluidType.OIL``.
-        - First entry uses ``CostType.PRE_ONSTREAM_COST``; remaining entries
-          are ``CostType.POST_ONSTREAM_COST``.
-        - ``cost`` and ``expense_year`` are NumPy arrays for vectorized use
-          in downstream calculations.
+        - Covers annual post-onstream LBT costs from 2024–2059.
+        - All arrays must remain index-aligned across fields
+          (expense year, cost, allocation, cost type, tax portion).
+        - LBT is non-taxable in this configuration (``tax_portion = 0``).
+        - The resulting dictionary is stored under ``self.lbt["oil"]``.
         """
 
         # Prepare LBT: OIL
         lbt_oil = {
             "start_year": 2022,
-            "end_year": 2035,
+            "end_year": 2059,
             "expense_year": np.array(
                 [
-                    2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031,
-                    2032, 2033, 2034, 2035
+                    2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034,
+                    2035, 2036, 2037, 2038, 2039, 2040, 2041, 2042, 2043, 2044, 2045,
+                    2046, 2047, 2048, 2049, 2050, 2051, 2052, 2053, 2054, 2055, 2056,
+                    2057, 2058, 2059
                 ]
             ),
             "cost": np.array(
                 [
-                    0, 0, 1718.30476967245, 3752.23099766397, 3812.96275956648,
-                    2746.88736465813, 1971.62024928616, 1464.00914775356,
-                    1000.50006761995, 814.840751988436, 457.13115224711,
-                    356.605652566246, 191.296236384866
+                    37.0471770599529, 110.081521811648, 126.75914500388, 117.033383606284,
+                    109.075037135927, 103.105827157277, 99.006559657619, 96.4903568272824,
+                    96.2386668608036, 95.7171130411643, 93.4543135567084, 86.3106120822783,
+                    78.4679688332504, 70.9742472047137, 64.6967334819052, 59.8364808239363,
+                    56.2597457020932, 52.7983851775847, 49.9653928691986, 44.5797062833911,
+                    42.0574690282417, 42.4972943184015, 40.7298343636884, 38.5174377104479,
+                    36.1035315575718, 33.7713386907775, 31.9140813168494, 26.4984451226943,
+                    22.1270085807899, 18.6900704045364, 17.6477708942794, 17.1050737627182,
+                    16.6910923178783, 16.1863322741868, 15.7473627538376, 15.4019182984441
                 ]
             ),
             "cost_allocation": [
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
                 FluidType.OIL
             ],
             "cost_type": [
-                CostType.PRE_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST
             ],
+            "tax_portion": np.array(
+                [
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+            ),
         }
 
         # Store LBT cost data as class's attribute "self.lbt"
@@ -414,15 +492,16 @@ class Case02:
 
     def get_setup_arguments(self) -> None:
         """
-        Prepare and store general setup arguments for the contract.
+        Define and store general setup arguments for the project.
 
-        Defines project-wide configuration parameters (dates, approvals, and POD
-        status) and stores them in the ``self.setup_arguments`` attribute.
+        Initializes key project timeline parameters such as start and end dates,
+        onstream dates for oil and gas, approval year, and POD-1 status, then
+        stores them in the `self.setup_arguments` attribute.
         """
 
         self.setup_arguments = {
             "start_date": date(year=2022, month=1, day=1),
-            "end_date": date(year=2035, month=12, day=31),
+            "end_date": date(year=2059, month=12, day=31),
             "oil_onstream_date": date(year=2024, month=1, day=1),
             "gas_onstream_date": None,
             "approval_year": None,
@@ -431,25 +510,28 @@ class Case02:
 
     def get_class_arguments(self) -> None:
         """
-        Set class-level arguments based on the selected contract type.
+        Initialize Gross Split–specific class-level arguments.
 
-        Constructs a mapping of arguments required by each contract class:
-        cost-recovery, gross-split, and base-project. For gross-split, the
-        method prepares a full set of reservoir, field, DMO, and fiscal
-        parameters (using the VariableSplit522017 model). The appropriate
-        argument dictionary is then selected based on ``self.contract_type``
-        and stored in ``self.class_arguments``.
+        Populates ``self.class_arguments`` with all contract parameters
+        required under the 2017 Variable Split 52 scheme, including field
+        characteristics, reservoir properties, ministry discretion, domestic
+        market obligation (DMO) settings, and carry-forward depreciation.
+
+        Returns
+        -------
+        None
 
         Notes
         -----
-        - Only ``ContractType.GROSS_SPLIT`` requires predefined parameters.
-        - ``ContractType.COST_RECOVERY`` and ``ContractType.BASE_PROJECT``
-          currently use empty argument mappings.
-        - Raises a ``ValueError`` if ``self.contract_type`` is not recognized.
+        - All parameter values are defined according to the
+          ``VariableSplit522017`` regulatory framework.
+        - The resulting dictionary is later merged when constructing the
+          ``GrossSplit`` contract instance.
         """
 
-        # Gross split
+        # Gross split regime
         VS_52 = VariableSplit522017
+        VS_13 = VariableSplit132024
 
         kwargs_gross_split = {
             # Field and reservoir properties
@@ -458,63 +540,67 @@ class Case02:
             "res_depth": VS_52.ReservoirDepth.LESSEQUAL_2500,
             "infra_avail": VS_52.InfrastructureAvailability.WELL_DEVELOPED,
             "res_type": VS_52.ReservoirType.CONVENTIONAL,
-            "api_oil": VS_52.APIOil.LESSTHAN_25,
-            "domestic_use": VS_52.DomesticUse.EQUAL_50_UNTIL_LESSTHAN_70,
+            "api_oil": VS_52.APIOil.EQUALGREATERTHAN_25,
+            "domestic_use": VS_52.DomesticUse.EQUAL_70_UNTIL_LESSTHAN_100,
             "prod_stage": VS_52.ProductionStage.SECONDARY,
             "co2_content": VS_52.CO2Content.LESSTHAN_5,
             "h2s_content": VS_52.H2SContent.LESSTHAN_100,
+            "field_reserves_2024": VS_13.FieldReservesAmount.MEDIUM,
+            "infra_avail_2024": VS_13.InfrastructureAvailability.PARTIALLY_AVAILABLE,
+            "field_loc_2024": VS_13.FieldLocation.ONSHORE,
 
             # Ministry discretion
-            "split_ministry_disc": 0.08,
+            "split_ministry_disc": 0.0,
 
-            # DMO
+            # DMO: None,
             "oil_dmo_volume_portion": 0.25,
             "oil_dmo_fee_portion": 1.0,
             "oil_dmo_holiday_duration": 60,
+            "gas_dmo_volume_portion": 0.25,
+            "gas_dmo_fee_portion": 1.0,
+            "gas_dmo_holiday_duration": 60,
 
             # Carry forward depreciation
             "oil_carry_forward_depreciation": 0.0,
             "gas_carry_forward_depreciation": 0.0,
         }
 
-        # Class argument's mapping
-        class_args_map = {
-            ContractType.COST_RECOVERY: {},
-            ContractType.GROSS_SPLIT: kwargs_gross_split,
-            ContractType.BASE_PROJECT: {},
-        }
-
-        try:
-            self.class_arguments = class_args_map[self.contract_type]
-
-        except KeyError:
-            raise ValueError(f"Unrecognized contract type: {self.contract_type!r}")
+        # Assign kwargs_gross_split as attribute "self.class_arguments"
+        self.class_arguments = kwargs_gross_split
 
     def get_contract_arguments(self) -> None:
         """
-        Assign contract-level arguments based on contract type.
+        Build and assign contract-level arguments for Gross Split PSC evaluation.
 
-        Selects predefined parameter dictionaries for Base Project,
-        Gross Split, or Cost Recovery contracts and stores the selected
-        mapping in ``self.contract_arguments``.
+        This method constructs the full set of fiscal and economic parameters used
+        during contract execution. It starts with base-project settings (e.g.,
+        revenue classification, VAT, inflation) and extends them with Gross
+        Split–specific terms such as tax regime, depreciation method,
+        amortization rules, and cumulative production split adjustments. The final
+        dictionary is stored in ``self.contract_arguments``.
 
-        Notes
-        -----
-        - Base Project and Gross Split share core revenue and inflation
-          settings; Gross Split extends these with depreciation, tax,
-          amortization, and regime parameters.
-        - Raises a ``ValueError`` if ``self.contract_type`` is invalid.
+        Returns
+        -------
+        None
+            Updates ``self.contract_arguments`` in place.
         """
 
         # Base project
         args_base_project = {
             "sulfur_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
             "electricity_revenue": OtherRevenue.ADDITION_TO_OIL_REVENUE,
-            "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            "vat_rate": 0.0,
+            "co2_revenue": OtherRevenue.REDUCTION_TO_OIL_OPEX,
+            "vat_rate": np.array(
+                [
+                    0.11, 0.11, 0.11, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12,
+                    0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12,
+                    0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12,
+                    0.12, 0.12, 0.12, 0.12, 0.12
+                ]
+            ),
             "year_inflation": None,
             "inflation_rate": 0.0,
-            "inflation_rate_applied_to": None,
+            "inflation_rate_applied_to": "None",
         }
 
         # Gross split
@@ -525,96 +611,67 @@ class Case02:
             "decline_factor": 2,
             "sum_undepreciated_cost": True,
             "is_dmo_end_weighted": True,
-            "tax_regime": TaxRegime.PREVAILING,
-            "effective_tax_rate": 0.2,
+            "tax_regime": TaxRegime.NAILED_DOWN,
+            "effective_tax_rate": 0.22,
             "amortization": True,
             "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
-            "regime": GrossSplitRegime.PERMEN_ESDM_12_2020,
+            "regime": GrossSplitRegime.PERMEN_ESDM_13_2024,
+            "reservoir_type_permen_2024": VariableSplit132024.ReservoirType.MK,
             "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
         }
 
-        # Pooled args
-        ctr_args = {
-            ContractType.COST_RECOVERY: {},
-            ContractType.GROSS_SPLIT: args_gross_split,
-            ContractType.BASE_PROJECT: args_base_project,
-        }
-
-        try:
-            self.contract_arguments = ctr_args[self.contract_type]
-
-        except KeyError:
-            raise ValueError(f"Unrecognized contract type: {self.contract_type!r}")
+        # Assign "args_gross_split" as the class's attribute "self.contract_arguments"
+        self.contract_arguments = args_gross_split
 
     def get_summary_arguments(self) -> None:
         """
-        Define and store economic summary configuration parameters.
+        Set summary-level economic parameters for project evaluation.
 
-        Sets up key parameters for project evaluation such as discount rate,
-        NPV mode, and discounting convention, and assigns them to
-        `self.summary_arguments`.
+        Initializes the dictionary of high-level financial settings—such as the
+        discount rate, NPV mode, discounting convention, inflation profile, and
+        profitability options—and assigns it to ``self.summary_arguments`` for use
+        in summary and valuation calculations.
 
-        Notes
-        -----
-        These parameters control how economic indicators like NPV and
-        profitability are calculated in the financial evaluation.
+        Returns
+        -------
+        None
+            Updates ``self.summary_arguments`` in place.
         """
 
         self.summary_arguments = {
             "discount_rate": 0.1,
-            "npv_mode": NPVSelection.NPV_POINT_FORWARD,
-            "discounting_mode": DiscountingMode.MID_YEAR,
-            "discount_rate_start_year": 2022,
+            "npv_mode": NPVSelection.NPV_NOMINAL_TERMS,
+            "discounting_mode": DiscountingMode.END_YEAR,
+            "discount_rate_start_year": 2023,
             "inflation_rate": 0.0,
-            "profitability_discounted": False,
+            "profitability_discounted": True,
         }
 
     def as_dict(self) -> dict:
         """
-        Convert all contract data into a JSON-ready dictionary.
+        Serialize the full contract configuration into a JSON-ready dictionary.
 
-        This method transforms internal contract attributes—such as setup data,
-        summary parameters, contract arguments, lifting profiles, and cost
-        components—into a fully serializable dictionary representation. Objects are
-        converted into primitive types using helper converters so the output can be
-        safely exported (e.g., to JSON).
+        Converts all argument groups—setup, summary, contract, class-specific
+        parameters, lifting data, and each cost category—into serializable
+        dictionary structures. Internally instantiates the appropriate domain
+        classes (e.g., ``Lifting``, ``CapitalCost``, ``Intangible``) before
+        constructing their JSON-compatible representations.
+
+        Notes
+        -----
+        - Class-specific arguments are included only when the contract type is
+          ``GROSS_SPLIT``.
+        - Lifting and all cost components are rebuilt as tuples of domain objects
+          before being passed to helper constructors.
+        - All nested objects are converted using ``convert_object`` to ensure
+          JSON serialization compatibility.
 
         Returns
         -------
         dict
-            A dictionary containing JSON-ready representations of all contract
-            components. The structure includes:
-
-            - ``setup`` : dict
-              Converted setup parameters.
-
-            - ``summary_arguments`` : dict
-              Summary-level arguments prepared for serialization.
-
-            - ``contract_arguments`` : dict
-              Contract-specific arguments.
-
-            - ``grosssplit`` : dict or None
-              Converted class-level arguments for Gross Split contracts; ``None``
-              for all other contract types.
-
-            - ``lifting`` : dict
-              Converted lifting attributes.
-
-            - ``capital`` : dict
-              Capital cost data.
-
-            - ``intangible`` : dict
-              Intangible expenditure data.
-
-            - ``opex`` : dict
-              Operating expenditure data.
-
-            - ``asr`` : dict
-              Abandonment, site restoration, and related cost data.
-
-            - ``lbt`` : dict
-              Land and building tax cost data.
+            A dictionary mapping all contract components (setup, summary,
+            contract arguments, class arguments, lifting, and cost structures)
+            to their JSON-ready representations.
         """
 
         # Helper function to convert data stored in an argument dictionary
@@ -669,18 +726,11 @@ class Case02:
 
     def as_class(self) -> GrossSplit:
         """
-        Build and return a contract class instance.
+        Assemble and return a ``GrossSplit`` contract.
 
-        Creates per-fluid objects for lifting and cost components, merges them
-        with setup and contract-level arguments, and initializes a ``GrossSplit``
-        contract instance.
-
-        Notes
-        -----
-        - Currently supports only ``ContractType.GROSS_SPLIT``; raises
-          ``ValueError`` for other types.
-        - Lifting, capital, intangible, OPEX, ASR, and LBT data are converted
-          into their respective component classes before assembly.
+        Initializes the lifting and cost components for oil, converts them into
+        tuple-based inputs, merges all configuration arguments, and constructs
+        the ``GrossSplit`` instance.
         """
 
         fl: list = ["oil"]

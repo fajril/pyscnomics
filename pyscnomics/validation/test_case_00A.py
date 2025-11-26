@@ -1,11 +1,11 @@
 """
-A collection of unit testings for CASE 00
+A collection of unit testings for CASE_00A
 """
 
 # import pytest
 import numpy as np
 from pyscnomics.econ.selection import ContractType
-from pyscnomics.dataset.case_00 import Case00
+from pyscnomics.dataset.case_00A import Case00A
 from pyscnomics.validation.preparation import execute_contract
 from pyscnomics.tools.table import get_table
 
@@ -22,20 +22,17 @@ cost_types = [
 
 # Specify arguments to run function "execute_contract()"
 kwargs_execute = {
-    "cls": Case00,
+    "cls": Case00A,
     "contract_type": ContractType.BASE_PROJECT,
-    "run_as_dict": True,
+    "run_as_dict": False,
 }
 
 # Run the contract using function "execute_contract()"
 ctr = execute_contract(**kwargs_execute)
 
-# Results of run in terms of "data", "contract", and "summary"
-data = ctr["data"]
+# Results of run in terms of "contract", "summary", and "cashflow"
 contract = ctr["contract"]
 summary = ctr["summary"]
-
-# Generate OIL cashflow
 cashflow_oil = get_table(contract=contract)[0]
 
 

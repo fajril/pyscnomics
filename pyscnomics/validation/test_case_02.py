@@ -1,5 +1,5 @@
 """
-A collection of unit testings for CASE 04
+A collection of unit testings for CASE_02
 """
 
 # import pytest
@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.econ.selection import ContractType
-from pyscnomics.dataset.case_04 import Case04
+from pyscnomics.dataset.case_02 import Case02
 from pyscnomics.validation.preparation import execute_contract
 from pyscnomics.tools.table import get_table
 
@@ -23,7 +23,7 @@ cost_types = [
 
 # Specify arguments to run function "execute_contract()"
 kwargs_execute = {
-    "cls": Case04,
+    "cls": Case02,
     "contract_type": ContractType.GROSS_SPLIT,
     "run_as_dict": True,
 }
@@ -38,7 +38,7 @@ summary: dict = ctr["summary"]
 cashflow_table_oil: pd.DataFrame = get_table(contract=contract)[0]
 
 
-def _calc_attr(attr: str) -> np.ndarray:
+def calc_attr(attr: str) -> np.ndarray:
     """
     Return the cashflow array for a given attribute.
 
@@ -55,6 +55,31 @@ def _calc_attr(attr: str) -> np.ndarray:
     return cashflow_table_oil[attr].to_numpy()
 
 
+def run_test_arr(calculated: np.ndarray, expected: np.ndarray, is_strict: bool = False):
+    """
+    Assert numerical agreement between two arrays.
+
+    Parameters
+    ----------
+    calculated : np.ndarray
+        Computed array to test.
+    expected : np.ndarray
+        Reference array.
+    is_strict : bool, default=False
+        If True, require full precision; otherwise compare to 2 decimals.
+
+    Returns
+    -------
+    None
+        Raises an assertion error if the arrays differ.
+    """
+
+    if is_strict:
+        return np.testing.assert_array_almost_equal(calculated, expected)
+
+    return np.testing.assert_array_almost_equal(calculated, expected, decimal=3)
+
+
 def test_project_years():
     """
     Verify that the computed project years match the expected array.
@@ -66,7 +91,7 @@ def test_project_years():
 
     project_yrs = {
         # Calculated result
-        "calculated": _calc_attr(attr="years"),
+        "calculated": calc_attr(attr="years"),
 
         # Expected result
         "expected": np.array(
@@ -80,7 +105,7 @@ def test_project_years():
     }
 
     # Execute testing
-    np.testing.assert_allclose(project_yrs["calculated"], project_yrs["expected"])
+    run_test_arr(**project_yrs)
 
 
 def test_lifting():
@@ -94,21 +119,25 @@ def test_lifting():
 
     lft_oil = {
         # Calculated result
-        "calculated": _calc_attr(attr="lifting"),
+        "calculated": calc_attr(attr="lifting"),
 
         # Expected result
         "expected": np.array(
             [
-                0, 0, 30.75, 91.37, 105.21, 97.14, 90.53, 85.58, 82.18, 80.09, 79.88,
-                79.45, 77.57, 71.64, 65.13, 58.91, 53.70, 49.67, 46.70, 43.82, 41.47,
-                37.00, 34.91, 35.27, 33.81, 31.97, 29.97, 28.03, 26.49, 21.99, 18.37,
-                15.51, 14.65, 14.20, 13.85, 13.43, 13.07, 12.78
+                0, 0, 30.74964895, 91.36912501, 105.2117737, 97.13926262, 90.53372936,
+                85.57920581, 82.17675934, 80.08827758, 79.87937156, 79.44647497,
+                77.56832135, 71.63895425, 65.1294562, 58.90956773, 53.69914798,
+                49.66507373, 46.69633607, 43.82336087, 41.47193963, 37.00174824,
+                34.90825783, 35.27331866, 33.80630342, 31.96998482, 29.96641066,
+                28.0306596, 26.48911132, 21.99406136, 18.36571097, 15.51300664,
+                14.64788421, 14.19743838, 13.85382829, 13.43487075, 13.07052021,
+                12.78379673
             ]
         ),
     }
 
     # Execute testing
-    np.testing.assert_allclose(lft_oil["calculated"], lft_oil["expected"], atol=1e-2)
+    run_test_arr(**lft_oil, is_strict=True)
 
 
 def test_price():
@@ -122,7 +151,7 @@ def test_price():
 
     price_oil = {
         # Calculated result
-        "calculated": _calc_attr(attr="price"),
+        "calculated": calc_attr(attr="price"),
 
         # Expected result
         "expected": np.array(
@@ -135,7 +164,7 @@ def test_price():
     }
 
     # Execute testing
-    np.testing.assert_allclose(price_oil["calculated"], price_oil["expected"])
+    run_test_arr(**price_oil, is_strict=True)
 
 
 def test_revenue():
@@ -150,22 +179,25 @@ def test_revenue():
 
     rev = {
         # Calculated result
-        "calculated": _calc_attr(attr="revenue"),
+        "calculated": calc_attr(attr="revenue"),
 
         # Expected result
         "expected": np.array(
             [
-                0.00, 0.00, 1844.98, 5482.15, 6312.71, 5828.36, 5432.02, 5134.75, 4930.61,
-                4805.30, 4792.76, 4766.79, 4654.10, 4298.34, 3907.77, 3534.57, 3221.95,
-                2979.90, 2801.78, 2629.40, 2488.32, 2220.10, 2094.50, 2116.40, 2028.38,
-                1918.20, 1797.98, 1681.84, 1589.35, 1319.64, 1101.94, 930.78, 878.87,
-                851.85, 831.23, 806.09, 784.23, 767.03
+                0, 0, 1844.978937, 5482.147501, 6312.706424, 5828.355757, 5432.023762,
+                5134.752348, 4930.605561, 4805.296655, 4792.762294, 4766.788498,
+                4654.099281, 4298.337255, 3907.767372, 3534.574064, 3221.948879,
+                2979.904424, 2801.780164, 2629.401652, 2488.316378, 2220.104895,
+                2094.49547, 2116.399119, 2028.378205, 1918.199089, 1797.984639,
+                1681.839576, 1589.346679, 1319.643681, 1101.942658, 930.7803986,
+                878.8730525, 851.8463029, 831.2296971, 806.0922447, 784.2312128,
+                767.0278037
             ]
         ),
     }
 
     # Execute testing
-    np.testing.assert_allclose(rev["calculated"], rev["expected"], atol=1e-2)
+    run_test_arr(**rev, is_strict=True)
 
 
 def test_sulfur():
@@ -181,9 +213,9 @@ def test_sulfur():
     sulfur = {
         # Calculated results
         "calculated": {
-            "lifting": _calc_attr(attr="lifting_sulfur"),
-            "price": _calc_attr(attr="price_sulfur"),
-            "revenue": _calc_attr(attr="revenue_sulfur"),
+            "lifting": calc_attr(attr="lifting_sulfur"),
+            "price": calc_attr(attr="price_sulfur"),
+            "revenue": calc_attr(attr="revenue_sulfur"),
         },
 
         # Expected results
@@ -213,9 +245,9 @@ def test_sulfur():
     expected = sulfur["expected"]
 
     # Execute testings
-    np.testing.assert_allclose(calc["lifting"], expected["lifting"])
-    np.testing.assert_allclose(calc["price"], expected["price"])
-    np.testing.assert_allclose(calc["revenue"], expected["revenue"])
+    run_test_arr(calc["lifting"], expected["lifting"], is_strict=True)
+    run_test_arr(calc["price"], expected["price"], is_strict=True)
+    run_test_arr(calc["revenue"], expected["revenue"], is_strict=True)
 
 
 def test_electricity():
@@ -231,9 +263,9 @@ def test_electricity():
     electricity = {
         # Calculated results
         "calculated": {
-            "lifting": _calc_attr(attr="lifting_electricity"),
-            "price": _calc_attr(attr="price_electricity"),
-            "revenue": _calc_attr(attr="revenue_electricity"),
+            "lifting": calc_attr(attr="lifting_electricity"),
+            "price": calc_attr(attr="price_electricity"),
+            "revenue": calc_attr(attr="revenue_electricity"),
         },
 
         # Expected results
@@ -263,9 +295,9 @@ def test_electricity():
     expected = electricity["expected"]
 
     # Execute testings
-    np.testing.assert_allclose(calc["lifting"], expected["lifting"])
-    np.testing.assert_allclose(calc["price"], expected["price"])
-    np.testing.assert_allclose(calc["revenue"], expected["revenue"])
+    run_test_arr(calc["lifting"], expected["lifting"], is_strict=True)
+    run_test_arr(calc["price"], expected["price"], is_strict=True)
+    run_test_arr(calc["revenue"], expected["revenue"], is_strict=True)
 
 
 def test_co2():
@@ -281,9 +313,9 @@ def test_co2():
     co2 = {
         # Calculated results
         "calculated": {
-            "lifting": _calc_attr(attr="lifting_co2"),
-            "price": _calc_attr(attr="price_co2"),
-            "revenue": _calc_attr(attr="revenue_co2"),
+            "lifting": calc_attr(attr="lifting_co2"),
+            "price": calc_attr(attr="price_co2"),
+            "revenue": calc_attr(attr="revenue_co2"),
         },
 
         # Expected results
@@ -313,9 +345,9 @@ def test_co2():
     expected = co2["expected"]
 
     # Execute testings
-    np.testing.assert_allclose(calc["lifting"], expected["lifting"])
-    np.testing.assert_allclose(calc["price"], expected["price"])
-    np.testing.assert_allclose(calc["revenue"], expected["revenue"])
+    run_test_arr(calc["lifting"], expected["lifting"], is_strict=True)
+    run_test_arr(calc["price"], expected["price"], is_strict=True)
+    run_test_arr(calc["revenue"], expected["revenue"], is_strict=True)
 
 
 def test_sunk_cost():
@@ -337,9 +369,9 @@ def test_sunk_cost():
     sc = {
         # Calculated results
         "calculated": {
-            "depreciable": _calc_attr(attr="sunk_cost_depreciable"),
-            "non_depreciable": _calc_attr(attr="sunk_cost_non_depreciable"),
-            "total": _calc_attr(attr="sunk_cost"),
+            "depreciable": calc_attr(attr="sunk_cost_depreciable"),
+            "non_depreciable": calc_attr(attr="sunk_cost_non_depreciable"),
+            "total": calc_attr(attr="sunk_cost"),
         },
 
         # Expected results
@@ -369,9 +401,9 @@ def test_sunk_cost():
     expected = sc["expected"]
 
     # Execute testings
-    np.testing.assert_allclose(calc["depreciable"], expected["depreciable"])
-    np.testing.assert_allclose(calc["non_depreciable"], expected["non_depreciable"])
-    np.testing.assert_allclose(calc["total"], expected["total"])
+    run_test_arr(calc["depreciable"], expected["depreciable"], is_strict=True)
+    run_test_arr(calc["non_depreciable"], expected["non_depreciable"], is_strict=True)
+    run_test_arr(calc["total"], expected["total"], is_strict=True)
 
 
 def test_preonstream_cost():
@@ -393,9 +425,9 @@ def test_preonstream_cost():
     preos = {
         # Calculated results
         "calculated": {
-            "depreciable": _calc_attr(attr="preonstream_depreciable"),
-            "non_depreciable": _calc_attr(attr="preonstream_non_depreciable"),
-            "total": _calc_attr(attr="preonstream"),
+            "depreciable": calc_attr(attr="preonstream_depreciable"),
+            "non_depreciable": calc_attr(attr="preonstream_non_depreciable"),
+            "total": calc_attr(attr="preonstream"),
         },
 
         # Expected results
@@ -425,9 +457,9 @@ def test_preonstream_cost():
     expected = preos["expected"]
 
     # Execute testings
-    np.testing.assert_allclose(calc["depreciable"], expected["depreciable"])
-    np.testing.assert_allclose(calc["non_depreciable"], expected["non_depreciable"])
-    np.testing.assert_allclose(calc["total"], expected["total"])
+    run_test_arr(calc["depreciable"], expected["depreciable"], is_strict=True)
+    run_test_arr(calc["non_depreciable"], expected["non_depreciable"], is_strict=True)
+    run_test_arr(calc["total"], expected["total"], is_strict=True)
 
 
 def test_postonstream_cost():
@@ -443,9 +475,9 @@ def test_postonstream_cost():
     postos = {
         # Calculated results
         "calculated": {
-            "depreciable": _calc_attr(attr="postonstream_depreciable"),
-            "non_depreciable": _calc_attr(attr="postonstream_non_depreciable"),
-            "total": _calc_attr(attr="postonstream"),
+            "depreciable": calc_attr(attr="postonstream_depreciable"),
+            "non_depreciable": calc_attr(attr="postonstream_non_depreciable"),
+            "total": calc_attr(attr="postonstream"),
         },
 
         # Expected results
@@ -483,15 +515,35 @@ def test_postonstream_cost():
         },
     }
 
-    # Execute testing
-    def _validate(target: str):
-        return np.testing.assert_array_almost_equal(
-            postos["calculated"][target], postos["expected"][target], decimal=3
-        )
+    calc = postos["calculated"]
+    expected = postos["expected"]
 
-    _validate(target="depreciable")
-    _validate(target="non_depreciable")
-    _validate(target="total")
+    # Execute testings
+    run_test_arr(calc["depreciable"], expected["depreciable"])
+    run_test_arr(calc["non_depreciable"], expected["non_depreciable"])
+    run_test_arr(calc["total"], expected["total"])
 
 
+def test_expenditures_pre_tax():
+    pass
+
+
+def test_indirect_tax():
+    pass
+
+
+def test_expenditures_post_tax():
+    pass
+
+
+def test_investments():
+    pass
+
+
+def test_sandbox():
+    t1 = summary
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
 
