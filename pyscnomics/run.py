@@ -122,21 +122,21 @@ def execute_contract(cls, contract_type, run_as_dict):
 if __name__ == "__main__":
 
     kwargs_execute = {
-        "cls": Case00A,
-        "contract_type": ContractType.BASE_PROJECT,
+        "cls": Case02,
+        "contract_type": ContractType.GROSS_SPLIT,
         "run_as_dict": True,
     }
 
     ctr = execute_contract(**kwargs_execute)
 
     data: dict = ctr["data"]
-    contract: BaseProject = ctr["contract"]
+    contract = ctr["contract"]
     contract_arguments: dict = ctr["contract_arguments"]
     summary_arguments: dict = ctr["summary_arguments"]
     summary: dict = ctr["summary"]
     cashflow_table: pd.DataFrame = get_table(contract=contract)[0]
 
-    t1 = summary
+    t1 = data["lbt"]
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')

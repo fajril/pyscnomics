@@ -27,7 +27,7 @@ from pyscnomics.econ.selection import (
     InitialYearAmortizationIncurred,
     NPVSelection,
     DiscountingMode,
-    UncertaintyDistribution,
+    # UncertaintyDistribution,
 )
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import (
