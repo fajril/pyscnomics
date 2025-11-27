@@ -17,7 +17,11 @@ from pyscnomics.optimize.optimization import optimize_psc
 from pyscnomics.optimize.optimization_transition import (
     optimize_psc_core as optimize_psc_trans,
 )
-from pyscnomics.econ.selection import OptimizationParameter, FluidType, SunkCostMethod
+from pyscnomics.econ.selection import (
+    OptimizationParameter,
+    FluidType,
+    SunkCostMethod,
+)
 from pyscnomics.tools.ltp import oil_ltp_predict, gas_ltp_predict
 from pyscnomics.tools.rpd import RPDModel
 from pyscnomics.api.converter import (

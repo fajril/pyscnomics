@@ -32,12 +32,12 @@ from pyscnomics.dataset.case_00A import Case00A
 
 if __name__ == "__main__":
 
-    contract_type = (ContractType.GROSS_SPLIT, "Gross Split")
+    ctr_type = ContractType.GROSS_SPLIT
 
-    case = Case00A(contract_type=contract_type[0])
+    case = Case00A(contract_type=ctr_type)
     data = case.as_dict()
 
-    t1 = get_sensitivity(data=data, contract_type=contract_type[1])
+    t1 = get_sensitivity(data=data, contract_type=ctr_type.value)
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')

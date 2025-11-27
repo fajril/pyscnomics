@@ -622,7 +622,7 @@ class VariableSplit082017:
 
         LESSTHAN_100 = "<100"
         EQUAL_100_UNTIL_LESSTHAN_300 = "100 <= x < 300"
-        EQUAL_300_UNTIL_LESSTHAN_500 = "1000 <= x < 500"
+        EQUAL_300_UNTIL_LESSTHAN_500 = "300 <= x < 500"
         EQUALGREATERTHAN_500 = "500 <= x"
 
     class APIOil(Enum):

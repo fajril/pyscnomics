@@ -237,8 +237,8 @@ def get_table_costrecovery_oil(contract: CostRecovery) -> pd.DataFrame:
 
         # Attributes associated with core business logic
         "investment_credit": _assign_attr("_oil_ic_paid", cr),
-        "unrecovered_cost": _assign_attr("_oil_unrecovered_before_transfer", cr),
         "recoverable_cost": _assign_attr("_oil_recoverable_cost", cr),
+        "unrecovered_cost": _assign_attr("_oil_unrecovered_before_transfer", cr),
         "cost_recovery": _assign_attr("_oil_cost_recovery", cr),
         "ets_before_transfer": _assign_attr("_oil_ets_before_transfer", cr),
         "transfer_to_gas": _assign_attr("_transfer_to_gas", cr),
@@ -406,8 +406,8 @@ def get_table_costrecovery_gas(contract: CostRecovery) -> pd.DataFrame:
 
         # Attributes associated with core business logic
         "investment_credit": _assign_attr("_gas_ic_paid", cr),
-        "unrecovered_cost": _assign_attr("_gas_unrecovered_before_transfer", cr),
         "recoverable_cost": _assign_attr("_gas_recoverable_cost", cr),
+        "unrecovered_cost": _assign_attr("_gas_unrecovered_before_transfer", cr),
         "cost_recovery": _assign_attr("_gas_cost_recovery", cr),
         "ets_before_transfer": _assign_attr("_gas_ets_before_transfer", cr),
         "transfer_to_oil": _assign_attr("_transfer_to_oil", cr),
@@ -585,10 +585,10 @@ def get_table_costrecovery_consolidated(contract: CostRecovery) -> pd.DataFrame:
 
         # Attributes associated with core business logic
         "investment_credit": _assign_attr("_consolidated_ic_paid", cr),
+        "recoverable_cost": _assign_attr("_consolidated_recoverable_cost", cr),
         "unrecovered_cost": _assign_attr(
             "_consolidated_unrecovered_before_transfer", cr
         ),
-        "recoverable_cost": _assign_attr("_consolidated_recoverable_cost", cr),
         "cost_recovery": _assign_attr(
             "_consolidated_cost_recovery_before_transfer", cr
         ),
