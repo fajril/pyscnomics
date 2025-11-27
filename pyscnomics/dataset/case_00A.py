@@ -1102,6 +1102,16 @@ class Case00A:
         }
 
     def get_optimization_arguments(self) -> None:
+        """
+        Set default optimization parameters.
+
+        Returns
+        -------
+        None
+            Populates ``self.optimization_arguments`` with defaults for the
+            optimization target (e.g., IRR), target value, and parameter
+            bounds used in the economic optimization routine.
+        """
 
         self.optimization_arguments = {
             "target_parameter": "IRR",

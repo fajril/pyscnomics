@@ -1,7 +1,8 @@
 """
-Procedures to carry out sensitivity analysis
+Procedures to carry out uncertainty analysis
 """
 
+import pandas as pd
 from pyscnomics.econ.selection import (
     OptimizationParameter,
     OptimizationTarget,
@@ -26,7 +27,7 @@ from pyscnomics.api.adapter import (
     get_contract_table,
 )
 from pyscnomics.tools.table import get_table
-from pyscnomics.api.adapter import get_sensitivity
+from pyscnomics.api.adapter import get_uncertainty
 from pyscnomics.dataset.case_00A import Case00A
 
 
@@ -37,7 +38,7 @@ if __name__ == "__main__":
     case = Case00A(contract_type=contract_type[0])
     data = case.as_dict()
 
-    t1 = get_sensitivity(data=data, contract_type=contract_type[1])
+    t1 = get_uncertainty(data=data, contract_type=contract_type[1])
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')
