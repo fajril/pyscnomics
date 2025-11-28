@@ -192,6 +192,7 @@ def read_cost_type(cost_type: str | list) -> CostType | list[CostType]:
             "sunk_cost": CostType.SUNK_COST,
             "preonstream_cost": CostType.PRE_ONSTREAM_COST,
             "postonstream_cost": CostType.POST_ONSTREAM_COST,
+            None: None,
         }
 
         # Replace each string inside the cost_type list into their

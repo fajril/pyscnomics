@@ -228,7 +228,7 @@ class Case02:
             "expense_year": np.array([2024, 2025]),
             "cost": np.array([3176.383, 6605.103]),
             "cost_allocation": [FluidType.OIL, FluidType.OIL],
-            "cost_type": [CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST],
+            "cost_type": [CostType.POST_ONSTREAM_COST, None],
             "tax_portion": np.array([1.0, 1.0]),
             "description": ["Intang DWO", "Intang DWO"],
         }

@@ -2,6 +2,8 @@
 Execute calculations
 """
 
+import json
+import importlib.resources as resources
 import pandas as pd
 from pyscnomics.econ.selection import (
     OptimizationParameter,
@@ -26,19 +28,20 @@ from pyscnomics.api.adapter import (
     get_baseproject,
     get_contract_table,
 )
+from pyscnomics.dataset.sample import read_cost_type
 from pyscnomics.tools.table import get_table
 from pyscnomics.dataset.case_00A import Case00A
 from pyscnomics.dataset.case_01 import Case01
 from pyscnomics.dataset.case_02 import Case02
 
 
-def execute_contract(cls, contract_type, run_as_dict):
+def execute_contract(case, contract_type, run_as_dict):
     """
     Execute a contract simulation either as a dictionary or as a class instance.
 
     Parameters
     ----------
-    cls : type
+    case : type
         The class constructor used to initialize the contract object.
     contract_type : ContractType
         Type of the contract to execute, e.g., COST_RECOVERY, GROSS_SPLIT, or BASE_PROJECT.
@@ -57,7 +60,7 @@ def execute_contract(cls, contract_type, run_as_dict):
         If an invalid contract type is provided.
     """
 
-    data = cls(contract_type)
+    data = case(contract_type)
 
     # Run contract as dictionary
     if run_as_dict:
@@ -118,11 +121,48 @@ def execute_contract(cls, contract_type, run_as_dict):
             "summary": contract.get_summary(**summary_arguments),
         }
 
+def execute_json(case, contract_type):
+
+    contract = case
+
+    if contract_type == ContractType.COST_RECOVERY:
+        cr = get_costrecovery(data=contract, summary_result=True)
+        return {
+            "data": contract,
+            "contract": cr[1],
+            "contract_arguments": cr[2],
+            "summary_arguments": cr[3],
+            "summary": cr[0],
+        }
+
+    elif contract_type == ContractType.GROSS_SPLIT:
+        gs = get_grosssplit(data=contract, summary_result=True)
+        return {
+            "data": contract,
+            "contract": gs[1],
+            "contract_arguments": gs[2],
+            "summary_arguments": gs[3],
+            "summary": gs[0],
+        }
+
+    elif contract_type == ContractType.BASE_PROJECT:
+        bp = get_baseproject(data=contract, summary_result=True)
+        return {
+            "data": contract,
+            "contract": bp[1],
+            "contract_arguments": bp[2],
+            "summary_arguments": bp[3],
+            "summary": bp[0],
+        }
+
+    else:
+        raise ValueError(f"Invalid contract type: {contract_type!r}")
+
 
 if __name__ == "__main__":
 
     kwargs_execute = {
-        "cls": Case02,
+        "case": Case02,
         "contract_type": ContractType.GROSS_SPLIT,
         "run_as_dict": True,
     }
@@ -136,7 +176,24 @@ if __name__ == "__main__":
     summary: dict = ctr["summary"]
     cashflow_table: pd.DataFrame = get_table(contract=contract)[0]
 
-    t1 = summary
+    # with resources.open_text("pyscnomics.dataset", "duri_field.json") as f:
+    #     data = json.load(f)
+    #
+    # kwargs_execute = {
+    #     "case": data,
+    #     "contract_type": ContractType.GROSS_SPLIT,
+    # }
+    #
+    # ctr = execute_json(**kwargs_execute)
+    #
+    # data: dict = ctr["data"]
+    # contract = ctr["contract"]
+    # contract_arguments: dict = ctr["contract_arguments"]
+    # summary_arguments: dict = ctr["summary_arguments"]
+    # summary: dict = ctr["summary"]
+    # cashflow_table: pd.DataFrame = get_table(contract=contract)[0]
+
+    t1 = cashflow_table
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')
