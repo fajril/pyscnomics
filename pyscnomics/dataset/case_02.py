@@ -615,7 +615,7 @@ class Case02:
             "effective_tax_rate": 0.22,
             "amortization": True,
             "sunk_cost_method": SunkCostMethod.DEPRECIATED_TANGIBLE,
-            "regime": GrossSplitRegime.PERMEN_ESDM_13_2024,
+            "regime": GrossSplitRegime.PERMEN_ESDM_52_2017,
             "reservoir_type_permen_2024": VariableSplit132024.ReservoirType.MK,
             "initial_amortization_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
         }

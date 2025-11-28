@@ -13,7 +13,7 @@ from pyscnomics.tools.table import get_table
 
 
 # Specify cost types
-cost_types = [
+categories = [
     "capital",
     "intangible",
     "opex",
@@ -36,6 +36,15 @@ data: dict = ctr["data"]
 contract: GrossSplit = ctr["contract"]
 summary: dict = ctr["summary"]
 cashflow_table_oil: pd.DataFrame = get_table(contract=contract)[0]
+
+
+def test_sandbox():
+    t1 = cashflow_table_oil
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Keys: {t1.keys()}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
 
 
 def calc_attr(attr: str) -> np.ndarray:
@@ -103,6 +112,12 @@ def test_project_years():
             ]
         ),
     }
+
+    t1 = project_yrs["calculated"]
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
 
     # Execute testing
     run_test_arr(**project_yrs)
@@ -525,25 +540,270 @@ def test_postonstream_cost():
 
 
 def test_expenditures_pre_tax():
-    pass
+    """
+    Test pre-tax expenditure calculations.
+
+    Verifies that computed pre-tax expenditures for each cost category
+    (capital, intangible, opex, and ASR) match expected NumPy arrays.
+    The test compares model-generated results obtained via
+    ``calc_attr('<category>_expenditures_pre_tax')`` against fixed
+    reference values.
+    """
+
+    pre_tax = {
+        # Calculated results
+        "calculated": {
+            cat: calc_attr(attr=f"{cat}_expenditures_pre_tax") for cat in categories
+        },
+
+        # Expected results
+        "expected": {
+            "capital": np.array(
+                [
+                    0, 0, 774.1361354, 1326.695271, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+            ),
+            "intangible": np.array(
+                [
+                    0, 0, 3176.383, 6605.103, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+            ),
+            "opex": np.array(
+                [
+                    0, 0, 284.4711524, 1081.030049, 973.3351612, 898.6547464, 837.5456371,
+                    791.7103488, 760.233636, 740.9126735, 738.9800422, 734.9752292,
+                    717.6000544, 662.7462936, 602.5256252, 544.984193, 496.7815578,
+                    459.46153, 431.9971443, 405.4186761, 383.6652079, 342.3105733,
+                    322.9432748, 326.3205256, 312.7488742, 295.7607236, 277.2252583,
+                    259.3172381, 245.0560666, 203.4714604, 169.9048654, 143.5139271,
+                    135.5105064, 131.343342, 128.1645362, 124.2886762, 120.9179966,
+                    118.2654603
+                ]
+            ),
+            "asr": np.array(
+                [
+                    0, 0, 28.16770602, 28.16770602, 28.16770602, 28.16770602, 28.16770602,
+                    28.16770602, 28.16770602, 28.16770602, 28.16770602, 28.16770602,
+                    28.16770602, 28.16770602, 28.16770602, 28.16770602, 28.16770602,
+                    28.16770602, 28.16770602, 28.16770602, 28.16770602, 28.16770602,
+                    28.16770602, 28.16770602, 28.16770602, 28.16770602, 28.16770602,
+                    28.16770602, 28.16770602, 28.16770602, 28.16770602, 28.16770602,
+                    28.16770602, 28.16770602, 28.16770602, 28.16770602, 28.16770602,
+                    28.16770602
+                ]
+            ),
+            "lbt": np.array(
+                [
+                    0, 0, 37.04717706, 110.0815218, 126.759145, 117.0333836, 109.0750371,
+                    103.1058272, 99.00655966, 96.49035683, 96.23866686, 95.71711304,
+                    93.45431356, 86.31061208, 78.46796883, 70.9742472, 64.69673348,
+                    59.83648082, 56.2597457, 52.79838518, 49.96539287, 44.57970628,
+                    42.05746903, 42.49729432, 40.72983436, 38.51743771, 36.10353156,
+                    33.77133869, 31.91408132, 26.49844512, 22.12700858, 18.6900704,
+                    17.64777089, 17.10507376, 16.69109232, 16.18633227, 15.74736275,
+                    15.4019183
+                ]
+            ),
+        },
+    }
+
+    calc = pre_tax["calculated"]
+    expected = pre_tax["expected"]
+
+    # Execute testings
+    run_test_arr(calc["capital"], expected["capital"], is_strict=True)
+    run_test_arr(calc["intangible"], expected["intangible"], is_strict=True)
+    run_test_arr(calc["opex"], expected["opex"], is_strict=True)
+    run_test_arr(calc["asr"], expected["asr"], is_strict=True)
+    run_test_arr(calc["lbt"], expected["lbt"], is_strict=True)
 
 
 def test_indirect_tax():
-    pass
+    """
+    Test indirect tax calculations.
+
+    Ensures that model-computed indirect taxes for all cost categories
+    (capital, intangible, opex, ASR, and LBT) match expected NumPy arrays.
+    Computed values are obtained via ``calc_attr('<category>_indirect_tax')``.
+    """
+
+    indirect_tax = {
+        # Calculated results
+        "calculated": {cat: calc_attr(attr=f"{cat}_indirect_tax") for cat in categories},
+
+        # Expected results
+        "expected": {
+            "capital": np.array(
+                [
+                    0, 0, 85.15497489, 159.2034325, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+            ),
+            "intangible": np.array(
+                [
+                    0, 0, 349.40213, 792.61236, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+            ),
+            "opex": np.array(
+                [
+                    0, 0, 31.29182676, 129.7236059, 116.8002193, 107.8385696, 100.5054764,
+                    95.00524185, 91.22803633, 88.90952082, 88.67760507, 88.19702751,
+                    86.11200653, 79.52955523, 72.30307503, 65.39810316, 59.61378693,
+                    55.13538361, 51.83965731, 48.65024113, 46.03982495, 41.0772688,
+                    38.75319298, 39.15846307, 37.52986491, 35.49128683, 33.26703099,
+                    31.11806858, 29.406728, 24.41657525, 20.38858384, 17.22167125,
+                    16.26126077, 15.76120104, 15.37974435, 14.91464115, 14.51015959,
+                    14.19185524
+                ]
+            ),
+            "asr": np.array(
+                [
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+            ),
+            "lbt": np.array(
+                [
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+            ),
+        },
+    }
+
+    calc = indirect_tax["calculated"]
+    expected = indirect_tax["expected"]
+
+    # Execute testings
+    run_test_arr(calc["capital"], expected["capital"], is_strict=True)
+    run_test_arr(calc["intangible"], expected["intangible"], is_strict=True)
+    run_test_arr(calc["opex"], expected["opex"], is_strict=True)
+    run_test_arr(calc["asr"], expected["asr"], is_strict=True)
+    run_test_arr(calc["lbt"], expected["lbt"], is_strict=True)
 
 
 def test_expenditures_post_tax():
-    pass
+    """
+    Test post-tax expenditure calculations.
+
+    Validates that computed post-tax expenditures for each cost category
+    (capital, intangible, opex, and ASR) match expected NumPy arrays.
+    Computed values are obtained via ``calc_attr('<category>_postonstream')``.
+    """
+
+    post_tax = {
+        # Calculated results
+        "calculated": {cat: calc_attr(attr=f"{cat}_postonstream") for cat in categories},
+
+        # Expected results
+        "expected": {
+            "capital": np.array(
+                [
+                    0, 0, 859.2911103, 1485.898703, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+            ),
+            "intangible": np.array(
+                [
+                    0, 0, 3525.78513, 7397.71536, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+            ),
+            "opex": np.array(
+                [
+                    0, 0, 315.7629792, 1210.753655, 1090.135381, 1006.493316, 938.0511135,
+                    886.7155906, 851.4616724, 829.8221944, 827.6576473, 823.1722567,
+                    803.712061, 742.2758488, 674.8287003, 610.3822962, 556.3953447,
+                    514.5969137, 483.8368016, 454.0689172, 429.7050329, 383.3878421,
+                    361.6964678, 365.4789886, 350.2787391, 331.2520104, 310.4922892,
+                    290.4353067, 274.4627946, 227.8880357, 190.2934492, 160.7355983,
+                    151.7717672, 147.104543, 143.5442806, 139.2033174, 135.4281562,
+                    132.4573155
+                ]
+            ),
+            "asr": np.array(
+                [
+                    0, 0, 28.16770602, 28.16770602, 28.16770602, 28.16770602, 28.16770602,
+                    28.16770602, 28.16770602, 28.16770602, 28.16770602, 28.16770602,
+                    28.16770602, 28.16770602, 28.16770602, 28.16770602, 28.16770602,
+                    28.16770602, 28.16770602, 28.16770602, 28.16770602, 28.16770602,
+                    28.16770602, 28.16770602, 28.16770602, 28.16770602, 28.16770602,
+                    28.16770602, 28.16770602, 28.16770602, 28.16770602, 28.16770602,
+                    28.16770602, 28.16770602, 28.16770602, 28.16770602, 28.16770602,
+                    28.16770602
+                ]
+            ),
+            "lbt": np.array(
+                [
+                    0, 0, 37.04717706, 110.0815218, 126.759145, 117.0333836, 109.0750371,
+                    103.1058272, 99.00655966, 96.49035683, 96.23866686, 95.71711304,
+                    93.45431356, 86.31061208, 78.46796883, 70.9742472, 64.69673348,
+                    59.83648082, 56.2597457, 52.79838518, 49.96539287, 44.57970628,
+                    42.05746903, 42.49729432, 40.72983436, 38.51743771, 36.10353156,
+                    33.77133869, 31.91408132, 26.49844512, 22.12700858, 18.6900704,
+                    17.64777089, 17.10507376, 16.69109232, 16.18633227, 15.74736275,
+                    15.4019183
+                ]
+            ),
+        },
+    }
+
+    calc = post_tax["calculated"]
+    expected = post_tax["expected"]
+
+    # Execute testings
+    run_test_arr(calc["capital"], expected["capital"], is_strict=True)
+    run_test_arr(calc["intangible"], expected["intangible"], is_strict=True)
+    run_test_arr(calc["opex"], expected["opex"], is_strict=True)
+    run_test_arr(calc["asr"], expected["asr"], is_strict=True)
+    run_test_arr(calc["lbt"], expected["lbt"], is_strict=True)
 
 
 def test_investments():
-    pass
+
+    investments = {
+        # Calculated results
+        "calculated": {
+            "capital": calc_attr(attr="expenses_capital"),
+            "non_capital": calc_attr(attr="expenses_non_capital"),
+            "total": None,
+        },
+
+        # Expected results
+        "expected": {
+            "capital": np.array(
+                [
+                    0, 0, 859.2911103, 1485.898703, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+            ),
+            "non_capital": np.array(
+                [
+                    0, 0, 3906.762992, 8746.718243, 1245.062232, 1151.694406, 1075.293857,
+                    1017.989124, 978.635938, 954.4802572, 952.0640202, 947.0570758,
+                    925.3340805, 856.7541669, 781.4643751, 709.5242494, 649.2597842,
+                    602.6011005, 568.2642533, 535.0350084, 507.8381318, 456.1352544,
+                    431.9216428, 436.143989, 419.1762795, 397.9371541, 374.7635268,
+                    352.3743514, 334.544582, 282.5541868, 240.5881638, 207.5933747,
+                    197.5872441, 192.3773228, 188.4030789, 183.5573557, 179.343225,
+                    176.0269398
+                ]
+            ),
+            "total": None,
+        },
+    }
+
+    calc = investments["calculated"]
+    expected = investments["expected"]
+
+    # Execute testings
+    run_test_arr(calc["capital"], expected["capital"], is_strict=True)
+    run_test_arr(calc["non_capital"], expected["non_capital"], is_strict=True)
 
 
-def test_sandbox():
-    t1 = summary
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+
+
 

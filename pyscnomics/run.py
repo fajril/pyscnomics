@@ -136,7 +136,7 @@ if __name__ == "__main__":
     summary: dict = ctr["summary"]
     cashflow_table: pd.DataFrame = get_table(contract=contract)[0]
 
-    t1 = data["lbt"]
+    t1 = summary
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')

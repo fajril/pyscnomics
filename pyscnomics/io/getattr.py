@@ -1100,7 +1100,7 @@ def convert_enum_var_split_13_2024(
         infra: {
             infra.NOT_AVAILABLE: "not_available",
             infra.PARTIALLY_AVAILABLE: "partially_available",
-            infra.AVAILABLE: "not_available",
+            infra.AVAILABLE: "available",
         },
         reserves: {
             reserves.LOW: "low",
