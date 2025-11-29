@@ -581,11 +581,11 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
 
 
 def load_cost(
-        filename: str,
-        start_year: int = 2023,
-        end_year: int = 2043,
-        cost_allocation: FluidType = FluidType.OIL,
-        template: str = "pyscnomics"
+    filename: str,
+    start_year: int = 2023,
+    end_year: int = 2043,
+    cost_allocation: FluidType = FluidType.OIL,
+    template: str = "pyscnomics"
 ) -> tuple[CapitalCost, Intangible, OPEX, ASR] | ValueError:
     """
     Function to load the cost data from Excel file.
