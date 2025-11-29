@@ -2,17 +2,10 @@
 A collection of procedures to run standard PSC contract
 """
 
-import pandas as pd
+import json
+import importlib.resources as resources
 
-from pyscnomics.econ.selection import (
-    OptimizationParameter,
-    OptimizationTarget,
-    ContractType,
-    VariableSplit082017,
-    VariableSplit522017,
-    VariableSplit132024,
-)
-
+from pyscnomics.econ.selection import ContractType
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
@@ -20,7 +13,6 @@ from pyscnomics.api.adapter import (
     get_costrecovery,
     get_grosssplit,
     get_baseproject,
-    get_contract_table,
 )
 
 from pyscnomics.tools.table import get_table
@@ -29,104 +21,129 @@ from pyscnomics.dataset.case_01 import Case01
 from pyscnomics.dataset.case_02 import Case02
 
 
-def execute_contract(case, contract_type, run_as_dict):
+def execute(case, contract_type, run_as_dict=True):
     """
-    Execute a contract simulation either as a dictionary or as a class instance.
+    Execute an economic evaluation case under a specified contract type.
 
     Parameters
     ----------
-    case : type
-        The class constructor used to initialize the contract object.
+    case : callable or dict
+        A case definition. If callable, it must return an object initialized
+        with ``contract_type`` and providing ``as_dict()``, ``as_class()``,
+        ``contract_arguments``, and ``summary_arguments``. If a dict, it is
+        treated as raw input data.
     contract_type : ContractType
-        Type of the contract to execute, e.g., COST_RECOVERY, GROSS_SPLIT, or BASE_PROJECT.
-    run_as_dict : bool
-        If True, execute the contract using dictionary-based inputs;
-        otherwise, execute using the class instance.
+        Contract model to evaluate (e.g., COST_RECOVERY, GROSS_SPLIT, BASE_PROJECT).
+    run_as_dict : bool, default=True
+        If True, evaluate using dict-based engine functions. If False,
+        instantiate the case class and execute through its API.
 
     Returns
     -------
     dict
-        Summary results of the contract execution, including key performance indicators.
+        A dictionary containing evaluation results. Keys include:
+        ``data`` (dict input), ``contract`` (contract engine or instance),
+        ``contract_arguments`` (dict), ``summary_arguments`` (dict),
+        and ``summary`` (evaluation summary).
 
     Raises
     ------
     ValueError
-        If an invalid contract type is provided.
+        If ``contract_type`` is not supported.
+
+    Notes
+    -----
+    The function dispatches to the appropriate engine based on contract type
+    and supports both dict-based and class-based execution flows.
     """
 
-    data = case(contract_type)
+    # Choose which engine to call based on "contract_type"
+    engines = {
+        ContractType.COST_RECOVERY: get_costrecovery,
+        ContractType.GROSS_SPLIT: get_grosssplit,
+        ContractType.BASE_PROJECT: get_baseproject,
+    }
 
-    # Run contract as dictionary
+    if contract_type not in engines:
+        raise ValueError(f"Invalid contract type: {contract_type!r}")
+
+    engine = engines[contract_type]
+
+    # Run as dictionary
     if run_as_dict:
-        # Prepare contract, contract_arguments, and summary_arguments
-        contract = data.as_dict()
-        # contract_arguments = data.contract_arguments
-        # summary_arguments = data.summary_arguments
+        # If case is provided as a class/instance
+        if callable(case):
+            obj = case(contract_type)
+            data = obj.as_dict()
 
-        # Execute the contract and return the results in terms of a dictionary
-        if contract_type == ContractType.COST_RECOVERY:
-            cr = get_costrecovery(data=contract, summary_result=True)
-            return {
-                "data": contract,
-                "contract": cr[1],
-                "contract_arguments": cr[2],
-                "summary_arguments": cr[3],
-                "summary": cr[0],
-            }
-
-        elif contract_type == ContractType.GROSS_SPLIT:
-            gs = get_grosssplit(data=contract, summary_result=True)
-            return {
-                "data": contract,
-                "contract": gs[1],
-                "contract_arguments": gs[2],
-                "summary_arguments": gs[3],
-                "summary": gs[0],
-            }
-
-        elif contract_type == ContractType.BASE_PROJECT:
-            bp = get_baseproject(data=contract, summary_result=True)
-            return {
-                "data": contract,
-                "contract": bp[1],
-                "contract_arguments": bp[2],
-                "summary_arguments": bp[3],
-                "summary": bp[0],
-            }
-
+        # If case is provided as a JSON data
         else:
-            raise ValueError(f"Invalid contract type: {contract_type!r}")
+            data = case
 
-    # Run contract as instance
-    else:
-        # Prepare contract, contract_arguments, and summary_arguments
-        contract = data.as_class()
-        contract_arguments = data.contract_arguments
-        summary_arguments = data.summary_arguments
+        results = engine(data=data, summary_result=True)
 
-        # Run the contract
-        contract.run(**contract_arguments)
-
-        # Return the results in terms of summary
         return {
-            "contract": contract,
-            "contract_arguments": contract_arguments,
-            "summary_arguments": summary_arguments,
-            "summary": contract.get_summary(**summary_arguments),
+            "data": data,
+            "contract": results[1],
+            "contract_arguments": results[2],
+            "summary_arguments": results[3],
+            "summary": results[0],
         }
+
+    # Run as a class's instance
+    obj = case(contract_type)
+    contract = obj.as_class()
+    contract_arguments = obj.contract_arguments
+    summary_arguments = obj.summary_arguments
+
+    contract.run(**contract_arguments)
+
+    return {
+        "contract": contract,
+        "contract_arguments": contract_arguments,
+        "summary_arguments": summary_arguments,
+        "summary": contract.get_summary(**summary_arguments),
+    }
+
+
+def load_json(target_json: str):
+    """
+    Load a JSON file from the packaged dataset.
+
+    Parameters
+    ----------
+    target_json : str
+        Name of the JSON file to load from the ``pyscnomics.dataset`` package
+        resources.
+
+    Returns
+    -------
+    dict or list
+        Parsed JSON content.
+
+    Notes
+    -----
+    This function reads JSON data bundled within the package using
+    ``importlib.resources``.
+    """
+
+    with resources.open_text("pyscnomics.dataset", target_json) as f:
+        data = json.load(f)
+
+    return data
 
 
 if __name__ == "__main__":
 
-    # Specify arguments to run function "execute_contract()"
+    # Specify arguments to run function "execute()"
     kwargs_execute = {
-        "case": Case02,
-        "contract_type": ContractType.GROSS_SPLIT,
+        "case": Case00A,
+        "contract_type": ContractType.BASE_PROJECT,
         "run_as_dict": True,
     }
 
-    # Run the contract using function "execute_contract()"
-    ctr = execute_contract(**kwargs_execute)
+    # Run the contract using function "execute()"
+    ctr = execute(**kwargs_execute)
 
     # Configure results
     data: dict = ctr["data"]
@@ -143,11 +160,17 @@ if __name__ == "__main__":
         "consolidated": cshflow[2],
     }
 
-    t1 = cashflow_table["oil"]
+    # t1 = contract_arguments
+    # print('\t')
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
+    # print('t1 = \n', t1)
+
+    t1 = data
     print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    print(f'Filetype: {type(t1["lifting"])}')
+    print(f'Length: {len(t1["lifting"])}')
+    print('t1 = \n', t1["lifting"])
 
     # print('\t')
     # print(f'Filetype: {type()}')
