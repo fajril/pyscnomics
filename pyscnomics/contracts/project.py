@@ -1643,18 +1643,20 @@ class BaseProject:
         """
         Classify and validate cost types for a given cost object.
 
-        Each expense in ``cost_obj`` is assigned to one of three categories
-        based on its expense year relative to the project approval year
-        and the earliest onstream year (oil or gas):
+        This method assigns each expense in ``cost_obj`` to one of three
+        cost-type categories using vectorized boolean masks:
 
-        - ``SUNK_COST``: Expenses before the approval year.
-        - ``PRE_ONSTREAM_COST``: Expenses between the approval year and the onstream year.
-        - ``POST_ONSTREAM_COST``: Expenses after the onstream year.
+        - ``SUNK_COST``: ``expense_year`` < approval year.
+        - ``PRE_ONSTREAM_COST``: approval year < ``expense_year`` < onstream year.
+        - ``POST_ONSTREAM_COST``: ``expense_year`` > onstream year.
 
-        The method enforces consistency rules, validates boundary conditions
-        (approval and onstream years), and ensures that no invalid
-        classifications occur. The approval year is first validated using
-        :meth:`_validate_approval_year`.
+        The approval year is validated via :meth:`_validate_approval_year`,
+        and the onstream year is determined as the earliest of the oil and
+        gas onstream years. After assignment, rule-based validation ensures
+        all masked elements match their expected cost types. Additional
+        boundary checks confirm that no POST-ONSTREAM classification occurs
+        at the approval year and that classifications at the onstream year
+        are consistent.
 
         Parameters
         ----------
@@ -2939,6 +2941,11 @@ class BaseProject:
             self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
         )
 
+        print('\t')
+        print(f'Filetype: {type(self._oil_depreciable_sunk_cost)}')
+        print(f'Length: {len(self._oil_depreciable_sunk_cost)}')
+        print('_oil_depreciable_sunk_cost = \n', self._oil_depreciable_sunk_cost)
+
     def _get_preonstream_array(self) -> None:
         """
         Construct and organize preonstream cost arrays for OIL and GAS.
@@ -4185,27 +4192,28 @@ class BaseProject:
 
         # Prepare sunk costs and preonstream costs
         self._get_sunkcost_array()
-        self._get_preonstream_array()
-        self._modify_sunk_cost_preonstream()
 
-        # Prepare capital, non-capital, and total investments
-        self._get_investments()
-
-        # Configure base cashflow for OIL and GAS
-        self._oil_cashflow = self._oil_revenue - (
-            self._oil_sunk_cost
-            + self._oil_preonstream
-            + self._oil_total_expenditures_post_tax
-        )
-
-        self._gas_cashflow = self._gas_revenue - (
-            self._gas_sunk_cost
-            + self._gas_preonstream
-            + self._gas_total_expenditures_post_tax
-        )
-
-        # Prepare consolidated profiles
-        self._get_consolidated_profiles()
+        # self._get_preonstream_array()
+        # self._modify_sunk_cost_preonstream()
+        #
+        # # Prepare capital, non-capital, and total investments
+        # self._get_investments()
+        #
+        # # Configure base cashflow for OIL and GAS
+        # self._oil_cashflow = self._oil_revenue - (
+        #     self._oil_sunk_cost
+        #     + self._oil_preonstream
+        #     + self._oil_total_expenditures_post_tax
+        # )
+        #
+        # self._gas_cashflow = self._gas_revenue - (
+        #     self._gas_sunk_cost
+        #     + self._gas_preonstream
+        #     + self._gas_total_expenditures_post_tax
+        # )
+        #
+        # # Prepare consolidated profiles
+        # self._get_consolidated_profiles()
 
     @staticmethod
     def _calc_division(numerator: float, denominator: float, default: float = 0.0):

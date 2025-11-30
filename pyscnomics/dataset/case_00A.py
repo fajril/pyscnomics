@@ -223,13 +223,7 @@ class Case00A:
                 ]
             ),
             "cost_type": (
-                [
-                    CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                    CostType.PRE_ONSTREAM_COST, CostType.SUNK_COST,
-                    CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                    CostType.POST_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                    CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                ]
+                [None, None, None, CostType.SUNK_COST, None, None, None, None, None, None]
             ),
             "tax_portion": np.array(
                 [
