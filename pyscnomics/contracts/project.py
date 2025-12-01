@@ -738,11 +738,6 @@ class BaseProject:
                 f"a/an {self.is_pod_1.__class__.__qualname__}"
             )
 
-        print('\t')
-        print(f'Filetype: {type(self.capital_cost[0].cost_type)}')
-        print(f'Length: {len(self.capital_cost[0].cost_type)}')
-        print('capital_cost = \n', self.capital_cost[0].cost_type)
-
         # Prepare attributes associated with total cost per component
         self.capital_cost_total = reduce(lambda x, y: x + y, self.capital_cost)
         self.intangible_cost_total = reduce(lambda x, y: x + y, self.intangible_cost)
@@ -771,65 +766,57 @@ class BaseProject:
             ]
         ]
 
-        # print('\t')
-        # print(f'Filetype: {type(capital_cost["oil"])}')
-        # print(f'Length: {len(capital_cost["oil"])}')
-        # print('capital_cost["oil"] = \n', capital_cost["oil"].cost_type)
+        # Modify cost_type in each cost categories, accounting for engineering sense
+        costs_list = [
+            capital_cost,
+            intangible,
+            opex,
+            asr,
+            lbt,
+            cost_of_sales,
+        ]
 
-        self._prepare_cost_types(is_pod_1=self.is_pod_1, cost_obj=intangible["oil"])
+        for cost in costs_list:
+            for ftype in [FluidType.OIL, FluidType.GAS]:
+                self._prepare_cost_types(
+                    is_pod_1=self.is_pod_1, cost_obj=cost[ftype.name.lower()]
+                )
 
+        # Define post-onstream cost, pre-onstream cost, and sunk cost attributes
+        costs_mapping = (
+            ("capital", self._filter_capital_cost, capital_cost),
+            ("intangible", self._filter_intangible, intangible),
+            ("opex", self._filter_opex, opex),
+            ("asr", self._filter_asr, asr),
+            ("lbt", self._filter_lbt, lbt),
+            ("cost_of_sales", self._filter_cost_of_sales, cost_of_sales),
+        )
 
-        # # Modify cost_type in each cost categories, accounting for engineering sense
-        # costs_list = [
-        #     capital_cost,
-        #     intangible,
-        #     opex,
-        #     asr,
-        #     lbt,
-        #     cost_of_sales,
-        # ]
-        #
-        # for cost in costs_list:
-        #     for ftype in [FluidType.OIL, FluidType.GAS]:
-        #         self._prepare_cost_types(
-        #             is_pod_1=self.is_pod_1, cost_obj=cost[ftype.name.lower()]
-        #         )
+        fluid_types = (
+            FluidType.OIL.name.lower(),
+            FluidType.GAS.name.lower(),
+        )
 
-        # # Define post-onstream cost, pre-onstream cost, and sunk cost attributes
-        # costs_mapping = (
-        #     ("capital", self._filter_capital_cost, capital_cost),
-        #     ("intangible", self._filter_intangible, intangible),
-        #     ("opex", self._filter_opex, opex),
-        #     ("asr", self._filter_asr, asr),
-        #     ("lbt", self._filter_lbt, lbt),
-        #     ("cost_of_sales", self._filter_cost_of_sales, cost_of_sales),
-        # )
-        #
-        # fluid_types = (
-        #     FluidType.OIL.name.lower(),
-        #     FluidType.GAS.name.lower(),
-        # )
-        #
-        # categories = (
-        #     ("postonstream", CostType.POST_ONSTREAM_COST),
-        #     ("preonstream", CostType.PRE_ONSTREAM_COST),
-        #     ("sunk_cost", CostType.SUNK_COST),
-        # )
-        #
-        # for prefix, filter_func, source in costs_mapping:
-        #     for ftype in fluid_types:
-        #         for categ_name, categ_type in categories:
-        #             setattr(
-        #                 self,
-        #                 f"_{ftype}_{prefix}_{categ_name}",
-        #                 filter_func(cost_obj_fluid=source[ftype], include_cost_type=categ_type)
-        #             )
-        #
-        # # Raise an exception error if the start year of the project is inconsistent
-        # self._check_inconsistent_start_year()
-        #
-        # # Raise an exception error if the end year of the project is inconsistent
-        # self._check_inconsistent_end_year()
+        categories = (
+            ("postonstream", CostType.POST_ONSTREAM_COST),
+            ("preonstream", CostType.PRE_ONSTREAM_COST),
+            ("sunk_cost", CostType.SUNK_COST),
+        )
+
+        for prefix, filter_func, source in costs_mapping:
+            for ftype in fluid_types:
+                for categ_name, categ_type in categories:
+                    setattr(
+                        self,
+                        f"_{ftype}_{prefix}_{categ_name}",
+                        filter_func(cost_obj_fluid=source[ftype], include_cost_type=categ_type)
+                    )
+
+        # Raise an exception error if the start year of the project is inconsistent
+        self._check_inconsistent_start_year()
+
+        # Raise an exception error if the end year of the project is inconsistent
+        self._check_inconsistent_end_year()
 
     def _get_lifting_by_commodity(self, commodity: FluidType) -> Lifting:
         """
@@ -2970,6 +2957,11 @@ class BaseProject:
             self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
         )
 
+        print('\t')
+        print(f'Filetype: {type(self._oil_non_depreciable_sunk_cost)}')
+        print(f'Length: {len(self._oil_non_depreciable_sunk_cost)}')
+        print('_oil_non_depreciable_sunk_cost = \n', self._oil_non_depreciable_sunk_cost)
+
     def _get_preonstream_array(self) -> None:
         """
         Construct and organize preonstream cost arrays for OIL and GAS.
@@ -4213,6 +4205,13 @@ class BaseProject:
             + self._gas_lbt_expenditures_post_tax
             + self._gas_cost_of_sales_expenditures_post_tax
         )
+
+        cap_sc = self._oil_capital_sunk_cost.expenditures_pre_tax()
+
+        print('\t')
+        print(f'Filetype: {type(cap_sc)}')
+        print(f'Length: {len(cap_sc)}')
+        print('_oil_capital_sunk_cost = \n', cap_sc)
 
         # Prepare sunk costs and preonstream costs
         self._get_sunkcost_array()

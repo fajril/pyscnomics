@@ -76,12 +76,10 @@ kwargs_capital_oil = {
 
 if __name__ == "__main__":
 
-    # capital_oil = CapitalCost(**kwargs_capital_oil)
-
     case = Case00A(contract_type=ContractType.BASE_PROJECT)
     contract = case.as_class()
-    # contract_arguments = case.contract_arguments
-    # contract.run(**contract_arguments)
+    contract_arguments = case.contract_arguments
+    contract.run(**contract_arguments)
 
     # print('\t')
     # print(f'Filetype: {type(contract)}')
