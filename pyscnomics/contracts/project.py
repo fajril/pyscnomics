@@ -738,6 +738,11 @@ class BaseProject:
                 f"a/an {self.is_pod_1.__class__.__qualname__}"
             )
 
+        print('\t')
+        print(f'Filetype: {type(self.capital_cost[0].cost_type)}')
+        print(f'Length: {len(self.capital_cost[0].cost_type)}')
+        print('capital_cost = \n', self.capital_cost[0].cost_type)
+
         # Prepare attributes associated with total cost per component
         self.capital_cost_total = reduce(lambda x, y: x + y, self.capital_cost)
         self.intangible_cost_total = reduce(lambda x, y: x + y, self.intangible_cost)
@@ -766,57 +771,65 @@ class BaseProject:
             ]
         ]
 
-        # Modify cost_type in each cost categories, accounting for engineering sense
-        costs_list = [
-            capital_cost,
-            intangible,
-            opex,
-            asr,
-            lbt,
-            cost_of_sales,
-        ]
+        # print('\t')
+        # print(f'Filetype: {type(capital_cost["oil"])}')
+        # print(f'Length: {len(capital_cost["oil"])}')
+        # print('capital_cost["oil"] = \n', capital_cost["oil"].cost_type)
 
-        for cost in costs_list:
-            for ftype in [FluidType.OIL, FluidType.GAS]:
-                self._prepare_cost_types(
-                    is_pod_1=self.is_pod_1, cost_obj=cost[ftype.name.lower()]
-                )
+        self._prepare_cost_types(is_pod_1=self.is_pod_1, cost_obj=intangible["oil"])
 
-        # Define post-onstream cost, pre-onstream cost, and sunk cost attributes
-        costs_mapping = (
-            ("capital", self._filter_capital_cost, capital_cost),
-            ("intangible", self._filter_intangible, intangible),
-            ("opex", self._filter_opex, opex),
-            ("asr", self._filter_asr, asr),
-            ("lbt", self._filter_lbt, lbt),
-            ("cost_of_sales", self._filter_cost_of_sales, cost_of_sales),
-        )
 
-        fluid_types = (
-            FluidType.OIL.name.lower(),
-            FluidType.GAS.name.lower(),
-        )
+        # # Modify cost_type in each cost categories, accounting for engineering sense
+        # costs_list = [
+        #     capital_cost,
+        #     intangible,
+        #     opex,
+        #     asr,
+        #     lbt,
+        #     cost_of_sales,
+        # ]
+        #
+        # for cost in costs_list:
+        #     for ftype in [FluidType.OIL, FluidType.GAS]:
+        #         self._prepare_cost_types(
+        #             is_pod_1=self.is_pod_1, cost_obj=cost[ftype.name.lower()]
+        #         )
 
-        categories = (
-            ("postonstream", CostType.POST_ONSTREAM_COST),
-            ("preonstream", CostType.PRE_ONSTREAM_COST),
-            ("sunk_cost", CostType.SUNK_COST),
-        )
-
-        for prefix, filter_func, source in costs_mapping:
-            for ftype in fluid_types:
-                for categ_name, categ_type in categories:
-                    setattr(
-                        self,
-                        f"_{ftype}_{prefix}_{categ_name}",
-                        filter_func(cost_obj_fluid=source[ftype], include_cost_type=categ_type)
-                    )
-
-        # Raise an exception error if the start year of the project is inconsistent
-        self._check_inconsistent_start_year()
-
-        # Raise an exception error if the end year of the project is inconsistent
-        self._check_inconsistent_end_year()
+        # # Define post-onstream cost, pre-onstream cost, and sunk cost attributes
+        # costs_mapping = (
+        #     ("capital", self._filter_capital_cost, capital_cost),
+        #     ("intangible", self._filter_intangible, intangible),
+        #     ("opex", self._filter_opex, opex),
+        #     ("asr", self._filter_asr, asr),
+        #     ("lbt", self._filter_lbt, lbt),
+        #     ("cost_of_sales", self._filter_cost_of_sales, cost_of_sales),
+        # )
+        #
+        # fluid_types = (
+        #     FluidType.OIL.name.lower(),
+        #     FluidType.GAS.name.lower(),
+        # )
+        #
+        # categories = (
+        #     ("postonstream", CostType.POST_ONSTREAM_COST),
+        #     ("preonstream", CostType.PRE_ONSTREAM_COST),
+        #     ("sunk_cost", CostType.SUNK_COST),
+        # )
+        #
+        # for prefix, filter_func, source in costs_mapping:
+        #     for ftype in fluid_types:
+        #         for categ_name, categ_type in categories:
+        #             setattr(
+        #                 self,
+        #                 f"_{ftype}_{prefix}_{categ_name}",
+        #                 filter_func(cost_obj_fluid=source[ftype], include_cost_type=categ_type)
+        #             )
+        #
+        # # Raise an exception error if the start year of the project is inconsistent
+        # self._check_inconsistent_start_year()
+        #
+        # # Raise an exception error if the end year of the project is inconsistent
+        # self._check_inconsistent_end_year()
 
     def _get_lifting_by_commodity(self, commodity: FluidType) -> Lifting:
         """
@@ -1641,44 +1654,50 @@ class BaseProject:
         cost_obj: CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales,
     ) -> None:
         """
-        Classify and validate cost types for a given cost object.
+        Classify, assign, and validate cost types for a given cost object.
 
-        This method assigns each expense in ``cost_obj`` to one of three
-        cost-type categories using vectorized boolean masks:
+        Each expense year in ``cost_obj`` is categorized into one of the
+        project cost-type groups based on its position relative to the project’s
+        approval year and the earliest onstream year (oil or gas):
 
-        - ``SUNK_COST``: ``expense_year`` < approval year.
-        - ``PRE_ONSTREAM_COST``: approval year < ``expense_year`` < onstream year.
-        - ``POST_ONSTREAM_COST``: ``expense_year`` > onstream year.
+        - ``SUNK_COST``:          expense_year < approval_year
+        - ``PRE_ONSTREAM_COST``:  approval_year < expense_year < onstream_year
+        - ``POST_ONSTREAM_COST``: expense_year > onstream_year
 
-        The approval year is validated via :meth:`_validate_approval_year`,
-        and the onstream year is determined as the earliest of the oil and
-        gas onstream years. After assignment, rule-based validation ensures
-        all masked elements match their expected cost types. Additional
-        boundary checks confirm that no POST-ONSTREAM classification occurs
-        at the approval year and that classifications at the onstream year
-        are consistent.
+        The approval year is first validated via :meth:`_validate_approval_year`.
+        Cost-type assignment is performed using vectorized NumPy masks, after
+        which rule-based checks ensure that all elements assigned under each
+        mask match their expected ``CostType`` value.
+
+        For expenses occurring exactly in the onstream year, this method assumes
+        a single entry and automatically assigns ``POST_ONSTREAM_COST`` if its
+        current value is ``None``. Additional boundary validation is applied at
+        the approval year when ``approval_year < onstream_year`` to ensure that
+        no invalid cost-type transitions occur.
 
         Parameters
         ----------
         is_pod_1 : bool
-            Flag indicating whether the project is POD-1. Used during approval
-            year validation.
+            Indicates whether the project corresponds to POD-1. Used during
+            approval-year validation.
         cost_obj : CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales
-            Cost object containing expense years and associated cost type
-            placeholders to be updated.
+            A cost object containing ``expense_year`` and ``cost_type`` arrays.
+            The ``cost_type`` array is modified in place.
 
         Returns
         -------
         None
-            The method updates the ``cost_type`` attribute of ``cost_obj`` in place.
+            The method updates ``cost_obj.cost_type`` in place.
 
         Notes
         -----
-        - The earliest onstream year is computed from both oil and gas dates.
-        - Cost type assignment is vectorized using boolean masks on
-          ``expense_year``.
-        - Rule-based validation ensures all masked elements match their
-          intended classification.
+        - The onstream year is taken as the earlier of the oil and gas onstream
+          dates.
+        - All cost-type classification operations are vectorized via NumPy masks.
+        - Validation ensures consistency between mask selections and assigned
+          cost-type values.
+        - The expense occurring exactly at the onstream year is promoted to
+          ``POST_ONSTREAM_COST`` when unassigned (``None``).
         """
 
         # Validate approval_year
@@ -1702,19 +1721,29 @@ class BaseProject:
 
         # Validate cost types assignments
         rules = [
-            (post_onstream, CostType.POST_ONSTREAM_COST, "post-onstream"),
-            (sunk_cost, CostType.SUNK_COST, "sunk cost"),
-            (pre_onstream, CostType.PRE_ONSTREAM_COST, "pre-onstream")
+            (post_onstream, CostType.POST_ONSTREAM_COST),
+            (sunk_cost, CostType.SUNK_COST),
+            (pre_onstream, CostType.PRE_ONSTREAM_COST),
         ]
 
-        for mask, expected, label in rules:
+        for mask, expected in rules:
             if np.any(mask) and not np.all(ct[mask] == expected):
-                raise BaseProjectException(f"Mismatch in {label} classification")
+                raise BaseProjectException(f"Mismatch in {expected.value} classification")
+
+        # At onstream_year, replace "None" with "postonstream_cost"
+        at_onstream = (ey == onstream_year)
+        if np.any(at_onstream) and (ct[at_onstream][0] is None):
+            ct[at_onstream] = CostType.POST_ONSTREAM_COST
 
         if self.approval_year < onstream_year:
 
             # Validate cost types at exact approval year boundary
             at_approval = (ey == self.approval_year)
+
+            # At approval year, replace "None" with "preonstream_cost"
+            if np.any(at_approval) and (ct[at_approval][0] is None):
+                ct[at_approval] = CostType.PRE_ONSTREAM_COST
+
             if (
                 np.any(at_approval)
                 and CostType.POST_ONSTREAM_COST in ct[at_approval]
@@ -2940,11 +2969,6 @@ class BaseProject:
         self._gas_sunk_cost = (
             self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
         )
-
-        print('\t')
-        print(f'Filetype: {type(self._oil_depreciable_sunk_cost)}')
-        print(f'Length: {len(self._oil_depreciable_sunk_cost)}')
-        print('_oil_depreciable_sunk_cost = \n', self._oil_depreciable_sunk_cost)
 
     def _get_preonstream_array(self) -> None:
         """

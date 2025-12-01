@@ -398,9 +398,7 @@ class CapitalCost(GeneralCost):
 
         # Prepare attribute cost_type
         if self.cost_type is None:
-            self.cost_type = [
-                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
-            ]
+            self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.cost_type, list):
@@ -410,13 +408,12 @@ class CapitalCost(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
-                for _, val in enumerate(self.cost_type)
+                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType) else 0
+                    1 if not isinstance(val, CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -1344,9 +1341,7 @@ class Intangible(GeneralCost):
 
         # Prepare attribute cost_type
         if self.cost_type is None:
-            self.cost_type = [
-                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
-            ]
+            self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.cost_type, list):
@@ -1356,13 +1351,12 @@ class Intangible(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
-                for _, val in enumerate(self.cost_type)
+                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType) else 0
+                    1 if not isinstance(val, CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -1806,9 +1800,7 @@ class OPEX(GeneralCost):
 
         # Prepare attribute cost_type
         if self.cost_type is None:
-            self.cost_type = [
-                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
-            ]
+            self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.cost_type, list):
@@ -1818,13 +1810,12 @@ class OPEX(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
-                for _, val in enumerate(self.cost_type)
+                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType) else 0
+                    1 if not isinstance(val, CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -2320,9 +2311,7 @@ class ASR(GeneralCost):
 
         # Prepare attribute cost_type
         if self.cost_type is None:
-            self.cost_type = [
-                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
-            ]
+            self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.cost_type, list):
@@ -2332,13 +2321,12 @@ class ASR(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
-                for _, val in enumerate(self.cost_type)
+                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType) else 0
+                    1 if not isinstance(val, CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -3010,9 +2998,7 @@ class LBT(GeneralCost):
 
         # Prepare attribute cost_type
         if self.cost_type is None:
-            self.cost_type = [
-                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
-            ]
+            self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.cost_type, list):
@@ -3022,13 +3008,12 @@ class LBT(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
-                for _, val in enumerate(self.cost_type)
+                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType) else 0
+                    1 if not isinstance(val, CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -3807,9 +3792,7 @@ class CostOfSales(GeneralCost):
 
         # Prepare attribute cost_type
         if self.cost_type is None:
-            self.cost_type = [
-                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
-            ]
+            self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.cost_type, list):
@@ -3819,13 +3802,12 @@ class CostOfSales(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
-                for _, val in enumerate(self.cost_type)
+                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType) else 0
+                    1 if not isinstance(val, CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
