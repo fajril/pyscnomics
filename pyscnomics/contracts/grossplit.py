@@ -4252,7 +4252,7 @@ class GrossSplit(BaseProject):
         )
 
         # Prepare contractor gross share summary
-        ctr_gross_share_sum = self._consolidated_gov_share_before_tf.sum(dtype=float)
+        ctr_gross_share_sum = self._consolidated_ctr_share_before_tf.sum(dtype=float)
 
         # Prepare government gross share summary
         gov_gross_share_sum = self._consolidated_gov_share_before_tf.sum(dtype=float)
