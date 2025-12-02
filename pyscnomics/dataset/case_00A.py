@@ -250,7 +250,7 @@ class Case00A:
                     None,  # 2026
                     None,  # 2027
                     None,  # 2028
-                    CostType.PRE_ONSTREAM_COST,  # 2029
+                    None,  # 2029
                     None,  # 2030
                     None,  # 2031
                     None,  # 2032
@@ -387,7 +387,7 @@ class Case00A:
                     2029,
                     2030,
                     2031,
-                    2029,
+                    2032,
                 ]
             ),
             "cost": np.array(

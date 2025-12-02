@@ -4193,42 +4193,29 @@ class BaseProject:
             + self._gas_cost_of_sales_expenditures_post_tax
         )
 
-        cap_sc = self._oil_capital_sunk_cost.expenditures_pre_tax()
-        cap_preos = self._oil_capital_preonstream.expenditures_pre_tax()
-
-        print('\t')
-        print(f'Filetype: {type(cap_sc)}')
-        print(f'Length: {len(cap_sc)}')
-        print('cap_sc = \n', cap_sc)
-
-        print('\t')
-        print(f'Filetype: {type(cap_preos)}')
-        print(f'Length: {len(cap_preos)}')
-        print('_oil_capital_preonstream = \n', cap_preos)
-
         # Prepare sunk costs and preonstream costs
         self._get_sunkcost_array()
         self._get_preonstream_array()
         self._modify_sunk_cost_preonstream()
 
-        # # Prepare capital, non-capital, and total investments
-        # self._get_investments()
-        #
-        # # Configure base cashflow for OIL and GAS
-        # self._oil_cashflow = self._oil_revenue - (
-        #     self._oil_sunk_cost
-        #     + self._oil_preonstream
-        #     + self._oil_total_expenditures_post_tax
-        # )
-        #
-        # self._gas_cashflow = self._gas_revenue - (
-        #     self._gas_sunk_cost
-        #     + self._gas_preonstream
-        #     + self._gas_total_expenditures_post_tax
-        # )
-        #
-        # # Prepare consolidated profiles
-        # self._get_consolidated_profiles()
+        # Prepare capital, non-capital, and total investments
+        self._get_investments()
+
+        # Configure base cashflow for OIL and GAS
+        self._oil_cashflow = self._oil_revenue - (
+            self._oil_sunk_cost
+            + self._oil_preonstream
+            + self._oil_total_expenditures_post_tax
+        )
+
+        self._gas_cashflow = self._gas_revenue - (
+            self._gas_sunk_cost
+            + self._gas_preonstream
+            + self._gas_total_expenditures_post_tax
+        )
+
+        # Prepare consolidated profiles
+        self._get_consolidated_profiles()
 
     @staticmethod
     def _calc_division(numerator: float, denominator: float, default: float = 0.0):
