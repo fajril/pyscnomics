@@ -270,6 +270,20 @@ class Case00A:
                     1,
                 ]
             ),
+            "pis_year": np.array(
+                [
+                    2029,
+                    2029,
+                    2029,
+                    2029,
+                    2029,
+                    2029,
+                    2029,
+                    2029,
+                    2029,
+                    2029,
+                ]
+            )
         }
 
         # Prepare capital data: GAS

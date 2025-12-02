@@ -1644,21 +1644,26 @@ class BaseProject:
         Classify and validate cost types for a given cost object.
 
         Each expense year in ``cost_obj`` is assigned to one of the project
-        cost-type categories based on its position relative to the project's
-        approval year and the earliest onstream year (oil or gas):
+        cost-type categories using vectorized NumPy masks. The assignment is based
+        on the relationship between the expense (or PIS) year, the project's
+        approval year, and the earliest onstream year (oil or gas):
 
         - ``SUNK_COST``:          expense_year < approval_year
         - ``PRE_ONSTREAM_COST``:  approval_year < expense_year < onstream_year
         - ``POST_ONSTREAM_COST``: expense_year > onstream_year
 
-        The approval year is first validated via :meth:`_validate_approval_year`.
-        Cost-type assignment is then performed using vectorized NumPy masks.
-        After assignment, consistency checks ensure that each mask corresponds
-        to the expected ``CostType`` value.
+        For ``CapitalCost`` objects, the Put Into Service (``pis_year``)
+        is used instead of ``expense_year`` when performing classification.
 
-        Expenses occurring exactly in the onstream year are *not* reassigned
-        automatically and retain their existing ``cost_type`` value. They may
-        be validated or adjusted elsewhere according to project rules.
+        The approval year is validated first via :meth:`_validate_approval_year`.
+        Cost-type assignment is then applied through Boolean masks, and each mask
+        is checked to ensure that all selected elements receive the correct
+        ``CostType`` value. A consistency error is raised when mismatches occur.
+
+        Expenses occurring exactly in the onstream year are handled separately:
+        if a cost-type entry at this year is ``None`` (unassigned), it is
+        automatically promoted to ``POST_ONSTREAM_COST``. Values that are already
+        set to a valid ``CostType`` are left unchanged.
 
         Parameters
         ----------
@@ -1666,8 +1671,8 @@ class BaseProject:
             Indicates whether the project corresponds to POD-1. Used during
             approval-year validation.
         cost_obj : CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales
-            A cost object providing ``expense_year`` and ``cost_type`` arrays.
-            ``cost_type`` is updated in place.
+            A cost object providing ``expense_year`` (or ``pis_year``)
+            and ``cost_type`` arrays. ``cost_type`` is updated in place.
 
         Returns
         -------
@@ -1676,10 +1681,13 @@ class BaseProject:
 
         Notes
         -----
-        - The onstream year is the earlier of the oil and gas onstream dates.
-        - All cost-type assignments use vectorized Boolean masking.
-        - Validation ensures that assigned cost types match the expected category.
-        - Exact-onstream expenses are left unchanged unless handled elsewhere.
+        - The onstream year is taken as the earlier of the oil and gas
+          onstream dates.
+        - All classification steps use vectorized Boolean masking.
+        - Validation ensures that each mask corresponds exactly to the intended
+          ``CostType`` assignment.
+        - Exact-onstream-year expenses receive ``POST_ONSTREAM_COST`` only when
+          they are currently ``None``.
         """
 
         # Validate approval_year
@@ -1690,11 +1698,13 @@ class BaseProject:
 
         # Build masks
         ct = np.array(cost_obj.cost_type)
-        ey = cost_obj.expense_year
+        ry = cost_obj.expense_year
+        if isinstance(cost_obj, CapitalCost):
+            ry = cost_obj.pis_year
 
-        post_onstream = ey > onstream_year
-        sunk_cost = ey < self.approval_year
-        pre_onstream = (ey > self.approval_year) & (ey < onstream_year)
+        post_onstream = ry > onstream_year
+        sunk_cost = ry < self.approval_year
+        pre_onstream = (ry > self.approval_year) & (ry < onstream_year)
 
         # Assign cost types using the masks
         ct[post_onstream] = CostType.POST_ONSTREAM_COST
@@ -1713,16 +1723,16 @@ class BaseProject:
                 raise BaseProjectException(f"Mismatch in {expected.value} classification")
 
         # At onstream_year, replace "None" with "postonstream_cost"
-        none_at_onstream = (ey == onstream_year) & np.equal(ct, None)
+        none_at_onstream = (ry == onstream_year) & np.equal(ct, None)
         ct[none_at_onstream] = CostType.POST_ONSTREAM_COST
 
         if self.approval_year < onstream_year:
             # At approval year, replace "None" with "preonstream_cost"
-            none_at_approval = (ey == self.approval_year) & np.equal(ct, None)
+            none_at_approval = (ry == self.approval_year) & np.equal(ct, None)
             ct[none_at_approval] = CostType.PRE_ONSTREAM_COST
 
             # Validate cost types at exact approval year boundary
-            at_approval = (ey == self.approval_year)
+            at_approval = (ry == self.approval_year)
             if (
                 np.any(at_approval)
                 and CostType.POST_ONSTREAM_COST in ct[at_approval]
@@ -1730,7 +1740,7 @@ class BaseProject:
                 raise BaseProjectException(f"Cannot accept POST ONSTREAM at approval year")
 
             # Validate cost types at exact onstream year boundary
-            at_onstream = (ey == onstream_year)
+            at_onstream = (ry == onstream_year)
             if (
                 self.approval_year < onstream_year
                 and np.any(at_onstream)
@@ -2734,40 +2744,51 @@ class BaseProject:
 
     def _validate_postonstream(self, postonstream_objects: list) -> None:
         """
-        Validate that all postonstream cost objects have expense years not
-        earlier than the onstream year.
+        Validate that all postonstream cost objects have their earliest cost
+        year (CAPEX or OPEX) not earlier than the project's onstream year.
 
-        This method checks each object in `postonstream_objects` to ensure
-        that the minimum expense year is no earlier than the earliest
-        onstream year (between oil and gas).
+        This method determines the earliest applicable year for each object in
+        `postonstream_objects`. For `CapitalCost` objects, the earliest
+        post-onstream CAPEX year is taken from `pis_year`. For all other cost
+        object types, the earliest year is taken from `expense_year`. These
+        years are then validated to ensure none occur before the earliest
+        onstream year (based on oil and gas onstream dates).
 
         Parameters
         ----------
         postonstream_objects : list
             A list of postonstream cost objects from each cost category
             (CapitalCost, Intangible, OPEX, ASR, LBT, or CostOfSales),
-            already filtered by fluid type. Each object must have an
-            `expense_year` attribute (array-like) representing the years
-            in which costs are incurred.
+            already filtered by fluid type. Each object must provide:
+            - `pis_year` (array-like) if it is a `CapitalCost`,
+            - otherwise `expense_year` (array-like),
+            representing the years in which the costs occur.
 
         Raises
         ------
         PostOnstreamException
-            If the minimum expense year of any postonstream cost object
-            occurs before the earliest onstream year. The exception message
-            lists the offending years and the cutoff year.
+            If any object's earliest postonstream year (from `pis_year` or
+            `expense_year`) occurs before the project's earliest onstream
+            year. The exception message lists the offending years and the
+            onstream cutoff year.
 
         Notes
         -----
-        This validation ensures that no postonstream costs are recorded
-        before the project reaches its onstream date, maintaining consistency
-        in project cost modeling.
+        This validation enforces chronological consistency by ensuring that
+        no postonstream CAPEX or OPEX is recorded before the project reaches
+        its onstream date, which is essential for accurate economic modeling.
         """
 
         onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+
         postonstream_min_years = np.array(
-            [np.min(po.expense_year) for po in postonstream_objects]
+            [
+                np.min(po.pis_year) if isinstance(po, CapitalCost)
+                else np.min(po.expense_year)
+                for po in postonstream_objects
+            ], dtype=int
         )
+
         mask = (postonstream_min_years < onstream_yr)
 
         if np.any(mask):
