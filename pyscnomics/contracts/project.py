@@ -1641,10 +1641,10 @@ class BaseProject:
         cost_obj: CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales,
     ) -> None:
         """
-        Classify, assign, and validate cost types for a given cost object.
+        Classify and validate cost types for a given cost object.
 
-        Each expense year in ``cost_obj`` is categorized into one of the
-        project cost-type groups based on its position relative to the project’s
+        Each expense year in ``cost_obj`` is assigned to one of the project
+        cost-type categories based on its position relative to the project's
         approval year and the earliest onstream year (oil or gas):
 
         - ``SUNK_COST``:          expense_year < approval_year
@@ -1652,15 +1652,13 @@ class BaseProject:
         - ``POST_ONSTREAM_COST``: expense_year > onstream_year
 
         The approval year is first validated via :meth:`_validate_approval_year`.
-        Cost-type assignment is performed using vectorized NumPy masks, after
-        which rule-based checks ensure that all elements assigned under each
-        mask match their expected ``CostType`` value.
+        Cost-type assignment is then performed using vectorized NumPy masks.
+        After assignment, consistency checks ensure that each mask corresponds
+        to the expected ``CostType`` value.
 
-        For expenses occurring exactly in the onstream year, this method assumes
-        a single entry and automatically assigns ``POST_ONSTREAM_COST`` if its
-        current value is ``None``. Additional boundary validation is applied at
-        the approval year when ``approval_year < onstream_year`` to ensure that
-        no invalid cost-type transitions occur.
+        Expenses occurring exactly in the onstream year are *not* reassigned
+        automatically and retain their existing ``cost_type`` value. They may
+        be validated or adjusted elsewhere according to project rules.
 
         Parameters
         ----------
@@ -1668,23 +1666,20 @@ class BaseProject:
             Indicates whether the project corresponds to POD-1. Used during
             approval-year validation.
         cost_obj : CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales
-            A cost object containing ``expense_year`` and ``cost_type`` arrays.
-            The ``cost_type`` array is modified in place.
+            A cost object providing ``expense_year`` and ``cost_type`` arrays.
+            ``cost_type`` is updated in place.
 
         Returns
         -------
         None
-            The method updates ``cost_obj.cost_type`` in place.
+            Updates ``cost_obj.cost_type`` in place.
 
         Notes
         -----
-        - The onstream year is taken as the earlier of the oil and gas onstream
-          dates.
-        - All cost-type classification operations are vectorized via NumPy masks.
-        - Validation ensures consistency between mask selections and assigned
-          cost-type values.
-        - The expense occurring exactly at the onstream year is promoted to
-          ``POST_ONSTREAM_COST`` when unassigned (``None``).
+        - The onstream year is the earlier of the oil and gas onstream dates.
+        - All cost-type assignments use vectorized Boolean masking.
+        - Validation ensures that assigned cost types match the expected category.
+        - Exact-onstream expenses are left unchanged unless handled elsewhere.
         """
 
         # Validate approval_year
@@ -1718,19 +1713,16 @@ class BaseProject:
                 raise BaseProjectException(f"Mismatch in {expected.value} classification")
 
         # At onstream_year, replace "None" with "postonstream_cost"
-        at_onstream = (ey == onstream_year)
-        if np.any(at_onstream) and (ct[at_onstream][0] is None):
-            ct[at_onstream] = CostType.POST_ONSTREAM_COST
+        none_at_onstream = (ey == onstream_year) & np.equal(ct, None)
+        ct[none_at_onstream] = CostType.POST_ONSTREAM_COST
 
         if self.approval_year < onstream_year:
+            # At approval year, replace "None" with "preonstream_cost"
+            none_at_approval = (ey == self.approval_year) & np.equal(ct, None)
+            ct[none_at_approval] = CostType.PRE_ONSTREAM_COST
 
             # Validate cost types at exact approval year boundary
             at_approval = (ey == self.approval_year)
-
-            # At approval year, replace "None" with "preonstream_cost"
-            if np.any(at_approval) and (ct[at_approval][0] is None):
-                ct[at_approval] = CostType.PRE_ONSTREAM_COST
-
             if (
                 np.any(at_approval)
                 and CostType.POST_ONSTREAM_COST in ct[at_approval]
@@ -2956,11 +2948,6 @@ class BaseProject:
         self._gas_sunk_cost = (
             self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
         )
-
-        print('\t')
-        print(f'Filetype: {type(self._oil_non_depreciable_sunk_cost)}')
-        print(f'Length: {len(self._oil_non_depreciable_sunk_cost)}')
-        print('_oil_non_depreciable_sunk_cost = \n', self._oil_non_depreciable_sunk_cost)
 
     def _get_preonstream_array(self) -> None:
         """
@@ -4207,18 +4194,23 @@ class BaseProject:
         )
 
         cap_sc = self._oil_capital_sunk_cost.expenditures_pre_tax()
+        cap_preos = self._oil_capital_preonstream.expenditures_pre_tax()
 
         print('\t')
         print(f'Filetype: {type(cap_sc)}')
         print(f'Length: {len(cap_sc)}')
-        print('_oil_capital_sunk_cost = \n', cap_sc)
+        print('cap_sc = \n', cap_sc)
+
+        print('\t')
+        print(f'Filetype: {type(cap_preos)}')
+        print(f'Length: {len(cap_preos)}')
+        print('_oil_capital_preonstream = \n', cap_preos)
 
         # Prepare sunk costs and preonstream costs
         self._get_sunkcost_array()
+        self._get_preonstream_array()
+        self._modify_sunk_cost_preonstream()
 
-        # self._get_preonstream_array()
-        # self._modify_sunk_cost_preonstream()
-        #
         # # Prepare capital, non-capital, and total investments
         # self._get_investments()
         #

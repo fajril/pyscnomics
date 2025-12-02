@@ -250,7 +250,7 @@ class Case00A:
                     None,  # 2026
                     None,  # 2027
                     None,  # 2028
-                    None,  # 2029
+                    CostType.PRE_ONSTREAM_COST,  # 2029
                     None,  # 2030
                     None,  # 2031
                     None,  # 2032
@@ -387,7 +387,7 @@ class Case00A:
                     2029,
                     2030,
                     2031,
-                    2032,
+                    2029,
                 ]
             ),
             "cost": np.array(
@@ -420,16 +420,16 @@ class Case00A:
             ),
             "cost_type": (
                 [
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
+                    None,  # 2023
+                    None,  # 2024
+                    None,  # 2025
+                    None,  # 2026
+                    None,  # 2027
+                    None,  # 2028
+                    None,  # 2029
+                    None,  # 2030
+                    None,  # 2031
+                    None,  # 2032
                 ]
             ),
             "tax_portion": np.array(
