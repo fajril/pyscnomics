@@ -1293,14 +1293,6 @@ def get_contract_table(data: dict, contract_type: str = "Cost Recovery") -> dict
             "gas": table_gas.set_index(year_column).to_dict(),
             "consolidated": table_consolidated.set_index(year_column).to_dict(),
         }
-
-    t1 = table_all_dict["oil"]["sunk_cost"]
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
-
-
     # Adding the execution info
     table_all_dict = add_execution_info(data=table_all_dict)
 

@@ -2677,9 +2677,6 @@ class BaseProject:
 
         onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
 
-        print('\t')
-        print(f'onstream_year: {onstream_yr}, approval_year: {self.approval_year}')
-
         sunkcost_max_years = np.array(
             [
                 np.max(sc.pis_year) if isinstance(sc, CapitalCost)

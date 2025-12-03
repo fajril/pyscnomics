@@ -8,7 +8,7 @@
     "is_pod_1": true
   },
   "summary_arguments": {
-    "discount_rate_start_year": 2022,
+    "discount_rate_start_year": 2023,
     "inflation_rate": 0,
     "discount_rate": 0.1,
     "npv_mode": "Full Cycle Nominal Terms",
@@ -182,7 +182,7 @@
     }
   },
   "capital": {
-    "copy of TEPOD1 SIMULATION": {
+    "TEPOD1 SIMULATION": {
       "start_year": 2021,
       "end_year": 2039,
       "tax_discount": [
@@ -291,8 +291,8 @@
         0
       ],
       "cost_type": [
-        "preonstream_cost",
-        "preonstream_cost",
+        "sunk_cost",
+        "sunk_cost",
         "postonstream_cost",
         null,
         null,
@@ -440,7 +440,7 @@
     }
   },
   "intangible": {
-    "copy of TEPOD1 SIMULATION": {
+    "TEPOD1 SIMULATION": {
       "start_year": 2021,
       "end_year": 2039,
       "tax_discount": [
@@ -462,9 +462,11 @@
         0,
         0,
         0,
+        0,
         0
       ],
       "expense_year": [
+        2021,
         2021,
         2022,
         2023,
@@ -504,32 +506,35 @@
         "Gas",
         "Gas",
         "Gas",
+        "Gas",
         "Gas"
       ],
       "cost": [
-        1181.69715110442,
-        28056.9646384597,
-        16001.4011965251,
-        830.61725361308,
-        2924.59003282853,
-        3223.33934570827,
-        3310.39472895583,
-        6326.61413973367,
-        3383.00329884343,
-        9326.90370757147,
-        1436.00920648216,
-        3210.18590027607,
-        1963.53567827579,
-        43.7873408016885,
-        120.415187204643,
-        65.6810112025327,
+        22314.28997967,
+        1220.16977515588,
+        28970.4178456131,
+        16522.3603034798,
+        857.659736789957,
+        3019.80618252685,
+        3328.281904571,
+        3418.17155802747,
+        6532.59030468346,
+        3493.14405187781,
+        9630.56057902125,
+        1482.76149177267,
+        3314.70022119253,
+        2027.46269197073,
+        45.212929328581,
+        124.335555653598,
+        67.819393992872,
         0,
         0,
         0
       ],
       "cost_type": [
-        "preonstream_cost",
-        "preonstream_cost",
+        null,
+        null,
+        null,
         "postonstream_cost",
         null,
         null,
@@ -549,6 +554,7 @@
         null
       ],
       "tax_portion": [
+        0,
         0,
         0,
         0.9,
@@ -588,12 +594,13 @@
         "-",
         "-",
         "-",
+        "-",
         "-"
       ]
     }
   },
   "opex": {
-    "copy of TEPOD1 SIMULATION": {
+    "TEPOD1 SIMULATION": {
       "start_year": 2021,
       "end_year": 2039,
       "tax_discount": [
@@ -681,8 +688,8 @@
         4992.04545321283
       ],
       "cost_type": [
-        "preonstream_cost",
-        "preonstream_cost",
+        null,
+        null,
         "postonstream_cost",
         null,
         null,
@@ -788,7 +795,7 @@
     }
   },
   "asr": {
-    "copy of TEPOD1 SIMULATION": {
+    "TEPOD1 SIMULATION": {
       "start_year": 2021,
       "end_year": 2039,
       "tax_discount": [
@@ -821,7 +828,7 @@
     }
   },
   "lbt": {
-    "copy of TEPOD1 SIMULATION": {
+    "TEPOD1 SIMULATION": {
       "start_year": 2021,
       "end_year": 2039,
       "tax_discount": [
@@ -902,8 +909,8 @@
       ],
       "cost_type": [
         "postonstream_cost",
-        "postonstream_cost",
-        "postonstream_cost",
+        null,
+        null,
         null,
         null,
         null,
@@ -966,7 +973,7 @@
     }
   },
   "cost_of_sales": {
-    "copy of TEPOD1 SIMULATION": {
+    "TEPOD1 SIMULATION": {
       "start_year": 2021,
       "end_year": 2039,
       "tax_discount": [
