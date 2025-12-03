@@ -1345,24 +1345,42 @@ def construct_cost_attr(
     )
 ):
     """
-    Construct a dictionary of processed cost attributes from cost objects.
+    Construct and process a dictionary of cost attributes from a tuple of
+    cost objects.
+
+    This function iterates through the provided cost objects, converts their
+    attributes into serializable or model-friendly forms, and returns them
+    as a dictionary keyed by cost index (e.g., ``"Cost 0"``, ``"Cost 1"``).
+
+    Attribute Processing Rules
+    --------------------------
+    - ``cost_allocation``:
+        Converted element-wise using ``convert_enum_fluid()``.
+    - ``cost_type``:
+        Converted element-wise using ``convert_enum_cost_type()``; values of
+        ``None`` are preserved.
+    - All other attributes:
+        Converted using ``convert_object()``.
 
     Parameters
     ----------
     cost : tuple of CapitalCost, Intangible, OPEX, ASR, LBT, or CostOfSales
-        Tuple of cost objects representing different expenditure types.
+        Tuple containing cost objects of a single category. Each cost object
+        is converted to a dictionary via ``vars()`` prior to attribute
+        processing.
 
     Returns
     -------
     dict
-        Dictionary mapping each cost entry (e.g., "Cost 0", "Cost 1") to its
-        processed attributes.
+        A dictionary mapping each cost entry name (e.g., ``"Cost 0"``) to its
+        processed attribute dictionary.
 
     Notes
     -----
-    Each cost object's attributes are converted using `convert_object()`,
-    with `cost_allocation` handled by `convert_enum_fluid()` and `cost_type`
-    by `convert_enum_cost_type()`.
+    This function standardizes cost object attributes for downstream use in
+    serialization, data exchange, or economic model preparation. The logic
+    replaces an earlier implementation that applied uniform conversion to all
+    attributes except ``cost_allocation``.
     """
 
     # Define key for each cost instances
@@ -1378,7 +1396,11 @@ def construct_cost_attr(
                 cst[key] = [convert_enum_fluid(objects=fluid) for fluid in cst[key]]
 
             elif key == "cost_type":
-                cst[key] = [convert_enum_cost_type(objects=ct) for ct in cst[key]]
+                cst[key] = [
+                    convert_enum_cost_type(objects=ct) if ct is not None
+                    else None for ct in cst[key]
+                ]
+                # cst[key] = [convert_enum_cost_type(objects=ct) for ct in cst[key]]
 
             else:
                 cst[key] = convert_object(objects=val)

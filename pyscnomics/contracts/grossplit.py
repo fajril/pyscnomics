@@ -3352,7 +3352,11 @@ class GrossSplit(BaseProject):
 
         # Modify sunk cost and preonstream cost for non-POD I contract
         if not self.is_pod_1:
+            self._modify_sunk_cost_preonstream()
 
+            """
+            Former approach
+            ---------------
             # Combine sunk cost and preonstream cost for non-POD I contract,
             # Assign the result as the "modified" sunk cost
             self._oil_sunk_cost += self._oil_preonstream
@@ -3361,6 +3365,7 @@ class GrossSplit(BaseProject):
             # Assign preonstream cost as zeros
             self._oil_preonstream = np.zeros_like(self.project_years, dtype=float)
             self._gas_preonstream = np.zeros_like(self.project_years, dtype=float)
+            """
 
         # Calculate depreciations and undepreciated assets
         self._get_depreciation(
@@ -3629,29 +3634,29 @@ class GrossSplit(BaseProject):
         """
         # For debugging purpose only
         _gas_tobe_deducted = (
-            gas_total_depr 
-            + gas_total_amor 
-            + self._gas_carry_forward_depreciation 
+            gas_total_depr
+            + gas_total_amor
+            + self._gas_carry_forward_depreciation
             + self._gas_non_capital
         )
         _oil_tobe_deducted = (
-            oil_total_depr 
-            + oil_total_amor 
-            + self._oil_carry_forward_depreciation 
+            oil_total_depr
+            + oil_total_amor
+            + self._oil_carry_forward_depreciation
             + self._oil_non_capital
         )
-        
+
         col1 = [
-            'ctr_before_trf', 
-            'tobe_deducted', 
-            'carward_deduct', 
+            'ctr_before_trf',
+            'tobe_deducted',
+            'carward_deduct',
             'deductible',
-            'transfer_to', 
-            'carward_after_trf', 
-            'ctr_after_trf', 
+            'transfer_to',
+            'carward_after_trf',
+            'ctr_after_trf',
             'net_profit'
         ]
-        
+
         fluids = ['oil', 'gas']
         gs1_df = pd.DataFrame(
             columns=pd.MultiIndex.from_product([col1, fluids]),
@@ -3743,7 +3748,7 @@ class GrossSplit(BaseProject):
             'undeductible_post_trf',
             'net_post_trf'
         ]
-        
+
         fluids = ['oil', 'gas']
 
         gs2_df = pd.DataFrame(

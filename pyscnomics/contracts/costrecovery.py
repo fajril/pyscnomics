@@ -2756,7 +2756,7 @@ class CostRecovery(BaseProject):
 
         # ===========================================================================================
 
-        """ 
+        """
         # Calculate three parameters before transfer: "cost to be recovered",
         # "unrecovered cost before transfer", and "cost recovery"
         (
@@ -2853,7 +2853,7 @@ class CostRecovery(BaseProject):
             ic=self._gas_ic_paid,
             cr_cap_rate=self.gas_cr_cap_rate,
         )
-        
+
         # ETS after transfer
         self._oil_ets_after_transfer = self._get_ets_after_transfer(
             ets_before_tf=self._oil_ets_before_transfer,
@@ -2877,16 +2877,16 @@ class CostRecovery(BaseProject):
             transferred_out=self._transfer_to_oil,
         )
 
-        cols1 = [#'revenue', 'ftp', 'ic_paid', 
-            'allocation', 'non_capital', 'depreciation', 
+        cols1 = [#'revenue', 'ftp', 'ic_paid',
+            'allocation', 'non_capital', 'depreciation',
                 'tobe_rec_pre','cost_rec_pre','unrec_pre', 'ets_pre',
                 'trf_to_og','tobe_rec_post','cost_rec_post','unrec_post','ets_post']
         fluids = ['oil','gas']
-        
-        cr1_df = pd.DataFrame(index=self.project_years, 
+
+        cr1_df = pd.DataFrame(index=self.project_years,
                               columns=pd.MultiIndex.from_product([cols1,fluids]))
         # cr1_df[('revenue','oil')] = self._oil_revenue
-        # cr1_df[('revenue','gas')] = self._gas_revenue   
+        # cr1_df[('revenue','gas')] = self._gas_revenue
         # cr1_df[('ftp','oil')] = self._oil_ftp
         # cr1_df[('ftp','gas')] = self._gas_ftp
         # cr1_df[('ic_paid','oil')] = self._oil_ic_paid
@@ -3002,12 +3002,12 @@ class CostRecovery(BaseProject):
         """
         Debugging DataFrame Cost Recovery & Transfer
 
-        cols2 = [#'revenue', 'ftp', 'ic_paid', 
-            'allocation', 'non_capital', 'depreciation', 
+        cols2 = [#'revenue', 'ftp', 'ic_paid',
+            'allocation', 'non_capital', 'depreciation',
                  'recoverable_cost','rec_pre_trf','unrec_pre_trf','ets_pre_trf',
                     'trf_to_og','rec_post_trf','unrec_post_trf','ets_post_trf']
-        
-        cr2_df = pd.DataFrame(index=self.project_years, 
+
+        cr2_df = pd.DataFrame(index=self.project_years,
                               columns=pd.MultiIndex.from_product([cols2,fluids]))
         #cr2_df[('revenue','oil')] = self._oil_revenue
         #cr2_df[('revenue','gas')] = self._gas_revenue
