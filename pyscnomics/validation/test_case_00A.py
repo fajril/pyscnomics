@@ -4,40 +4,40 @@ A collection of unit testings for CASE_00A
 
 # import pytest
 import numpy as np
+from pyscnomics.contracts.project import BaseProject
 from pyscnomics.econ.selection import ContractType
 from pyscnomics.dataset.case_00A import Case00A
-from pyscnomics.validation.preparation import execute_contract
+from pyscnomics.validation.helper_validation import execute_contract
 from pyscnomics.tools.table import get_table
 
 
-# Specify cost types
-cost_types = [
-    "capital",
-    "intangible",
-    "opex",
-    "asr",
-    "lbt",
-    "cost_of_sales",
-]
-
 # Specify arguments to run function "execute_contract()"
 kwargs_execute = {
-    "cls": Case00A,
+    "case": Case00A,
     "contract_type": ContractType.BASE_PROJECT,
-    "run_as_dict": False,
 }
 
 # Run the contract using function "execute_contract()"
 ctr = execute_contract(**kwargs_execute)
 
 # Results of run in terms of "contract", "summary", and "cashflow"
-contract = ctr["contract"]
-summary = ctr["summary"]
-cashflow_oil = get_table(contract=contract)[0]
+data: dict = ctr["data"]
+contract: BaseProject = ctr["contract"]
+contract_arguments: dict = ctr["contract_arguments"]
+summary_arguments: dict = ctr["summary_arguments"]
+summary: dict = ctr["summary"]
+
+# Configure cashflow table
+cshflow = get_table(contract=contract)
+cashflow_table = {
+    "oil": cshflow[0],
+    "gas": cshflow[1],
+    "consolidated": cshflow[2],
+}
 
 
 def _calc_attr(attr: str) -> np.ndarray:
-    return cashflow_oil[attr].to_numpy()
+    return cashflow_table["oil"][attr].to_numpy()
 
 
 def test_project_years():
@@ -230,9 +230,9 @@ def test_sunk_cost():
 
         # Expected attributes
         "expected": {
-            "depreciable": np.array([200, 200, 200, 200, 50, 50, 0, 0, 0, 0]),
+            "depreciable": np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0,]),
             "non_depreciable": np.array([1000, 1000, 1000, 1000, 250, 250, 0, 0, 0, 0]),
-            "total": np.array([1200, 1200, 1200, 1200, 300, 300, 0, 0, 0, 0]),
+            "total": np.array([1000, 1000, 1000, 1000, 250, 250, 0, 0, 0, 0]),
         },
     }
 
@@ -297,9 +297,9 @@ def test_postonstream_cost():
             "total": _calc_attr(attr="postonstream"),
         },
         "expected": {
-            "depreciable": np.array([0, 0, 0, 0, 0, 0, 100, 100, 100, 100]),
+            "depreciable": np.array([200, 200, 200, 200, 50, 50, 100, 100, 100, 100]),
             "non_depreciable": np.array([0, 0, 0, 0, 0, 0, 500, 500, 500, 500]),
-            "total": np.array([0, 0, 0, 0, 0, 0, 600, 600, 600, 600]),
+            "total": np.array([200, 200, 200, 200, 50, 50, 600, 600, 600, 600]),
         },
     }
 
@@ -321,6 +321,14 @@ def test_expenditures_pre_tax():
     expected NumPy arrays using ``np.testing.assert_allclose``.
     """
 
+    cost_types = [
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales",
+    ]
+
     pre_tax = {
         "calculated": {
             ct: _calc_attr(attr=f"{ct}_expenditures_pre_tax") for ct in cost_types
@@ -330,11 +338,16 @@ def test_expenditures_pre_tax():
         },
     }
 
+    pre_tax_capital = {
+        "calculated": _calc_attr(attr="capital_expenditures_pre_tax"),
+        "expected": np.array([200, 200, 200, 200, 50, 50, 100, 100, 100, 100]),
+    }
+
     calc = pre_tax["calculated"]
     expected = pre_tax["expected"]
 
     # Execute testings
-    np.testing.assert_allclose(calc["capital"], expected["capital"])
+    np.testing.assert_allclose(pre_tax_capital["calculated"], pre_tax_capital["expected"])
     np.testing.assert_allclose(calc["intangible"], expected["intangible"])
     np.testing.assert_allclose(calc["opex"], expected["opex"])
     np.testing.assert_allclose(calc["asr"], expected["asr"])
@@ -355,6 +368,15 @@ def test_indirect_tax():
     - ``_calc_attr`` retrieves each ``<cost_type>_indirect_tax`` attribute.
     - Expected arrays are all zeros, indicating no indirect tax applied.
     """
+
+    cost_types = [
+        "capital",
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales",
+    ]
 
     indirect_tax = {
         "calculated": {ct: _calc_attr(attr=f"{ct}_indirect_tax") for ct in cost_types},
@@ -387,6 +409,14 @@ def test_expeditures_post_tax():
     - Expected arrays contain a uniform post-tax expenditure profile.
     """
 
+    cost_types = [
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales",
+    ]
+
     post_tax = {
         "calculated": {ct: _calc_attr(attr=f"{ct}_postonstream") for ct in cost_types},
         "expected": {
@@ -394,11 +424,16 @@ def test_expeditures_post_tax():
         },
     }
 
+    post_tax_capital = {
+        "calculated": _calc_attr(attr="capital_postonstream"),
+        "expected": np.array([200, 200, 200, 200, 50, 50, 100, 100, 100, 100]),
+    }
+
     calc = post_tax["calculated"]
     expected = post_tax["expected"]
 
     # Execute testings
-    np.testing.assert_allclose(calc["capital"], expected["capital"])
+    np.testing.assert_allclose(post_tax_capital["calculated"], post_tax_capital["expected"])
     np.testing.assert_allclose(calc["intangible"], expected["intangible"])
     np.testing.assert_allclose(calc["opex"], expected["opex"])
     np.testing.assert_allclose(calc["asr"], expected["asr"])
@@ -427,9 +462,9 @@ def test_expenses():
             "total": _calc_attr(attr="expenses_total"),
         },
         "expected": {
-            "capital": np.array([0, 0, 0, 0, 0, 0, 100, 100, 100, 100]),
+            "capital": np.array([200, 200, 200, 200, 50, 50, 100, 100, 100, 100]),
             "non_capital": np.array([0, 0, 0, 0, 0, 0, 500, 500, 500, 500]),
-            "total": np.array([0, 0, 0, 0, 0, 0, 600, 600, 600, 600]),
+            "total": np.array([200, 200, 200, 200, 50, 50, 600, 600, 600, 600]),
         },
     }
 

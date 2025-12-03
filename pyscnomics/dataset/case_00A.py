@@ -250,7 +250,7 @@ class Case00A:
                     None,  # 2026
                     None,  # 2027
                     None,  # 2028
-                    CostType.PRE_ONSTREAM_COST,  # 2029
+                    None,  # 2029
                     None,  # 2030
                     None,  # 2031
                     None,  # 2032
@@ -1252,7 +1252,7 @@ class Case00A:
             "oil_onstream_date": date(year=2030, month=1, day=1),
             "gas_onstream_date": date(year=2029, month=1, day=1),
             "approval_year": 2026,
-            "is_pod_1": True,
+            "is_pod_1": False,
         }
 
     def get_class_arguments(self) -> None:

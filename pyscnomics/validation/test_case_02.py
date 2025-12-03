@@ -8,7 +8,7 @@ import pandas as pd
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.econ.selection import ContractType
 from pyscnomics.dataset.case_02 import Case02
-from pyscnomics.validation.preparation import execute_contract
+from pyscnomics.validation.helper_validation import execute_contract
 from pyscnomics.tools.table import get_table
 
 
@@ -23,9 +23,8 @@ categories = [
 
 # Specify arguments to run function "execute_contract()"
 kwargs_execute = {
-    "cls": Case02,
+    "case": Case02,
     "contract_type": ContractType.GROSS_SPLIT,
-    "run_as_dict": True,
 }
 
 # Run the contract using function "execute_contract()"
@@ -38,13 +37,13 @@ summary: dict = ctr["summary"]
 cashflow_table_oil: pd.DataFrame = get_table(contract=contract)[0]
 
 
-def test_sandbox():
-    t1 = cashflow_table_oil
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Keys: {t1.keys()}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+# def test_sandbox():
+#     t1 = cashflow_table_oil
+#     print('\t')
+#     print(f'Filetype: {type(t1)}')
+#     print(f'Keys: {t1.keys()}')
+#     print(f'Length: {len(t1)}')
+#     print('t1 = \n', t1)
 
 
 def calc_attr(attr: str) -> np.ndarray:
