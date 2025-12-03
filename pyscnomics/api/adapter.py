@@ -1196,7 +1196,8 @@ def add_execution_info(data: dict) -> dict:
     from importlib.metadata import version, PackageNotFoundError
 
     try:
-        package_version = version("pyscnomics")
+        package_version = "1.4.0"
+        # package_version = version("pyscnomics")
 
     except PackageNotFoundError:
         package_version = "unknown"
