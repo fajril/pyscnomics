@@ -31,19 +31,19 @@ if __name__ == "__main__":
 
     # Specify arguments to run function "execute_contract()"
     kwargs_execute = {
-        "case": Case00A,
-        "contract_type": ContractType.COST_RECOVERY,
+        "case": convert_to_dict(filename="te_pod1_field.json"),
+        "contract_type": ContractType.GROSS_SPLIT,
     }
 
     # Run the contract using function "execute_contract()"
     ctr = execute_contract(**kwargs_execute)
 
-    # Configure results
-    data: dict = ctr["data"]
-    contract: CostRecovery | GrossSplit | BaseProject = ctr["contract"]
-    contract_arguments: dict = ctr["contract_arguments"]
-    summary_arguments: dict = ctr["summary_arguments"]
-    summary: dict = ctr["summary"]
+    # # Configure results
+    # data: dict = ctr["data"]
+    # contract: CostRecovery | GrossSplit | BaseProject = ctr["contract"]
+    # contract_arguments: dict = ctr["contract_arguments"]
+    # summary_arguments: dict = ctr["summary_arguments"]
+    # summary: dict = ctr["summary"]
 
     # # Configure cashflow table
     # cshflow: tuple = get_table(contract=contract)
@@ -52,12 +52,6 @@ if __name__ == "__main__":
     #     "gas": cshflow[1],
     #     "consolidated": cshflow[2],
     # }
-
-    t1 = summary
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
 
     # print('\t')
     # print(f'Filetype: {type()}')

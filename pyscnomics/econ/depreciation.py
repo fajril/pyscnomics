@@ -482,7 +482,7 @@ def prepare_amortization(
     if min(prod_year) < project_years.min():
         raise UnitOfProductionException(
             f"Production year ({min(prod_year)}) is before the start year "
-            f"of the project ({start_year_project})."
+            f"of the project ({project_years.min()})."
         )
 
     # Raise an exception if prod_year is after the end year of the project
@@ -490,7 +490,7 @@ def prepare_amortization(
         # if max(prod_year) > int(start_year_project + amortization_len - 1):
         raise UnitOfProductionException(
             f"Production year ({max(prod_year)}) is after the end year "
-            f"of the project ({int(start_year_project + amortization_len - 1)})"
+            f"of the project ({int(project_years.max())})"
         )
 
     # Raise an exception if salvage_value is larger than the associated cost

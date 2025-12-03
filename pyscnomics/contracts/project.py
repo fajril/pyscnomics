@@ -2676,7 +2676,21 @@ class BaseProject:
         """
 
         onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
-        sunkcost_max_years = np.array([np.max(sc.expense_year) for sc in sunkcost_objects])
+
+        print('\t')
+        print(f'onstream_year: {onstream_yr}, approval_year: {self.approval_year}')
+
+        sunkcost_max_years = np.array(
+            [
+                np.max(sc.pis_year) if isinstance(sc, CapitalCost)
+                else np.max(sc.expense_year) for sc in sunkcost_objects
+            ], dtype=int
+        )
+
+        # sunkcost_max_years = np.array(
+        #     [np.max(sc.expense_year) for sc in sunkcost_objects]
+        # )
+
         cutoff_year = min([self.approval_year, onstream_yr])
         mask = (sunkcost_max_years > cutoff_year)
 
@@ -2721,12 +2735,26 @@ class BaseProject:
         onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
 
         preonstream_max_years = np.array(
-            [np.max(pr.expense_year) for pr in preonstream_objects]
+            [
+                np.max(pr.pis_year) if isinstance(pr, CapitalCost)
+                else np.max(pr.expense_year) for pr in preonstream_objects
+            ], dtype=int
         )
 
+        # preonstream_max_years = np.array(
+        #     [np.max(pr.expense_year) for pr in preonstream_objects]
+        # )
+
         preonstream_min_years = np.array(
-            [np.min(pr.expense_year) for pr in preonstream_objects]
+            [
+                np.min(pr.pis_year) if isinstance(pr, CapitalCost)
+                else np.min(pr.expense_year) for pr in preonstream_objects
+            ], dtype=int
         )
+
+        # preonstream_min_years = np.array(
+        #     [np.min(pr.expense_year) for pr in preonstream_objects]
+        # )
 
         mask = (
             (preonstream_min_years < self.approval_year)
@@ -2784,8 +2812,7 @@ class BaseProject:
         postonstream_min_years = np.array(
             [
                 np.min(po.pis_year) if isinstance(po, CapitalCost)
-                else np.min(po.expense_year)
-                for po in postonstream_objects
+                else np.min(po.expense_year) for po in postonstream_objects
             ], dtype=int
         )
 
