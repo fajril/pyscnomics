@@ -401,7 +401,9 @@ class Summary:
                     'years': contract.project_years,
                     'oil_costrecovery_or_deductible_cost': contract._oil_cost_recovery_after_tf if isinstance(contract, CostRecovery) else contract._oil_deductible_cost,
                     'oil_unrecoverable_cost_or_carryforward_cost': contract._oil_unrecovered_after_transfer if isinstance(contract, CostRecovery) else contract._oil_carward_cost_aftertf,
-                    'oil_ctr_share': contract._oil_contractor_share if isinstance(contract, CostRecovery) else contract._oil_ctr_share_after_transfer,
+                    # patch 12/03/2025
+                    'oil_ctr_share': contract._oil_contractor_share if isinstance(contract, CostRecovery) else contract._oil_ctr_net_share,
+                    # 'oil_ctr_share': contract._oil_contractor_share if isinstance(contract, CostRecovery) else contract._oil_ctr_share_after_transfer,
                     'oil_gov_share': contract._oil_government_share if isinstance(contract, CostRecovery) else contract._oil_gov_share,
                     'oil_effective_tax_payment': contract._oil_tax_payment if isinstance(contract, CostRecovery) else contract._oil_tax,
                     'oil_ddmo': contract._oil_ddmo,
@@ -410,7 +412,9 @@ class Summary:
                     'oil_ctr_cashflow': contract._oil_cashflow if isinstance(contract, CostRecovery) else contract._oil_ctr_cashflow,
                     'gas_costrecovery_or_deductible_cost': contract._gas_cost_recovery_after_tf if isinstance(contract, CostRecovery) else contract._gas_deductible_cost,
                     'gas_unrecoverable_cost_or_carryforward_cost': contract._gas_unrecovered_after_transfer if isinstance(contract, CostRecovery) else contract._gas_carward_cost_aftertf,
-                    'gas_ctr_share': contract._gas_contractor_share if isinstance(contract,CostRecovery) else contract._gas_ctr_share_after_transfer,
+                    # patch 12/03/2025
+                    'gas_ctr_share': contract._gas_contractor_share if isinstance(contract, CostRecovery) else contract._gas_ctr_net_share,
+                    # 'gas_ctr_share': contract._gas_contractor_share if isinstance(contract,CostRecovery) else contract._gas_ctr_share_after_transfer,
                     'gas_gov_share': contract._gas_government_share if isinstance(contract,CostRecovery) else contract._gas_gov_share,
                     'gas_effective_tax_payment': contract._gas_tax_payment if isinstance(contract,CostRecovery) else contract._gas_tax,
                     'gas_ddmo': contract._gas_ddmo,
@@ -419,7 +423,9 @@ class Summary:
                     'gas_ctr_cashflow': contract._gas_cashflow if isinstance(contract,CostRecovery) else contract._gas_ctr_cashflow,
                     'consolidated_costrecovery_or_deductible_cost': contract._consolidated_cost_recovery_after_tf if isinstance(contract, CostRecovery) else contract._consolidated_deductible_cost,
                     'consolidated_unrecoverable_cost_or_carryforward_cost': contract._consolidated_unrecovered_after_transfer if isinstance(contract, CostRecovery) else contract._consolidated_carward_cost_aftertf,
-                    'consolidated_ctr_share': contract._consolidated_contractor_share if isinstance(contract, CostRecovery) else contract._consolidated_ctr_share_after_transfer,
+                    # patch 12/03/2025
+                    'consolidated_ctr_share': contract._consolidated_contractor_share if isinstance(contract, CostRecovery) else contract._consolidated_ctr_net_share,
+                    # 'consolidated_ctr_share': contract._consolidated_contractor_share if isinstance(contract, CostRecovery) else contract._consolidated_ctr_share_after_transfer,
                     'consolidated_gov_share': contract._consolidated_government_share if isinstance(contract,CostRecovery) else contract._consolidated_gov_share_before_tf,
                     'consolidated_effective_tax_payment': contract._consolidated_tax_payment if isinstance(contract,CostRecovery) else contract._consolidated_tax_payment,
                     'consolidated_ddmo': contract._consolidated_ddmo,

@@ -26,6 +26,10 @@ from pyscnomics.api.adapter import (get_baseproject,
                                     get_lbt_expenditures,
                                     get_sensitivity,
                                     get_uncertainty)
+from pyscnomics.api.converter import (
+    convert_str_to_npvmode,
+    convert_str_to_discountingmode,
+)
 from pyscnomics.api.converter import Data, EconLimit, ASRExpendituresBM, LBTExpendituresBM
 from pyscnomics.api.converter import DataTransition
 from pyscnomics.api.converter import LtpBM, RpdBM
@@ -471,8 +475,8 @@ async def get_combine(request: Request, data: dict = Body(...)):
             reference_year=reference_year,
             inflation_rate=inflation_rate,
             discount_rate=discount_rate,
-            npv_mode=npv_mode,
-            discounting_mode=discounting_mode,
+            npv_mode=convert_str_to_npvmode(npv_mode),
+            discounting_mode=convert_str_to_discountingmode(discounting_mode),
             profitability_discounted=profitability_discounted
         )
         tbl_summ = summary_.case_combine()
@@ -524,8 +528,8 @@ async def get_increment(request: Request, data: dict = Body(...)):
             reference_year=reference_year,
             inflation_rate=inflation_rate,
             discount_rate=discount_rate,
-            npv_mode=npv_mode,
-            discounting_mode=discounting_mode,
+            npv_mode=convert_str_to_npvmode(npv_mode),
+            discounting_mode=convert_str_to_discountingmode(discounting_mode),
             profitability_discounted=profitability_discounted
         )
         tbl_summ = summary_.case_incremental()
