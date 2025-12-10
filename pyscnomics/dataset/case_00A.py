@@ -244,7 +244,7 @@ class Case00A:
             ),
             "cost_type": (
                 [
-                    None,  # 2023
+                    CostType.POST_ONSTREAM_COST,  # 2023
                     None,  # 2024
                     None,  # 2025
                     None,  # 2026
@@ -253,7 +253,7 @@ class Case00A:
                     None,  # 2029
                     None,  # 2030
                     None,  # 2031
-                    None,  # 2032
+                    CostType.SUNK_COST,  # 2032
                 ]
             ),
             "tax_portion": np.array(

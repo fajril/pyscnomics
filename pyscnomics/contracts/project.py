@@ -2,6 +2,7 @@
 Configure base project as the foundation (or parent class) for PSC contract.
 """
 
+import logging
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass, field
@@ -37,6 +38,11 @@ from pyscnomics.econ.indicator import (
 
 pd.set_option("display.max_rows", 200)
 pd.set_option("display.max_columns", 50)
+logging.basicConfig(
+    # filename="warnings.log",
+    level=logging.WARNING,
+    format="%(levelname)s: %(message)s\n"
+)
 
 
 class BaseProjectException(Exception):
@@ -773,7 +779,7 @@ class BaseProject:
         print('t1 = \n', t1)
 
         self._prepare_cost_types(
-            cost_obj=capital_cost["oil"], is_strict=True
+            cost_obj=capital_cost["oil"], is_strict=False
         )
 
         t1 = capital_cost["oil"]
@@ -1703,23 +1709,25 @@ class BaseProject:
         ct[pre_onstream_default] = CostType.PRE_ONSTREAM_COST
         ct[post_onstream_default] = CostType.POST_ONSTREAM_COST
 
-        # Conditions for "strict" mode
+        # Specify cost type conditions
+        ctypes = {
+            "sc": ry < self.approval_year,
+            "preos": (ry > self.approval_year) & (ry < onstream_year),
+            "postos": ry > onstream_year,
+            "at_approval": ry == self.approval_year,
+            "at_onstream": ry == onstream_year,
+        }
+
+        # Mapping rules
+        rules = [
+            (ctypes["sc"], CostType.SUNK_COST),
+            (ctypes["preos"], CostType.PRE_ONSTREAM_COST),
+            (ctypes["postos"], CostType.POST_ONSTREAM_COST),
+        ]
+
+        # "Strict" mode
         if is_strict:
-            ctypes = {
-                "sc": ry < self.approval_year,
-                "preos": (ry > self.approval_year) & (ry < onstream_year),
-                "postos": ry > onstream_year,
-                "at_approval": ry == self.approval_year,
-                "at_onstream": ry == onstream_year,
-            }
-
             # Raise an error: Mismatch in cost type classification
-            rules = [
-                (ctypes["sc"], CostType.SUNK_COST),
-                (ctypes["preos"], CostType.PRE_ONSTREAM_COST),
-                (ctypes["postos"], CostType.POST_ONSTREAM_COST),
-            ]
-
             for mask, expected in rules:
                 if np.any(mask) and not np.all(ct[mask] == expected):
                     raise BaseProjectException(f"Mismatch in {expected.value} classification")
@@ -1744,6 +1752,17 @@ class BaseProject:
                         f"Cannot accept SUNK COST as cost type at onstream year "
                         f"({onstream_year})"
                     )
+
+        # "Loose" mode
+        else:
+            for mask, expected in rules:
+                if np.any(mask) and not np.all(ct[mask] == expected):
+                    logging.warning(
+                        f"Inconsistencies in cost type classifications. "
+                        f"{ct[mask]} should all contain {expected}. "
+                    )
+
+
 
         # Modify cost_type attribute of cost_obj
         cost_obj.cost_type = ct.tolist()
