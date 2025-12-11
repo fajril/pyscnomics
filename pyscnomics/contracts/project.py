@@ -441,6 +441,28 @@ class BaseProject:
                 f"is after the end date: {self.end_date}"
             )
 
+        # Prepare attribute "is_pod_1"
+        if self.is_pod_1 is None:
+            self.is_pod_1 = False
+
+        else:
+            if not isinstance(self.is_pod_1, bool):
+                raise BaseProjectException(
+                    f"Attribute is_pod_1 must be a boolean, not "
+                    f"a/an {self.is_pod_1.__class__.__qualname__}"
+                )
+
+        # Prepare attribute "is_strict"
+        if self.is_strict is None:
+            self.is_strict = True
+
+        else:
+            if not isinstance(self.is_strict, bool):
+                raise BaseProjectException(
+                    f"Attribute is_strict must be a boolean, not "
+                    f"a/an {self.is_strict.__class__.__qualname__}"
+                )
+
         # Prepare attribute lifting (for OIL, GAS, SULFUR, ELECTRICITY, and CO2)
         if self.lifting is None:
             self.lifting = (
@@ -740,13 +762,6 @@ class BaseProject:
                     f"Attribute cost_of_sales must be provided as a tuple of CostOfSales "
                     f"instances, not as an/a {self.cost_of_sales.__class__.__qualname__}"
                 )
-
-        # Prepare attribute "is_pod_1"
-        if not isinstance(self.is_pod_1, bool):
-            raise BaseProjectException(
-                f"Attribute is_pod_1 must be a boolean, not "
-                f"a/an {self.is_pod_1.__class__.__qualname__}"
-            )
 
         # Prepare attributes associated with total cost per component
         self.capital_cost_total = reduce(lambda x, y: x + y, self.capital_cost)
@@ -1635,55 +1650,62 @@ class BaseProject:
         """
         Assign and validate cost-type classifications for a cost object.
 
-        This method performs two major tasks:
+        This method performs two coordinated tasks:
 
         1. **Default assignment**
-           Unassigned entries in ``cost_obj.cost_type`` (i.e., values equal to
-           ``None``) are classified using the object's reference year relative to
-           the project timeline:
+           Any entry in ``cost_obj.cost_type`` that is ``None`` is automatically
+           classified based on the reference year relative to the project timeline:
 
              - ``SUNK_COST``          : year < approval_year
              - ``PRE_ONSTREAM_COST``  : approval_year <= year < onstream_year
              - ``POST_ONSTREAM_COST`` : year >= onstream_year
 
-           For ``CapitalCost`` objects the reference year is ``pis_year``; for
-           all others it is ``expense_year``. The earliest onstream year between
-           oil and gas is used.
+           For ``CapitalCost`` objects, the reference array is ``pis_year``; for all
+           other cost objects it is ``expense_year``.
+           The earliest onstream year between oil and gas is used as the cutoff.
+           For non-POD I configurations, the default ``SUNK_COST`` category is not
+           applied and is replaced with ``PRE_ONSTREAM_COST``.
 
         2. **Consistency validation**
-           For entries that were already assigned, the method checks whether the
-           values match the expected ``CostType`` for their classification window.
-           Additional validation is applied at the exact approval and onstream
-           years to reject disallowed cost-type combinations.
+           For entries that already have an assigned ``cost_type``, the method checks
+           whether their values are compatible with the classification implied by
+           their reference year. Three regions are checked:
 
-           - In ``is_strict=True`` mode: mismatches raise ``BaseProjectException``.
-           - In ``is_strict=False`` mode: mismatches emit a warning but do not halt
-             execution.
+             - year < approval_year
+             - approval_year < year < onstream_year
+             - year > onstream_year
+
+           Boundary years receive additional validation:
+             - At the **approval year**, ``POST_ONSTREAM_COST`` is not permitted.
+             - At the **onstream year**, ``SUNK_COST`` is not permitted.
+
+           Validation behavior depends on ``is_strict``:
+             - ``True``  → mismatches raise ``BaseProjectException``.
+             - ``False`` → mismatches are logged as warnings.
 
         Parameters
         ----------
         is_strict : bool
-            If ``True``, enforce strict validation of existing ``cost_type``
-            assignments and boundary-year rules. If ``False``, inconsistencies are
-            logged as warnings.
+            Determines whether inconsistencies raise exceptions (strict mode) or are
+            only logged as warnings (loose mode).
         cost_obj : CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales
-            Object providing reference-year information (``pis_year`` or
-            ``expense_year``) and a mutable ``cost_type`` list. The list is updated
-            in place.
+            Cost object providing ``pis_year`` or ``expense_year`` and a mutable
+            ``cost_type`` list. This list is modified in place.
 
         Returns
         -------
         None
-            ``cost_obj.cost_type`` is modified in place.
+            The ``cost_type`` attribute of ``cost_obj`` is updated directly.
 
         Raises
         ------
         BaseProjectException
-            If approval-year validation fails, or if ``is_strict=True`` and any
-            of the following occur:
-            - assigned ``cost_type`` values do not match the expected classification,
-            - ``POST_ONSTREAM_COST`` appears at the approval year,
-            - ``SUNK_COST`` appears at the onstream year.
+            Raised when:
+            - the approval year validation fails,
+            - assigned ``cost_type`` values contradict their year-based classification
+              (strict mode only),
+            - ``POST_ONSTREAM_COST`` is found at the approval year (strict mode),
+            - ``SUNK_COST`` is found at the onstream year (strict mode).
         """
 
         # Validate approval_year
@@ -1705,7 +1727,10 @@ class BaseProject:
         }
 
         # Assign default values for cost types using the above masks
-        ct[defaults["sunk_cost"]] = CostType.SUNK_COST
+        # For non-POD I --> no sunk cost as default values
+        ct[defaults["sunk_cost"]] = (
+            CostType.SUNK_COST if self.is_pod_1 else CostType.PRE_ONSTREAM_COST
+        )
         ct[defaults["preonstream"]] = CostType.PRE_ONSTREAM_COST
         ct[defaults["postonstream"]] = CostType.POST_ONSTREAM_COST
 
@@ -1719,8 +1744,9 @@ class BaseProject:
         }
 
         # Mapping rules
+        # For non-POD I --> no sunk cost as default values
         rules = [
-            (ctypes["sc"], CostType.SUNK_COST),
+            (ctypes["sc"], CostType.SUNK_COST if self.is_pod_1 else CostType.PRE_ONSTREAM_COST),
             (ctypes["preos"], CostType.PRE_ONSTREAM_COST),
             (ctypes["postos"], CostType.POST_ONSTREAM_COST),
         ]
@@ -2735,32 +2761,47 @@ class BaseProject:
 
     def _validate_preonstream(self, preonstream_objects: list) -> None:
         """
-        Validate that all pre-onstream cost objects fall within the allowed year range.
+        Validate the year ranges of all pre-onstream cost objects.
 
-        The method checks each object's reference years—``pis_year`` for ``CapitalCost``
-        and ``expense_year`` for all other cost types—and ensures they lie between the
-        project approval year and the earliest onstream year (oil or gas).
+        This method inspects each object's reference-year span—``pis_year`` for
+        ``CapitalCost`` or ``expense_year`` for all other cost types—and checks
+        whether its minimum and maximum years fall within the permitted
+        pre-onstream window.
+
+        The rules differ slightly depending on the contract type:
+
+        * **POD I**
+          Pre-onstream years must satisfy:
+          ``approval_year <= year <= onstream_year``
+          Both the minimum and maximum reference years are validated.
+
+        * **Non-POD I**
+          Only the upper bound is enforced:
+          ``max(year) <= onstream_year``
+          (Years before the approval year are allowed because non-POD I treats them
+          as pre-onstream by default.)
 
         Parameters
         ----------
         preonstream_objects : list
-            List of pre-onstream cost objects (CapitalCost, Intangible, OPEX,
-            ASR, LBT, or CostOfSales), already filtered by fluid type. Each object
-            must expose either ``pis_year`` or ``expense_year`` as year arrays.
+            A list of pre-onstream cost objects (``CapitalCost``, ``Intangible``,
+            ``OPEX``, ``ASR``, ``LBT``, or ``CostOfSales``). Each object must
+            provide a reference-year array through ``pis_year`` (for
+            ``CapitalCost``) or ``expense_year`` (for other cost types).
 
         Raises
         ------
         PreOnstreamException
-            Raised in strict mode if any object's year range falls outside the valid
-            interval. The exception message includes the offending (min, max) year
-            pairs and the expected bounds.
+            Raised when ``is_strict`` is enabled and any object's year span violates
+            the allowed range for its contract type. The error message lists the
+            offending (min, max) year pairs along with the expected interval.
 
         Notes
         -----
-        Ensures chronological consistency of pre-onstream costs by preventing
-        entries from appearing before project approval or beyond the designated
-        onstream start. In non-strict mode, violations trigger warnings instead of
-        exceptions.
+        In non-strict mode, violations trigger warnings rather than exceptions.
+        This validation preserves chronological consistency by ensuring that
+        pre-onstream expenditures occur entirely before the project's earliest
+        onstream year, and—where required—no earlier than the approval year.
         """
 
         onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
@@ -2779,10 +2820,16 @@ class BaseProject:
             ], dtype=int
         )
 
-        mask = (
-            (preonstream_min_years < self.approval_year)
-            | (preonstream_max_years > onstream_yr)
-        )
+        # POD I contract
+        if self.is_pod_1:
+            mask = (
+                (preonstream_min_years < self.approval_year)
+                | (preonstream_max_years > onstream_yr)
+            )
+
+        # Non-POD I contract
+        else:
+            mask = (preonstream_max_years > onstream_yr)
 
         if np.any(mask):
             incorrect_years = list(
@@ -2803,32 +2850,33 @@ class BaseProject:
 
     def _validate_postonstream(self, postonstream_objects: list) -> None:
         """
-        Validate that post-onstream cost objects do not include years before the onstream
-        date.
+        Validate the year bounds of post-onstream cost objects.
 
-        This method checks the earliest reference year for each post-onstream object and
-        ensures it is not earlier than the project's earliest onstream year (oil or gas).
-        For ``CapitalCost`` objects, the reference year is ``pis_year``; for all others,
-        it is ``expense_year``.
+        This method checks the earliest reference year for each post-onstream cost
+        object and verifies that none occur before the project's earliest onstream
+        year (oil or gas). ``CapitalCost`` objects use ``pis_year`` as their reference
+        array, while all other cost types use ``expense_year``.
 
         Parameters
         ----------
         postonstream_objects : list
-            A list of post-onstream cost objects (CapitalCost, Intangible, OPEX, ASR,
-            LBT, or CostOfSales), already filtered by fluid type. Each object must
-            provide either ``pis_year`` or ``expense_year`` as year arrays.
+            Collection of post-onstream cost objects (``CapitalCost``, ``Intangible``,
+            ``OPEX``, ``ASR``, ``LBT``, or ``CostOfSales``). Each object must provide
+            a reference year array via ``pis_year`` or ``expense_year``.
 
         Raises
         ------
         PostOnstreamException
-            If any object's earliest reference year occurs before the project's
-            onstream year. The exception message lists the offending years and
-            the valid onstream cutoff.
+            Raised when ``is_strict`` is enabled and one or more objects contain
+            reference years earlier than the project's onstream year. The exception
+            message includes the offending years and the valid cutoff.
 
         Notes
         -----
-        This validation ensures chronological consistency by preventing post-onstream
-        expenditures from appearing before the project enters its onstream phase.
+        In non-strict mode, violations trigger warnings instead of exceptions.
+        This check enforces chronological consistency by ensuring that post-onstream
+        expenditures do not appear before the project transitions into its onstream
+        phase.
         """
 
         onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
@@ -2844,10 +2892,18 @@ class BaseProject:
 
         if np.any(mask):
             incorrect_years = postonstream_min_years[mask]
-            raise PostOnstreamException(
+            message = (
                 f"Postonstream cost years ({incorrect_years}) occur before "
-                f"onstream year ({onstream_yr}) "
+                f"onstream year ({onstream_yr})"
             )
+
+            # Strict mode: raise an error
+            if self.is_strict:
+                raise PostOnstreamException(message)
+
+            # Loose mode: display a warning message
+            else:
+                logging.warning(message)
 
     def _get_cost_objects_validation(self) -> None:
         """
@@ -2868,17 +2924,6 @@ class BaseProject:
         -   Preonstream costs must be between the approval year and the earliest
             onstream year.
         -   Postonstream costs must occur no earlier than the earliest onstream year.
-
-        Raises
-        ------
-        SunkCostException
-            If any sunk cost object has `expense_year` exceeding the cutoff year.
-        PreOnstreamException
-            If any preonstream cost object has `expense_year` outside the allowable
-            range.
-        PostOnstreamException
-            If any postonstream cost object has `expense_year` earlier than the
-            onstream year.
 
         Notes
         -----
@@ -3096,92 +3141,57 @@ class BaseProject:
             self._gas_depreciable_preonstream + self._gas_non_depreciable_preonstream
         )
 
-    def _modify_sunk_cost_preonstream(self) -> None:
+    def _validated_sunkcost_non_pod_1(self) -> None:
         """
-        Update sunk cost and preonstream attributes for oil and gas.
+        Validate sunk cost arrays for non–POD I contracts.
 
-        This method adjusts both depreciable and non-depreciable sunk costs by
-        adding the corresponding preonstream values. After the update, all
-        preonstream attributes are reset to zero arrays. Finally, it recomputes
-        the total sunk cost and preonstream values for oil and gas.
+        This method checks whether all sunk cost components are zero when the
+        contract is not POD I. The validation is performed on both depreciable and
+        non-depreciable sunk cost arrays for oil and gas.
+
+        In strict mode (``is_strict``), the presence of any non-zero sunk cost in a
+        non–POD I contract results in a ``SunkCostException``. In non-strict mode,
+        the method instead emits a warning for each cost category found to contain
+        non-zero values.
+
+        The following attributes are validated:
+
+        - ``_oil_depreciable_sunk_cost``
+        - ``_gas_depreciable_sunk_cost``
+        - ``_oil_non_depreciable_sunk_cost``
+        - ``_gas_non_depreciable_sunk_cost``
 
         Notes
         -----
-        - The method modifies the following attributes in place:
-          * ``_oil_depreciable_sunk_cost``
-          * ``_gas_depreciable_sunk_cost``
-          * ``_oil_non_depreciable_sunk_cost``
-          * ``_gas_non_depreciable_sunk_cost``
-          * ``_oil_depreciable_preonstream``
-          * ``_gas_depreciable_preonstream``
-          * ``_oil_non_depreciable_preonstream``
-          * ``_gas_non_depreciable_preonstream``
-          * ``_oil_sunk_cost``
-          * ``_gas_sunk_cost``
-          * ``_oil_preonstream``
-          * ``_gas_preonstream``
-
-        - After execution, all preonstream attributes are zero arrays of the
-          same shape as ``project_years``.
-
-        Attributes Modified
-        -------------------
-        _oil_depreciable_sunk_cost : ndarray
-            Updated by adding ``_oil_depreciable_preonstream``.
-        _gas_depreciable_sunk_cost : ndarray
-            Updated by adding ``_gas_depreciable_preonstream``.
-        _oil_non_depreciable_sunk_cost : ndarray
-            Updated by adding ``_oil_non_depreciable_preonstream``.
-        _gas_non_depreciable_sunk_cost : ndarray
-            Updated by adding ``_gas_non_depreciable_preonstream``.
-        _oil_depreciable_preonstream : ndarray
-            Reset to zeros after being added to sunk cost.
-        _gas_depreciable_preonstream : ndarray
-            Reset to zeros after being added to sunk cost.
-        _oil_non_depreciable_preonstream : ndarray
-            Reset to zeros after being added to sunk cost.
-        _gas_non_depreciable_preonstream : ndarray
-            Reset to zeros after being added to sunk cost.
-        _oil_sunk_cost : ndarray
-            Recomputed as sum of oil depreciable and non-depreciable sunk costs.
-        _gas_sunk_cost : ndarray
-            Recomputed as sum of gas depreciable and non-depreciable sunk costs.
-        _oil_preonstream : ndarray
-            Reset to zero as sum of oil preonstream components.
-        _gas_preonstream : ndarray
-            Reset to zero as sum of gas preonstream components.
+        - POD I contracts are exempt from this validation.
+        - The method does not modify any sunk cost or preonstream arrays; it performs
+          validation only.
         """
 
-        # Modify depreciable and non-depreciable expenses for sunk cost
-        self._oil_depreciable_sunk_cost += self._oil_depreciable_preonstream
-        self._gas_depreciable_sunk_cost += self._gas_depreciable_preonstream
-        self._oil_non_depreciable_sunk_cost += self._oil_non_depreciable_preonstream
-        self._gas_non_depreciable_sunk_cost += self._gas_non_depreciable_preonstream
+        def _all_zeros(arr: np.ndarray) -> bool:
+            return np.all(arr == 0)
 
-        # Modify depreaciable and non-depreciable expenses for preonstream
-        zeros = np.zeros_like(self.project_years, dtype=float)
+        if not self.is_pod_1:
+            zero_sunk_costs = {
+                "oil_depreciable": _all_zeros(self._oil_depreciable_sunk_cost),
+                "gas_depreciable": _all_zeros(self._gas_depreciable_sunk_cost),
+                "oil_non_depreciable": _all_zeros(self._oil_non_depreciable_sunk_cost),
+                "gas_non_depreciable": _all_zeros(self._gas_non_depreciable_sunk_cost),
+            }
 
-        for attr in [
-            "_oil_depreciable_preonstream",
-            "_gas_depreciable_preonstream",
-            "_oil_non_depreciable_preonstream",
-            "_gas_non_depreciable_preonstream",
-        ]:
-            setattr(self, attr, zeros)
+            values = zero_sunk_costs.values()
 
-        # Modify total sunk cost and preonstream
-        self._oil_sunk_cost = (
-            self._oil_depreciable_sunk_cost + self._oil_non_depreciable_sunk_cost
-        )
-        self._gas_sunk_cost = (
-            self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
-        )
-        self._oil_preonstream = (
-            self._oil_depreciable_preonstream + self._oil_non_depreciable_preonstream
-        )
-        self._gas_preonstream = (
-            self._gas_depreciable_preonstream + self._gas_non_depreciable_preonstream
-        )
+            # Strict mode: raise an error
+            if self.is_strict:
+                if not all(values):
+                    raise SunkCostException(f"Cannot have sunk cost in non-POD I contract.")
+
+            # Loose mode: display a warning message
+            else:
+                for key, val in zero_sunk_costs.items():
+                    if not val:
+                        message = f"Found {key} sunk cost for non-POD I contract."
+                        logging.warning(message)
 
     def _get_investments(self) -> None:
         """
@@ -3850,112 +3860,109 @@ class BaseProject:
         # Validate sunk cost, pre-onstream, and post-onstream objects
         self._get_cost_objects_validation()
 
-        print('\t')
-        print('Aditya')
+        # Calculate pre tax expenditures
+        self._get_expenditures_pre_tax(
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
+        )
 
-        # # Calculate pre tax expenditures
-        # self._get_expenditures_pre_tax(
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     inflation_rate_applied_to=inflation_rate_applied_to,
-        # )
-        #
-        # # Calculate indirect taxes
-        # self._get_indirect_taxes(tax_rate=vat_rate)
-        #
-        # # Calculate post tax expenditures
-        # self._get_expenditures_post_tax()
-        #
-        # # Other revenue
-        # self._get_other_revenue(
-        #     sulfur_revenue=sulfur_revenue,
-        #     electricity_revenue=electricity_revenue,
-        #     co2_revenue=co2_revenue,
-        # )
-        #
-        # # Total OIL pre-tax expenditures
-        # self._oil_total_expenditures_pre_tax = (
-        #     self._oil_capital_expenditures_pre_tax
-        #     + self._oil_intangible_expenditures_pre_tax
-        #     + self._oil_opex_expenditures_pre_tax
-        #     + self._oil_asr_expenditures_pre_tax
-        #     + self._oil_lbt_expenditures_pre_tax
-        #     + self._oil_cost_of_sales_expenditures_pre_tax
-        # )
-        #
-        # # Total GAS pre-tax expenditures
-        # self._gas_total_expenditures_pre_tax = (
-        #     self._gas_capital_expenditures_pre_tax
-        #     + self._gas_intangible_expenditures_pre_tax
-        #     + self._gas_opex_expenditures_pre_tax
-        #     + self._gas_asr_expenditures_pre_tax
-        #     + self._gas_lbt_expenditures_pre_tax
-        #     + self._gas_cost_of_sales_expenditures_pre_tax
-        # )
-        #
-        # # Total OIL indirect taxes
-        # self._oil_total_indirect_tax = (
-        #     self._oil_capital_indirect_tax
-        #     + self._oil_intangible_indirect_tax
-        #     + self._oil_opex_indirect_tax
-        #     + self._oil_asr_indirect_tax
-        #     + self._oil_lbt_indirect_tax
-        #     + self._oil_cost_of_sales_indirect_tax
-        # )
-        #
-        # # Total GAS indirect taxes
-        # self._gas_total_indirect_tax = (
-        #     self._gas_capital_indirect_tax
-        #     + self._gas_intangible_indirect_tax
-        #     + self._gas_opex_indirect_tax
-        #     + self._gas_asr_indirect_tax
-        #     + self._gas_lbt_indirect_tax
-        #     + self._gas_cost_of_sales_indirect_tax
-        # )
-        #
-        # # Total OIL post-tax expenditures
-        # self._oil_total_expenditures_post_tax = (
-        #     self._oil_capital_expenditures_post_tax
-        #     + self._oil_intangible_expenditures_post_tax
-        #     + self._oil_opex_expenditures_post_tax
-        #     + self._oil_asr_expenditures_post_tax
-        #     + self._oil_lbt_expenditures_post_tax
-        #     + self._oil_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # # Total GAS post-tax expenditures
-        # self._gas_total_expenditures_post_tax = (
-        #     self._gas_capital_expenditures_post_tax
-        #     + self._gas_intangible_expenditures_post_tax
-        #     + self._gas_opex_expenditures_post_tax
-        #     + self._gas_asr_expenditures_post_tax
-        #     + self._gas_lbt_expenditures_post_tax
-        #     + self._gas_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # # Prepare sunk costs and preonstream costs
-        # self._get_sunkcost_array()
-        # self._get_preonstream_array()
-        # self._modify_sunk_cost_preonstream()
-        #
-        # # Prepare capital, non-capital, and total investments
-        # self._get_investments()
-        #
-        # # Configure base cashflow for OIL and GAS
-        # self._oil_cashflow = self._oil_revenue - (
-        #     self._oil_sunk_cost
-        #     + self._oil_preonstream
-        #     + self._oil_total_expenditures_post_tax
-        # )
-        #
-        # self._gas_cashflow = self._gas_revenue - (
-        #     self._gas_sunk_cost
-        #     + self._gas_preonstream
-        #     + self._gas_total_expenditures_post_tax
-        # )
-        #
-        # # Prepare consolidated profiles
-        # self._get_consolidated_profiles()
+        # Calculate indirect taxes
+        self._get_indirect_taxes(tax_rate=vat_rate)
+
+        # Calculate post tax expenditures
+        self._get_expenditures_post_tax()
+
+        # Other revenue
+        self._get_other_revenue(
+            sulfur_revenue=sulfur_revenue,
+            electricity_revenue=electricity_revenue,
+            co2_revenue=co2_revenue,
+        )
+
+        # Total OIL pre-tax expenditures
+        self._oil_total_expenditures_pre_tax = (
+            self._oil_capital_expenditures_pre_tax
+            + self._oil_intangible_expenditures_pre_tax
+            + self._oil_opex_expenditures_pre_tax
+            + self._oil_asr_expenditures_pre_tax
+            + self._oil_lbt_expenditures_pre_tax
+            + self._oil_cost_of_sales_expenditures_pre_tax
+        )
+
+        # Total GAS pre-tax expenditures
+        self._gas_total_expenditures_pre_tax = (
+            self._gas_capital_expenditures_pre_tax
+            + self._gas_intangible_expenditures_pre_tax
+            + self._gas_opex_expenditures_pre_tax
+            + self._gas_asr_expenditures_pre_tax
+            + self._gas_lbt_expenditures_pre_tax
+            + self._gas_cost_of_sales_expenditures_pre_tax
+        )
+
+        # Total OIL indirect taxes
+        self._oil_total_indirect_tax = (
+            self._oil_capital_indirect_tax
+            + self._oil_intangible_indirect_tax
+            + self._oil_opex_indirect_tax
+            + self._oil_asr_indirect_tax
+            + self._oil_lbt_indirect_tax
+            + self._oil_cost_of_sales_indirect_tax
+        )
+
+        # Total GAS indirect taxes
+        self._gas_total_indirect_tax = (
+            self._gas_capital_indirect_tax
+            + self._gas_intangible_indirect_tax
+            + self._gas_opex_indirect_tax
+            + self._gas_asr_indirect_tax
+            + self._gas_lbt_indirect_tax
+            + self._gas_cost_of_sales_indirect_tax
+        )
+
+        # Total OIL post-tax expenditures
+        self._oil_total_expenditures_post_tax = (
+            self._oil_capital_expenditures_post_tax
+            + self._oil_intangible_expenditures_post_tax
+            + self._oil_opex_expenditures_post_tax
+            + self._oil_asr_expenditures_post_tax
+            + self._oil_lbt_expenditures_post_tax
+            + self._oil_cost_of_sales_expenditures_post_tax
+        )
+
+        # Total GAS post-tax expenditures
+        self._gas_total_expenditures_post_tax = (
+            self._gas_capital_expenditures_post_tax
+            + self._gas_intangible_expenditures_post_tax
+            + self._gas_opex_expenditures_post_tax
+            + self._gas_asr_expenditures_post_tax
+            + self._gas_lbt_expenditures_post_tax
+            + self._gas_cost_of_sales_expenditures_post_tax
+        )
+
+        # Prepare sunk costs and preonstream costs
+        self._get_sunkcost_array()
+        self._get_preonstream_array()
+        self._validated_sunkcost_non_pod_1()
+
+        # Prepare capital, non-capital, and total investments
+        self._get_investments()
+
+        # Configure base cashflow for OIL and GAS
+        self._oil_cashflow = self._oil_revenue - (
+            self._oil_sunk_cost
+            + self._oil_preonstream
+            + self._oil_total_expenditures_post_tax
+        )
+
+        self._gas_cashflow = self._gas_revenue - (
+            self._gas_sunk_cost
+            + self._gas_preonstream
+            + self._gas_total_expenditures_post_tax
+        )
+
+        # Prepare consolidated profiles
+        self._get_consolidated_profiles()
 
     @staticmethod
     def _calc_division(numerator: float, denominator: float, default: float = 0.0):

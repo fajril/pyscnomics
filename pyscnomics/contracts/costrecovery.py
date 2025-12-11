@@ -2059,7 +2059,7 @@ class CostRecovery(BaseProject):
         # Prepare sunk costs and preonstream costs
         self._get_sunkcost_array()
         self._get_preonstream_array()
-        self._modify_sunk_cost_preonstream()
+        self._validated_sunkcost_non_pod_1()
 
         # Calculate depreciations and undepreciated assets
         self._get_depreciation(

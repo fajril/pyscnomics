@@ -2697,7 +2697,7 @@ class GrossSplit(BaseProject):
 
         # Modify sunk cost and preonstream cost for non-POD I contract
         if not self.is_pod_1:
-            self._modify_sunk_cost_preonstream()
+            self._validated_sunkcost_non_pod_1()
 
             """
             Former approach
