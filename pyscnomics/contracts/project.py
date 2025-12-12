@@ -2761,64 +2761,47 @@ class BaseProject:
 
     def _validate_preonstream(self, preonstream_objects: list) -> None:
         """
-        Validate the year ranges of all pre-onstream cost objects.
+        Validate the reference-year ranges of pre-onstream cost objects.
 
-        This method inspects each object's reference-year span—``pis_year`` for
-        ``CapitalCost`` or ``expense_year`` for all other cost types—and checks
-        whether its minimum and maximum years fall within the permitted
-        pre-onstream window.
-
-        The rules differ slightly depending on the contract type:
+        Each object’s minimum and maximum reference years—``pis_year`` for
+        ``CapitalCost`` or ``expense_year`` for other cost types—are extracted and
+        checked against the allowable pre-onstream window determined by the contract
+        type:
 
         * **POD I**
-          Pre-onstream years must satisfy:
-          ``approval_year <= year <= onstream_year``
-          Both the minimum and maximum reference years are validated.
+          Both lower and upper bounds are enforced:
+          ``approval_year <= year <= onstream_year``.
 
         * **Non-POD I**
-          Only the upper bound is enforced:
-          ``max(year) <= onstream_year``
-          (Years before the approval year are allowed because non-POD I treats them
-          as pre-onstream by default.)
+          Only the upper bound applies:
+          ``max(year) <= onstream_year``.
 
         Parameters
         ----------
         preonstream_objects : list
-            A list of pre-onstream cost objects (``CapitalCost``, ``Intangible``,
-            ``OPEX``, ``ASR``, ``LBT``, or ``CostOfSales``). Each object must
-            provide a reference-year array through ``pis_year`` (for
-            ``CapitalCost``) or ``expense_year`` (for other cost types).
+            A list of cost objects providing ``pis_year`` or ``expense_year`` arrays.
 
         Raises
         ------
         PreOnstreamException
-            Raised when ``is_strict`` is enabled and any object's year span violates
-            the allowed range for its contract type. The error message lists the
-            offending (min, max) year pairs along with the expected interval.
-
-        Notes
-        -----
-        In non-strict mode, violations trigger warnings rather than exceptions.
-        This validation preserves chronological consistency by ensuring that
-        pre-onstream expenditures occur entirely before the project's earliest
-        onstream year, and—where required—no earlier than the approval year.
+            If strict mode is enabled and any object's year span violates the
+            permitted range. Otherwise, a warning is logged.
         """
 
         onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
 
-        preonstream_max_years = np.array(
-            [
-                np.max(pr.pis_year) if isinstance(pr, CapitalCost)
-                else np.max(pr.expense_year) for pr in preonstream_objects
-            ], dtype=int
-        )
+        # Helper to extract min/max year for each object
+        def _extract_years(obj, func):
+            arr = obj.pis_year if isinstance(obj, CapitalCost) else obj.expense_year
+            return func(arr)
 
-        preonstream_min_years = np.array(
-            [
-                np.min(pr.pis_year) if isinstance(pr, CapitalCost)
-                else np.min(pr.expense_year) for pr in preonstream_objects
-            ], dtype=int
+        preonstream_max_years = np.array(
+            [_extract_years(obj=pr, func=np.max) for pr in preonstream_objects]
         )
+        preonstream_min_years = np.array(
+            [_extract_years(obj=pr, func=np.min) for pr in preonstream_objects]
+        )
+        message = None
 
         # POD I contract
         if self.is_pod_1:
@@ -2827,19 +2810,27 @@ class BaseProject:
                 | (preonstream_max_years > onstream_yr)
             )
 
+            if np.any(mask):
+                incorrect_years = list(
+                    zip(preonstream_min_years[mask], preonstream_max_years[mask])
+                )
+                message = (
+                    f"Preonstream years ({incorrect_years}) fall outside the allowable "
+                    f"range: {self.approval_year} <= preonstream_years <= {onstream_yr}."
+                )
+
         # Non-POD I contract
         else:
             mask = (preonstream_max_years > onstream_yr)
 
-        if np.any(mask):
-            incorrect_years = list(
-                zip(preonstream_min_years[mask], preonstream_max_years[mask])
-            )
-            message = (
-                f"Preonstream years ({incorrect_years}) fall outside the allowable "
-                f"range: {self.approval_year} <= preonstream_years <= {onstream_yr}."
-            )
+            if np.any(mask):
+                incorrect_years = preonstream_max_years[mask]
+                message = (
+                    f"Preonstream years fall outside the allowable range: "
+                    f"preonstream_years ({incorrect_years}) > {onstream_yr}."
+                )
 
+        if message is not None:
             # Strict mode: raise an error
             if self.is_strict:
                 raise PreOnstreamException(message)
