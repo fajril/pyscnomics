@@ -45,19 +45,19 @@ if __name__ == "__main__":
     summary_arguments: dict = ctr["summary_arguments"]
     summary: dict = ctr["summary"]
 
-    # Configure cashflow table
-    cshflow: tuple = get_table(contract=contract)
-    cashflow_table: dict = {
-        "oil": cshflow[0],
-        "gas": cshflow[1],
-        "consolidated": cshflow[2],
-    }
-
-    t1 = cashflow_table["oil"]
+    t1 = summary
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')
     print('t1 = \n', t1)
+
+    # # Configure cashflow table
+    # cshflow: tuple = get_table(contract=contract)
+    # cashflow_table: dict = {
+    #     "oil": cshflow[0],
+    #     "gas": cshflow[1],
+    #     "consolidated": cshflow[2],
+    # }
 
     # print('\t')
     # print(f'Filetype: {type()}')

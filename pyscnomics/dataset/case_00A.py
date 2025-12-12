@@ -245,7 +245,7 @@ class Case00A:
             "cost_type": (
                 [
                     None,  # 2023
-                    CostType.SUNK_COST,  # 2024
+                    None,  # 2024
                     None,  # 2025
                     None,  # 2026
                     None,  # 2027
@@ -253,7 +253,7 @@ class Case00A:
                     None,  # 2029
                     None,  # 2030
                     None,  # 2031
-                    CostType.SUNK_COST,  # 2032
+                    None,  # 2032
                 ]
             ),
             "tax_portion": np.array(
@@ -1252,7 +1252,7 @@ class Case00A:
             "oil_onstream_date": date(year=2030, month=1, day=1),
             "gas_onstream_date": date(year=2029, month=1, day=1),
             "approval_year": 2026,
-            "is_pod_1": False,
+            "is_pod_1": True,
             "is_strict": False,
         }
 

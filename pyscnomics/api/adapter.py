@@ -159,6 +159,7 @@ def get_setup_dict(data: dict) -> tuple:
     )
     approval_year = convert_str_to_int(str_object=data["setup"]["approval_year"])
     is_pod_1 = data["setup"]["is_pod_1"]
+    is_strict = data["setup"]["is_strict"]
     lifting = convert_dict_to_lifting(data_raw=data) if "lifting" in data else None
     capital = convert_dict_to_capital(
         data_raw=data["capital"] if "capital" in data else None
@@ -180,6 +181,7 @@ def get_setup_dict(data: dict) -> tuple:
         gas_onstream_date,
         approval_year,
         is_pod_1,
+        is_strict,
         lifting,
         capital,
         intangible,
@@ -286,6 +288,7 @@ def build_baseproject_instance(data: dict) -> BaseProject:
         gas_onstream_date,
         approval_year,
         is_pod_1,
+        is_strict,
         lifting,
         capital,
         intangible,
@@ -304,6 +307,7 @@ def build_baseproject_instance(data: dict) -> BaseProject:
         "gas_onstream_date": gas_onstream_date,
         "approval_year": approval_year,
         "is_pod_1": is_pod_1,
+        "is_strict": is_strict,
 
         # Lifting and costs
         "lifting": lifting,
@@ -1196,7 +1200,7 @@ def add_execution_info(data: dict) -> dict:
     from importlib.metadata import version, PackageNotFoundError
 
     try:
-        package_version = "1.4.0"
+        package_version = "1.5.0"
         # package_version = version("pyscnomics")
 
     except PackageNotFoundError:
