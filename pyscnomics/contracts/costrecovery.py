@@ -565,85 +565,66 @@ class CostRecovery(BaseProject):
         #     )
         # }
 
+        print('\t')
+        print(f'Filetype: {type(self._oil_capital_sunk_cost)}')
+        print(f'Length: {len(self._oil_capital_sunk_cost)}')
+        print('_oil_capital_sunk_cost = ', self._oil_capital_sunk_cost)
+
         onstream_yr = min(self.oil_onstream_date.year, self.gas_onstream_date.year)
 
         print('\t')
         print('onstream_yr = ', onstream_yr)
 
-        def _check_pis_years(obj_capital: CapitalCost):
+        # Helper function to check PIS years
+        def _check_pis_years(obj_capital: CapitalCost, obj_name: str) -> None:
             pis_yrs = obj_capital.pis_year
-            mask = (pis_yrs != onstream_yr)
+            invalid_pis_years = pis_yrs[pis_yrs != onstream_yr]
 
-            if np.any(mask):
+            if len(invalid_pis_years) > 0:
+                # Specify message to be displayed
+                msg = (
+                    f"Found {obj_name!r} PIS years ({invalid_pis_years}) that are "
+                    f"different from onstream year ({onstream_yr})"
+                )
+
+                # Strict mode: raise an error
                 if self.is_strict:
-                    raise CostRecoveryException(
-                        f"Cannot allow PIS years ({pis_yrs[mask]}) that are different "
-                        f"from onstream year ({onstream_yr})."
-                    )
-                else:
-                    logging.warning(
-                        f"Found PIS years ({pis_yrs[mask]}) that are different from "
-                        f"onstream year ({onstream_yr})"
-                    )
+                    raise CostRecoveryException(f"Cannot allow: {msg}")
 
-        t1 = [
-            _check_pis_years(obj_capital=cap)
-            for cap in [
-                self._oil_capital_sunk_cost,
-                self._oil_capital_preonstream,
-                self._gas_capital_sunk_cost,
-                self._gas_capital_preonstream,
-            ]
+                # Loose mode: display a warning message
+                else:
+                    logging.warning(msg)
+
+        # Check PIS years for sunk costs and preonstream costs
+        mapping_capital = [
+            (self._oil_capital_sunk_cost, "oil_capital_sunk_cost"),
+            (self._oil_capital_preonstream, "oil_capital_preonstream"),
+            (self._gas_capital_sunk_cost, "gas_capital_sunk_cost"),
+            (self._gas_capital_preonstream, "gas_capital_preonstream"),
         ]
 
-        # t1 = _check_pis_years(obj_capital=self._oil_capital_sunk_cost)
-        # print('\t')
-        # print(f'Filetype: {type(t1)}')
-        # print(f'Length: {len(t1)}')
-        # print('t1 = \n', t1)
+        for obj, name in mapping_capital:
+            _check_pis_years(obj_capital=obj, obj_name=name)
 
+        # Define intermediate attributes:
+        # "depreciations": dict and "undepreciated_assets": dict
+        fluids = ["oil", "gas"]
+        cost_types = ["postonstream", "preonstream", "sunk_cost"]
 
-        # costs = self._oil_capital_sunk_cost.cost
-        # pis_yrs = self._oil_capital_sunk_cost.pis_year
-        # mask = (pis_yrs != onstream_yr)
-        #
-        # invalid = list(zip(costs[mask], pis_yrs[mask]))
-        #
-        # message = (
-        #     f"The PIS years of the following costs are different from the onstream year "
-        #     f"({onstream_yr}): {invalid}"
-        # )
-        #
-        # print('\t')
-        # print('costs = ', costs)
-        # print('pis_yrs = ', pis_yrs)
-        # print('mask = ', mask)
-        #
-        # print('\t')
-        # print('invalid = ', invalid)
-        #
-        # print('\t')
-        # print('message = ', message)
+        depreciations = {f: {c: None for c in cost_types} for f in fluids}
+        undepreciated_assets = {f: {c: None for c in cost_types} for f in fluids}
 
-        # # Define intermediate attributes:
-        # # "depreciations": dict and "undepreciated_assets": dict
-        # fluids = ["oil", "gas"]
-        # cost_types = ["postonstream", "preonstream", "sunk_cost"]
-        #
-        # depreciations = {f: {c: None for c in cost_types} for f in fluids}
-        # undepreciated_assets = {f: {c: None for c in cost_types} for f in fluids}
-        #
-        # depreciations["oil"]["sunk_cost"] = self._oil_capital_sunk_cost.total_depreciation_rate(
-        #     oil_onstream_year=self.oil_onstream_date.year,
-        #     gas_onstream_year=self.gas_onstream_date.year,
-        #     initial_depreciation_year=InitialYearDepreciationIncurred.DIRECT,
-        #     depr_method=depr_method,
-        #     decline_factor=decline_factor,
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     tax_rate=tax_rate,
-        #     inflation_rate_applied_to=inflation_rate_applied_to,
-        # )
+        depreciations["oil"]["sunk_cost"] = self._oil_capital_sunk_cost.total_depreciation_rate(
+            oil_onstream_year=self.oil_onstream_date.year,
+            gas_onstream_year=self.gas_onstream_date.year,
+            initial_depreciation_year=InitialYearDepreciationIncurred.DIRECT,
+            depr_method=depr_method,
+            decline_factor=decline_factor,
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            tax_rate=tax_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
+        )
 
         # for (f, mapping) in depr_mapping.items():
         #     for (c, obj, depr_type) in mapping:

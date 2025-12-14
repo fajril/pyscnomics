@@ -850,7 +850,10 @@ class CapitalCost(GeneralCost):
                 f"Depreciation method ({depr_method}) is not recognized"
             )
 
-
+        print('\t')
+        print(f'Filetype: {type(depreciation_charge)}')
+        print(f'Length: {len(depreciation_charge)}')
+        print('depreciation_charge = \n', depreciation_charge)
 
         # # Specify indices to place the first element of depreciation
         # onstream_yrs = np.repeat(min([oil_onstream_year, gas_onstream_year]), len(self.cost))

@@ -1896,6 +1896,7 @@ class BaseProject:
                 cost=np.array([0]),
                 cost_allocation=[allocation],
                 cost_type=[include_cost_type],
+                pis_year=np.array([onstream_yr])
             )
 
         return CapitalCost(
