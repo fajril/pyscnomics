@@ -76,7 +76,7 @@ kwargs_capital_oil = {
 
 if __name__ == "__main__":
 
-    case = Case00A(contract_type=ContractType.BASE_PROJECT)
+    case = Case00A(contract_type=ContractType.COST_RECOVERY)
 
     contract = case.as_class()
     contract_arguments = case.contract_arguments

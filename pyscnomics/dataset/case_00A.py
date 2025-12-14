@@ -244,8 +244,8 @@ class Case00A:
             ),
             "cost_type": (
                 [
-                    None,  # 2023
-                    None,  # 2024
+                    CostType.SUNK_COST,  # 2023
+                    CostType.SUNK_COST,  # 2024
                     None,  # 2025
                     None,  # 2026
                     None,  # 2027
@@ -362,16 +362,16 @@ class Case00A:
             ),
             "pis_year": np.array(
                 [
-                    2023,
-                    2024,
-                    2025,
-                    2026,
-                    2027,
-                    2028,
                     2029,
-                    2030,
-                    2031,
-                    2032,
+                    2029,
+                    2029,
+                    2029,
+                    2029,
+                    2029,
+                    2029,
+                    2029,
+                    2029,
+                    2029,
                 ]
             )
         }
@@ -1265,8 +1265,8 @@ class Case00A:
             "end_date": date(year=2032, month=12, day=31),
             "oil_onstream_date": date(year=2030, month=1, day=1),
             "gas_onstream_date": date(year=2029, month=1, day=1),
-            "approval_year": 2029,
-            "is_pod_1": False,
+            "approval_year": 2026,
+            "is_pod_1": True,
             "is_strict": False,
         }
 
