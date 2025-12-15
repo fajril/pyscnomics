@@ -19,7 +19,6 @@ from pyscnomics.econ.selection import (
     CostType,
     DeprMethod,
     InflationAppliedTo,
-    InitialYearDepreciationIncurred,
 )
 from pyscnomics.econ.costs_tools import (
     get_cost_adjustment_by_inflation,
@@ -646,9 +645,6 @@ class CapitalCost(GeneralCost):
 
     def total_depreciation_rate(
         self,
-        oil_onstream_year: int,
-        gas_onstream_year: int,
-        initial_depreciation_year: InitialYearDepreciationIncurred,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
         year_inflation: np.ndarray = None,
@@ -657,76 +653,55 @@ class CapitalCost(GeneralCost):
         inflation_rate_applied_to: InflationAppliedTo | None = None,
     ) -> tuple:
         """
-        Calculate the total depreciation charges for project assets, adjusted for
-        inflation and indirect tax effects, using the specified depreciation method.
-        The method also computes the undepreciated asset value for overdue assets
-        (i.e., assets not fully depreciated within the project life).
+        Compute total annual depreciation charges for all assets, with optional
+        inflation and indirect tax adjustments.
+
+        Asset costs are first adjusted based on the specified inflation scope and
+        indirect tax, then depreciated using the selected depreciation method.
+        Assets whose useful lives extend beyond the project end are tracked as
+        undepreciated (overdue) assets.
 
         Parameters
         ----------
-        oil_onstream_year : int
-            The onstream year of oil facilities. Used when
-            ``initial_depreciation_year`` is set to ``ONSTREAM_YEAR``.
-        gas_onstream_year : int
-            The onstream year of gas facilities. Used when
-            ``initial_depreciation_year`` is set to ``ONSTREAM_YEAR``.
-        initial_depreciation_year : InitialYearDepreciationIncurred
-            Rule defining the year when depreciation starts:
-            - ``DIRECT`` : Depreciation begins in the asset’s placed-in-service year.
-            - ``ONSTREAM_YEAR`` : Depreciation begins in the project’s first onstream year
-              (minimum of oil and gas onstream years).
         depr_method : DeprMethod, default=DeprMethod.PSC_DB
-            Depreciation method to apply:
-            - ``DeprMethod.SL`` : Straight-line method.
-            - ``DeprMethod.DB`` : Declining-balance method.
-            - ``DeprMethod.PSC_DB`` : PSC-specific declining balance (default).
+            Depreciation method to apply (straight-line, declining balance,
+            or PSC declining balance).
         decline_factor : float or int, default=2
             Decline factor for the declining-balance method.
-            Ignored if ``depr_method`` is not ``DB``.
+            Ignored unless ``depr_method`` is ``DeprMethod.DB``.
         year_inflation : np.ndarray, optional
-            Array of years when inflation adjustments apply.
-            If None, inflation is assumed to apply relative to the start year.
+            Project years to which inflation adjustments are applied.
+            If None, inflation is applied relative to the project start year.
         inflation_rate : float or np.ndarray, default=0.0
-            Inflation rate(s) applied to CAPEX (and optionally OPEX).
-            - If float, a constant rate is used.
-            - If ndarray, rates vary by project year.
+            Inflation rate(s) applied according to ``inflation_rate_applied_to``.
         tax_rate : float or np.ndarray, default=0.0
             Indirect tax rate(s) applied to project costs.
-            - If float, a constant rate is used.
-            - If ndarray, rates vary by project year.
         inflation_rate_applied_to : InflationAppliedTo or None, default=None
-            Scope of inflation application:
-            - ``InflationAppliedTo.CAPEX`` : Apply to CAPEX only.
-            - ``InflationAppliedTo.CAPEX_AND_OPEX`` : Apply to both CAPEX and OPEX.
-            - ``InflationAppliedTo.OPEX`` : Apply to OPEX only (CAPEX only taxed).
-            - ``None`` : No inflation adjustment (only tax is applied).
+            Defines whether inflation is applied to CAPEX, OPEX, both, or not applied
+            at all (tax only).
 
         Returns
         -------
         tuple of np.ndarray
             (1) ``total_depreciation_charge`` :
-                1D array of total depreciation charges per project year.
+                Total depreciation charge per project year.
             (2) ``undepreciated_asset`` :
-                1D array of undepreciated asset values for overdue assets
-                (i.e., depreciation extending beyond the project duration).
+                Remaining depreciation beyond the project duration
+                for assets not fully depreciated.
 
         Raises
         ------
         CapitalException
-            If an unrecognized depreciation method or invalid
-            ``inflation_rate_applied_to`` is provided.
+            If an invalid depreciation method or inflation application scope
+            is provided.
 
         Notes
         -----
-        - Depreciation schedules are aligned based on ``initial_depreciation_year``:
-          either directly from ``pis_year`` (DIRECT) or shifted to the project’s
-          onstream year (ONSTREAM_YEAR).
-        - Inflation and/or indirect tax are applied to project costs before
-          calculating depreciation, depending on ``inflation_rate_applied_to``.
-        - Assets with useful lives extending beyond project end are tracked separately
-          in ``undepreciated_asset``.
-        - Supports multiple assets, each with distinct cost, useful life,
-          salvage value, and depreciation factor.
+        - Depreciation charges are aligned to each asset’s ``pis_year``.
+        - Inflation and indirect tax are applied before depreciation,
+          based on ``inflation_rate_applied_to``.
+        - Overdue depreciation (beyond project end) is reported separately
+          as undepreciated assets.
         """
 
         # Prepare parameter "inflation_rate_applied_to"
@@ -772,22 +747,12 @@ class CapitalCost(GeneralCost):
             )
         )
 
-        print('\t')
-        print(f'Filetype: {type(self.cost)}')
-        print(f'Length: {len(self.cost)}')
-        print('cost = ', self.cost)
-
         cost_adjusted = {
             InflationAppliedTo.CAPEX: cost_adjusted_by_inflation_and_tax,
             InflationAppliedTo.CAPEX_AND_OPEX: cost_adjusted_by_inflation_and_tax,
             InflationAppliedTo.OPEX: cost_adjusted_only_by_tax,
             None: cost_adjusted_only_by_tax,
         }[inflation_rate_applied_to]
-
-        print('\t')
-        print(f'Filetype: {type(cost_adjusted)}')
-        print(f'Length: {len(cost_adjusted)}')
-        print('cost_adjusted = ', cost_adjusted)
 
         # Calculate depreciation
         # Depreciation method is straight line
@@ -850,74 +815,58 @@ class CapitalCost(GeneralCost):
                 f"Depreciation method ({depr_method}) is not recognized"
             )
 
-        print('\t')
-        print(f'Filetype: {type(depreciation_charge)}')
-        print(f'Length: {len(depreciation_charge)}')
-        print('depreciation_charge = \n', depreciation_charge)
+        # Specify indices to place the first element of depreciation
+        shift_indices = self.pis_year - self.start_year
 
-        # # Specify indices to place the first element of depreciation
-        # onstream_yrs = np.repeat(min([oil_onstream_year, gas_onstream_year]), len(self.cost))
-        #
-        # shift_indices = {
-        #     InitialYearDepreciationIncurred.DIRECT: self.pis_year - self.start_year,
-        #     InitialYearDepreciationIncurred.ONSTREAM_YEAR: onstream_yrs - self.start_year,
-        # }[initial_depreciation_year]
-        #
-        # # Prepare assets with overdue depreciation, namely those that
-        # # have not been fully depreciated by the end of the project
-        # overdues = {
-        #     InitialYearDepreciationIncurred.DIRECT: (
-        #         (self.pis_year + self.useful_life - self.end_year - 1).astype(int)
-        #     ),
-        #     InitialYearDepreciationIncurred.ONSTREAM_YEAR: (
-        #         (onstream_yrs + self.useful_life - self.end_year - 1).astype(int)
-        #     ),
-        # }[initial_depreciation_year]
-        #
-        # is_overdue = overdues > 0
-        #
-        # if np.any(is_overdue):
-        #     # Some assets have not been fully depreciated by the end of the project.
-        #     # These assets are overdue by {overdue[is_overdue]} years.
-        #     max_overdue = int(np.max(overdues[is_overdue]))
-        #     full_depr_charge = np.zeros(
-        #         [depreciation_charge.shape[0], depreciation_charge.shape[1] + max_overdue]
-        #     )
-        #     # useful_life = self.useful_life.astype(int)
-        #     for i, charge in enumerate(depreciation_charge):
-        #         # (
-        #         #     full_depr_charge[i, shift_indices[i]:shift_indices[i] + useful_life[i]]
-        #         # ) = charge[useful_life[i]]
-        #         if shift_indices[i]+charge.shape[0] > full_depr_charge.shape[1]:
-        #             max_idx = full_depr_charge.shape[1]-shift_indices[i]
-        #             charge = charge[:max_idx]
-        #         full_depr_charge[i, shift_indices[i]:shift_indices[i]+charge.shape[0]] = charge
-        #
-        #     overdue_depr_charge = full_depr_charge[:, self.end_year-self.start_year+1:]
-        #
-        # else:
-        #     overdue_depr_charge = np.zeros([1, 1])
-        #
-        # # Modify depreciation_charge so that expenditures are aligned with
-        # # the corresponding pis_year (or expense_year)
-        # depreciation_charge = np.array(
-        #     [
-        #         np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
-        #         for row, i in zip(depreciation_charge, shift_indices)
-        #     ]
-        # )
-        #
-        # # Calculate total depreciation charge and undepreciated asset
-        # total_depreciation_charge = depreciation_charge.sum(axis=0)
-        # undepreciated_asset = overdue_depr_charge.sum(axis=0)
-        #
-        # return total_depreciation_charge, undepreciated_asset
+        # Prepare assets with overdue depreciation, namely those that
+        # have not been fully depreciated by the end of the project
+        overdues = (self.pis_year + self.useful_life - self.end_year - 1).astype(int)
+
+        is_overdue = overdues > 0
+
+        if np.any(is_overdue):
+            # Some assets have not been fully depreciated by the end of the project.
+            # These assets are overdue by {overdue[is_overdue]} years.
+            max_overdue = int(np.max(overdues[is_overdue]))
+
+            full_depr_charge = np.zeros(
+                [depreciation_charge.shape[0], depreciation_charge.shape[1] + max_overdue]
+            )
+            # useful_life = self.useful_life.astype(int)
+
+            for i, charge in enumerate(depreciation_charge):
+                # (
+                #     full_depr_charge[i, shift_indices[i]:shift_indices[i] + useful_life[i]]
+                # ) = charge[useful_life[i]]
+
+                if shift_indices[i] + charge.shape[0] > full_depr_charge.shape[1]:
+                    max_idx = full_depr_charge.shape[1] - shift_indices[i]
+                    charge = charge[:max_idx]
+
+                full_depr_charge[i, shift_indices[i]:shift_indices[i] + charge.shape[0]] = charge
+
+            overdue_depr_charge = full_depr_charge[:, self.end_year - self.start_year + 1:]
+
+        else:
+            overdue_depr_charge = np.zeros([1, 1])
+
+        # Modify depreciation_charge so that expenditures are aligned with
+        # the corresponding pis_year (or expense_year)
+        depreciation_charge = np.array(
+            [
+                np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
+                for row, i in zip(depreciation_charge, shift_indices)
+            ]
+        )
+
+        # Calculate total depreciation charge and undepreciated asset
+        total_depreciation_charge = depreciation_charge.sum(axis=0)
+        undepreciated_asset = overdue_depr_charge.sum(axis=0)
+
+        return total_depreciation_charge, undepreciated_asset
 
     def total_depreciation_book_value(
         self,
-        oil_onstream_year: int,
-        gas_onstream_year: int,
-        initial_depreciation_year: InitialYearDepreciationIncurred,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
         year_inflation: np.ndarray = None,
@@ -926,77 +875,45 @@ class CapitalCost(GeneralCost):
         inflation_rate_applied_to: InflationAppliedTo | None = None,
     ) -> np.ndarray:
         """
-        Calculate the cumulative book value of project assets after depreciation,
-        adjusted for indirect tax and (optionally) inflation.
+        Compute the cumulative book value of project assets after depreciation.
 
-        This method first computes total depreciation charges (via
-        ``total_depreciation_rate``), aligned according to the chosen
-        ``initial_depreciation_year`` rule. It then subtracts cumulative
-        depreciation charges from cumulative post-tax expenditures to derive
-        the book value trajectory.
+        The book value is calculated as cumulative post-tax (and optionally
+        inflation-adjusted) expenditures minus cumulative depreciation charges.
+        Depreciation charges are obtained from ``total_depreciation_rate`` using
+        the specified depreciation method and adjustment rules.
 
         Parameters
         ----------
-        oil_onstream_year : int
-            The onstream year of oil facilities. Used when
-            ``initial_depreciation_year`` is set to ``ONSTREAM_YEAR``.
-        gas_onstream_year : int
-            The onstream year of gas facilities. Used when
-            ``initial_depreciation_year`` is set to ``ONSTREAM_YEAR``.
-        initial_depreciation_year : InitialYearDepreciationIncurred
-            Rule defining when depreciation starts:
-            - ``DIRECT`` : Depreciation begins in the asset’s placed-in-service year.
-            - ``ONSTREAM_YEAR`` : Depreciation begins in the project’s first onstream year
-              (minimum of oil and gas onstream years).
         depr_method : DeprMethod, default=DeprMethod.PSC_DB
-            Depreciation method to apply:
-            - ``DeprMethod.SL`` : Straight-line method.
-            - ``DeprMethod.DB`` : Declining-balance method.
-            - ``DeprMethod.PSC_DB`` : PSC-specific declining balance (default).
+            Depreciation method applied to asset costs.
         decline_factor : float or int, default=2
             Decline factor for the declining-balance method.
-            Ignored if ``depr_method`` is not ``DB``.
+            Ignored unless ``depr_method`` is ``DeprMethod.DB``.
         year_inflation : np.ndarray, optional
-            Array of years when inflation adjustments apply.
-            If None, inflation is assumed relative to the start year.
+            Project years to which inflation adjustments are applied.
         inflation_rate : float or np.ndarray, default=0.0
-            Inflation rate(s) applied to CAPEX (and optionally OPEX).
-            - If float, a constant inflation rate is used.
-            - If ndarray, rates vary by project year.
+            Inflation rate(s) applied according to ``inflation_rate_applied_to``.
         tax_rate : float or np.ndarray, default=0.0
             Indirect tax rate(s) applied to project costs.
-            - If float, a constant tax rate is used.
-            - If ndarray, rates vary by project year.
         inflation_rate_applied_to : InflationAppliedTo or None, default=None
-            Scope of inflation application:
-            - ``InflationAppliedTo.CAPEX`` : Apply to CAPEX only.
-            - ``InflationAppliedTo.CAPEX_AND_OPEX`` : Apply to both CAPEX and OPEX.
-            - ``InflationAppliedTo.OPEX`` : Apply to OPEX only (CAPEX only taxed).
-            - ``None`` : No inflation adjustment (only tax is applied).
+            Defines whether inflation is applied to CAPEX, OPEX, both, or not applied
+            (tax only).
 
         Returns
         -------
         np.ndarray
-            1D array of cumulative book values for each project year,
-            accounting for depreciation, indirect tax, and inflation
-            adjustments.
+            1D array of cumulative asset book values per project year.
 
         Notes
         -----
-        - The cumulative book value is calculated as:
-              cumulative(post-tax expenditures) - cumulative(depreciation charges).
-        - Depreciation timing is determined by ``initial_depreciation_year``:
-          either directly in ``pis_year`` (DIRECT) or aligned with the earliest
-          project onstream year (ONSTREAM_YEAR).
-        - Inflation and indirect tax adjustments are applied consistently with
+        - Book value is computed as:
+              cumulative(post-tax expenditures) − cumulative(depreciation charges).
+        - Inflation and indirect tax treatments are consistent with
           ``expenditures_post_tax`` and ``total_depreciation_rate``.
         """
 
         # Calculate total depreciation charge from method total_depreciation_rate()
         total_depreciation_charge = self.total_depreciation_rate(
-            oil_onstream_year=oil_onstream_year,
-            gas_onstream_year=gas_onstream_year,
-            initial_depreciation_year=initial_depreciation_year,
             depr_method=depr_method,
             decline_factor=decline_factor,
             year_inflation=year_inflation,
