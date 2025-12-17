@@ -803,42 +803,50 @@ class BaseProject:
             cost_of_sales,
         ]
 
-        for cost in costs_list:
-            for ftype in fluid_types:
-                self._prepare_cost_types(
-                    is_strict=self.is_strict, cost_obj=cost[ftype]
-                )
-
-        # Define post-onstream cost, pre-onstream cost, and sunk cost attributes
-        costs_mapping = (
-            ("capital", self._filter_capital_cost, capital_cost),
-            ("intangible", self._filter_intangible, intangible),
-            ("opex", self._filter_opex, opex),
-            ("asr", self._filter_asr, asr),
-            ("lbt", self._filter_lbt, lbt),
-            ("cost_of_sales", self._filter_cost_of_sales, cost_of_sales),
+        self._prepare_cost_types_new(
+            is_strict=self.is_strict, cost_obj=capital_cost["oil"]
         )
 
-        categories = (
-            ("postonstream", CostType.POST_ONSTREAM_COST),
-            ("preonstream", CostType.PRE_ONSTREAM_COST),
-            ("sunk_cost", CostType.SUNK_COST),
-        )
+        # self._prepare_cost_types(
+        #     is_strict=self.is_strict, cost_obj=capital_cost["oil"]
+        # )
 
-        for prefix, filter_func, source in costs_mapping:
-            for ftype in fluid_types:
-                for categ_name, categ_type in categories:
-                    setattr(
-                        self,
-                        f"_{ftype}_{prefix}_{categ_name}",
-                        filter_func(cost_obj_fluid=source[ftype], include_cost_type=categ_type)
-                    )
-
-        # Raise an exception error if the start year of the project is inconsistent
-        self._check_inconsistent_start_year()
-
-        # Raise an exception error if the end year of the project is inconsistent
-        self._check_inconsistent_end_year()
+        # for cost in costs_list:
+        #     for ftype in fluid_types:
+        #         self._prepare_cost_types(
+        #             is_strict=self.is_strict, cost_obj=cost[ftype]
+        #         )
+        #
+        # # Define post-onstream cost, pre-onstream cost, and sunk cost attributes
+        # costs_mapping = (
+        #     ("capital", self._filter_capital_cost, capital_cost),
+        #     ("intangible", self._filter_intangible, intangible),
+        #     ("opex", self._filter_opex, opex),
+        #     ("asr", self._filter_asr, asr),
+        #     ("lbt", self._filter_lbt, lbt),
+        #     ("cost_of_sales", self._filter_cost_of_sales, cost_of_sales),
+        # )
+        #
+        # categories = (
+        #     ("postonstream", CostType.POST_ONSTREAM_COST),
+        #     ("preonstream", CostType.PRE_ONSTREAM_COST),
+        #     ("sunk_cost", CostType.SUNK_COST),
+        # )
+        #
+        # for prefix, filter_func, source in costs_mapping:
+        #     for ftype in fluid_types:
+        #         for categ_name, categ_type in categories:
+        #             setattr(
+        #                 self,
+        #                 f"_{ftype}_{prefix}_{categ_name}",
+        #                 filter_func(cost_obj_fluid=source[ftype], include_cost_type=categ_type)
+        #             )
+        #
+        # # Raise an exception error if the start year of the project is inconsistent
+        # self._check_inconsistent_start_year()
+        #
+        # # Raise an exception error if the end year of the project is inconsistent
+        # self._check_inconsistent_end_year()
 
     def _get_lifting_by_commodity(self, commodity: FluidType) -> Lifting:
         """
@@ -1641,6 +1649,39 @@ class BaseProject:
                 f"Approval year ({self.approval_year}) as after "
                 f"onstream year ({onstream_yr})"
             )
+
+    def _assign_default_cost_types(
+        self,
+        onstream_year: int,
+        cost_obj: CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales,
+    ):
+
+        ct = np.array(cost_obj.cost_type)
+        ry = cost_obj.expense_year
+        is_none = np.equal(ct, None)
+
+        # Masks for default values: sunk cost, preonstream cost, and postonstream cost
+        defaults = {
+            "sunk_cost": (ry < self.approval_year) & is_none,
+            "preonstream": (ry >= self.approval_year) & (ry < onstream_year) & is_none,
+            "postonstream": (ry >= onstream_year) & is_none,
+        }
+
+    def _prepare_cost_types_new(
+        self,
+        is_strict: bool,
+        cost_obj: CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales,
+    ):
+
+        # Validate approval year
+        self._validate_approval_year()
+
+        # Specify relevant onstream year
+        onstream_year = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+
+        print('\t')
+        print('onstream_year = ', onstream_year)
+
 
     def _prepare_cost_types(
         self,
