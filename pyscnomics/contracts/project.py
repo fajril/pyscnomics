@@ -1751,8 +1751,8 @@ class BaseProject:
         # Define boolean masks for each project period based on reference year "ry"
         masks = {
             "sunk_cost": ry < self.approval_year,
-            "preonstream": (ry > self.approval_year) & (ry < onstream_year),
-            "postonstream": ry > onstream_year,
+            "preonstream_cost": (ry > self.approval_year) & (ry < onstream_year),
+            "postonstream_cost": ry > onstream_year,
         }
 
         # Validation rules:
@@ -1764,13 +1764,13 @@ class BaseProject:
                 [CostType.POST_ONSTREAM_COST]
             ),
             (
-                "preonstream",
-                masks["preonstream"],
+                "preonstream_cost",
+                masks["preonstream_cost"],
                 [CostType.SUNK_COST, CostType.POST_ONSTREAM_COST]
             ),
             (
-                "postonstream",
-                masks["postonstream"],
+                "postonstream_cost",
+                masks["postonstream_cost"],
                 [CostType.SUNK_COST, CostType.PRE_ONSTREAM_COST]
             ),
         ]
@@ -1802,8 +1802,54 @@ class BaseProject:
                 # Loose mode: emit a warning and continue
                 logging.warning(msg)
 
-    def _validate_boundary_year_cost_types(self):
-        pass
+    def _validate_boundary_year_cost_types(
+        self,
+        ct: np.ndarray,
+        ry: np.ndarray,
+        onstream_year: int,
+        is_strict: bool,
+    ):
+        at_approval = (ry == self.approval_year)
+        at_onstream = (ry == onstream_year)
+
+        # Validate cost type at exact approval year
+        if np.any(at_approval) and CostType.POST_ONSTREAM_COST in ct[at_approval]:
+            # Prepare messages to be displayed
+            msg_error = (
+                f"Cannot accept POST ONSTREAM COST as cost type at approval year "
+                f"({self.approval_year})."
+            )
+            msg_warning = (
+                f"Found POST ONSTREAM COST as cost type at approval year. Expected "
+                f"cost types at approval year are: SUNK COST and PRE ONSTREAM COST."
+            )
+
+            # Strict mode: raise an error
+            if is_strict:
+                logging.error(msg_error)
+                raise BaseProjectException(msg_error)
+
+            # Loose mode: emit a warning and continue
+            logging.warning(msg_warning)
+
+        # Validate cost type at exact onstream year
+        if np.any(at_onstream) and CostType.SUNK_COST in ct[at_onstream]:
+            # Prepare messages to be displayed
+            msg_error = (
+                f"Cannot accept SUNK COST as cost type at onstream year ({onstream_year})."
+            )
+            msg_warning = (
+                f"Found SUNK COST as cost type at onstream year. Expected cost types at "
+                f"onstream year are: PRE ONSTREAM COST and POST ONSTREAM COST."
+            )
+
+            # Strict mode: raise an error
+            if is_strict:
+                logging.warning(msg_error)
+                raise BaseProjectException(msg_error)
+
+            # Loose mode; emit a warning and continue
+            logging.warning(msg_warning)
 
     def _prepare_cost_types_new(
         self,
@@ -1828,16 +1874,19 @@ class BaseProject:
             is_strict=is_strict,
         )
 
+        # Validate cost type at boundary years
+        if self.approval_year < onstream_year:
+            self._validate_boundary_year_cost_types(
+                ct=ct,
+                ry=ry,
+                onstream_year=onstream_year,
+                is_strict=is_strict,
+            )
+
         print('\t')
         print(f'Filetype: {type(ct)}')
         print(f'Length: {len(ct)}')
         print('ct = ', ct)
-
-        # Validate cost type at boundary years
-        if self.approval_year < onstream_year:
-            self._validate_boundary_year_cost_types()
-
-
 
     def _prepare_cost_types(
         self,
