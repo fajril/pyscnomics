@@ -1654,18 +1654,156 @@ class BaseProject:
         self,
         onstream_year: int,
         cost_obj: CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales,
-    ):
+    ) -> tuple:
+        """
+        Assign default cost types based on reference years and project milestones.
 
+        This method assigns default ``CostType`` values to cost entries whose cost
+        type is not explicitly provided. Defaults are determined from the expense
+        year relative to the project approval year and onstream year. For non-POD I
+        projects, sunk costs are not assigned as default values.
+
+        Parameters
+        ----------
+        onstream_year : int
+            Project onstream year used to distinguish pre- and post-onstream periods.
+        cost_obj : CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales
+            Cost object containing expense years and (optional) cost type
+            classifications.
+
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray]
+            A tuple ``(ry, ct)`` where ``ry`` is the array of expense years and ``ct``
+            is the array of assigned cost types.
+
+        Notes
+        -----
+        - Default assignment applies only to entries with ``None`` as cost type.
+        - For non-POD I projects, sunk costs default to pre-onstream costs.
+        """
+
+        # Extract cost types and reference (expense) years
         ct = np.array(cost_obj.cost_type)
         ry = cost_obj.expense_year
+
+        # Identify entries without an explicitly assigned cost type
         is_none = np.equal(ct, None)
 
-        # Masks for default values: sunk cost, preonstream cost, and postonstream cost
+        # Define masks for default cost type assignment based on project periods
         defaults = {
             "sunk_cost": (ry < self.approval_year) & is_none,
             "preonstream": (ry >= self.approval_year) & (ry < onstream_year) & is_none,
             "postonstream": (ry >= onstream_year) & is_none,
         }
+
+        # Assign default values for cost types using the above masks
+        # For non-POD I projects, sunk costs default to pre-onstream costs
+        ct[defaults["sunk_cost"]] = (
+            CostType.SUNK_COST if self.is_pod_1 else CostType.PRE_ONSTREAM_COST
+        )
+        ct[defaults["preonstream"]] = CostType.PRE_ONSTREAM_COST
+        ct[defaults["postonstream"]] = CostType.POST_ONSTREAM_COST
+
+        return ry, ct
+
+    def _validate_cost_type_consistency(
+        self,
+        ct: np.ndarray,
+        ry: np.ndarray,
+        onstream_year: int,
+        is_strict: bool,
+    ) -> None:
+        """
+        Validate consistency between cost types and their applicable project periods.
+
+        This method checks whether cost types assigned to each record are compatible
+        with the corresponding project period inferred from reference years. Each
+        period (sunk cost, pre-onstream, post-onstream) defines a set of disallowed
+        cost types. Violations are either raised as exceptions or logged as warnings,
+        depending on the strictness setting.
+
+        Parameters
+        ----------
+        ct : np.ndarray
+            Array of cost types, represented as ``CostType`` enum members.
+        ry : np.ndarray
+            Array of reference years corresponding to each cost entry.
+        onstream_year : int
+            Project onstream year used to distinguish pre- and post-onstream periods.
+        is_strict : bool
+            If True, inconsistencies raise an exception; otherwise, they are
+            logged as warnings and execution continues.
+
+        Raises
+        ------
+        BaseProjectException
+            If an invalid cost type is detected and strict mode is enabled.
+
+        Notes
+        -----
+        - Period classification is based on comparison with project approval year
+          and onstream year.
+        - In non-strict mode, inconsistencies are logged as warnings and execution
+          continues.
+        """
+
+        # Define boolean masks for each project period based on reference year "ry"
+        masks = {
+            "sunk_cost": ry < self.approval_year,
+            "preonstream": (ry > self.approval_year) & (ry < onstream_year),
+            "postonstream": ry > onstream_year,
+        }
+
+        # Validation rules:
+        # (period_name, mask, list of invalid cost types for that period)
+        rules = [
+            (
+                "sunk_cost",
+                masks["sunk_cost"],
+                [CostType.POST_ONSTREAM_COST]
+            ),
+            (
+                "preonstream",
+                masks["preonstream"],
+                [CostType.SUNK_COST, CostType.POST_ONSTREAM_COST]
+            ),
+            (
+                "postonstream",
+                masks["postonstream"],
+                [CostType.SUNK_COST, CostType.PRE_ONSTREAM_COST]
+            ),
+        ]
+
+        # Apply validation rules sequentially
+        for period, mask, invalid_types in rules:
+            # Skip periods with no applicable records
+            if not np.any(mask):
+                continue
+
+            # Identify entries whose cost type violates the rule for this period
+            hit = np.isin(ct[mask], invalid_types)
+
+            if hit.any():
+                # Extract invalid cost type for reporting
+                found = [t.value for t in ct[mask][hit]]
+
+                # Specify message to be displayed
+                msg = (
+                    f"Cost type classification mismatch. "
+                    f"Found {found} in {period} period."
+                )
+
+                # Strict mode: raise an error
+                if is_strict:
+                    logging.error(msg)
+                    raise BaseProjectException(msg)
+
+                # Loose mode: emit a warning and continue
+                logging.warning(msg)
+
+    def _validate_boundary_year_cost_types(self):
+        pass
 
     def _prepare_cost_types_new(
         self,
@@ -1679,8 +1817,26 @@ class BaseProject:
         # Specify relevant onstream year
         onstream_year = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
 
+        # Assign default values for "None" input
+        ry, ct = self._assign_default_cost_types(onstream_year=onstream_year, cost_obj=cost_obj)
+
+        # Validate cost type
+        self._validate_cost_type_consistency(
+            ct=ct,
+            ry=ry,
+            onstream_year=onstream_year,
+            is_strict=is_strict,
+        )
+
         print('\t')
-        print('onstream_year = ', onstream_year)
+        print(f'Filetype: {type(ct)}')
+        print(f'Length: {len(ct)}')
+        print('ct = ', ct)
+
+        # Validate cost type at boundary years
+        if self.approval_year < onstream_year:
+            self._validate_boundary_year_cost_types()
+
 
 
     def _prepare_cost_types(
