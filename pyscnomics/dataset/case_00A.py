@@ -247,7 +247,7 @@ class Case00A:
                     None,  # 2023
                     None,  # 2024
                     None,  # 2025
-                    CostType.POST_ONSTREAM_COST,  # 2026
+                    None,  # 2026
                     None,  # 2027
                     None,  # 2028
                     None,  # 2029
@@ -1267,7 +1267,7 @@ class Case00A:
             "gas_onstream_date": date(year=2029, month=1, day=1),
             "approval_year": 2026,
             "is_pod_1": False,
-            "is_strict": True,
+            "is_strict": False,
         }
 
     def get_class_arguments(self) -> None:
