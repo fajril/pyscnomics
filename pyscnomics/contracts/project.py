@@ -2943,49 +2943,49 @@ class BaseProject:
             # )
 
             print('\t')
-            print('mask = \n', mask)
+            print('min_years = \n', min_years)
 
-            condition_1 = np.any(min_years)
-            condition_2 = np.any(max_years)
-
-            if np.any(mask):
-                if np.any(condition_1) and np.any(condition_2):
-                    incorrect_years = list(
-                        zip(preonstream_min_years[mask], preonstream_max_years[mask])
-                    )
-
-                elif np.any(condition_1) and not np.any(condition_2):
-                    incorrect_years = preonstream_min_years[mask]
-
-                elif not np.any(condition_1) and np.any(condition_2):
-                    incorrect_years = preonstream_max_years[mask]
-
-                message = (
-                    f"Preonstream years ({incorrect_years}) fall outside the allowable "
-                    f"range: {self.approval_year} <= preonstream_years <= {onstream_yr}."
-                )
-
-
-
-        # Non-POD I contract
-        else:
-            mask = (preonstream_max_years > onstream_yr)
-
-            if np.any(mask):
-                incorrect_years = preonstream_max_years[mask]
-                message = (
-                    f"Preonstream years fall outside the allowable range: "
-                    f"preonstream_years ({incorrect_years}) > {onstream_yr}."
-                )
-
-        if message is not None:
-            # Strict mode: raise an error
-            if self.is_strict:
-                raise PreOnstreamException(message)
-
-            # Loose mode: display a warning message
-            else:
-                logging.warning(message)
+        #     condition_1 = np.any(min_years)
+        #     condition_2 = np.any(max_years)
+        #
+        #     if np.any(mask):
+        #         if np.any(condition_1) and np.any(condition_2):
+        #             incorrect_years = list(
+        #                 zip(preonstream_min_years[mask], preonstream_max_years[mask])
+        #             )
+        #
+        #         elif np.any(condition_1) and not np.any(condition_2):
+        #             incorrect_years = preonstream_min_years[mask]
+        #
+        #         elif not np.any(condition_1) and np.any(condition_2):
+        #             incorrect_years = preonstream_max_years[mask]
+        #
+        #         message = (
+        #             f"Preonstream years ({incorrect_years}) fall outside the allowable "
+        #             f"range: {self.approval_year} <= preonstream_years <= {onstream_yr}."
+        #         )
+        #
+        #
+        #
+        # # Non-POD I contract
+        # else:
+        #     mask = (preonstream_max_years > onstream_yr)
+        #
+        #     if np.any(mask):
+        #         incorrect_years = preonstream_max_years[mask]
+        #         message = (
+        #             f"Preonstream years fall outside the allowable range: "
+        #             f"preonstream_years ({incorrect_years}) > {onstream_yr}."
+        #         )
+        #
+        # if message is not None:
+        #     # Strict mode: raise an error
+        #     if self.is_strict:
+        #         raise PreOnstreamException(message)
+        #
+        #     # Loose mode: display a warning message
+        #     else:
+        #         logging.warning(message)
 
     def _validate_postonstream(self, postonstream_objects: list) -> None:
         """
