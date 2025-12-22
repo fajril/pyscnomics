@@ -272,8 +272,8 @@ class Case00A:
             ),
             "pis_year": np.array(
                 [
-                    2029,
-                    2029,
+                    2024,
+                    2024,
                     2029,
                     2029,
                     2029,
@@ -1266,7 +1266,7 @@ class Case00A:
             "oil_onstream_date": date(year=2030, month=1, day=1),
             "gas_onstream_date": date(year=2029, month=1, day=1),
             "approval_year": 2026,
-            "is_pod_1": False,
+            "is_pod_1": True,
             "is_strict": False,
         }
 
