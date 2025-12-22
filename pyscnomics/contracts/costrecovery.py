@@ -486,6 +486,10 @@ class CostRecovery(BaseProject):
                         f"Non-Capital costs."
                     )
 
+    def _check_pis_year(self, obj_capital: CapitalCost, obj_name: str, is_strict: bool) -> None:
+
+        pass
+
     def _get_depreciation(
         self,
         depr_method: DeprMethod,
@@ -553,108 +557,105 @@ class CostRecovery(BaseProject):
             * ``_oil_undepreciated_assets`` / ``_gas_undepreciated_assets``
         """
 
-        # Check capital sunk cost
-        self._check_capital_sunk_cost()
+        self._check_pis_year()
 
-        # Specify onstream year
-        onstream_yr = min(self.oil_onstream_date.year, self.gas_onstream_date.year)
-
-        # Helper function to check PIS years
-        def _check_pis_years(obj_capital: CapitalCost, obj_name: str) -> None:
-            pis_yrs = obj_capital.pis_year
-            invalid_pis_years = pis_yrs[pis_yrs != onstream_yr]
-
-            if len(invalid_pis_years) > 0:
-                # Specify message to be displayed
-                msg = (
-                    f"Found {obj_name!r} PIS years ({invalid_pis_years}) that are "
-                    f"different from onstream year ({onstream_yr})"
-                )
-
-                # Strict mode: raise an error
-                if self.is_strict:
-                    raise CostRecoveryException(f"Cannot allow: {msg}")
-
-                # Loose mode: display a warning message
-                else:
-                    logging.warning(msg)
-
-        # Check PIS years for sunk costs and preonstream costs
-        mapping_capital = [
-            (self._oil_capital_sunk_cost, "oil_capital_sunk_cost"),
-            (self._oil_capital_preonstream, "oil_capital_preonstream"),
-            (self._gas_capital_sunk_cost, "gas_capital_sunk_cost"),
-            (self._gas_capital_preonstream, "gas_capital_preonstream"),
-        ]
-
-        for obj, name in mapping_capital:
-            _check_pis_years(obj_capital=obj, obj_name=name)
-
-        # Define the mapping between fluids, cost types, capital objects, and
-        # the initial year of depreciation incurred
-        depr_mapping = {
-            "oil": (
-                ("postonstream", self._oil_capital_postonstream),
-                ("preonstream", self._oil_capital_preonstream),
-                ("sunk_cost", self._oil_capital_sunk_cost),
-            ),
-            "gas": (
-                ("postonstream", self._gas_capital_postonstream),
-                ("preonstream", self._gas_capital_preonstream),
-                ("sunk_cost", self._gas_capital_sunk_cost),
-            ),
-        }
-
-        # Define intermediate attributes:
-        # "depreciations": dict and "undepreciated_assets": dict
-        fluids = ["oil", "gas"]
-        cost_types = ["postonstream", "preonstream", "sunk_cost"]
-
-        depreciations = {f: {c: None for c in cost_types} for f in fluids}
-        undepreciated_assets = {f: {c: None for c in cost_types} for f in fluids}
-
-        for f, mapping in depr_mapping.items():
-            for c, obj in mapping:
-                (
-                    depreciations[f][c],
-                    undepreciated_assets[f][c]
-                ) = obj.total_depreciation_rate(
-                    depr_method=depr_method,
-                    decline_factor=decline_factor,
-                    year_inflation=year_inflation,
-                    inflation_rate=inflation_rate,
-                    tax_rate=tax_rate,
-                    inflation_rate_applied_to=inflation_rate_applied_to,
-                )
-
-        # Set initial values for attributes "_oil_depreciations" and "_gas_depreciations"
-        self._oil_depreciations = {
-            c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
-        }
-
-        self._gas_depreciations = {
-            c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
-        }
-
-        # Set initial values for attributes "_oil_undepreciated_assets"
-        # and "_gas_undepreciated_assets"
-        self._oil_undepreciated_assets = {c: None for c in cost_types}
-        self._gas_undepreciated_assets = {c: None for c in cost_types}
-
-        # Set attributes "_oil_depreciations", "_gas_depreciations",
-        # "_oil_undepreciated_assets", and "gas_undepreciated_assets"
-        for f, f_depr, f_undepr in [
-            ("oil", self._oil_depreciations, self._oil_undepreciated_assets),
-            ("gas", self._gas_depreciations, self._gas_undepreciated_assets)
-        ]:
-            for c in cost_types:
-                f_depr[c] = depreciations[f][c]
-                f_undepr[c] = undepreciated_assets[f][c]
-
-        print('\t')
-        print(f'Filetype: {type(self._oil_depreciations["sunk_cost"])}')
-        print(f'Length: {len(self._oil_depreciations["sunk_cost"])}')
-        print('_oil_depreciations["sunk_cost"] = \n', self._oil_depreciations["sunk_cost"])
+        # # Check capital sunk cost
+        # self._check_capital_sunk_cost()
+        #
+        # # Specify onstream year
+        # onstream_yr = min(self.oil_onstream_date.year, self.gas_onstream_date.year)
+        #
+        # # Helper function to check PIS years
+        # def _check_pis_years(obj_capital: CapitalCost, obj_name: str) -> None:
+        #     pis_yrs = obj_capital.pis_year
+        #     invalid_pis_years = pis_yrs[pis_yrs != onstream_yr]
+        #
+        #     if len(invalid_pis_years) > 0:
+        #         # Specify message to be displayed
+        #         msg = (
+        #             f"Found {obj_name!r} PIS years ({invalid_pis_years}) that are "
+        #             f"different from onstream year ({onstream_yr})"
+        #         )
+        #
+        #         # Strict mode: raise an error
+        #         if self.is_strict:
+        #             raise CostRecoveryException(f"Cannot allow: {msg}")
+        #
+        #         # Loose mode: display a warning message
+        #         else:
+        #             logging.warning(msg)
+        #
+        # # Check PIS years for sunk costs and preonstream costs
+        # mapping_capital = [
+        #     (self._oil_capital_sunk_cost, "oil_capital_sunk_cost"),
+        #     (self._oil_capital_preonstream, "oil_capital_preonstream"),
+        #     (self._gas_capital_sunk_cost, "gas_capital_sunk_cost"),
+        #     (self._gas_capital_preonstream, "gas_capital_preonstream"),
+        # ]
+        #
+        # for obj, name in mapping_capital:
+        #     _check_pis_years(obj_capital=obj, obj_name=name)
+        #
+        # # Define the mapping between fluids, cost types, capital objects, and
+        # # the initial year of depreciation incurred
+        # depr_mapping = {
+        #     "oil": (
+        #         ("postonstream", self._oil_capital_postonstream),
+        #         ("preonstream", self._oil_capital_preonstream),
+        #         ("sunk_cost", self._oil_capital_sunk_cost),
+        #     ),
+        #     "gas": (
+        #         ("postonstream", self._gas_capital_postonstream),
+        #         ("preonstream", self._gas_capital_preonstream),
+        #         ("sunk_cost", self._gas_capital_sunk_cost),
+        #     ),
+        # }
+        #
+        # # Define intermediate attributes:
+        # # "depreciations": dict and "undepreciated_assets": dict
+        # fluids = ["oil", "gas"]
+        # cost_types = ["postonstream", "preonstream", "sunk_cost"]
+        #
+        # depreciations = {f: {c: None for c in cost_types} for f in fluids}
+        # undepreciated_assets = {f: {c: None for c in cost_types} for f in fluids}
+        #
+        # for f, mapping in depr_mapping.items():
+        #     for c, obj in mapping:
+        #         (
+        #             depreciations[f][c],
+        #             undepreciated_assets[f][c]
+        #         ) = obj.total_depreciation_rate(
+        #             depr_method=depr_method,
+        #             decline_factor=decline_factor,
+        #             year_inflation=year_inflation,
+        #             inflation_rate=inflation_rate,
+        #             tax_rate=tax_rate,
+        #             inflation_rate_applied_to=inflation_rate_applied_to,
+        #         )
+        #
+        # # Set initial values for attributes "_oil_depreciations" and "_gas_depreciations"
+        # self._oil_depreciations = {
+        #     c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
+        # }
+        #
+        # self._gas_depreciations = {
+        #     c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
+        # }
+        #
+        # # Set initial values for attributes "_oil_undepreciated_assets"
+        # # and "_gas_undepreciated_assets"
+        # self._oil_undepreciated_assets = {c: None for c in cost_types}
+        # self._gas_undepreciated_assets = {c: None for c in cost_types}
+        #
+        # # Set attributes "_oil_depreciations", "_gas_depreciations",
+        # # "_oil_undepreciated_assets", and "gas_undepreciated_assets"
+        # for f, f_depr, f_undepr in [
+        #     ("oil", self._oil_depreciations, self._oil_undepreciated_assets),
+        #     ("gas", self._gas_depreciations, self._gas_undepreciated_assets)
+        # ]:
+        #     for c in cost_types:
+        #         f_depr[c] = depreciations[f][c]
+        #         f_undepr[c] = undepreciated_assets[f][c]
 
     def _get_modified_depreciations(self, sum_undepreciated_cost: bool) -> None:
         """
@@ -2104,17 +2105,27 @@ class CostRecovery(BaseProject):
         # Prepare sunk costs and preonstream costs
         self._get_sunkcost_array()
         self._get_preonstream_array()
-        self._validated_sunkcost_non_pod_1()
 
-        # Calculate depreciations and undepreciated assets
-        self._get_depreciation(
-            depr_method=depr_method,
-            decline_factor=decline_factor,
-            year_inflation=year_inflation,
-            inflation_rate=inflation_rate,
-            tax_rate=vat_rate,
-            inflation_rate_applied_to=inflation_rate_applied_to,
-        )
+        print('\t')
+        print(f'Filetype: {type(self._oil_depreciable_sunk_cost)}')
+        print(f'Length: {len(self._oil_depreciable_sunk_cost)}')
+        print('_oil_depreciable_sunk_cost = ', self._oil_depreciable_sunk_cost)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_non_depreciable_sunk_cost)}')
+        print(f'Length: {len(self._oil_non_depreciable_sunk_cost)}')
+        print('_oil_non_depreciable_sunk_cost = ', self._oil_non_depreciable_sunk_cost)
+
+
+        # # Calculate depreciations and undepreciated assets
+        # self._get_depreciation(
+        #     depr_method=depr_method,
+        #     decline_factor=decline_factor,
+        #     year_inflation=year_inflation,
+        #     inflation_rate=inflation_rate,
+        #     tax_rate=vat_rate,
+        #     inflation_rate_applied_to=inflation_rate_applied_to,
+        # )
 
         # # Modify depreciations, accounting for various adjustments
         # self._get_modified_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)

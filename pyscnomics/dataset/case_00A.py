@@ -244,9 +244,9 @@ class Case00A:
             ),
             "cost_type": (
                 [
-                    CostType.SUNK_COST,  # 2023
-                    CostType.SUNK_COST,  # 2024
-                    CostType.SUNK_COST,  # 2025
+                    None,  # 2023
+                    None,  # 2024
+                    None,  # 2025
                     None,  # 2026
                     None,  # 2027
                     None,  # 2028
