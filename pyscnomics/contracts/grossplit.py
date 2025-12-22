@@ -2,6 +2,7 @@
 Handles calculations associated with PSC Gross Split.
 """
 
+import logging
 import warnings
 from dataclasses import dataclass, field
 import numpy as np
@@ -491,6 +492,58 @@ class GrossSplit(BaseProject):
                     f"is different from the length of project years: "
                     f"{self.project_duration}"
                 )
+
+    def _validate_sunkcost_non_pod_1(self) -> None:
+        """
+        Validate sunk cost arrays for non–POD I contracts.
+
+        This method checks whether all sunk cost components are zero when the
+        contract is not POD I. The validation is performed on both depreciable and
+        non-depreciable sunk cost arrays for oil and gas.
+
+        In strict mode (``is_strict``), the presence of any non-zero sunk cost in a
+        non–POD I contract results in a ``SunkCostException``. In non-strict mode,
+        the method instead emits a warning for each cost category found to contain
+        non-zero values.
+
+        The following attributes are validated:
+
+        - ``_oil_depreciable_sunk_cost``
+        - ``_gas_depreciable_sunk_cost``
+        - ``_oil_non_depreciable_sunk_cost``
+        - ``_gas_non_depreciable_sunk_cost``
+
+        Notes
+        -----
+        - POD I contracts are exempt from this validation.
+        - The method does not modify any sunk cost or preonstream arrays; it performs
+          validation only.
+        """
+
+        def _all_zeros(arr: np.ndarray) -> bool:
+            return np.all(arr == 0)
+
+        if not self.is_pod_1:
+            zero_sunk_costs = {
+                "oil_depreciable": _all_zeros(self._oil_depreciable_sunk_cost),
+                "gas_depreciable": _all_zeros(self._gas_depreciable_sunk_cost),
+                "oil_non_depreciable": _all_zeros(self._oil_non_depreciable_sunk_cost),
+                "gas_non_depreciable": _all_zeros(self._gas_non_depreciable_sunk_cost),
+            }
+
+            values = zero_sunk_costs.values()
+
+            # Strict mode: raise an error
+            if self.is_strict:
+                if not all(values):
+                    raise SunkCostException(f"Cannot have sunk cost in non-POD I contract.")
+
+            # Loose mode: display a warning message
+            else:
+                for key, val in zero_sunk_costs.items():
+                    if not val:
+                        message = f"Found {key} sunk cost for non-POD I contract."
+                        logging.warning(message)
 
     def _get_depreciation(
         self,
