@@ -217,7 +217,7 @@ class Case00A:
             "cost": np.array(
                 [
                     200,
-                    200,
+                    0,  # 200,
                     200,
                     200,
                     50,
@@ -1265,8 +1265,8 @@ class Case00A:
             "end_date": date(year=2032, month=12, day=31),
             "oil_onstream_date": date(year=2030, month=1, day=1),
             "gas_onstream_date": date(year=2029, month=1, day=1),
-            "approval_year": 2029,
-            "is_pod_1": False,
+            "approval_year": 2026,
+            "is_pod_1": True,
             "is_strict": False,
         }
 

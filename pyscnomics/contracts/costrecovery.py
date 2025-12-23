@@ -22,6 +22,7 @@ from pyscnomics.econ.selection import (
     InitialYearDepreciationIncurred,
     NPVSelection,
     DiscountingMode,
+    ContractType,
 )
 from pyscnomics.econ.indicator import (
     irr,
@@ -496,7 +497,7 @@ class CostRecovery(BaseProject):
 
         # Identify non-zero sunk costs
         name = sc_capital_name
-        nonzero_mask = (sc_capital_object.cost != 0)
+        nonzero_mask = (sc_capital_object.cost != 0.0)
 
         # Exit early if all sunk costs are zeros
         if not np.any(nonzero_mask):
@@ -528,16 +529,19 @@ class CostRecovery(BaseProject):
         if is_strict:
             raise CostRecoveryException(msg_error)
 
-        # Loose mode: log a warning message, validate PIS years with onstream year
+        # Loose mode: record a warning message, validate PIS years with onstream year,
         # and continue execution
         else:
-            logging.warning(msg_warning)
-            self._check_capital_pis_years(
-                obj_capital=sc_capital_object,
-                obj_name=sc_capital_name,
-                is_strict=False,
-                onstream_year=onstream_year,
+            self.warning_messages.append(
+                (ContractType.COST_RECOVERY.value, msg_warning)
             )
+
+            # self._check_capital_pis_years(
+            #     obj_capital=sc_capital_object,
+            #     obj_name=sc_capital_name,
+            #     is_strict=False,
+            #     onstream_year=onstream_year,
+            # )
 
     def _get_depreciation(
         self,

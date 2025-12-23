@@ -41,13 +41,6 @@ from pyscnomics.econ.indicator import (
 pd.set_option("display.max_rows", 200)
 pd.set_option("display.max_columns", 50)
 
-# Logging settings
-logging.basicConfig(
-    # filename="warnings.log",
-    level=logging.WARNING,
-    format="%(levelname)s: %(message)s\n"
-)
-
 
 class BaseProjectException(Exception):
     """ Exception to be raised for a misuse of BaseProject class """
