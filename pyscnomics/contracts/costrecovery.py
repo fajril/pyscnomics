@@ -459,112 +459,73 @@ class CostRecovery(BaseProject):
         self._oil_carry_forward_depreciation = carward_depr["oil_carry_forward_depreciation"]
         self._gas_carry_forward_depreciation = carward_depr["gas_carry_forward_depreciation"]
 
-    def _check_capital_sunk_cost(self):
-
-        capital_sunk_cost_objects = [
-            ("oil_capital_sunk_cost", self._oil_capital_sunk_cost),
-            ("gas_capital_sunk_cost", self._gas_capital_sunk_cost)
-        ]
-
-        for f, obj in capital_sunk_cost_objects:
-            capital_sunk_costs = list(zip(obj.expense_year, obj.cost))
-            if not np.all(obj == 0):
-                if self.is_strict:
-                    raise SunkCostException(
-                        f"Cannot allow {f!r} ({capital_sunk_costs}) in PSC Cost Recovery (CR) "
-                        f"contract. In PSC CR, costs that are expensed prior to onstream "
-                        f"year should be treated as Non-Capital with no depreciation applied "
-                        f"to them. You MUST re-classify them as Non-Capital costs."
-                    )
-                else:
-                    logging.warning(
-                        f"Found {f!r} ({capital_sunk_costs}) in PSC Cost Recovery (CR) "
-                        f"contract. In PSC CR, costs that are expensed prior to onstream "
-                        f"year should be treated as Non-Capital with no depreciation applied "
-                        f"to them. If you classify them as Capital, they will be subject to "
-                        f"depreciation. You may want to consider re-classifying them as "
-                        f"Non-Capital costs."
-                    )
-
     @staticmethod
-    def _check_capital_pis_years(
-        obj_capital: CapitalCost,
-        obj_name: str,
+    def _check_capital_sunk_cost(
+        sc_obj_capital: CapitalCost,
+        sc_obj_capital_name: str,
         is_strict: bool,
-        onstream_year: int,
     ) -> None:
         """
-        Validate that capital PIS years do not precede the project onstream year.
+        Validate that sunk costs are not classified as capital costs under PSC Cost Recovery.
 
-        This method checks whether any ``pis_year`` values of a ``CapitalCost`` object
-        occur before the specified onstream year. If such cases are found, the behavior
-        depends on the validation mode:
+        In a PSC Cost Recovery (CR) contract, sunk costs should be treated as intangible
+        costs with no depreciation applied. This method checks whether a capital cost
+        object contains non-zero sunk costs and flags them as invalid.
+
+        Validation behavior depends on the selected mode:
 
         - Strict mode: raises a ``CostRecoveryException``.
         - Loose mode: logs a warning and continues execution.
 
         Parameters
         ----------
-        obj_capital : CapitalCost
-            Capital cost object containing PIS years and associated costs.
-        obj_name : str
-            Human-readable name of the capital cost object, used in messages.
+        sc_obj_capital : CapitalCost
+            Capital cost object representing sunk costs, including expense years and costs.
+        sc_obj_capital_name : str
+            Human-readable name of the sunk cost object, used in messages.
         is_strict : bool
-            If True, invalid PIS years raise an exception; otherwise, a warning is logged.
-        onstream_year : int
-            Earliest allowable year for capital PIS recognition.
+            If True, invalid sunk costs raise an exception; otherwise, a warning is logged.
 
         Raises
         ------
         CostRecoveryException
-            If invalid PIS years are found and ``is_strict`` is True.
+            If non-zero sunk costs are found and ``is_strict`` is True.
         """
 
-        # Extract PIS years and the corresponding costs of a CapitalCost object
-        pis_yrs = obj_capital.pis_year
-        costs = obj_capital.cost
+        # Extract expense years and the corresponding costs of a capital sunk cost object
+        name = sc_obj_capital_name
+        invalid_years = sc_obj_capital.expense_year
+        invalid_costs = sc_obj_capital.cost
 
-        # Identify PIS years occurring before the onstream year
-        mask = pis_yrs < onstream_year
+        # Pair invalid expense years with invalid costs
+        invalid = [f"{yr}: {cst}" for yr, cst in zip(invalid_years, invalid_costs)]
 
-        # Collect invalid PIS years
-        invalid_pis_yrs = pis_yrs[mask]
-
-        # Exit early if all PIS years are valid
-        if invalid_pis_yrs.size == 0:
+        # Exit early if all capital sunk costs are zero
+        if np.allclose(invalid_costs, 0.0):
             return
 
-        # Collect costs associated with invalid PIS years
-        invalid_costs = costs[mask]
-
-        # Pair invalid PIS years with their corresponding costs
-        invalid = [f"{yr}: {cst}" for yr, cst in zip(invalid_pis_yrs, invalid_costs)]
-
+        # Specify messages to be displayed
         msg_error = (
-            f"Cannot have {obj_name!r} PIS years ({invalid_pis_yrs}) before "
-            f"onstream year ({onstream_year})."
+            f"Cannot allow {name!r} ({invalid}) in PSC Cost Recovery (CR) contract. "
+            f"Conceptually, all sunk costs in PSC CR should be classified as "
+            f"intangible cost--with NO DEPRECIATION APPLIED TO THEM--, not capital cost."
         )
 
         msg_warning = (
-            f"Found {obj_name!r} PIS years ({invalid_pis_yrs}) before onstream year "
-            f"({onstream_year}). PSCnomics will ALWAYS charge {obj_name!r} depreciations or "
-            f"amortizations at their corresponding PIS years. You may want to reset the "
-            f"configuration of the following PIS years ({invalid}) so that they prevail at "
-            f"the onstream year ({onstream_year})."
+            f"Found {name!r} ({invalid}) in PSC Cost Recovery (CR) contract. "
+            f"Conceptually, all sunk costs in PSC CR should be classified as "
+            f"intangible cost--with NO DEPRECIATION APPLIED TO THEM--, not capital cost. "
+            f"Classifying sunk costs as capital cost in PSC CR contract may produce "
+            f"an incorrect calculation, where depreciation will be applied to them."
         )
 
-        # Strict mode: raise an error and STOP execution
+        # Strict mode: raise an error and stop execution
         if is_strict:
-            logging.error(msg_error)
             raise CostRecoveryException(msg_error)
 
         # Loose mode: log a warning message and continue execution
         else:
             logging.warning(msg_warning)
-
-
-
-
 
     def _get_depreciation(
         self,
@@ -636,48 +597,35 @@ class CostRecovery(BaseProject):
         # Specify onstream year
         onstream_yr = min(self.oil_onstream_date.year, self.gas_onstream_date.year)
 
-        self._check_capital_pis_years(
-            obj_capital=self._oil_capital_sunk_cost,
-            obj_name="oil_capital_sunk_cost",
-            is_strict=self.is_strict,
-            onstream_year=onstream_yr,
-        )
+        # Check whether capital sunk costs are present
+        mapping_capital_sunk_cost = [
+            (self._oil_capital_sunk_cost, "oil_capital_sunk_cost"),
+            (self._gas_capital_sunk_cost, "gas_capital_sunk_cost"),
+        ]
 
-        # # Check capital sunk cost
-        # self._check_capital_sunk_cost()
-        #
+        for obj, name in mapping_capital_sunk_cost:
+            self._check_capital_sunk_cost(
+                sc_obj_capital=obj,
+                sc_obj_capital_name=name,
+                is_strict=self.is_strict,
+            )
 
-        # # Helper function to check PIS years
-        # def _check_pis_years(obj_capital: CapitalCost, obj_name: str) -> None:
-        #     pis_yrs = obj_capital.pis_year
-        #     invalid_pis_years = pis_yrs[pis_yrs != onstream_yr]
+        # print('\t')
+        # print(f'Filetype: {type(self._oil_capital_sunk_cost)}')
+        # print(f'Length: {len(self._oil_capital_sunk_cost)}')
+        # print('_oil_capital_sunk_cost = ', self._oil_capital_sunk_cost)
         #
-        #     if len(invalid_pis_years) > 0:
-        #         # Specify message to be displayed
-        #         msg = (
-        #             f"Found {obj_name!r} PIS years ({invalid_pis_years}) that are "
-        #             f"different from onstream year ({onstream_yr})"
-        #         )
+        # print('\t')
+        # print(f'Filetype: {type(self._oil_depreciable_sunk_cost)}')
+        # print(f'Length: {len(self._oil_depreciable_sunk_cost)}')
+        # print('_oil_depreciable_sunk_cost = ', self._oil_depreciable_sunk_cost)
         #
-        #         # Strict mode: raise an error
-        #         if self.is_strict:
-        #             raise CostRecoveryException(f"Cannot allow: {msg}")
-        #
-        #         # Loose mode: display a warning message
-        #         else:
-        #             logging.warning(msg)
-        #
-        # # Check PIS years for sunk costs and preonstream costs
-        # mapping_capital = [
-        #     (self._oil_capital_sunk_cost, "oil_capital_sunk_cost"),
-        #     (self._oil_capital_preonstream, "oil_capital_preonstream"),
-        #     (self._gas_capital_sunk_cost, "gas_capital_sunk_cost"),
-        #     (self._gas_capital_preonstream, "gas_capital_preonstream"),
-        # ]
-        #
-        # for obj, name in mapping_capital:
-        #     _check_pis_years(obj_capital=obj, obj_name=name)
-        #
+        # print('\t')
+        # print(f'Filetype: {type(self._oil_non_depreciable_sunk_cost)}')
+        # print(f'Length: {len(self._oil_non_depreciable_sunk_cost)}')
+        # print('_oil_non_depreciable_sunk_cost = ', self._oil_non_depreciable_sunk_cost)
+
+
         # # Define the mapping between fluids, cost types, capital objects, and
         # # the initial year of depreciation incurred
         # depr_mapping = {

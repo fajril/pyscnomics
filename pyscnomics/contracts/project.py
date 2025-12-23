@@ -4065,6 +4065,82 @@ class BaseProject:
         """
         return (numerator / denominator) if denominator != 0 else default
 
+    @staticmethod
+    def _check_capital_pis_years(
+        obj_capital: CapitalCost,
+        obj_name: str,
+        is_strict: bool,
+        onstream_year: int,
+    ) -> None:
+        """
+        Validate that capital PIS years do not precede the project onstream year.
+
+        This method checks whether any ``pis_year`` values of a ``CapitalCost`` object
+        occur before the specified onstream year. If such cases are found, the behavior
+        depends on the validation mode:
+
+        - Strict mode: raises a ``CostRecoveryException``.
+        - Loose mode: logs a warning and continues execution.
+
+        Parameters
+        ----------
+        obj_capital : CapitalCost
+            Capital cost object containing PIS years and associated costs.
+        obj_name : str
+            Human-readable name of the capital cost object, used in messages.
+        is_strict : bool
+            If True, invalid PIS years raise an exception; otherwise, a warning is logged.
+        onstream_year : int
+            Earliest allowable year for capital PIS recognition.
+
+        Raises
+        ------
+        BaseProjectException
+            If invalid PIS years are found and ``is_strict`` is True.
+        """
+
+        # Extract PIS years and the corresponding costs of a CapitalCost object
+        pis_yrs = obj_capital.pis_year
+        costs = obj_capital.cost
+
+        # Identify PIS years occurring before the onstream year
+        mask = pis_yrs < onstream_year
+
+        # Collect invalid PIS years
+        invalid_pis_yrs = pis_yrs[mask]
+
+        # Exit early if all PIS years are valid
+        if invalid_pis_yrs.size == 0:
+            return
+
+        # Collect costs associated with invalid PIS years
+        invalid_costs = costs[mask]
+
+        # Pair invalid PIS years with their corresponding costs
+        invalid = [f"{yr}: {cst}" for yr, cst in zip(invalid_pis_yrs, invalid_costs)]
+
+        msg_error = (
+            f"Cannot have {obj_name!r} PIS years ({invalid_pis_yrs}) before "
+            f"onstream year ({onstream_year})."
+        )
+
+        msg_warning = (
+            f"Found {obj_name!r} PIS years ({invalid_pis_yrs}) before onstream year "
+            f"({onstream_year}). PSCnomics will ALWAYS charge {obj_name!r} depreciations or "
+            f"amortizations at their corresponding PIS years. You may want to reset the "
+            f"configuration of the following PIS years ({invalid}) so that they prevail at "
+            f"the onstream year ({onstream_year})."
+        )
+
+        # Strict mode: raise an error and STOP execution
+        if is_strict:
+            logging.error(msg_error)
+            raise BaseProjectException(msg_error)
+
+        # Loose mode: log a warning message and continue execution
+        else:
+            logging.warning(msg_warning)
+
     def get_summary(
         self,
         discount_rate: float = 0.1,
