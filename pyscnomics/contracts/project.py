@@ -17,6 +17,7 @@ from pyscnomics.econ.selection import (
     InflationAppliedTo,
     NPVSelection,
     DiscountingMode,
+    ContractType,
 )
 from pyscnomics.econ.costs import (
     CapitalCost,
@@ -311,6 +312,9 @@ class BaseProject:
     # Attributes associated with cashflow
     _oil_cashflow: np.ndarray = field(default=None, init=False, repr=False)
     _gas_cashflow: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attribute to store warning messages
+    warning_messages: list = field(default_factory=lambda: [], init=False, repr=False)
 
     # Attributes associated with consolidated profiles
     _consolidated_lifting: np.ndarray = field(default=None, init=False, repr=False)
@@ -805,9 +809,7 @@ class BaseProject:
 
         for cost in costs_list:
             for ftype in fluid_types:
-                self._prepare_cost_types(
-                    is_strict=self.is_strict, cost_obj=cost[ftype]
-                )
+                self._prepare_cost_types(cost_obj=cost[ftype])
 
         # Define post-onstream cost, pre-onstream cost, and sunk cost attributes
         costs_mapping = (
@@ -1704,16 +1706,14 @@ class BaseProject:
         ct: np.ndarray,
         ry: np.ndarray,
         onstream_year: int,
-        is_strict: bool,
     ) -> None:
         """
         Validate consistency between cost types and their applicable project periods.
 
-        This method checks whether cost types assigned to each record are compatible
-        with the corresponding project period inferred from reference years. Each
-        period (sunk cost, pre-onstream, post-onstream) defines a set of disallowed
-        cost types. Violations are either raised as exceptions or logged as warnings,
-        depending on the strictness setting.
+        This method verifies that cost types assigned to each record are compatible
+        with the project period inferred from the reference year. Project periods
+        (sunk, pre-onstream, post-onstream) impose constraints on which cost types
+        are allowed. Any mismatch results in an exception.
 
         Parameters
         ----------
@@ -1723,21 +1723,17 @@ class BaseProject:
             Array of reference years corresponding to each cost entry.
         onstream_year : int
             Project onstream year used to distinguish pre- and post-onstream periods.
-        is_strict : bool
-            If True, inconsistencies raise an exception; otherwise, they are
-            logged as warnings and execution continues.
 
         Raises
         ------
         BaseProjectException
-            If an invalid cost type is detected and strict mode is enabled.
+            If a cost type is not allowed for the inferred project period.
 
         Notes
         -----
-        - Period classification is based on comparison with project approval year
-          and onstream year.
-        - In non-strict mode, inconsistencies are logged as warnings and execution
-          continues.
+        - Period classification is based on comparison with the project approval
+          year and the onstream year.
+        - Validation stops at the first detected inconsistency.
         """
 
         # Define boolean masks for each project period based on reference year "ry"
@@ -1758,7 +1754,7 @@ class BaseProject:
             (
                 "preonstream_cost",
                 masks["preonstream_cost"],
-                [CostType.SUNK_COST, CostType.POST_ONSTREAM_COST]
+                [CostType.POST_ONSTREAM_COST]
             ),
             (
                 "postonstream_cost",
@@ -1786,47 +1782,36 @@ class BaseProject:
                     f"Found {found} in {period} period."
                 )
 
-                # Strict mode: raise an error
-                if is_strict:
-                    logging.error(msg)
-                    raise BaseProjectException(msg)
-
-                # Loose mode: emit a warning and continue
-                logging.warning(msg)
+                raise BaseProjectException(msg)
 
     def _validate_boundary_year_cost_types(
         self,
         ct: np.ndarray,
         ry: np.ndarray,
         onstream_year: int,
-        is_strict: bool,
     ) -> None:
         """
         Validate cost type assignments at boundary project years.
 
         This method enforces consistency rules for cost types occurring exactly
         at the project approval year and the onstream year. Certain cost types
-        are disallowed at these boundary years and are treated as classification
-        errors or warnings depending on the strictness setting.
+        are not permitted at these boundary years, and any violation results
+        in an exception.
 
         Parameters
         ----------
         ct : np.ndarray
-            Array of cost types as ``CostType`` enum members.
+            Array of cost types represented as ``CostType`` enum members.
         ry : np.ndarray
             Array of reference years corresponding to each cost entry.
         onstream_year : int
-            Project onstream year used as a boundary between pre- and post-onstream
-            periods.
-        is_strict : bool
-            If True, invalid cost types at boundary years raise an exception;
-            otherwise, they are logged as warnings.
+            Project onstream year used as the boundary between pre- and
+            post-onstream periods.
 
         Raises
         ------
         BaseProjectException
-            If a disallowed cost type is detected at a boundary year and
-            ``is_strict`` is True.
+            If a disallowed cost type is detected at a boundary year.
 
         Notes
         -----
@@ -1845,18 +1830,8 @@ class BaseProject:
                 f"Cannot accept POST ONSTREAM COST as cost type at approval year "
                 f"({self.approval_year})."
             )
-            msg_warning = (
-                f"Found POST ONSTREAM COST as cost type at approval year. Expected "
-                f"cost types at approval year are: SUNK COST and PRE ONSTREAM COST."
-            )
 
-            # Strict mode: raise an error
-            if is_strict:
-                logging.error(msg_error)
-                raise BaseProjectException(msg_error)
-
-            # Loose mode: emit a warning and continue
-            logging.warning(msg_warning)
+            raise BaseProjectException(msg_error)
 
         # Validate cost type at exact onstream year
         if np.any(at_onstream) and CostType.SUNK_COST in ct[at_onstream]:
@@ -1864,51 +1839,39 @@ class BaseProject:
             msg_error = (
                 f"Cannot accept SUNK COST as cost type at onstream year ({onstream_year})."
             )
-            msg_warning = (
-                f"Found SUNK COST as cost type at onstream year. Expected cost types at "
-                f"onstream year are: PRE ONSTREAM COST and POST ONSTREAM COST."
-            )
 
-            # Strict mode: raise an error
-            if is_strict:
-                logging.error(msg_error)
-                raise BaseProjectException(msg_error)
-
-            # Loose mode; emit a warning and continue
-            logging.warning(msg_warning)
+            raise BaseProjectException(msg_error)
 
     def _prepare_cost_types(
         self,
-        is_strict: bool,
         cost_obj: CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales,
     ) -> None:
         """
         Prepare, assign, and validate cost type classifications for a cost object.
 
-        This method determines the applicable project onstream year, assigns default
-        cost types where none are provided, and validates that all cost type
-        classifications are consistent with project timing rules. Additional checks
-        are applied at boundary years (approval and onstream) to ensure strict
-        compliance with classification constraints.
+        This method determines the effective project onstream year, assigns default
+        cost types where missing, and validates that all cost type classifications
+        are consistent with project timing rules. Additional validation is applied
+        at boundary years (approval and onstream) to enforce strict classification
+        constraints.
 
         Parameters
         ----------
-        is_strict : bool
-            If True, any invalid cost type classification raises an exception;
-            otherwise, violations are logged as warnings and execution continues.
         cost_obj : CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales
             Cost object whose ``cost_type`` attribute will be prepared and validated.
 
         Raises
         ------
         BaseProjectException
-            If an invalid cost type is detected and strict mode is enabled.
+            If an invalid cost type classification is detected.
 
         Notes
         -----
         - The effective onstream year is defined as the earliest of oil and gas
           onstream dates.
         - Default cost types are assigned only where the input value is ``None``.
+        - Boundary-year validation is applied only when the approval year precedes
+          the onstream year.
         - This method updates ``cost_obj.cost_type`` in place.
         """
 
@@ -1926,7 +1889,6 @@ class BaseProject:
             ct=ct,
             ry=ry,
             onstream_year=onstream_year,
-            is_strict=is_strict,
         )
 
         # Validate cost type at boundary years
@@ -1935,7 +1897,6 @@ class BaseProject:
                 ct=ct,
                 ry=ry,
                 onstream_year=onstream_year,
-                is_strict=is_strict,
             )
 
         # Modify cost_type attribute of cost_obj
@@ -2839,31 +2800,26 @@ class BaseProject:
 
     def _validate_sunkcost(self, sunkcost_objects: list) -> None:
         """
-        Validate that sunk cost objects do not extend beyond the allowed cutoff year.
+        Validate that sunk cost objects do not extend beyond the cutoff year.
 
-        This method computes the maximum ``expense_year`` for each sunk cost object and
-        checks that none exceed the cutoff year, defined as the earlier of the project
-        approval year and the earliest onstream year (oil or gas).
+        This method checks the maximum ``expense_year`` of each sunk cost object and
+        verifies that none exceed the cutoff year, defined as the earlier of the
+        project approval year and the earliest onstream year (oil or gas).
 
-        Validation behavior depends on ``self.is_strict``:
-        - ``True``  → violations raise ``SunkCostException``.
-        - ``False`` → violations are logged as warnings.
+        Behavior depends on ``self.is_strict``:
+        - ``True``  → raise ``SunkCostException`` on violation.
+        - ``False`` → record a warning message.
 
         Parameters
         ----------
         sunkcost_objects : list
-            A list of sunk cost objects, each providing an ``expense_year`` array. The
-            list is assumed to be pre-filtered to include only sunk cost items.
-
-        Returns
-        -------
-        None
+            List of sunk cost objects, each exposing an ``expense_year`` array. The
+            list is assumed to contain only sunk cost items.
 
         Raises
         ------
         SunkCostException
-            Raised in strict mode when one or more sunk cost objects have years exceeding
-            the cutoff year.
+            Raised in strict mode if any sunk cost year exceeds the cutoff year.
         """
 
         # Determine onstream year: the earlier between oil and gas onstream year
@@ -2883,38 +2839,39 @@ class BaseProject:
 
             # Strict mode: raise an error
             if self.is_strict:
-                logging.error(message)
                 raise SunkCostException(message)
 
             # Loose mode: display a warning message
             else:
-                logging.warning(message)
+                self.warning_messages.append(
+                    (ContractType.BASE_PROJECT.value, message)
+                )
 
     def _validate_preonstream(self, preonstream_objects: list) -> None:
         """
-        Validate year ranges of pre-onstream cost objects.
+        Validate year bounds of pre-onstream cost objects.
 
-        This method validates each object's ``expense_year`` against the permitted
-        pre-onstream window, using the earliest onstream year (oil or gas) as the
+        This method checks each object's ``expense_year`` against the allowable
+        pre-onstream window using the earliest onstream year (oil or gas) as the
         upper bound. Validation rules depend on the contract type:
 
         - **POD I**     → ``approval_year <= min(expense_year)``
-                         and ``max(expense_year) <= onstream_year``
+                          and ``max(expense_year) <= onstream_year``
         - **Non-POD I** → ``max(expense_year) <= onstream_year``
 
         Behavior is controlled by ``self.is_strict``:
-        - ``True``  → raise ``PreOnstreamException`` on violation
-        - ``False`` → emit warnings and continue execution
+        - ``True``  → raise ``PreOnstreamException`` on violation.
+        - ``False`` → record a warning message.
 
         Parameters
         ----------
         preonstream_objects : list
-            Pre-onstream cost objects exposing an ``expense_year`` array.
+            List of pre-onstream cost objects exposing an ``expense_year`` array.
 
         Raises
         ------
         PreOnstreamException
-            Raised in strict mode if one or more objects violate year constraints.
+            Raised in strict mode if one or more objects violate the year constraints.
         """
 
         # Determine onstream year: the earlier between oil and gas onstream year
@@ -2978,34 +2935,35 @@ class BaseProject:
         if message is not None:
             # Strict mode: raise an error
             if self.is_strict:
-                logging.error(message)
                 raise PreOnstreamException(message)
 
             # Loose mode: emit a warning and continue
             else:
-                logging.warning(message)
+                self.warning_messages.append(
+                    (ContractType.BASE_PROJECT.value, message)
+                )
 
     def _validate_postonstream(self, postonstream_objects: list) -> None:
         """
-        Validate year ranges of post-onstream cost objects.
+        Validate year bounds of post-onstream cost objects.
 
-        This method ensures that all post-onstream costs occur in or after the
-        project's earliest onstream year (oil or gas). Validation is performed by
-        checking the minimum ``expense_year`` of each object.
-
-        Behavior is controlled by ``self.is_strict``:
-        - ``True``  → raise ``PostOnstreamException`` on violation
-        - ``False`` → emit warnings and continue execution
+        This method checks the minimum ``expense_year`` of each post-onstream cost
+        object and ensures that all values are greater than or equal to the project's
+        earliest onstream year (oil or gas).
 
         Parameters
         ----------
         postonstream_objects : list
-            Post-onstream cost objects exposing an ``expense_year`` array.
+            List of post-onstream cost objects exposing an ``expense_year`` array.
+
+        Returns
+        -------
+        None
 
         Raises
         ------
         PostOnstreamException
-            Raised in strict mode if one or more objects contain years earlier than
+            Raised if one or more post-onstream cost objects contain years earlier than
             the onstream year.
         """
 
@@ -3026,14 +2984,7 @@ class BaseProject:
                 f"onstream year ({onstream_yr})"
             )
 
-            # Strict mode: raise an error
-            if self.is_strict:
-                logging.error(message)
-                raise PostOnstreamException(message)
-
-            # Loose mode: display a warning message
-            else:
-                logging.warning(message)
+            raise PostOnstreamException(message)
 
     def _get_cost_objects_validation(self) -> None:
         """

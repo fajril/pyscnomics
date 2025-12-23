@@ -459,50 +459,55 @@ class CostRecovery(BaseProject):
         self._oil_carry_forward_depreciation = carward_depr["oil_carry_forward_depreciation"]
         self._gas_carry_forward_depreciation = carward_depr["gas_carry_forward_depreciation"]
 
-    @staticmethod
     def _check_capital_sunk_cost(
-        sc_obj_capital: CapitalCost,
-        sc_obj_capital_name: str,
+        self,
+        sc_capital_object: CapitalCost,
+        sc_capital_name: str,
         is_strict: bool,
+        onstream_year: int,
     ) -> None:
         """
-        Validate that sunk costs are not classified as capital costs under PSC Cost Recovery.
+        Validate that sunk costs are not treated as capital costs under PSC Cost Recovery.
 
-        In a PSC Cost Recovery (CR) contract, sunk costs should be treated as intangible
-        costs with no depreciation applied. This method checks whether a capital cost
-        object contains non-zero sunk costs and flags them as invalid.
-
-        Validation behavior depends on the selected mode:
-
-        - Strict mode: raises a ``CostRecoveryException``.
-        - Loose mode: logs a warning and continues execution.
+        This method checks a ``CapitalCost`` object for non-zero sunk costs, which are
+        not allowed in PSC Cost Recovery (CR) contracts. Sunk costs must be classified
+        as intangible costs with no depreciation applied. In non-strict mode, a warning
+        is issued and capital PIS years are additionally validated against the onstream
+        year.
 
         Parameters
         ----------
-        sc_obj_capital : CapitalCost
-            Capital cost object representing sunk costs, including expense years and costs.
-        sc_obj_capital_name : str
-            Human-readable name of the sunk cost object, used in messages.
+        sc_capital_object : CapitalCost
+            Capital cost object containing sunk cost values and expense years.
+        sc_capital_name : str
+            Descriptive name of the sunk cost item, used in messages.
         is_strict : bool
-            If True, invalid sunk costs raise an exception; otherwise, a warning is logged.
+            If True, raises an exception when invalid sunk costs are found; otherwise,
+            a warning is logged and execution continues.
+        onstream_year : int
+            Project onstream year used for secondary PIS-year validation in non-strict
+            mode.
 
         Raises
         ------
         CostRecoveryException
-            If non-zero sunk costs are found and ``is_strict`` is True.
+            If non-zero sunk costs are detected and ``is_strict`` is True.
         """
 
-        # Extract expense years and the corresponding costs of a capital sunk cost object
-        name = sc_obj_capital_name
-        invalid_years = sc_obj_capital.expense_year
-        invalid_costs = sc_obj_capital.cost
+        # Identify non-zero sunk costs
+        name = sc_capital_name
+        nonzero_mask = (sc_capital_object.cost != 0)
+
+        # Exit early if all sunk costs are zeros
+        if not np.any(nonzero_mask):
+            return
+
+        # Extract invalid costs and their corresponding years
+        invalid_costs = sc_capital_object.cost[nonzero_mask]
+        invalid_years = sc_capital_object.expense_year[nonzero_mask]
 
         # Pair invalid expense years with invalid costs
         invalid = [f"{yr}: {cst}" for yr, cst in zip(invalid_years, invalid_costs)]
-
-        # Exit early if all capital sunk costs are zero
-        if np.allclose(invalid_costs, 0.0):
-            return
 
         # Specify messages to be displayed
         msg_error = (
@@ -523,9 +528,16 @@ class CostRecovery(BaseProject):
         if is_strict:
             raise CostRecoveryException(msg_error)
 
-        # Loose mode: log a warning message and continue execution
+        # Loose mode: log a warning message, validate PIS years with onstream year
+        # and continue execution
         else:
             logging.warning(msg_warning)
+            self._check_capital_pis_years(
+                obj_capital=sc_capital_object,
+                obj_name=sc_capital_name,
+                is_strict=False,
+                onstream_year=onstream_year,
+            )
 
     def _get_depreciation(
         self,
@@ -597,33 +609,39 @@ class CostRecovery(BaseProject):
         # Specify onstream year
         onstream_yr = min(self.oil_onstream_date.year, self.gas_onstream_date.year)
 
-        # Check whether capital sunk costs are present
-        mapping_capital_sunk_cost = [
-            (self._oil_capital_sunk_cost, "oil_capital_sunk_cost"),
-            (self._gas_capital_sunk_cost, "gas_capital_sunk_cost"),
-        ]
+        self._check_capital_sunk_cost(
+            sc_capital_object=self._oil_capital_sunk_cost,
+            sc_capital_name="oil_capital_sunk_cost",
+            is_strict=self.is_strict,
+            onstream_year=onstream_yr,
+        )
 
-        for obj, name in mapping_capital_sunk_cost:
-            self._check_capital_sunk_cost(
-                sc_obj_capital=obj,
-                sc_obj_capital_name=name,
-                is_strict=self.is_strict,
-            )
-
-        # print('\t')
-        # print(f'Filetype: {type(self._oil_capital_sunk_cost)}')
-        # print(f'Length: {len(self._oil_capital_sunk_cost)}')
-        # print('_oil_capital_sunk_cost = ', self._oil_capital_sunk_cost)
+        # # Check whether sunk costs are treated as capital costs
+        # mapping_capital_sunk_costs = [
+        #     (self._oil_depreciable_sunk_cost, "oil_capital_sunk_cost"),
+        #     (self._gas_depreciable_sunk_cost, "gas_capital_sunk_cost"),
+        # ]
         #
-        # print('\t')
-        # print(f'Filetype: {type(self._oil_depreciable_sunk_cost)}')
-        # print(f'Length: {len(self._oil_depreciable_sunk_cost)}')
-        # print('_oil_depreciable_sunk_cost = ', self._oil_depreciable_sunk_cost)
+        # for arr, name in mapping_capital_sunk_costs:
+        #     self._check_capital_sunk_cost(
+        #         sc_capital_array=arr,
+        #         sc_capital_name=name,
+        #         is_strict=self.is_strict,
+        #     )
         #
-        # print('\t')
-        # print(f'Filetype: {type(self._oil_non_depreciable_sunk_cost)}')
-        # print(f'Length: {len(self._oil_non_depreciable_sunk_cost)}')
-        # print('_oil_non_depreciable_sunk_cost = ', self._oil_non_depreciable_sunk_cost)
+        # mapping_capital_pis_years = [
+        #     (self._oil_capital_sunk_cost, "oil_capital_sunk_cost"),
+        #     (self._gas_capital_sunk_cost, "gas_capital_sunk_cost"),
+        #     (self._oil_capital_preonstream, "oil_capital_preonstream"),
+        #     (self._gas_capital_preonstream, "gas_capital_preonstream")
+        # ]
+        #
+        # for obj, name in mapping_capital_pis_years:
+        #     self._check_capital_pis_years(
+        #         obj_capital=None,
+        #         obj_name=None,
+        #         is_strict=self.is_strict,
+        #     )
 
 
         # # Define the mapping between fluids, cost types, capital objects, and
