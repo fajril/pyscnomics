@@ -2,7 +2,6 @@
 Configure base project as the foundation (or parent class) for PSC contract.
 """
 
-import logging
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass, field
@@ -219,6 +218,14 @@ class BaseProject:
     _gas_non_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
     _oil_preonstream: np.ndarray = field(default=None, init=False, repr=False)
     _gas_preonstream: np.ndarray = field(default=None, init=False, repr=False)
+
+    # Attributes associated with postonstream costs
+    _oil_depreciable_postonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_depreciable_postonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_non_depreciable_postonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_non_depreciable_postonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_postonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _gas_postonstream: np.ndarray = field(default=None, init=False, repr=False)
 
     # Attributes associated with pre tax expenditures for each cost categories
     _oil_capital_expenditures_pre_tax: np.ndarray = field(
@@ -3215,6 +3222,51 @@ class BaseProject:
             self._gas_depreciable_preonstream + self._gas_non_depreciable_preonstream
         )
 
+    def _get_postonstream_array(self) -> None:
+        """
+        Construct post-onstream cost arrays for oil and gas.
+
+        This method separates depreciable and non-depreciable post-onstream
+        costs from post-tax expenditures, then aggregates them to obtain total
+        post-onstream costs for oil and gas. All results are stored as internal
+        attributes.
+
+        Sets
+        ----
+        _oil_depreciable_postonstream : np.ndarray
+            Depreciable oil post-onstream costs.
+        _gas_depreciable_postonstream : np.ndarray
+            Depreciable gas post-onstream costs.
+        _oil_non_depreciable_postonstream : np.ndarray
+            Non-depreciable oil post-onstream costs.
+        _gas_non_depreciable_postonstream : np.ndarray
+            Non-depreciable gas post-onstream costs.
+        _oil_postonstream : np.ndarray
+            Total oil post-onstream costs.
+        _gas_postonstream : np.ndarray
+            Total gas post-onstream costs.
+        """
+
+        # Define depreciable postonstream costs
+        self._oil_depreciable_postonstream = self._oil_capital_expenditures_post_tax
+        self._gas_depreciable_postonstream = self._gas_capital_expenditures_post_tax
+
+        # Define non-depreciable preonstream costs
+        self._oil_non_depreciable_postonstream = (
+            self._oil_total_expenditures_post_tax - self._oil_depreciable_postonstream
+        )
+        self._gas_non_depreciable_postonstream = (
+            self._gas_total_expenditures_post_tax - self._gas_depreciable_postonstream
+        )
+
+        # Calculate (total = depreciable + non_depreciable costs)
+        self._oil_postonstream = (
+            self._oil_depreciable_postonstream + self._oil_non_depreciable_postonstream
+        )
+        self._gas_postonstream = (
+            self._gas_depreciable_postonstream + self._gas_non_depreciable_postonstream
+        )
+
     def _get_investments(self) -> None:
         """
         Calculate and categorize total investments for oil and gas.
@@ -3965,6 +4017,7 @@ class BaseProject:
         # Prepare sunk costs and preonstream costs
         self._get_sunkcost_array()
         self._get_preonstream_array()
+        self._get_postonstream_array()
 
         # Prepare capital, non-capital, and total investments
         self._get_investments()

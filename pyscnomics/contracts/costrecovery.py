@@ -666,29 +666,124 @@ class CostRecovery(BaseProject):
                     inflation_rate_applied_to=inflation_rate_applied_to,
                 )
 
-        # Set initial values for attributes "_oil_depreciations" and "_gas_depreciations"
-        self._oil_depreciations = {
-            c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
+        # Store the results as class's attributes
+        self._oil_depreciations = depreciations["oil"]
+        self._gas_depreciations = depreciations["gas"]
+        self._oil_undepreciated_assets = undepreciated_assets["oil"]
+        self._gas_undepreciated_assets = undepreciated_assets["gas"]
+
+        # # Set initial values for attributes "_oil_depreciations" and "_gas_depreciations"
+        # self._oil_depreciations = {
+        #     c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
+        # }
+        #
+        # self._gas_depreciations = {
+        #     c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
+        # }
+        #
+        # # Set initial values for attributes "_oil_undepreciated_assets"
+        # # and "_gas_undepreciated_assets"
+        # self._oil_undepreciated_assets = {c: None for c in cost_types}
+        # self._gas_undepreciated_assets = {c: None for c in cost_types}
+        #
+        # # Set attributes "_oil_depreciations", "_gas_depreciations",
+        # # "_oil_undepreciated_assets", and "gas_undepreciated_assets"
+        # for f, f_depr, f_undepr in [
+        #     ("oil", self._oil_depreciations, self._oil_undepreciated_assets),
+        #     ("gas", self._gas_depreciations, self._gas_undepreciated_assets)
+        # ]:
+        #     for c in cost_types:
+        #         f_depr[c] = depreciations[f][c]
+        #         f_undepr[c] = undepreciated_assets[f][c]
+
+    def _allocate_non_depreciable_sunk_cost(
+        self, non_depreciable_sunk_cost: np.ndarray
+    ) -> np.ndarray:
+        """
+        Allocate non-depreciable sunk costs to the project onstream year.
+
+        All non-depreciable sunk costs are aggregated into a single bulk value
+        and assigned entirely to the earliest onstream year (oil or gas) within
+        the project timeline.
+
+        Parameters
+        ----------
+        non_depreciable_sunk_cost : np.ndarray
+            Array of non-depreciable sunk cost values across project years.
+
+        Returns
+        -------
+        np.ndarray
+            Array aligned with ``project_years``, where the total sunk cost is
+            allocated at the onstream year and zeros elsewhere.
+
+        Raises
+        ------
+        CostRecoveryException
+            If the onstream year cannot be uniquely identified in
+            ``project_years``.
+        """
+
+        # Identify onstream year in project years array
+        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        match_at_onstream = np.flatnonzero(self.project_years == onstream_yr)
+        if match_at_onstream.size != 1:
+            raise CostRecoveryException(
+                f"Expected one onstream year match, got {match_at_onstream.size} instead."
+            )
+
+        # Configure index of onstream year in project years array
+        onstream_id = int(match_at_onstream[0])
+
+        # Calculate bulk value of non-depreciable_sunk_cost
+        bulk = non_depreciable_sunk_cost.sum(dtype=float)
+
+        # Allocate bulk value of non-depreciable sunk cost at the onstream year
+        arr = np.zeros_like(self.project_years, dtype=float)
+        arr[onstream_id] = bulk
+
+        return arr
+
+    def _get_non_depreciables(self):
+        """
+        Assemble non-depreciable cost arrays for oil and gas.
+
+        This method constructs dictionaries of non-depreciable costs by cost
+        category (sunk cost, pre-onstream, post-onstream) for oil and gas.
+        Non-depreciable sunk costs are aggregated and allocated to the
+        onstream year, while other components are taken directly from their
+        respective arrays.
+
+        Sets
+        ----
+        _oil_non_depreciables : dict[str, np.ndarray]
+            Non-depreciable oil costs by cost category.
+        _gas_non_depreciables : dict[str, np.ndarray]
+            Non-depreciable gas costs by cost category.
+        """
+
+        # Construct intermediate variable "non_depreciables" which stores
+        # non-depreciable costs for each fluids and each cost types
+        non_depreciables = {
+            "oil": {
+                "sunk_cost": self._allocate_non_depreciable_sunk_cost(
+                    non_depreciable_sunk_cost=self._oil_non_depreciable_sunk_cost
+                ),
+                "preonstream": self._oil_non_depreciable_preonstream,
+                "postonstream": self._oil_non_depreciable_postonstream,
+            },
+            "gas": {
+                "sunk_cost": self._allocate_non_depreciable_sunk_cost(
+                    non_depreciable_sunk_cost=self._gas_non_depreciable_sunk_cost
+                ),
+                "preonstream": self._gas_non_depreciable_preonstream,
+                "postonstream": self._gas_non_depreciable_postonstream,
+            },
         }
 
-        self._gas_depreciations = {
-            c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
-        }
-
-        # Set initial values for attributes "_oil_undepreciated_assets"
-        # and "_gas_undepreciated_assets"
-        self._oil_undepreciated_assets = {c: None for c in cost_types}
-        self._gas_undepreciated_assets = {c: None for c in cost_types}
-
-        # Set attributes "_oil_depreciations", "_gas_depreciations",
-        # "_oil_undepreciated_assets", and "gas_undepreciated_assets"
-        for f, f_depr, f_undepr in [
-            ("oil", self._oil_depreciations, self._oil_undepreciated_assets),
-            ("gas", self._gas_depreciations, self._gas_undepreciated_assets)
-        ]:
-            for c in cost_types:
-                f_depr[c] = depreciations[f][c]
-                f_undepr[c] = undepreciated_assets[f][c]
+        # Stores processed non-depreciable costs as class's attributes
+        self._oil_non_depreciables = non_depreciables["oil"]
+        self._gas_non_depreciables = non_depreciables["gas"]
 
     def _get_modified_depreciations(self, sum_undepreciated_cost: bool) -> None:
         """
@@ -2135,11 +2230,13 @@ class CostRecovery(BaseProject):
             + self._gas_cost_of_sales_expenditures_post_tax
         )
 
-        # Prepare sunk costs and preonstream costs
+        # Prepare sunk costs, preonstream costs, and postonstream costs
         self._get_sunkcost_array()
         self._get_preonstream_array()
+        self._get_postonstream_array()
 
-        # Calculate depreciations and undepreciated assets
+        # Calculate depreciations and undepreciated assets for capital
+        # sunk costs, preonstream costs, and postonstream costs
         self._get_depreciation(
             depr_method=depr_method,
             decline_factor=decline_factor,
@@ -2148,6 +2245,32 @@ class CostRecovery(BaseProject):
             tax_rate=vat_rate,
             inflation_rate_applied_to=inflation_rate_applied_to,
         )
+
+        # Process non-depreciable costs for non-capital sunk costs,
+        # preonstream costs, and postonstream costs
+        self._get_non_depreciables()
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_depreciations)}')
+        print(f'Length: {len(self._oil_depreciations)}')
+        print('_oil_depreciations = ', self._oil_depreciations)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_undepreciated_assets)}')
+        print(f'Length: {len(self._oil_undepreciated_assets)}')
+        print('_oil_undepreciated_assets = ', self._oil_undepreciated_assets)
+
+        # print('\t')
+        # print(f'Filetype: {type(self._oil_non_depreciables)}')
+        # print(f'Length: {len(self._oil_non_depreciables)}')
+        # print('_oil_non_depreciables = ', self._oil_non_depreciables)
+        #
+        # print('\t')
+        # print(f'Filetype: {type(self._gas_non_depreciables)}')
+        # print(f'Length: {len(self._gas_non_depreciables)}')
+        # print('_gas_non_depreciables = ', self._gas_non_depreciables)
+
+
 
         # # Modify depreciations, accounting for various adjustments
         # self._get_modified_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)

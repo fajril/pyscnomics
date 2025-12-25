@@ -83,10 +83,10 @@ if __name__ == "__main__":
     summary_arguments = case.summary_arguments
     contract.run(**contract_arguments)
 
-    print('\t')
-    print(f'Filetype: {type(contract.warning_messages)}')
-    print(f'Length: {len(contract.warning_messages)}')
-    print('warning_messages = \n', contract.warning_messages)
+    # print('\t')
+    # print(f'Filetype: {type(contract.warning_messages)}')
+    # print(f'Length: {len(contract.warning_messages)}')
+    # print('warning_messages = \n', contract.warning_messages)
 
     # print('\t')
     # print(f'Filetype: {type()}')
