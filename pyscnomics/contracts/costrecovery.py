@@ -672,30 +672,6 @@ class CostRecovery(BaseProject):
         self._oil_undepreciated_assets = undepreciated_assets["oil"]
         self._gas_undepreciated_assets = undepreciated_assets["gas"]
 
-        # # Set initial values for attributes "_oil_depreciations" and "_gas_depreciations"
-        # self._oil_depreciations = {
-        #     c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
-        # }
-        #
-        # self._gas_depreciations = {
-        #     c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
-        # }
-        #
-        # # Set initial values for attributes "_oil_undepreciated_assets"
-        # # and "_gas_undepreciated_assets"
-        # self._oil_undepreciated_assets = {c: None for c in cost_types}
-        # self._gas_undepreciated_assets = {c: None for c in cost_types}
-        #
-        # # Set attributes "_oil_depreciations", "_gas_depreciations",
-        # # "_oil_undepreciated_assets", and "gas_undepreciated_assets"
-        # for f, f_depr, f_undepr in [
-        #     ("oil", self._oil_depreciations, self._oil_undepreciated_assets),
-        #     ("gas", self._gas_depreciations, self._gas_undepreciated_assets)
-        # ]:
-        #     for c in cost_types:
-        #         f_depr[c] = depreciations[f][c]
-        #         f_undepr[c] = undepreciated_assets[f][c]
-
     def _allocate_non_depreciable_sunk_cost(
         self, non_depreciable_sunk_cost: np.ndarray
     ) -> np.ndarray:
@@ -787,55 +763,35 @@ class CostRecovery(BaseProject):
 
     def _get_modified_depreciations(self, sum_undepreciated_cost: bool) -> None:
         """
-        Modify oil and gas depreciation and undepreciated asset schedules.
+        Adjust oil and gas depreciation and undepreciated asset schedules.
 
-        This method applies three sequential adjustments to the internal
-        depreciation and undepreciated asset arrays for both oil and gas:
-
-        1. **Tolerance cleanup**: Very small undepreciated asset values
-           (below a fixed tolerance of ``1e-5``) are set to zero to
-           eliminate numerical noise.
-        2. **Final-year adjustment** (optional): If
-           ``sum_undepreciated_cost=True``, all remaining undepreciated
-           balances are summed and transferred into the final year of the
-           corresponding depreciation schedule. After this transfer,
-           the undepreciated asset arrays are reset to zeros.
-        3. **Depreciation reclassification**: All ``preonstream`` cost
-           depreciations are combined into ``sunk_cost`` depreciations.
-           Once transferred, the ``preonstream`` depreciation arrays are
-           reset to zeros.
+        This method performs in-place modifications to the undepreciated asset
+        and depreciation arrays for both oil and gas by:
+        (i) removing numerically insignificant undepreciated balances, and
+        (ii) optionally transferring remaining undepreciated costs into the
+        final year of the corresponding depreciation schedules.
 
         Parameters
         ----------
         sum_undepreciated_cost : bool
-            If True, any remaining undepreciated costs are added to the last
-            project year’s depreciation value and the undepreciated assets
-            are cleared. If False, undepreciated balances remain as-is
-            (apart from tolerance cleanup).
+            True  → sum undepreciated by cost type → final depreciation year
+            False → keep undepreciated (after tolerance cleanup)
 
         Returns
         -------
         None
-            The method updates the following attributes in place:
-
-            - ``_oil_depreciations``
-            - ``_gas_depreciations``
-            - ``_oil_undepreciated_assets``
-            - ``_gas_undepreciated_assets``
+            Updates the following attributes in place:
+            ``_oil_depreciations``, ``_gas_depreciations``,
+            ``_oil_undepreciated_assets``, and ``_gas_undepreciated_assets``.
 
         Notes
         -----
-        - Affects the following cost types: ``postonstream``, ``preonstream``,
-          and ``sunk_cost``.
-        - The tolerance threshold is fixed at ``1e-5``.
-        - Depreciations are updated only in the last year if
-          ``sum_undepreciated_cost=True``.
-        - After modification, all ``preonstream`` depreciation values are
-          reclassified into ``sunk_cost`` and cleared from their original arrays.
+        - Cost types: sunk_cost | preonstream | postonstream
+        - Final-year adjustment affects depreciation only
         """
 
         undepre_assets = [self._oil_undepreciated_assets, self._gas_undepreciated_assets]
-        cost_types = ["postonstream", "preonstream", "sunk_cost"]
+        cost_types = ["sunk_cost", "preonstream", "postonstream"]
 
         # Treatment for small order of number (example 1e-5) in undepreciated assets
         tol = 1.0e-5
@@ -854,6 +810,9 @@ class CostRecovery(BaseProject):
                     depr[c][-1] += undepr[c].sum()
                     undepr[c] = np.zeros([1, 1], dtype=float)
 
+        """
+        Former approach
+        ---------------
         # Modify depreciations.
         # Combine sunk cost and preonstream cost depreciations, then assign
         # the results as the "modified" sunk cost depreciations
@@ -863,6 +822,7 @@ class CostRecovery(BaseProject):
         # Assign preonstream cost depreciations as zeros
         self._oil_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
         self._gas_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
+        """
 
     def _get_ftp(self) -> None:
         """
@@ -2250,40 +2210,36 @@ class CostRecovery(BaseProject):
         # preonstream costs, and postonstream costs
         self._get_non_depreciables()
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_depreciations)}')
-        print(f'Length: {len(self._oil_depreciations)}')
-        print('_oil_depreciations = ', self._oil_depreciations)
+        # Modify depreciations, accounting for various adjustments
+        self._get_modified_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)
+
+        # Summation attributes: "sunk_cost" + "preonstream" + "postonstream",
+        # for depreciations, undepreciated_assets, and non_depreciables
+        self._oil_sum_undepreciated_asset = np.sum(
+            [np.sum(v) for v in self._oil_undepreciated_assets.values()]
+        )
+        self._gas_sum_undepreciated_asset = np.sum(
+            [np.sum(v) for v in self._gas_undepreciated_assets.values()]
+        )
+
+        self._oil_depreciation = np.sum([v for v in self._oil_depreciations.values()], axis=0)
+        self._gas_depreciation = np.sum([v for v in self._gas_depreciations.values()], axis=0)
 
         print('\t')
-        print(f'Filetype: {type(self._oil_undepreciated_assets)}')
-        print(f'Length: {len(self._oil_undepreciated_assets)}')
-        print('_oil_undepreciated_assets = ', self._oil_undepreciated_assets)
+        print(f'Filetype: {type(self._oil_non_depreciables)}')
+        print(f'Length: {len(self._oil_non_depreciables)}')
+        print('_oil_non_depreciables = \n', self._oil_non_depreciables)
 
-        # print('\t')
-        # print(f'Filetype: {type(self._oil_non_depreciables)}')
-        # print(f'Length: {len(self._oil_non_depreciables)}')
-        # print('_oil_non_depreciables = ', self._oil_non_depreciables)
-        #
-        # print('\t')
-        # print(f'Filetype: {type(self._gas_non_depreciables)}')
-        # print(f'Length: {len(self._gas_non_depreciables)}')
-        # print('_gas_non_depreciables = ', self._gas_non_depreciables)
+        self._oil_non_depreciables["sum"] = np.sum(
+            [v for v in self._oil_non_depreciables.values()], axis=0
+        )
 
+        print('\t')
+        print(f'Filetype: {type(self._oil_non_depreciables)}')
+        print(f'Length: {len(self._oil_non_depreciables)}')
+        print('_oil_non_depreciables = \n', self._oil_non_depreciables)
 
 
-        # # Modify depreciations, accounting for various adjustments
-        # self._get_modified_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)
-        # self._oil_sum_undepreciated_asset = np.sum(
-        #     [np.sum(v) for v in self._oil_undepreciated_assets.values()]
-        # )
-        # self._gas_sum_undepreciated_asset = np.sum(
-        #     [np.sum(v) for v in self._gas_undepreciated_assets.values()]
-        # )
-        #
-        # self._oil_depreciation = np.sum([v for v in self._oil_depreciations.values()], axis=0)
-        # self._gas_depreciation = np.sum([v for v in self._gas_depreciations.values()], axis=0)
-        #
         # # Calculate FTP
         # self._get_ftp()
         #
