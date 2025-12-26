@@ -18,8 +18,8 @@ from pyscnomics.econ.selection import (
     TaxSplitTypeCR,
     DeprMethod,
     OtherRevenue,
-    SunkCostMethod,
-    InitialYearDepreciationIncurred,
+    # SunkCostMethod,
+    # InitialYearDepreciationIncurred,
     NPVSelection,
     DiscountingMode,
     ContractType,
@@ -810,20 +810,6 @@ class CostRecovery(BaseProject):
                     depr[c][-1] += undepr[c].sum()
                     undepr[c] = np.zeros([1, 1], dtype=float)
 
-        """
-        Former approach
-        ---------------
-        # Modify depreciations.
-        # Combine sunk cost and preonstream cost depreciations, then assign
-        # the results as the "modified" sunk cost depreciations
-        self._oil_depreciations["sunk_cost"] += self._oil_depreciations["preonstream"]
-        self._gas_depreciations["sunk_cost"] += self._gas_depreciations["preonstream"]
-
-        # Assign preonstream cost depreciations as zeros
-        self._oil_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
-        self._gas_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
-        """
-
     def _get_ftp(self) -> None:
         """
         Calculate and allocate First Tranche Petroleum (FTP) for oil and gas.
@@ -1152,155 +1138,7 @@ class CostRecovery(BaseProject):
 
         return ic_total, ic_unrecovered, ic_paid
 
-    def _allocate_sunk_cost(
-        self, sunk_cost: np.ndarray, preonstream: np.ndarray
-    ) -> np.ndarray:
-        """
-        Allocate sunk cost and preonstream expenditures to the onstream year.
 
-        This method aggregates the total value of ``sunk_cost`` and
-        ``preonstream`` arrays into a single bulk value and assigns it to
-        the project year corresponding to the earlier of the oil or gas
-        onstream dates. All other years are set to zero.
-
-        This method will be used to support sunk cost treatment configuration.
-
-        Parameters
-        ----------
-        sunk_cost : np.ndarray
-            Array of sunk cost values across project years.
-        preonstream : np.ndarray
-            Array of preonstream cost values across project years.
-
-        Returns
-        -------
-        np.ndarray
-            A 1D array aligned with ``project_years`` where the summed bulk
-            value of ``sunk_cost`` and ``preonstream`` is positioned at the
-            onstream year, with zeros elsewhere.
-
-        Raises
-        ------
-        ValueError
-            If the onstream year does not uniquely match exactly one entry
-            in ``project_years``.
-
-        Notes
-        -----
-        - The onstream year is determined as the earlier of
-          ``oil_onstream_date.year`` and ``gas_onstream_date.year``.
-        - Both ``sunk_cost`` and ``preonstream`` arrays are expected to
-          align with ``project_years`` in length.
-        """
-
-        # Calculate bulk value of (sunk_cost + preonstream)
-        bulk_value = float(np.sum(sunk_cost + preonstream))
-
-        # Determine the location of onstream year in project years array
-        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
-        match = np.flatnonzero(self.project_years == onstream_yr)
-
-        # Expected only a single match; raise an exception if multiple matches occurs
-        if match.size != 1:
-            raise ValueError(f"Expected one onstream year match, got {match.size} instead")
-
-        onstream_id = int(match[0])
-
-        # Create a new array with bulk value positioned at the onstream year
-        arr = np.zeros_like(self.project_years, dtype=float)
-        arr[onstream_id] = bulk_value
-
-        return arr
-
-    def _apply_sunk_cost_treatment(self, sunk_cost_method: SunkCostMethod) -> dict:
-        """
-        Apply sunk cost treatment for both oil and gas based on the selected method.
-
-        This method allocates and categorizes sunk costs into depreciable and
-        non-depreciable components depending on the specified sunk cost treatment
-        method. It returns the treated sunk cost values for both oil and gas.
-
-        Parameters
-        ----------
-        sunk_cost_method : SunkCostMethod
-            The method used for treating depreciable sunk cost.
-            Supported options:
-                - SunkCostMethod.DEPRECIATED_TANGIBLE
-                    Adds depreciable sunk cost to the corresponding
-                    depreciation schedules.
-                - SunkCostMethod.POOLED_1ST_YEAR
-                    Pools depreciable sunk cost in the onstream year
-                    through allocation.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the treated sunk cost components:
-            {
-                "oil_depreciation" : np.ndarray
-                    Depreciable sunk cost for oil, treated based on the selected method.
-                "oil_non_depreciable" : np.ndarray
-                    Non-depreciable sunk cost for oil allocated at onstream year.
-                "gas_depreciation" : np.ndarray
-                    Depreciable sunk cost for gas, treated based on the selected method.
-                "gas_non_depreciable" : np.ndarray
-                    Non-depreciable sunk cost for gas allocated at onstream year.
-            }
-
-        Notes
-        -----
-        - Non-depreciable sunk costs are always allocated directly at the onstream
-          year using the `_allocate_sunk_cost()` helper.
-        - Depreciable sunk costs are handled according to the selected method:
-            * **Depreciated Tangible**:
-                Combined with the existing depreciation schedule entries.
-            * **Pooled 1st Year**:
-                Fully allocated in the onstream year as a single pooled amount.
-        - The method does not modify class attributes in-place but
-          returns all treated sunk cost arrays for external assignment.
-        """
-
-        # Carry out treatment for non depreciable sunk cost
-        oil_non_dep = self._allocate_sunk_cost(
-            sunk_cost=self._oil_non_depreciable_sunk_cost,
-            preonstream=self._oil_non_depreciable_preonstream,
-        )
-        gas_non_dep = self._allocate_sunk_cost(
-            sunk_cost=self._gas_non_depreciable_sunk_cost,
-            preonstream=self._gas_non_depreciable_preonstream,
-        )
-
-        # Specify treatment for depreciable sunk cost for OPTION 1: DEPRECIATED TANGIBLE
-        if sunk_cost_method == SunkCostMethod.DEPRECIATED_TANGIBLE:
-            oil_dep = (
-                self._oil_depreciations["sunk_cost"] + self._oil_depreciations["preonstream"]
-            )
-            gas_dep = (
-                self._gas_depreciations["sunk_cost"] + self._gas_depreciations["preonstream"]
-            )
-
-        # Specify treatment for depreciable sunk cost for OPTION 2: POOLED AT ONSTREAM YEAR
-        elif sunk_cost_method == SunkCostMethod.POOLED_1ST_YEAR:
-            oil_dep = self._allocate_sunk_cost(
-                sunk_cost=self._oil_depreciable_sunk_cost,
-                preonstream=self._oil_depreciable_preonstream,
-            )
-            gas_dep = self._allocate_sunk_cost(
-                sunk_cost=self._gas_depreciable_sunk_cost,
-                preonstream=self._gas_depreciable_preonstream,
-            )
-
-        else:
-            raise CostRecoveryException(
-                f"Sunk cost treatment method ({sunk_cost_method}) is unrecognized"
-            )
-
-        return {
-            "oil_depreciation": oil_dep,
-            "oil_non_depreciable": oil_non_dep,
-            "gas_depreciation": gas_dep,
-            "gas_non_depreciable": gas_non_dep,
-        }
 
     @staticmethod
     def _get_cost_recovery(
@@ -2020,92 +1858,8 @@ class CostRecovery(BaseProject):
         oil_cost_of_sales_applied: bool = False,
         gas_cost_of_sales_applied: bool = False,
         sum_undepreciated_cost: bool = False,
-        sunk_cost_method: SunkCostMethod = SunkCostMethod.DEPRECIATED_TANGIBLE,
+        # sunk_cost_method: SunkCostMethod = SunkCostMethod.DEPRECIATED_TANGIBLE,
     ):
-        """
-        Run the full economic evaluation workflow under a Cost Recovery PSC scheme.
-
-        This method executes the complete chain of cost recovery, tax, and equity
-        calculations for both oil and gas streams under the specified fiscal regime.
-        It integrates expenditure inflation adjustments, depreciation, investment credit,
-        FTP (First Tranche Petroleum), DMO (Domestic Market Obligation), cost recovery,
-        transfer between fluids, and final contractor/government take computations.
-
-        The results are stored internally in class attributes and can be retrieved via
-        result-preparation or reporting methods.
-
-        Parameters
-        ----------
-        sulfur_revenue : OtherRevenue, default=OtherRevenue.ADDITION_TO_GAS_REVENUE
-            Allocation rule for sulfur sales revenue (added to oil or gas revenue).
-        electricity_revenue : OtherRevenue, default=OtherRevenue.ADDITION_TO_OIL_REVENUE
-            Allocation rule for electricity sales revenue.
-        co2_revenue : OtherRevenue, default=OtherRevenue.ADDITION_TO_GAS_REVENUE
-            Allocation rule for CO₂ utilization or revenue.
-        vat_rate : float or ndarray of float, default=0.0
-            Value Added Tax rate applied to expenditures.
-        year_inflation : ndarray of float, optional
-            Annual inflation index or factors to adjust costs through project years.
-        inflation_rate : float or ndarray of float, default=0.0
-            Annual inflation rate applied to selected cost categories.
-        inflation_rate_applied_to : InflationAppliedTo or None,
-            default=InflationAppliedTo.CAPEX.
-            Defines which cost category receives inflation adjustment
-            (e.g., CAPEX, OPEX, or all).
-        is_dmo_end_weighted : bool, default=False
-            If True, applies DMO (Domestic Market Obligation) weighting toward
-            the end years.
-        tax_regime : TaxRegime, default=TaxRegime.NAILED_DOWN
-            Defines the applicable tax regime for effective tax rate determination.
-        effective_tax_rate : float, ndarray of float, or None, default=None
-            User-defined effective tax rate; if None, the rate is determined by `tax_regime`.
-        ftp_tax_regime : FTPTaxRegime, default=FTPTaxRegime.PDJP_20_2017
-            Regime defining FTP (First Tranche Petroleum) tax treatment.
-        depr_method : DeprMethod, default=DeprMethod.PSC_DB
-            Depreciation method used for capital recovery (e.g., PSC declining balance).
-        decline_factor : float or int, default=2
-            Decline factor used in declining balance depreciation.
-        post_uu_22_year2001 : bool, default=True
-            Indicates whether the PSC follows the fiscal rules post UU-22/2001.
-        oil_cost_of_sales_applied : bool, default=False
-            If True, applies cost-of-sales adjustment to oil revenue.
-        gas_cost_of_sales_applied : bool, default=False
-            If True, applies cost-of-sales adjustment to gas revenue.
-        sum_undepreciated_cost : bool, default=False
-            If True, sums undepreciated capital costs before computing new depreciation.
-        sunk_cost_method : SunkCostMethod, default=SunkCostMethod.DEPRECIATED_TANGIBLE
-            Defines the treatment of sunk cost (e.g., depreciated tangible or full cost).
-
-        Returns
-        -------
-        None
-            The method modifies internal attributes of the class instance in place.
-            Key resulting attributes include:
-
-            - `_oil_cashflow`, `_gas_cashflow` : ndarray
-                Contractor’s annual cashflow for oil and gas.
-            - `_oil_contractor_take`, `_gas_contractor_take` : ndarray
-                Contractor’s take after cost recovery and taxation.
-            - `_oil_government_take`, `_gas_government_take` : ndarray
-                Government’s total take (FTP + equity + tax + DMO).
-            - `_oil_tax_payment`, `_gas_tax_payment` : ndarray
-                Corporate tax payments by year.
-            - `_oil_revenue`, `_gas_revenue` : ndarray
-                Adjusted gross revenue after applying cost-of-sales.
-            - `_tax_rate_arr` : ndarray
-                Effective tax rate array applied per project year.
-            - `_get_consolidated_profiles_cr()` output
-                Consolidated project results across oil and gas.
-
-        Notes
-        -----
-        - This method should be executed after all pre-onstream data and input arrays
-          (e.g., costs, production, prices) are properly configured.
-        - Internal calculations follow Indonesian PSC conventions, including
-          FTP, DMO, and cost recovery logic.
-        - All intermediate steps (e.g., investment credit, depreciation, sunk cost)
-          are automatically handled.
-        """
 
         # Calculate WAP (Weighted Average Price) for each produced fluid
         self._get_wap_price()
@@ -2225,374 +1979,347 @@ class CostRecovery(BaseProject):
         self._oil_depreciation = np.sum([v for v in self._oil_depreciations.values()], axis=0)
         self._gas_depreciation = np.sum([v for v in self._gas_depreciations.values()], axis=0)
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_non_depreciables)}')
-        print(f'Length: {len(self._oil_non_depreciables)}')
-        print('_oil_non_depreciables = \n', self._oil_non_depreciables)
+        # Calculate FTP
+        self._get_ftp()
 
-        self._oil_non_depreciables["sum"] = np.sum(
-            [v for v in self._oil_non_depreciables.values()], axis=0
+        # Condition when Cost of Sales for Oil is being applied,
+        # which will modify oil or gas revenue
+        self._apply_cost_of_sales(
+            oil_applied=oil_cost_of_sales_applied, gas_applied=gas_cost_of_sales_applied
         )
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_non_depreciables)}')
-        print(f'Length: {len(self._oil_non_depreciables)}')
-        print('_oil_non_depreciables = \n', self._oil_non_depreciables)
+        # Defining the PreTax Split, whether using conventional PreTax or Sliding
+        if self.tax_split_type is not TaxSplitTypeCR.CONVENTIONAL:
+            self._get_rc_icp_pretax()
 
+        # Calculate capital and non-capital investments
+        self._get_investments()
 
-        # # Calculate FTP
-        # self._get_ftp()
-        #
-        # # Condition when Cost of Sales for Oil is being applied,
-        # # which will modify oil or gas revenue
-        # self._apply_cost_of_sales(
-        #     oil_applied=oil_cost_of_sales_applied, gas_applied=gas_cost_of_sales_applied
+        # Investment credit
+        self._oil_ic, self._oil_ic_unrecovered, self._oil_ic_paid = self._get_ic(
+            revenue=self._oil_revenue,
+            ftp=self._oil_ftp,
+            cost_alloc=FluidType.OIL,
+            ic_rate=self.oil_ic_rate,
+        )
+
+        self._gas_ic, self._gas_ic_unrecovered, self._gas_ic_paid = self._get_ic(
+            revenue=self._gas_revenue,
+            ftp=self._gas_ftp,
+            cost_alloc=FluidType.GAS,
+            ic_rate=self.gas_ic_rate,
+        )
+
+        # Configure total capital cost in the form of depreciations for OIL and GAS
+        self._oil_depr_total = (
+            self._oil_depreciations["sunk_cost"]
+            + self._oil_depreciations["preonstream"]
+            + self._oil_depreciations["postonstream"]
+            + self._oil_carry_forward_depreciation
+        )
+
+        self._gas_depr_total = (
+            self._gas_depreciations["sunk_cost"]
+            + self._gas_depreciations["preonstream"]
+            + self._gas_depreciations["postonstream"]
+            + self._gas_carry_forward_depreciation
+        )
+
+        # Configure total non-capital cost in the form of non-depreciables for OIL and GAS
+        self._oil_non_depr_total = np.sum(
+            [v for v in self._oil_non_depreciables.values()], axis=0
+        )
+        self._gas_non_depr_total = np.sum(
+            [v for v in self._gas_non_depreciables.values()], axis=0
+        )
+
+        # ===========================================================================================
+
+        """
+        # Calculate three parameters before transfer: "cost to be recovered",
+        # "unrecovered cost before transfer", and "cost recovery"
+        (
+            self._oil_unrecovered_before_transfer,
+            self._oil_cost_to_be_recovered,
+            self._oil_cost_recovery,
+        ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
+            project_years=self.project_years,
+            depreciation=self._oil_depr_total,
+            non_capital=self._oil_non_depr_total,
+            # depreciation=self._oil_depreciation,
+            # non_capital=self._oil_non_capital,
+            revenue=self._oil_revenue,
+            ftp_ctr=self._oil_ftp_ctr,
+            ftp_gov=self._oil_ftp_gov,
+            ic=self._oil_ic_paid,
+            cr_cap_rate=self.oil_cr_cap_rate,
+        )
+
+        (
+            self._gas_unrecovered_before_transfer,
+            self._gas_cost_to_be_recovered,
+            self._gas_cost_recovery,
+        ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
+            project_years=self.project_years,
+            depreciation=self._gas_depr_total,
+            non_capital=self._gas_non_depr_total,
+            # depreciation=self._gas_depreciation,
+            # non_capital=self._gas_non_capital,
+            revenue=self._gas_revenue,
+            ftp_ctr=self._gas_ftp_ctr,
+            ftp_gov=self._gas_ftp_gov,
+            ic=self._gas_ic_paid,
+            cr_cap_rate=self.gas_cr_cap_rate,
+        )
+
+        # ETS (Equity to be Split) before transfer/consolidation
+        self._oil_ets_before_transfer = self._get_ets_before_transfer(
+            revenue=self._oil_revenue,
+            ftp_ctr=self._oil_ftp_ctr,
+            ftp_gov=self._oil_ftp_gov,
+            ic=self._oil_ic_paid,
+            cost_recovery=self._oil_cost_recovery,
+        )
+
+        self._gas_ets_before_transfer = self._get_ets_before_transfer(
+            revenue=self._gas_revenue,
+            ftp_ctr=self._gas_ftp_ctr,
+            ftp_gov=self._gas_ftp_gov,
+            ic=self._gas_ic_paid,
+            cost_recovery=self._gas_cost_recovery,
+        )
+
+        # Calculate transfer
+        self._transfer_to_oil, self._transfer_to_gas = psc_tools.get_transfer(
+            gas_unrecovered=self._gas_unrecovered_before_transfer,
+            oil_unrecovered=self._oil_unrecovered_before_transfer,
+            gas_ets_pretransfer=self._gas_ets_before_transfer,
+            oil_ets_pretransfer=self._oil_ets_before_transfer,
+        )
+
+        # Re-calculate three parameters after transfer: "cost to be recovered",
+        # "unrecovered cost before transfer", and "cost recovery"
+        (
+            self._oil_unrecovered_after_transfer,
+            self._oil_cost_to_be_recovered_after_tf,
+            self._oil_cost_recovery_after_tf,
+        ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
+            project_years=self.project_years,
+            depreciation=self._oil_depr_total,
+            non_capital=self._oil_non_depr_total,
+            # depreciation=self._oil_depreciation,
+            # non_capital=self._oil_non_capital,
+            revenue=self._oil_revenue + self._transfer_to_oil,
+            ftp_ctr=self._oil_ftp_ctr,
+            ftp_gov=self._oil_ftp_gov,
+            ic=self._oil_ic_paid,
+            cr_cap_rate=self.oil_cr_cap_rate,
+        )
+
+        (
+            self._gas_unrecovered_after_transfer,
+            self._gas_cost_to_be_recovered_after_tf,
+            self._gas_cost_recovery_after_tf,
+        ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
+            project_years=self.project_years,
+            depreciation=self._gas_depr_total,
+            non_capital=self._gas_non_depr_total,
+            # depreciation=self._gas_depreciation,
+            # non_capital=self._gas_non_capital,
+            revenue=self._gas_revenue + self._transfer_to_gas,
+            ftp_ctr=self._gas_ftp_ctr,
+            ftp_gov=self._gas_ftp_gov,
+            ic=self._gas_ic_paid,
+            cr_cap_rate=self.gas_cr_cap_rate,
+        )
+
+        # ETS after transfer
+        self._oil_ets_after_transfer = self._get_ets_after_transfer(
+            ets_before_tf=self._oil_ets_before_transfer,
+            revenue=self._oil_revenue,
+            ftp_ctr=self._oil_ftp_ctr,
+            ftp_gov=self._oil_ftp_gov,
+            ic=self._oil_ic_paid,
+            cost_recovery=self._oil_cost_recovery_after_tf,
+            transferred_in=self._transfer_to_oil,
+            transferred_out=self._transfer_to_gas,
+        )
+
+        self._gas_ets_after_transfer = self._get_ets_after_transfer(
+            ets_before_tf=self._gas_ets_before_transfer,
+            revenue=self._gas_revenue,
+            ftp_ctr=self._gas_ftp_ctr,
+            ftp_gov=self._gas_ftp_gov,
+            ic=self._gas_ic_paid,
+            cost_recovery=self._gas_cost_recovery_after_tf,
+            transferred_in=self._transfer_to_gas,
+            transferred_out=self._transfer_to_oil,
+        )
+
+        cols1 = [#'revenue', 'ftp', 'ic_paid',
+            'allocation', 'non_capital', 'depreciation',
+                'tobe_rec_pre','cost_rec_pre','unrec_pre', 'ets_pre',
+                'trf_to_og','tobe_rec_post','cost_rec_post','unrec_post','ets_post']
+        fluids = ['oil','gas']
+
+        cr1_df = pd.DataFrame(index=self.project_years,
+                              columns=pd.MultiIndex.from_product([cols1,fluids]))
+        # cr1_df[('revenue','oil')] = self._oil_revenue
+        # cr1_df[('revenue','gas')] = self._gas_revenue
+        # cr1_df[('ftp','oil')] = self._oil_ftp
+        # cr1_df[('ftp','gas')] = self._gas_ftp
+        # cr1_df[('ic_paid','oil')] = self._oil_ic_paid
+        # cr1_df[('ic_paid','gas')] = self._gas_ic_paid
+        cr1_df[('non_capital','oil')] = self._oil_non_depr_total
+        cr1_df[('non_capital','gas')] = self._gas_non_depr_total
+        cr1_df[('depreciation','oil')] = self._oil_depr_total
+        cr1_df[('depreciation','gas')] = self._gas_depr_total
+        # cr1_df[('allocation','oil')] = (
+        #     cr1_df[('revenue', 'oil')] - cr1_df[('ftp', 'oil')] - cr1_df[('ic_paid', 'oil')]
         # )
-        #
-        # # Defining the PreTax Split, whether using conventional PreTax or Sliding
-        # if self.tax_split_type is not TaxSplitTypeCR.CONVENTIONAL:
-        #     self._get_rc_icp_pretax()
-        #
-        # # Calculate capital and non-capital investments
-        # self._get_investments()
-        #
-        # # Investment credit
-        # self._oil_ic, self._oil_ic_unrecovered, self._oil_ic_paid = self._get_ic(
-        #     revenue=self._oil_revenue,
-        #     ftp=self._oil_ftp,
-        #     cost_alloc=FluidType.OIL,
-        #     ic_rate=self.oil_ic_rate,
+        # cr1_df[('allocation','gas')] = (
+        #     cr1_df[('revenue', 'gas')] - cr1_df[('ftp', 'gas')] - cr1_df[('ic_paid', 'gas')]
         # )
-        #
-        # self._gas_ic, self._gas_ic_unrecovered, self._gas_ic_paid = self._get_ic(
-        #     revenue=self._gas_revenue,
-        #     ftp=self._gas_ftp,
-        #     cost_alloc=FluidType.GAS,
-        #     ic_rate=self.gas_ic_rate,
-        # )
-        #
-        # # Apply sunk cost treatment
-        # sunk_cost = self._apply_sunk_cost_treatment(sunk_cost_method=sunk_cost_method)
-        #
-        # # Configure total capital cost in the form of depreciations for OIL and GAS
-        # self._oil_depr_total = (
-        #     sunk_cost["oil_depreciation"]
-        #     + self._oil_depreciations["postonstream"]
-        #     + self._oil_carry_forward_depreciation
-        # )
-        #
-        # self._gas_depr_total = (
-        #     sunk_cost["gas_depreciation"]
-        #     + self._gas_depreciations["postonstream"]
-        #     + self._gas_carry_forward_depreciation
-        # )
-        #
-        # # Configure total non-capital cost in the form of non-depreciables for OIL and GAS
-        # self._oil_non_depr_total = (
-        #     sunk_cost["oil_non_depreciable"]
-        #     + self._oil_intangible_expenditures_post_tax
-        #     + self._oil_opex_expenditures_post_tax
-        #     + self._oil_asr_expenditures_post_tax
-        #     + self._oil_lbt_expenditures_post_tax
-        #     + self._oil_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # self._gas_non_depr_total = (
-        #     sunk_cost["gas_non_depreciable"]
-        #     + self._gas_intangible_expenditures_post_tax
-        #     + self._gas_opex_expenditures_post_tax
-        #     + self._gas_asr_expenditures_post_tax
-        #     + self._gas_lbt_expenditures_post_tax
-        #     + self._gas_cost_of_sales_expenditures_post_tax
-        # )
-        #
-        # # ===========================================================================================
-        #
-        # """
-        # # Calculate three parameters before transfer: "cost to be recovered",
-        # # "unrecovered cost before transfer", and "cost recovery"
-        # (
-        #     self._oil_unrecovered_before_transfer,
-        #     self._oil_cost_to_be_recovered,
-        #     self._oil_cost_recovery,
-        # ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
-        #     project_years=self.project_years,
-        #     depreciation=self._oil_depr_total,
-        #     non_capital=self._oil_non_depr_total,
-        #     # depreciation=self._oil_depreciation,
-        #     # non_capital=self._oil_non_capital,
-        #     revenue=self._oil_revenue,
-        #     ftp_ctr=self._oil_ftp_ctr,
-        #     ftp_gov=self._oil_ftp_gov,
-        #     ic=self._oil_ic_paid,
-        #     cr_cap_rate=self.oil_cr_cap_rate,
-        # )
-        #
-        # (
-        #     self._gas_unrecovered_before_transfer,
-        #     self._gas_cost_to_be_recovered,
-        #     self._gas_cost_recovery,
-        # ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
-        #     project_years=self.project_years,
-        #     depreciation=self._gas_depr_total,
-        #     non_capital=self._gas_non_depr_total,
-        #     # depreciation=self._gas_depreciation,
-        #     # non_capital=self._gas_non_capital,
-        #     revenue=self._gas_revenue,
-        #     ftp_ctr=self._gas_ftp_ctr,
-        #     ftp_gov=self._gas_ftp_gov,
-        #     ic=self._gas_ic_paid,
-        #     cr_cap_rate=self.gas_cr_cap_rate,
-        # )
-        #
-        # # ETS (Equity to be Split) before transfer/consolidation
-        # self._oil_ets_before_transfer = self._get_ets_before_transfer(
-        #     revenue=self._oil_revenue,
-        #     ftp_ctr=self._oil_ftp_ctr,
-        #     ftp_gov=self._oil_ftp_gov,
-        #     ic=self._oil_ic_paid,
-        #     cost_recovery=self._oil_cost_recovery,
-        # )
-        #
-        # self._gas_ets_before_transfer = self._get_ets_before_transfer(
-        #     revenue=self._gas_revenue,
-        #     ftp_ctr=self._gas_ftp_ctr,
-        #     ftp_gov=self._gas_ftp_gov,
-        #     ic=self._gas_ic_paid,
-        #     cost_recovery=self._gas_cost_recovery,
-        # )
-        #
-        # # Calculate transfer
-        # self._transfer_to_oil, self._transfer_to_gas = psc_tools.get_transfer(
-        #     gas_unrecovered=self._gas_unrecovered_before_transfer,
-        #     oil_unrecovered=self._oil_unrecovered_before_transfer,
-        #     gas_ets_pretransfer=self._gas_ets_before_transfer,
-        #     oil_ets_pretransfer=self._oil_ets_before_transfer,
-        # )
-        #
-        # # Re-calculate three parameters after transfer: "cost to be recovered",
-        # # "unrecovered cost before transfer", and "cost recovery"
-        # (
-        #     self._oil_unrecovered_after_transfer,
-        #     self._oil_cost_to_be_recovered_after_tf,
-        #     self._oil_cost_recovery_after_tf,
-        # ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
-        #     project_years=self.project_years,
-        #     depreciation=self._oil_depr_total,
-        #     non_capital=self._oil_non_depr_total,
-        #     # depreciation=self._oil_depreciation,
-        #     # non_capital=self._oil_non_capital,
-        #     revenue=self._oil_revenue + self._transfer_to_oil,
-        #     ftp_ctr=self._oil_ftp_ctr,
-        #     ftp_gov=self._oil_ftp_gov,
-        #     ic=self._oil_ic_paid,
-        #     cr_cap_rate=self.oil_cr_cap_rate,
-        # )
-        #
-        # (
-        #     self._gas_unrecovered_after_transfer,
-        #     self._gas_cost_to_be_recovered_after_tf,
-        #     self._gas_cost_recovery_after_tf,
-        # ) = psc_tools.get_unrec_cost_2b_recovered_costrec(
-        #     project_years=self.project_years,
-        #     depreciation=self._gas_depr_total,
-        #     non_capital=self._gas_non_depr_total,
-        #     # depreciation=self._gas_depreciation,
-        #     # non_capital=self._gas_non_capital,
-        #     revenue=self._gas_revenue + self._transfer_to_gas,
-        #     ftp_ctr=self._gas_ftp_ctr,
-        #     ftp_gov=self._gas_ftp_gov,
-        #     ic=self._gas_ic_paid,
-        #     cr_cap_rate=self.gas_cr_cap_rate,
-        # )
-        #
-        # # ETS after transfer
-        # self._oil_ets_after_transfer = self._get_ets_after_transfer(
-        #     ets_before_tf=self._oil_ets_before_transfer,
-        #     revenue=self._oil_revenue,
-        #     ftp_ctr=self._oil_ftp_ctr,
-        #     ftp_gov=self._oil_ftp_gov,
-        #     ic=self._oil_ic_paid,
-        #     cost_recovery=self._oil_cost_recovery_after_tf,
-        #     transferred_in=self._transfer_to_oil,
-        #     transferred_out=self._transfer_to_gas,
-        # )
-        #
-        # self._gas_ets_after_transfer = self._get_ets_after_transfer(
-        #     ets_before_tf=self._gas_ets_before_transfer,
-        #     revenue=self._gas_revenue,
-        #     ftp_ctr=self._gas_ftp_ctr,
-        #     ftp_gov=self._gas_ftp_gov,
-        #     ic=self._gas_ic_paid,
-        #     cost_recovery=self._gas_cost_recovery_after_tf,
-        #     transferred_in=self._transfer_to_gas,
-        #     transferred_out=self._transfer_to_oil,
-        # )
-        #
-        # cols1 = [#'revenue', 'ftp', 'ic_paid',
-        #     'allocation', 'non_capital', 'depreciation',
-        #         'tobe_rec_pre','cost_rec_pre','unrec_pre', 'ets_pre',
-        #         'trf_to_og','tobe_rec_post','cost_rec_post','unrec_post','ets_post']
-        # fluids = ['oil','gas']
-        #
-        # cr1_df = pd.DataFrame(index=self.project_years,
-        #                       columns=pd.MultiIndex.from_product([cols1,fluids]))
-        # # cr1_df[('revenue','oil')] = self._oil_revenue
-        # # cr1_df[('revenue','gas')] = self._gas_revenue
-        # # cr1_df[('ftp','oil')] = self._oil_ftp
-        # # cr1_df[('ftp','gas')] = self._gas_ftp
-        # # cr1_df[('ic_paid','oil')] = self._oil_ic_paid
-        # # cr1_df[('ic_paid','gas')] = self._gas_ic_paid
-        # cr1_df[('non_capital','oil')] = self._oil_non_depr_total
-        # cr1_df[('non_capital','gas')] = self._gas_non_depr_total
-        # cr1_df[('depreciation','oil')] = self._oil_depr_total
-        # cr1_df[('depreciation','gas')] = self._gas_depr_total
-        # # cr1_df[('allocation','oil')] = (
-        # #     cr1_df[('revenue', 'oil')] - cr1_df[('ftp', 'oil')] - cr1_df[('ic_paid', 'oil')]
-        # # )
-        # # cr1_df[('allocation','gas')] = (
-        # #     cr1_df[('revenue', 'gas')] - cr1_df[('ftp', 'gas')] - cr1_df[('ic_paid', 'gas')]
-        # # )
-        # cr1_df[('allocation','oil')] = self._oil_revenue - self._oil_ftp - self._oil_ic_paid
-        # cr1_df[('allocation','gas')] = self._gas_revenue - self._gas_ftp - self._gas_ic_paid
-        # cr1_df[('tobe_rec_pre','oil')] = self._oil_cost_to_be_recovered
-        # cr1_df[('tobe_rec_pre','gas')] = self._gas_cost_to_be_recovered
-        # cr1_df[('cost_rec_pre','oil')] = self._oil_cost_recovery
-        # cr1_df[('cost_rec_pre','gas')] = self._gas_cost_recovery
-        # cr1_df[('unrec_pre','oil')] = self._oil_unrecovered_before_transfer
-        # cr1_df[('unrec_pre','gas')] = self._gas_unrecovered_before_transfer
-        # cr1_df[('ets_pre','oil')] = self._oil_ets_before_transfer
-        # cr1_df[('ets_pre','gas')] = self._gas_ets_before_transfer
-        # cr1_df[('trf_to_og','oil')] = self._transfer_to_oil
-        # cr1_df[('trf_to_og','gas')] = self._transfer_to_gas
-        # cr1_df[('tobe_rec_post','oil')] = self._oil_cost_to_be_recovered_after_tf
-        # cr1_df[('tobe_rec_post','gas')] = self._gas_cost_to_be_recovered_after_tf
-        # cr1_df[('cost_rec_post','oil')] = self._oil_cost_recovery_after_tf
-        # cr1_df[('cost_rec_post','gas')] = self._gas_cost_recovery_after_tf
-        # cr1_df[('unrec_post','oil')] = self._oil_unrecovered_after_transfer
-        # cr1_df[('unrec_post','gas')] = self._gas_unrecovered_after_transfer
-        # cr1_df[('ets_post','oil')] = self._oil_ets_after_transfer
-        # cr1_df[('ets_post','gas')] = self._gas_ets_after_transfer
-        # """
-        #
-        # # ===========================================================================================
-        #
-        # oil_allocation = self._oil_revenue - self._oil_ftp - self._oil_ic_paid
-        # gas_allocation = self._gas_revenue - self._gas_ftp - self._gas_ic_paid
-        # allocation = np.vstack((oil_allocation, gas_allocation)).T
-        # # non_capital = np.vstack((self._oil_non_capital, self._gas_non_capital)).T
-        # # depreciation = np.vstack((self._oil_depreciation, self._gas_depreciation)).T
-        # non_capital = np.vstack((self._oil_non_depr_total, self._gas_non_depr_total)).T
-        # depreciation = np.vstack((self._oil_depr_total, self._gas_depr_total)).T
-        #
-        # ets_pre_trf = np.zeros_like(allocation)
-        # ets_post_trf = np.zeros_like(allocation)
-        # unrec_pre_trf = np.zeros_like(allocation)
-        # unrec_post_trf = np.zeros_like(allocation)
-        # rec_pre_trf = np.zeros_like(allocation)
-        # rec_post_trf = np.zeros_like(allocation)
-        # recoverable_cost = np.zeros_like(allocation)
-        # trf_to_og = np.zeros_like(allocation)
-        # project_duration = len(self.project_years)
-        # prev_unrec = np.zeros(2)
-        #
-        # for i in range(project_duration):
-        #
-        #     recoverable_cost[i] = non_capital[i] + depreciation[i] + prev_unrec
-        #     ets_pre_trf[i] = np.maximum(allocation[i] - recoverable_cost[i], 0)
-        #     unrec_pre_trf[i] = np.maximum(recoverable_cost[i] - allocation[i], 0)
-        #     rec_pre_trf[i] = recoverable_cost[i] - unrec_pre_trf[i]
-        #
-        #     trf_to = np.zeros(2)
-        #     ets_after = ets_pre_trf[i].copy()
-        #     unrec_after = unrec_pre_trf[i].copy()
-        #     recov_after = rec_pre_trf[i].copy()
-        #
-        #     if ets_pre_trf[i, 0] > 0 and unrec_pre_trf[i, 1] > 0:
-        #         trf_to[1] = np.minimum(ets_pre_trf[i, 0], unrec_pre_trf[i, 1])
-        #         ets_after[0] = ets_pre_trf[i, 0] - trf_to[1]
-        #         unrec_after[1] = unrec_pre_trf[i, 1] - trf_to[1]
-        #         recov_after[1] = rec_pre_trf[i, 1] + trf_to[1]
-        #
-        #     elif ets_pre_trf[i, 1] > 0 and unrec_pre_trf[i, 0] > 0:
-        #         trf_to[0] = np.minimum(ets_pre_trf[i, 1], unrec_pre_trf[i, 0])
-        #         ets_after[1] = ets_pre_trf[i, 1] - trf_to[0]
-        #         unrec_after[0] = unrec_pre_trf[i, 0] - trf_to[0]
-        #         recov_after[0] = rec_pre_trf[i, 0] + trf_to[0]
-        #
-        #     ets_post_trf[i] = ets_after
-        #     unrec_post_trf[i] = unrec_after
-        #     rec_post_trf[i] = recov_after
-        #     trf_to_og[i] = trf_to
-        #
-        #     prev_unrec = unrec_after
-        #
-        # self._oil_revenue_allocation = oil_allocation
-        # self._gas_revenue_allocation = gas_allocation
-        # self._oil_recoverable_cost = recoverable_cost[:, 0]
-        # self._gas_recoverable_cost = recoverable_cost[:, 1]
-        # self._oil_cost_recovery = rec_pre_trf[:, 0]
-        # self._gas_cost_recovery = rec_pre_trf[:, 1]
-        # self._oil_unrecovered_before_transfer = unrec_pre_trf[:, 0]
-        # self._gas_unrecovered_before_transfer = unrec_pre_trf[:, 1]
-        # self._oil_cost_recovery_after_tf = rec_post_trf[:, 0]
-        # self._gas_cost_recovery_after_tf = rec_post_trf[:, 1]
-        # self._oil_ets_before_transfer = ets_pre_trf[:, 0]
-        # self._gas_ets_before_transfer = ets_pre_trf[:, 1]
-        #
-        # self._transfer_to_oil = trf_to_og[:, 0]
-        # self._transfer_to_gas = trf_to_og[:, 1]
-        # self._oil_cost_recovery_after_tf = rec_post_trf[:, 0]
-        # self._gas_cost_recovery_after_tf = rec_post_trf[:, 1]
-        # self._oil_unrecovered_after_transfer = unrec_post_trf[:, 0]
-        # self._gas_unrecovered_after_transfer = unrec_post_trf[:, 1]
-        # self._oil_ets_after_transfer = ets_post_trf[:, 0]
-        # self._gas_ets_after_transfer = ets_post_trf[:, 1]
-        #
-        # # ========================================================================================
-        #
-        # """
-        # Debugging DataFrame Cost Recovery & Transfer
-        #
-        # cols2 = [#'revenue', 'ftp', 'ic_paid',
-        #     'allocation', 'non_capital', 'depreciation',
-        #          'recoverable_cost','rec_pre_trf','unrec_pre_trf','ets_pre_trf',
-        #             'trf_to_og','rec_post_trf','unrec_post_trf','ets_post_trf']
-        #
-        # cr2_df = pd.DataFrame(index=self.project_years,
-        #                       columns=pd.MultiIndex.from_product([cols2,fluids]))
-        # #cr2_df[('revenue','oil')] = self._oil_revenue
-        # #cr2_df[('revenue','gas')] = self._gas_revenue
-        # #cr2_df[('ftp','oil')] = self._oil_ftp
-        # #cr2_df[('ftp','gas')] = self._gas_ftp
-        # #cr2_df[('ic_paid','oil')] = self._oil_ic_paid
-        # #cr2_df[('ic_paid','gas')] = self._gas_ic_paid
-        # cr2_df[('non_capital','oil')] = self._oil_non_depr_total
-        # cr2_df[('non_capital','gas')] = self._gas_non_depr_total
-        # cr2_df[('depreciation','oil')] = self._oil_depr_total
-        # cr2_df[('depreciation','gas')] = self._gas_depr_total
-        # cr2_df[('allocation','oil')] = allocation[:,0]
-        # cr2_df[('allocation','gas')] = allocation[:,1]
-        # cr2_df[('recoverable_cost','oil')] = recoverable_cost[:,0]
-        # cr2_df[('recoverable_cost','gas')] = recoverable_cost[:,1]
-        # cr2_df[('rec_pre_trf','oil')] = rec_pre_trf[:,0]
-        # cr2_df[('rec_pre_trf','gas')] = rec_pre_trf[:,1]
-        # cr2_df[('unrec_pre_trf','oil')] = unrec_pre_trf[:,0]
-        # cr2_df[('unrec_pre_trf','gas')] = unrec_pre_trf[:,1]
-        # cr2_df[('ets_pre_trf','oil')] = ets_pre_trf[:,0]
-        # cr2_df[('ets_pre_trf','gas')] = ets_pre_trf[:,1]
-        # cr2_df[('trf_to_og','oil')] = trf_to_og[:,0]
-        # cr2_df[('trf_to_og','gas')] = trf_to_og[:,1]
-        # cr2_df[('rec_post_trf','oil')] = rec_post_trf[:,0]
-        # cr2_df[('rec_post_trf','gas')] = rec_post_trf[:,1]
-        # cr2_df[('unrec_post_trf','oil')] = unrec_post_trf[:,0]
-        # cr2_df[('unrec_post_trf','gas')] = unrec_post_trf[:,1]
-        # cr2_df[('ets_post_trf','oil')] = ets_post_trf[:,0]
-        # cr2_df[('ets_post_trf','gas')] = ets_post_trf[:,1]
-        # """
-        #
-        # # ========================================================================================
-        #
+        cr1_df[('allocation','oil')] = self._oil_revenue - self._oil_ftp - self._oil_ic_paid
+        cr1_df[('allocation','gas')] = self._gas_revenue - self._gas_ftp - self._gas_ic_paid
+        cr1_df[('tobe_rec_pre','oil')] = self._oil_cost_to_be_recovered
+        cr1_df[('tobe_rec_pre','gas')] = self._gas_cost_to_be_recovered
+        cr1_df[('cost_rec_pre','oil')] = self._oil_cost_recovery
+        cr1_df[('cost_rec_pre','gas')] = self._gas_cost_recovery
+        cr1_df[('unrec_pre','oil')] = self._oil_unrecovered_before_transfer
+        cr1_df[('unrec_pre','gas')] = self._gas_unrecovered_before_transfer
+        cr1_df[('ets_pre','oil')] = self._oil_ets_before_transfer
+        cr1_df[('ets_pre','gas')] = self._gas_ets_before_transfer
+        cr1_df[('trf_to_og','oil')] = self._transfer_to_oil
+        cr1_df[('trf_to_og','gas')] = self._transfer_to_gas
+        cr1_df[('tobe_rec_post','oil')] = self._oil_cost_to_be_recovered_after_tf
+        cr1_df[('tobe_rec_post','gas')] = self._gas_cost_to_be_recovered_after_tf
+        cr1_df[('cost_rec_post','oil')] = self._oil_cost_recovery_after_tf
+        cr1_df[('cost_rec_post','gas')] = self._gas_cost_recovery_after_tf
+        cr1_df[('unrec_post','oil')] = self._oil_unrecovered_after_transfer
+        cr1_df[('unrec_post','gas')] = self._gas_unrecovered_after_transfer
+        cr1_df[('ets_post','oil')] = self._oil_ets_after_transfer
+        cr1_df[('ets_post','gas')] = self._gas_ets_after_transfer
+        """
+
+        # ===========================================================================================
+
+        oil_allocation = self._oil_revenue - self._oil_ftp - self._oil_ic_paid
+        gas_allocation = self._gas_revenue - self._gas_ftp - self._gas_ic_paid
+        allocation = np.vstack((oil_allocation, gas_allocation)).T
+        # non_capital = np.vstack((self._oil_non_capital, self._gas_non_capital)).T
+        # depreciation = np.vstack((self._oil_depreciation, self._gas_depreciation)).T
+        non_capital = np.vstack((self._oil_non_depr_total, self._gas_non_depr_total)).T
+        depreciation = np.vstack((self._oil_depr_total, self._gas_depr_total)).T
+
+        ets_pre_trf = np.zeros_like(allocation)
+        ets_post_trf = np.zeros_like(allocation)
+        unrec_pre_trf = np.zeros_like(allocation)
+        unrec_post_trf = np.zeros_like(allocation)
+        rec_pre_trf = np.zeros_like(allocation)
+        rec_post_trf = np.zeros_like(allocation)
+        recoverable_cost = np.zeros_like(allocation)
+        trf_to_og = np.zeros_like(allocation)
+        project_duration = len(self.project_years)
+        prev_unrec = np.zeros(2)
+
+        for i in range(project_duration):
+
+            recoverable_cost[i] = non_capital[i] + depreciation[i] + prev_unrec
+            ets_pre_trf[i] = np.maximum(allocation[i] - recoverable_cost[i], 0)
+            unrec_pre_trf[i] = np.maximum(recoverable_cost[i] - allocation[i], 0)
+            rec_pre_trf[i] = recoverable_cost[i] - unrec_pre_trf[i]
+
+            trf_to = np.zeros(2)
+            ets_after = ets_pre_trf[i].copy()
+            unrec_after = unrec_pre_trf[i].copy()
+            recov_after = rec_pre_trf[i].copy()
+
+            if ets_pre_trf[i, 0] > 0 and unrec_pre_trf[i, 1] > 0:
+                trf_to[1] = np.minimum(ets_pre_trf[i, 0], unrec_pre_trf[i, 1])
+                ets_after[0] = ets_pre_trf[i, 0] - trf_to[1]
+                unrec_after[1] = unrec_pre_trf[i, 1] - trf_to[1]
+                recov_after[1] = rec_pre_trf[i, 1] + trf_to[1]
+
+            elif ets_pre_trf[i, 1] > 0 and unrec_pre_trf[i, 0] > 0:
+                trf_to[0] = np.minimum(ets_pre_trf[i, 1], unrec_pre_trf[i, 0])
+                ets_after[1] = ets_pre_trf[i, 1] - trf_to[0]
+                unrec_after[0] = unrec_pre_trf[i, 0] - trf_to[0]
+                recov_after[0] = rec_pre_trf[i, 0] + trf_to[0]
+
+            ets_post_trf[i] = ets_after
+            unrec_post_trf[i] = unrec_after
+            rec_post_trf[i] = recov_after
+            trf_to_og[i] = trf_to
+
+            prev_unrec = unrec_after
+
+        self._oil_revenue_allocation = oil_allocation
+        self._gas_revenue_allocation = gas_allocation
+        self._oil_recoverable_cost = recoverable_cost[:, 0]
+        self._gas_recoverable_cost = recoverable_cost[:, 1]
+        self._oil_cost_recovery = rec_pre_trf[:, 0]
+        self._gas_cost_recovery = rec_pre_trf[:, 1]
+        self._oil_unrecovered_before_transfer = unrec_pre_trf[:, 0]
+        self._gas_unrecovered_before_transfer = unrec_pre_trf[:, 1]
+        self._oil_cost_recovery_after_tf = rec_post_trf[:, 0]
+        self._gas_cost_recovery_after_tf = rec_post_trf[:, 1]
+        self._oil_ets_before_transfer = ets_pre_trf[:, 0]
+        self._gas_ets_before_transfer = ets_pre_trf[:, 1]
+
+        self._transfer_to_oil = trf_to_og[:, 0]
+        self._transfer_to_gas = trf_to_og[:, 1]
+        self._oil_cost_recovery_after_tf = rec_post_trf[:, 0]
+        self._gas_cost_recovery_after_tf = rec_post_trf[:, 1]
+        self._oil_unrecovered_after_transfer = unrec_post_trf[:, 0]
+        self._gas_unrecovered_after_transfer = unrec_post_trf[:, 1]
+        self._oil_ets_after_transfer = ets_post_trf[:, 0]
+        self._gas_ets_after_transfer = ets_post_trf[:, 1]
+
+        # ========================================================================================
+
+        """
+        Debugging DataFrame Cost Recovery & Transfer
+
+        cols2 = [#'revenue', 'ftp', 'ic_paid',
+            'allocation', 'non_capital', 'depreciation',
+                 'recoverable_cost','rec_pre_trf','unrec_pre_trf','ets_pre_trf',
+                    'trf_to_og','rec_post_trf','unrec_post_trf','ets_post_trf']
+
+        cr2_df = pd.DataFrame(index=self.project_years,
+                              columns=pd.MultiIndex.from_product([cols2,fluids]))
+        #cr2_df[('revenue','oil')] = self._oil_revenue
+        #cr2_df[('revenue','gas')] = self._gas_revenue
+        #cr2_df[('ftp','oil')] = self._oil_ftp
+        #cr2_df[('ftp','gas')] = self._gas_ftp
+        #cr2_df[('ic_paid','oil')] = self._oil_ic_paid
+        #cr2_df[('ic_paid','gas')] = self._gas_ic_paid
+        cr2_df[('non_capital','oil')] = self._oil_non_depr_total
+        cr2_df[('non_capital','gas')] = self._gas_non_depr_total
+        cr2_df[('depreciation','oil')] = self._oil_depr_total
+        cr2_df[('depreciation','gas')] = self._gas_depr_total
+        cr2_df[('allocation','oil')] = allocation[:,0]
+        cr2_df[('allocation','gas')] = allocation[:,1]
+        cr2_df[('recoverable_cost','oil')] = recoverable_cost[:,0]
+        cr2_df[('recoverable_cost','gas')] = recoverable_cost[:,1]
+        cr2_df[('rec_pre_trf','oil')] = rec_pre_trf[:,0]
+        cr2_df[('rec_pre_trf','gas')] = rec_pre_trf[:,1]
+        cr2_df[('unrec_pre_trf','oil')] = unrec_pre_trf[:,0]
+        cr2_df[('unrec_pre_trf','gas')] = unrec_pre_trf[:,1]
+        cr2_df[('ets_pre_trf','oil')] = ets_pre_trf[:,0]
+        cr2_df[('ets_pre_trf','gas')] = ets_pre_trf[:,1]
+        cr2_df[('trf_to_og','oil')] = trf_to_og[:,0]
+        cr2_df[('trf_to_og','gas')] = trf_to_og[:,1]
+        cr2_df[('rec_post_trf','oil')] = rec_post_trf[:,0]
+        cr2_df[('rec_post_trf','gas')] = rec_post_trf[:,1]
+        cr2_df[('unrec_post_trf','oil')] = unrec_post_trf[:,0]
+        cr2_df[('unrec_post_trf','gas')] = unrec_post_trf[:,1]
+        cr2_df[('ets_post_trf','oil')] = ets_post_trf[:,0]
+        cr2_df[('ets_post_trf','gas')] = ets_post_trf[:,1]
+        """
+
+        # ========================================================================================
+
         # # ES (Equity Share)
         # self._oil_contractor_share, self._oil_government_share = self._get_equity_share(
         #     ets=self._oil_ets_after_transfer, pretax_ctr=self.oil_ctr_pretax_share
