@@ -32,7 +32,7 @@ if __name__ == "__main__":
     # Specify arguments to run function "execute_contract()"
     kwargs_execute = {
         "case": Case00A,
-        "contract_type": ContractType.BASE_PROJECT,
+        "contract_type": ContractType.COST_RECOVERY,
     }
 
     # Run the contract using function "execute_contract()"
@@ -45,15 +45,15 @@ if __name__ == "__main__":
     summary_arguments: dict = ctr["summary_arguments"]
     summary: dict = ctr["summary"]
 
-    # Configure cashflow table
-    cshflow: tuple = get_table(contract=contract)
-    cashflow_table: dict = {
-        "oil": cshflow[0],
-        "gas": cshflow[1],
-        "consolidated": cshflow[2],
-    }
+    # # Configure cashflow table
+    # cshflow: tuple = get_table(contract=contract)
+    # cashflow_table: dict = {
+    #     "oil": cshflow[0],
+    #     "gas": cshflow[1],
+    #     "consolidated": cshflow[2],
+    # }
 
-    t1 = cashflow_table["oil"]
+    t1 = summary
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')
