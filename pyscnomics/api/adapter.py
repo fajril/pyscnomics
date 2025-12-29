@@ -81,83 +81,41 @@ class RDPModelException(Exception):
 
 def get_setup_dict(data: dict) -> tuple:
     """
-    Convert the setup section of the input dictionary into structured core engine data.
+    Parse project setup and cost sections into core engine objects.
 
-    This function parses the setup information and cost-related sections
-    (e.g., capital, intangible, opex, ASR, LBT, and cost of sales)
-    from the input dictionary into standardized dataclass-based objects.
-    It ensures each section conforms to the expected internal data structure
-    used by the core economic engine.
+    Extracts setup metadata (dates, approval year, POD flag, strict mode) and
+    converts optional financial sections (lifting, capital, intangible, opex,
+    ASR, LBT, cost of sales) into standardized dataclass objects.
 
     Parameters
     ----------
     data : dict
-        The full project setup dictionary containing general setup information
-        (e.g., start/end dates, approval year, POD status) and financial data
-        such as capital, intangible, opex, ASR, LBT, and cost-of-sales details.
-
-        Expected structure example:
-            {
-                "setup": {
-                    "start_date": "2020-01-01",
-                    "end_date": "2035-12-31",
-                    "approval_year": "2020",
-                    "is_pod_1": True,
-                    "oil_onstream_date": "2022-06-01",
-                    "gas_onstream_date": "2023-01-01"
-                },
-                "capital": {...},
-                "intangible": {...},
-                "opex": {...},
-                "asr": {...},
-                "lbt": {...},
-                "cost_of_sales": {...},
-                "lifting": {...}
-            }
+        Project input dictionary with a required ``setup`` section and optional
+        cost-related sections.
 
     Returns
     -------
     tuple
-        A tuple containing parsed and converted project setup components:
-
-        - **start_date** : `datetime.date`
-          Project start date.
-        - **end_date** : `datetime.date`
-          Project end date.
-        - **oil_onstream_date** : `datetime.date` or `None`
-          Oil production start date, if available.
-        - **gas_onstream_date** : `datetime.date` or `None`
-          Gas production start date, if available.
-        - **approval_year** : `int` or `None`
-          Project approval year.
-        - **is_pod_1** : `bool`
-          Indicator whether the project is POD-1.
-        - **lifting** : `Lifting` or `None`
-          Lifting configuration, converted using `convert_dict_to_lifting()`.
-        - **capital** : `CapitalCost` or `None`
-          Capital expenditure data, converted using `convert_dict_to_capital()`.
-        - **intangible** : `Intangible` or `None`
-          Intangible expenditure data, converted using `convert_dict_to_intangible()`.
-        - **opex** : `OPEX` or `None`
-          Operating expenditure data, converted using `convert_dict_to_opex()`.
-        - **asr** : `ASR` or `None`
-          Abandonment and Site Restoration data, converted using `convert_dict_to_asr()`.
-        - **lbt** : `LBT` or `None`
-          Land and Building Tax data, converted using `convert_dict_to_lbt()`.
-        - **cost_of_sales** : `CostOfSales` or `None`
-          Cost of sales data, converted using `convert_dict_to_cost_of_sales()`.
+        (
+            start_date, end_date, approval_year,
+            oil_onstream_date, gas_onstream_date,
+            is_pod_1, is_strict,
+            lifting, capital, intangible,
+            opex, asr, lbt, cost_of_sales
+        )
+        Parsed setup fields and converted cost objects (or ``None`` if absent).
     """
 
     # Parsing the contract setup into each corresponding variables
     start_date = convert_str_to_date(str_object=data["setup"]["start_date"])
     end_date = convert_str_to_date(str_object=data["setup"]["end_date"])
+    approval_year = convert_str_to_int(str_object=data["setup"]["approval_year"])
     oil_onstream_date = convert_str_to_date(
         str_object=data["setup"].get("oil_onstream_date", None)
     )
     gas_onstream_date = convert_str_to_date(
         str_object=data["setup"].get("gas_onstream_date", None)
     )
-    approval_year = convert_str_to_int(str_object=data["setup"]["approval_year"])
     is_pod_1 = data["setup"]["is_pod_1"]
     is_strict = data["setup"]["is_strict"]
     lifting = convert_dict_to_lifting(data_raw=data) if "lifting" in data else None
@@ -177,9 +135,9 @@ def get_setup_dict(data: dict) -> tuple:
     return (
         start_date,
         end_date,
+        approval_year,
         oil_onstream_date,
         gas_onstream_date,
-        approval_year,
         is_pod_1,
         is_strict,
         lifting,
@@ -284,9 +242,9 @@ def build_baseproject_instance(data: dict) -> BaseProject:
     (
         start_date,
         end_date,
+        approval_year,
         oil_onstream_date,
         gas_onstream_date,
-        approval_year,
         is_pod_1,
         is_strict,
         lifting,
@@ -303,9 +261,9 @@ def build_baseproject_instance(data: dict) -> BaseProject:
         # Base parameters
         "start_date": start_date,
         "end_date": end_date,
+        "approval_year": approval_year,
         "oil_onstream_date": oil_onstream_date,
         "gas_onstream_date": gas_onstream_date,
-        "approval_year": approval_year,
         "is_pod_1": is_pod_1,
         "is_strict": is_strict,
 
@@ -472,10 +430,11 @@ def build_costrecovery_instance(data: dict) -> CostRecovery:
     (
         start_date,
         end_date,
+        approval_year,
         oil_onstream_date,
         gas_onstream_date,
-        approval_year,
         is_pod_1,
+        is_strict,
         lifting,
         capital,
         intangible,
@@ -492,61 +451,61 @@ def build_costrecovery_instance(data: dict) -> CostRecovery:
     f_icp = convert_list_to_array_float
     f_float = convert_to_float
 
-    # Prepare contract attributes for CostRecovery
-    contract_kwargs = {
-        # Base parameters
-        "start_date": start_date,
-        "end_date": end_date,
-        "oil_onstream_date": oil_onstream_date,
-        "gas_onstream_date": gas_onstream_date,
-        "approval_year": approval_year,
-        "is_pod_1": is_pod_1,
-
-        # Lifting and costs
-        "lifting": lifting,
-        "capital_cost": capital,
-        "intangible_cost": intangible,
-        "opex": opex,
-        "asr_cost": asr,
-        "lbt_cost": lbt,
-        "cost_of_sales": cost_of_sales,
-
-        # FTP
-        "oil_ftp_is_available": cr["oil_ftp_is_available"],
-        "oil_ftp_is_shared": cr["oil_ftp_is_shared"],
-        "oil_ftp_portion": f_rate(data_input=cr["oil_ftp_portion"]),
-        "gas_ftp_is_available": cr["gas_ftp_is_available"],
-        "gas_ftp_is_shared": cr["gas_ftp_is_shared"],
-        "gas_ftp_portion": f_rate(data_input=cr["gas_ftp_portion"]),
-
-        # Split
-        "tax_split_type": f_split(str_object=cr["tax_split_type"]),
-        "condition_dict": cr["condition_dict"],
-        "indicator_rc_icp_sliding": f_icp(data_list=cr["indicator_rc_icp_sliding"]),
-        "oil_ctr_pretax_share": f_rate(data_input=cr["oil_ctr_pretax_share"]),
-        "gas_ctr_pretax_share": f_rate(data_input=cr["gas_ctr_pretax_share"]),
-
-        # Investment credit and cap rate
-        "oil_ic_rate": f_float(target=cr["oil_ic_rate"]),
-        "gas_ic_rate": f_float(target=cr["gas_ic_rate"]),
-        "ic_is_available": cr["ic_is_available"],
-        "oil_cr_cap_rate": f_float(target=cr["oil_cr_cap_rate"]),
-        "gas_cr_cap_rate": f_float(target=cr["gas_cr_cap_rate"]),
-
-        # DMO
-        "oil_dmo_volume_portion": f_rate(data_input=cr["oil_dmo_volume_portion"]),
-        "oil_dmo_fee_portion": f_rate(data_input=cr["oil_dmo_fee_portion"]),
-        "oil_dmo_holiday_duration": cr["oil_dmo_holiday_duration"],
-        "gas_dmo_volume_portion": f_rate(data_input=cr["gas_dmo_volume_portion"]),
-        "gas_dmo_fee_portion": f_rate(data_input=cr["gas_dmo_fee_portion"]),
-        "gas_dmo_holiday_duration": cr["gas_dmo_holiday_duration"],
-
-        # Carry forward depreciation
-        "oil_carry_forward_depreciation": 0.0,
-        "gas_carry_forward_depreciation": 0.0,
-    }
-
-    return CostRecovery(**contract_kwargs)
+    # # Prepare contract attributes for CostRecovery
+    # contract_kwargs = {
+    #     # Base parameters
+    #     "start_date": start_date,
+    #     "end_date": end_date,
+    #     "oil_onstream_date": oil_onstream_date,
+    #     "gas_onstream_date": gas_onstream_date,
+    #     "approval_year": approval_year,
+    #     "is_pod_1": is_pod_1,
+    #
+    #     # Lifting and costs
+    #     "lifting": lifting,
+    #     "capital_cost": capital,
+    #     "intangible_cost": intangible,
+    #     "opex": opex,
+    #     "asr_cost": asr,
+    #     "lbt_cost": lbt,
+    #     "cost_of_sales": cost_of_sales,
+    #
+    #     # FTP
+    #     "oil_ftp_is_available": cr["oil_ftp_is_available"],
+    #     "oil_ftp_is_shared": cr["oil_ftp_is_shared"],
+    #     "oil_ftp_portion": f_rate(data_input=cr["oil_ftp_portion"]),
+    #     "gas_ftp_is_available": cr["gas_ftp_is_available"],
+    #     "gas_ftp_is_shared": cr["gas_ftp_is_shared"],
+    #     "gas_ftp_portion": f_rate(data_input=cr["gas_ftp_portion"]),
+    #
+    #     # Split
+    #     "tax_split_type": f_split(str_object=cr["tax_split_type"]),
+    #     "condition_dict": cr["condition_dict"],
+    #     "indicator_rc_icp_sliding": f_icp(data_list=cr["indicator_rc_icp_sliding"]),
+    #     "oil_ctr_pretax_share": f_rate(data_input=cr["oil_ctr_pretax_share"]),
+    #     "gas_ctr_pretax_share": f_rate(data_input=cr["gas_ctr_pretax_share"]),
+    #
+    #     # Investment credit and cap rate
+    #     "oil_ic_rate": f_float(target=cr["oil_ic_rate"]),
+    #     "gas_ic_rate": f_float(target=cr["gas_ic_rate"]),
+    #     "ic_is_available": cr["ic_is_available"],
+    #     "oil_cr_cap_rate": f_float(target=cr["oil_cr_cap_rate"]),
+    #     "gas_cr_cap_rate": f_float(target=cr["gas_cr_cap_rate"]),
+    #
+    #     # DMO
+    #     "oil_dmo_volume_portion": f_rate(data_input=cr["oil_dmo_volume_portion"]),
+    #     "oil_dmo_fee_portion": f_rate(data_input=cr["oil_dmo_fee_portion"]),
+    #     "oil_dmo_holiday_duration": cr["oil_dmo_holiday_duration"],
+    #     "gas_dmo_volume_portion": f_rate(data_input=cr["gas_dmo_volume_portion"]),
+    #     "gas_dmo_fee_portion": f_rate(data_input=cr["gas_dmo_fee_portion"]),
+    #     "gas_dmo_holiday_duration": cr["gas_dmo_holiday_duration"],
+    #
+    #     # Carry forward depreciation
+    #     "oil_carry_forward_depreciation": 0.0,
+    #     "gas_carry_forward_depreciation": 0.0,
+    # }
+    #
+    # return CostRecovery(**contract_kwargs)
 
 
 def build_costrecovery_arguments(data: dict) -> dict:

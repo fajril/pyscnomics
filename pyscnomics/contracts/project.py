@@ -115,9 +115,9 @@ class BaseProject:
     # List of required arguments
     start_date: date
     end_date: date
+    approval_year: int
     oil_onstream_date: date = field(default=None)
     gas_onstream_date: date = field(default=None)
-    approval_year: int = field(default=None)
     is_pod_1: bool = field(default=False)
     is_strict: bool = field(default=True)
     lifting: tuple[Lifting, ...] = field(default=None)

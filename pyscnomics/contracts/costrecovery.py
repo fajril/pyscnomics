@@ -2,7 +2,7 @@
 Handles calculations associated with PSC Cost Recovery.
 """
 
-import logging
+# import logging
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass, field
@@ -255,7 +255,13 @@ class CostRecovery(BaseProject):
     _consolidated_undepreciated_assets: dict = field(
         default_factory=lambda: {}, init=False, repr=False
     )
+    _consolidated_non_depreciables: dict = field(
+        default_factory=lambda: {}, init=False, repr=False
+    )
     _consolidated_depreciation: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_sum_undepreciated_asset: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
     _consolidated_depr_total: np.ndarray = field(default=None, init=False, repr=False)
     _consolidated_non_depr_total: np.ndarray = field(default=None, init=False, repr=False)
 
@@ -1688,6 +1694,11 @@ class CostRecovery(BaseProject):
 
         self._consolidated_undepreciated_assets = {
             c: self._oil_undepreciated_assets[c] + self._gas_undepreciated_assets[c]
+            for c in cost_types
+        }
+
+        self._consolidated_non_depreciables = {
+            c: self._oil_non_depreciables[c] + self._gas_non_depreciables[c]
             for c in cost_types
         }
 
