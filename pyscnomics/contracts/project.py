@@ -337,6 +337,14 @@ class BaseProject:
     )
     _consolidated_preonstream: np.ndarray = field(default=None, init=False, repr=False)
 
+    _consolidated_depreciable_postonstream: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_non_depreciable_postonstream: np.ndarray = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_postonstream: np.ndarray = field(default=None, init=False, repr=False)
+
     _consolidated_capital_expenditures_pre_tax: np.ndarray = field(
         default=None, init=False, repr=False
     )
@@ -3837,6 +3845,15 @@ class BaseProject:
             self._oil_non_depreciable_preonstream + self._gas_non_depreciable_preonstream
         )
         self._consolidated_preonstream = self._oil_preonstream + self._gas_preonstream
+
+        # Attributes associated with consolidated postonstream
+        self._consolidated_depreciable_postonstream = (
+            self._oil_depreciable_postonstream + self._gas_depreciable_postonstream
+        )
+        self._consolidated_non_depreciable_postonstream = (
+            self._oil_non_depreciable_postonstream + self._gas_non_depreciable_postonstream
+        )
+        self._consolidated_postonstream = self._oil_postonstream + self._gas_postonstream
 
         categories = [
             "capital",

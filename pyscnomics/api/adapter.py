@@ -395,35 +395,22 @@ def get_baseproject(data: dict, summary_result: bool = True):
 
 def build_costrecovery_instance(data: dict) -> CostRecovery:
     """
-    Build and return a fully configured `CostRecovery` contract instance.
+    Build a fully configured CostRecovery contract instance.
 
-    This function extracts setup parameters and cost recovery–specific
-    attributes from the input data dictionary, applies the necessary
-    type conversions, and initializes the `CostRecovery` object with
-    the prepared keyword arguments.
+    Parses setup data via ``get_setup_dict`` and converts cost-recovery
+    parameters (FTP, split, IC, DMO, cap rate) into engine-ready inputs,
+    then initializes and returns a ``CostRecovery`` object.
 
     Parameters
     ----------
     data : dict
-        Input data dictionary containing setup parameters and
-        `costrecovery`-specific contract attributes. Must include
-        sections such as `lifting`, `capital`, `opex`, and
-        `costrecovery`.
+        Project input dictionary containing ``setup`` and ``costrecovery``
+        sections, plus optional lifting and cost components.
 
     Returns
     -------
     CostRecovery
-        The instantiated `CostRecovery` contract object, ready for
-        execution using its `run()` method.
-
-    Notes
-    -----
-    - Setup parameters (dates, lifting, and costs) are parsed via
-      :func:`get_setup_dict`.
-    - Conversion utilities like :func:`convert_list_to_array_float_or_array`
-      and :func:`convert_str_to_taxsplit` are used for type coercion.
-    - The function prepares all base, FTP, split, investment credit,
-      DMO, and depreciation parameters required for initialization.
+        Initialized CostRecovery contract, ready to run.
     """
 
     # Specify base arguments
@@ -451,102 +438,81 @@ def build_costrecovery_instance(data: dict) -> CostRecovery:
     f_icp = convert_list_to_array_float
     f_float = convert_to_float
 
-    # # Prepare contract attributes for CostRecovery
-    # contract_kwargs = {
-    #     # Base parameters
-    #     "start_date": start_date,
-    #     "end_date": end_date,
-    #     "oil_onstream_date": oil_onstream_date,
-    #     "gas_onstream_date": gas_onstream_date,
-    #     "approval_year": approval_year,
-    #     "is_pod_1": is_pod_1,
-    #
-    #     # Lifting and costs
-    #     "lifting": lifting,
-    #     "capital_cost": capital,
-    #     "intangible_cost": intangible,
-    #     "opex": opex,
-    #     "asr_cost": asr,
-    #     "lbt_cost": lbt,
-    #     "cost_of_sales": cost_of_sales,
-    #
-    #     # FTP
-    #     "oil_ftp_is_available": cr["oil_ftp_is_available"],
-    #     "oil_ftp_is_shared": cr["oil_ftp_is_shared"],
-    #     "oil_ftp_portion": f_rate(data_input=cr["oil_ftp_portion"]),
-    #     "gas_ftp_is_available": cr["gas_ftp_is_available"],
-    #     "gas_ftp_is_shared": cr["gas_ftp_is_shared"],
-    #     "gas_ftp_portion": f_rate(data_input=cr["gas_ftp_portion"]),
-    #
-    #     # Split
-    #     "tax_split_type": f_split(str_object=cr["tax_split_type"]),
-    #     "condition_dict": cr["condition_dict"],
-    #     "indicator_rc_icp_sliding": f_icp(data_list=cr["indicator_rc_icp_sliding"]),
-    #     "oil_ctr_pretax_share": f_rate(data_input=cr["oil_ctr_pretax_share"]),
-    #     "gas_ctr_pretax_share": f_rate(data_input=cr["gas_ctr_pretax_share"]),
-    #
-    #     # Investment credit and cap rate
-    #     "oil_ic_rate": f_float(target=cr["oil_ic_rate"]),
-    #     "gas_ic_rate": f_float(target=cr["gas_ic_rate"]),
-    #     "ic_is_available": cr["ic_is_available"],
-    #     "oil_cr_cap_rate": f_float(target=cr["oil_cr_cap_rate"]),
-    #     "gas_cr_cap_rate": f_float(target=cr["gas_cr_cap_rate"]),
-    #
-    #     # DMO
-    #     "oil_dmo_volume_portion": f_rate(data_input=cr["oil_dmo_volume_portion"]),
-    #     "oil_dmo_fee_portion": f_rate(data_input=cr["oil_dmo_fee_portion"]),
-    #     "oil_dmo_holiday_duration": cr["oil_dmo_holiday_duration"],
-    #     "gas_dmo_volume_portion": f_rate(data_input=cr["gas_dmo_volume_portion"]),
-    #     "gas_dmo_fee_portion": f_rate(data_input=cr["gas_dmo_fee_portion"]),
-    #     "gas_dmo_holiday_duration": cr["gas_dmo_holiday_duration"],
-    #
-    #     # Carry forward depreciation
-    #     "oil_carry_forward_depreciation": 0.0,
-    #     "gas_carry_forward_depreciation": 0.0,
-    # }
-    #
-    # return CostRecovery(**contract_kwargs)
+    # Prepare contract attributes for CostRecovery
+    contract_kwargs = {
+        # Base parameters
+        "start_date": start_date,
+        "end_date": end_date,
+        "approval_year": approval_year,
+        "oil_onstream_date": oil_onstream_date,
+        "gas_onstream_date": gas_onstream_date,
+        "is_pod_1": is_pod_1,
+        "is_strict": is_strict,
+
+        # Lifting and costs
+        "lifting": lifting,
+        "capital_cost": capital,
+        "intangible_cost": intangible,
+        "opex": opex,
+        "asr_cost": asr,
+        "lbt_cost": lbt,
+        "cost_of_sales": cost_of_sales,
+
+        # FTP
+        "oil_ftp_is_available": cr["oil_ftp_is_available"],
+        "oil_ftp_is_shared": cr["oil_ftp_is_shared"],
+        "oil_ftp_portion": f_rate(data_input=cr["oil_ftp_portion"]),
+        "gas_ftp_is_available": cr["gas_ftp_is_available"],
+        "gas_ftp_is_shared": cr["gas_ftp_is_shared"],
+        "gas_ftp_portion": f_rate(data_input=cr["gas_ftp_portion"]),
+
+        # Split
+        "tax_split_type": f_split(str_object=cr["tax_split_type"]),
+        "condition_dict": cr["condition_dict"],
+        "indicator_rc_icp_sliding": f_icp(data_list=cr["indicator_rc_icp_sliding"]),
+        "oil_ctr_pretax_share": f_rate(data_input=cr["oil_ctr_pretax_share"]),
+        "gas_ctr_pretax_share": f_rate(data_input=cr["gas_ctr_pretax_share"]),
+
+        # Investment credit and cap rate
+        "oil_ic_rate": f_float(target=cr["oil_ic_rate"]),
+        "gas_ic_rate": f_float(target=cr["gas_ic_rate"]),
+        "ic_is_available": cr["ic_is_available"],
+        "oil_cr_cap_rate": f_float(target=cr["oil_cr_cap_rate"]),
+        "gas_cr_cap_rate": f_float(target=cr["gas_cr_cap_rate"]),
+
+        # DMO
+        "oil_dmo_volume_portion": f_rate(data_input=cr["oil_dmo_volume_portion"]),
+        "oil_dmo_fee_portion": f_rate(data_input=cr["oil_dmo_fee_portion"]),
+        "oil_dmo_holiday_duration": cr["oil_dmo_holiday_duration"],
+        "gas_dmo_volume_portion": f_rate(data_input=cr["gas_dmo_volume_portion"]),
+        "gas_dmo_fee_portion": f_rate(data_input=cr["gas_dmo_fee_portion"]),
+        "gas_dmo_holiday_duration": cr["gas_dmo_holiday_duration"],
+
+        # Carry forward depreciation
+        "oil_carry_forward_depreciation": 0.0,
+        "gas_carry_forward_depreciation": 0.0,
+    }
+
+    return CostRecovery(**contract_kwargs)
 
 
 def build_costrecovery_arguments(data: dict) -> dict:
     """
-    Build and return the argument dictionary required to execute a
-    `CostRecovery` contract.
+    Build the argument dictionary for executing a CostRecovery contract.
 
-    This function extracts contract-level parameters from the input
-    data dictionary, performs necessary type conversions, and prepares
-    all supporting arguments related to revenue, FTP, VAT, inflation,
-    tax, depreciation, and cost of sales. The resulting dictionary can
-    be directly passed to the `CostRecovery.run()` method.
+    Parses ``contract_arguments`` from the input data, applies required
+    type conversions, and assembles revenue, FTP, VAT, inflation, tax,
+    depreciation, DMO, and cost-of-sales parameters for ``CostRecovery.run()``.
 
     Parameters
     ----------
     data : dict
-        Input data dictionary containing the section `contract_arguments`
-        with all parameter definitions required for the cost recovery
-        contract setup.
+        Project input dictionary containing a ``contract_arguments`` section.
 
     Returns
     -------
     dict
-        Dictionary of processed arguments to initialize or execute
-        the `CostRecovery` contract.
-
-    Notes
-    -----
-    - Type conversion functions such as
-      :func:`convert_str_to_otherrevenue`, :func:`convert_str_to_taxregime`,
-      and :func:`convert_str_to_depremethod` are used for input parsing.
-    - Internal helper function `_get_value()` safely retrieves dictionary
-      values and applies optional conversion or defaults when keys are
-      missing or `None`.
-    - Covers the following parameter groups:
-        * Other revenues (e.g., sulfur, electricity, CO₂)
-        * FTP and tax regimes
-        * VAT and inflation parameters
-        * Depreciation configuration
-        * DMO weighting and cost-of-sales flags
-        * Sunk cost handling
+        Processed keyword arguments for CostRecovery execution.
     """
 
     # Specify abbreviations and helper method
@@ -615,12 +581,12 @@ def build_costrecovery_arguments(data: dict) -> dict:
         "oil_cost_of_sales_applied": _get_value(key="oil_cost_of_sales_applied", default=False),
         "gas_cost_of_sales_applied": _get_value(key="gas_cost_of_sales_applied", default=False),
 
-        # Sunk cost
-        "sunk_cost_method": _get_value(
-            key="sunk_cost_method",
-            default=SunkCostMethod.DEPRECIATED_TANGIBLE,
-            converter=converter_sunk_cost_method,
-        ),
+        # # Sunk cost
+        # "sunk_cost_method": _get_value(
+        #     key="sunk_cost_method",
+        #     default=SunkCostMethod.DEPRECIATED_TANGIBLE,
+        #     converter=converter_sunk_cost_method,
+        # ),
     }
 
 
