@@ -1188,56 +1188,37 @@ def get_table_baseproject_oil(contract: BaseProject) -> pd.DataFrame:
         get_non_petroleum_commodity(com, bp) for com in non_petroleum_commodities
     ]
 
-    # # Specify postonstream attributes for OIL
-    # oil_depreciable_postonstream = _assign_attr(
-    #     "_oil_capital_expenditures_post_tax", bp
-    # )
-    #
-    # oil_non_depreciable_postonstream = np.array(
-    #     [
-    #         _assign_attr(at, bp) for at in [
-    #             "_oil_intangible_expenditures_post_tax",
-    #             "_oil_opex_expenditures_post_tax",
-    #             "_oil_asr_expenditures_post_tax",
-    #             "_oil_lbt_expenditures_post_tax",
-    #             "_oil_cost_of_sales_expenditures_post_tax",
-    #         ]
-    #     ]
-    # ).sum(axis=0)
-    #
-    # oil_postonstream = oil_depreciable_postonstream + oil_non_depreciable_postonstream
-    #
-    # # A list of cost categories
-    # categories = [
-    #     "capital",
-    #     "intangible",
-    #     "opex",
-    #     "asr",
-    #     "lbt",
-    #     "cost_of_sales"
-    # ]
-    #
-    # # Assign attributes associated with expenditures pre tax
-    # pre_tax = {
-    #     f"{cat}_expenditures_pre_tax": _assign_attr(
-    #         f"_oil_{cat}_expenditures_pre_tax", bp
-    #     )
-    #     for cat in categories
-    # }
-    #
-    # # Assign attributes associated with indirect tax
-    # indirect_tax = {
-    #     f"{cat}_indirect_tax": _assign_attr(f"_oil_{cat}_indirect_tax", bp)
-    #     for cat in categories
-    # }
-    #
-    # # Assign attributes associated with postonstream costs (or expenditures post tax)
-    # post_tax = {
-    #     f"{cat}_postonstream": _assign_attr(
-    #         f"_oil_{cat}_expenditures_post_tax", bp
-    #     )
-    #     for cat in categories
-    # }
+    # A list of cost categories
+    categories = [
+        "capital",
+        "intangible",
+        "opex",
+        "asr",
+        "lbt",
+        "cost_of_sales"
+    ]
+
+    # Assign attributes associated with expenditures pre tax
+    pre_tax = {
+        f"{cat}_expenditures_pre_tax": _assign_attr(
+            f"_oil_{cat}_expenditures_pre_tax", bp
+        )
+        for cat in categories
+    }
+
+    # Assign attributes associated with indirect tax
+    indirect_tax = {
+        f"{cat}_indirect_tax": _assign_attr(f"_oil_{cat}_indirect_tax", bp)
+        for cat in categories
+    }
+
+    # Assign attributes associated with postonstream costs (or expenditures post tax)
+    post_tax = {
+        f"{cat}_postonstream": _assign_attr(
+            f"_oil_{cat}_expenditures_post_tax", bp
+        )
+        for cat in categories
+    }
 
     # Specify cashflow table for OIL
     table_oil: dict = {
@@ -1258,9 +1239,7 @@ def get_table_baseproject_oil(contract: BaseProject) -> pd.DataFrame:
         "sunk_cost": _assign_attr("_oil_sunk_cost", bp),
 
         # Attributes associated with preonstream cost
-        "preonstream_depreciable": _assign_attr(
-            "_oil_depreciable_preonstream", bp
-        ),
+        "preonstream_depreciable": _assign_attr("_oil_depreciable_preonstream", bp),
         "preonstream_non_depreciable": _assign_attr(
             "_oil_non_depreciable_preonstream", bp
         ),
@@ -1268,32 +1247,28 @@ def get_table_baseproject_oil(contract: BaseProject) -> pd.DataFrame:
 
         # Attributes associated with postonstream cost
         "postonstream_depreciable": _assign_attr("_oil_depreciable_postonstream", bp),
-        "postonstream_non_depreciable": _assign_attr("_oil_non_depreciable_postonstream", bp),
+        "postonstream_non_depreciable": _assign_attr(
+            "_oil_non_depreciable_postonstream", bp
+        ),
         "postonstream": _assign_attr("_oil_postonstream", bp),
 
+        # Attributes associated with expenditures pre tax
+        **pre_tax,
 
-        # # Attributes associated with expenditures pre tax
-        # **pre_tax,
-        #
-        # # Attributes associated with indirect tax
-        # **indirect_tax,
-        #
-        # # Attributes associated with expenditures post tax
-        # **post_tax,
-        #
-        # # Attributes associated with expenses
-        # "expenses_capital": _assign_attr("_oil_capital", bp),
-        # "expenses_non_capital": _assign_attr("_oil_non_capital", bp),
-        # "expenses_total": _assign_attr("_oil_total_expenses", bp),
-        #
-        # # Attribute associated with cashflow
-        # "cashflow": _assign_attr("_oil_cashflow", bp),
+        # Attributes associated with indirect tax
+        **indirect_tax,
+
+        # Attributes associated with expenditures post tax
+        **post_tax,
+
+        # Attributes associated with expenses
+        "expenses_capital": _assign_attr("_oil_capital", bp),
+        "expenses_non_capital": _assign_attr("_oil_non_capital", bp),
+        "expenses_total": _assign_attr("_oil_total_expenses", bp),
+
+        # Attribute associated with cashflow
+        "cashflow": _assign_attr("_oil_cashflow", bp),
     }
-
-    print('\t')
-    print(f'Filetype: {type(table_oil)}')
-    print(f'Length: {len(table_oil)}')
-    print('table_oil = \n', table_oil)
 
     # Convert OIL cashflow table into pandas DataFrame
     return pd.DataFrame(table_oil)
@@ -1338,25 +1313,6 @@ def get_table_baseproject_gas(contract: BaseProject) -> pd.DataFrame:
     sulfur, electricity, co2 = [
         get_non_petroleum_commodity(com, bp) for com in non_petroleum_commodities
     ]
-
-    # Specify postonstream attributes for GAS
-    gas_depreciable_postonstream = _assign_attr(
-        "_gas_capital_expenditures_post_tax", bp
-    )
-
-    gas_non_depreciable_postonstream = np.array(
-        [
-            _assign_attr(at, bp) for at in [
-                "_gas_intangible_expenditures_post_tax",
-                "_gas_opex_expenditures_post_tax",
-                "_gas_asr_expenditures_post_tax",
-                "_gas_lbt_expenditures_post_tax",
-                "_gas_cost_of_sales_expenditures_post_tax",
-            ]
-        ]
-    ).sum(axis=0)
-
-    gas_postonstream = gas_depreciable_postonstream + gas_non_depreciable_postonstream
 
     # A list of cost categories
     categories = [
@@ -1418,9 +1374,11 @@ def get_table_baseproject_gas(contract: BaseProject) -> pd.DataFrame:
         "preonstream": _assign_attr("_gas_preonstream", bp),
 
         # Attributes associated with postonstream cost
-        "postonstream_depreciable": gas_depreciable_postonstream,
-        "postonstream_non_depreciable": gas_non_depreciable_postonstream,
-        "postonstream": gas_postonstream,
+        "postonstream_depreciable": _assign_attr("_gas_depreciable_postonstream", bp),
+        "postonstream_non_depreciable": _assign_attr(
+            "_gas_non_depreciable_postonstream", bp
+        ),
+        "postonstream": _assign_attr("_gas_postonstream", bp),
 
         # Attributes associated with expenditures pre tax
         **pre_tax,
@@ -1483,27 +1441,6 @@ def get_table_baseproject_consolidated(contract: BaseProject) -> pd.DataFrame:
     sulfur, electricity, co2 = [
         get_non_petroleum_commodity(com, bp) for com in non_petroleum_commodities
     ]
-
-    # Specify postonstream attributes for CONSOLIDATED
-    consolidated_depreciable_postonstream = _assign_attr(
-        "_consolidated_capital_expenditures_post_tax", bp
-    )
-
-    consolidated_non_depreciable_postonstream = np.array(
-        [
-            _assign_attr(at, bp) for at in [
-                "_consolidated_intangible_expenditures_post_tax",
-                "_consolidated_opex_expenditures_post_tax",
-                "_consolidated_asr_expenditures_post_tax",
-                "_consolidated_lbt_expenditures_post_tax",
-                "_consolidated_cost_of_sales_expenditures_post_tax",
-            ]
-        ]
-    ).sum(axis=0)
-
-    consolidated_postonstream = (
-        consolidated_depreciable_postonstream + consolidated_non_depreciable_postonstream
-    )
 
     # A list of cost categories
     categories = [
@@ -1569,9 +1506,13 @@ def get_table_baseproject_consolidated(contract: BaseProject) -> pd.DataFrame:
         "preonstream": _assign_attr("_consolidated_preonstream", bp),
 
         # Attributes associated with postonstream cost
-        "postonstream_depreciable": consolidated_depreciable_postonstream,
-        "postonstream_non_depreciable": consolidated_non_depreciable_postonstream,
-        "postonstream": consolidated_postonstream,
+        "postonstream_depreciable": _assign_attr(
+            "_consolidated_depreciable_postonstream", bp
+        ),
+        "postonstream_non_depreciable": _assign_attr(
+            "_consolidated_non_depreciable_postonstream", bp
+        ),
+        "postonstream": _assign_attr("_consolidated_postonstream", bp),
 
         # Attributes associated with expenditures pre tax
         **pre_tax,

@@ -47,17 +47,17 @@ if __name__ == "__main__":
 
     # Configure cashflow table
     cshflow: tuple = get_table(contract=contract)
-    # cashflow_table: dict = {
-    #     "oil": cshflow[0],
-    #     "gas": cshflow[1],
-    #     "consolidated": cshflow[2],
-    # }
-    #
-    # t1 = cashflow_table["consolidated"]
-    # print('\t')
-    # print(f'Filetype: {type(t1)}')
-    # print(f'Length: {len(t1)}')
-    # print('t1 = \n', t1)
+    cashflow_table: dict = {
+        "oil": cshflow[0],
+        "gas": cshflow[1],
+        "consolidated": cshflow[2],
+    }
+
+    t1 = cashflow_table["consolidated"]
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
 
     # print('\t')
     # print(f'Filetype: {type()}')
