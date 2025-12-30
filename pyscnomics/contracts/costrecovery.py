@@ -1876,8 +1876,57 @@ class CostRecovery(BaseProject):
         oil_cost_of_sales_applied: bool = False,
         gas_cost_of_sales_applied: bool = False,
         sum_undepreciated_cost: bool = False,
-        # sunk_cost_method: SunkCostMethod = SunkCostMethod.DEPRECIATED_TANGIBLE,
     ):
+        """
+        Execute the Cost Recovery contract cashflow calculation.
+
+        Runs the full PSC cost recovery workflow: expenditures, depreciation,
+        FTP, cost recovery and transfer, equity split, DMO, taxation, and
+        contractor/government take. Results are stored as internal time-series
+        attributes on the contract instance.
+
+        Parameters
+        ----------
+        sulfur_revenue : OtherRevenue, optional
+            Treatment of sulfur revenue.
+        electricity_revenue : OtherRevenue, optional
+            Treatment of electricity revenue.
+        co2_revenue : OtherRevenue, optional
+            Treatment of CO₂ revenue.
+        vat_rate : float or np.ndarray, optional
+            VAT rate applied to expenditures.
+        year_inflation : np.ndarray, optional
+            Year index for inflation application.
+        inflation_rate : float or np.ndarray, optional
+            Inflation rate.
+        inflation_rate_applied_to : InflationAppliedTo or None, optional
+            Cost components affected by inflation.
+        is_dmo_end_weighted : bool, optional
+            Apply end-weighted DMO calculation.
+        tax_regime : TaxRegime, optional
+            Applicable income tax regime.
+        effective_tax_rate : float, np.ndarray, or None, optional
+            Override tax rate (scalar or time series).
+        ftp_tax_regime : FTPTaxRegime, optional
+            FTP taxation regime.
+        depr_method : DeprMethod, optional
+            Depreciation method.
+        decline_factor : float or int, optional
+            Declining-balance factor (if applicable).
+        post_uu_22_year2001 : bool, optional
+            Apply post–UU No.22/2001 DMO rules.
+        oil_cost_of_sales_applied : bool, optional
+            Apply cost of sales to oil revenue.
+        gas_cost_of_sales_applied : bool, optional
+            Apply cost of sales to gas revenue.
+        sum_undepreciated_cost : bool, optional
+            Aggregate undepreciated assets across cost categories.
+
+        Returns
+        -------
+        None
+            Results are stored on the object as internal attributes.
+        """
 
         # Calculate WAP (Weighted Average Price) for each produced fluid
         self._get_wap_price()
