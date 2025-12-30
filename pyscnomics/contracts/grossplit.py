@@ -10,6 +10,14 @@ import pandas as pd
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts import psc_tools
+from pyscnomics.econ.costs import (
+    CapitalCost,
+    Intangible,
+    OPEX,
+    ASR,
+    LBT,
+    CostOfSales,
+)
 from pyscnomics.econ.selection import (
     FluidType,
     GrossSplitRegime,
@@ -554,6 +562,44 @@ class GrossSplit(BaseProject):
                     if not val:
                         message = f"Found {key} sunk cost for non-POD I contract."
                         logging.warning(message)
+
+    def _check_non_capital_sunk_cost(
+        self,
+        sc_non_capital_object: Intangible | OPEX | ASR | LBT | CostOfSales,
+        sc_non_capital_name: str,
+        is_pod_1: bool,
+        is_strict: bool,
+    ):
+
+        # Identify nonzero sunk costs
+        name = sc_non_capital_name
+        nonzero_mask = (sc_non_capital_object.cost != 0)
+
+        # Exit early if all sunk costs are zeros
+        if not np.any(nonzero_mask):
+            return
+
+        invalid_costs = sc_non_capital_object.cost[nonzero_mask]
+        invalid_years = sc_non_capital_object.expense_year[nonzero_mask]
+
+        print('\t')
+        print(f'Filetype: {type(invalid_costs)}')
+        print(f'Length: {len(invalid_costs)}')
+        print('invalid_costs = ', invalid_costs)
+
+        print('\t')
+        print(f'Filetype: {type(invalid_years)}')
+        print(f'Length: {len(invalid_years)}')
+        print('invalid_years = ', invalid_years)
+
+    def _prepare_depreciation(self):
+
+        self._check_non_capital_sunk_cost(
+            sc_non_capital_object=self._oil_intangible_sunk_cost,
+            sc_non_capital_name="oil_intangible_sunk_cost",
+            is_pod_1=self.is_pod_1,
+            is_strict=self.is_strict,
+        )
 
     def _get_depreciation(
         self,
@@ -2759,20 +2805,8 @@ class GrossSplit(BaseProject):
         self._get_preonstream_array()
         self._get_postonstream_array()
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_depreciable_postonstream)}')
-        print(f'Length: {len(self._oil_depreciable_postonstream)}')
-        print('_oil_depreciable_postonstream = ', self._oil_depreciable_postonstream)
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_non_depreciable_postonstream)}')
-        print(f'Length: {len(self._oil_non_depreciable_postonstream)}')
-        print('_oil_non_depreciable_postonstream = ', self._oil_non_depreciable_postonstream)
-
-        print('\t')
-        print(f'Filetype: {type(self._oil_postonstream)}')
-        print(f'Length: {len(self._oil_postonstream)}')
-        print('_oil_postonstream = ', self._oil_postonstream)
+        self._prepare_depreciation()
 
         # # Modify sunk cost and preonstream cost for non-POD I contract
         # if not self.is_pod_1:
