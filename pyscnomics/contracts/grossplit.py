@@ -33,6 +33,7 @@ from pyscnomics.econ.selection import (
     SunkCostMethod,
     NPVSelection,
     DiscountingMode,
+    ContractType,
 )
 from pyscnomics.econ.depreciation import unit_of_production_rate
 from pyscnomics.econ.indicator import (
@@ -567,9 +568,31 @@ class GrossSplit(BaseProject):
         self,
         sc_non_capital_object: Intangible | OPEX | ASR | LBT | CostOfSales,
         sc_non_capital_name: str,
-        is_pod_1: bool,
         is_strict: bool,
-    ):
+    ) -> None:
+        """
+        Validate non-capital sunk costs for PSC Gross Split POD I contracts.
+
+        Checks whether non-capital sunk cost objects contain nonzero values.
+        In strict mode, raises an exception; otherwise, records a warning and
+        continues execution.
+
+        Parameters
+        ----------
+        sc_non_capital_object : Intangible | OPEX | ASR | LBT | CostOfSales
+            Non-capital sunk cost object to be validated.
+        sc_non_capital_name : str
+            Human-readable name of the cost component.
+        is_strict : bool
+            If True, raise an error on invalid sunk costs; otherwise, issue a warning.
+        """
+
+        # Raise an error: invalid object in "sc_non_capital_object"
+        if not isinstance(sc_non_capital_object, (Intangible, OPEX, ASR, LBT, CostOfSales)):
+            raise GrossSplitException(
+                f"Found an invalid object ({sc_non_capital_object.__class__.__qualname__}). "
+                f"Object must be an instance of Intangible/OPEX/ASR/LBT/CostOfSales."
+            )
 
         # Identify nonzero sunk costs
         name = sc_non_capital_name
@@ -579,26 +602,98 @@ class GrossSplit(BaseProject):
         if not np.any(nonzero_mask):
             return
 
+        # Extract invalid costs alongside their corresponding expense years
         invalid_costs = sc_non_capital_object.cost[nonzero_mask]
         invalid_years = sc_non_capital_object.expense_year[nonzero_mask]
 
-        print('\t')
-        print(f'Filetype: {type(invalid_costs)}')
-        print(f'Length: {len(invalid_costs)}')
-        print('invalid_costs = ', invalid_costs)
+        # Pair invalid expense years with invalid costs
+        invalid = [f"{yr}: {cst}" for yr, cst in zip(invalid_years, invalid_costs)]
 
-        print('\t')
-        print(f'Filetype: {type(invalid_years)}')
-        print(f'Length: {len(invalid_years)}')
-        print('invalid_years = ', invalid_years)
+        # Specify messages to be displayed
+        msg_error = (
+            f"Cannot allow {name!r}: {invalid} in PSC Gross Split (GS) POD I contract. "
+            f"Conceptually, all sunk costs in PSC GS POD I should be classified as capital "
+            f"cost--with AMORTIZATION APPLIED TO THEM--, not non-capital (Intangible/OPEX/ASR"
+            f"LBT/CostOfSales) costs."
+        )
 
+        msg_warning = (
+            f"Found {name!r}: {invalid} in PSC Gross Split (GS) POD I contract. Conceptually, "
+            f"all sunk costs in PSC GS POD I should be classified as capital cost--with "
+            f"AMORTIZATION APPLIED TO THEM--, not non-capital (Intangible/OPEX/ASR/LBT/"
+            f"CostOfSales) costs. Classifying sunk costs as non-capital costs in PSC GS POD I "
+            f"contract may produce an incorrect calculation, where direct charges applied to "
+            f"them WITHOUT AMORTIZATION."
+        )
+
+        # Strict mode: raise an error and stop execution
+        if is_strict:
+            raise GrossSplitException(msg_error)
+
+        # Loose mode: record a warning message, validate PIS years with onstream year,
+        # and continue execution
+        else:
+            self.warning_messages.append(
+                (ContractType.GROSS_SPLIT.value, msg_warning)
+            )
+
+    def _check_no_sunk_costs(self):
+        pass
+
+    def _prepare_amortization(self):
+
+        # Specify onstream year
+        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+
+        if self.is_pod_1:
+
+            # Check capital sunk costs: whether PIS years < onstream year
+            mapping_capital_sunk_costs = [
+                (self._oil_capital_sunk_cost, "oil_capital_sunk_cost"),
+                (self._gas_capital_sunk_cost, "gas_capital_sunk_cost"),
+            ]
+
+            for sc_obj, sc_name in mapping_capital_sunk_costs:
+                self._check_capital_pis_years(
+                    obj_capital=sc_obj,
+                    obj_name=sc_name,
+                    is_strict=self.is_strict,
+                    onstream_year=onstream_yr,
+                )
+
+            # Check whether sunk costs are treated as non-capital costs
+            mapping_non_capital_sunk_costs = [
+                (self._oil_intangible_sunk_cost, "oil_intangible_sunk_cost"),
+                (self._oil_opex_sunk_cost, "oil_opex_sunk_cost"),
+                (self._oil_asr_sunk_cost, "oil_asr_sunk_cost"),
+                (self._oil_lbt_sunk_cost, "oil_lbt_sunk_cost"),
+                (self._oil_cost_of_sales_sunk_cost, "oil_cost_of_sales_sunk_cost"),
+                (self._gas_intangible_sunk_cost, "gas_intangible_sunk_cost"),
+                (self._gas_opex_sunk_cost, "gas_opex_sunk_cost"),
+                (self._gas_asr_sunk_cost, "gas_asr_sunk_cost"),
+                (self._gas_lbt_sunk_cost, "gas_lbt_sunk_cost"),
+                (self._gas_cost_of_sales_sunk_cost, "gas_cost_of_sales_sunk_cost"),
+            ]
+
+            for sc_obj, sc_name in mapping_non_capital_sunk_costs:
+                self._check_non_capital_sunk_cost(
+                    sc_non_capital_object=sc_obj,
+                    sc_non_capital_name=sc_name,
+                    is_strict=self.is_strict,
+                )
+
+                
     def _prepare_depreciation(self):
+
+        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+
+
 
         self._check_non_capital_sunk_cost(
             sc_non_capital_object=self._oil_intangible_sunk_cost,
             sc_non_capital_name="oil_intangible_sunk_cost",
-            is_pod_1=self.is_pod_1,
             is_strict=self.is_strict,
+            onstream_year=onstream_yr,
         )
 
     def _get_depreciation(
@@ -2805,8 +2900,7 @@ class GrossSplit(BaseProject):
         self._get_preonstream_array()
         self._get_postonstream_array()
 
-
-        self._prepare_depreciation()
+        self._prepare_amortization()
 
         # # Modify sunk cost and preonstream cost for non-POD I contract
         # if not self.is_pod_1:
