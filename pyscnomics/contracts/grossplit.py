@@ -564,14 +564,15 @@ class GrossSplit(BaseProject):
                         message = f"Found {key} sunk cost for non-POD I contract."
                         logging.warning(message)
 
-    def _check_non_capital_sunk_cost(
+    def _check_invalid_non_capital_costs(
         self,
-        sc_non_capital_object: Intangible | OPEX | ASR | LBT | CostOfSales,
-        sc_non_capital_name: str,
+        obj_non_capital: Intangible | OPEX | ASR | LBT | CostOfSales,
+        obj_name: str,
         is_strict: bool,
     ) -> None:
         """
-        Validate non-capital sunk costs for PSC Gross Split POD I contracts.
+        Validate non-capital sunk costs and non-capital preonstream costs for
+        PSC Gross Split POD I contracts.
 
         Checks whether non-capital sunk cost objects contain nonzero values.
         In strict mode, raises an exception; otherwise, records a warning and
@@ -579,32 +580,32 @@ class GrossSplit(BaseProject):
 
         Parameters
         ----------
-        sc_non_capital_object : Intangible | OPEX | ASR | LBT | CostOfSales
+        obj_non_capital : Intangible | OPEX | ASR | LBT | CostOfSales
             Non-capital sunk cost object to be validated.
-        sc_non_capital_name : str
+        obj_name : str
             Human-readable name of the cost component.
         is_strict : bool
             If True, raise an error on invalid sunk costs; otherwise, issue a warning.
         """
 
-        # Raise an error: invalid object in "sc_non_capital_object"
-        if not isinstance(sc_non_capital_object, (Intangible, OPEX, ASR, LBT, CostOfSales)):
+        # Raise an error: invalid object in "obj_non_capital"
+        if not isinstance(obj_non_capital, (Intangible, OPEX, ASR, LBT, CostOfSales)):
             raise GrossSplitException(
-                f"Found an invalid object ({sc_non_capital_object.__class__.__qualname__}). "
+                f"Found an invalid object ({obj_non_capital.__class__.__qualname__}). "
                 f"Object must be an instance of Intangible/OPEX/ASR/LBT/CostOfSales."
             )
 
         # Identify nonzero sunk costs
-        name = sc_non_capital_name
-        nonzero_mask = (sc_non_capital_object.cost != 0)
+        name = obj_name
+        nonzero_mask = (obj_non_capital.cost != 0)
 
         # Exit early if all sunk costs are zeros
         if not np.any(nonzero_mask):
             return
 
         # Extract invalid costs alongside their corresponding expense years
-        invalid_costs = sc_non_capital_object.cost[nonzero_mask]
-        invalid_years = sc_non_capital_object.expense_year[nonzero_mask]
+        invalid_costs = obj_non_capital.cost[nonzero_mask]
+        invalid_years = obj_non_capital.expense_year[nonzero_mask]
 
         # Pair invalid expense years with invalid costs
         invalid = [f"{yr}: {cst}" for yr, cst in zip(invalid_years, invalid_costs)]
@@ -637,64 +638,302 @@ class GrossSplit(BaseProject):
                 (ContractType.GROSS_SPLIT.value, msg_warning)
             )
 
-    def _check_no_sunk_costs(self):
-        pass
+    def _check_no_sunk_costs(
+        self,
+        sc_object: CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales,
+        sc_name: str,
+        is_capital: bool,
+        is_strict: bool,
+        onstream_year: int,
+    ) -> None:
+        """
+        Validate absence of sunk costs for Non-POD I PSC Gross Split contracts.
 
-    def _prepare_amortization(self):
+        Ensures that no capital or non-capital sunk costs are present. In strict
+        mode, raises an exception; otherwise, records a warning and optionally
+        validates capital PIS years against the onstream year.
+
+        Parameters
+        ----------
+        sc_object : CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales
+            Sunk cost object to be validated.
+        sc_name : str
+            Human-readable name of the cost component.
+        is_capital : bool
+            Flag indicating whether the object represents capital cost.
+        is_strict : bool
+            If True, raise an error on detected sunk costs; otherwise, issue a warning.
+        onstream_year : int
+            Project onstream year used for capital PIS year validation.
+        """
+
+        # Raise an error: invalid data input for "sc_object"
+        if not isinstance(sc_object, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
+            raise GrossSplitException(
+                f"Found an invalid sunk cost object ({sc_object.__class__.__qualname__}). "
+                f"The object must be an instance of CapitalCost/Intangible/OPEX/ASR/"
+                f"LBT/CostOfSales."
+            )
+
+        # Identify nonzero sunk costs
+        nonzero_mask = (sc_object.cost != 0)
+
+        # Exit early if all sunk costs are zeros
+        if not np.any(nonzero_mask):
+            return
+
+        # Extract invalid costs and their corresponding expense years
+        invalid_costs = sc_object.cost[nonzero_mask]
+        invalid_years = sc_object.expense_year[nonzero_mask]
+
+        # Pair invalid expense years with invalid costs
+        invalid = [f"{yr}: {cst}" for yr, cst in zip(invalid_years, invalid_costs)]
+
+        # Specify messages to be displayed
+        msg_error = (
+            f"Cannot allow {sc_name!r}: {invalid} in Non-POD I PSC Gross Split (GS) contract. "
+            f"Conceptually, Non-POD I PSC GS MUST NOT contain any sunk costs, either as "
+            f"capital or non-capital sunk costs."
+        )
+
+        msg_warning = (
+            f"Found {sc_name!r}: {invalid} in Non-POD I PSC Gross Split (GS) contract. "
+            f"Conceptually, Non-POD I PSC GS SHOULD NOT contain any sunk costs, either as "
+            f"capital or non-capital sunk costs. Having sunk costs in Non-POD I GS contract "
+            f"leads to incorrect calculation, in which capital sunk costs are subject to "
+            f"amortizations and non-capital sunk costs are subject to direct charges."
+        )
+
+        # Strict mode: raise an error and stop execution
+        if is_strict:
+            raise GrossSplitException(msg_error)
+
+        # Loose mode: record a warning message, validate PIS years with onstream year,
+        # and continue execution
+        else:
+            self.warning_messages.append(
+                (ContractType.GROSS_SPLIT.value, msg_warning)
+            )
+
+            # For capital sunk cost, check whether PIS years < onstream year
+            if is_capital:
+                self._check_capital_pis_years(
+                    obj_capital=sc_object,
+                    obj_name=sc_name,
+                    is_strict=False,
+                    onstream_year=onstream_year,
+                )
+
+    def _prepare_amortization(self) -> None:
+        """
+        Validate sunk and pre-onstream cost treatment for amortization logic.
+
+        This method enforces PSC Gross Split rules by validating:
+        - Capital cost PIS years against onstream year
+        - Proper classification of sunk vs pre-onstream costs
+        - Absence of sunk costs in Non-POD I contracts
+
+        Behavior differs between POD I and Non-POD I Gross Split contracts and
+        respects strict vs non-strict validation modes.
+        """
 
         # Specify onstream year
         onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
 
-        if self.is_pod_1:
-
-            # Check capital sunk costs: whether PIS years < onstream year
-            mapping_capital_sunk_costs = [
-                (self._oil_capital_sunk_cost, "oil_capital_sunk_cost"),
-                (self._gas_capital_sunk_cost, "gas_capital_sunk_cost"),
-            ]
-
-            for sc_obj, sc_name in mapping_capital_sunk_costs:
+        # Helper method to check whether capital costs PIS years < onstream year
+        def _validate_capital_pis_years(mapping):
+            for obj, name in mapping:
                 self._check_capital_pis_years(
-                    obj_capital=sc_obj,
-                    obj_name=sc_name,
+                    obj_capital=obj,
+                    obj_name=name,
                     is_strict=self.is_strict,
                     onstream_year=onstream_yr,
                 )
 
-            # Check whether sunk costs are treated as non-capital costs
-            mapping_non_capital_sunk_costs = [
-                (self._oil_intangible_sunk_cost, "oil_intangible_sunk_cost"),
-                (self._oil_opex_sunk_cost, "oil_opex_sunk_cost"),
-                (self._oil_asr_sunk_cost, "oil_asr_sunk_cost"),
-                (self._oil_lbt_sunk_cost, "oil_lbt_sunk_cost"),
-                (self._oil_cost_of_sales_sunk_cost, "oil_cost_of_sales_sunk_cost"),
-                (self._gas_intangible_sunk_cost, "gas_intangible_sunk_cost"),
-                (self._gas_opex_sunk_cost, "gas_opex_sunk_cost"),
-                (self._gas_asr_sunk_cost, "gas_asr_sunk_cost"),
-                (self._gas_lbt_sunk_cost, "gas_lbt_sunk_cost"),
-                (self._gas_cost_of_sales_sunk_cost, "gas_cost_of_sales_sunk_cost"),
-            ]
+        # Define several mapping variables
+        mapping_capital_sunk_costs = [
+            (self._oil_capital_sunk_cost, "oil_capital_sunk_cost"),
+            (self._gas_capital_sunk_cost, "gas_capital_sunk_cost"),
+        ]
 
-            for sc_obj, sc_name in mapping_non_capital_sunk_costs:
-                self._check_non_capital_sunk_cost(
-                    sc_non_capital_object=sc_obj,
-                    sc_non_capital_name=sc_name,
+        mapping_capital_preonstream = [
+            (self._oil_capital_preonstream, "oil_capital_preonstream"),
+            (self._gas_capital_preonstream, "gas_capital_preonstream"),
+        ]
+
+        mapping_non_capital_sunk_costs = [
+            # Oil
+            (self._oil_intangible_sunk_cost, "oil_intangible_sunk_cost"),
+            (self._oil_opex_sunk_cost, "oil_opex_sunk_cost"),
+            (self._oil_asr_sunk_cost, "oil_asr_sunk_cost"),
+            (self._oil_lbt_sunk_cost, "oil_lbt_sunk_cost"),
+            (self._oil_cost_of_sales_sunk_cost, "oil_cost_of_sales_sunk_cost"),
+
+            # Gas
+            (self._gas_intangible_sunk_cost, "gas_intangible_sunk_cost"),
+            (self._gas_opex_sunk_cost, "gas_opex_sunk_cost"),
+            (self._gas_asr_sunk_cost, "gas_asr_sunk_cost"),
+            (self._gas_lbt_sunk_cost, "gas_lbt_sunk_cost"),
+            (self._gas_cost_of_sales_sunk_cost, "gas_cost_of_sales_sunk_cost"),
+        ]
+
+        mapping_non_capital_preonstream = [
+            # Oil
+            (self._oil_intangible_preonstream, "oil_intangible_preonstream"),
+            (self._oil_opex_preonstream, "oil_opex_preonstream"),
+            (self._oil_asr_preonstream, "oil_asr_preonstream"),
+            (self._oil_lbt_preonstream, "oil_lbt_preonstream"),
+            (self._oil_cost_of_sales_preonstream, "oil_cost_of_sales_preonstream"),
+
+            # Gas
+            (self._gas_intangible_preonstream, "gas_intangible_preonstream"),
+            (self._gas_opex_preonstream, "gas_opex_preonstream"),
+            (self._gas_asr_preonstream, "gas_asr_preonstream"),
+            (self._gas_lbt_preonstream, "gas_lbt_preonstream"),
+            (self._gas_cost_of_sales_preonstream, "gas_cost_of_sales_preonstream"),
+        ]
+
+        mapping_sunk_costs = [
+            (self._oil_capital_sunk_cost, "oil_capital_sunk_cost", True),
+            (self._oil_intangible_sunk_cost, "oil_intangible_sunk_cost", False),
+            (self._oil_opex_sunk_cost, "oil_opex_sunk_cost", False),
+            (self._oil_asr_sunk_cost, "oil_asr_sunk_cost", False),
+            (self._oil_lbt_sunk_cost, "oil_lbt_sunk_cost", False),
+            (self._oil_cost_of_sales_sunk_cost, "oil_cost_of_sales_sunk_cost", False),
+            (self._gas_capital_sunk_cost, "gas_capital_sunk_cost", True),
+            (self._gas_intangible_sunk_cost, "gas_intangible_sunk_cost", False),
+            (self._gas_opex_sunk_cost, "gas_opex_sunk_cost", False),
+            (self._gas_asr_sunk_cost, "gas_asr_sunk_cost", False),
+            (self._gas_lbt_sunk_cost, "gas_lbt_sunk_cost", False),
+            (self._gas_cost_of_sales_sunk_cost, "gas_cost_of_sales_sunk_cost", False),
+        ]
+
+        # POD I GS
+        if self.is_pod_1:
+            # Check capital sunk costs: whether PIS years < onstream year
+            _validate_capital_pis_years(mapping_capital_sunk_costs)
+
+            # Check capital preonstream costs: whether PIS years < onstream year
+            _validate_capital_pis_years(mapping_capital_preonstream)
+
+            # Check whether sunk costs are treated as non-capital costs
+            for obj, name in mapping_non_capital_sunk_costs:
+                self._check_invalid_non_capital_costs(
+                    obj_non_capital=obj,
+                    obj_name=name,
                     is_strict=self.is_strict,
                 )
+
+            # Check whether preonstream costs are treated as non-capital costs
+            for obj, name in mapping_non_capital_preonstream:
+                self._check_invalid_non_capital_costs(
+                    obj_non_capital=obj,
+                    obj_name=name,
+                    is_strict=self.is_strict,
+                )
+
+        # Non-POD I GS
+        else:
+            # Check whether sunk costs exist
+            for obj, name, is_cap in mapping_sunk_costs:
+                self._check_no_sunk_costs(
+                    sc_object=obj,
+                    sc_name=name,
+                    is_capital=is_cap,
+                    is_strict=self.is_strict,
+                    onstream_year=onstream_yr,
+                )
+
+            # Check capital preonstream: whether PIS years < onstream year
+            _validate_capital_pis_years(mapping_capital_preonstream)
+
+    def _get_amortization(
+        self,
+        salvage_value: float,
+        # initial_amortization_year: InitialYearAmortizationIncurred,
+    ) -> None:
+
+        # Prepare data prior to calculating amortization
+        self._prepare_amortization()
+
+        # Define mapping between fluid types, cost types, cost types array, and
+        # fluid lifting objects
+        amort_mapping = {
+            "oil": (
+                ("sunk_cost", self._oil_sunk_cost, self._oil_lifting),
+                ("preonstream", self._oil_preonstream, self._oil_lifting),
+            ),
+            "gas": (
+                ("sunk_cost", self._gas_sunk_cost, self._gas_lifting),
+                ("preonstream", self._gas_preonstream, self._gas_lifting),
+            ),
+        }
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_sunk_cost)}')
+        print(f'Length: {len(self._oil_sunk_cost)}')
+        print('_oil_sunk_cost = ', self._oil_sunk_cost)
+
+        t1 = self._oil_sunk_cost.sum()
+        print('\t')
+        print(f'Filetype: {type(t1)}')
+        print('t1 = ', t1)
+
+        # # Define intermediate attribute --> "amortizations": dict
+        # fluids = ["oil", "gas"]
+        # cost_types = ["sunk_cost", "preonstream"]
+        #
+        # amortizations = {f: {c: None for c in cost_types} for f in fluids}
+        #
+        # amortizations["oil"]["sunk_cost"] = unit_of_production_rate(
+        #     project_years=self.project_years,
+        #     approval_year=self.approval_year,
+        #     cost=self._oil_sunk_cost.sum(),
+        #     prod=self._oil_lifting.get_lifting_rate_ghv_arr(),
+        #     prod_year=self.project_years,
+        #     salvage_value=salvage_value,
+        # )
+
+
+
+
+        # for (f, mapping) in amort_mapping.items():
+        #     for (c, cost_arr, lft_obj) in mapping:
+        #         amortizations[f][c] = unit_of_production_rate(
+        #             project_years=self.project_years,
+        #             approval_year=self.approval_year,
+        #             cost=cost_arr.sum(),
+        #             prod=lft_obj.get_lifting_rate_ghv_arr(),
+        #             prod_year=self.project_years,
+        #             salvage_value=salvage_value,
+        #             # initial_amortization_year=initial_amortization_year,
+        #         )
+        #
+        # # Set initial values for attributes "_oil_amortizations" and "_gas_amortizations"
+        # self._oil_amortizations = {
+        #     c: np.zeros_like(self.project_years, dtype=float)
+        #     for c in ["sunk_cost", "preonstream", "postonstream"]
+        # }
+        #
+        # self._gas_amortizations = {
+        #     c: np.zeros_like(self.project_years, dtype=float)
+        #     for c in ["sunk_cost", "preonstream", "postonstream"]
+        # }
+        #
+        # # Modify "_oil_amortizations" and "_gas_amortizations" for POD I contract type
+        # if self.is_pod_1:
+        #     for (f, f_amor) in [
+        #         ("oil", self._oil_amortizations),
+        #         ("gas", self._gas_amortizations)
+        #     ]:
+        #         for c in cost_types:
+        #             f_amor[c] = amortizations[f][c]
+
 
 
     def _prepare_depreciation(self):
 
         onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
-
-
-
-        self._check_non_capital_sunk_cost(
-            sc_non_capital_object=self._oil_intangible_sunk_cost,
-            sc_non_capital_name="oil_intangible_sunk_cost",
-            is_strict=self.is_strict,
-            onstream_year=onstream_yr,
-        )
 
     def _get_depreciation(
         self,
@@ -941,110 +1180,6 @@ class GrossSplit(BaseProject):
             # Assign preonstream cost depreciations as zeros
             self._oil_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
             self._gas_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
-
-    def _get_amortization(
-        self,
-        salvage_value: float,
-        initial_amortization_year: InitialYearAmortizationIncurred,
-    ) -> None:
-        """
-        Compute and assign amortization schedules for oil and gas cost types.
-
-        This method calculates amortization charges for ``sunk_cost`` and
-        ``preonstream`` expenditures of oil and gas using the
-        unit-of-production (UOP) method. The charges are based on project
-        years, approval year, lifting volumes, and the specified salvage value.
-        Intermediate results are stored in a local ``amortizations`` dictionary
-        and selectively applied to internal attributes.
-
-        The internal amortization attributes (``_oil_amortizations`` and
-        ``_gas_amortizations``) are initialized with zero arrays for all three
-        cost types: ``sunk_cost``, ``preonstream``, and ``postonstream``.
-
-        For projects under a POD I contract type (``self.is_pod_1=True``),
-        the calculated amortization schedules for ``sunk_cost`` and
-        ``preonstream`` replace the initialized zero arrays. For
-        ``postonstream`` or for non-POD I projects, the arrays remain as zeros.
-
-        Parameters
-        ----------
-        salvage_value : float
-            Residual value of the asset at the end of its useful life.
-            Must not exceed the total depreciable cost.
-        initial_amortization_year : InitialYearAmortizationIncurred
-            Specifies the reference year to begin amortization. Options include:
-            - ``InitialYearAmortizationIncurred.ONSTREAM_YEAR`` → aligns with
-              fluid production year.
-            - ``InitialYearAmortizationIncurred.APPROVAL_YEAR`` → aligns with
-              project approval year.
-
-        Returns
-        -------
-        None
-            The method updates the internal attributes
-            ``_oil_amortizations`` and ``_gas_amortizations`` in place.
-
-        Notes
-        -----
-        - Only ``sunk_cost`` and ``preonstream`` cost types are calculated.
-        - ``postonstream`` amortizations are always initialized as zeros.
-        - Amortization is computed per fluid type (oil and gas) using
-          ``unit_of_production_rate``.
-        - Lifting volumes are retrieved from the fluid lifting objects
-          (``_oil_lifting`` and ``_gas_lifting``).
-        - Results are aligned with the full project years array.
-        """
-
-        # Define mapping between fluid types, cost types, cost types array, and
-        # fluid lifting objects
-        amort_mapping = {
-            "oil": (
-                ("sunk_cost", self._oil_sunk_cost, self._oil_lifting),
-                ("preonstream", self._oil_preonstream, self._oil_lifting),
-            ),
-            "gas": (
-                ("sunk_cost", self._gas_sunk_cost, self._gas_lifting),
-                ("preonstream", self._gas_preonstream, self._gas_lifting),
-            ),
-        }
-
-        # Define intermediate attribute --> "amortizations": dict
-        fluids = ["oil", "gas"]
-        cost_types = ["sunk_cost", "preonstream"]
-
-        amortizations = {f: {c: None for c in cost_types} for f in fluids}
-
-        for (f, mapping) in amort_mapping.items():
-            for (c, cost_arr, lft_obj) in mapping:
-                amortizations[f][c] = unit_of_production_rate(
-                    project_years=self.project_years,
-                    approval_year=self.approval_year,
-                    cost=cost_arr.sum(),
-                    prod=lft_obj.get_lifting_rate_ghv_arr(),
-                    prod_year=self.project_years,
-                    salvage_value=salvage_value,
-                    initial_amortization_year=initial_amortization_year,
-                )
-
-        # Set initial values for attributes "_oil_amortizations" and "_gas_amortizations"
-        self._oil_amortizations = {
-            c: np.zeros_like(self.project_years, dtype=float)
-            for c in ["sunk_cost", "preonstream", "postonstream"]
-        }
-
-        self._gas_amortizations = {
-            c: np.zeros_like(self.project_years, dtype=float)
-            for c in ["sunk_cost", "preonstream", "postonstream"]
-        }
-
-        # Modify "_oil_amortizations" and "_gas_amortizations" for POD I contract type
-        if self.is_pod_1:
-            for (f, f_amor) in [
-                ("oil", self._oil_amortizations),
-                ("gas", self._gas_amortizations)
-            ]:
-                for c in cost_types:
-                    f_amor[c] = amortizations[f][c]
 
     def _wrapper_base_split(self, regime: GrossSplitRegime) -> None:
         """
@@ -2900,7 +3035,7 @@ class GrossSplit(BaseProject):
         self._get_preonstream_array()
         self._get_postonstream_array()
 
-        self._prepare_amortization()
+        self._get_amortization(salvage_value=0.0)
 
         # # Modify sunk cost and preonstream cost for non-POD I contract
         # if not self.is_pod_1:
