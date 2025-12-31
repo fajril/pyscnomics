@@ -682,7 +682,7 @@ class GrossSplit(BaseProject):
                     is_strict=self.is_strict,
                 )
 
-                
+
     def _prepare_depreciation(self):
 
         onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
