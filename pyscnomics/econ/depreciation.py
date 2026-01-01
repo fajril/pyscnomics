@@ -331,6 +331,11 @@ def psc_declining_balance_depreciation_rate(
         (depreciation_charge, cost - np.sum(depreciation_charge, keepdims=True))
     )
 
+    print('\t')
+    print(f'Filetype: {type(depreciation_charge)}')
+    print(f'Length: {len(depreciation_charge)}')
+    print('depreciation_charge = ', depreciation_charge)
+
     # Modify depreciation charge; accounting for project duration
     if depreciation_len > len(depreciation_charge):
         extension = np.zeros(int(depreciation_len - len(depreciation_charge)))
@@ -543,7 +548,7 @@ def unit_of_production_rate(
     cost: float,
     prod: np.ndarray,
     prod_year: np.ndarray,
-    initial_amortization_year: InitialYearAmortizationIncurred,
+    # initial_amortization_year: InitialYearAmortizationIncurred,
     salvage_value: float,
 ) -> np.ndarray:
     """
@@ -643,9 +648,7 @@ def unit_of_production_rate(
             )
 
         # Calculate amortization charge (1 * UOP)
-        amortization_charge = np.divide(
-            prod, cum_prod, where=cum_prod != 0
-        ) * (cost - salvage_value)
+        amortization_charge = np.divide(prod, cum_prod) * (cost - salvage_value)
 
         # Calculate amortization charge (2 * UOP)
         amortization_charge = 2.0 * amortization_charge
@@ -655,9 +658,7 @@ def unit_of_production_rate(
         remaining_amortization_modified = np.where(
             remaining_amortization < 0, 0, remaining_amortization
         )
-        remaining_amortization_unique_sum = np.sum(
-            np.unique(remaining_amortization_modified)
-        )
+        remaining_amortization_unique_sum = np.sum(np.unique(remaining_amortization_modified))
 
         # Amortization charge is paid off since the first year
         if remaining_amortization_unique_sum == 0:
@@ -677,36 +678,46 @@ def unit_of_production_rate(
                 f"{remaining_amortization_unique_sum}"
             )
 
-        # Check whether amortization charge array is all zero
-        if np.all(amortization_charge == 0):
-            amortization_charge = amortization_charge
+        print('\t')
+        print(f'Filetype: {type(amortization_charge)}')
+        print(f'Length: {len(amortization_charge)}')
+        print('amortization_charge = ', amortization_charge)
 
-        else:
-            # Allocate amortization_charge according to their associated year
-            if initial_amortization_year == InitialYearAmortizationIncurred.ONSTREAM_YEAR:
-                amortization_charge = np.bincount(
-                    prod_year - project_years.min(), weights=amortization_charge
-                )
+        # # Check whether amortization charge array is all zero
+        # if np.all(amortization_charge == 0):
+        #     amortization_charge = amortization_charge
+        #
+        # else:
+        #     # Allocate amortization charge
+        #     amortization_charge = np.bincount(
+        #         prod_year - project_years.min(), weights=amortization_charge
+        #     )
+        #
+        #     # Allocate amortization_charge according to their associated year
+        #     if initial_amortization_year == InitialYearAmortizationIncurred.ONSTREAM_YEAR:
+        #         amortization_charge = np.bincount(
+        #             prod_year - project_years.min(), weights=amortization_charge
+        #         )
+        #
+        #     elif initial_amortization_year == InitialYearAmortizationIncurred.APPROVAL_YEAR:
+        #         amortization_charge = align_amortization(
+        #             amortization_charge=amortization_charge,
+        #             project_years=project_years,
+        #             target_year=approval_year,
+        #         )
+        #
+        #     else:
+        #         raise UnitOfProductionException(
+        #             f"Unrecognized initial amortization year: "
+        #             f"{initial_amortization_year.__class__.__qualname__}. "
+        #         )
 
-            elif initial_amortization_year == InitialYearAmortizationIncurred.APPROVAL_YEAR:
-                amortization_charge = align_amortization(
-                    amortization_charge=amortization_charge,
-                    project_years=project_years,
-                    target_year=approval_year,
-                )
-
-            else:
-                raise UnitOfProductionException(
-                    f"Unrecognized initial amortization year: "
-                    f"{initial_amortization_year.__class__.__qualname__}. "
-                )
-
-        # Modify amortization charge, accounting for project duration
-        if len(amortization_charge) < len(project_years):
-            extension = np.zeros(len(project_years) - len(amortization_charge))
-            amortization_charge = np.concatenate((amortization_charge, extension))
-
-        return amortization_charge
+    #     # Modify amortization charge, accounting for project duration
+    #     if len(amortization_charge) < len(project_years):
+    #         extension = np.zeros(len(project_years) - len(amortization_charge))
+    #         amortization_charge = np.concatenate((amortization_charge, extension))
+    #
+    #     return amortization_charge
 
 
 def unit_of_production_book_value(

@@ -794,12 +794,15 @@ class GrossSplit(BaseProject):
         ]
 
         mapping_sunk_costs = [
+            # Oil
             (self._oil_capital_sunk_cost, "oil_capital_sunk_cost", True),
             (self._oil_intangible_sunk_cost, "oil_intangible_sunk_cost", False),
             (self._oil_opex_sunk_cost, "oil_opex_sunk_cost", False),
             (self._oil_asr_sunk_cost, "oil_asr_sunk_cost", False),
             (self._oil_lbt_sunk_cost, "oil_lbt_sunk_cost", False),
             (self._oil_cost_of_sales_sunk_cost, "oil_cost_of_sales_sunk_cost", False),
+
+            # Gas
             (self._gas_capital_sunk_cost, "gas_capital_sunk_cost", True),
             (self._gas_intangible_sunk_cost, "gas_intangible_sunk_cost", False),
             (self._gas_opex_sunk_cost, "gas_opex_sunk_cost", False),
@@ -869,30 +872,25 @@ class GrossSplit(BaseProject):
             ),
         }
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_sunk_cost)}')
-        print(f'Length: {len(self._oil_sunk_cost)}')
-        print('_oil_sunk_cost = ', self._oil_sunk_cost)
+        # Define intermediate attribute --> "amortizations": dict
+        fluids = ["oil", "gas"]
+        cost_types = ["sunk_cost", "preonstream"]
 
-        t1 = self._oil_sunk_cost.sum()
-        print('\t')
-        print(f'Filetype: {type(t1)}')
-        print('t1 = ', t1)
+        amortizations = {f: {c: None for c in cost_types} for f in fluids}
 
-        # # Define intermediate attribute --> "amortizations": dict
-        # fluids = ["oil", "gas"]
-        # cost_types = ["sunk_cost", "preonstream"]
-        #
-        # amortizations = {f: {c: None for c in cost_types} for f in fluids}
-        #
-        # amortizations["oil"]["sunk_cost"] = unit_of_production_rate(
-        #     project_years=self.project_years,
-        #     approval_year=self.approval_year,
-        #     cost=self._oil_sunk_cost.sum(),
-        #     prod=self._oil_lifting.get_lifting_rate_ghv_arr(),
-        #     prod_year=self.project_years,
-        #     salvage_value=salvage_value,
-        # )
+        print('\t')
+        print(f'Filetype: {type(self._oil_capital_sunk_cost)}')
+        print(f'Length: {len(self._oil_capital_sunk_cost)}')
+        print('_oil_capital_sunk_cost = ', self._oil_capital_sunk_cost)
+
+        amortizations["oil"]["sunk_cost"] = unit_of_production_rate(
+            project_years=self.project_years,
+            approval_year=self.approval_year,
+            cost=self._oil_sunk_cost.sum(),
+            prod=self._oil_lifting.get_lifting_rate_ghv_arr(),
+            prod_year=self.project_years,
+            salvage_value=salvage_value,
+        )
 
 
 
@@ -1040,64 +1038,85 @@ class GrossSplit(BaseProject):
         depreciations = {f: {c: None for c in cost_types} for f in fluids}
         undepreciated_assets = {f: {c: None for c in cost_types} for f in fluids}
 
-        for (f, mapping) in depr_mapping.items():
-            for (c, obj, depr_type) in mapping:
-                (
-                    depreciations[f][c],
-                    undepreciated_assets[f][c],
-                ) = obj.total_depreciation_rate(
-                    oil_onstream_year=self.oil_onstream_date.year,
-                    gas_onstream_year=self.gas_onstream_date.year,
-                    initial_depreciation_year=depr_type,
-                    depr_method=depr_method,
-                    decline_factor=decline_factor,
-                    year_inflation=year_inflation,
-                    inflation_rate=inflation_rate,
-                    tax_rate=tax_rate,
-                    inflation_rate_applied_to=inflation_rate_applied_to,
-                )
+        self._oil_capital_sunk_cost.total_depreciation_rate(
+            depr_method=depr_method,
+            decline_factor=decline_factor,
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            tax_rate=tax_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
+        )
 
-        # Set initial values for attributes "_oil_depreciations" and "_gas_depreciations"
-        self._oil_depreciations = {
-            c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
-        }
+        # (
+        #     depreciations["oil"]["sunk_cost"],
+        #     undepreciated_assets["oil"]["sunk_cost"]
+        # ) = self._oil_capital_sunk_cost.total_depreciation_rate(
+        #     depr_method=depr_method,
+        #     decline_factor=decline_factor,
+        #     year_inflation=year_inflation,
+        #     inflation_rate=inflation_rate,
+        #     tax_rate=tax_rate,
+        #     inflation_rate_applied_to=inflation_rate_applied_to,
+        # )
 
-        self._gas_depreciations = {
-            c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
-        }
-
-        # Set initial values for attributes "_oil_undepreciated_assets"
-        # and "_gas_undepreciated_assets"
-        self._oil_undepreciated_assets = {c: None for c in cost_types}
-        self._gas_undepreciated_assets = {c: None for c in cost_types}
-
-        # Set several attributes according to contract type (POD I or non POD I)
-        if self.is_pod_1:
-
-            # Set attributes "_oil_depreciations" and "_gas_depreciations"
-            self._oil_depreciations["postonstream"] = depreciations["oil"]["postonstream"]
-            self._gas_depreciations["postonstream"] = depreciations["gas"]["postonstream"]
-
-            # Set attributes "_oil_undepreciated_assets" and "gas_undepreciated_assets"
-            for f in fluids:
-                for i, j in [
-                    ("postonstream", undepreciated_assets[f]["postonstream"]),
-                    ("preonstream", np.zeros([1, 1], dtype=float)),
-                    ("sunk_cost", np.zeros([1, 1], dtype=float))
-                ]:
-                    getattr(self, f"_{f}_undepreciated_assets")[i] = j
-
-        else:
-
-            # Set attributes "_oil_depreciations", "_gas_depreciations",
-            # "_oil_undepreciated_assets", and "gas_undepreciated_assets"
-            for f, f_depr, f_undepr in [
-                ("oil", self._oil_depreciations, self._oil_undepreciated_assets),
-                ("gas", self._gas_depreciations, self._gas_undepreciated_assets),
-            ]:
-                for c in cost_types:
-                    f_depr[c] = depreciations[f][c]
-                    f_undepr[c] = undepreciated_assets[f][c]
+        # for (f, mapping) in depr_mapping.items():
+        #     for (c, obj, depr_type) in mapping:
+        #         (
+        #             depreciations[f][c],
+        #             undepreciated_assets[f][c],
+        #         ) = obj.total_depreciation_rate(
+        #             oil_onstream_year=self.oil_onstream_date.year,
+        #             gas_onstream_year=self.gas_onstream_date.year,
+        #             initial_depreciation_year=depr_type,
+        #             depr_method=depr_method,
+        #             decline_factor=decline_factor,
+        #             year_inflation=year_inflation,
+        #             inflation_rate=inflation_rate,
+        #             tax_rate=tax_rate,
+        #             inflation_rate_applied_to=inflation_rate_applied_to,
+        #         )
+        #
+        # # Set initial values for attributes "_oil_depreciations" and "_gas_depreciations"
+        # self._oil_depreciations = {
+        #     c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
+        # }
+        #
+        # self._gas_depreciations = {
+        #     c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
+        # }
+        #
+        # # Set initial values for attributes "_oil_undepreciated_assets"
+        # # and "_gas_undepreciated_assets"
+        # self._oil_undepreciated_assets = {c: None for c in cost_types}
+        # self._gas_undepreciated_assets = {c: None for c in cost_types}
+        #
+        # # Set several attributes according to contract type (POD I or non POD I)
+        # if self.is_pod_1:
+        #
+        #     # Set attributes "_oil_depreciations" and "_gas_depreciations"
+        #     self._oil_depreciations["postonstream"] = depreciations["oil"]["postonstream"]
+        #     self._gas_depreciations["postonstream"] = depreciations["gas"]["postonstream"]
+        #
+        #     # Set attributes "_oil_undepreciated_assets" and "gas_undepreciated_assets"
+        #     for f in fluids:
+        #         for i, j in [
+        #             ("postonstream", undepreciated_assets[f]["postonstream"]),
+        #             ("preonstream", np.zeros([1, 1], dtype=float)),
+        #             ("sunk_cost", np.zeros([1, 1], dtype=float))
+        #         ]:
+        #             getattr(self, f"_{f}_undepreciated_assets")[i] = j
+        #
+        # else:
+        #
+        #     # Set attributes "_oil_depreciations", "_gas_depreciations",
+        #     # "_oil_undepreciated_assets", and "gas_undepreciated_assets"
+        #     for f, f_depr, f_undepr in [
+        #         ("oil", self._oil_depreciations, self._oil_undepreciated_assets),
+        #         ("gas", self._gas_depreciations, self._gas_undepreciated_assets),
+        #     ]:
+        #         for c in cost_types:
+        #             f_depr[c] = depreciations[f][c]
+        #             f_undepr[c] = undepreciated_assets[f][c]
 
     def _get_modified_depreciations(self, sum_undepreciated_cost: bool) -> None:
         """
@@ -3035,7 +3054,21 @@ class GrossSplit(BaseProject):
         self._get_preonstream_array()
         self._get_postonstream_array()
 
-        self._get_amortization(salvage_value=0.0)
+        print('\t')
+        print(f'Filetype: {type(self._oil_capital_sunk_cost.cost)}')
+        print(f'Length: {len(self._oil_capital_sunk_cost.cost)}')
+        print('_oil_capital_sunk_cost = ', self._oil_capital_sunk_cost.cost)
+
+        # self._get_amortization(salvage_value=0.0)
+
+        self._get_depreciation(
+            depr_method=depr_method,
+            decline_factor=decline_factor,
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            tax_rate=vat_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to
+        )
 
         # # Modify sunk cost and preonstream cost for non-POD I contract
         # if not self.is_pod_1:

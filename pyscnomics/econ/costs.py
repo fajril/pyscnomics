@@ -754,6 +754,11 @@ class CapitalCost(GeneralCost):
             None: cost_adjusted_only_by_tax,
         }[inflation_rate_applied_to]
 
+        print('\t')
+        print(f'Filetype: {type(cost_adjusted)}')
+        print(f'Length: {len(cost_adjusted)}')
+        print('cost_adjusted = ', cost_adjusted)
+
         # Calculate depreciation
         # Depreciation method is straight line
         if depr_method == DeprMethod.SL:
@@ -815,55 +820,60 @@ class CapitalCost(GeneralCost):
                 f"Depreciation method ({depr_method}) is not recognized"
             )
 
-        # Specify indices to place the first element of depreciation
-        shift_indices = self.pis_year - self.start_year
+        print('\t')
+        print(f'Filetype: {type(depreciation_charge)}')
+        print(f'Length: {len(depreciation_charge)}')
+        print('depreciation_charge = ', depreciation_charge)
 
-        # Prepare assets with overdue depreciation, namely those that
-        # have not been fully depreciated by the end of the project
-        overdues = (self.pis_year + self.useful_life - self.end_year - 1).astype(int)
-
-        is_overdue = overdues > 0
-
-        if np.any(is_overdue):
-            # Some assets have not been fully depreciated by the end of the project.
-            # These assets are overdue by {overdue[is_overdue]} years.
-            max_overdue = int(np.max(overdues[is_overdue]))
-
-            full_depr_charge = np.zeros(
-                [depreciation_charge.shape[0], depreciation_charge.shape[1] + max_overdue]
-            )
-            # useful_life = self.useful_life.astype(int)
-
-            for i, charge in enumerate(depreciation_charge):
-                # (
-                #     full_depr_charge[i, shift_indices[i]:shift_indices[i] + useful_life[i]]
-                # ) = charge[useful_life[i]]
-
-                if shift_indices[i] + charge.shape[0] > full_depr_charge.shape[1]:
-                    max_idx = full_depr_charge.shape[1] - shift_indices[i]
-                    charge = charge[:max_idx]
-
-                full_depr_charge[i, shift_indices[i]:shift_indices[i] + charge.shape[0]] = charge
-
-            overdue_depr_charge = full_depr_charge[:, self.end_year - self.start_year + 1:]
-
-        else:
-            overdue_depr_charge = np.zeros([1, 1])
-
-        # Modify depreciation_charge so that expenditures are aligned with
-        # the corresponding pis_year (or expense_year)
-        depreciation_charge = np.array(
-            [
-                np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
-                for row, i in zip(depreciation_charge, shift_indices)
-            ]
-        )
-
-        # Calculate total depreciation charge and undepreciated asset
-        total_depreciation_charge = depreciation_charge.sum(axis=0)
-        undepreciated_asset = overdue_depr_charge.sum(axis=0)
-
-        return total_depreciation_charge, undepreciated_asset
+        # # Specify indices to place the first element of depreciation
+        # shift_indices = self.pis_year - self.start_year
+        #
+        # # Prepare assets with overdue depreciation, namely those that
+        # # have not been fully depreciated by the end of the project
+        # overdues = (self.pis_year + self.useful_life - self.end_year - 1).astype(int)
+        #
+        # is_overdue = overdues > 0
+        #
+        # if np.any(is_overdue):
+        #     # Some assets have not been fully depreciated by the end of the project.
+        #     # These assets are overdue by {overdue[is_overdue]} years.
+        #     max_overdue = int(np.max(overdues[is_overdue]))
+        #
+        #     full_depr_charge = np.zeros(
+        #         [depreciation_charge.shape[0], depreciation_charge.shape[1] + max_overdue]
+        #     )
+        #     # useful_life = self.useful_life.astype(int)
+        #
+        #     for i, charge in enumerate(depreciation_charge):
+        #         # (
+        #         #     full_depr_charge[i, shift_indices[i]:shift_indices[i] + useful_life[i]]
+        #         # ) = charge[useful_life[i]]
+        #
+        #         if shift_indices[i] + charge.shape[0] > full_depr_charge.shape[1]:
+        #             max_idx = full_depr_charge.shape[1] - shift_indices[i]
+        #             charge = charge[:max_idx]
+        #
+        #         full_depr_charge[i, shift_indices[i]:shift_indices[i] + charge.shape[0]] = charge
+        #
+        #     overdue_depr_charge = full_depr_charge[:, self.end_year - self.start_year + 1:]
+        #
+        # else:
+        #     overdue_depr_charge = np.zeros([1, 1])
+        #
+        # # Modify depreciation_charge so that expenditures are aligned with
+        # # the corresponding pis_year (or expense_year)
+        # depreciation_charge = np.array(
+        #     [
+        #         np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
+        #         for row, i in zip(depreciation_charge, shift_indices)
+        #     ]
+        # )
+        #
+        # # Calculate total depreciation charge and undepreciated asset
+        # total_depreciation_charge = depreciation_charge.sum(axis=0)
+        # undepreciated_asset = overdue_depr_charge.sum(axis=0)
+        #
+        # return total_depreciation_charge, undepreciated_asset
 
     def total_depreciation_book_value(
         self,
