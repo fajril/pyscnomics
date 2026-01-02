@@ -638,7 +638,7 @@ class CostRecovery(BaseProject):
         self._prepare_depreciation()
 
         # Define the mapping between fluids, cost types, and capital objects
-        depr_mapping: dict = {
+        depr_mapping = {
             "oil": (
                 ("sunk_cost", self._oil_capital_sunk_cost),
                 ("preonstream", self._oil_capital_preonstream),

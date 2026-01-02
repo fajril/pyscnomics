@@ -8,6 +8,7 @@ import dateutils
 from datetime import date
 
 from pyscnomics.econ.revenue import Lifting
+from pyscnomics.econ.costs import CapitalCost
 
 
 def get_unrec_cost_2b_recovered_costrec(

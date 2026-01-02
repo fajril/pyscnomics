@@ -754,76 +754,73 @@ class CapitalCost(GeneralCost):
             None: cost_adjusted_only_by_tax,
         }[inflation_rate_applied_to]
 
-        print('\t')
-        print(f'Filetype: {type(cost_adjusted)}')
-        print(f'Length: {len(cost_adjusted)}')
-        print('cost_adjusted = ', cost_adjusted)
+        depr.psc_declining_balance_depreciation_rate(
+            cost=200,
+            depreciation_factor=0.5,
+            useful_life=5,
+            depreciation_len=self.project_duration,
+        )
 
-        # Calculate depreciation
-        # Depreciation method is straight line
-        if depr_method == DeprMethod.SL:
-            depreciation_charge = np.array(
-                [
-                    depr.straight_line_depreciation_rate(
-                        cost=c,
-                        salvage_value=sv,
-                        useful_life=ul,
-                        depreciation_len=self.project_duration,
-                    )
-                    for c, sv, ul in zip(
-                        cost_adjusted,
-                        self.salvage_value,
-                        self.useful_life,
-                    )
-                ]
-            )
-
-        # Depreciation method is declining balance
-        elif depr_method == DeprMethod.DB:
-            depreciation_charge = np.array(
-                [
-                    depr.declining_balance_depreciation_rate(
-                        cost=c,
-                        salvage_value=sv,
-                        useful_life=ul,
-                        decline_factor=decline_factor,
-                        depreciation_len=self.project_duration,
-                    )
-                    for c, sv, ul in zip(
-                        cost_adjusted,
-                        self.salvage_value,
-                        self.useful_life,
-                    )
-                ]
-            )
-
-        # Depreciation method is PSC declining balance
-        elif depr_method == DeprMethod.PSC_DB:
-            depreciation_charge = np.array(
-                [
-                    depr.psc_declining_balance_depreciation_rate(
-                        cost=c,
-                        depreciation_factor=dr,
-                        useful_life=ul,
-                        depreciation_len=self.project_duration,
-                    )
-                    for c, dr, ul in zip(
-                        cost_adjusted,
-                        self.depreciation_factor,
-                        self.useful_life,
-                    )
-                ]
-            )
-
-        else:
-            raise CapitalException(
-                f"Depreciation method ({depr_method}) is not recognized"
-            )
-
-        print('\t')
-        print(f'Filetype: {type(depreciation_charge)}')
-        print(f'Length: {len(depreciation_charge)}')
-        print('depreciation_charge = ', depreciation_charge)
+        # # Calculate depreciation
+        # # Depreciation method is straight line
+        # if depr_method == DeprMethod.SL:
+        #     depreciation_charge = np.array(
+        #         [
+        #             depr.straight_line_depreciation_rate(
+        #                 cost=c,
+        #                 salvage_value=sv,
+        #                 useful_life=ul,
+        #                 depreciation_len=self.project_duration,
+        #             )
+        #             for c, sv, ul in zip(
+        #                 cost_adjusted,
+        #                 self.salvage_value,
+        #                 self.useful_life,
+        #             )
+        #         ]
+        #     )
+        #
+        # # Depreciation method is declining balance
+        # elif depr_method == DeprMethod.DB:
+        #     depreciation_charge = np.array(
+        #         [
+        #             depr.declining_balance_depreciation_rate(
+        #                 cost=c,
+        #                 salvage_value=sv,
+        #                 useful_life=ul,
+        #                 decline_factor=decline_factor,
+        #                 depreciation_len=self.project_duration,
+        #             )
+        #             for c, sv, ul in zip(
+        #                 cost_adjusted,
+        #                 self.salvage_value,
+        #                 self.useful_life,
+        #             )
+        #         ]
+        #     )
+        #
+        # # Depreciation method is PSC declining balance
+        # elif depr_method == DeprMethod.PSC_DB:
+        #     depreciation_charge = np.array(
+        #         [
+        #             depr.psc_declining_balance_depreciation_rate(
+        #                 cost=c,
+        #                 depreciation_factor=dr,
+        #                 useful_life=ul,
+        #                 depreciation_len=self.project_duration,
+        #             )
+        #             for c, dr, ul in zip(
+        #                 cost_adjusted,
+        #                 self.depreciation_factor,
+        #                 self.useful_life,
+        #             )
+        #         ]
+        #     )
+        #
+        # else:
+        #     raise CapitalException(
+        #         f"Depreciation method ({depr_method}) is not recognized"
+        #     )
 
         # # Specify indices to place the first element of depreciation
         # shift_indices = self.pis_year - self.start_year
@@ -940,6 +937,56 @@ class CapitalCost(GeneralCost):
                 tax_rate=tax_rate,
             )
         ) - np.cumsum(total_depreciation_charge)
+
+    def total_amortization_rate(self, prod: np.ndarray):
+
+        # Specify cumulative production
+        cum_prod = prod.sum(dtype=float)
+
+        # If "cum_prod" is zero, return zero array of "amortization_charge"
+        if cum_prod == 0:
+            amortization_charge = np.zeros_like(self.project_years, dtype=float)
+            return amortization_charge
+
+        # Raise an error for negative value of "cum_prod"
+        if cum_prod < 0:
+            raise CapitalException(
+                f"Cannot have a negative value ({cum_prod}) in cumulative production."
+            )
+
+        cost = self.cost[0]
+        salvage_value = self.salvage_value[0]
+
+        amortization_charge = np.divide(prod, cum_prod) * (cost - salvage_value)
+        amortization_charge = 2.0 * amortization_charge
+        remaining_amortization = cost - salvage_value - np.cumsum(amortization_charge)
+        remaining_amortization_modified = np.where(
+            remaining_amortization < 0, 0, remaining_amortization
+        )
+
+        print('\t')
+        print(f'Filetype: {type(amortization_charge)}')
+        print(f'Length: {len(amortization_charge)}')
+        print('amortization_charge = \n', amortization_charge)
+
+        print('\t')
+        print(f'Filetype: {type(remaining_amortization)}')
+        print(f'Length: {len(remaining_amortization)}')
+        print('remaining_amortization = \n', remaining_amortization)
+
+        print('\t')
+        print(f'Filetype: {type(remaining_amortization_modified)}')
+        print(f'Length: {len(remaining_amortization_modified)}')
+        print('remaining_amortization_modified = \n', remaining_amortization_modified)
+
+        # mask = np.array([int(np.flatnonzero(self.project_years == pis)) for pis in self.pis_year])
+        # prod_at_pis = prod[mask]
+
+        # print('\t')
+        # print(f'Filetype: {type(amortization_charge)}')
+        # print(f'Length: {len(amortization_charge)}')
+        # print('amortization_charge = ', amortization_charge)
+
 
     def __eq__(self, other):
         # Between two instances of CapitalCost

@@ -727,15 +727,17 @@ class GrossSplit(BaseProject):
 
     def _prepare_amortization(self) -> None:
         """
-        Validate sunk and pre-onstream cost treatment for amortization logic.
+        Validate amortization-related cost classifications under PSC Gross Split.
 
-        This method enforces PSC Gross Split rules by validating:
-        - Capital cost PIS years against onstream year
-        - Proper classification of sunk vs pre-onstream costs
-        - Absence of sunk costs in Non-POD I contracts
+        Performs amortization-specific validation for POD I contracts only.
 
-        Behavior differs between POD I and Non-POD I Gross Split contracts and
-        respects strict vs non-strict validation modes.
+        For POD I:
+        - Validate capital sunk costs and pre-onstream costs PIS years vs onstream year
+        - Validate that non-capital sunk costs and pre-onstream costs are not amortized
+
+        For Non-POD I contracts, no amortization validation is applied.
+
+        Validation behavior respects strict vs non-strict mode.
         """
 
         # Specify onstream year
@@ -743,23 +745,33 @@ class GrossSplit(BaseProject):
 
         # Helper method to check whether capital costs PIS years < onstream year
         def _validate_capital_pis_years(mapping):
-            for obj, name in mapping:
+            for obj, name, is_amort in mapping:
                 self._check_capital_pis_years(
                     obj_capital=obj,
                     obj_name=name,
+                    is_amortization=is_amort,
                     is_strict=self.is_strict,
                     onstream_year=onstream_yr,
                 )
 
+        # Helper method to validate non-capital costs
+        def _validate_non_capital_costs(mapping):
+            for obj, name in mapping:
+                self._check_invalid_non_capital_costs(
+                    obj_non_capital=obj,
+                    obj_name=name,
+                    is_strict=self.is_strict,
+                )
+
         # Define several mapping variables
         mapping_capital_sunk_costs = [
-            (self._oil_capital_sunk_cost, "oil_capital_sunk_cost"),
-            (self._gas_capital_sunk_cost, "gas_capital_sunk_cost"),
+            (self._oil_capital_sunk_cost, "oil_capital_sunk_cost", True),
+            (self._gas_capital_sunk_cost, "gas_capital_sunk_cost", True),
         ]
 
-        mapping_capital_preonstream = [
-            (self._oil_capital_preonstream, "oil_capital_preonstream"),
-            (self._gas_capital_preonstream, "gas_capital_preonstream"),
+        mapping_capital_preonstreams = [
+            (self._oil_capital_preonstream, "oil_capital_preonstream", True),
+            (self._gas_capital_preonstream, "gas_capital_preonstream", True),
         ]
 
         mapping_non_capital_sunk_costs = [
@@ -778,7 +790,7 @@ class GrossSplit(BaseProject):
             (self._gas_cost_of_sales_sunk_cost, "gas_cost_of_sales_sunk_cost"),
         ]
 
-        mapping_non_capital_preonstream = [
+        mapping_non_capital_preonstreams = [
             # Oil
             (self._oil_intangible_preonstream, "oil_intangible_preonstream"),
             (self._oil_opex_preonstream, "oil_opex_preonstream"),
@@ -794,62 +806,26 @@ class GrossSplit(BaseProject):
             (self._gas_cost_of_sales_preonstream, "gas_cost_of_sales_preonstream"),
         ]
 
-        mapping_sunk_costs = [
-            # Oil
-            (self._oil_capital_sunk_cost, "oil_capital_sunk_cost", True),
-            (self._oil_intangible_sunk_cost, "oil_intangible_sunk_cost", False),
-            (self._oil_opex_sunk_cost, "oil_opex_sunk_cost", False),
-            (self._oil_asr_sunk_cost, "oil_asr_sunk_cost", False),
-            (self._oil_lbt_sunk_cost, "oil_lbt_sunk_cost", False),
-            (self._oil_cost_of_sales_sunk_cost, "oil_cost_of_sales_sunk_cost", False),
+        # Non-POD I Gross Split:
+        # Amortization validation is not applicable
+        if not self.is_pod_1:
+            return
 
-            # Gas
-            (self._gas_capital_sunk_cost, "gas_capital_sunk_cost", True),
-            (self._gas_intangible_sunk_cost, "gas_intangible_sunk_cost", False),
-            (self._gas_opex_sunk_cost, "gas_opex_sunk_cost", False),
-            (self._gas_asr_sunk_cost, "gas_asr_sunk_cost", False),
-            (self._gas_lbt_sunk_cost, "gas_lbt_sunk_cost", False),
-            (self._gas_cost_of_sales_sunk_cost, "gas_cost_of_sales_sunk_cost", False),
-        ]
-
-        # POD I GS
-        if self.is_pod_1:
+        # POD I Gross Split:
+        # 1) Validate capital sunk costs PIS years
+        # 2) Validate non-capital sunk costs
+        else:
             # Check capital sunk costs: whether PIS years < onstream year
             _validate_capital_pis_years(mapping_capital_sunk_costs)
 
             # Check capital preonstream costs: whether PIS years < onstream year
-            _validate_capital_pis_years(mapping_capital_preonstream)
+            _validate_capital_pis_years(mapping_capital_preonstreams)
 
             # Check whether sunk costs are treated as non-capital costs
-            for obj, name in mapping_non_capital_sunk_costs:
-                self._check_invalid_non_capital_costs(
-                    obj_non_capital=obj,
-                    obj_name=name,
-                    is_strict=self.is_strict,
-                )
+            _validate_non_capital_costs(mapping_non_capital_sunk_costs)
 
             # Check whether preonstream costs are treated as non-capital costs
-            for obj, name in mapping_non_capital_preonstream:
-                self._check_invalid_non_capital_costs(
-                    obj_non_capital=obj,
-                    obj_name=name,
-                    is_strict=self.is_strict,
-                )
-
-        # Non-POD I GS
-        else:
-            # Check whether sunk costs exist
-            for obj, name, is_cap in mapping_sunk_costs:
-                self._check_no_sunk_costs(
-                    sc_object=obj,
-                    sc_name=name,
-                    is_capital=is_cap,
-                    is_strict=self.is_strict,
-                    onstream_year=onstream_yr,
-                )
-
-            # Check capital preonstream: whether PIS years < onstream year
-            _validate_capital_pis_years(mapping_capital_preonstream)
+            _validate_non_capital_costs(mapping_non_capital_preonstreams)
 
     def _get_amortization(
         self,
@@ -879,18 +855,14 @@ class GrossSplit(BaseProject):
 
         amortizations = {f: {c: None for c in cost_types} for f in fluids}
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_capital_sunk_cost)}')
-        print(f'Length: {len(self._oil_capital_sunk_cost)}')
-        print('_oil_capital_sunk_cost = ', self._oil_capital_sunk_cost)
+        # print('\t')
+        # print(f'Filetype: {type(self._oil_capital_sunk_cost)}')
+        # print(f'Length: {len(self._oil_capital_sunk_cost)}')
+        # print('_oil_capital_sunk_cost = ', self._oil_capital_sunk_cost)
 
-        amortizations["oil"]["sunk_cost"] = unit_of_production_rate(
-            project_years=self.project_years,
-            approval_year=self.approval_year,
-            cost=self._oil_sunk_cost.sum(),
-            prod=self._oil_lifting.get_lifting_rate_ghv_arr(),
-            prod_year=self.project_years,
-            salvage_value=salvage_value,
+        self._oil_capital_sunk_cost.total_amortization_rate(
+            prod=self._oil_lifting.get_lifting_rate_ghv_arr()
+            # prod=np.array([0, 0, 0, 0, 0, 0, 0, 1, 10, 1000])
         )
 
         # for (f, mapping) in amort_mapping.items():
@@ -999,44 +971,22 @@ class GrossSplit(BaseProject):
         tax_rate: np.ndarray | float,
         inflation_rate_applied_to: InflationAppliedTo,
     ) -> None:
-        
-        # Define the mapping between fluids, cost types, capital objects, and
-        # the initial year of depreciation incurred
+
+        # Preliminary assessments prior to depreciation calculation
+        self._prepare_depreciation()
+
+        # Define the mapping between fluids, cost types, and capital objects
         depr_mapping = {
-            "oil": (
-                (
-                    "postonstream",
-                    self._oil_capital_postonstream,
-                    InitialYearDepreciationIncurred.DIRECT,
-                ),
-                (
-                    "preonstream",
-                    self._oil_capital_preonstream,
-                    InitialYearDepreciationIncurred.ONSTREAM_YEAR,
-                ),
-                (
-                    "sunk_cost",
-                    self._oil_capital_sunk_cost,
-                    InitialYearDepreciationIncurred.ONSTREAM_YEAR,
-                ),
-            ),
-            "gas": (
-                (
-                    "postonstream",
-                    self._gas_capital_postonstream,
-                    InitialYearDepreciationIncurred.DIRECT,
-                ),
-                (
-                    "preonstream",
-                    self._gas_capital_preonstream,
-                    InitialYearDepreciationIncurred.ONSTREAM_YEAR,
-                ),
-                (
-                    "sunk_cost",
-                    self._gas_capital_sunk_cost,
-                    InitialYearDepreciationIncurred.ONSTREAM_YEAR,
-                ),
-            )
+            "oil": [
+                ("sunk_cost", self._oil_capital_sunk_cost),
+                ("preonstream", self._oil_capital_preonstream),
+                ("postonstream", self._oil_capital_postonstream),
+            ],
+            "gas": [
+                ("sunk_cost", self._gas_capital_sunk_cost),
+                ("preonstream", self._gas_capital_preonstream),
+                ("postonstream", self._gas_capital_postonstream),
+            ],
         }
 
         # Define intermediate attributes:
@@ -1055,6 +1005,11 @@ class GrossSplit(BaseProject):
             tax_rate=tax_rate,
             inflation_rate_applied_to=inflation_rate_applied_to,
         )
+
+        # print('\t')
+        # print(f'Filetype: {type(self._oil_capital_sunk_cost)}')
+        # print(f'Length: {len(self._oil_capital_sunk_cost)}')
+        # print('_oil_capital_sunk_cost = ', self._oil_capital_sunk_cost)
 
         # (
         #     depreciations["oil"]["sunk_cost"],
@@ -3063,10 +3018,7 @@ class GrossSplit(BaseProject):
         self._get_preonstream_array()
         self._get_postonstream_array()
 
-        self._prepare_depreciation()
-
-
-        # self._get_amortization(salvage_value=0.0)
+        self._get_amortization(salvage_value=0.0)
 
         # self._get_depreciation(
         #     depr_method=depr_method,

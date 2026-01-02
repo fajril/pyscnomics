@@ -331,11 +331,6 @@ def psc_declining_balance_depreciation_rate(
         (depreciation_charge, cost - np.sum(depreciation_charge, keepdims=True))
     )
 
-    print('\t')
-    print(f'Filetype: {type(depreciation_charge)}')
-    print(f'Length: {len(depreciation_charge)}')
-    print('depreciation_charge = ', depreciation_charge)
-
     # Modify depreciation charge; accounting for project duration
     if depreciation_len > len(depreciation_charge):
         extension = np.zeros(int(depreciation_len - len(depreciation_charge)))

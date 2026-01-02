@@ -197,6 +197,7 @@ class Case00A:
         """
 
         # Prepare capital data: OIL
+
         capital_oil = {
             "start_year": 2023,
             "end_year": 2032,
@@ -244,9 +245,9 @@ class Case00A:
             ),
             "cost_type": (
                 [
-                    None,  # 2023
-                    None,  # 2024
-                    None,  # 2025
+                    CostType.SUNK_COST,  # 2023
+                    CostType.SUNK_COST,  # 2024
+                    CostType.SUNK_COST,  # 2025
                     None,  # 2026
                     None,  # 2027
                     None,  # 2028
@@ -273,8 +274,8 @@ class Case00A:
             "pis_year": np.array(
                 [
                     2029,
-                    2029,
-                    2029,
+                    2030,  # 2029,
+                    2030,  # 2029,
                     2029,
                     2029,
                     2029,
@@ -285,7 +286,6 @@ class Case00A:
                 ]
             )
         }
-
         # Prepare capital data: GAS
         capital_gas = {
             "start_year": 2023,
