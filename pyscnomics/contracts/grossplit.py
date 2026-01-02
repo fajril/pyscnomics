@@ -701,7 +701,7 @@ class GrossSplit(BaseProject):
             f"Conceptually, Non-POD I PSC GS SHOULD NOT contain any sunk costs, either as "
             f"capital or non-capital sunk costs. Having sunk costs in Non-POD I GS contract "
             f"leads to incorrect calculation, in which capital sunk costs are subject to "
-            f"amortizations and non-capital sunk costs are subject to direct charges."
+            f"depreciations and non-capital sunk costs are subject to direct charges."
         )
 
         # Strict mode: raise an error and stop execution
@@ -720,6 +720,7 @@ class GrossSplit(BaseProject):
                 self._check_capital_pis_years(
                     obj_capital=sc_object,
                     obj_name=sc_name,
+                    is_amortization=False,
                     is_strict=False,
                     onstream_year=onstream_year,
                 )
@@ -892,9 +893,6 @@ class GrossSplit(BaseProject):
             salvage_value=salvage_value,
         )
 
-
-
-
         # for (f, mapping) in amort_mapping.items():
         #     for (c, cost_arr, lft_obj) in mapping:
         #         amortizations[f][c] = unit_of_production_rate(
@@ -927,11 +925,70 @@ class GrossSplit(BaseProject):
         #         for c in cost_types:
         #             f_amor[c] = amortizations[f][c]
 
+    def _prepare_depreciation(self) -> None:
+        """
+        Validate depreciation-related constraints for PSC Gross Split contracts.
 
+        For Non-POD I contracts, this method disallows all sunk costs and
+        validates capital pre-onstream PIS years against the onstream year.
+        POD I contracts bypass depreciation-specific validation.
+        """
 
-    def _prepare_depreciation(self):
-
+        # Specify onstream year
         onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+
+        # All sunk costs (capital and non-capital) that must NOT exist
+        # in Non-POD I Gross Split contracts
+        mapping_sunk_costs = [
+            # Oil
+            (self._oil_capital_sunk_cost, "oil_capital_sunk_cost", True),
+            (self._oil_intangible_sunk_cost, "oil_intangible_sunk_cost", False),
+            (self._oil_opex_sunk_cost, "oil_opex_sunk_cost", False),
+            (self._oil_asr_sunk_cost, "oil_asr_sunk_cost", False),
+            (self._oil_lbt_sunk_cost, "oil_lbt_sunk_cost", False),
+            (self._oil_cost_of_sales_sunk_cost, "oil_cost_of_sales_sunk_cost", False),
+
+            # Gas
+            (self._gas_capital_sunk_cost, "gas_capital_sunk_cost", True),
+            (self._gas_intangible_sunk_cost, "gas_intangible_sunk_cost", False),
+            (self._gas_opex_sunk_cost, "gas_opex_sunk_cost", False),
+            (self._gas_asr_sunk_cost, "gas_asr_sunk_cost", False),
+            (self._gas_lbt_sunk_cost, "gas_lbt_sunk_cost", False),
+            (self._gas_cost_of_sales_sunk_cost, "gas_cost_of_sales_sunk_cost", False),
+        ]
+
+        # Capital pre-onstream costs whose PIS years must not precede onstream year
+        mapping_capital_preonstreams = [
+            (self._oil_capital_preonstream, "oil_capital_preonstream", False),
+            (self._gas_capital_preonstream, "gas_capital_preonstream", False),
+        ]
+
+        # POD I Gross Split:
+        # Depreciation validation is not applicable
+        if self.is_pod_1:
+            return
+
+        # Non-POD I Gross Split:
+        # 1) Disallow all sunk costs
+        # 2) Validate capital pre-onstream PIS years
+        else:
+            for obj, name, is_cap in mapping_sunk_costs:
+                self._check_no_sunk_costs(
+                    sc_object=obj,
+                    sc_name=name,
+                    is_capital=is_cap,
+                    is_strict=self.is_strict,
+                    onstream_year=onstream_yr,
+                )
+
+            for obj, name, is_amort in mapping_capital_preonstreams:
+                self._check_capital_pis_years(
+                    obj_capital=obj,
+                    obj_name=name,
+                    is_amortization=is_amort,
+                    is_strict=self.is_strict,
+                    onstream_year=onstream_yr,
+                )
 
     def _get_depreciation(
         self,
@@ -942,55 +999,7 @@ class GrossSplit(BaseProject):
         tax_rate: np.ndarray | float,
         inflation_rate_applied_to: InflationAppliedTo,
     ) -> None:
-        """
-        Compute and assign depreciation schedules and undepreciated asset balances
-        for oil and gas capital costs.
-
-        This method constructs depreciation arrays for post-onstream, pre-onstream,
-        and sunk cost categories of both oil and gas. Depreciation is calculated
-        using the provided method and economic parameters (inflation, tax, etc.).
-        The results are assigned to internal attributes, including:
-
-        - ``self._oil_depreciations`` and ``self._gas_depreciations``:
-          dictionaries of depreciation arrays by cost type.
-        - ``self._oil_undepreciated_assets`` and ``self._gas_undepreciated_assets``:
-          dictionaries of undepreciated asset balances by cost type.
-
-        Behavior depends on the contract type (POD I vs. non-POD I):
-        - **POD I**: only post-onstream depreciation and undepreciated assets are
-          retained, while pre-onstream and sunk cost balances are initialized to
-          zero.
-        - **Non-POD I**: all depreciation and undepreciated asset categories are
-          retained.
-
-        Parameters
-        ----------
-        depr_method : DeprMethod
-            Depreciation method to apply (e.g., straight-line, declining balance).
-        decline_factor : float or int
-            Factor used for declining balance depreciation (e.g., 2 for double
-            declining balance).
-        year_inflation : np.ndarray
-            Array of year-on-year inflation multipliers applied to cost recovery.
-        inflation_rate : np.ndarray or int or float
-            Inflation rate(s) applied to depreciation. Can be a scalar or an array.
-        tax_rate : np.ndarray or float
-            Applicable tax rate(s) used in depreciation calculation.
-        inflation_rate_applied_to : InflationAppliedTo
-            Specifies whether inflation is applied to CAPEX, OPEX, CAPEX and OPEX,
-            or None.
-
-        Returns
-        -------
-        None
-            Results are stored in the following attributes:
-
-            - ``self._oil_depreciations`` : dict[str, np.ndarray]
-            - ``self._gas_depreciations`` : dict[str, np.ndarray]
-            - ``self._oil_undepreciated_assets`` : dict[str, np.ndarray]
-            - ``self._gas_undepreciated_assets`` : dict[str, np.ndarray]
-        """
-
+        
         # Define the mapping between fluids, cost types, capital objects, and
         # the initial year of depreciation incurred
         depr_mapping = {
@@ -3054,21 +3063,19 @@ class GrossSplit(BaseProject):
         self._get_preonstream_array()
         self._get_postonstream_array()
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_capital_sunk_cost.cost)}')
-        print(f'Length: {len(self._oil_capital_sunk_cost.cost)}')
-        print('_oil_capital_sunk_cost = ', self._oil_capital_sunk_cost.cost)
+        self._prepare_depreciation()
+
 
         # self._get_amortization(salvage_value=0.0)
 
-        self._get_depreciation(
-            depr_method=depr_method,
-            decline_factor=decline_factor,
-            year_inflation=year_inflation,
-            inflation_rate=inflation_rate,
-            tax_rate=vat_rate,
-            inflation_rate_applied_to=inflation_rate_applied_to
-        )
+        # self._get_depreciation(
+        #     depr_method=depr_method,
+        #     decline_factor=decline_factor,
+        #     year_inflation=year_inflation,
+        #     inflation_rate=inflation_rate,
+        #     tax_rate=vat_rate,
+        #     inflation_rate_applied_to=inflation_rate_applied_to
+        # )
 
         # # Modify sunk cost and preonstream cost for non-POD I contract
         # if not self.is_pod_1:

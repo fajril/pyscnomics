@@ -566,12 +566,18 @@ class CostRecovery(BaseProject):
         # Specify onstream year
         onstream_yr = min(self.oil_onstream_date.year, self.gas_onstream_date.year)
 
-        # Check whether sunk costs are treated as capital costs
+        # Collection of mappings
         mapping_capital_sunk_costs = [
             (self._oil_capital_sunk_cost, "oil_capital_sunk_cost"),
             (self._gas_capital_sunk_cost, "gas_capital_sunk_cost"),
         ]
 
+        mapping_capital_preonstreams = [
+            (self._oil_capital_preonstream, "oil_capital_preonstream"),
+            (self._gas_capital_preonstream, "gas_capital_preonstream"),
+        ]
+
+        # Check whether sunk costs are treated as capital costs
         for sc_obj, sc_name in mapping_capital_sunk_costs:
             self._check_capital_sunk_cost(
                 sc_capital_object=sc_obj,
@@ -581,11 +587,6 @@ class CostRecovery(BaseProject):
             )
 
         # Check capital preonstream costs: whether PIS years < onstream year
-        mapping_capital_preonstreams = [
-            (self._oil_capital_preonstream, "oil_capital_preonstream"),
-            (self._gas_capital_preonstream, "gas_capital_preonstream"),
-        ]
-
         for preos_obj, preos_name in mapping_capital_preonstreams:
             self._check_capital_pis_years(
                 obj_capital=preos_obj,

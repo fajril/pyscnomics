@@ -4083,25 +4083,30 @@ class BaseProject:
         self,
         obj_capital: CapitalCost,
         obj_name: str,
+        is_amortization: bool,
         is_strict: bool,
         onstream_year: int,
     ) -> None:
         """
-        Validate that capital PIS years do not precede the onstream year.
+        Validate capital PIS years against the onstream year.
 
-        This method checks whether any ``pis_year`` values in a ``CapitalCost`` object
-        occur before the specified ``onstream_year``. If violations are found, strict
-        mode raises an exception, while loose mode records a warning and continues
-        execution.
+        Checks whether any PIS years in a ``CapitalCost`` object occur before the
+        onstream year. In strict mode, violations raise an exception; otherwise,
+        a warning is recorded. Warning messages differ depending on whether the
+        cost is treated under amortization or depreciation logic.
 
         Parameters
         ----------
         obj_capital : CapitalCost
-            Capital cost object containing PIS years and associated costs.
+            Capital cost object containing cost values and PIS years.
         obj_name : str
-            Descriptive name of the capital cost object, used in messages.
+            Descriptive name of the capital cost object (used in messages).
+        is_amortization : bool
+            If True, applies amortization-specific validation messaging;
+            otherwise, depreciation-specific messaging is used.
         is_strict : bool
-            If True, invalid PIS years raise an exception; otherwise, a warning is stored.
+            If True, invalid PIS years raise an exception; otherwise, a warning
+            is stored and execution continues.
         onstream_year : int
             Earliest allowable year for capital PIS recognition.
 
@@ -4135,13 +4140,27 @@ class BaseProject:
             f"onstream year ({onstream_year})."
         )
 
-        msg_warning = (
-            f"Found {obj_name!r} PIS years ({invalid_pis_yrs}) before onstream year "
-            f"({onstream_year}). PSCnomics will ALWAYS charge {obj_name!r} depreciations or "
-            f"amortizations at their corresponding PIS years. You may want to reset the "
-            f"configuration of the following PIS years ({invalid}) so that they prevail at "
-            f"the onstream year ({onstream_year})."
-        )
+        if is_amortization:
+            msg_warning = (
+                f"Found {obj_name!r} PIS years ({invalid_pis_yrs}) before onstream year "
+                f"({onstream_year}). PSCnomics will ALWAYS charge {obj_name!r} amortizations "
+                f"at their corresponding PIS years. Please be aware that setting PIS years "
+                f"before onstream year will lead to ZERO amortizations due to the absence of "
+                f"lifting commodities. Since lifting components prior to onstream are ZEROS, "
+                f"calculation of amortizations using the Unit of Production (UOP) method will "
+                f"produce ZERO results. You may want to reset the configuration of the "
+                f"following PIS years ({invalid}) so that they prevail at the onstream year "
+                f"({onstream_year})."
+            )
+
+        else:
+            msg_warning = (
+                f"Found {obj_name!r} PIS years ({invalid_pis_yrs}) before onstream year "
+                f"({onstream_year}). PSCnomics will ALWAYS charge {obj_name!r} depreciations "
+                f"at their corresponding PIS years. You may want to reset the configuration "
+                f"of the following PIS years ({invalid}) so that they prevail at the onstream "
+                f"year ({onstream_year})."
+            )
 
         # Strict mode: raise an error and stop execution
         if is_strict:
