@@ -35,7 +35,7 @@ from pyscnomics.econ.selection import (
     DiscountingMode,
     ContractType,
 )
-from pyscnomics.econ.depreciation import unit_of_production_rate
+from pyscnomics.econ.depreciation import unit_of_production_rate, unit_of_production_book_value
 from pyscnomics.econ.indicator import (
     irr,
     npv_nominal_terms,
@@ -860,13 +860,34 @@ class GrossSplit(BaseProject):
         # print(f'Length: {len(self._oil_capital_sunk_cost)}')
         # print('_oil_capital_sunk_cost = ', self._oil_capital_sunk_cost)
 
-        unit_of_production_rate(
-            project_years=self.project_years,
+        t1 = unit_of_production_rate(
+            project_years=np.array(
+                [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032]
+            ),
+            # project_years=self.project_years,
             prod=np.array([0, 0, 10, 10, 10, 10, 10, 0, 0, 0]),
             cost=100,
             salvage_value=0,
-            pis_year=2024,
+            pis_year=2026,
         )
+
+        # t2 = unit_of_production_book_value(
+        #     project_years=self.project_years,
+        #     prod=np.array([None, 0, 10, 10, 10, 10, 10, 0, 0, np.nan]),
+        #     cost=100,
+        #     salvage_value=0,
+        #     pis_year=2024,
+        # )
+
+        # print('\t')
+        # print(f'Filetype: {type(t1)}')
+        # print(f'Length: {len(t1)}')
+        # print('t1 = ', t1)
+        #
+        # print('\t')
+        # print(f'Filetype: {type(t2)}')
+        # print(f'Length: {len(t2)}')
+        # print('t2 = ', t2)
 
         # for (f, mapping) in amort_mapping.items():
         #     for (c, cost_arr, lft_obj) in mapping:

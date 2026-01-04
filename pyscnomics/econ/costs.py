@@ -938,6 +938,11 @@ class CapitalCost(GeneralCost):
             )
         ) - np.cumsum(total_depreciation_charge)
 
+
+
+
+
+
     def total_amortization_rate(self, prod: np.ndarray):
 
         # Specify cumulative production
