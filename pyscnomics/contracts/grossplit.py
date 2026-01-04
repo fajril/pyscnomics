@@ -867,7 +867,7 @@ class GrossSplit(BaseProject):
         - Supported cost types: ``sunk_cost``, ``preonstream``, ``postonstream``.
         - Post-onstream amortization is always zero.
         """
-        
+
         def _zeros():
             return np.zeros_like(self.project_years, dtype=float)
 
