@@ -860,9 +860,12 @@ class GrossSplit(BaseProject):
         # print(f'Length: {len(self._oil_capital_sunk_cost)}')
         # print('_oil_capital_sunk_cost = ', self._oil_capital_sunk_cost)
 
-        self._oil_capital_sunk_cost.total_amortization_rate(
-            prod=self._oil_lifting.get_lifting_rate_ghv_arr()
-            # prod=np.array([0, 0, 0, 0, 0, 0, 0, 1, 10, 1000])
+        unit_of_production_rate(
+            project_years=self.project_years,
+            prod=np.array([0, 0, 10, 10, 10, 10, 10, 0, 0, 0]),
+            cost=100,
+            salvage_value=0,
+            pis_year=2024,
         )
 
         # for (f, mapping) in amort_mapping.items():
