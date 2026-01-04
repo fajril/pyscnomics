@@ -829,97 +829,98 @@ class GrossSplit(BaseProject):
 
     def _get_amortization(
         self,
-        salvage_value: float,
-        # initial_amortization_year: InitialYearAmortizationIncurred,
+        year_inflation: np.ndarray,
+        inflation_rate: np.ndarray | int | float,
+        tax_rate: np.ndarray | float,
+        inflation_rate_applied_to: InflationAppliedTo,
     ) -> None:
+        """
+        Compute oil and gas amortization schedules by cost type.
+
+        Initializes amortization arrays for all cost types and fluids. If the
+        project is POD-1, sunk and pre-onstream amortizations are calculated
+        using unit-of-production logic with inflation and tax adjustments.
+        Post-onstream amortization is set to zero.
+
+        Parameters
+        ----------
+        year_inflation : np.ndarray
+            Inflation base years aligned with project years.
+        inflation_rate : np.ndarray or float or int
+            Inflation rate(s) applied to eligible costs.
+        tax_rate : np.ndarray or float
+            Indirect tax rate(s).
+        inflation_rate_applied_to : InflationAppliedTo
+            Specifies which cost components are subject to inflation.
+
+        Returns
+        -------
+        None
+            Updates the following attributes in place:
+
+            - ``_oil_amortizations``
+            - ``_gas_amortizations``
+
+        Notes
+        -----
+        - Only POD-1 projects generate amortization charges.
+        - Supported cost types: ``sunk_cost``, ``preonstream``, ``postonstream``.
+        - Post-onstream amortization is always zero.
+        """
+        
+        def _zeros():
+            return np.zeros_like(self.project_years, dtype=float)
+
+        # Initialize amortization containers for all cost types
+        cost_types_all = ["sunk_cost", "preonstream", "postonstream"]
+        self._oil_amortizations = {c: _zeros() for c in cost_types_all}
+        self._gas_amortizations = {c: _zeros() for c in cost_types_all}
+
+        # Only POD 1 projects generate amortization
+        if not self.is_pod_1:
+            return
 
         # Prepare data prior to calculating amortization
         self._prepare_amortization()
 
-        # Define mapping between fluid types, cost types, cost types array, and
-        # fluid lifting objects
+        # Mapping: fluid → (cost type, capital cost object, lifting object)
         amort_mapping = {
             "oil": (
-                ("sunk_cost", self._oil_sunk_cost, self._oil_lifting),
-                ("preonstream", self._oil_preonstream, self._oil_lifting),
+                ("sunk_cost", self._oil_capital_sunk_cost, self._oil_lifting),
+                ("preonstream", self._oil_capital_preonstream, self._oil_lifting),
             ),
             "gas": (
-                ("sunk_cost", self._gas_sunk_cost, self._gas_lifting),
-                ("preonstream", self._gas_preonstream, self._gas_lifting),
+                ("sunk_cost", self._gas_capital_sunk_cost, self._gas_lifting),
+                ("preonstream", self._gas_capital_preonstream, self._gas_lifting),
             ),
         }
 
         # Define intermediate attribute --> "amortizations": dict
-        fluids = ["oil", "gas"]
-        cost_types = ["sunk_cost", "preonstream"]
+        # Only these cost types generate amortization charges
+        cost_types_amort = ["sunk_cost", "preonstream"]
+        amortizations = {f: {c: None for c in cost_types_amort} for f in amort_mapping.keys()}
 
-        amortizations = {f: {c: None for c in cost_types} for f in fluids}
+        # Common arguments passed to amortization calculator
+        kwargs_amort = {
+            "year_inflation": year_inflation,
+            "inflation_rate": inflation_rate,
+            "tax_rate": tax_rate,
+            "inflation_rate_applied_to": inflation_rate_applied_to,
+        }
 
-        # print('\t')
-        # print(f'Filetype: {type(self._oil_capital_sunk_cost)}')
-        # print(f'Length: {len(self._oil_capital_sunk_cost)}')
-        # print('_oil_capital_sunk_cost = ', self._oil_capital_sunk_cost)
+        # Compute amortization per fluid per cost type
+        for f, mapping in amort_mapping.items():
+            for c, obj_c, obj_l in mapping:
+                amortizations[f][c] = obj_c.total_amortization_rate(
+                    prod=obj_l.get_lifting_rate_ghv_arr(),
+                    **kwargs_amort,
+                )
 
-        t1 = unit_of_production_rate(
-            project_years=np.array(
-                [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032]
-            ),
-            # project_years=self.project_years,
-            prod=np.array([0, 0, 10, 10, 10, 10, 10, 0, 0, 0]),
-            cost=100,
-            salvage_value=0,
-            pis_year=2026,
-        )
-
-        # t2 = unit_of_production_book_value(
-        #     project_years=self.project_years,
-        #     prod=np.array([None, 0, 10, 10, 10, 10, 10, 0, 0, np.nan]),
-        #     cost=100,
-        #     salvage_value=0,
-        #     pis_year=2024,
-        # )
-
-        # print('\t')
-        # print(f'Filetype: {type(t1)}')
-        # print(f'Length: {len(t1)}')
-        # print('t1 = ', t1)
-        #
-        # print('\t')
-        # print(f'Filetype: {type(t2)}')
-        # print(f'Length: {len(t2)}')
-        # print('t2 = ', t2)
-
-        # for (f, mapping) in amort_mapping.items():
-        #     for (c, cost_arr, lft_obj) in mapping:
-        #         amortizations[f][c] = unit_of_production_rate(
-        #             project_years=self.project_years,
-        #             approval_year=self.approval_year,
-        #             cost=cost_arr.sum(),
-        #             prod=lft_obj.get_lifting_rate_ghv_arr(),
-        #             prod_year=self.project_years,
-        #             salvage_value=salvage_value,
-        #             # initial_amortization_year=initial_amortization_year,
-        #         )
-        #
-        # # Set initial values for attributes "_oil_amortizations" and "_gas_amortizations"
-        # self._oil_amortizations = {
-        #     c: np.zeros_like(self.project_years, dtype=float)
-        #     for c in ["sunk_cost", "preonstream", "postonstream"]
-        # }
-        #
-        # self._gas_amortizations = {
-        #     c: np.zeros_like(self.project_years, dtype=float)
-        #     for c in ["sunk_cost", "preonstream", "postonstream"]
-        # }
-        #
-        # # Modify "_oil_amortizations" and "_gas_amortizations" for POD I contract type
-        # if self.is_pod_1:
-        #     for (f, f_amor) in [
-        #         ("oil", self._oil_amortizations),
-        #         ("gas", self._gas_amortizations)
-        #     ]:
-        #         for c in cost_types:
-        #             f_amor[c] = amortizations[f][c]
+        # Assign computed amortizations; post-onstream remains zero
+        self._oil_amortizations = amortizations["oil"]
+        self._gas_amortizations = amortizations["gas"]
+        self._oil_amortizations["postonstream"] = _zeros()
+        self._gas_amortizations["postonstream"] = _zeros()
 
     def _prepare_depreciation(self) -> None:
         """
@@ -3042,7 +3043,17 @@ class GrossSplit(BaseProject):
         self._get_preonstream_array()
         self._get_postonstream_array()
 
-        self._get_amortization(salvage_value=0.0)
+        self._get_amortization(
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            tax_rate=vat_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
+        )
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_amortizations)}')
+        print(f'Length: {len(self._oil_amortizations)}')
+        print('_oil_amortizations = \n', self._oil_amortizations)
 
         # self._get_depreciation(
         #     depr_method=depr_method,

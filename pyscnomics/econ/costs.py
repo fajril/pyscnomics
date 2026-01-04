@@ -754,123 +754,116 @@ class CapitalCost(GeneralCost):
             None: cost_adjusted_only_by_tax,
         }[inflation_rate_applied_to]
 
-        depr.psc_declining_balance_depreciation_rate(
-            cost=200,
-            depreciation_factor=0.5,
-            useful_life=5,
-            depreciation_len=self.project_duration,
+        # Calculate depreciation
+        # Depreciation method is straight line
+        if depr_method == DeprMethod.SL:
+            depreciation_charge = np.array(
+                [
+                    depr.straight_line_depreciation_rate(
+                        cost=c,
+                        salvage_value=sv,
+                        useful_life=ul,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, sv, ul in zip(
+                        cost_adjusted,
+                        self.salvage_value,
+                        self.useful_life,
+                    )
+                ]
+            )
+
+        # Depreciation method is declining balance
+        elif depr_method == DeprMethod.DB:
+            depreciation_charge = np.array(
+                [
+                    depr.declining_balance_depreciation_rate(
+                        cost=c,
+                        salvage_value=sv,
+                        useful_life=ul,
+                        decline_factor=decline_factor,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, sv, ul in zip(
+                        cost_adjusted,
+                        self.salvage_value,
+                        self.useful_life,
+                    )
+                ]
+            )
+
+        # Depreciation method is PSC declining balance
+        elif depr_method == DeprMethod.PSC_DB:
+            depreciation_charge = np.array(
+                [
+                    depr.psc_declining_balance_depreciation_rate(
+                        cost=c,
+                        depreciation_factor=dr,
+                        useful_life=ul,
+                        depreciation_len=self.project_duration,
+                    )
+                    for c, dr, ul in zip(
+                        cost_adjusted,
+                        self.depreciation_factor,
+                        self.useful_life,
+                    )
+                ]
+            )
+
+        else:
+            raise CapitalException(
+                f"Depreciation method ({depr_method}) is not recognized"
+            )
+
+        # Specify indices to place the first element of depreciation
+        shift_indices = self.pis_year - self.start_year
+
+        # Prepare assets with overdue depreciation, namely those that
+        # have not been fully depreciated by the end of the project
+        overdues = (self.pis_year + self.useful_life - self.end_year - 1).astype(int)
+
+        is_overdue = overdues > 0
+
+        if np.any(is_overdue):
+            # Some assets have not been fully depreciated by the end of the project.
+            # These assets are overdue by {overdue[is_overdue]} years.
+            max_overdue = int(np.max(overdues[is_overdue]))
+
+            full_depr_charge = np.zeros(
+                [depreciation_charge.shape[0], depreciation_charge.shape[1] + max_overdue]
+            )
+            # useful_life = self.useful_life.astype(int)
+
+            for i, charge in enumerate(depreciation_charge):
+                # (
+                #     full_depr_charge[i, shift_indices[i]:shift_indices[i] + useful_life[i]]
+                # ) = charge[useful_life[i]]
+
+                if shift_indices[i] + charge.shape[0] > full_depr_charge.shape[1]:
+                    max_idx = full_depr_charge.shape[1] - shift_indices[i]
+                    charge = charge[:max_idx]
+
+                full_depr_charge[i, shift_indices[i]:shift_indices[i] + charge.shape[0]] = charge
+
+            overdue_depr_charge = full_depr_charge[:, self.end_year - self.start_year + 1:]
+
+        else:
+            overdue_depr_charge = np.zeros([1, 1])
+
+        # Modify depreciation_charge so that expenditures are aligned with
+        # the corresponding pis_year (or expense_year)
+        depreciation_charge = np.array(
+            [
+                np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
+                for row, i in zip(depreciation_charge, shift_indices)
+            ]
         )
 
-        # # Calculate depreciation
-        # # Depreciation method is straight line
-        # if depr_method == DeprMethod.SL:
-        #     depreciation_charge = np.array(
-        #         [
-        #             depr.straight_line_depreciation_rate(
-        #                 cost=c,
-        #                 salvage_value=sv,
-        #                 useful_life=ul,
-        #                 depreciation_len=self.project_duration,
-        #             )
-        #             for c, sv, ul in zip(
-        #                 cost_adjusted,
-        #                 self.salvage_value,
-        #                 self.useful_life,
-        #             )
-        #         ]
-        #     )
-        #
-        # # Depreciation method is declining balance
-        # elif depr_method == DeprMethod.DB:
-        #     depreciation_charge = np.array(
-        #         [
-        #             depr.declining_balance_depreciation_rate(
-        #                 cost=c,
-        #                 salvage_value=sv,
-        #                 useful_life=ul,
-        #                 decline_factor=decline_factor,
-        #                 depreciation_len=self.project_duration,
-        #             )
-        #             for c, sv, ul in zip(
-        #                 cost_adjusted,
-        #                 self.salvage_value,
-        #                 self.useful_life,
-        #             )
-        #         ]
-        #     )
-        #
-        # # Depreciation method is PSC declining balance
-        # elif depr_method == DeprMethod.PSC_DB:
-        #     depreciation_charge = np.array(
-        #         [
-        #             depr.psc_declining_balance_depreciation_rate(
-        #                 cost=c,
-        #                 depreciation_factor=dr,
-        #                 useful_life=ul,
-        #                 depreciation_len=self.project_duration,
-        #             )
-        #             for c, dr, ul in zip(
-        #                 cost_adjusted,
-        #                 self.depreciation_factor,
-        #                 self.useful_life,
-        #             )
-        #         ]
-        #     )
-        #
-        # else:
-        #     raise CapitalException(
-        #         f"Depreciation method ({depr_method}) is not recognized"
-        #     )
+        # Calculate total depreciation charge and undepreciated asset
+        total_depreciation_charge = depreciation_charge.sum(axis=0)
+        undepreciated_asset = overdue_depr_charge.sum(axis=0)
 
-        # # Specify indices to place the first element of depreciation
-        # shift_indices = self.pis_year - self.start_year
-        #
-        # # Prepare assets with overdue depreciation, namely those that
-        # # have not been fully depreciated by the end of the project
-        # overdues = (self.pis_year + self.useful_life - self.end_year - 1).astype(int)
-        #
-        # is_overdue = overdues > 0
-        #
-        # if np.any(is_overdue):
-        #     # Some assets have not been fully depreciated by the end of the project.
-        #     # These assets are overdue by {overdue[is_overdue]} years.
-        #     max_overdue = int(np.max(overdues[is_overdue]))
-        #
-        #     full_depr_charge = np.zeros(
-        #         [depreciation_charge.shape[0], depreciation_charge.shape[1] + max_overdue]
-        #     )
-        #     # useful_life = self.useful_life.astype(int)
-        #
-        #     for i, charge in enumerate(depreciation_charge):
-        #         # (
-        #         #     full_depr_charge[i, shift_indices[i]:shift_indices[i] + useful_life[i]]
-        #         # ) = charge[useful_life[i]]
-        #
-        #         if shift_indices[i] + charge.shape[0] > full_depr_charge.shape[1]:
-        #             max_idx = full_depr_charge.shape[1] - shift_indices[i]
-        #             charge = charge[:max_idx]
-        #
-        #         full_depr_charge[i, shift_indices[i]:shift_indices[i] + charge.shape[0]] = charge
-        #
-        #     overdue_depr_charge = full_depr_charge[:, self.end_year - self.start_year + 1:]
-        #
-        # else:
-        #     overdue_depr_charge = np.zeros([1, 1])
-        #
-        # # Modify depreciation_charge so that expenditures are aligned with
-        # # the corresponding pis_year (or expense_year)
-        # depreciation_charge = np.array(
-        #     [
-        #         np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
-        #         for row, i in zip(depreciation_charge, shift_indices)
-        #     ]
-        # )
-        #
-        # # Calculate total depreciation charge and undepreciated asset
-        # total_depreciation_charge = depreciation_charge.sum(axis=0)
-        # undepreciated_asset = overdue_depr_charge.sum(axis=0)
-        #
-        # return total_depreciation_charge, undepreciated_asset
+        return total_depreciation_charge, undepreciated_asset
 
     def total_depreciation_book_value(
         self,
@@ -938,60 +931,112 @@ class CapitalCost(GeneralCost):
             )
         ) - np.cumsum(total_depreciation_charge)
 
+    def total_amortization_rate(
+        self,
+        prod: np.ndarray,
+        year_inflation: np.ndarray,
+        inflation_rate: np.ndarray | int | float,
+        tax_rate: np.ndarray | float,
+        inflation_rate_applied_to: InflationAppliedTo | None,
+    ) -> np.ndarray:
+        """
+        Compute total unit-of-production amortization rate for all capital elements.
 
+        Adjusts capital costs for inflation and/or indirect tax according to
+        ``inflation_rate_applied_to``, then computes unit-of-production
+        amortization per cost element and aggregates them into a project-level
+        amortization profile.
 
+        Parameters
+        ----------
+        prod : np.ndarray
+            Production profile aligned with ``self.project_years``.
+        year_inflation : np.ndarray
+            Year identifiers used for inflation adjustment.
+        inflation_rate : np.ndarray or float or int
+            Inflation rate(s) applied to eligible cost components.
+        tax_rate : np.ndarray or float
+            Indirect tax rate(s).
+        inflation_rate_applied_to : InflationAppliedTo or None
+            Specifies which cost components are adjusted by inflation.
+            If None, only indirect tax is applied.
 
+        Returns
+        -------
+        np.ndarray
+            Total amortization charge per project year.
+        """
 
-
-    def total_amortization_rate(self, prod: np.ndarray):
-
-        # Specify cumulative production
-        cum_prod = prod.sum(dtype=float)
-
-        # If "cum_prod" is zero, return zero array of "amortization_charge"
-        if cum_prod == 0:
-            amortization_charge = np.zeros_like(self.project_years, dtype=float)
-            return amortization_charge
-
-        # Raise an error for negative value of "cum_prod"
-        if cum_prod < 0:
+        # Prepare parameter "inflation_rate_applied_to"
+        if not isinstance(inflation_rate_applied_to, (InflationAppliedTo, type(None))):
             raise CapitalException(
-                f"Cannot have a negative value ({cum_prod}) in cumulative production."
+                f"Invalid inflation_rate_applied_to: "
+                f"({inflation_rate_applied_to.__class__.__qualname__}). "
+                f"Expected one of {list(InflationAppliedTo)} or None."
             )
 
-        cost = self.cost[0]
-        salvage_value = self.salvage_value[0]
-
-        amortization_charge = np.divide(prod, cum_prod) * (cost - salvage_value)
-        amortization_charge = 2.0 * amortization_charge
-        remaining_amortization = cost - salvage_value - np.cumsum(amortization_charge)
-        remaining_amortization_modified = np.where(
-            remaining_amortization < 0, 0, remaining_amortization
+        # Specify "cost_adjusted" according to "inflation_rate_applied_to"
+        cost_adjusted_by_inflation_and_tax = (
+            get_cost_adjustment_by_inflation(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                cost=self.cost,
+                expense_year=self.expense_year,
+                project_years=self.project_years,
+                year_inflation=year_inflation,
+                inflation_rate=inflation_rate,
+            )
+            + calc_indirect_tax(
+                start_year=self.start_year,
+                cost=self.cost,
+                expense_year=self.expense_year,
+                project_years=self.project_years,
+                tax_portion=self.tax_portion,
+                tax_rate=tax_rate,
+                tax_discount=self.tax_discount,
+            )
         )
 
-        print('\t')
-        print(f'Filetype: {type(amortization_charge)}')
-        print(f'Length: {len(amortization_charge)}')
-        print('amortization_charge = \n', amortization_charge)
+        cost_adjusted_only_by_tax = (
+            self.cost
+            + calc_indirect_tax(
+                start_year=self.start_year,
+                cost=self.cost,
+                expense_year=self.expense_year,
+                project_years=self.project_years,
+                tax_portion=self.tax_portion,
+                tax_rate=tax_rate,
+                tax_discount=self.tax_discount,
+            )
+        )
 
-        print('\t')
-        print(f'Filetype: {type(remaining_amortization)}')
-        print(f'Length: {len(remaining_amortization)}')
-        print('remaining_amortization = \n', remaining_amortization)
+        cost_adjusted = {
+            InflationAppliedTo.CAPEX: cost_adjusted_by_inflation_and_tax,
+            InflationAppliedTo.CAPEX_AND_OPEX: cost_adjusted_by_inflation_and_tax,
+            InflationAppliedTo.OPEX: cost_adjusted_only_by_tax,
+            None: cost_adjusted_only_by_tax,
+        }[inflation_rate_applied_to]
 
-        print('\t')
-        print(f'Filetype: {type(remaining_amortization_modified)}')
-        print(f'Length: {len(remaining_amortization_modified)}')
-        print('remaining_amortization_modified = \n', remaining_amortization_modified)
+        # Calculate amortization charges
+        amortization_charges = np.array(
+            [
+                depr.unit_of_production_rate(
+                    project_years=self.project_years,
+                    prod=prod,
+                    cost=c,
+                    salvage_value=sv,
+                    pis_year=pis,
+                )
+                for c, sv, pis in zip(
+                    cost_adjusted,
+                    self.salvage_value,
+                    self.pis_year,
+                )
+            ]
+        )
 
-        # mask = np.array([int(np.flatnonzero(self.project_years == pis)) for pis in self.pis_year])
-        # prod_at_pis = prod[mask]
-
-        # print('\t')
-        # print(f'Filetype: {type(amortization_charge)}')
-        # print(f'Length: {len(amortization_charge)}')
-        # print('amortization_charge = ', amortization_charge)
-
+        # Returns total amortization charge for all cost elements
+        return amortization_charges.sum(axis=0)
 
     def __eq__(self, other):
         # Between two instances of CapitalCost
