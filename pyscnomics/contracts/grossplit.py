@@ -512,58 +512,6 @@ class GrossSplit(BaseProject):
                     f"{self.project_duration}"
                 )
 
-    # def _validate_sunkcost_non_pod_1(self) -> None:
-    #     """
-    #     Validate sunk cost arrays for non–POD I contracts.
-    #
-    #     This method checks whether all sunk cost components are zero when the
-    #     contract is not POD I. The validation is performed on both depreciable and
-    #     non-depreciable sunk cost arrays for oil and gas.
-    #
-    #     In strict mode (``is_strict``), the presence of any non-zero sunk cost in a
-    #     non–POD I contract results in a ``SunkCostException``. In non-strict mode,
-    #     the method instead emits a warning for each cost category found to contain
-    #     non-zero values.
-    #
-    #     The following attributes are validated:
-    #
-    #     - ``_oil_depreciable_sunk_cost``
-    #     - ``_gas_depreciable_sunk_cost``
-    #     - ``_oil_non_depreciable_sunk_cost``
-    #     - ``_gas_non_depreciable_sunk_cost``
-    #
-    #     Notes
-    #     -----
-    #     - POD I contracts are exempt from this validation.
-    #     - The method does not modify any sunk cost or preonstream arrays; it performs
-    #       validation only.
-    #     """
-    #
-    #     def _all_zeros(arr: np.ndarray) -> bool:
-    #         return np.all(arr == 0)
-    #
-    #     if not self.is_pod_1:
-    #         zero_sunk_costs = {
-    #             "oil_depreciable": _all_zeros(self._oil_depreciable_sunk_cost),
-    #             "gas_depreciable": _all_zeros(self._gas_depreciable_sunk_cost),
-    #             "oil_non_depreciable": _all_zeros(self._oil_non_depreciable_sunk_cost),
-    #             "gas_non_depreciable": _all_zeros(self._gas_non_depreciable_sunk_cost),
-    #         }
-    #
-    #         values = zero_sunk_costs.values()
-    #
-    #         # Strict mode: raise an error
-    #         if self.is_strict:
-    #             if not all(values):
-    #                 raise SunkCostException(f"Cannot have sunk cost in non-POD I contract.")
-    #
-    #         # Loose mode: display a warning message
-    #         else:
-    #             for key, val in zero_sunk_costs.items():
-    #                 if not val:
-    #                     message = f"Found {key} sunk cost for non-POD I contract."
-    #                     logging.warning(message)
-
     def _check_invalid_non_capital_costs(
         self,
         obj_non_capital: Intangible | OPEX | ASR | LBT | CostOfSales,
@@ -942,11 +890,21 @@ class GrossSplit(BaseProject):
 
     def _prepare_depreciation(self) -> None:
         """
-        Validate depreciation-related constraints for PSC Gross Split contracts.
+        Prepare and validate depreciation-related constraints.
 
-        For Non-POD I contracts, this method disallows all sunk costs and
-        validates capital pre-onstream PIS years against the onstream year.
-        POD I contracts bypass depreciation-specific validation.
+        Scope
+        -----
+        - Applies to Non-POD I PSC Gross Split contracts only.
+        - POD I contracts → no depreciation validation (early exit).
+
+        Workflow (Non-POD I)
+        -------------------
+        1. Determine effective onstream year (earliest oil/gas).
+        2. Disallow all sunk costs (capital | non-capital).
+        3. Validate capital pre-onstream PIS years:
+           - PIS year must not precede onstream year.
+
+        Validation behavior follows ``self.is_strict``.
         """
 
         # POD I Gross Split:
@@ -1013,6 +971,37 @@ class GrossSplit(BaseProject):
         tax_rate: np.ndarray | float,
         inflation_rate_applied_to: InflationAppliedTo,
     ) -> None:
+        """
+        Compute depreciation and remaining undepreciated assets.
+
+        Generates depreciation schedules for oil and gas capital costs under
+        Non-POD I PSC Gross Split contracts. POD I projects return zero
+        depreciation by design.
+
+        Workflow
+        --------
+        1. Initialize zero-valued depreciation and undepreciated asset containers.
+        2. Exit early for POD I contracts.
+        3. Run depreciation pre-validation.
+        4. Compute depreciation per fluid (oil | gas) and cost type
+           (sunk | pre-onstream | post-onstream).
+        5. Store depreciation and undepreciated asset results on the instance.
+
+        Parameters
+        ----------
+        depr_method : DeprMethod
+            Depreciation method applied to capital costs.
+        decline_factor : float or int
+            Decline factor used by applicable depreciation methods.
+        year_inflation : ndarray
+            Project-year inflation index.
+        inflation_rate : ndarray or float
+            Inflation rate applied to depreciation calculations.
+        tax_rate : ndarray or float
+            Applicable tax rate.
+        inflation_rate_applied_to : InflationAppliedTo
+            Specifies which components inflation is applied to.
+        """
 
         def _zeros_arr():
             return np.zeros_like(self.project_years, dtype=float)
@@ -1034,12 +1023,7 @@ class GrossSplit(BaseProject):
         # Prepare data prior to calculating depreciation
         self._prepare_depreciation()
 
-
-
-
-
-
-        # Define the mapping between fluids, cost types, and capital objects
+        # Mapping: fluid -> (cost type, capital cost object)
         depr_mapping = {
             "oil": [
                 ("sunk_cost", self._oil_capital_sunk_cost),
@@ -1053,98 +1037,32 @@ class GrossSplit(BaseProject):
             ],
         }
 
-        # Define intermediate attributes:
-        # "depreciations": dict and "undepreciated_assets": dict
-        fluids = ["oil", "gas"]
-        cost_types = ["postonstream", "preonstream", "sunk_cost"]
+        # Define intermediate attributes: "depreciations" and "undepreciated_assets"
+        depreciations = {f: {c: None for c in cost_types} for f in depr_mapping.keys()}
+        undepreciated_assets = {f: {c: None for c in cost_types} for f in depr_mapping.keys()}
 
-        depreciations = {f: {c: None for c in cost_types} for f in fluids}
-        undepreciated_assets = {f: {c: None for c in cost_types} for f in fluids}
+        # Common arguments passed to depreciation calculator
+        kwargs_depr = {
+            "depr_method": depr_method,
+            "decline_factor": decline_factor,
+            "year_inflation": year_inflation,
+            "inflation_rate": inflation_rate,
+            "tax_rate": tax_rate,
+            "inflation_rate_applied_to": inflation_rate_applied_to,
+        }
 
-        t1 = self._oil_capital_sunk_cost.total_depreciation_rate(
-            depr_method=depr_method,
-            decline_factor=decline_factor,
-            year_inflation=year_inflation,
-            inflation_rate=inflation_rate,
-            tax_rate=tax_rate,
-            inflation_rate_applied_to=inflation_rate_applied_to,
-        )
+        # Compute depreciation per fluid per cost type
+        for f, mapping in depr_mapping.items():
+            for c, obj_c in mapping:
+                (
+                    depreciations[f][c], undepreciated_assets[f][c]
+                ) = obj_c.total_depreciation_rate(**kwargs_depr)
 
-        # print('\t')
-        # print(f'Filetype: {type(t1)}')
-        # print(f'Shape: {t1.shape}')
-        # print('t1 = ', t1)
-
-        # (
-        #     depreciations["oil"]["sunk_cost"],
-        #     undepreciated_assets["oil"]["sunk_cost"]
-        # ) = self._oil_capital_sunk_cost.total_depreciation_rate(
-        #     depr_method=depr_method,
-        #     decline_factor=decline_factor,
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     tax_rate=tax_rate,
-        #     inflation_rate_applied_to=inflation_rate_applied_to,
-        # )
-
-        # for (f, mapping) in depr_mapping.items():
-        #     for (c, obj, depr_type) in mapping:
-        #         (
-        #             depreciations[f][c],
-        #             undepreciated_assets[f][c],
-        #         ) = obj.total_depreciation_rate(
-        #             oil_onstream_year=self.oil_onstream_date.year,
-        #             gas_onstream_year=self.gas_onstream_date.year,
-        #             initial_depreciation_year=depr_type,
-        #             depr_method=depr_method,
-        #             decline_factor=decline_factor,
-        #             year_inflation=year_inflation,
-        #             inflation_rate=inflation_rate,
-        #             tax_rate=tax_rate,
-        #             inflation_rate_applied_to=inflation_rate_applied_to,
-        #         )
-        #
-        # # Set initial values for attributes "_oil_depreciations" and "_gas_depreciations"
-        # self._oil_depreciations = {
-        #     c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
-        # }
-        #
-        # self._gas_depreciations = {
-        #     c: np.zeros_like(self.project_years, dtype=float) for c in cost_types
-        # }
-        #
-        # # Set initial values for attributes "_oil_undepreciated_assets"
-        # # and "_gas_undepreciated_assets"
-        # self._oil_undepreciated_assets = {c: None for c in cost_types}
-        # self._gas_undepreciated_assets = {c: None for c in cost_types}
-        #
-        # # Set several attributes according to contract type (POD I or non POD I)
-        # if self.is_pod_1:
-        #
-        #     # Set attributes "_oil_depreciations" and "_gas_depreciations"
-        #     self._oil_depreciations["postonstream"] = depreciations["oil"]["postonstream"]
-        #     self._gas_depreciations["postonstream"] = depreciations["gas"]["postonstream"]
-        #
-        #     # Set attributes "_oil_undepreciated_assets" and "gas_undepreciated_assets"
-        #     for f in fluids:
-        #         for i, j in [
-        #             ("postonstream", undepreciated_assets[f]["postonstream"]),
-        #             ("preonstream", np.zeros([1, 1], dtype=float)),
-        #             ("sunk_cost", np.zeros([1, 1], dtype=float))
-        #         ]:
-        #             getattr(self, f"_{f}_undepreciated_assets")[i] = j
-        #
-        # else:
-        #
-        #     # Set attributes "_oil_depreciations", "_gas_depreciations",
-        #     # "_oil_undepreciated_assets", and "gas_undepreciated_assets"
-        #     for f, f_depr, f_undepr in [
-        #         ("oil", self._oil_depreciations, self._oil_undepreciated_assets),
-        #         ("gas", self._gas_depreciations, self._gas_undepreciated_assets),
-        #     ]:
-        #         for c in cost_types:
-        #             f_depr[c] = depreciations[f][c]
-        #             f_undepr[c] = undepreciated_assets[f][c]
+        # Assign computed depreciations
+        self._oil_depreciations = depreciations["oil"]
+        self._gas_depreciations = depreciations["gas"]
+        self._oil_undepreciated_assets = undepreciated_assets["oil"]
+        self._gas_undepreciated_assets = undepreciated_assets["gas"]
 
     def _get_modified_depreciations(self, sum_undepreciated_cost: bool) -> None:
         """
@@ -1227,6 +1145,12 @@ class GrossSplit(BaseProject):
             # Assign preonstream cost depreciations as zeros
             self._oil_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
             self._gas_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
+
+    def _allocate_non_depreciable_sunk_cost(self):
+        pass
+
+    def _get_non_depreciables(self):
+        pass
 
     def _wrapper_base_split(self, regime: GrossSplitRegime) -> None:
         """
@@ -3082,18 +3006,15 @@ class GrossSplit(BaseProject):
         self._get_preonstream_array()
         self._get_postonstream_array()
 
-        # self._get_amortization(
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     tax_rate=vat_rate,
-        #     inflation_rate_applied_to=inflation_rate_applied_to,
-        # )
+        # Calculate amortization
+        self._get_amortization(
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            tax_rate=vat_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
+        )
 
-        # print('\t')
-        # print(f'Filetype: {type(self._oil_amortizations)}')
-        # print(f'Length: {len(self._oil_amortizations)}')
-        # print('_oil_amortizations = \n', self._oil_amortizations)
-
+        # Calculate depreciations and undepreciated assets
         self._get_depreciation(
             depr_method=depr_method,
             decline_factor=decline_factor,
@@ -3103,33 +3024,22 @@ class GrossSplit(BaseProject):
             inflation_rate_applied_to=inflation_rate_applied_to
         )
 
-        # # Modify sunk cost and preonstream cost for non-POD I contract
-        # if not self.is_pod_1:
-        #     self._validated_sunkcost_non_pod_1()
-        #
-        #     """
-        #     Former approach
-        #     ---------------
-        #     # Combine sunk cost and preonstream cost for non-POD I contract,
-        #     # Assign the result as the "modified" sunk cost
-        #     self._oil_sunk_cost += self._oil_preonstream
-        #     self._gas_sunk_cost += self._gas_preonstream
-        #
-        #     # Assign preonstream cost as zeros
-        #     self._oil_preonstream = np.zeros_like(self.project_years, dtype=float)
-        #     self._gas_preonstream = np.zeros_like(self.project_years, dtype=float)
-        #     """
-        #
-        # # Calculate depreciations and undepreciated assets
-        # self._get_depreciation(
-        #     depr_method=depr_method,
-        #     decline_factor=decline_factor,
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     tax_rate=vat_rate,
-        #     inflation_rate_applied_to=inflation_rate_applied_to,
-        # )
-        #
+        print('\t')
+        print(f'Filetype: {type(self._oil_amortizations)}')
+        print(f'Length: {len(self._oil_amortizations)}')
+        print('_oil_amortizations = ', self._oil_amortizations)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_depreciations)}')
+        print(f'Length: {len(self._oil_depreciations)}')
+        print('_oil_depreciations = ', self._oil_depreciations)
+
+        print('\t')
+        print(f'Filetype: {type(self._oil_undepreciated_assets)}')
+        print(f'Length: {len(self._oil_undepreciated_assets)}')
+        print('_oil_undepreciated_assets = ', self._oil_undepreciated_assets)
+
+
         # # Modify depreciations, accounting for various adjusments
         # self._get_modified_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)
         # self._oil_sum_undepreciated_asset = np.sum(
@@ -3138,13 +3048,7 @@ class GrossSplit(BaseProject):
         # self._gas_sum_undepreciated_asset = np.sum(
         #     [np.sum(v) for v in self._gas_undepreciated_assets.values()]
         # )
-        #
-        # # Calculate amortizations
-        # self._get_amortization(
-        #     salvage_value=0.0,
-        #     initial_amortization_year=initial_amortization_year,
-        # )
-        #
+
         # self._oil_depreciation = np.sum([v for v in self._oil_depreciations.values()], axis=0)
         # self._gas_depreciation = np.sum([v for v in self._gas_depreciations.values()], axis=0)
         # self._oil_amortization = np.sum([v for v in self._oil_amortizations.values()], axis=0)
