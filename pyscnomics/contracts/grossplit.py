@@ -512,57 +512,57 @@ class GrossSplit(BaseProject):
                     f"{self.project_duration}"
                 )
 
-    def _validate_sunkcost_non_pod_1(self) -> None:
-        """
-        Validate sunk cost arrays for non–POD I contracts.
-
-        This method checks whether all sunk cost components are zero when the
-        contract is not POD I. The validation is performed on both depreciable and
-        non-depreciable sunk cost arrays for oil and gas.
-
-        In strict mode (``is_strict``), the presence of any non-zero sunk cost in a
-        non–POD I contract results in a ``SunkCostException``. In non-strict mode,
-        the method instead emits a warning for each cost category found to contain
-        non-zero values.
-
-        The following attributes are validated:
-
-        - ``_oil_depreciable_sunk_cost``
-        - ``_gas_depreciable_sunk_cost``
-        - ``_oil_non_depreciable_sunk_cost``
-        - ``_gas_non_depreciable_sunk_cost``
-
-        Notes
-        -----
-        - POD I contracts are exempt from this validation.
-        - The method does not modify any sunk cost or preonstream arrays; it performs
-          validation only.
-        """
-
-        def _all_zeros(arr: np.ndarray) -> bool:
-            return np.all(arr == 0)
-
-        if not self.is_pod_1:
-            zero_sunk_costs = {
-                "oil_depreciable": _all_zeros(self._oil_depreciable_sunk_cost),
-                "gas_depreciable": _all_zeros(self._gas_depreciable_sunk_cost),
-                "oil_non_depreciable": _all_zeros(self._oil_non_depreciable_sunk_cost),
-                "gas_non_depreciable": _all_zeros(self._gas_non_depreciable_sunk_cost),
-            }
-
-            values = zero_sunk_costs.values()
-
-            # Strict mode: raise an error
-            if self.is_strict:
-                if not all(values):
-                    raise SunkCostException(f"Cannot have sunk cost in non-POD I contract.")
-
-            # Loose mode: display a warning message
-            else:
-                for key, val in zero_sunk_costs.items():
-                    if not val:
-                        message = f"Found {key} sunk cost for non-POD I contract."
-                        logging.warning(message)
+    # def _validate_sunkcost_non_pod_1(self) -> None:
+    #     """
+    #     Validate sunk cost arrays for non–POD I contracts.
+    #
+    #     This method checks whether all sunk cost components are zero when the
+    #     contract is not POD I. The validation is performed on both depreciable and
+    #     non-depreciable sunk cost arrays for oil and gas.
+    #
+    #     In strict mode (``is_strict``), the presence of any non-zero sunk cost in a
+    #     non–POD I contract results in a ``SunkCostException``. In non-strict mode,
+    #     the method instead emits a warning for each cost category found to contain
+    #     non-zero values.
+    #
+    #     The following attributes are validated:
+    #
+    #     - ``_oil_depreciable_sunk_cost``
+    #     - ``_gas_depreciable_sunk_cost``
+    #     - ``_oil_non_depreciable_sunk_cost``
+    #     - ``_gas_non_depreciable_sunk_cost``
+    #
+    #     Notes
+    #     -----
+    #     - POD I contracts are exempt from this validation.
+    #     - The method does not modify any sunk cost or preonstream arrays; it performs
+    #       validation only.
+    #     """
+    #
+    #     def _all_zeros(arr: np.ndarray) -> bool:
+    #         return np.all(arr == 0)
+    #
+    #     if not self.is_pod_1:
+    #         zero_sunk_costs = {
+    #             "oil_depreciable": _all_zeros(self._oil_depreciable_sunk_cost),
+    #             "gas_depreciable": _all_zeros(self._gas_depreciable_sunk_cost),
+    #             "oil_non_depreciable": _all_zeros(self._oil_non_depreciable_sunk_cost),
+    #             "gas_non_depreciable": _all_zeros(self._gas_non_depreciable_sunk_cost),
+    #         }
+    #
+    #         values = zero_sunk_costs.values()
+    #
+    #         # Strict mode: raise an error
+    #         if self.is_strict:
+    #             if not all(values):
+    #                 raise SunkCostException(f"Cannot have sunk cost in non-POD I contract.")
+    #
+    #         # Loose mode: display a warning message
+    #         else:
+    #             for key, val in zero_sunk_costs.items():
+    #                 if not val:
+    #                     message = f"Found {key} sunk cost for non-POD I contract."
+    #                     logging.warning(message)
 
     def _check_invalid_non_capital_costs(
         self,
@@ -949,6 +949,11 @@ class GrossSplit(BaseProject):
         POD I contracts bypass depreciation-specific validation.
         """
 
+        # POD I Gross Split:
+        # Depreciation validation is not applicable
+        if self.is_pod_1:
+            return
+
         # Specify onstream year
         onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
 
@@ -978,32 +983,26 @@ class GrossSplit(BaseProject):
             (self._gas_capital_preonstream, "gas_capital_preonstream", False),
         ]
 
-        # POD I Gross Split:
-        # Depreciation validation is not applicable
-        if self.is_pod_1:
-            return
-
         # Non-POD I Gross Split:
         # 1) Disallow all sunk costs
         # 2) Validate capital pre-onstream PIS years
-        else:
-            for obj, name, is_cap in mapping_sunk_costs:
-                self._check_no_sunk_costs(
-                    sc_object=obj,
-                    sc_name=name,
-                    is_capital=is_cap,
-                    is_strict=self.is_strict,
-                    onstream_year=onstream_yr,
-                )
+        for obj, name, is_cap in mapping_sunk_costs:
+            self._check_no_sunk_costs(
+                sc_object=obj,
+                sc_name=name,
+                is_capital=is_cap,
+                is_strict=self.is_strict,
+                onstream_year=onstream_yr,
+            )
 
-            for obj, name, is_amort in mapping_capital_preonstreams:
-                self._check_capital_pis_years_before_onstream(
-                    obj_capital=obj,
-                    obj_name=name,
-                    is_amortization=is_amort,
-                    is_strict=self.is_strict,
-                    onstream_year=onstream_yr,
-                )
+        for obj, name, is_amort in mapping_capital_preonstreams:
+            self._check_capital_pis_years_before_onstream(
+                obj_capital=obj,
+                obj_name=name,
+                is_amortization=is_amort,
+                is_strict=self.is_strict,
+                onstream_year=onstream_yr,
+            )
 
     def _get_depreciation(
         self,
@@ -1015,8 +1014,30 @@ class GrossSplit(BaseProject):
         inflation_rate_applied_to: InflationAppliedTo,
     ) -> None:
 
-        # Preliminary assessments prior to depreciation calculation
+        def _zeros_arr():
+            return np.zeros_like(self.project_years, dtype=float)
+
+        def _zeros_sv():
+            return np.zeros(1, dtype=float)
+
+        # Initialize depreciation and undepreciated_asset containers for all cost types
+        cost_types = ["sunk_cost", "preonstream", "postonstream"]
+        self._oil_depreciations = {c: _zeros_arr() for c in cost_types}
+        self._gas_depreciations = {c: _zeros_arr() for c in cost_types}
+        self._oil_undepreciated_assets = {c: _zeros_sv() for c in cost_types}
+        self._gas_undepreciated_assets = {c: _zeros_sv() for c in cost_types}
+
+        # Only Non-POD 1 projects generate depreciation
+        if self.is_pod_1:
+            return
+
+        # Prepare data prior to calculating depreciation
         self._prepare_depreciation()
+
+
+
+
+
 
         # Define the mapping between fluids, cost types, and capital objects
         depr_mapping = {
@@ -1040,7 +1061,7 @@ class GrossSplit(BaseProject):
         depreciations = {f: {c: None for c in cost_types} for f in fluids}
         undepreciated_assets = {f: {c: None for c in cost_types} for f in fluids}
 
-        self._oil_capital_sunk_cost.total_depreciation_rate(
+        t1 = self._oil_capital_sunk_cost.total_depreciation_rate(
             depr_method=depr_method,
             decline_factor=decline_factor,
             year_inflation=year_inflation,
@@ -1050,9 +1071,9 @@ class GrossSplit(BaseProject):
         )
 
         # print('\t')
-        # print(f'Filetype: {type(self._oil_capital_sunk_cost)}')
-        # print(f'Length: {len(self._oil_capital_sunk_cost)}')
-        # print('_oil_capital_sunk_cost = ', self._oil_capital_sunk_cost)
+        # print(f'Filetype: {type(t1)}')
+        # print(f'Shape: {t1.shape}')
+        # print('t1 = ', t1)
 
         # (
         #     depreciations["oil"]["sunk_cost"],
@@ -3061,26 +3082,26 @@ class GrossSplit(BaseProject):
         self._get_preonstream_array()
         self._get_postonstream_array()
 
-        self._get_amortization(
-            year_inflation=year_inflation,
-            inflation_rate=inflation_rate,
-            tax_rate=vat_rate,
-            inflation_rate_applied_to=inflation_rate_applied_to,
-        )
+        # self._get_amortization(
+        #     year_inflation=year_inflation,
+        #     inflation_rate=inflation_rate,
+        #     tax_rate=vat_rate,
+        #     inflation_rate_applied_to=inflation_rate_applied_to,
+        # )
 
         # print('\t')
         # print(f'Filetype: {type(self._oil_amortizations)}')
         # print(f'Length: {len(self._oil_amortizations)}')
         # print('_oil_amortizations = \n', self._oil_amortizations)
 
-        # self._get_depreciation(
-        #     depr_method=depr_method,
-        #     decline_factor=decline_factor,
-        #     year_inflation=year_inflation,
-        #     inflation_rate=inflation_rate,
-        #     tax_rate=vat_rate,
-        #     inflation_rate_applied_to=inflation_rate_applied_to
-        # )
+        self._get_depreciation(
+            depr_method=depr_method,
+            decline_factor=decline_factor,
+            year_inflation=year_inflation,
+            inflation_rate=inflation_rate,
+            tax_rate=vat_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to
+        )
 
         # # Modify sunk cost and preonstream cost for non-POD I contract
         # if not self.is_pod_1:
