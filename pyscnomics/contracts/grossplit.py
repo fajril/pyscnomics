@@ -1007,7 +1007,7 @@ class GrossSplit(BaseProject):
             return np.zeros_like(self.project_years, dtype=float)
 
         def _zeros_sv():
-            return np.zeros(1, dtype=float)
+            return np.zeros([1, 1], dtype=float)
 
         # Initialize depreciation and undepreciated_asset containers for all cost types
         cost_types = ["sunk_cost", "preonstream", "postonstream"]
@@ -1066,56 +1066,35 @@ class GrossSplit(BaseProject):
 
     def _get_modified_depreciations(self, sum_undepreciated_cost: bool) -> None:
         """
-        Modify oil and gas depreciation and undepreciated asset schedules.
+        Adjust oil and gas depreciation and undepreciated asset schedules.
 
-        This method applies up to three sequential adjustments to the internal
-        depreciation and undepreciated asset arrays for both oil and gas:
-
-        1. **Tolerance cleanup**: Very small undepreciated asset values
-           (below a fixed tolerance of ``1e-5``) are set to zero to
-           eliminate numerical noise.
-        2. **Final-year adjustment** (optional): If
-           ``sum_undepreciated_cost=True``, all remaining undepreciated
-           balances are summed and transferred into the final year of the
-           corresponding depreciation schedule. After this transfer,
-           the undepreciated asset arrays are reset to zeros.
-        3. **Depreciation reclassification** (*only for non-POD I contracts*):
-           If ``is_pod_1`` is False, all ``preonstream`` cost depreciations
-           are combined into ``sunk_cost`` depreciations. Once transferred,
-           the ``preonstream`` depreciation arrays are reset to zeros.
+        This method performs in-place modifications to the undepreciated asset
+        and depreciation arrays for both oil and gas by:
+        (i) removing numerically insignificant undepreciated balances, and
+        (ii) optionally transferring remaining undepreciated costs into the
+        final year of the corresponding depreciation schedules.
 
         Parameters
         ----------
         sum_undepreciated_cost : bool
-            If True, any remaining undepreciated costs are added to the last
-            project year’s depreciation value and the undepreciated assets
-            are cleared. If False, undepreciated balances remain as-is
-            (apart from tolerance cleanup).
+            True  → sum undepreciated by cost type → final depreciation year
+            False → keep undepreciated (after tolerance cleanup)
 
         Returns
         -------
         None
-            The method updates the following attributes in place:
-
-            - ``_oil_depreciations``
-            - ``_gas_depreciations``
-            - ``_oil_undepreciated_assets``
-            - ``_gas_undepreciated_assets``
+            Updates the following attributes in place:
+            ``_oil_depreciations``, ``_gas_depreciations``,
+            ``_oil_undepreciated_assets``, and ``_gas_undepreciated_assets``.
 
         Notes
         -----
-        - Affects the following cost types: ``postonstream``, ``preonstream``,
-          and ``sunk_cost``.
-        - The tolerance threshold is fixed at ``1e-5``.
-        - Depreciations are updated only in the last year if
-          ``sum_undepreciated_cost=True``.
-        - For contracts that are **not POD I**, all ``preonstream``
-          depreciations are reclassified into ``sunk_cost`` and cleared from
-          their original arrays.
+        - Cost types: sunk_cost | preonstream | postonstream
+        - Final-year adjustment affects depreciation only
         """
 
         undepre_assets = [self._oil_undepreciated_assets, self._gas_undepreciated_assets]
-        cost_types = ["postonstream", "preonstream", "sunk_cost"]
+        cost_types = ["sunk_cost", "preonstream", "postonstream"]
 
         # Treatment for small order of number (example 1e-5) in undepreciated assets
         tol = 1.0e-5
@@ -1134,23 +1113,30 @@ class GrossSplit(BaseProject):
                     depr[c][-1] += undepr[c].sum()
                     undepr[c] = np.zeros([1, 1], dtype=float)
 
-        # Modify depreciations for non POD I contract
-        if not self.is_pod_1:
+    def _get_non_depreciables(self) -> None:
+        """
+        Collect and organize non-depreciable costs by fluid and cost type.
 
-            # Combine sunk cost and preonstream cost depreciations for non POD I contract,
-            # then assign the results as the "modified" sunk cost depreciations
-            self._oil_depreciations["sunk_cost"] += self._oil_depreciations["preonstream"]
-            self._gas_depreciations["sunk_cost"] += self._gas_depreciations["preonstream"]
+        This method gathers non-depreciable cost arrays for oil and gas across
+        sunk, pre-onstream, and post-onstream cost types, and stores them as
+        structured class attributes for downstream processing.
 
-            # Assign preonstream cost depreciations as zeros
-            self._oil_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
-            self._gas_depreciations["preonstream"] = np.zeros_like(self.project_years, dtype=float)
+        Results are assigned to:
+        - ``self._oil_non_depreciables``
+        - ``self._gas_non_depreciables``
+        """
 
-    def _allocate_non_depreciable_sunk_cost(self):
-        pass
+        # Construct intermediate variable "non_depreciables" which stores
+        # non-depreciable costs for each fluid and each cost types
+        cost_types = ["sunk_cost", "preonstream", "postonstream"]
+        non_depreciables = {
+            "oil": {c: getattr(self, f"_oil_non_depreciable_{c}") for c in cost_types},
+            "gas": {c: getattr(self, f"_gas_non_depreciable_{c}") for c in cost_types},
+        }
 
-    def _get_non_depreciables(self):
-        pass
+        # Stores processed non-depreciable costs as class's attributes
+        self._oil_non_depreciables = non_depreciables["oil"]
+        self._gas_non_depreciables = non_depreciables["gas"]
 
     def _wrapper_base_split(self, regime: GrossSplitRegime) -> None:
         """
@@ -2341,63 +2327,63 @@ class GrossSplit(BaseProject):
 
         return years_exceed
 
-    def _allocate_sunk_cost(
-        self, sunk_cost: np.ndarray, preonstream: np.ndarray
-    ) -> np.ndarray:
-        """
-        Allocate sunk cost and preonstream expenditures to the onstream year.
-
-        This method aggregates the total value of ``sunk_cost`` and
-        ``preonstream`` arrays into a single bulk value and assigns it to
-        the project year corresponding to the earlier of the oil or gas
-        onstream dates. All other years are set to zero.
-
-        Parameters
-        ----------
-        sunk_cost : np.ndarray
-            Array of sunk cost values across project years.
-        preonstream : np.ndarray
-            Array of preonstream cost values across project years.
-
-        Returns
-        -------
-        np.ndarray
-            A 1D array aligned with ``project_years`` where the summed bulk
-            value of ``sunk_cost`` and ``preonstream`` is positioned at the
-            onstream year, with zeros elsewhere.
-
-        Raises
-        ------
-        ValueError
-            If the onstream year does not uniquely match exactly one entry
-            in ``project_years``.
-
-        Notes
-        -----
-        - The onstream year is determined as the earlier of
-          ``oil_onstream_date.year`` and ``gas_onstream_date.year``.
-        - Both ``sunk_cost`` and ``preonstream`` arrays are expected to
-          align with ``project_years`` in length.
-        """
-
-        # Calculate bulk value
-        bulk_value = float(np.sum(sunk_cost + preonstream))
-
-        # Determine the location of onstream year in project years array
-        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
-        match = np.flatnonzero(self.project_years == onstream_yr)
-
-        # Expected only a single match; raise an exception if multiple matches occurs
-        if match.size != 1:
-            raise ValueError(f"Expected one onstream year match, got {match.size} instead.")
-
-        onstream_id = int(match[0])
-
-        # Create a new array with bulk value positioned at the onstream year
-        arr = np.zeros_like(self.project_years, dtype=float)
-        arr[onstream_id] = bulk_value
-
-        return arr
+    # def _allocate_sunk_cost(
+    #     self, sunk_cost: np.ndarray, preonstream: np.ndarray
+    # ) -> np.ndarray:
+    #     """
+    #     Allocate sunk cost and preonstream expenditures to the onstream year.
+    #
+    #     This method aggregates the total value of ``sunk_cost`` and
+    #     ``preonstream`` arrays into a single bulk value and assigns it to
+    #     the project year corresponding to the earlier of the oil or gas
+    #     onstream dates. All other years are set to zero.
+    #
+    #     Parameters
+    #     ----------
+    #     sunk_cost : np.ndarray
+    #         Array of sunk cost values across project years.
+    #     preonstream : np.ndarray
+    #         Array of preonstream cost values across project years.
+    #
+    #     Returns
+    #     -------
+    #     np.ndarray
+    #         A 1D array aligned with ``project_years`` where the summed bulk
+    #         value of ``sunk_cost`` and ``preonstream`` is positioned at the
+    #         onstream year, with zeros elsewhere.
+    #
+    #     Raises
+    #     ------
+    #     ValueError
+    #         If the onstream year does not uniquely match exactly one entry
+    #         in ``project_years``.
+    #
+    #     Notes
+    #     -----
+    #     - The onstream year is determined as the earlier of
+    #       ``oil_onstream_date.year`` and ``gas_onstream_date.year``.
+    #     - Both ``sunk_cost`` and ``preonstream`` arrays are expected to
+    #       align with ``project_years`` in length.
+    #     """
+    #
+    #     # Calculate bulk value
+    #     bulk_value = float(np.sum(sunk_cost + preonstream))
+    #
+    #     # Determine the location of onstream year in project years array
+    #     onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+    #     match = np.flatnonzero(self.project_years == onstream_yr)
+    #
+    #     # Expected only a single match; raise an exception if multiple matches occurs
+    #     if match.size != 1:
+    #         raise ValueError(f"Expected one onstream year match, got {match.size} instead.")
+    #
+    #     onstream_id = int(match[0])
+    #
+    #     # Create a new array with bulk value positioned at the onstream year
+    #     arr = np.zeros_like(self.project_years, dtype=float)
+    #     arr[onstream_id] = bulk_value
+    #
+    #     return arr
 
     def _get_cost_to_be_deducted(self, sunk_cost_method: SunkCostMethod) -> None:
         """
@@ -2835,85 +2821,15 @@ class GrossSplit(BaseProject):
         tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
         effective_tax_rate: float | np.ndarray = 0.22,
         amortization: bool = False,
-        sunk_cost_method: SunkCostMethod = SunkCostMethod.DEPRECIATED_TANGIBLE,
+        # sunk_cost_method: SunkCostMethod = SunkCostMethod.DEPRECIATED_TANGIBLE,
         regime: GrossSplitRegime = GrossSplitRegime.PERMEN_ESDM_13_2024,
         reservoir_type_permen_2024: VariableSplit132024.ReservoirType = (
             VariableSplit132024.ReservoirType.MK
         ),
-        initial_amortization_year: InitialYearAmortizationIncurred = (
-            InitialYearAmortizationIncurred.ONSTREAM_YEAR
-        ),
+        # initial_amortization_year: InitialYearAmortizationIncurred = (
+        #     InitialYearAmortizationIncurred.ONSTREAM_YEAR
+        # ),
     ):
-        """
-        Run the full economic evaluation workflow under a Gross Split PSC scheme.
-
-        This method executes the main sequence of calculations, including
-        revenues, expenditures, taxes, contractor/government split, deductible
-        costs, DMO (Domestic Market Obligation), cash flows, and government take.
-        It modifies the model’s internal state by populating time-series arrays
-        for oil, gas, and consolidated results.
-
-        Parameters
-        ----------
-        sulfur_revenue : OtherRevenue, default=OtherRevenue.ADDITION_TO_GAS_REVENUE
-            Treatment of sulfur revenue (added to gas revenue or handled separately).
-        electricity_revenue : OtherRevenue, default=OtherRevenue.ADDITION_TO_OIL_REVENUE
-            Treatment of electricity revenue.
-        co2_revenue : OtherRevenue, default=OtherRevenue.ADDITION_TO_GAS_REVENUE
-            Treatment of CO₂ revenue.
-        vat_rate : float or np.ndarray, default=0.0
-            Value-added tax (VAT) rate applied to indirect taxes.
-        year_inflation : np.ndarray, optional
-            Year-specific inflation factors. If None, a constant rate is applied.
-        inflation_rate : float or np.ndarray, default=0.0
-            Inflation rate applied to selected expenditures.
-        inflation_rate_applied_to : InflationAppliedTo or None, default=InflationAppliedTo.CAPEX
-            Specifies which cost components are subject to inflation adjustments.
-        cum_production_split_offset : float, np.ndarray, or None, default=0.0
-            Offset applied to cumulative production for progressive split calculation.
-            Can be a scalar (applied to the first year only) or a time-series array.
-        depr_method : DeprMethod, default=DeprMethod.PSC_DB
-            Depreciation method to apply (e.g., PSC Declining Balance).
-        decline_factor : float or int, default=2
-            Decline factor for declining-balance depreciation.
-        sum_undepreciated_cost : bool, default=False
-            Whether to sum undepreciated costs across categories before adjustment.
-        is_dmo_end_weighted : bool, default=False
-            If True, DMO holiday adjustment is applied at the end of the period.
-        tax_regime : TaxRegime, default=TaxRegime.NAILED_DOWN
-            Tax regime to use if effective tax rate is not explicitly provided.
-        effective_tax_rate : float or np.ndarray, default=0.22
-            Effective tax rate. If None, determined by `tax_regime`.
-        amortization : bool, default=False
-            Whether amortization of certain costs is enabled.
-        sunk_cost_method : SunkCostMethod, default=SunkCostMethod.DEPRECIATED_TANGIBLE
-            Method for treating sunk costs in the calculation.
-        regime : GrossSplitRegime, default=GrossSplitRegime.PERMEN_ESDM_13_2024
-            Gross Split regime definition to apply.
-        reservoir_type_permen_2024 : VariableSplit132024.ReservoirType, default=MK
-            Reservoir classification for variable split (as defined in Permen 13/2024).
-        initial_amortization_year : InitialYearAmortizationIncurred, default=ONSTREAM_YEAR
-            Defines when amortization begins (e.g., onstream year).
-
-        Returns
-        -------
-        None
-            The method updates internal attributes in-place, including:
-            - ``_oil_*`` : Oil-related revenues, expenditures, splits, taxes, cash flows.
-            - ``_gas_*`` : Gas-related revenues, expenditures, splits, taxes, cash flows.
-            - ``_consolidated_*`` : Aggregated oil + gas profiles.
-
-        Notes
-        -----
-        - This is the **main entry point** for running the model after setting
-          production, cost, and contract parameters.
-        - The method modifies internal state only; results are retrieved through
-          :meth:`get_results` or other accessors.
-        - PSC-specific terminology:
-          * *Deductible cost* ≈ "cost recovery" in cost-recovery PSC.
-          * *Contractor split* refers to gross split allocation before and after transfer.
-          * *DMO* corresponds to domestic market obligation adjustments.
-        """
 
         # Perform initial check to several input arguments
         self._check_attributes()
@@ -3024,207 +2940,227 @@ class GrossSplit(BaseProject):
             inflation_rate_applied_to=inflation_rate_applied_to
         )
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_amortizations)}')
-        print(f'Length: {len(self._oil_amortizations)}')
-        print('_oil_amortizations = ', self._oil_amortizations)
+        # Modify depreciations, accounting for various adjusments
+        self._get_modified_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)
+
+        # Process non-depreciable costs for non-capital sunk costs,
+        # non-capital preonstream costs, and non-capital postonstream costs
+        self._get_non_depreciables()
+
+        # Summation attributes: "sunk_cost" + "preonstream" + "postonstream",
+        # for amortizations, depreciations, and undepreciated_assets
+        self._oil_sum_undepreciated_asset = np.sum(
+            [np.sum(v) for v in self._oil_undepreciated_assets.values()]
+        )
+        self._gas_sum_undepreciated_asset = np.sum(
+            [np.sum(v) for v in self._gas_undepreciated_assets.values()]
+        )
+
+        self._oil_depreciation = np.sum([v for v in self._oil_depreciations.values()], axis=0)
+        self._gas_depreciation = np.sum([v for v in self._gas_depreciations.values()], axis=0)
+        self._oil_amortization = np.sum([v for v in self._oil_amortizations.values()], axis=0)
+        self._gas_amortization = np.sum([v for v in self._gas_amortizations.values()], axis=0)
+
+        # Specify base split
+        self._wrapper_base_split(regime=regime)
+
+        # Specify variable split
+        self._wrapper_variable_split(
+            regime=regime,
+            reservoir_type=reservoir_type_permen_2024,
+        )
+
+        self._var_split_array = np.full_like(
+            self.project_years, fill_value=self._variable_split, dtype=float
+        )
+
+        # Calculate gas production in MMBOE. Based on discussion with YRA on June 28th, 2024,
+        # cumulative production used for progressive cumulative production split is defined as
+        # the sum of production rate and production baseline.
+        prod_gas_boe = (
+            self._gas_lifting.get_prod_rate_total_arr() * 1_000. / self.conversion_boe_to_scf
+        )
+
+        # Check if the cumulative production split offset length is the same
+        # with the length of project years
+        self._check_cum_production_split_offset(
+            cum_production_split_offset=cum_production_split_offset
+        )
+
+        # Adjustment in cumulative production split offset
+        # when parameter "cum_production_split_offset" is given as a single value.
+        if (
+            isinstance(cum_production_split_offset, float)
+            or isinstance(cum_production_split_offset, int)
+        ):
+            offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
+            offset_arr[0] = cum_production_split_offset
+
+        else:
+            offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
+
+        # Calculating the cumulative production
+        self._cumulative_prod = np.cumsum(
+            self._oil_lifting.get_prod_rate_total_arr()
+            + prod_gas_boe
+            + offset_arr
+        )
+
+        # Specify progressive split
+        vectorized_get_prog_split = np.vectorize(self._wrapper_progressive_split)
+
+        # Condition when the cum_production_split_offset is filled with np.ndarray
+        if (
+            isinstance(cum_production_split_offset, np.ndarray)
+            and len(cum_production_split_offset) > 1
+        ):
+            # Define attributes "_oil_prog_price_split", "_oil_prog_cum_split",
+            # "_oil_prog_split"
+            (
+                self._oil_prog_price_split,
+                self._oil_prog_cum_split
+            ) = vectorized_get_prog_split(
+                fluid=self._oil_lifting.fluid_type,
+                price=self._oil_lifting.get_price_arr(),
+                cum=None,
+                regime=regime
+            )
+
+            self._oil_prog_split = self._oil_prog_price_split + cum_production_split_offset
+
+            # Define attributes "_gas_prog_price_split", "_gas_prog_cum_split",
+            # "_gas_prog_split"
+            (
+                self._gas_prog_price_split,
+                self._gas_prog_cum_split
+            ) = vectorized_get_prog_split(
+                fluid=self._gas_lifting.fluid_type,
+                price=self._gas_lifting.get_price_arr(),
+                cum=None,
+                regime=regime
+            )
+
+            self._gas_prog_split = self._gas_prog_price_split + cum_production_split_offset
+
+        # Condition when the cum_production_split_offset is not filled
+        else:
+            # Define attributes "_oil_prog_price_split", "_oil_prog_cum_split",
+            # "_oil_prog_split"
+            (
+                self._oil_prog_price_split,
+                self._oil_prog_cum_split
+            ) = vectorized_get_prog_split(
+                fluid=self._oil_lifting.fluid_type,
+                price=self._oil_lifting.get_price_arr(),
+                cum=self._cumulative_prod,
+                regime=regime,
+            )
+
+            self._oil_prog_split = self._oil_prog_price_split + self._oil_prog_cum_split
+
+            # Define attributes "_gas_prog_price_split", "_gas_prog_cum_split",
+            # "_gas_prog_split"
+            (
+                self._gas_prog_price_split,
+                self._gas_prog_cum_split
+            ) = vectorized_get_prog_split(
+                fluid=self._gas_lifting.fluid_type,
+                price=self._gas_lifting.get_price_arr(),
+                cum=self._cumulative_prod,
+                regime=regime,
+            )
+
+            self._gas_prog_split = self._gas_prog_price_split + self._gas_prog_cum_split
+
+        # Ministerial discretion
+        self._ministry_discretion_arr = np.full_like(
+            self.project_years, fill_value=self.split_ministry_disc, dtype=float
+        )
+
+        # Total Contractor Split
+        self._get_total_contractor_split(
+            regime=regime,
+            reservoir_type=reservoir_type_permen_2024,
+            ministry_discretion=self._ministry_discretion_arr,
+        )
+
+        # Adjustment when total contractor split exceeds 100%
+        self._oil_ctr_split_prior_bracket = np.copy(self._oil_ctr_split)
+        self._gas_ctr_split_prior_bracket = np.copy(self._gas_ctr_split)
+
+        self._oil_year_maximum_ctr_split = self._get_year_maximum_split(
+            ctr_split=self._oil_ctr_split,
+            fluid="oil"
+        )
+
+        self._gas_year_maximum_ctr_split = self._get_year_maximum_split(
+            ctr_split=self._gas_ctr_split,
+            fluid="gas"
+        )
+
+        # Set maximum contractor split to be 100%
+        self._oil_ctr_split[self._oil_ctr_split > 1.0] = 1.0
+        self._gas_ctr_split[self._gas_ctr_split > 1.0] = 1.0
+
+        # Contractor Share
+        self._oil_ctr_share_before_transfer = self._oil_revenue * self._oil_ctr_split
+        self._gas_ctr_share_before_transfer = self._gas_revenue * self._gas_ctr_split
+
+        # Government Share
+        self._oil_gov_share = self._oil_revenue - self._oil_ctr_share_before_transfer
+        self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
+
+        # Calculate capital and non-capital investments
+        self._get_investments()
+
+        # Carry forward deductible cost (in PSC Cost Recovery called Unrecovered Cost)
+        zeros = np.zeros_like(self.project_years, dtype=float)
+        oil_total_depr = np.sum([v for v in self._oil_depreciations.values()], axis=0)
+        oil_total_amor = np.sum([v for v in self._oil_amortizations.values()], axis=0)
+        oil_total_non_depr = np.sum([v for v in self._oil_non_depreciables.values()], axis=0)
+
+        self._oil_cost_tobe_deducted = (
+            oil_total_depr
+            + oil_total_amor
+            + self._oil_carry_forward_depreciation
+            + oil_total_non_depr
+        )
+
+        self._oil_carward_deduct_cost = psc_tools.get_unrecovered_cost(
+            depreciation=(
+                oil_total_depr + oil_total_amor + self._oil_carry_forward_depreciation
+            ),
+            non_capital=self._oil_non_capital,
+            revenue=self._oil_ctr_share_before_transfer,
+            ftp_ctr=zeros,
+            ftp_gov=zeros,
+            ic=zeros,
+        )
 
         print('\t')
-        print(f'Filetype: {type(self._oil_depreciations)}')
-        print(f'Length: {len(self._oil_depreciations)}')
-        print('_oil_depreciations = ', self._oil_depreciations)
+        print('_oil_depreciable_preonstream = ', self._oil_depreciable_preonstream)
+        print('_oil_non_depreciable_preonstream = ', self._oil_non_depreciable_preonstream)
+        print('_oil_preonstream = ', self._oil_preonstream)
+        print('_oil_amortizations["preonstream"] = ', self._oil_amortizations["preonstream"])
+        print('_oil_depreciations["preonstream"] = ', self._oil_depreciations["preonstream"])
+        print('_oil_undepreciated_assets["preonstream"] = ', self._oil_undepreciated_assets["preonstream"])
+        print('_oil_non_depreciables["preonstream"] = ', self._oil_non_depreciables["preonstream"])
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_undepreciated_assets)}')
-        print(f'Length: {len(self._oil_undepreciated_assets)}')
-        print('_oil_undepreciated_assets = ', self._oil_undepreciated_assets)
 
+        # print('\t')
+        # print('oil_total_depr = ', oil_total_depr)
+        # print('oil_total_amor = ', oil_total_amor)
+        # print('oil_total_non_depr = ', oil_total_non_depr)
+        # print('_oil_non_capital = ', self._oil_non_capital)
+        # print('_oil_sum_undepreciated_asset = ', self._oil_sum_undepreciated_asset)
+        # print('_sulfur_lifting = ', self._sulfur_lifting.get_lifting_rate_ghv_arr())
+        #
+        # t1 = oil_total_depr + oil_total_amor + self._oil_carry_forward_depreciation + oil_total_non_depr
+        # t2 = oil_total_depr + oil_total_amor + self._oil_carry_forward_depreciation + self._oil_non_capital
+        #
+        # print('t1 = ', t1.sum())
+        # print('t2 = ', t2.sum())
 
-        # # Modify depreciations, accounting for various adjusments
-        # self._get_modified_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)
-        # self._oil_sum_undepreciated_asset = np.sum(
-        #     [np.sum(v) for v in self._oil_undepreciated_assets.values()]
-        # )
-        # self._gas_sum_undepreciated_asset = np.sum(
-        #     [np.sum(v) for v in self._gas_undepreciated_assets.values()]
-        # )
-
-        # self._oil_depreciation = np.sum([v for v in self._oil_depreciations.values()], axis=0)
-        # self._gas_depreciation = np.sum([v for v in self._gas_depreciations.values()], axis=0)
-        # self._oil_amortization = np.sum([v for v in self._oil_amortizations.values()], axis=0)
-        # self._gas_amortization = np.sum([v for v in self._gas_amortizations.values()], axis=0)
-        #
-        # # Specify base split
-        # self._wrapper_base_split(regime=regime)
-        #
-        # # Specify variable split
-        # self._wrapper_variable_split(
-        #     regime=regime,
-        #     reservoir_type=reservoir_type_permen_2024,
-        # )
-        #
-        # self._var_split_array = np.full_like(
-        #     self.project_years, fill_value=self._variable_split, dtype=float
-        # )
-        #
-        # # Calculate gas production in MMBOE. Based on discussion with YRA on June 28th, 2024,
-        # # cumulative production used for progressive cumulative production split is defined as
-        # # the sum of production rate and production baseline.
-        # prod_gas_boe = (
-        #     self._gas_lifting.get_prod_rate_total_arr() * 1_000. / self.conversion_boe_to_scf
-        # )
-        #
-        # # Check if the cumulative production split offset length is the same
-        # # with the length of project years
-        # self._check_cum_production_split_offset(
-        #     cum_production_split_offset=cum_production_split_offset
-        # )
-        #
-        # # Adjustment in cumulative production split offset
-        # # when parameter "cum_production_split_offset" is given as a single value.
-        # if (
-        #     isinstance(cum_production_split_offset, float)
-        #     or isinstance(cum_production_split_offset, int)
-        # ):
-        #     offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
-        #     offset_arr[0] = cum_production_split_offset
-        #
-        # else:
-        #     offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
-        #
-        # # Calculating the cumulative production
-        # self._cumulative_prod = np.cumsum(
-        #     self._oil_lifting.get_prod_rate_total_arr()
-        #     + prod_gas_boe
-        #     + offset_arr
-        # )
-        #
-        # # Specify progressive split
-        # vectorized_get_prog_split = np.vectorize(self._wrapper_progressive_split)
-        #
-        # # Condition when the cum_production_split_offset is filled with np.ndarray
-        # if (
-        #     isinstance(cum_production_split_offset, np.ndarray)
-        #     and len(cum_production_split_offset) > 1
-        # ):
-        #     # Define attributes "_oil_prog_price_split", "_oil_prog_cum_split",
-        #     # "_oil_prog_split"
-        #     (
-        #         self._oil_prog_price_split,
-        #         self._oil_prog_cum_split
-        #     ) = vectorized_get_prog_split(
-        #         fluid=self._oil_lifting.fluid_type,
-        #         price=self._oil_lifting.get_price_arr(),
-        #         cum=None,
-        #         regime=regime
-        #     )
-        #
-        #     self._oil_prog_split = self._oil_prog_price_split + cum_production_split_offset
-        #
-        #     # Define attributes "_gas_prog_price_split", "_gas_prog_cum_split",
-        #     # "_gas_prog_split"
-        #     (
-        #         self._gas_prog_price_split,
-        #         self._gas_prog_cum_split
-        #     ) = vectorized_get_prog_split(
-        #         fluid=self._gas_lifting.fluid_type,
-        #         price=self._gas_lifting.get_price_arr(),
-        #         cum=None,
-        #         regime=regime
-        #     )
-        #
-        #     self._gas_prog_split = self._gas_prog_price_split + cum_production_split_offset
-        #
-        # # Condition when the cum_production_split_offset is not filled
-        # else:
-        #     # Define attributes "_oil_prog_price_split", "_oil_prog_cum_split",
-        #     # "_oil_prog_split"
-        #     (
-        #         self._oil_prog_price_split,
-        #         self._oil_prog_cum_split
-        #     ) = vectorized_get_prog_split(
-        #         fluid=self._oil_lifting.fluid_type,
-        #         price=self._oil_lifting.get_price_arr(),
-        #         cum=self._cumulative_prod,
-        #         regime=regime,
-        #     )
-        #
-        #     self._oil_prog_split = self._oil_prog_price_split + self._oil_prog_cum_split
-        #
-        #     # Define attributes "_gas_prog_price_split", "_gas_prog_cum_split",
-        #     # "_gas_prog_split"
-        #     (
-        #         self._gas_prog_price_split,
-        #         self._gas_prog_cum_split
-        #     ) = vectorized_get_prog_split(
-        #         fluid=self._gas_lifting.fluid_type,
-        #         price=self._gas_lifting.get_price_arr(),
-        #         cum=self._cumulative_prod,
-        #         regime=regime,
-        #     )
-        #
-        #     self._gas_prog_split = self._gas_prog_price_split + self._gas_prog_cum_split
-        #
-        # # Ministerial discretion
-        # self._ministry_discretion_arr = np.full_like(
-        #     self.project_years, fill_value=self.split_ministry_disc, dtype=float
-        # )
-        #
-        # # Total Contractor Split
-        # self._get_total_contractor_split(
-        #     regime=regime,
-        #     reservoir_type=reservoir_type_permen_2024,
-        #     ministry_discretion=self._ministry_discretion_arr,
-        # )
-        #
-        # # Adjustment when total contractor split exceeds 100%
-        # self._oil_ctr_split_prior_bracket = np.copy(self._oil_ctr_split)
-        # self._gas_ctr_split_prior_bracket = np.copy(self._gas_ctr_split)
-        #
-        # self._oil_year_maximum_ctr_split = self._get_year_maximum_split(
-        #     ctr_split=self._oil_ctr_split,
-        #     fluid="oil"
-        # )
-        #
-        # self._gas_year_maximum_ctr_split = self._get_year_maximum_split(
-        #     ctr_split=self._gas_ctr_split,
-        #     fluid="gas"
-        # )
-        #
-        # # Set maximum contractor split to be 100%
-        # self._oil_ctr_split[self._oil_ctr_split > 1.0] = 1.0
-        # self._gas_ctr_split[self._gas_ctr_split > 1.0] = 1.0
-        #
-        # # Contractor Share
-        # self._oil_ctr_share_before_transfer = self._oil_revenue * self._oil_ctr_split
-        # self._gas_ctr_share_before_transfer = self._gas_revenue * self._gas_ctr_split
-        #
-        # # Government Share
-        # self._oil_gov_share = self._oil_revenue - self._oil_ctr_share_before_transfer
-        # self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
-        #
-        # # Calculate capital and non-capital investments
-        # self._get_investments()
-        #
-        # # Cost to be deducted
-        # self._get_cost_to_be_deducted(sunk_cost_method=sunk_cost_method)
-        #
-        # # Oil carry forward deductible cost (in PSC Cost Recovery called Unrecovered Cost)
-        # zeros = np.zeros_like(self.project_years, dtype=float)
-        # oil_total_depr = np.array(list(self._oil_depreciations.values())).sum(axis=0)
-        # oil_total_amor = np.array(list(self._oil_amortizations.values())).sum(axis=0)
-        #
-        # self._oil_carward_deduct_cost = psc_tools.get_unrecovered_cost(
-        #     depreciation=(
-        #         oil_total_depr + oil_total_amor + self._oil_carry_forward_depreciation
-        #     ),
-        #     non_capital=self._oil_non_capital,
-        #     revenue=self._oil_ctr_share_before_transfer,
-        #     ftp_ctr=zeros,
-        #     ftp_gov=zeros,
-        #     ic=zeros,
-        # )
-        #
         # # Gas carry forward deductible cost (in PSC Cost Recovery called Unrecovered Cost)
         # gas_total_depr = np.array(list(self._gas_depreciations.values())).sum(axis=0)
         # gas_total_amor = np.array(list(self._gas_amortizations.values())).sum(axis=0)
@@ -3252,7 +3188,7 @@ class GrossSplit(BaseProject):
         #     cost_tobe_deducted=self._gas_cost_tobe_deducted,
         #     carward_deduct_cost=self._gas_carward_deduct_cost
         # )
-        #
+
         # # Transfer
         # self._transfer_to_oil, self._transfer_to_gas = psc_tools.get_transfer(
         #     oil_unrecovered=self._oil_carward_deduct_cost,

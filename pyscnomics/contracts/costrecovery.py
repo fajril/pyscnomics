@@ -727,7 +727,7 @@ class CostRecovery(BaseProject):
 
         return arr
 
-    def _get_non_depreciables(self):
+    def _get_non_depreciables(self) -> None:
         """
         Assemble non-depreciable cost arrays for oil and gas.
 
@@ -2029,14 +2029,14 @@ class CostRecovery(BaseProject):
         )
 
         # Process non-depreciable costs for non-capital sunk costs,
-        # preonstream costs, and postonstream costs
+        # non-capital preonstream costs, and non-capital postonstream costs
         self._get_non_depreciables()
 
         # Modify depreciations, accounting for various adjustments
         self._get_modified_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)
 
         # Summation attributes: "sunk_cost" + "preonstream" + "postonstream",
-        # for depreciations, undepreciated_assets, and non_depreciables
+        # for depreciations and undepreciated_assets
         self._oil_sum_undepreciated_asset = np.sum(
             [np.sum(v) for v in self._oil_undepreciated_assets.values()]
         )
