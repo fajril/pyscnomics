@@ -542,7 +542,7 @@ class CostRecovery(BaseProject):
                 (ContractType.COST_RECOVERY.value, msg_warning)
             )
 
-            self._check_capital_pis_years(
+            self._check_capital_pis_years_before_onstream(
                 obj_capital=sc_capital_object,
                 obj_name=sc_capital_name,
                 is_strict=False,
@@ -588,7 +588,7 @@ class CostRecovery(BaseProject):
 
         # Check capital preonstream costs: whether PIS years < onstream year
         for preos_obj, preos_name in mapping_capital_preonstreams:
-            self._check_capital_pis_years(
+            self._check_capital_pis_years_before_onstream(
                 obj_capital=preos_obj,
                 obj_name=preos_name,
                 is_strict=self.is_strict,

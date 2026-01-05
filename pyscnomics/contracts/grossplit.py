@@ -35,7 +35,7 @@ from pyscnomics.econ.selection import (
     DiscountingMode,
     ContractType,
 )
-from pyscnomics.econ.depreciation import unit_of_production_rate, unit_of_production_book_value
+# from pyscnomics.econ.depreciation import unit_of_production_rate
 from pyscnomics.econ.indicator import (
     irr,
     npv_nominal_terms,
@@ -717,7 +717,7 @@ class GrossSplit(BaseProject):
 
             # For capital sunk cost, check whether PIS years < onstream year
             if is_capital:
-                self._check_capital_pis_years(
+                self._check_capital_pis_years_before_onstream(
                     obj_capital=sc_object,
                     obj_name=sc_name,
                     is_amortization=False,
@@ -727,32 +727,53 @@ class GrossSplit(BaseProject):
 
     def _prepare_amortization(self) -> None:
         """
-        Validate amortization-related cost classifications under PSC Gross Split.
+        Prepare and validate amortization-related cost classifications.
 
-        Performs amortization-specific validation for POD I contracts only.
+        Applies amortization validation rules for POD I PSC Gross Split contracts.
+        For non-POD I contracts, this method exits without action.
 
-        For POD I:
-        - Validate capital sunk costs and pre-onstream costs PIS years vs onstream year
-        - Validate that non-capital sunk costs and pre-onstream costs are not amortized
+        Workflow (POD I only)
+        ---------------------
+        1. Determine the effective onstream year (earliest of oil/gas).
+        2. Validate capital sunk and pre-onstream costs:
+           - PIS years < onstream year
+           - PIS years > onstream year
+           (strict → error | non-strict → warning).
+        3. Validate that non-capital sunk and pre-onstream costs
+           are not treated as amortizable.
 
-        For Non-POD I contracts, no amortization validation is applied.
-
-        Validation behavior respects strict vs non-strict mode.
+        Validation behavior follows ``self.is_strict``.
         """
+
+        # Non-POD I Gross Split:
+        # Amortization validation is not applicable
+        if not self.is_pod_1:
+            return
 
         # Specify onstream year
         onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
 
         # Helper method to check whether capital costs PIS years < onstream year
-        def _validate_capital_pis_years(mapping):
+        def _validate_capital_pis_years(mapping, is_before_onstream: bool):
+            kwargs = {
+                "is_strict": self.is_strict,
+                "onstream_year": onstream_yr,
+            }
+
             for obj, name, is_amort in mapping:
-                self._check_capital_pis_years(
-                    obj_capital=obj,
-                    obj_name=name,
-                    is_amortization=is_amort,
-                    is_strict=self.is_strict,
-                    onstream_year=onstream_yr,
-                )
+                if is_before_onstream:
+                    self._check_capital_pis_years_before_onstream(
+                        obj_capital=obj,
+                        obj_name=name,
+                        is_amortization=is_amort,
+                        **kwargs,
+                    )
+                else:
+                    self._check_capital_pis_years_after_onstream(
+                        obj_capital=obj,
+                        obj_name=name,
+                        **kwargs,
+                    )
 
         # Helper method to validate non-capital costs
         def _validate_non_capital_costs(mapping):
@@ -806,26 +827,23 @@ class GrossSplit(BaseProject):
             (self._gas_cost_of_sales_preonstream, "gas_cost_of_sales_preonstream"),
         ]
 
-        # Non-POD I Gross Split:
-        # Amortization validation is not applicable
-        if not self.is_pod_1:
-            return
-
         # POD I Gross Split:
         # 1) Validate capital sunk costs PIS years
         # 2) Validate non-capital sunk costs
-        else:
-            # Check capital sunk costs: whether PIS years < onstream year
-            _validate_capital_pis_years(mapping_capital_sunk_costs)
+        for is_before_onstream in [True, False]:
+            # Check capital sunk costs:
+            # Whether PIS years < onstream year or PIS years > onstream year
+            _validate_capital_pis_years(mapping_capital_sunk_costs, is_before_onstream)
 
-            # Check capital preonstream costs: whether PIS years < onstream year
-            _validate_capital_pis_years(mapping_capital_preonstreams)
+            # Check capital preonstream costs:
+            # Whether PIS years < onstream year or PIS years > onstream year
+            _validate_capital_pis_years(mapping_capital_preonstreams, is_before_onstream)
 
-            # Check whether sunk costs are treated as non-capital costs
-            _validate_non_capital_costs(mapping_non_capital_sunk_costs)
+        # Check whether sunk costs are treated as non-capital costs
+        _validate_non_capital_costs(mapping_non_capital_sunk_costs)
 
-            # Check whether preonstream costs are treated as non-capital costs
-            _validate_non_capital_costs(mapping_non_capital_preonstreams)
+        # Check whether preonstream costs are treated as non-capital costs
+        _validate_non_capital_costs(mapping_non_capital_preonstreams)
 
     def _get_amortization(
         self,
@@ -979,7 +997,7 @@ class GrossSplit(BaseProject):
                 )
 
             for obj, name, is_amort in mapping_capital_preonstreams:
-                self._check_capital_pis_years(
+                self._check_capital_pis_years_before_onstream(
                     obj_capital=obj,
                     obj_name=name,
                     is_amortization=is_amort,
@@ -3050,10 +3068,10 @@ class GrossSplit(BaseProject):
             inflation_rate_applied_to=inflation_rate_applied_to,
         )
 
-        print('\t')
-        print(f'Filetype: {type(self._oil_amortizations)}')
-        print(f'Length: {len(self._oil_amortizations)}')
-        print('_oil_amortizations = \n', self._oil_amortizations)
+        # print('\t')
+        # print(f'Filetype: {type(self._oil_amortizations)}')
+        # print(f'Length: {len(self._oil_amortizations)}')
+        # print('_oil_amortizations = \n', self._oil_amortizations)
 
         # self._get_depreciation(
         #     depr_method=depr_method,
