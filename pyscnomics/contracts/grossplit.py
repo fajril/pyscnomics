@@ -962,7 +962,7 @@ class GrossSplit(BaseProject):
                 onstream_year=onstream_yr,
             )
 
-    def _get_depreciation(
+    def _get_depreciation_pod_1(
         self,
         depr_method: DeprMethod,
         decline_factor: float | int,
@@ -972,25 +972,20 @@ class GrossSplit(BaseProject):
         inflation_rate_applied_to: InflationAppliedTo,
     ) -> None:
         """
-        Compute depreciation and remaining undepreciated assets.
+        Compute depreciation and undepreciated assets for POD I contracts.
 
-        Generates depreciation schedules for oil and gas capital costs under
-        Non-POD I PSC Gross Split contracts. POD I projects return zero
-        depreciation by design.
+        Under POD I Gross Split rules, only post-onstream capital costs are
+        eligible for depreciation. Sunk and pre-onstream costs are treated
+        as fully non-depreciable and are represented by zero-valued containers.
 
-        Workflow
-        --------
-        1. Initialize zero-valued depreciation and undepreciated asset containers.
-        2. Exit early for POD I contracts.
-        3. Run depreciation pre-validation.
-        4. Compute depreciation per fluid (oil | gas) and cost type
-           (sunk | pre-onstream | post-onstream).
-        5. Store depreciation and undepreciated asset results on the instance.
+        This method computes post-onstream depreciation separately for oil
+        and gas, initializes complete depreciation dictionaries for all
+        cost types, and stores the results on the instance.
 
         Parameters
         ----------
         depr_method : DeprMethod
-            Depreciation method applied to capital costs.
+            Depreciation method applied to post-onstream capital costs.
         decline_factor : float or int
             Decline factor used by applicable depreciation methods.
         year_inflation : ndarray
@@ -1003,46 +998,22 @@ class GrossSplit(BaseProject):
             Specifies which components inflation is applied to.
         """
 
+        # Helper constructors for zero-filled result containers
         def _zeros_arr():
             return np.zeros_like(self.project_years, dtype=float)
 
         def _zeros_sv():
-            return np.zeros([1, 1], dtype=float)
+            return np.zeros(1, dtype=float)
 
-        # Initialize depreciation and undepreciated_asset containers for all cost types
-        cost_types = ["sunk_cost", "preonstream", "postonstream"]
-        self._oil_depreciations = {c: _zeros_arr() for c in cost_types}
-        self._gas_depreciations = {c: _zeros_arr() for c in cost_types}
-        self._oil_undepreciated_assets = {c: _zeros_sv() for c in cost_types}
-        self._gas_undepreciated_assets = {c: _zeros_sv() for c in cost_types}
+        # POD I: depreciation applies only to postonstream capital
+        fluids = ["oil", "gas"]
+        all_cost_types = ["sunk_cost", "preonstream", "postonstream"]
+        postonstream_capital = {f: getattr(self, f"_{f}_capital_postonstream") for f in fluids}
+        depreciation = {f: None for f in fluids}
+        undepreciated = {f: None for f in fluids}
 
-        # Only Non-POD 1 projects generate depreciation
-        if self.is_pod_1:
-            return
-
-        # Prepare data prior to calculating depreciation
-        self._prepare_depreciation()
-
-        # Mapping: fluid -> (cost type, capital cost object)
-        depr_mapping = {
-            "oil": [
-                ("sunk_cost", self._oil_capital_sunk_cost),
-                ("preonstream", self._oil_capital_preonstream),
-                ("postonstream", self._oil_capital_postonstream),
-            ],
-            "gas": [
-                ("sunk_cost", self._gas_capital_sunk_cost),
-                ("preonstream", self._gas_capital_preonstream),
-                ("postonstream", self._gas_capital_postonstream),
-            ],
-        }
-
-        # Define intermediate attributes: "depreciations" and "undepreciated_assets"
-        depreciations = {f: {c: None for c in cost_types} for f in depr_mapping.keys()}
-        undepreciated_assets = {f: {c: None for c in cost_types} for f in depr_mapping.keys()}
-
-        # Common arguments passed to depreciation calculator
-        kwargs_depr = {
+        # Common arguments passed to depreciation and undepreciated asset calculator
+        kwargs = {
             "depr_method": depr_method,
             "decline_factor": decline_factor,
             "year_inflation": year_inflation,
@@ -1051,18 +1022,169 @@ class GrossSplit(BaseProject):
             "inflation_rate_applied_to": inflation_rate_applied_to,
         }
 
-        # Compute depreciation per fluid per cost type
-        for f, mapping in depr_mapping.items():
-            for c, obj_c in mapping:
-                (
-                    depreciations[f][c], undepreciated_assets[f][c]
-                ) = obj_c.total_depreciation_rate(**kwargs_depr)
+        # Compute capital postonstream depreciation per fluid
+        for f, obj_cap in postonstream_capital.items():
+            (depreciation[f], undepreciated[f]) = obj_cap.total_depreciation_rate(**kwargs)
 
-        # Assign computed depreciations
-        self._oil_depreciations = depreciations["oil"]
-        self._gas_depreciations = depreciations["gas"]
-        self._oil_undepreciated_assets = undepreciated_assets["oil"]
-        self._gas_undepreciated_assets = undepreciated_assets["gas"]
+        # Initialize full depreciation containers (all cost types),
+        # then inject POD I post-onstream results
+        self._oil_depreciations = {c: _zeros_arr() for c in all_cost_types}
+        self._gas_depreciations = {c: _zeros_arr() for c in all_cost_types}
+
+        # Depreciations: only post-onstream may be non-zero
+        self._oil_depreciations["postonstream"] = depreciation["oil"]
+        self._gas_depreciations["postonstream"] = depreciation["gas"]
+
+        # Undepreciated assets: only post-onstream may be non-zero
+        self._oil_undepreciated_assets = {
+            "sunk_cost": _zeros_sv(),
+            "preonstream": _zeros_sv(),
+            "postonstream": undepreciated["oil"],
+        }
+
+        self._gas_undepreciated_assets = {
+            "sunk_cost": _zeros_sv(),
+            "preonstream": _zeros_sv(),
+            "postonstream": undepreciated["gas"],
+        }
+
+    def _get_depreciation_non_pod_1(
+        self,
+        depr_method: DeprMethod,
+        decline_factor: float | int,
+        year_inflation: np.ndarray,
+        inflation_rate: np.ndarray | int | float,
+        tax_rate: np.ndarray | float,
+        inflation_rate_applied_to: InflationAppliedTo,
+    ) -> None:
+
+        self._prepare_depreciation()
+
+        depr_mapping = {
+            "oil": None,
+            "gas": None,
+        }
+
+    def _get_depreciation(
+        self,
+        depr_method: DeprMethod,
+        decline_factor: float | int,
+        year_inflation: np.ndarray,
+        inflation_rate: np.ndarray | int | float,
+        tax_rate: np.ndarray | float,
+        inflation_rate_applied_to: InflationAppliedTo,
+    ) -> None:
+
+        kwargs_common = {
+            "depr_method": depr_method,
+            "decline_factor": decline_factor,
+            "year_inflation": year_inflation,
+            "inflation_rate": inflation_rate,
+            "tax_rate": tax_rate,
+            "inflation_rate_applied_to": inflation_rate_applied_to,
+        }
+
+        if self.is_pod_1:
+            self._get_depreciation_pod_1(**kwargs_common)
+
+        else:
+            self._get_depreciation_non_pod_1(**kwargs_common)
+
+        # # Helper methods
+        # def _zeros_arr():
+        #     return np.zeros_like(self.project_years, dtype=float)
+        #
+        # def _zeros_sv():
+        #     return np.zeros(1, dtype=float)
+
+        # # Initialize depreciation and undepreciated_asset containers for all cost types
+        # cost_types = ["sunk_cost", "preonstream", "postonstream"]
+        # self._oil_depreciations = {c: _zeros_arr() for c in cost_types}
+        # self._gas_depreciations = {c: _zeros_arr() for c in cost_types}
+        # self._oil_undepreciated_assets = {c: None for c in cost_types}
+        # self._gas_undepreciated_assets = {c: None for c in cost_types}
+        #
+        # if self.is_pod_1:
+        #
+        #     depr_postonstream_mapping = {
+        #         "oil": self._oil_capital_postonstream,
+        #         "gas": self._gas_capital_postonstream,
+        #     }
+        #
+        #     depreciation_postonstream = {f: None for f in depr_postonstream_mapping.keys()}
+        #     undepreciated_asset_postonstream = {f: None for f in depr_postonstream_mapping.keys()}
+        #
+        #     kwargs_depr = {
+        #         "depr_method": depr_method,
+        #         "decline_factor": decline_factor,
+        #         "year_inflation": year_inflation,
+        #         "inflation_rate": inflation_rate,
+        #         "tax_rate": tax_rate,
+        #         "inflation_rate_applied_to": inflation_rate_applied_to,
+        #     }
+        #
+        #     for f, obj_c in depr_postonstream_mapping.items():
+        #         (
+        #             depreciation_postonstream[f],
+        #             undepreciated_asset_postonstream[f]
+        #         ) = obj_c.total_depreciation_rate(**kwargs_depr)
+        #
+        #     self._oil_depreciations["postonstream"] = depreciation_postonstream["oil"]
+        #     self._gas_depreciations["postonstream"] = depreciation_postonstream["gas"]
+        #
+        #     self._oil_undepreciated_assets = {
+        #         "sunk_cost": _zeros_sv(),
+        #         "preonstream": _zeros_sv(),
+        #         "postonstream": undepreciated_asset_postonstream["oil"],
+        #     }
+        #
+        #     self._gas_undepreciated_assets = {
+        #         "sunk_cost": _zeros_sv(),
+        #         "preonstream": _zeros_sv(),
+        #         "postonstream": undepreciated_asset_postonstream["gas"],
+        #     }
+        #
+        # else:
+        #     # Mapping: fluid -> (cost type, capital cost object)
+        #     depr_mapping = {
+        #         "oil": [
+        #             ("sunk_cost", self._oil_capital_sunk_cost),
+        #             ("preonstream", self._oil_capital_preonstream),
+        #             ("postonstream", self._oil_capital_postonstream),
+        #         ],
+        #         "gas": [
+        #             ("sunk_cost", self._gas_capital_sunk_cost),
+        #             ("preonstream", self._gas_capital_preonstream),
+        #             ("postonstream", self._gas_capital_postonstream),
+        #         ],
+        #     }
+        #
+        #     # Define intermediate attributes: "depreciations" and "undepreciated_assets"
+        #     depreciations = {f: {c: None for c in cost_types} for f in depr_mapping.keys()}
+        #     undepreciated_assets = {f: {c: None for c in cost_types} for f in depr_mapping.keys()}
+        #
+        #     # Common arguments passed to depreciation calculator
+        #     kwargs_depr = {
+        #         "depr_method": depr_method,
+        #         "decline_factor": decline_factor,
+        #         "year_inflation": year_inflation,
+        #         "inflation_rate": inflation_rate,
+        #         "tax_rate": tax_rate,
+        #         "inflation_rate_applied_to": inflation_rate_applied_to,
+        #     }
+        #
+        #     # Compute depreciation per fluid per cost type
+        #     for f, mapping in depr_mapping.items():
+        #         for c, obj_c in mapping:
+        #             (
+        #                 depreciations[f][c], undepreciated_assets[f][c]
+        #             ) = obj_c.total_depreciation_rate(**kwargs_depr)
+        #
+        #     # Assign computed depreciations
+        #     self._oil_depreciations = depreciations["oil"]
+        #     self._gas_depreciations = depreciations["gas"]
+        #     self._oil_undepreciated_assets = undepreciated_assets["oil"]
+        #     self._gas_undepreciated_assets = undepreciated_assets["gas"]
 
     def _get_modified_depreciations(self, sum_undepreciated_cost: bool) -> None:
         """
@@ -2327,64 +2449,6 @@ class GrossSplit(BaseProject):
 
         return years_exceed
 
-    # def _allocate_sunk_cost(
-    #     self, sunk_cost: np.ndarray, preonstream: np.ndarray
-    # ) -> np.ndarray:
-    #     """
-    #     Allocate sunk cost and preonstream expenditures to the onstream year.
-    #
-    #     This method aggregates the total value of ``sunk_cost`` and
-    #     ``preonstream`` arrays into a single bulk value and assigns it to
-    #     the project year corresponding to the earlier of the oil or gas
-    #     onstream dates. All other years are set to zero.
-    #
-    #     Parameters
-    #     ----------
-    #     sunk_cost : np.ndarray
-    #         Array of sunk cost values across project years.
-    #     preonstream : np.ndarray
-    #         Array of preonstream cost values across project years.
-    #
-    #     Returns
-    #     -------
-    #     np.ndarray
-    #         A 1D array aligned with ``project_years`` where the summed bulk
-    #         value of ``sunk_cost`` and ``preonstream`` is positioned at the
-    #         onstream year, with zeros elsewhere.
-    #
-    #     Raises
-    #     ------
-    #     ValueError
-    #         If the onstream year does not uniquely match exactly one entry
-    #         in ``project_years``.
-    #
-    #     Notes
-    #     -----
-    #     - The onstream year is determined as the earlier of
-    #       ``oil_onstream_date.year`` and ``gas_onstream_date.year``.
-    #     - Both ``sunk_cost`` and ``preonstream`` arrays are expected to
-    #       align with ``project_years`` in length.
-    #     """
-    #
-    #     # Calculate bulk value
-    #     bulk_value = float(np.sum(sunk_cost + preonstream))
-    #
-    #     # Determine the location of onstream year in project years array
-    #     onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
-    #     match = np.flatnonzero(self.project_years == onstream_yr)
-    #
-    #     # Expected only a single match; raise an exception if multiple matches occurs
-    #     if match.size != 1:
-    #         raise ValueError(f"Expected one onstream year match, got {match.size} instead.")
-    #
-    #     onstream_id = int(match[0])
-    #
-    #     # Create a new array with bulk value positioned at the onstream year
-    #     arr = np.zeros_like(self.project_years, dtype=float)
-    #     arr[onstream_id] = bulk_value
-    #
-    #     return arr
-
     def _get_cost_to_be_deducted(self, sunk_cost_method: SunkCostMethod) -> None:
         """
         Compute the total cost to be deducted for oil and gas.
@@ -2940,211 +3004,222 @@ class GrossSplit(BaseProject):
             inflation_rate_applied_to=inflation_rate_applied_to
         )
 
-        # Modify depreciations, accounting for various adjusments
-        self._get_modified_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)
+        # # Modify depreciations, accounting for various adjusments
+        # self._get_modified_depreciations(sum_undepreciated_cost=sum_undepreciated_cost)
+        #
+        # # Process non-depreciable costs for non-capital sunk costs,
+        # # non-capital preonstream costs, and non-capital postonstream costs
+        # self._get_non_depreciables()
+        #
+        # # Summation attributes: "sunk_cost" + "preonstream" + "postonstream",
+        # # for amortizations, depreciations, and undepreciated_assets
+        # self._oil_sum_undepreciated_asset = np.sum(
+        #     [np.sum(v) for v in self._oil_undepreciated_assets.values()]
+        # )
+        # self._gas_sum_undepreciated_asset = np.sum(
+        #     [np.sum(v) for v in self._gas_undepreciated_assets.values()]
+        # )
+        #
+        # self._oil_depreciation = np.sum([v for v in self._oil_depreciations.values()], axis=0)
+        # self._gas_depreciation = np.sum([v for v in self._gas_depreciations.values()], axis=0)
+        # self._oil_amortization = np.sum([v for v in self._oil_amortizations.values()], axis=0)
+        # self._gas_amortization = np.sum([v for v in self._gas_amortizations.values()], axis=0)
+        #
+        # # Specify base split
+        # self._wrapper_base_split(regime=regime)
+        #
+        # # Specify variable split
+        # self._wrapper_variable_split(
+        #     regime=regime,
+        #     reservoir_type=reservoir_type_permen_2024,
+        # )
+        #
+        # self._var_split_array = np.full_like(
+        #     self.project_years, fill_value=self._variable_split, dtype=float
+        # )
+        #
+        # # Calculate gas production in MMBOE. Based on discussion with YRA on June 28th, 2024,
+        # # cumulative production used for progressive cumulative production split is defined as
+        # # the sum of production rate and production baseline.
+        # prod_gas_boe = (
+        #     self._gas_lifting.get_prod_rate_total_arr() * 1_000. / self.conversion_boe_to_scf
+        # )
+        #
+        # # Check if the cumulative production split offset length is the same
+        # # with the length of project years
+        # self._check_cum_production_split_offset(
+        #     cum_production_split_offset=cum_production_split_offset
+        # )
+        #
+        # # Adjustment in cumulative production split offset
+        # # when parameter "cum_production_split_offset" is given as a single value.
+        # if (
+        #     isinstance(cum_production_split_offset, float)
+        #     or isinstance(cum_production_split_offset, int)
+        # ):
+        #     offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
+        #     offset_arr[0] = cum_production_split_offset
+        #
+        # else:
+        #     offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
+        #
+        # # Calculating the cumulative production
+        # self._cumulative_prod = np.cumsum(
+        #     self._oil_lifting.get_prod_rate_total_arr()
+        #     + prod_gas_boe
+        #     + offset_arr
+        # )
+        #
+        # # Specify progressive split
+        # vectorized_get_prog_split = np.vectorize(self._wrapper_progressive_split)
+        #
+        # # Condition when the cum_production_split_offset is filled with np.ndarray
+        # if (
+        #     isinstance(cum_production_split_offset, np.ndarray)
+        #     and len(cum_production_split_offset) > 1
+        # ):
+        #     # Define attributes "_oil_prog_price_split", "_oil_prog_cum_split",
+        #     # "_oil_prog_split"
+        #     (
+        #         self._oil_prog_price_split,
+        #         self._oil_prog_cum_split
+        #     ) = vectorized_get_prog_split(
+        #         fluid=self._oil_lifting.fluid_type,
+        #         price=self._oil_lifting.get_price_arr(),
+        #         cum=None,
+        #         regime=regime
+        #     )
+        #
+        #     self._oil_prog_split = self._oil_prog_price_split + cum_production_split_offset
+        #
+        #     # Define attributes "_gas_prog_price_split", "_gas_prog_cum_split",
+        #     # "_gas_prog_split"
+        #     (
+        #         self._gas_prog_price_split,
+        #         self._gas_prog_cum_split
+        #     ) = vectorized_get_prog_split(
+        #         fluid=self._gas_lifting.fluid_type,
+        #         price=self._gas_lifting.get_price_arr(),
+        #         cum=None,
+        #         regime=regime
+        #     )
+        #
+        #     self._gas_prog_split = self._gas_prog_price_split + cum_production_split_offset
+        #
+        # # Condition when the cum_production_split_offset is not filled
+        # else:
+        #     # Define attributes "_oil_prog_price_split", "_oil_prog_cum_split",
+        #     # "_oil_prog_split"
+        #     (
+        #         self._oil_prog_price_split,
+        #         self._oil_prog_cum_split
+        #     ) = vectorized_get_prog_split(
+        #         fluid=self._oil_lifting.fluid_type,
+        #         price=self._oil_lifting.get_price_arr(),
+        #         cum=self._cumulative_prod,
+        #         regime=regime,
+        #     )
+        #
+        #     self._oil_prog_split = self._oil_prog_price_split + self._oil_prog_cum_split
+        #
+        #     # Define attributes "_gas_prog_price_split", "_gas_prog_cum_split",
+        #     # "_gas_prog_split"
+        #     (
+        #         self._gas_prog_price_split,
+        #         self._gas_prog_cum_split
+        #     ) = vectorized_get_prog_split(
+        #         fluid=self._gas_lifting.fluid_type,
+        #         price=self._gas_lifting.get_price_arr(),
+        #         cum=self._cumulative_prod,
+        #         regime=regime,
+        #     )
+        #
+        #     self._gas_prog_split = self._gas_prog_price_split + self._gas_prog_cum_split
+        #
+        # # Ministerial discretion
+        # self._ministry_discretion_arr = np.full_like(
+        #     self.project_years, fill_value=self.split_ministry_disc, dtype=float
+        # )
+        #
+        # # Total Contractor Split
+        # self._get_total_contractor_split(
+        #     regime=regime,
+        #     reservoir_type=reservoir_type_permen_2024,
+        #     ministry_discretion=self._ministry_discretion_arr,
+        # )
+        #
+        # # Adjustment when total contractor split exceeds 100%
+        # self._oil_ctr_split_prior_bracket = np.copy(self._oil_ctr_split)
+        # self._gas_ctr_split_prior_bracket = np.copy(self._gas_ctr_split)
+        #
+        # self._oil_year_maximum_ctr_split = self._get_year_maximum_split(
+        #     ctr_split=self._oil_ctr_split,
+        #     fluid="oil"
+        # )
+        #
+        # self._gas_year_maximum_ctr_split = self._get_year_maximum_split(
+        #     ctr_split=self._gas_ctr_split,
+        #     fluid="gas"
+        # )
+        #
+        # # Set maximum contractor split to be 100%
+        # self._oil_ctr_split[self._oil_ctr_split > 1.0] = 1.0
+        # self._gas_ctr_split[self._gas_ctr_split > 1.0] = 1.0
+        #
+        # # Contractor Share
+        # self._oil_ctr_share_before_transfer = self._oil_revenue * self._oil_ctr_split
+        # self._gas_ctr_share_before_transfer = self._gas_revenue * self._gas_ctr_split
+        #
+        # # Government Share
+        # self._oil_gov_share = self._oil_revenue - self._oil_ctr_share_before_transfer
+        # self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
+        #
+        # # Calculate capital and non-capital investments
+        # self._get_investments()
+        #
+        # # Carry forward deductible cost (in PSC Cost Recovery called Unrecovered Cost)
+        # zeros = np.zeros_like(self.project_years, dtype=float)
+        # oil_total_depr = np.sum([v for v in self._oil_depreciations.values()], axis=0)
+        # oil_total_amor = np.sum([v for v in self._oil_amortizations.values()], axis=0)
+        # oil_total_non_depr = np.sum([v for v in self._oil_non_depreciables.values()], axis=0)
+        #
+        # self._oil_cost_tobe_deducted = (
+        #     oil_total_depr
+        #     + oil_total_amor
+        #     + self._oil_carry_forward_depreciation
+        #     + oil_total_non_depr
+        # )
+        #
+        # self._oil_carward_deduct_cost = psc_tools.get_unrecovered_cost(
+        #     depreciation=(
+        #         oil_total_depr + oil_total_amor + self._oil_carry_forward_depreciation
+        #     ),
+        #     non_capital=self._oil_non_capital,
+        #     revenue=self._oil_ctr_share_before_transfer,
+        #     ftp_ctr=zeros,
+        #     ftp_gov=zeros,
+        #     ic=zeros,
+        # )
 
-        # Process non-depreciable costs for non-capital sunk costs,
-        # non-capital preonstream costs, and non-capital postonstream costs
-        self._get_non_depreciables()
+        # t1 = self._oil_depreciations["postonstream"]
+        # print('\t')
+        # print(f'Filetype: {type(t1)}')
+        # print(f'Length: {len(t1)}')
+        # print('t1 = ', t1)
 
-        # Summation attributes: "sunk_cost" + "preonstream" + "postonstream",
-        # for amortizations, depreciations, and undepreciated_assets
-        self._oil_sum_undepreciated_asset = np.sum(
-            [np.sum(v) for v in self._oil_undepreciated_assets.values()]
-        )
-        self._gas_sum_undepreciated_asset = np.sum(
-            [np.sum(v) for v in self._gas_undepreciated_assets.values()]
-        )
+        # print('\t')
+        # print('_oil_depreciable_preonstream = ', self._oil_depreciable_preonstream)
+        # print('_oil_non_depreciable_preonstream = ', self._oil_non_depreciable_preonstream)
+        # print('_oil_preonstream = ', self._oil_preonstream)
+        # print('_oil_amortizations["preonstream"] = ', self._oil_amortizations["preonstream"])
+        # print('_oil_depreciations["preonstream"] = ', self._oil_depreciations["preonstream"])
+        # print('_oil_undepreciated_assets["preonstream"] = ', self._oil_undepreciated_assets["preonstream"])
+        # print('_oil_non_depreciables["preonstream"] = ', self._oil_non_depreciables["preonstream"])
 
-        self._oil_depreciation = np.sum([v for v in self._oil_depreciations.values()], axis=0)
-        self._gas_depreciation = np.sum([v for v in self._gas_depreciations.values()], axis=0)
-        self._oil_amortization = np.sum([v for v in self._oil_amortizations.values()], axis=0)
-        self._gas_amortization = np.sum([v for v in self._gas_amortizations.values()], axis=0)
 
-        # Specify base split
-        self._wrapper_base_split(regime=regime)
 
-        # Specify variable split
-        self._wrapper_variable_split(
-            regime=regime,
-            reservoir_type=reservoir_type_permen_2024,
-        )
 
-        self._var_split_array = np.full_like(
-            self.project_years, fill_value=self._variable_split, dtype=float
-        )
 
-        # Calculate gas production in MMBOE. Based on discussion with YRA on June 28th, 2024,
-        # cumulative production used for progressive cumulative production split is defined as
-        # the sum of production rate and production baseline.
-        prod_gas_boe = (
-            self._gas_lifting.get_prod_rate_total_arr() * 1_000. / self.conversion_boe_to_scf
-        )
-
-        # Check if the cumulative production split offset length is the same
-        # with the length of project years
-        self._check_cum_production_split_offset(
-            cum_production_split_offset=cum_production_split_offset
-        )
-
-        # Adjustment in cumulative production split offset
-        # when parameter "cum_production_split_offset" is given as a single value.
-        if (
-            isinstance(cum_production_split_offset, float)
-            or isinstance(cum_production_split_offset, int)
-        ):
-            offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
-            offset_arr[0] = cum_production_split_offset
-
-        else:
-            offset_arr = np.full_like(self.project_years, fill_value=0.0, dtype=float)
-
-        # Calculating the cumulative production
-        self._cumulative_prod = np.cumsum(
-            self._oil_lifting.get_prod_rate_total_arr()
-            + prod_gas_boe
-            + offset_arr
-        )
-
-        # Specify progressive split
-        vectorized_get_prog_split = np.vectorize(self._wrapper_progressive_split)
-
-        # Condition when the cum_production_split_offset is filled with np.ndarray
-        if (
-            isinstance(cum_production_split_offset, np.ndarray)
-            and len(cum_production_split_offset) > 1
-        ):
-            # Define attributes "_oil_prog_price_split", "_oil_prog_cum_split",
-            # "_oil_prog_split"
-            (
-                self._oil_prog_price_split,
-                self._oil_prog_cum_split
-            ) = vectorized_get_prog_split(
-                fluid=self._oil_lifting.fluid_type,
-                price=self._oil_lifting.get_price_arr(),
-                cum=None,
-                regime=regime
-            )
-
-            self._oil_prog_split = self._oil_prog_price_split + cum_production_split_offset
-
-            # Define attributes "_gas_prog_price_split", "_gas_prog_cum_split",
-            # "_gas_prog_split"
-            (
-                self._gas_prog_price_split,
-                self._gas_prog_cum_split
-            ) = vectorized_get_prog_split(
-                fluid=self._gas_lifting.fluid_type,
-                price=self._gas_lifting.get_price_arr(),
-                cum=None,
-                regime=regime
-            )
-
-            self._gas_prog_split = self._gas_prog_price_split + cum_production_split_offset
-
-        # Condition when the cum_production_split_offset is not filled
-        else:
-            # Define attributes "_oil_prog_price_split", "_oil_prog_cum_split",
-            # "_oil_prog_split"
-            (
-                self._oil_prog_price_split,
-                self._oil_prog_cum_split
-            ) = vectorized_get_prog_split(
-                fluid=self._oil_lifting.fluid_type,
-                price=self._oil_lifting.get_price_arr(),
-                cum=self._cumulative_prod,
-                regime=regime,
-            )
-
-            self._oil_prog_split = self._oil_prog_price_split + self._oil_prog_cum_split
-
-            # Define attributes "_gas_prog_price_split", "_gas_prog_cum_split",
-            # "_gas_prog_split"
-            (
-                self._gas_prog_price_split,
-                self._gas_prog_cum_split
-            ) = vectorized_get_prog_split(
-                fluid=self._gas_lifting.fluid_type,
-                price=self._gas_lifting.get_price_arr(),
-                cum=self._cumulative_prod,
-                regime=regime,
-            )
-
-            self._gas_prog_split = self._gas_prog_price_split + self._gas_prog_cum_split
-
-        # Ministerial discretion
-        self._ministry_discretion_arr = np.full_like(
-            self.project_years, fill_value=self.split_ministry_disc, dtype=float
-        )
-
-        # Total Contractor Split
-        self._get_total_contractor_split(
-            regime=regime,
-            reservoir_type=reservoir_type_permen_2024,
-            ministry_discretion=self._ministry_discretion_arr,
-        )
-
-        # Adjustment when total contractor split exceeds 100%
-        self._oil_ctr_split_prior_bracket = np.copy(self._oil_ctr_split)
-        self._gas_ctr_split_prior_bracket = np.copy(self._gas_ctr_split)
-
-        self._oil_year_maximum_ctr_split = self._get_year_maximum_split(
-            ctr_split=self._oil_ctr_split,
-            fluid="oil"
-        )
-
-        self._gas_year_maximum_ctr_split = self._get_year_maximum_split(
-            ctr_split=self._gas_ctr_split,
-            fluid="gas"
-        )
-
-        # Set maximum contractor split to be 100%
-        self._oil_ctr_split[self._oil_ctr_split > 1.0] = 1.0
-        self._gas_ctr_split[self._gas_ctr_split > 1.0] = 1.0
-
-        # Contractor Share
-        self._oil_ctr_share_before_transfer = self._oil_revenue * self._oil_ctr_split
-        self._gas_ctr_share_before_transfer = self._gas_revenue * self._gas_ctr_split
-
-        # Government Share
-        self._oil_gov_share = self._oil_revenue - self._oil_ctr_share_before_transfer
-        self._gas_gov_share = self._gas_revenue - self._gas_ctr_share_before_transfer
-
-        # Calculate capital and non-capital investments
-        self._get_investments()
-
-        # Carry forward deductible cost (in PSC Cost Recovery called Unrecovered Cost)
-        zeros = np.zeros_like(self.project_years, dtype=float)
-        oil_total_depr = np.sum([v for v in self._oil_depreciations.values()], axis=0)
-        oil_total_amor = np.sum([v for v in self._oil_amortizations.values()], axis=0)
-        oil_total_non_depr = np.sum([v for v in self._oil_non_depreciables.values()], axis=0)
-
-        self._oil_cost_tobe_deducted = (
-            oil_total_depr
-            + oil_total_amor
-            + self._oil_carry_forward_depreciation
-            + oil_total_non_depr
-        )
-
-        self._oil_carward_deduct_cost = psc_tools.get_unrecovered_cost(
-            depreciation=(
-                oil_total_depr + oil_total_amor + self._oil_carry_forward_depreciation
-            ),
-            non_capital=self._oil_non_capital,
-            revenue=self._oil_ctr_share_before_transfer,
-            ftp_ctr=zeros,
-            ftp_gov=zeros,
-            ic=zeros,
-        )
-
-        print('\t')
-        print('_oil_depreciable_preonstream = ', self._oil_depreciable_preonstream)
-        print('_oil_non_depreciable_preonstream = ', self._oil_non_depreciable_preonstream)
-        print('_oil_preonstream = ', self._oil_preonstream)
-        print('_oil_amortizations["preonstream"] = ', self._oil_amortizations["preonstream"])
-        print('_oil_depreciations["preonstream"] = ', self._oil_depreciations["preonstream"])
-        print('_oil_undepreciated_assets["preonstream"] = ', self._oil_undepreciated_assets["preonstream"])
-        print('_oil_non_depreciables["preonstream"] = ', self._oil_non_depreciables["preonstream"])
 
 
         # print('\t')
@@ -3945,3 +4020,30 @@ class GrossSplit(BaseProject):
             "oil_carry_forward_depreciation": oil_carward_depreciation_sum,
             "gas_carry_forward_depreciation": gas_carward_depreciation_sum,
         }
+
+    """
+    Prior approach (deprecated)
+    ---------------------------
+        def _allocate_sunk_cost(
+        self, sunk_cost: np.ndarray, preonstream: np.ndarray
+    ) -> np.ndarray:
+    
+        # Calculate bulk value
+        bulk_value = float(np.sum(sunk_cost + preonstream))
+
+        # Determine the location of onstream year in project years array
+        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        match = np.flatnonzero(self.project_years == onstream_yr)
+
+        # Expected only a single match; raise an exception if multiple matches occurs
+        if match.size != 1:
+            raise ValueError(f"Expected one onstream year match, got {match.size} instead.")
+
+        onstream_id = int(match[0])
+
+        # Create a new array with bulk value positioned at the onstream year
+        arr = np.zeros_like(self.project_years, dtype=float)
+        arr[onstream_id] = bulk_value
+
+        return arr
+    """
