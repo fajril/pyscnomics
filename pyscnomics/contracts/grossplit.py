@@ -1103,6 +1103,7 @@ class GrossSplit(BaseProject):
 
         # Intermediate containers for depreciation and undepreciated asset results
         cost_types = ["sunk_cost", "preonstream", "postonstream"]
+
         depreciations = {f: {c: None for c in cost_types} for f in depr_mapping.keys()}
         undepreciated_assets = {f: {c: None for c in cost_types} for f in depr_mapping.keys()}
 

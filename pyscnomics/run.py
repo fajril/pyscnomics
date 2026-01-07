@@ -76,17 +76,17 @@ kwargs_capital_oil = {
 
 if __name__ == "__main__":
 
-    case = Case00A(contract_type=ContractType.GROSS_SPLIT)
+    case = Case00A(contract_type=ContractType.COST_RECOVERY)
 
     contract = case.as_class()
     contract_arguments = case.contract_arguments
     summary_arguments = case.summary_arguments
     contract.run(**contract_arguments)
 
-    print('\t')
-    print(f'Filetype: {type(contract.warning_messages)}')
-    print(f'Length: {len(contract.warning_messages)}')
-    print('warning_messages = \n', contract.warning_messages)
+    # print('\t')
+    # print(f'Filetype: {type(contract.warning_messages)}')
+    # print(f'Length: {len(contract.warning_messages)}')
+    # print('warning_messages = \n', contract.warning_messages)
 
     # print('\t')
     # print(f'Filetype: {type()}')
