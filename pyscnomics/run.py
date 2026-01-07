@@ -94,6 +94,6 @@ if __name__ == "__main__":
     # print()
 
     # print('\t')
-    #     # print(f'Filetype: {type(t1)}')
-    #     # print(f'Length: {len(t1)}')
-    #     # print(t1)
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
+    # print(t1)

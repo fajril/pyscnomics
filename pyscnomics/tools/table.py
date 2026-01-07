@@ -622,25 +622,6 @@ def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
         get_non_petroleum_commodity(com, gs) for com in non_petroleum_commodities
     ]
 
-    # Prepare postonstream attributes for OIL
-    oil_depreciable_postonstream = _assign_attr(
-        "_oil_capital_expenditures_post_tax", gs
-    )
-
-    oil_non_depreciable_postonstream = np.array(
-        [
-            _assign_attr(at, gs) for at in [
-                "_oil_intangible_expenditures_post_tax",
-                "_oil_opex_expenditures_post_tax",
-                "_oil_asr_expenditures_post_tax",
-                "_oil_lbt_expenditures_post_tax",
-                "_oil_cost_of_sales_expenditures_post_tax",
-            ]
-        ]
-    ).sum(axis=0)
-
-    oil_postonstream = oil_depreciable_postonstream + oil_non_depreciable_postonstream
-
     # Specify a list of cost categories
     categories = [
         "capital",
@@ -671,11 +652,10 @@ def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
         for cat in categories
     }
 
-    # Prepare attribute associated with depreciations
-    depreciations = _assign_attr("_oil_depreciations", gs)
-
-    # Prepare attribute associated with amortizations
+    # Prepare attributes associated with amortizations, depreciations, and non-depreciables
     amortizations = _assign_attr("_oil_amortizations", gs)
+    depreciations = _assign_attr("_oil_depreciations", gs)
+    non_depreciables = _assign_attr("_oil_non_depreciables", gs)
 
     # Specify cashflow table for OIL
     table_oil: dict = {
@@ -703,9 +683,11 @@ def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
         "preonstream": _assign_attr("_oil_preonstream", gs),
 
         # Attributes associated with postonstream cost
-        "postonstream_depreciable": oil_depreciable_postonstream,
-        "postonstream_non_depreciable": oil_non_depreciable_postonstream,
-        "postonstream": oil_postonstream,
+        "postonstream_depreciable": _assign_attr("_oil_depreciable_postonstream", gs),
+        "postonstream_non_depreciable": _assign_attr(
+            "_oil_non_depreciable_postonstream", gs
+        ),
+        "postonstream": _assign_attr("_oil_postonstream", gs),
 
         # Attributes associated with expenditures pre tax
         **pre_tax,
@@ -721,15 +703,20 @@ def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
         "expenses_non_capital": _assign_attr("_oil_non_capital", gs),
         "expenses_total": _assign_attr("_oil_total_expenses", gs),
 
+        # Attributes associated with amortizations
+        "amortizations_sunk_cost": amortizations["sunk_cost"],
+        "amortizations_preonstream": amortizations["preonstream"],
+        "amortizations_postonstream": amortizations["postonstream"],
+
         # Attributes associated with depreciations
         "depreciations_sunk_cost": depreciations["sunk_cost"],
         "depreciations_preonstream": depreciations["preonstream"],
         "depreciations_postonstream": depreciations["postonstream"],
 
-        # Attributes associated with amortizations
-        "amortizations_sunk_cost": amortizations["sunk_cost"],
-        "amortizations_preonstream": amortizations["preonstream"],
-        "amortizations_postonstream": amortizations["postonstream"],
+        # Attributes associated with non-depreciables
+        "non_depreciables_sunk_cost": non_depreciables["sunk_cost"],
+        "non_depreciables_preonstream": non_depreciables["preonstream"],
+        "non_depreciables_postonstream": non_depreciables["postonstream"],
 
         # Attributes associated with splits
         "base_split": _assign_attr("_oil_base_split", gs),
@@ -808,25 +795,6 @@ def get_table_grosssplit_gas(contract: GrossSplit) -> pd.DataFrame:
         get_non_petroleum_commodity(com, gs) for com in non_petroleum_commodities
     ]
 
-    # Prepare postonstream attributes for GAS
-    gas_depreciable_postonstream = _assign_attr(
-        "_gas_capital_expenditures_post_tax", gs
-    )
-
-    gas_non_depreciable_postonstream = np.array(
-        [
-            _assign_attr(at, gs) for at in [
-                "_gas_intangible_expenditures_post_tax",
-                "_gas_opex_expenditures_post_tax",
-                "_gas_asr_expenditures_post_tax",
-                "_gas_lbt_expenditures_post_tax",
-                "_gas_cost_of_sales_expenditures_post_tax",
-            ]
-        ]
-    ).sum(axis=0)
-
-    gas_postonstream = gas_depreciable_postonstream + gas_non_depreciable_postonstream
-
     # Specify a list of cost categories
     categories = [
         "capital",
@@ -857,11 +825,10 @@ def get_table_grosssplit_gas(contract: GrossSplit) -> pd.DataFrame:
         for cat in categories
     }
 
-    # Prepare attribute associated with depreciations
-    depreciations = _assign_attr("_gas_depreciations", gs)
-
-    # Prepare attribute associated with amortizations
+    # Prepare attributes associated with amortizations, depreciations, and non-depreciables
     amortizations = _assign_attr("_gas_amortizations", gs)
+    depreciations = _assign_attr("_gas_depreciations", gs)
+    non_depreciables = _assign_attr("_gas_non_depreciables", gs)
 
     # Specify cashflow table for GAS
     table_gas: dict = {
@@ -889,9 +856,9 @@ def get_table_grosssplit_gas(contract: GrossSplit) -> pd.DataFrame:
         "preonstream": _assign_attr("_gas_preonstream", gs),
 
         # Attributes associated with postonstream cost
-        "postonstream_depreciable": gas_depreciable_postonstream,
-        "postonstream_non_depreciable": gas_non_depreciable_postonstream,
-        "postonstream": gas_postonstream,
+        "postonstream_depreciable": _assign_attr("_gas_depreciable_postonstream", gs),
+        "postonstream_non_depreciable": _assign_attr("_gas_non_depreciable_postonstream", gs),
+        "postonstream": _assign_attr("_gas_postonstream", gs),
 
         # Attributes associated with expenditures pre tax
         **pre_tax,
@@ -907,15 +874,20 @@ def get_table_grosssplit_gas(contract: GrossSplit) -> pd.DataFrame:
         "expenses_non_capital": _assign_attr("_gas_non_capital", gs),
         "expenses_total": _assign_attr("_gas_total_expenses", gs),
 
+        # Attributes associated with amortizations
+        "amortizations_sunk_cost": amortizations["sunk_cost"],
+        "amortizations_preonstream": amortizations["preonstream"],
+        "amortizations_postonstream": amortizations["postonstream"],
+
         # Attributes associated with depreciations
         "depreciations_sunk_cost": depreciations["sunk_cost"],
         "depreciations_preonstream": depreciations["preonstream"],
         "depreciations_postonstream": depreciations["postonstream"],
 
-        # Attributes associated with amortizations
-        "amortizations_sunk_cost": amortizations["sunk_cost"],
-        "amortizations_preonstream": amortizations["preonstream"],
-        "amortizations_postonstream": amortizations["postonstream"],
+        # Attributes associated with non-depreciables
+        "non_depreciables_sunk_cost": non_depreciables["sunk_cost"],
+        "non_depreciables_preonstream": non_depreciables["preonstream"],
+        "non_depreciables_postonstream": non_depreciables["postonstream"],
 
         # Attributes associated with splits
         "base_split": _assign_attr("_gas_base_split", gs),
@@ -993,27 +965,6 @@ def get_table_grosssplit_consolidated(contract: GrossSplit) -> pd.DataFrame:
         get_non_petroleum_commodity(com, gs) for com in non_petroleum_commodities
     ]
 
-    # Specify postonstream attributes for CONSOLIDATED
-    consolidated_depreciable_postonstream = _assign_attr(
-        "_consolidated_capital_expenditures_post_tax", gs
-    )
-
-    consolidated_non_depreciable_postonstream = np.array(
-        [
-            _assign_attr(at, gs) for at in [
-                "_consolidated_intangible_expenditures_post_tax",
-                "_consolidated_opex_expenditures_post_tax",
-                "_consolidated_asr_expenditures_post_tax",
-                "_consolidated_lbt_expenditures_post_tax",
-                "_consolidated_cost_of_sales_expenditures_post_tax",
-            ]
-        ]
-    ).sum(axis=0)
-
-    consolidated_postonstream = (
-        consolidated_depreciable_postonstream + consolidated_non_depreciable_postonstream
-    )
-
     # Specify a list of cost categories
     categories = [
         "capital",
@@ -1048,11 +999,10 @@ def get_table_grosssplit_consolidated(contract: GrossSplit) -> pd.DataFrame:
         for cat in categories
     }
 
-    # Prepare attribute associated with depreciations
-    depreciations = _assign_attr("_consolidated_depreciations", gs)
-
-    # Prepare attribute associated with amortizations
+    # Prepare attributes associated with amortizations, depreciations, and non-depreciables
     amortizations = _assign_attr("_consolidated_amortizations", gs)
+    depreciations = _assign_attr("_consolidated_depreciations", gs)
+    non_depreciables = _assign_attr("_consolidated_non_depreciables", gs)
 
     # Specify cashflow table for CONSOLIDATED
     table_consolidated: dict = {
@@ -1084,9 +1034,13 @@ def get_table_grosssplit_consolidated(contract: GrossSplit) -> pd.DataFrame:
         "preonstream": _assign_attr("_consolidated_preonstream", gs),
 
         # Attributes associated with postonstream cost
-        "postonstream_depreciable": consolidated_depreciable_postonstream,
-        "postonstream_non_depreciable": consolidated_non_depreciable_postonstream,
-        "postonstream": consolidated_postonstream,
+        "postonstream_depreciable": _assign_attr(
+            "_consolidated_depreciable_postonstream", gs
+        ),
+        "postonstream_non_depreciable": _assign_attr(
+            "_consolidated_non_depreciable_postonstream", gs
+        ),
+        "postonstream": _assign_attr("_consolidated_postonstream", gs),
 
         # Attributes associated with expenditures pre tax
         **pre_tax,
@@ -1102,15 +1056,20 @@ def get_table_grosssplit_consolidated(contract: GrossSplit) -> pd.DataFrame:
         "expenses_non_capital": _assign_attr("_consolidated_non_capital", gs),
         "expenses_total": _assign_attr("_consolidated_total_expenses", gs),
 
+        # Attributes associated with amortizations
+        "amortizations_sunk_cost": amortizations["sunk_cost"],
+        "amortizations_preonstream": amortizations["preonstream"],
+        "amortizations_postonstream": amortizations["postonstream"],
+
         # Attributes associated with depreciations
         "depreciations_sunk_cost": depreciations["sunk_cost"],
         "depreciations_preonstream": depreciations["preonstream"],
         "depreciations_postonstream": depreciations["postonstream"],
 
-        # Attributes associated with amortizations
-        "amortizations_sunk_cost": amortizations["sunk_cost"],
-        "amortizations_preonstream": amortizations["preonstream"],
-        "amortizations_postonstream": amortizations["postonstream"],
+        # Attributes associated with non-depreciables
+        "non_depreciables_sunk_cost": non_depreciables["sunk_cost"],
+        "non_depreciables_preonstream": non_depreciables["preonstream"],
+        "non_depreciables_postonstream": non_depreciables["postonstream"],
 
         # Attributes associated with shares
         "contractor_share": _assign_attr("_consolidated_ctr_share_before_tf", gs),

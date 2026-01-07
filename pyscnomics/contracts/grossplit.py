@@ -44,6 +44,7 @@ from pyscnomics.econ.indicator import (
 
 pd.set_option("display.max_rows", 200)
 pd.set_option("display.max_columns", 50)
+pd.set_option("display.max_colwidth", 150)
 
 
 class GrossSplitException(Exception):
@@ -2597,6 +2598,15 @@ class GrossSplit(BaseProject):
         )
         self._consolidated_preonstream = self._oil_preonstream + self._gas_preonstream
 
+        # Attributes associated with consolidated postonstream
+        self._consolidated_depreciable_postonstream = (
+            self._oil_depreciable_postonstream + self._gas_depreciable_postonstream
+        )
+        self._consolidated_non_depreciable_postonstream = (
+            self._oil_non_depreciable_postonstream + self._gas_non_depreciable_postonstream
+        )
+        self._consolidated_postonstream = self._oil_postonstream + self._gas_postonstream
+
         categories = [
             "capital",
             "intangible",
@@ -2737,18 +2747,6 @@ class GrossSplit(BaseProject):
             self._oil_lbt_expenditures_post_tax + self._gas_lbt_expenditures_post_tax
         )
         self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
-
-    def warnings_to_dataframe(self) -> None:
-        """
-        Convert a list of warning messages into a pandas DataFrame structure
-        """
-        self.warning_messages = pd.DataFrame(
-            {
-                "No.": np.arange(1, len(self.warning_messages) + 1),
-                "Category": [c for c, _ in self.warning_messages],
-                "Message": [m for _, m in self.warning_messages],
-            }
-        )
 
     def run(
         self,
@@ -3437,6 +3435,7 @@ class GrossSplit(BaseProject):
         # Prepare consolidated attributes
         self._get_consolidated_profiles()
 
+        # Display warning messages as pandas DataFrame
         self.warnings_to_dataframe()
 
     def get_summary(

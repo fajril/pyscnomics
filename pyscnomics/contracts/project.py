@@ -38,7 +38,8 @@ from pyscnomics.econ.indicator import (
 
 # Set display for pandas dataframe
 pd.set_option("display.max_rows", 200)
-pd.set_option("display.max_columns", 50)
+pd.set_option("display.max_columns", 200)
+pd.set_option("display.max_colwidth", 150)
 
 
 class BaseProjectException(Exception):
@@ -4252,6 +4253,21 @@ class BaseProject:
             self.warning_messages.append(
                 (ContractType.BASE_PROJECT.value, msg_warning)
             )
+
+    def warnings_to_dataframe(self) -> None:
+        """
+        Convert warning messages from a list to a pandas DataFrame.
+        """
+
+        messages = pd.DataFrame(
+            {
+                "No.": np.arange(1, len(self.warning_messages) + 1),
+                "Category": [c for c, _ in self.warning_messages],
+                "Message": [m for _, m in self.warning_messages],
+            }
+        )
+
+        self.warning_messages = messages
 
     def get_summary(
         self,

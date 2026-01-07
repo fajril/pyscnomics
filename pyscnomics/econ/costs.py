@@ -470,8 +470,10 @@ class CapitalCost(GeneralCost):
         self.salvage_value = self.salvage_value.astype(np.float64)
 
         # Prepare attribute useful_life
+        life = min(5.0, self.project_duration)
+
         if self.useful_life is None:
-            self.useful_life = np.repeat(5.0, len(self.expense_year))
+            self.useful_life = np.repeat(life, len(self.expense_year))
 
         else:
             if not isinstance(self.useful_life, np.ndarray):
@@ -479,10 +481,9 @@ class CapitalCost(GeneralCost):
                     f"Attribute useful_life must be provided as a numpy.ndarray, "
                     f"not as a/an {self.useful_life.__class__.__qualname__}"
                 )
-
             useful_life_nan_id = np.argwhere(pd.isna(self.useful_life)).ravel()
             if len(useful_life_nan_id) > 0:
-                self.useful_life[useful_life_nan_id] = np.repeat(5.0, len(useful_life_nan_id))
+                self.useful_life[useful_life_nan_id] = np.repeat(life, len(useful_life_nan_id))
 
         self.useful_life = self.useful_life.astype(np.float64)
 

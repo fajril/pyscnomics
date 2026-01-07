@@ -653,45 +653,45 @@ def get_costrecovery(data: dict, summary_result: bool = True):
 
 def build_grosssplit_instance(data: dict) -> GrossSplit:
     """
-    Build and return an initialized :class:`GrossSplit` contract instance.
+    Construct and return a fully initialized :class:`GrossSplit` instance.
 
-    This function extracts and transforms relevant input parameters from the
-    provided ``data`` dictionary to create a fully configured instance of the
-    :class:`GrossSplit` class.
+    This function extracts, validates, and transforms relevant inputs from the
+    provided ``data`` dictionary to build a configured Gross Split PSC contract.
+    Missing or optional attributes are safely defaulted, and list-based fiscal
+    inputs are normalized to NumPy arrays where required.
 
-    It handles type conversion, optional attribute retrieval, nd ensures missing
-    values are safely replaced with defaults when applicable. The returned object
-    is ready for execution through the :meth:`GrossSplit.run` method.
+    The returned instance is ready to be executed via :meth:`GrossSplit.run`.
 
     Parameters
     ----------
     data : dict
-        Dictionary containing the full dataset required to construct a
-        Gross Split PSC (Production Sharing Contract) instance.
+        Input dictionary containing project setup data, fiscal parameters,
+        cost objects, lifting profiles, and Gross Split–specific attributes.
 
     Returns
     -------
     GrossSplit
-        A fully configured :class:`GrossSplit` instance initialized with
-        project setup parameters, fiscal settings, and DMO-related attributes.
-        The instance is ready to run the Gross Split PSC economic model.
+        An initialized :class:`GrossSplit` contract instance with project,
+        reservoir, fiscal, and DMO parameters configured.
 
     Notes
     -----
-    - The helper function ``_get_value()`` ensures missing or ``None`` attributes
-      from the input dictionary are replaced with a default value (``None`` by default).
-    - List-type fiscal inputs such as DMO portions are converted to NumPy arrays
-      using :func:`convert_list_to_array_float_or_array`.
+    - Optional or missing attributes are handled defensively via a local
+      ``_get_value`` helper.
+    - DMO-related list inputs are converted to NumPy arrays using
+      :func:`convert_list_to_array_float_or_array`.
+    - Carry-forward depreciation values are initialized to zero by default.
     """
 
     # Specify base arguments
     (
         start_date,
         end_date,
+        approval_year,
         oil_onstream_date,
         gas_onstream_date,
-        approval_year,
         is_pod_1,
+        is_strict,
         lifting,
         capital,
         intangible,
@@ -725,10 +725,11 @@ def build_grosssplit_instance(data: dict) -> GrossSplit:
         # Base parameters
         "start_date": start_date,
         "end_date": end_date,
+        "approval_year": approval_year,
         "oil_onstream_date": oil_onstream_date,
         "gas_onstream_date": gas_onstream_date,
-        "approval_year": approval_year,
         "is_pod_1": is_pod_1,
+        "is_strict": is_strict,
 
         # Lifting and costs
         "lifting": lifting,
@@ -737,6 +738,7 @@ def build_grosssplit_instance(data: dict) -> GrossSplit:
         "opex": opex,
         "asr_cost": asr,
         "lbt_cost": lbt,
+        "cost_of_sales": cost_of_sales,
 
         # Field and reservoir properties
         "field_status": _get_value(key="field_status"),
@@ -772,39 +774,29 @@ def build_grosssplit_instance(data: dict) -> GrossSplit:
 
 def build_grosssplit_arguments(data: dict) -> dict:
     """
-    Build a dictionary of contract arguments for the Gross Split PSC scheme.
+    Build a normalized dictionary of execution arguments for a Gross Split PSC.
 
-    This function extracts and converts values from the input ``data`` dictionary,
-    applying type conversions and default values as necessary. It prepares a
-    consistent set of parameters to initialize a ``GrossSplit`` instance or to
-    perform economic evaluations under the Gross Split PSC regime.
+    This function extracts contract-related parameters from ``data["contract_arguments"]``,
+    applies required type conversions, and assigns defaults for optional values.
+    The resulting dictionary is suitable for use as keyword arguments in
+    :meth:`GrossSplit.run`.
 
     Parameters
     ----------
     data : dict
-        Input dictionary containing contract-related information. Must include
-        the key ``"contract_arguments"`` that holds all argument values. Expected
-        structure:
-
-        - ``data["contract_arguments"]["sulfur_revenue"]`` : str
-        - ``data["contract_arguments"]["inflation_rate"]`` : list or float
-        - ``data["contract_arguments"]["tax_regime"]`` : str
-        - and so on.
+        Input dictionary containing a ``"contract_arguments"`` section with
+        Gross Split fiscal and execution parameters.
 
     Returns
     -------
     dict
-        A dictionary of processed contract arguments ready for initializing a
-        ``GrossSplit`` instance.
+        Dictionary of processed and type-safe Gross Split arguments.
 
     Notes
     -----
-    - Missing or ``None`` values are replaced with the specified default in
-      each converter call.
-    - Optional keys are safely accessed using the internal helper method
-      ``_get_value()``, which applies type conversion if a converter is provided.
-    - The returned dictionary is intended for use as keyword arguments in
-      creating a ``GrossSplit`` contract object.
+    - String-based fiscal inputs are converted to enums.
+    - List-like numeric inputs are converted to NumPy arrays where applicable.
+    - Missing or ``None`` values fall back to sensible defaults.
     """
 
     # Specify abbreviations and helper method
@@ -817,7 +809,6 @@ def build_grosssplit_arguments(data: dict) -> dict:
     f_tax_rate = convert_list_to_array_float_or_array_or_none
     f_regime = convert_grosssplitregime_to_enum
     f_2024 = converter_reservoir_type_permen_2024
-    f_amor = converter_initial_amortization_year
 
     def _get_value(key: str, source: dict = ca, default=None, converter=None):
         """
@@ -873,16 +864,10 @@ def build_grosssplit_arguments(data: dict) -> dict:
 
         # Sunk cost
         "amortization": _get_value(key="amortization", default=False),
-        "sunk_cost_method": _get_value(
-            key="sunk_cost_method",
-            default=SunkCostMethod.DEPRECIATED_TANGIBLE,
-            converter=converter_sunk_cost_method,
-        ),
 
         # Fiscal regime
         "regime": f_regime(target=ca["regime"]),
         "reservoir_type_permen_2024": f_2024(target_str=ca["reservoir_type_permen_2024"]),
-        "initial_amortization_year": f_amor(target_str=ca["initial_amortization_year"]),
     }
 
 
