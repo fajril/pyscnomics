@@ -504,8 +504,9 @@ class Case02:
             "end_date": date(year=2059, month=12, day=31),
             "oil_onstream_date": date(year=2024, month=1, day=1),
             "gas_onstream_date": None,
-            "approval_year": None,
+            "approval_year": 2024,
             "is_pod_1": False,
+            "is_strict": False,
         }
 
     def get_class_arguments(self) -> None:
