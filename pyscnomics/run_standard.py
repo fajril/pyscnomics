@@ -32,32 +32,37 @@ if __name__ == "__main__":
     # Specify arguments to run function "execute_contract()"
     kwargs_execute = {
         "case": Case00A,
-        "contract_type": ContractType.COST_RECOVERY,
+        "contract_type": ContractType.GROSS_SPLIT,
     }
 
     # Run the contract using function "execute_contract()"
     ctr = execute_contract(**kwargs_execute)
 
-    # # Configure results
-    # data: dict = ctr["data"]
-    # contract: CostRecovery | GrossSplit | BaseProject = ctr["contract"]
-    # contract_arguments: dict = ctr["contract_arguments"]
-    # summary_arguments: dict = ctr["summary_arguments"]
-    # summary: dict = ctr["summary"]
-    #
-    # # Configure cashflow table
-    # cshflow: tuple = get_table(contract=contract)
-    # cashflow_table: dict = {
-    #     "oil": cshflow[0],
-    #     "gas": cshflow[1],
-    #     "consolidated": cshflow[2],
-    # }
+    # Configure results
+    data: dict = ctr["data"]
+    contract: CostRecovery | GrossSplit | BaseProject = ctr["contract"]
+    contract_arguments: dict = ctr["contract_arguments"]
+    summary_arguments: dict = ctr["summary_arguments"]
+    summary: dict = ctr["summary"]
 
-    # t1 = cashflow_table["consolidated"]
-    # print('\t')
-    # print(f'Filetype: {type(t1)}')
-    # print(f'Length: {len(t1)}')
-    # print('t1 = \n', t1)
+    # Configure cashflow table
+    cshflow: tuple = get_table(contract=contract)
+    cashflow_table: dict = {
+        "oil": cshflow[0],
+        "gas": cshflow[1],
+        "consolidated": cshflow[2],
+    }
+
+    t1 = cashflow_table["oil"]
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
+
+    print('\t')
+    print(f'Filetype: {type(contract.warning_messages)}')
+    print(f'Length: {len(contract.warning_messages)}')
+    print('warning_messages = \n', contract.warning_messages)
 
     # print('\t')
     # print(f'Filetype: {type()}')

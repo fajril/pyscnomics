@@ -11,7 +11,6 @@ from pyscnomics.contracts.transition import Transition
 
 pd.set_option("display.max_rows", None)
 pd.set_option("display.max_columns", 200)
-pd.set_option("display.width", 150)
 
 
 # Define sulfur, electricity, and CO2 as non-petroleum commodities
@@ -176,9 +175,7 @@ def get_table_costrecovery_oil(contract: CostRecovery) -> pd.DataFrame:
 
         # Attributes associated with sunk cost
         "sunk_cost_depreciable": _assign_attr("_oil_depreciable_sunk_cost", cr),
-        "sunk_cost_non_depreciable": _assign_attr(
-            "_oil_non_depreciable_sunk_cost", cr
-        ),
+        "sunk_cost_non_depreciable": _assign_attr("_oil_non_depreciable_sunk_cost", cr),
         "sunk_cost": _assign_attr("_oil_sunk_cost", cr),
 
         # Attributes associated with preonstream cost

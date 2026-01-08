@@ -39,7 +39,7 @@ from pyscnomics.econ.indicator import (
 # Set display for pandas dataframe
 pd.set_option("display.max_rows", 200)
 pd.set_option("display.max_columns", 200)
-pd.set_option("display.max_colwidth", 150)
+# pd.set_option("display.max_colwidth", 150)
 
 
 class BaseProjectException(Exception):
@@ -4055,6 +4055,9 @@ class BaseProject:
 
         # Prepare consolidated profiles
         self._get_consolidated_profiles()
+
+        # Display warning messages as pandas DataFrame
+        self.warnings_to_dataframe()
 
     @staticmethod
     def _calc_division(numerator: float, denominator: float, default: float = 0.0):
