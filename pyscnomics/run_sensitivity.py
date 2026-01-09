@@ -26,7 +26,10 @@ from pyscnomics.api.adapter import (
     get_contract_table,
 )
 from pyscnomics.tools.table import get_table
-from pyscnomics.optimize.sensitivity import _get_multipliers
+from pyscnomics.optimize.sensitivity import (
+    _get_multipliers,
+    _prepare_adjusted_parameters_single_contract
+)
 from pyscnomics.api.adapter import get_sensitivity
 from pyscnomics.dataset.case_00A import Case00A
 
@@ -36,11 +39,17 @@ if __name__ == "__main__":
     case = Case00A(contract_type=ContractType.COST_RECOVERY)
     contract = case.as_class()
 
-    t1 = contract
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    _prepare_adjusted_parameters_single_contract(
+        contract=contract,
+        adjustment_value=0.5,
+        element="GASLIFTING"
+    )
+
+    # t1 = contract
+    # print('\t')
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
+    # print('t1 = \n', t1)
 
     # ctr_type = ContractType.GROSS_SPLIT
     #
