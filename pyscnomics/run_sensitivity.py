@@ -26,22 +26,32 @@ from pyscnomics.api.adapter import (
     get_contract_table,
 )
 from pyscnomics.tools.table import get_table
+from pyscnomics.optimize.sensitivity import _get_multipliers
 from pyscnomics.api.adapter import get_sensitivity
 from pyscnomics.dataset.case_00A import Case00A
 
 
 if __name__ == "__main__":
 
-    ctr_type = ContractType.GROSS_SPLIT
+    case = Case00A(contract_type=ContractType.COST_RECOVERY)
+    contract = case.as_class()
 
-    case = Case00A(contract_type=ctr_type)
-    data = case.as_dict()
-
-    t1 = get_sensitivity(data=data, contract_type=ctr_type.value)
+    t1 = contract
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')
     print('t1 = \n', t1)
+
+    # ctr_type = ContractType.GROSS_SPLIT
+    #
+    # case = Case00A(contract_type=ctr_type)
+    # data = case.as_dict()
+    #
+    # t1 = get_sensitivity(data=data, contract_type=ctr_type.value)
+    # print('\t')
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
+    # print('t1 = \n', t1)
 
     # print('\t')
     # print(f'Filetype: {type()}')
