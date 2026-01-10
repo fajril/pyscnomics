@@ -312,7 +312,6 @@ def _prepare_onstream_dates_single_contract(
     -------
     dict
         A dictionary containing the oil and gas onstream dates, with the following keys:
-
         - ``"oil"`` : datetime or None
           The oil onstream date, or ``None`` if `_oil_revenue` equals zero.
         - ``"gas"`` : datetime or None
@@ -326,13 +325,28 @@ def _prepare_onstream_dates_single_contract(
     """
     def _get_onstream_date(target_str: str, default: str):
         value = getattr(contract, target_str)
+
+        print('\t')
+        print('value = ', value)
+
         total = value.sum() if hasattr(value, "sum") else value
+
+        print('total = ', total)
+
+        
+
         return None if total == 0 else getattr(contract, default)
 
-    return {
-        "oil": _get_onstream_date(target_str="_oil_revenue", default="oil_onstream_date"),
-        "gas": _get_onstream_date(target_str="_gas_revenue", default="gas_onstream_date"),
-    }
+    _get_onstream_date(target_str="_oil_revenue", default="oil_onstream_date")
+
+    # t1 = _get_onstream_date(target_str="_oil_revenue", default="oil_onstream_date")
+    # print('\t')
+    # print('t1 = ', t1)
+
+    # return {
+    #     "oil": _get_onstream_date(target_str="_oil_revenue", default="oil_onstream_date"),
+    #     "gas": _get_onstream_date(target_str="_gas_revenue", default="gas_onstream_date"),
+    # }
 
 
 def _adjust_element_single_contract(
@@ -379,15 +393,9 @@ def _adjust_element_single_contract(
         element=element,
     )
 
-    t1 = params_adjusted
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    # Prepare onstream dates
+    onstream_date = _prepare_onstream_dates_single_contract(contract=contract)
 
-    # # Prepare onstream dates
-    # onstream_date = _prepare_onstream_dates_single_contract(contract=contract)
-    #
     # # Specify base arguments
     # base_kwargs = {
     #     # Base parameters
