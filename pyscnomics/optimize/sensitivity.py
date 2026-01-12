@@ -402,9 +402,6 @@ def _adjust_element_single_contract(
         "cost_of_sales": contract.cost_of_sales,
     }
 
-    print('\t')
-    print('base_kwargs = \n', base_kwargs)
-
     # Create a new instance of CostRecovery
     if isinstance(contract, CostRecovery):
 
@@ -450,58 +447,58 @@ def _adjust_element_single_contract(
 
         contract_adjusted = CostRecovery(**cost_recovery_kwargs)
 
-    # # Create a new instance of GrossSplit
-    # elif isinstance(contract, GrossSplit):
-    #
-    #     # Specify the required arguments to create an instance of GrossSplit
-    #     gross_split_kwargs = {
-    #         # Base parameters, lifting, and costs
-    #         **base_kwargs,
-    #
-    #         # Field and reservoir properties
-    #         "field_status": contract.field_status,
-    #         "field_loc": contract.field_loc,
-    #         "res_depth": contract.res_depth,
-    #         "infra_avail": contract.infra_avail,
-    #         "res_type": contract.res_type,
-    #         "api_oil": contract.api_oil,
-    #         "domestic_use": contract.domestic_use,
-    #         "prod_stage": contract.prod_stage,
-    #         "co2_content": contract.co2_content,
-    #         "h2s_content": contract.h2s_content,
-    #         "field_reserves_2024": contract.field_reserves_2024,
-    #         "infra_avail_2024": contract.infra_avail_2024,
-    #         "field_loc_2024": contract.field_loc_2024,
-    #         "split_ministry_disc": contract.split_ministry_disc,
-    #
-    #         # DMO parameters
-    #         "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
-    #         "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
-    #         "oil_dmo_holiday_duration": contract.oil_dmo_holiday_duration,
-    #         "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
-    #         "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
-    #         "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
-    #
-    #         # Carry forward depreciation
-    #         "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
-    #         "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
-    #     }
-    #
-    #     contract_adjusted = GrossSplit(**gross_split_kwargs)
-    #
-    # # Create a new instance of BaseProject
-    # elif isinstance(contract, BaseProject):
-    #     contract_adjusted = BaseProject(**base_kwargs)
-    #
-    # else:
-    #     raise SensitivityException(
-    #         f"Invalid contract type: {contract.__class__.__qualname__}"
-    #     )
-    #
-    # if run_contract:
-    #     contract_adjusted.run(**contract_arguments)
-    #
-    # return contract_adjusted
+    # Create a new instance of GrossSplit
+    elif isinstance(contract, GrossSplit):
+
+        # Specify the required arguments to create an instance of GrossSplit
+        gross_split_kwargs = {
+            # Base parameters, lifting, and costs
+            **base_kwargs,
+
+            # Field and reservoir properties
+            "field_status": contract.field_status,
+            "field_loc": contract.field_loc,
+            "res_depth": contract.res_depth,
+            "infra_avail": contract.infra_avail,
+            "res_type": contract.res_type,
+            "api_oil": contract.api_oil,
+            "domestic_use": contract.domestic_use,
+            "prod_stage": contract.prod_stage,
+            "co2_content": contract.co2_content,
+            "h2s_content": contract.h2s_content,
+            "field_reserves_2024": contract.field_reserves_2024,
+            "infra_avail_2024": contract.infra_avail_2024,
+            "field_loc_2024": contract.field_loc_2024,
+            "split_ministry_disc": contract.split_ministry_disc,
+
+            # DMO parameters
+            "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
+            "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
+            "oil_dmo_holiday_duration": contract.oil_dmo_holiday_duration,
+            "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
+            "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
+            "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
+
+            # Carry forward depreciation
+            "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
+            "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
+        }
+
+        contract_adjusted = GrossSplit(**gross_split_kwargs)
+
+    # Create a new instance of BaseProject
+    elif isinstance(contract, BaseProject):
+        contract_adjusted = BaseProject(**base_kwargs)
+
+    else:
+        raise SensitivityException(
+            f"Invalid contract type: {contract.__class__.__qualname__}"
+        )
+
+    if run_contract:
+        contract_adjusted.run(**contract_arguments)
+
+    return contract_adjusted
 
 
 def _adjust_element_transition_contract(
@@ -589,11 +586,8 @@ def _adjust_contract(
         The adjustment value which will be multiplied by the corresponding element.
     run_contract:bool
         The option to run the contract or not.
-
-    Returns
-    -------
-
     """
+
     if isinstance(contract, Transition):
         return _adjust_element_transition_contract(
             contract=contract,
@@ -736,20 +730,20 @@ def sensitivity_psc(
         for indicator in indicator_list
     }
 
-    if dataframe_output is True:
-
-        # Transform result dictionary into DataFrames
-        sensitivity_result_df = {
-            indicator: pd.DataFrame.from_dict(data, orient="index")
-            .reset_index()
-            .rename(columns={"index": "Factor"})
-            .set_index("Factor")
-            for indicator, data in sensitivity_result.items()
-        }
-        return sensitivity_result_df
-
-    else:
-        return sensitivity_result
+    # if dataframe_output is True:
+    #
+    #     # Transform result dictionary into DataFrames
+    #     sensitivity_result_df = {
+    #         indicator: pd.DataFrame.from_dict(data, orient="index")
+    #         .reset_index()
+    #         .rename(columns={"index": "Factor"})
+    #         .set_index("Factor")
+    #         for indicator, data in sensitivity_result.items()
+    #     }
+    #     return sensitivity_result_df
+    #
+    # else:
+    #     return sensitivity_result
 
 
 """
