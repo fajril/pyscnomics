@@ -2005,6 +2005,7 @@ def get_sensitivity(data: dict, contract_type: str):
       a collection of DataFrames.
     """
 
+    # Check for invalid conditions
     if "sensitivity_arguments" not in data:
         raise ContractException(
             "The payload does not have the sensitivity_arguments key"
@@ -2015,31 +2016,44 @@ def get_sensitivity(data: dict, contract_type: str):
             "The payload sensitivity_arguments does not have any values"
         )
 
+    # Helper method
+    def _extract_contract_components(func):
+        _, contract, contract_arguments, summary_argument = func
+        return contract, contract_arguments, summary_argument
+
     # Retrieving the contract, contract_arguments_dict,
-    # summary_arguments_dict based on the contract type
+    # summary_arguments_dict based on the contract type.
     # CostRecovery
     if contract_type == "Cost Recovery":
-        contract = get_costrecovery(data=data)[1]
-        contract_arguments = get_costrecovery(data=data)[2]
-        summary_argument = get_costrecovery(data=data)[3]
+        (
+            contract,
+            contract_arguments,
+            summary_argument
+        ) = _extract_contract_components(func=get_costrecovery(data=data))
 
     # GrossSplit
     elif contract_type == "Gross Split":
-        contract = get_grosssplit(data=data)[1]
-        contract_arguments = get_grosssplit(data=data)[2]
-        summary_argument = get_grosssplit(data=data)[3]
+        (
+            contract,
+            contract_arguments,
+            summary_argument
+        ) = _extract_contract_components(func=get_grosssplit(data=data))
 
     # Transition
     elif contract_type == "Transition":
-        contract = get_transition(data=data)[1]
-        contract_arguments = get_transition(data=data)[2]
-        summary_argument = get_transition(data=data)[3]
+        (
+            contract,
+            contract_arguments,
+            summary_argument
+        ) = _extract_contract_components(func=get_transition(data=data))
 
     # BaseProject
     else:
-        contract = get_baseproject(data=data)[1]
-        contract_arguments = get_baseproject(data=data)[2]
-        summary_argument = get_baseproject(data=data)[3]
+        (
+            contract,
+            contract_arguments,
+            summary_argument
+        ) = _extract_contract_components(func=get_baseproject(data=data))
 
     # Constructing the sensitivity arguments
     sensitivity_result = sensitivity_psc(
