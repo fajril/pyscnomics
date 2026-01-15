@@ -135,50 +135,76 @@ def get_setup_dict(data: dict) -> tuple:
           Cost of sales data, converted using `convert_dict_to_cost_of_sales()`.
     """
 
+    def _check_existence(target_key: str):
+        if target_key not in data:
+            raise MonteCarloException(f"Missing {target_key!r} in dictionary 'data'.")
+        return data[target_key]
+
     # Specify abbreviation for selected functions and variables
-    se = data["setup"]
-    intang = data["intangible"]
-    cos = data["cost_of_sales"]
-    to_date = convert_str_to_date
-    to_int = convert_str_to_int
-    to_lft = convert_dict_to_lifting
-    to_cap = convert_dict_to_capital
-    to_intang = convert_dict_to_intangible
-    to_opex = convert_dict_to_opex
-    to_asr = convert_dict_to_asr
-    to_lbt = convert_dict_to_lbt
-    to_cos = convert_dict_to_cost_of_sales
+    se = _check_existence(target_key="setup")
+
+    # se = data["setup"] if "setup" in data else None
+    # cap = data["capital"] if "capital" in data else None
+    # intang = data["intangible"]
+    # cos = data["cost_of_sales"]
+    # to_date = convert_str_to_date
+    # to_int = convert_str_to_int
+    # to_lft = convert_dict_to_lifting
+    # to_cap = convert_dict_to_capital
+    # to_intang = convert_dict_to_intangible
+    # to_opex = convert_dict_to_opex
+    # to_asr = convert_dict_to_asr
+    # to_lbt = convert_dict_to_lbt
+    # to_cos = convert_dict_to_cost_of_sales
 
     # Parsing the contract setup into each corresponding variables
-    start_date = to_date(str_object=se["start_date"])
-    end_date = to_date(str_object=se["end_date"])
-    oil_onstream_date = to_date(str_object=se.get("oil_onstream_date", None))
-    gas_onstream_date = to_date(str_object=se.get("gas_onstream_date", None))
-    approval_year = to_int(str_object=se["approval_year"])
+    start_date = convert_str_to_date(str_object=se["start_date"])
+    end_date = convert_str_to_date(str_object=se["end_date"])
+    approval_year = convert_str_to_int(str_object=se["approval_year"])
+    oil_onstream_date = convert_str_to_date(str_object=se.get("oil_onstream_date", None))
+    gas_onstream_date = convert_str_to_date(str_object=se.get("gas_onstream_date", None))
     is_pod_1 = se["is_pod_1"]
-    lifting = to_lft(data_raw=data) if "lifting" in data else None
-    capital = to_cap(data_raw=data["capital"] if "capital" in data else None)
-    intangible = to_intang(data_raw=intang if "intangible" in data else None)
-    opex = to_opex(data_raw=data["opex"]) if "opex" in data else None
-    asr = to_asr(data_raw=data["asr"]) if "asr" in data else None
-    lbt = to_lbt(data_raw=data["lbt"]) if "lbt" in data else None
-    cost_of_sales = to_cos(data_raw=cos if "cost_of_sales" in data else None)
-
-    return (
-        start_date,
-        end_date,
-        oil_onstream_date,
-        gas_onstream_date,
-        approval_year,
-        is_pod_1,
-        lifting,
-        capital,
-        intangible,
-        opex,
-        asr,
-        lbt,
-        cost_of_sales,
+    is_strict = se["is_strict"]
+    lifting = convert_dict_to_lifting(data_raw=data) if "lifting" in data else None
+    capital = (
+        convert_dict_to_capital(data_raw=data["capital"]) if "capital" in data else None
     )
+    intangible = (
+        convert_dict_to_intangible(data_raw=data["intangible"]) if "intangible" in data else None
+    )
+
+
+
+    print('\t')
+    print(f'Filetype: {type(intangible)}')
+    print('intangible = \n', intangible)
+
+    # intangible = convert_dict_to_intangible(data_raw=intang if "intangible" in data else None)
+    #
+    #
+    # lifting = to_lft(data_raw=data) if "lifting" in data else None
+    # capital = to_cap(data_raw=data["capital"] if "capital" in data else None)
+    # intangible = to_intang(data_raw=intang if "intangible" in data else None)
+    # opex = to_opex(data_raw=data["opex"]) if "opex" in data else None
+    # asr = to_asr(data_raw=data["asr"]) if "asr" in data else None
+    # lbt = to_lbt(data_raw=data["lbt"]) if "lbt" in data else None
+    # cost_of_sales = to_cos(data_raw=cos if "cost_of_sales" in data else None)
+    #
+    # return (
+    #     start_date,
+    #     end_date,
+    #     oil_onstream_date,
+    #     gas_onstream_date,
+    #     approval_year,
+    #     is_pod_1,
+    #     lifting,
+    #     capital,
+    #     intangible,
+    #     opex,
+    #     asr,
+    #     lbt,
+    #     cost_of_sales,
+    # )
 
 
 def get_summary_dict(data: dict) -> dict:

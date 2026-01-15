@@ -20,11 +20,14 @@ from pyscnomics.optimize.optimization import (
     optimize_psc_core,
     optimize_psc,
 )
-from pyscnomics.api.adapter import (
-    get_costrecovery,
-    get_grosssplit,
-    get_baseproject,
-    get_contract_table,
+# from pyscnomics.api.adapter import (
+#     get_costrecovery,
+#     get_grosssplit,
+#     get_baseproject,
+#     get_contract_table,
+# )
+from pyscnomics.optimize.uncertainty import (
+    get_setup_dict,
 )
 from pyscnomics.tools.table import get_table
 from pyscnomics.api.adapter import get_uncertainty
@@ -38,11 +41,13 @@ if __name__ == "__main__":
     case = Case00A(contract_type=ctr_type)
     data = case.as_dict()
 
-    t1 = get_uncertainty(data=data, contract_type=ctr_type.value)
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    get_setup_dict(data=data)
+
+    # t1 = get_uncertainty(data=data, contract_type=ctr_type.value)
+    # print('\t')
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
+    # print('t1 = \n', t1)
 
     # print('\t')
     # print(f'Filetype: {type()}')
