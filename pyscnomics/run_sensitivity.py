@@ -38,35 +38,6 @@ from pyscnomics.dataset.case_00A import Case00A
 
 if __name__ == "__main__":
 
-    # case = Case00A(contract_type=ContractType.BASE_PROJECT)
-    # contract = case.as_class()
-    # contract_arguments = case.contract_arguments
-    # summary_arguments = case.summary_arguments
-    #
-    # elements = {
-    #     0: "CAPEX",
-    #     1: "OPEX",
-    #     2: "OILPRICE",
-    #     3: "GASPRICE",
-    #     4: "OILLIFTING",
-    #     5: "GASLIFTING",
-    # }
-    #
-    # kwargs_sensitivity = {
-    #     "contract": contract,
-    #     "contract_arguments": contract_arguments,
-    #     "summary_arguments": summary_arguments,
-    #     "min_deviation": 0.5,
-    #     "max_deviation": 0.5,
-    #     "dataframe_output": True,
-    # }
-    #
-    # t1 = sensitivity_psc(**kwargs_sensitivity)
-    # print('\t')
-    # print(f'Filetype: {type(t1)}')
-    # print(f'Length: {len(t1)}')
-    # print('t1 = \n', t1)
-
     ctr_type = ContractType.GROSS_SPLIT
 
     case = Case00A(contract_type=ctr_type)
@@ -79,7 +50,7 @@ if __name__ == "__main__":
     # print(f'Length: {len()}')
     # print()
 
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    # print('\t')
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
+    # print('t1 = \n', t1)

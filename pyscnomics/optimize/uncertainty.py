@@ -181,42 +181,6 @@ def get_setup_dict(data: dict) -> tuple:
     )
 
 
-"""
-Former Approach
----------------
-def get_setup_dict(data: dict) -> tuple:
-    # Parsing the contract setup into each corresponding variables
-    start_date = convert_str_to_date(str_object=data["setup"]["start_date"])
-    end_date = convert_str_to_date(str_object=data["setup"]["end_date"])
-    oil_onstream_date = convert_str_to_date(
-        str_object=data["setup"]["oil_onstream_date"]
-    )
-    gas_onstream_date = convert_str_to_date(
-        str_object=data["setup"]["gas_onstream_date"]
-    )
-    lifting = convert_dict_to_lifting(data_raw=data)
-    capital = convert_dict_to_capital(data_raw=data["capital"])
-    intangible = convert_dict_to_intangible(data_raw=data["intangible"])
-    opex = convert_dict_to_opex(data_raw=data["opex"])
-    asr = convert_dict_to_asr(data_raw=data["asr"])
-    lbt = convert_dict_to_lbt(data_raw=data["lbt"])
-    cost_of_sales = convert_dict_to_cost_of_sales(data_raw=data["cost_of_sales"])
-    return (
-        start_date,
-        end_date,
-        oil_onstream_date,
-        gas_onstream_date,
-        lifting,
-        capital,
-        intangible,
-        opex,
-        asr,
-        lbt,
-        cost_of_sales,
-    )
-"""
-
-
 def get_summary_dict(data: dict) -> dict:
     """
     Extract and convert summary-related parameters from the input dictionary
@@ -282,35 +246,6 @@ def get_summary_dict(data: dict) -> dict:
     }
 
     return summary_arguments_dict
-
-
-"""
-def get_summary_dict(data: dict) -> dict:
-    # Filling the argument with the input data
-    reference_year = data["summary_arguments"].get("reference_year", None)
-    inflation_rate = data["summary_arguments"].get("inflation_rate", None)
-    discount_rate = data["summary_arguments"].get("discount_rate", 0.1)
-    npv_mode = convert_str_to_npvmode(
-        str_object=data["summary_arguments"].get("npv_mode", "Full Cycle Nominal Terms")
-    )
-    discounting_mode = convert_str_to_discountingmode(
-        str_object=data["summary_arguments"].get("discounting_mode", "discounting_mode")
-    )
-    profitability_discounted = data["summary_arguments"].get(
-        "profitability_discounted", False
-    )
-
-    summary_arguments_dict = {
-        "reference_year": reference_year,
-        "inflation_rate": inflation_rate,
-        "discount_rate": discount_rate,
-        "npv_mode": npv_mode,
-        "discounting_mode": discounting_mode,
-        "profitability_discounted": profitability_discounted,
-    }
-
-    return summary_arguments_dict
-"""
 
 
 def build_baseproject_instance(data: dict) -> BaseProject:
@@ -445,69 +380,6 @@ def get_baseproject(data: dict) -> dict:
     summary_arguments_dict = get_summary_dict(data=data)
 
     return contract.get_summary(**summary_arguments_dict)
-
-
-"""
-Former approach
----------------
-def get_baseproject(data: dict):
-    (
-        start_date,
-        end_date,
-        oil_onstream_date,
-        gas_onstream_date,
-        lifting,
-        tangible,
-        intangible,
-        opex,
-        asr,
-        lbt,
-        cost_of_sales,
-    ) = get_setup_dict(data=data)
-
-    contract = BaseProject(
-        start_date=start_date,
-        end_date=end_date,
-        oil_onstream_date=oil_onstream_date,
-        gas_onstream_date=gas_onstream_date,
-        lifting=lifting,
-        capital_cost=tangible,
-        intangible_cost=intangible,
-        opex=opex,
-        asr_cost=asr,
-        lbt_cost=lbt,
-    )
-
-    contract_arguments_dict = {
-        "sulfur_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["sulfur_revenue"]
-        ),
-        "electricity_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["electricity_revenue"]
-        ),
-        "co2_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["co2_revenue"]
-        ),
-        "sunk_cost_reference_year": data["contract_arguments"][
-            "sunk_cost_reference_year"
-        ],
-        "tax_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["tax_rate"]
-        ),
-        "inflation_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["inflation_rate"]
-        ),
-        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
-            str_object=data["contract_arguments"]["inflation_rate_applied_to"]
-        ),
-    }
-
-    contract.run(**contract_arguments_dict)
-
-    summary_arguments_dict = get_summary_dict(data=data)
-    summary_arguments_dict["contract"] = contract
-    return get_summary(**summary_arguments_dict)
-"""
 
 
 def build_costrecovery_instance(data: dict) -> CostRecovery:
@@ -771,159 +643,6 @@ def get_costrecovery(data: dict) -> dict:
     summary_arguments_dict = get_summary_dict(data=data)
 
     return contract.get_summary(**summary_arguments_dict)
-
-
-"""
-Former approach
----------------
-def get_costrecovery(data: dict):
-    (
-        start_date,
-        end_date,
-        oil_onstream_date,
-        gas_onstream_date,
-        lifting,
-        tangible,
-        intangible,
-        opex,
-        asr,
-        lbt,
-        cost_of_sales,
-    ) = get_setup_dict(data=data)
-
-    contract = CostRecovery(
-        start_date=start_date,
-        end_date=end_date,
-        oil_onstream_date=oil_onstream_date,
-        gas_onstream_date=gas_onstream_date,
-        lifting=lifting,
-        capital_cost=tangible,
-        intangible_cost=intangible,
-        opex=opex,
-        asr_cost=asr,
-        lbt_cost=lbt,
-        cost_of_sales=cost_of_sales,
-        oil_ftp_is_available=data["costrecovery"]["oil_ftp_is_available"],
-        oil_ftp_is_shared=data["costrecovery"]["oil_ftp_is_shared"],
-        oil_ftp_portion=convert_to_float(
-            target=data["costrecovery"]["oil_ftp_portion"]
-        ),
-        gas_ftp_is_available=data["costrecovery"]["gas_ftp_is_available"],
-        gas_ftp_is_shared=data["costrecovery"]["gas_ftp_is_shared"],
-        gas_ftp_portion=convert_to_float(
-            target=data["costrecovery"]["gas_ftp_portion"]
-        ),
-        tax_split_type=convert_str_to_taxsplit(
-            str_object=data["costrecovery"]["tax_split_type"]
-        ),
-        condition_dict=data["costrecovery"]["condition_dict"],
-        indicator_rc_icp_sliding=convert_list_to_array_float(
-            data_list=data["costrecovery"]["indicator_rc_icp_sliding"]
-        ),
-        oil_ctr_pretax_share=convert_to_float(
-            target=data["costrecovery"]["oil_ctr_pretax_share"]
-        ),
-        gas_ctr_pretax_share=convert_to_float(
-            target=data["costrecovery"]["gas_ctr_pretax_share"]
-        ),
-        oil_ic_rate=convert_to_float(target=data["costrecovery"]["oil_ic_rate"]),
-        gas_ic_rate=convert_to_float(target=data["costrecovery"]["gas_ic_rate"]),
-        ic_is_available=data["costrecovery"]["ic_is_available"],
-        oil_cr_cap_rate=convert_to_float(
-            target=data["costrecovery"]["oil_cr_cap_rate"]
-        ),
-        gas_cr_cap_rate=convert_to_float(
-            target=data["costrecovery"]["gas_cr_cap_rate"]
-        ),
-        oil_dmo_volume_portion=convert_to_float(
-            target=data["costrecovery"]["oil_dmo_volume_portion"]
-        ),
-        oil_dmo_fee_portion=convert_to_float(
-            target=data["costrecovery"]["oil_dmo_fee_portion"]
-        ),
-        oil_dmo_holiday_duration=data["costrecovery"]["oil_dmo_holiday_duration"],
-        gas_dmo_volume_portion=convert_to_float(
-            target=data["costrecovery"]["gas_dmo_volume_portion"]
-        ),
-        gas_dmo_fee_portion=convert_to_float(
-            target=data["costrecovery"]["gas_dmo_fee_portion"]
-        ),
-        gas_dmo_holiday_duration=data["costrecovery"]["gas_dmo_holiday_duration"],
-        oil_carry_forward_depreciation=data["costrecovery"][
-            "oil_carry_forward_depreciation"
-        ],
-        gas_carry_forward_depreciation=data["costrecovery"][
-            "gas_carry_forward_depreciation"
-        ],
-    )
-
-    # Filling the arguments of the contract with the data input
-    contract_arguments_dict = {
-        "sulfur_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["sulfur_revenue"]
-        ),
-        "electricity_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["electricity_revenue"]
-        ),
-        "co2_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["co2_revenue"]
-        ),
-        "is_dmo_end_weighted": data["contract_arguments"]["is_dmo_end_weighted"],
-        "tax_regime": convert_str_to_taxregime(
-            str_object=data["contract_arguments"]["tax_regime"]
-        ),
-        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
-            data_list=data["contract_arguments"]["effective_tax_rate"]
-        ),
-        "ftp_tax_regime": convert_str_to_ftptaxregime(
-            str_object=data["contract_arguments"]["ftp_tax_regime"]
-        ),
-        "sunk_cost_reference_year": data["contract_arguments"][
-            "sunk_cost_reference_year"
-        ],
-        "depr_method": convert_str_to_depremethod(
-            str_object=data["contract_arguments"]["depr_method"]
-        ),
-        "decline_factor": data["contract_arguments"]["decline_factor"],
-        "vat_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["vat_rate"]
-        ),
-        "inflation_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["inflation_rate"]
-        ),
-        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
-            str_object=data["contract_arguments"]["inflation_rate_applied_to"]
-        ),
-        "post_uu_22_year2001": (
-            True
-            if "post_uu_22_year2001" not in data["contract_arguments"]
-            else data["contract_arguments"]["post_uu_22_year2001"]
-        ),
-        "oil_cost_of_sales_applied": (
-            False
-            if "oil_cost_of_sales_applied" not in data["contract_arguments"]
-            else data["contract_arguments"]["oil_cost_of_sales_applied"]
-        ),
-        "gas_cost_of_sales_applied": (
-            False
-            if "gas_cost_of_sales_applied" not in data["contract_arguments"]
-            else data["contract_arguments"]["gas_cost_of_sales_applied"]
-        ),
-        "sum_undepreciated_cost": (
-            False
-            if "sum_undepreciated_cost" not in data["contract_arguments"]
-            else data["contract_arguments"]["sum_undepreciated_cost"]
-        ),
-    }
-
-    # Running the contract
-    contract.run(**contract_arguments_dict)
-
-    # Filling the summary arguments
-    summary_arguments_dict = get_summary_dict(data=data)
-    summary_arguments_dict["contract"] = contract
-    return get_summary(**summary_arguments_dict)
-"""
 
 
 def build_grosssplit_instance(data: dict) -> GrossSplit:
@@ -1192,134 +911,6 @@ def get_grosssplit(data: dict) -> dict:
     summary_arguments_dict = get_summary_dict(data=data)
 
     return contract.get_summary(**summary_arguments_dict)
-
-
-"""
-Former Approach
----------------
-def get_grosssplit(data: dict):
-    (
-        start_date,
-        end_date,
-        oil_onstream_date,
-        gas_onstream_date,
-        lifting,
-        tangible,
-        intangible,
-        opex,
-        asr,
-        lbt,
-        cost_of_sales,
-    ) = get_setup_dict(data=data)
-
-    contract = GrossSplit(
-        start_date=start_date,
-        end_date=end_date,
-        oil_onstream_date=oil_onstream_date,
-        gas_onstream_date=gas_onstream_date,
-        lifting=lifting,
-        capital_cost=tangible,
-        intangible_cost=intangible,
-        opex=opex,
-        asr_cost=asr,
-        lbt_cost=lbt,
-        field_status=data["grosssplit"]["field_status"],
-        field_loc=data["grosssplit"]["field_loc"],
-        res_depth=data["grosssplit"]["res_depth"],
-        infra_avail=data["grosssplit"]["infra_avail"],
-        res_type=data["grosssplit"]["res_type"],
-        api_oil=data["grosssplit"]["api_oil"],
-        domestic_use=data["grosssplit"]["domestic_use"],
-        prod_stage=data["grosssplit"]["prod_stage"],
-        co2_content=data["grosssplit"]["co2_content"],
-        h2s_content=data["grosssplit"]["h2s_content"],
-        base_split_ctr_oil=convert_to_float(
-            target=data["grosssplit"]["base_split_ctr_oil"]
-        ),
-        base_split_ctr_gas=convert_to_float(
-            target=data["grosssplit"]["base_split_ctr_gas"]
-        ),
-        split_ministry_disc=convert_to_float(
-            target=data["grosssplit"]["split_ministry_disc"]
-        ),
-        oil_dmo_volume_portion=convert_to_float(
-            target=data["grosssplit"]["oil_dmo_volume_portion"]
-        ),
-        oil_dmo_fee_portion=convert_to_float(
-            target=data["grosssplit"]["oil_dmo_fee_portion"]
-        ),
-        oil_dmo_holiday_duration=data["grosssplit"]["oil_dmo_holiday_duration"],
-        gas_dmo_volume_portion=convert_to_float(
-            target=data["grosssplit"]["gas_dmo_volume_portion"]
-        ),
-        gas_dmo_fee_portion=convert_to_float(
-            target=data["grosssplit"]["gas_dmo_fee_portion"]
-        ),
-        gas_dmo_holiday_duration=data["grosssplit"]["gas_dmo_holiday_duration"],
-        oil_carry_forward_depreciation=data["grosssplit"][
-            "oil_carry_forward_depreciation"
-        ],
-        gas_carry_forward_depreciation=data["grosssplit"][
-            "gas_carry_forward_depreciation"
-        ],
-    )
-
-    # Filling the arguments of the contract with the data input
-    contract_arguments_dict = {
-        "sulfur_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["sulfur_revenue"]
-        ),
-        "electricity_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["electricity_revenue"]
-        ),
-        "co2_revenue": convert_str_to_otherrevenue(
-            str_object=data["contract_arguments"]["co2_revenue"]
-        ),
-        "is_dmo_end_weighted": data["contract_arguments"]["is_dmo_end_weighted"],
-        "tax_regime": convert_str_to_taxregime(
-            str_object=data["contract_arguments"]["tax_regime"]
-        ),
-        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
-            data_list=data["contract_arguments"]["effective_tax_rate"]
-        ),
-        "sunk_cost_reference_year": data["contract_arguments"][
-            "sunk_cost_reference_year"
-        ],
-        "depr_method": convert_str_to_depremethod(
-            str_object=data["contract_arguments"]["depr_method"]
-        ),
-        "decline_factor": data["contract_arguments"]["decline_factor"],
-        "vat_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["vat_rate"]
-        ),
-        "inflation_rate": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["inflation_rate"]
-        ),
-        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
-            str_object=data["contract_arguments"]["inflation_rate_applied_to"]
-        ),
-        "cum_production_split_offset": convert_list_to_array_float_or_array(
-            data_input=data["contract_arguments"]["cum_production_split_offset"]
-        ),
-        "amortization": data["contract_arguments"]["amortization"],
-        "regime": convert_grosssplitregime_to_enum(
-            target=data["contract_arguments"]["regime"]
-        ),
-        "sum_undepreciated_cost": (
-            False
-            if "sum_undepreciated_cost" not in data["contract_arguments"]
-            else data["contract_arguments"]["sum_undepreciated_cost"]
-        ),
-    }
-
-    # Running the contract
-    contract.run(**contract_arguments_dict)
-
-    # Filling the summary arguments
-    summary_arguments_dict = get_summary_dict(data=data)
-    summary_arguments_dict["contract"] = contract
-    return get_summary(**summary_arguments_dict)
-"""
 
 
 def get_transition(data: dict):
@@ -1696,7 +1287,7 @@ def min_mean_max_retriever(
             is_price=False,
             arrays=[
                 getattr(contract, f"_oil_lifting").lifting_rate,
-                getattr(contract, f"_gas_lifting").lifting_rate
+                getattr(contract, f"_gas_lifting").lifting_rate,
             ]
         ),
         "oil_price": _make_mapping(
@@ -2013,111 +1604,6 @@ class ProcessMonte:
 
         return contract_adjusted
 
-    """
-    Former approach
-    ---------------
-    def Adjust_Data(self, multipliers: np.ndarray):
-
-        Adj_Contract = copy.deepcopy(self.baseContract)
-
-        def Adj_Partial_Data(
-            contract_: dict,
-            par: str,
-            key: str,
-            multiplier: float,
-            datakeys: list = [],
-        ):
-            for item_key in contract_[key].keys():
-                item = contract_[key][item_key]
-
-                if (
-                    par == "Lifting"
-                    and key == "lifting"
-                    and item["fluid_type"] == "Gas"
-                ):
-                    continue
-
-                if key == "lifting":
-                    if (
-                        (par == "Oil Price" and item["fluid_type"] == "Oil")
-                        or (par == "Gas Price" and item["fluid_type"] == "Gas")
-                        or par == "Lifting"
-                    ):
-                        lifting_key = (
-                            ["price"]
-                            if par == "Oil Price" or par == "Gas Price"
-                            else ["lifting_rate", "prod_rate"]
-                        )
-                        for lift_keys in lifting_key:
-                            item[lift_keys] = (
-                                np.array(item[lift_keys]) * multiplier
-                            ).tolist()
-                else:
-                    for data_key in datakeys:
-                        item[data_key] = (
-                            np.array(item[data_key]) * multiplier
-                        ).tolist()
-
-        # Specify contract based on contract type
-        # for iloop in range(2 if self.type >= 3 else 1):
-        contract_ = (
-            # Adj_Contract if self.type < 3 else Adj_Contract[f"contract_{iloop+1}"]
-            Adj_Contract
-            if self.type < 3
-            else Adj_Contract[f"contract_{2}"]
-        )
-
-        for i in range(len(self.parameter)):
-            # OIl
-            if self.parameter[i]["id"] == 0:
-                Adj_Partial_Data(contract_, "Oil Price", "lifting", multipliers[i])
-
-            elif self.parameter[i]["id"] == 1:
-                Adj_Partial_Data(contract_, "Gas Price", "lifting", multipliers[i])
-
-            elif self.parameter[i]["id"] == 2:
-                Adj_Partial_Data(
-                    contract_,
-                    "OPEX",
-                    "opex",
-                    multipliers[i],
-                    ["fixed_cost", "cost_per_volume"],
-                )
-                Adj_Partial_Data(
-                    contract_,
-                    "ASR",
-                    "asr",
-                    multipliers[i],
-                    ["cost"],
-                )
-                Adj_Partial_Data(
-                    contract_,
-                    "LBT",
-                    "lbt",
-                    multipliers[i],
-                    ["cost"],
-                )
-                Adj_Partial_Data(
-                    contract_,
-                    "COS",
-                    "cost_of_sales",
-                    multipliers[i],
-                    ["cost"],
-                )
-
-            elif self.parameter[i]["id"] == 3:
-                Adj_Partial_Data(
-                    contract_, "CAPEX", "capital", multipliers[i], ["cost"]
-                )
-                Adj_Partial_Data(
-                    contract_, "CAPEX", "intangible", multipliers[i], ["cost"]
-                )
-            elif self.parameter[i]["id"] == 4:
-                Adj_Partial_Data(contract_, "Lifting", "lifting", multipliers[i])
-
-        return Adj_Contract
-    """
-
     def calcContract(self, n: int) -> dict:
         """
         Execute a Monte Carlo simulation for the selected contract type and
@@ -2158,21 +1644,6 @@ class ProcessMonte:
             }
 
             csummary = mapping_summary.get(self.type, get_baseproject)(data=dataAdj)
-
-            """
-            Former approach
-            ---------------
-            csummary = (
-                get_costrecovery(data=dataAdj) if self.type == 1
-                else (
-                    get_grosssplit(data=dataAdj) if self.type == 2
-                    else (
-                        get_transition(data=dataAdj) if self.type >= 3
-                        else get_baseproject(data=dataAdj)
-                    )
-                )
-            )
-            """
 
             del dataAdj
 
@@ -2407,72 +1878,6 @@ class ProcessMonte:
 
         return self.get_outcomes(results=results)
 
-    """
-    Former approach
-    ---------------
-        def calculate(self):
-
-        # Designate a container to store Monte Carlo simulation results
-        results = np.zeros(
-            [self.numSim, len(self.target) + len(self.parameter)], dtype=np.float64
-        )
-        
-        # Execute MonteCarlo simulation using pathos multiprocessing
-        from pathos.multiprocessing import ProcessingPool as Pool
-
-        with Pool() as pool:
-            futures = pool.map(self.calcContract, range(self.numSim))
-
-        for res in futures:
-            results[res["n"], 0 : len(self.target)] = res["output"]
-            results[res["n"], len(self.target) :] = [
-                self.multipliers[res["n"], index] * item["base"]
-                for index, item in enumerate(self.parameter)
-            ]
-
-        # Sorted the results
-        results_sorted = np.take_along_axis(
-            arr=results,
-            indices=np.argsort(results, axis=0),
-            axis=0,
-        )
-
-        # Specify probability
-        prob = np.arange(1, self.numSim + 1, dtype=np.float64) / self.numSim
-
-        # Arrange the results
-        results_arranged = np.concatenate((prob[:, np.newaxis], results_sorted), axis=1)
-
-        # Calculate P10, P50, P90
-        percentiles = np.percentile(
-            a=results_arranged,
-            q=[10, 50, 90],
-            method="higher",
-            axis=0,
-        )
-
-        # Determine indices of data
-        indices = np.linspace(0, self.numSim, 101)[0:-1].astype(int)
-        indices[0] = 1
-        if indices[-1] != self.numSim - 1:
-            indices = np.append(indices, int(self.numSim - 1))
-
-        # Final outcomes
-        outcomes = {
-            "params": (
-                ["Oil Price", "Gas Price", "Opex", "Capex", "Cum. prod."]
-                if self.hasGas
-                else ["Oil Price", "Opex", "Capex", "Cum. prod."]
-            ),
-            "results": results_arranged[indices, :].tolist(),
-            "P10": percentiles[0, :].tolist(),
-            "P50": percentiles[1, :].tolist(),
-            "P90": percentiles[2, :].tolist(),
-        }
-
-        return outcomes
-    """
-
 
 def uncertainty_psc(
     contract: BaseProject | CostRecovery | GrossSplit | Transition,
@@ -2699,3 +2104,594 @@ def uncertainty_psc(
         # print(traceback.format_exc(limit=2))
 
         return monte.calculate_single_core()
+
+
+"""
+Former Approach
+---------------
+def get_setup_dict(data: dict) -> tuple:
+    # Parsing the contract setup into each corresponding variables
+    start_date = convert_str_to_date(str_object=data["setup"]["start_date"])
+    end_date = convert_str_to_date(str_object=data["setup"]["end_date"])
+    oil_onstream_date = convert_str_to_date(
+        str_object=data["setup"]["oil_onstream_date"]
+    )
+    gas_onstream_date = convert_str_to_date(
+        str_object=data["setup"]["gas_onstream_date"]
+    )
+    lifting = convert_dict_to_lifting(data_raw=data)
+    capital = convert_dict_to_capital(data_raw=data["capital"])
+    intangible = convert_dict_to_intangible(data_raw=data["intangible"])
+    opex = convert_dict_to_opex(data_raw=data["opex"])
+    asr = convert_dict_to_asr(data_raw=data["asr"])
+    lbt = convert_dict_to_lbt(data_raw=data["lbt"])
+    cost_of_sales = convert_dict_to_cost_of_sales(data_raw=data["cost_of_sales"])
+    return (
+        start_date,
+        end_date,
+        oil_onstream_date,
+        gas_onstream_date,
+        lifting,
+        capital,
+        intangible,
+        opex,
+        asr,
+        lbt,
+        cost_of_sales,
+    )
+"""
+
+"""
+def get_summary_dict(data: dict) -> dict:
+    # Filling the argument with the input data
+    reference_year = data["summary_arguments"].get("reference_year", None)
+    inflation_rate = data["summary_arguments"].get("inflation_rate", None)
+    discount_rate = data["summary_arguments"].get("discount_rate", 0.1)
+    npv_mode = convert_str_to_npvmode(
+        str_object=data["summary_arguments"].get("npv_mode", "Full Cycle Nominal Terms")
+    )
+    discounting_mode = convert_str_to_discountingmode(
+        str_object=data["summary_arguments"].get("discounting_mode", "discounting_mode")
+    )
+    profitability_discounted = data["summary_arguments"].get(
+        "profitability_discounted", False
+    )
+
+    summary_arguments_dict = {
+        "reference_year": reference_year,
+        "inflation_rate": inflation_rate,
+        "discount_rate": discount_rate,
+        "npv_mode": npv_mode,
+        "discounting_mode": discounting_mode,
+        "profitability_discounted": profitability_discounted,
+    }
+
+    return summary_arguments_dict
+"""
+
+"""
+Former approach
+---------------
+def get_baseproject(data: dict):
+    (
+        start_date,
+        end_date,
+        oil_onstream_date,
+        gas_onstream_date,
+        lifting,
+        tangible,
+        intangible,
+        opex,
+        asr,
+        lbt,
+        cost_of_sales,
+    ) = get_setup_dict(data=data)
+
+    contract = BaseProject(
+        start_date=start_date,
+        end_date=end_date,
+        oil_onstream_date=oil_onstream_date,
+        gas_onstream_date=gas_onstream_date,
+        lifting=lifting,
+        capital_cost=tangible,
+        intangible_cost=intangible,
+        opex=opex,
+        asr_cost=asr,
+        lbt_cost=lbt,
+    )
+
+    contract_arguments_dict = {
+        "sulfur_revenue": convert_str_to_otherrevenue(
+            str_object=data["contract_arguments"]["sulfur_revenue"]
+        ),
+        "electricity_revenue": convert_str_to_otherrevenue(
+            str_object=data["contract_arguments"]["electricity_revenue"]
+        ),
+        "co2_revenue": convert_str_to_otherrevenue(
+            str_object=data["contract_arguments"]["co2_revenue"]
+        ),
+        "sunk_cost_reference_year": data["contract_arguments"][
+            "sunk_cost_reference_year"
+        ],
+        "tax_rate": convert_list_to_array_float_or_array(
+            data_input=data["contract_arguments"]["tax_rate"]
+        ),
+        "inflation_rate": convert_list_to_array_float_or_array(
+            data_input=data["contract_arguments"]["inflation_rate"]
+        ),
+        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
+            str_object=data["contract_arguments"]["inflation_rate_applied_to"]
+        ),
+    }
+
+    contract.run(**contract_arguments_dict)
+
+    summary_arguments_dict = get_summary_dict(data=data)
+    summary_arguments_dict["contract"] = contract
+    return get_summary(**summary_arguments_dict)
+"""
+
+"""
+Former approach
+---------------
+def get_costrecovery(data: dict):
+    (
+        start_date,
+        end_date,
+        oil_onstream_date,
+        gas_onstream_date,
+        lifting,
+        tangible,
+        intangible,
+        opex,
+        asr,
+        lbt,
+        cost_of_sales,
+    ) = get_setup_dict(data=data)
+
+    contract = CostRecovery(
+        start_date=start_date,
+        end_date=end_date,
+        oil_onstream_date=oil_onstream_date,
+        gas_onstream_date=gas_onstream_date,
+        lifting=lifting,
+        capital_cost=tangible,
+        intangible_cost=intangible,
+        opex=opex,
+        asr_cost=asr,
+        lbt_cost=lbt,
+        cost_of_sales=cost_of_sales,
+        oil_ftp_is_available=data["costrecovery"]["oil_ftp_is_available"],
+        oil_ftp_is_shared=data["costrecovery"]["oil_ftp_is_shared"],
+        oil_ftp_portion=convert_to_float(
+            target=data["costrecovery"]["oil_ftp_portion"]
+        ),
+        gas_ftp_is_available=data["costrecovery"]["gas_ftp_is_available"],
+        gas_ftp_is_shared=data["costrecovery"]["gas_ftp_is_shared"],
+        gas_ftp_portion=convert_to_float(
+            target=data["costrecovery"]["gas_ftp_portion"]
+        ),
+        tax_split_type=convert_str_to_taxsplit(
+            str_object=data["costrecovery"]["tax_split_type"]
+        ),
+        condition_dict=data["costrecovery"]["condition_dict"],
+        indicator_rc_icp_sliding=convert_list_to_array_float(
+            data_list=data["costrecovery"]["indicator_rc_icp_sliding"]
+        ),
+        oil_ctr_pretax_share=convert_to_float(
+            target=data["costrecovery"]["oil_ctr_pretax_share"]
+        ),
+        gas_ctr_pretax_share=convert_to_float(
+            target=data["costrecovery"]["gas_ctr_pretax_share"]
+        ),
+        oil_ic_rate=convert_to_float(target=data["costrecovery"]["oil_ic_rate"]),
+        gas_ic_rate=convert_to_float(target=data["costrecovery"]["gas_ic_rate"]),
+        ic_is_available=data["costrecovery"]["ic_is_available"],
+        oil_cr_cap_rate=convert_to_float(
+            target=data["costrecovery"]["oil_cr_cap_rate"]
+        ),
+        gas_cr_cap_rate=convert_to_float(
+            target=data["costrecovery"]["gas_cr_cap_rate"]
+        ),
+        oil_dmo_volume_portion=convert_to_float(
+            target=data["costrecovery"]["oil_dmo_volume_portion"]
+        ),
+        oil_dmo_fee_portion=convert_to_float(
+            target=data["costrecovery"]["oil_dmo_fee_portion"]
+        ),
+        oil_dmo_holiday_duration=data["costrecovery"]["oil_dmo_holiday_duration"],
+        gas_dmo_volume_portion=convert_to_float(
+            target=data["costrecovery"]["gas_dmo_volume_portion"]
+        ),
+        gas_dmo_fee_portion=convert_to_float(
+            target=data["costrecovery"]["gas_dmo_fee_portion"]
+        ),
+        gas_dmo_holiday_duration=data["costrecovery"]["gas_dmo_holiday_duration"],
+        oil_carry_forward_depreciation=data["costrecovery"][
+            "oil_carry_forward_depreciation"
+        ],
+        gas_carry_forward_depreciation=data["costrecovery"][
+            "gas_carry_forward_depreciation"
+        ],
+    )
+
+    # Filling the arguments of the contract with the data input
+    contract_arguments_dict = {
+        "sulfur_revenue": convert_str_to_otherrevenue(
+            str_object=data["contract_arguments"]["sulfur_revenue"]
+        ),
+        "electricity_revenue": convert_str_to_otherrevenue(
+            str_object=data["contract_arguments"]["electricity_revenue"]
+        ),
+        "co2_revenue": convert_str_to_otherrevenue(
+            str_object=data["contract_arguments"]["co2_revenue"]
+        ),
+        "is_dmo_end_weighted": data["contract_arguments"]["is_dmo_end_weighted"],
+        "tax_regime": convert_str_to_taxregime(
+            str_object=data["contract_arguments"]["tax_regime"]
+        ),
+        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
+            data_list=data["contract_arguments"]["effective_tax_rate"]
+        ),
+        "ftp_tax_regime": convert_str_to_ftptaxregime(
+            str_object=data["contract_arguments"]["ftp_tax_regime"]
+        ),
+        "sunk_cost_reference_year": data["contract_arguments"][
+            "sunk_cost_reference_year"
+        ],
+        "depr_method": convert_str_to_depremethod(
+            str_object=data["contract_arguments"]["depr_method"]
+        ),
+        "decline_factor": data["contract_arguments"]["decline_factor"],
+        "vat_rate": convert_list_to_array_float_or_array(
+            data_input=data["contract_arguments"]["vat_rate"]
+        ),
+        "inflation_rate": convert_list_to_array_float_or_array(
+            data_input=data["contract_arguments"]["inflation_rate"]
+        ),
+        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
+            str_object=data["contract_arguments"]["inflation_rate_applied_to"]
+        ),
+        "post_uu_22_year2001": (
+            True
+            if "post_uu_22_year2001" not in data["contract_arguments"]
+            else data["contract_arguments"]["post_uu_22_year2001"]
+        ),
+        "oil_cost_of_sales_applied": (
+            False
+            if "oil_cost_of_sales_applied" not in data["contract_arguments"]
+            else data["contract_arguments"]["oil_cost_of_sales_applied"]
+        ),
+        "gas_cost_of_sales_applied": (
+            False
+            if "gas_cost_of_sales_applied" not in data["contract_arguments"]
+            else data["contract_arguments"]["gas_cost_of_sales_applied"]
+        ),
+        "sum_undepreciated_cost": (
+            False
+            if "sum_undepreciated_cost" not in data["contract_arguments"]
+            else data["contract_arguments"]["sum_undepreciated_cost"]
+        ),
+    }
+
+    # Running the contract
+    contract.run(**contract_arguments_dict)
+
+    # Filling the summary arguments
+    summary_arguments_dict = get_summary_dict(data=data)
+    summary_arguments_dict["contract"] = contract
+    return get_summary(**summary_arguments_dict)
+"""
+
+"""
+Former Approach
+---------------
+def get_grosssplit(data: dict):
+    (
+        start_date,
+        end_date,
+        oil_onstream_date,
+        gas_onstream_date,
+        lifting,
+        tangible,
+        intangible,
+        opex,
+        asr,
+        lbt,
+        cost_of_sales,
+    ) = get_setup_dict(data=data)
+
+    contract = GrossSplit(
+        start_date=start_date,
+        end_date=end_date,
+        oil_onstream_date=oil_onstream_date,
+        gas_onstream_date=gas_onstream_date,
+        lifting=lifting,
+        capital_cost=tangible,
+        intangible_cost=intangible,
+        opex=opex,
+        asr_cost=asr,
+        lbt_cost=lbt,
+        field_status=data["grosssplit"]["field_status"],
+        field_loc=data["grosssplit"]["field_loc"],
+        res_depth=data["grosssplit"]["res_depth"],
+        infra_avail=data["grosssplit"]["infra_avail"],
+        res_type=data["grosssplit"]["res_type"],
+        api_oil=data["grosssplit"]["api_oil"],
+        domestic_use=data["grosssplit"]["domestic_use"],
+        prod_stage=data["grosssplit"]["prod_stage"],
+        co2_content=data["grosssplit"]["co2_content"],
+        h2s_content=data["grosssplit"]["h2s_content"],
+        base_split_ctr_oil=convert_to_float(
+            target=data["grosssplit"]["base_split_ctr_oil"]
+        ),
+        base_split_ctr_gas=convert_to_float(
+            target=data["grosssplit"]["base_split_ctr_gas"]
+        ),
+        split_ministry_disc=convert_to_float(
+            target=data["grosssplit"]["split_ministry_disc"]
+        ),
+        oil_dmo_volume_portion=convert_to_float(
+            target=data["grosssplit"]["oil_dmo_volume_portion"]
+        ),
+        oil_dmo_fee_portion=convert_to_float(
+            target=data["grosssplit"]["oil_dmo_fee_portion"]
+        ),
+        oil_dmo_holiday_duration=data["grosssplit"]["oil_dmo_holiday_duration"],
+        gas_dmo_volume_portion=convert_to_float(
+            target=data["grosssplit"]["gas_dmo_volume_portion"]
+        ),
+        gas_dmo_fee_portion=convert_to_float(
+            target=data["grosssplit"]["gas_dmo_fee_portion"]
+        ),
+        gas_dmo_holiday_duration=data["grosssplit"]["gas_dmo_holiday_duration"],
+        oil_carry_forward_depreciation=data["grosssplit"][
+            "oil_carry_forward_depreciation"
+        ],
+        gas_carry_forward_depreciation=data["grosssplit"][
+            "gas_carry_forward_depreciation"
+        ],
+    )
+
+    # Filling the arguments of the contract with the data input
+    contract_arguments_dict = {
+        "sulfur_revenue": convert_str_to_otherrevenue(
+            str_object=data["contract_arguments"]["sulfur_revenue"]
+        ),
+        "electricity_revenue": convert_str_to_otherrevenue(
+            str_object=data["contract_arguments"]["electricity_revenue"]
+        ),
+        "co2_revenue": convert_str_to_otherrevenue(
+            str_object=data["contract_arguments"]["co2_revenue"]
+        ),
+        "is_dmo_end_weighted": data["contract_arguments"]["is_dmo_end_weighted"],
+        "tax_regime": convert_str_to_taxregime(
+            str_object=data["contract_arguments"]["tax_regime"]
+        ),
+        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
+            data_list=data["contract_arguments"]["effective_tax_rate"]
+        ),
+        "sunk_cost_reference_year": data["contract_arguments"][
+            "sunk_cost_reference_year"
+        ],
+        "depr_method": convert_str_to_depremethod(
+            str_object=data["contract_arguments"]["depr_method"]
+        ),
+        "decline_factor": data["contract_arguments"]["decline_factor"],
+        "vat_rate": convert_list_to_array_float_or_array(
+            data_input=data["contract_arguments"]["vat_rate"]
+        ),
+        "inflation_rate": convert_list_to_array_float_or_array(
+            data_input=data["contract_arguments"]["inflation_rate"]
+        ),
+        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
+            str_object=data["contract_arguments"]["inflation_rate_applied_to"]
+        ),
+        "cum_production_split_offset": convert_list_to_array_float_or_array(
+            data_input=data["contract_arguments"]["cum_production_split_offset"]
+        ),
+        "amortization": data["contract_arguments"]["amortization"],
+        "regime": convert_grosssplitregime_to_enum(
+            target=data["contract_arguments"]["regime"]
+        ),
+        "sum_undepreciated_cost": (
+            False
+            if "sum_undepreciated_cost" not in data["contract_arguments"]
+            else data["contract_arguments"]["sum_undepreciated_cost"]
+        ),
+    }
+
+    # Running the contract
+    contract.run(**contract_arguments_dict)
+
+    # Filling the summary arguments
+    summary_arguments_dict = get_summary_dict(data=data)
+    summary_arguments_dict["contract"] = contract
+    return get_summary(**summary_arguments_dict)
+"""
+
+"""
+            Former approach
+            ---------------
+            csummary = (
+                get_costrecovery(data=dataAdj) if self.type == 1
+                else (
+                    get_grosssplit(data=dataAdj) if self.type == 2
+                    else (
+                        get_transition(data=dataAdj) if self.type >= 3
+                        else get_baseproject(data=dataAdj)
+                    )
+                )
+            )
+"""
+
+"""
+    Former approach
+    ---------------
+    def Adjust_Data(self, multipliers: np.ndarray):
+
+        Adj_Contract = copy.deepcopy(self.baseContract)
+
+        def Adj_Partial_Data(
+            contract_: dict,
+            par: str,
+            key: str,
+            multiplier: float,
+            datakeys: list = [],
+        ):
+            for item_key in contract_[key].keys():
+                item = contract_[key][item_key]
+
+                if (
+                    par == "Lifting"
+                    and key == "lifting"
+                    and item["fluid_type"] == "Gas"
+                ):
+                    continue
+
+                if key == "lifting":
+                    if (
+                        (par == "Oil Price" and item["fluid_type"] == "Oil")
+                        or (par == "Gas Price" and item["fluid_type"] == "Gas")
+                        or par == "Lifting"
+                    ):
+                        lifting_key = (
+                            ["price"]
+                            if par == "Oil Price" or par == "Gas Price"
+                            else ["lifting_rate", "prod_rate"]
+                        )
+                        for lift_keys in lifting_key:
+                            item[lift_keys] = (
+                                np.array(item[lift_keys]) * multiplier
+                            ).tolist()
+                else:
+                    for data_key in datakeys:
+                        item[data_key] = (
+                            np.array(item[data_key]) * multiplier
+                        ).tolist()
+
+        # Specify contract based on contract type
+        # for iloop in range(2 if self.type >= 3 else 1):
+        contract_ = (
+            # Adj_Contract if self.type < 3 else Adj_Contract[f"contract_{iloop+1}"]
+            Adj_Contract
+            if self.type < 3
+            else Adj_Contract[f"contract_{2}"]
+        )
+
+        for i in range(len(self.parameter)):
+            # OIl
+            if self.parameter[i]["id"] == 0:
+                Adj_Partial_Data(contract_, "Oil Price", "lifting", multipliers[i])
+
+            elif self.parameter[i]["id"] == 1:
+                Adj_Partial_Data(contract_, "Gas Price", "lifting", multipliers[i])
+
+            elif self.parameter[i]["id"] == 2:
+                Adj_Partial_Data(
+                    contract_,
+                    "OPEX",
+                    "opex",
+                    multipliers[i],
+                    ["fixed_cost", "cost_per_volume"],
+                )
+                Adj_Partial_Data(
+                    contract_,
+                    "ASR",
+                    "asr",
+                    multipliers[i],
+                    ["cost"],
+                )
+                Adj_Partial_Data(
+                    contract_,
+                    "LBT",
+                    "lbt",
+                    multipliers[i],
+                    ["cost"],
+                )
+                Adj_Partial_Data(
+                    contract_,
+                    "COS",
+                    "cost_of_sales",
+                    multipliers[i],
+                    ["cost"],
+                )
+
+            elif self.parameter[i]["id"] == 3:
+                Adj_Partial_Data(
+                    contract_, "CAPEX", "capital", multipliers[i], ["cost"]
+                )
+                Adj_Partial_Data(
+                    contract_, "CAPEX", "intangible", multipliers[i], ["cost"]
+                )
+            elif self.parameter[i]["id"] == 4:
+                Adj_Partial_Data(contract_, "Lifting", "lifting", multipliers[i])
+
+        return Adj_Contract
+"""
+
+"""
+    Former approach
+    ---------------
+        def calculate(self):
+
+        # Designate a container to store Monte Carlo simulation results
+        results = np.zeros(
+            [self.numSim, len(self.target) + len(self.parameter)], dtype=np.float64
+        )
+
+        # Execute MonteCarlo simulation using pathos multiprocessing
+        from pathos.multiprocessing import ProcessingPool as Pool
+
+        with Pool() as pool:
+            futures = pool.map(self.calcContract, range(self.numSim))
+
+        for res in futures:
+            results[res["n"], 0 : len(self.target)] = res["output"]
+            results[res["n"], len(self.target) :] = [
+                self.multipliers[res["n"], index] * item["base"]
+                for index, item in enumerate(self.parameter)
+            ]
+
+        # Sorted the results
+        results_sorted = np.take_along_axis(
+            arr=results,
+            indices=np.argsort(results, axis=0),
+            axis=0,
+        )
+
+        # Specify probability
+        prob = np.arange(1, self.numSim + 1, dtype=np.float64) / self.numSim
+
+        # Arrange the results
+        results_arranged = np.concatenate((prob[:, np.newaxis], results_sorted), axis=1)
+
+        # Calculate P10, P50, P90
+        percentiles = np.percentile(
+            a=results_arranged,
+            q=[10, 50, 90],
+            method="higher",
+            axis=0,
+        )
+
+        # Determine indices of data
+        indices = np.linspace(0, self.numSim, 101)[0:-1].astype(int)
+        indices[0] = 1
+        if indices[-1] != self.numSim - 1:
+            indices = np.append(indices, int(self.numSim - 1))
+
+        # Final outcomes
+        outcomes = {
+            "params": (
+                ["Oil Price", "Gas Price", "Opex", "Capex", "Cum. prod."]
+                if self.hasGas
+                else ["Oil Price", "Opex", "Capex", "Cum. prod."]
+            ),
+            "results": results_arranged[indices, :].tolist(),
+            "P10": percentiles[0, :].tolist(),
+            "P50": percentiles[1, :].tolist(),
+            "P90": percentiles[2, :].tolist(),
+        }
+
+        return outcomes
+"""
