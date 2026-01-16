@@ -1206,11 +1206,12 @@ def get_contract_table(data: dict, contract_type: str = "Cost Recovery") -> dict
             "oil": table_oil.set_index(year_column).to_dict(),
             "gas": table_gas.set_index(year_column).to_dict(),
             "consolidated": table_consolidated.set_index(year_column).to_dict(),
+            # "warning_message": None,
         }
     # Adding the execution info
     table_all_dict = add_execution_info(data=table_all_dict)
 
-    return table_all_dict
+    return table_all_dict, contract.warning_messages
 
 
 def get_detailed_summary(data: dict, contract_type: str) -> dict:

@@ -65,97 +65,88 @@ class MonteCarloException(Exception):
     pass
 
 
+def _check_existence(target_key: str, data: dict):
+    """
+    Validate the existence of a required key in a dictionary.
+
+    Parameters
+    ----------
+    target_key : str
+        Key that must be present in the input dictionary.
+    data : dict
+        Dictionary to be validated.
+
+    Raises
+    ------
+    MonteCarloException
+        If ``target_key`` is not found in ``data``.
+    """
+
+    if target_key not in data:
+        raise MonteCarloException(
+            f"Required key {target_key!r} not found in input data."
+        )
+
+    return data[target_key]
+
+
 def get_setup_dict(data: dict) -> tuple:
     """
-    Convert the setup section of the input dictionary into structured core
-    engine data.
+    Parse and convert project setup and cost configuration into core-engine objects.
 
-    This function parses the setup information and cost-related sections
-    (e.g., capital, intangible, opex, ASR, LBT, and cost of sales)
-    from the input dictionary into standardized dataclass-based objects.
-    It ensures each section conforms to the expected internal data structure
-    used by the core economic engine.
+    This function extracts the ``setup`` section and optional financial components
+    from the input dictionary and converts them into standardized internal
+    representations used by the economic engine.
 
     Parameters
     ----------
     data : dict
-        The full project setup dictionary containing general setup information
-        (e.g., start/end dates, approval year, POD status) and financial data
-        such as capital, intangible, opex, ASR, LBT, and cost-of-sales details.
-
-        Expected structure example:
-            {
-                "setup": {
-                    "start_date": "2020-01-01",
-                    "end_date": "2035-12-31",
-                    "approval_year": "2020",
-                    "is_pod_1": True,
-                    "oil_onstream_date": "2022-06-01",
-                    "gas_onstream_date": "2023-01-01"
-                },
-                "capital": {...},
-                "intangible": {...},
-                "opex": {...},
-                "asr": {...},
-                "lbt": {...},
-                "cost_of_sales": {...},
-                "lifting": {...}
-            }
+        Project configuration dictionary containing a mandatory ``setup`` section
+        and optional cost-related sections such as ``capital``, ``intangible``,
+        ``opex``, ``asr``, ``lbt``, ``cost_of_sales``, and ``lifting``.
 
     Returns
     -------
     tuple
-        A tuple containing parsed and converted project setup components:
+        Parsed project configuration components in the following order:
 
-        - **start_date** : `datetime.date`
-          Project start date.
-        - **end_date** : `datetime.date`
-          Project end date.
-        - **oil_onstream_date** : `datetime.date` or `None`
-          Oil production start date, if available.
-        - **gas_onstream_date** : `datetime.date` or `None`
-          Gas production start date, if available.
-        - **approval_year** : `int` or `None`
-          Project approval year.
-        - **is_pod_1** : `bool`
-          Indicator whether the project is POD-1.
-        - **lifting** : `Lifting` or `None`
-          Lifting configuration, converted using `convert_dict_to_lifting()`.
-        - **capital** : `CapitalCost` or `None`
-          Capital expenditure data, converted using `convert_dict_to_capital()`.
-        - **intangible** : `Intangible` or `None`
-          Intangible expenditure data, converted using `convert_dict_to_intangible()`.
-        - **opex** : `OPEX` or `None`
-          Operating expenditure data, converted using `convert_dict_to_opex()`.
-        - **asr** : `ASR` or `None`
-          Abandonment and Site Restoration data, converted using `convert_dict_to_asr()`.
-        - **lbt** : `LBT` or `None`
-          Land and Building Tax data, converted using `convert_dict_to_lbt()`.
-        - **cost_of_sales** : `CostOfSales` or `None`
-          Cost of sales data, converted using `convert_dict_to_cost_of_sales()`.
+        - **start_date** : datetime.date
+            Project start date.
+        - **end_date** : datetime.date
+            Project end date.
+        - **approval_year** : int or None
+            Project approval year.
+        - **oil_onstream_date** : datetime.date or None
+            Oil production start date.
+        - **gas_onstream_date** : datetime.date or None
+            Gas production start date.
+        - **is_pod_1** : bool
+            POD-1 indicator.
+        - **is_strict** : bool
+            Strict validation flag.
+        - **lifting** : Lifting or None
+            Lifting configuration.
+        - **capital** : CapitalCost or None
+            Capital expenditure data.
+        - **intangible** : Intangible or None
+            Intangible expenditure data.
+        - **opex** : OPEX or None
+            Operating expenditure data.
+        - **asr** : ASR or None
+            Abandonment and site restoration data.
+        - **lbt** : LBT or None
+            Land and building tax data.
+        - **cost_of_sales** : CostOfSales or None
+            Cost of sales data.
+
+    Raises
+    ------
+    MonteCarloException
+        If the required ``setup`` section is missing from ``data``.
     """
 
-    def _check_existence(target_key: str):
-        if target_key not in data:
-            raise MonteCarloException(f"Missing {target_key!r} in dictionary 'data'.")
-        return data[target_key]
-
-    # Specify abbreviation for selected functions and variables
-    se = _check_existence(target_key="setup")
-
-    # se = data["setup"] if "setup" in data else None
-    # cap = data["capital"] if "capital" in data else None
-    # intang = data["intangible"]
-    # cos = data["cost_of_sales"]
-    # to_date = convert_str_to_date
-    # to_int = convert_str_to_int
-    # to_lft = convert_dict_to_lifting
-    # to_cap = convert_dict_to_capital
-    # to_intang = convert_dict_to_intangible
-    # to_opex = convert_dict_to_opex
-    # to_asr = convert_dict_to_asr
-    # to_lbt = convert_dict_to_lbt
-    # to_cos = convert_dict_to_cost_of_sales
+    # Specify abbreviation
+    se = _check_existence(target_key="setup", data=data)
 
     # Parsing the contract setup into each corresponding variables
     start_date = convert_str_to_date(str_object=se["start_date"])
@@ -163,8 +154,8 @@ def get_setup_dict(data: dict) -> tuple:
     approval_year = convert_str_to_int(str_object=se["approval_year"])
     oil_onstream_date = convert_str_to_date(str_object=se.get("oil_onstream_date", None))
     gas_onstream_date = convert_str_to_date(str_object=se.get("gas_onstream_date", None))
-    is_pod_1 = se["is_pod_1"]
-    is_strict = se["is_strict"]
+    is_pod_1 = se.get("is_pod_1", None)
+    is_strict = se.get("is_strict", None)
     lifting = convert_dict_to_lifting(data_raw=data) if "lifting" in data else None
     capital = (
         convert_dict_to_capital(data_raw=data["capital"]) if "capital" in data else None
@@ -172,106 +163,65 @@ def get_setup_dict(data: dict) -> tuple:
     intangible = (
         convert_dict_to_intangible(data_raw=data["intangible"]) if "intangible" in data else None
     )
+    opex = convert_dict_to_opex(data_raw=data["opex"]) if "opex" in data else None
+    asr = convert_dict_to_asr(data_raw=data["asr"]) if "asr" in data else None
+    lbt = convert_dict_to_lbt(data_raw=data["lbt"]) if "lbt" in data else None
+    cost_of_sales = (
+        convert_dict_to_cost_of_sales(data_raw=data["cost_of_sales"])
+        if "cost_of_sales" in data else None
+    )
 
-
-
-    print('\t')
-    print(f'Filetype: {type(intangible)}')
-    print('intangible = \n', intangible)
-
-    # intangible = convert_dict_to_intangible(data_raw=intang if "intangible" in data else None)
-    #
-    #
-    # lifting = to_lft(data_raw=data) if "lifting" in data else None
-    # capital = to_cap(data_raw=data["capital"] if "capital" in data else None)
-    # intangible = to_intang(data_raw=intang if "intangible" in data else None)
-    # opex = to_opex(data_raw=data["opex"]) if "opex" in data else None
-    # asr = to_asr(data_raw=data["asr"]) if "asr" in data else None
-    # lbt = to_lbt(data_raw=data["lbt"]) if "lbt" in data else None
-    # cost_of_sales = to_cos(data_raw=cos if "cost_of_sales" in data else None)
-    #
-    # return (
-    #     start_date,
-    #     end_date,
-    #     oil_onstream_date,
-    #     gas_onstream_date,
-    #     approval_year,
-    #     is_pod_1,
-    #     lifting,
-    #     capital,
-    #     intangible,
-    #     opex,
-    #     asr,
-    #     lbt,
-    #     cost_of_sales,
-    # )
+    return (
+        start_date,
+        end_date,
+        approval_year,
+        oil_onstream_date,
+        gas_onstream_date,
+        is_pod_1,
+        is_strict,
+        lifting,
+        capital,
+        intangible,
+        opex,
+        asr,
+        lbt,
+        cost_of_sales,
+    )
 
 
 def get_summary_dict(data: dict) -> dict:
-    """
-    Extract and convert summary-related parameters from the input dictionary
-    into a standardized format accepted by the core engine.
-
-    Parameters
-    ----------
-    data : dict
-        The input data dictionary containing the `"summary_arguments"` key,
-        which stores summary-level project parameters.
-
-    Returns
-    -------
-    summary_arguments_dict : dict
-        A dictionary containing the processed summary arguments in the
-        core engine–compatible format, with the following keys:
-
-        - **discount_rate_start_year** : int or None
-          The project year at which the discount rate becomes effective.
-        - **inflation_rate** : float or None
-          The annual inflation rate applied to cost and revenue projections.
-        - **discount_rate** : float
-          The discount rate used in NPV calculation (default is 0.1 if unspecified).
-        - **npv_mode** : NPVMode
-          The NPV mode converted from string representation
-          (default is `"Full Cycle Nominal Terms"`).
-        - **discounting_mode** : DiscountingMode
-          The discounting mode converted from string representation
-          (default is `"discounting_mode"` if unspecified).
-        - **profitability_discounted** : bool
-          Flag indicating whether profitability metrics should be discounted
-          (default is `False`).
-
-    Notes
-    -----
-    - Missing keys in the `"summary_arguments"` section of the input are
-      replaced with predefined default values where applicable.
-    - String-based parameters such as `"npv_mode"` and `"discounting_mode"`
-      are converted into their corresponding enumeration types via helper
-      functions (e.g., `convert_str_to_npvmode()`).
-    """
 
     # Specify abbreviations for selected functions and variables
-    to_npv = convert_str_to_npvmode
-    to_dm = convert_str_to_discountingmode
-    sa = data["summary_arguments"]
+    sa = _check_existence(target_key="summary_arguments", data=data)
+
+    # to_npv = convert_str_to_npvmode
+    # to_dm = convert_str_to_discountingmode
+    # sa = data["summary_arguments"]
 
     # Fill get_summary() argument with input data
     discount_rate_start_year = sa.get("discount_rate_start_year", None)
     inflation_rate = sa.get("inflation_rate", None)
     discount_rate = sa.get("discount_rate", 0.1)
-    npv_mode = to_npv(str_object=sa.get("npv_mode", "Full Cycle Nominal Terms"))
-    discounting_mode = to_dm(str_object=sa.get("discounting_mode", "discounting_mode"))
-    profitability_discounted = sa.get("profitability_discounted", False)
 
-    summary_arguments_dict = {
-        "discount_rate_start_year": discount_rate_start_year,
-        "inflation_rate": inflation_rate,
-        "discount_rate": discount_rate,
-        "npv_mode": npv_mode,
-        "discounting_mode": discounting_mode,
-        "profitability_discounted": profitability_discounted,
-    }
+    t1 = inflation_rate
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print('t1 = ', t1)
 
-    return summary_arguments_dict
+    # npv_mode = to_npv(str_object=sa.get("npv_mode", "Full Cycle Nominal Terms"))
+    # discounting_mode = to_dm(str_object=sa.get("discounting_mode", "discounting_mode"))
+    # profitability_discounted = sa.get("profitability_discounted", False)
+
+    # summary_arguments_dict = {
+    #     "discount_rate_start_year": discount_rate_start_year,
+    #     "inflation_rate": inflation_rate,
+    #     "discount_rate": discount_rate,
+    #     "npv_mode": npv_mode,
+    #     "discounting_mode": discounting_mode,
+    #     "profitability_discounted": profitability_discounted,
+    # }
+    #
+    # return summary_arguments_dict
 
 
 def build_baseproject_instance(data: dict) -> BaseProject:

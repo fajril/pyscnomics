@@ -591,7 +591,11 @@ async def get_cf(request: Request, data: dict = Body(...)):
         ecolimit = data['ecolimit']
         hasGas = data['hasGas']
         jData: dict = json.loads(base64.b64decode(data['data']).decode("utf-8"))
-        ctrTable = get_contract_table(data=jData, contract_type = 'Cost Recovery' if ctr == 1 else 'Gross Split' if ctr == 2 else 'Transition' if ctr >=3 else 'Project')
+        ctrTable, messages = get_contract_table(
+            data=jData,
+            contract_type='Cost Recovery' if ctr == 1 else 'Gross Split' if ctr == 2 else 'Transition' if ctr >= 3 else 'Project'
+        )
+        # ctrTable = get_contract_table(data=jData, contract_type = 'Cost Recovery' if ctr == 1 else 'Gross Split' if ctr == 2 else 'Transition' if ctr >=3 else 'Project')
         try:
             if ctr < 3:
                 ecoLimitResult = {
@@ -618,7 +622,8 @@ async def get_cf(request: Request, data: dict = Body(...)):
         return {
             "state": 1,
             "table": ctrTable,
-            "ecolimit": ecoLimitResult
+            "ecolimit": ecoLimitResult,
+            "warning_message": messages,
         }
     except Exception as err:
       makeHttpException(err)

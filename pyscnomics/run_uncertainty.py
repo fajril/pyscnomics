@@ -28,6 +28,7 @@ from pyscnomics.optimize.optimization import (
 # )
 from pyscnomics.optimize.uncertainty import (
     get_setup_dict,
+    get_summary_dict,
 )
 from pyscnomics.tools.table import get_table
 from pyscnomics.api.adapter import get_uncertainty
@@ -41,7 +42,7 @@ if __name__ == "__main__":
     case = Case00A(contract_type=ctr_type)
     data = case.as_dict()
 
-    get_setup_dict(data=data)
+    get_summary_dict(data=data)
 
     # t1 = get_uncertainty(data=data, contract_type=ctr_type.value)
     # print('\t')
