@@ -39,7 +39,7 @@ from pyscnomics.econ.indicator import (
 # Set display for pandas dataframe
 pd.set_option("display.max_rows", 200)
 pd.set_option("display.max_columns", 200)
-pd.set_option("display.max_colwidth", 70)
+pd.set_option("display.max_colwidth", 100)
 
 
 class BaseProjectException(Exception):
