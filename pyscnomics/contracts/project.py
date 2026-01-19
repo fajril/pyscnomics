@@ -1214,11 +1214,18 @@ class BaseProject:
         }
 
         if fluid_type not in cct.cost_allocation:
+
+            onstream_yr = {
+                FluidType.OIL: self.oil_onstream_date.year,
+                FluidType.GAS: self.gas_onstream_date.year,
+            }[fluid_type]
+
             return CapitalCost(
                 **kwargs,
                 expense_year=np.array([cct.start_year]),
                 cost=np.array([0]),
                 cost_allocation=[fluid_type],
+                pis_year=np.array([onstream_yr])
             )
 
         else:

@@ -11,7 +11,9 @@ from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.tools.table import get_table
 
+import pyscnomics.dataset as data
 from pyscnomics.dataset.case_00A import Case00A
+from pyscnomics.dataset.case_00B import Case00B
 from pyscnomics.dataset.case_01 import Case01
 from pyscnomics.dataset.case_02 import Case02
 
@@ -76,8 +78,13 @@ kwargs_capital_oil = {
 
 if __name__ == "__main__":
 
-    case = Case00A(contract_type=ContractType.COST_RECOVERY)
+    # Create an instance of case
+    kwargs_case = {
+        "contract_type": ContractType.COST_RECOVERY,
+        "fluid": FluidType.OIL,
+    }
 
+    case = Case00B(**kwargs_case)
     contract = case.as_class()
     contract_arguments = case.contract_arguments
     summary_arguments = case.summary_arguments
