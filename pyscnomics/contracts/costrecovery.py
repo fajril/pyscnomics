@@ -253,9 +253,9 @@ class CostRecovery(BaseProject):
     _consolidated_depreciations: dict = field(
         default_factory=lambda: {}, init=False, repr=False
     )
-    _consolidated_undepreciated_assets: dict = field(
-        default_factory=lambda: {}, init=False, repr=False
-    )
+    # _consolidated_undepreciated_assets: dict = field(
+    #     default_factory=lambda: {}, init=False, repr=False
+    # )
     _consolidated_non_depreciables: dict = field(
         default_factory=lambda: {}, init=False, repr=False
     )
@@ -1708,10 +1708,10 @@ class CostRecovery(BaseProject):
             for c in cost_types
         }
 
-        self._consolidated_undepreciated_assets = {
-            c: self._oil_undepreciated_assets[c] + self._gas_undepreciated_assets[c]
-            for c in cost_types
-        }
+        # self._consolidated_undepreciated_assets = {
+        #     c: self._oil_undepreciated_assets[c] + self._gas_undepreciated_assets[c]
+        #     for c in cost_types
+        # }
 
         self._consolidated_non_depreciables = {
             c: self._oil_non_depreciables[c] + self._gas_non_depreciables[c]

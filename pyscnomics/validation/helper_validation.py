@@ -4,7 +4,7 @@ A collection of procedures to prepare case 0
 
 import os
 import json
-from pyscnomics.econ.selection import ContractType
+from pyscnomics.econ.selection import ContractType, FluidType
 from pyscnomics.api.adapter import (
     get_costrecovery,
     get_grosssplit,

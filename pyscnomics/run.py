@@ -79,12 +79,7 @@ kwargs_capital_oil = {
 if __name__ == "__main__":
 
     # Create an instance of case
-    kwargs_case = {
-        "contract_type": ContractType.COST_RECOVERY,
-        "fluid": FluidType.OIL,
-    }
-
-    case = Case00B(**kwargs_case)
+    case = Case00B(contract_type=ContractType.COST_RECOVERY)
     contract = case.as_class()
     contract_arguments = case.contract_arguments
     summary_arguments = case.summary_arguments

@@ -70,7 +70,7 @@ class Case00B:
     """
 
     contract_type: ContractType
-    fluid: FluidType
+    fluid: FluidType = field(default=None, init=False, repr=False)
 
     # An attribute representing project timeline
     start_year: int = field(default=2023, init=False, repr=False)
@@ -104,6 +104,7 @@ class Case00B:
         immediately after class instantiation.
         """
 
+        self.fluid = FluidType.OIL
         self.project_duration = self.end_year - self.start_year + 1
         self.project_time = {
             "start_year": self.start_year,
@@ -199,16 +200,16 @@ class Case00B:
             ),
             "pis_year": np.array(
                 [
-                    2029,  # 2023
-                    2029,  # 2024
-                    2029,  # 2025
-                    2029,  # 2026
-                    2029,  # 2027
-                    2029,  # 2028
-                    2029,  # 2029
-                    2029,  # 2030
-                    2029,  # 2031
-                    2029,  # 2032
+                    2030,  # 2023
+                    2030,  # 2024
+                    2030,  # 2025
+                    2030,  # 2026
+                    2030,  # 2027
+                    2030,  # 2028
+                    2030,  # 2029
+                    2030,  # 2030
+                    2030,  # 2031
+                    2030,  # 2032
                 ]
             ),
             "useful_life": np.array(
@@ -557,7 +558,7 @@ class Case00B:
             "gas_onstream_date": None,
             "approval_year": 2026,
             "is_pod_1": False,
-            "is_strict": False,
+            "is_strict": True,
         }
 
     def get_class_arguments(self):
@@ -770,5 +771,75 @@ class Case00B:
         else:
             raise ValueError(f"Unrecognized contract type: {self.contract_type!r}")
 
-    def as_dict(self):
-        pass
+    def as_dict(self) -> dict:
+        """
+        Convert all contract-related attributes into a unified dictionary format.
+
+        This method consolidates and converts setup, summary, contract, class,
+        lifting, and cost attributes into serializable dictionary objects for
+        export or reconstruction.
+
+        Notes
+        -----
+        - Handles both Cost Recovery and Gross Split contract types.
+        - Applies object conversion to ensure compatibility with JSON serialization.
+        - Returns a mapping of all major project components (e.g., capital, OPEX, ASR).
+        """
+
+        # Helper function to convert data stored in an argument dictionary
+        def _converter(source: dict):
+            return {key: convert_object(objects=val) for key, val in source.items()}
+
+        # Convert data in "setup_arguments", "summary_arguments", and "contract_arguments"
+        setup_args = _converter(source=self.setup_arguments)
+        summary_args = _converter(source=self.summary_arguments)
+        contract_args = _converter(source=self.contract_arguments)
+
+        # Convert data in "class_arguments"
+        gs = (
+            _converter(source=self.class_arguments)
+            if self.contract_type == ContractType.GROSS_SPLIT
+            else None
+        )
+
+        cr = (
+            _converter(source=self.class_arguments)
+            if self.contract_type == ContractType.COST_RECOVERY
+            else None
+        )
+
+        # Convert lifting data
+        lifting = construct_lifting_attr(
+            lifting=tuple([Lifting(**lft) for lft in self.lifting.values()])
+        )
+
+        # Convert data in "capital", "intangible", "opex", "asr", "lbt", "cost_of_sales"
+        # Helper method to convert data associated with costs
+        def _construct_cost_attributes(source: dict, Cls):
+            items = tuple([Cls(**val) for val in source.values()])
+            return construct_cost_attr(cost=items)
+
+        cap = _construct_cost_attributes(source=self.capital, Cls=CapitalCost)
+        itg = _construct_cost_attributes(source=self.intangible, Cls=Intangible)
+        op = _construct_cost_attributes(source=self.opex, Cls=OPEX)
+        asr = _construct_cost_attributes(source=self.asr, Cls=ASR)
+        lbt = _construct_cost_attributes(source=self.lbt, Cls=LBT)
+        cos = _construct_cost_attributes(source=self.cos, Cls=CostOfSales)
+
+        # Mapping converted data
+        mapping_converted_data = [
+            ("setup", setup_args),
+            ("summary_arguments", summary_args),
+            ("contract_arguments", contract_args),
+            ("grosssplit", gs),
+            ("costrecovery", cr),
+            ("lifting", lifting),
+            ("capital", cap),
+            ("intangible", itg),
+            ("opex", op),
+            ("asr", asr),
+            ("lbt", lbt),
+            ("cost_of_sales", cos),
+        ]
+
+        return {key: val for key, val in mapping_converted_data}

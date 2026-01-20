@@ -2667,10 +2667,10 @@ class GrossSplit(BaseProject):
             for c in cost_types
         }
 
-        self._consolidated_undepreciated_assets = {
-            c: self._oil_undepreciated_assets[c] + self._gas_undepreciated_assets[c]
-            for c in cost_types
-        }
+        # self._consolidated_undepreciated_assets = {
+        #     c: self._oil_undepreciated_assets[c] + self._gas_undepreciated_assets[c]
+        #     for c in cost_types
+        # }
 
         self._consolidated_amortizations = {
             c: self._oil_amortizations[c] + self._gas_amortizations[c]

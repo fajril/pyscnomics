@@ -22,7 +22,9 @@ from pyscnomics.validation.helper_validation import (
 )
 
 from pyscnomics.tools.table import get_table
+import pyscnomics.dataset as data
 from pyscnomics.dataset.case_00A import Case00A
+from pyscnomics.dataset.case_00B import Case00B
 from pyscnomics.dataset.case_01 import Case01
 from pyscnomics.dataset.case_02 import Case02
 
@@ -31,7 +33,7 @@ if __name__ == "__main__":
 
     # Specify arguments to run function "execute_contract()"
     kwargs_execute = {
-        "case": Case02,
+        "case": Case00B,
         "contract_type": ContractType.GROSS_SPLIT,
     }
 

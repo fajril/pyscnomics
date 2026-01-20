@@ -1225,7 +1225,7 @@ class BaseProject:
                 expense_year=np.array([cct.start_year]),
                 cost=np.array([0]),
                 cost_allocation=[fluid_type],
-                pis_year=np.array([onstream_yr])
+                pis_year=np.array([onstream_yr]),
             )
 
         else:
