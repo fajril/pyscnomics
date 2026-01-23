@@ -1216,6 +1216,12 @@ def min_mean_max_retriever(
                 (max, np.max, arrays)
             )
 
+    def _summarize_arrays():
+        pass
+
+    def _summarize_price():
+        pass
+    
     def _get_results(mapping_entry, is_price=False):
         """
         Compute minimum, mean, and maximum results for a mapping entry.
@@ -1240,6 +1246,32 @@ def min_mean_max_retriever(
             return [func(arr) for func, arr in mapping_entry]
         else:
             return [_calc_statistics(out, inn, arr) for out, inn, arr in mapping_entry]
+
+    # Specify mapping variables for CAPEX.
+    # CAPEX arrays = total capital cost array + total intangible cost array
+    capex_arrays = [contract.capital_cost_total.cost, contract.intangible_cost_total.cost]
+    capex_mapping = [
+        (min, np.min, capex_arrays),
+        (np.mean, np.mean, capex_arrays),
+        (max, np.max, capex_arrays),
+    ]
+
+    (
+        min_capex,
+        mean_capex,
+        max_capex
+    ) = [
+        out([inn(arr) for arr in arrays])
+        for out, inn, arrays in capex_mapping
+    ]
+
+    # min_capex = min([np.min(arr) for arr in capex_arrays])
+    # mean_capex = np.mean([np.mean(arr) for arr in capex_arrays])
+    # max_capex = max([np.max(arr) for arr in capex_arrays])
+
+    # (min_capex, mean_capex, max_capex) = _get_results(mapping_entry=capex_mapping)
+
+
 
     # Specify mapping variables
     mapping = {
@@ -1277,44 +1309,50 @@ def min_mean_max_retriever(
     }
 
     # Retrieve min, mean, and max for several parameters
-    (min_capex, mean_capex, max_capex) = _get_results(mapping_entry=mapping["capex"])
-    (min_opex, mean_opex, max_opex) = _get_results(mapping_entry=mapping["opex"])
-    (min_lifting, mean_lifting, max_lifting) = _get_results(
-        mapping_entry=mapping["lifting"]
-    )
-    (min_oil_price, mean_oil_price, max_oil_price) = _get_results(
-        mapping_entry=mapping["oil_price"], is_price=True
-    )
-    (min_gas_price, mean_gas_price, max_gas_price) = _get_results(
-        mapping_entry=mapping["gas_price"], is_price=True
-    )
+    # (min_capex, mean_capex, max_capex) = _get_results(mapping_entry=mapping["capex"])
+    # (min_opex, mean_opex, max_opex) = _get_results(mapping_entry=mapping["opex"])
+    # (min_lifting, mean_lifting, max_lifting) = _get_results(
+    #     mapping_entry=mapping["lifting"]
+    # )
+    # (min_oil_price, mean_oil_price, max_oil_price) = _get_results(
+    #     mapping_entry=mapping["oil_price"], is_price=True
+    # )
+    # (min_gas_price, mean_gas_price, max_gas_price) = _get_results(
+    #     mapping_entry=mapping["gas_price"], is_price=True
+    # )
 
-    # Create a dictionary of results
-    results = {
-        "min_capex": min_capex,
-        "mean_capex": mean_capex,
-        "max_capex": max_capex,
-        "min_opex": min_opex,
-        "mean_opex": mean_opex,
-        "max_opex": max_opex,
-        "min_oil_price": min_oil_price,
-        "mean_oil_price": mean_oil_price,
-        "max_oil_price": max_oil_price,
-        "min_gas_price": min_gas_price,
-        "mean_gas_price": mean_gas_price,
-        "max_gas_price": max_gas_price,
-        "min_lifting": min_lifting,
-        "mean_lifting": mean_lifting,
-        "max_lifting": max_lifting,
-    }
+    print('\t')
+    print('min_capex = ', min_capex)
+    print('mean_capex = ', mean_capex)
+    print('max_capex = ', max_capex)
 
-    if verbose is True:
-        print("Parameter used:")
-        for key, value in results.items():
-            print(key, ": ", value)
-        print("")
 
-    return results
+    # # Create a dictionary of results
+    # results = {
+    #     "min_capex": min_capex,
+    #     "mean_capex": mean_capex,
+    #     "max_capex": max_capex,
+    #     "min_opex": min_opex,
+    #     "mean_opex": mean_opex,
+    #     "max_opex": max_opex,
+    #     "min_oil_price": min_oil_price,
+    #     "mean_oil_price": mean_oil_price,
+    #     "max_oil_price": max_oil_price,
+    #     "min_gas_price": min_gas_price,
+    #     "mean_gas_price": mean_gas_price,
+    #     "max_gas_price": max_gas_price,
+    #     "min_lifting": min_lifting,
+    #     "mean_lifting": mean_lifting,
+    #     "max_lifting": max_lifting,
+    # }
+    #
+    # if verbose is True:
+    #     print("Parameter used:")
+    #     for key, value in results.items():
+    #         print(key, ": ", value)
+    #     print("")
+    #
+    # return results
 
 
 class ProcessMonte:
@@ -1927,159 +1965,131 @@ def uncertainty_psc(
     # Retrieve the Min Max and Average Values
     min_max_mean_original = min_mean_max_retriever(contract=contract, verbose=verbose)
 
-    min_max_mean_std = {
-        "min_oil_price": min_oil_price,
-        "mean_oil_price": mean_oil_price,
-        "max_oil_price": max_oil_price,
-        "min_gas_price": min_gas_price,
-        "mean_gas_price": mean_gas_price,
-        "max_gas_price": max_gas_price,
-        "min_opex": min_opex,
-        "mean_opex": mean_opex,
-        "max_opex": max_opex,
-        "min_capex": min_capex,
-        "mean_capex": mean_capex,
-        "max_capex": max_capex,
-        "min_lifting": min_lifting,
-        "mean_lifting": mean_lifting,
-        "max_lifting": max_lifting,
-    }
-
-    # If the element is not being input from argument, fill with original value
-    for element in min_max_mean_std.keys():
-        if min_max_mean_std[element] is None:
-            min_max_mean_std[element] = min_max_mean_original[element]
-
-    # Default multipliers for min and max values
-    min_factor, max_factor = (0.8, 1.2)
-
-    # Check for equal values of min, mean, and max, then specify adjustments
-    bases = [key[4:] for key in min_max_mean_std if key.startswith("min_")]
-    for base in bases:
-        min_key, mean_key, max_key = f"min_{base}", f"mean_{base}", f"max_{base}"
-
-        if not all([k in min_max_mean_std for k in [min_key, mean_key, max_key]]):
-            continue
-
-        min_val, mean_val, max_val = (
-            min_max_mean_std[min_key],
-            min_max_mean_std[mean_key],
-            min_max_mean_std[max_key],
-        )
-
-        # Adjust if min == mean == max
-        if min_val == mean_val == max_val:
-            min_max_mean_std[min_key] = min_factor * min_val
-            min_max_mean_std[max_key] = max_factor * max_val
-
-    """ 
-    Former approach:
-    # Iterate over the dictionary
-    for key in list(min_max_mean_std.keys()):
-        if key.startswith("min_"):
-            base = key[4:]  # Base key (e.g., 'capex', 'opex', etc.)
-
-            min_key = f"min_{base}"
-            mean_key = f"mean_{base}"
-            max_key = f"max_{base}"
-
-            # Check if min, mean, and max values are the same
-            if (
-                min_key in min_max_mean_std
-                and mean_key in min_max_mean_std
-                and max_key in min_max_mean_std
-                and min_max_mean_std[min_key]
-                == min_max_mean_std[mean_key]
-                == min_max_mean_std[max_key]
-            ):
-                # Adjust min and max values
-                # +++ Set min to 0.8 of the min
-                min_max_mean_std[min_key] = (0.8 * min_max_mean_std[min_key])
-
-                # +++ Set max to 1.2 of the max
-                min_max_mean_std[max_key] = (1.2 * min_max_mean_std[max_key])
-    """
-
-    parameter = [
-        {
-            "id": 0,
-            "dist": oil_price_distribution,
-            "min": min_max_mean_std["min_oil_price"],
-            "base": min_max_mean_std["mean_oil_price"],
-            "max": min_max_mean_std["max_oil_price"],
-            "stddev": oil_price_stddev,
-        },
-        {
-            "id": 1,
-            "dist": gas_price_distribution,
-            "min": min_max_mean_std["min_gas_price"],
-            "base": min_max_mean_std["mean_gas_price"],
-            "max": min_max_mean_std["max_gas_price"],
-            "stddev": gas_price_stddev,
-        },
-        {
-            "id": 2,
-            "dist": opex_distribution,
-            "min": min_max_mean_std["min_opex"],
-            "base": min_max_mean_std["mean_opex"],
-            "max": min_max_mean_std["max_opex"],
-            "stddev": opex_stddev,
-        },
-        {
-            "id": 3,
-            "dist": capex_distribution,
-            "min": min_max_mean_std["min_capex"],
-            "base": min_max_mean_std["mean_capex"],
-            "max": min_max_mean_std["max_capex"],
-            "stddev": capex_stddev,
-        },
-        {
-            "id": 4,
-            "dist": lifting_distribution,
-            "min": min_max_mean_std["min_lifting"],
-            "base": min_max_mean_std["mean_lifting"],
-            "max": min_max_mean_std["max_lifting"],
-            "stddev": lifting_stddev,
-        },
-    ]
-
-    # Delete key '1' from `parameter` when no GAS is produced
-    fluid_produced = [lft.fluid_type for lft in contract.lifting]
-    # fluid_produced = [lift.fluid_type.value for lift in contract.lifting]
-
-    if FluidType.GAS not in fluid_produced:
-        del parameter[1]
-
-    # Constructing the contract key
-    contract_dict = get_contract_attributes(
-        contract=contract,
-        contract_arguments=contract_arguments,
-        summary_arguments=summary_arguments,
-    )
-
-    # Executing the montecarlo
-    kwargs_monte = {
-        "contract_type": contract_type,
-        "contract": contract_dict,
-        "params": parameter,
-        "numSim": run_number,
-    }
-
-    monte = ProcessMonte(**kwargs_monte)
-
-    # Use multiprocessing if run_number is large (i.e. larger than 400)
-    try:
-        if run_number <= 400:
-            return monte.calculate_single_core()
-        else:
-            return monte.calculate_multi_cores()
-
-    # Should error occurs, return back to serial processing
-    except Exception as e:
-        print(f"[Warning] Parallel mode failed: {e}")
-        # print(traceback.format_exc(limit=2))
-
-        return monte.calculate_single_core()
+    # min_max_mean_std = {
+    #     "min_oil_price": min_oil_price,
+    #     "mean_oil_price": mean_oil_price,
+    #     "max_oil_price": max_oil_price,
+    #     "min_gas_price": min_gas_price,
+    #     "mean_gas_price": mean_gas_price,
+    #     "max_gas_price": max_gas_price,
+    #     "min_opex": min_opex,
+    #     "mean_opex": mean_opex,
+    #     "max_opex": max_opex,
+    #     "min_capex": min_capex,
+    #     "mean_capex": mean_capex,
+    #     "max_capex": max_capex,
+    #     "min_lifting": min_lifting,
+    #     "mean_lifting": mean_lifting,
+    #     "max_lifting": max_lifting,
+    # }
+    #
+    # # If the element is not being input from argument, fill with original value
+    # for element in min_max_mean_std.keys():
+    #     if min_max_mean_std[element] is None:
+    #         min_max_mean_std[element] = min_max_mean_original[element]
+    #
+    # # Default multipliers for min and max values
+    # min_factor, max_factor = (0.8, 1.2)
+    #
+    # # Check for equal values of min, mean, and max, then specify adjustments
+    # bases = [key[4:] for key in min_max_mean_std if key.startswith("min_")]
+    # for base in bases:
+    #     min_key, mean_key, max_key = f"min_{base}", f"mean_{base}", f"max_{base}"
+    #
+    #     if not all([k in min_max_mean_std for k in [min_key, mean_key, max_key]]):
+    #         continue
+    #
+    #     min_val, mean_val, max_val = (
+    #         min_max_mean_std[min_key],
+    #         min_max_mean_std[mean_key],
+    #         min_max_mean_std[max_key],
+    #     )
+    #
+    #     # Adjust if min == mean == max
+    #     if min_val == mean_val == max_val:
+    #         min_max_mean_std[min_key] = min_factor * min_val
+    #         min_max_mean_std[max_key] = max_factor * max_val
+    #
+    # parameter = [
+    #     {
+    #         "id": 0,
+    #         "dist": oil_price_distribution,
+    #         "min": min_max_mean_std["min_oil_price"],
+    #         "base": min_max_mean_std["mean_oil_price"],
+    #         "max": min_max_mean_std["max_oil_price"],
+    #         "stddev": oil_price_stddev,
+    #     },
+    #     {
+    #         "id": 1,
+    #         "dist": gas_price_distribution,
+    #         "min": min_max_mean_std["min_gas_price"],
+    #         "base": min_max_mean_std["mean_gas_price"],
+    #         "max": min_max_mean_std["max_gas_price"],
+    #         "stddev": gas_price_stddev,
+    #     },
+    #     {
+    #         "id": 2,
+    #         "dist": opex_distribution,
+    #         "min": min_max_mean_std["min_opex"],
+    #         "base": min_max_mean_std["mean_opex"],
+    #         "max": min_max_mean_std["max_opex"],
+    #         "stddev": opex_stddev,
+    #     },
+    #     {
+    #         "id": 3,
+    #         "dist": capex_distribution,
+    #         "min": min_max_mean_std["min_capex"],
+    #         "base": min_max_mean_std["mean_capex"],
+    #         "max": min_max_mean_std["max_capex"],
+    #         "stddev": capex_stddev,
+    #     },
+    #     {
+    #         "id": 4,
+    #         "dist": lifting_distribution,
+    #         "min": min_max_mean_std["min_lifting"],
+    #         "base": min_max_mean_std["mean_lifting"],
+    #         "max": min_max_mean_std["max_lifting"],
+    #         "stddev": lifting_stddev,
+    #     },
+    # ]
+    #
+    # # Delete key '1' from `parameter` when no GAS is produced
+    # fluid_produced = [lft.fluid_type for lft in contract.lifting]
+    # # fluid_produced = [lift.fluid_type.value for lift in contract.lifting]
+    #
+    # if FluidType.GAS not in fluid_produced:
+    #     del parameter[1]
+    #
+    # # Constructing the contract key
+    # contract_dict = get_contract_attributes(
+    #     contract=contract,
+    #     contract_arguments=contract_arguments,
+    #     summary_arguments=summary_arguments,
+    # )
+    #
+    # # Executing the montecarlo
+    # kwargs_monte = {
+    #     "contract_type": contract_type,
+    #     "contract": contract_dict,
+    #     "params": parameter,
+    #     "numSim": run_number,
+    # }
+    #
+    # monte = ProcessMonte(**kwargs_monte)
+    #
+    # # Use multiprocessing if run_number is large (i.e. larger than 400)
+    # try:
+    #     if run_number <= 400:
+    #         return monte.calculate_single_core()
+    #     else:
+    #         return monte.calculate_multi_cores()
+    #
+    # # Should error occurs, return back to serial processing
+    # except Exception as e:
+    #     print(f"[Warning] Parallel mode failed: {e}")
+    #     # print(traceback.format_exc(limit=2))
+    #
+    #     return monte.calculate_single_core()
 
 
 """
@@ -2671,3 +2681,31 @@ def get_grosssplit(data: dict):
 
         return outcomes
 """
+
+""" 
+    Former approach:
+    # Iterate over the dictionary
+    for key in list(min_max_mean_std.keys()):
+        if key.startswith("min_"):
+            base = key[4:]  # Base key (e.g., 'capex', 'opex', etc.)
+
+            min_key = f"min_{base}"
+            mean_key = f"mean_{base}"
+            max_key = f"max_{base}"
+
+            # Check if min, mean, and max values are the same
+            if (
+                min_key in min_max_mean_std
+                and mean_key in min_max_mean_std
+                and max_key in min_max_mean_std
+                and min_max_mean_std[min_key]
+                == min_max_mean_std[mean_key]
+                == min_max_mean_std[max_key]
+            ):
+                # Adjust min and max values
+                # +++ Set min to 0.8 of the min
+                min_max_mean_std[min_key] = (0.8 * min_max_mean_std[min_key])
+
+                # +++ Set max to 1.2 of the max
+                min_max_mean_std[max_key] = (1.2 * min_max_mean_std[max_key])
+    """

@@ -104,13 +104,17 @@ class Case00B:
         immediately after class instantiation.
         """
 
+        # Specify fluid type
         self.fluid = FluidType.OIL
+
+        # Prepare attributes associated with project timeline
         self.project_duration = self.end_year - self.start_year + 1
         self.project_time = {
             "start_year": self.start_year,
             "end_year": self.end_year,
         }
 
+        # Prepare the required attributes to execute the contract
         self.get_lifting()
         self.get_capital()
         self.get_intangible()
@@ -558,7 +562,7 @@ class Case00B:
             "gas_onstream_date": None,
             "approval_year": 2026,
             "is_pod_1": False,
-            "is_strict": True,
+            "is_strict": False,
         }
 
     def get_class_arguments(self):
@@ -715,7 +719,7 @@ class Case00B:
 
         self.summary_arguments = {
             "discount_rate": 0.1,
-            "npv_mode": NPVSelection.NPV_SKK_NOMINAL_TERMS,
+            "npv_mode": NPVSelection.NPV_POINT_FORWARD,
             "discounting_mode": DiscountingMode.END_YEAR,
             "discount_rate_start_year": 2023,
             "inflation_rate": 0.0,

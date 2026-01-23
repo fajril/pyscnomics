@@ -1421,29 +1421,27 @@ def construct_cost_attr(
 
 def construct_setup_attr(contract: BaseProject | CostRecovery | GrossSplit | Transition):
     """
-    Construct a standardized dictionary of setup attributes for a contract.
+    Construct a standardized setup-attribute dictionary from a contract object.
 
     Parameters
     ----------
     contract : BaseProject | CostRecovery | GrossSplit | Transition
-        Contract object containing lifting data, contract dates, and onstream information.
+        Contract instance containing project dates, lifting configuration,
+        and setup-related attributes.
 
     Returns
     -------
     dict
-        Dictionary containing formatted setup attributes:
-        - start_date : str
-        - end_date : str
-        - oil_onstream_date : str or None
-        - gas_onstream_date : str or None
-        - approval_year : int or None
-        - is_pod_1 : bool
+        Dictionary of formatted setup attributes with keys:
+        ``start_date``, ``end_date``, ``oil_onstream_date``,
+        ``gas_onstream_date``, ``approval_year``, ``is_pod_1``,
+        and ``is_strict``.
 
     Notes
     -----
-    - Dates are formatted as "DD/MM/YYYY".
-    - Onstream dates are included only if the fluid type is produced.
-    - Attribute assignment uses `_prepare_setup_attr` for validation.
+    - Dates are formatted as ``"DD/MM/YYYY"``.
+    - Onstream dates are included only if the corresponding fluid is produced.
+    - Missing or ``None`` attributes fall back to default values.
     """
 
     fluid_produced = [lift.fluid_type for lift in contract.lifting]
@@ -1503,6 +1501,7 @@ def construct_setup_attr(contract: BaseProject | CostRecovery | GrossSplit | Tra
         "gas": (FluidType.GAS, contract.gas_onstream_date),
         "approval_year": ("approval_year", contract.approval_year, None),
         "is_pod_1": ("is_pod_1", contract.is_pod_1, False),
+        "is_strict": ("is_strict", contract.is_strict, True)
     }
 
     return {
@@ -1512,6 +1511,7 @@ def construct_setup_attr(contract: BaseProject | CostRecovery | GrossSplit | Tra
         "gas_onstream_date": _get_date(*args["gas"]),
         "approval_year": _prepare_setup_attr(*args["approval_year"]),
         "is_pod_1": _prepare_setup_attr(*args["is_pod_1"]),
+        "is_strict": _prepare_setup_attr(*args["is_strict"]),
     }
 
 
@@ -1652,7 +1652,6 @@ def construct_costrecovery_arguments_attr(contract_arguments: dict):
         "oil_cost_of_sales_applied": ("oil_cost_of_sales_applied", False),
         "gas_cost_of_sales_applied": ("gas_cost_of_sales_applied", False),
         "sum_undepreciated_cost": ("sum_undepreciated_cost", True),
-        "sunk_cost_method": ("sunk_cost_method", "depreciated_tangible"),
     }
 
     cr_arguments = {
@@ -1703,6 +1702,8 @@ def construct_grosssplit_attr(contract: GrossSplit):
         "field_reserves_2024": contract.field_reserves_2024,
         "infra_avail_2024": contract.infra_avail_2024,
         "field_loc_2024": contract.field_loc_2024,
+
+        # Ministry discretion
         "split_ministry_disc": contract.split_ministry_disc,
 
         # DMO parameters
@@ -1760,10 +1761,8 @@ def construct_grosssplit_arguments_attr(contract_arguments: dict) -> dict:
         "tax_regime": ("tax_regime", "nailed down"),
         "effective_tax_rate": ("effective_tax_rate", 0.22),
         "amortization": ("amortization", False),
-        "sunk_cost_method": ("sunk_cost_method", "depreciated_tangible"),
         "regime": ("regime", "PERMEN_ESDM_12_2020"),
         "reservoir_type_permen_2024": ("reservoir_type_permen_2024", "conventional"),
-        "initial_amortization_year": ("initial_amortization_year", "onstream_year"),
     }
 
     gs_arguments = {
