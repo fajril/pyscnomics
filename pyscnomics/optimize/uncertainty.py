@@ -1133,226 +1133,102 @@ def min_mean_max_retriever(
     verbose: bool = False,
 ):
     """
-    Retrieve the minimum, mean, and maximum values of selected Monte Carlo simulation
-    elements from a given PSC contract object.
+    Retrieve minimum, mean, and maximum values for key economic parameters.
 
-    The function computes summary statistics (min, mean, max) for several key economic
-    and production-related quantities, including CAPEX, OPEX, lifting volumes, and
-    oil/gas prices.
+    This function computes summary statistics (min, mean, max) for CAPEX,
+    OPEX, lifting rates, and oil/gas prices based on data stored in the
+    contract object.
 
     Parameters
     ----------
     contract : BaseProject | CostRecovery | GrossSplit | Transition
-        The PSC contract object containing Monte Carlo simulation outputs.
-    verbose : bool, default=False
-        If True, prints the computed min, mean, and max values for each parameter.
+        Contract instance containing cost, lifting, and price data.
+    verbose : bool, default False
+        If True, print computed statistics to stdout.
 
     Returns
     -------
     dict
-        Dictionary containing the minimum, mean, and maximum values for each parameter:
-
-        - ``min_capex``, ``mean_capex``, ``max_capex``
-        - ``min_opex``, ``mean_opex``, ``max_opex``
-        - ``min_lifting``, ``mean_lifting``, ``max_lifting``
-        - ``min_oil_price``, ``mean_oil_price``, ``max_oil_price``
-        - ``min_gas_price``, ``mean_gas_price``, ``max_gas_price``
-
-    Notes
-    -----
-    - The function uses nested functional mappings to compute statistics:
-      non-price elements (CAPEX, OPEX, lifting) combine multiple arrays via built-in
-      and NumPy functions, while price elements use direct NumPy operations.
-    - The helper functions `_calc_statistics`, `_make_mapping`, and `_get_results`
-      modularize the computation for readability and consistency.
+        Dictionary containing min, mean, and max values for each parameter.
     """
 
-    # Helper function
-    def _calc_statistics(outer_func, inner_func, arrays_list):
-        """
-        Apply an inner function to each array, then combine the results
-        using an outer function.
+    # Compute global min/mean/max across multiple arrays
+    def _get_statistics(arrays_list: list):
+        min_value = min([np.min(arr) for arr in arrays_list])
+        mean_value = np.mean([np.mean(arr) for arr in arrays_list])
+        max_value = max([np.max(arr) for arr in arrays_list])
+        return min_value, mean_value, max_value
 
-        Parameters
-        ----------
-        outer_func : callable
-            Function to combine results, e.g. `min`, `max`, `np.mean`.
-        inner_func : callable
-            Function applied to each array, e.g. `np.min`, `np.max`, `np.mean`.
-        arrays_list : list of array-like
-            Sequence of arrays to evaluate.
+    # Compute min/mean/max for a single array (e.g., prices)
+    def _get_statistics_price(array: np.ndarray):
+        return array.min(), array.mean(), array.max()
 
-        Returns
-        -------
-        float
-            Result after applying both functions.
-        """
+    # Calculate statistics (min, mean, max) for CAPEX.
+    # --- CAPEX: capital + intangible costs ---
+    (min_capex, mean_capex, max_capex) = _get_statistics(
+        arrays_list=[
+            getattr(contract, "capital_cost_total").cost,
+            getattr(contract, "intangible_cost_total").cost,
+        ]
+    )
 
-        return outer_func([inner_func(arr) for arr in arrays_list])
+    # Calculate statistics (min, mean, max) for OPEX.
+    # --- OPEX: operating, ASR, LBT, and cost of sales ---
+    (min_opex, mean_opex, max_opex) = _get_statistics(
+        arrays_list=[
+            getattr(contract, "opex_total").cost,
+            getattr(contract, "asr_cost_total").cost,
+            getattr(contract, "lbt_cost_total").cost,
+            getattr(contract, "cost_of_sales_total").cost,
+        ]
+    )
 
-    def _make_mapping(is_price, arrays):
-        """
-        Build a min–mean–max mapping for the given arrays.
+    # Calculate statistics (min, mean, max) for LIFTING.
+    # --- LIFTING: oil and gas lifting rates ---
+    (min_lifting, mean_lifting, max_lifting) = _get_statistics(
+        arrays_list=[
+            getattr(contract, "_oil_lifting").lifting_rate,
+            getattr(contract, "_gas_lifting").lifting_rate,
+        ]
+    )
 
-        Parameters
-        ----------
-        is_price : bool
-            If True, use only NumPy functions; otherwise mix built-in and NumPy functions.
-        arrays : list of array-like
-            Arrays to evaluate.
-        """
+    # Calculate statistics (min, mean, max) for OIL PRICE
+    (min_oil_price, mean_oil_price, max_oil_price) = _get_statistics_price(
+        array=getattr(contract, "_oil_lifting").price
+    )
 
-        if is_price:
-            return (
-                (np.min, arrays),
-                (np.mean, arrays),
-                (np.max, arrays)
-            )
+    # Calculate statistics (min, mean, max) for GAS PRICE
+    (min_gas_price, mean_gas_price, max_gas_price) = _get_statistics_price(
+        array=getattr(contract, "_gas_lifting").price
+    )
 
-        else:
-            return (
-                (min, np.min, arrays),
-                (np.mean, np.mean, arrays),
-                (max, np.max, arrays)
-            )
-
-    def _summarize_arrays():
-        pass
-
-    def _summarize_price():
-        pass
-    
-    def _get_results(mapping_entry, is_price=False):
-        """
-        Compute minimum, mean, and maximum results for a mapping entry.
-
-        Parameters
-        ----------
-        mapping_entry : list of tuple
-            Sequence of tuples representing statistical operations.
-            For non-price data: each tuple is (outer_func, inner_func, arrays).
-            For price data: each tuple is (func, arrays).
-        is_price : bool, default=False
-            If True, apply only single-level NumPy functions for price data;
-            otherwise, apply nested inner and outer functions.
-
-        Returns
-        -------
-        list of float
-            Computed statistical results (min, mean, and max values).
-        """
-
-        if is_price:
-            return [func(arr) for func, arr in mapping_entry]
-        else:
-            return [_calc_statistics(out, inn, arr) for out, inn, arr in mapping_entry]
-
-    # Specify mapping variables for CAPEX.
-    # CAPEX arrays = total capital cost array + total intangible cost array
-    capex_arrays = [contract.capital_cost_total.cost, contract.intangible_cost_total.cost]
-    capex_mapping = [
-        (min, np.min, capex_arrays),
-        (np.mean, np.mean, capex_arrays),
-        (max, np.max, capex_arrays),
-    ]
-
-    (
-        min_capex,
-        mean_capex,
-        max_capex
-    ) = [
-        out([inn(arr) for arr in arrays])
-        for out, inn, arrays in capex_mapping
-    ]
-
-    # min_capex = min([np.min(arr) for arr in capex_arrays])
-    # mean_capex = np.mean([np.mean(arr) for arr in capex_arrays])
-    # max_capex = max([np.max(arr) for arr in capex_arrays])
-
-    # (min_capex, mean_capex, max_capex) = _get_results(mapping_entry=capex_mapping)
-
-
-
-    # Specify mapping variables
-    mapping = {
-        "capex": _make_mapping(
-            is_price=False,
-            arrays=[
-                contract.capital_cost_total.cost,
-                contract.intangible_cost_total.cost
-            ]
-        ),
-        "opex": _make_mapping(
-            is_price=False,
-            arrays=[
-                contract.opex_total.cost,
-                contract.asr_cost_total.cost,
-                contract.lbt_cost_total.cost,
-                contract.cost_of_sales_total.cost
-            ]
-        ),
-        "lifting": _make_mapping(
-            is_price=False,
-            arrays=[
-                getattr(contract, f"_oil_lifting").lifting_rate,
-                getattr(contract, f"_gas_lifting").lifting_rate,
-            ]
-        ),
-        "oil_price": _make_mapping(
-            is_price=True,
-            arrays=getattr(contract, f"_oil_lifting").price
-        ),
-        "gas_price": _make_mapping(
-            is_price=True,
-            arrays=getattr(contract, f"_gas_lifting").price
-        )
+    # Collect all statistics into a dictionary
+    results = {
+        "min_capex": min_capex,
+        "mean_capex": mean_capex,
+        "max_capex": max_capex,
+        "min_opex": min_opex,
+        "mean_opex": mean_opex,
+        "max_opex": max_opex,
+        "min_oil_price": min_oil_price,
+        "mean_oil_price": mean_oil_price,
+        "max_oil_price": max_oil_price,
+        "min_gas_price": min_gas_price,
+        "mean_gas_price": mean_gas_price,
+        "max_gas_price": max_gas_price,
+        "min_lifting": min_lifting,
+        "mean_lifting": mean_lifting,
+        "max_lifting": max_lifting,
     }
 
-    # Retrieve min, mean, and max for several parameters
-    # (min_capex, mean_capex, max_capex) = _get_results(mapping_entry=mapping["capex"])
-    # (min_opex, mean_opex, max_opex) = _get_results(mapping_entry=mapping["opex"])
-    # (min_lifting, mean_lifting, max_lifting) = _get_results(
-    #     mapping_entry=mapping["lifting"]
-    # )
-    # (min_oil_price, mean_oil_price, max_oil_price) = _get_results(
-    #     mapping_entry=mapping["oil_price"], is_price=True
-    # )
-    # (min_gas_price, mean_gas_price, max_gas_price) = _get_results(
-    #     mapping_entry=mapping["gas_price"], is_price=True
-    # )
+    # Optional debug output
+    if verbose is True:
+        print("Parameter used:")
+        for key, value in results.items():
+            print(key, ": ", value)
+        print("")
 
-    print('\t')
-    print('min_capex = ', min_capex)
-    print('mean_capex = ', mean_capex)
-    print('max_capex = ', max_capex)
-
-
-    # # Create a dictionary of results
-    # results = {
-    #     "min_capex": min_capex,
-    #     "mean_capex": mean_capex,
-    #     "max_capex": max_capex,
-    #     "min_opex": min_opex,
-    #     "mean_opex": mean_opex,
-    #     "max_opex": max_opex,
-    #     "min_oil_price": min_oil_price,
-    #     "mean_oil_price": mean_oil_price,
-    #     "max_oil_price": max_oil_price,
-    #     "min_gas_price": min_gas_price,
-    #     "mean_gas_price": mean_gas_price,
-    #     "max_gas_price": max_gas_price,
-    #     "min_lifting": min_lifting,
-    #     "mean_lifting": mean_lifting,
-    #     "max_lifting": max_lifting,
-    # }
-    #
-    # if verbose is True:
-    #     print("Parameter used:")
-    #     for key, value in results.items():
-    #         print(key, ": ", value)
-    #     print("")
-    #
-    # return results
+    return results
 
 
 class ProcessMonte:
@@ -1964,6 +1840,12 @@ def uncertainty_psc(
 
     # Retrieve the Min Max and Average Values
     min_max_mean_original = min_mean_max_retriever(contract=contract, verbose=verbose)
+
+    t1 = min_max_mean_original
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
 
     # min_max_mean_std = {
     #     "min_oil_price": min_oil_price,

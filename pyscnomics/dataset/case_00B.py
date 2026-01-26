@@ -105,7 +105,7 @@ class Case00B:
         """
 
         # Specify fluid type
-        self.fluid = FluidType.OIL
+        self.fluid = FluidType.GAS
 
         # Prepare attributes associated with project timeline
         self.project_duration = self.end_year - self.start_year + 1
