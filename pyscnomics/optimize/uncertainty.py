@@ -608,17 +608,25 @@ def get_costrecovery(data: dict) -> dict:
         Summary of the Cost Recovery contract evaluation.
     """
 
+    print('\t')
+    print('Aditya')
+
     # Specify contract and contract arguments
     contract = build_costrecovery_instance(data=data)
-    contract_arguments_dict = build_costrecovery_arguments(data=data)
+    # contract_arguments_dict = build_costrecovery_arguments(data=data)
+    #
+    # print('\t')
+    # print(f'Filetype: {type(contract)}')
+    # print(f'Length: {len(contract)}')
+    # print('contract = \n', contract)
 
-    # Execute CostRecovery instance
-    contract.run(**contract_arguments_dict)
-
-    # Fill summary arguments
-    summary_arguments_dict = get_summary_dict(data=data)
-
-    return contract.get_summary(**summary_arguments_dict)
+    # # Execute CostRecovery instance
+    # contract.run(**contract_arguments_dict)
+    #
+    # # Fill summary arguments
+    # summary_arguments_dict = get_summary_dict(data=data)
+    #
+    # return contract.get_summary(**summary_arguments_dict)
 
 
 def build_grosssplit_instance(data: dict) -> GrossSplit:
@@ -1238,45 +1246,6 @@ class ProcessMonte:
     target = ["npv", "irr", "pi", "pot", "gov_take", "ctr_net_share"]
 
     def __init__(self, contract_type, contract, numSim, params):
-        """
-        Initialize a Monte Carlo simulation handler for the given contract type.
-
-        This constructor prepares the base contract, identifies whether gas is included
-        as a lifting commodity, and initializes Monte Carlo multipliers for each
-        uncertain parameter based on the specified probability distributions.
-
-        Parameters
-        ----------
-        contract_type : str or Enum
-            The type of production sharing contract (e.g., "CostRecovery", "GrossSplit",
-            or other contract category identifiers).
-        contract : BaseProject or CostRecovery or GrossSplit or Transition
-            The base contract object that serves as the reference for all Monte Carlo
-            simulation runs.
-        numSim : int
-            The total number of Monte Carlo simulation runs to be executed.
-        params : list of dict
-            A list of parameter specifications, where each element is a dictionary
-            describing a stochastic variable. Each dictionary must include:
-                - ``"id"`` : int
-                    Unique identifier of the parameter.
-                - ``"dist"`` : Enum or object
-                    The probability distribution type for sampling (e.g., Uniform, Normal).
-                - ``"min"`` : float
-                    The minimum possible value of the parameter.
-                - ``"base"`` : float
-                    The base or mean value of the parameter.
-                - ``"max"`` : float
-                    The maximum possible value of the parameter.
-                - ``"stddev"`` : float
-                    The standard deviation (applicable for distributions requiring it).
-        Notes
-        -----
-        -   The function ``get_multipliers_montecarlo`` is used internally to sample
-            multipliers for each parameter based on the provided statistical definitions.
-        -   The ``hasGas`` flag is set to ``True`` if any parameter has an identifier
-            equal to 1, indicating that gas is part of the evaluated contract.
-        """
 
         self.type = contract_type
         self.numSim = numSim
@@ -1291,29 +1260,23 @@ class ProcessMonte:
         #         self.hasGas = True
         #         break
 
-        print('\t')
-        print('hasOil = ', self.hasOil)
-        print('hasGas = ', self.hasGas)
+        # print('\t')
+        # print('hasOil = ', self.hasOil)
+        # print('hasGas = ', self.hasGas)
+
+        # print('\t')
+        # print(f'Filetype: {type(self.parameter)}')
+        # print(f'Length: {len(self.parameter)}')
+        # print('parameter = \n', self.parameter)
 
         # Prepare multipliers
-        self.multipliers = np.ones(
-            [self.numSim, len(self.parameter)], dtype=np.float64
-        )
+        mults = np.array([1, 0.75, 0.5, 0.25, 0.125])
+        self.multipliers = np.repeat(mults[:, np.newaxis], len(self.parameter), axis=1)
 
-        for i, param in enumerate(self.parameter):
-            self.multipliers[:, i] = get_multipliers_montecarlo(
-                run_number=self.numSim,
-                distribution=param["dist"].value,
-                min_value=param["min"],
-                mean_value=param["base"],
-                max_value=param["max"],
-                std_dev=param["stddev"],
-            )
-
-        print('\t')
-        print(f'Filetype: {type(self.multipliers)}, Shape: {self.multipliers.shape}')
-        print('multipliers = \n', self.multipliers)
-
+        # self.multipliers = np.ones(
+        #     [self.numSim, len(self.parameter)], dtype=np.float64
+        # )
+        #
         # for i, param in enumerate(self.parameter):
         #     self.multipliers[:, i] = get_multipliers_montecarlo(
         #         run_number=self.numSim,
@@ -1324,10 +1287,9 @@ class ProcessMonte:
         #         std_dev=param["stddev"],
         #     )
 
-        """
-        mults = np.array([0.5, 0.25, 0.1])
-        self.multipliers = np.repeat(mults[:, np.newaxis], len(self.parameter), axis=1)
-        """
+        # print('\t')
+        # print(f'Filetype: {type(self.multipliers)}, Shape: {self.multipliers.shape}')
+        # print('multipliers = \n', self.multipliers)
 
     def Adjust_Data(self, multipliers: np.ndarray) -> dict:
         """
@@ -1393,12 +1355,12 @@ class ProcessMonte:
 
             for item_key, item in contract_[key].items():
 
-                # Skip GAS lifting adjustment for "Lifting" target parameter
-                if (
-                    target_param == "Lifting" and key == "lifting"
-                    and item["fluid_type"] == "Gas"
-                ):
-                    continue
+                # # Skip GAS lifting adjustment for "Lifting" target parameter
+                # if (
+                #     target_param == "Lifting" and key == "lifting"
+                #     and item["fluid_type"] == "Gas"
+                # ):
+                #     continue
 
                 # Specify target keys for lifting-related target
                 if key == "lifting":
@@ -1454,7 +1416,7 @@ class ProcessMonte:
                     target_param="OPEX",
                     key="opex",
                     multiplier=multipliers[i],
-                    datakeys=["fixed_cost", "cost_per_volume"],
+                    datakeys=["fixed_cost", "cost_per_volume", "cost"],
                 )
 
                 # Adjust class ASR
@@ -1513,7 +1475,7 @@ class ProcessMonte:
                     multiplier=multipliers[i],
                 )
 
-        return contract_adjusted
+        return contract_
 
     def calcContract(self, n: int) -> dict:
         """
@@ -1545,30 +1507,54 @@ class ProcessMonte:
             # time.sleep(100)
 
             # Specify adjusted data by calling the "Adjust_Data()" method
-            dataAdj = self.Adjust_Data(self.multipliers[n, :])
+            dataAdj: dict = self.Adjust_Data(self.multipliers[n, :])
 
-            # Execute the corresponding contract and return the result in terms of summary
-            mapping_summary = {
-                1: get_costrecovery,
-                2: get_grosssplit,
-                3: get_transition,
-            }
+            print('\t')
+            print(f'Filetype: {type(dataAdj)}')
+            print(f'Length: {len(dataAdj)}')
+            print(f'Keys: {dataAdj.keys()}')
+            # print('dataAdj = \n', dataAdj)
 
-            csummary = mapping_summary.get(self.type, get_baseproject)(data=dataAdj)
+            # # Execute the corresponding contract and return the result in terms of summary
+            # mapping_summary = {
+            #     1: get_costrecovery,
+            #     2: get_grosssplit,
+            #     3: get_transition,
+            # }
 
-            del dataAdj
+            # print('\t')
+            # print(f'Filetype: {type(mapping_summary)}')
+            # print(f'Length: {len(mapping_summary)}')
+            # print('mapping_summary = \n', mapping_summary)
+            #
+            # t1 = mapping_summary.get(self.type, get_baseproject)
+            # print('\t')
+            # print(f'Filetype: {type(t1)}')
+            # print('t1 = \n', t1)
 
-            return {
-                "n": n,
-                "output": (
-                    csummary["ctr_npv"],
-                    csummary["ctr_irr"],
-                    csummary["ctr_pi"],
-                    csummary["ctr_pot"],
-                    csummary["gov_take"],
-                    csummary["ctr_net_share"],
-                ),
-            }
+            if self.type == 1:
+                csummary = get_costrecovery(data=dataAdj)
+
+            # csummary = mapping_summary.get(self.type, get_baseproject)(data=dataAdj)
+
+            # print('\t')
+            # print(f'Filetype: {type(csummary)}')
+            # print(f'Length: {len(csummary)}')
+            # print('csummary = \n', csummary)
+
+            # del dataAdj
+            #
+            # return {
+            #     "n": n,
+            #     "output": (
+            #         csummary["ctr_npv"],
+            #         csummary["ctr_irr"],
+            #         csummary["ctr_pi"],
+            #         csummary["ctr_pot"],
+            #         csummary["gov_take"],
+            #         csummary["ctr_net_share"],
+            #     ),
+            # }
 
         except Exception as err:
 
@@ -1977,11 +1963,6 @@ def uncertainty_psc(
         if p["fluid"] is None or p["fluid"] in fluid_produced
     ]
 
-    # print('\t')
-    # print(f'Filetype: {type(parameter)}')
-    # print(f'Length: {len(parameter)}')
-    # print('parameter = \n', parameter)
-
     # Constructing the contract key
     contract_dict: dict = get_contract_attributes(
         contract=contract,
@@ -1989,11 +1970,13 @@ def uncertainty_psc(
         summary_arguments=summary_arguments,
     )
 
+    mults = np.array([1, 0.75, 0.5, 0.25, 0.125])
+    multipliers = np.repeat(mults[:, np.newaxis], len(parameter), axis=1)
+
     # print('\t')
-    # print(f'Filetype: {type(contract_dict)}')
-    # print(f'Length: {len(contract_dict)}')
-    # print(f'Keys: {contract_dict.keys()}')
-    # print('contract_dict = \n', contract_dict)
+    # print(f'Filetype: {type(multipliers)}')
+    # print(f'Shape: {multipliers.shape}')
+    # print('multipliers = \n', multipliers[2, :])
 
     # Executing the montecarlo
     kwargs_monte = {
@@ -2004,6 +1987,9 @@ def uncertainty_psc(
     }
 
     monte = ProcessMonte(**kwargs_monte)
+    monte.calcContract(n=2)
+
+
 
     # # Use multiprocessing if run_number is large (i.e. larger than 400)
     # try:

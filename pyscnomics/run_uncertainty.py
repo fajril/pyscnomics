@@ -51,7 +51,7 @@ if __name__ == "__main__":
         "contract": contract,
         "contract_arguments": contract_arguments,
         "summary_arguments": summary_arguments,
-        "run_number": 10,
+        "run_number": 5,
         "oil_price_stddev": 1,
         "gas_price_stddev": 1,
         "opex_stddev": 1,

@@ -2958,7 +2958,7 @@ class CostRecovery(BaseProject):
             # Modify contractor net cashflow since the cashflow before discount rate
             # start year is neglected
             ref_year_arr = np.full(
-                self._consolidated_cashflow, fill_value=discount_rate_start_year
+                self._consolidated_cashflow.shape, fill_value=discount_rate_start_year
             )
             cashflow_point_forward = np.where(
                 self.project_years >= ref_year_arr,
