@@ -200,7 +200,7 @@ def get_summary_dict(data: dict) -> dict:
         str_object=data["summary_arguments"].get("npv_mode", "Full Cycle Nominal Terms")
     )
     discounting_mode = convert_str_to_discountingmode(
-        str_object=data["summary_arguments"].get("discounting_mode", "discounting_mode")
+        str_object=data["summary_arguments"].get("discounting_mode", "End Year Discounting")
     )
     profitability_discounted = data["summary_arguments"].get(
         "profitability_discounted", False
