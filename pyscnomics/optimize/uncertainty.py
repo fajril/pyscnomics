@@ -65,29 +65,26 @@ class MonteCarloException(Exception):
     pass
 
 
-def _check_existence(target_key: str, data: dict):
+def _check_existence(target_key: str, data: dict, default=None):
     """
-    Validate the existence of a required key in a dictionary.
+    Retrieve a value from a dictionary with a safe fallback.
 
     Parameters
     ----------
     target_key : str
-        Key that must be present in the input dictionary.
+        Key to look up in ``data``.
     data : dict
-        Dictionary to be validated.
+        Input dictionary.
+    default : Any, optional
+        Value returned when ``target_key`` is missing (default: ``None``).
 
-    Raises
-    ------
-    MonteCarloException
-        If ``target_key`` is not found in ``data``.
+    Returns
+    -------
+    Any
+        ``data[target_key]`` if present, otherwise ``default``.
     """
 
-    if target_key not in data:
-        raise MonteCarloException(
-            f"Required key {target_key!r} is not found in input data."
-        )
-
-    return data[target_key]
+    return data.get(target_key, default)
 
 
 def get_setup_dict(data: dict) -> tuple:
@@ -105,14 +102,9 @@ def get_setup_dict(data: dict) -> tuple:
     tuple
         Parsed setup values and converted cost objects, returned in a fixed order
         expected by the economic engine.
-
-    Raises
-    ------
-    MonteCarloException
-        If the required ``setup`` section is missing.
     """
 
-    # Specify abbreviation
+    # Check whether "setup" exist in "data" and prepare it accordingly
     se = _check_existence(target_key="setup", data=data)
 
     # Parsing the contract setup into each corresponding variables
@@ -157,8 +149,27 @@ def get_setup_dict(data: dict) -> tuple:
 
 
 def get_summary_dict(data: dict) -> dict:
+    """
+    Extract and normalize summary-related arguments.
 
-    # Specify abbreviations for selected functions and variables
+    Parameters
+    ----------
+    data : dict
+        Input configuration containing a required ``summary_arguments`` section.
+
+    Returns
+    -------
+    dict
+        Summary arguments with defaults applied and enums converted:
+        - discount_rate_start_year
+        - inflation_rate
+        - discount_rate
+        - npv_mode
+        - discounting_mode
+        - profitability_discounted
+    """
+
+    # Check whether "summary_arguments" exists in "data" and prepare it accordingly
     sa = _check_existence(target_key="summary_arguments", data=data)
 
     # Fill get_summary() argument with input data
@@ -185,32 +196,33 @@ def get_summary_dict(data: dict) -> dict:
 
 def build_baseproject_instance(data: dict) -> BaseProject:
     """
-    Build and initialize a Base Project contract instance.
-
-    This function extracts fundamental parameters from the input data,
-    prepares the required keyword arguments, and returns a fully
-    constructed :class:`BaseProject` instance for economic evaluation.
+    Build a ``BaseProject`` instance from input configuration data.
 
     Parameters
     ----------
     data : dict
-        Input dictionary containing all parameters necessary to
-        configure a Base Project contract.
+        Project configuration containing ``setup`` and optional cost/lifting sections.
 
     Returns
     -------
     BaseProject
-        Initialized :class:`BaseProject` object ready for evaluation.
+        Initialized BaseProject with setup, lifting, and cost components attached.
+
+    Notes
+    -----
+    - Internally relies on ``get_setup_dict()`` for parsing & conversion.
+    - Missing optional sections → corresponding attributes set to ``None``.
     """
 
     # Specify base arguments
     (
         start_date,
         end_date,
+        approval_year,
         oil_onstream_date,
         gas_onstream_date,
-        approval_year,
         is_pod_1,
+        is_strict,
         lifting,
         capital,
         intangible,
@@ -225,10 +237,11 @@ def build_baseproject_instance(data: dict) -> BaseProject:
         # Base parameters
         "start_date": start_date,
         "end_date": end_date,
+        "approval_year": approval_year,
         "oil_onstream_date": oil_onstream_date,
         "gas_onstream_date": gas_onstream_date,
-        "approval_year": approval_year,
         "is_pod_1": is_pod_1,
+        "is_strict": is_strict,
 
         # Lifting and costs
         "lifting": lifting,
@@ -245,42 +258,41 @@ def build_baseproject_instance(data: dict) -> BaseProject:
 
 def build_baseproject_arguments(data: dict) -> dict:
     """
-    Build the argument dictionary for a Base Project contract.
-
-    This function extracts and converts key economic parameters such as
-    revenues, tax rate, and inflation information from the input data,
-    returning a dictionary suitable for initializing or executing a
-    :class:`BaseProject` instance.
+    Build BaseProject contract arguments from input data.
 
     Parameters
     ----------
     data : dict
-        Input dictionary containing contract arguments and economic
-        parameters for the Base Project.
+        Project input dictionary containing ``contract_arguments``.
 
     Returns
     -------
     dict
-        Dictionary of processed Base Project arguments, ready for use
-        in model evaluation.
+        Parsed BaseProject arguments, including:
+        - other revenues → sulfur | electricity | CO₂
+        - VAT & inflation settings
+
+    Notes
+    -----
+    - ``contract_arguments`` must exist in ``data``
+    - Values are converted to engine-ready types
     """
 
-    # Specify abbreviations
-    ca = data["contract_arguments"]
-    f_rev = convert_str_to_otherrevenue
-    f_rate = convert_list_to_array_float_or_array
-    f_infl = convert_str_to_inflationappliedto
+    # Check whether "contract_arguments" exist in "data", and prepare it accordingly
+    ca = _check_existence(target_key="contract_arguments", data=data)
 
     return {
         # Other revenues
-        "sulfur_revenue": f_rev(str_object=ca["sulfur_revenue"]),
-        "electricity_revenue": f_rev(str_object=ca["electricity_revenue"]),
-        "co2_revenue": f_rev(str_object=ca["co2_revenue"]),
+        "sulfur_revenue": convert_str_to_otherrevenue(str_object=ca["sulfur_revenue"]),
+        "electricity_revenue": convert_str_to_otherrevenue(str_object=ca["electricity_revenue"]),
+        "co2_revenue": convert_str_to_otherrevenue(str_object=ca["co2_revenue"]),
 
         # VAT and inflation
-        "vat_rate": f_rate(data_input=ca["vat_rate"]),
-        "inflation_rate": f_rate(data_input=ca["inflation_rate"]),
-        "inflation_rate_applied_to": f_infl(str_object=ca["inflation_rate_applied_to"]),
+        "vat_rate": convert_list_to_array_float_or_array(data_input=ca["vat_rate"]),
+        "inflation_rate": convert_list_to_array_float_or_array(data_input=ca["inflation_rate"]),
+        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
+            str_object=ca["inflation_rate_applied_to"]
+        ),
     }
 
 
@@ -319,45 +331,36 @@ def get_baseproject(data: dict) -> dict:
 
 def build_costrecovery_instance(data: dict) -> CostRecovery:
     """
-    Build and return a fully configured `CostRecovery` contract instance.
-
-    This function extracts setup parameters and cost recovery–specific
-    attributes from the input data dictionary, applies the necessary
-    type conversions, and initializes the `CostRecovery` object with
-    the prepared keyword arguments.
+    Build a CostRecovery contract instance from input data.
 
     Parameters
     ----------
     data : dict
-        Input data dictionary containing setup parameters and
-        `costrecovery`-specific contract attributes. Must include
-        sections such as `lifting`, `capital`, `opex`, and
-        `costrecovery`.
+        Project configuration dictionary containing:
+        - ``setup`` (base project info)
+        - ``costrecovery`` (CR-specific terms)
 
     Returns
     -------
     CostRecovery
-        The instantiated `CostRecovery` contract object, ready for
-        execution using its `run()` method.
+        Initialized CostRecovery contract object.
 
     Notes
     -----
-    - Setup parameters (dates, lifting, and costs) are parsed via
-      :func:`get_setup_dict`.
-    - Conversion utilities like :func:`convert_list_to_array_float_or_array`
-      and :func:`convert_str_to_taxsplit` are used for type coercion.
-    - The function prepares all base, FTP, split, investment credit,
-      DMO, and depreciation parameters required for initialization.
+    - Base attributes are parsed via ``get_setup_dict()``
+    - CR terms include FTP, split, IC, cap rate, and DMO settings
+    - Inputs are converted to engine-ready types before instantiation
     """
 
     # Specify base arguments
     (
         start_date,
         end_date,
+        approval_year,
         oil_onstream_date,
         gas_onstream_date,
-        approval_year,
         is_pod_1,
+        is_strict,
         lifting,
         capital,
         intangible,
@@ -367,22 +370,19 @@ def build_costrecovery_instance(data: dict) -> CostRecovery:
         cost_of_sales,
     ) = get_setup_dict(data=data)
 
-    # Specify abbreviations
-    cr = data["costrecovery"]
-    f_rate = convert_list_to_array_float_or_array
-    f_split = convert_str_to_taxsplit
-    f_icp = convert_list_to_array_float
-    f_float = convert_to_float
+    # Check whether "costrecovery" exist in "data", and prepare it accordingly
+    cr = _check_existence(target_key="costrecovery", data=data)
 
     # Prepare contract attributes for CostRecovery
     contract_kwargs = {
         # Base parameters
         "start_date": start_date,
         "end_date": end_date,
+        "approval_year": approval_year,
         "oil_onstream_date": oil_onstream_date,
         "gas_onstream_date": gas_onstream_date,
-        "approval_year": approval_year,
         "is_pod_1": is_pod_1,
+        "is_strict": is_strict,
 
         # Lifting and costs
         "lifting": lifting,
@@ -396,31 +396,45 @@ def build_costrecovery_instance(data: dict) -> CostRecovery:
         # FTP
         "oil_ftp_is_available": cr["oil_ftp_is_available"],
         "oil_ftp_is_shared": cr["oil_ftp_is_shared"],
-        "oil_ftp_portion": f_rate(data_input=cr["oil_ftp_portion"]),
+        "oil_ftp_portion": convert_list_to_array_float_or_array(data_input=cr["oil_ftp_portion"]),
         "gas_ftp_is_available": cr["gas_ftp_is_available"],
         "gas_ftp_is_shared": cr["gas_ftp_is_shared"],
-        "gas_ftp_portion": f_rate(data_input=cr["gas_ftp_portion"]),
+        "gas_ftp_portion": convert_list_to_array_float_or_array(data_input=cr["gas_ftp_portion"]),
 
         # Split
-        "tax_split_type": f_split(str_object=cr["tax_split_type"]),
+        "tax_split_type": convert_str_to_taxsplit(str_object=cr["tax_split_type"]),
         "condition_dict": cr["condition_dict"],
-        "indicator_rc_icp_sliding": f_icp(data_list=cr["indicator_rc_icp_sliding"]),
-        "oil_ctr_pretax_share": f_rate(data_input=cr["oil_ctr_pretax_share"]),
-        "gas_ctr_pretax_share": f_rate(data_input=cr["gas_ctr_pretax_share"]),
+        "indicator_rc_icp_sliding": convert_list_to_array_float(
+            data_list=cr["indicator_rc_icp_sliding"]
+        ),
+        "oil_ctr_pretax_share": convert_list_to_array_float_or_array(
+            data_input=cr["oil_ctr_pretax_share"]
+        ),
+        "gas_ctr_pretax_share": convert_list_to_array_float_or_array(
+            data_input=cr["gas_ctr_pretax_share"]
+        ),
 
         # Investment credit and cap rate
-        "oil_ic_rate": f_float(target=cr["oil_ic_rate"]),
-        "gas_ic_rate": f_float(target=cr["gas_ic_rate"]),
+        "oil_ic_rate": convert_to_float(target=cr["oil_ic_rate"]),
+        "gas_ic_rate": convert_to_float(target=cr["gas_ic_rate"]),
         "ic_is_available": cr["ic_is_available"],
-        "oil_cr_cap_rate": f_float(target=cr["oil_cr_cap_rate"]),
-        "gas_cr_cap_rate": f_float(target=cr["gas_cr_cap_rate"]),
+        "oil_cr_cap_rate": convert_to_float(target=cr["oil_cr_cap_rate"]),
+        "gas_cr_cap_rate": convert_to_float(target=cr["gas_cr_cap_rate"]),
 
         # DMO
-        "oil_dmo_volume_portion": f_rate(data_input=cr["oil_dmo_volume_portion"]),
-        "oil_dmo_fee_portion": f_rate(data_input=cr["oil_dmo_fee_portion"]),
+        "oil_dmo_volume_portion": convert_list_to_array_float_or_array(
+            data_input=cr["oil_dmo_volume_portion"]
+        ),
+        "oil_dmo_fee_portion": convert_list_to_array_float_or_array(
+            data_input=cr["oil_dmo_fee_portion"]
+        ),
         "oil_dmo_holiday_duration": cr["oil_dmo_holiday_duration"],
-        "gas_dmo_volume_portion": f_rate(data_input=cr["gas_dmo_volume_portion"]),
-        "gas_dmo_fee_portion": f_rate(data_input=cr["gas_dmo_fee_portion"]),
+        "gas_dmo_volume_portion": convert_list_to_array_float_or_array(
+            data_input=cr["gas_dmo_volume_portion"]
+        ),
+        "gas_dmo_fee_portion": convert_list_to_array_float_or_array(
+            data_input=cr["gas_dmo_fee_portion"]
+        ),
         "gas_dmo_holiday_duration": cr["gas_dmo_holiday_duration"],
 
         # Carry forward depreciation

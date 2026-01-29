@@ -35,6 +35,10 @@ from pyscnomics.optimize.uncertainty import (
     build_baseproject_arguments,
     get_baseproject,
 
+    build_costrecovery_instance,
+    build_costrecovery_arguments,
+    get_costrecovery,
+
     ProcessMonte,
     uncertainty_psc,
 )
@@ -50,7 +54,7 @@ if __name__ == "__main__":
     case = Case00B(contract_type=ContractType.COST_RECOVERY)
     data = case.as_dict()
 
-    t1 = get_summary_dict(data=data)
+    t1 = build_costrecovery_instance(data=data)
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')
