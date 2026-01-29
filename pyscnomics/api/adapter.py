@@ -580,13 +580,6 @@ def build_costrecovery_arguments(data: dict) -> dict:
         # Cost of sales
         "oil_cost_of_sales_applied": _get_value(key="oil_cost_of_sales_applied", default=False),
         "gas_cost_of_sales_applied": _get_value(key="gas_cost_of_sales_applied", default=False),
-
-        # # Sunk cost
-        # "sunk_cost_method": _get_value(
-        #     key="sunk_cost_method",
-        #     default=SunkCostMethod.DEPRECIATED_TANGIBLE,
-        #     converter=converter_sunk_cost_method,
-        # ),
     }
 
 

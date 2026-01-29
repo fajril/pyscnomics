@@ -67,24 +67,25 @@ class MonteCarloException(Exception):
 
 def _check_existence(target_key: str, data: dict, default=None):
     """
-    Retrieve a value from a dictionary with a safe fallback.
+    Check whether a key exists in a dictionary and return a safe value.
 
     Parameters
     ----------
     target_key : str
-        Key to look up in ``data``.
+        Key to look for in `data`.
     data : dict
         Input dictionary.
-    default : Any, optional
-        Value returned when ``target_key`` is missing (default: ``None``).
+    default : any, optional
+        Fallback value if key is missing or its value is None.
 
     Returns
     -------
-    Any
-        ``data[target_key]`` if present, otherwise ``default``.
+    any
+        `data[target_key]` if present and not None, otherwise `default`.
     """
-
-    return data.get(target_key, default)
+    return (
+        default if (target_key not in data) or (data[target_key] is None) else data[target_key]
+    )
 
 
 def get_setup_dict(data: dict) -> tuple:
@@ -447,202 +448,130 @@ def build_costrecovery_instance(data: dict) -> CostRecovery:
 
 def build_costrecovery_arguments(data: dict) -> dict:
     """
-    Build and return the argument dictionary required to execute a
-    `CostRecovery` contract.
+    Build normalized cost-recovery arguments from raw input data.
 
-    This function extracts contract-level parameters from the input
-    data dictionary, performs necessary type conversions, and prepares
-    all supporting arguments related to revenue, FTP, VAT, inflation,
-    tax, depreciation, and cost of sales. The resulting dictionary can
-    be directly passed to the `CostRecovery.run()` method.
+    Extracts `contract_arguments` from `data`, applies defaults where needed,
+    and converts string/list inputs into internal enum/array representations
+    required by the cost-recovery model.
 
     Parameters
     ----------
     data : dict
-        Input data dictionary containing the section `contract_arguments`
-        with all parameter definitions required for the cost recovery
-        contract setup.
+        Raw input dictionary containing `contract_arguments`.
 
     Returns
     -------
     dict
-        Dictionary of processed arguments to initialize or execute
-        the `CostRecovery` contract.
-
-    Notes
-    -----
-    - Type conversion functions such as
-      :func:`convert_str_to_otherrevenue`, :func:`convert_str_to_taxregime`,
-      and :func:`convert_str_to_depremethod` are used for input parsing.
-    - Internal helper function `_get_value()` safely retrieves dictionary
-      values and applies optional conversion or defaults when keys are
-      missing or `None`.
-    - Covers the following parameter groups:
-        * Other revenues (e.g., sulfur, electricity, CO₂)
-        * FTP and tax regimes
-        * VAT and inflation parameters
-        * Depreciation configuration
-        * DMO weighting and cost-of-sales flags
-        * Sunk cost handling
+        Sanitized and converted cost-recovery arguments ready for model use.
     """
 
-    # Specify abbreviations and helper method
-    ca = data["contract_arguments"]
-    f_rev = convert_str_to_otherrevenue
-    f_rate = convert_list_to_array_float_or_array
-    f_infl = convert_str_to_inflationappliedto
-    f_tax = convert_str_to_taxregime
-    f_tax_rate = convert_list_to_array_float_or_array_or_none
-    f_ftp = convert_str_to_ftptaxregime
-    f_depr = convert_str_to_depremethod
-
-    def _get_value(key: str, source: dict = ca, default=True, converter=None):
-        """
-        Helper function:
-        Safely retrieve a value from a dictionary with an optional converter.
-
-        Parameters
-        ----------
-        key : str
-            Key to look up in the dictionary.
-        source : dict, optional
-            Source dictionary. Defaults to ``ca``.
-        default : any, optional
-            Value to return if key is missing or ``None``.
-        converter : callable, optional
-            Function to convert the retrieved value.
-        """
-        if converter is None:
-            return (
-                default if (key not in source) or (source[key] is None)
-                else source[key]
-            )
-        else:
-            return (
-                default if (key not in source) or (source[key] is None)
-                else converter(source[key])
-            )
+    # Check whether "contract_arguments" exist in "data", and prepare it accordingly
+    ca = _check_existence(target_key="contract_arguments", data=data)
 
     return {
         # Other revenues
-        "sulfur_revenue": f_rev(str_object=ca["sulfur_revenue"]),
-        "electricity_revenue": f_rev(str_object=ca["electricity_revenue"]),
-        "co2_revenue": f_rev(str_object=ca["co2_revenue"]),
+        "sulfur_revenue": convert_str_to_otherrevenue(str_object=ca["sulfur_revenue"]),
+        "electricity_revenue": convert_str_to_otherrevenue(str_object=ca["electricity_revenue"]),
+        "co2_revenue": convert_str_to_otherrevenue(str_object=ca["co2_revenue"]),
 
         # FTP
-        "ftp_tax_regime": f_ftp(str_object=ca["ftp_tax_regime"]),
+        "ftp_tax_regime": convert_str_to_ftptaxregime(str_object=ca["ftp_tax_regime"]),
 
         # VAT and inflation
-        "vat_rate": f_rate(data_input=ca["vat_rate"]),
-        "inflation_rate": f_rate(data_input=ca["inflation_rate"]),
-        "inflation_rate_applied_to": f_infl(str_object=ca["inflation_rate_applied_to"]),
+        "vat_rate": convert_list_to_array_float_or_array(data_input=ca["vat_rate"]),
+        "inflation_rate": convert_list_to_array_float_or_array(data_input=ca["inflation_rate"]),
+        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
+            str_object=ca["inflation_rate_applied_to"]
+        ),
 
         # DMO and tax
         "is_dmo_end_weighted": ca["is_dmo_end_weighted"],
-        "tax_regime": f_tax(str_object=ca["tax_regime"]),
-        "effective_tax_rate": f_tax_rate(data_list=ca["effective_tax_rate"]),
-        "post_uu_22_year2001": _get_value(key="post_uu_22_year2001"),
+        "tax_regime": convert_str_to_taxregime(str_object=ca["tax_regime"]),
+        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
+            data_list=ca["effective_tax_rate"]
+        ),
+        "post_uu_22_year2001": _check_existence(
+            target_key="post_uu_22_year2001", data=ca, default=True
+        ),
 
         # Depreciation
-        "depr_method": f_depr(str_object=ca["depr_method"]),
+        "depr_method": convert_str_to_depremethod(str_object=ca["depr_method"]),
         "decline_factor": ca["decline_factor"],
-        "sum_undepreciated_cost": _get_value(key="sum_undepreciated_cost", default=False),
+        "sum_undepreciated_cost": _check_existence(
+            target_key="sum_undepreciated_cost", data=ca, default=False
+        ),
 
         # Cost of sales
-        "oil_cost_of_sales_applied": _get_value(key="oil_cost_of_sales_applied", default=False),
-        "gas_cost_of_sales_applied": _get_value(key="gas_cost_of_sales_applied", default=False),
-
-        # Sunk cost
-        "sunk_cost_method": _get_value(
-            key="sunk_cost_method",
-            default=SunkCostMethod.DEPRECIATED_TANGIBLE,
-            converter=converter_sunk_cost_method,
+        "oil_cost_of_sales_applied": _check_existence(
+            target_key="oil_cost_of_sales_applied", data=ca, default=False
+        ),
+        "gas_cost_of_sales_applied": _check_existence(
+            target_key="gas_cost_of_sales_applied", data=ca, default=False
         ),
     }
 
 
 def get_costrecovery(data: dict) -> dict:
     """
-    Build, execute, and summarize a Cost Recovery contract evaluation.
+    Run cost-recovery calculation and return its summary.
 
-    This function constructs a :class:`CostRecovery` instance using the provided
-    input data, executes its economic evaluation, and generates a summary of the
-    results.
+    Builds the cost-recovery contract instance and arguments from `data`,
+    executes the model, and extracts the final summary output.
 
     Parameters
     ----------
     data : dict
-        Dictionary containing setup information, contract parameters, and summary
-        configuration.
+        Raw input dictionary containing contract setup, arguments,
+        and summary configuration.
 
     Returns
     -------
     dict
-        Summary of the Cost Recovery contract evaluation.
+        Cost-recovery summary results.
     """
-
-    print('\t')
-    print('Aditya')
 
     # Specify contract and contract arguments
     contract = build_costrecovery_instance(data=data)
-    # contract_arguments_dict = build_costrecovery_arguments(data=data)
-    #
-    # print('\t')
-    # print(f'Filetype: {type(contract)}')
-    # print(f'Length: {len(contract)}')
-    # print('contract = \n', contract)
+    contract_arguments_dict = build_costrecovery_arguments(data=data)
 
-    # # Execute CostRecovery instance
-    # contract.run(**contract_arguments_dict)
-    #
-    # # Fill summary arguments
-    # summary_arguments_dict = get_summary_dict(data=data)
-    #
-    # return contract.get_summary(**summary_arguments_dict)
+    # Execute CostRecovery instance
+    contract.run(**contract_arguments_dict)
+
+    # Fill summary arguments
+    summary_arguments_dict = get_summary_dict(data=data)
+
+    return contract.get_summary(**summary_arguments_dict)
 
 
 def build_grosssplit_instance(data: dict) -> GrossSplit:
     """
-    Build and return an initialized :class:`GrossSplit` contract instance.
+    Build and initialize a GrossSplit contract instance.
 
-    This function extracts and transforms relevant input parameters from the
-    provided ``data`` dictionary to create a fully configured instance of the
-    :class:`GrossSplit` class.
-
-    It handles type conversion, optional attribute retrieval, nd ensures missing
-    values are safely replaced with defaults when applicable. The returned object
-    is ready for execution through the :meth:`GrossSplit.run` method.
+    Extracts setup, lifting, cost, and Gross Split–specific parameters
+    from `data`, prepares contract arguments, and returns a ready-to-run
+    `GrossSplit` object.
 
     Parameters
     ----------
     data : dict
-        Dictionary containing the full dataset required to construct a
-        Gross Split PSC (Production Sharing Contract) instance.
+        Raw input dictionary containing project setup and gross split
+        contract configuration.
 
     Returns
     -------
     GrossSplit
-        A fully configured :class:`GrossSplit` instance initialized with
-        project setup parameters, fiscal settings, and DMO-related attributes.
-        The instance is ready to run the Gross Split PSC economic model.
-
-    Notes
-    -----
-    - The helper function ``_get_value()`` ensures missing or ``None`` attributes
-      from the input dictionary are replaced with a default value (``None`` by default).
-    - List-type fiscal inputs such as DMO portions are converted to NumPy arrays
-      using :func:`convert_list_to_array_float_or_array`.
+        Initialized GrossSplit contract instance.
     """
 
     # Specify base arguments
     (
         start_date,
         end_date,
+        approval_year,
         oil_onstream_date,
         gas_onstream_date,
-        approval_year,
         is_pod_1,
+        is_strict,
         lifting,
         capital,
         intangible,
@@ -652,34 +581,19 @@ def build_grosssplit_instance(data: dict) -> GrossSplit:
         cost_of_sales,
     ) = get_setup_dict(data=data)
 
-    # Specify abbreviations and helper method to be used in instance preparation
-    gs = data["grosssplit"]
-    func = convert_list_to_array_float_or_array
-
-    def _get_value(key: str, source: dict = gs, default=None):
-        """
-        Helper function: safely retrieve a value from a dictionary.
-
-        Parameters
-        ----------
-        key : str
-            Key to look up in the dictionary.
-        source : dict, optional
-            Source dictionary. Defaults to ``ca``.
-        default : any, optional
-            Value to return if key is missing or ``None``.
-        """
-        return default if (key not in source) or (source[key] is None) else source[key]
+    # Check whether "grosssplit" exist in "data", and prepare it accordingly
+    gs = _check_existence(target_key="grosssplit", data=data)
 
     # Prepare contract attributes for GrossSplit
     contract_kwargs = {
         # Base parameters
         "start_date": start_date,
         "end_date": end_date,
+        "approval_year": approval_year,
         "oil_onstream_date": oil_onstream_date,
         "gas_onstream_date": gas_onstream_date,
-        "approval_year": approval_year,
         "is_pod_1": is_pod_1,
+        "is_strict": is_strict,
 
         # Lifting and costs
         "lifting": lifting,
@@ -690,28 +604,40 @@ def build_grosssplit_instance(data: dict) -> GrossSplit:
         "lbt_cost": lbt,
 
         # Field and reservoir properties
-        "field_status": _get_value(key="field_status"),
-        "field_loc": _get_value(key="field_loc"),
-        "res_depth": _get_value(key="res_depth"),
-        "infra_avail": _get_value(key="infra_avail"),
-        "res_type": _get_value(key="res_type"),
-        "api_oil": _get_value(key="api_oil"),
-        "domestic_use": _get_value(key="domestic_use"),
-        "prod_stage": _get_value(key="prod_stage"),
-        "co2_content": _get_value(key="co2_content"),
-        "h2s_content": _get_value(key="h2s_content"),
-        "field_reserves_2024": _get_value(key="field_reserves_2024"),
-        "infra_avail_2024": _get_value(key="infra_avail_2024"),
-        "field_loc_2024": _get_value(key="field_loc_2024"),
+        "field_status": _check_existence(target_key="field_status", data=gs),
+        "field_loc": _check_existence(target_key="field_loc", data=gs),
+        "res_depth": _check_existence(target_key="res_depth", data=gs),
+        "infra_avail": _check_existence(target_key="infra_avail", data=gs),
+        "res_type": _check_existence(target_key="res_type", data=gs),
+        "api_oil": _check_existence(target_key="api_oil", data=gs),
+        "domestic_use": _check_existence(target_key="domestic_use", data=gs),
+        "prod_stage": _check_existence(target_key="prod_stage", data=gs),
+        "co2_content": _check_existence(target_key="co2_content", data=gs),
+        "h2s_content": _check_existence(target_key="h2s_content", data=gs),
+        "field_reserves_2024": _check_existence(target_key="field_reserves_2024", data=gs),
+        "infra_avail_2024": _check_existence(target_key="infra_avail_2024", data=gs),
+        "field_loc_2024": _check_existence(target_key="field_loc_2024", data=gs),
         "split_ministry_disc": convert_to_float(target=gs["split_ministry_disc"]),
 
         # DMO parameters
-        "oil_dmo_volume_portion": func(data_input=gs["oil_dmo_volume_portion"]),
-        "oil_dmo_fee_portion": func(data_input=gs["oil_dmo_fee_portion"]),
-        "oil_dmo_holiday_duration": _get_value(key="oil_dmo_holiday_duration"),
-        "gas_dmo_volume_portion": func(data_input=gs["gas_dmo_volume_portion"]),
-        "gas_dmo_fee_portion": func(data_input=gs["gas_dmo_fee_portion"]),
-        "gas_dmo_holiday_duration": _get_value(key="gas_dmo_holiday_duration"),
+        "oil_dmo_volume_portion": convert_list_to_array_float_or_array(
+            data_input=gs["oil_dmo_volume_portion"]
+        ),
+        "oil_dmo_fee_portion": convert_list_to_array_float_or_array(
+            data_input=gs["oil_dmo_fee_portion"]
+        ),
+        "oil_dmo_holiday_duration": _check_existence(
+            target_key="oil_dmo_holiday_duration", data=gs
+        ),
+        "gas_dmo_volume_portion": convert_list_to_array_float_or_array(
+            data_input=gs["gas_dmo_volume_portion"]
+        ),
+        "gas_dmo_fee_portion": convert_list_to_array_float_or_array(
+            data_input=gs["gas_dmo_fee_portion"]
+        ),
+        "gas_dmo_holiday_duration": _check_existence(
+            target_key="gas_dmo_holiday_duration", data=gs
+        ),
 
         # Carry forward depreciation
         "oil_carry_forward_depreciation": 0.0,
