@@ -65,7 +65,7 @@ class MonteCarloException(Exception):
     pass
 
 
-def _check_existence(target_key: str, data: dict, default=None):
+def _extract_from_dict(target_key: str, source: dict, default=None):
     """
     Check whether a key exists in a dictionary and return a safe value.
 
@@ -73,7 +73,7 @@ def _check_existence(target_key: str, data: dict, default=None):
     ----------
     target_key : str
         Key to look for in `data`.
-    data : dict
+    source : dict
         Input dictionary.
     default : any, optional
         Fallback value if key is missing or its value is None.
@@ -84,7 +84,8 @@ def _check_existence(target_key: str, data: dict, default=None):
         `data[target_key]` if present and not None, otherwise `default`.
     """
     return (
-        default if (target_key not in data) or (data[target_key] is None) else data[target_key]
+        default if (target_key not in source) or (source[target_key] is None)
+        else source[target_key]
     )
 
 
@@ -106,7 +107,7 @@ def get_setup_dict(data: dict) -> tuple:
     """
 
     # Check whether "setup" exist in "data" and prepare it accordingly
-    se = _check_existence(target_key="setup", data=data)
+    se = _extract_from_dict(target_key="setup", source=data)
 
     # Parsing the contract setup into each corresponding variables
     start_date = convert_str_to_date(str_object=se["start_date"])
@@ -171,7 +172,7 @@ def get_summary_dict(data: dict) -> dict:
     """
 
     # Check whether "summary_arguments" exists in "data" and prepare it accordingly
-    sa = _check_existence(target_key="summary_arguments", data=data)
+    sa = _extract_from_dict(target_key="summary_arguments", source=data)
 
     # Fill get_summary() argument with input data
     discount_rate_start_year = sa.get("discount_rate_start_year", None)
@@ -280,7 +281,7 @@ def build_baseproject_arguments(data: dict) -> dict:
     """
 
     # Check whether "contract_arguments" exist in "data", and prepare it accordingly
-    ca = _check_existence(target_key="contract_arguments", data=data)
+    ca = _extract_from_dict(target_key="contract_arguments", source=data)
 
     return {
         # Other revenues
@@ -372,7 +373,7 @@ def build_costrecovery_instance(data: dict) -> CostRecovery:
     ) = get_setup_dict(data=data)
 
     # Check whether "costrecovery" exist in "data", and prepare it accordingly
-    cr = _check_existence(target_key="costrecovery", data=data)
+    cr = _extract_from_dict(target_key="costrecovery", source=data)
 
     # Prepare contract attributes for CostRecovery
     contract_kwargs = {
@@ -466,7 +467,7 @@ def build_costrecovery_arguments(data: dict) -> dict:
     """
 
     # Check whether "contract_arguments" exist in "data", and prepare it accordingly
-    ca = _check_existence(target_key="contract_arguments", data=data)
+    ca = _extract_from_dict(target_key="contract_arguments", source=data)
 
     return {
         # Other revenues
@@ -490,23 +491,23 @@ def build_costrecovery_arguments(data: dict) -> dict:
         "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
             data_list=ca["effective_tax_rate"]
         ),
-        "post_uu_22_year2001": _check_existence(
-            target_key="post_uu_22_year2001", data=ca, default=True
+        "post_uu_22_year2001": _extract_from_dict(
+            target_key="post_uu_22_year2001", source=ca, default=True
         ),
 
         # Depreciation
         "depr_method": convert_str_to_depremethod(str_object=ca["depr_method"]),
         "decline_factor": ca["decline_factor"],
-        "sum_undepreciated_cost": _check_existence(
-            target_key="sum_undepreciated_cost", data=ca, default=False
+        "sum_undepreciated_cost": _extract_from_dict(
+            target_key="sum_undepreciated_cost", source=ca, default=False
         ),
 
         # Cost of sales
-        "oil_cost_of_sales_applied": _check_existence(
-            target_key="oil_cost_of_sales_applied", data=ca, default=False
+        "oil_cost_of_sales_applied": _extract_from_dict(
+            target_key="oil_cost_of_sales_applied", source=ca, default=False
         ),
-        "gas_cost_of_sales_applied": _check_existence(
-            target_key="gas_cost_of_sales_applied", data=ca, default=False
+        "gas_cost_of_sales_applied": _extract_from_dict(
+            target_key="gas_cost_of_sales_applied", source=ca, default=False
         ),
     }
 
@@ -582,7 +583,7 @@ def build_grosssplit_instance(data: dict) -> GrossSplit:
     ) = get_setup_dict(data=data)
 
     # Check whether "grosssplit" exist in "data", and prepare it accordingly
-    gs = _check_existence(target_key="grosssplit", data=data)
+    gs = _extract_from_dict(target_key="grosssplit", source=data)
 
     # Prepare contract attributes for GrossSplit
     contract_kwargs = {
@@ -604,19 +605,19 @@ def build_grosssplit_instance(data: dict) -> GrossSplit:
         "lbt_cost": lbt,
 
         # Field and reservoir properties
-        "field_status": _check_existence(target_key="field_status", data=gs),
-        "field_loc": _check_existence(target_key="field_loc", data=gs),
-        "res_depth": _check_existence(target_key="res_depth", data=gs),
-        "infra_avail": _check_existence(target_key="infra_avail", data=gs),
-        "res_type": _check_existence(target_key="res_type", data=gs),
-        "api_oil": _check_existence(target_key="api_oil", data=gs),
-        "domestic_use": _check_existence(target_key="domestic_use", data=gs),
-        "prod_stage": _check_existence(target_key="prod_stage", data=gs),
-        "co2_content": _check_existence(target_key="co2_content", data=gs),
-        "h2s_content": _check_existence(target_key="h2s_content", data=gs),
-        "field_reserves_2024": _check_existence(target_key="field_reserves_2024", data=gs),
-        "infra_avail_2024": _check_existence(target_key="infra_avail_2024", data=gs),
-        "field_loc_2024": _check_existence(target_key="field_loc_2024", data=gs),
+        "field_status": _extract_from_dict(target_key="field_status", source=gs),
+        "field_loc": _extract_from_dict(target_key="field_loc", source=gs),
+        "res_depth": _extract_from_dict(target_key="res_depth", source=gs),
+        "infra_avail": _extract_from_dict(target_key="infra_avail", source=gs),
+        "res_type": _extract_from_dict(target_key="res_type", source=gs),
+        "api_oil": _extract_from_dict(target_key="api_oil", source=gs),
+        "domestic_use": _extract_from_dict(target_key="domestic_use", source=gs),
+        "prod_stage": _extract_from_dict(target_key="prod_stage", source=gs),
+        "co2_content": _extract_from_dict(target_key="co2_content", source=gs),
+        "h2s_content": _extract_from_dict(target_key="h2s_content", source=gs),
+        "field_reserves_2024": _extract_from_dict(target_key="field_reserves_2024", source=gs),
+        "infra_avail_2024": _extract_from_dict(target_key="infra_avail_2024", source=gs),
+        "field_loc_2024": _extract_from_dict(target_key="field_loc_2024", source=gs),
         "split_ministry_disc": convert_to_float(target=gs["split_ministry_disc"]),
 
         # DMO parameters
@@ -626,8 +627,8 @@ def build_grosssplit_instance(data: dict) -> GrossSplit:
         "oil_dmo_fee_portion": convert_list_to_array_float_or_array(
             data_input=gs["oil_dmo_fee_portion"]
         ),
-        "oil_dmo_holiday_duration": _check_existence(
-            target_key="oil_dmo_holiday_duration", data=gs
+        "oil_dmo_holiday_duration": _extract_from_dict(
+            target_key="oil_dmo_holiday_duration", source=gs
         ),
         "gas_dmo_volume_portion": convert_list_to_array_float_or_array(
             data_input=gs["gas_dmo_volume_portion"]
@@ -635,8 +636,8 @@ def build_grosssplit_instance(data: dict) -> GrossSplit:
         "gas_dmo_fee_portion": convert_list_to_array_float_or_array(
             data_input=gs["gas_dmo_fee_portion"]
         ),
-        "gas_dmo_holiday_duration": _check_existence(
-            target_key="gas_dmo_holiday_duration", data=gs
+        "gas_dmo_holiday_duration": _extract_from_dict(
+            target_key="gas_dmo_holiday_duration", source=gs
         ),
 
         # Carry forward depreciation
@@ -649,117 +650,68 @@ def build_grosssplit_instance(data: dict) -> GrossSplit:
 
 def build_grosssplit_arguments(data: dict) -> dict:
     """
-    Build a dictionary of contract arguments for the Gross Split PSC scheme.
+    Build Gross Split contract argument dictionary.
 
-    This function extracts and converts values from the input ``data`` dictionary,
-    applying type conversions and default values as necessary. It prepares a
-    consistent set of parameters to initialize a ``GrossSplit`` instance or to
-    perform economic evaluations under the Gross Split PSC regime.
+    Extracts `contract_arguments` from `data`, applies defaults where needed,
+    performs type/enum conversions, and prepares keyword arguments for
+    Gross Split contract execution.
 
     Parameters
     ----------
     data : dict
-        Input dictionary containing contract-related information. Must include
-        the key ``"contract_arguments"`` that holds all argument values. Expected
-        structure:
-
-        - ``data["contract_arguments"]["sulfur_revenue"]`` : str
-        - ``data["contract_arguments"]["inflation_rate"]`` : list or float
-        - ``data["contract_arguments"]["tax_regime"]`` : str
-        - and so on.
+        Raw input dictionary containing contract arguments.
 
     Returns
     -------
     dict
-        A dictionary of processed contract arguments ready for initializing a
-        ``GrossSplit`` instance.
-
-    Notes
-    -----
-    - Missing or ``None`` values are replaced with the specified default in
-      each converter call.
-    - Optional keys are safely accessed using the internal helper method
-      ``_get_value()``, which applies type conversion if a converter is provided.
-    - The returned dictionary is intended for use as keyword arguments in
-      creating a ``GrossSplit`` contract object.
+        Parsed and converted Gross Split contract arguments.
     """
 
-    # Specify abbreviations and helper method
-    ca = data["contract_arguments"]
-    f_rev = convert_str_to_otherrevenue
-    f_rate = convert_list_to_array_float_or_array
-    f_infl = convert_str_to_inflationappliedto
-    f_depr = convert_str_to_depremethod
-    f_tax = convert_str_to_taxregime
-    f_tax_rate = convert_list_to_array_float_or_array_or_none
-    f_regime = convert_grosssplitregime_to_enum
-    f_2024 = converter_reservoir_type_permen_2024
-    f_amor = converter_initial_amortization_year
-
-    def _get_value(key: str, source: dict = ca, default=None, converter=None):
-        """
-        Helper function:
-        Safely retrieve a value from a dictionary with an optional converter.
-
-        Parameters
-        ----------
-        key : str
-            Key to look up in the dictionary.
-        source : dict, optional
-            Source dictionary. Defaults to ``ca``.
-        default : any, optional
-            Value to return if key is missing or ``None``.
-        converter : callable, optional
-            Function to convert the retrieved value.
-        """
-
-        if converter is None:
-            return (
-                default if (key not in source) or (source[key] is None)
-                else source[key]
-            )
-        else:
-            return (
-                default if (key not in source) or (source[key] is None)
-                else converter(source[key])
-            )
+    # Check whether "contract_arguments" exist in "data", and prepare it accordingly
+    ca = _extract_from_dict(target_key="contract_arguments", source=data)
 
     return {
         # Other revenues
-        "sulfur_revenue": f_rev(str_object=ca["sulfur_revenue"]),
-        "electricity_revenue": f_rev(str_object=ca["electricity_revenue"]),
-        "co2_revenue": f_rev(str_object=ca["co2_revenue"]),
+        "sulfur_revenue": convert_str_to_otherrevenue(str_object=ca["sulfur_revenue"]),
+        "electricity_revenue": convert_str_to_otherrevenue(str_object=ca["electricity_revenue"]),
+        "co2_revenue": convert_str_to_otherrevenue(str_object=ca["co2_revenue"]),
 
         # VAT and inflation
-        "vat_rate": f_rate(data_input=ca["vat_rate"]),
-        "inflation_rate": f_rate(data_input=ca["inflation_rate"]),
-        "inflation_rate_applied_to": f_infl(str_object=ca["inflation_rate_applied_to"]),
-
-        # Production offset
-        "cum_production_split_offset": f_rate(data_input=ca["cum_production_split_offset"]),
-
-        # Depreciation
-        "depr_method": f_depr(str_object=ca["depr_method"]),
-        "decline_factor": ca["decline_factor"],
-        "sum_undepreciated_cost": _get_value(key="sum_undepreciated_cost", default=False),
-
-        # DMO and tax
-        "is_dmo_end_weighted": ca["is_dmo_end_weighted"],
-        "tax_regime": f_tax(str_object=ca["tax_regime"]),
-        "effective_tax_rate": f_tax_rate(data_list=ca["effective_tax_rate"]),
-
-        # Sunk cost
-        "amortization": _get_value(key="amortization", default=False),
-        "sunk_cost_method": _get_value(
-            key="sunk_cost_method",
-            default=SunkCostMethod.DEPRECIATED_TANGIBLE,
-            converter=converter_sunk_cost_method,
+        "vat_rate": convert_list_to_array_float_or_array(data_input=ca["vat_rate"]),
+        "inflation_rate": convert_list_to_array_float_or_array(data_input=ca["inflation_rate"]),
+        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
+            str_object=ca["inflation_rate_applied_to"]
         ),
 
+        # Production offset
+        "cum_production_split_offset": convert_list_to_array_float_or_array(
+            data_input=ca["cum_production_split_offset"]
+        ),
+
+        # Depreciation
+        "depr_method": convert_str_to_depremethod(str_object=ca["depr_method"]),
+        "decline_factor": _extract_from_dict(target_key="decline_factor", source=ca, default=2),
+        "sum_undepreciated_cost": _extract_from_dict(
+            target_key="sum_undepreciated_cost", source=ca, default=False
+        ),
+
+        # DMO and tax
+        "is_dmo_end_weighted": _extract_from_dict(
+            target_key="is_dmo_end_weighted", source=ca, default=False
+        ),
+        "tax_regime": convert_str_to_taxregime(str_object=ca["tax_regime"]),
+        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
+            data_list=ca["effective_tax_rate"]
+        ),
+
+        # Sunk cost
+        "amortization": _extract_from_dict(target_key="amortization", source=ca, default=False),
+
         # Fiscal regime
-        "regime": f_regime(target=ca["regime"]),
-        "reservoir_type_permen_2024": f_2024(target_str=ca["reservoir_type_permen_2024"]),
-        "initial_amortization_year": f_amor(target_str=ca["initial_amortization_year"]),
+        "regime": convert_grosssplitregime_to_enum(target=ca["regime"]),
+        "reservoir_type_permen_2024": converter_reservoir_type_permen_2024(
+            target_str=ca["reservoir_type_permen_2024"]
+        ),
     }
 
 

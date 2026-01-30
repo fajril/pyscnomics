@@ -58,7 +58,7 @@ if __name__ == "__main__":
     case = Case00B(contract_type=ContractType.GROSS_SPLIT)
     data = case.as_dict()
 
-    t1 = build_grosssplit_instance(data=data)
+    t1 = get_grosssplit(data=data)
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')
