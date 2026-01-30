@@ -20,7 +20,7 @@ from pyscnomics.optimize.optimization_transition import (
 from pyscnomics.econ.selection import (
     OptimizationParameter,
     FluidType,
-    SunkCostMethod,
+    # SunkCostMethod,
 )
 from pyscnomics.tools.ltp import oil_ltp_predict, gas_ltp_predict
 from pyscnomics.tools.rpd import RPDModel
@@ -54,9 +54,9 @@ from pyscnomics.api.converter import (
     convert_to_method_limit,
     convert_to_uncertainty_distribution,
     convert_to_skk_summary_baseproject,
-    converter_sunk_cost_method,
+    # converter_sunk_cost_method,
     converter_reservoir_type_permen_2024,
-    converter_initial_amortization_year,
+    # converter_initial_amortization_year,
 )
 from pyscnomics.econ.limit import econ_limit
 
@@ -79,19 +79,44 @@ class RDPModelException(Exception):
     pass
 
 
+def _extract_from_dict(target_key: str, source: dict, default=None):
+    """
+    Safely extract a value from a dictionary.
+
+    Returns `default` if the key is missing or its value is None;
+    otherwise returns the stored value.
+
+    Parameters
+    ----------
+    target_key : str
+        Key to extract.
+    source : dict
+        Source dictionary.
+    default : any, optional
+        Fallback value if key is absent or None.
+
+    Returns
+    -------
+    any
+        Extracted value or `default`.
+    """
+    return (
+        default if (target_key not in source) or (source[target_key] is None)
+        else source[target_key]
+    )
+
+
 def get_setup_dict(data: dict) -> tuple:
     """
-    Parse project setup and cost sections into core engine objects.
-
-    Extracts setup metadata (dates, approval year, POD flag, strict mode) and
-    converts optional financial sections (lifting, capital, intangible, opex,
-    ASR, LBT, cost of sales) into standardized dataclass objects.
+    Extract core project setup and cost objects.
+    - Parses dates, approval year, POD flag, strict mode
+    - Converts cost-related sections into engine-ready objects
+    - Missing cost sections → None
 
     Parameters
     ----------
     data : dict
-        Project input dictionary with a required ``setup`` section and optional
-        cost-related sections.
+        Project input dictionary (must contain ``setup``).
 
     Returns
     -------
@@ -103,33 +128,33 @@ def get_setup_dict(data: dict) -> tuple:
             lifting, capital, intangible,
             opex, asr, lbt, cost_of_sales
         )
-        Parsed setup fields and converted cost objects (or ``None`` if absent).
     """
 
+    # Check whether "setup" exist in "data" and prepare it accordingly
+    se = _extract_from_dict(target_key="setup", source=data)
+
     # Parsing the contract setup into each corresponding variables
-    start_date = convert_str_to_date(str_object=data["setup"]["start_date"])
-    end_date = convert_str_to_date(str_object=data["setup"]["end_date"])
-    approval_year = convert_str_to_int(str_object=data["setup"]["approval_year"])
-    oil_onstream_date = convert_str_to_date(
-        str_object=data["setup"].get("oil_onstream_date", None)
-    )
-    gas_onstream_date = convert_str_to_date(
-        str_object=data["setup"].get("gas_onstream_date", None)
-    )
-    is_pod_1 = data["setup"]["is_pod_1"]
-    is_strict = data["setup"]["is_strict"]
+    start_date = convert_str_to_date(str_object=se["start_date"])
+    end_date = convert_str_to_date(str_object=se["end_date"])
+    approval_year = convert_str_to_int(str_object=se["approval_year"])
+    oil_onstream_date = convert_str_to_date(str_object=se.get("oil_onstream_date", None))
+    gas_onstream_date = convert_str_to_date(str_object=se.get("gas_onstream_date", None))
+    is_pod_1 = _extract_from_dict(target_key="is_pod_1", source=se)
+    is_strict = _extract_from_dict(target_key="is_strict", source=se)
     lifting = convert_dict_to_lifting(data_raw=data) if "lifting" in data else None
-    capital = convert_dict_to_capital(
-        data_raw=data["capital"] if "capital" in data else None
+    capital = (
+        convert_dict_to_capital(data_raw=data["capital"]) if "capital" in data else None
     )
-    intangible = convert_dict_to_intangible(
-        data_raw=data["intangible"] if "intangible" in data else None
+    intangible = (
+        convert_dict_to_intangible(data_raw=data["intangible"]) if "intangible" in data
+        else None
     )
     opex = convert_dict_to_opex(data_raw=data["opex"]) if "opex" in data else None
     asr = convert_dict_to_asr(data_raw=data["asr"]) if "asr" in data else None
     lbt = convert_dict_to_lbt(data_raw=data["lbt"]) if "lbt" in data else None
-    cost_of_sales = convert_dict_to_cost_of_sales(
-        data_raw=data["cost_of_sales"] if "cost_of_sales" in data else None
+    cost_of_sales = (
+        convert_dict_to_cost_of_sales(data_raw=data["cost_of_sales"])
+        if "cost_of_sales" in data else None
     )
 
     return (
@@ -152,61 +177,39 @@ def get_setup_dict(data: dict) -> tuple:
 
 def get_summary_dict(data: dict) -> dict:
     """
-    Extract and convert summary-related parameters from the input dictionary
-    into a standardized format accepted by the core engine.
+    Extract and normalize summary-related arguments.
 
     Parameters
     ----------
     data : dict
-        The input data dictionary containing the `"summary_arguments"` key,
-        which stores summary-level project parameters.
+        Input configuration containing a required ``summary_arguments`` section.
 
     Returns
     -------
-    summary_arguments_dict : dict
-        A dictionary containing the processed summary arguments in the
-        core engine–compatible format, with the following keys:
-
-        - **discount_rate_start_year** : int or None
-          The project year at which the discount rate becomes effective.
-        - **inflation_rate** : float or None
-          The annual inflation rate applied to cost and revenue projections.
-        - **discount_rate** : float
-          The discount rate used in NPV calculation (default is 0.1 if unspecified).
-        - **npv_mode** : NPVMode
-          The NPV mode converted from string representation
-          (default is `"Full Cycle Nominal Terms"`).
-        - **discounting_mode** : DiscountingMode
-          The discounting mode converted from string representation
-          (default is `"discounting_mode"` if unspecified).
-        - **profitability_discounted** : bool
-          Flag indicating whether profitability metrics should be discounted
-          (default is `False`).
-
-    Notes
-    -----
-    - Missing keys in the `"summary_arguments"` section of the input are
-      replaced with predefined default values where applicable.
-    - String-based parameters such as `"npv_mode"` and `"discounting_mode"`
-      are converted into their corresponding enumeration types via helper
-      functions (e.g., `convert_str_to_npvmode()`).
+    dict
+        Summary arguments with defaults applied and enums converted:
+        - discount_rate_start_year
+        - inflation_rate
+        - discount_rate
+        - npv_mode
+        - discounting_mode
+        - profitability_discounted
     """
 
-    # Fill get_summary() argument with input data
-    discount_rate_start_year = data["summary_arguments"].get("discount_rate_start_year", None)
-    inflation_rate = data["summary_arguments"].get("inflation_rate", None)
-    discount_rate = data["summary_arguments"].get("discount_rate", 0.1)
-    npv_mode = convert_str_to_npvmode(
-        str_object=data["summary_arguments"].get("npv_mode", "Full Cycle Nominal Terms")
-    )
-    discounting_mode = convert_str_to_discountingmode(
-        str_object=data["summary_arguments"].get("discounting_mode", "End Year Discounting")
-    )
-    profitability_discounted = data["summary_arguments"].get(
-        "profitability_discounted", False
-    )
+    # Check whether "summary_arguments" exists in "data" and prepare it accordingly
+    sa = _extract_from_dict(target_key="summary_arguments", source=data)
 
-    summary_arguments_dict = {
+    # Fill get_summary() argument with input data
+    discount_rate_start_year = sa.get("discount_rate_start_year", None)
+    inflation_rate = sa.get("inflation_rate", None)
+    discount_rate = sa.get("discount_rate", 0.1)
+    npv_mode = convert_str_to_npvmode(str_object=sa.get("npv_mode", "Full Cycle Nominal Terms"))
+    discounting_mode = convert_str_to_discountingmode(
+        str_object=sa.get("discounting_mode", "End Year Discounting")
+    )
+    profitability_discounted = sa.get("profitability_discounted", False)
+
+    return {
         "discount_rate_start_year": discount_rate_start_year,
         "inflation_rate": inflation_rate,
         "discount_rate": discount_rate,
@@ -214,8 +217,6 @@ def get_summary_dict(data: dict) -> dict:
         "discounting_mode": discounting_mode,
         "profitability_discounted": profitability_discounted,
     }
-
-    return summary_arguments_dict
 
 
 def build_baseproject_instance(data: dict) -> BaseProject:
@@ -302,68 +303,56 @@ def build_baseproject_arguments(data: dict) -> dict:
         in model evaluation.
     """
 
-    # Specify abbreviations
-    ca = data["contract_arguments"]
-    f_rev = convert_str_to_otherrevenue
-    f_rate = convert_list_to_array_float_or_array
-    f_infl = convert_str_to_inflationappliedto
+    # Check whether "contract_arguments" exist in "data" and prepare it accordingly
+    ca = _extract_from_dict(target_key="contract_arguments", source=data)
 
     return {
         # Other revenues
-        "sulfur_revenue": f_rev(str_object=ca["sulfur_revenue"]),
-        "electricity_revenue": f_rev(str_object=ca["electricity_revenue"]),
-        "co2_revenue": f_rev(str_object=ca["co2_revenue"]),
+        "sulfur_revenue": convert_str_to_otherrevenue(
+            str_object=ca.get("sulfur_revenue", "Addition to Gas Revenue")
+        ),
+        "electricity_revenue": convert_str_to_otherrevenue(
+            str_object=ca.get("electricity_revenue", "Addition to Gas Revenue")
+        ),
+        "co2_revenue": convert_str_to_otherrevenue(
+            str_object=ca.get("co2_revenue", "Addition to Gas Revenue")
+        ),
 
         # VAT and inflation
-        "vat_rate": f_rate(data_input=ca["vat_rate"]),
-        "inflation_rate": f_rate(data_input=ca["inflation_rate"]),
-        "inflation_rate_applied_to": f_infl(str_object=ca["inflation_rate_applied_to"]),
+        "vat_rate": convert_list_to_array_float_or_array(data_input=ca.get("vat_rate", 0.0)),
+        "inflation_rate": convert_list_to_array_float_or_array(
+            data_input=ca.get("inflation_rate", 0.0)
+        ),
+        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
+            str_object=ca.get("inflation_rate_applied_to", None)
+        ),
     }
 
 
 def get_baseproject(data: dict, summary_result: bool = True):
     """
-    Build, execute, and optionally summarize a Base Project contract evaluation.
+    Build and run a BaseProject evaluation.
 
-    This function prepares all necessary inputs, constructs a :class:`BaseProject`
-    instance, executes its economic evaluation, and optionally generates an
-    executive summary formatted according to SKK Migas standards.
+    - Builds BaseProject instance
+    - Prepares and executes contract arguments
+    - Optionally returns SKK Migas–formatted summary
 
     Parameters
     ----------
     data : dict
-        Input dictionary containing setup information, contract arguments,
-        and summary parameters required for Base Project evaluation.
+        Project input dictionary (setup, contract args, summary args).
     summary_result : bool, default=True
-        If ``True``, generate and return the SKK Migas–formatted summary.
-        If ``False``, return only the contract instance and its arguments.
+        Return SKK Migas summary if True.
 
     Returns
     -------
     tuple
-        A 4-element tuple containing:
-
-        - **summary_skk** : dict or None
-          Executive summary in SKK-compatible format, or ``None`` if
-          ``summary_result=False``.
-        - **contract** : BaseProject
-          Executed :class:`BaseProject` instance.
-        - **contract_arguments_dict** : dict
-          Dictionary of arguments passed to :meth:`BaseProject.run`.
-        - **summary_arguments_dict** : dict or None
-          Summary argument dictionary, or ``None`` if summary generation
-          was skipped.
-
-    Notes
-    -----
-    The function performs the following key steps:
-
-    1. Instantiates the :class:`BaseProject` object via
-       :func:`build_baseproject_instance`.
-    2. Prepares contract arguments using :func:`build_baseproject_arguments`.
-    3. Executes the contract with :meth:`BaseProject.run`.
-    4. Optionally generates an SKK Migas–formatted summary using
-       :func:`convert_to_skk_summary_baseproject` and appends execution info.
+        (
+            summary_skk,              # dict | None
+            contract,                 # BaseProject
+            contract_arguments_dict,  # dict
+            summary_arguments_dict    # dict | None
+        )
     """
 
     # Specify contract and contract arguments
@@ -431,12 +420,8 @@ def build_costrecovery_instance(data: dict) -> CostRecovery:
         cost_of_sales,
     ) = get_setup_dict(data=data)
 
-    # Specify abbreviations
-    cr = data["costrecovery"]
-    f_rate = convert_list_to_array_float_or_array
-    f_split = convert_str_to_taxsplit
-    f_icp = convert_list_to_array_float
-    f_float = convert_to_float
+    # Check whether "costrecovery" exist in "data" and prepare it accordingly
+    cr = _extract_from_dict(target_key="costrecovery", source=data)
 
     # Prepare contract attributes for CostRecovery
     contract_kwargs = {
@@ -461,31 +446,45 @@ def build_costrecovery_instance(data: dict) -> CostRecovery:
         # FTP
         "oil_ftp_is_available": cr["oil_ftp_is_available"],
         "oil_ftp_is_shared": cr["oil_ftp_is_shared"],
-        "oil_ftp_portion": f_rate(data_input=cr["oil_ftp_portion"]),
+        "oil_ftp_portion": convert_list_to_array_float_or_array(data_input=cr["oil_ftp_portion"]),
         "gas_ftp_is_available": cr["gas_ftp_is_available"],
         "gas_ftp_is_shared": cr["gas_ftp_is_shared"],
-        "gas_ftp_portion": f_rate(data_input=cr["gas_ftp_portion"]),
+        "gas_ftp_portion": convert_list_to_array_float_or_array(data_input=cr["gas_ftp_portion"]),
 
         # Split
-        "tax_split_type": f_split(str_object=cr["tax_split_type"]),
+        "tax_split_type": convert_str_to_taxsplit(str_object=cr["tax_split_type"]),
         "condition_dict": cr["condition_dict"],
-        "indicator_rc_icp_sliding": f_icp(data_list=cr["indicator_rc_icp_sliding"]),
-        "oil_ctr_pretax_share": f_rate(data_input=cr["oil_ctr_pretax_share"]),
-        "gas_ctr_pretax_share": f_rate(data_input=cr["gas_ctr_pretax_share"]),
+        "indicator_rc_icp_sliding": convert_list_to_array_float(
+            data_list=cr["indicator_rc_icp_sliding"]
+        ),
+        "oil_ctr_pretax_share": convert_list_to_array_float_or_array(
+            data_input=cr["oil_ctr_pretax_share"]
+        ),
+        "gas_ctr_pretax_share": convert_list_to_array_float_or_array(
+            data_input=cr["gas_ctr_pretax_share"]
+        ),
 
         # Investment credit and cap rate
-        "oil_ic_rate": f_float(target=cr["oil_ic_rate"]),
-        "gas_ic_rate": f_float(target=cr["gas_ic_rate"]),
+        "oil_ic_rate": convert_to_float(target=cr["oil_ic_rate"]),
+        "gas_ic_rate": convert_to_float(target=cr["gas_ic_rate"]),
         "ic_is_available": cr["ic_is_available"],
-        "oil_cr_cap_rate": f_float(target=cr["oil_cr_cap_rate"]),
-        "gas_cr_cap_rate": f_float(target=cr["gas_cr_cap_rate"]),
+        "oil_cr_cap_rate": convert_to_float(target=cr["oil_cr_cap_rate"]),
+        "gas_cr_cap_rate": convert_to_float(target=cr["gas_cr_cap_rate"]),
 
         # DMO
-        "oil_dmo_volume_portion": f_rate(data_input=cr["oil_dmo_volume_portion"]),
-        "oil_dmo_fee_portion": f_rate(data_input=cr["oil_dmo_fee_portion"]),
+        "oil_dmo_volume_portion": convert_list_to_array_float_or_array(
+            data_input=cr["oil_dmo_volume_portion"]
+        ),
+        "oil_dmo_fee_portion": convert_list_to_array_float_or_array(
+            data_input=cr["oil_dmo_fee_portion"]
+        ),
         "oil_dmo_holiday_duration": cr["oil_dmo_holiday_duration"],
-        "gas_dmo_volume_portion": f_rate(data_input=cr["gas_dmo_volume_portion"]),
-        "gas_dmo_fee_portion": f_rate(data_input=cr["gas_dmo_fee_portion"]),
+        "gas_dmo_volume_portion": convert_list_to_array_float_or_array(
+            data_input=cr["gas_dmo_volume_portion"]
+        ),
+        "gas_dmo_fee_portion": convert_list_to_array_float_or_array(
+            data_input=cr["gas_dmo_fee_portion"]
+        ),
         "gas_dmo_holiday_duration": cr["gas_dmo_holiday_duration"],
 
         # Carry forward depreciation

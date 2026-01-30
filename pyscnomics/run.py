@@ -10,6 +10,13 @@ from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.tools.table import get_table
+from pyscnomics.api.adapter import (
+    get_setup_dict,
+    get_summary_dict,
+    build_baseproject_arguments,
+    get_baseproject,
+    build_costrecovery_instance,
+)
 
 import pyscnomics.dataset as data
 from pyscnomics.dataset.case_00A import Case00A
@@ -80,15 +87,23 @@ if __name__ == "__main__":
 
     # Create an instance of case
     case = Case00B(contract_type=ContractType.COST_RECOVERY)
-    contract = case.as_class()
-    contract_arguments = case.contract_arguments
-    summary_arguments = case.summary_arguments
-    contract.run(**contract_arguments)
+    data = case.as_dict()
 
+    t1 = build_costrecovery_instance(data=data)
     print('\t')
-    print(f'Filetype: {type(contract.warning_messages)}')
-    print(f'Length: {len(contract.warning_messages)}')
-    print('warning_messages = \n', contract.warning_messages)
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print(t1)
+
+    # contract = case.as_class()
+    # contract_arguments = case.contract_arguments
+    # summary_arguments = case.summary_arguments
+    # contract.run(**contract_arguments)
+    #
+    # print('\t')
+    # print(f'Filetype: {type(contract.warning_messages)}')
+    # print(f'Length: {len(contract.warning_messages)}')
+    # print('warning_messages = \n', contract.warning_messages)
 
     # print('\t')
     # print(f'Filetype: {type()}')
