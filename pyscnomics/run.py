@@ -16,6 +16,8 @@ from pyscnomics.api.adapter import (
     build_baseproject_arguments,
     get_baseproject,
     build_costrecovery_instance,
+    build_costrecovery_arguments,
+    get_costrecovery,
 )
 
 import pyscnomics.dataset as data
@@ -89,7 +91,7 @@ if __name__ == "__main__":
     case = Case00B(contract_type=ContractType.COST_RECOVERY)
     data = case.as_dict()
 
-    t1 = build_costrecovery_instance(data=data)
+    t1 = get_costrecovery(data=data)
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')

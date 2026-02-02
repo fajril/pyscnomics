@@ -497,119 +497,95 @@ def build_costrecovery_instance(data: dict) -> CostRecovery:
 
 def build_costrecovery_arguments(data: dict) -> dict:
     """
-    Build the argument dictionary for executing a CostRecovery contract.
+    Build normalized cost-recovery arguments from raw input data.
 
-    Parses ``contract_arguments`` from the input data, applies required
-    type conversions, and assembles revenue, FTP, VAT, inflation, tax,
-    depreciation, DMO, and cost-of-sales parameters for ``CostRecovery.run()``.
+    Extracts `contract_arguments` from `data`, applies defaults where needed,
+    and converts string/list inputs into internal enum/array representations
+    required by the cost-recovery model.
 
     Parameters
     ----------
     data : dict
-        Project input dictionary containing a ``contract_arguments`` section.
+        Raw input dictionary containing `contract_arguments`.
 
     Returns
     -------
     dict
-        Processed keyword arguments for CostRecovery execution.
+        Sanitized and converted cost-recovery arguments ready for model use.
     """
 
-    # Specify abbreviations and helper method
-    ca = data["contract_arguments"]
-    f_rev = convert_str_to_otherrevenue
-    f_rate = convert_list_to_array_float_or_array
-    f_infl = convert_str_to_inflationappliedto
-    f_tax = convert_str_to_taxregime
-    f_tax_rate = convert_list_to_array_float_or_array_or_none
-    f_ftp = convert_str_to_ftptaxregime
-    f_depr = convert_str_to_depremethod
-
-    def _get_value(key: str, source: dict = ca, default=True, converter=None):
-        """
-        Helper function:
-        Safely retrieve a value from a dictionary with an optional converter.
-
-        Parameters
-        ----------
-        key : str
-            Key to look up in the dictionary.
-        source : dict, optional
-            Source dictionary. Defaults to ``ca``.
-        default : any, optional
-            Value to return if key is missing or ``None``.
-        converter : callable, optional
-            Function to convert the retrieved value.
-        """
-        if converter is None:
-            return (
-                default if (key not in source) or (source[key] is None)
-                else source[key]
-            )
-        else:
-            return (
-                default if (key not in source) or (source[key] is None)
-                else converter(source[key])
-            )
+    # Check whether "contract_arguments" exist in "data" and prepare it accordingly
+    ca = _extract_from_dict(target_key="contract_arguments", source=data)
 
     return {
         # Other revenues
-        "sulfur_revenue": f_rev(str_object=ca["sulfur_revenue"]),
-        "electricity_revenue": f_rev(str_object=ca["electricity_revenue"]),
-        "co2_revenue": f_rev(str_object=ca["co2_revenue"]),
+        "sulfur_revenue": convert_str_to_otherrevenue(str_object=ca["sulfur_revenue"]),
+        "electricity_revenue": convert_str_to_otherrevenue(str_object=ca["electricity_revenue"]),
+        "co2_revenue": convert_str_to_otherrevenue(str_object=ca["co2_revenue"]),
 
         # FTP
-        "ftp_tax_regime": f_ftp(str_object=ca["ftp_tax_regime"]),
+        "ftp_tax_regime": convert_str_to_ftptaxregime(str_object=ca["ftp_tax_regime"]),
 
         # VAT and inflation
-        "vat_rate": f_rate(data_input=ca["vat_rate"]),
-        "inflation_rate": f_rate(data_input=ca["inflation_rate"]),
-        "inflation_rate_applied_to": f_infl(str_object=ca["inflation_rate_applied_to"]),
+        "vat_rate": convert_list_to_array_float_or_array(data_input=ca["vat_rate"]),
+        "inflation_rate": convert_list_to_array_float_or_array(data_input=ca["inflation_rate"]),
+        "inflation_rate_applied_to": convert_str_to_inflationappliedto(
+            str_object=ca["inflation_rate_applied_to"]
+        ),
 
         # DMO and tax
         "is_dmo_end_weighted": ca["is_dmo_end_weighted"],
-        "tax_regime": f_tax(str_object=ca["tax_regime"]),
-        "effective_tax_rate": f_tax_rate(data_list=ca["effective_tax_rate"]),
-        "post_uu_22_year2001": _get_value(key="post_uu_22_year2001"),
+        "tax_regime": convert_str_to_taxregime(str_object=ca["tax_regime"]),
+        "effective_tax_rate": convert_list_to_array_float_or_array_or_none(
+            data_list=ca["effective_tax_rate"]
+        ),
+        "post_uu_22_year2001": _extract_from_dict(
+            target_key="post_uu_22_year2001", source=ca, default=True
+        ),
 
         # Depreciation
-        "depr_method": f_depr(str_object=ca["depr_method"]),
+        "depr_method": convert_str_to_depremethod(str_object=ca["depr_method"]),
         "decline_factor": ca["decline_factor"],
-        "sum_undepreciated_cost": _get_value(key="sum_undepreciated_cost", default=False),
+        "sum_undepreciated_cost": _extract_from_dict(
+            target_key="sum_undepreciated_cost", source=ca, default=False
+        ),
 
         # Cost of sales
-        "oil_cost_of_sales_applied": _get_value(key="oil_cost_of_sales_applied", default=False),
-        "gas_cost_of_sales_applied": _get_value(key="gas_cost_of_sales_applied", default=False),
+        "oil_cost_of_sales_applied": _extract_from_dict(
+            target_key="oil_cost_of_sales_applied", source=ca, default=False
+        ),
+        "gas_cost_of_sales_applied": _extract_from_dict(
+            target_key="gas_cost_of_sales_applied", source=ca, default=False
+        ),
     }
 
 
 def get_costrecovery(data: dict, summary_result: bool = True):
     """
-    Execute a Cost Recovery PSC evaluation and optionally return the summary results.
+    Run Cost Recovery PSC evaluation (+ optional summary).
 
-    This function builds the contract instance, prepares input arguments, runs
-    the Cost Recovery model, and optionally generates the SKK Migas–formatted
-    summary.
+    - Build CostRecovery contract
+    - Prepare & execute contract arguments
+    - Optionally return SKK Migas–formatted summary
 
     Parameters
     ----------
     data : dict
-        Input data containing all parameters required for the Cost Recovery evaluation.
+        Full input dictionary for Cost Recovery evaluation.
     summary_result : bool, default=True
-        If True, return the SKK Migas–formatted summary; otherwise, omit it.
+        Return summary if True; skip if False.
 
     Returns
     -------
     tuple
-        (summary_skk, contract, contract_arguments_dict, summary_arguments_dict)
+        (
+            summary_skk,              # dict | None
+            contract,                 # CostRecovery
+            contract_arguments_dict,  # dict
+            summary_arguments_dict    # dict | None
+        )
 
-        - **summary_skk** : dict or None
-          Summary of results in SKK Migas format, or None if not requested.
-        - **contract** : CostRecovery
-          Executed Cost Recovery contract instance.
-        - **contract_arguments_dict** : dict
-          Arguments used in :meth:`CostRecovery.run`.
-        - **summary_arguments_dict** : dict or None
-          Arguments used for summary generation, or None if skipped.
+    TL;DR: Build → run Cost Recovery contract → optionally return SKK-style summary.
     """
 
     # Specify contract and contract arguments
