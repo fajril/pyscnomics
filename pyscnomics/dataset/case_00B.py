@@ -105,7 +105,7 @@ class Case00B:
         """
 
         # Specify fluid type
-        self.fluid = FluidType.GAS
+        self.fluid = FluidType.OIL
 
         # Prepare attributes associated with project timeline
         self.project_duration = self.end_year - self.start_year + 1
@@ -136,9 +136,10 @@ class Case00B:
         # Prepare lifting data
         lifting = {
             **self.project_time,
-            "prod_year": np.array([2030, 2031, 2032]),
-            "lifting_rate": np.array([100, 100, 100]),
-            "price": np.array([120, 120, 120]),
+            "prod_year": np.array([2028, 2029, 2030, 2031, 2032]),
+            "lifting_rate": np.array([0, 0, 100, 100, 100]),
+            # "lifting_rate": np.array([0, 0, 0, 0, 0]),
+            "price": np.array([120, 120, 120, 120, 120]),
             "fluid_type": self.fluid,
         }
 
@@ -558,11 +559,11 @@ class Case00B:
         self.setup_arguments = {
             "start_date": date(year=2023, month=1, day=1),
             "end_date": date(year=2032, month=12, day=31),
-            "oil_onstream_date": date(year=2030, month=1, day=1),
+            "oil_onstream_date": date(year=2028, month=1, day=1),
             "gas_onstream_date": None,
             "approval_year": 2026,
             "is_pod_1": False,
-            "is_strict": False,
+            "is_strict": True,
         }
 
     def get_class_arguments(self):

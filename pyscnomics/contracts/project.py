@@ -542,83 +542,9 @@ class BaseProject:
         self._electricity_revenue = self._electricity_lifting.revenue()
         self._co2_revenue = self._co2_lifting.revenue()
 
-        # Prepare attribute oil_onstream_date: set default value and error message
-        oil_revenue_index = np.argwhere(self._oil_revenue > 0).ravel()
-
-        if len(oil_revenue_index) > 0:
-            if self.oil_onstream_date is not None:
-                if self.oil_onstream_date.year < self.start_date.year:
-                    raise BaseProjectException(
-                        f"Oil onstream year ({self.oil_onstream_date.year}) is before "
-                        f"the start project year ({self.start_date.year})"
-                    )
-
-                if self.oil_onstream_date.year > self.end_date.year:
-                    raise BaseProjectException(
-                        f"Oil onstream year ({self.oil_onstream_date.year}) is after "
-                        f"the end year of the project ({self.end_date.year})"
-                    )
-
-                # Ensure oil_onstream_date provided by the user is consistent
-                # with the beginning of oil lifting, indicated by the first year
-                # of positive oil revenue
-                oil_onstream_index = int(
-                    np.argwhere(self.oil_onstream_date.year == self.project_years).ravel()
-                )
-
-                if oil_onstream_index != oil_revenue_index[0]:
-                    raise BaseProjectException(
-                        f"Oil onstream year ({self.oil_onstream_date.year}) is different "
-                        f"from the starting year of oil production "
-                        f"({self.project_years[oil_revenue_index[0]]})"
-                    )
-
-            else:
-                self.oil_onstream_date = date(
-                    year=self.project_years[oil_revenue_index[0]], month=1, day=1
-                )
-
-        else:
-            self.oil_onstream_date = self.end_date
-
-        # Prepare attribute gas_onstream_date: set default value and error message
-        gas_revenue_index = np.argwhere(self._gas_revenue > 0).ravel()
-
-        if len(gas_revenue_index) > 0:
-            if self.gas_onstream_date is not None:
-                if self.gas_onstream_date.year < self.start_date.year:
-                    raise BaseProjectException(
-                        f"Gas onstream year ({self.gas_onstream_date.year}) is before "
-                        f"the start project year ({self.start_date.year})"
-                    )
-
-                if self.gas_onstream_date.year > self.end_date.year:
-                    raise BaseProjectException(
-                        f"Gas onstream year ({self.gas_onstream_date.year}) is after "
-                        f"the end year of the project ({self.end_date.year})"
-                    )
-
-                # Ensure gas_onstream_date provided by the user is consistent
-                # with the beginning of gas lifting, indicated by the first year
-                # of positive gas revenue
-                gas_onstream_index = int(
-                    np.argwhere(self.gas_onstream_date.year == self.project_years).ravel()
-                )
-
-                if gas_onstream_index != gas_revenue_index[0]:
-                    raise BaseProjectException(
-                        f"Gas onstream year ({self.gas_onstream_date.year}) is different "
-                        f"from the starting year of gas production "
-                        f"({self.project_years[gas_revenue_index[0]]})"
-                    )
-
-            else:
-                self.gas_onstream_date = date(
-                    year=int(self.project_years[gas_revenue_index[0]]), month=1, day=1
-                )
-
-        else:
-            self.gas_onstream_date = self.end_date
+        # Prepare onstream dates for OIL and GAS
+        self.oil_onstream_date = self._get_onstream_date(fluid="oil")
+        self.gas_onstream_date = self._get_onstream_date(fluid="gas")
 
         # Prepare attribute capital_cost (for both OIL and GAS)
         if self.capital_cost is None:
@@ -850,6 +776,91 @@ class BaseProject:
 
         # Raise an exception error if the end year of the project is inconsistent
         self._check_inconsistent_end_year()
+
+    def _get_onstream_date(self, fluid: str) -> date:
+        """
+        Resolve and validate onstream date for a given fluid (oil | gas).
+
+        Logic:
+        - If revenue exists:
+          • onstream_date = first revenue year (if not provided)
+          • otherwise → validate against project period & allowed years
+        - If no revenue → fallback to project end date
+
+        Parameters
+        ----------
+        fluid : str
+            Fluid type → {"oil", "gas"}.
+
+        Returns
+        -------
+        datetime.date
+            Validated (or inferred) onstream date.
+
+        Raises
+        ------
+        BaseProjectException
+            If fluid is invalid or onstream year violates project / lifting rules.
+
+        TL;DR:
+        Safely infer or validate oil/gas onstream date based on revenue, lifting, and project bounds.
+        """
+
+        # Validate input type
+        if not isinstance(fluid, str):
+            raise BaseProjectException(
+                f"Parameter 'fluid' must be a string, not {fluid.__class__.__qualname__}."
+            )
+
+        # Specify allowed fluid types
+        if fluid not in {"oil", "gas"}:
+            raise BaseProjectException(
+                f"Invalid fluid type: {fluid}. Must choose between 'oil' or 'gas'."
+            )
+
+        # Define fluid-specific attributes
+        onstream_date = getattr(self, f"{fluid}_onstream_date")
+        lifting = getattr(self, f"_{fluid}_lifting")
+        revenue = getattr(self, f"_{fluid}_revenue")
+
+        # Identify years with positive revenue
+        revenue_idx = np.flatnonzero(revenue > 0)
+
+        # Case 1: fluid has positive revenue
+        if len(revenue_idx) > 0:
+            earliest_revenue_year = self.project_years[revenue_idx[0]]
+
+            # If onstream date is not provided, infer it from the earliest revenue year
+            if onstream_date is None:
+                return date(year=earliest_revenue_year, month=1, day=1)
+
+            # If onstream date is provided, validate it
+            else:
+                onstream_year = onstream_date.year
+
+                # Onstream year must fall within project duration
+                if not (self.start_date.year <= onstream_year <= self.end_date.year):
+                    raise BaseProjectException(
+                        f"{fluid.capitalize()} onstream year ({onstream_year}) must be within "
+                        f"project period ({self.start_date.year}-{self.end_date.year})."
+                    )
+
+                # Only allow two values as onstream year:
+                # (1) earliest_lifting_year, or (2) earliest_revenue_year
+                earliest_lifting_year = min(lifting.prod_year)
+                allowed_years = {earliest_lifting_year, earliest_revenue_year}
+
+                if onstream_year not in allowed_years:
+                    raise BaseProjectException(
+                        f"Invalid {fluid} onstream year ({onstream_year}). "
+                        f"Allowed values: {sorted(allowed_years)}."
+                    )
+
+                return onstream_date
+
+        # Case 2: No revenue at all -> fallback to project end date
+        else:
+            return self.end_date
 
     def _get_lifting_by_commodity(self, commodity: FluidType) -> Lifting:
         """
@@ -4678,3 +4689,86 @@ class BaseProject:
 
     def __len__(self):
         return self.project_duration
+
+    """
+    PREVIOUS CODES (DEPRECATED)
+    ===========================
+    
+    # Prepare attribute gas_onstream_date: set default value and error message
+        oil_revenue_index = np.argwhere(self._oil_revenue > 0).ravel()
+        
+        if len(oil_revenue_index) > 0:
+            if self.oil_onstream_date is not None:
+                if self.oil_onstream_date.year < self.start_date.year:
+                    raise BaseProjectException(
+                        f"Oil onstream year ({self.oil_onstream_date.year}) is before "
+                        f"the start project year ({self.start_date.year})"
+                    )
+
+                if self.oil_onstream_date.year > self.end_date.year:
+                    raise BaseProjectException(
+                        f"Oil onstream year ({self.oil_onstream_date.year}) is after "
+                        f"the end year of the project ({self.end_date.year})"
+                    )
+
+                # Ensure oil_onstream_date provided by the user is consistent
+                # with the beginning of oil lifting, indicated by the first year
+                # of positive oil revenue
+                oil_onstream_index = int(
+                    np.argwhere(self.oil_onstream_date.year == self.project_years).ravel()
+                )
+
+                if oil_onstream_index != oil_revenue_index[0]:
+                    raise BaseProjectException(
+                        f"Oil onstream year ({self.oil_onstream_date.year}) is different "
+                        f"from the starting year of oil production "
+                        f"({self.project_years[oil_revenue_index[0]]})"
+                    )
+
+            else:
+                self.oil_onstream_date = date(
+                    year=self.project_years[oil_revenue_index[0]], month=1, day=1
+                )
+
+        else:
+            self.oil_onstream_date = self.end_date
+
+        # Prepare attribute gas_onstream_date: set default value and error message
+        gas_revenue_index = np.argwhere(self._gas_revenue > 0).ravel()
+
+        if len(gas_revenue_index) > 0:
+            if self.gas_onstream_date is not None:
+                if self.gas_onstream_date.year < self.start_date.year:
+                    raise BaseProjectException(
+                        f"Gas onstream year ({self.gas_onstream_date.year}) is before "
+                        f"the start project year ({self.start_date.year})"
+                    )
+
+                if self.gas_onstream_date.year > self.end_date.year:
+                    raise BaseProjectException(
+                        f"Gas onstream year ({self.gas_onstream_date.year}) is after "
+                        f"the end year of the project ({self.end_date.year})"
+                    )
+
+                # Ensure gas_onstream_date provided by the user is consistent
+                # with the beginning of gas lifting, indicated by the first year
+                # of positive gas revenue
+                gas_onstream_index = int(
+                    np.argwhere(self.gas_onstream_date.year == self.project_years).ravel()
+                )
+
+                if gas_onstream_index != gas_revenue_index[0]:
+                    raise BaseProjectException(
+                        f"Gas onstream year ({self.gas_onstream_date.year}) is different "
+                        f"from the starting year of gas production "
+                        f"({self.project_years[gas_revenue_index[0]]})"
+                    )
+
+            else:
+                self.gas_onstream_date = date(
+                    year=int(self.project_years[gas_revenue_index[0]]), month=1, day=1
+                )
+
+        else:
+            self.gas_onstream_date = self.end_date
+    """

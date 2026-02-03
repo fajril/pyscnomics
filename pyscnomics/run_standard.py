@@ -55,7 +55,7 @@ if __name__ == "__main__":
         "consolidated": cshflow[2],
     }
 
-    t1 = data
+    t1 = cashflow_table["gas"]
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')

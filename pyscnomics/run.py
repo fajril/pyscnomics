@@ -91,16 +91,15 @@ kwargs_capital_oil = {
 if __name__ == "__main__":
 
     # Create an instance of case
-    case = Case00B(contract_type=ContractType.GROSS_SPLIT)
-    data = case.as_dict()
+    case = Case00B(contract_type=ContractType.BASE_PROJECT)
+    contract = case.as_class()
 
-    t1 = get_grosssplit(data=data)
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print(t1)
+    # t1 = contract.lifting
+    # print('\t')
+    # print(f'Filetype: {type(t1)}')
+    # print(f'Length: {len(t1)}')
+    # print(t1)
 
-    # contract = case.as_class()
     # contract_arguments = case.contract_arguments
     # summary_arguments = case.summary_arguments
     # contract.run(**contract_arguments)
