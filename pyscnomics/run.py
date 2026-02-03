@@ -18,6 +18,9 @@ from pyscnomics.api.adapter import (
     build_costrecovery_instance,
     build_costrecovery_arguments,
     get_costrecovery,
+    build_grosssplit_instance,
+    build_grosssplit_arguments,
+    get_grosssplit,
 )
 
 import pyscnomics.dataset as data
@@ -88,10 +91,10 @@ kwargs_capital_oil = {
 if __name__ == "__main__":
 
     # Create an instance of case
-    case = Case00B(contract_type=ContractType.COST_RECOVERY)
+    case = Case00B(contract_type=ContractType.GROSS_SPLIT)
     data = case.as_dict()
 
-    t1 = get_costrecovery(data=data)
+    t1 = get_grosssplit(data=data)
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')

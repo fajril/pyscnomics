@@ -603,6 +603,7 @@ def build_grosssplit_instance(data: dict) -> GrossSplit:
         "opex": opex,
         "asr_cost": asr,
         "lbt_cost": lbt,
+        "cost_of_sales": cost_of_sales,
 
         # Field and reservoir properties
         "field_status": _extract_from_dict(target_key="field_status", source=gs),
