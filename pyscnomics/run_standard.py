@@ -34,7 +34,7 @@ if __name__ == "__main__":
     # Specify arguments to run function "execute_contract()"
     kwargs_execute = {
         "case": Case00B,
-        "contract_type": ContractType.COST_RECOVERY,
+        "contract_type": ContractType.GROSS_SPLIT,
     }
 
     # Run the contract using function "execute_contract()"
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         "consolidated": cshflow[2],
     }
 
-    t1 = cashflow_table["gas"]
+    t1 = cashflow_table["oil"]
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')

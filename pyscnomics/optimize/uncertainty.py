@@ -1659,6 +1659,7 @@ def uncertainty_psc(
     capex_distribution: UncertaintyDistribution = UncertaintyDistribution.NORMAL,
     lifting_distribution: UncertaintyDistribution = UncertaintyDistribution.NORMAL,
     verbose: bool = False,
+
 ) -> dict:
     """
     Perform Monte Carlo uncertainty analysis for a PSC economic model.
@@ -1859,8 +1860,9 @@ def uncertainty_psc(
 
 
 """
-Former Approach
----------------
+FORMER APPROACH
+===============
+
 def get_setup_dict(data: dict) -> tuple:
     # Parsing the contract setup into each corresponding variables
     start_date = convert_str_to_date(str_object=data["setup"]["start_date"])
@@ -1891,9 +1893,9 @@ def get_setup_dict(data: dict) -> tuple:
         lbt,
         cost_of_sales,
     )
-"""
-
-"""
+    
+=========================================================================================
+    
 def get_summary_dict(data: dict) -> dict:
     # Filling the argument with the input data
     reference_year = data["summary_arguments"].get("reference_year", None)
@@ -1919,11 +1921,9 @@ def get_summary_dict(data: dict) -> dict:
     }
 
     return summary_arguments_dict
-"""
-
-"""
-Former approach
----------------
+    
+=========================================================================================
+    
 def get_baseproject(data: dict):
     (
         start_date,
@@ -1981,11 +1981,9 @@ def get_baseproject(data: dict):
     summary_arguments_dict = get_summary_dict(data=data)
     summary_arguments_dict["contract"] = contract
     return get_summary(**summary_arguments_dict)
-"""
-
-"""
-Former approach
----------------
+    
+=========================================================================================
+    
 def get_costrecovery(data: dict):
     (
         start_date,
@@ -2133,11 +2131,9 @@ def get_costrecovery(data: dict):
     summary_arguments_dict = get_summary_dict(data=data)
     summary_arguments_dict["contract"] = contract
     return get_summary(**summary_arguments_dict)
-"""
-
-"""
-Former Approach
----------------
+    
+=========================================================================================
+    
 def get_grosssplit(data: dict):
     (
         start_date,
@@ -2260,12 +2256,10 @@ def get_grosssplit(data: dict):
     summary_arguments_dict = get_summary_dict(data=data)
     summary_arguments_dict["contract"] = contract
     return get_summary(**summary_arguments_dict)
-"""
-
-"""
-            Former approach
-            ---------------
-            csummary = (
+    
+=========================================================================================
+    
+csummary = (
                 get_costrecovery(data=dataAdj) if self.type == 1
                 else (
                     get_grosssplit(data=dataAdj) if self.type == 2
@@ -2275,12 +2269,10 @@ def get_grosssplit(data: dict):
                     )
                 )
             )
-"""
-
-"""
-    Former approach
-    ---------------
-    def Adjust_Data(self, multipliers: np.ndarray):
+        
+=========================================================================================    
+            
+def Adjust_Data(self, multipliers: np.ndarray):
 
         Adj_Contract = copy.deepcopy(self.baseContract)
 
@@ -2380,12 +2372,10 @@ def get_grosssplit(data: dict):
                 Adj_Partial_Data(contract_, "Lifting", "lifting", multipliers[i])
 
         return Adj_Contract
-"""
-
-"""
-    Former approach
-    ---------------
-        def calculate(self):
+        
+=========================================================================================
+        
+def calculate(self):
 
         # Designate a container to store Monte Carlo simulation results
         results = np.zeros(
@@ -2446,11 +2436,10 @@ def get_grosssplit(data: dict):
         }
 
         return outcomes
-"""
-
-""" 
-    Former approach:
-    # Iterate over the dictionary
+        
+=========================================================================================
+        
+# Iterate over the dictionary
     for key in list(min_max_mean_std.keys()):
         if key.startswith("min_"):
             base = key[4:]  # Base key (e.g., 'capex', 'opex', etc.)
@@ -2473,5 +2462,5 @@ def get_grosssplit(data: dict):
                 min_max_mean_std[min_key] = (0.8 * min_max_mean_std[min_key])
 
                 # +++ Set max to 1.2 of the max
-                min_max_mean_std[max_key] = (1.2 * min_max_mean_std[max_key])
-    """
+                min_max_mean_std[max_key] = (1.2 * min_max_mean_std[max_key])       
+"""

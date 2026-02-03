@@ -138,7 +138,6 @@ class Case00B:
             **self.project_time,
             "prod_year": np.array([2028, 2029, 2030, 2031, 2032]),
             "lifting_rate": np.array([0, 0, 100, 100, 100]),
-            # "lifting_rate": np.array([0, 0, 0, 0, 0]),
             "price": np.array([120, 120, 120, 120, 120]),
             "fluid_type": self.fluid,
         }
