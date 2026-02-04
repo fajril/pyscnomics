@@ -1532,7 +1532,7 @@ class Case00A:
             "lifting_stddev": 1.25,
             "oil_price_distribution": "Normal",
             "gas_price_distribution": "Normal",
-            "opex_distribution": "Normal",
+            "opex_distribution": "Uniform",
             "capex_distribution": "Normal",
             "lifting_distribution": "Normal",
         }

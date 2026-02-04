@@ -30,6 +30,7 @@ from pyscnomics.optimize.optimization import (
 from pyscnomics.optimize.uncertainty import (
     get_setup_dict,
     get_summary_dict,
+    min_mean_max_retriever,
 
     build_baseproject_instance,
     build_baseproject_arguments,
@@ -55,37 +56,29 @@ from pyscnomics.io.getattr import get_contract_attributes
 
 if __name__ == "__main__":
 
-    case = Case00B(contract_type=ContractType.GROSS_SPLIT)
-    data = case.as_dict()
+    case = Case00B(contract_type=ContractType.BASE_PROJECT)
+    contract = case.as_class()
+    contract_arguments = case.contract_arguments
+    summary_arguments = case.summary_arguments
 
-    t1 = get_grosssplit(data=data)
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    kwargs_uncertainty = {
+        "contract": contract,
+        "contract_arguments": contract_arguments,
+        "summary_arguments": summary_arguments,
+        "run_number": 5,
+        "oil_price_stddev": 1,
+        "gas_price_stddev": 1,
+        "opex_stddev": 1,
+        "capex_stddev": 1,
+        "lifting_stddev": 1,
+        "oil_price_distribution": UncertaintyDistribution.NORMAL,
+        "gas_price_distribution": UncertaintyDistribution.NORMAL,
+        "opex_distribution": UncertaintyDistribution.LOGNORMAL,
+        "capex_distribution": UncertaintyDistribution.TRIANGULAR,
+        "lifting_distribution": UncertaintyDistribution.UNIFORM,
+    }
 
-    # contract = case.as_class()
-    # contract_arguments = case.contract_arguments
-    # summary_arguments = case.summary_arguments
-    #
-    # kwargs_uncertainty = {
-    #     "contract": contract,
-    #     "contract_arguments": contract_arguments,
-    #     "summary_arguments": summary_arguments,
-    #     "run_number": 5,
-    #     "oil_price_stddev": 1,
-    #     "gas_price_stddev": 1,
-    #     "opex_stddev": 1,
-    #     "capex_stddev": 1,
-    #     "lifting_stddev": 1,
-    #     "oil_price_distribution": UncertaintyDistribution.UNIFORM,
-    #     "gas_price_distribution": UncertaintyDistribution.UNIFORM,
-    #     "opex_distribution": UncertaintyDistribution.UNIFORM,
-    #     "capex_distribution": UncertaintyDistribution.UNIFORM,
-    #     "lifting_distribution": UncertaintyDistribution.UNIFORM,
-    # }
-    #
-    # uncertainty_psc(**kwargs_uncertainty)
+    uncertainty_psc(**kwargs_uncertainty)
 
     # data = case.as_dict()
     # get_summary_dict(data=data)

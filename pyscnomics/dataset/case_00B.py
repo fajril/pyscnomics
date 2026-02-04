@@ -95,6 +95,11 @@ class Case00B:
     contract_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
     summary_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
 
+    # Attributes associated with sensitivity, uncertainty, and optimization arguments
+    sensitivity_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
+    uncertainty_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
+    optimization_arguments: dict = field(default_factory=lambda: {}, init=False, repr=False)
+
     def __post_init__(self):
         """
         Initialize all contract components after object creation.
@@ -724,6 +729,96 @@ class Case00B:
             "discount_rate_start_year": 2023,
             "inflation_rate": 0.0,
             "profitability_discounted": False,
+        }
+
+    def get_sensitivity_arguments(self) -> None:
+        """
+        Set default sensitivity-analysis parameters.
+
+        Returns
+        -------
+        None
+            Updates ``self.sensitivity_arguments`` with:
+            ``min_deviation``, ``max_deviation``, ``base_value``, and ``step``.
+        """
+
+        self.sensitivity_arguments = {
+            "min_deviation": 0.25,
+            "max_deviation": 0.25,
+            "base_value": 1,
+            "step": 10,
+        }
+
+    def get_uncertainty_arguments(self) -> None:
+        """
+        Set default uncertainty-analysis parameters.
+
+        Returns
+        -------
+        None
+            Populates ``self.uncertainty_arguments`` with defaults for
+            price, cost, lifting ranges, standard deviations, distributions,
+            and the number of simulation runs.
+        """
+
+        self.uncertainty_arguments = {
+            "run_number": 100,
+            "min_oil_price": None,
+            "mean_oil_price": None,
+            "max_oil_price": None,
+            "min_gas_price": None,
+            "mean_gas_price": None,
+            "max_gas_price": None,
+            "min_opex": None,
+            "mean_opex": None,
+            "max_opex": None,
+            "min_capex": None,
+            "mean_capex": None,
+            "max_capex": None,
+            "min_lifting": None,
+            "mean_lifting": None,
+            "max_lifting": None,
+            "oil_price_stddev": 1.25,
+            "gas_price_stddev": 1.25,
+            "opex_stddev": 1.25,
+            "capex_stddev": 1.25,
+            "lifting_stddev": 1.25,
+            "oil_price_distribution": "Normal",
+            "gas_price_distribution": "Normal",
+            "opex_distribution": "Uniform",
+            "capex_distribution": "Triangular",
+            "lifting_distribution": "LogNormal",
+        }
+
+    def get_optimization_arguments(self) -> None:
+        """
+        Set default optimization parameters.
+
+        Returns
+        -------
+        None
+            Populates ``self.optimization_arguments`` with defaults for the
+            optimization target (e.g., IRR), target value, and parameter
+            bounds used in the economic optimization routine.
+        """
+
+        self.optimization_arguments = {
+            "target_parameter": "IRR",
+            "target_optimization": 0.35,
+            "dict_optimization": {
+                "parameter": [
+                    "Ministerial Discretion",
+                    "Effective Tax Rate"
+                ],
+                "min": [
+                    0.08,
+                    0.4
+                ],
+                "max": [
+                    0.1,
+                    0.44
+                ],
+            },
         }
 
     def as_class(self):

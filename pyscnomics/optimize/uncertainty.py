@@ -835,34 +835,47 @@ def get_multipliers_montecarlo(
 ) -> np.ndarray:
     """
     Generate an array of multipliers for Monte Carlo simulation based on
-    the specified distribution.
+    the specified probability distribution.
+
+    All distributions are generated in *ratio space* (value / mean_value),
+    so the resulting multipliers are centered around 1.0.
 
     Parameters
     ----------
-    run_number: int
-        Number of runs.
-    distribution: str
-        Type of distribution ("Uniform", "Triangular", or "Normal").
-    min_value: float
-        Minimum value for the distribution.
-    mean_value: float
-        Mean (or central value) for the distribution.
-    max_value: float
-        Maximum value for the distribution.
-    std_dev: float
-        Standard deviation for the normal distribution.
+    run_number : int
+        Number of Monte Carlo runs.
+    distribution : str
+        Distribution type (case-insensitive):
+        {"uniform", "triangular", "normal", "lognormal"}.
+    min_value : float
+        Minimum value of the distribution.
+    mean_value : float
+        Mean (central) value of the distribution.
+    max_value : float
+        Maximum value of the distribution.
+    std_dev : float
+        Standard deviation (used for Normal and LogNormal distributions).
 
     Returns
     -------
-    multipliers: np.ndarray
-        Array of multipliers generated using Monte Carlo simulation.
+    np.ndarray
+        Array of Monte Carlo multipliers.
 
-    Notes
-    -----
-    - For "Uniform" distribution, the function uses a uniform random variable.
-    - For "Triangular" distribution, the function uses a triangular random variable.
-    - For "Normal" distribution, the function uses a truncated normal random variable.
+    Raises
+    ------
+    ValueError
+        If input values are invalid.
+    MonteCarloException
+        If the distribution type is unsupported.
+
+    TL;DR:
+    Generate mean-normalized Monte Carlo multipliers using Uniform, Triangular,
+    Normal (truncated), or LogNormal (truncated) distributions.
     """
+
+    # Return an array of ones if min = mean = max
+    if min_value == mean_value == max_value:
+        return np.ones(run_number, dtype=np.float64)
 
     # Validate input: cannot have zero mean value
     if mean_value == 0:
@@ -874,8 +887,11 @@ def get_multipliers_montecarlo(
             f"Paramater max_value must be greater than min_value"
         )
 
+    # Normalize distribution name
+    distribution = distribution.lower()
+
     # Uniform distribution
-    if distribution == "Uniform":
+    if distribution == "uniform":
         # Normalize parameters
         min_ratio, max_ratio = [float(v / mean_value) for v in (min_value, max_value)]
 
@@ -887,7 +903,7 @@ def get_multipliers_montecarlo(
         )
 
     # Triangular distribution
-    elif distribution == "Triangular":
+    elif distribution == "triangular":
         # Normalize parameters
         (
             min_ratio,
@@ -907,7 +923,7 @@ def get_multipliers_montecarlo(
         )
 
     # Normal distribution
-    elif distribution == "Normal":
+    elif distribution == "normal":
         # Validate input: cannot have zero standard deviation
         if std_dev == 0:
             raise ValueError(f"Cannot have zero standard deviation")
@@ -936,7 +952,7 @@ def get_multipliers_montecarlo(
         multipliers = (multipliers_init * std_ratio) + mean_ratio
 
     # Log normal distribution
-    elif distribution == "LogNormal":
+    elif distribution == "lognormal":
         # Validate input: cannot have zero standard deviation
         if std_dev == 0:
             raise ValueError(f"Cannot have zero standard deviation")
@@ -956,7 +972,7 @@ def get_multipliers_montecarlo(
         # Convert to log-space
         log_min = np.log(min_ratio)
         log_mean = np.log(mean_ratio)
-        log_max = np.log(mean_ratio)
+        log_max = np.log(max_ratio)
         log_std = std_ratio / mean_ratio
 
         # Determine z-values in log-space
@@ -1106,42 +1122,27 @@ class ProcessMonte:
         self.hasOil = any([p["id"] == 0 for p in self.parameter])
         self.hasGas = any([p["id"] == 1 for p in self.parameter])
 
-        # # Modify attribute `hasGas` if GAS is present as a lifting commodity
-        # for i, _ in enumerate(self.parameter):
-        #     if self.parameter[i]["id"] == 1:
-        #         self.hasGas = True
-        #         break
-
-        # print('\t')
-        # print('hasOil = ', self.hasOil)
-        # print('hasGas = ', self.hasGas)
-
-        # print('\t')
-        # print(f'Filetype: {type(self.parameter)}')
-        # print(f'Length: {len(self.parameter)}')
-        # print('parameter = \n', self.parameter)
+        # mults = np.array([1, 0.75, 0.5, 0.25, 0.125])
+        # self.multipliers = np.repeat(mults[:, np.newaxis], len(self.parameter), axis=1)
 
         # Prepare multipliers
-        mults = np.array([1, 0.75, 0.5, 0.25, 0.125])
-        self.multipliers = np.repeat(mults[:, np.newaxis], len(self.parameter), axis=1)
+        self.multipliers = np.ones(
+            [self.numSim, len(self.parameter)], dtype=np.float64
+        )
 
-        # self.multipliers = np.ones(
-        #     [self.numSim, len(self.parameter)], dtype=np.float64
-        # )
-        #
-        # for i, param in enumerate(self.parameter):
-        #     self.multipliers[:, i] = get_multipliers_montecarlo(
-        #         run_number=self.numSim,
-        #         distribution=param["dist"].value,
-        #         min_value=param["min"],
-        #         mean_value=param["base"],
-        #         max_value=param["max"],
-        #         std_dev=param["stddev"],
-        #     )
+        for i, param in enumerate(self.parameter):
+            self.multipliers[:, i] = get_multipliers_montecarlo(
+                run_number=self.numSim,
+                distribution=param["dist"].value,
+                min_value=param["min"],
+                mean_value=param["base"],
+                max_value=param["max"],
+                std_dev=param["stddev"],
+            )
 
-        # print('\t')
-        # print(f'Filetype: {type(self.multipliers)}, Shape: {self.multipliers.shape}')
-        # print('multipliers = \n', self.multipliers)
+        print('\t')
+        print(f'Filetype: {type(self.multipliers)}, Shape: {self.multipliers.shape}')
+        print('multipliers = \n', self.multipliers)
 
     def Adjust_Data(self, multipliers: np.ndarray) -> dict:
         """
@@ -1659,7 +1660,6 @@ def uncertainty_psc(
     capex_distribution: UncertaintyDistribution = UncertaintyDistribution.NORMAL,
     lifting_distribution: UncertaintyDistribution = UncertaintyDistribution.NORMAL,
     verbose: bool = False,
-
 ) -> dict:
     """
     Perform Monte Carlo uncertainty analysis for a PSC economic model.
@@ -1728,35 +1728,40 @@ def uncertainty_psc(
 
     # Specify default values for multipliers,
     # (in the form of "min_multipliers" and "max_multipliers")
-    min_factor, max_factor = (0.8, 1.2)
+    # min_factor, max_factor = (0.8, 1.2)
 
     # Check for equal values of min, mean, and max, then specify adjustments.
     # =========================================================================
     # Extract keywords: "oil_price", "gas_price", "opex", "capex", and "lifting"
     # from variable "min_max_mean_std".
-    bases = [key[4:] for key in min_max_mean_std if key.startswith("min_")]
+    # bases = [key[4:] for key in min_max_mean_std if key.startswith("min_")]
 
-    for base in bases:
-        min_key, mean_key, max_key = f"min_{base}", f"mean_{base}", f"max_{base}"
+    # for base in bases:
+    #     min_key, mean_key, max_key = f"min_{base}", f"mean_{base}", f"max_{base}"
+    #
+    #     # Exit loop if at least one of ["min_key", "mean_key", "max_key"] is not
+    #     # available in variable "min_max_mean_std".
+    #     if not all([k in min_max_mean_std for k in [min_key, mean_key, max_key]]):
+    #         continue
+    #
+    #     # Extract statistics (min, mean, max) from variable "min_max_mean_std"
+    #     min_val, mean_val, max_val = (
+    #         min_max_mean_std[min_key],
+    #         min_max_mean_std[mean_key],
+    #         min_max_mean_std[max_key],
+    #     )
+    #
+    #     # Carry out adjustment if min_val == mean_val == max_val.
+    #     # Adjustment is invoked on "min" and "max" values of a particular keyword
+    #     # in variable "min_max_mean_std" by applying default multipliers.
+    #     if min_val == mean_val == max_val:
+    #         min_max_mean_std[min_key] = min_factor * min_val
+    #         min_max_mean_std[max_key] = max_factor * max_val
 
-        # Exit loop if at least one of ["min_key", "mean_key", "max_key"] is not
-        # available in variable "min_max_mean_std".
-        if not all([k in min_max_mean_std for k in [min_key, mean_key, max_key]]):
-            continue
-
-        # Extract statistics (min, mean, max) from variable "min_max_mean_std"
-        min_val, mean_val, max_val = (
-            min_max_mean_std[min_key],
-            min_max_mean_std[mean_key],
-            min_max_mean_std[max_key],
-        )
-
-        # Carry out adjustment if min_val == mean_val == max_val.
-        # Adjustment is invoked on "min" and "max" values of a particular keyword
-        # in variable "min_max_mean_std" by applying default multipliers.
-        if min_val == mean_val == max_val:
-            min_max_mean_std[min_key] = min_factor * min_val
-            min_max_mean_std[max_key] = max_factor * max_val
+    print('\t')
+    print(f'Filetype: {type(min_max_mean_std)}')
+    print(f'Length: {len(min_max_mean_std)}')
+    print('min_max_mean_std = \n', min_max_mean_std)
 
     # Create a list of input arguments' configuration for each uncertainty parameters.
     # --- Uncertainty parameter:
@@ -1826,11 +1831,6 @@ def uncertainty_psc(
     mults = np.array([1, 0.75, 0.5, 0.25, 0.125])
     multipliers = np.repeat(mults[:, np.newaxis], len(parameter), axis=1)
 
-    # print('\t')
-    # print(f'Filetype: {type(multipliers)}')
-    # print(f'Shape: {multipliers.shape}')
-    # print('multipliers = \n', multipliers[2, :])
-
     # Executing the montecarlo
     kwargs_monte = {
         "contract_type": contract_type,
@@ -1840,7 +1840,7 @@ def uncertainty_psc(
     }
 
     monte = ProcessMonte(**kwargs_monte)
-    monte.calcContract(n=2)
+    # monte.calcContract(n=2)
 
 
 
@@ -2462,5 +2462,37 @@ def calculate(self):
                 min_max_mean_std[min_key] = (0.8 * min_max_mean_std[min_key])
 
                 # +++ Set max to 1.2 of the max
-                min_max_mean_std[max_key] = (1.2 * min_max_mean_std[max_key])       
+                min_max_mean_std[max_key] = (1.2 * min_max_mean_std[max_key])
+                
+==========================================================================================
+
+    for base in bases:
+        min_key, mean_key, max_key = f"min_{base}", f"mean_{base}", f"max_{base}"
+
+        # Exit loop if at least one of ["min_key", "mean_key", "max_key"] is not
+        # available in variable "min_max_mean_std".
+        if not all([k in min_max_mean_std for k in [min_key, mean_key, max_key]]):
+            continue
+
+        # Extract statistics (min, mean, max) from variable "min_max_mean_std"
+        min_val, mean_val, max_val = (
+            min_max_mean_std[min_key],
+            min_max_mean_std[mean_key],
+            min_max_mean_std[max_key],
+        )
+
+        # Carry out adjustment if min_val == mean_val == max_val.
+        # Adjustment is invoked on "min" and "max" values of a particular keyword
+        # in variable "min_max_mean_std" by applying default multipliers.
+        if min_val == mean_val == max_val:
+            min_max_mean_std[min_key] = min_factor * min_val
+            min_max_mean_std[max_key] = max_factor * max_val
+            
+==========================================================================================
+
+# Modify attribute `hasGas` if GAS is present as a lifting commodity
+        for i, _ in enumerate(self.parameter):
+            if self.parameter[i]["id"] == 1:
+                self.hasGas = True
+                break        
 """
