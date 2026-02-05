@@ -131,6 +131,9 @@ class Case00B:
         self.get_class_arguments()
         self.get_contract_arguments()
         self.get_summary_arguments()
+        self.get_sensitivity_arguments()
+        self.get_uncertainty_arguments()
+        self.get_optimization_arguments()
 
     def get_lifting(self):
         """

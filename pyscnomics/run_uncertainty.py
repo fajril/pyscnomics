@@ -56,7 +56,7 @@ from pyscnomics.io.getattr import get_contract_attributes
 
 if __name__ == "__main__":
 
-    case = Case00B(contract_type=ContractType.BASE_PROJECT)
+    case = Case00B(contract_type=ContractType.COST_RECOVERY)
     contract = case.as_class()
     contract_arguments = case.contract_arguments
     summary_arguments = case.summary_arguments

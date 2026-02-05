@@ -1122,23 +1122,23 @@ class ProcessMonte:
         self.hasOil = any([p["id"] == 0 for p in self.parameter])
         self.hasGas = any([p["id"] == 1 for p in self.parameter])
 
-        # mults = np.array([1, 0.75, 0.5, 0.25, 0.125])
-        # self.multipliers = np.repeat(mults[:, np.newaxis], len(self.parameter), axis=1)
+        mults = np.array([1, 0.75, 0.5, 0.25, 0.125])
+        self.multipliers = np.repeat(mults[:, np.newaxis], len(self.parameter), axis=1)
 
-        # Prepare multipliers
-        self.multipliers = np.ones(
-            [self.numSim, len(self.parameter)], dtype=np.float64
-        )
-
-        for i, param in enumerate(self.parameter):
-            self.multipliers[:, i] = get_multipliers_montecarlo(
-                run_number=self.numSim,
-                distribution=param["dist"].value,
-                min_value=param["min"],
-                mean_value=param["base"],
-                max_value=param["max"],
-                std_dev=param["stddev"],
-            )
+        # # Prepare multipliers
+        # self.multipliers = np.ones(
+        #     [self.numSim, len(self.parameter)], dtype=np.float64
+        # )
+        #
+        # for i, param in enumerate(self.parameter):
+        #     self.multipliers[:, i] = get_multipliers_montecarlo(
+        #         run_number=self.numSim,
+        #         distribution=param["dist"].value,
+        #         min_value=param["min"],
+        #         mean_value=param["base"],
+        #         max_value=param["max"],
+        #         std_dev=param["stddev"],
+        #     )
 
         print('\t')
         print(f'Filetype: {type(self.multipliers)}, Shape: {self.multipliers.shape}')
@@ -1239,6 +1239,19 @@ class ProcessMonte:
         contract_ = (
             contract_adjusted if self.type < 3 else contract_adjusted[f"contract_{2}"]
         )
+
+        # print('\t')
+        # print(f'Filetype: {type(contract_)}')
+        # print(f'Length: {len(contract_)}')
+        # print(f'Keys: {contract_.keys()}')
+        # print('contract_ = \n', contract_)
+
+        # _adjust_partial_data(
+        #     contract_=contract_,
+        #     target_param="Oil Price",
+        #     key="lifting",
+        #     multiplier=multipliers[0],
+        # )
 
         # Contract adjustments per single run simulation (i.e., per row)
         for i, val in enumerate(self.parameter):
@@ -1359,6 +1372,12 @@ class ProcessMonte:
             # print(f"Monte Progress: {n}", flush=True)
             # time.sleep(100)
 
+            mults = self.multipliers[n, :]
+            print('\t')
+            print(f'Filetype: {type(mults)}')
+            print(f'Length: {len(mults)}')
+            print('mults = \n', mults)
+
             # Specify adjusted data by calling the "Adjust_Data()" method
             dataAdj: dict = self.Adjust_Data(self.multipliers[n, :])
 
@@ -1366,38 +1385,18 @@ class ProcessMonte:
             print(f'Filetype: {type(dataAdj)}')
             print(f'Length: {len(dataAdj)}')
             print(f'Keys: {dataAdj.keys()}')
-            # print('dataAdj = \n', dataAdj)
+            print('dataAdj = \n', dataAdj)
 
-            # # Execute the corresponding contract and return the result in terms of summary
-            # mapping_summary = {
-            #     1: get_costrecovery,
-            #     2: get_grosssplit,
-            #     3: get_transition,
-            # }
+            # Execute the corresponding contract and return the result in terms of summary
+            mapping_summary = {
+                1: get_costrecovery,
+                2: get_grosssplit,
+                3: get_transition,
+            }
 
-            # print('\t')
-            # print(f'Filetype: {type(mapping_summary)}')
-            # print(f'Length: {len(mapping_summary)}')
-            # print('mapping_summary = \n', mapping_summary)
-            #
-            # t1 = mapping_summary.get(self.type, get_baseproject)
-            # print('\t')
-            # print(f'Filetype: {type(t1)}')
-            # print('t1 = \n', t1)
+            csummary = mapping_summary.get(self.type, get_baseproject)(data=dataAdj)
 
-            if self.type == 1:
-                csummary = get_costrecovery(data=dataAdj)
-
-            # csummary = mapping_summary.get(self.type, get_baseproject)(data=dataAdj)
-
-            # print('\t')
-            # print(f'Filetype: {type(csummary)}')
-            # print(f'Length: {len(csummary)}')
-            # print('csummary = \n', csummary)
-
-            # del dataAdj
-            #
-            # return {
+            # results = {
             #     "n": n,
             #     "output": (
             #         csummary["ctr_npv"],
@@ -1409,10 +1408,21 @@ class ProcessMonte:
             #     ),
             # }
 
+            del dataAdj
+            return {
+                "n": n,
+                "output": (
+                    csummary["ctr_npv"],
+                    csummary["ctr_irr"],
+                    csummary["ctr_pi"],
+                    csummary["ctr_pot"],
+                    csummary["gov_take"],
+                    csummary["ctr_net_share"],
+                ),
+            }
+
         except Exception as err:
-
             print(f"Error: {err}")
-
             return {
                 "n": n,
                 "output": (
@@ -1544,6 +1554,11 @@ class ProcessMonte:
                 self.multipliers[rnum, idx] * items["base"]
                 for idx, items in enumerate(self.parameter)
             ]
+
+        print('\t')
+        print(f'Filetype: {type(results)}')
+        print(f'Length: {len(results)}')
+        print('results = \n', results)
 
         # Get the outcomes of Monte Carlo simulation
         return self.get_outcomes(results=results)
@@ -1758,10 +1773,10 @@ def uncertainty_psc(
     #         min_max_mean_std[min_key] = min_factor * min_val
     #         min_max_mean_std[max_key] = max_factor * max_val
 
-    print('\t')
-    print(f'Filetype: {type(min_max_mean_std)}')
-    print(f'Length: {len(min_max_mean_std)}')
-    print('min_max_mean_std = \n', min_max_mean_std)
+    # print('\t')
+    # print(f'Filetype: {type(min_max_mean_std)}')
+    # print(f'Length: {len(min_max_mean_std)}')
+    # print('min_max_mean_std = \n', min_max_mean_std)
 
     # Create a list of input arguments' configuration for each uncertainty parameters.
     # --- Uncertainty parameter:
@@ -1828,9 +1843,6 @@ def uncertainty_psc(
         summary_arguments=summary_arguments,
     )
 
-    mults = np.array([1, 0.75, 0.5, 0.25, 0.125])
-    multipliers = np.repeat(mults[:, np.newaxis], len(parameter), axis=1)
-
     # Executing the montecarlo
     kwargs_monte = {
         "contract_type": contract_type,
@@ -1840,8 +1852,18 @@ def uncertainty_psc(
     }
 
     monte = ProcessMonte(**kwargs_monte)
-    # monte.calcContract(n=2)
 
+    # mults = np.array([1, 0.75, 0.5, 0.25, 0.125])
+    # multipliers = np.repeat(mults[:, np.newaxis], len(parameter), axis=1)
+    #
+    # print('\t')
+    # print(f'Filetype: {type(multipliers)}')
+    # print(f'Shape: {multipliers.shape}')
+    # print('multipliers = \n', multipliers)
+
+    # monte.Adjust_Data(multipliers=multipliers[0, :])
+    # monte.calcContract(n=2)
+    monte.calculate_single_core()
 
 
     # # Use multiprocessing if run_number is large (i.e. larger than 400)
