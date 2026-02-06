@@ -1392,31 +1392,31 @@ class ProcessMonte:
 
     def get_outcomes(self, results: np.ndarray) -> dict:
         """
-        Compute and summarize probabilistic outcomes from Monte Carlo results.
+        Summarize Monte Carlo results into probabilistic outcomes.
 
-        The function sorts simulation results, assigns cumulative probabilities,
-        and computes key percentiles (P10, P50, P90) to summarize uncertainty.
+        Sorts simulation outputs, assigns cumulative probabilities, and
+        computes P10 / P50 / P90 per parameter.
 
         Parameters
         ----------
         results : np.ndarray
-            Array of simulation results with shape (numSim, n_variables).
+            Simulation results, shape (numSim, n_params).
 
         Returns
         -------
         dict
-            Dictionary containing:
-            - **params** : list of str
-                Names of economic parameters considered.
-            - **results** : list of list
-                Sorted results with corresponding cumulative probabilities.
-            - **P10**, **P50**, **P90** : list of float
-                Percentile values representing optimistic, median, and
-                conservative outcomes.
+            Outcome summary with:
+            - params : list[str]
+            - results : list[list[float]]  # prob + values
+            - P10, P50, P90 : list[float]
 
         Notes
         -----
-        If `self.hasGas` is True, gas-related parameters are included.
+        - Sorting is done per parameter.
+        - Percentiles use `method="higher"`.
+
+        TL;DR:
+        Turn Monte Carlo outputs into probability tables and P10/P50/P90.
         """
 
         row_number = self.numSim
@@ -1436,11 +1436,6 @@ class ProcessMonte:
             (prob[:, np.newaxis], results_sorted), axis=1
         )
 
-        print('\t')
-        print(f'Filetype: {type(results_arranged)}')
-        print(f'Shape: {results_arranged.shape}')
-        print('results_arranged = \n', results_arranged[:, :4])
-
         # Calculate P10, P50, P90
         percentiles = np.percentile(
             a=results_arranged,
@@ -1449,61 +1444,28 @@ class ProcessMonte:
             axis=0,
         )
 
-        print('\t')
-        print(f'Filetype: {type(percentiles)}')
-        print(f'Shape: {percentiles.shape}')
-        print('percentiles = \n', percentiles[:, :4])
-
         # Determine indices of data
         indices = np.linspace(0, row_number, 101)[0:-1].astype(int)
-        indices[0] = 1
+        # indices[0] = 1
         if indices[-1] != row_number - 1:
             indices = np.append(indices, int(row_number - 1))
 
-        print('\t')
-        print(f'Filetype: {type(indices)}')
-        print(f'Shape: {indices.shape}')
-        print('indices = ', indices)
-
-        print('\t')
-        print(f'Filetype: {type(self.parameter)}')
-        print(f'Length: {len(self.parameter)}')
-        print('self.parameter = \n', self.parameter)
-
+        # Identify parameter names
         target_indices = np.array([val["id"] for _, val in enumerate(self.parameter)])
-        param_mapping = {
-            0: "a",
-            1: "b",
-            2: "c",
-            3: "d",
-            4: "e",
+        param_names = np.array(
+            ["oil_price", "gas_price", "opex", "capex", "lifting"]
+        )[target_indices]
+
+        # Final outcomes
+        outcomes = {
+            "params": param_names.tolist(),
+            "results": results_arranged[indices, :].tolist(),
+            "P10": percentiles[0, :].tolist(),
+            "P50": percentiles[1, :].tolist(),
+            "P90": percentiles[2, :].tolist(),
         }
-        param_names = param_mapping[target_indices]
 
-        print('\t')
-        print(f'Filetype: {type(target_indices)}')
-        print(f'Length: {len(target_indices)}')
-        print('target_indices = ', target_indices)
-
-        print('\t')
-        print(f'Filetype: {type(param_names)}')
-        print(f'Length: {len(param_names)}')
-        print('param_names = ', param_names)
-
-        # # Final outcomes
-        # outcomes = {
-        #     "params": (
-        #         ["Oil Price", "Gas Price", "Opex", "Capex", "Cum. prod."]
-        #         if self.hasGas
-        #         else ["Oil Price", "Opex", "Capex", "Cum. prod."]
-        #     ),
-        #     "results": results_arranged[indices, :].tolist(),
-        #     "P10": percentiles[0, :].tolist(),
-        #     "P50": percentiles[1, :].tolist(),
-        #     "P90": percentiles[2, :].tolist(),
-        # }
-        #
-        # return outcomes
+        return outcomes
 
     def calculate_single_core(self) -> dict:
         """
@@ -1626,7 +1588,7 @@ class ProcessMonte:
             # Fill with NPV, IRR, PI, POT, gov_take, and ctr_net_share, respectively
             results[rnum, 0:len(self.target)] = output
 
-            # Column 6 until 11:
+            # Column 6 until end:
             # Fill with the multipliers associated with:
             # oil price, gas price, opex, capex, and lifting, accordingly
             results[rnum, len(self.target):] = mult
@@ -1851,10 +1813,11 @@ def uncertainty_psc(
     # print(f'Shape: {multipliers.shape}')
     # print('multipliers = \n', multipliers)
 
-    # monte.Adjust_Data(multipliers=multipliers[0, :])
-    # monte.calcContract(n=2)
-    monte.calculate_single_core()
-
+    t1 = monte.calculate_multi_cores()
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
 
     # # Use multiprocessing if run_number is large (i.e. larger than 400)
     # try:
@@ -2502,7 +2465,7 @@ def calculate(self):
             
 ==========================================================================================
 
-# Modify attribute `hasGas` if GAS is present as a lifting commodity
+        # Modify attribute `hasGas` if GAS is present as a lifting commodity
         for i, _ in enumerate(self.parameter):
             if self.parameter[i]["id"] == 1:
                 self.hasGas = True
@@ -2643,6 +2606,21 @@ def calculate(self):
                 )
 
         return contract_
+        
+==========================================================================================
+
+        # Final outcomes
+        outcomes = {
+            "params": (
+                ["Oil Price", "Gas Price", "Opex", "Capex", "Cum. prod."]
+                if self.hasGas
+                else ["Oil Price", "Opex", "Capex", "Cum. prod."]
+            ),
+            "results": results_arranged[indices, :].tolist(),
+            "P10": percentiles[0, :].tolist(),
+            "P50": percentiles[1, :].tolist(),
+            "P90": percentiles[2, :].tolist(),
+        }
         
 ==========================================================================================
 """
