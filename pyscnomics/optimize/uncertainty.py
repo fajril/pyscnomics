@@ -1207,14 +1207,6 @@ class ProcessMonte:
                 datakeys = []
 
             for item_key, item in contract_[key].items():
-
-                # # Skip GAS lifting adjustment for "Lifting" target parameter
-                # if (
-                #     target_param == "Lifting" and key == "lifting"
-                #     and item["fluid_type"] == "Gas"
-                # ):
-                #     continue
-
                 # Specify target keys for lifting-related target
                 if key == "lifting":
                     if target_param == "Oil Price" and item["fluid_type"] == "Oil":
@@ -1239,19 +1231,6 @@ class ProcessMonte:
         contract_ = (
             contract_adjusted if self.type < 3 else contract_adjusted[f"contract_{2}"]
         )
-
-        # print('\t')
-        # print(f'Filetype: {type(contract_)}')
-        # print(f'Length: {len(contract_)}')
-        # print(f'Keys: {contract_.keys()}')
-        # print('contract_ = \n', contract_)
-
-        # _adjust_partial_data(
-        #     contract_=contract_,
-        #     target_param="Oil Price",
-        #     key="lifting",
-        #     multiplier=multipliers[0],
-        # )
 
         # Contract adjustments per single run simulation (i.e., per row)
         for i, val in enumerate(self.parameter):
@@ -1372,20 +1351,8 @@ class ProcessMonte:
             # print(f"Monte Progress: {n}", flush=True)
             # time.sleep(100)
 
-            mults = self.multipliers[n, :]
-            print('\t')
-            print(f'Filetype: {type(mults)}')
-            print(f'Length: {len(mults)}')
-            print('mults = \n', mults)
-
             # Specify adjusted data by calling the "Adjust_Data()" method
             dataAdj: dict = self.Adjust_Data(self.multipliers[n, :])
-
-            print('\t')
-            print(f'Filetype: {type(dataAdj)}')
-            print(f'Length: {len(dataAdj)}')
-            print(f'Keys: {dataAdj.keys()}')
-            print('dataAdj = \n', dataAdj)
 
             # Execute the corresponding contract and return the result in terms of summary
             mapping_summary = {
@@ -1395,18 +1362,6 @@ class ProcessMonte:
             }
 
             csummary = mapping_summary.get(self.type, get_baseproject)(data=dataAdj)
-
-            # results = {
-            #     "n": n,
-            #     "output": (
-            #         csummary["ctr_npv"],
-            #         csummary["ctr_irr"],
-            #         csummary["ctr_pi"],
-            #         csummary["ctr_pot"],
-            #         csummary["gov_take"],
-            #         csummary["ctr_net_share"],
-            #     ),
-            # }
 
             del dataAdj
             return {
@@ -1481,6 +1436,11 @@ class ProcessMonte:
             (prob[:, np.newaxis], results_sorted), axis=1
         )
 
+        print('\t')
+        print(f'Filetype: {type(results_arranged)}')
+        print(f'Shape: {results_arranged.shape}')
+        print('results_arranged = \n', results_arranged[:, :4])
+
         # Calculate P10, P50, P90
         percentiles = np.percentile(
             a=results_arranged,
@@ -1489,26 +1449,61 @@ class ProcessMonte:
             axis=0,
         )
 
+        print('\t')
+        print(f'Filetype: {type(percentiles)}')
+        print(f'Shape: {percentiles.shape}')
+        print('percentiles = \n', percentiles[:, :4])
+
         # Determine indices of data
         indices = np.linspace(0, row_number, 101)[0:-1].astype(int)
         indices[0] = 1
         if indices[-1] != row_number - 1:
             indices = np.append(indices, int(row_number - 1))
 
-        # Final outcomes
-        outcomes = {
-            "params": (
-                ["Oil Price", "Gas Price", "Opex", "Capex", "Cum. prod."]
-                if self.hasGas
-                else ["Oil Price", "Opex", "Capex", "Cum. prod."]
-            ),
-            "results": results_arranged[indices, :].tolist(),
-            "P10": percentiles[0, :].tolist(),
-            "P50": percentiles[1, :].tolist(),
-            "P90": percentiles[2, :].tolist(),
-        }
+        print('\t')
+        print(f'Filetype: {type(indices)}')
+        print(f'Shape: {indices.shape}')
+        print('indices = ', indices)
 
-        return outcomes
+        print('\t')
+        print(f'Filetype: {type(self.parameter)}')
+        print(f'Length: {len(self.parameter)}')
+        print('self.parameter = \n', self.parameter)
+
+        target_indices = np.array([val["id"] for _, val in enumerate(self.parameter)])
+        param_mapping = {
+            0: "a",
+            1: "b",
+            2: "c",
+            3: "d",
+            4: "e",
+        }
+        param_names = param_mapping[target_indices]
+
+        print('\t')
+        print(f'Filetype: {type(target_indices)}')
+        print(f'Length: {len(target_indices)}')
+        print('target_indices = ', target_indices)
+
+        print('\t')
+        print(f'Filetype: {type(param_names)}')
+        print(f'Length: {len(param_names)}')
+        print('param_names = ', param_names)
+
+        # # Final outcomes
+        # outcomes = {
+        #     "params": (
+        #         ["Oil Price", "Gas Price", "Opex", "Capex", "Cum. prod."]
+        #         if self.hasGas
+        #         else ["Oil Price", "Opex", "Capex", "Cum. prod."]
+        #     ),
+        #     "results": results_arranged[indices, :].tolist(),
+        #     "P10": percentiles[0, :].tolist(),
+        #     "P50": percentiles[1, :].tolist(),
+        #     "P90": percentiles[2, :].tolist(),
+        # }
+        #
+        # return outcomes
 
     def calculate_single_core(self) -> dict:
         """
@@ -1547,18 +1542,13 @@ class ProcessMonte:
             # Fill with NPV, IRR, PI, POT, gov_take, and ctr_net_share, respectively
             results[rnum, 0:len(self.target)] = output
 
-            # Column 6 until 11:
+            # Column 6 until end:
             # Fill with the multipliers associated with:
             # oil price, gas price, opex, capex, and lifting, accordingly
             results[rnum, len(self.target):] = [
                 self.multipliers[rnum, idx] * items["base"]
                 for idx, items in enumerate(self.parameter)
             ]
-
-        print('\t')
-        print(f'Filetype: {type(results)}')
-        print(f'Length: {len(results)}')
-        print('results = \n', results)
 
         # Get the outcomes of Monte Carlo simulation
         return self.get_outcomes(results=results)
@@ -2516,5 +2506,143 @@ def calculate(self):
         for i, _ in enumerate(self.parameter):
             if self.parameter[i]["id"] == 1:
                 self.hasGas = True
-                break        
+                break     
+                
+==========================================================================================
+
+        def _adjust_partial_data(
+            contract_: dict,
+            target_param: str,
+            key: str,
+            multiplier: float,
+            datakeys: list | None = None,
+        ):
+            if datakeys is None:
+                datakeys = []
+
+            for item_key, item in contract_[key].items():
+
+                # Skip GAS lifting adjustment for "Lifting" target parameter
+                if (
+                    target_param == "Lifting" and key == "lifting"
+                    and item["fluid_type"] == "Gas"
+                ):
+                    continue
+
+                # Specify target keys for lifting-related target
+                if key == "lifting":
+                    if target_param == "Oil Price" and item["fluid_type"] == "Oil":
+                        target_keys = ["price"]
+                    elif target_param == "Gas Price" and item["fluid_type"] == "Gas":
+                        target_keys = ["price"]
+                    elif target_param == "Lifting":
+                        target_keys = ["lifting_rate", "prod_rate"]
+                    else:
+                        continue
+
+                # Specify target keys for non-lifting targets
+                else:
+                    target_keys = datakeys
+
+                # Adjust target attributes by multiplication with the prescribed multipliers
+                for k in target_keys:
+                    if k in item:
+                        item[k] = (np.array(item[k]) * multiplier).tolist()
+
+        # Specify attribute `contract_` based on `contract_type`
+        contract_ = (
+            contract_adjusted if self.type < 3 else contract_adjusted[f"contract_{2}"]
+        )
+        
+        # Contract adjustments per single run simulation (i.e., per row)
+        for i, val in enumerate(self.parameter):
+
+            # Target parameter: Oil Price
+            if val["id"] == 0:
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="Oil Price",
+                    key="lifting",
+                    multiplier=multipliers[i]
+                )
+
+            # Target parameter: Gas Price
+            elif val["id"] == 1:
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="Gas Price",
+                    key="lifting",
+                    multiplier=multipliers[i],
+                )
+
+            # Target parameter: OPEX
+            elif val["id"] == 2:
+                # Adjust class OPEX
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="OPEX",
+                    key="opex",
+                    multiplier=multipliers[i],
+                    datakeys=["fixed_cost", "cost_per_volume", "cost"],
+                )
+
+                # Adjust class ASR
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="ASR",
+                    key="asr",
+                    multiplier=multipliers[i],
+                    datakeys=["cost"],
+                )
+
+                # Adjust class LBT
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="LBT",
+                    key="lbt",
+                    multiplier=multipliers[i],
+                    datakeys=["cost"],
+                )
+
+                # Adjust class CostOfSales
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="COS",
+                    key="cost_of_sales",
+                    multiplier=multipliers[i],
+                    datakeys=["cost"],
+                )
+
+            # Target parameter: CAPEX
+            elif val["id"] == 3:
+                # Adjust class CapitalCost
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="CAPEX",
+                    key="capital",
+                    multiplier=multipliers[i],
+                    datakeys=["cost"],
+                )
+
+                # Adjust class Intangible
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="CAPEX",
+                    key="intangible",
+                    multiplier=multipliers[i],
+                    datakeys=["cost"],
+                )
+
+            # Target parameter: Lifting
+            elif val["id"] == 4:
+                _adjust_partial_data(
+                    contract_=contract_,
+                    target_param="Lifting",
+                    key="lifting",
+                    multiplier=multipliers[i],
+                )
+
+        return contract_
+        
+==========================================================================================
 """
