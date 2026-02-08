@@ -2031,16 +2031,19 @@ def get_uncertainty(data: dict, contract_type: str):
     - Raises `ContractException` if `uncertainty_arguments` are missing or invalid.
     """
 
-    # Filter unwanted inputs
-    if "uncertainty_arguments" not in data:
-        raise ContractException(
-            "The payload does not have the uncertainty_arguments key"
-        )
+    # # Filter unwanted inputs
+    # if "uncertainty_arguments" not in data:
+    #     raise ContractException(
+    #         "The payload does not have the uncertainty_arguments key"
+    #     )
+    #
+    # if data["uncertainty_arguments"] is None:
+    #     raise ContractException(
+    #         "The payload uncertainty_arguments does not have any values"
+    #     )
 
-    if data["uncertainty_arguments"] is None:
-        raise ContractException(
-            "The payload uncertainty_arguments does not have any values"
-        )
+    # Prepare input "uncertainty_arguments"
+    ua = _extract_from_dict(target_key="uncertainty_arguments", source=data)
 
     # Retrieving the contract, contract_arguments_dict,
     # summary_arguments_dict based on the contract type
@@ -2066,12 +2069,14 @@ def get_uncertainty(data: dict, contract_type: str):
 
     # Helper function
     def _convert_distribution_enum_to_str(target: str):
-        return convert_to_uncertainty_distribution(
-            target=data["uncertainty_arguments"][target]
-        )
+        return convert_to_uncertainty_distribution(target=ua[target])
+
+        # return convert_to_uncertainty_distribution(
+        #     target=data["uncertainty_arguments"][target]
+        # )
 
     # Abbreviations
-    ua = data["uncertainty_arguments"]
+    # ua = data["uncertainty_arguments"]
     to_str = _convert_distribution_enum_to_str
 
     # Constructing the sensitivity arguments

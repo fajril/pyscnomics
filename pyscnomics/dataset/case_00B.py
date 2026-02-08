@@ -789,8 +789,8 @@ class Case00B:
             "oil_price_distribution": "Normal",
             "gas_price_distribution": "Normal",
             "opex_distribution": "Uniform",
-            "capex_distribution": "Triangular",
-            "lifting_distribution": "LogNormal",
+            "capex_distribution": "LogNormal",
+            "lifting_distribution": "Triangular",
         }
 
     def get_optimization_arguments(self) -> None:
@@ -942,6 +942,9 @@ class Case00B:
             ("asr", asr),
             ("lbt", lbt),
             ("cost_of_sales", cos),
+            ("sensitivity_arguments", self.sensitivity_arguments),
+            ("uncertainty_arguments", self.uncertainty_arguments),
+            ("optimization_arguments", self.optimization_arguments),
         ]
 
         return {key: val for key, val in mapping_converted_data}

@@ -13,6 +13,11 @@ from pyscnomics.econ.selection import (
     VariableSplit132024,
     UncertaintyDistribution,
 )
+from pyscnomics.validation.helper_validation import (
+    convert_to_json,
+    convert_to_dict,
+    execute_contract,
+)
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
@@ -57,42 +62,49 @@ from pyscnomics.io.getattr import get_contract_attributes
 
 if __name__ == "__main__":
 
-    case = Case00B(contract_type=ContractType.COST_RECOVERY)
-    contract = case.as_class()
-    contract_arguments = case.contract_arguments
-    summary_arguments = case.summary_arguments
+    # case = Case00B(contract_type=ContractType.COST_RECOVERY)
+    # contract = case.as_class()
+    # contract_arguments = case.contract_arguments
+    # summary_arguments = case.summary_arguments
+    #
+    # kwargs_uncertainty = {
+    #     "contract": contract,
+    #     "contract_arguments": contract_arguments,
+    #     "summary_arguments": summary_arguments,
+    #     "run_number": 1_000,
+    #     "oil_price_stddev": 1,
+    #     "gas_price_stddev": 1,
+    #     "opex_stddev": 1,
+    #     "capex_stddev": 1,
+    #     "lifting_stddev": 1,
+    #     "oil_price_distribution": UncertaintyDistribution.NORMAL,
+    #     "gas_price_distribution": UncertaintyDistribution.NORMAL,
+    #     "opex_distribution": UncertaintyDistribution.LOGNORMAL,
+    #     "capex_distribution": UncertaintyDistribution.TRIANGULAR,
+    #     "lifting_distribution": UncertaintyDistribution.UNIFORM,
+    # }
 
-    kwargs_uncertainty = {
-        "contract": contract,
-        "contract_arguments": contract_arguments,
-        "summary_arguments": summary_arguments,
-        "run_number": 1_000,
-        "oil_price_stddev": 1,
-        "gas_price_stddev": 1,
-        "opex_stddev": 1,
-        "capex_stddev": 1,
-        "lifting_stddev": 1,
-        "oil_price_distribution": UncertaintyDistribution.NORMAL,
-        "gas_price_distribution": UncertaintyDistribution.NORMAL,
-        "opex_distribution": UncertaintyDistribution.LOGNORMAL,
-        "capex_distribution": UncertaintyDistribution.TRIANGULAR,
-        "lifting_distribution": UncertaintyDistribution.UNIFORM,
+    # Specify arguments to run function "execute_contract()"
+    kwargs_execute = {
+        "case": Case00B,
+        "contract_type": ContractType.COST_RECOVERY,
     }
 
-    timer_start = tm.time()
-    t1 = uncertainty_psc(**kwargs_uncertainty)
-    timer_end = tm.time()
+    # Run the contract using function "execute_contract()"
+    ctr = execute_contract(**kwargs_execute)
 
-    print('\t')
-    print('calculation_time = ', timer_end - timer_start)
+    # Configure results
+    data: dict = ctr["data"]
+    contract: CostRecovery | GrossSplit | BaseProject = ctr["contract"]
+    contract_arguments: dict = ctr["contract_arguments"]
+    summary_arguments: dict = ctr["summary_arguments"]
+    summary: dict = ctr["summary"]
 
+    t1 = get_uncertainty(data=data, contract_type=kwargs_execute["contract_type"].value)
     print('\t')
     print(f'Filetype: {type(t1)}')
     print(f'Length: {len(t1)}')
     print('t1 = \n', t1)
-
-    # data = case.as_dict()
-    # get_summary_dict(data=data)
 
     # t1 = get_uncertainty(data=data, contract_type=ctr_type.value)
     # print('\t')
