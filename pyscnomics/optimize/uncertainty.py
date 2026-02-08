@@ -1119,30 +1119,21 @@ class ProcessMonte:
         self.numSim = numSim
         self.baseContract = contract
         self.parameter = params
-        self.hasOil = any([p["id"] == 0 for p in self.parameter])
-        self.hasGas = any([p["id"] == 1 for p in self.parameter])
 
-        mults = np.array([1, 0.75, 0.5, 0.25, 0.125])
-        self.multipliers = np.repeat(mults[:, np.newaxis], len(self.parameter), axis=1)
+        # Prepare multipliers
+        self.multipliers = np.ones(
+            [self.numSim, len(self.parameter)], dtype=np.float64
+        )
 
-        # # Prepare multipliers
-        # self.multipliers = np.ones(
-        #     [self.numSim, len(self.parameter)], dtype=np.float64
-        # )
-        #
-        # for i, param in enumerate(self.parameter):
-        #     self.multipliers[:, i] = get_multipliers_montecarlo(
-        #         run_number=self.numSim,
-        #         distribution=param["dist"].value,
-        #         min_value=param["min"],
-        #         mean_value=param["base"],
-        #         max_value=param["max"],
-        #         std_dev=param["stddev"],
-        #     )
-
-        print('\t')
-        print(f'Filetype: {type(self.multipliers)}, Shape: {self.multipliers.shape}')
-        print('multipliers = \n', self.multipliers)
+        for i, param in enumerate(self.parameter):
+            self.multipliers[:, i] = get_multipliers_montecarlo(
+                run_number=self.numSim,
+                distribution=param["dist"].value,
+                min_value=param["min"],
+                mean_value=param["base"],
+                max_value=param["max"],
+                std_dev=param["stddev"],
+            )
 
     def Adjust_Data(self, multipliers: np.ndarray) -> dict:
         """
@@ -1538,8 +1529,9 @@ class ProcessMonte:
 
         row_number = self.numSim
 
-        # Specify the number of active CPU
-        n_processes = max(1, int(os.cpu_count() / 2))
+        # Specify the number of active CPU for parallel computation
+        n_processes = max(1, int(os.cpu_count() - 2))
+        # n_processes = max(1, int(os.cpu_count() / 2))
 
         # Designate a container to store Monte Carlo simulation results
         results: np.ndarray = np.zeros(
@@ -1571,6 +1563,7 @@ class ProcessMonte:
             ]
 
             return rnum, output, multipliers
+
 
         # Instantiate pathos pool
         pl = Pool(nodes=n_processes)
@@ -1693,43 +1686,6 @@ def uncertainty_psc(
         if min_max_mean_std[element] is None:
             min_max_mean_std[element] = min_max_mean_original[element]
 
-    # Specify default values for multipliers,
-    # (in the form of "min_multipliers" and "max_multipliers")
-    # min_factor, max_factor = (0.8, 1.2)
-
-    # Check for equal values of min, mean, and max, then specify adjustments.
-    # =========================================================================
-    # Extract keywords: "oil_price", "gas_price", "opex", "capex", and "lifting"
-    # from variable "min_max_mean_std".
-    # bases = [key[4:] for key in min_max_mean_std if key.startswith("min_")]
-
-    # for base in bases:
-    #     min_key, mean_key, max_key = f"min_{base}", f"mean_{base}", f"max_{base}"
-    #
-    #     # Exit loop if at least one of ["min_key", "mean_key", "max_key"] is not
-    #     # available in variable "min_max_mean_std".
-    #     if not all([k in min_max_mean_std for k in [min_key, mean_key, max_key]]):
-    #         continue
-    #
-    #     # Extract statistics (min, mean, max) from variable "min_max_mean_std"
-    #     min_val, mean_val, max_val = (
-    #         min_max_mean_std[min_key],
-    #         min_max_mean_std[mean_key],
-    #         min_max_mean_std[max_key],
-    #     )
-    #
-    #     # Carry out adjustment if min_val == mean_val == max_val.
-    #     # Adjustment is invoked on "min" and "max" values of a particular keyword
-    #     # in variable "min_max_mean_std" by applying default multipliers.
-    #     if min_val == mean_val == max_val:
-    #         min_max_mean_std[min_key] = min_factor * min_val
-    #         min_max_mean_std[max_key] = max_factor * max_val
-
-    # print('\t')
-    # print(f'Filetype: {type(min_max_mean_std)}')
-    # print(f'Length: {len(min_max_mean_std)}')
-    # print('min_max_mean_std = \n', min_max_mean_std)
-
     # Create a list of input arguments' configuration for each uncertainty parameters.
     # --- Uncertainty parameter:
     # --- (1) OIL PRICE, (2) GAS PRICE, (3) OPEX, (4) CAPEX, (5) Lifting
@@ -1805,33 +1761,19 @@ def uncertainty_psc(
 
     monte = ProcessMonte(**kwargs_monte)
 
-    # mults = np.array([1, 0.75, 0.5, 0.25, 0.125])
-    # multipliers = np.repeat(mults[:, np.newaxis], len(parameter), axis=1)
-    #
-    # print('\t')
-    # print(f'Filetype: {type(multipliers)}')
-    # print(f'Shape: {multipliers.shape}')
-    # print('multipliers = \n', multipliers)
+    # Use multiprocessing if run_number is large (i.e. larger than 400)
+    try:
+        if run_number <= 400:
+            return monte.calculate_single_core()
+        else:
+            return monte.calculate_multi_cores()
 
-    t1 = monte.calculate_multi_cores()
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1)
+    # Should error occurs, return back to serial processing
+    except Exception as e:
+        print(f"[Warning] Parallel mode failed: {e}")
+        # print(traceback.format_exc(limit=2))
 
-    # # Use multiprocessing if run_number is large (i.e. larger than 400)
-    # try:
-    #     if run_number <= 400:
-    #         return monte.calculate_single_core()
-    #     else:
-    #         return monte.calculate_multi_cores()
-    #
-    # # Should error occurs, return back to serial processing
-    # except Exception as e:
-    #     print(f"[Warning] Parallel mode failed: {e}")
-    #     # print(traceback.format_exc(limit=2))
-    #
-    #     return monte.calculate_single_core()
+        return monte.calculate_single_core()
 
 
 """
@@ -2623,4 +2565,65 @@ def calculate(self):
         }
         
 ==========================================================================================
+
+# Specify default values for multipliers,
+    # (in the form of "min_multipliers" and "max_multipliers")
+    min_factor, max_factor = (0.8, 1.2)
+
+    # Check for equal values of min, mean, and max, then specify adjustments.
+    # =========================================================================
+    # Extract keywords: "oil_price", "gas_price", "opex", "capex", and "lifting"
+    # from variable "min_max_mean_std".
+    bases = [key[4:] for key in min_max_mean_std if key.startswith("min_")]
+
+    for base in bases:
+        min_key, mean_key, max_key = f"min_{base}", f"mean_{base}", f"max_{base}"
+
+        # Exit loop if at least one of ["min_key", "mean_key", "max_key"] is not
+        # available in variable "min_max_mean_std".
+        if not all([k in min_max_mean_std for k in [min_key, mean_key, max_key]]):
+            continue
+
+        # Extract statistics (min, mean, max) from variable "min_max_mean_std"
+        min_val, mean_val, max_val = (
+            min_max_mean_std[min_key],
+            min_max_mean_std[mean_key],
+            min_max_mean_std[max_key],
+        )
+
+        # Carry out adjustment if min_val == mean_val == max_val.
+        # Adjustment is invoked on "min" and "max" values of a particular keyword
+        # in variable "min_max_mean_std" by applying default multipliers.
+        if min_val == mean_val == max_val:
+            min_max_mean_std[min_key] = min_factor * min_val
+            min_max_mean_std[max_key] = max_factor * max_val
+            
+==========================================================================================
+
+    def __init__(self, contract_type, contract, numSim, params):
+
+        self.type = contract_type
+        self.numSim = numSim
+        self.baseContract = contract
+        self.parameter = params
+        self.hasOil = any([p["id"] == 0 for p in self.parameter])
+        self.hasGas = any([p["id"] == 1 for p in self.parameter])
+
+        mults = np.array([1, 0.75, 0.5, 0.25, 0.125])
+        self.multipliers = np.repeat(mults[:, np.newaxis], len(self.parameter), axis=1)
+
+        # Prepare multipliers
+        self.multipliers = np.ones(
+            [self.numSim, len(self.parameter)], dtype=np.float64
+        )
+
+        for i, param in enumerate(self.parameter):
+            self.multipliers[:, i] = get_multipliers_montecarlo(
+                run_number=self.numSim,
+                distribution=param["dist"].value,
+                min_value=param["min"],
+                mean_value=param["base"],
+                max_value=param["max"],
+                std_dev=param["stddev"],
+            )
 """

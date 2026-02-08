@@ -2,6 +2,7 @@
 Procedures to carry out uncertainty analysis
 """
 
+import time as tm
 import pandas as pd
 from pyscnomics.econ.selection import (
     OptimizationParameter,
@@ -65,7 +66,7 @@ if __name__ == "__main__":
         "contract": contract,
         "contract_arguments": contract_arguments,
         "summary_arguments": summary_arguments,
-        "run_number": 5,
+        "run_number": 1_000,
         "oil_price_stddev": 1,
         "gas_price_stddev": 1,
         "opex_stddev": 1,
@@ -78,7 +79,17 @@ if __name__ == "__main__":
         "lifting_distribution": UncertaintyDistribution.UNIFORM,
     }
 
-    uncertainty_psc(**kwargs_uncertainty)
+    timer_start = tm.time()
+    t1 = uncertainty_psc(**kwargs_uncertainty)
+    timer_end = tm.time()
+
+    print('\t')
+    print('calculation_time = ', timer_end - timer_start)
+
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
 
     # data = case.as_dict()
     # get_summary_dict(data=data)
