@@ -2031,16 +2031,140 @@ def get_uncertainty(data: dict, contract_type: str):
     - Raises `ContractException` if `uncertainty_arguments` are missing or invalid.
     """
 
-    # # Filter unwanted inputs
-    # if "uncertainty_arguments" not in data:
-    #     raise ContractException(
-    #         "The payload does not have the uncertainty_arguments key"
-    #     )
-    #
-    # if data["uncertainty_arguments"] is None:
-    #     raise ContractException(
-    #         "The payload uncertainty_arguments does not have any values"
-    #     )
+    # Prepare input "uncertainty_arguments"
+    ua = _extract_from_dict(target_key="uncertainty_arguments", source=data)
+
+    # Retrieving the contract, contract_arguments_dict,
+    # summary_arguments_dict based on the contract type
+    if contract_type == "Cost Recovery":
+        contract = get_costrecovery(data=data)[1]
+        contract_arguments = get_costrecovery(data=data)[2]
+        summary_argument = get_costrecovery(data=data)[3]
+
+    elif contract_type == "Gross Split":
+        contract = get_grosssplit(data=data)[1]
+        contract_arguments = get_grosssplit(data=data)[2]
+        summary_argument = get_grosssplit(data=data)[3]
+
+    elif contract_type == "Transition":
+        contract = get_transition(data=data)[1]
+        contract_arguments = get_transition(data=data)[2]
+        summary_argument = get_transition(data=data)[3]
+
+    else:
+        contract = get_baseproject(data=data)[1]
+        contract_arguments = get_baseproject(data=data)[2]
+        summary_argument = get_baseproject(data=data)[3]
+
+    # Helper function
+    def _convert_distribution_enum_to_str(target: str):
+        return convert_to_uncertainty_distribution(target=ua[target])
+
+    # Abbreviations
+    to_str = _convert_distribution_enum_to_str
+
+    # Constructing the sensitivity arguments
+    uncertainty_kwargs = {
+        # Base parameters
+        "contract": contract,
+        "contract_arguments": contract_arguments,
+        "summary_arguments": summary_argument,
+        "run_number": ua["run_number"],
+
+        # Statistics parameters for OIL PRICE
+        "min_oil_price": ua["min_oil_price"],
+        "mean_oil_price": ua["mean_oil_price"],
+        "max_oil_price": ua["max_oil_price"],
+
+        # Statistics parameters for GAS PRICE
+        "min_gas_price": ua["min_gas_price"],
+        "mean_gas_price": ua["mean_gas_price"],
+        "max_gas_price": ua["max_gas_price"],
+
+        # Statistics parameters for OPEX
+        "min_opex": ua["min_opex"],
+        "mean_opex": ua["mean_opex"],
+        "max_opex": ua["max_opex"],
+
+        # Statistics parameters for CAPEX
+        "min_capex": ua["min_capex"],
+        "mean_capex": ua["mean_capex"],
+        "max_capex": ua["max_capex"],
+
+        # Statistics parameters for Lifting
+        "min_lifting": ua["min_lifting"],
+        "mean_lifting": ua["mean_lifting"],
+        "max_lifting": ua["max_lifting"],
+
+        # Standard deviations
+        "oil_price_stddev": ua["oil_price_stddev"],
+        "gas_price_stddev": ua["gas_price_stddev"],
+        "opex_stddev": ua["opex_stddev"],
+        "capex_stddev": ua["capex_stddev"],
+        "lifting_stddev": ua["lifting_stddev"],
+
+        # Distribution
+        "oil_price_distribution": to_str("oil_price_distribution"),
+        "gas_price_distribution": to_str("gas_price_distribution"),
+        "opex_distribution": to_str("opex_distribution"),
+        "capex_distribution": to_str("capex_distribution"),
+        "lifting_distribution": to_str("lifting_distribution"),
+    }
+
+    return uncertainty_psc(**uncertainty_kwargs)
+
+
+"""
+FORMER APPROACH
+---------------
+
+def get_summary_object(
+    data: dict, contract: CostRecovery | GrossSplit | Transition
+) -> (dict, dict):
+    
+    # The function to get the summary dictionary object from the data and contract input.
+    # 
+    # Parameters
+    # ----------
+    # data: dict
+    #     The dictionary of the data input
+    # contract: CostRecovery | GrossSplit | Transition
+    #     The contract object.
+    # 
+    # Returns
+    # -------
+    # summary: dict
+    #     The summary of the contract ini dictionary format.
+    # 
+    # summary_arguments_dict: dict
+    #     The summary arguments used in retrieving the summary of the contract.
+
+    if contract is Transition:
+        summary_arguments_dict = get_summary_dict(data=data)
+        summary_arguments_dict["contract"] = contract
+        summary = get_summary(**summary_arguments_dict)
+
+    else:
+        summary_arguments_dict = get_summary_dict(data=data)
+        summary_arguments_dict["contract"] = contract
+        summary = get_summary(**summary_arguments_dict)
+
+    return summary, summary_arguments_dict
+
+=============================================================================================
+
+def get_uncertainty(data: dict, contract_type: str):
+    
+    # Filter unwanted inputs
+    if "uncertainty_arguments" not in data:
+        raise ContractException(
+            "The payload does not have the uncertainty_arguments key"
+        )
+
+    if data["uncertainty_arguments"] is None:
+        raise ContractException(
+            "The payload uncertainty_arguments does not have any values"
+        )
 
     # Prepare input "uncertainty_arguments"
     ua = _extract_from_dict(target_key="uncertainty_arguments", source=data)
@@ -2128,38 +2252,6 @@ def get_uncertainty(data: dict, contract_type: str):
     }
 
     return uncertainty_psc(**uncertainty_kwargs)
-
-
-# def get_summary_object(
-#     data: dict, contract: CostRecovery | GrossSplit | Transition
-# ) -> (dict, dict):
-#     """
-#     The function to get the summary dictionary object from the data and contract input.
-#
-#     Parameters
-#     ----------
-#     data: dict
-#         The dictionary of the data input
-#     contract: CostRecovery | GrossSplit | Transition
-#         The contract object.
-#
-#     Returns
-#     -------
-#     summary: dict
-#         The summary of the contract ini dictionary format.
-#
-#     summary_arguments_dict: dict
-#         The summary arguments used in retrieving the summary of the contract.
-#
-#     """
-#     if contract is Transition:
-#         summary_arguments_dict = get_summary_dict(data=data)
-#         summary_arguments_dict["contract"] = contract
-#         summary = get_summary(**summary_arguments_dict)
-#
-#     else:
-#         summary_arguments_dict = get_summary_dict(data=data)
-#         summary_arguments_dict["contract"] = contract
-#         summary = get_summary(**summary_arguments_dict)
-#
-#     return summary, summary_arguments_dict
+    
+=============================================================================================
+"""
