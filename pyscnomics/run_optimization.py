@@ -45,8 +45,8 @@ if __name__ == "__main__":
         "contract_arguments": contract_arguments,
         "summary_arguments": summary_arguments,
         "dict_optimization": optimization_arguments,
-        "target_parameter": "Aditya",
-        "target_optimization_value": 0.2,
+        "target_parameter": OptimizationTarget.IRR,
+        "target_optimization_value": 0.15,
     }
 
     optimize_psc(**kwargs_optim)

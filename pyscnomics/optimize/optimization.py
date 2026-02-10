@@ -755,61 +755,10 @@ def optimize_psc(
     summary_arguments: dict,
     target_parameter: OptimizationTarget = OptimizationTarget.IRR,
 ) -> (list, list, float, list):
-    """
-    The function to get contract variable(s) that resulting the desired target
-    or contract's economic target.
-
-    Within this function will utilize the optimize_psc_core.
-
-    Parameters
-    ----------
-    dict_optimization: dict
-        The optimization dictionary that containing the information about minimum
-        boundary and upper boundary
-        of the optimized parameters.
-    contract: CostRecovery | GrossSplit
-        The contract object.
-    contract_arguments: dict
-        The contract arguments that passed on the fly .run() of the contract dataclass.
-    target_optimization_value: float
-        The desired target value.
-    summary_argument: dict
-        The dictionary containing the arguments that passed summary function.
-    target_parameter: OptimizationTarget
-        The enum selection for economic indicator  that will be optimized.
-
-    Notes
-    -------
-    The dictionary of dict_optimization should be at least having the structure
-    as the following:
-        dict_optimization = {'parameters': list[OptimizationParameter],
-                             'min': np.ndarray,
-                             'max': np.ndarray}
-
-        'parameters' keys containing the enum list of the variable that will be
-        optimized to achieve the target.
-        'min' keys containing the minimum value of each parameter.
-        'max' keys containing the minimum value of each parameter.
-
-    Returns
-    -------
-    out : tuple
-        list_str: list
-            The list of parameter that passed and has been optimized.
-        list_params_value: list
-            The list of parameter's value that passed and has been optimized.
-        result_optimization: float
-            The value of the targeted parameter which the result of the optimization.
-        list_executed_contract: list
-            The list of executed contracts.
-    """
 
     # Get the summary of the base case
     contract.run(**contract_arguments)
     summary_base = contract.get_summary(**summary_arguments)
-
-    print('\t')
-    print('PI = ', summary_base["ctr_pi"])
 
     # Retrieve the economic indicator of the base case corresponding to the chosen indicator
     _target_key_mapping = {
@@ -819,37 +768,46 @@ def optimize_psc(
     }
 
     try:
-        target_parameter = summary_base[_target_key_mapping[target_parameter]]
+        target_value_base = summary_base[_target_key_mapping[target_parameter]]
     except KeyError:
         raise OptimizationException(f"Optimization target ({target_parameter}) is not recognized.")
 
-    print('\t')
-    print(f'Filetype: {type(target_parameter)}')
-    print('target_parameter = ', target_parameter)
+    # Defining the dictionary that could be in multi-values
+    pseudo_dict = {
+        "key": ["vat_rate"],
+        "selection": [OptimizationParameter.VAT_RATE],
+        "index_in_parameter": [],
+        "value": [],
+    }
 
-    # if target_parameter == OptimizationTarget.IRR:
-    #     target_value_base = summary_base["ctr_irr"]
-    # elif target_parameter == OptimizationTarget.NPV:
-    #     target_value_base = summary_base["ctr_npv"]
-    # elif target_parameter == OptimizationTarget.PI:
-    #     target_value_base = summary_base["ctr_pi"]
-    # else:
-    #     raise OptimizationException(
-    #         f"Optimization Target {target_parameter} is not recognized"
-    #     )
-    #
-    # # Defining the dictionary that could be in multi-values
-    # pseudo_dict = {
-    #     "key": ["vat_rate"],
-    #     "selection": [OptimizationParameter.VAT_RATE],
-    #     "index_in_parameter": [],
-    #     "value": [],
-    # }
-    #
-    # # Initiating new contract argument which will be adjusted in the following loop
-    # contract_arguments_new = contract_arguments.copy()
-    #
-    # # Checking the existence of the multi-values optimization parameter
+    # Initiating new contract argument which will be adjusted in the following loop
+    contract_arguments_new = contract_arguments.copy()
+
+    # Checking the existence of the multi-values optimization parameter
+    for key, selection in zip(pseudo_dict["key"], pseudo_dict["selection"]):
+
+        t1 = isinstance(contract_arguments[key], np.ndarray)
+        print('\t')
+        print(f'Filetype: {type(t1)}')
+        print('t1 = \n', t1)
+
+        if not (
+            key in contract_arguments
+            and isinstance(contract_arguments[key], np.ndarray)
+            and selection in dict_optimization["parameter"]
+        ):
+            continue
+
+        print('\t')
+        print('Aditya')
+
+        # Get the index of the min and max of the selection values and
+        # store it in the pseudo_dict
+        index_pseudo = dict_optimization["parameter"].index(selection)
+        pseudo_dict["index_in_parameter"].append(index_pseudo)
+
+
+
     # for key, selection in zip(pseudo_dict["key"], pseudo_dict["selection"]):
     #     if (
     #         key in contract_arguments.keys()
@@ -895,7 +853,12 @@ def optimize_psc(
     #
     #     else:
     #         pass
-    #
+
+    # print('\t')
+    # print(f'Filetype: {type(pseudo_dict)}')
+    # print(f'Length: {len(pseudo_dict)}')
+    # print('pseudo_dict = \n', pseudo_dict)
+
     # # Get the optimization of the contract
     # result = optimize_psc_core(
     #     dict_optimization=dict_optimization,

@@ -138,12 +138,20 @@ async def get_summary_cf(request: Request, data: dict = Body(...)):
     try:
         ctr = data['ctr']
         jData: dict = json.loads(base64.b64decode(data['data']).decode("utf-8"))
-        ctrTable = get_contract_table(data=jData, contract_type = 'Cost Recovery' if ctr == 1 else 'Gross Split' if ctr == 2 else 'Transition' if ctr >=3 else 'Project')
+        ctrTable = get_contract_table(
+            data=jData,
+            contract_type = (
+                'Cost Recovery' if ctr == 1
+                else 'Gross Split' if ctr == 2
+                else 'Transition' if ctr >= 3
+                else 'Base Project'
+            )
+        )
         
         sumCalc = Summaries(ctr, jData)
         return {
             "state": 1,
-            "table": ctrTable['consolidated'] if ctr < 3 else { 'contract_1': ctrTable['contract_1']['consolidated'], 'contract_2':ctrTable['contract_2']['consolidated'] }  
+            "table": ctrTable['consolidated'] if ctr < 3 else {'contract_1': ctrTable['contract_1']['consolidated'], 'contract_2':ctrTable['contract_2']['consolidated'] }
         }
     except Exception as err:
       makeHttpException(err)

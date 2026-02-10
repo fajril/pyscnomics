@@ -28,6 +28,7 @@ from pyscnomics.econ.selection import (
     InitialYearAmortizationIncurred,
     NPVSelection,
     DiscountingMode,
+    OptimizationParameter,
     # UncertaintyDistribution,
 )
 from pyscnomics.econ.revenue import Lifting
@@ -672,7 +673,10 @@ class Case00B:
             "sulfur_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
             "electricity_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
             "co2_revenue": OtherRevenue.ADDITION_TO_GAS_REVENUE,
-            "vat_rate": 0.0,
+            # "vat_rate": 0.0,
+            "vat_rate": np.array(
+                [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1], dtype=float
+            ),
             "year_inflation": None,
             "inflation_rate": 0.0,
             "inflation_rate_applied_to": None,
@@ -683,7 +687,7 @@ class Case00B:
             **kwargs_base_project,
             "is_dmo_end_weighted": False,
             "tax_regime": TaxRegime.NAILED_DOWN,
-            "effective_tax_rate": None,
+            "effective_tax_rate": 0.22,
             "ftp_tax_regime": FTPTaxRegime.PDJP_20_2017,
             "depr_method": DeprMethod.PSC_DB,
             "decline_factor": 2,
@@ -808,21 +812,29 @@ class Case00B:
         self.optimization_arguments = {
             "target_parameter": "IRR",
             "target_optimization": 0.35,
-            "dict_optimization": {
-                "parameter": [
-                    "Ministerial Discretion",
-                    "Effective Tax Rate"
-                ],
-                "min": [
-                    0.08,
-                    0.4
-                ],
-                "max": [
-                    0.1,
-                    0.44
-                ],
-            },
+            "parameter": [OptimizationParameter.VAT_RATE],
+            "min": [0.01],
+            "max": [0.3],
         }
+
+        # self.optimization_arguments = {
+        #     "target_parameter": "IRR",
+        #     "target_optimization": 0.35,
+        #     "dict_optimization": {
+        #         "parameter": [
+        #             "Ministerial Discretion",
+        #             "Effective Tax Rate"
+        #         ],
+        #         "min": [
+        #             0.08,
+        #             0.4
+        #         ],
+        #         "max": [
+        #             0.1,
+        #             0.44
+        #         ],
+        #     },
+        # }
 
     def as_class(self):
         """
