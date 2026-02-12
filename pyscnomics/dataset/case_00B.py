@@ -817,25 +817,6 @@ class Case00B:
             "max": [0.3],
         }
 
-        # self.optimization_arguments = {
-        #     "target_parameter": "IRR",
-        #     "target_optimization": 0.35,
-        #     "dict_optimization": {
-        #         "parameter": [
-        #             "Ministerial Discretion",
-        #             "Effective Tax Rate"
-        #         ],
-        #         "min": [
-        #             0.08,
-        #             0.4
-        #         ],
-        #         "max": [
-        #             0.1,
-        #             0.44
-        #         ],
-        #     },
-        # }
-
     def as_class(self):
         """
         Construct and return a contract instance based on the specified contract type.
@@ -960,3 +941,27 @@ class Case00B:
         ]
 
         return {key: val for key, val in mapping_converted_data}
+
+"""
+FORMER APPROACH
+---------------
+    def get_optimization_arguments(self) -> None:
+        self.optimization_arguments = {
+            "target_parameter": "IRR",
+            "target_optimization": 0.35,
+            "dict_optimization": {
+                "parameter": [
+                    "Ministerial Discretion",
+                    "Effective Tax Rate"
+                ],
+                "min": [
+                    0.08,
+                    0.4
+                ],
+                "max": [
+                    0.1,
+                    0.44
+                ],
+            },
+        }
+"""
