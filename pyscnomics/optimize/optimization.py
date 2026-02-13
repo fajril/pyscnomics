@@ -416,28 +416,33 @@ def adjust_cost_element(
     lbt_adjusted = contract.lbt_cost
     cos_adjusted = contract.cost_of_sales
 
+    print('\t')
+    print(f'Filetype: {type(capital_adjusted)}')
+    print(f'Length: {len(capital_adjusted)}')
+    print('capital_adjusted = \n', capital_adjusted)
+
     # Condition when the VAT of each cost element will be adjusted
     if adjustment_variable == OptimizationParameter.VAT_DISCOUNT:
         # Adjusting the Capital Cost of the contract
         capital_adjusted = tuple(
             [
                 CapitalCost(
-                    start_year=tan.start_year,
-                    end_year=tan.end_year,
-                    cost=tan.cost,
-                    expense_year=tan.expense_year,
-                    cost_allocation=tan.cost_allocation,
-                    cost_type=tan.cost_type,
-                    description=tan.description,
-                    tax_portion=tan.tax_portion,
+                    start_year=cap.start_year,
+                    end_year=cap.end_year,
+                    cost=cap.cost,
+                    expense_year=cap.expense_year,
+                    cost_allocation=cap.cost_allocation,
+                    cost_type=cap.cost_type,
+                    description=cap.description,
+                    tax_portion=cap.tax_portion,
                     tax_discount=adjustment_value,
-                    pis_year=tan.pis_year,
-                    salvage_value=tan.salvage_value,
-                    useful_life=tan.useful_life,
-                    depreciation_factor=tan.depreciation_factor,
-                    is_ic_applied=tan.is_ic_applied,
+                    pis_year=cap.pis_year,
+                    salvage_value=cap.salvage_value,
+                    useful_life=cap.useful_life,
+                    depreciation_factor=cap.depreciation_factor,
+                    is_ic_applied=cap.is_ic_applied,
                 )
-                for tan in contract.capital_cost
+                for cap in contract.capital_cost
             ]
         )
 
@@ -551,142 +556,142 @@ def adjust_cost_element(
             ]
         )
 
-    # Condition when the chosen option is not recognized
-    else:
-        raise OptimizationException(
-            f"Adjustment Variable {adjustment_variable} "
-            f"do not exist. It should be VAT or LBT in string data type"
-        )
-
-    # Onstream date treatment (OIL)
-    if np.sum(getattr(contract, f"_oil_revenue")) == 0:
-        oil_onstream_date = None
-    else:
-        oil_onstream_date = contract.oil_onstream_date
-
-    # Onstream date treatment (GAS)
-    if np.sum(getattr(contract, f"_gas_revenue")) == 0:
-        gas_onstream_date = None
-    else:
-        gas_onstream_date = contract.gas_onstream_date
-
-    # Specify base arguments
-    kwargs_base = {
-        "start_date": contract.start_date,
-        "end_date": contract.end_date,
-        "oil_onstream_date": oil_onstream_date,
-        "gas_onstream_date": gas_onstream_date,
-        "approval_year": contract.approval_year,
-        "is_pod_1": contract.is_pod_1,
-    }
-
-    # Specify arguments associated with lifting and costs
-    kwargs_lifting_costs = {
-        "lifting": contract.lifting,
-        "capital_cost": capital_adjusted,
-        "intangible_cost": intangible_adjusted,
-        "opex": opex_adjusted,
-        "asr_cost": asr_adjusted,
-        "lbt_cost": lbt_adjusted,
-        "cost_of_sales": cos_adjusted,
-    }
-
-    # When the contract is CostRecovery, parsing back the adjusted cost elements
-    # to the cost recovery contract
-    if isinstance(contract, CostRecovery):
-        kwargs_costrec = {
-            # Base parameters
-            **kwargs_base,
-
-            # Lifting and costs
-            **kwargs_lifting_costs,
-
-            # FTP
-            "oil_ftp_is_available": contract.oil_ftp_is_available,
-            "oil_ftp_is_shared": contract.oil_ftp_is_shared,
-            "oil_ftp_portion": contract.oil_ftp_portion,
-            "gas_ftp_is_available": contract.gas_ftp_is_available,
-            "gas_ftp_is_shared": contract.gas_ftp_is_shared,
-            "gas_ftp_portion": contract.gas_ftp_portion,
-
-            # Tax split
-            "tax_split_type": contract.tax_split_type,
-            "condition_dict": contract.condition_dict,
-            "indicator_rc_icp_sliding": contract.indicator_rc_icp_sliding,
-            "oil_ctr_pretax_share": contract.oil_ctr_pretax_share,
-            "gas_ctr_pretax_share": contract.gas_ctr_pretax_share,
-
-            # Investment credit
-            "oil_ic_rate": contract.oil_ic_rate,
-            "gas_ic_rate": contract.gas_ic_rate,
-            "ic_is_available": contract.ic_is_available,
-            "oil_cr_cap_rate": contract.oil_cr_cap_rate,
-            "gas_cr_cap_rate": contract.gas_cr_cap_rate,
-
-            # DMO
-            "oil_dmo_volume_portion": 0.25,
-            "oil_dmo_fee_portion": 0.25,
-            "oil_dmo_holiday_duration": 60,
-            "gas_dmo_volume_portion": 1.0,
-            "gas_dmo_fee_portion": 1.0,
-            "gas_dmo_holiday_duration": 60,
-
-            # Carry forward depreciation
-            "oil_carry_forward_depreciation": 0.0,
-            "gas_carry_forward_depreciation": 0.0,
-        }
-
-        return CostRecovery(**kwargs_costrec)
-
-    # # When the contract is GrossSplit, parsing back the adjusted cost elements
-    # # to the gross split contract
-    elif isinstance(contract, GrossSplit):
-        kwargs_gs = {
-            # Base parameters
-            **kwargs_base,
-
-            # Lifting and costs
-            **kwargs_lifting_costs,
-
-            # Field and reservoir properties
-            "field_status": contract.field_status,
-            "field_loc": contract.field_loc,
-            "res_depth": contract.res_depth,
-            "infra_avail": contract.infra_avail,
-            "res_type": contract.res_type,
-            "api_oil": contract.api_oil,
-            "domestic_use": contract.domestic_use,
-            "prod_stage": contract.prod_stage,
-            "co2_content": contract.co2_content,
-            "h2s_content": contract.h2s_content,
-            "field_reserves_2024": contract.field_reserves_2024,
-            "infra_avail_2024": contract.infra_avail_2024,
-            "field_loc_2024": contract.field_loc_2024,
-
-            # Ministry discretion
-            "split_ministry_disc": contract.split_ministry_disc,
-
-            # DMO
-            "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
-            "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
-            "oil_dmo_holiday_duration": contract.oil_dmo_holiday_duration,
-            "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
-            "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
-            "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
-
-            # Carry forward depreciation
-            "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
-            "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
-        }
-
-        return GrossSplit(**kwargs_gs)
-
-    # When the contract is not recognized, raise an exception
-    else:
-        raise OptimizationException(
-            f"Contract type {type(contract)}, is not a valid contract "
-            f"for optimization module"
-        )
+    # # Condition when the chosen option is not recognized
+    # else:
+    #     raise OptimizationException(
+    #         f"Adjustment Variable {adjustment_variable} "
+    #         f"do not exist. It should be VAT or LBT in string data type"
+    #     )
+    #
+    # # Onstream date treatment (OIL)
+    # if np.sum(getattr(contract, f"_oil_revenue")) == 0:
+    #     oil_onstream_date = None
+    # else:
+    #     oil_onstream_date = contract.oil_onstream_date
+    #
+    # # Onstream date treatment (GAS)
+    # if np.sum(getattr(contract, f"_gas_revenue")) == 0:
+    #     gas_onstream_date = None
+    # else:
+    #     gas_onstream_date = contract.gas_onstream_date
+    #
+    # # Specify base arguments
+    # kwargs_base = {
+    #     "start_date": contract.start_date,
+    #     "end_date": contract.end_date,
+    #     "oil_onstream_date": oil_onstream_date,
+    #     "gas_onstream_date": gas_onstream_date,
+    #     "approval_year": contract.approval_year,
+    #     "is_pod_1": contract.is_pod_1,
+    # }
+    #
+    # # Specify arguments associated with lifting and costs
+    # kwargs_lifting_costs = {
+    #     "lifting": contract.lifting,
+    #     "capital_cost": capital_adjusted,
+    #     "intangible_cost": intangible_adjusted,
+    #     "opex": opex_adjusted,
+    #     "asr_cost": asr_adjusted,
+    #     "lbt_cost": lbt_adjusted,
+    #     "cost_of_sales": cos_adjusted,
+    # }
+    #
+    # # When the contract is CostRecovery, parsing back the adjusted cost elements
+    # # to the cost recovery contract
+    # if isinstance(contract, CostRecovery):
+    #     kwargs_costrec = {
+    #         # Base parameters
+    #         **kwargs_base,
+    #
+    #         # Lifting and costs
+    #         **kwargs_lifting_costs,
+    #
+    #         # FTP
+    #         "oil_ftp_is_available": contract.oil_ftp_is_available,
+    #         "oil_ftp_is_shared": contract.oil_ftp_is_shared,
+    #         "oil_ftp_portion": contract.oil_ftp_portion,
+    #         "gas_ftp_is_available": contract.gas_ftp_is_available,
+    #         "gas_ftp_is_shared": contract.gas_ftp_is_shared,
+    #         "gas_ftp_portion": contract.gas_ftp_portion,
+    #
+    #         # Tax split
+    #         "tax_split_type": contract.tax_split_type,
+    #         "condition_dict": contract.condition_dict,
+    #         "indicator_rc_icp_sliding": contract.indicator_rc_icp_sliding,
+    #         "oil_ctr_pretax_share": contract.oil_ctr_pretax_share,
+    #         "gas_ctr_pretax_share": contract.gas_ctr_pretax_share,
+    #
+    #         # Investment credit
+    #         "oil_ic_rate": contract.oil_ic_rate,
+    #         "gas_ic_rate": contract.gas_ic_rate,
+    #         "ic_is_available": contract.ic_is_available,
+    #         "oil_cr_cap_rate": contract.oil_cr_cap_rate,
+    #         "gas_cr_cap_rate": contract.gas_cr_cap_rate,
+    #
+    #         # DMO
+    #         "oil_dmo_volume_portion": 0.25,
+    #         "oil_dmo_fee_portion": 0.25,
+    #         "oil_dmo_holiday_duration": 60,
+    #         "gas_dmo_volume_portion": 1.0,
+    #         "gas_dmo_fee_portion": 1.0,
+    #         "gas_dmo_holiday_duration": 60,
+    #
+    #         # Carry forward depreciation
+    #         "oil_carry_forward_depreciation": 0.0,
+    #         "gas_carry_forward_depreciation": 0.0,
+    #     }
+    #
+    #     return CostRecovery(**kwargs_costrec)
+    #
+    # # # When the contract is GrossSplit, parsing back the adjusted cost elements
+    # # # to the gross split contract
+    # elif isinstance(contract, GrossSplit):
+    #     kwargs_gs = {
+    #         # Base parameters
+    #         **kwargs_base,
+    #
+    #         # Lifting and costs
+    #         **kwargs_lifting_costs,
+    #
+    #         # Field and reservoir properties
+    #         "field_status": contract.field_status,
+    #         "field_loc": contract.field_loc,
+    #         "res_depth": contract.res_depth,
+    #         "infra_avail": contract.infra_avail,
+    #         "res_type": contract.res_type,
+    #         "api_oil": contract.api_oil,
+    #         "domestic_use": contract.domestic_use,
+    #         "prod_stage": contract.prod_stage,
+    #         "co2_content": contract.co2_content,
+    #         "h2s_content": contract.h2s_content,
+    #         "field_reserves_2024": contract.field_reserves_2024,
+    #         "infra_avail_2024": contract.infra_avail_2024,
+    #         "field_loc_2024": contract.field_loc_2024,
+    #
+    #         # Ministry discretion
+    #         "split_ministry_disc": contract.split_ministry_disc,
+    #
+    #         # DMO
+    #         "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
+    #         "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
+    #         "oil_dmo_holiday_duration": contract.oil_dmo_holiday_duration,
+    #         "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
+    #         "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
+    #         "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
+    #
+    #         # Carry forward depreciation
+    #         "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
+    #         "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
+    #     }
+    #
+    #     return GrossSplit(**kwargs_gs)
+    #
+    # # When the contract is not recognized, raise an exception
+    # else:
+    #     raise OptimizationException(
+    #         f"Contract type {type(contract)}, is not a valid contract "
+    #         f"for optimization module"
+    #     )
 
 
 def adjust_useful_life_years(
@@ -725,20 +730,27 @@ def adjust_useful_life_years(
 
     # Catch the useful life below 2 years
     below_mask = useful_life_array < 2
+
+    if np.all(below_mask):
+        raise OptimizationException(
+            f"Cannot optimize useful life for project duration < 2 years. "
+            f"Please remove 'depreciation_acceleration' as target optimization parameter."
+        )
+
     if np.any(below_mask):
         values_below = useful_life_array[below_mask]
         raise OptimizationException(
             f"Useful life contains values below 2 years: {values_below}"
         )
 
-    # Adjust "useful_life" with "acceleration_rate", ensuring at least 2 years
-    min_useful_life = 2
-    accel_rate = 1 - adjustment_value
-
-    adjusted_useful_life = np.ceil(useful_life_array * accel_rate)
-    adjusted_useful_life = np.maximum(adjusted_useful_life, min_useful_life)
-
-    return adjusted_useful_life.astype(int)
+    # # Adjust "useful_life" with "acceleration_rate", ensuring at least 2 years
+    # min_useful_life = 2
+    # accel_rate = 1 - adjustment_value
+    #
+    # adjusted_useful_life = np.ceil(useful_life_array * accel_rate)
+    # adjusted_useful_life = np.maximum(adjusted_useful_life, min_useful_life)
+    #
+    # return adjusted_useful_life.astype(int)
 
 
 def optimize_psc(

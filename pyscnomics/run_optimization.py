@@ -1,6 +1,7 @@
 """
 Procedures to carry out optimization study
 """
+import numpy as np
 
 from pyscnomics.econ.selection import (
     OptimizationParameter,
@@ -40,16 +41,31 @@ if __name__ == "__main__":
     summary_arguments = case.summary_arguments
     optimization_arguments = case.optimization_arguments
 
-    kwargs_optim = {
-        "contract": contract,
-        "contract_arguments": contract_arguments,
-        "summary_arguments": summary_arguments,
-        "dict_optimization": optimization_arguments,
-        "target_parameter": OptimizationTarget.IRR,
-        "target_optimization_value": 0.15,
+    kwargs_useful_life_years = {
+        "adjustment_value": 0.5,
+        "useful_life_array": np.array([5, 5, 5, 1, 1, 1, 1, 1, 1, 1], dtype=float),
     }
 
-    optimize_psc(**kwargs_optim)
+    adjust_useful_life_years(**kwargs_useful_life_years)
+
+    # kwargs_adjust_cost_element = {
+    #     "contract": contract,
+    #     "adjustment_value": 0.5,
+    #     "adjustment_variable": OptimizationParameter.MINISTERIAL_DISCRETION,
+    # }
+    #
+    # adjust_cost_element(**kwargs_adjust_cost_element)
+
+    # kwargs_optim = {
+    #     "contract": contract,
+    #     "contract_arguments": contract_arguments,
+    #     "summary_arguments": summary_arguments,
+    #     "dict_optimization": optimization_arguments,
+    #     "target_parameter": OptimizationTarget.IRR,
+    #     "target_optimization_value": 0.15,
+    # }
+    #
+    # optimize_psc(**kwargs_optim)
 
     # case = Case00A(contract_type=ctr_type)
     # data = case.as_dict()
@@ -67,6 +83,6 @@ if __name__ == "__main__":
     # print('\t')
     # print(f'Filetype: {type(t1)}')
     # print(f'Length: {len(t1)}')
-    # print('t1 = \n', t1
+    # print('t1 = \n', t1)
 
 
