@@ -41,20 +41,13 @@ if __name__ == "__main__":
     summary_arguments = case.summary_arguments
     optimization_arguments = case.optimization_arguments
 
-    kwargs_useful_life_years = {
+    kwargs_adjust_cost_element = {
+        "contract": contract,
         "adjustment_value": 0.5,
-        "useful_life_array": np.array([5, 5, 5, 1, 1, 1, 1, 1, 1, 1], dtype=float),
+        "adjustment_variable": OptimizationParameter.DEPRECIATION_ACCELERATION,
     }
 
-    adjust_useful_life_years(**kwargs_useful_life_years)
-
-    # kwargs_adjust_cost_element = {
-    #     "contract": contract,
-    #     "adjustment_value": 0.5,
-    #     "adjustment_variable": OptimizationParameter.MINISTERIAL_DISCRETION,
-    # }
-    #
-    # adjust_cost_element(**kwargs_adjust_cost_element)
+    adjust_cost_element(**kwargs_adjust_cost_element)
 
     # kwargs_optim = {
     #     "contract": contract,

@@ -571,7 +571,7 @@ class Case00B:
             "gas_onstream_date": None,
             "approval_year": 2026,
             "is_pod_1": False,
-            "is_strict": True,
+            "is_strict": False,
         }
 
     def get_class_arguments(self):

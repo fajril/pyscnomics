@@ -416,11 +416,6 @@ def adjust_cost_element(
     lbt_adjusted = contract.lbt_cost
     cos_adjusted = contract.cost_of_sales
 
-    print('\t')
-    print(f'Filetype: {type(capital_adjusted)}')
-    print(f'Length: {len(capital_adjusted)}')
-    print('capital_adjusted = \n', capital_adjusted)
-
     # Condition when the VAT of each cost element will be adjusted
     if adjustment_variable == OptimizationParameter.VAT_DISCOUNT:
         # Adjusting the Capital Cost of the contract
@@ -556,46 +551,64 @@ def adjust_cost_element(
             ]
         )
 
-    # # Condition when the chosen option is not recognized
-    # else:
-    #     raise OptimizationException(
-    #         f"Adjustment Variable {adjustment_variable} "
-    #         f"do not exist. It should be VAT or LBT in string data type"
-    #     )
-    #
-    # # Onstream date treatment (OIL)
-    # if np.sum(getattr(contract, f"_oil_revenue")) == 0:
-    #     oil_onstream_date = None
-    # else:
-    #     oil_onstream_date = contract.oil_onstream_date
-    #
-    # # Onstream date treatment (GAS)
-    # if np.sum(getattr(contract, f"_gas_revenue")) == 0:
-    #     gas_onstream_date = None
-    # else:
-    #     gas_onstream_date = contract.gas_onstream_date
-    #
-    # # Specify base arguments
-    # kwargs_base = {
-    #     "start_date": contract.start_date,
-    #     "end_date": contract.end_date,
-    #     "oil_onstream_date": oil_onstream_date,
-    #     "gas_onstream_date": gas_onstream_date,
-    #     "approval_year": contract.approval_year,
-    #     "is_pod_1": contract.is_pod_1,
-    # }
-    #
-    # # Specify arguments associated with lifting and costs
-    # kwargs_lifting_costs = {
-    #     "lifting": contract.lifting,
-    #     "capital_cost": capital_adjusted,
-    #     "intangible_cost": intangible_adjusted,
-    #     "opex": opex_adjusted,
-    #     "asr_cost": asr_adjusted,
-    #     "lbt_cost": lbt_adjusted,
-    #     "cost_of_sales": cos_adjusted,
-    # }
-    #
+    # Condition when the chosen option is not recognized
+    else:
+        raise OptimizationException(
+            f"Adjustment Variable {adjustment_variable} "
+            f"do not exist. It should be VAT or LBT in string data type"
+        )
+
+    # Onstream date treatment for OIL and/or GAS
+    def _resolve_onstream_date(contract, revenue_attr: str, onstream_attr: str):
+        revenue = getattr(contract, revenue_attr)
+        return (
+            None
+            if np.allclose(revenue, 0)
+            else getattr(contract, onstream_attr)
+        )
+
+    oil_onstream_date = _resolve_onstream_date(
+        contract=contract, revenue_attr="_oil_revenue", onstream_attr="oil_onstream_date"
+    )
+
+    gas_onstream_date = _resolve_onstream_date(
+        contract=contract, revenue_attr="_gas_revenue", onstream_attr="gas_onstream_date"
+    )
+
+    # Specify base arguments
+    kwargs_base = {
+        "start_date": contract.start_date,
+        "end_date": contract.end_date,
+        "oil_onstream_date": oil_onstream_date,
+        "gas_onstream_date": gas_onstream_date,
+        "approval_year": contract.approval_year,
+        "is_pod_1": contract.is_pod_1,
+        "is_strict": contract.is_strict,
+    }
+
+    print('\t')
+    print(f'Filetype: {type(kwargs_base)}')
+    print(f'Length: {len(kwargs_base)}')
+    print(f'Keys: {kwargs_base.keys()}')
+    print('kwargs_base = \n', kwargs_base)
+
+    # Specify arguments associated with lifting and costs
+    kwargs_lifting_costs = {
+        "lifting": contract.lifting,
+        "capital_cost": capital_adjusted,
+        "intangible_cost": intangible_adjusted,
+        "opex": opex_adjusted,
+        "asr_cost": asr_adjusted,
+        "lbt_cost": lbt_adjusted,
+        "cost_of_sales": cos_adjusted,
+    }
+
+    print('\t')
+    print(f'Filetype: {type(kwargs_lifting_costs)}')
+    print(f'Length: {len(kwargs_lifting_costs)}')
+    print(f'Keys: {kwargs_lifting_costs.keys()}')
+    print('kwargs_lifting_costs = \n', kwargs_lifting_costs)
+
     # # When the contract is CostRecovery, parsing back the adjusted cost elements
     # # to the cost recovery contract
     # if isinstance(contract, CostRecovery):
@@ -699,27 +712,30 @@ def adjust_useful_life_years(
     useful_life_array: np.ndarray
 ) -> np.ndarray:
     """
-    Adjust useful life values using a depreciation factor, enforcing a minimum of 2 years.
+    Adjust useful life using a depreciation acceleration factor.
 
-    The function scales each value by ``(1 - adjustment_value)``, rounds up to the nearest
-    year, and ensures no result falls below 2 years.
+    Each useful life value is scaled by (1 - adjustment_value) → rounded up
+    to the nearest year → enforced to be ≥ 2 years.
 
     Parameters
     ----------
     adjustment_value : float
-        Depreciation factor in [0, 1).
+        Depreciation acceleration factor ∈ [0, 1].
     useful_life_array : np.ndarray
-        Array of original useful life values (years).
+        Original useful life values (years).
 
     Returns
     -------
     np.ndarray
-        Adjusted useful life values (years), rounded up and floored at 2 years.
+        Adjusted useful life (int years), ceil-rounded and floored at 2.
 
     Raises
     ------
     OptimizationException
-        If `adjustment_value` is outside [0, 1) or any element in `useful_life_array` < 2.
+        - adjustment_value outside [0, 1]
+        - any useful life < 2 years
+
+    TL;DR: Scale useful life by (1 − factor), ceil it, and never allow < 2 years.
     """
 
     # Check for unsuitable "adjustment_value" input
@@ -728,7 +744,7 @@ def adjust_useful_life_years(
             f"Adjustment value {adjustment_value} is out of valid range [0, 1]"
         )
 
-    # Catch the useful life below 2 years
+    # Does not allow optimization if useful life is below 2 years
     below_mask = useful_life_array < 2
 
     if np.all(below_mask):
@@ -743,14 +759,14 @@ def adjust_useful_life_years(
             f"Useful life contains values below 2 years: {values_below}"
         )
 
-    # # Adjust "useful_life" with "acceleration_rate", ensuring at least 2 years
-    # min_useful_life = 2
-    # accel_rate = 1 - adjustment_value
-    #
-    # adjusted_useful_life = np.ceil(useful_life_array * accel_rate)
-    # adjusted_useful_life = np.maximum(adjusted_useful_life, min_useful_life)
-    #
-    # return adjusted_useful_life.astype(int)
+    # Adjust "useful_life" with "acceleration_rate", ensuring at least 2 years
+    min_useful_life = 2
+    accel_rate = 1 - adjustment_value
+
+    adjusted_useful_life = np.ceil(useful_life_array * accel_rate)
+    adjusted_useful_life = np.maximum(adjusted_useful_life, min_useful_life)
+
+    return adjusted_useful_life.astype(int)
 
 
 def optimize_psc(
