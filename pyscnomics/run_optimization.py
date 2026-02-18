@@ -41,13 +41,16 @@ if __name__ == "__main__":
     summary_arguments = case.summary_arguments
     optimization_arguments = case.optimization_arguments
 
-    kwargs_adjust_cost_element = {
+    kwargs_adjust_contract = {
         "contract": contract,
-        "adjustment_value": 0.5,
-        "adjustment_variable": OptimizationParameter.DEPRECIATION_ACCELERATION,
+        "contract_arguments": contract_arguments,
+        "summary_argument": summary_arguments,
+        "variable": OptimizationParameter.VAT_RATE,
+        "value": 0.5,
+        "target_parameter": "ctr_irr",
     }
 
-    adjust_cost_element(**kwargs_adjust_cost_element)
+    adjust_contract(**kwargs_adjust_contract)
 
     # kwargs_optim = {
     #     "contract": contract,

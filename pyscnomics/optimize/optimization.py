@@ -117,31 +117,41 @@ def adjust_contract(
         if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
             contract_arguments["effective_tax_rate"] = value
 
-    # The condition when contract is Gross Split
-    elif isinstance(contract, GrossSplit):
-        # Changing the attributes of the contract based on the chosen variable
-        if variable is OptimizationParameter.MINISTERIAL_DISCRETION:
-            contract.split_ministry_disc = value
+        print('\t')
+        print(f'Filetype: {type(contract)}')
+        print(f'Length: {len(contract)}')
+        print('contract = \n', contract)
 
-        if variable is OptimizationParameter.OIL_DMO_FEE:
-            contract.oil_dmo_fee_portion = value
+        print('\t')
+        print(f'Filetype: {type(contract_arguments)}')
+        print(f'Length: {len(contract_arguments)}')
+        print('contract_arguments = \n', contract_arguments)
 
-        if variable is OptimizationParameter.GAS_DMO_FEE:
-            contract.gas_dmo_fee_portion = value
-
-        if variable is OptimizationParameter.VAT_RATE:
-            contract_arguments["vat_rate"] = value
-
-        if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
-            contract_arguments["effective_tax_rate"] = value
-
-    # Running the contract
-    contract.run(**contract_arguments)
-
-    # Get the summary of the new contract and get its value of the targeted optimization
-    result_psc = contract.get_summary(**summary_argument)[target_parameter]
-
-    return result_psc, contract
+    # # The condition when contract is Gross Split
+    # elif isinstance(contract, GrossSplit):
+    #     # Changing the attributes of the contract based on the chosen variable
+    #     if variable is OptimizationParameter.MINISTERIAL_DISCRETION:
+    #         contract.split_ministry_disc = value
+    #
+    #     if variable is OptimizationParameter.OIL_DMO_FEE:
+    #         contract.oil_dmo_fee_portion = value
+    #
+    #     if variable is OptimizationParameter.GAS_DMO_FEE:
+    #         contract.gas_dmo_fee_portion = value
+    #
+    #     if variable is OptimizationParameter.VAT_RATE:
+    #         contract_arguments["vat_rate"] = value
+    #
+    #     if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
+    #         contract_arguments["effective_tax_rate"] = value
+    #
+    # # Running the contract
+    # contract.run(**contract_arguments)
+    #
+    # # Get the summary of the new contract and get its value of the targeted optimization
+    # result_psc = contract.get_summary(**summary_argument)[target_parameter]
+    #
+    # return result_psc, contract
 
 
 def optimize_psc_core(
@@ -365,42 +375,38 @@ def adjust_cost_element(
     adjustment_variable: OptimizationParameter = OptimizationParameter.VAT_DISCOUNT,
 ) -> CostRecovery | GrossSplit:
     """
-    Adjust specific cost elements of a PSC contract using a given adjustment factor.
+    Adjust selected cost elements of a PSC contract.
 
-    Depending on the chosen `adjustment_variable`, this function modifies either
-    the VAT discount, LBT discount, or the useful life of capital costs in the
-    provided contract. The adjusted contract is then reconstructed and returned.
+    Applies an optimization factor to a chosen cost component and returns
+    a reconstructed contract with updated costs.
+
+    Supported adjustments:
+    - VAT_DISCOUNT → scales VAT discount across cost elements
+    - LBT_DISCOUNT → scales LBT discount
+    - DEPRECIATION_ACCELERATION → shortens capital useful life
 
     Parameters
     ----------
     contract : CostRecovery | GrossSplit
-        Contract instance to be adjusted.
+        PSC contract to modify.
     adjustment_value : float, default=1.0
-        Adjustment factor applied to the selected cost element. Must be within [0, 1].
-    adjustment_variable : OptimizationParameter, default=OptimizationParameter.VAT_DISCOUNT
-        Target parameter to adjust. Supported options:
-        - ``OptimizationParameter.VAT_DISCOUNT``
-        - ``OptimizationParameter.LBT_DISCOUNT``
-        - ``OptimizationParameter.DEPRECIATION_ACCELERATION``
+        Adjustment factor ∈ [0, 1].
+    adjustment_variable : OptimizationParameter
+        Target cost component to adjust.
 
     Returns
     -------
     CostRecovery | GrossSplit
-        A new contract instance with the adjusted cost element.
+        New contract instance with adjusted cost elements.
 
     Raises
     ------
     OptimizationException
-        If `adjustment_value` is outside [0, 1],
-        if `adjustment_variable` is not recognized,
-        or if `contract` is not a valid PSC contract type.
+        - invalid adjustment_value
+        - unsupported adjustment_variable
+        - unsupported contract type
 
-    Notes
-    -----
-    - VAT and LBT discounts are directly multiplied by the `adjustment_value`.
-    - Depreciation adjustment modifies the useful life using
-      :func:`adjust_useful_life_years`.
-    - Minimum adjusted useful life is 2 years.
+    TL;DR: Modify one cost component (VAT, LBT, or depreciation) and rebuild the contract.
     """
 
     # Check for unsuitable "adjustment_value" parameter
@@ -586,12 +592,6 @@ def adjust_cost_element(
         "is_strict": contract.is_strict,
     }
 
-    print('\t')
-    print(f'Filetype: {type(kwargs_base)}')
-    print(f'Length: {len(kwargs_base)}')
-    print(f'Keys: {kwargs_base.keys()}')
-    print('kwargs_base = \n', kwargs_base)
-
     # Specify arguments associated with lifting and costs
     kwargs_lifting_costs = {
         "lifting": contract.lifting,
@@ -603,108 +603,102 @@ def adjust_cost_element(
         "cost_of_sales": cos_adjusted,
     }
 
-    print('\t')
-    print(f'Filetype: {type(kwargs_lifting_costs)}')
-    print(f'Length: {len(kwargs_lifting_costs)}')
-    print(f'Keys: {kwargs_lifting_costs.keys()}')
-    print('kwargs_lifting_costs = \n', kwargs_lifting_costs)
+    # When the contract is CostRecovery, parsing back the adjusted cost elements
+    # to the cost recovery contract
+    if isinstance(contract, CostRecovery):
+        kwargs_costrec = {
+            # Base parameters
+            **kwargs_base,
 
-    # # When the contract is CostRecovery, parsing back the adjusted cost elements
-    # # to the cost recovery contract
-    # if isinstance(contract, CostRecovery):
-    #     kwargs_costrec = {
-    #         # Base parameters
-    #         **kwargs_base,
-    #
-    #         # Lifting and costs
-    #         **kwargs_lifting_costs,
-    #
-    #         # FTP
-    #         "oil_ftp_is_available": contract.oil_ftp_is_available,
-    #         "oil_ftp_is_shared": contract.oil_ftp_is_shared,
-    #         "oil_ftp_portion": contract.oil_ftp_portion,
-    #         "gas_ftp_is_available": contract.gas_ftp_is_available,
-    #         "gas_ftp_is_shared": contract.gas_ftp_is_shared,
-    #         "gas_ftp_portion": contract.gas_ftp_portion,
-    #
-    #         # Tax split
-    #         "tax_split_type": contract.tax_split_type,
-    #         "condition_dict": contract.condition_dict,
-    #         "indicator_rc_icp_sliding": contract.indicator_rc_icp_sliding,
-    #         "oil_ctr_pretax_share": contract.oil_ctr_pretax_share,
-    #         "gas_ctr_pretax_share": contract.gas_ctr_pretax_share,
-    #
-    #         # Investment credit
-    #         "oil_ic_rate": contract.oil_ic_rate,
-    #         "gas_ic_rate": contract.gas_ic_rate,
-    #         "ic_is_available": contract.ic_is_available,
-    #         "oil_cr_cap_rate": contract.oil_cr_cap_rate,
-    #         "gas_cr_cap_rate": contract.gas_cr_cap_rate,
-    #
-    #         # DMO
-    #         "oil_dmo_volume_portion": 0.25,
-    #         "oil_dmo_fee_portion": 0.25,
-    #         "oil_dmo_holiday_duration": 60,
-    #         "gas_dmo_volume_portion": 1.0,
-    #         "gas_dmo_fee_portion": 1.0,
-    #         "gas_dmo_holiday_duration": 60,
-    #
-    #         # Carry forward depreciation
-    #         "oil_carry_forward_depreciation": 0.0,
-    #         "gas_carry_forward_depreciation": 0.0,
-    #     }
-    #
-    #     return CostRecovery(**kwargs_costrec)
-    #
-    # # # When the contract is GrossSplit, parsing back the adjusted cost elements
-    # # # to the gross split contract
-    # elif isinstance(contract, GrossSplit):
-    #     kwargs_gs = {
-    #         # Base parameters
-    #         **kwargs_base,
-    #
-    #         # Lifting and costs
-    #         **kwargs_lifting_costs,
-    #
-    #         # Field and reservoir properties
-    #         "field_status": contract.field_status,
-    #         "field_loc": contract.field_loc,
-    #         "res_depth": contract.res_depth,
-    #         "infra_avail": contract.infra_avail,
-    #         "res_type": contract.res_type,
-    #         "api_oil": contract.api_oil,
-    #         "domestic_use": contract.domestic_use,
-    #         "prod_stage": contract.prod_stage,
-    #         "co2_content": contract.co2_content,
-    #         "h2s_content": contract.h2s_content,
-    #         "field_reserves_2024": contract.field_reserves_2024,
-    #         "infra_avail_2024": contract.infra_avail_2024,
-    #         "field_loc_2024": contract.field_loc_2024,
-    #
-    #         # Ministry discretion
-    #         "split_ministry_disc": contract.split_ministry_disc,
-    #
-    #         # DMO
-    #         "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
-    #         "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
-    #         "oil_dmo_holiday_duration": contract.oil_dmo_holiday_duration,
-    #         "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
-    #         "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
-    #         "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
-    #
-    #         # Carry forward depreciation
-    #         "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
-    #         "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
-    #     }
-    #
-    #     return GrossSplit(**kwargs_gs)
-    #
-    # # When the contract is not recognized, raise an exception
-    # else:
-    #     raise OptimizationException(
-    #         f"Contract type {type(contract)}, is not a valid contract "
-    #         f"for optimization module"
-    #     )
+            # Lifting and costs
+            **kwargs_lifting_costs,
+
+            # FTP
+            "oil_ftp_is_available": contract.oil_ftp_is_available,
+            "oil_ftp_is_shared": contract.oil_ftp_is_shared,
+            "oil_ftp_portion": contract.oil_ftp_portion,
+            "gas_ftp_is_available": contract.gas_ftp_is_available,
+            "gas_ftp_is_shared": contract.gas_ftp_is_shared,
+            "gas_ftp_portion": contract.gas_ftp_portion,
+
+            # Tax split
+            "tax_split_type": contract.tax_split_type,
+            "condition_dict": contract.condition_dict,
+            "indicator_rc_icp_sliding": contract.indicator_rc_icp_sliding,
+            "oil_ctr_pretax_share": contract.oil_ctr_pretax_share,
+            "gas_ctr_pretax_share": contract.gas_ctr_pretax_share,
+
+            # Investment credit
+            "oil_ic_rate": contract.oil_ic_rate,
+            "gas_ic_rate": contract.gas_ic_rate,
+            "ic_is_available": contract.ic_is_available,
+            "oil_cr_cap_rate": contract.oil_cr_cap_rate,
+            "gas_cr_cap_rate": contract.gas_cr_cap_rate,
+
+            # DMO
+            "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
+            "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
+            "oil_dmo_holiday_duration": contract.oil_dmo_holiday_duration,
+            "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
+            "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
+            "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
+
+            # Carry forward depreciation
+            "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
+            "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
+        }
+
+        return CostRecovery(**kwargs_costrec)
+
+    # When the contract is GrossSplit, parsing back the adjusted cost elements
+    # to the gross split contract
+    elif isinstance(contract, GrossSplit):
+        kwargs_gs = {
+            # Base parameters
+            **kwargs_base,
+
+            # Lifting and costs
+            **kwargs_lifting_costs,
+
+            # Field and reservoir properties
+            "field_status": contract.field_status,
+            "field_loc": contract.field_loc,
+            "res_depth": contract.res_depth,
+            "infra_avail": contract.infra_avail,
+            "res_type": contract.res_type,
+            "api_oil": contract.api_oil,
+            "domestic_use": contract.domestic_use,
+            "prod_stage": contract.prod_stage,
+            "co2_content": contract.co2_content,
+            "h2s_content": contract.h2s_content,
+            "field_reserves_2024": contract.field_reserves_2024,
+            "infra_avail_2024": contract.infra_avail_2024,
+            "field_loc_2024": contract.field_loc_2024,
+
+            # Ministry discretion
+            "split_ministry_disc": contract.split_ministry_disc,
+
+            # DMO
+            "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
+            "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
+            "oil_dmo_holiday_duration": contract.oil_dmo_holiday_duration,
+            "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
+            "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
+            "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
+
+            # Carry forward depreciation
+            "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
+            "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
+        }
+
+        return GrossSplit(**kwargs_gs)
+
+    # When the contract is not recognized, raise an exception
+    else:
+        raise OptimizationException(
+            f"Contract type {type(contract)}, is not a valid contract "
+            f"for optimization module"
+        )
 
 
 def adjust_useful_life_years(
