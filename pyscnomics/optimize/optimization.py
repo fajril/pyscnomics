@@ -117,37 +117,32 @@ def adjust_contract(
         if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
             contract_arguments["effective_tax_rate"] = value
 
-        print('\t')
-        print(f'Filetype: {type(contract)}')
-        print(f'Length: {len(contract)}')
-        print('contract = \n', contract)
+    # The condition when contract is Gross Split
+    elif isinstance(contract, GrossSplit):
+        # Changing the attributes of the contract based on the chosen variable
+        if variable is OptimizationParameter.MINISTERIAL_DISCRETION:
+            contract.split_ministry_disc = value
 
-        print('\t')
-        print(f'Filetype: {type(contract_arguments)}')
-        print(f'Length: {len(contract_arguments)}')
-        print('contract_arguments = \n', contract_arguments)
+        if variable is OptimizationParameter.OIL_DMO_FEE:
+            contract.oil_dmo_fee_portion = value
 
-    # # The condition when contract is Gross Split
-    # elif isinstance(contract, GrossSplit):
-    #     # Changing the attributes of the contract based on the chosen variable
-    #     if variable is OptimizationParameter.MINISTERIAL_DISCRETION:
-    #         contract.split_ministry_disc = value
-    #
-    #     if variable is OptimizationParameter.OIL_DMO_FEE:
-    #         contract.oil_dmo_fee_portion = value
-    #
-    #     if variable is OptimizationParameter.GAS_DMO_FEE:
-    #         contract.gas_dmo_fee_portion = value
-    #
-    #     if variable is OptimizationParameter.VAT_RATE:
-    #         contract_arguments["vat_rate"] = value
-    #
-    #     if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
-    #         contract_arguments["effective_tax_rate"] = value
-    #
-    # # Running the contract
-    # contract.run(**contract_arguments)
-    #
+        if variable is OptimizationParameter.GAS_DMO_FEE:
+            contract.gas_dmo_fee_portion = value
+
+        if variable is OptimizationParameter.VAT_RATE:
+            contract_arguments["vat_rate"] = value
+
+        if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
+            contract_arguments["effective_tax_rate"] = value
+
+    # Running the contract
+    contract.run(**contract_arguments)
+
+    print('\t')
+    print(f'Filetype: {type(contract)}')
+    print(f'Length: {len(contract)}')
+    print('contract = \n', contract)
+
     # # Get the summary of the new contract and get its value of the targeted optimization
     # result_psc = contract.get_summary(**summary_argument)[target_parameter]
     #

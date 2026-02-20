@@ -35,7 +35,7 @@ from pyscnomics.dataset.case_00B import Case00B
 
 if __name__ == "__main__":
 
-    case = Case00B(contract_type=ContractType.COST_RECOVERY)
+    case = Case00B(contract_type=ContractType.GROSS_SPLIT)
     contract = case.as_class()
     contract_arguments = case.contract_arguments
     summary_arguments = case.summary_arguments
@@ -45,8 +45,8 @@ if __name__ == "__main__":
         "contract": contract,
         "contract_arguments": contract_arguments,
         "summary_argument": summary_arguments,
-        "variable": OptimizationParameter.VAT_RATE,
-        "value": 0.5,
+        "variable": OptimizationParameter.MINISTERIAL_DISCRETION,
+        "value": 0.1,
         "target_parameter": "ctr_irr",
     }
 
