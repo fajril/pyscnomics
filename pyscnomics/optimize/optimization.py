@@ -28,36 +28,38 @@ def adjust_contract(
     target_parameter: str,
 ) -> (CostRecovery | GrossSplit, dict):
     """
-    Adjusts a PSC contract variable and re-runs the contract to obtain the
-    updated target parameter value.
+    Adjust one optimization variable, re-run the contract, and return the updated target metric.
+
+    The selected variable is applied either by modifying contract attributes directly or via
+    `adjust_cost_element()` for cost-related adjustments, followed by contract execution.
 
     Parameters
     ----------
-    contract : CostRecovery or GrossSplit
-        The PSC contract instance to be modified.
+    contract : CostRecovery | GrossSplit
+        PSC contract to adjust and execute.
     contract_arguments : dict
-        Arguments passed to the contract's ``.run()`` method.
+        Arguments passed to `contract.run()`.
     summary_argument : dict
-        Arguments passed to the summary function.
+        Arguments passed to `contract.get_summary()`.
     variable : OptimizationParameter
-        The optimization variable (enum) to be adjusted.
+        Optimization variable to modify.
     value : float
-        The new value assigned to the selected variable.
+        New value assigned to the variable.
     target_parameter : str
-        The target parameter name extracted from the summary output.
+        Summary key representing the optimization target.
 
     Returns
     -------
-    result_psc : float
-        Updated value of the target parameter after contract execution.
-    contract : CostRecovery or GrossSplit
-        The modified and executed contract instance.
+    tuple[float, CostRecovery | GrossSplit]
+        (updated target value, executed contract).
 
-    Notes
-    -----
-    Supports both ``CostRecovery`` and ``GrossSplit`` PSC types.
-    Cost-related variables (e.g., VAT or LBT discounts) are adjusted via
-    ``adjust_cost_element()`` before re-running the contract.
+    Raises
+    ------
+    OptimizationException
+        If contract type or optimization variable is unsupported.
+
+    TL;DR: Change one parameter → run contract → return updated KPI and contract.
+    *KPI = Key Performance Indicator.
     """
 
     # Optimization parameter is VAT
@@ -138,15 +140,10 @@ def adjust_contract(
     # Running the contract
     contract.run(**contract_arguments)
 
-    print('\t')
-    print(f'Filetype: {type(contract)}')
-    print(f'Length: {len(contract)}')
-    print('contract = \n', contract)
+    # Get the summary of the new contract and get its value of the targeted optimization
+    result_psc = contract.get_summary(**summary_argument)[target_parameter]
 
-    # # Get the summary of the new contract and get its value of the targeted optimization
-    # result_psc = contract.get_summary(**summary_argument)[target_parameter]
-    #
-    # return result_psc, contract
+    return result_psc, contract
 
 
 def optimize_psc_core(
