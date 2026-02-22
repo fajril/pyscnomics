@@ -272,6 +272,9 @@ def optimize_psc_core(
         )
 
         print('\t')
+        print('result_psc = ', result_psc)
+
+        print('\t')
         print(f'Filetype: {type(psc)}')
         print(f'Length: {len(psc)}')
         print('psc = \n', psc)

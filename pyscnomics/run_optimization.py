@@ -41,17 +41,31 @@ if __name__ == "__main__":
     summary_arguments = case.summary_arguments
     optimization_arguments = case.optimization_arguments
 
-    kwargs_adjust_contract = {
+    # # Execute adjust contract
+    # kwargs_adjust_contract = {
+    #     "contract": contract,
+    #     "contract_arguments": contract_arguments,
+    #     "summary_argument": summary_arguments,
+    #     "variable": OptimizationParameter.MINISTERIAL_DISCRETION,
+    #     "value": 0.1,
+    #     "target_parameter": "ctr_irr",
+    # }
+    #
+    # adjust_contract(**kwargs_adjust_contract)
+
+    # Execute optimize psc core
+    kwargs_psc_core = {
         "contract": contract,
         "contract_arguments": contract_arguments,
         "summary_argument": summary_arguments,
-        "variable": OptimizationParameter.MINISTERIAL_DISCRETION,
-        "value": 0.1,
-        "target_parameter": "ctr_irr",
+        "target_optimization_value": 0.5,
+        "dict_optimization": optimization_arguments,
+        "target_parameter": OptimizationTarget.IRR,
     }
 
-    adjust_contract(**kwargs_adjust_contract)
+    optimize_psc_core(**kwargs_psc_core)
 
+    # Execute optimize_psc
     # kwargs_optim = {
     #     "contract": contract,
     #     "contract_arguments": contract_arguments,
