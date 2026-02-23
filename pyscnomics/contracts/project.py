@@ -4075,7 +4075,7 @@ class BaseProject:
         self._get_consolidated_profiles()
 
         # Display warning messages as pandas DataFrame
-        self.warnings_to_dataframe()
+        # self.warnings_to_dataframe()
 
     @staticmethod
     def _calc_division(numerator: float, denominator: float, default: float = 0.0):

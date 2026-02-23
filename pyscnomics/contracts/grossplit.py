@@ -3437,7 +3437,7 @@ class GrossSplit(BaseProject):
         self._get_consolidated_profiles()
 
         # Display warning messages as pandas DataFrame
-        self.warnings_to_dataframe()
+        # self.warnings_to_dataframe()
 
     def get_summary(
         self,

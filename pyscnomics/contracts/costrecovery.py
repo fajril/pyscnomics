@@ -2543,7 +2543,7 @@ class CostRecovery(BaseProject):
         self._get_consolidated_profiles_cr(ftp_tax_regime=ftp_tax_regime)
 
         # Display warning messages as pandas DataFrame
-        self.warnings_to_dataframe()
+        # self.warnings_to_dataframe()
 
     def get_summary(
         self,
