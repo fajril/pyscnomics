@@ -811,14 +811,14 @@ class Case00B:
 
         self.optimization_arguments = {
             "target_parameter": "IRR",
-            "target_optimization": 0.3,
+            "target_optimization": 0.25,
             "parameter": [
                 OptimizationParameter.MINISTERIAL_DISCRETION,
                 OptimizationParameter.VAT_RATE,
             ],
             "min": [
                 0.01,
-                0.01,
+                0.005,
             ],
             "max": [
                 0.1,

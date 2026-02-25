@@ -58,7 +58,7 @@ if __name__ == "__main__":
         "contract": contract,
         "contract_arguments": contract_arguments,
         "summary_argument": summary_arguments,
-        "target_optimization_value": 0.3,
+        "target_optimization_value": 0.25,
         "dict_optimization": optimization_arguments,
         "target_parameter": OptimizationTarget.IRR,
     }

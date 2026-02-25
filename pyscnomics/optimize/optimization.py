@@ -225,64 +225,64 @@ def optimize_psc_core(
             target_parameter=target_param,
         )
 
-        # # Able to conduct optimization since the result is greater than the target
-        # if result_psc > target_optimization_value:
-        #     # Defining the upper and lower limit of the optimized variable
-        #     bounds = (dict_optimization["min"][index], dict_optimization["max"][index])
-        #
-        #     def objective_run(new_value):
-        #         """
-        #         A helper function to execute an updated contract
-        #         """
-        #         result_psc_obj, executed_contract = adjust_contract(
-        #             contract=psc,
-        #             contract_arguments=contract_arguments,
-        #             variable=param,
-        #             value=new_value,
-        #             summary_argument=summary_argument,
-        #             target_parameter=target_parameter,
-        #         )
-        #
-        #         result_obj = abs(result_psc_obj - target_optimization_value)
-        #
-        #         return result_obj
+        # Able to conduct optimization since the result is greater than the target
+        if result_psc > target_optimization_value:
+            # Defining the upper and lower limit of the optimized variable
+            bounds = (dict_optimization["min"][index], dict_optimization["max"][index])
 
-    #         # Optimization of the objective function
-    #         optim_result = minimize_scalar(
-    #             objective_run, bounds=bounds, method="bounded"
-    #         )
-    #
-    #         # Difference value from target and optimization result
-    #         optimized_diff = optim_result.fun
-    #
-    #         # Optimized Parameter Value
-    #         optimized_parameter = optim_result.x
-    #
-    #         # Result of the objective function
-    #         function_result = optimized_diff + target_optimization_value
-    #
-    #         # Writing the result of optimization to the list_params_value
-    #         list_params_value[index] = optimized_parameter
-    #
-    #         # Defining the result_optimization
-    #         result_optimization = function_result
-    #
-    #         # Defining the executed contract
-    #         executed_contract = adjust_contract(
-    #             contract=psc,
-    #             contract_arguments=contract_arguments,
-    #             variable=param,
-    #             value=optimized_parameter,
-    #             summary_argument=summary_argument,
-    #             target_parameter=target_parameter,
-    #         )[1]
-    #
-    #         # Filling the list with executed contract
-    #         list_executed_contract.append(executed_contract)
-    #
-    #         # Exiting the loop since the target has been achieved
-    #         break
-    #
+            def objective_run(new_value):
+                """
+                A helper function to execute an updated contract
+                """
+                result_psc_obj, executed_contract = adjust_contract(
+                    contract=psc,
+                    contract_arguments=contract_arguments,
+                    summary_argument=summary_argument,
+                    variable=param,
+                    value=new_value,
+                    target_parameter=target_param,
+                )
+
+                result_obj = abs(result_psc_obj - target_optimization_value)
+
+                return result_obj
+
+            # Optimization of the objective function
+            optim_result = minimize_scalar(
+                objective_run, bounds=bounds, method="bounded"
+            )
+
+            # Difference value from target and optimization result
+            optimized_diff = optim_result.fun
+
+            # Optimized Parameter Value
+            optimized_parameter = optim_result.x
+
+            # Result of the objective function
+            function_result = optimized_diff + target_optimization_value
+
+            # Writing the result of optimization to the list_params_value
+            list_params_value[index] = optimized_parameter
+
+            # Defining the result_optimization
+            result_optimization = function_result
+
+            # Defining the executed contract
+            executed_contract = adjust_contract(
+                contract=psc,
+                contract_arguments=contract_arguments,
+                summary_argument=summary_argument,
+                variable=param,
+                value=optimized_parameter,
+                target_parameter=target_param,
+            )[1]
+
+            # Filling the list with executed contract
+            list_executed_contract.append(executed_contract)
+
+            # Exiting the loop since the target has been achieved
+            break
+
     #     elif result_psc <= target_optimization_value:
     #         # Writing the maximum value to the list_params_value
     #         list_params_value[index] = max_value
