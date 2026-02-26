@@ -58,12 +58,16 @@ if __name__ == "__main__":
         "contract": contract,
         "contract_arguments": contract_arguments,
         "summary_argument": summary_arguments,
-        "target_optimization_value": 0.25,
+        "target_optimization_value": 0.3,
         "dict_optimization": optimization_arguments,
         "target_parameter": OptimizationTarget.IRR,
     }
 
-    optimize_psc_core(**kwargs_psc_core)
+    t1 = optimize_psc_core(**kwargs_psc_core)
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1[3])
 
     # Execute optimize_psc
     # kwargs_optim = {

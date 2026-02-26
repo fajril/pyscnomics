@@ -154,6 +154,60 @@ def optimize_psc_core(
     dict_optimization: dict,
     target_parameter: OptimizationTarget,
 ) -> (list, list, float, list):
+    """
+    Sequential PSC parameter optimization toward a target Key Performance
+    Indicator (KPI) value.
+
+    The function iteratively modifies PSC fiscal parameters, executes the
+    contract, and checks whether the selected optimization target
+    (IRR / NPV / PI) exceeds the desired value. Once the target is reached,
+    bounded scalar optimization is performed to find the parameter value
+    that minimizes the deviation from the target KPI.
+
+    Optimization stops immediately after the first successful parameter
+    achieving the target.
+
+    Parameters
+    ----------
+    contract : CostRecovery | GrossSplit
+        Base PSC contract object.
+    contract_arguments : dict
+        Arguments required to execute the contract model.
+    summary_argument : dict
+        Arguments used to compute summary/KPI results.
+    target_optimization_value : float
+        Desired KPI target value.
+    dict_optimization : dict
+        Optimization configuration containing:
+        - parameter : list[OptimizationParameter]
+        - min : lower bounds
+        - max : upper bounds
+    target_parameter : OptimizationTarget
+        KPI used as optimization objective (IRR, NPV, PI).
+
+    Returns
+    -------
+    list[str]
+        Names of optimized parameters.
+    list
+        Final parameter values ("Base Value" or optimized value).
+    float
+        Resulting KPI after optimization.
+    list
+        Executed contract objects for each evaluated step.
+
+    Notes
+    -----
+    • Parameters are optimized sequentially (not jointly).
+    • Each parameter first tested at its bound (min/max rule).
+    • `scipy.optimize.minimize_scalar(method="bounded")`
+      is used once the target is achievable.
+    • Loop exits after first successful optimization.
+
+    TL;DR:
+    Try parameters one-by-one → run PSC → if target reachable,
+    scalar-optimize that parameter and return updated KPI + contracts.
+    """
 
     # Changing the Optimization selection from Enum to string in order to retrieve
     # the result from summary dictionary
@@ -283,19 +337,19 @@ def optimize_psc_core(
             # Exiting the loop since the target has been achieved
             break
 
-    #     elif result_psc <= target_optimization_value:
-    #         # Writing the maximum value to the list_params_value
-    #         list_params_value[index] = max_value
-    #
-    #         # Defining the result_optimization
-    #         result_optimization = result_psc
-    #
-    #         list_executed_contract.append(psc)
-    #
-    # # Converting the list of enum into list of str enum value
-    # list_str = [enum_value.value for enum_value in list_params]
-    #
-    # return list_str, list_params_value, result_optimization, list_executed_contract
+        elif result_psc <= target_optimization_value:
+            # Writing the maximum value to the list_params_value
+            list_params_value[index] = max_value
+
+            # Defining the result_optimization
+            result_optimization = result_psc
+
+            list_executed_contract.append(psc)
+
+    # Converting the list of enum into list of str enum value
+    list_str = [enum_value.value for enum_value in list_params]
+
+    return list_str, list_params_value, result_optimization, list_executed_contract
 
 
 def adjust_cost_element(
