@@ -41,6 +41,22 @@ if __name__ == "__main__":
     summary_arguments = case.summary_arguments
     optimization_arguments = case.optimization_arguments
 
+    # Execute optimize_psc
+    kwargs_optim = {
+        "contract": contract,
+        "contract_arguments": contract_arguments,
+        "summary_arguments": summary_arguments,
+        "dict_optimization": optimization_arguments,
+        "target_parameter": OptimizationTarget.IRR,
+        "target_optimization_value": 0.3,
+    }
+
+    t1 = optimize_psc(**kwargs_optim)
+    print('\t')
+    print(f'Filetype: {type(t1[3])}')
+    print(f'Length: {len(t1[3])}')
+    print('t1 = \n', t1[3][0])
+
     # # Execute adjust contract
     # kwargs_adjust_contract = {
     #     "contract": contract,
@@ -53,33 +69,17 @@ if __name__ == "__main__":
     #
     # adjust_contract(**kwargs_adjust_contract)
 
-    # Execute optimize psc core
-    kwargs_psc_core = {
-        "contract": contract,
-        "contract_arguments": contract_arguments,
-        "summary_argument": summary_arguments,
-        "target_optimization_value": 0.3,
-        "dict_optimization": optimization_arguments,
-        "target_parameter": OptimizationTarget.IRR,
-    }
-
-    t1 = optimize_psc_core(**kwargs_psc_core)
-    print('\t')
-    print(f'Filetype: {type(t1)}')
-    print(f'Length: {len(t1)}')
-    print('t1 = \n', t1[3])
-
-    # Execute optimize_psc
-    # kwargs_optim = {
+    # # Execute optimize psc core
+    # kwargs_psc_core = {
     #     "contract": contract,
     #     "contract_arguments": contract_arguments,
-    #     "summary_arguments": summary_arguments,
+    #     "summary_argument": summary_arguments,
+    #     "target_optimization_value": 0.3,
     #     "dict_optimization": optimization_arguments,
     #     "target_parameter": OptimizationTarget.IRR,
-    #     "target_optimization_value": 0.15,
     # }
     #
-    # optimize_psc(**kwargs_optim)
+    # optimize_psc_core(**kwargs_psc_core)
 
     # case = Case00A(contract_type=ctr_type)
     # data = case.as_dict()

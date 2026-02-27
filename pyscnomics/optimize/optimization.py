@@ -754,6 +754,66 @@ def optimize_psc(
     summary_arguments: dict,
     target_parameter: OptimizationTarget = OptimizationTarget.IRR,
 ) -> (list, list, float, list):
+    """
+    Run PSC optimization workflow including multi-value parameter handling.
+
+    This function performs end-to-end optimization of a PSC contract by:
+
+    • evaluating the base-case economics
+    • optionally collapsing multi-value inputs (e.g., array VAT) into a
+      single representative optimization variable
+    • running ``optimize_psc_core`` to reach the target economic indicator
+    • restoring optimized values back to their original array structure
+    • re-running the contract when transformed arguments are required
+
+    Supports both Cost Recovery and Gross Split contracts.
+
+    Parameters
+    ----------
+    dict_optimization : dict
+        Optimization configuration containing:
+        • parameter → list[OptimizationParameter]
+        • min → lower bounds
+        • max → upper bounds
+    contract : CostRecovery | GrossSplit
+        PSC contract instance to be optimized.
+    contract_arguments : dict
+        Arguments passed to ``contract.run()``.
+    target_optimization_value : float
+        Desired value of the selected economic indicator.
+    summary_arguments : dict
+        Arguments passed to ``contract.get_summary()``.
+    target_parameter : OptimizationTarget, default=OptimizationTarget.IRR
+        Economic indicator used as optimization target
+        (IRR, NPV, or PI).
+
+    Returns
+    -------
+    list[str]
+        Names of optimized parameters.
+    list
+        Optimized parameter values (or "Base Value" if unchanged).
+    float
+        Final optimized value of the selected economic indicator.
+    list
+        Sequence of executed contract states during optimization.
+
+    Raises
+    ------
+    OptimizationException
+        If the optimization target or configuration is invalid.
+
+    Notes
+    -----
+    • Multi-value inputs (e.g., VAT arrays) are temporarily reduced to a
+      scalar optimization problem and later reconstructed.
+    • Final contract execution reflects transformed arguments when
+      proportional scaling is required.
+
+    TL;DR:
+    Full PSC optimization pipeline: baseline → core optimization →
+    reconstruct multi-values → return optimized economics + contracts.
+    """
 
     # Get the summary of the base case
     contract.run(**contract_arguments)
@@ -818,142 +878,96 @@ def optimize_psc(
             target_parameter=target_parameter,
         )
 
+        variable_value_pseudo = optim_base_result[1][0]
 
+        # Replacing the original multiple variable value into single value of
+        # variable_value_pseudo
+        contract_arguments_new[key] = variable_value_pseudo
 
-    # for key, selection in zip(pseudo_dict["key"], pseudo_dict["selection"]):
-    #     if (
-    #         key in contract_arguments.keys()
-    #         and isinstance(contract_arguments[key], np.ndarray)
-    #         and selection in dict_optimization["parameter"]
-    #     ):
-    #
-    #         # Get the index of the min and max of the selection values and
-    #         # store it in the pseudo_dict
-    #         index_pseudo = dict_optimization["parameter"].index(selection)
-    #         pseudo_dict["index_in_parameter"].append(index_pseudo)
-    #
-    #         # Defining the dictionary of base optimization
-    #         dict_opt_pseudo = {
-    #             "parameter": [selection],
-    #             "min": np.array([dict_optimization["min"][index_pseudo]], dtype=float),
-    #             "max": np.array([dict_optimization["max"][index_pseudo]], dtype=float),
-    #         }
-    #
-    #         # Copying the contract and summary argument to avoid argument overwriting
-    #         contract_arguments_pseudo = contract_arguments.copy()
-    #         summary_argument_pseudo = summary_arguments.copy()
-    #
-    #         # Retrieving the result_optim_pseudo which it will be used
-    #         # as base for resul_optim_new
-    #         optim_base_result = optimize_psc_core(
-    #             dict_optimization=dict_opt_pseudo,
-    #             contract=contract,
-    #             contract_arguments=contract_arguments_pseudo,
-    #             target_optimization_value=target_value_base,
-    #             summary_argument=summary_argument_pseudo,
-    #             target_parameter=target_parameter,
-    #         )
-    #
-    #         variable_value_pseudo = optim_base_result[1][0]
-    #
-    #         # Replacing the original multiple variable value into single value of
-    #         # variable_value_pseudo
-    #         contract_arguments_new[key] = variable_value_pseudo
-    #
-    #         # Storing the variable_value_pseudo into the pseudo_dict
-    #         pseudo_dict["value"].append(variable_value_pseudo)
-    #
-    #     else:
-    #         pass
+        # Storing the variable_value_pseudo into the pseudo_dict
+        pseudo_dict["value"].append(variable_value_pseudo)
 
-    # print('\t')
-    # print(f'Filetype: {type(pseudo_dict)}')
-    # print(f'Length: {len(pseudo_dict)}')
-    # print('pseudo_dict = \n', pseudo_dict)
+    # Get the optimization of the contract
+    result = optimize_psc_core(
+        dict_optimization=dict_optimization,
+        contract=contract,
+        contract_arguments=contract_arguments_new,
+        target_optimization_value=target_optimization_value,
+        summary_argument=summary_arguments,
+        target_parameter=target_parameter,
+    )
 
-    # # Get the optimization of the contract
-    # result = optimize_psc_core(
-    #     dict_optimization=dict_optimization,
-    #     contract=contract,
-    #     contract_arguments=contract_arguments_new,
-    #     target_optimization_value=target_optimization_value,
-    #     summary_argument=summary_arguments,
-    #     target_parameter=target_parameter,
-    # )
-    #
-    # list_str = result[0]
-    # list_params_value = result[1]
-    # result_optimization = result[2]
-    # list_executed_contract = result[3]
-    #
-    # contract = list_executed_contract[-1]
-    #
-    # # Initiating the adjusted contract arguments
-    # contract_arguments_adjusted = contract_arguments.copy()
-    #
-    # # Iterating in order to the single argument back into the original form (array)
-    # for key, pseudo_value, index in zip(
-    #     pseudo_dict["key"], pseudo_dict["value"], pseudo_dict["index_in_parameter"]
-    # ):
-    #     # The condition when the optimization value is "Base Value",
-    #     # do not need to change the form
-    #     if isinstance(list_params_value[index], str):
-    #         pass
-    #
-    #     # The condition when the optimization value is not "Base Value"
-    #     elif (
-    #         isinstance(list_params_value[index], (float, int, np.ndarray))
-    #         and key in contract_arguments.keys()
-    #     ):
-    #         #  Defining the factor of transformation : VAT_New / VAT_Old
-    #         factor = np.divide(
-    #             list_params_value[index],
-    #             pseudo_value,
-    #             where=list_params_value[index] != 0,
-    #         )
-    #
-    #         # Defining the proportioned argument based on the obtained factor:
-    #         # factor * VATi
-    #         transformed_value = contract_arguments[key] * np.full_like(
-    #             contract_arguments_new[key], fill_value=factor, dtype=float
-    #         )
-    #
-    #         # Deforming the array into a list due to the consistency of
-    #         # the optimization result
-    #         list_params_value[index] = transformed_value.tolist()
-    #
-    #         contract_arguments_adjusted[key] = transformed_value
-    #
-    #     # Pass the other condition
-    #     else:
-    #         pass
-    #
-    # # Running the contract using the adjusted contract argument when
-    # # the VAT is multi values
-    # if len(pseudo_dict["index_in_parameter"]) > 0:
-    #
-    #     contract.run(**contract_arguments_adjusted)
-    #
-    #     #  Replacing the executed contract from the optimization function
-    #     #  into the adjusted contract
-    #     list_executed_contract[-1] = contract
-    #
-    #     # Retrieving the summary of the contract
-    #     summary_optimized = contract.get_summary(**summary_arguments)
-    #
-    #     #  Retrieving the corresponding target value
-    #     if target_parameter == OptimizationTarget.IRR:
-    #         result_optimization = summary_optimized["ctr_irr"]
-    #     elif target_parameter == OptimizationTarget.NPV:
-    #         result_optimization = summary_optimized["ctr_npv"]
-    #     elif target_parameter == OptimizationTarget.PI:
-    #         result_optimization = summary_optimized["ctr_pi"]
-    #     else:
-    #         raise OptimizationException(
-    #             f"Optimization Target {target_parameter} is not recognized"
-    #         )
-    #
-    # return list_str, list_params_value, result_optimization, list_executed_contract
+    list_str = result[0]
+    list_params_value = result[1]
+    result_optimization = result[2]
+    list_executed_contract = result[3]
+
+    contract = list_executed_contract[-1]
+
+    # Initiating the adjusted contract arguments
+    contract_arguments_adjusted = contract_arguments.copy()
+
+    for key, pseudo_value, index in zip(
+        pseudo_dict["key"],
+        pseudo_dict["value"],
+        pseudo_dict["index_in_parameter"],
+    ):
+        # The condition when the optimization value is "Base Value":
+        # do not need to change the form
+        if isinstance(list_params_value[index], str):
+            continue
+
+        # Skip if not eligible for transformation
+        if not (
+            isinstance(list_params_value[index], (float, int, np.ndarray))
+            and key in contract_arguments
+        ):
+            continue
+
+        # Defining the factor of transformation: VAT_New / VAT_Old
+        factor = np.divide(
+            list_params_value[index],
+            pseudo_value,
+            where=list_params_value[index] != 0,
+        )
+
+        # Defining the proportioned argument based on the obtained factor:
+        # factor * VATi
+        transformed_value = contract_arguments[key] * np.full_like(
+            contract_arguments_new[key], fill_value=factor, dtype=float
+        )
+
+        # Deforming the array into a list due to the consistency of
+        # the optimization result
+        list_params_value[index] = transformed_value.tolist()
+        contract_arguments_adjusted[key] = transformed_value
+
+    # Running the contract using the adjusted contract argument when
+    # the VAT is multi values
+    if len(pseudo_dict["index_in_parameter"]) > 0:
+
+        contract.run(**contract_arguments_adjusted)
+
+        #  Replacing the executed contract from the optimization function
+        #  into the adjusted contract
+        list_executed_contract[-1] = contract
+
+        # Retrieving the summary of the contract
+        summary_optimized = contract.get_summary(**summary_arguments)
+
+        #  Retrieving the corresponding target value
+        if target_parameter == OptimizationTarget.IRR:
+            result_optimization = summary_optimized["ctr_irr"]
+        elif target_parameter == OptimizationTarget.NPV:
+            result_optimization = summary_optimized["ctr_npv"]
+        elif target_parameter == OptimizationTarget.PI:
+            result_optimization = summary_optimized["ctr_pi"]
+        else:
+            raise OptimizationException(
+                f"Optimization Target {target_parameter} is not recognized"
+            )
+
+    return list_str, list_params_value, result_optimization, list_executed_contract
 
 
 """
