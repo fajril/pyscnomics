@@ -44,6 +44,10 @@ if __name__ == "__main__":
     data = case.as_dict()
 
     t1 = get_sensitivity(data=data, contract_type=ctr_type.value)
+    print('\t')
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print('t1 = \n', t1)
 
     # print('\t')
     # print(f'Filetype: {type()}')

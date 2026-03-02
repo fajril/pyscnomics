@@ -1826,7 +1826,7 @@ def get_contract_optimization(data: dict, contract_type: str = "Cost Recovery") 
                 contract=contract,
                 contract_arguments=contract_arguments,
                 target_optimization_value=target_optimization_value,
-                summary_argument=summary_argument,
+                summary_arguments=summary_argument,
                 target_parameter=target_parameter,
             )
         )
@@ -1891,6 +1891,7 @@ def get_contract_optimization(data: dict, contract_type: str = "Cost Recovery") 
     result_parameters = (
         pd.DataFrame(optimization_result).set_index("list_str").to_dict()
     )
+
     result_parameters["optimization_result"] = result_optimization
 
     # Adding the execution info

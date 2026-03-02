@@ -34,7 +34,7 @@ if __name__ == "__main__":
     # Specify arguments to run function "execute_contract()"
     kwargs_execute = {
         "case": Case00B,
-        "contract_type": ContractType.GROSS_SPLIT,
+        "contract_type": ContractType.COST_RECOVERY,
     }
 
     # Run the contract using function "execute_contract()"

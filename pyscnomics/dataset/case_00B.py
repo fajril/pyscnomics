@@ -570,7 +570,7 @@ class Case00B:
             "oil_onstream_date": date(year=2028, month=1, day=1),
             "gas_onstream_date": None,
             "approval_year": 2026,
-            "is_pod_1": False,
+            "is_pod_1": True,
             "is_strict": False,
         }
 
@@ -811,19 +811,33 @@ class Case00B:
 
         self.optimization_arguments = {
             "target_parameter": "IRR",
-            "target_optimization": 0.25,
-            "parameter": [
-                OptimizationParameter.MINISTERIAL_DISCRETION,
-                OptimizationParameter.VAT_RATE,
-            ],
-            "min": [
-                0.01,
-                0.005,
-            ],
-            "max": [
-                0.1,
-                0.2,
-            ],
+            "target_optimization": 0.30,
+            "dict_optimization": {
+                "parameter": [
+                    "Ministerial Discretion",
+                    "VAT Rate",
+                ],
+                "min": [
+                    0.01,
+                    0.005,
+                ],
+                "max": [
+                    0.1,
+                    0.2,
+                ],
+            },
+            # "parameter": [
+            #     OptimizationParameter.MINISTERIAL_DISCRETION,
+            #     OptimizationParameter.VAT_RATE,
+            # ],
+            # "min": [
+            #     0.01,
+            #     0.005,
+            # ],
+            # "max": [
+            #     0.1,
+            #     0.2,
+            # ],
         }
 
     def as_class(self):

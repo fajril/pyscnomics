@@ -29,33 +29,55 @@ from pyscnomics.api.adapter import (
 )
 from pyscnomics.tools.table import get_table
 from pyscnomics.api.adapter import get_contract_optimization
+from pyscnomics.validation.helper_validation import execute_contract
 from pyscnomics.dataset.case_00A import Case00A
 from pyscnomics.dataset.case_00B import Case00B
 
 
 if __name__ == "__main__":
 
-    case = Case00B(contract_type=ContractType.GROSS_SPLIT)
-    contract = case.as_class()
-    contract_arguments = case.contract_arguments
-    summary_arguments = case.summary_arguments
-    optimization_arguments = case.optimization_arguments
-
-    # Execute optimize_psc
-    kwargs_optim = {
-        "contract": contract,
-        "contract_arguments": contract_arguments,
-        "summary_arguments": summary_arguments,
-        "dict_optimization": optimization_arguments,
-        "target_parameter": OptimizationTarget.IRR,
-        "target_optimization_value": 0.3,
+    # Specify arguments to run function "execute_contract()"
+    kwargs_execute = {
+        "case": Case00B,
+        "contract_type": ContractType.GROSS_SPLIT,
     }
 
-    t1 = optimize_psc(**kwargs_optim)
+    # Run the contract using function "execute_contract()"
+    ctr = execute_contract(**kwargs_execute)
+
+    # Configure results
+    data: dict = ctr["data"]
+    contract: CostRecovery | GrossSplit = ctr["contract"]
+    contract_arguments: dict = ctr["contract_arguments"]
+    summary_arguments: dict = ctr["summary_arguments"]
+    summary: dict = ctr["summary"]
+
+    t1 = get_contract_optimization(
+        data=data, contract_type=kwargs_execute["contract_type"].value
+    )
     print('\t')
-    print(f'Filetype: {type(t1[3])}')
-    print(f'Length: {len(t1[3])}')
-    print('t1 = \n', t1[3][0])
+    print(f'Filetype: {type(t1)}')
+    print(f'Length: {len(t1)}')
+    print(f'Keys: {t1.keys()}')
+    print('t1 = \n', t1)
+
+    # case = Case00B(contract_type=ctr)
+    # contract = case.as_class()
+    # contract_arguments = case.contract_arguments
+    # summary_arguments = case.summary_arguments
+    # optimization_arguments = case.optimization_arguments
+
+    # # Execute optimize_psc
+    # kwargs_optim = {
+    #     "contract": contract,
+    #     "contract_arguments": contract_arguments,
+    #     "summary_arguments": summary_arguments,
+    #     "dict_optimization": optimization_arguments,
+    #     "target_parameter": OptimizationTarget.IRR,
+    #     "target_optimization_value": 0.3,
+    # }
+    #
+    # optimize_psc(**kwargs_optim)
 
     # # Execute adjust contract
     # kwargs_adjust_contract = {
@@ -80,14 +102,6 @@ if __name__ == "__main__":
     # }
     #
     # optimize_psc_core(**kwargs_psc_core)
-
-    # case = Case00A(contract_type=ctr_type)
-    # data = case.as_dict()
-    # t1 = get_contract_optimization(data=data, contract_type=ctr_type.value)
-    # print('\t')
-    # print(f'Filetype: {type(t1)}')
-    # print(f'Length: {len(t1)}')
-    # print('t1 = \n', t1)
 
     # print('\t')
     # print(f'Filetype: {type()}')
