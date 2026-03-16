@@ -65,6 +65,9 @@ uv run pyscnomics --api 1 --port 9999
 ### Building Documentation
 
 ```bash
+# Install docs dependencies (for building locally)
+uv sync --extra docs
+
 # Build HTML documentation
 cd docs
 uv run make html
