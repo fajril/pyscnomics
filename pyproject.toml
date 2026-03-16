@@ -22,14 +22,6 @@ dependencies = [
     "pathos==0.3.3"
 ]
 requires-python = ">=3.11"
-
-[project.optional-dependencies]
-docs = [
-    "sphinx>=5.0",
-    "furo",
-    "sphinxcontrib-mermaid",
-]
-
 authors = [
     {name = "Aditya Dewanto", email = "adityadewanto@gmail.com"},
     {name = "Muhammad Adhim Mulia", email = "adhimmuliam@gmail.com"},
@@ -43,7 +35,7 @@ readme = "README.md"
 license = {file = "LICENSE.txt"}
 keywords = ["Production Sharing Contract", "PSC", "Project Economic"]
 classifiers = [
-  "Programming Language :: Python"
+    "Programming Language :: Python"
 ]
 
 [project.urls]
@@ -52,6 +44,13 @@ Documentation = "https://github.com/fajril/pyscnomics"
 
 [project.scripts]
 pyscnomics = "pyscnomics.pyscnomics_cli:entry_point"
+
+[project.optional-dependencies]
+docs = [
+    "sphinx>=5.0",
+    "furo",
+    "sphinxcontrib-mermaid",
+]
 
 [tool.setuptools]
 include-package-data = true
