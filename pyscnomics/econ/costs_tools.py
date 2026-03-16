@@ -6,7 +6,7 @@ import numpy as np
 
 
 class TaxInflationException(Exception):
-    """ Exception to be raised for an incorrect tax and inflation configurations """
+    """Exception to be raised for an incorrect tax and inflation configurations"""
 
     pass
 
@@ -112,9 +112,7 @@ def get_cost_adjustment_by_tax(
     tax_rate_arr = check_input(target_func=project_years, param=tax_rate)
     tax_rate_id = (expense_year - start_year).astype("int")
 
-    return cost * (
-        1.0 + tax_portion * tax_rate_arr[tax_rate_id] * (1.0 - tax_discount)
-    )
+    return cost * (1.0 + tax_portion * tax_rate_arr[tax_rate_id] * (1.0 - tax_discount))
 
 
 def get_cost_adjustment_by_inflation(
@@ -220,7 +218,8 @@ def get_cost_adjustment_by_inflation(
                 np.argwhere(year_inflation[i] == project_years).ravel()
                 for i, _ in enumerate(year_inflation)
             ]
-        ).ravel() + 1
+        ).ravel()
+        + 1
     ).astype(np.int64)
 
     id_end = (
@@ -230,7 +229,7 @@ def get_cost_adjustment_by_inflation(
     # Multipliers to adjust cost by inflation
     mult = np.array(
         [
-            np.prod(1.0 + inflation_rate_arr[id_start[i]:id_end[i]])
+            np.prod(1.0 + inflation_rate_arr[id_start[i] : id_end[i]])
             for i, _ in enumerate(id_start)
         ]
     )
@@ -321,14 +320,12 @@ def apply_cost_adjustment(
         ]
     )
 
-    id_end = (
-        (expense_year - year_ref) + (year_ref - start_year) + 1
-    ).astype("int")
+    id_end = ((expense_year - year_ref) + (year_ref - start_year) + 1).astype("int")
 
     # Multipliers to adjust cost by inflation
     mult = np.array(
         [
-            np.prod(1.0 + inflation_rate_arr[id_start[i]:id_end[i]])
+            np.prod(1.0 + inflation_rate_arr[id_start[i] : id_end[i]])
             for i, val in enumerate(id_start)
         ]
     )
@@ -489,6 +486,6 @@ def calc_distributed_cost(
     distributed_cost = np.zeros([project_duration, len(expense_year)], dtype=np.float64)
 
     for i, _ in enumerate(expense_year):
-        distributed_cost[id_start[i]:id_end[i], i] = cost_split[i]
+        distributed_cost[id_start[i] : id_end[i], i] = cost_split[i]
 
     return distributed_cost

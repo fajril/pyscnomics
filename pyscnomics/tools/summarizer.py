@@ -255,11 +255,11 @@ class Summary:
         return {
             idx: {
                 'years': contract.project_years,
-                'oil_lifting': contract._oil_lifting.get_lifting_rate_arr(),
-                'gas_lifting': contract._gas_lifting.get_lifting_rate_arr(),
-                'sulfur_lifting': contract._sulfur_lifting.get_lifting_rate_arr(),
-                'electricity_lifting': contract._electricity_lifting.get_lifting_rate_arr(),
-                'co2_lifting': contract._co2_lifting.get_lifting_rate_arr(),
+                'oil_lifting': contract._oil_lifting.get_lifting_rate_ghv_arr(),
+                'gas_lifting': contract._gas_lifting.get_lifting_rate_ghv_arr(),
+                'sulfur_lifting': contract._sulfur_lifting.get_lifting_rate_ghv_arr(),
+                'electricity_lifting': contract._electricity_lifting.get_lifting_rate_ghv_arr(),
+                'co2_lifting': contract._co2_lifting.get_lifting_rate_ghv_arr(),
             }
             for idx, contract in enumerate(self.contract)
         }

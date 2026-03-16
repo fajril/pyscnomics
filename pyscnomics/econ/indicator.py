@@ -1,6 +1,7 @@
 """
 Handles calculations associated with the economic indicators of the project.
 """
+
 from datetime import date
 import numpy as np
 import pyxirr
@@ -252,7 +253,7 @@ def npv_nominal_terms(
     cashflow_years: np.ndarray,
     discount_rate: float,
     reference_year: int,
-    discounting_mode: DiscountingMode.END_YEAR
+    discounting_mode: DiscountingMode.END_YEAR,
 ) -> float:
     """
     A function to calculate the Net Present Value (NPV) of a series of cashflows in nominal terms.
@@ -294,9 +295,7 @@ def npv_nominal_terms(
     else:
         year_factor = 0.5
 
-    dcf = np.where(t_arr > 0,
-                   1 / (np.power(1 + discount_rate, t_arr + year_factor)),
-                   1)
+    dcf = np.where(t_arr > 0, 1 / (np.power(1 + discount_rate, t_arr + year_factor)), 1)
 
     discounted_cashflow = cashflow * dcf
     return float(np.sum(discounted_cashflow))
@@ -308,7 +307,7 @@ def npv_real_terms(
     discount_rate: float,
     reference_year: int,
     inflation_rate: float,
-    discounting_mode: DiscountingMode.END_YEAR
+    discounting_mode: DiscountingMode.END_YEAR,
 ) -> float:
     """
     A function to calculate the Net Present Value (NPV) of a series of cashflows in real terms.
@@ -351,14 +350,13 @@ def npv_real_terms(
     else:
         year_factor = 0.5
 
-    dcf = np.where(t_arr > 0,
-                   1 / (np.power(1 + discount_rate, t_arr + year_factor)),
-                   1)
+    dcf = np.where(t_arr > 0, 1 / (np.power(1 + discount_rate, t_arr + year_factor)), 1)
 
     discounted_cashflow = np.where(
         t_arr > 0,
         dcf * cashflow,
-        cashflow * np.power((1 + inflation_rate), np.max(cashflow_years) - reference_year)
+        cashflow
+        * np.power((1 + inflation_rate), np.max(cashflow_years) - reference_year),
     )
     return float(np.sum(discounted_cashflow))
 
@@ -367,7 +365,7 @@ def npv_skk_nominal_terms(
     cashflow: np.ndarray,
     cashflow_years: np.ndarray,
     discount_rate: float,
-    discounting_mode: DiscountingMode.END_YEAR
+    discounting_mode: DiscountingMode.END_YEAR,
 ) -> float:
     """
     A function to calculate the Net Present Value (NPV) of a series of cashflows
@@ -405,7 +403,9 @@ def npv_skk_nominal_terms(
         year_factor = 0.5
 
     reference_year_arr = np.full_like(cashflow, fill_value=np.min(cashflow_years))
-    dcf = 1/(np.power((1+discount_rate), cashflow_years - reference_year_arr + year_factor))
+    dcf = 1 / (
+        np.power((1 + discount_rate), cashflow_years - reference_year_arr + year_factor)
+    )
     discounted_cashflow = cashflow * dcf
     return float(np.sum(discounted_cashflow))
 
@@ -415,7 +415,7 @@ def npv_skk_real_terms(
     cashflow_years: np.ndarray,
     discount_rate: float,
     reference_year: int,
-    discounting_mode: DiscountingMode.END_YEAR
+    discounting_mode: DiscountingMode.END_YEAR,
 ) -> float:
     """
     A function to calculate the Net Present Value (NPV) of a series of cashflows
@@ -461,15 +461,17 @@ def npv_skk_real_terms(
     else:
         year_factor = 0.5
 
-    dcf = np.where(t_arr >= 0,
-                   1/np.power((1+discount_rate), t_arr + year_factor),
-                   1)
+    dcf = np.where(
+        t_arr >= 0, 1 / np.power((1 + discount_rate), t_arr + year_factor), 1
+    )
 
-    discounted_cashflow = (
-        np.where(cashflow_years > reference_year,
-                 dcf * cashflow,
-                 dcf * cashflow * np.power((1 + discount_rate),
-                                           np.max(cashflow_years) - reference_year) + year_factor)
+    discounted_cashflow = np.where(
+        cashflow_years > reference_year,
+        dcf * cashflow,
+        dcf
+        * cashflow
+        * np.power((1 + discount_rate), np.max(cashflow_years) - reference_year)
+        + year_factor,
     )
     return float(np.sum(discounted_cashflow))
 
@@ -479,7 +481,7 @@ def npv_point_forward(
     cashflow_years: np.ndarray,
     discount_rate: float,
     reference_year: int,
-    discounting_mode: DiscountingMode.END_YEAR
+    discounting_mode: DiscountingMode.END_YEAR,
 ) -> float:
     """
     Calculate the Net Present Value (NPV) of a series of cashflows using a point-forward approach.
@@ -519,21 +521,15 @@ def npv_point_forward(
     else:
         year_factor = 0.5
 
-    dcf = np.where(t_arr >= 0,
-                   1/np.power((1+discount_rate), t_arr + year_factor),
-                   1)
+    dcf = np.where(
+        t_arr >= 0, 1 / np.power((1 + discount_rate), t_arr + year_factor), 1
+    )
 
-    discounted_cashflow = np.where(t_arr < 0,
-                                   0,
-                                   dcf * cashflow)
+    discounted_cashflow = np.where(t_arr < 0, 0, dcf * cashflow)
     return float(np.sum(discounted_cashflow))
 
 
-def pot_psc(
-    cashflow: np.ndarray,
-    cashflow_years: np.ndarray,
-    reference_year: int
-):
+def pot_psc(cashflow: np.ndarray, cashflow_years: np.ndarray, reference_year: int):
     """
     Calculate Pay Out Time (POT) for a Production Sharing Contract (PSC).
 
@@ -552,26 +548,32 @@ def pot_psc(
         The Pay Out Time (POT) for the given cash flows.
     """
     project_year = np.arange(1, (np.max(cashflow_years) - reference_year + 1) + 1)
-    project_year = np.concatenate((np.zeros(reference_year - np.min(cashflow_years)), project_year))
+    project_year = np.concatenate(
+        (np.zeros(reference_year - np.min(cashflow_years)), project_year)
+    )
     cum_cashflow = np.cumsum(cashflow)
 
     # Create an array of zeros with the same length as cum_cashflow
     pot = np.zeros_like(cum_cashflow, dtype=float)
 
     # Find indices where cum_cashflow changes sign from negative to positive
-    positive_change_indices = np.where((cum_cashflow[:-1] < 0) & (cum_cashflow[1:] >= 0))[0]
+    positive_change_indices = np.where(
+        (cum_cashflow[:-1] < 0) & (cum_cashflow[1:] >= 0)
+    )[0]
 
     # Calculate the values using vectorized operations
-    pot[positive_change_indices] = (
-        (project_year[positive_change_indices] +
-         (project_year[positive_change_indices + 1] - project_year[positive_change_indices])
-         /
-         (cum_cashflow[positive_change_indices + 1] - cum_cashflow[positive_change_indices])
-         *
-         (0 - cum_cashflow[positive_change_indices]))
+    pot[positive_change_indices] = project_year[positive_change_indices] + (
+        project_year[positive_change_indices + 1]
+        - project_year[positive_change_indices]
+    ) / (
+        cum_cashflow[positive_change_indices + 1]
+        - cum_cashflow[positive_change_indices]
+    ) * (
+        0 - cum_cashflow[positive_change_indices]
     )
 
     return float(np.max(pot))
+
 
 # def pot_psc(cashflow: np.ndarray,
 #             cashflow_years: np.ndarray,

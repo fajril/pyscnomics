@@ -1,3 +1,8 @@
+"""
+A collection of functions performing various calculations
+related to PSC contract
+"""
+
 import numpy as np
 import dateutils
 from datetime import date
@@ -479,11 +484,11 @@ def get_dmo(onstream_date: date,
     # Condition when the DMO scheme is using pre UU No.22 Year 2001
     if post_uu_22_year2001 is False:
         dmo_volume = np.where(ets > 0,
-                           np.minimum((dmo_volume_portion * lifting.get_lifting_rate_arr() * ctr_pretax_share),
+                           np.minimum((dmo_volume_portion * lifting.get_lifting_rate_ghv_arr() * ctr_pretax_share),
                                       np.divide(ctr_ets, lifting.get_price_arr(), where=lifting.get_price_arr() != 0) + np.divide(ctr_ftp, lifting.get_price_arr(), where=lifting.get_price_arr() != 0)),
                            0)
     else:
-        dmo_volume = dmo_volume_portion * lifting.get_lifting_rate_arr() * ctr_pretax_share
+        dmo_volume = dmo_volume_portion * lifting.get_lifting_rate_ghv_arr() * ctr_pretax_share
 
     dmo_fee = np.where(np.logical_and(unrecovered_cost == 0, ~dmo_holiday),
                        dmo_fee_portion * price * dmo_volume,

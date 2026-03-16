@@ -50,7 +50,7 @@ def test_opex():
 
 def test_lifting():
     base = np.asarray(load_testing(dataset_type='case3', key='oil_lifting'))
-    calc = psc._oil_lifting.get_lifting_rate_arr()
+    calc = psc._oil_lifting.get_lifting_rate_ghv_arr()
     np.testing.assert_allclose(base, calc)
 
 

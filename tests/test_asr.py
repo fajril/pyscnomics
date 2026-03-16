@@ -4,8 +4,19 @@ A collection of testing units for ASR class.
 
 import pytest
 import numpy as np
-from pyscnomics.econ.selection import FluidType, TaxType
+from pyscnomics.econ.selection import FluidType, CostType
 from pyscnomics.econ.costs import ASR, ASRException
+
+
+# Parameters for example
+expense_year_1 = np.array([2023, 2024, 2025, 2026,])
+cost_1 = np.array([200, 150, 100, 50])
+cost_allocation_1 = [FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL]
+cost_type_1 = [
+    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+]
+tax_portion_1 = np.array([1, 1, 1, 1])
 
 
 def test_asr_incorrect_year_input():
@@ -61,7 +72,7 @@ def test_asr_incorrect_expense_year_input():
 def test_comparison():
     """A unit testing for comparison in ASR class"""
 
-    mangga_asr = ASR(
+    asr_mangga = ASR(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 50]),
@@ -69,7 +80,7 @@ def test_comparison():
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    apel_asr = ASR(
+    asr_apel = ASR(
         start_year=2023,
         end_year=2030,
         cost=np.array([100, 50]),
@@ -77,7 +88,7 @@ def test_comparison():
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    nanas_asr = ASR(
+    asr_nanas = ASR(
         start_year=2023,
         end_year=2030,
         cost=np.array([25, 25]),
@@ -85,10 +96,57 @@ def test_comparison():
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    assert mangga_asr == apel_asr
-    assert apel_asr != nanas_asr
-    assert nanas_asr <= mangga_asr
-    assert apel_asr >= nanas_asr
+    assert asr_mangga == asr_apel
+    assert asr_apel != asr_nanas
+    assert asr_nanas <= asr_mangga
+    assert asr_apel >= asr_nanas
+
+
+def test_asr_dunder_add():
+
+    asr_mangga = ASR(
+        start_year=2023,
+        end_year=2030,
+        expense_year=expense_year_1,
+        cost=cost_1,
+        cost_allocation=cost_allocation_1,
+        cost_type=cost_type_1,
+        future_rate=0.2,
+    )
+
+    asr_apel = ASR(
+        start_year=2023,
+        end_year=2030,
+        expense_year=np.array([2029, 2029]),
+        cost=np.array([500, 500]),
+        cost_allocation=[FluidType.GAS, FluidType.GAS],
+        cost_type=[CostType.SUNK_COST, CostType.SUNK_COST],
+        future_rate=0.01,
+    )
+
+    asr_total = asr_mangga + asr_apel
+
+    expected = {
+        "expense_year": np.array([2023, 2024, 2025, 2026, 2029, 2029]),
+        "cost": np.array([200, 150, 100, 50, 500, 500]),
+        "cost_allocation": [
+            FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+            FluidType.GAS, FluidType.GAS
+        ],
+        "cost_type": [
+            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+            CostType.SUNK_COST, CostType.SUNK_COST,
+        ],
+        "future_rate": np.array([0.2, 0.2, 0.2, 0.2, 0.01, 0.01]),
+    }
+
+    # Execute testings
+    np.testing.assert_allclose(asr_total.expense_year, expected["expense_year"])
+    np.testing.assert_allclose(asr_total.cost, expected["cost"])
+    assert asr_total.cost_allocation == expected["cost_allocation"]
+    assert asr_total.cost_type == expected["cost_type"]
+    np.testing.assert_allclose(asr_total.future_rate, expected["future_rate"])
 
 
 def test_asr_expenditures():

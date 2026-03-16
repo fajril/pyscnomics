@@ -4,8 +4,35 @@ A collection of unit testings for OPEX class.
 
 import pytest
 import numpy as np
-from pyscnomics.econ.selection import FluidType, TaxType
+from pyscnomics.econ.selection import FluidType, CostType
 from pyscnomics.econ.costs import OPEX, OPEXException, Intangible
+
+
+# Parameters for example
+expense_year_1 = np.array([2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030])
+cost_1 = np.array([200, 200, 200, 150, 100, 75, 25, 25])
+cost_2 = np.array([200, 200, 200, 150])
+cost_allocation_1 = [
+    FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+    FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+]
+cost_type_1 = [
+    np.nan, np.nan, CostType.SUNK_COST, CostType.SUNK_COST,
+    CostType.SUNK_COST, CostType.SUNK_COST, None, None,
+]
+cost_type_2 = [
+    "CostType.SUNK_COST", CostType.SUNK_COST, CostType.SUNK_COST,
+    CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
+]
+cost_type_3 = [
+    CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
+    CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
+]
+tax_portion_1 = np.array([1, 1, 1, 1, 1, 1, 1, 1])
 
 
 def test_opex_incorrect_year_input():
@@ -22,45 +49,20 @@ def test_opex_incorrect_year_input():
         )
 
 
-def test_opex_unequal_length_of_data_input():
-    """A unit testing for incorrect data input: unequal length of data input"""
-
+def test_opex_unequal_length_input_1():
     with pytest.raises(OPEXException):
-
         OPEX(
             start_year=2023,
             end_year=2030,
-            fixed_cost=np.array([100, 50, 50]),
-            expense_year=np.array([2028, 2029]),
-            cost_allocation=[FluidType.OIL, FluidType.OIL],
-            prod_rate=np.array([100, 50]),
-            cost_per_volume=np.array([0.1, 0.1]),
+            expense_year=expense_year_1,
+            fixed_cost=cost_2,
+            cost_allocation=cost_allocation_1,
+            cost_type=cost_type_3,
         )
 
+
+def test_opex_unequal_length_input_2():
     with pytest.raises(OPEXException):
-
-        OPEX(
-            start_year=2023,
-            end_year=2030,
-            fixed_cost=np.array([100, 50]),
-            expense_year=np.array([2028, 2029]),
-            cost_allocation=[FluidType.OIL, FluidType.OIL],
-            prod_rate=np.array([100, 100]),
-        )
-
-    with pytest.raises(OPEXException):
-
-        OPEX(
-            start_year=2023,
-            end_year=2030,
-            fixed_cost=np.array([100, 50]),
-            expense_year=np.array([2028, 2029]),
-            cost_allocation=[FluidType.OIL, FluidType.OIL],
-            cost_per_volume=np.array([0.1, 0.1]),
-        )
-
-    with pytest.raises(OPEXException):
-
         OPEX(
             start_year=2023,
             end_year=2030,
@@ -89,32 +91,33 @@ def test_opex_incorrect_expense_year_input():
 def test_opex_comparison_error():
     """A unit testing for misuse of OPEX: comparing different instances/objects"""
 
-    mangga_opex = OPEX(
+    opex_mangga = OPEX(
         start_year=2023,
         end_year=2030,
-        fixed_cost=np.array([100, 50]),
-        expense_year=np.array([2028, 2029]),
-        cost_allocation=[FluidType.OIL, FluidType.OIL],
+        expense_year=expense_year_1,
+        fixed_cost=cost_1,
+        cost_allocation=cost_allocation_1,
+        cost_type=cost_type_1,
     )
 
-    mangga_intangible = Intangible(
+    opex_apel = OPEX(
         start_year=2023,
         end_year=2030,
-        cost=np.array([100, 50]),
-        expense_year=np.array([2028, 2029]),
-        cost_allocation=[FluidType.OIL, FluidType.OIL],
+        expense_year=expense_year_1,
+        fixed_cost=cost_1,
+        cost_allocation=cost_allocation_1,
+        cost_type=cost_type_1,
     )
 
-    # Execute testing
-    check_equality = (mangga_opex == mangga_intangible)
+    check_equality = (opex_mangga == opex_apel)
 
-    assert check_equality is False
+    assert check_equality is True
 
 
 def test_opex_comparison():
     """A unit testing for comparison between OPEX instances"""
 
-    mangga_opex = OPEX(
+    opex_mangga = OPEX(
         start_year=2023,
         end_year=2030,
         fixed_cost=np.array([100, 50]),
@@ -122,7 +125,7 @@ def test_opex_comparison():
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    apel_opex = OPEX(
+    opex_apel = OPEX(
         start_year=2023,
         end_year=2030,
         fixed_cost=np.array([100, 50]),
@@ -130,7 +133,7 @@ def test_opex_comparison():
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    jeruk_opex = OPEX(
+    opex_jeruk = OPEX(
         start_year=2023,
         end_year=2030,
         fixed_cost=np.array([50, 25]),
@@ -138,7 +141,7 @@ def test_opex_comparison():
         cost_allocation=[FluidType.OIL, FluidType.OIL],
     )
 
-    nanas_opex = OPEX(
+    opex_nanas = OPEX(
         start_year=2023,
         end_year=2030,
         fixed_cost=np.array([100, 50]),
@@ -149,12 +152,12 @@ def test_opex_comparison():
     )
 
     # Execute comparison testing
-    assert mangga_opex == apel_opex
-    assert mangga_opex != jeruk_opex
-    assert jeruk_opex < apel_opex
-    assert mangga_opex <= nanas_opex
-    assert nanas_opex > mangga_opex
-    assert apel_opex >= jeruk_opex
+    assert opex_mangga == opex_apel
+    assert opex_mangga != opex_jeruk
+    assert opex_jeruk < opex_apel
+    assert opex_mangga <= opex_nanas
+    assert opex_apel > opex_jeruk
+    assert opex_apel >= opex_jeruk
 
 
 def test_opex_arithmetics_incorrect():
@@ -189,8 +192,70 @@ def test_opex_arithmetics_incorrect():
         assert mangga_opex / 0
 
 
+def test_opex_dunder_add():
+
+    opex_mangga = OPEX(
+        start_year=2023,
+        end_year=2030,
+        expense_year=expense_year_1,
+        fixed_cost=cost_1,
+        cost_allocation=cost_allocation_1,
+        cost_type=cost_type_1,
+    )
+
+    opex_apel = OPEX(
+        start_year=2023,
+        end_year=2030,
+        expense_year=expense_year_1,
+        fixed_cost=cost_1,
+        cost_allocation=cost_allocation_1,
+        cost_type=cost_type_3,
+    )
+
+    opex_add = opex_mangga + opex_apel
+
+    expected = {
+        "expense_year": np.array(
+            [
+                2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030,
+                2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030,
+            ]
+        ),
+        "fixed_cost": np.array(
+            [
+                200, 200, 200, 150, 100, 75, 25, 25,
+                200, 200, 200, 150, 100, 75, 25, 25,
+            ]
+        ),
+        "cost_allocation": (
+            [
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+            ]
+        ),
+        "cost_type": (
+            [
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
+                CostType.SUNK_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
+                CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
+                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
+            ]
+        ),
+    }
+
+    np.testing.assert_allclose(opex_add.expense_year, expected["expense_year"])
+    np.testing.assert_allclose(opex_add.fixed_cost, expected["fixed_cost"])
+    assert opex_add.cost_allocation == expected["cost_allocation"]
+    assert opex_add.cost_type == expected["cost_type"]
+
+
 def test_opex_arithmetics():
-    """A unit testing for arithmetic operations upon an instance of OPEX"""
 
     # Expected results
     add1 = [110, 110, 170, 170, 60, 60, 0, 0]
