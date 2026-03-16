@@ -1,0 +1,21 @@
+/* Custom CSS for larger Mermaid diagrams */
+
+.mermaid {
+    display: flex;
+    justify-content: center;
+    margin: 2em 0;
+}
+
+.mermaid svg {
+    max-width: 100%;
+    height: auto;
+    min-height: 400px;
+    width: auto !important;
+}
+
+/* Ensure diagrams are scrollable on smaller screens */
+@media screen and (max-width: 768px) {
+    .mermaid svg {
+        min-height: 300px;
+    }
+}
