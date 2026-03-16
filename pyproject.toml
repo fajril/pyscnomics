@@ -21,6 +21,14 @@ dependencies = [
     "fastapi==0.110.0",
     "pathos==0.3.3"
 ]
+
+[project.optional-dependencies]
+docs = [
+    "sphinx>=5.0",
+    "furo",
+    "sphinxcontrib-mermaid",
+]
+
 requires-python = ">=3.11"
 authors = [
     {name = "Aditya Dewanto", email = "adityadewanto@gmail.com"},
