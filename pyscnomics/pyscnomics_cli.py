@@ -281,8 +281,8 @@ def main(workbook_path, mode):
 @click.option(
     "-port",
     "--port",
-    default=8000,
-    help="The port number for running the API backend. The default port is 8000",
+    default=9999,
+    help="The port number for running the API backend. The default port is 9999",
 )
 def entry_point(**kwargs):
     """Manages CLI"""
