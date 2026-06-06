@@ -310,18 +310,21 @@ class Lifting:
 
     def get_lifting_rate_ghv_arr(self) -> np.ndarray:
         """
-        Computes and aligns the array of lifting rate multiplied by GHV with production years.
+        Computes and aligns the array of lifting rate multiplied by GHV with
+        production years.
 
-        This method calculates the product of `lifting_rate` and `ghv` for each time step,
-        then uses `_get_array` to aggregate and align the values according to the corresponding
-        production year. The final array is padded with zeros if necessary to match the
-        project duration.
+        This method calculates the product of `lifting_rate` and `ghv` for each
+        time step, then uses `_get_array` to aggregate and align the values
+        according to the corresponding production year.
+
+        The final array is padded with zeros if necessary to match the project
+        duration.
 
         Returns
         -------
         np.ndarray
-            A 1D array of length equal to the project duration, where each element represents
-            the aligned value of `lifting_rate * ghv` for that production year.
+            A 1D array of length equal to the project duration, where each element
+            represents the aligned value of `lifting_rate * ghv` for that production year.
 
         Notes
         -----

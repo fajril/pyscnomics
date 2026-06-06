@@ -13,7 +13,12 @@ from pyscnomics.io.aggregator import Aggregate
 from pyscnomics.io.plot_generator import get_uncertainty_plot
 
 from pyscnomics.tools.summary import get_summary
-from pyscnomics.io.write_excel import write_cashflow, write_summary, write_opt, write_table
+from pyscnomics.io.write_excel import (
+    write_cashflow,
+    write_summary,
+    write_opt,
+    write_table,
+)
 from pyscnomics.optimize.optimization import optimize_psc
 
 from pyscnomics.contracts.project import BaseProject
@@ -249,37 +254,39 @@ def main(workbook_path, mode):
         pass
 
     # Giving the workbook execution status to show that execution is success
-    xw.Book(workbook_path).sheets("References").range("N17").value = "Pyscnomics Version Not Supported. Please use older pyscnomics version"
+    xw.Book(workbook_path).sheets("References").range(
+        "N17"
+    ).value = "Pyscnomics Version Not Supported. Please use older pyscnomics version"
 
 
 @click.command()
 @click.option(
-    '-p',
-    '--path',
-    help='The path of the Microsoft Excel Workbook with PySCnomics template'
+    "-p",
+    "--path",
+    help="The path of the Microsoft Excel Workbook with PySCnomics template",
 )
 @click.option(
-    '-m',
-    '--mode',
-    default='Standard',
-    help='The mode of the simulation. They are: "Standard", "Sensitivity", "Optimization", "Uncertainty"'
+    "-m",
+    "--mode",
+    default="Standard",
+    help='The mode of the simulation. They are: "Standard", "Sensitivity", "Optimization", "Uncertainty"',
 )
 @click.option(
-    '-api',
-    '--api',
+    "-api",
+    "--api",
     default=1,
-    help='The command for running the API backend. '
-         '0 for not activating the API backend. 1 for activating the API backend'
+    help="The command for running the API backend. "
+    "0 for not activating the API backend. 1 for activating the API backend",
 )
 @click.option(
-    '-port',
-    '--port',
+    "-port",
+    "--port",
     default=8000,
-    help='The port number for running the API backend. The default port is 8000'
+    help="The port number for running the API backend. The default port is 8000",
 )
 def entry_point(**kwargs):
-    """ Manages CLI """
-    if kwargs['api'] == 1:
+    """Manages CLI"""
+    if kwargs["api"] == 1:
         body = """
                 We welcome you to our library, PySCnomics. This package contains tailored functionalities for 
                 assessing economic feasibility of oil and gas projects following the state-of-the-art Production 
@@ -289,23 +296,28 @@ def entry_point(**kwargs):
                 Institut Teknologi Bandung (ITB)
                 """
         print(body)
-        port_number = kwargs['port']
-        uvicorn.run("pyscnomics.api.main:app", host="0.0.0.0", port=int(port_number), reload=False)
+        port_number = kwargs["port"]
+        uvicorn.run(
+            "pyscnomics.api.main:app",
+            host="0.0.0.0",
+            port=int(port_number),
+            reload=False,
+        )
 
-    if kwargs['path'] is not None:
+    if kwargs["path"] is not None:
         # Defining the cli command for path
-        if 'p' in kwargs:
-            file_path = kwargs['p']
-        elif 'path' in kwargs:
-            file_path = kwargs['path']
+        if "p" in kwargs:
+            file_path = kwargs["p"]
+        elif "path" in kwargs:
+            file_path = kwargs["path"]
         else:
             file_path = None
 
         # Defining the cli command for mode
-        if 'm' in kwargs:
-            mode = kwargs['m']
-        elif 'mode' in kwargs:
-            mode = kwargs['mode']
+        if "m" in kwargs:
+            mode = kwargs["m"]
+        elif "mode" in kwargs:
+            mode = kwargs["mode"]
         else:
             mode = None
 
@@ -314,10 +326,10 @@ def entry_point(**kwargs):
 
 
 def run_standard(
-        contract: CostRecovery | GrossSplit | Transition,
-        contract_arguments: dict,
-        workbook_object: xw.Book,
-        summary_argument: dict
+    contract: CostRecovery | GrossSplit | Transition,
+    contract_arguments: dict,
+    workbook_object: xw.Book,
+    summary_argument: dict,
 ):
     """
     The function to run simulation in Standard mode.
@@ -341,16 +353,16 @@ def run_standard(
 
     sheet_name = None
     if isinstance(contract, CostRecovery):
-        sheet_name = 'Result Table CR'
+        sheet_name = "Result Table CR"
 
     elif isinstance(contract, GrossSplit):
-        sheet_name = 'Result Table GS'
+        sheet_name = "Result Table GS"
 
     elif isinstance(contract, BaseProject):
-        sheet_name = 'Result Table Base Project'
+        sheet_name = "Result Table Base Project"
 
     elif isinstance(contract, Transition):
-        sheet_name = 'Transition'
+        sheet_name = "Transition"
 
     # Writing the result of the contract
     write_cashflow(
@@ -363,17 +375,17 @@ def run_standard(
     write_summary(
         summary_dict=contract_summary,
         workbook_object=workbook_object,
-        sheet_name='Executive Summary',
-        range_cell='E5',
+        sheet_name="Executive Summary",
+        range_cell="E5",
     )
 
 
 def run_optimization(
-        contract: CostRecovery | GrossSplit | Transition,
-        data: Aggregate,
-        contract_arguments: dict,
-        summary_arguments: dict,
-        workbook_object: xw.Book,
+    contract: CostRecovery | GrossSplit | Transition,
+    data: Aggregate,
+    contract_arguments: dict,
+    summary_arguments: dict,
+    workbook_object: xw.Book,
 ):
     """
     The function to run simulation in Optimization mode.
@@ -430,22 +442,22 @@ def run_optimization(
         list_params_value=list_params_value,
         result_optimization=result_optimization,
         workbook_object=workbook_object,
-        sheet_name='Optimization',
-        range_opt_result='P2',
+        sheet_name="Optimization",
+        range_opt_result="P2",
         range_list_params=range_list_params,
         range_list_value=range_list_value,
     )
 
     # Generating the summary of the optimized contract
-    summary_arguments['contract'] = optimized_contract
+    summary_arguments["contract"] = optimized_contract
     optimized_contract_summary = get_summary(**summary_arguments)
 
     # Writing optimized contract summary
     write_summary(
         summary_dict=optimized_contract_summary,
         workbook_object=workbook_object,
-        sheet_name='Optimization Comparison',
-        range_cell='J6',
+        sheet_name="Optimization Comparison",
+        range_cell="J6",
     )
 
 

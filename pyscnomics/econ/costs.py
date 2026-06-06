@@ -18,6 +18,7 @@ from pyscnomics.econ.selection import (
     FluidType,
     CostType,
     DeprMethod,
+    InflationAppliedTo,
 )
 from pyscnomics.econ.costs_tools import (
     get_cost_adjustment_by_inflation,
@@ -396,9 +397,7 @@ class CapitalCost(GeneralCost):
 
         # Prepare attribute cost_type
         if self.cost_type is None:
-            self.cost_type = [
-                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
-            ]
+            self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.cost_type, list):
@@ -408,13 +407,12 @@ class CapitalCost(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
-                for _, val in enumerate(self.cost_type)
+                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType) else 0
+                    1 if not isinstance(val, CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -472,8 +470,10 @@ class CapitalCost(GeneralCost):
         self.salvage_value = self.salvage_value.astype(np.float64)
 
         # Prepare attribute useful_life
+        life = min(5.0, self.project_duration)
+
         if self.useful_life is None:
-            self.useful_life = np.repeat(5.0, len(self.expense_year))
+            self.useful_life = np.repeat(life, len(self.expense_year))
 
         else:
             if not isinstance(self.useful_life, np.ndarray):
@@ -481,10 +481,9 @@ class CapitalCost(GeneralCost):
                     f"Attribute useful_life must be provided as a numpy.ndarray, "
                     f"not as a/an {self.useful_life.__class__.__qualname__}"
                 )
-
             useful_life_nan_id = np.argwhere(pd.isna(self.useful_life)).ravel()
             if len(useful_life_nan_id) > 0:
-                self.useful_life[useful_life_nan_id] = np.repeat(5.0, len(useful_life_nan_id))
+                self.useful_life[useful_life_nan_id] = np.repeat(life, len(useful_life_nan_id))
 
         self.useful_life = self.useful_life.astype(np.float64)
 
@@ -652,70 +651,109 @@ class CapitalCost(GeneralCost):
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | int | float = 0.0,
         tax_rate: np.ndarray | float = 0.0,
+        inflation_rate_applied_to: InflationAppliedTo | None = None,
     ) -> tuple:
         """
-        This function calculates the total depreciation for a project based on the specified
-        depreciation method, inflation rates, tax portions, and tax discounts. It also returns
-        the undepreciated asset value at the end of the depreciation period.
+        Compute total annual depreciation charges for all assets, with optional
+        inflation and indirect tax adjustments.
+
+        Asset costs are first adjusted based on the specified inflation scope and
+        indirect tax, then depreciated using the selected depreciation method.
+        Assets whose useful lives extend beyond the project end are tracked as
+        undepreciated (overdue) assets.
 
         Parameters
         ----------
-        depr_method : DeprMethod, optional
-            The depreciation method to be applied. Available methods include:
-            - `DeprMethod.SL` for straight-line depreciation,
-            - `DeprMethod.DB` for declining balance,
-            - `DeprMethod.PSC_DB` for PSC declining balance.
-            Default is `DeprMethod.PSC_DB`.
-        decline_factor : float or int, optional
-            The decline factor used in the declining balance depreciation method.
-            Default is 2, which corresponds to double-declining balance.
+        depr_method : DeprMethod, default=DeprMethod.PSC_DB
+            Depreciation method to apply (straight-line, declining balance,
+            or PSC declining balance).
+        decline_factor : float or int, default=2
+            Decline factor for the declining-balance method.
+            Ignored unless ``depr_method`` is ``DeprMethod.DB``.
         year_inflation : np.ndarray, optional
-            A NumPy array representing the years during which inflation is applied to the costs.
-            If not provided, defaults to repeating the `start_year` for all costs.
-        inflation_rate : np.ndarray or float, optional
-            The inflation rate(s) to apply to the project costs. If provided as a float,
-            a uniform inflation rate is applied. If provided as a NumPy array, different
-            rates are applied based on the corresponding project years. Default is 0.0.
-        tax_rate : np.ndarray or float, optional
-            A NumPy array or float representing the tax rate applied to the costs. If not provided,
-            a default rate of 0.0 will be used. When provided as an array, it should match
-            the project years.
+            Project years to which inflation adjustments are applied.
+            If None, inflation is applied relative to the project start year.
+        inflation_rate : float or np.ndarray, default=0.0
+            Inflation rate(s) applied according to ``inflation_rate_applied_to``.
+        tax_rate : float or np.ndarray, default=0.0
+            Indirect tax rate(s) applied to project costs.
+        inflation_rate_applied_to : InflationAppliedTo or None, default=None
+            Defines whether inflation is applied to CAPEX, OPEX, both, or not applied
+            at all (tax only).
 
         Returns
         -------
-        tuple
-            A tuple containing:
-            (1) Total depreciation charges for each period.
-            (2) The undepreciated asset value at the end of the analysis.
+        tuple of np.ndarray
+            (1) ``total_depreciation_charge`` :
+                Total depreciation charge per project year.
+            (2) ``undepreciated_asset`` :
+                Remaining depreciation beyond the project duration
+                for assets not fully depreciated.
+
+        Raises
+        ------
+        CapitalException
+            If an invalid depreciation method or inflation application scope
+            is provided.
 
         Notes
-        ------
-        (1) This method calculates depreciation charges based on the specified
-            depreciation method.
-        (2) Prior to the core calculations, attribute 'cost' is adjusted by tax
-            and inflation schemes (if any),
-        (3) The depreciation charges are aligned with the corresponding periods
-            based on pis_year.
+        -----
+        - Depreciation charges are aligned to each asset’s ``pis_year``.
+        - Inflation and indirect tax are applied before depreciation,
+          based on ``inflation_rate_applied_to``.
+        - Overdue depreciation (beyond project end) is reported separately
+          as undepreciated assets.
         """
 
-        # Cost adjustment due to inflation and tax
-        cost_adjusted = get_cost_adjustment_by_inflation(
-            start_year=self.start_year,
-            end_year=self.end_year,
-            cost=self.cost,
-            expense_year=self.expense_year,
-            project_years=self.project_years,
-            year_inflation=year_inflation,
-            inflation_rate=inflation_rate,
-        ) + calc_indirect_tax(
-            start_year=self.start_year,
-            cost=self.cost,
-            expense_year=self.expense_year,
-            project_years=self.project_years,
-            tax_portion=self.tax_portion,
-            tax_rate=tax_rate,
-            tax_discount=self.tax_discount,
+        # Prepare parameter "inflation_rate_applied_to"
+        if not isinstance(inflation_rate_applied_to, (InflationAppliedTo, type(None))):
+            raise CapitalException(
+                f"Invalid inflation_rate_applied_to: "
+                f"({inflation_rate_applied_to.__class__.__qualname__}). "
+                f"Expected one of {list(InflationAppliedTo)} or None."
+            )
+
+        # Specify "cost_adjusted" according to "inflation_rate_applied_to"
+        cost_adjusted_by_inflation_and_tax = (
+            get_cost_adjustment_by_inflation(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                cost=self.cost,
+                expense_year=self.expense_year,
+                project_years=self.project_years,
+                year_inflation=year_inflation,
+                inflation_rate=inflation_rate,
+            )
+            + calc_indirect_tax(
+                start_year=self.start_year,
+                cost=self.cost,
+                expense_year=self.expense_year,
+                project_years=self.project_years,
+                tax_portion=self.tax_portion,
+                tax_rate=tax_rate,
+                tax_discount=self.tax_discount,
+            )
         )
+
+        cost_adjusted_only_by_tax = (
+            self.cost
+            + calc_indirect_tax(
+                start_year=self.start_year,
+                cost=self.cost,
+                expense_year=self.expense_year,
+                project_years=self.project_years,
+                tax_portion=self.tax_portion,
+                tax_rate=tax_rate,
+                tax_discount=self.tax_discount,
+            )
+        )
+
+        cost_adjusted = {
+            InflationAppliedTo.CAPEX: cost_adjusted_by_inflation_and_tax,
+            InflationAppliedTo.CAPEX_AND_OPEX: cost_adjusted_by_inflation_and_tax,
+            InflationAppliedTo.OPEX: cost_adjusted_only_by_tax,
+            None: cost_adjusted_only_by_tax,
+        }[inflation_rate_applied_to]
 
         # Calculate depreciation
         # Depreciation method is straight line
@@ -778,22 +816,37 @@ class CapitalCost(GeneralCost):
                 f"Depreciation method ({depr_method}) is not recognized"
             )
 
-        # The relative difference of pis_year and start_year
+        # Specify indices to place the first element of depreciation
         shift_indices = self.pis_year - self.start_year
 
-        overdue = (self.pis_year + self.useful_life - self.end_year - 1).astype(int)
+        # Prepare assets with overdue depreciation, namely those that
+        # have not been fully depreciated by the end of the project
+        overdues = (self.pis_year + self.useful_life - self.end_year - 1).astype(int)
 
-        if np.any(overdue > 0):
+        is_overdue = overdues > 0
 
+        if np.any(is_overdue):
             # Some assets have not been fully depreciated by the end of the project.
-            # These assets are overdue by {overdue[overdue > 0]} years.
-            is_overdue = overdue > 0
-            max_overdue = int(np.max(overdue[is_overdue]))
-            overdue_depr_charge = [
-                np.concatenate((row[-i:-i+o], np.zeros(max_overdue-o))) if i > 0
-                else row for row, i, o in zip(depreciation_charge, shift_indices, overdue)
-            ]
-            overdue_depr_charge = np.asarray(overdue_depr_charge)[is_overdue]
+            # These assets are overdue by {overdue[is_overdue]} years.
+            max_overdue = int(np.max(overdues[is_overdue]))
+
+            full_depr_charge = np.zeros(
+                [depreciation_charge.shape[0], depreciation_charge.shape[1] + max_overdue]
+            )
+            # useful_life = self.useful_life.astype(int)
+
+            for i, charge in enumerate(depreciation_charge):
+                # (
+                #     full_depr_charge[i, shift_indices[i]:shift_indices[i] + useful_life[i]]
+                # ) = charge[useful_life[i]]
+
+                if shift_indices[i] + charge.shape[0] > full_depr_charge.shape[1]:
+                    max_idx = full_depr_charge.shape[1] - shift_indices[i]
+                    charge = charge[:max_idx]
+
+                full_depr_charge[i, shift_indices[i]:shift_indices[i] + charge.shape[0]] = charge
+
+            overdue_depr_charge = full_depr_charge[:, self.end_year - self.start_year + 1:]
 
         else:
             overdue_depr_charge = np.zeros([1, 1])
@@ -810,7 +863,6 @@ class CapitalCost(GeneralCost):
         # Calculate total depreciation charge and undepreciated asset
         total_depreciation_charge = depreciation_charge.sum(axis=0)
         undepreciated_asset = overdue_depr_charge.sum(axis=0)
-        # undepreciated_asset = np.sum(cost_adjusted) - np.sum(total_depreciation_charge)
 
         return total_depreciation_charge, undepreciated_asset
 
@@ -821,45 +873,44 @@ class CapitalCost(GeneralCost):
         year_inflation: np.ndarray = None,
         inflation_rate: np.ndarray | int | float = 0.0,
         tax_rate: np.ndarray | float = 0.0,
+        inflation_rate_applied_to: InflationAppliedTo | None = None,
     ) -> np.ndarray:
         """
-        Calculate the total book value of depreciation for the asset.
+        Compute the cumulative book value of project assets after depreciation.
+
+        The book value is calculated as cumulative post-tax (and optionally
+        inflation-adjusted) expenditures minus cumulative depreciation charges.
+        Depreciation charges are obtained from ``total_depreciation_rate`` using
+        the specified depreciation method and adjustment rules.
 
         Parameters
         ----------
-        depr_method : DeprMethod, optional
-            The depreciation method to be applied. Available methods include:
-            - `DeprMethod.SL` for straight-line depreciation,
-            - `DeprMethod.DB` for declining balance,
-            - `DeprMethod.PSC_DB` for PSC declining balance.
-            Default is `DeprMethod.PSC_DB`.
-        decline_factor : float or int, optional
-            The decline factor used in the declining balance depreciation method.
-            Default is 2, which corresponds to double-declining balance.
+        depr_method : DeprMethod, default=DeprMethod.PSC_DB
+            Depreciation method applied to asset costs.
+        decline_factor : float or int, default=2
+            Decline factor for the declining-balance method.
+            Ignored unless ``depr_method`` is ``DeprMethod.DB``.
         year_inflation : np.ndarray, optional
-            A NumPy array representing the years during which inflation is applied to the costs.
-            If not provided, defaults to repeating the `start_year` for all costs.
-        inflation_rate : np.ndarray or float, optional
-            The inflation rate(s) to apply to the project costs. If provided as a float,
-            a uniform inflation rate is applied. If provided as a NumPy array, different
-            rates are applied based on the corresponding project years. Default is 0.0.
-        tax_rate : np.ndarray or float, optional
-            A NumPy array or float representing the tax rate applied to the costs. If not provided,
-            a default rate of 0.0 will be used. When provided as an array, it should match
-            the project years.
+            Project years to which inflation adjustments are applied.
+        inflation_rate : float or np.ndarray, default=0.0
+            Inflation rate(s) applied according to ``inflation_rate_applied_to``.
+        tax_rate : float or np.ndarray, default=0.0
+            Indirect tax rate(s) applied to project costs.
+        inflation_rate_applied_to : InflationAppliedTo or None, default=None
+            Defines whether inflation is applied to CAPEX, OPEX, both, or not applied
+            (tax only).
 
         Returns
         -------
         np.ndarray
-            An array containing the cumulative book value of depreciation for each period,
-            taking into account tax and inflation schemes.
+            1D array of cumulative asset book values per project year.
 
         Notes
         -----
-        (1) This method calculates the cumulative book value of depreciation for the asset
-            based on the specified depreciation method and other parameters.
-        (2) The cumulative book value is obtained by subtracting the cumulative
-            depreciation charges from the cumulative expenditures.
+        - Book value is computed as:
+              cumulative(post-tax expenditures) − cumulative(depreciation charges).
+        - Inflation and indirect tax treatments are consistent with
+          ``expenditures_post_tax`` and ``total_depreciation_rate``.
         """
 
         # Calculate total depreciation charge from method total_depreciation_rate()
@@ -869,6 +920,7 @@ class CapitalCost(GeneralCost):
             year_inflation=year_inflation,
             inflation_rate=inflation_rate,
             tax_rate=tax_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
         )[0]
 
         # Calculate total depreciation book value
@@ -879,6 +931,113 @@ class CapitalCost(GeneralCost):
                 tax_rate=tax_rate,
             )
         ) - np.cumsum(total_depreciation_charge)
+
+    def total_amortization_rate(
+        self,
+        prod: np.ndarray,
+        year_inflation: np.ndarray,
+        inflation_rate: np.ndarray | int | float,
+        tax_rate: np.ndarray | float,
+        inflation_rate_applied_to: InflationAppliedTo | None,
+    ) -> np.ndarray:
+        """
+        Compute total unit-of-production amortization rate for all capital elements.
+
+        Adjusts capital costs for inflation and/or indirect tax according to
+        ``inflation_rate_applied_to``, then computes unit-of-production
+        amortization per cost element and aggregates them into a project-level
+        amortization profile.
+
+        Parameters
+        ----------
+        prod : np.ndarray
+            Production profile aligned with ``self.project_years``.
+        year_inflation : np.ndarray
+            Year identifiers used for inflation adjustment.
+        inflation_rate : np.ndarray or float or int
+            Inflation rate(s) applied to eligible cost components.
+        tax_rate : np.ndarray or float
+            Indirect tax rate(s).
+        inflation_rate_applied_to : InflationAppliedTo or None
+            Specifies which cost components are adjusted by inflation.
+            If None, only indirect tax is applied.
+
+        Returns
+        -------
+        np.ndarray
+            Total amortization charge per project year.
+        """
+
+        # Prepare parameter "inflation_rate_applied_to"
+        if not isinstance(inflation_rate_applied_to, (InflationAppliedTo, type(None))):
+            raise CapitalException(
+                f"Invalid inflation_rate_applied_to: "
+                f"({inflation_rate_applied_to.__class__.__qualname__}). "
+                f"Expected one of {list(InflationAppliedTo)} or None."
+            )
+
+        # Specify "cost_adjusted" according to "inflation_rate_applied_to"
+        cost_adjusted_by_inflation_and_tax = (
+            get_cost_adjustment_by_inflation(
+                start_year=self.start_year,
+                end_year=self.end_year,
+                cost=self.cost,
+                expense_year=self.expense_year,
+                project_years=self.project_years,
+                year_inflation=year_inflation,
+                inflation_rate=inflation_rate,
+            )
+            + calc_indirect_tax(
+                start_year=self.start_year,
+                cost=self.cost,
+                expense_year=self.expense_year,
+                project_years=self.project_years,
+                tax_portion=self.tax_portion,
+                tax_rate=tax_rate,
+                tax_discount=self.tax_discount,
+            )
+        )
+
+        cost_adjusted_only_by_tax = (
+            self.cost
+            + calc_indirect_tax(
+                start_year=self.start_year,
+                cost=self.cost,
+                expense_year=self.expense_year,
+                project_years=self.project_years,
+                tax_portion=self.tax_portion,
+                tax_rate=tax_rate,
+                tax_discount=self.tax_discount,
+            )
+        )
+
+        cost_adjusted = {
+            InflationAppliedTo.CAPEX: cost_adjusted_by_inflation_and_tax,
+            InflationAppliedTo.CAPEX_AND_OPEX: cost_adjusted_by_inflation_and_tax,
+            InflationAppliedTo.OPEX: cost_adjusted_only_by_tax,
+            None: cost_adjusted_only_by_tax,
+        }[inflation_rate_applied_to]
+
+        # Calculate amortization charges
+        amortization_charges = np.array(
+            [
+                depr.unit_of_production_rate(
+                    project_years=self.project_years,
+                    prod=prod,
+                    cost=c,
+                    salvage_value=sv,
+                    pis_year=pis,
+                )
+                for c, sv, pis in zip(
+                    cost_adjusted,
+                    self.salvage_value,
+                    self.pis_year,
+                )
+            ]
+        )
+
+        # Returns total amortization charge for all cost elements
+        return amortization_charges.sum(axis=0)
 
     def __eq__(self, other):
         # Between two instances of CapitalCost
@@ -1222,9 +1381,7 @@ class Intangible(GeneralCost):
 
         # Prepare attribute cost_type
         if self.cost_type is None:
-            self.cost_type = [
-                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
-            ]
+            self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.cost_type, list):
@@ -1234,13 +1391,12 @@ class Intangible(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
-                for _, val in enumerate(self.cost_type)
+                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType) else 0
+                    1 if not isinstance(val, CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -1684,9 +1840,7 @@ class OPEX(GeneralCost):
 
         # Prepare attribute cost_type
         if self.cost_type is None:
-            self.cost_type = [
-                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
-            ]
+            self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.cost_type, list):
@@ -1696,13 +1850,12 @@ class OPEX(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
-                for _, val in enumerate(self.cost_type)
+                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType) else 0
+                    1 if not isinstance(val, CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -2198,9 +2351,7 @@ class ASR(GeneralCost):
 
         # Prepare attribute cost_type
         if self.cost_type is None:
-            self.cost_type = [
-                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
-            ]
+            self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.cost_type, list):
@@ -2210,13 +2361,12 @@ class ASR(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
-                for _, val in enumerate(self.cost_type)
+                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType) else 0
+                    1 if not isinstance(val, CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -2888,9 +3038,7 @@ class LBT(GeneralCost):
 
         # Prepare attribute cost_type
         if self.cost_type is None:
-            self.cost_type = [
-                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
-            ]
+            self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.cost_type, list):
@@ -2900,13 +3048,12 @@ class LBT(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
-                for _, val in enumerate(self.cost_type)
+                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType) else 0
+                    1 if not isinstance(val, CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -3685,9 +3832,7 @@ class CostOfSales(GeneralCost):
 
         # Prepare attribute cost_type
         if self.cost_type is None:
-            self.cost_type = [
-                CostType.PRE_ONSTREAM_COST for _ in range(len(self.expense_year))
-            ]
+            self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
             if not isinstance(self.cost_type, list):
@@ -3697,13 +3842,12 @@ class CostOfSales(GeneralCost):
                 )
 
             self.cost_type = [
-                CostType.PRE_ONSTREAM_COST if pd.isna(val) else val
-                for _, val in enumerate(self.cost_type)
+                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType) else 0
+                    1 if not isinstance(val, CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )

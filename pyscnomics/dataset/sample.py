@@ -1,3 +1,8 @@
+"""
+A collection of methods to convert string datatype from JSON inputs
+to their corresponding datatypes in the core engine.
+"""
+
 import json
 import os
 import importlib.resources as pkg_resources
@@ -11,7 +16,8 @@ from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales
-from pyscnomics.econ.revenue import Lifting, FluidType
+from pyscnomics.econ.revenue import Lifting
+from pyscnomics.econ.selection import FluidType, CostType
 
 
 def get_json_file_names() -> list:
@@ -80,7 +86,7 @@ def read_json_file(file_name: str) -> dict:
 
 def read_fluid_type(fluid: list | str) -> list[FluidType] | FluidType:
     """
-    A function to converting the str input into FluidType Enum class.
+    A function to convert the str input into FluidType Enum class.
 
     Parameters
     ----------
@@ -106,7 +112,6 @@ def read_fluid_type(fluid: list | str) -> list[FluidType] | FluidType:
             return FluidType.CO2
 
     else:
-
         fluid_mapping = {'Oil': FluidType.OIL,
                          'Gas': FluidType.GAS,
                          'Sulfur': FluidType.SULFUR,
@@ -115,6 +120,89 @@ def read_fluid_type(fluid: list | str) -> list[FluidType] | FluidType:
 
         # Replace elements in the list using the mapping
         result = [fluid_mapping[i] for i in fluid if i in fluid_mapping]
+
+        return result
+
+
+def read_cost_type(cost_type: str | list) -> CostType | list[CostType]:
+    """
+    Convert cost type(s) from string representation to corresponding CostType enum.
+
+    This function accepts either a single string or a list of strings representing
+    cost types and returns the corresponding `CostType` enum instance(s).
+    Valid cost type strings include:
+    - "sunk_cost"
+    - "preonstream_cost"
+    - "postonstream_cost"
+
+    Parameters
+    ----------
+    cost_type : str or list of str
+        Cost type(s) to be converted. Can be a single string (e.g., "Sunk Cost")
+        or a list of strings (e.g., ["Sunk Cost", "Postonstream Cost"]).
+
+    Returns
+    -------
+    CostType or list of CostType
+        The corresponding `CostType` enum instance(s) matching the input.
+        Returns a single `CostType` if input is a string, otherwise returns
+        a list of `CostType` objects.
+
+    Raises
+    ------
+    TypeError
+        If `cost_type` is not a string or list, or if any element within the list
+        is not a valid cost type string.
+    KeyError
+        If a string input does not match any recognized cost type.
+
+    Notes
+    -----
+    Valid cost type strings are case-sensitive and must exactly match one of the
+    following:
+    - "sunk_cost"
+    - "preonstream_cost"
+    - "postonstream_cost"
+    """
+
+    # Only allow string or list as the datatype of `cost_type`
+    if not isinstance(cost_type, (str, list)):
+        return TypeError(
+            f"Parameter cost_type must be a string or a list, "
+            f"not {cost_type.__class__.__qualname__}"
+        )
+
+    # Transformation string -> CostType(Enum) for string input
+    if isinstance(cost_type, str):
+        if cost_type == "sunk_cost":
+            return CostType.SUNK_COST
+
+        elif cost_type == "preonstream_cost":
+            return CostType.PRE_ONSTREAM_COST
+
+        elif cost_type == "postonstream_cost":
+            return CostType.POST_ONSTREAM_COST
+
+        else:
+            raise KeyError(f"Parameter cost_type ({cost_type}) is unrecognized")
+
+    # Transformation string -> CostType(Enum) for list input
+    else:
+        cost_type_mapping = {
+            "sunk_cost": CostType.SUNK_COST,
+            "preonstream_cost": CostType.PRE_ONSTREAM_COST,
+            "postonstream_cost": CostType.POST_ONSTREAM_COST,
+            None: None,
+        }
+
+        # Replace each string inside the cost_type list into their
+        # corresponding CostType(Enum) counterparts
+        result = [0] * len(cost_type)
+        for i, ct in enumerate(cost_type):
+            if ct in cost_type_mapping.keys():
+                result[i] = cost_type_mapping[ct]
+            else:
+                raise TypeError(f"Invalid cost type: {ct}")
 
         return result
 
@@ -154,45 +242,66 @@ def assign_lifting(data_raw: dict) -> tuple | None:
     -------
     lifting_list: tuple | None
         The list containing the lifting dataclass.
-
     """
-    # Defining the data source and the list container for Lifting. Then, assign them based on their fluid type
+
+    # Defining data source and container for Lifting (container as list datatype).
+    # Then, assign them based on their fluid type
     lifting_data = data_raw['lifting']
+
     if lifting_data is None:
         return None
+
     else:
         lifting_list = []
         for key in lifting_data.keys():
-            # Since the Lifting data for gas has different arguments input, conditional formatting is applied
+            # Since the Lifting data for gas has different arguments input,
+            # conditional formatting is applied
             if 'Gas' in key or 'GSA' in key:
-                lifting = Lifting(start_year=lifting_data[key]["start_year"],
-                                  end_year=lifting_data[key]["end_year"],
-                                  lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
-                                  price=np.array(lifting_data[key]["price"]),
-                                  prod_year=np.array(lifting_data[key]["prod_year"]),
-                                  fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
-                                  ghv=None if lifting_data[key]["ghv"] is None else
-                                  np.array(lifting_data[key]["ghv"]),
-                                  prod_rate=None if lifting_data[key]["prod_rate"] is None or "prod_rate" not in lifting_data[key]
-                                  else np.array(lifting_data[key]["prod_rate"]),
-                                  prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None or "prod_rate_baseline" not in lifting_data[key]
-                                  else np.array(lifting_data[key]["prod_rate_baseline"]),
-                                  )
+                lifting = Lifting(
+                    start_year=lifting_data[key]["start_year"],
+                    end_year=lifting_data[key]["end_year"],
+                    lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
+                    price=np.array(lifting_data[key]["price"]),
+                    prod_year=np.array(lifting_data[key]["prod_year"]),
+                    fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
+                    ghv=(
+                        None if lifting_data[key]["ghv"] is None
+                        else np.array(lifting_data[key]["ghv"])
+                    ),
+                    prod_rate=(
+                        None if lifting_data[key]["prod_rate"] is None
+                        or "prod_rate" not in lifting_data[key]
+                        else np.array(lifting_data[key]["prod_rate"])
+                    ),
+                    prod_rate_baseline=(
+                        None if lifting_data[key]["prod_rate_baseline"] is None
+                        or "prod_rate_baseline" not in lifting_data[key]
+                        else np.array(lifting_data[key]["prod_rate_baseline"])
+                    ),
+                )
 
                 lifting_list.append(lifting)
 
             else:
-                lifting = Lifting(start_year=lifting_data[key]["start_year"],
-                                  end_year=lifting_data[key]["end_year"],
-                                  lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
-                                  price=np.array(lifting_data[key]["price"]),
-                                  prod_year=np.array(lifting_data[key]["prod_year"]),
-                                  fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
-                                  prod_rate=None if lifting_data[key]["prod_rate"] is None or "prod_rate" not in lifting_data[key]
-                                  else np.array(lifting_data[key]["prod_rate"]),
-                                  prod_rate_baseline=None if lifting_data[key]["prod_rate_baseline"] is None or "prod_rate_baseline" not in lifting_data[key]
-                                  else np.array(lifting_data[key]["prod_rate_baseline"]),
-                                  )
+                lifting = Lifting(
+                    start_year=lifting_data[key]["start_year"],
+                    end_year=lifting_data[key]["end_year"],
+                    lifting_rate=np.array(lifting_data[key]["lifting_rate"]),
+                    price=np.array(lifting_data[key]["price"]),
+                    prod_year=np.array(lifting_data[key]["prod_year"]),
+                    fluid_type=read_fluid_type(lifting_data[key]["fluid_type"]),
+                    prod_rate=(
+                        None if lifting_data[key]["prod_rate"] is None
+                        or "prod_rate" not in lifting_data[key]
+                        else np.array(lifting_data[key]["prod_rate"])
+                    ),
+                    prod_rate_baseline=(
+                        None if lifting_data[key]["prod_rate_baseline"] is None
+                        or "prod_rate_baseline" not in lifting_data[key]
+                        else np.array(lifting_data[key]["prod_rate_baseline"])
+                    ),
+                )
+
                 lifting_list.append(lifting)
 
         return tuple(lifting_list)
@@ -472,11 +581,11 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
 
 
 def load_cost(
-        filename: str,
-        start_year: int = 2023,
-        end_year: int = 2043,
-        cost_allocation: FluidType = FluidType.OIL,
-        template: str = "pyscnomics"
+    filename: str,
+    start_year: int = 2023,
+    end_year: int = 2043,
+    cost_allocation: FluidType = FluidType.OIL,
+    template: str = "pyscnomics"
 ) -> tuple[CapitalCost, Intangible, OPEX, ASR] | ValueError:
     """
     Function to load the cost data from Excel file.

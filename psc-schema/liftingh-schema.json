@@ -1,0 +1,39 @@
+{
+  "$id": "liftingh-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table LiftingH Schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer"
+    },
+    "cId": {
+      "$ref": "case-schema.json#/properties/id",
+      "description": "Foreign key referencing Case.id"
+    },
+    "name": {
+      "type": "string"
+    },
+    "Tipe": {
+      "type": "integer",
+      "description": "Type of lifting :  0: Oil 1: Gas 2: LPG propane 3: LPG butane 4: CO2 5: Sulfur 6: Electricity",
+      "default": 0
+    },
+    "onstream_date": {
+      "type": "integer",
+      "description": "UTC timestamp in seconds"
+    },
+    "GSANumber": {
+      "type": "integer",
+      "default": 1
+    }
+  },
+  "required": [
+    "id",
+    "cId",
+    "name",
+    "Tipe",
+    "onstream_date",
+    "GSANumber"
+  ]
+}

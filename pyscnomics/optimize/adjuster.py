@@ -1,6 +1,7 @@
 """
 Configuration to undertake sensitivity analysis.
 """
+
 import numpy as np
 from dataclasses import dataclass, field
 
@@ -15,7 +16,7 @@ from pyscnomics.contracts.transition import Transition
 
 
 class AdjustDataException(Exception):
-    """ Exception to be raised for a misuse of AdjustData class """
+    """Exception to be raised for a misuse of AdjustData class"""
 
     pass
 
@@ -50,10 +51,7 @@ def get_price_and_rate_adjustment(
         # Extract price and lifting_rate data from the original lifting_aggregate data
         lifting_aggregate_attrs = {
             "price": (
-                [
-                    lifting_aggregate[i].price
-                    for i, val in enumerate(lifting_aggregate)
-                ]
+                [lifting_aggregate[i].price for i, val in enumerate(lifting_aggregate)]
             ),
             "rate": (
                 [
@@ -113,11 +111,16 @@ def get_price_and_rate_adjustment(
         # Perform modification to price and lifting_rate data
         updated_attrs = {
             "price": {
-                psc: [pr * price_multiplier for pr in lifting_aggregate_attrs["price"][psc]]
+                psc: [
+                    pr * price_multiplier
+                    for pr in lifting_aggregate_attrs["price"][psc]
+                ]
                 for psc in ["PSC 1", "PSC 2"]
             },
             "rate": {
-                psc: [rt * rate_multiplier for rt in lifting_aggregate_attrs["rate"][psc]]
+                psc: [
+                    rt * rate_multiplier for rt in lifting_aggregate_attrs["rate"][psc]
+                ]
                 for psc in ["PSC 1", "PSC 2"]
             },
         }
@@ -168,12 +171,9 @@ def get_rate_adjustment(
     # For single contract
     if "Transition" not in contract_type:
         # Extract lifting rate data from the original lifting_aggregate
-        lifting_aggregate_rate = (
-            [
-                lifting_aggregate[i].lifting_rate
-                for i, val in enumerate(lifting_aggregate)
-            ]
-        )
+        lifting_aggregate_rate = [
+            lifting_aggregate[i].lifting_rate for i, val in enumerate(lifting_aggregate)
+        ]
 
         # Modify lifting rate data
         updated_rate = [rt * rate_multiplier for rt in lifting_aggregate_rate]
@@ -262,10 +262,7 @@ def get_opex_adjustment(
         # Extract fixed_cost and cost_per_volume data from the original opex_aggregate
         opex_aggregate_attrs = {
             "fixed_cost": (
-                [
-                    opex_aggregate[i].fixed_cost
-                    for i, val in enumerate(opex_aggregate)
-                ]
+                [opex_aggregate[i].fixed_cost for i, val in enumerate(opex_aggregate)]
             ),
             "cost_per_volume": (
                 [
@@ -281,7 +278,10 @@ def get_opex_adjustment(
                 [fc * opex_multiplier for fc in opex_aggregate_attrs["fixed_cost"]]
             ),
             "cost_per_volume": (
-                [cpv * opex_multiplier for cpv in opex_aggregate_attrs["cost_per_volume"]]
+                [
+                    cpv * opex_multiplier
+                    for cpv in opex_aggregate_attrs["cost_per_volume"]
+                ]
             ),
         }
 
@@ -333,11 +333,17 @@ def get_opex_adjustment(
         # Modify fixed_cost and cost_per_volume data
         updated_attrs = {
             "fixed_cost": {
-                psc: [fc * opex_multiplier for fc in opex_aggregate_attrs["fixed_cost"][psc]]
+                psc: [
+                    fc * opex_multiplier
+                    for fc in opex_aggregate_attrs["fixed_cost"][psc]
+                ]
                 for psc in ["PSC 1", "PSC 2"]
             },
             "cost_per_volume": {
-                psc: [cpv * opex_multiplier for cpv in opex_aggregate_attrs["cost_per_volume"][psc]]
+                psc: [
+                    cpv * opex_multiplier
+                    for cpv in opex_aggregate_attrs["cost_per_volume"][psc]
+                ]
                 for psc in ["PSC 1", "PSC 2"]
             },
         }
@@ -392,12 +398,9 @@ def get_tangible_adjustment(
     # For single contract
     if "Transition" not in contract_type:
         # Extract cost data from the original tangible_cost_aggregate
-        tangible_aggregate_cost = (
-            [
-                tangible_aggregate[i].cost
-                for i, val in enumerate(tangible_aggregate)
-            ]
-        )
+        tangible_aggregate_cost = [
+            tangible_aggregate[i].cost for i, val in enumerate(tangible_aggregate)
+        ]
 
         # Modify cost data
         updated_cost = [cst * tangible_multiplier for cst in tangible_aggregate_cost]
@@ -463,7 +466,9 @@ def get_tangible_adjustment(
                         pis_year=tangible_aggregate[psc][i].pis_year,
                         salvage_value=tangible_aggregate[psc][i].salvage_value,
                         useful_life=tangible_aggregate[psc][i].useful_life,
-                        depreciation_factor=tangible_aggregate[psc][i].depreciation_factor,
+                        depreciation_factor=tangible_aggregate[psc][
+                            i
+                        ].depreciation_factor,
                         is_ic_applied=tangible_aggregate[psc][i].is_ic_applied,
                     )
                     for i, val in enumerate(tangible_aggregate[psc])
@@ -498,15 +503,14 @@ def get_intangible_adjustment(
     # For single contract
     if "Transition" not in contract_type:
         # Extract cost data from the original intangible_cost_aggregate
-        intangible_aggregate_cost = (
-            [
-                intangible_aggregate[i].cost
-                for i, val in enumerate(intangible_aggregate)
-            ]
-        )
+        intangible_aggregate_cost = [
+            intangible_aggregate[i].cost for i, val in enumerate(intangible_aggregate)
+        ]
 
         # Modify cost data
-        updated_cost = [cst * intangible_multiplier for cst in intangible_aggregate_cost]
+        updated_cost = [
+            cst * intangible_multiplier for cst in intangible_aggregate_cost
+        ]
 
         # Return a new tuple of Intangible with modified cost
         return tuple(
@@ -588,6 +592,7 @@ class AdjustData:
     psc: CostRecovery
     psc_arguments: dict
     """
+
     # Parameters
     multipliers: np.ndarray
     workbook_path: str = field(default=None)
@@ -961,34 +966,73 @@ class AdjustData:
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date,
                 lifting=lifting_total["PSC 1"],
                 capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 1"],
+                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
+                    "PSC 1"
+                ],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 1"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 1"],
-                oil_ftp_is_available=self.data.psc_transition_cr_to_cr[keys[0]].oil_ftp_availability,
-                oil_ftp_is_shared=self.data.psc_transition_cr_to_cr[keys[0]].oil_ftp_is_shared,
-                oil_ftp_portion=self.data.psc_transition_cr_to_cr[keys[0]].oil_ftp_portion,
-                gas_ftp_is_available=self.data.psc_transition_cr_to_cr[keys[0]].gas_ftp_availability,
-                gas_ftp_is_shared=self.data.psc_transition_cr_to_cr[keys[0]].gas_ftp_is_shared,
-                gas_ftp_portion=self.data.psc_transition_cr_to_cr[keys[0]].gas_ftp_portion,
+                oil_ftp_is_available=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].oil_ftp_availability,
+                oil_ftp_is_shared=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].oil_ftp_is_shared,
+                oil_ftp_portion=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].oil_ftp_portion,
+                gas_ftp_is_available=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].gas_ftp_availability,
+                gas_ftp_is_shared=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].gas_ftp_is_shared,
+                gas_ftp_portion=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].gas_ftp_portion,
                 tax_split_type=self.data.psc_transition_cr_to_cr[keys[0]].split_type,
-                condition_dict=self.data.psc_transition_cr_to_cr[keys[0]].icp_sliding_scale,
+                condition_dict=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].icp_sliding_scale,
                 indicator_rc_icp_sliding=(
-                    self.data.psc_transition_cr_to_cr[keys[0]].indicator_rc_split_sliding_scale
+                    self.data.psc_transition_cr_to_cr[
+                        keys[0]
+                    ].indicator_rc_split_sliding_scale
                 ),
-                oil_ctr_pretax_share=self.data.psc_transition_cr_to_cr[keys[0]].oil_ctr_pretax,
-                gas_ctr_pretax_share=self.data.psc_transition_cr_to_cr[keys[0]].gas_ctr_pretax,
+                oil_ctr_pretax_share=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].oil_ctr_pretax,
+                gas_ctr_pretax_share=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].gas_ctr_pretax,
                 oil_ic_rate=self.data.psc_transition_cr_to_cr[keys[0]].ic_oil,
                 gas_ic_rate=self.data.psc_transition_cr_to_cr[keys[0]].ic_gas,
-                ic_is_available=self.data.psc_transition_cr_to_cr[keys[0]].ic_availability,
-                oil_cr_cap_rate=self.data.psc_transition_cr_to_cr[keys[0]].oil_cr_cap_rate,
-                gas_cr_cap_rate=self.data.psc_transition_cr_to_cr[keys[0]].gas_cr_cap_rate,
-                oil_dmo_volume_portion=self.data.psc_transition_cr_to_cr[keys[0]].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_cr_to_cr[keys[0]].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_cr_to_cr[keys[0]].oil_dmo_period,
-
-                gas_dmo_volume_portion=self.data.psc_transition_cr_to_cr[keys[0]].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_cr_to_cr[keys[0]].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_cr_to_cr[keys[0]].gas_dmo_period,
+                ic_is_available=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].ic_availability,
+                oil_cr_cap_rate=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].oil_cr_cap_rate,
+                gas_cr_cap_rate=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].gas_cr_cap_rate,
+                oil_dmo_volume_portion=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].oil_dmo_volume,
+                oil_dmo_fee_portion=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].oil_dmo_fee,
+                oil_dmo_holiday_duration=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].oil_dmo_period,
+                gas_dmo_volume_portion=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].gas_dmo_volume,
+                gas_dmo_fee_portion=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].gas_dmo_fee,
+                gas_dmo_holiday_duration=self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].gas_dmo_period,
             ),
             "PSC 2": CostRecovery(
                 start_date=self.data.general_config_data.start_date_project_second,
@@ -997,72 +1041,136 @@ class AdjustData:
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date_second,
                 lifting=lifting_total["PSC 2"],
                 capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 2"],
+                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
+                    "PSC 2"
+                ],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 2"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 2"],
-                oil_ftp_is_available=self.data.psc_transition_cr_to_cr[keys[1]].oil_ftp_availability,
-                oil_ftp_is_shared=self.data.psc_transition_cr_to_cr[keys[1]].oil_ftp_is_shared,
-                oil_ftp_portion=self.data.psc_transition_cr_to_cr[keys[1]].oil_ftp_portion,
-                gas_ftp_is_available=self.data.psc_transition_cr_to_cr[keys[1]].gas_ftp_availability,
-                gas_ftp_is_shared=self.data.psc_transition_cr_to_cr[keys[1]].gas_ftp_is_shared,
-                gas_ftp_portion=self.data.psc_transition_cr_to_cr[keys[1]].gas_ftp_portion,
+                oil_ftp_is_available=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].oil_ftp_availability,
+                oil_ftp_is_shared=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].oil_ftp_is_shared,
+                oil_ftp_portion=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].oil_ftp_portion,
+                gas_ftp_is_available=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].gas_ftp_availability,
+                gas_ftp_is_shared=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].gas_ftp_is_shared,
+                gas_ftp_portion=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].gas_ftp_portion,
                 tax_split_type=self.data.psc_transition_cr_to_cr[keys[1]].split_type,
-                condition_dict=self.data.psc_transition_cr_to_cr[keys[1]].icp_sliding_scale,
+                condition_dict=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].icp_sliding_scale,
                 indicator_rc_icp_sliding=(
-                    self.data.psc_transition_cr_to_cr[keys[1]].indicator_rc_split_sliding_scale
+                    self.data.psc_transition_cr_to_cr[
+                        keys[1]
+                    ].indicator_rc_split_sliding_scale
                 ),
-                oil_ctr_pretax_share=self.data.psc_transition_cr_to_cr[keys[1]].oil_ctr_pretax,
-                gas_ctr_pretax_share=self.data.psc_transition_cr_to_cr[keys[1]].gas_ctr_pretax,
+                oil_ctr_pretax_share=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].oil_ctr_pretax,
+                gas_ctr_pretax_share=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].gas_ctr_pretax,
                 oil_ic_rate=self.data.psc_transition_cr_to_cr[keys[1]].ic_oil,
                 gas_ic_rate=self.data.psc_transition_cr_to_cr[keys[1]].ic_gas,
-                ic_is_available=self.data.psc_transition_cr_to_cr[keys[1]].ic_availability,
-                oil_cr_cap_rate=self.data.psc_transition_cr_to_cr[keys[1]].oil_cr_cap_rate,
-                gas_cr_cap_rate=self.data.psc_transition_cr_to_cr[keys[1]].gas_cr_cap_rate,
-                oil_dmo_volume_portion=self.data.psc_transition_cr_to_cr[keys[1]].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_cr_to_cr[keys[1]].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_cr_to_cr[keys[1]].oil_dmo_period,
-                gas_dmo_volume_portion=self.data.psc_transition_cr_to_cr[keys[1]].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_cr_to_cr[keys[1]].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_cr_to_cr[keys[1]].gas_dmo_period,
+                ic_is_available=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].ic_availability,
+                oil_cr_cap_rate=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].oil_cr_cap_rate,
+                gas_cr_cap_rate=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].gas_cr_cap_rate,
+                oil_dmo_volume_portion=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].oil_dmo_volume,
+                oil_dmo_fee_portion=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].oil_dmo_fee,
+                oil_dmo_holiday_duration=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].oil_dmo_period,
+                gas_dmo_volume_portion=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].gas_dmo_volume,
+                gas_dmo_fee_portion=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].gas_dmo_fee,
+                gas_dmo_holiday_duration=self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].gas_dmo_period,
             ),
         }
 
         # Specify arguments for PSC transition CR-CR
         self.psc_arguments = {
             "PSC 1": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config["PSC 1"],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config["PSC 1"],
+                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
+                    "PSC 1"
+                ],
+                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
+                    "PSC 1"
+                ],
                 "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 1"],
-                "is_dmo_end_weighted": self.data.psc_transition_cr_to_cr[keys[0]].dmo_is_weighted,
+                "is_dmo_end_weighted": self.data.psc_transition_cr_to_cr[
+                    keys[0]
+                ].dmo_is_weighted,
                 "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 1"],
                 "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 1"],
-                "ftp_tax_regime": self.data.fiscal_config_data.tax_payment_config["PSC 1"],
+                "ftp_tax_regime": self.data.fiscal_config_data.tax_payment_config[
+                    "PSC 1"
+                ],
                 "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method["PSC 1"],
+                "depr_method": self.data.fiscal_config_data.depreciation_method[
+                    "PSC 1"
+                ],
                 "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 1"],
                 "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 1"],
                 "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 1"],
                 "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 1"],
-                "future_rate": float(self.data.fiscal_config_data.asr_future_rate["PSC 1"]),
+                "future_rate": float(
+                    self.data.fiscal_config_data.asr_future_rate["PSC 1"]
+                ),
                 "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
                 # "year_ref": None,
                 # "tax_type": None,
             },
             "PSC 2": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config["PSC 2"],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config["PSC 2"],
+                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
+                    "PSC 2"
+                ],
+                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
+                    "PSC 2"
+                ],
                 "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 2"],
-                "is_dmo_end_weighted": self.data.psc_transition_cr_to_cr[keys[1]].dmo_is_weighted,
+                "is_dmo_end_weighted": self.data.psc_transition_cr_to_cr[
+                    keys[1]
+                ].dmo_is_weighted,
                 "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 2"],
                 "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 2"],
-                "ftp_tax_regime": self.data.fiscal_config_data.tax_payment_config["PSC 2"],
+                "ftp_tax_regime": self.data.fiscal_config_data.tax_payment_config[
+                    "PSC 2"
+                ],
                 "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method["PSC 2"],
+                "depr_method": self.data.fiscal_config_data.depreciation_method[
+                    "PSC 2"
+                ],
                 "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 2"],
                 "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 2"],
                 "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 2"],
                 "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 2"],
-                "future_rate": float(self.data.fiscal_config_data.asr_future_rate["PSC 2"]),
+                "future_rate": float(
+                    self.data.fiscal_config_data.asr_future_rate["PSC 2"]
+                ),
                 "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
                 # "year_ref": None,
                 # "tax_type": None,
@@ -1128,33 +1236,73 @@ class AdjustData:
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date,
                 lifting=lifting_total["PSC 1"],
                 capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 1"],
+                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
+                    "PSC 1"
+                ],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 1"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 1"],
-                oil_ftp_is_available=self.data.psc_transition_cr_to_gs[keys[0]].oil_ftp_availability,
-                oil_ftp_is_shared=self.data.psc_transition_cr_to_gs[keys[0]].oil_ftp_is_shared,
-                oil_ftp_portion=self.data.psc_transition_cr_to_gs[keys[0]].oil_ftp_portion,
-                gas_ftp_is_available=self.data.psc_transition_cr_to_gs[keys[0]].gas_ftp_availability,
-                gas_ftp_is_shared=self.data.psc_transition_cr_to_gs[keys[0]].gas_ftp_is_shared,
-                gas_ftp_portion=self.data.psc_transition_cr_to_gs[keys[0]].gas_ftp_portion,
+                oil_ftp_is_available=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].oil_ftp_availability,
+                oil_ftp_is_shared=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].oil_ftp_is_shared,
+                oil_ftp_portion=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].oil_ftp_portion,
+                gas_ftp_is_available=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].gas_ftp_availability,
+                gas_ftp_is_shared=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].gas_ftp_is_shared,
+                gas_ftp_portion=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].gas_ftp_portion,
                 tax_split_type=self.data.psc_transition_cr_to_gs[keys[0]].split_type,
-                condition_dict=self.data.psc_transition_cr_to_gs[keys[0]].icp_sliding_scale,
+                condition_dict=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].icp_sliding_scale,
                 indicator_rc_icp_sliding=(
-                    self.data.psc_transition_cr_to_gs[keys[0]].indicator_rc_split_sliding_scale
+                    self.data.psc_transition_cr_to_gs[
+                        keys[0]
+                    ].indicator_rc_split_sliding_scale
                 ),
-                oil_ctr_pretax_share=self.data.psc_transition_cr_to_gs[keys[0]].oil_ctr_pretax,
-                gas_ctr_pretax_share=self.data.psc_transition_cr_to_gs[keys[0]].gas_ctr_pretax,
+                oil_ctr_pretax_share=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].oil_ctr_pretax,
+                gas_ctr_pretax_share=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].gas_ctr_pretax,
                 oil_ic_rate=self.data.psc_transition_cr_to_gs[keys[0]].ic_oil,
                 gas_ic_rate=self.data.psc_transition_cr_to_gs[keys[0]].ic_gas,
-                ic_is_available=self.data.psc_transition_cr_to_gs[keys[0]].ic_availability,
-                oil_cr_cap_rate=self.data.psc_transition_cr_to_gs[keys[0]].oil_cr_cap_rate,
-                gas_cr_cap_rate=self.data.psc_transition_cr_to_gs[keys[0]].gas_cr_cap_rate,
-                oil_dmo_volume_portion=self.data.psc_transition_cr_to_gs[keys[0]].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_cr_to_gs[keys[0]].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_cr_to_gs[keys[0]].oil_dmo_period,
-                gas_dmo_volume_portion=self.data.psc_transition_cr_to_gs[keys[0]].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_cr_to_gs[keys[0]].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_cr_to_gs[keys[0]].gas_dmo_period,
+                ic_is_available=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].ic_availability,
+                oil_cr_cap_rate=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].oil_cr_cap_rate,
+                gas_cr_cap_rate=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].gas_cr_cap_rate,
+                oil_dmo_volume_portion=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].oil_dmo_volume,
+                oil_dmo_fee_portion=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].oil_dmo_fee,
+                oil_dmo_holiday_duration=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].oil_dmo_period,
+                gas_dmo_volume_portion=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].gas_dmo_volume,
+                gas_dmo_fee_portion=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].gas_dmo_fee,
+                gas_dmo_holiday_duration=self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].gas_dmo_period,
             ),
             "PSC 2": GrossSplit(
                 start_date=self.data.general_config_data.start_date_project_second,
@@ -1163,66 +1311,112 @@ class AdjustData:
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date_second,
                 lifting=lifting_total["PSC 2"],
                 capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 2"],
+                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
+                    "PSC 2"
+                ],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 2"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 2"],
                 field_status=self.data.psc_transition_cr_to_gs[keys[1]].field_status,
                 field_loc=self.data.psc_transition_cr_to_gs[keys[1]].field_location,
                 res_depth=self.data.psc_transition_cr_to_gs[keys[1]].reservoir_depth,
-                infra_avail=self.data.psc_transition_cr_to_gs[keys[1]].infrastructure_availability,
+                infra_avail=self.data.psc_transition_cr_to_gs[
+                    keys[1]
+                ].infrastructure_availability,
                 res_type=self.data.psc_transition_cr_to_gs[keys[1]].reservoir_type,
                 api_oil=self.data.psc_transition_cr_to_gs[keys[1]].oil_api,
-                domestic_use=self.data.psc_transition_cr_to_gs[keys[1]].domestic_content_use,
+                domestic_use=self.data.psc_transition_cr_to_gs[
+                    keys[1]
+                ].domestic_content_use,
                 prod_stage=self.data.psc_transition_cr_to_gs[keys[1]].production_stage,
                 co2_content=self.data.psc_transition_cr_to_gs[keys[1]].co2_content,
                 h2s_content=self.data.psc_transition_cr_to_gs[keys[1]].h2s_content,
-                base_split_ctr_oil=self.data.psc_transition_cr_to_gs[keys[1]].oil_base_split,
-                base_split_ctr_gas=self.data.psc_transition_cr_to_gs[keys[1]].gas_base_split,
-                split_ministry_disc=self.data.psc_transition_cr_to_gs[keys[1]].ministry_discretion_split,
-                oil_dmo_volume_portion=self.data.psc_transition_cr_to_gs[keys[1]].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_cr_to_gs[keys[1]].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_cr_to_gs[keys[1]].oil_dmo_period,
-                gas_dmo_volume_portion=self.data.psc_transition_cr_to_gs[keys[1]].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_cr_to_gs[keys[1]].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_cr_to_gs[keys[1]].gas_dmo_period,
+                base_split_ctr_oil=self.data.psc_transition_cr_to_gs[
+                    keys[1]
+                ].oil_base_split,
+                base_split_ctr_gas=self.data.psc_transition_cr_to_gs[
+                    keys[1]
+                ].gas_base_split,
+                split_ministry_disc=self.data.psc_transition_cr_to_gs[
+                    keys[1]
+                ].ministry_discretion_split,
+                oil_dmo_volume_portion=self.data.psc_transition_cr_to_gs[
+                    keys[1]
+                ].oil_dmo_volume,
+                oil_dmo_fee_portion=self.data.psc_transition_cr_to_gs[
+                    keys[1]
+                ].oil_dmo_fee,
+                oil_dmo_holiday_duration=self.data.psc_transition_cr_to_gs[
+                    keys[1]
+                ].oil_dmo_period,
+                gas_dmo_volume_portion=self.data.psc_transition_cr_to_gs[
+                    keys[1]
+                ].gas_dmo_volume,
+                gas_dmo_fee_portion=self.data.psc_transition_cr_to_gs[
+                    keys[1]
+                ].gas_dmo_fee,
+                gas_dmo_holiday_duration=self.data.psc_transition_cr_to_gs[
+                    keys[1]
+                ].gas_dmo_period,
             ),
         }
 
         # Specify arguments for PSC transition CR-GS
         self.psc_arguments = {
             "PSC 1": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config["PSC 1"],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config["PSC 1"],
+                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
+                    "PSC 1"
+                ],
+                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
+                    "PSC 1"
+                ],
                 "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 1"],
-                "is_dmo_end_weighted": self.data.psc_transition_cr_to_gs[keys[0]].dmo_is_weighted,
+                "is_dmo_end_weighted": self.data.psc_transition_cr_to_gs[
+                    keys[0]
+                ].dmo_is_weighted,
                 "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 1"],
                 "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 1"],
-                "ftp_tax_regime": self.data.fiscal_config_data.tax_payment_config["PSC 1"],
+                "ftp_tax_regime": self.data.fiscal_config_data.tax_payment_config[
+                    "PSC 1"
+                ],
                 "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method["PSC 1"],
+                "depr_method": self.data.fiscal_config_data.depreciation_method[
+                    "PSC 1"
+                ],
                 "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 1"],
                 "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 1"],
                 "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 1"],
                 "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 1"],
-                "future_rate": float(self.data.fiscal_config_data.asr_future_rate["PSC 1"]),
+                "future_rate": float(
+                    self.data.fiscal_config_data.asr_future_rate["PSC 1"]
+                ),
                 "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
                 # "year_ref": None,
                 # "tax_type": None,
             },
             "PSC 2": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config["PSC 2"],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config["PSC 2"],
+                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
+                    "PSC 2"
+                ],
+                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
+                    "PSC 2"
+                ],
                 "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 2"],
-                "is_dmo_end_weighted": self.data.psc_transition_cr_to_gs[keys[1]].dmo_is_weighted,
+                "is_dmo_end_weighted": self.data.psc_transition_cr_to_gs[
+                    keys[1]
+                ].dmo_is_weighted,
                 "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 2"],
                 "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 2"],
                 "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method["PSC 2"],
+                "depr_method": self.data.fiscal_config_data.depreciation_method[
+                    "PSC 2"
+                ],
                 "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 2"],
                 "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 2"],
                 "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 2"],
                 "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 2"],
-                "future_rate": float(self.data.fiscal_config_data.asr_future_rate["PSC 2"]),
+                "future_rate": float(
+                    self.data.fiscal_config_data.asr_future_rate["PSC 2"]
+                ),
                 "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
                 # "regime": None,
                 # "year_ref": None,
@@ -1289,28 +1483,52 @@ class AdjustData:
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date,
                 lifting=lifting_total["PSC 1"],
                 capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 1"],
+                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
+                    "PSC 1"
+                ],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 1"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 1"],
                 field_status=self.data.psc_transition_gs_to_gs[keys[0]].field_status,
                 field_loc=self.data.psc_transition_gs_to_gs[keys[0]].field_location,
                 res_depth=self.data.psc_transition_gs_to_gs[keys[0]].reservoir_depth,
-                infra_avail=self.data.psc_transition_gs_to_gs[keys[0]].infrastructure_availability,
+                infra_avail=self.data.psc_transition_gs_to_gs[
+                    keys[0]
+                ].infrastructure_availability,
                 res_type=self.data.psc_transition_gs_to_gs[keys[0]].reservoir_type,
                 api_oil=self.data.psc_transition_gs_to_gs[keys[0]].oil_api,
-                domestic_use=self.data.psc_transition_gs_to_gs[keys[0]].domestic_content_use,
+                domestic_use=self.data.psc_transition_gs_to_gs[
+                    keys[0]
+                ].domestic_content_use,
                 prod_stage=self.data.psc_transition_gs_to_gs[keys[0]].production_stage,
                 co2_content=self.data.psc_transition_gs_to_gs[keys[0]].co2_content,
                 h2s_content=self.data.psc_transition_gs_to_gs[keys[0]].h2s_content,
-                base_split_ctr_oil=self.data.psc_transition_gs_to_gs[keys[0]].oil_base_split,
-                base_split_ctr_gas=self.data.psc_transition_gs_to_gs[keys[0]].gas_base_split,
-                split_ministry_disc=self.data.psc_transition_gs_to_gs[keys[0]].ministry_discretion_split,
-                oil_dmo_volume_portion=self.data.psc_transition_gs_to_gs[keys[0]].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_gs_to_gs[keys[0]].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_gs_to_gs[keys[0]].oil_dmo_period,
-                gas_dmo_volume_portion=self.data.psc_transition_gs_to_gs[keys[0]].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_gs_to_gs[keys[0]].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_gs_to_gs[keys[0]].gas_dmo_period,
+                base_split_ctr_oil=self.data.psc_transition_gs_to_gs[
+                    keys[0]
+                ].oil_base_split,
+                base_split_ctr_gas=self.data.psc_transition_gs_to_gs[
+                    keys[0]
+                ].gas_base_split,
+                split_ministry_disc=self.data.psc_transition_gs_to_gs[
+                    keys[0]
+                ].ministry_discretion_split,
+                oil_dmo_volume_portion=self.data.psc_transition_gs_to_gs[
+                    keys[0]
+                ].oil_dmo_volume,
+                oil_dmo_fee_portion=self.data.psc_transition_gs_to_gs[
+                    keys[0]
+                ].oil_dmo_fee,
+                oil_dmo_holiday_duration=self.data.psc_transition_gs_to_gs[
+                    keys[0]
+                ].oil_dmo_period,
+                gas_dmo_volume_portion=self.data.psc_transition_gs_to_gs[
+                    keys[0]
+                ].gas_dmo_volume,
+                gas_dmo_fee_portion=self.data.psc_transition_gs_to_gs[
+                    keys[0]
+                ].gas_dmo_fee,
+                gas_dmo_holiday_duration=self.data.psc_transition_gs_to_gs[
+                    keys[0]
+                ].gas_dmo_period,
             ),
             "PSC 2": GrossSplit(
                 start_date=self.data.general_config_data.start_date_project_second,
@@ -1319,66 +1537,110 @@ class AdjustData:
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date_second,
                 lifting=lifting_total["PSC 2"],
                 capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 2"],
+                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
+                    "PSC 2"
+                ],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 2"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 2"],
                 field_status=self.data.psc_transition_gs_to_gs[keys[1]].field_status,
                 field_loc=self.data.psc_transition_gs_to_gs[keys[1]].field_location,
                 res_depth=self.data.psc_transition_gs_to_gs[keys[1]].reservoir_depth,
-                infra_avail=self.data.psc_transition_gs_to_gs[keys[1]].infrastructure_availability,
+                infra_avail=self.data.psc_transition_gs_to_gs[
+                    keys[1]
+                ].infrastructure_availability,
                 res_type=self.data.psc_transition_gs_to_gs[keys[1]].reservoir_type,
                 api_oil=self.data.psc_transition_gs_to_gs[keys[1]].oil_api,
-                domestic_use=self.data.psc_transition_gs_to_gs[keys[1]].domestic_content_use,
+                domestic_use=self.data.psc_transition_gs_to_gs[
+                    keys[1]
+                ].domestic_content_use,
                 prod_stage=self.data.psc_transition_gs_to_gs[keys[1]].production_stage,
                 co2_content=self.data.psc_transition_gs_to_gs[keys[1]].co2_content,
                 h2s_content=self.data.psc_transition_gs_to_gs[keys[1]].h2s_content,
-                base_split_ctr_oil=self.data.psc_transition_gs_to_gs[keys[1]].oil_base_split,
-                base_split_ctr_gas=self.data.psc_transition_gs_to_gs[keys[1]].gas_base_split,
-                split_ministry_disc=self.data.psc_transition_gs_to_gs[keys[1]].ministry_discretion_split,
-                oil_dmo_volume_portion=self.data.psc_transition_gs_to_gs[keys[1]].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_gs_to_gs[keys[1]].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_gs_to_gs[keys[1]].oil_dmo_period,
-                gas_dmo_volume_portion=self.data.psc_transition_gs_to_gs[keys[1]].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_gs_to_gs[keys[1]].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_gs_to_gs[keys[1]].gas_dmo_period,
+                base_split_ctr_oil=self.data.psc_transition_gs_to_gs[
+                    keys[1]
+                ].oil_base_split,
+                base_split_ctr_gas=self.data.psc_transition_gs_to_gs[
+                    keys[1]
+                ].gas_base_split,
+                split_ministry_disc=self.data.psc_transition_gs_to_gs[
+                    keys[1]
+                ].ministry_discretion_split,
+                oil_dmo_volume_portion=self.data.psc_transition_gs_to_gs[
+                    keys[1]
+                ].oil_dmo_volume,
+                oil_dmo_fee_portion=self.data.psc_transition_gs_to_gs[
+                    keys[1]
+                ].oil_dmo_fee,
+                oil_dmo_holiday_duration=self.data.psc_transition_gs_to_gs[
+                    keys[1]
+                ].oil_dmo_period,
+                gas_dmo_volume_portion=self.data.psc_transition_gs_to_gs[
+                    keys[1]
+                ].gas_dmo_volume,
+                gas_dmo_fee_portion=self.data.psc_transition_gs_to_gs[
+                    keys[1]
+                ].gas_dmo_fee,
+                gas_dmo_holiday_duration=self.data.psc_transition_gs_to_gs[
+                    keys[1]
+                ].gas_dmo_period,
             ),
         }
 
         # Specify arguments for PSC transition GS-GS
         self.psc_arguments = {
             "PSC 1": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config["PSC 1"],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config["PSC 1"],
+                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
+                    "PSC 1"
+                ],
+                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
+                    "PSC 1"
+                ],
                 "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 1"],
-                "is_dmo_end_weighted": self.data.psc_transition_gs_to_gs[keys[0]].dmo_is_weighted,
+                "is_dmo_end_weighted": self.data.psc_transition_gs_to_gs[
+                    keys[0]
+                ].dmo_is_weighted,
                 "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 1"],
                 "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 1"],
                 "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method["PSC 1"],
+                "depr_method": self.data.fiscal_config_data.depreciation_method[
+                    "PSC 1"
+                ],
                 "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 1"],
                 "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 1"],
                 "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 1"],
                 "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 1"],
-                "future_rate": float(self.data.fiscal_config_data.asr_future_rate["PSC 1"]),
+                "future_rate": float(
+                    self.data.fiscal_config_data.asr_future_rate["PSC 1"]
+                ),
                 "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
                 # "regime": None,
                 # "year_ref": None,
                 # "tax_type": None,
             },
             "PSC 2": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config["PSC 2"],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config["PSC 2"],
+                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
+                    "PSC 2"
+                ],
+                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
+                    "PSC 2"
+                ],
                 "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 2"],
-                "is_dmo_end_weighted": self.data.psc_transition_gs_to_gs[keys[1]].dmo_is_weighted,
+                "is_dmo_end_weighted": self.data.psc_transition_gs_to_gs[
+                    keys[1]
+                ].dmo_is_weighted,
                 "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 2"],
                 "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 2"],
                 "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method["PSC 2"],
+                "depr_method": self.data.fiscal_config_data.depreciation_method[
+                    "PSC 2"
+                ],
                 "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 2"],
                 "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 2"],
                 "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 2"],
                 "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 2"],
-                "future_rate": float(self.data.fiscal_config_data.asr_future_rate["PSC 2"]),
+                "future_rate": float(
+                    self.data.fiscal_config_data.asr_future_rate["PSC 2"]
+                ),
                 "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
                 # "regime": None,
                 # "year_ref": None,
@@ -1445,28 +1707,52 @@ class AdjustData:
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date,
                 lifting=lifting_total["PSC 1"],
                 capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 1"],
+                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
+                    "PSC 1"
+                ],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 1"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 1"],
                 field_status=self.data.psc_transition_gs_to_cr[keys[0]].field_status,
                 field_loc=self.data.psc_transition_gs_to_cr[keys[0]].field_location,
                 res_depth=self.data.psc_transition_gs_to_cr[keys[0]].reservoir_depth,
-                infra_avail=self.data.psc_transition_gs_to_cr[keys[0]].infrastructure_availability,
+                infra_avail=self.data.psc_transition_gs_to_cr[
+                    keys[0]
+                ].infrastructure_availability,
                 res_type=self.data.psc_transition_gs_to_cr[keys[0]].reservoir_type,
                 api_oil=self.data.psc_transition_gs_to_cr[keys[0]].oil_api,
-                domestic_use=self.data.psc_transition_gs_to_cr[keys[0]].domestic_content_use,
+                domestic_use=self.data.psc_transition_gs_to_cr[
+                    keys[0]
+                ].domestic_content_use,
                 prod_stage=self.data.psc_transition_gs_to_cr[keys[0]].production_stage,
                 co2_content=self.data.psc_transition_gs_to_cr[keys[0]].co2_content,
                 h2s_content=self.data.psc_transition_gs_to_cr[keys[0]].h2s_content,
-                base_split_ctr_oil=self.data.psc_transition_gs_to_cr[keys[0]].oil_base_split,
-                base_split_ctr_gas=self.data.psc_transition_gs_to_cr[keys[0]].gas_base_split,
-                split_ministry_disc=self.data.psc_transition_gs_to_cr[keys[0]].ministry_discretion_split,
-                oil_dmo_volume_portion=self.data.psc_transition_gs_to_cr[keys[0]].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_gs_to_cr[keys[0]].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_gs_to_cr[keys[0]].oil_dmo_period,
-                gas_dmo_volume_portion=self.data.psc_transition_gs_to_cr[keys[0]].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_gs_to_cr[keys[0]].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_gs_to_cr[keys[0]].gas_dmo_period,
+                base_split_ctr_oil=self.data.psc_transition_gs_to_cr[
+                    keys[0]
+                ].oil_base_split,
+                base_split_ctr_gas=self.data.psc_transition_gs_to_cr[
+                    keys[0]
+                ].gas_base_split,
+                split_ministry_disc=self.data.psc_transition_gs_to_cr[
+                    keys[0]
+                ].ministry_discretion_split,
+                oil_dmo_volume_portion=self.data.psc_transition_gs_to_cr[
+                    keys[0]
+                ].oil_dmo_volume,
+                oil_dmo_fee_portion=self.data.psc_transition_gs_to_cr[
+                    keys[0]
+                ].oil_dmo_fee,
+                oil_dmo_holiday_duration=self.data.psc_transition_gs_to_cr[
+                    keys[0]
+                ].oil_dmo_period,
+                gas_dmo_volume_portion=self.data.psc_transition_gs_to_cr[
+                    keys[0]
+                ].gas_dmo_volume,
+                gas_dmo_fee_portion=self.data.psc_transition_gs_to_cr[
+                    keys[0]
+                ].gas_dmo_fee,
+                gas_dmo_holiday_duration=self.data.psc_transition_gs_to_cr[
+                    keys[0]
+                ].gas_dmo_period,
             ),
             "PSC 2": CostRecovery(
                 start_date=self.data.general_config_data.start_date_project_second,
@@ -1475,72 +1761,134 @@ class AdjustData:
                 gas_onstream_date=self.data.general_config_data.gas_onstream_date_second,
                 lifting=lifting_total["PSC 2"],
                 capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"]["PSC 2"],
+                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
+                    "PSC 2"
+                ],
                 opex=self.sensitivity_data["opex_aggregate"]["PSC 2"],
                 asr_cost=self.data.asr_cost_aggregate["PSC 2"],
-                oil_ftp_is_available=self.data.psc_transition_gs_to_cr[keys[1]].oil_ftp_availability,
-                oil_ftp_is_shared=self.data.psc_transition_gs_to_cr[keys[1]].oil_ftp_is_shared,
-                oil_ftp_portion=self.data.psc_transition_gs_to_cr[keys[1]].oil_ftp_portion,
-                gas_ftp_is_available=self.data.psc_transition_gs_to_cr[keys[1]].gas_ftp_availability,
-                gas_ftp_is_shared=self.data.psc_transition_gs_to_cr[keys[1]].gas_ftp_is_shared,
-                gas_ftp_portion=self.data.psc_transition_gs_to_cr[keys[1]].gas_ftp_portion,
+                oil_ftp_is_available=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].oil_ftp_availability,
+                oil_ftp_is_shared=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].oil_ftp_is_shared,
+                oil_ftp_portion=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].oil_ftp_portion,
+                gas_ftp_is_available=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].gas_ftp_availability,
+                gas_ftp_is_shared=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].gas_ftp_is_shared,
+                gas_ftp_portion=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].gas_ftp_portion,
                 tax_split_type=self.data.psc_transition_gs_to_cr[keys[1]].split_type,
-                condition_dict=self.data.psc_transition_gs_to_cr[keys[1]].icp_sliding_scale,
+                condition_dict=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].icp_sliding_scale,
                 indicator_rc_icp_sliding=(
-                    self.data.psc_transition_gs_to_cr[keys[1]].indicator_rc_split_sliding_scale
+                    self.data.psc_transition_gs_to_cr[
+                        keys[1]
+                    ].indicator_rc_split_sliding_scale
                 ),
-                oil_ctr_pretax_share=self.data.psc_transition_gs_to_cr[keys[1]].oil_ctr_pretax,
-                gas_ctr_pretax_share=self.data.psc_transition_gs_to_cr[keys[1]].gas_ctr_pretax,
+                oil_ctr_pretax_share=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].oil_ctr_pretax,
+                gas_ctr_pretax_share=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].gas_ctr_pretax,
                 oil_ic_rate=self.data.psc_transition_gs_to_cr[keys[1]].ic_oil,
                 gas_ic_rate=self.data.psc_transition_gs_to_cr[keys[1]].ic_gas,
-                ic_is_available=self.data.psc_transition_gs_to_cr[keys[1]].ic_availability,
-                oil_cr_cap_rate=self.data.psc_transition_gs_to_cr[keys[1]].oil_cr_cap_rate,
-                gas_cr_cap_rate=self.data.psc_transition_gs_to_cr[keys[1]].gas_cr_cap_rate,
-                oil_dmo_volume_portion=self.data.psc_transition_gs_to_cr[keys[1]].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_gs_to_cr[keys[1]].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_gs_to_cr[keys[1]].oil_dmo_period,
-                gas_dmo_volume_portion=self.data.psc_transition_gs_to_cr[keys[1]].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_gs_to_cr[keys[1]].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_gs_to_cr[keys[1]].gas_dmo_period,
+                ic_is_available=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].ic_availability,
+                oil_cr_cap_rate=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].oil_cr_cap_rate,
+                gas_cr_cap_rate=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].gas_cr_cap_rate,
+                oil_dmo_volume_portion=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].oil_dmo_volume,
+                oil_dmo_fee_portion=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].oil_dmo_fee,
+                oil_dmo_holiday_duration=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].oil_dmo_period,
+                gas_dmo_volume_portion=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].gas_dmo_volume,
+                gas_dmo_fee_portion=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].gas_dmo_fee,
+                gas_dmo_holiday_duration=self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].gas_dmo_period,
             ),
         }
 
         # Specify arguments for PSC transition GS-CR
         self.psc_arguments = {
             "PSC 1": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config["PSC 1"],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config["PSC 1"],
+                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
+                    "PSC 1"
+                ],
+                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
+                    "PSC 1"
+                ],
                 "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 1"],
-                "is_dmo_end_weighted": self.data.psc_transition_gs_to_cr[keys[0]].dmo_is_weighted,
+                "is_dmo_end_weighted": self.data.psc_transition_gs_to_cr[
+                    keys[0]
+                ].dmo_is_weighted,
                 "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 1"],
                 "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 1"],
                 "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method["PSC 1"],
+                "depr_method": self.data.fiscal_config_data.depreciation_method[
+                    "PSC 1"
+                ],
                 "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 1"],
                 "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 1"],
                 "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 1"],
                 "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 1"],
-                "future_rate": float(self.data.fiscal_config_data.asr_future_rate["PSC 1"]),
+                "future_rate": float(
+                    self.data.fiscal_config_data.asr_future_rate["PSC 1"]
+                ),
                 "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
                 # "regime": None,
                 # "year_ref": None,
                 # "tax_type": None,
             },
             "PSC 2": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config["PSC 2"],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config["PSC 2"],
+                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
+                    "PSC 2"
+                ],
+                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
+                    "PSC 2"
+                ],
                 "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 2"],
-                "is_dmo_end_weighted": self.data.psc_transition_gs_to_cr[keys[1]].dmo_is_weighted,
+                "is_dmo_end_weighted": self.data.psc_transition_gs_to_cr[
+                    keys[1]
+                ].dmo_is_weighted,
                 "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 2"],
                 "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 2"],
-                "ftp_tax_regime": self.data.fiscal_config_data.tax_payment_config["PSC 2"],
+                "ftp_tax_regime": self.data.fiscal_config_data.tax_payment_config[
+                    "PSC 2"
+                ],
                 "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method["PSC 2"],
+                "depr_method": self.data.fiscal_config_data.depreciation_method[
+                    "PSC 2"
+                ],
                 "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 2"],
                 "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 2"],
                 "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 2"],
                 "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 2"],
-                "future_rate": float(self.data.fiscal_config_data.asr_future_rate["PSC 2"]),
+                "future_rate": float(
+                    self.data.fiscal_config_data.asr_future_rate["PSC 2"]
+                ),
                 "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
                 # "year_ref": None,
                 # "tax_type": None,

@@ -1,0 +1,29 @@
+{
+  "$id": "case-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table Case Schema v1",
+  "type": "object",
+  "properties": {
+    "id": {"type":  "integer"},
+    "name": {"type":  "string"},
+    "description": { "type": ["string", "null"], "default": null },
+    "ctrType": {
+        "type":  "integer", 
+        "description": "The type of contract : 0: base project, 1: CR, 2: GS, 3: CR-CR, 4: CR-GS, 5: GS-GS, 6: GS-CR",
+        "default": 1
+    },
+    "evaluator": { "type": ["string", "null"], "default": null },
+    "evaluator_date": {"type":  ["integer", "null"], "description": "UTC timestamp", "default": null },
+    "created_at": {
+      "type": ["integer", "null", "string"],
+      "description": "UTC timestamp",
+      "default": 0
+    },
+    "updated_at": {
+    "type": ["integer", "null", "string"],
+    "description": "UTC timestamp",
+    "default": null
+    }
+  },
+  "required": ["id", "name", "description", "ctrType"]
+}

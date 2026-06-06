@@ -1,26 +1,37 @@
+"""
+Module to handle API router.
+"""
+
 from fastapi import APIRouter
-from pyscnomics.api.adapter import (get_baseproject,
-                                    get_costrecovery,
-                                    get_contract_table,
-                                    get_contract_optimization,
-                                    get_grosssplit,
-                                    get_transition,
-                                    get_detailed_summary,
-                                    get_ltp_dict,
-                                    get_rpd_dict,
-                                    get_grosssplit_split,
-                                    get_transition_split,
-                                    get_economic_limit,
-                                    get_asr_expenditures,
-                                    get_lbt_expenditures,
-                                    get_sensitivity,
-                                    get_uncertainty)
-from pyscnomics.api.converter import Data, EconLimit, ASRExpendituresBM, LBTExpendituresBM
+from pyscnomics.api.adapter import (
+    get_baseproject,
+    get_costrecovery,
+    get_contract_table,
+    get_contract_optimization,
+    get_grosssplit,
+    get_transition,
+    get_detailed_summary,
+    get_ltp_dict,
+    get_rpd_dict,
+    get_grosssplit_split,
+    get_transition_split,
+    get_economic_limit,
+    get_asr_expenditures,
+    get_lbt_expenditures,
+    get_sensitivity,
+    get_uncertainty,
+)
+from pyscnomics.api.converter import (
+    Data,
+    EconLimit,
+    ASRExpendituresBM,
+    LBTExpendituresBM,
+)
 from pyscnomics.api.converter import DataTransition
 from pyscnomics.api.converter import LtpBM, RpdBM
 
 
-router = APIRouter(prefix='/api')
+router = APIRouter(prefix="/api")
 
 
 @router.get("/")
@@ -28,7 +39,7 @@ async def read_root():
     """
     Route to get the current running PySCnomics version.
     """
-    return {"Pyscnomics": "Version 1.0.0"}
+    return {"Pyscnomics": "Version 1.4.0"}
 
 
 @router.post("/costrecovery")
@@ -50,7 +61,6 @@ async def calculate_costrecovery(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
     result = get_costrecovery(data=data.model_dump())[0]
     return result
@@ -75,11 +85,10 @@ async def get_costrecovery_detailed(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
-    result = get_detailed_summary(
-        data=data.model_dump(),
-        contract_type='Cost Recovery')
+
+    result = get_detailed_summary(data=data.model_dump(), contract_type="Cost Recovery")
+
     return result
 
 
@@ -102,9 +111,8 @@ async def get_costrecovery_table(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
-    return get_contract_table(data=data.model_dump(), contract_type='Cost Recovery')
+    return get_contract_table(data=data.model_dump(), contract_type="Cost Recovery")
 
 
 @router.post("/costrecovery/optimization")
@@ -126,9 +134,10 @@ async def calculate_costrecovery_optimization(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
-    return get_contract_optimization(data=data.model_dump(), contract_type='Cost Recovery')
+    return get_contract_optimization(
+        data=data.model_dump(), contract_type="Cost Recovery"
+    )
 
 
 @router.post("/grosssplit")
@@ -150,7 +159,6 @@ async def calculate_grosssplit(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
     result = get_grosssplit(data=data.model_dump())[0]
     return result
@@ -175,11 +183,8 @@ async def get_grosssplit_detailed(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
-    result = get_detailed_summary(
-        data=data.model_dump(),
-        contract_type='Gross Split')
+    result = get_detailed_summary(data=data.model_dump(), contract_type="Gross Split")
     return result
 
 
@@ -202,9 +207,8 @@ async def get_grosssplit_table(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
-    return get_contract_table(data=data.model_dump(), contract_type='Gross Split')
+    return get_contract_table(data=data.model_dump(), contract_type="Gross Split")
 
 
 @router.post("/grosssplit/optimization")
@@ -226,9 +230,10 @@ async def calculate_grosssplit_optimization(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
-    return get_contract_optimization(data=data.model_dump(), contract_type='Gross Split')
+    return get_contract_optimization(
+        data=data.model_dump(), contract_type="Gross Split"
+    )
 
 
 @router.post("/transition")
@@ -259,10 +264,9 @@ async def calculate_transition(data: DataTransition) -> dict:
         -- asr
     - contract_arguments
     - summary_arguments
-
-
     """
     result = get_transition(data=data.model_dump())[0]
+
     return result
 
 
@@ -285,11 +289,9 @@ async def get_transition_detailed(data: DataTransition) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
-    result = get_detailed_summary(
-        data=data.model_dump(),
-        contract_type='Transition')
+    result = get_detailed_summary(data=data.model_dump(), contract_type="Transition")
+
     return result
 
 
@@ -321,9 +323,8 @@ async def get_transition_table(data: DataTransition) -> dict:
         -- asr
     - contract_arguments
     - summary_arguments
-
     """
-    return get_contract_table(data=data.model_dump(), contract_type='Transition')
+    return get_contract_table(data=data.model_dump(), contract_type="Transition")
 
 
 @router.post("/transition/optimization")
@@ -345,9 +346,8 @@ async def calculate_transition_optimization(data: DataTransition) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
-    return get_contract_optimization(data=data.model_dump(), contract_type='Transition')
+    return get_contract_optimization(data=data.model_dump(), contract_type="Transition")
 
 
 @router.post("/baseproject")
@@ -366,7 +366,6 @@ async def calculate_baseproject(data: Data) -> dict:
     - intangible
     - opex
     - asr
-
     """
     result = get_baseproject(data=data.model_dump())[0]
     return result
@@ -388,9 +387,8 @@ async def get_baseproject_table(data: Data) -> dict:
     - intangible
     - opex
     - asr
-
     """
-    return get_contract_table(data=data.model_dump(), contract_type='Base Project')
+    return get_contract_table(data=data.model_dump(), contract_type="Base Project")
 
 
 @router.post("/baseproject/detailed_summary")
@@ -409,11 +407,10 @@ async def get_baseproject_detailed(data: Data) -> dict:
     - intangible
     - opex
     - asr
-
     """
-    result = get_detailed_summary(
-        data=data.model_dump(),
-        contract_type='Base Project')
+
+    result = get_detailed_summary(data=data.model_dump(), contract_type="Base Project")
+
     return result
 
 
@@ -428,7 +425,6 @@ async def calculate_ltp(data: LtpBM) -> dict:
     start_year: int
     end_year: int
     fluid_type: str
-
     """
     return get_ltp_dict(data=data.model_dump())
 
@@ -470,7 +466,6 @@ async def get_grosssplit_split_information(data: Data) -> dict:
     - asr
     - optimization_arguments
     - sensitivity_arguments
-
     """
     return get_grosssplit_split(data=data.model_dump())
 
@@ -504,11 +499,11 @@ async def get_transition_split_information(data: DataTransition) -> dict:
         -- asr
     - contract_arguments
     - summary_arguments
-
-
     """
     result = get_transition_split(data=data.model_dump())
+
     return result
+
 
 @router.post("/econlimit")
 async def calculate_economic_limit(data: EconLimit) -> int:
@@ -548,9 +543,8 @@ async def calculate_costrecovery_sensitivity(data: Data) -> dict:
     ## Retrieve The Sensitivity of a cost recovery contract.
     Route to get the sensitivity of a cost recovery contract.
     """
-    return get_sensitivity(
-        data=data.model_dump(),
-        contract_type='Cost Recovery')
+    return get_sensitivity(data=data.model_dump(), contract_type="Cost Recovery")
+
 
 @router.post("/grosssplit/sensitivity")
 async def calculate_grosssplit_sensitivity(data: Data) -> dict:
@@ -558,9 +552,8 @@ async def calculate_grosssplit_sensitivity(data: Data) -> dict:
     ## Retrieve The Sensitivity of a gross split contract.
     Route to get the sensitivity of a contract.
     """
-    return get_sensitivity(
-        data=data.model_dump(),
-        contract_type='Gross Split')
+    return get_sensitivity(data=data.model_dump(), contract_type="Gross Split")
+
 
 @router.post("/transition/sensitivity")
 async def calculate_transition_sensitivity(data: DataTransition) -> dict:
@@ -568,9 +561,8 @@ async def calculate_transition_sensitivity(data: DataTransition) -> dict:
     ## Retrieve The Sensitivity of a gross split contract.
     Route to get the sensitivity of a contract.
     """
-    return get_sensitivity(
-        data=data.model_dump(),
-        contract_type='Transition')
+    return get_sensitivity(data=data.model_dump(), contract_type="Transition")
+
 
 @router.post("/baseproject/sensitivity")
 async def calculate_project_sensitivity(data: Data) -> dict:
@@ -578,9 +570,7 @@ async def calculate_project_sensitivity(data: Data) -> dict:
     ## Retrieve The Sensitivity of a base project contract.
     Route to get the sensitivity of a contract.
     """
-    return get_sensitivity(
-        data=data.model_dump(),
-        contract_type='Base Project')
+    return get_sensitivity(data=data.model_dump(), contract_type="Base Project")
 
 
 @router.post("/costrecovery/uncertainty")
@@ -589,9 +579,8 @@ async def calculate_costrecovery_uncertainty(data: Data) -> dict:
     ## Retrieve The Uncertainty of a cost recovery contract.
     Route to get the uncertainty of a cost recovery contract.
     """
-    return get_uncertainty(
-        data=data.model_dump(),
-        contract_type='Cost Recovery')
+    return get_uncertainty(data=data.model_dump(), contract_type="Cost Recovery")
+
 
 @router.post("/grosssplit/uncertainty")
 async def calculate_grosssplit_uncertainty(data: Data) -> dict:
@@ -599,9 +588,7 @@ async def calculate_grosssplit_uncertainty(data: Data) -> dict:
     ## Retrieve The Uncertainty of a gross split contract.
     Route to get the uncertainty of a gross split contract.
     """
-    return get_uncertainty(
-        data=data.model_dump(),
-        contract_type='Gross Split')
+    return get_uncertainty(data=data.model_dump(), contract_type="Gross Split")
 
 
 @router.post("/transition/uncertainty")
@@ -610,9 +597,8 @@ async def calculate_transition_uncertainty(data: Data) -> dict:
     ## Retrieve The Uncertainty of a transition contract.
     Route to get the uncertainty of a transition contract.
     """
-    return get_uncertainty(
-        data=data.model_dump(),
-        contract_type='Gross Split')
+    return get_uncertainty(data=data.model_dump(), contract_type="Gross Split")
+
 
 @router.post("/baseproject/uncertainty")
 async def calculate_baseproject_uncertainty(data: Data) -> dict:
@@ -620,6 +606,4 @@ async def calculate_baseproject_uncertainty(data: Data) -> dict:
     ## Retrieve The Uncertainty of a base project contract.
     Route to get the uncertainty of a base projcet contract.
     """
-    return get_uncertainty(
-        data=data.model_dump(),
-        contract_type='Base Project')
+    return get_uncertainty(data=data.model_dump(), contract_type="Base Project")

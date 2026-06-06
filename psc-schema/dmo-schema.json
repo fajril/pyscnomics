@@ -1,0 +1,14 @@
+{
+  "$id": "dmo-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "properties DMO Schema",
+  "type": "object",
+  "properties": {
+    "holiday": { "type": "boolean", "default": true },
+    "period": { "type": ["integer"], "default": 60 },
+    "start_production": { "type": ["integer", "null"], "default": null },
+    "volume": { "type": ["number"], "default": 25.0 },
+    "fee": { "type": ["number", "null"], "default": 25.0 }
+  },
+  "required": ["holiday", "period", "start_production", "volume", "fee"]
+}

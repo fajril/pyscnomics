@@ -45,6 +45,8 @@ def check_input(target_func, param: np.ndarray | float | int) -> np.ndarray:
         )
 
     else:
+        param_arr = None
+
         if isinstance(param, np.ndarray):
             if len(param) != len(target_func):
                 raise TaxInflationException(
@@ -229,7 +231,7 @@ def get_cost_adjustment_by_inflation(
     # Multipliers to adjust cost by inflation
     mult = np.array(
         [
-            np.prod(1.0 + inflation_rate_arr[id_start[i] : id_end[i]])
+            np.prod(1.0 + inflation_rate_arr[id_start[i]:id_end[i]])
             for i, _ in enumerate(id_start)
         ]
     )
@@ -325,7 +327,7 @@ def apply_cost_adjustment(
     # Multipliers to adjust cost by inflation
     mult = np.array(
         [
-            np.prod(1.0 + inflation_rate_arr[id_start[i] : id_end[i]])
+            np.prod(1.0 + inflation_rate_arr[id_start[i]:id_end[i]])
             for i, val in enumerate(id_start)
         ]
     )
@@ -486,6 +488,6 @@ def calc_distributed_cost(
     distributed_cost = np.zeros([project_duration, len(expense_year)], dtype=np.float64)
 
     for i, _ in enumerate(expense_year):
-        distributed_cost[id_start[i] : id_end[i], i] = cost_split[i]
+        distributed_cost[id_start[i]:id_end[i], i] = cost_split[i]
 
     return distributed_cost

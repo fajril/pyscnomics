@@ -4,17 +4,41 @@ Handles the routine to get the attributes of a contract object.
 import numpy as np
 
 from datetime import date
-from enum import Enum
+# from enum import Enum
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.grossplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
-from pyscnomics.econ import TaxSplitTypeCR, NPVSelection, DiscountingMode, OtherRevenue, DeprMethod, FTPTaxRegime, \
-    TaxRegime, InflationAppliedTo, GrossSplitRegime
+from pyscnomics.econ import (
+    TaxSplitTypeCR,
+    NPVSelection,
+    DiscountingMode,
+    OtherRevenue,
+    DeprMethod,
+    FTPTaxRegime,
+    TaxRegime,
+    InflationAppliedTo,
+    GrossSplitRegime,
+)
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales
-from pyscnomics.econ.selection import FluidType, VariableSplit082017, VariableSplit522017
+from pyscnomics.econ.costs import (
+    CapitalCost,
+    Intangible,
+    OPEX,
+    ASR,
+    LBT,
+    CostOfSales
+)
+from pyscnomics.econ.selection import (
+    FluidType,
+    CostType,
+    VariableSplit082017,
+    VariableSplit522017,
+    VariableSplit132024,
+    SunkCostMethod,
+    InitialYearAmortizationIncurred,
+)
 
 
 class GetAttrException(Exception):
@@ -23,7 +47,86 @@ class GetAttrException(Exception):
     pass
 
 
-def convert_enum_fluid(objects: FluidType):
+def _helper_convert_enum_to_str(enum_target, enum_type, enum_mapping) -> str:
+    """
+    Convert an enum member to its corresponding string representation.
+
+    This helper function provides a generic way to map enum members to
+    string values with proper type validation and error handling.
+
+    Parameters
+    ----------
+    enum_target : Any
+        The enum member to convert to string representation.
+    enum_type : type
+        The expected enum class type for validation.
+    enum_mapping : dict
+        Dictionary mapping enum members to their string representations.
+        Keys should be instances of `enum_type`, values should be strings.
+
+    Returns
+    -------
+    str
+        String representation of the enum member as defined in `enum_mapping`.
+
+    Raises
+    ------
+    GetAttrException
+        If `enum_target` is not an instance of `enum_type`.
+        If `enum_target` is not found as a key in `enum_mapping`.
+
+    Notes
+    -----
+    This function is designed as an internal helper to reduce code duplication
+    when converting multiple enum types to string representations.
+    """
+
+    # Filter incorrect input
+    if not isinstance(enum_target, enum_type):
+        raise GetAttrException(
+            f"Parameter must be a {enum_type.__name__!r} instance, "
+            f"not {enum_target.__class__.__qualname__!r}"
+        )
+
+    try:
+        return enum_mapping[enum_target]
+    except KeyError:
+        raise GetAttrException(f"Invalid {enum_type.__name__!r} object: {enum_target!r} ")
+
+
+def convert_enum_fluid(objects: FluidType) -> str:
+    """
+    Convert FluidType enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : FluidType
+        The FluidType enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the FluidType enum member.
+        Possible values: 'Oil', 'Gas', 'Sulfur', 'Electricity', 'CO2'.
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a FluidType instance.
+        If `objects` is not a recognized FluidType enum member.
+
+    Notes
+    -----
+    This function uses a dictionary-based mapping approach for optimal
+    performance (O(1) lookup time) compared to the previous if-elif chain.
+
+    The implementation delegates to a shared helper function
+    `_helper_convert_enum_to_str` for consistent error handling and validation
+    across similar enum converters.
+    """
+
+    """
+    Former approach:
     if objects is FluidType.OIL:
         result = 'Oil'
     elif objects is FluidType.GAS:
@@ -38,10 +141,86 @@ def convert_enum_fluid(objects: FluidType):
         raise GetAttrException(
             f"{objects} is not recognized"
         )
-
     return result
+    """
 
-def convert_enum_taxsplit(objects: TaxSplitTypeCR):
+    # Core mapping: an instance of FluidType -> its corresponding string
+    mapping = {
+        FluidType.OIL: "Oil",
+        FluidType.GAS: "Gas",
+        FluidType.SULFUR: "Sulfur",
+        FluidType.ELECTRICITY: "Electricity",
+        FluidType.CO2: "CO2",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=FluidType, enum_mapping=mapping
+    )
+
+
+def convert_enum_cost_type(objects: CostType) -> str:
+    """
+    Convert a CostType enum member to its string representation.
+
+    Parameters
+    ----------
+    objects : CostType
+        Target cost type enum.
+
+    Returns
+    -------
+    str
+        Corresponding cost type string.
+
+    Notes
+    -----
+    The conversion uses a predefined mapping and `_helper_convert_enum_to_str`.
+    """
+
+    # Core mapping: an instance of CostType -> its corresponding string
+    mapping = {
+        CostType.SUNK_COST: "sunk_cost",
+        CostType.PRE_ONSTREAM_COST: "preonstream_cost",
+        CostType.POST_ONSTREAM_COST: "postonstream_cost",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=CostType, enum_mapping=mapping
+    )
+
+
+def convert_enum_taxsplit(objects: TaxSplitTypeCR) -> str:
+    """
+    Convert TaxSplitTypeCR enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : TaxSplitTypeCR
+        The TaxSplitTypeCR enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the TaxSplitTypeCR enum member.
+        Possible values: 'Conventional', 'ICP Sliding Scale', 'R/C'.
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a TaxSplitTypeCR instance.
+        If `objects` is not a recognized TaxSplitTypeCR enum member.
+
+    Notes
+    -----
+    This function uses a dictionary-based mapping approach for optimal
+    performance (O(1) lookup time) compared to the previous if-elif chain.
+
+    The implementation delegates to a shared helper function `_helper_convert_enum_to_str`
+    for consistent error handling and validation across similar enum converters.
+    """
+
+    """
+    # Former approach
     if objects is TaxSplitTypeCR.CONVENTIONAL:
         result = 'Conventional'
     elif objects is TaxSplitTypeCR.SLIDING_SCALE:
@@ -53,8 +232,58 @@ def convert_enum_taxsplit(objects: TaxSplitTypeCR):
             f"{objects} is not recognized"
         )
     return result
+    """
 
-def convert_enum_npv(objects: NPVSelection):
+    # Core mapping
+    mapping = {
+        TaxSplitTypeCR.CONVENTIONAL: "Conventional",
+        TaxSplitTypeCR.SLIDING_SCALE: "ICP Sliding Scale",
+        TaxSplitTypeCR.R2C: "R/C"
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=TaxSplitTypeCR, enum_mapping=mapping
+    )
+
+
+def convert_enum_npv(objects: NPVSelection) -> str:
+    """
+    Convert NPVSelection enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : NPVSelection
+        The NPVSelection enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the NPVSelection enum member.
+        Possible values:
+        - 'SKK Full Cycle Real Terms'
+        - 'SKK Full Cycle Nominal Terms'
+        - 'Full Cycle Real Terms'
+        - 'Full Cycle Nominal Terms'
+        - 'Point Forward'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a NPVSelection instance.
+        If `objects` is not a recognized NPVSelection enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         NPVSelection.NPV_SKK_REAL_TERMS:"SKK Full Cycle Real Terms",
         NPVSelection.NPV_SKK_NOMINAL_TERMS:"SKK Full Cycle Nominal Terms",
@@ -66,8 +295,57 @@ def convert_enum_npv(objects: NPVSelection):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
 
-def convert_enum_discountingmode(objects: DiscountingMode):
+    # Core mapping
+    mapping = {
+        NPVSelection.NPV_SKK_REAL_TERMS: "SKK Full Cycle Real Terms",
+        NPVSelection.NPV_SKK_NOMINAL_TERMS: "SKK Full Cycle Nominal Terms",
+        NPVSelection.NPV_REAL_TERMS: "Full Cycle Real Terms",
+        NPVSelection.NPV_NOMINAL_TERMS: "Full Cycle Nominal Terms",
+        NPVSelection.NPV_POINT_FORWARD: "Point Forward",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=NPVSelection, enum_mapping=mapping
+    )
+
+
+def convert_enum_discountingmode(objects: DiscountingMode) -> str:
+    """
+    Convert DiscountingMode enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : DiscountingMode
+        The DiscountingMode enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the DiscountingMode enum member.
+        Possible values:
+        - 'End Year'
+        - 'Mid Year'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a DiscountingMode instance.
+        If `objects` is not a recognized DiscountingMode enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         DiscountingMode.END_YEAR: "End Year",
         DiscountingMode.MID_YEAR: "Mid Year",
@@ -76,8 +354,56 @@ def convert_enum_discountingmode(objects: DiscountingMode):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
 
-def convert_enum_otherrevenue(objects: OtherRevenue):
+    # Core mapping
+    mapping = {
+        DiscountingMode.END_YEAR: "End Year",
+        DiscountingMode.MID_YEAR: "Mid Year",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=DiscountingMode, enum_mapping=mapping
+    )
+
+
+def convert_enum_otherrevenue(objects: OtherRevenue) -> str:
+    """
+    Convert OtherRevenue enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : OtherRevenue
+        The OtherRevenue enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the OtherRevenue enum member.
+        Possible values:
+        - 'Addition to Oil Revenue'
+        - 'Addition to Gas Revenue'
+        - 'Reduction to Oil OPEX'
+        - 'Reduction to Gas OPEX'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a OtherRevenue instance.
+        If `objects` is not a recognized OtherRevenue enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         OtherRevenue.ADDITION_TO_OIL_REVENUE: "Addition to Oil Revenue",
         OtherRevenue.ADDITION_TO_GAS_REVENUE: "Addition to Gas Revenue",
@@ -88,8 +414,58 @@ def convert_enum_otherrevenue(objects: OtherRevenue):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
 
-def convert_enum_depreciationmethod(objects: DeprMethod):
+    # Core mapping
+    mapping = {
+        OtherRevenue.ADDITION_TO_OIL_REVENUE: "Addition to Oil Revenue",
+        OtherRevenue.ADDITION_TO_GAS_REVENUE: "Addition to Gas Revenue",
+        OtherRevenue.REDUCTION_TO_OIL_OPEX: "Reduction to Oil OPEX",
+        OtherRevenue.REDUCTION_TO_GAS_OPEX: "Reduction to Gas OPEX",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=OtherRevenue, enum_mapping=mapping
+    )
+
+
+def convert_enum_depreciationmethod(objects: DeprMethod) -> str:
+    """
+    Convert DeprMethod enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : DeprMethod
+        The DeprMethod enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the DeprMethod enum member.
+        Possible values:
+        - 'PSC Declining Balance'
+        - 'Declining Balance'
+        - 'Unit Of Production'
+        - 'Straight Line'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a DeprMethod instance.
+        If `objects` is not a recognized DeprMethod enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         DeprMethod.PSC_DB: "PSC Declining Balance",
         DeprMethod.DB: "Declining Balance",
@@ -100,8 +476,56 @@ def convert_enum_depreciationmethod(objects: DeprMethod):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
 
-def convert_enum_ftptaxregime(objects: FTPTaxRegime):
+    # Core mapping
+    mapping = {
+        DeprMethod.PSC_DB: "PSC Declining Balance",
+        DeprMethod.DB: "Declining Balance",
+        DeprMethod.UOP: "Unit Of Production",
+        DeprMethod.SL: "Straight Line",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=DeprMethod, enum_mapping=mapping
+    )
+
+
+def convert_enum_ftptaxregime(objects: FTPTaxRegime) -> str:
+    """
+    Convert FTPTaxRegime enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : FTPTaxRegime
+        The FTPTaxRegime enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the FTPTaxRegime enum member.
+        Possible values:
+        - 'PDJP No.20 Tahun 2017'
+        - 'Pre PDJP No.20 Tahun 2017'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a FTPTaxRegime instance.
+        If `objects` is not a recognized FTPTaxRegime enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         FTPTaxRegime.PDJP_20_2017: "PDJP No.20 Tahun 2017",
         FTPTaxRegime.PRE_PDJP_20_2017: "Pre PDJP No.20 Tahun 2017",
@@ -110,8 +534,58 @@ def convert_enum_ftptaxregime(objects: FTPTaxRegime):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
 
-def convert_enum_taxregime(objects: TaxRegime):
+    # Core mapping
+    mapping = {
+        FTPTaxRegime.PDJP_20_2017: "PDJP No.20 Tahun 2017",
+        FTPTaxRegime.PRE_PDJP_20_2017: "Pre PDJP No.20 Tahun 2017",
+        FTPTaxRegime.DIRECT_MODE: "Direct Mode",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=FTPTaxRegime, enum_mapping=mapping
+    )
+
+
+def convert_enum_taxregime(objects: TaxRegime) -> str:
+    """
+    Convert TaxRegime enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : TaxRegime
+        The TaxRegime enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the TaxRegime enum member.
+        Possible values:
+        - 'nailed down'
+        - 'prevailing'
+        - 'UU No.36 Tahun 2008'
+        - 'UU No.02 Tahun 2020'
+        - 'UU No.07 Tahun 2021'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a TaxRegime instance.
+        If `objects` is not a recognized TaxRegime enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         TaxRegime.NAILED_DOWN: "nailed down",
         TaxRegime.PREVAILING: "prevailing",
@@ -123,8 +597,58 @@ def convert_enum_taxregime(objects: TaxRegime):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
 
-def convert_enum_inflationappliedto(objects: InflationAppliedTo):
+    # Core mapping
+    mapping = {
+        TaxRegime.NAILED_DOWN: "nailed down",
+        TaxRegime.PREVAILING: "prevailing",
+        TaxRegime.UU_36_2008: "UU No.36 Tahun 2008",
+        TaxRegime.UU_02_2020: "UU No.02 Tahun 2020",
+        TaxRegime.UU_07_2021: "UU No.07 Tahun 2021",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=TaxRegime, enum_mapping=mapping
+    )
+
+
+def convert_enum_inflationappliedto(objects: InflationAppliedTo) -> str:
+    """
+    Convert InflationAppliedTo enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : InflationAppliedTo
+        The InflationAppliedTo enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the InflationAppliedTo enum member.
+        Possible values:
+        - 'CAPEX'
+        - 'OPEX'
+        - 'CAPEX AND OPEX'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a InflationAppliedTo instance.
+        If `objects` is not a recognized InflationAppliedTo enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         InflationAppliedTo.CAPEX: "CAPEX",
         InflationAppliedTo.OPEX: "OPEX",
@@ -134,8 +658,58 @@ def convert_enum_inflationappliedto(objects: InflationAppliedTo):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
 
-def convert_enum_gsregime(objects: GrossSplitRegime):
+    # Core mapping
+    mapping = {
+        InflationAppliedTo.CAPEX: "CAPEX",
+        InflationAppliedTo.OPEX: "OPEX",
+        InflationAppliedTo.CAPEX_AND_OPEX: "CAPEX AND OPEX",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=InflationAppliedTo, enum_mapping=mapping
+    )
+
+
+def convert_enum_gsregime(objects: GrossSplitRegime) -> str:
+    """
+    Convert GrossSplitRegime enum member to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : GrossSplitRegime
+        The GrossSplitRegime enum member to convert to string.
+
+    Returns
+    -------
+    str
+        String representation of the GrossSplitRegime enum member.
+        Possible values:
+        - 'PERMEN_ESDM_8_2017'
+        - 'PERMEN_ESDM_52_2017'
+        - 'PERMEN_ESDM_20_2019'
+        - 'PERMEN_ESDM_12_2020'
+        - 'PERMEN_ESDM_13_2024'
+
+    Raises
+    ------
+    GetAttrException
+        If `objects` is not a GrossSplitRegime instance.
+        If `objects` is not a recognized GrossSplitRegime enum member.
+
+    Notes
+    -----
+    This function replaces a previous inefficient approach that used linear
+    search through dictionary keys. The current implementation uses direct
+    dictionary lookup for optimal O(1) performance.
+
+    The function delegates to `_helper_convert_enum_to_str` for consistent
+    type validation and error handling across all enum conversion functions.
+    """
+
+    """
+    # Former approach
     attrs = {
         GrossSplitRegime.PERMEN_ESDM_8_2017: "PERMEN_ESDM_8_2017",
         GrossSplitRegime.PERMEN_ESDM_52_2017: "PERMEN_ESDM_52_2017",
@@ -146,77 +720,611 @@ def convert_enum_gsregime(objects: GrossSplitRegime):
     for key in attrs.keys():
         if objects == key:
             return attrs[key]
+    """
+
+    # Core mapping
+    mapping = {
+        GrossSplitRegime.PERMEN_ESDM_8_2017: "PERMEN_ESDM_8_2017",
+        GrossSplitRegime.PERMEN_ESDM_52_2017: "PERMEN_ESDM_52_2017",
+        GrossSplitRegime.PERMEN_ESDM_20_2019: "PERMEN_ESDM_20_2019",
+        GrossSplitRegime.PERMEN_ESDM_12_2020: "PERMEN_ESDM_12_2020",
+        GrossSplitRegime.PERMEN_ESDM_13_2024: "PERMEN_ESDM_13_2024",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=GrossSplitRegime, enum_mapping=mapping
+    )
+
+
+def convert_enum_sunk_cost_method(objects: SunkCostMethod) -> str:
+    """
+    Convert a `SunkCostMethod` enum to its corresponding string representation.
+
+    Parameters
+    ----------
+    objects : SunkCostMethod
+        The sunk cost method enum to be converted.
+
+    Returns
+    -------
+    str
+        The string representation of the given `SunkCostMethod` value.
+    """
+
+    # Core mapping
+    mapping = {
+        SunkCostMethod.DEPRECIATED_TANGIBLE: "depreciated_tangible",
+        SunkCostMethod.POOLED_1ST_YEAR: "pooled_first_year",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects, enum_type=SunkCostMethod, enum_mapping=mapping
+    )
+
+
+def convert_enum_initial_amortization_year(
+    objects: InitialYearAmortizationIncurred
+) -> str:
+    """
+    Convert InitialYearAmortizationIncurred enum to string representation.
+
+    Maps enum values to their corresponding string identifiers for use in
+    amortization calculations and data processing.
+
+    Parameters
+    ----------
+    objects : InitialYearAmortizationIncurred
+        Enum value representing the initial year basis for amortization.
+
+    Returns
+    -------
+    str
+        String representation of the enum value:
+        - "onstream_year" for ONSTREAM_YEAR
+        - "approval_year" for APPROVAL_YEAR
+    """
+
+    # Core mapping
+    mapping = {
+        InitialYearAmortizationIncurred.ONSTREAM_YEAR: "onstream_year",
+        InitialYearAmortizationIncurred.APPROVAL_YEAR: "approval_year",
+    }
+
+    return _helper_convert_enum_to_str(
+        enum_target=objects,
+        enum_type=InitialYearAmortizationIncurred,
+        enum_mapping=mapping,
+    )
+
+
+def convert_enum_var_split_08_2017(
+    objects: (
+        VariableSplit082017.FieldStatus
+        | VariableSplit082017.FieldLocation
+        | VariableSplit082017.ReservoirDepth
+        | VariableSplit082017.InfrastructureAvailability
+        | VariableSplit082017.ReservoirType
+        | VariableSplit082017.CO2Content
+        | VariableSplit082017.H2SContent
+        | VariableSplit082017.APIOil
+        | VariableSplit082017.DomesticUse
+        | VariableSplit082017.ProductionStage
+    )
+) -> str:
+    """
+    Convert an enumeration value from VariableSplit082017 into its string representation.
+
+    This function maps enum members defined under the VariableSplit082017 scheme
+    (e.g., FieldStatus, FieldLocation, ReservoirDepth) to their corresponding
+    human-readable string labels used in split-variable reporting for GR 08/2017.
+
+    Parameters
+    ----------
+    objects : VariableSplit082017.<Enum>
+        An instance of one of the supported enumeration types:
+        ``FieldStatus``, ``FieldLocation``, ``ReservoirDepth``,
+        ``InfrastructureAvailability``, ``ReservoirType``, ``CO2Content``,
+        ``H2SContent``, ``APIOil``, ``DomesticUse``, or ``ProductionStage``.
+
+    Returns
+    -------
+    str
+        The string representation associated with the given enumeration value.
+
+    Raises
+    ------
+    TypeError
+        If ``objects`` is not an instance of any supported VariableSplit082017
+        enumeration class.
+
+    Notes
+    -----
+    The mapping follows the classification categories specified in
+    Government Regulation No. 08/2017 (Indonesia), commonly used for
+    economic evaluation and upstream variable-split calculations.
+    """
+
+    # Define short aliases
+    VS = VariableSplit082017
+    fstatus = VS.FieldStatus
+    floc = VS.FieldLocation
+    rdepth = VS.ReservoirDepth
+    infra = VS.InfrastructureAvailability
+    rtype = VS.ReservoirType
+    co2 = VS.CO2Content
+    h2s = VS.H2SContent
+    api = VS.APIOil
+    dom_use = VS.DomesticUse
+    prod_stg = VS.ProductionStage
+
+    # Mapping datatype, enum, and string representation
+    mapping_dict = {
+        fstatus: {
+            fstatus.POD_I: "POD I",
+            fstatus.POD_II: "POD II",
+            fstatus.POFD: "POFD",
+            fstatus.NO_POD: "No POD",
+        },
+        floc: {
+            floc.ONSHORE: "Onshore",
+            floc.OFFSHORE_0_UNTIL_LESSEQUAL_20: "Offshore (0<h<=20)",
+            floc.OFFSHORE_20_UNTIL_LESSEQUAL_50: "Offshore (20<h<=50)",
+            floc.OFFSHORE_50_UNTIL_LESSEQUAL_150: "Offshore (50<h<=150)",
+            floc.OFFSHORE_150_UNTIL_LESSEQUAL_1000: "Offshore (150<h<=1000)",
+            floc.OFFSHORE_GREATERTHAN_1000: "Offshore (h>1000)",
+        },
+        rdepth: {
+            rdepth.LESSEQUAL_2500: "<=2500",
+            rdepth.GREATERTHAN_2500: ">2500",
+        },
+        infra: {
+            infra.WELL_DEVELOPED: "Well Developed",
+            infra.NEW_FRONTIER: "New Frontier",
+        },
+        rtype: {
+            rtype.CONVENTIONAL: "Conventional",
+            rtype.NON_CONVENTIONAL: "Non Conventional",
+        },
+        co2: {
+            co2.LESSTHAN_5: "<5",
+            co2.EQUAL_5_UNTIL_LESSTHAN_10: "5<=x<10",
+            co2.EQUAL_10_UNTIL_LESSTHAN_20: "10<=x<20",
+            co2.EQUAL_20_UNTIL_LESSTHAN_40: "20<=x<40",
+            co2.EQUAL_40_UNTIL_LESSTHAN_60: "40<=x<60",
+            co2.EQUALGREATERTHAN_60: "x>=60",
+        },
+        h2s: {
+            h2s.LESSTHAN_100: "<100",
+            h2s.EQUAL_100_UNTIL_LESSTHAN_300: "100<=x<300",
+            h2s.EQUAL_300_UNTIL_LESSTHAN_500: "300<=x<500",
+            h2s.EQUALGREATERTHAN_500: "x>=500",
+        },
+        api: {
+            api.LESSTHAN_25: "<25",
+            api.EQUALGREATERTHAN_25: ">=25",
+        },
+        dom_use: {
+            dom_use.LESSTHAN_30: "<30",
+            dom_use.EQUAL_30_UNTIL_LESSTHAN_50: "30<=x<50",
+            dom_use.EQUAL_50_UNTIL_LESSTHAN_70: "50<=x<70",
+            dom_use.EQUAL_70_UNTIL_LESSTHAN_100: "70<=x<100",
+        },
+        prod_stg: {
+            prod_stg.PRIMARY: "Primary",
+            prod_stg.SECONDARY: "Secondary",
+            prod_stg.TERTIARY: "Tertiary",
+        },
+    }
+
+    # Dynamic conversion of enum to string representation based on input object's datatype
+    for enum_type, mapping in mapping_dict.items():
+        if isinstance(objects, enum_type):
+            return _helper_convert_enum_to_str(
+                enum_target=objects, enum_type=enum_type, enum_mapping=mapping
+            )
+
+    raise TypeError(f"Unsupported enum type: {objects.__class__.__qualname__!r}")
+
+
+def convert_enum_var_split_52_2017(
+    objects: (
+        VariableSplit522017.FieldStatus
+        | VariableSplit522017.FieldLocation
+        | VariableSplit522017.ReservoirDepth
+        | VariableSplit522017.InfrastructureAvailability
+        | VariableSplit522017.ReservoirType
+        | VariableSplit522017.CO2Content
+        | VariableSplit522017.H2SContent
+        | VariableSplit522017.APIOil
+        | VariableSplit522017.DomesticUse
+        | VariableSplit522017.ProductionStage
+    )
+) -> str:
+    """
+    Convert an enumeration value from VariableSplit522017 into its string representation.
+
+    This function maps enum members defined under the VariableSplit522017 specification
+    (e.g., FieldStatus, FieldLocation, ReservoirDepth) to their corresponding
+    human-readable string labels used in split-variable reporting for GR 52/2017.
+
+    Parameters
+    ----------
+    objects : VariableSplit522017.<Enum>
+        An instance of one of the supported enumeration types:
+        ``FieldStatus``, ``FieldLocation``, ``ReservoirDepth``,
+        ``InfrastructureAvailability``, ``ReservoirType``, ``CO2Content``,
+        ``H2SContent``, ``APIOil``, ``DomesticUse``, or ``ProductionStage``.
+
+    Returns
+    -------
+    str
+        The string representation associated with the given enumeration value.
+
+    Raises
+    ------
+    TypeError
+        If ``objects`` does not belong to any supported VariableSplit522017
+        enumeration class.
+
+    Notes
+    -----
+    The mapping is defined according to the value ranges and classifications
+    specified in Government Regulation No. 52/2017 (Indonesia), commonly
+    used for economic evaluation and variable-split categorization.
+    """
+
+    # Define short aliases
+    VS = VariableSplit522017
+    fstatus = VS.FieldStatus
+    floc = VS.FieldLocation
+    rdepth = VS.ReservoirDepth
+    infra = VS.InfrastructureAvailability
+    rtype = VS.ReservoirType
+    co2 = VS.CO2Content
+    h2s = VS.H2SContent
+    api = VS.APIOil
+    dom_use = VS.DomesticUse
+    prod_stg = VS.ProductionStage
+
+    # Mapping datatype, enum, and string representation
+    mapping_dict = {
+        fstatus: {
+            fstatus.POD_I: "POD I",
+            fstatus.POD_II: "POD II",
+            fstatus.NO_POD: "No POD",
+        },
+        floc: {
+            floc.ONSHORE: "Onshore",
+            floc.OFFSHORE_0_UNTIL_LESSEQUAL_20: "Offshore (0<h<=20)",
+            floc.OFFSHORE_20_UNTIL_LESSEQUAL_50: "Offshore (20<h<=50)",
+            floc.OFFSHORE_50_UNTIL_LESSEQUAL_150: "Offshore (50<h<=150)",
+            floc.OFFSHORE_150_UNTIL_LESSEQUAL_1000: "Offshore (150<h<=1000)",
+            floc.OFFSHORE_GREATERTHAN_1000: "Offshore (h>1000)",
+        },
+        rdepth: {
+            rdepth.LESSEQUAL_2500: "<=2500",
+            rdepth.GREATERTHAN_2500: ">2500",
+        },
+        infra: {
+            infra.WELL_DEVELOPED: "Well Developed",
+            infra.NEW_FRONTIER_OFFSHORE: "New Frontier Offshore",
+            infra.NEW_FRONTIER_ONSHORE: "New Frontier Onshore",
+        },
+        rtype: {
+            rtype.CONVENTIONAL: "Conventional",
+            rtype.NON_CONVENTIONAL: "Non Conventional",
+        },
+        co2: {
+            co2.LESSTHAN_5: "<5",
+            co2.EQUAL_5_UNTIL_LESSTHAN_10: "5<=x<10",
+            co2.EQUAL_10_UNTIL_LESSTHAN_20: "10<=x<20",
+            co2.EQUAL_20_UNTIL_LESSTHAN_40: "20<=x<40",
+            co2.EQUAL_40_UNTIL_LESSTHAN_60: "40<=x<60",
+            co2.EQUALGREATERTHAN_60: "x>=60",
+        },
+        h2s: {
+            h2s.LESSTHAN_100: "<100",
+            h2s.EQUAL_100_UNTIL_LESSTHAN_1000: "100<=x<1000",
+            h2s.EQUAL_1000_UNTIL_LESSTHAN_2000: "1000<=x<2000",
+            h2s.EQUAL_2000_UNTIL_LESSTHAN_3000: "2000<=x<3000",
+            h2s.EQUAL_3000_UNTIL_LESSTHAN_4000: "3000<=x<4000",
+            h2s.EQUALGREATERTHAN_4000: "x>=4000",
+        },
+        api: {
+            api.LESSTHAN_25: "<25",
+            api.EQUALGREATERTHAN_25: ">=25",
+        },
+        dom_use: {
+            dom_use.EQUAL_30_UNTIL_LESSTHAN_50: "30<=x<50",
+            dom_use.EQUAL_50_UNTIL_LESSTHAN_70: "50<=x<70",
+            dom_use.EQUAL_70_UNTIL_LESSTHAN_100: "70<=x<100",
+        },
+        prod_stg: {
+            prod_stg.PRIMARY: "Primary",
+            prod_stg.SECONDARY: "Secondary",
+            prod_stg.TERTIARY: "Tertiary",
+        },
+    }
+
+    # Dynamic conversion of enum to string representation based on input object's datatype
+    for enum_type, mapping in mapping_dict.items():
+        if isinstance(objects, enum_type):
+            return _helper_convert_enum_to_str(
+                enum_target=objects, enum_type=enum_type, enum_mapping=mapping
+            )
+
+    raise TypeError(f"Unsupported enum type: {objects.__class__.__qualname__!r}")
+
+
+def convert_enum_var_split_13_2024(
+    objects: (
+        VariableSplit132024.InfrastructureAvailability
+        | VariableSplit132024.FieldReservesAmount
+        | VariableSplit132024.FieldLocation
+    )
+) -> str:
+    """
+    Convert a VariableSplit132024 enum instance to its string representation.
+
+    Parameters
+    ----------
+    objects : (
+        VariableSplit132024.InfrastructureAvailability |
+        VariableSplit132024.FieldReservesAmount |
+        VariableSplit132024.FieldLocation |
+        VariableSplit132024.ReservoirType
+    )
+        Enum member representing a variable split category.
+
+    Returns
+    -------
+    str
+        String equivalent of the given enum value.
+
+    Notes
+    -----
+    The function uses centralized mapping for each VariableSplit132024 subclass
+    and delegates conversion to `_helper_convert_enum_to_str`. Raises
+    `TypeError` for unsupported enum types.
+    """
+
+    # Define short aliases
+    VS = VariableSplit132024
+    infra = VS.InfrastructureAvailability
+    reserves = VS.FieldReservesAmount
+    loc = VS.FieldLocation
+    rtype = VS.ReservoirType
+
+    # Mapping datatype, enum, and string representation
+    mapping_dict = {
+        infra: {
+            infra.NOT_AVAILABLE: "not_available",
+            infra.PARTIALLY_AVAILABLE: "partially_available",
+            infra.AVAILABLE: "available",
+        },
+        reserves: {
+            reserves.LOW: "low",
+            reserves.MEDIUM: "medium",
+            reserves.HIGH: "high",
+        },
+        loc: {
+            loc.ONSHORE: "Onshore",
+            loc.SHALLOW_OFFSHORE: "shallow_offshore",
+            loc.DEEP_OFFSHORE: "deep_offshore",
+            loc.ULTRADEEP_OFFSHORE: "ultradeep_offshore"
+        },
+        rtype: {
+            rtype.MK: "conventional",
+            rtype.MNK: "unconventional",
+        }
+    }
+
+    # Dynamic conversion of enum to string representation based on input object's datatype
+    # ("InfrastructureAvailability", "FieldReservesAmount", "FieldLocation", or "ReservoirType")
+    for enum_type, mapping in mapping_dict.items():
+        if isinstance(objects, enum_type):
+            return _helper_convert_enum_to_str(
+                enum_target=objects, enum_type=enum_type, enum_mapping=mapping
+            )
+
+    raise TypeError(f"Unsupported enum type: {objects.__class__.__qualname__!r}")
+
 
 def convert_object(objects):
-    if isinstance(objects, date):
-        return objects.strftime('%Y-%m-%d')
+    """
+    Convert various object types to their serializable representations.
 
+    This function serves as a universal converter that handles multiple data types
+    including dates, NumPy arrays, and various enum types used in the financial
+    modeling system. It ensures objects are converted to JSON-serializable formats.
+
+    Parameters
+    ----------
+    objects : Any
+        The object to convert to a serializable representation.
+        Supported types include:
+        - date objects
+        - numpy.ndarray
+        - FluidType enum
+        - TaxSplitTypeCR enum
+        - NPVSelection enum
+        - DiscountingMode enum
+        - OtherRevenue enum
+        - DeprMethod enum
+        - FTPTaxRegime enum
+        - TaxRegime enum
+        - InflationAppliedTo enum
+        - GrossSplitRegime enum
+        - VariableSplit522017 enums
+        - VariableSplit082017 enums
+        - VariableSplit132024 enums
+
+    Returns
+    -------
+    Any
+        Serializable representation of the input object:
+        - date -> str in 'YYYY-MM-DD' format
+        - numpy.ndarray -> list
+        - Enum types -> str representation via dedicated converters
+        - VariableSplit enums -> direct enum value
+        - Other types -> returned as-is
+
+    Notes
+    -----
+    This function provides a centralized conversion point for serialization
+    purposes, particularly useful for preparing data for JSON serialization
+    or API responses.
+
+    The function uses dedicated converter functions for specific enum types
+    to ensure consistent string representations across the application.
+    """
+
+    # Object is date
+    if isinstance(objects, date):
+        return objects.strftime("%d/%m/%Y")
+        # return objects.strftime('%Y-%m-%d')
+
+    # Object is numpy.ndarray
     elif isinstance(objects, np.ndarray):
         return objects.tolist()
 
+    # Object is FluidType
     elif isinstance(objects, FluidType):
         return convert_enum_fluid(objects=objects)
 
+    # Object is CostType
+    elif isinstance(objects, CostType):
+        return convert_enum_cost_type(objects=objects)
+
+    # Object is TaxSplitTypeCR
     elif isinstance(objects, TaxSplitTypeCR):
         return convert_enum_taxsplit(objects=objects)
 
+    # Object is NPVSelection
     elif isinstance(objects, NPVSelection):
         return convert_enum_npv(objects=objects)
 
+    # Object is DiscountingMode
     elif isinstance(objects, DiscountingMode):
         return convert_enum_discountingmode(objects=objects)
 
+    # Object is OtherRevenue
     elif isinstance(objects, OtherRevenue):
         return convert_enum_otherrevenue(objects=objects)
 
+    # Object is DeprMethod
     elif isinstance(objects, DeprMethod):
         return convert_enum_depreciationmethod(objects=objects)
 
+    # Object is FTPTaxRegime
     elif isinstance(objects, FTPTaxRegime):
         return convert_enum_ftptaxregime(objects=objects)
 
+    # Object is TaxRegime
     elif isinstance(objects, TaxRegime):
         return convert_enum_taxregime(objects=objects)
 
+    # Object is InflationAppliedTo
     elif isinstance(objects, InflationAppliedTo):
         return convert_enum_inflationappliedto(objects=objects)
 
+    # Object is GrossSplitRegime
     elif isinstance(objects, GrossSplitRegime):
         return convert_enum_gsregime(objects=objects)
 
-    elif isinstance(objects, (
-            VariableSplit522017.FieldStatus,
-            VariableSplit522017.FieldLocation,
-            VariableSplit522017.ReservoirDepth,
-            VariableSplit522017.InfrastructureAvailability,
-            VariableSplit522017.ReservoirType,
-            VariableSplit522017.CO2Content,
-            VariableSplit522017.H2SContent,
-            VariableSplit522017.APIOil,
-            VariableSplit522017.DomesticUse,
-            VariableSplit522017.ProductionStage,
-    )):
-        return objects.value
+    # Object is SunkCostMethod
+    elif isinstance(objects, SunkCostMethod):
+        return convert_enum_sunk_cost_method(objects=objects)
 
+    # Object is InitialAmortizationIncurred
+    elif isinstance(objects, InitialYearAmortizationIncurred):
+        return convert_enum_initial_amortization_year(objects=objects)
+
+    # Object is VariableSplit522017
     elif isinstance(objects, (
-            VariableSplit082017.FieldStatus,
-            VariableSplit082017.FieldLocation,
-            VariableSplit082017.ReservoirDepth,
-            VariableSplit082017.InfrastructureAvailability,
-            VariableSplit082017.ReservoirType,
-            VariableSplit082017.CO2Content,
-            VariableSplit082017.H2SContent,
-            VariableSplit082017.APIOil,
-            VariableSplit082017.DomesticUse,
-            VariableSplit082017.ProductionStage,
+        VariableSplit522017.FieldStatus,
+        VariableSplit522017.FieldLocation,
+        VariableSplit522017.ReservoirDepth,
+        VariableSplit522017.InfrastructureAvailability,
+        VariableSplit522017.ReservoirType,
+        VariableSplit522017.CO2Content,
+        VariableSplit522017.H2SContent,
+        VariableSplit522017.APIOil,
+        VariableSplit522017.DomesticUse,
+        VariableSplit522017.ProductionStage,
     )):
-        return objects.value
+        return convert_enum_var_split_52_2017(objects=objects)
+
+    # Object is VariableSplit082017
+    elif isinstance(objects, (
+        VariableSplit082017.FieldStatus,
+        VariableSplit082017.FieldLocation,
+        VariableSplit082017.ReservoirDepth,
+        VariableSplit082017.InfrastructureAvailability,
+        VariableSplit082017.ReservoirType,
+        VariableSplit082017.CO2Content,
+        VariableSplit082017.H2SContent,
+        VariableSplit082017.APIOil,
+        VariableSplit082017.DomesticUse,
+        VariableSplit082017.ProductionStage,
+    )):
+        return convert_enum_var_split_08_2017(objects=objects)
+
+    # Object is VariableSplit132024
+    elif isinstance(objects, (
+        VariableSplit132024.InfrastructureAvailability,
+        VariableSplit132024.FieldReservesAmount,
+        VariableSplit132024.FieldLocation,
+        VariableSplit132024.ReservoirType,
+    )):
+        return convert_enum_var_split_13_2024(objects=objects)
 
     else:
         return objects
 
-def construct_lifting_attr(lifting: tuple[Lifting]):
-    fluid_types = [(str(lift.fluid_type.value) + ' ' + str(index)).capitalize() for index, lift in enumerate(lifting)]
+
+def _prepare_args(target_arg, default, contract_arguments: dict):
+    return contract_arguments.get(target_arg, default)
+
+
+def construct_lifting_attr(lifting: tuple[Lifting]) -> dict:
+    """
+    Construct a dictionary containing processed lifting attributes for each fluid type.
+
+    This function iterates through a tuple of `Lifting` objects, extracts their
+    attributes, converts each attribute using `convert_object()`, and returns
+    a dictionary mapping descriptive fluid type names (e.g., "Oil 0", "Gas 1")
+    to the corresponding processed lifting data.
+
+    Parameters
+    ----------
+    lifting : tuple of Lifting
+        A tuple containing one or more `Lifting` objects. Each object represents
+        lifting data for a specific fluid type.
+
+    Returns
+    -------
+    dict
+        A dictionary where:
+        - Keys are strings describing each fluid type with an index suffix
+          (e.g., `"Oil 0"`, `"Gas 1"`).
+        - Values are dictionaries of processed lifting attributes for each fluid type.
+
+    Notes
+    -----
+    - Each attribute of the `Lifting` object is converted using the
+      `convert_object()` function.
+    - The function assumes that each `Lifting` object has a `fluid_type`
+      attribute with a `.value` property that can be converted to string.
+    """
+
+    fluid_types = (
+        [
+            (str(lift.fluid_type.value) + ' ' + str(index)).capitalize()
+            for index, lift in enumerate(lifting)
+        ]
+    )
+
     liftings = [vars(lift) for lift in lifting]
 
     for lift in liftings:
@@ -225,56 +1333,279 @@ def construct_lifting_attr(lifting: tuple[Lifting]):
 
     return dict(zip(fluid_types, liftings))
 
-def construct_cost_attr(cost: tuple[CapitalCost] | tuple[Intangible] | tuple[OPEX] | tuple[ASR] | tuple[LBT] | tuple[CostOfSales]):
-    cost_key = ['Cost ' + str(index) for index, _ in enumerate(cost)]
+
+def construct_cost_attr(
+    cost: (
+        tuple[CapitalCost]
+        | tuple[Intangible]
+        | tuple[OPEX]
+        | tuple[ASR]
+        | tuple[LBT]
+        | tuple[CostOfSales]
+    )
+):
+    """
+    Construct and process a dictionary of cost attributes from a tuple of
+    cost objects.
+
+    This function iterates through the provided cost objects, converts their
+    attributes into serializable or model-friendly forms, and returns them
+    as a dictionary keyed by cost index (e.g., ``"Cost 0"``, ``"Cost 1"``).
+
+    Attribute Processing Rules
+    --------------------------
+    - ``cost_allocation``:
+        Converted element-wise using ``convert_enum_fluid()``.
+    - ``cost_type``:
+        Converted element-wise using ``convert_enum_cost_type()``; values of
+        ``None`` are preserved.
+    - All other attributes:
+        Converted using ``convert_object()``.
+
+    Parameters
+    ----------
+    cost : tuple of CapitalCost, Intangible, OPEX, ASR, LBT, or CostOfSales
+        Tuple containing cost objects of a single category. Each cost object
+        is converted to a dictionary via ``vars()`` prior to attribute
+        processing.
+
+    Returns
+    -------
+    dict
+        A dictionary mapping each cost entry name (e.g., ``"Cost 0"``) to its
+        processed attribute dictionary.
+
+    Notes
+    -----
+    This function standardizes cost object attributes for downstream use in
+    serialization, data exchange, or economic model preparation. The logic
+    replaces an earlier implementation that applied uniform conversion to all
+    attributes except ``cost_allocation``.
+    """
+
+    # Define key for each cost instances
+    cost_key = ["Cost " + str(index) for index, _ in enumerate(cost)]
+
+    # Convert every cost instances into their correponding dictionaries
     costs = [vars(cst) for cst in cost]
 
+    # Modify cost attributes (as dictionaries)
     for cst in costs:
+        for key, val in cst.items():
+            if key == "cost_allocation":
+                cst[key] = [convert_enum_fluid(objects=fluid) for fluid in cst[key]]
+
+            elif key == "cost_type":
+                cst[key] = [
+                    convert_enum_cost_type(objects=ct) if ct is not None
+                    else None for ct in cst[key]
+                ]
+                # cst[key] = [convert_enum_cost_type(objects=ct) for ct in cst[key]]
+
+            else:
+                cst[key] = convert_object(objects=val)
+
+    """
+    Former approach
+    ---------------
+        for cst in costs:
         for key, item in cst.items():
-            if key == 'cost_allocation':
+            if key == "cost_allocation":
                 cst[key] = [convert_enum_fluid(objects=fluid) for fluid in cst[key]]
             else:
                 cst[key] = convert_object(objects=item)
+    """
+
     return dict(zip(cost_key, costs))
 
+
 def construct_setup_attr(contract: BaseProject | CostRecovery | GrossSplit | Transition):
+    """
+    Construct a standardized setup-attribute dictionary from a contract object.
+
+    Parameters
+    ----------
+    contract : BaseProject | CostRecovery | GrossSplit | Transition
+        Contract instance containing project dates, lifting configuration,
+        and setup-related attributes.
+
+    Returns
+    -------
+    dict
+        Dictionary of formatted setup attributes with keys:
+        ``start_date``, ``end_date``, ``oil_onstream_date``,
+        ``gas_onstream_date``, ``approval_year``, ``is_pod_1``,
+        and ``is_strict``.
+
+    Notes
+    -----
+    - Dates are formatted as ``"DD/MM/YYYY"``.
+    - Onstream dates are included only if the corresponding fluid is produced.
+    - Missing or ``None`` attributes fall back to default values.
+    """
+
     fluid_produced = [lift.fluid_type for lift in contract.lifting]
+    contract_attrs = list(vars(contract).keys())
+
+    def _get_date(fluid_type: FluidType, onstream_date: date):
+        """
+        Get formatted onstream date if fluid type is produced.
+
+        Helper function to validate fluid production and format the
+        corresponding onstream date.
+
+        Parameters
+        ----------
+        fluid_type : FluidType
+            Type of fluid (OIL or GAS) to check for production
+        onstream_date : datetime
+            Date when production for the fluid type begins
+
+        Returns
+        -------
+        str or None
+            Formatted date string "DD/MM/YYYY" if fluid type is produced,
+            otherwise None
+        """
+        return (
+            None if fluid_type not in fluid_produced
+            else onstream_date.strftime("%d/%m/%Y")
+        )
+
+    def _prepare_setup_attr(target, source, default):
+        """
+        Select appropriate attribute value from source or fallback to default.
+
+        Parameters
+        ----------
+        target : str
+            Attribute name to check in the contract attribute list.
+        source : Any
+            Candidate value to assign if valid (not None).
+        default : Any
+            Default value to use if `target` not found or `source` is None.
+
+        Returns
+        -------
+        Any
+            Selected attribute value, either `source` or `default`.
+        """
+        return (
+            default if (target not in contract_attrs) or (source is None)
+            else source
+        )
+
+    # Mapping variables
+    args = {
+        "oil": (FluidType.OIL, contract.oil_onstream_date),
+        "gas": (FluidType.GAS, contract.gas_onstream_date),
+        "approval_year": ("approval_year", contract.approval_year, None),
+        "is_pod_1": ("is_pod_1", contract.is_pod_1, False),
+        "is_strict": ("is_strict", contract.is_strict, True)
+    }
+
     return {
         "start_date": contract.start_date.strftime("%d/%m/%Y"),
         "end_date": contract.end_date.strftime("%d/%m/%Y"),
-        "oil_onstream_date": None if FluidType.OIL not in fluid_produced else contract.oil_onstream_date.strftime("%d/%m/%Y"),
-        "gas_onstream_date": None if FluidType.GAS not in fluid_produced else contract.gas_onstream_date.strftime("%d/%m/%Y"),
+        "oil_onstream_date": _get_date(*args["oil"]),
+        "gas_onstream_date": _get_date(*args["gas"]),
+        "approval_year": _prepare_setup_attr(*args["approval_year"]),
+        "is_pod_1": _prepare_setup_attr(*args["is_pod_1"]),
+        "is_strict": _prepare_setup_attr(*args["is_strict"]),
     }
 
+
 def construct_summary_arguments_attr(summary_arguments: dict):
+    """
+    Process summary arguments by converting all values using convert_object.
+
+    This function iterates through all key-value pairs in the input dictionary
+    and applies the `convert_object` function to each value, modifying the
+    dictionary in place.
+
+    Parameters
+    ----------
+    summary_arguments : dict
+        Dictionary containing summary arguments where values need to be
+        processed/converted. The dictionary will be modified in place.
+
+    Returns
+    -------
+    dict
+        The same dictionary object with all values processed by `convert_object`.
+        The dictionary is modified in place and returned for method chaining.
+
+    Notes
+    -----
+    - This function modifies the input dictionary in place
+    - The specific conversion behavior depends on the `convert_object` function
+    """
+
     for key, value in summary_arguments.items():
         summary_arguments[key] = convert_object(objects=value)
+
     return summary_arguments
 
+
 def construct_costrecovery_attr(contract: CostRecovery):
-    cr_setup =  {
-        'oil_ftp_is_available': contract.oil_ftp_is_available,
-        'oil_ftp_is_shared': contract.oil_ftp_is_shared,
-        'oil_ftp_portion': contract.oil_ftp_portion,
-        'gas_ftp_is_available': contract.gas_ftp_is_available,
-        'gas_ftp_is_shared': contract.gas_ftp_is_shared,
-        'gas_ftp_portion': contract.gas_ftp_portion,
-        'tax_split_type': contract.tax_split_type,
-        'condition_dict': contract.condition_dict,
-        'indicator_rc_icp_sliding': contract.indicator_rc_icp_sliding,
-        'oil_ctr_pretax_share': contract.oil_ctr_pretax_share,
-        'gas_ctr_pretax_share': contract.gas_ctr_pretax_share,
-        'oil_ic_rate': contract.oil_ic_rate,
-        'gas_ic_rate': contract.gas_ic_rate,
-        'ic_is_available': contract.ic_is_available,
-        'oil_cr_cap_rate': contract.oil_cr_cap_rate,
-        'gas_cr_cap_rate': contract.gas_cr_cap_rate,
-        'oil_dmo_volume_portion': contract.oil_dmo_volume_portion,
-        'oil_dmo_fee_portion': contract.oil_dmo_fee_portion,
-        'oil_dmo_holiday_duration': contract.oil_dmo_holiday_duration,
-        'gas_dmo_volume_portion': contract.gas_dmo_volume_portion,
-        'gas_dmo_fee_portion': contract.gas_dmo_fee_portion,
-        'gas_dmo_holiday_duration': contract.gas_dmo_holiday_duration,
+    """
+    Extract and convert CostRecovery contract attributes to a dictionary.
+
+    Processes CostRecovery contract object attributes across multiple categories
+    including FTP, splits, investment credits, DMO, and depreciation. All values
+    are processed through convert_object.
+
+    Parameters
+    ----------
+    contract : CostRecovery
+        CostRecovery contract object containing attributes for FTP, tax splits,
+        investment credits, DMO, and depreciation settings.
+
+    Returns
+    -------
+    dict
+        Dictionary containing converted CostRecovery attributes with keys for:
+        - FTP settings (oil/gas availability, sharing, portions)
+        - Tax splits and contractor shares
+        - Investment credit rates and cap rates
+        - DMO volumes, fees, and holidays
+        - Carry forward depreciation values
+    """
+
+    cr_setup = {
+        # FTP
+        "oil_ftp_is_available": contract.oil_ftp_is_available,
+        "oil_ftp_is_shared": contract.oil_ftp_is_shared,
+        "oil_ftp_portion": contract.oil_ftp_portion,
+        "gas_ftp_is_available": contract.gas_ftp_is_available,
+        "gas_ftp_is_shared": contract.gas_ftp_is_shared,
+        "gas_ftp_portion": contract.gas_ftp_portion,
+
+        # Split
+        "tax_split_type": contract.tax_split_type,
+        "condition_dict": contract.condition_dict,
+        "indicator_rc_icp_sliding": contract.indicator_rc_icp_sliding,
+        "oil_ctr_pretax_share": contract.oil_ctr_pretax_share,
+        "gas_ctr_pretax_share": contract.gas_ctr_pretax_share,
+
+        # Investment credit and cap rate
+        "oil_ic_rate": contract.oil_ic_rate,
+        "gas_ic_rate": contract.gas_ic_rate,
+        "ic_is_available": contract.ic_is_available,
+        "oil_cr_cap_rate": contract.oil_cr_cap_rate,
+        "gas_cr_cap_rate": contract.gas_cr_cap_rate,
+
+        # DMO
+        "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
+        "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
+        "oil_dmo_holiday_duration": contract.oil_dmo_holiday_duration,
+        "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
+        "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
+        "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
+
+        # Carry forward depreciation
+        "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
+        "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
     }
 
     for key, value in cr_setup.items():
@@ -282,25 +1613,49 @@ def construct_costrecovery_attr(contract: CostRecovery):
 
     return cr_setup
 
+
 def construct_costrecovery_arguments_attr(contract_arguments: dict):
+    """
+    Construct processed Cost Recovery contract arguments with default values applied.
+
+    Parameters
+    ----------
+    contract_arguments : dict
+        Dictionary containing user-defined Cost Recovery parameters.
+
+    Returns
+    -------
+    dict
+        Dictionary of processed contract arguments where missing keys are filled
+        with default values and all entries are converted using `convert_object()`.
+
+    Notes
+    -----
+    - Default values are defined in an internal mapping.
+    - Each argument is processed using `convert_object()` for type consistency.
+    """
+
+    mapping_args = {
+        "sulfur_revenue": ("sulfur_revenue", "Addition to Oil Revenue"),
+        "electricity_revenue": ("electricity_revenue", "Addition to Oil Revenue"),
+        "co2_revenue": ("co2_revenue", "Addition to Oil Revenue"),
+        "vat_rate": ("vat_rate", 0.0),
+        "inflation_rate": ("inflation_rate", 0.0),
+        "inflation_rate_applied_to": ("inflation_rate_applied_to", None),
+        "is_dmo_end_weighted": ("is_dmo_end_weighted", False),
+        "tax_regime": ("tax_regime", "nailed down"),
+        "effective_tax_rate": ("effective_tax_rate", None),
+        "ftp_tax_regime": ("ftp_tax_regime", "PDJP No.20 Tahun 2017"),
+        "depr_method": ("depr_method", "PSC Declining Balance"),
+        "decline_factor": ("decline_factor", 2),
+        "post_uu_22_year2001": ("post_uu_22_year2001", True),
+        "oil_cost_of_sales_applied": ("oil_cost_of_sales_applied", False),
+        "gas_cost_of_sales_applied": ("gas_cost_of_sales_applied", False),
+        "sum_undepreciated_cost": ("sum_undepreciated_cost", True),
+    }
+
     cr_arguments = {
-        "sulfur_revenue": contract_arguments.get("sulfur_revenue", "Addition to Oil Revenue"),
-        "electricity_revenue": contract_arguments.get("electricity_revenue", "Addition to Oil Revenue"),
-        "co2_revenue": contract_arguments.get("co2_revenue", "Addition to Oil Revenue"),
-        "is_dmo_end_weighted": contract_arguments.get("is_dmo_end_weighted", False),
-        "tax_regime": contract_arguments.get("tax_regime", "nailed down"),
-        "effective_tax_rate": contract_arguments.get("effective_tax_rate", None),
-        "ftp_tax_regime": contract_arguments.get("ftp_tax_regime", "PDJP No.20 Tahun 2017"),
-        "sunk_cost_reference_year": contract_arguments.get("sunk_cost_reference_year", None),
-        "depr_method": contract_arguments.get("depr_method", "PSC Declining Balance"),
-        "decline_factor": contract_arguments.get("decline_factor", 2),
-        "vat_rate": contract_arguments.get("vat_rate", 0.0),
-        "inflation_rate": contract_arguments.get("inflation_rate", 0.0),
-        "inflation_rate_applied_to": contract_arguments.get("inflation_rate_applied_to", None),
-        "post_uu_22_year2001": contract_arguments.get("post_uu_22_year2001", True),
-        "sum_undepreciated_cost": contract_arguments.get("sum_undepreciated_cost", True),
-        "oil_cost_of_sales_applied": contract_arguments.get("oil_cost_of_sales_applied", False),
-        "gas_cost_of_sales_applied": contract_arguments.get("gas_cost_of_sales_applied", False),
+        key: _prepare_args(*val, contract_arguments) for key, val in mapping_args.items()
     }
 
     for key, value in cr_arguments.items():
@@ -308,8 +1663,32 @@ def construct_costrecovery_arguments_attr(contract_arguments: dict):
 
     return cr_arguments
 
+
 def construct_grosssplit_attr(contract: GrossSplit):
+    """
+    Construct a dictionary of processed Gross Split contract attributes.
+
+    Parameters
+    ----------
+    contract : GrossSplit
+        The Gross Split contract object containing field, reservoir, DMO,
+        and depreciation parameters.
+
+    Returns
+    -------
+    dict
+        Dictionary of processed Gross Split attributes, where all values
+        are converted using `convert_object()`.
+
+    Notes
+    -----
+    - Includes key contract attributes such as field/reservoir properties,
+      DMO parameters, and carry-forward depreciation.
+    - Ensures type consistency by processing all values with `convert_object()`.
+    """
+
     gs_setup = {
+        # Field and reservoir properties
         "field_status": contract.field_status,
         "field_loc": contract.field_loc,
         "res_depth": contract.res_depth,
@@ -320,15 +1699,24 @@ def construct_grosssplit_attr(contract: GrossSplit):
         "prod_stage": contract.prod_stage,
         "co2_content": contract.co2_content,
         "h2s_content": contract.h2s_content,
-        "base_split_ctr_oil": contract.base_split_ctr_oil,
-        "base_split_ctr_gas": contract.base_split_ctr_gas,
+        "field_reserves_2024": contract.field_reserves_2024,
+        "infra_avail_2024": contract.infra_avail_2024,
+        "field_loc_2024": contract.field_loc_2024,
+
+        # Ministry discretion
         "split_ministry_disc": contract.split_ministry_disc,
+
+        # DMO parameters
         "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
         "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
         "oil_dmo_holiday_duration": contract.oil_dmo_holiday_duration,
         "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
         "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
         "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
+
+        # Carry forward depreciation
+        "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
+        "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
     }
 
     for key, value in gs_setup.items():
@@ -336,24 +1724,49 @@ def construct_grosssplit_attr(contract: GrossSplit):
 
     return gs_setup
 
-def construct_grosssplit_arguments_attr(contract_arguments: dict):
+
+def construct_grosssplit_arguments_attr(contract_arguments: dict) -> dict:
+    """
+    Construct processed Gross Split contract arguments with default values applied.
+
+    Parameters
+    ----------
+    contract_arguments : dict
+        Dictionary containing user-defined Gross Split parameters.
+
+    Returns
+    -------
+    dict
+        Dictionary of processed contract arguments where missing keys are filled
+        with default values and all entries are converted using `convert_object()`.
+
+    Notes
+    -----
+    - Default values are defined in an internal mapping.
+    - Ensures type consistency through `convert_object()`.
+    """
+
+    mapping_args = {
+        "sulfur_revenue": ("sulfur_revenue", "Addition to Oil Revenue"),
+        "electricity_revenue": ("electricity_revenue", "Addition to Oil Revenue"),
+        "co2_revenue": ("co2_revenue", "Addition to Oil Revenue"),
+        "vat_rate": ("vat_rate", 0.0),
+        "inflation_rate": ("inflation_rate", 0.0),
+        "inflation_rate_applied_to": ("inflation_rate_applied_to", None),
+        "cum_production_split_offset": ("cum_production_split_offset", None),
+        "depr_method": ("depr_method", "PSC Declining Balance"),
+        "decline_factor": ("decline_factor", 2),
+        "sum_undepreciated_cost": ("sum_undepreciated_cost", True),
+        "is_dmo_end_weighted": ("is_dmo_end_weighted", False),
+        "tax_regime": ("tax_regime", "nailed down"),
+        "effective_tax_rate": ("effective_tax_rate", 0.22),
+        "amortization": ("amortization", False),
+        "regime": ("regime", "PERMEN_ESDM_12_2020"),
+        "reservoir_type_permen_2024": ("reservoir_type_permen_2024", "conventional"),
+    }
+
     gs_arguments = {
-        "sulfur_revenue": contract_arguments.get("sulfur_revenue", "Addition to Oil Revenue"),
-        "electricity_revenue": contract_arguments.get("electricity_revenue", "Addition to Oil Revenue"),
-        "co2_revenue": contract_arguments.get("co2_revenue", "Addition to Oil Revenue"),
-        "is_dmo_end_weighted": contract_arguments.get("is_dmo_end_weighted", False),
-        "tax_regime": contract_arguments.get("tax_regime", "nailed down"),
-        "effective_tax_rate": contract_arguments.get("effective_tax_rate", 0.22),
-        "sunk_cost_reference_year": contract_arguments.get("sunk_cost_reference_year", None),
-        "depr_method": contract_arguments.get("depr_method", "PSC Declining Balance"),
-        "decline_factor": contract_arguments.get("decline_factor", 2),
-        "vat_rate": contract_arguments.get("vat_rate", 0.0),
-        "inflation_rate": contract_arguments.get("inflation_rate", 0.0),
-        "inflation_rate_applied_to": contract_arguments.get("inflation_rate_applied_to", None),
-        "cum_production_split_offset": contract_arguments.get("cum_production_split_offset", None),
-        "amortization": contract_arguments.get("amortization", False),
-        "regime": contract_arguments.get("regime", "PERMEN_ESDM_12_2020"),
-        "sum_undepreciated_cost": contract_arguments.get("sum_undepreciated_cost", True),
+        key: _prepare_args(*val, contract_arguments) for key, val in mapping_args.items()
     }
 
     for key, value in gs_arguments.items():
@@ -361,11 +1774,58 @@ def construct_grosssplit_arguments_attr(contract_arguments: dict):
 
     return gs_arguments
 
+
+def construct_baseproject_arguments_attr(contract_arguments: dict) -> dict:
+    """
+    Process BaseProject contract arguments with mapping and conversion.
+
+    Maps and converts contract arguments for BaseProject using predefined
+    mappings and applies object conversion to all values.
+
+    Parameters
+    ----------
+    contract_arguments : dict
+        Raw contract arguments dictionary.
+
+    Returns
+    -------
+    dict
+        Processed BaseProject arguments with keys: sulfur_revenue,
+        electricity_revenue, co2_revenue, tax_rate, year_inflation,
+        inflation_rate, inflation_rate_applied_to.
+    """
+
+    mapping_args = {
+        "sulfur_revenue": ("sulfur_revenue", "Addition to Oil Revenue"),
+        "electricity_revenue": ("electricity_revenue", "Addition to Oil Revenue"),
+        "co2_revenue": ("co2_revenue", "Addition to Oil Revenue"),
+        "vat_rate": ("vat_rate", 0.0),
+        "year_inflation": ("year_inflation", None),
+        "inflation_rate": ("inflation_rate", 0.0),
+        "inflation_rate_applied_to": ("inflation_rate_applied_to", None),
+    }
+
+    bp_arguments = {
+        key: _prepare_args(*val, contract_arguments) for key, val in mapping_args.items()
+    }
+
+    for key, value in bp_arguments.items():
+        bp_arguments[key] = convert_object(objects=value)
+
+    return bp_arguments
+
+
 def construct_transition_attr(contract: Transition):
+    """
+    Construct a dictionary of processed Transition contract attributes
+    """
+
     if isinstance(contract.contract1, CostRecovery):
         contract_1 = construct_costrecovery_attr(contract=contract.contract1)
+
     elif isinstance(contract.contract1, GrossSplit):
         contract_1 = construct_grosssplit_attr(contract=contract.contract1)
+
     else:
         raise GetAttrException(
             f"The contract: {type(contract.contract1)} type is not recognized"
@@ -373,8 +1833,10 @@ def construct_transition_attr(contract: Transition):
 
     if isinstance(contract.contract1, CostRecovery):
         contract_2 = construct_costrecovery_attr(contract=contract.contract2)
+
     elif isinstance(contract.contract1, GrossSplit):
         contract_2 = construct_grosssplit_attr(contract=contract.contract2)
+
     else:
         raise GetAttrException(
             f"The contract: {type(contract.contract2)} type is not recognized"
@@ -382,7 +1844,12 @@ def construct_transition_attr(contract: Transition):
 
     return contract_1, contract_2
 
+
 def construct_transition_arguments(contract_arguments: dict):
+    """
+    Construct processed Transition contract arguments with default values applied
+    """
+
     trans_arguments = {
         "unrec_portion": contract_arguments["unrec_portion"],
     }
@@ -392,92 +1859,89 @@ def construct_transition_arguments(contract_arguments: dict):
 
     return trans_arguments
 
-def construct_baseproject_arguments_attr(contract_arguments: dict):
-    bp_arguments = {
-        "sulfur_revenue": contract_arguments.get("sulfur_revenue", "Addition to Oil Revenue"),
-        "electricity_revenue": contract_arguments.get("electricity_revenue", "Addition to Oil Revenue"),
-        "co2_revenue": contract_arguments.get("co2_revenue", "Addition to Oil Revenue"),
-        "sunk_cost_reference_year": contract_arguments.get("sunk_cost_reference_year", None),
-        "year_inflation": contract_arguments.get("year_inflation", None),
-        "inflation_rate": contract_arguments.get("inflation_rate", 0.0),
-        "tax_rate": contract_arguments.get("tax_rate", 0.0),
-        "inflation_rate_applied_to": contract_arguments.get("inflation_rate_applied_to", None),
-    }
-
-    for key, value in bp_arguments.items():
-        bp_arguments[key] = convert_object(objects=value)
-
-    return bp_arguments
-
 
 def get_contract_attributes(
-        contract: BaseProject | CostRecovery | GrossSplit | Transition,
-        contract_arguments: dict,
-        summary_arguments: dict,
+    contract: BaseProject | CostRecovery | GrossSplit | Transition,
+    contract_arguments: dict,
+    summary_arguments: dict,
 ) -> dict:
     """
-    Function to get the attributes of a contract in a defined json compatible format.
+    Construct a comprehensive dictionary of contract attributes in JSON-compatible format.
+
+    This function aggregates various components of a petroleum contract—
+    including setup, arguments, lifting data, and cost structures—into a
+    unified dictionary ready for JSON serialization.
 
     Parameters
     ----------
-    contract: BaseProject | CostRecovery | GrossSplit | Transition
-        The contract which the attributes will be retrieved in compatible json format.
-    contract_arguments: dict
-        The contract arguments
-    summary_arguments: dict
-        The summary arguments of the contract.
+    contract : BaseProject or CostRecovery or GrossSplit or Transition
+        The contract object whose attributes will be extracted and processed.
+    contract_arguments : dict
+        Dictionary containing user-defined or default contract argument values.
+    summary_arguments : dict
+        Dictionary containing summary-level configuration of the contract.
 
     Returns
     -------
-    out: dict
-        The dictionary containing the contract attributes in json compatible format.
+    dict
+        A dictionary containing all contract attributes in a JSON-compatible
+        structure. The content and structure depend on the contract type.
+
+    Notes
+    -----
+    - Automatically detects contract type and calls the corresponding
+      attribute-construction functions.
+    - Includes setup, summary arguments, contract-specific attributes,
+      lifting data, and cost structures.
+    - Ensures that all elements are processed through `convert_object()`
+      for JSON compatibility.
     """
 
     # Constructing the setup and summary arguments key
     attr = {
-        'setup': construct_setup_attr(contract=contract),
-        'summary_arguments': construct_summary_arguments_attr(summary_arguments=summary_arguments),
+        "setup": construct_setup_attr(contract=contract),
+        "summary_arguments": construct_summary_arguments_attr(
+            summary_arguments=summary_arguments
+        ),
     }
 
     # Constructing the contract config key
     if isinstance(contract, CostRecovery):
-        attr['costrecovery'] = construct_costrecovery_attr(contract=contract)
-        attr['contract_arguments'] = construct_costrecovery_arguments_attr(contract_arguments=contract_arguments)
+        attr["costrecovery"] = construct_costrecovery_attr(contract=contract)
+        attr["contract_arguments"] = construct_costrecovery_arguments_attr(
+            contract_arguments=contract_arguments
+        )
+
     elif isinstance(contract, GrossSplit):
-        attr['grosssplit'] = construct_grosssplit_attr(contract=contract)
-        attr['contract_arguments'] = construct_grosssplit_arguments_attr(contract_arguments=contract_arguments)
+        attr["grosssplit"] = construct_grosssplit_attr(contract=contract)
+        attr["contract_arguments"] = construct_grosssplit_arguments_attr(
+            contract_arguments=contract_arguments
+        )
+
     elif isinstance(contract, Transition):
-        attr['contract_1'], attr['contract_2'] = construct_transition_attr(contract=contract)
-        attr['contract_arguments'] = construct_transition_arguments(contract_arguments=contract_arguments)
+        attr["contract_1"], attr["contract_2"] = construct_transition_attr(contract=contract)
+        attr["contract_arguments"] = construct_transition_arguments(
+            contract_arguments=contract_arguments
+        )
+
     elif isinstance(contract, BaseProject):
-        attr['contract_arguments'] = construct_baseproject_arguments_attr(contract_arguments=contract_arguments)
+        attr["contract_arguments"] = construct_baseproject_arguments_attr(
+            contract_arguments=contract_arguments
+        )
 
-    # Constructing the lifting key
-    attr['lifting'] = construct_lifting_attr(lifting=contract.lifting)
+    # Mapping for lifting and costs assignments
+    mapping_lifting_costs = (
+        ("lifting", construct_lifting_attr, contract.lifting),
+        ("capital", construct_cost_attr, contract.capital_cost),
+        ("intangible", construct_cost_attr, contract.intangible_cost),
+        ("opex", construct_cost_attr, contract.opex),
+        ("asr", construct_cost_attr, contract.asr_cost),
+        ("lbt", construct_cost_attr, contract.lbt_cost),
+        ("cost_of_sales", construct_cost_attr, contract.cost_of_sales),
+    )
 
-    # Constructing the capital key
-    attr['capital'] = construct_cost_attr(cost=contract.capital_cost)
-
-    # Constructing the intangible key
-    attr['intangible'] = construct_cost_attr(cost=contract.intangible_cost)
-
-    # Constructing the opex key
-    attr['opex'] = construct_cost_attr(cost=contract.opex)
-
-    # Constructing the asr key
-    attr['asr'] = construct_cost_attr(cost=contract.asr_cost)
-
-    # Constructing the lbt key
-    attr['lbt'] = construct_cost_attr(cost=contract.lbt_cost)
-
-    # Constructing the cost of sales key
-    attr['cost_of_sales'] = construct_cost_attr(cost=contract.cost_of_sales)
+    # Add `attr` members for lifting and costs
+    for (section, builder_func, source_data) in mapping_lifting_costs:
+        attr[section] = builder_func(source_data)
 
     return attr
-
-
-
-
-
-
-

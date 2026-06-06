@@ -1,0 +1,37 @@
+{
+  "$id": "asrcost-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table Cost asr Schema",
+  "type": "object",
+  "properties": {
+    "id": { "type": "integer" },
+
+    "cId": {
+      "$ref": "case-schema.json#/properties/id",
+      "description": "Foreign key referencing Case.id"
+    },
+
+    "expense_year": { "type": ["integer", "null"], "default": null },
+    "cost_allocation": { 
+      "type": ["number", "null"], 
+      "description": "Cost allocation: 0: Oil, 1: Gas",
+      "default": 0 
+    },
+
+    "cost": { "type": ["number", "null"], "default": null },
+    "final_year": { "type": ["integer", "null"], "default": null },
+
+    "tax_portion": { 
+      "type": ["number", "null"], 
+      "description": "The Percent tax portion (%) of this cost",
+      "default": null 
+    },
+    "description": { "type": ["string", "null"], "default": null },
+    "datastate": { "type": "integer", "default": 0 },
+    "costtype": { "type": ["integer", "null"], "default": null }
+  },
+
+  "required": [
+    "id", "cId", "expense_year", "cost_allocation", "fixed_cost"
+  ]
+}

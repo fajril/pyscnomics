@@ -236,8 +236,13 @@ class ContractType(Enum):
         Gross Split (GS) contract type.
     """
 
-    COST_RECOVERY = "Cost Recovery (CR)"
-    GROSS_SPLIT = "Gross Split (GS)"
+    COST_RECOVERY = "Cost Recovery"
+    GROSS_SPLIT = "Gross Split"
+    BASE_PROJECT = "Base Project"
+    TRANSITION_CR_TO_CR = "Transition CR - CR"
+    TRAMSITION_CR_TO_GS = "Transition CR - GS"
+    TRANSITION_GS_TO_CR = "Transition GS - CR"
+    TRANSITION_GS_TO_GS = "Transition GS - GS"
 
 
 class NPVSelection(Enum):
@@ -617,7 +622,7 @@ class VariableSplit082017:
 
         LESSTHAN_100 = "<100"
         EQUAL_100_UNTIL_LESSTHAN_300 = "100 <= x < 300"
-        EQUAL_300_UNTIL_LESSTHAN_500 = "1000 <= x < 500"
+        EQUAL_300_UNTIL_LESSTHAN_500 = "300 <= x < 500"
         EQUALGREATERTHAN_500 = "500 <= x"
 
     class APIOil(Enum):
@@ -681,6 +686,14 @@ class VariableSplit132024:
         DEEP_OFFSHORE = "500 <= h <= 1000"
         ULTRADEEP_OFFSHORE = "1000 < h"
 
+    class ReservoirType(Enum):
+        """
+        Reservoir type variable split component
+        """
+
+        MK = "conventional"
+        MNK = "unconventional"
+
 
 class ContractSample(Enum):
     """
@@ -710,6 +723,7 @@ class UncertaintyDistribution(Enum):
     UNIFORM = "Uniform"
     TRIANGULAR = "Triangular"
     NORMAL = "Normal"
+    LOGNORMAL = "LogNormal"
 
 
 class SunkCostInvestmentType(Enum):
@@ -726,13 +740,11 @@ class SunkCostMethod(Enum):
     Treatment options for sunk cost.
     """
 
-    DEPRECIATED_TANGIBLE = (
-        "Depreciated Tangible Sunk Cost, while the intangible will be pooled in the first year"
-    )
-    POOLED_1ST_YEAR = "Sunk Cost pooled in the first year"
-    DIRECT = (
-        "Sunk Cost will be directly applied to the cashflow based on the expense year"
-    )
+    DEPRECIATED_TANGIBLE = "depreciated_tangible"
+    POOLED_1ST_YEAR = "pooled_first_year"
+    # DIRECT = (
+    #     "Sunk Cost will be directly applied to the cashflow based on the expense year"
+    # )
 
 
 class CashflowType(Enum):
@@ -748,6 +760,28 @@ class CashflowType(Enum):
 class CostType(Enum):
     """ Selection for Cost Type """
 
-    SUNK_COST = "Sunk Cost"
-    PRE_ONSTREAM_COST = "Preonstream Cost"
-    POST_ONSTREAM_COST = "Postonstream Cost"
+    SUNK_COST = "sunk_cost"
+    PRE_ONSTREAM_COST = "preonstream_cost"
+    POST_ONSTREAM_COST = "postonstream_cost"
+
+
+class InitialYearAmortizationIncurred(Enum):
+    """ Selection for Initial Year of Amortization Incurred """
+
+    ONSTREAM_YEAR = "onstream_year"
+    APPROVAL_YEAR = "approval_year"
+
+
+class InitialYearDepreciationIncurred(Enum):
+    """ Selection for Initial Year of Depreciation Incurred """
+
+    DIRECT = "PIS Year"
+    ONSTREAM_YEAR = "Onstream Year"
+
+
+class ExampleCases(Enum):
+    """ Selection for example data case """
+
+    CASE_00A = "base_project_dummy_oil"
+    CASE_01 = "cost_recovery_opl_puyuh_oil"
+    CASE_02 = "gross_split_bene_area_oil"

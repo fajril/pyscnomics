@@ -1,0 +1,15 @@
+{
+  "$id": "senscfg-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table Sensitivity Config Schema",
+  "type": "object",
+  "properties": {
+    "cId": {
+      "$ref": "case-schema.json#/properties/id",
+      "description": "Foreign key referencing Case.id"
+    },
+    "min": { "type": "number", "default": 30.0 },
+    "max": { "type": "number", "default": 30.0 }
+  },
+  "required": ["cId", "min", "max"]
+}

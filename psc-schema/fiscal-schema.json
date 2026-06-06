@@ -1,0 +1,152 @@
+{
+  "$id": "fiscal-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Table Fiscal Schema",
+  "type": "object",
+  "properties": {
+    "id": { "type": "integer" },
+
+    "cId": {
+      "$ref": "case-schema.json#/properties/id",
+      "description": "Foreign key referencing Case.id"
+    },
+    "ctr": {
+      "type": "integer",
+      "description": "indicator 0=contract 1 dan 1=contract 2"
+    },
+
+    "transferred_unrec_cost": {
+      "type": ["number", "null"],
+      "default": 0.0
+    },
+
+    "Tax": { 
+      "$ref": "#/$defs/dbmodeTable",
+      "default": { "mode": 0, "rate_init": 42.0, "multi": [{ "year": null, "rate": null }] }
+    },
+    "Inflation": { 
+      "$ref": "#/$defs/dbmodeTable",
+      "default": { "mode": 0, "rate_init": 0.0, "multi": [{ "year": null, "rate": null }] }
+    },
+    "VAT": { 
+      "$ref": "#/$defs/dbmodeTable",
+      "default": { "mode": 0, "rate_init": 12.0, "multi": [{ "year": null, "rate": null }] }
+    },
+    "LBT": { 
+      "$ref": "#/$defs/dbmodeTable",
+      "default": { "mode": 0, "rate_init": 0.0, "multi": [{ "year": null, "rate": null }] }
+    },
+
+    "Depreciation": { "$ref": "#/$defs/dbDep" },
+
+    "tax_payment_config": { 
+      "type": "integer", 
+      "description": "The tax payment configuration: 0:PDJP, 1:PrePDJP, 2:Direct",
+      "default": 1 
+    },
+    "asr_future_rate": { "type": ["number", "null"], "default": 0.0 },
+
+    "vat_discount": { "type": ["number", "null"], "default": 0.0 },
+    "lbt_discount": { "type": ["number", "null"], "default": 0.0 },
+
+    "npv_mode": { 
+      "type": "integer",
+      "description": "The NPV mode: 0: 'SKK Full Cycle Real Terms', 1: 'SKK Full Cycle Nominal Terms', 2: 'Full Cycle Real Terms', 3: 'Full Cycle Nominal Terms', 4: 'Point Forward'",
+      "default": 3
+    },
+    "discounting_mode": { 
+      "type": "integer", 
+      "description": "The discounting mode: 0: 'End Year', 1: 'Mid Year'",
+      "default": 0 
+    },
+
+    "sulfur_revenue_config": { 
+      "type": "integer",
+      "description": "The sulfur revenue configuration: 0: 'Addition to Oil Revenue', 1: 'Addition to Gas Revenue', 2: 'Reduction to Oil OPEX', 3: 'Reduction to Gas OPEX'",
+      "default": 2
+    },
+    "electricity_revenue_config": { 
+      "type": "integer",
+      "description": "The electricity revenue configuration: 0: 'Addition to Oil Revenue', 1: 'Addition to Gas Revenue', 2: 'Reduction to Oil OPEX', 3: 'Reduction to Gas OPEX'",
+      "default": 2
+    },
+    "co2_revenue_config": { 
+      "type": "integer",
+      "description": "The CO2 revenue configuration: 0: 'Addition to Oil Revenue', 1: 'Addition to Gas Revenue', 2: 'Reduction to Oil OPEX', 3: 'Reduction to Gas OPEX'",
+      "default": 3
+    },
+
+    "sunk_cost_reference_year": {
+      "type": ["integer", "null"],
+      "default": null,
+      "deprecated": true
+    },
+
+    "regime": { 
+      "type": "integer",
+      "description": "The regime: 0: PERMEN_ESDM_8_2017 1: PERMEN_ESDM_52_2017 2: PERMEN_ESDM_20_2019 3: PERMEN_ESDM_12_2020 4: PERMEN_ESDM_13_2024",
+      "default": 3
+    },
+    "profitability_discounted": { 
+      "type": "boolean",
+      "description": "Indicates if profitability is discounted.",
+      "default": true
+    },
+    "sum_undepreciated_cost": { 
+      "type": "boolean",
+      "description": "Indicates if the sum of undepreciated costs is included.",
+      "default": true
+    },
+    "amortization": { 
+      "type": "boolean",
+      "description": "Indicates if amortization is applied.",
+      "default": false
+    }
+  },
+
+  "required": [
+    "id", "cId", "ctr", "Tax", "tax_payment_config", "Depreciation",
+    "Inflation", "VAT", "LBT", "npv_mode", "discounting_mode",
+    "sulfur_revenue_config", "electricity_revenue_config", "co2_revenue_config"
+  ],
+
+  "$defs": {
+    "dbmodeTable": {
+      "type": "object",
+      "properties": {
+        "mode": { 
+          "type": "integer",
+          "description": "0: value or 1: table",
+          "default": 0
+        },
+        "rate_init": { "type": ["number", "null"], "default": 12 },
+        "multi": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "year": { "type": ["integer", "null"], "default": null },
+              "rate": { "type": ["number", "null"], "default": null }
+            },
+            "required": ["year", "rate"]
+          },
+          "default": [{ "year": null, "rate": null }]
+        }
+      },
+      "required": ["mode", "rate_init", "multi"]
+    },
+
+    "dbDep": {
+      "type": "object",
+      "properties": {
+        "depreciation_method": { 
+          "type": "integer", 
+          "description": "The depreciation method:  0: Decline 1: PSC 2: Unit 3: Straight",
+          "default": 1
+        },
+        "decline_factor": { "type": ["number", "null"], "default": 2.0 }
+      },
+      "required": ["depreciation_method", "decline_factor"]
+    }
+  }
+}

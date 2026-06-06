@@ -367,7 +367,7 @@ class Summary:
                 'oil_depreciation': contract._oil_depreciation,
                 'oil_non_capital': contract._oil_non_capital,
                 'oil_sunk_cost': contract._oil_sunk_cost,
-                'oil_undepreciated_asset': contract._oil_undepreciated_asset,
+                'oil_undepreciated_asset': contract._oil_sum_undepreciated_asset,
                 'oil_carry_forward_depreciation': contract._oil_carry_forward_depreciation,
                 'gas_depreciable': contract._gas_capital_expenditures_post_tax,
                 'gas_intangible': contract._gas_intangible_expenditures_post_tax,
@@ -377,7 +377,7 @@ class Summary:
                 'gas_depreciation': contract._gas_depreciation,
                 'gas_non_capital': contract._gas_non_capital,
                 'gas_sunk_cost': contract._gas_sunk_cost,
-                'gas_undepreciated_asset': contract._gas_undepreciated_asset,
+                'gas_undepreciated_asset': contract._gas_sum_undepreciated_asset,
                 'gas_carry_forward_depreciation': contract._gas_carry_forward_depreciation,
                 'consolidated_depreciable': contract._oil_capital_expenditures_post_tax + contract._gas_capital_expenditures_post_tax,
                 'consolidated_intangible': contract._oil_intangible_expenditures_post_tax + contract._gas_intangible_expenditures_post_tax,
@@ -387,7 +387,7 @@ class Summary:
                 'consolidated_depreciation': contract._oil_depreciation + contract._gas_depreciation,
                 'consolidated_non_capital': contract._oil_non_capital + contract._gas_non_capital,
                 'consolidated_sunk_cost': contract._oil_sunk_cost + contract._gas_sunk_cost,
-                'consolidated_undepreciated_asset': contract._oil_undepreciated_asset + contract._gas_undepreciated_asset,
+                'consolidated_undepreciated_asset': contract._oil_sum_undepreciated_asset + contract._gas_sum_undepreciated_asset,
                 'consolidated_carry_forward_depreciation': contract._consolidated_carry_forward_depreciation,
             }
             for idx, contract in enumerate(self.contract)
@@ -401,7 +401,9 @@ class Summary:
                     'years': contract.project_years,
                     'oil_costrecovery_or_deductible_cost': contract._oil_cost_recovery_after_tf if isinstance(contract, CostRecovery) else contract._oil_deductible_cost,
                     'oil_unrecoverable_cost_or_carryforward_cost': contract._oil_unrecovered_after_transfer if isinstance(contract, CostRecovery) else contract._oil_carward_cost_aftertf,
-                    'oil_ctr_share': contract._oil_contractor_share if isinstance(contract, CostRecovery) else contract._oil_ctr_share_after_transfer,
+                    # patch 12/03/2025
+                    'oil_ctr_share': contract._oil_contractor_share if isinstance(contract, CostRecovery) else contract._oil_ctr_net_share,
+                    # 'oil_ctr_share': contract._oil_contractor_share if isinstance(contract, CostRecovery) else contract._oil_ctr_share_after_transfer,
                     'oil_gov_share': contract._oil_government_share if isinstance(contract, CostRecovery) else contract._oil_gov_share,
                     'oil_effective_tax_payment': contract._oil_tax_payment if isinstance(contract, CostRecovery) else contract._oil_tax,
                     'oil_ddmo': contract._oil_ddmo,
@@ -410,7 +412,9 @@ class Summary:
                     'oil_ctr_cashflow': contract._oil_cashflow if isinstance(contract, CostRecovery) else contract._oil_ctr_cashflow,
                     'gas_costrecovery_or_deductible_cost': contract._gas_cost_recovery_after_tf if isinstance(contract, CostRecovery) else contract._gas_deductible_cost,
                     'gas_unrecoverable_cost_or_carryforward_cost': contract._gas_unrecovered_after_transfer if isinstance(contract, CostRecovery) else contract._gas_carward_cost_aftertf,
-                    'gas_ctr_share': contract._gas_contractor_share if isinstance(contract,CostRecovery) else contract._gas_ctr_share_after_transfer,
+                    # patch 12/03/2025
+                    'gas_ctr_share': contract._gas_contractor_share if isinstance(contract, CostRecovery) else contract._gas_ctr_net_share,
+                    # 'gas_ctr_share': contract._gas_contractor_share if isinstance(contract,CostRecovery) else contract._gas_ctr_share_after_transfer,
                     'gas_gov_share': contract._gas_government_share if isinstance(contract,CostRecovery) else contract._gas_gov_share,
                     'gas_effective_tax_payment': contract._gas_tax_payment if isinstance(contract,CostRecovery) else contract._gas_tax,
                     'gas_ddmo': contract._gas_ddmo,
@@ -419,7 +423,9 @@ class Summary:
                     'gas_ctr_cashflow': contract._gas_cashflow if isinstance(contract,CostRecovery) else contract._gas_ctr_cashflow,
                     'consolidated_costrecovery_or_deductible_cost': contract._consolidated_cost_recovery_after_tf if isinstance(contract, CostRecovery) else contract._consolidated_deductible_cost,
                     'consolidated_unrecoverable_cost_or_carryforward_cost': contract._consolidated_unrecovered_after_transfer if isinstance(contract, CostRecovery) else contract._consolidated_carward_cost_aftertf,
-                    'consolidated_ctr_share': contract._consolidated_contractor_share if isinstance(contract, CostRecovery) else contract._consolidated_ctr_share_after_transfer,
+                    # patch 12/03/2025
+                    'consolidated_ctr_share': contract._consolidated_contractor_share if isinstance(contract, CostRecovery) else contract._consolidated_ctr_net_share,
+                    # 'consolidated_ctr_share': contract._consolidated_contractor_share if isinstance(contract, CostRecovery) else contract._consolidated_ctr_share_after_transfer,
                     'consolidated_gov_share': contract._consolidated_government_share if isinstance(contract,CostRecovery) else contract._consolidated_gov_share_before_tf,
                     'consolidated_effective_tax_payment': contract._consolidated_tax_payment if isinstance(contract,CostRecovery) else contract._consolidated_tax_payment,
                     'consolidated_ddmo': contract._consolidated_ddmo,
@@ -488,7 +494,6 @@ class Summary:
 
         return values[indices]
 
-
     def _parse_dict(self, source):
         for idx, cntrct in source.items():
             for key in cntrct:
@@ -530,15 +535,15 @@ class Summary:
         return merged
 
     def _parsing_attributes(
-            self,
-            lifting: dict,
-            revenue: dict,
-            cost_expenditure_pretax: dict,
-            cost_indirect_tax: dict,
-            cost_expenditure_posttax: dict,
-            cost_contract: dict,
-            psc_terms: dict,
-            cr_terms: dict,
+        self,
+        lifting: dict,
+        revenue: dict,
+        cost_expenditure_pretax: dict,
+        cost_indirect_tax: dict,
+        cost_expenditure_posttax: dict,
+        cost_contract: dict,
+        psc_terms: dict,
+        cr_terms: dict,
     ):
         # Lifting Attributes
         self.oil_lifting = lifting['oil_lifting']
@@ -722,7 +727,8 @@ class Summary:
         exclude: list = ['contract', 'reference_year', 'inflation_rate', 'discount_rate', 'npv_mode',
                          'discounting_mode', 'profitability_discounted', ]
         data_dict = {key: value.tolist() if isinstance(value, np.ndarray) else value for key, value in self.__dict__.items() if key not in exclude}
-        return pd.DataFrame(data_dict)  # Convert filtered dictionary to DataFrame
+        #return pd.DataFrame(data_dict)  # Convert filtered dictionary to DataFrame
+        return data_dict
 
     def case_combine(self):
         self.run(mode='combine')
