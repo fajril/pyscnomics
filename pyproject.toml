@@ -16,10 +16,11 @@ dependencies = [
     "scipy >=1.7.3",
     "xlwings>=0.24.8",
     "click==8.1.7",
-    "uvicorn==0.28.0",
-    "pydantic==2.6.4",
-    "fastapi==0.110.0",
-    "pathos==0.3.3"
+    "uvicorn>=0.30.0",
+    "pydantic>=2.9.0",
+    "fastapi>=0.116.0",
+    "starlette>=1.0.1",
+    "pathos==0.3.3",
 ]
 requires-python = ">=3.11"
 authors = [
