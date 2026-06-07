@@ -9,7 +9,7 @@ from datetime import date
 from pyscnomics.econ.selection import OtherRevenue, FluidType, CostType
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales
-from pyscnomics.contracts.grossplit import GrossSplit
+from pyscnomics.contracts.gross_split import GrossSplit
 
 
 kwargs = {

@@ -11,9 +11,7 @@ dependencies = [
     "matplotlib>=3.4.3",
     "pandas>=2.2.0",
     "pyxirr==0.9.3",
-    "pyxlsb>=1.0.10",
     "scipy >=1.7.3",
-    "xlwings>=0.24.8",
     "click==8.1.7",
     "uvicorn>=0.30.0",
     "pydantic>=2.9.0",
@@ -48,6 +46,7 @@ pyscnomics = "pyscnomics.pyscnomics_cli:entry_point"
 [project.optional-dependencies]
 dev = [
     "pytest>=7.1.2",
+    "httpx>=0.27.0",
 ]
 docs = [
     "sphinx>=5.0",

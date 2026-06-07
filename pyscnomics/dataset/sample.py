@@ -492,12 +492,15 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
 
     # Assigning the lifting and cost data.
     lifting_tuple = assign_lifting(data_raw)
-    capital_tuple, intangible_tuple, opex_tuple, asr_tuple, lbt_tuple, cos_tuple = assign_cost(data_raw)
+    capital_tuple, intangible_tuple, opex_tuple, asr_tuple, lbt_tuple, cos_tuple = [
+        tuple(x) if isinstance(x, list) else x for x in assign_cost(data_raw)
+    ]
 
     if contract_type == 'project':
         return BaseProject(
             start_date=project_start_date,
             end_date=project_end_date,
+            approval_year=project_start_date.year,
             oil_onstream_date=oil_onstream_date,
             gas_onstream_date=gas_onstream_date,
             lifting=lifting_tuple,
@@ -514,6 +517,7 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
         return CostRecovery(
             start_date=project_start_date,
             end_date=project_end_date,
+            approval_year=project_start_date.year,
             oil_onstream_date=oil_onstream_date,
             gas_onstream_date=gas_onstream_date,
             lifting=lifting_tuple,
@@ -549,6 +553,7 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
         return GrossSplit(
             start_date=project_start_date,
             end_date=project_end_date,
+            approval_year=project_start_date.year,
             oil_onstream_date=oil_onstream_date,
             gas_onstream_date=gas_onstream_date,
             lifting=lifting_tuple,
@@ -568,9 +573,6 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
             prod_stage=config['prod_stage'],
             co2_content=config['co2_content'],
             h2s_content=config['h2s_content'],
-            base_split_ctr_oil=config['base_split_ctr_oil'],
-            base_split_ctr_gas=config['base_split_ctr_gas'],
-            split_ministry_disc=config['split_ministry_disc'],
             oil_dmo_volume_portion=config['oil_dmo_volume_portion'],
             oil_dmo_fee_portion=config['oil_dmo_fee_portion'],
             oil_dmo_holiday_duration=config['oil_dmo_holiday_duration'],
@@ -580,90 +582,3 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
         )
 
 
-def load_cost(
-    filename: str,
-    start_year: int = 2023,
-    end_year: int = 2043,
-    cost_allocation: FluidType = FluidType.OIL,
-    template: str = "pyscnomics"
-) -> tuple[CapitalCost, Intangible, OPEX, ASR] | ValueError:
-    """
-    Function to load the cost data from Excel file.
-
-    Parameters
-    ----------
-    filename: str
-        The name of the Excel file.
-    start_year: int
-        The start year of the cost data.
-    end_year: int
-        The end year of the cost data
-    cost_allocation: FluidType
-        The fluid type of that the cost will be allocated to.
-    template: str
-        The type of Excel source that will be read. The available types are: ['pyscnomics', 'questor']
-
-    Returns
-    -------
-    out: tuple
-        Capital
-            The Tangible dataclass.
-        Intangible
-            The Intangible dataclass
-        OPEX
-            The OPEX dataclass
-        ASR
-            The ASR dataclass
-    """
-
-    # Defining the available template list and making the condition if not satisfied
-    template_list = ['pyscnomics', 'questor']
-    if template not in template_list:
-        raise ValueError('Unknown Template: "{0}", please check the Template Type in Docstring.'.format(template))
-
-    # Reading the Questor Excels file from column B to W and replacing the value of NaN with 0
-    df = pd.read_excel(filename, skiprows=18, header=None, na_values=0).fillna(value=0)
-    years_arr = np.arange(start_year, start_year + df.shape[0], 1)
-    df.set_index(years_arr, inplace=True)
-
-    # Assigning the Tangible data
-    capital_arr = np.array(df[[5, 7, 8, 9, 10, 11, 12]].sum(axis=1).to_numpy(dtype=float))
-    capital = CapitalCost(
-        start_year=start_year,
-        end_year=end_year,
-        cost=capital_arr,
-        expense_year=years_arr,
-        cost_allocation=[cost_allocation] * len(capital_arr)
-    )
-
-    # Assigning the Intangible data
-    intangible_arr = df[6].to_numpy(dtype=float)
-    intangible = Intangible(
-        start_year=start_year,
-        end_year=end_year,
-        cost=intangible_arr,
-        expense_year=years_arr,
-        cost_allocation=[cost_allocation] * len(capital_arr)
-    )
-
-    # Assigning the ASR data
-    asr_arr = df[18].to_numpy(dtype=float)
-    asr = ASR(
-        start_year=start_year,
-        end_year=end_year,
-        cost=asr_arr,
-        expense_year=years_arr,
-        cost_allocation=[cost_allocation] * len(capital_arr)
-    )
-
-    # Assigning the OPEX data
-    fixed_cost_arr = df[[13, 14, 15, 16, 17]].sum(axis=1).to_numpy(dtype=float)
-    opex = OPEX(
-        start_year=start_year,
-        end_year=end_year,
-        fixed_cost=fixed_cost_arr,
-        expense_year=years_arr,
-        cost_allocation=[cost_allocation] * len(capital_arr)
-    )
-
-    return capital, intangible, opex, asr

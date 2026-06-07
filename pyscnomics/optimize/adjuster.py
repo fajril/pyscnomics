@@ -5,7 +5,6 @@ Configuration to undertake sensitivity analysis.
 import numpy as np
 from dataclasses import dataclass, field
 
-from pyscnomics.io.aggregator import Aggregate
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX
 
@@ -581,7 +580,7 @@ class AdjustData:
     Parameters
     ----------
     workbook_path: str
-    data: Aggregate
+    data: object
     multipliers: np.ndarray
 
     Attributes
@@ -596,7 +595,7 @@ class AdjustData:
     # Parameters
     multipliers: np.ndarray
     workbook_path: str = field(default=None)
-    data: Aggregate = field(default=None, repr=False)
+    data: object = field(default=None, repr=False)
 
     # Attributes to be defined later
     contract_type: str = field(default=None, init=False, repr=False)
@@ -610,7 +609,7 @@ class AdjustData:
     def __post_init__(self):
         # Prepare attribute workbook_path
         if self.workbook_path is None:
-            self.workbook_path = "Workbook.xlsb"
+            self.workbook_path = None
 
         # Prepare attribute summary_arguments
         self.summary_arguments = {
