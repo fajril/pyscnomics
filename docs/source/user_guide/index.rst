@@ -11,6 +11,8 @@ a junior petroleum economist to an intermediate level of understanding.
 
    installation
    quickstart
+   tutorial_custom_contract
+   cli_reference
    chapter0_math_notation
    chapter0b_units_currency
    chapter1_project_economics
@@ -22,3 +24,4 @@ a junior petroleum economist to an intermediate level of understanding.
    chapter7_gross_split
    chapter8_incentives_framework
    api_server
+   changelog

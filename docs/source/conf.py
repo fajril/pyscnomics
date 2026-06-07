@@ -12,7 +12,7 @@ sys.path.insert(0, str(project_root))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "pyscnomics"
-copyright = "2025, pyscnomics Team"
+copyright = "2026, pyscnomics Team"
 author = "pyscnomics Team"
 release = "1.4.0"
 
