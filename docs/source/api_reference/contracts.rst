@@ -11,7 +11,7 @@ Contracts Module
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: pyscnomics.contracts.grossplit
+.. automodule:: pyscnomics.contracts.gross_split
    :members:
    :undoc-members:
    :show-inheritance:

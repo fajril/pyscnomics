@@ -6,7 +6,7 @@ from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales, LBT
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.contracts.costrecovery import CostRecovery
-from pyscnomics.contracts.grosssplit import GrossSplit
+from pyscnomics.contracts.gross_split import GrossSplit
 from pyscnomics.contracts import psc_tools
 
 

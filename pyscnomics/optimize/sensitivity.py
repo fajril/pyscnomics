@@ -14,7 +14,7 @@ from pyscnomics.econ import CostOfSales, Lifting, FluidType
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
-from pyscnomics.contracts.grosssplit import GrossSplit
+from pyscnomics.contracts.gross_split import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT
 

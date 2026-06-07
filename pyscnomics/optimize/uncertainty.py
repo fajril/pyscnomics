@@ -17,7 +17,7 @@ from pathos.helpers import mp
 from pyscnomics.tools.summary import get_summary
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
-from pyscnomics.contracts.grosssplit import GrossSplit
+from pyscnomics.contracts.gross_split import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.econ import FluidType
 from pyscnomics.econ.selection import UncertaintyDistribution, SunkCostMethod

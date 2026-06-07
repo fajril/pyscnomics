@@ -2,5 +2,5 @@
 
 from .project import BaseProject
 from .costrecovery import CostRecovery
-from .grosssplit import GrossSplit
+from .gross_split import GrossSplit
 from .transition import Transition

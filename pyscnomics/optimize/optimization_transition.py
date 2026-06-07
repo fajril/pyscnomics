@@ -1,7 +1,7 @@
 from scipy.optimize import minimize_scalar
 
 from pyscnomics.contracts.costrecovery import CostRecovery
-from pyscnomics.contracts.grosssplit import GrossSplit
+from pyscnomics.contracts.gross_split import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.econ.selection import (
     OptimizationParameter,

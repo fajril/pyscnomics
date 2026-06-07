@@ -3,7 +3,7 @@ import numpy as np
 from pyscnomics.dataset.sample import load_data
 from pyscnomics.econ.selection import FTPTaxRegime, ContractSample
 from pyscnomics.contracts.costrecovery import CostRecovery
-from pyscnomics.contracts.grosssplit import GrossSplit
+from pyscnomics.contracts.gross_split import GrossSplit
 
 
 class ObjectSampleException(Exception):
