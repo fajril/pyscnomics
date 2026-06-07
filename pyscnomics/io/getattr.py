@@ -8,7 +8,7 @@ from datetime import date
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
-from pyscnomics.contracts.grossplit import GrossSplit
+from pyscnomics.contracts.grosssplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.econ import (
     TaxSplitTypeCR,

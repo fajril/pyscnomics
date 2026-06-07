@@ -11,7 +11,7 @@ from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
-from pyscnomics.contracts.grossplit import GrossSplit
+from pyscnomics.contracts.grosssplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 
 

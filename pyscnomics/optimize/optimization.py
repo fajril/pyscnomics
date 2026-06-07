@@ -6,7 +6,7 @@ import numpy as np
 from scipy.optimize import minimize_scalar
 
 from pyscnomics.contracts.costrecovery import CostRecovery
-from pyscnomics.contracts.grossplit import GrossSplit
+from pyscnomics.contracts.grosssplit import GrossSplit
 from pyscnomics.econ.selection import OptimizationParameter, OptimizationTarget
 # from pyscnomics.tools.summary import get_summary
 

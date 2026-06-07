@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
-from pyscnomics.contracts.grossplit import GrossSplit
+from pyscnomics.contracts.grosssplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 
 pd.set_option("display.max_rows", None)

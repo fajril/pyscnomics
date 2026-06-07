@@ -4,7 +4,7 @@ import numpy as np
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
-from pyscnomics.contracts.grossplit import GrossSplit
+from pyscnomics.contracts.grosssplit import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.econ.selection import NPVSelection, DiscountingMode
 from pyscnomics.econ.indicator import (irr,
