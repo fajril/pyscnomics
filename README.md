@@ -1,120 +1,217 @@
-# Overview
+# PySCnomics
 
-PySCnomics is a package contains tailored functionalities for assessing economic feasibility of oil and gas projects following the state-of-the-art Production Sharing Contract (PSC) schemes in Indonesia. 
+> An economic engine for calculating PSC (Production Sharing Contract) schemes in Indonesia.
 
-Developed through a collaborative research between Indonesia's Special Task Force for Upstream Oil and Gas Business Activities (SKK Migas) and the Department of Petroleum Engineering at Institut Teknologi Bandung (ITB), PySCnomics stands as a reliable solution for industry professionals.
+PySCnomics is a Python package for assessing the economic feasibility of oil and gas projects following Indonesian PSC schemes, including Cost Recovery, Gross Split, and their transition variants. Developed jointly by SKK Migas and Institut Teknologi Bandung (ITB).
+
+- 📖 **Full documentation:** [https://pyscnomics.readthedocs.io](https://pyscnomics.readthedocs.io)
+- 🚀 **API service:** 30 endpoints via `pyscnomics --api 1`
+- 🐍 **Python:** 3.11+
 
 
 ## Installation
-To install PySCnomics, simply run:
 
-`pip install pyscnomics`
+Install from PyPI:
+
+```bash
+pip install pyscnomics
+```
+
+Or with [uv](https://github.com/astral-sh/uv) (recommended for development):
+
+```bash
+uv pip install pyscnomics
+```
 
 
 ## Key Features
-PySCnomics offers comprehensive capabilities to evaluate the feasibility of various Indonesian PSC contracts, including a wide range of regime variations of each contract: 
-- Base Project
-- Cost Recovery
-- Gross Split
-- Transition Cost Recovery - Cost Recovery
-- Transition Cost Recovery - Gross Split
-- Transition Gross Split - Gross Split 
-- Transition Gross Split - Cost Recovery
 
-Beyond feasibility assessment, PySCnomics provides advanced tools for:
-- PSC Contract Optimization
-- PSC Contract Sensitivity
-- PSC Contract Uncertainty Analysis
+PySCnomics evaluates all Indonesian PSC contract types and regime variations:
 
-To further streamline the assessment process, PySCnomics includes specialized modules for:
-- Depreciation
-- Inflation
-- Cost Taxing
-- Production Profile Generation
-- API service
-- And much more...
+- **Base Project** — economic indicators without fiscal terms
+- **Cost Recovery** — pre-2017 fiscal regime
+- **Gross Split** — post-2017 fiscal regime (Permen ESDM 8/2017, 52/2017, 20/2019, 12/2020, 13/2024)
+- **Transition** — four variants between Cost Recovery and Gross Split
+
+Advanced analysis modules:
+
+- **Optimization** — regime-based Gross Split contract optimization
+- **Sensitivity** — parameter sweep with deviation analysis
+- **Uncertainty** — Monte Carlo simulation
+- **Depreciation, Inflation, Cost Taxing, Production Profile Generation**
+
 
 ## Quick Start
-Create a new file, in this case named `sample.py` with the following code:
+
+Generate a sample contract and view its cashflow table:
 
 ```python
 from pyscnomics.dataset.object_sample import generate_contract_sample
 from pyscnomics.econ.selection import ContractSample
 from pyscnomics.tools.table import get_table
 
-# Initiating Contract Object
+# Initiate contract object
 psc = generate_contract_sample(case=ContractSample.CASE_1)
 
-# Get the cashflow table from the contract
+# Get cashflow table
 tables = get_table(contract=psc)
 print(tables)
 ```
 
+
+## Optimization (Gross Split)
+
+Optimize a Gross Split contract toward a target IRR, NPV, or PI by sweeping fiscal parameters:
+
+```python
+from pyscnomics.dataset.object_sample import generate_contract_sample
+from pyscnomics.econ.selection import ContractSample, OptimizationParameter, OptimizationTarget
+from pyscnomics.optimize.optimization import optimize_psc
+import numpy as np
+
+psc = generate_contract_sample(case=ContractSample.CASE_1)
+
+# Configure optimization: which parameters to sweep and their bounds
+dict_optimization = {
+    "parameter": [
+        OptimizationParameter.EFFECTIVE_TAX_RATE,
+        OptimizationParameter.VAT_RATE,
+    ],
+    "min": np.array([0.30, 0.05]),
+    "max": np.array([0.50, 0.15]),
+}
+
+# Run optimization
+params, values, result, contracts = optimize_psc(
+    dict_optimization=dict_optimization,
+    contract=psc,
+    contract_arguments={},
+    target_optimization_value=0.10,   # 10% IRR target
+    summary_argument={"reference_year": 2023},
+    target_parameter=OptimizationTarget.IRR,
+)
+
+print("Optimized parameters:", params)
+print("Optimized values:", values)
+print("Resulting IRR:", result)
+```
+
+Supported regimes (configured in `pyscnomics/contracts/grossplit.py`):
+
+- `PERMEN_ESDM_8_2017` — base split (0.43, 0.48)
+- `PERMEN_ESDM_52_2017` — base split (0.43, 0.48)
+- `PERMEN_ESDM_20_2019` — base split (0.43, 0.48)
+- `PERMEN_ESDM_12_2020` — base split (0.43, 0.48)
+- `PERMEN_ESDM_13_2024` — base split (0.47, 0.49)
+
+
 ## Sensitivity Analysis
-Create a new file with the following code:
+
+Sweep a parameter range and evaluate the effect on contract indicators:
 
 ```python
 from pyscnomics.dataset.object_sample import generate_contract_sample
 from pyscnomics.econ.selection import ContractSample
 from pyscnomics.optimize.sensitivity import sensitivity_psc
-from pyscnomics.tools.summary import get_summary
 
-# Initiating Contract Object
 psc = generate_contract_sample(case=ContractSample.CASE_1)
 
-# Defining the contract arguments
-contract_arguments = {
-    'effective_tax_rate': 0.40
-}
-
-# Defining the summary arguments
-summary_arguments = {
-    'reference_year':2023,
-}
-
-# Executing the sensitivity
 result = sensitivity_psc(
     contract=psc,
-    contract_arguments=contract_arguments,
-    summary_arguments=summary_arguments,
+    contract_arguments={'effective_tax_rate': 0.40},
+    summary_arguments={'reference_year': 2023},
     min_deviation=0.2,
     max_deviation=0.2,
     base_value=1,
     step=10,
 )
 
-# Printing the sensitivity result
-for i in result.keys():
-    print(i)
-    print(result[i])
-    print('')
-
+for key in result.keys():
+    print(key, result[key])
 ```
 
-## API Service with PySCnomics
 
-PySCnomics also supports running as an API service, making it easy to integrate into your applications or workflows. With just a single command, you can set up and start an API server to interact with PySCnomics programmatically.
+## API Service
 
-### How to Start the API Server
+PySCnomics can run as a FastAPI service, exposing all 30 endpoints programmatically. This is the recommended way to integrate PySCnomics into web apps, notebooks, or pipelines.
 
-To run the PySCnomics API service, use the following command:
+### Start the server
 
 ```bash
 pyscnomics --api 1 --port 9999
 ```
-Replace 9999 with the desired port number if needed. By default, the API will be accessible at:
-http://localhost:9999
 
-### Accessing the API Documentation
-Once the API server is running, you can view the interactive API documentation by navigating to: http://localhost:9999/docs
+- `--api 1` is the default; pass `--api 0` to disable API mode
+- `--port 9999` is the default; change if 9999 is in use
+
+The server will be available at `http://localhost:9999`. Interactive docs at `http://localhost:9999/docs`.
+
+### Endpoint categories
+
+| Category | Method | Path | Count |
+|----------|--------|------|-------|
+| Root | `GET` | `/api/` | 1 |
+| Contract calculation | `POST` | `/api/{contract}` | 3 |
+| Detailed summary | `POST` | `/api/{contract}/detailed_summary` | 3 |
+| Tables | `POST` | `/api/{contract}/table` | 4 |
+| Optimization | `POST` | `/api/{contract}/optimization` | 3 |
+| Sensitivity | `POST` | `/api/{contract}/sensitivity` | 4 |
+| Uncertainty | `POST` | `/api/{contract}/uncertainty` | 3 |
+| Split calculation | `POST` | `/api/{contract}/split` | 2 |
+| Econ limit & expenditures | `POST` | `/api/econlimit`, `/api/asr_expenditures`, `/api/lbt_expenditures` | 3 |
+| LTP & RPD | `POST` | `/api/ltp`, `/api/rpd` | 2 |
+| **Total** | | | **30** |
+
+Where `{contract}` is one of: `costrecovery`, `grosssplit`, `transition`, `baseproject`.
+
+See the OpenAPI schema at `http://localhost:9999/openapi.json` for full details.
 
 
+## Development
+
+Clone the repository:
+
+```bash
+git clone https://github.com/fajril/pyscnomics.git
+cd pyscnomics
+uv sync
+```
+
+Run the API locally:
+
+```bash
+uv run pyscnomics --api 1
+```
+
+Run tests:
+
+```bash
+uv run pytest
+```
+
+Build documentation (Sphinx):
+
+```bash
+uv sync --extra docs
+uv run sphinx-build docs/source docs/build
+```
 
 
+## Contributing
 
+Contributions are welcome. Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Major changes should be discussed in an issue first.
+
+Public forks in active use:
+
+- [adhimmulia/pyscnomics-Extended](https://github.com/adhimmulia/pyscnomics-Extended)
+- [aguswe/pyscnomics](https://github.com/aguswe/pyscnomics)
+
+
+## Citation
+
+If PySCnomics is used in academic work, please cite the project. Author list and contact information are in [AUTHORS.md](AUTHORS.md).
 
 
 ## License
-This project is licensed under the terms of the Apache Software license. See the [License](https://github.com/fajril/pyscnomics/blob/main/LICENSE) file for details.
 
-An economic engine for calculating PSC Scheme in Indonesia.
+This project is licensed under the Apache Software License. See [LICENSE](LICENSE) for details.
