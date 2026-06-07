@@ -1212,7 +1212,6 @@ dependencies = [
     { name = "pandas", version = "3.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
     { name = "pathos" },
     { name = "pydantic" },
-    { name = "pytest" },
     { name = "pyxirr" },
     { name = "pyxlsb" },
     { name = "scipy" },
@@ -1222,6 +1221,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+]
 docs = [
     { name = "furo" },
     { name = "sphinx", version = "9.0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -1240,7 +1242,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.2.0" },
     { name = "pathos", specifier = "==0.3.3" },
     { name = "pydantic", specifier = ">=2.9.0" },
-    { name = "pytest", specifier = ">=7.1.2" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.1.2" },
     { name = "pyxirr", specifier = "==0.9.3" },
     { name = "pyxlsb", specifier = ">=1.0.10" },
     { name = "scipy", specifier = ">=1.7.3" },
@@ -1250,7 +1252,7 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.30.0" },
     { name = "xlwings", specifier = ">=0.24.8" },
 ]
-provides-extras = ["docs"]
+provides-extras = ["dev", "docs"]
 
 [[package]]
 name = "pytest"
