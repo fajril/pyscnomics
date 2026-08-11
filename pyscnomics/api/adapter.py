@@ -2,16 +2,51 @@
 This file is utilized to be the adapter of the router into the core codes.
 """
 
+from datetime import datetime
+import math
+from typing import Any, cast
+
 import numpy as np
 import pandas as pd
-from datetime import datetime
 
+from pyscnomics.api.converter import (
+    convert_dict_to_asr,
+    convert_dict_to_capital,
+    convert_dict_to_cost_of_sales,
+    convert_dict_to_intangible,
+    convert_dict_to_lbt,
+    convert_dict_to_lifting,
+    convert_dict_to_opex,
+    convert_grosssplitregime_to_enum,
+    convert_list_to_array_float,
+    convert_list_to_array_float_or_array,
+    convert_list_to_array_float_or_array_or_none,
+    convert_str_to_date,
+    convert_str_to_depremethod,
+    convert_str_to_discountingmode,
+    convert_str_to_ftptaxregime,
+    convert_str_to_inflationappliedto,
+    convert_str_to_int,
+    convert_str_to_npvmode,
+    convert_str_to_optimization_parameters,
+    convert_str_to_optimization_targetparameter,
+    convert_str_to_otherrevenue,
+    convert_str_to_taxregime,
+    convert_str_to_taxsplit,
+    convert_summary_to_dict,
+    convert_to_float,
+    convert_to_method_limit,
+    convert_to_skk_summary_baseproject,
+    convert_to_uncertainty_distribution,
+    converter_reservoir_type_permen_2024,
+    read_fluid_type,
+)
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.gross_split import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.optimize import sensitivity_psc, uncertainty_psc
-# from pyscnomics.tools.summary import get_summary
+from pyscnomics.tools.summary import get_summary
 from pyscnomics.tools.table import get_table
 from pyscnomics.optimize.optimization import optimize_psc
 from pyscnomics.optimize.optimization_transition import (
@@ -24,40 +59,7 @@ from pyscnomics.econ.selection import (
 )
 from pyscnomics.tools.ltp import oil_ltp_predict, gas_ltp_predict
 from pyscnomics.tools.rpd import RPDModel
-from pyscnomics.api.converter import (
-    convert_str_to_date,
-    convert_str_to_int,
-    convert_list_to_array_float_or_array,
-    convert_dict_to_lifting,
-    convert_dict_to_capital,
-    convert_dict_to_intangible,
-    convert_dict_to_opex,
-    convert_dict_to_asr,
-    convert_dict_to_lbt,
-    convert_dict_to_cost_of_sales,
-    convert_list_to_array_float,
-    convert_list_to_array_float_or_array_or_none,
-    convert_str_to_taxsplit,
-    convert_str_to_npvmode,
-    convert_str_to_discountingmode,
-    convert_str_to_otherrevenue,
-    convert_str_to_taxregime,
-    convert_str_to_ftptaxregime,
-    convert_str_to_depremethod,
-    convert_str_to_inflationappliedto,
-    convert_summary_to_dict,
-    convert_str_to_optimization_parameters,
-    convert_str_to_optimization_targetparameter,
-    convert_grosssplitregime_to_enum,
-    convert_to_float,
-    read_fluid_type,
-    convert_to_method_limit,
-    convert_to_uncertainty_distribution,
-    convert_to_skk_summary_baseproject,
-    # converter_sunk_cost_method,
-    converter_reservoir_type_permen_2024,
-    # converter_initial_amortization_year,
-)
+from pyscnomics.tools.summarizer import Summary
 from pyscnomics.econ.limit import econ_limit
 
 
@@ -131,12 +133,15 @@ def get_setup_dict(data: dict) -> tuple:
     """
 
     # Check whether "setup" exist in "data" and prepare it accordingly
-    se = _extract_from_dict(target_key="setup", source=data)
+    se = cast(dict[str, Any], _extract_from_dict(target_key="setup", source=data))
 
     # Parsing the contract setup into each corresponding variables
     start_date = convert_str_to_date(str_object=se["start_date"])
+    assert start_date is not None
     end_date = convert_str_to_date(str_object=se["end_date"])
-    approval_year = convert_str_to_int(str_object=se["approval_year"])
+    approval_year = convert_str_to_int(str_object=se.get("approval_year", start_date.year))
+    if approval_year is None:
+        approval_year = start_date.year
     oil_onstream_date = convert_str_to_date(str_object=se.get("oil_onstream_date", None))
     gas_onstream_date = convert_str_to_date(str_object=se.get("gas_onstream_date", None))
     is_pod_1 = _extract_from_dict(target_key="is_pod_1", source=se)
@@ -1044,7 +1049,7 @@ def add_execution_info(data: dict) -> dict:
     execution_date = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
     # Defining the PySCnomics Version
-    from importlib.metadata import version, PackageNotFoundError
+    from importlib.metadata import PackageNotFoundError
 
     try:
         package_version = "1.5.0"
@@ -1072,7 +1077,9 @@ def add_execution_info(data: dict) -> dict:
     return data
 
 
-def get_contract_table(data: dict, contract_type: str = "Cost Recovery") -> dict:
+def get_contract_table(
+    data: dict[str, Any], contract_type: str = "Cost Recovery"
+) -> tuple[dict[str, Any], Any]:
     """
     Function to get the cash flow table of the contract that has been run.
 
@@ -1147,10 +1154,134 @@ def get_contract_table(data: dict, contract_type: str = "Cost Recovery") -> dict
     # Adding the execution info
     table_all_dict = add_execution_info(data=table_all_dict)
 
-    return table_all_dict, contract.warning_messages
+    return table_all_dict, getattr(contract, "warning_messages", [])
 
 
-def get_detailed_summary(data: dict, contract_type: str) -> dict:
+def _run_case_contract(data: dict[str, Any], ctr: int) -> Any:
+    """Build and run one combine/incremental case contract."""
+    if ctr == 0:
+        return get_baseproject(data=data, summary_result=False)[1]
+    if ctr == 1:
+        return get_costrecovery(data=data, summary_result=False)[1]
+    if ctr == 2:
+        return get_grosssplit(data=data, summary_result=False)[1]
+    return get_transition(data=data)[1]
+
+
+def _merged_result(
+    cases: list[dict[str, Any]], options: dict[str, Any], mode: str
+) -> list[dict[str, Any]]:
+    """Run Summary merge and return per-case rows plus the derived row."""
+    contracts = []
+    per_case = []
+    for case in cases:
+        contract = _run_case_contract(data=case["data"], ctr=case["ctr"])
+        contracts.append(contract)
+        _, _, table_consolidated = get_table(contract=contract)
+        table_frame = (
+            table_consolidated[1]
+            if case["ctr"] >= 3
+            else table_consolidated
+        )
+        table = table_frame.set_index(table_frame.columns[0]).to_dict()
+        per_case.append(
+            {
+                "cId": case["cId"],
+                "ctr": case["ctr"],
+                "summary": _case_summary(data=case["data"], ctr=case["ctr"]),
+                "table_consolidated": table,
+            }
+        )
+
+    summary = Summary(
+        contract=tuple(contracts),
+        reference_year=options["reference_year"],
+        inflation_rate=options["inflation_rate"],
+        discount_rate=options["discount_rate"],
+        npv_mode=convert_str_to_npvmode(str_object=options["npv_mode"]),
+        discounting_mode=convert_str_to_discountingmode(
+            str_object=options["discounting_mode"]
+        ),
+        profitability_discounted=options["profitability_discounted"],
+    )
+    merged = summary.case_combine() if mode == "combine" else summary.case_incremental()
+    exec_summary = summary.get_executive_summary()
+    merged_lists = {
+        key: (value.tolist() if isinstance(value, np.ndarray) else value)
+        for key, value in merged.items()
+    }
+    merged_years = merged_lists.pop("years")
+    merged_table = {
+        key: value
+        for key, value in merged_lists.items()
+        if isinstance(value, list)
+    }
+    merged_table["years"] = merged_years
+    merged_table = {
+        key: dict(zip(merged_years, value))
+        for key, value in merged_table.items()
+    }
+    per_case.append(
+        {
+            "cId": 0,
+            "ctr": -1,
+            "summary": _clean_summary(exec_summary),
+            "table_consolidated": merged_table,
+        }
+    )
+    return per_case
+
+
+def get_combine_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    """
+    Combine case summaries plus a merged derived row.
+
+    Reuses the core ``Summary`` combine merge for the economic results and
+    the canonical table generator for each case's year-keyed consolidated
+    table.
+    """
+    per_case = _merged_result(
+        cases=payload["cases"], options=payload["options"], mode="combine"
+    )
+    return {"combine": per_case}
+
+
+def get_increment_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    """Incremental case summaries plus a merged derived row (base - others)."""
+    per_case = _merged_result(
+        cases=payload["cases"], options=payload["options"], mode="incremental"
+    )
+    return {"increment": per_case}
+
+
+def _clean_summary(summary: dict[str, Any]) -> dict[str, Any]:
+    """Convert numpy scalars to JSON-native values and drop None."""
+    cleaned = {}
+    for key, value in summary.items():
+        if value is None or (isinstance(value, float) and not math.isfinite(value)):
+            continue
+        cleaned[key] = (
+            value.item()
+            if isinstance(value, np.generic)
+            else value
+        )
+    return cleaned
+
+
+def _case_summary(data: dict[str, Any], ctr: int) -> dict[str, Any]:
+    """Return the SKK summary for one case (used only for per-case rows)."""
+    if ctr == 0:
+        return cast(dict[str, Any], get_baseproject(data=data, summary_result=True)[0])
+    if ctr == 1:
+        return cast(dict[str, Any], get_costrecovery(data=data, summary_result=True)[0])
+    if ctr == 2:
+        return cast(dict[str, Any], get_grosssplit(data=data, summary_result=True)[0])
+    return cast(dict[str, Any], get_transition(data=data)[0])
+
+
+def get_detailed_summary(
+    data: dict[str, Any], contract_type: str
+) -> dict[str, Any]:
     """
     Generate a detailed economic summary for a given PSC (Production Sharing Contract)
     type.
@@ -1194,15 +1325,19 @@ def get_detailed_summary(data: dict, contract_type: str) -> dict:
     if contract_type not in contract_map:
         raise ValueError(f"Invalid contract type: {contract_type!r}")
 
-    func = contract_map[contract_type]
-    _, contract, _, summary_args = func(data=data, summary_result=True)
+    if contract_type == "Transition":
+        _, contract, _, summary_args = cast(Any, get_transition)(data=data)
+    else:
+        _, contract, _, summary_args = cast(Any, contract_map[contract_type])(
+            data=data, summary_result=True
+        )
 
-    return contract.get_summary(**summary_args)
+    return cast(dict[str, Any], contract.get_summary(**summary_args))
 
 
 def get_ltp(
     volume: float, start_year: int, end_year: int, fluid_type: FluidType
-) -> np.ndarray:
+) -> np.ndarray[Any, Any]:
     """
     Function to get the ltp array.
 

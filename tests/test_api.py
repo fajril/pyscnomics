@@ -3,7 +3,6 @@ API smoke tests — verify core endpoints and import chains work after refactori
 Run: uv run pytest tests/test_api.py -v
 """
 
-import pytest
 from datetime import date
 from fastapi.testclient import TestClient
 
@@ -21,6 +20,28 @@ class TestGetEndpoints:
         assert resp.status_code == 200
         body = resp.json()
         assert "Pyscnomics" in body
+
+    def test_health_endpoint(self):
+        resp = client.get("/api/health")
+        assert resp.status_code == 200
+        assert resp.json() == {"status": "ok"}
+
+    def test_version_endpoint(self):
+        from pyscnomics import __version__
+        resp = client.get("/api/version")
+        assert resp.status_code == 200
+        assert resp.json() == {"version": __version__}
+
+    def test_cors_headers(self):
+        resp = client.options(
+            "/api/health",
+            headers={
+                "Origin": "http://127.0.0.1:5173",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+        assert resp.status_code == 200
+        assert resp.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
 
     def test_docs_available(self):
         resp = client.get("/docs")
@@ -46,24 +67,30 @@ class TestImportChains:
         from pyscnomics.contracts.gross_split import GrossSplit
         from pyscnomics.contracts.transition import Transition
         from pyscnomics.contracts.project import BaseProject
+        _ = (CostRecovery, GrossSplit, Transition, BaseProject)
 
     def test_import_optimize(self):
         from pyscnomics.optimize.optimization import optimize_psc
         from pyscnomics.optimize.sensitivity import sensitivity_psc
         from pyscnomics.optimize.uncertainty import uncertainty_psc
+        _ = (optimize_psc, sensitivity_psc, uncertainty_psc)
 
     def test_import_tools(self):
         from pyscnomics.tools.table import get_table
         from pyscnomics.tools.summary import get_summary
+        _ = (get_table, get_summary)
 
     def test_import_io(self):
-        from pyscnomics.io import getattr as _
+        from pyscnomics.io import getattr as getattr_module
+
+        _ = getattr_module
 
     def test_import_api(self):
         from pyscnomics.api.main import app
         from pyscnomics.api.router import router
         from pyscnomics.api.adapter import get_grosssplit
         from pyscnomics.api.converter import Data
+        _ = (app, router, get_grosssplit, Data)
 
 
 # ── Sample data tests ──────────────────────────────────────────────
@@ -100,3 +127,442 @@ class TestSampleData:
             approval_year=2023,
         )
         assert psc is not None
+
+
+# ── Setup defaults ───────────────────────────────────────────────
+
+class TestSetupDefaults:
+    """Missing setup fields should default instead of raising KeyError."""
+
+    def test_missing_approval_year_defaults_to_start_year(self):
+        from pyscnomics.api.adapter import get_setup_dict
+
+        result = get_setup_dict(
+            data={
+                "setup": {
+                    "start_date": "01/01/2023",
+                    "end_date": "31/12/2027",
+                    "oil_onstream_date": None,
+                    "gas_onstream_date": None,
+                },
+            }
+        )
+        assert result[2] == 2023
+
+    def test_null_approval_year_defaults_to_start_year(self):
+        from pyscnomics.api.adapter import get_setup_dict
+
+        result = get_setup_dict(
+            data={
+                "setup": {
+                    "start_date": "01/01/2023",
+                    "end_date": "31/12/2027",
+                    "approval_year": None,
+                },
+            }
+        )
+        assert result[2] == 2023
+
+
+# ── Transition uncertainty regression ─────────────────────────────
+
+class TestTransitionUncertainty:
+    """Regression: transition uncertainty must use DataTransition + "Transition"."""
+
+    def test_datatransition_has_uncertainty_arguments(self):
+        """DataTransition carries uncertainty_arguments like Data."""
+        from pyscnomics.api.converter import Data, DataTransition, UncertaintyBM
+
+        assert "uncertainty_arguments" in DataTransition.model_fields
+        field = DataTransition.model_fields["uncertainty_arguments"]
+        assert field.annotation is UncertaintyBM or field.annotation == UncertaintyBM
+        assert field.default is None
+        assert "uncertainty_arguments" in Data.model_fields
+
+    def test_transition_uncertainty_route_signature(self):
+        """Route accepts DataTransition, not Data."""
+        import inspect
+
+        from pyscnomics.api.converter import DataTransition
+        from pyscnomics.api.router import calculate_transition_uncertainty
+
+        sig = inspect.signature(calculate_transition_uncertainty)
+        assert sig.parameters["data"].annotation is DataTransition
+
+    def test_transition_uncertainty_delegates_transition(self, monkeypatch):
+        """Route dumps payload and delegates with contract_type="Transition"."""
+        import asyncio
+        from typing import Any, cast
+
+        import pyscnomics.api.router as router
+        from pyscnomics.api.router import calculate_transition_uncertainty
+
+        calls = {}
+
+        def fake_get_uncertainty(data=None, contract_type=None):
+            calls["data"] = data
+            calls["contract_type"] = contract_type
+            return {"ok": True}
+
+        monkeypatch.setattr(router, "get_uncertainty", fake_get_uncertainty)
+
+        class Fake:
+            def model_dump(self):
+                return {"dumped": True}
+
+        result = asyncio.run(calculate_transition_uncertainty(cast(Any, Fake())))
+        assert result == {"ok": True}
+        assert calls["data"] == {"dumped": True}
+        assert calls["contract_type"] == "Transition"
+
+
+# ── Warnings endpoints ────────────────────────────────────────────
+
+class TestWarningsEndpoints:
+    """Canonical warnings endpoints reuse adapters and expose contract warnings."""
+
+    def test_extract_warnings_absent_returns_empty(self):
+        """No warning_messages attribute/None -> []."""
+        from pyscnomics.api.router import _extract_warnings
+
+        assert _extract_warnings((None, object(), {}, None)) == []
+
+        class NoWarnings:
+            warning_messages = None
+
+        assert _extract_warnings((None, NoWarnings(), {}, None)) == []
+
+    def test_extract_warnings_returns_records(self):
+        """warning_messages.to_dict(orient="records") is returned verbatim."""
+        from pyscnomics.api.router import _extract_warnings
+
+        class Messages:
+            def to_dict(self, orient):
+                assert orient == "records"
+                return [{"No.": 1, "Category": "BASE_PROJECT", "Message": "warn"}]
+
+        class FakeContract:
+            warning_messages = Messages()
+
+        assert _extract_warnings((None, FakeContract(), {}, None)) == [
+            {"No.": 1, "Category": "BASE_PROJECT", "Message": "warn"}
+        ]
+
+    def test_warnings_routes_delegate_to_adapters(self, monkeypatch):
+        """Each warnings route calls its adapter with the dumped payload and returns records."""
+        import asyncio
+        from typing import Any, cast
+
+        import pyscnomics.api.router as router
+
+        class Messages:
+            def to_dict(self, orient):
+                return [{"ok": True}]
+
+        class FakeContract:
+            warning_messages = Messages()
+
+        calls = {}
+
+        def run_case(route_name: str, adapter_name: str):
+            def fake_adapter(data=None, summary_result=True):
+                calls[adapter_name] = data
+                return None, FakeContract(), {}, None
+
+            monkeypatch.setattr(router, adapter_name, fake_adapter)
+
+            class Payload:
+                def model_dump(self):
+                    return {"dumped": True}
+
+            route = getattr(router, route_name)
+            result = asyncio.run(route(cast(Any, Payload())))
+            assert result == [{"ok": True}]
+            assert calls[adapter_name] == {"dumped": True}
+
+        for route_name, adapter_name in [
+            ("get_baseproject_warnings", "get_baseproject"),
+            ("get_costrecovery_warnings", "get_costrecovery"),
+            ("get_grosssplit_warnings", "get_grosssplit"),
+            ("get_transition_warnings", "get_transition"),
+        ]:
+            run_case(route_name, adapter_name)
+
+    def test_transition_warnings_route_signature(self):
+        """Transition warnings route accepts DataTransition, not Data."""
+        import inspect
+
+        from pyscnomics.api.converter import DataTransition
+        from pyscnomics.api.router import get_transition_warnings
+
+        sig = inspect.signature(get_transition_warnings)
+        assert sig.parameters["data"].annotation is DataTransition
+
+    def test_warnings_paths_in_openapi(self):
+        """All four warnings paths are registered."""
+        schema = client.get("/openapi.json").json()
+        for path in [
+            "/api/baseproject/warnings",
+            "/api/costrecovery/warnings",
+            "/api/grosssplit/warnings",
+            "/api/transition/warnings",
+        ]:
+            assert path in schema["paths"]
+
+
+# ── Canonical table routes ────────────────────────────────────────
+
+class TestTableRoutes:
+    """Canonical table routes return only the table dict, not warnings."""
+
+    def test_table_routes_return_table_dict(self, monkeypatch):
+        """Each table route returns table dict and delegates with its contract type."""
+        import asyncio
+        from typing import Any, cast
+
+        import pyscnomics.api.router as router
+
+        table_dict = {"consolidated": {}}
+        sentinel = object()
+        calls = {}
+
+        def fake_get_contract_table(data=None, contract_type=None):
+            calls["data"] = data
+            calls["contract_type"] = contract_type
+            return table_dict, sentinel
+
+        monkeypatch.setattr(router, "get_contract_table", fake_get_contract_table)
+
+        class Payload:
+            def model_dump(self):
+                return {"dumped": True}
+
+        for route_name, contract_type in [
+            ("get_costrecovery_table", "Cost Recovery"),
+            ("get_grosssplit_table", "Gross Split"),
+            ("get_transition_table", "Transition"),
+            ("get_baseproject_table", "Base Project"),
+        ]:
+            route = getattr(router, route_name)
+            result = asyncio.run(route(cast(Any, Payload())))
+            assert result == table_dict
+            assert calls["data"] == {"dumped": True}
+            assert calls["contract_type"] == contract_type
+
+
+# ── Combine / incremental endpoints ──────────────────────────────
+
+class TestCombineIncrement:
+    """Canonical /api/combine and /api/increment reuse core Summary behavior."""
+
+    def test_request_model_shape(self):
+        """Direct frontend JSON maps to cases + options with string enums."""
+        from pyscnomics.api.converter import CasesRequestBM
+
+        payload = CasesRequestBM.model_validate(
+            {
+                "cases": [
+                    {"cId": 11, "ctr": 1, "data": {"setup": {}}},
+                    {"cId": 12, "ctr": 2, "data": {"setup": {}}},
+                ],
+                "options": {
+                    "reference_year": 2023,
+                    "inflation_rate": 0.05,
+                    "discount_rate": 0.1,
+                    "npv_mode": "SKK Full Cycle Nominal Terms",
+                    "discounting_mode": "End Year",
+                    "profitability_discounted": True,
+                },
+            }
+        ).model_dump()
+        assert [c["cId"] for c in payload["cases"]] == [11, 12]
+        assert [c["ctr"] for c in payload["cases"]] == [1, 2]
+        assert payload["options"]["npv_mode"] == "SKK Full Cycle Nominal Terms"
+
+    def test_routes_delegate_to_adapters(self, monkeypatch):
+        """Routes dump the validated payload and call the combine/increment adapters."""
+        import asyncio
+        from typing import Any, cast
+
+        import pyscnomics.api.router as router
+
+        calls = {}
+
+        def fake_combine(payload=None):
+            calls["combine"] = payload
+            return {"combine": []}
+
+        def fake_increment(payload=None):
+            calls["increment"] = payload
+            return {"increment": []}
+
+        monkeypatch.setattr(router, "get_combine_summary", fake_combine)
+        monkeypatch.setattr(router, "get_increment_summary", fake_increment)
+
+        class Fake:
+            def model_dump(self):
+                return {"cases": [], "options": {}}
+
+        assert asyncio.run(router.calculate_combine(cast(Any, Fake()))) == {
+            "combine": []
+        }
+        assert asyncio.run(router.calculate_increment(cast(Any, Fake()))) == {
+            "increment": []
+        }
+        assert calls["combine"] == {"cases": [], "options": {}}
+        assert calls["increment"] == {"cases": [], "options": {}}
+
+    def test_merged_result_keeps_case_order_and_appends_derived_row(
+        self, monkeypatch
+    ):
+        """Per-case rows keep input order; cId=0 derived row is appended last."""
+        import numpy as np
+
+        import pyscnomics.api.adapter as adapter
+
+        contracts = []
+        summaries = {"a": 1, "b": 2}
+
+        def fake_run(data, ctr):
+            contracts.append((data, ctr))
+            return object()
+
+        def fake_case_summary(data, ctr):
+            return {"case": ctr}
+
+        def fake_table(contract):
+            frame = __import__("pandas").DataFrame(
+                {"years": [2023, 2024], "cashflow": [10.0, 20.0]}
+            )
+            return frame, frame, frame
+
+        class FakeSummary:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+
+            def case_combine(self):
+                return {"years": np.array([2023, 2024]), "cashflow": np.array([1, 2])}
+
+            def get_executive_summary(self):
+                return summaries
+
+        monkeypatch.setattr(adapter, "_run_case_contract", fake_run)
+        monkeypatch.setattr(adapter, "_case_summary", fake_case_summary)
+        monkeypatch.setattr(adapter, "get_table", fake_table)
+        monkeypatch.setattr(adapter, "Summary", FakeSummary)
+
+        payload = {
+            "cases": [
+                {"cId": 5, "ctr": 1, "data": {"setup": {}}},
+                {"cId": 9, "ctr": 2, "data": {"setup": {}}},
+            ],
+            "options": {
+                "reference_year": 2023,
+                "inflation_rate": 0.0,
+                "discount_rate": 0.1,
+                "npv_mode": "SKK Full Cycle Nominal Terms",
+                "discounting_mode": "End Year",
+                "profitability_discounted": True,
+            },
+        }
+        result = adapter.get_combine_summary(payload)["combine"]
+
+        assert [row["cId"] for row in result] == [5, 9, 0]
+        assert [row["ctr"] for row in result] == [1, 2, -1]
+        assert result[0]["summary"] == {"case": 1}
+        assert result[-1]["table_consolidated"]["years"] == {2023: 2023, 2024: 2024}
+        assert result[-1]["table_consolidated"]["cashflow"] == {2023: 1, 2024: 2}
+        assert result[-1]["summary"] == summaries
+
+    def test_increment_uses_case_incremental(self, monkeypatch):
+        """Increment mode calls Summary.case_incremental, not case_combine."""
+        import numpy as np
+
+        import pyscnomics.api.adapter as adapter
+
+        calls = {}
+
+        def fake_run(data, ctr):
+            return object()
+
+        def fake_table(contract):
+            frame = __import__("pandas").DataFrame(
+                {"years": [2023], "cashflow": [10.0]}
+            )
+            return frame, frame, frame
+
+        class FakeSummary:
+            def __init__(self, **kwargs):
+                pass
+
+            def case_incremental(self):
+                calls["mode"] = "incremental"
+                return {"years": np.array([2023]), "cashflow": np.array([5])}
+
+            def get_executive_summary(self):
+                return {}
+
+        monkeypatch.setattr(adapter, "_run_case_contract", fake_run)
+        monkeypatch.setattr(adapter, "_case_summary", lambda data, ctr: {})
+        monkeypatch.setattr(adapter, "get_table", fake_table)
+        monkeypatch.setattr(adapter, "Summary", FakeSummary)
+
+        payload = {
+            "cases": [{"cId": 1, "ctr": 1, "data": {"setup": {}}}],
+            "options": {
+                "reference_year": 2023,
+                "inflation_rate": 0.0,
+                "discount_rate": 0.1,
+                "npv_mode": "SKK Full Cycle Nominal Terms",
+                "discounting_mode": "End Year",
+                "profitability_discounted": True,
+            },
+        }
+        result = adapter.get_increment_summary(payload)["increment"]
+        assert calls["mode"] == "incremental"
+        assert result[-1]["cId"] == 0
+
+    def test_transition_case_uses_second_consolidated_frame(self, monkeypatch):
+        """Transition get_table returns a tuple; use the second consolidated frame."""
+        import numpy as np
+
+        import pyscnomics.api.adapter as adapter
+
+        def fake_run(data, ctr):
+            return object()
+
+        def fake_table(contract):
+            frame = __import__("pandas").DataFrame(
+                {"years": [2023], "cashflow": [1.0]}
+            )
+            # legacy transition shape: (oil tuple, gas tuple, consolidated tuple)
+            return (frame,), (frame,), (frame, frame)
+
+        class FakeSummary:
+            def __init__(self, **kwargs):
+                pass
+
+            def case_combine(self):
+                return {"years": np.array([2023]), "cashflow": np.array([1])}
+
+            def get_executive_summary(self):
+                return {}
+
+        monkeypatch.setattr(adapter, "_run_case_contract", fake_run)
+        monkeypatch.setattr(adapter, "_case_summary", lambda data, ctr: {})
+        monkeypatch.setattr(adapter, "get_table", fake_table)
+        monkeypatch.setattr(adapter, "Summary", FakeSummary)
+
+        payload = {
+            "cases": [{"cId": 3, "ctr": 3, "data": {"setup": {}}}],
+            "options": {
+                "reference_year": 2023,
+                "inflation_rate": 0.0,
+                "discount_rate": 0.1,
+                "npv_mode": "SKK Full Cycle Nominal Terms",
+                "discounting_mode": "End Year",
+                "profitability_discounted": True,
+            },
+        }
+        result = adapter.get_combine_summary(payload)["combine"]
+        assert result[0]["table_consolidated"]["cashflow"] == {2023: 1.0}

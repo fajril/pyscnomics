@@ -2,13 +2,19 @@
 Module to handle API router.
 """
 
+from typing import Any, cast
+
 from fastapi import APIRouter
+
+from pyscnomics import __version__
 from pyscnomics.api.adapter import (
     get_baseproject,
     get_costrecovery,
+    get_combine_summary,
     get_contract_table,
     get_contract_optimization,
     get_grosssplit,
+    get_increment_summary,
     get_transition,
     get_detailed_summary,
     get_ltp_dict,
@@ -26,10 +32,10 @@ from pyscnomics.api.converter import (
     EconLimit,
     ASRExpendituresBM,
     LBTExpendituresBM,
+    CasesRequestBM,
 )
 from pyscnomics.api.converter import DataTransition
 from pyscnomics.api.converter import LtpBM, RpdBM
-
 
 router = APIRouter(prefix="/api")
 
@@ -40,6 +46,18 @@ async def read_root():
     Route to get the current running PySCnomics version.
     """
     return {"Pyscnomics": "Version 1.4.0"}
+
+
+@router.get("/health")
+async def health_check():
+    """Health-check endpoint."""
+    return {"status": "ok"}
+
+
+@router.get("/version")
+async def api_version():
+    """Return the installed pyscnomics version."""
+    return {"version": __version__}
 
 
 @router.post("/costrecovery")
@@ -112,7 +130,7 @@ async def get_costrecovery_table(data: Data) -> dict:
     - optimization_arguments
     - sensitivity_arguments
     """
-    return get_contract_table(data=data.model_dump(), contract_type="Cost Recovery")
+    return get_contract_table(data=data.model_dump(), contract_type="Cost Recovery")[0]
 
 
 @router.post("/costrecovery/optimization")
@@ -208,7 +226,7 @@ async def get_grosssplit_table(data: Data) -> dict:
     - optimization_arguments
     - sensitivity_arguments
     """
-    return get_contract_table(data=data.model_dump(), contract_type="Gross Split")
+    return get_contract_table(data=data.model_dump(), contract_type="Gross Split")[0]
 
 
 @router.post("/grosssplit/optimization")
@@ -324,7 +342,7 @@ async def get_transition_table(data: DataTransition) -> dict:
     - contract_arguments
     - summary_arguments
     """
-    return get_contract_table(data=data.model_dump(), contract_type="Transition")
+    return get_contract_table(data=data.model_dump(), contract_type="Transition")[0]
 
 
 @router.post("/transition/optimization")
@@ -388,7 +406,7 @@ async def get_baseproject_table(data: Data) -> dict:
     - opex
     - asr
     """
-    return get_contract_table(data=data.model_dump(), contract_type="Base Project")
+    return get_contract_table(data=data.model_dump(), contract_type="Base Project")[0]
 
 
 @router.post("/baseproject/detailed_summary")
@@ -592,12 +610,12 @@ async def calculate_grosssplit_uncertainty(data: Data) -> dict:
 
 
 @router.post("/transition/uncertainty")
-async def calculate_transition_uncertainty(data: Data) -> dict:
+async def calculate_transition_uncertainty(data: DataTransition) -> dict:
     """
     ## Retrieve The Uncertainty of a transition contract.
     Route to get the uncertainty of a transition contract.
     """
-    return get_uncertainty(data=data.model_dump(), contract_type="Gross Split")
+    return get_uncertainty(data=data.model_dump(), contract_type="Transition")
 
 
 @router.post("/baseproject/uncertainty")
@@ -607,3 +625,83 @@ async def calculate_baseproject_uncertainty(data: Data) -> dict:
     Route to get the uncertainty of a base projcet contract.
     """
     return get_uncertainty(data=data.model_dump(), contract_type="Base Project")
+
+
+def _extract_warnings(adapter_result: tuple[object, ...]) -> list[dict[str, object]]:
+    """
+    Extract warning messages from an adapter result tuple.
+
+    The contract object is the second element of the adapter result tuple.
+    Returns ``[]`` when the contract has no ``warning_messages``.
+    """
+    contract = adapter_result[1]
+    warning_messages = getattr(contract, "warning_messages", None)
+    if warning_messages is None:
+        return []
+    return cast(Any, warning_messages).to_dict(orient="records")
+
+
+@router.post("/baseproject/warnings")
+async def get_baseproject_warnings(data: Data) -> list[dict[str, object]]:
+    """
+    ## Base Project Warnings
+    Route to retrieve the warning messages of a Base Project contract.
+    """
+    return _extract_warnings(get_baseproject(data=data.model_dump()))
+
+
+@router.post("/costrecovery/warnings")
+async def get_costrecovery_warnings(data: Data) -> list[dict[str, object]]:
+    """
+    ## Cost Recovery Warnings
+    Route to retrieve the warning messages of a Cost Recovery contract.
+    """
+    return _extract_warnings(get_costrecovery(data=data.model_dump()))
+
+
+@router.post("/grosssplit/warnings")
+async def get_grosssplit_warnings(data: Data) -> list[dict[str, object]]:
+    """
+    ## Gross Split Warnings
+    Route to retrieve the warning messages of a Gross Split contract.
+    """
+    return _extract_warnings(get_grosssplit(data=data.model_dump()))
+
+
+@router.post("/transition/warnings")
+async def get_transition_warnings(data: DataTransition) -> list[dict[str, object]]:
+    """
+    ## Transition Warnings
+    Route to retrieve the warning messages of a Transition contract.
+    """
+    return _extract_warnings(get_transition(data=data.model_dump()))
+
+
+@router.post("/combine")
+async def calculate_combine(data: CasesRequestBM) -> dict[str, Any]:
+    """
+    ## Combine Cases
+    Route to combine multiple contract cases into one economic result.
+
+    ### Data Input Structure
+    data:
+    - cases: list[{cId, ctr, data}]
+    - options: {reference_year, inflation_rate, discount_rate, npv_mode,
+      discounting_mode, profitability_discounted}
+    """
+    return get_combine_summary(payload=data.model_dump())
+
+
+@router.post("/increment")
+async def calculate_increment(data: CasesRequestBM) -> dict[str, Any]:
+    """
+    ## Incremental Cases
+    Route to calculate the incremental result between contract cases.
+
+    ### Data Input Structure
+    data:
+    - cases: list[{cId, ctr, data}]
+    - options: {reference_year, inflation_rate, discount_rate, npv_mode,
+      discounting_mode, profitability_discounted}
+    """
+    return get_increment_summary(payload=data.model_dump())

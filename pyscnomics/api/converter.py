@@ -2,11 +2,11 @@
 This file containing the tools which utilized by API adapter.
 """
 
-from datetime import datetime, date
-from typing import Dict, Union, Optional, List
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field
 import numpy as np
+from pydantic import BaseModel, Field
 
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales, LBT
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type, read_cost_type
@@ -753,6 +753,8 @@ class DataTransition(BaseModel):
         The contract arguments in form of ContractArgumentsBM BaseModel.
     summary_arguments: SummaryArgumentsBM
         The summary arguments in form of SummaryArgumentsBM BaseModel.
+    uncertainty_arguments: UncertaintyBM = None
+        The uncertainty arguments in form of UncertaintyBM BaseModel.
     result: dict = None
         The result of the running contract.
     """
@@ -764,6 +766,7 @@ class DataTransition(BaseModel):
     result: dict = None
     optimization_arguments: OptimizationBM = None
     sensitivity_arguments: SensitivityBM = None
+    uncertainty_arguments: UncertaintyBM = None
 
 
 class EconLimit(BaseModel):
@@ -2404,3 +2407,41 @@ def convert_to_uncertainty_distribution(target: str):
             f"Invalid distribution: {target!r}. "
             f"Expected one of {list(mapping.keys())}."
         )
+
+
+class CombineCaseBM(BaseModel):
+    """
+    BaseModel for one case in a combine/incremental request.
+
+    ``data`` is the same direct JSON contract payload accepted by the
+    canonical contract endpoints (setup, summary_arguments,
+    contract_arguments, lifting, costs, and the scheme-specific block).
+    """
+
+    cId: int
+    ctr: int = Field(ge=0, le=3)
+    data: dict[str, Any]
+
+
+class CombineOptionsBM(BaseModel):
+    """
+    Summary options shared by combine/incremental requests.
+
+    Field names match the existing frontend combine/incremental option
+    payload; values are the same strings used by the canonical summary
+    endpoints (for example ``npv_mode`` and ``discounting_mode``).
+    """
+
+    reference_year: int
+    inflation_rate: float | int = 0.0
+    discount_rate: float | int = 0.1
+    npv_mode: str = "SKK Full Cycle Nominal Terms"
+    discounting_mode: str = "End Year"
+    profitability_discounted: bool = True
+
+
+class CasesRequestBM(BaseModel):
+    """BaseModel for the combine/incremental request body."""
+
+    cases: list[CombineCaseBM] = Field(min_length=1)
+    options: CombineOptionsBM

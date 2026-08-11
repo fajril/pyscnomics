@@ -20,6 +20,11 @@ import uvicorn
     default=9999,
     help="The port number for running the API backend. The default port is 9999",
 )
+@click.option(
+    "--host",
+    default="127.0.0.1",
+    help="The host address for running the API backend. Defaults to 127.0.0.1",
+)
 def entry_point(**kwargs):
     """Manages CLI"""
     if kwargs["api"] == 1:
@@ -35,7 +40,7 @@ def entry_point(**kwargs):
         port_number = kwargs["port"]
         uvicorn.run(
             "pyscnomics.api.main:app",
-            host="0.0.0.0",
+            host=kwargs["host"],
             port=int(port_number),
             reload=False,
         )
