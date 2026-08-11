@@ -349,6 +349,46 @@ class TestTableRoutes:
             assert calls["data"] == {"dumped": True}
             assert calls["contract_type"] == contract_type
 
+    def test_grosssplit_table_accepts_nullable_capital_arrays(self, monkeypatch):
+        """CapitalCost arrays with JSON null elements pass request validation."""
+        import pyscnomics.api.router as router
+
+        calls = {}
+
+        def fake_get_contract_table(data=None, contract_type=None):
+            calls["data"] = data
+            calls["contract_type"] = contract_type
+            return {"consolidated": {}}, object()
+
+        monkeypatch.setattr(router, "get_contract_table", fake_get_contract_table)
+
+        payload = {
+            "setup": {
+                "start_date": "01/01/2023",
+                "end_date": "31/12/2027",
+            },
+            "summary_arguments": {},
+            "contract_arguments": {},
+            "capital": {
+                "well": {
+                    "start_year": 2023,
+                    "end_year": 2027,
+                    "expense_year": [2023, 2024, 2025, 2026, 2027],
+                    "cost": [1000, 1000, 1000, 1000, 1000],
+                    "pis_year": [2023, 2024, None, 2026, 2027],
+                    "salvage_value": [0, 0, None, 0, 0],
+                    "useful_life": [5, 5, None, 5, 5],
+                    "depreciation_factor": [0.5, 0.5, None, 0.5, 0.5],
+                    "is_ic_applied": [True, False, None, False, True],
+                }
+            },
+        }
+
+        resp = client.post("/api/grosssplit/table", json=payload)
+        assert resp.status_code == 200
+        assert resp.json() == {"consolidated": {}}
+        assert calls["contract_type"] == "Gross Split"
+
 
 # ── Combine / incremental endpoints ──────────────────────────────
 

@@ -400,11 +400,11 @@ class CapitalCostBM(GeneralCostBM):
         The condition of will the IC applied or not.
     """
 
-    pis_year: Optional[list[int]] = Field(default=None)
-    salvage_value: Optional[Union[list[int], list[float]]] = Field(default=None)
-    useful_life: Optional[list[int]] = Field(default=None)
-    depreciation_factor: Optional[list[float]] = Field(default=None)
-    is_ic_applied: Optional[list[bool]] = Field(default=None)
+    pis_year: Optional[list[int | None]] = Field(default=None)
+    salvage_value: Optional[list[float | None]] = Field(default=None)
+    useful_life: Optional[list[float | None]] = Field(default=None)
+    depreciation_factor: Optional[list[float | None]] = Field(default=None)
+    is_ic_applied: Optional[list[bool | None]] = Field(default=None)
 
 
 class IntangibleBM(GeneralCostBM):
