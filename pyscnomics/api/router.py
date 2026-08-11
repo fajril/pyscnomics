@@ -638,6 +638,8 @@ def _extract_warnings(adapter_result: tuple[object, ...]) -> list[dict[str, obje
     warning_messages = getattr(contract, "warning_messages", None)
     if warning_messages is None:
         return []
+    if isinstance(warning_messages, list):
+        return cast(list[dict[str, object]], warning_messages)
     return cast(Any, warning_messages).to_dict(orient="records")
 
 

@@ -164,6 +164,74 @@ class TestSetupDefaults:
         assert result[2] == 2023
 
 
+# ── Contract argument defaults ───────────────────────────────────
+
+class TestContractArgumentDefaults:
+    def test_dump_includes_reservoir_type_permen_2024(self):
+        from pyscnomics.api.converter import ContractArgumentsBM
+
+        assert (
+            ContractArgumentsBM().model_dump()["reservoir_type_permen_2024"]
+            == "conventional"
+        )
+        assert (
+            ContractArgumentsBM(
+                reservoir_type_permen_2024="unconventional"
+            ).model_dump()["reservoir_type_permen_2024"]
+            == "unconventional"
+        )
+
+
+# ── Gross Split schema ────────────────────────────────────────────
+
+class TestGrossSplitSchema:
+    def test_dump_preserves_permen_2024_fields(self):
+        from pyscnomics.api.converter import GrossSplitBM
+
+        dumped = GrossSplitBM(
+            field_loc_2024="ultradeep_offshore",
+            infra_avail_2024="not_available",
+            field_reserves_2024="high",
+        ).model_dump()
+
+        assert dumped["field_loc_2024"] == "ultradeep_offshore"
+        assert dumped["infra_avail_2024"] == "not_available"
+        assert dumped["field_reserves_2024"] == "high"
+
+
+# ── Optimization schema ───────────────────────────────────────────
+
+class TestOptimizationSchema:
+    def test_optimization_dict_rejects_empty_selections(self):
+        import pytest
+        from pydantic import ValidationError
+
+        from pyscnomics.api.converter import OptimizationDictBM
+
+        with pytest.raises(ValidationError) as excinfo:
+            _ = OptimizationDictBM(parameter=[], min=[], max=[])
+
+        empty_locs = {
+            error["loc"][0] for error in excinfo.value.errors() if error["loc"]
+        }
+        assert empty_locs == {"parameter", "min", "max"}
+
+    def test_optimization_dict_accepts_nonempty_selections(self):
+        from pyscnomics.api.converter import OptimizationDictBM
+
+        dumped = OptimizationDictBM(
+            parameter=["Oil Contractor Pre Tax"],
+            min=[0.1],
+            max=[0.2],
+        ).model_dump()
+
+        assert dumped == {
+            "parameter": ["Oil Contractor Pre Tax"],
+            "min": [0.1],
+            "max": [0.2],
+        }
+
+
 # ── Transition uncertainty regression ─────────────────────────────
 
 class TestTransitionUncertainty:
@@ -247,6 +315,17 @@ class TestWarningsEndpoints:
         assert _extract_warnings((None, FakeContract(), {}, None)) == [
             {"No.": 1, "Category": "BASE_PROJECT", "Message": "warn"}
         ]
+
+    def test_extract_warnings_returns_list_verbatim(self):
+        """List-backed warning messages are returned unchanged."""
+        from pyscnomics.api.router import _extract_warnings
+
+        messages = [{"No.": 1, "Category": "BASE_PROJECT", "Message": "warn"}]
+
+        class FakeContract:
+            warning_messages = messages
+
+        assert _extract_warnings((None, FakeContract(), {}, None)) is messages
 
     def test_warnings_routes_delegate_to_adapters(self, monkeypatch):
         """Each warnings route calls its adapter with the dumped payload and returns records."""

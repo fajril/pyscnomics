@@ -231,8 +231,10 @@ class GrossSplitBM(BaseModel):
 
     field_status: str = Field(default=None)
     field_loc: str = Field(default=None)
+    field_loc_2024: str | None = Field(default=None)
     res_depth: str = Field(default=None)
     infra_avail: str = Field(default=None)
+    infra_avail_2024: str | None = Field(default=None)
     res_type: str = Field(default=None)
     api_oil: str = Field(default=None)
     domestic_use: str = Field(default=None)
@@ -240,6 +242,7 @@ class GrossSplitBM(BaseModel):
     co2_content: str = Field(default=None)
     h2s_content: str = Field(default=None)
     field_reserves: str = Field(default=None)
+    field_reserves_2024: str | None = Field(default=None)
     base_split_ctr_oil: float | int = 0.43
     base_split_ctr_gas: float | int = 0.48
     split_ministry_disc: float | int = 0.08
@@ -315,6 +318,7 @@ class ContractArgumentsBM(BaseModel):
     cum_production_split_offset: list | float | int | None = None
     amortization: bool = False
     regime: str = "PERMEN_ESDM_12_2020"
+    reservoir_type_permen_2024: str = "conventional"
     oil_cost_of_sales_applied: bool = False
     gas_cost_of_sales_applied: bool = False
     sum_undepreciated_cost: bool = False
@@ -504,9 +508,9 @@ class OptimizationDictBM(BaseModel):
 
     """
 
-    parameter: list[str]
-    min: list[float] | list[int]
-    max: list[float] | list[int]
+    parameter: list[str] = Field(min_length=1)
+    min: list[float] | list[int] = Field(min_length=1)
+    max: list[float] | list[int] = Field(min_length=1)
 
 
 class OptimizationBM(BaseModel):
