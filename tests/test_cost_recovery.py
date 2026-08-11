@@ -2,14 +2,11 @@
 A collection of unit testing for class CostRecovery
 """
 
-import pytest
 import numpy as np
-from datetime import date
 from dataclasses import dataclass, field
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales
-from pyscnomics.contracts.costrecovery import CostRecovery
 
 
 @dataclass

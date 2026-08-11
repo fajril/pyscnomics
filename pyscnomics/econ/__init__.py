@@ -38,24 +38,6 @@ from .selection import (
 
 
 
-from .selection import (
-    DeprMethod,
-    FluidType,
-    TaxType,
-    TaxSplitTypeCR,
-    YearReference,
-    TaxRegime,
-    TaxPaymentMode,
-    FTPTaxRegime,
-    GrossSplitRegime,
-    DiscountingMode,
-    ContractType,
-    NPVSelection,
-    OtherRevenue,
-    InflationAppliedTo,
-    OptimizationParameter,
-    OptimizationTarget,
-)
 from .indicator import (
     pot,
     npv,

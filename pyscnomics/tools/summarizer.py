@@ -722,7 +722,6 @@ class Summary:
         )
 
     def _to_dataframe(self):
-        import pandas as pd
         """Convert selected dataclass attributes into a pandas DataFrame."""
         exclude: list = ['contract', 'reference_year', 'inflation_rate', 'discount_rate', 'npv_mode',
                          'discounting_mode', 'profitability_discounted', ]

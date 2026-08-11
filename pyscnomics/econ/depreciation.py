@@ -4,7 +4,6 @@ Calculate depreciation.
 
 import numpy as np
 import pandas as pd
-from pyscnomics.econ.selection import InitialYearAmortizationIncurred
 
 
 class DepreciationException(Exception):
@@ -314,8 +313,8 @@ def psc_declining_balance_depreciation_rate(
 
     if depreciation_factor > 1 or depreciation_factor < 0:
         raise DepreciationException(
-            f"The value of depreciation_factor must fall within the following interval: "
-            f"0 <= depreciation_factor <= 1"
+            "The value of depreciation_factor must fall within the following interval: "
+            "0 <= depreciation_factor <= 1"
         )
 
     # Create an array of exponents
@@ -570,7 +569,7 @@ def unit_of_production_rate(
         idx = np.argmin(remaining_amortization_modified)
 
         if idx == 0:
-            raise UnitOfProductionException(f"Invalid amortization termination index.")
+            raise UnitOfProductionException("Invalid amortization termination index.")
 
         amortization_charge[idx] = remaining_amortization[idx - 1]
         amortization_charge[idx + 1:] = 0

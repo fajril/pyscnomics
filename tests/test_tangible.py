@@ -4,7 +4,7 @@ A collection of unit testing for Tangible class
 
 import pytest
 import numpy as np
-from pyscnomics.econ.selection import DeprMethod, FluidType, TaxType
+from pyscnomics.econ.selection import DeprMethod, FluidType
 from pyscnomics.econ.costs import CapitalException, CapitalCost
 
 

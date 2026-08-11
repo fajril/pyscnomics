@@ -116,8 +116,8 @@ class CashFlow:
 
         else:
             raise CashFlowException(
-                f"Must compare an instance of CashFlow with another instance of "
-                f"CashFlow, an integer, or a float. "
+                "Must compare an instance of CashFlow with another instance of "
+                "CashFlow, an integer, or a float. "
             )
 
     def __le__(self, other):
@@ -131,8 +131,8 @@ class CashFlow:
 
         else:
             raise CashFlowException(
-                f"Must compare an instance of CashFlow with another instance of "
-                f"CashFlow, an integer, or a float. "
+                "Must compare an instance of CashFlow with another instance of "
+                "CashFlow, an integer, or a float. "
             )
 
     def __gt__(self, other):
@@ -146,8 +146,8 @@ class CashFlow:
 
         else:
             raise CashFlowException(
-                f"Must compare an instance of CashFlow with another instance of "
-                f"CashFlow, an integer, or a float."
+                "Must compare an instance of CashFlow with another instance of "
+                "CashFlow, an integer, or a float."
             )
 
     def __ge__(self, other):
@@ -161,8 +161,8 @@ class CashFlow:
 
         else:
             raise CashFlowException(
-                f"Must compare an instance of CashFlow with another instance of "
-                f"CashFlow, an integer, or a float."
+                "Must compare an instance of CashFlow with another instance of "
+                "CashFlow, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -257,7 +257,7 @@ class CashFlow:
         elif isinstance(other, (int, float)):
             # Cannot divide by zero
             if other == 0:
-                raise CashFlowException(f"Cannot divide by zero")
+                raise CashFlowException("Cannot divide by zero")
 
             else:
                 return CashFlow(

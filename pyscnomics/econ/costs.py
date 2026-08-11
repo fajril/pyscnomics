@@ -418,7 +418,7 @@ class CapitalCost(GeneralCost):
             )
 
             if np.sum(incorrect_cost_type) > 0:
-                raise CapitalException(f"Must insert CostType in list cost_type")
+                raise CapitalException("Must insert CostType in list cost_type")
 
         # Prepare attribute description
         if self.description is None:
@@ -529,7 +529,7 @@ class CapitalCost(GeneralCost):
             )
 
             if np.sum(is_ic_applied_not_boolean) > 0:
-                raise CapitalException(f"Must insert boolean in list is_ic_applied")
+                raise CapitalException("Must insert boolean in list is_ic_applied")
 
         # Prepare attribute tax_portion
         if self.tax_portion is None:
@@ -566,7 +566,7 @@ class CapitalCost(GeneralCost):
         if isinstance(self.tax_discount, (float, int)):
             if self.tax_discount < 0 or self.tax_discount > 1:
                 raise CapitalException(
-                    f"Attribute tax_discount must be between 0 and 1"
+                    "Attribute tax_discount must be between 0 and 1"
                 )
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.cost))
@@ -1079,8 +1079,8 @@ class CapitalCost(GeneralCost):
 
         else:
             raise CapitalException(
-                f"Must compare an instance of CapitalCost with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of CapitalCost with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __le__(self, other):
@@ -1095,8 +1095,8 @@ class CapitalCost(GeneralCost):
 
         else:
             raise CapitalException(
-                f"Must compare an instance of CapitalCost with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of CapitalCost with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __gt__(self, other):
@@ -1111,8 +1111,8 @@ class CapitalCost(GeneralCost):
 
         else:
             raise CapitalException(
-                f"Must compare an instance of CapitalCost with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of CapitalCost with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __ge__(self, other):
@@ -1127,8 +1127,8 @@ class CapitalCost(GeneralCost):
 
         else:
             raise CapitalException(
-                f"Must compare an instance of CapitalCost with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of CapitalCost with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -1267,7 +1267,7 @@ class CapitalCost(GeneralCost):
         elif isinstance(other, (int, float)):
             # Cannot divide with zero
             if other == 0:
-                raise CapitalException(f"Cannot divide with zero")
+                raise CapitalException("Cannot divide with zero")
 
             else:
                 return CapitalCost(
@@ -1402,7 +1402,7 @@ class Intangible(GeneralCost):
             )
 
             if np.sum(incorrect_cost_type) > 0:
-                raise IntangibleException(f"Must insert CostType in list cost_type")
+                raise IntangibleException("Must insert CostType in list cost_type")
 
         # Prepare attribute description
         if self.description is None:
@@ -1454,7 +1454,7 @@ class Intangible(GeneralCost):
         if isinstance(self.tax_discount, (float, int)):
             if self.tax_discount < 0 or self.tax_discount > 1:
                 raise IntangibleException(
-                    f"Attribute tax_discount must be between 0 and 1"
+                    "Attribute tax_discount must be between 0 and 1"
                 )
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.cost))
@@ -1549,8 +1549,8 @@ class Intangible(GeneralCost):
 
         else:
             raise IntangibleException(
-                f"Must compare an instance of Intangible with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of Intangible with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __le__(self, other):
@@ -1565,8 +1565,8 @@ class Intangible(GeneralCost):
 
         else:
             raise IntangibleException(
-                f"Must compare an instance of Intangible with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of Intangible with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __gt__(self, other):
@@ -1581,8 +1581,8 @@ class Intangible(GeneralCost):
 
         else:
             raise IntangibleException(
-                f"Must compare an instance of Intangible with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of Intangible with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __ge__(self, other):
@@ -1597,8 +1597,8 @@ class Intangible(GeneralCost):
 
         else:
             raise IntangibleException(
-                f"Must compare an instance of Intangible with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of Intangible with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -1706,7 +1706,7 @@ class Intangible(GeneralCost):
         elif isinstance(other, (int, float)):
             # Cannot divide by zero
             if other == 0:
-                raise IntangibleException(f"Cannot divide by zero")
+                raise IntangibleException("Cannot divide by zero")
 
             else:
                 return Intangible(
@@ -1861,7 +1861,7 @@ class OPEX(GeneralCost):
             )
 
             if np.sum(incorrect_cost_type) > 0:
-                raise OPEXException(f"Must insert CostType in list cost_type")
+                raise OPEXException("Must insert CostType in list cost_type")
 
         # Prepare attribute description
         if self.description is None:
@@ -1912,7 +1912,7 @@ class OPEX(GeneralCost):
 
         if isinstance(self.tax_discount, (float, int)):
             if self.tax_discount < 0 or self.tax_discount > 1:
-                raise OPEXException(f"Attribute tax_discount must be between 0 and 1")
+                raise OPEXException("Attribute tax_discount must be between 0 and 1")
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.expense_year))
 
@@ -2059,8 +2059,8 @@ class OPEX(GeneralCost):
 
         else:
             raise OPEXException(
-                f"Must compare an instance of OPEX with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of OPEX with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __le__(self, other):
@@ -2075,8 +2075,8 @@ class OPEX(GeneralCost):
 
         else:
             raise OPEXException(
-                f"Must compare an instance of OPEX with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of OPEX with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __gt__(self, other):
@@ -2091,8 +2091,8 @@ class OPEX(GeneralCost):
 
         else:
             raise OPEXException(
-                f"Must compare an instance of OPEX with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of OPEX with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __ge__(self, other):
@@ -2107,8 +2107,8 @@ class OPEX(GeneralCost):
 
         else:
             raise OPEXException(
-                f"Must compare an instance of OPEX with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of OPEX with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -2230,7 +2230,7 @@ class OPEX(GeneralCost):
         elif isinstance(other, (int, float)):
             # Cannot divide by zero
             if other == 0:
-                raise OPEXException(f"Cannot divide with zero")
+                raise OPEXException("Cannot divide with zero")
 
             else:
                 return OPEX(
@@ -2372,7 +2372,7 @@ class ASR(GeneralCost):
             )
 
             if np.sum(incorrect_cost_type) > 0:
-                raise ASRException(f"Must insert CostType in list cost_type")
+                raise ASRException("Must insert CostType in list cost_type")
 
         # Prepare attribute description
         if self.description is None:
@@ -2423,7 +2423,7 @@ class ASR(GeneralCost):
 
         if isinstance(self.tax_discount, (float, int)):
             if self.tax_discount < 0 or self.tax_discount > 1:
-                raise ASRException(f"Attribute tax_discount must be between 0 and 1")
+                raise ASRException("Attribute tax_discount must be between 0 and 1")
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.cost))
 
@@ -2457,7 +2457,7 @@ class ASR(GeneralCost):
 
             if isinstance(self.future_rate, float):
                 if self.future_rate < 0.0 or self.future_rate > 1.0:
-                    raise ASRException(f"Attribute future_rate must be between 0 and 1")
+                    raise ASRException("Attribute future_rate must be between 0 and 1")
                 else:
                     self.future_rate = np.repeat(self.future_rate, len(self.cost))
 
@@ -2738,8 +2738,8 @@ class ASR(GeneralCost):
 
         else:
             raise ASRException(
-                f"Must compare an instance of ASR with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer or a float. "
+                "Must compare an instance of ASR with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer or a float. "
             )
 
     def __le__(self, other):
@@ -2754,8 +2754,8 @@ class ASR(GeneralCost):
 
         else:
             raise ASRException(
-                f"Must compare an instance of ASR with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer or a float. "
+                "Must compare an instance of ASR with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer or a float. "
             )
 
     def __gt__(self, other):
@@ -2770,8 +2770,8 @@ class ASR(GeneralCost):
 
         else:
             raise ASRException(
-                f"Must compare an instance of ASR with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of ASR with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __ge__(self, other):
@@ -2786,8 +2786,8 @@ class ASR(GeneralCost):
 
         else:
             raise ASRException(
-                f"Must compare an instance of ASR with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of ASR with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -2906,7 +2906,7 @@ class ASR(GeneralCost):
         # Between an instance of ASR and an integer/a float
         elif isinstance(other, (int, float)):
             if other == 0:
-                raise ASRException(f"Cannot divide with zero")
+                raise ASRException("Cannot divide with zero")
 
             else:
                 return ASR(
@@ -3059,7 +3059,7 @@ class LBT(GeneralCost):
             )
 
             if np.sum(incorrect_cost_type) > 0:
-                raise LBTException(f"Must insert CostType in list cost_type")
+                raise LBTException("Must insert CostType in list cost_type")
 
         # Prepare attribute description
         if self.description is None:
@@ -3110,7 +3110,7 @@ class LBT(GeneralCost):
 
         if isinstance(self.tax_discount, (float, int)):
             if self.tax_discount < 0 or self.tax_discount > 1:
-                raise LBTException(f"Attribute tax_discount must be between 0 and 1")
+                raise LBTException("Attribute tax_discount must be between 0 and 1")
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.expense_year))
 
@@ -3512,8 +3512,8 @@ class LBT(GeneralCost):
 
         else:
             raise LBTException(
-                f"Must compare an instance of LBT with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of LBT with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __le__(self, other):
@@ -3528,8 +3528,8 @@ class LBT(GeneralCost):
 
         else:
             raise LBTException(
-                f"Must compare an instance of LBT with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of LBT with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __gt__(self, other):
@@ -3544,8 +3544,8 @@ class LBT(GeneralCost):
 
         else:
             raise LBTException(
-                f"Must compare an instance of ASR with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of ASR with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __ge__(self, other):
@@ -3560,8 +3560,8 @@ class LBT(GeneralCost):
 
         else:
             raise LBTException(
-                f"Must compare an instance of LBT with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of LBT with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -3706,7 +3706,7 @@ class LBT(GeneralCost):
         elif isinstance(other, (int, float)):
             # Cannot divide with zero
             if other == 0:
-                raise LBTException(f"Cannot divide with zero")
+                raise LBTException("Cannot divide with zero")
 
             else:
                 return LBT(
@@ -3853,7 +3853,7 @@ class CostOfSales(GeneralCost):
             )
 
             if np.sum(incorrect_cost_type) > 0:
-                raise CostOfSalesException(f"Must insert CostType in list cost_type")
+                raise CostOfSalesException("Must insert CostType in list cost_type")
 
         # Prepare attribute description
         if self.description is None:
@@ -3905,7 +3905,7 @@ class CostOfSales(GeneralCost):
         if isinstance(self.tax_discount, (float, int)):
             if self.tax_discount < 0 or self.tax_discount > 1:
                 raise CostOfSalesException(
-                    f"Attribute tax_discount must be between 0 and 1"
+                    "Attribute tax_discount must be between 0 and 1"
                 )
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.expense_year))
@@ -4001,8 +4001,8 @@ class CostOfSales(GeneralCost):
 
         else:
             raise CostOfSalesException(
-                f"Must compare an instance of CostOfSales with another instance of "
-                f"CapitalCost/Instangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of CostOfSales with another instance of "
+                "CapitalCost/Instangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __le__(self, other):
@@ -4017,8 +4017,8 @@ class CostOfSales(GeneralCost):
 
         else:
             raise CostOfSalesException(
-                f"Must compare an instance of CostOfSales with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of CostOfSales with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __gt__(self, other):
@@ -4033,8 +4033,8 @@ class CostOfSales(GeneralCost):
 
         else:
             raise CostOfSalesException(
-                f"Must compare an instance of CostOfSales with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of CostOfSales with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __ge__(self, other):
@@ -4049,8 +4049,8 @@ class CostOfSales(GeneralCost):
 
         else:
             raise CostOfSalesException(
-                f"Must compare an instance of CostOfSales with another instance of "
-                f"CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
+                "Must compare an instance of CostOfSales with another instance of "
+                "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -4160,7 +4160,7 @@ class CostOfSales(GeneralCost):
         elif isinstance(other, (int, float)):
             # Cannot divide by zero
             if other == 0:
-                raise CostOfSalesException(f"Cannot divide with zero.")
+                raise CostOfSalesException("Cannot divide with zero.")
 
             else:
                 return CostOfSales(

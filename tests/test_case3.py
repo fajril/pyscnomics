@@ -4,7 +4,6 @@ A unit testing for depreciation module.
 
 import numpy as np
 from pyscnomics.dataset.sample import load_data, load_testing
-from pyscnomics.econ.selection import InflationAppliedTo
 
 # Defining the contract object
 psc = load_data(dataset_type='case3', contract_type='gross_split')

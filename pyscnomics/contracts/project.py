@@ -1641,7 +1641,7 @@ class BaseProject:
 
         # Raise an error: approval year is not provided
         if self.approval_year is None:
-            raise BaseProjectException(f"Attribute approval_year is missing")
+            raise BaseProjectException("Attribute approval_year is missing")
 
         # Raise an error: approval year is not provided as an integer
         if not isinstance(self.approval_year, int):
@@ -3488,8 +3488,8 @@ class BaseProject:
 
         else:
             raise BaseProjectException(
-                f"Parameter inflation_rate_applied_to is not recognized. "
-                f"Available options are: CAPEX, OPEX, CAPEX and OPEX, or None. "
+                "Parameter inflation_rate_applied_to is not recognized. "
+                "Available options are: CAPEX, OPEX, CAPEX and OPEX, or None. "
             )
 
     def _get_expenditures_pre_tax(

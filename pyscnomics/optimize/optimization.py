@@ -726,8 +726,8 @@ def adjust_useful_life_years(
 
     if np.all(below_mask):
         raise OptimizationException(
-            f"Cannot optimize useful life for project duration < 2 years. "
-            f"Please remove 'depreciation_acceleration' as target optimization parameter."
+            "Cannot optimize useful life for project duration < 2 years. "
+            "Please remove 'depreciation_acceleration' as target optimization parameter."
         )
 
     if np.any(below_mask):

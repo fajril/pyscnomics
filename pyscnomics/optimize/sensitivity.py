@@ -8,7 +8,7 @@ which depended with the excel into fully able to be run in python.
 import numpy as np
 import pandas as pd
 
-from pyscnomics.econ import CostOfSales, Lifting, FluidType
+from pyscnomics.econ import Lifting, FluidType
 # from pyscnomics.io.aggregator import Aggregate
 # from pyscnomics.optimize.adjuster import AdjustData
 
@@ -16,7 +16,7 @@ from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.gross_split import GrossSplit
 from pyscnomics.contracts.transition import Transition
-from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT
+from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX
 
 
 class SensitivityException(Exception):

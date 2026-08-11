@@ -562,8 +562,8 @@ class Lifting:
 
         else:
             raise LiftingException(
-                f"Must compare an instance of Lifting with another instance "
-                f"of Lifting, an integer, or a float."
+                "Must compare an instance of Lifting with another instance "
+                "of Lifting, an integer, or a float."
             )
 
     def __le__(self, other):
@@ -577,8 +577,8 @@ class Lifting:
 
         else:
             raise LiftingException(
-                f"Must compare an instance of Lifting with another instance "
-                f"of Lifting, an integer, or a float."
+                "Must compare an instance of Lifting with another instance "
+                "of Lifting, an integer, or a float."
             )
 
     def __gt__(self, other):
@@ -592,8 +592,8 @@ class Lifting:
 
         else:
             raise LiftingException(
-                f"Must compare an instance of Lifting with another "
-                f"instance of Lifting, an integer, or a float."
+                "Must compare an instance of Lifting with another "
+                "instance of Lifting, an integer, or a float."
             )
 
     def __ge__(self, other):
@@ -607,8 +607,8 @@ class Lifting:
 
         else:
             raise LiftingException(
-                f"Must compare an instance of Lifting with another "
-                f"instance of Lifting, an integer, or a float."
+                "Must compare an instance of Lifting with another "
+                "instance of Lifting, an integer, or a float."
             )
 
     def __add__(self, other):
@@ -745,7 +745,7 @@ class Lifting:
         elif isinstance(other, (int, float)):
             # Cannot divide with zero
             if other == 0:
-                raise LiftingException(f"Cannot divide with zero.")
+                raise LiftingException("Cannot divide with zero.")
 
             else:
                 return Lifting(

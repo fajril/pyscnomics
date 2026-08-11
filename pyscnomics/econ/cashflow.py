@@ -124,8 +124,8 @@ class Cashflow:
         ):
             if self.contract._consolidated_cashflow is None:
                 raise CashflowException(
-                    f"Cashflow dataclass only receive contract that has been run. "
-                    f"Please run the contract before parse it to the Cashflow dataclass."
+                    "Cashflow dataclass only receive contract that has been run. "
+                    "Please run the contract before parse it to the Cashflow dataclass."
                 )
             else:
                 pass
@@ -142,7 +142,7 @@ class Cashflow:
                 else:
                     pass
         else:
-            raise CashflowException(f"Cashflow dataclass only receive psc contract/s.")
+            raise CashflowException("Cashflow dataclass only receive psc contract/s.")
 
     def get_single_project_start_end(self):
         """

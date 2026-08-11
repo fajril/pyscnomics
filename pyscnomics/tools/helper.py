@@ -855,10 +855,10 @@ def get_lifting_data_split_simple(
             ]
         ):
             raise SplitDataException(
-                f"Cannot split data for PSC transition. "
-                f"Please check the production data. "
-                f"The provided production data is not sufficient to perform "
-                f"splitting into two PSC contracts."
+                "Cannot split data for PSC transition. "
+                "Please check the production data. "
+                "The provided production data is not sufficient to perform "
+                "splitting into two PSC contracts."
             )
 
         # Split the original target data into two corresponding PSC contracts
@@ -919,10 +919,10 @@ def get_lifting_data_split_simple(
             ]
         ):
             raise SplitDataException(
-                f"Cannot split data for PSC transition. "
-                f"Please check the production data. "
-                f"The provided production data is not sufficient to perform "
-                f"splitting into two PSC contracts."
+                "Cannot split data for PSC transition. "
+                "Please check the production data. "
+                "The provided production data is not sufficient to perform "
+                "splitting into two PSC contracts."
             )
 
         # Split the original target data into two corresponding PSC contracts
@@ -1037,10 +1037,10 @@ def get_lifting_data_split_advanced(
             ]
         ):
             raise SplitDataException(
-                f"Cannot split data for PSC transition. "
-                f"Please check the production data. "
-                f"The provided production data is not sufficient to perform "
-                f"splitting into two PSC contracts."
+                "Cannot split data for PSC transition. "
+                "Please check the production data. "
+                "The provided production data is not sufficient to perform "
+                "splitting into two PSC contracts."
             )
 
         # Split the original target data into two corresponding PSC contracts
@@ -1111,10 +1111,10 @@ def get_lifting_data_split_advanced(
             ]
         ):
             raise SplitDataException(
-                f"Cannot split data for PSC transition. "
-                f"Please check the production data. "
-                f"The provided production data is not sufficient to perform "
-                f"splitting into two PSC contracts."
+                "Cannot split data for PSC transition. "
+                "Please check the production data. "
+                "The provided production data is not sufficient to perform "
+                "splitting into two PSC contracts."
             )
 
         # Split the original target data into two corresponding PSC contracts
@@ -1210,10 +1210,10 @@ def get_cost_data_split(
         # two corresponding psc regimes
         if any([len(id_transition[psc]) == 0 for psc in psc_regimes]):
             raise SplitDataException(
-                f"Cannot split data for PSC transition. "
-                f"Please check cost data. "
-                f"The provided cost data is not sufficient to perform "
-                f"splitting into two PSC contracts."
+                "Cannot split data for PSC transition. "
+                "Please check cost data. "
+                "The provided cost data is not sufficient to perform "
+                "splitting into two PSC contracts."
             )
 
         # Split the original target data into two corresponding PSC contracts
@@ -1254,10 +1254,10 @@ def get_cost_data_split(
         # two corresponding psc regimes
         if any([len(id_transition[psc]) == 0 for psc in psc_regimes]):
             raise SplitDataException(
-                f"Cannot split data for PSC transition. "
-                f"Please check cost data. "
-                f"The provided cost data is not sufficient to perform "
-                f"splitting into two PSC contracts."
+                "Cannot split data for PSC transition. "
+                "Please check cost data. "
+                "The provided cost data is not sufficient to perform "
+                "splitting into two PSC contracts."
             )
 
         # Split the original target data into two corresponding PSC contracts

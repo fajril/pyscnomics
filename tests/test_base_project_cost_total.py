@@ -6,8 +6,8 @@ involving total cost categories
 from datetime import date
 import numpy as np
 
-from pyscnomics.econ.selection import OtherRevenue, FluidType, CostType
-from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales
+from pyscnomics.econ.selection import FluidType
+from pyscnomics.econ.costs import CapitalCost, Intangible, LBT
 from pyscnomics.contracts.project import BaseProject
 
 

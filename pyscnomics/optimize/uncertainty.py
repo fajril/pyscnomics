@@ -20,7 +20,7 @@ from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.gross_split import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.econ import FluidType
-from pyscnomics.econ.selection import UncertaintyDistribution, SunkCostMethod
+from pyscnomics.econ.selection import UncertaintyDistribution
 from pyscnomics.io.getattr import get_contract_attributes
 from pyscnomics.api.converter import (
     convert_str_to_date,
@@ -45,9 +45,7 @@ from pyscnomics.api.converter import (
     convert_str_to_inflationappliedto,
     convert_grosssplitregime_to_enum,
     convert_to_float,
-    converter_sunk_cost_method,
     converter_reservoir_type_permen_2024,
-    converter_initial_amortization_year,
     # read_fluid_type,
     # convert_to_method_limit,
     # convert_to_uncertainty_distribution,
@@ -879,12 +877,12 @@ def get_multipliers_montecarlo(
 
     # Validate input: cannot have zero mean value
     if mean_value == 0:
-        raise ValueError(f"Cannot have zero mean value")
+        raise ValueError("Cannot have zero mean value")
 
     # Validate input: filter incorrect assignment of `max_value` and/or `min_value`
     if max_value <= min_value:
         raise ValueError(
-            f"Paramater max_value must be greater than min_value"
+            "Paramater max_value must be greater than min_value"
         )
 
     # Normalize distribution name
@@ -926,7 +924,7 @@ def get_multipliers_montecarlo(
     elif distribution == "normal":
         # Validate input: cannot have zero standard deviation
         if std_dev == 0:
-            raise ValueError(f"Cannot have zero standard deviation")
+            raise ValueError("Cannot have zero standard deviation")
 
         # Normalize parameters
         (
@@ -955,7 +953,7 @@ def get_multipliers_montecarlo(
     elif distribution == "lognormal":
         # Validate input: cannot have zero standard deviation
         if std_dev == 0:
-            raise ValueError(f"Cannot have zero standard deviation")
+            raise ValueError("Cannot have zero standard deviation")
 
         # Validate input
         if min_value <= 0 or mean_value <= 0 or max_value <= 0:
@@ -996,9 +994,9 @@ def get_multipliers_montecarlo(
 
     else:
         raise MonteCarloException(
-            f"The type of distribution is unrecognized. "
-            f"Please select type of distribution between: "
-            f"Uniform, Triangular, Normal, and LogNormal."
+            "The type of distribution is unrecognized. "
+            "Please select type of distribution between: "
+            "Uniform, Triangular, Normal, and LogNormal."
         )
 
     return multipliers

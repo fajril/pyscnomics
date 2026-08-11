@@ -10,7 +10,6 @@ from pathlib import Path
 from datetime import datetime
 
 import numpy as np
-import pandas as pd
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery

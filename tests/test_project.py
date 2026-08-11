@@ -1,13 +1,12 @@
 """
 A collection of unit testings for module project.py
 """
-from typing import final
 
 import pytest
 import numpy as np
 from datetime import date
 
-from pyscnomics.econ.selection import FluidType, TaxType
+from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
 from pyscnomics.contracts.project import BaseProject, BaseProjectException
