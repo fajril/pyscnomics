@@ -189,14 +189,143 @@ class TestGrossSplitSchema:
         from pyscnomics.api.converter import GrossSplitBM
 
         dumped = GrossSplitBM(
-            field_loc_2024="ultradeep_offshore",
-            infra_avail_2024="not_available",
-            field_reserves_2024="high",
+            field_loc_2024="shallow_offshore",
+            infra_avail_2024="available",
+            field_reserves_2024="low",
         ).model_dump()
 
-        assert dumped["field_loc_2024"] == "ultradeep_offshore"
-        assert dumped["infra_avail_2024"] == "not_available"
-        assert dumped["field_reserves_2024"] == "high"
+        assert dumped["field_loc_2024"] == "shallow_offshore"
+        assert dumped["infra_avail_2024"] == "available"
+        assert dumped["field_reserves_2024"] == "low"
+
+
+# ── Cost type schema ─────────────────────────────────────────────
+
+class TestCostTypeSchema:
+    def test_data_dump_preserves_cost_type(self):
+        """HTTP cost classification must survive Pydantic model_dump."""
+        from typing import Any
+
+        from pyscnomics.api.converter import Data
+
+        payload: dict[str, Any] = {
+            "setup": {
+                "start_date": "01/01/2023",
+                "end_date": "31/12/2027",
+            },
+            "summary_arguments": {},
+            "contract_arguments": {},
+            "capital": {
+                "well": {
+                    "start_year": 2023,
+                    "end_year": 2027,
+                    "expense_year": [2023],
+                    "cost": [100.0],
+                    "cost_allocation": ["Oil"],
+                    "cost_type": ["sunk_cost"],
+                }
+            },
+        }
+
+        dumped = Data(**payload).model_dump()
+
+        assert dumped["capital"]["well"]["cost_type"] == ["sunk_cost"]
+
+    def test_grosssplit_table_preserves_cost_type(self, monkeypatch):
+        """The real route hands the adapter the original cost_type array."""
+        import pyscnomics.api.router as router
+
+        calls = {}
+
+        def fake_get_contract_table(data=None, contract_type=None):
+            calls["data"] = data
+            calls["contract_type"] = contract_type
+            return {"consolidated": {}}, object()
+
+        monkeypatch.setattr(router, "get_contract_table", fake_get_contract_table)
+
+        payload = {
+            "setup": {
+                "start_date": "01/01/2023",
+                "end_date": "31/12/2027",
+            },
+            "summary_arguments": {},
+            "contract_arguments": {},
+            "capital": {
+                "well": {
+                    "start_year": 2023,
+                    "end_year": 2027,
+                    "expense_year": [2023],
+                    "cost": [100.0],
+                    "cost_allocation": ["Oil"],
+                    "cost_type": ["sunk_cost"],
+                }
+            },
+        }
+
+        resp = client.post("/api/grosssplit/table", json=payload)
+
+        assert resp.status_code == 200
+        assert calls["contract_type"] == "Gross Split"
+        assert calls["data"]["capital"]["well"]["cost_type"] == ["sunk_cost"]
+
+
+# ── Setup schema ─────────────────────────────────────────────────
+
+class TestSetupSchema:
+    def test_data_dump_preserves_setup_fields(self):
+        """Core setup flags must survive Pydantic model_dump."""
+        from typing import Any
+
+        from pyscnomics.api.converter import Data
+
+        payload: dict[str, Any] = {
+            "setup": {
+                "start_date": "01/01/2025",
+                "end_date": "31/12/2030",
+                "approval_year": 2026,
+                "is_pod_1": False,
+                "is_strict": True,
+            },
+            "summary_arguments": {},
+            "contract_arguments": {},
+        }
+
+        dumped = Data(**payload).model_dump()["setup"]
+
+        assert dumped["approval_year"] == 2026
+        assert dumped["is_pod_1"] is False
+        assert dumped["is_strict"] is True
+
+
+# ── Summary arguments schema ─────────────────────────────────────
+
+class TestSummaryArgumentsSchema:
+    def test_data_dump_preserves_discount_rate_start_year(self):
+        """The frontend's discount reference year must survive model_dump."""
+        from typing import Any
+
+        from pyscnomics.api.converter import Data
+
+        payload: dict[str, Any] = {
+            "setup": {
+                "start_date": "01/01/2025",
+                "end_date": "31/12/2030",
+            },
+            "summary_arguments": {
+                "discount_rate_start_year": 2024,
+                "inflation_rate": 0.03,
+                "discount_rate": 0.12,
+                "npv_mode": "SKK Full Cycle Nominal Terms",
+                "discounting_mode": "Mid Year",
+                "profitability_discounted": False,
+            },
+            "contract_arguments": {},
+        }
+
+        dumped = Data(**payload).model_dump()["summary_arguments"]
+
+        assert dumped["discount_rate_start_year"] == 2024
 
 
 # ── Optimization schema ───────────────────────────────────────────
@@ -317,7 +446,7 @@ class TestWarningsEndpoints:
         ]
 
     def test_extract_warnings_returns_list_verbatim(self):
-        """List-backed warning messages are returned unchanged."""
+        """List-backed dict warning messages are returned unchanged."""
         from pyscnomics.api.router import _extract_warnings
 
         messages = [{"No.": 1, "Category": "BASE_PROJECT", "Message": "warn"}]
@@ -325,7 +454,22 @@ class TestWarningsEndpoints:
         class FakeContract:
             warning_messages = messages
 
-        assert _extract_warnings((None, FakeContract(), {}, None)) is messages
+        assert _extract_warnings((None, FakeContract(), {}, None)) == messages
+
+    def test_extract_warnings_normalizes_tuple_messages(self):
+        """Engine tuple warnings become Message dicts for the frontend."""
+        from pyscnomics.api.router import _extract_warnings
+
+        class FakeContract:
+            warning_messages = [
+                ("Gross Split", "First warning"),
+                ("Gross Split", "Second warning"),
+            ]
+
+        assert _extract_warnings((None, FakeContract(), {}, None)) == [
+            {"Message": "First warning"},
+            {"Message": "Second warning"},
+        ]
 
     def test_warnings_routes_delegate_to_adapters(self, monkeypatch):
         """Each warnings route calls its adapter with the dumped payload and returns records."""

@@ -47,12 +47,21 @@ class SetupBM(BaseModel):
         The start date of oil production.
     gas_onstream_date: str | int | None
         The start date of gas production.
+    approval_year: int | None
+        The project approval year.
+    is_pod_1: bool | None
+        Whether the project is POD I.
+    is_strict: bool | None
+        Whether strict cost validation is enabled.
     """
 
     start_date: str | int = "01/01/2010"
     end_date: str | int = "31/12/2045"
     oil_onstream_date: str | int | None = None
     gas_onstream_date: str | int | None = None
+    approval_year: int | None = None
+    is_pod_1: bool | None = None
+    is_strict: bool | None = None
 
 
 class SummaryArgumentsBM(BaseModel):
@@ -77,6 +86,7 @@ class SummaryArgumentsBM(BaseModel):
     """
 
     reference_year: int = 2022
+    discount_rate_start_year: int | None = None
     inflation_rate: float | int | list = 0.1
     discount_rate: float | int = 0.1
     npv_mode: str = "SKK Full Cycle Nominal Terms"
@@ -380,6 +390,7 @@ class GeneralCostBM(BaseModel):
     expense_year: List[int]
     cost: Optional[Union[List[float], List[int]]]
     cost_allocation: Optional[List[str]] = Field(default=None)
+    cost_type: Optional[list[str | None]] = Field(default=None)
     description: Optional[List[str]] = Field(default=None)
     tax_portion: Optional[Union[List[float], List[int]]] = Field(default=None)
     tax_discount: Optional[Union[List[float], List[int]]] = Field(default=None)

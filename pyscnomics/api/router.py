@@ -639,7 +639,10 @@ def _extract_warnings(adapter_result: tuple[object, ...]) -> list[dict[str, obje
     if warning_messages is None:
         return []
     if isinstance(warning_messages, list):
-        return cast(list[dict[str, object]], warning_messages)
+        return [
+            item if isinstance(item, dict) else {"Message": item[1]}
+            for item in warning_messages
+        ]
     return cast(Any, warning_messages).to_dict(orient="records")
 
 
