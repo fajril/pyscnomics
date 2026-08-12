@@ -3388,8 +3388,23 @@ class GrossSplit(BaseProject):
         )
 
         # Taxable Income
-        self._oil_taxable_income = self._oil_net_operating_profit - self._oil_ddmo
-        self._gas_taxable_income = self._gas_net_operating_profit - self._gas_ddmo
+        # Tax is applied on the combined pre-transfer contractor share minus
+        # deductible, matching the workbook model (ET = DU - EQ, EZ = EY * tax
+        # rate). Oil/gas transfers are internal reallocations; taxing the
+        # after-transfer net operating profit defers tax on the donor surplus
+        # and shifts tax between years without changing total tax. Keeping the
+        # per-fluid pre-transfer taxable income preserves reporting fields
+        # while its sum equals the combined taxable income.
+        self._oil_taxable_income = (
+            self._oil_ctr_share_before_transfer
+            - self._oil_deductible_cost
+            - self._oil_ddmo
+        )
+        self._gas_taxable_income = (
+            self._gas_ctr_share_before_transfer
+            - self._gas_deductible_cost
+            - self._gas_ddmo
+        )
 
         # Tax Payment
         # Generating tax array based on the tax regime if tax_rate argument is None
@@ -3814,13 +3829,19 @@ class GrossSplit(BaseProject):
         )
 
         # Prepare deductible cost summary
-        deductible_cost_sum = self._consolidated_deductible_cost.sum(dtype=float)
+        # Cross-fluid transfers cover otherwise undeducted costs, so the
+        # recovered amount is the pre-transfer deductible plus transfers.
+        deductible_cost_sum = (
+            self._consolidated_deductible_cost.sum(dtype=float)
+            + self._transfer_to_oil.sum(dtype=float)
+            + self._transfer_to_gas.sum(dtype=float)
+        )
         deductible_cost_over_gross_rev = self._calc_division(
             numerator=deductible_cost_sum, denominator=total_gross_revenue_sum
         )
 
         # Prepare carry forward deductible cost summary
-        carry_forward_deductible_cost = self._consolidated_carward_deduct_cost[-1]
+        carry_forward_deductible_cost = self._consolidated_carward_cost_aftertf[-1]
         carry_forcost_over_gross_share = self._calc_division(
             numerator=carry_forward_deductible_cost, denominator=total_gross_revenue_sum
         )
