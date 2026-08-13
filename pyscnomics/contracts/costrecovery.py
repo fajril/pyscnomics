@@ -2748,8 +2748,13 @@ class CostRecovery(BaseProject):
             numerator=gov_take_sum, denominator=total_gross_revenue_sum
         )
 
-        # Calculate IRR
-        ctr_irr = irr(cashflow=self._consolidated_cashflow)
+        # Point-forward mode uses the cash flow from the reference year
+        # onward; full-cycle modes use the full project cash flow.
+        if npv_mode == NPVSelection.NPV_POINT_FORWARD:
+            mask = self.project_years >= discount_rate_start_year
+            ctr_irr = irr(cashflow=self._consolidated_cashflow[mask])
+        else:
+            ctr_irr = irr(cashflow=self._consolidated_cashflow)
 
         # Calculate NPV
         # NPV method: SKK real terms

@@ -846,7 +846,7 @@ class GrossSplit(BaseProject):
         # Prepare data prior to calculating amortization
         self._prepare_amortization()
 
-        # Mapping: fluid → (cost type, capital cost object, lifting object)
+        # Mapping: fluid → (cost type, amortizable pool object, lifting object)
         amort_mapping = {
             "oil": (
                 ("sunk_cost", self._oil_capital_sunk_cost, self._oil_lifting),
@@ -858,17 +858,42 @@ class GrossSplit(BaseProject):
             ),
         }
 
+        # POD I amortizes the full pre-onstream pool, not just capital.
+        # The workbook Amortization_GS schedule applies 2x UOP from the
+        # onstream year to capital sunk cost plus capital/intangible/OPEX/
+        # ASR/LBT/cost-of-sales pre-onstream costs. Non-capital pre-onstream
+        # costs are wrapped as capital with PIS at onstream so they reuse the
+        # same 2x UOP schedule and amortize with the capital pool.
+        non_capital_mapping = {
+            "oil": (
+                self._oil_intangible_preonstream,
+                self._oil_opex_preonstream,
+                self._oil_asr_preonstream,
+                self._oil_lbt_preonstream,
+                self._oil_cost_of_sales_preonstream,
+            ),
+            "gas": (
+                self._gas_intangible_preonstream,
+                self._gas_opex_preonstream,
+                self._gas_asr_preonstream,
+                self._gas_lbt_preonstream,
+                self._gas_cost_of_sales_preonstream,
+            ),
+        }
+        onstream_year = min(
+            self.oil_onstream_date.year,
+            self.gas_onstream_date.year,
+        )
+
         # Define intermediate attribute --> "amortizations": dict
         # Only these cost types generate amortization charges
         cost_types_amort = ["sunk_cost", "preonstream"]
-        amortizations = {f: {c: None for c in cost_types_amort} for f in amort_mapping.keys()}
-
-        # Common arguments passed to amortization calculator
-        kwargs_amort = {
-            "year_inflation": year_inflation,
-            "inflation_rate": inflation_rate,
-            "tax_rate": tax_rate,
-            "inflation_rate_applied_to": inflation_rate_applied_to,
+        amortizations: dict[str, dict[str, np.ndarray]] = {
+            f: {
+                c: np.zeros_like(self.project_years, dtype=float)
+                for c in cost_types_amort
+            }
+            for f in amort_mapping.keys()
         }
 
         # Compute amortization per fluid per cost type
@@ -876,7 +901,33 @@ class GrossSplit(BaseProject):
             for c, obj_c, obj_l in mapping:
                 amortizations[f][c] = obj_c.total_amortization_rate(
                     prod=obj_l.get_lifting_rate_ghv_arr(),
-                    **kwargs_amort,
+                    year_inflation=year_inflation,
+                    inflation_rate=inflation_rate,
+                    tax_rate=tax_rate,
+                    inflation_rate_applied_to=inflation_rate_applied_to,
+                )
+            for obj_nc in non_capital_mapping[f]:
+                if obj_nc is None or not np.any(np.asarray(obj_nc.cost)):
+                    continue
+                wrapped = CapitalCost(
+                    start_year=obj_nc.start_year,
+                    end_year=obj_nc.end_year,
+                    expense_year=obj_nc.expense_year,
+                    cost=obj_nc.cost,
+                    cost_allocation=obj_nc.cost_allocation,
+                    cost_type=obj_nc.cost_type,
+                    description=obj_nc.description,
+                    tax_portion=obj_nc.tax_portion,
+                    tax_discount=obj_nc.tax_discount,
+                    salvage_value=np.zeros_like(obj_nc.cost),
+                    pis_year=np.full_like(obj_nc.expense_year, onstream_year),
+                )
+                amortizations[f]["preonstream"] += wrapped.total_amortization_rate(
+                    prod=mapping[0][2].get_lifting_rate_ghv_arr(),
+                    year_inflation=year_inflation,
+                    inflation_rate=inflation_rate,
+                    tax_rate=tax_rate,
+                    inflation_rate_applied_to=inflation_rate_applied_to,
                 )
 
         # Assign computed amortizations; post-onstream remains zero
@@ -3109,7 +3160,11 @@ class GrossSplit(BaseProject):
         zeros = np.zeros_like(self.project_years, dtype=float)
         oil_total_depr = np.sum([v for v in self._oil_depreciations.values()], axis=0)
         oil_total_amor = np.sum([v for v in self._oil_amortizations.values()], axis=0)
-        oil_total_non_depr = np.sum([v for v in self._oil_non_depreciables.values()], axis=0)
+        oil_total_non_depr = (
+            self._oil_non_depreciables["postonstream"]
+            if self.is_pod_1
+            else np.sum([v for v in self._oil_non_depreciables.values()], axis=0)
+        )
 
         # Compute oil cost to be deducted
         self._oil_cost_tobe_deducted = (
@@ -3133,7 +3188,11 @@ class GrossSplit(BaseProject):
         # Gas carry forward deductible cost (in PSC Cost Recovery called Unrecovered Cost)
         gas_total_depr = np.sum([v for v in self._gas_depreciations.values()], axis=0)
         gas_total_amor = np.sum([v for v in self._gas_amortizations.values()], axis=0)
-        gas_total_non_depr = np.sum([v for v in self._gas_non_depreciables.values()], axis=0)
+        gas_total_non_depr = (
+            self._gas_non_depreciables["postonstream"]
+            if self.is_pod_1
+            else np.sum([v for v in self._gas_non_depreciables.values()], axis=0)
+        )
 
         self._gas_cost_tobe_deducted = (
             gas_total_depr
@@ -3429,17 +3488,26 @@ class GrossSplit(BaseProject):
         self._oil_ctr_net_share = self._oil_taxable_income - self._oil_tax
         self._gas_ctr_net_share = self._gas_taxable_income - self._gas_tax
 
-        # Contractor Cash Flow
+        # Contractor Cash Flow. The workbook identity is
+        # FB = SUM(AP, AS) - SUM(DM, EX, EZ), where DM is the direct
+        # pre-production cost (sunk + preonstream) and EX/EZ are DMO and tax.
+        # Replacing _total_expenses with sunk + preonstream +
+        # post-tax expenditures avoids double-counting the amortized
+        # pre-onstream pool.
         self._oil_ctr_cashflow = (
             self._oil_ctr_share_before_transfer
-            - self._oil_total_expenses
+            - self._oil_sunk_cost
+            - self._oil_preonstream
+            - self._oil_total_expenditures_post_tax
             - self._oil_ddmo
             - self._oil_tax
         )
 
         self._gas_ctr_cashflow = (
             self._gas_ctr_share_before_transfer
-            - self._gas_total_expenses
+            - self._gas_sunk_cost
+            - self._gas_preonstream
+            - self._gas_total_expenditures_post_tax
             - self._gas_ddmo
             - self._gas_tax
         )
@@ -3657,8 +3725,13 @@ class GrossSplit(BaseProject):
             numerator=gov_take_sum, denominator=total_gross_revenue_sum
         )
 
-        # Calculate IRR
-        ctr_irr = irr(cashflow=self._consolidated_cashflow)
+        # Point-forward mode uses the cash flow from the reference year
+        # onward; full-cycle modes use the full project cash flow.
+        if npv_mode == NPVSelection.NPV_POINT_FORWARD:
+            mask = self.project_years >= discount_rate_start_year
+            ctr_irr = irr(cashflow=self._consolidated_cashflow[mask])
+        else:
+            ctr_irr = irr(cashflow=self._consolidated_cashflow)
 
         # Calculate NPV
         # NPV method: SKK real terms
@@ -3862,10 +3935,9 @@ class GrossSplit(BaseProject):
         )
 
         # Prepare contractor net cashflow summary
-        # For NPV POINT FORWARD
+        # For NPV POINT FORWARD, only cashflow from the discount reference
+        # year onward is included; other modes use the full-cycle sum.
         if npv_mode == NPVSelection.NPV_POINT_FORWARD:
-            # Modify contractor net cashflow since the cashflow before discount rate
-            # start year is neglected
             ref_year_arr = np.full_like(
                 self._consolidated_cashflow, fill_value=discount_rate_start_year
             )
@@ -3876,18 +3948,16 @@ class GrossSplit(BaseProject):
             )
             gross_revenue_point_forward = np.where(
                 self.project_years >= ref_year_arr,
-                self._consolidated_cashflow,
+                self._consolidated_revenue,
                 0,
             )
 
-            # Contractor net cashflow
             ctr_net_cashflow_sum = cashflow_point_forward.sum(dtype=float)
             ctr_net_cashflow_over_gross_rev = self._calc_division(
                 numerator=ctr_net_cashflow_sum,
                 denominator=gross_revenue_point_forward.sum(dtype=float),
             )
 
-        # For other NPV calculation methods
         else:
             ctr_net_cashflow_sum = self._consolidated_cashflow.sum(dtype=float)
             ctr_net_cashflow_over_gross_rev = self._calc_division(

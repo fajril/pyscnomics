@@ -188,3 +188,21 @@ def test_tax_uses_combined_pre_transfer_income():
         atol=1e-6,
     )
     assert summary["gov_tax_income"] > 0
+
+
+def test_point_forward_cashflow_and_irr_match_reference_year():
+    """Point-forward summary uses cash flow from the reference year onward."""
+
+    payload = _payload()
+    payload["summary_arguments"]["discount_rate_start_year"] = 2026
+    payload["summary_arguments"]["npv_mode"] = "Point Forward"
+
+    summary, contract, _, _ = get_grosssplit(data=copy.deepcopy(payload))
+
+    mask = contract.project_years >= 2026
+    point_forward_cf = contract._consolidated_cashflow[mask].sum(dtype=float)
+
+    assert summary["ctr_net_cashflow"] == point_forward_cf
+    assert summary["ctr_net_cashflow"] != contract._consolidated_cashflow.sum(
+        dtype=float
+    )
