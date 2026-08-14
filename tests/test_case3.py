@@ -4,6 +4,7 @@ A unit testing for depreciation module.
 
 import numpy as np
 from pyscnomics.dataset.sample import load_data, load_testing
+from pyscnomics.econ.selection import GrossSplitRegime
 
 # Defining the contract object
 psc = load_data(dataset_type='case3', contract_type='gross_split')
@@ -21,6 +22,7 @@ contract_arguments = {
     "vat_rate": vat_rate,
     "inflation_rate": inflation_rate,
     "inflation_rate_applied_to": inflation_rate_applied_to,
+    "regime": GrossSplitRegime.PERMEN_ESDM_12_2020,
 }
 
 # Running the contract with contract arguments

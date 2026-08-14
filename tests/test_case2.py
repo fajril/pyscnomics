@@ -1,9 +1,16 @@
+from typing import cast
+
 import numpy as np
+
+from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.econ.selection import FTPTaxRegime, DeprMethod
 from pyscnomics.dataset.sample import load_data, load_testing
 
 # Defining the contract object
-psc = load_data(dataset_type='case2', contract_type='cost_recovery')
+psc = cast(
+    CostRecovery,
+    load_data(dataset_type='case2', contract_type='cost_recovery'),
+)
 
 # Defining the contract arguments
 tax_rate = 0.405
@@ -133,21 +140,6 @@ def test_unrec_before_transfer():
     np.testing.assert_allclose(gas_unrec_before_transfer, gas_unrec_before_transfer_base, atol=1e-6)
 
 
-def test_cost_tobe_recovered():
-    """
-    Test module for testing the Cost To Be Recover.
-    """
-
-    oil_cost_to_be_recovered = psc._oil_cost_to_be_recovered
-    gas_cost_to_be_recovered = psc._gas_cost_to_be_recovered
-
-    oil_cost_to_be_recovered_base = load_testing(dataset_type='case2', key='oil_cost_to_be_recovered')
-    gas_cost_to_be_recovered_base = load_testing(dataset_type='case2', key='gas_cost_to_be_recovered')
-
-    np.testing.assert_allclose(oil_cost_to_be_recovered, oil_cost_to_be_recovered_base, atol=1e-6)
-    np.testing.assert_allclose(gas_cost_to_be_recovered, gas_cost_to_be_recovered_base, atol=1e-6)
-
-
 def test_cost_recovery():
     # Calculated result
     oil_cost_recovery = psc._oil_cost_recovery
@@ -160,6 +152,33 @@ def test_cost_recovery():
     # Execute testing
     np.testing.assert_allclose(oil_cost_recovery, oil_cost_recovery_base, atol=1e-6)
     np.testing.assert_allclose(gas_cost_recovery, gas_cost_recovery_base, atol=1e-6)
+
+
+def test_cost_recovery_balance_uses_prior_post_transfer_unrecovered():
+    balances = (
+        (
+            psc._oil_cost_recovery,
+            psc._oil_unrecovered_before_transfer,
+            psc._oil_depr_total,
+            psc._oil_non_depr_total,
+            psc._oil_unrecovered_after_transfer,
+        ),
+        (
+            psc._gas_cost_recovery,
+            psc._gas_unrecovered_before_transfer,
+            psc._gas_depr_total,
+            psc._gas_non_depr_total,
+            psc._gas_unrecovered_after_transfer,
+        ),
+    )
+
+    for cost_recovery, unrecovered_before, depreciation, non_capital, unrecovered_after in balances:
+        prior_unrecovered_after = np.concatenate(([0.0], unrecovered_after[:-1]))
+        np.testing.assert_allclose(
+            cost_recovery + unrecovered_before,
+            depreciation + non_capital + prior_unrecovered_after,
+            atol=1e-6,
+        )
 
 
 def test_ets_before_transfer():
@@ -685,6 +704,4 @@ def test_consolidated_cashflow():
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
-
-
 

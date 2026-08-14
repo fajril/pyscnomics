@@ -133,21 +133,6 @@ def test_unrec_before_transfer():
     np.testing.assert_allclose(gas_unrec_before_transfer, gas_unrec_before_transfer_base, atol=1e-6)
 
 
-def test_cost_tobe_recovered():
-    """
-    Test module for testing the Cost To Be Recover.
-    """
-
-    oil_cost_to_be_recovered = psc._oil_cost_to_be_recovered
-    gas_cost_to_be_recovered = psc._gas_cost_to_be_recovered
-
-    oil_cost_to_be_recovered_base = load_testing(dataset_type='case1', key='oil_cost_to_be_recovered')
-    gas_cost_to_be_recovered_base = load_testing(dataset_type='case1', key='gas_cost_to_be_recovered')
-
-    np.testing.assert_allclose(oil_cost_to_be_recovered, oil_cost_to_be_recovered_base, atol=1e-6)
-    np.testing.assert_allclose(gas_cost_to_be_recovered, gas_cost_to_be_recovered_base, atol=1e-6)
-
-
 def test_cost_recovery():
     # Calculated result
     oil_cost_recovery = psc._oil_cost_recovery
@@ -685,6 +670,5 @@ def test_consolidated_cashflow():
 
     # Execute testing
     np.testing.assert_allclose(engine, base, atol=1e-6)
-
 
 

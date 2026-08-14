@@ -1,7 +1,7 @@
 import numpy as np
 
 from pyscnomics.dataset.sample import load_data
-from pyscnomics.econ.selection import FTPTaxRegime, ContractSample
+from pyscnomics.econ.selection import FTPTaxRegime, ContractSample, GrossSplitRegime
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.gross_split import GrossSplit
 
@@ -86,6 +86,7 @@ def generate_contract_sample(case: ContractSample) -> CostRecovery | GrossSplit:
             "vat_rate": vat_rate,
             "inflation_rate": inflation_rate,
             "inflation_rate_applied_to": inflation_rate_applied_to,
+            "regime": GrossSplitRegime.PERMEN_ESDM_12_2020,
         }
 
         # Running the contract with contract arguments
