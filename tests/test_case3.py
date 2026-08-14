@@ -10,7 +10,6 @@ psc = load_data(dataset_type='case3', contract_type='gross_split')
 
 # Defining the contract arguments
 tax_rate = 0.22
-sunk_cost_reference_year = 2022
 vat_rate = np.array([0.11, 0.11, 0.11, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12])
 inflation_rate = 0.0
 future_rate = 0.0
@@ -19,7 +18,6 @@ inflation_rate_applied_to = None
 # Defining the contract arguments
 contract_arguments = {
     "effective_tax_rate": tax_rate,
-    "sunk_cost_reference_year": sunk_cost_reference_year,
     "vat_rate": vat_rate,
     "inflation_rate": inflation_rate,
     "inflation_rate_applied_to": inflation_rate_applied_to,

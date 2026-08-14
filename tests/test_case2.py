@@ -8,7 +8,6 @@ psc = load_data(dataset_type='case2', contract_type='cost_recovery')
 # Defining the contract arguments
 tax_rate = 0.405
 ftp_tax_regime = FTPTaxRegime.DIRECT_MODE
-sunk_cost_reference_year = 2023
 depr_method = DeprMethod.PSC_DB
 future_rate = 0.0
 post_uu_22_year2001 = True
@@ -16,7 +15,6 @@ post_uu_22_year2001 = True
 contract_arguments = {
     'effective_tax_rate': tax_rate,
     'ftp_tax_regime': ftp_tax_regime,
-    'sunk_cost_reference_year': sunk_cost_reference_year,
     'depr_method': depr_method,
     'post_uu_22_year2001': post_uu_22_year2001,
 }
