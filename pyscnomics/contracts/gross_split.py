@@ -858,12 +858,9 @@ class GrossSplit(BaseProject):
             ),
         }
 
-        # POD I amortizes the full pre-onstream pool, not just capital.
-        # The workbook Amortization_GS schedule applies 2x UOP from the
-        # onstream year to capital sunk cost plus capital/intangible/OPEX/
-        # ASR/LBT/cost-of-sales pre-onstream costs. Non-capital pre-onstream
-        # costs are wrapped as capital with PIS at onstream so they reuse the
-        # same 2x UOP schedule and amortize with the capital pool.
+        # POD I amortizes the full pre-onstream pool using 2x UOP from the
+        # onstream year. Non-capital pre-onstream costs are wrapped as capital
+        # with PIS at onstream so they amortize with the capital pool.
         non_capital_mapping = {
             "oil": (
                 self._oil_intangible_preonstream,
@@ -3448,9 +3445,8 @@ class GrossSplit(BaseProject):
 
         # Taxable Income
         # Tax is applied on the combined pre-transfer contractor share minus
-        # deductible, matching the workbook model (ET = DU - EQ, EZ = EY * tax
-        # rate). Oil/gas transfers are internal reallocations; taxing the
-        # after-transfer net operating profit defers tax on the donor surplus
+        # deductible cost. Oil/gas transfers are internal reallocations.
+        # Taxing after-transfer net operating profit defers tax on donor surplus
         # and shifts tax between years without changing total tax. Keeping the
         # per-fluid pre-transfer taxable income preserves reporting fields
         # while its sum equals the combined taxable income.
@@ -3488,12 +3484,9 @@ class GrossSplit(BaseProject):
         self._oil_ctr_net_share = self._oil_taxable_income - self._oil_tax
         self._gas_ctr_net_share = self._gas_taxable_income - self._gas_tax
 
-        # Contractor Cash Flow. The workbook identity is
-        # FB = SUM(AP, AS) - SUM(DM, EX, EZ), where DM is the direct
-        # pre-production cost (sunk + preonstream) and EX/EZ are DMO and tax.
-        # Replacing _total_expenses with sunk + preonstream +
-        # post-tax expenditures avoids double-counting the amortized
-        # pre-onstream pool.
+        # Contractor cash flow deducts direct pre-production cost, DMO, and
+        # tax. Using sunk, pre-onstream, and post-tax expenditures avoids
+        # double-counting the amortized pre-onstream pool.
         self._oil_ctr_cashflow = (
             self._oil_ctr_share_before_transfer
             - self._oil_sunk_cost
@@ -3693,7 +3686,7 @@ class GrossSplit(BaseProject):
 
         lbt_sum = lbt_cost.sum(dtype=float)
 
-        # Prepare indirect taxes summary
+        # Include LBT in the total indirect tax summary.
         oil_indirect_tax_sum = self._oil_total_indirect_tax.sum(dtype=float)
         gas_indirect_tax_sum = self._gas_total_indirect_tax.sum(dtype=float)
 
@@ -3901,9 +3894,7 @@ class GrossSplit(BaseProject):
             reference_year=discount_rate_start_year,
         )
 
-        # Prepare deductible cost summary
-        # Cross-fluid transfers cover otherwise undeducted costs, so the
-        # recovered amount is the pre-transfer deductible plus transfers.
+        # Transfers cover deductible costs left unrecovered by the source fluid.
         deductible_cost_sum = (
             self._consolidated_deductible_cost.sum(dtype=float)
             + self._transfer_to_oil.sum(dtype=float)
@@ -3986,7 +3977,9 @@ class GrossSplit(BaseProject):
             "undepreciated_asset_oil": oil_undepreciated_asset_sum,
             "undepreciated_asset_gas": gas_undepreciated_asset_sum,
             "undepreciated_asset_total": total_undepreciated_asset_sum,
-            "total_indirect_taxes": oil_indirect_tax_sum + gas_indirect_tax_sum,
+            "total_indirect_taxes": (
+                oil_indirect_tax_sum + gas_indirect_tax_sum + lbt_sum
+            ),
             "oil_indirect_taxes": oil_indirect_tax_sum,
             "gas_indirect_taxes": gas_indirect_tax_sum,
             "total_carry_forward_depreciation": total_carward_depreciation_sum,

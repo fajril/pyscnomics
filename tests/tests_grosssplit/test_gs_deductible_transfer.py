@@ -152,18 +152,19 @@ def test_deductible_summary_includes_transfer_coverage():
 
     summary, contract, _, _ = get_grosssplit(data=copy.deepcopy(_payload()))
 
-    cost_sum = float(
-        np.nansum(contract._oil_cost_tobe_deducted + contract._gas_cost_tobe_deducted)
-    )
     pre_transfer_deductible = float(
         np.nansum(contract._oil_deductible_cost + contract._gas_deductible_cost)
     )
     transfers = float(np.nansum(contract._transfer_to_oil + contract._transfer_to_gas))
+    cost_to_be_deducted = float(
+        np.nansum(contract._oil_cost_tobe_deducted + contract._gas_cost_tobe_deducted)
+    )
     carry_after_transfer = float(contract._consolidated_carward_cost_aftertf[-1])
 
     assert transfers > 0
     assert pre_transfer_deductible == 0
-    assert summary["cost_recovery/deductible_cost"] == cost_sum - carry_after_transfer
+    assert summary["cost_recovery/deductible_cost"] == pre_transfer_deductible + transfers
+    assert summary["cost_recovery/deductible_cost"] == cost_to_be_deducted - carry_after_transfer
     assert summary["unrec_cost"] == carry_after_transfer
 
 
@@ -212,3 +213,37 @@ def test_point_forward_net_cashflow_remains_full_lifecycle():
         reference_year=reference_year,
         discounting_mode=DiscountingMode.END_YEAR,
     )
+
+
+def test_total_indirect_taxes_includes_lbt():
+    """Total indirect taxes include VAT and LBT."""
+
+    payload = _payload()
+    payload["lbt"] = {
+        "gas_lbt": {
+            "start_year": 2025,
+            "end_year": 2026,
+            "expense_year": [2025],
+            "cost_allocation": ["Gas"],
+            "cost": [100.0],
+            "cost_type": ["postonstream_cost"],
+            "final_year": [2025],
+            "utilized_land_area": [0.0],
+            "utilized_building_area": [0.0],
+            "njop_land": [0.0],
+            "njop_building": [0.0],
+            "gross_revenue": [0.0],
+            "tax_portion": [0.0],
+            "tax_discount": [0.0],
+            "description": ["gas lbt"],
+        }
+    }
+
+    summary, contract, _, _ = get_grosssplit(data=copy.deepcopy(payload))
+
+    expected_vat = (
+        contract._oil_total_indirect_tax.sum(dtype=float)
+        + contract._gas_total_indirect_tax.sum(dtype=float)
+    )
+    assert summary["total_indirect_taxes"] == expected_vat + summary["lbt"]
+    assert summary["total_indirect_taxes"] > 0
