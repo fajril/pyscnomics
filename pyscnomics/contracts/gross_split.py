@@ -3934,35 +3934,12 @@ class GrossSplit(BaseProject):
             numerator=ctr_net_share_sum, denominator=total_gross_revenue_sum
         )
 
-        # Prepare contractor net cashflow summary
-        # For NPV POINT FORWARD, only cashflow from the discount reference
-        # year onward is included; other modes use the full-cycle sum.
-        if npv_mode == NPVSelection.NPV_POINT_FORWARD:
-            ref_year_arr = np.full_like(
-                self._consolidated_cashflow, fill_value=discount_rate_start_year
-            )
-            cashflow_point_forward = np.where(
-                self.project_years >= ref_year_arr,
-                self._consolidated_cashflow,
-                0,
-            )
-            gross_revenue_point_forward = np.where(
-                self.project_years >= ref_year_arr,
-                self._consolidated_revenue,
-                0,
-            )
-
-            ctr_net_cashflow_sum = cashflow_point_forward.sum(dtype=float)
-            ctr_net_cashflow_over_gross_rev = self._calc_division(
-                numerator=ctr_net_cashflow_sum,
-                denominator=gross_revenue_point_forward.sum(dtype=float),
-            )
-
-        else:
-            ctr_net_cashflow_sum = self._consolidated_cashflow.sum(dtype=float)
-            ctr_net_cashflow_over_gross_rev = self._calc_division(
-                numerator=ctr_net_cashflow_sum, denominator=total_gross_revenue_sum
-            )
+        # Net cash flow is a full-lifecycle project metric. Point-forward
+        # selection applies to valuation metrics, not this reported total.
+        ctr_net_cashflow_sum = self._consolidated_cashflow.sum(dtype=float)
+        ctr_net_cashflow_over_gross_rev = self._calc_division(
+            numerator=ctr_net_cashflow_sum, denominator=total_gross_revenue_sum
+        )
 
         return {
             "lifting_oil": oil_lifting_ghv_sum,

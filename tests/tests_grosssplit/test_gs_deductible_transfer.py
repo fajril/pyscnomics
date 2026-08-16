@@ -5,6 +5,8 @@ import copy
 import numpy as np
 
 from pyscnomics.api.adapter import get_grosssplit
+from pyscnomics.econ.indicator import irr, npv_point_forward
+from pyscnomics.econ.selection import DiscountingMode
 
 
 def _payload() -> dict:
@@ -190,19 +192,23 @@ def test_tax_uses_combined_pre_transfer_income():
     assert summary["gov_tax_income"] > 0
 
 
-def test_point_forward_cashflow_and_irr_match_reference_year():
-    """Point-forward summary uses cash flow from the reference year onward."""
+def test_point_forward_net_cashflow_remains_full_lifecycle():
+    """Point-forward NPV must not change the reported project cash flow."""
 
     payload = _payload()
-    payload["summary_arguments"]["discount_rate_start_year"] = 2026
+    reference_year = 2026
+    payload["summary_arguments"]["discount_rate_start_year"] = reference_year
     payload["summary_arguments"]["npv_mode"] = "Point Forward"
 
     summary, contract, _, _ = get_grosssplit(data=copy.deepcopy(payload))
 
-    mask = contract.project_years >= 2026
-    point_forward_cf = contract._consolidated_cashflow[mask].sum(dtype=float)
-
-    assert summary["ctr_net_cashflow"] == point_forward_cf
-    assert summary["ctr_net_cashflow"] != contract._consolidated_cashflow.sum(
-        dtype=float
+    point_forward = contract.project_years >= reference_year
+    assert summary["ctr_net_cashflow"] == contract._consolidated_cashflow.sum(dtype=float)
+    assert summary["ctr_irr"] == irr(contract._consolidated_cashflow[point_forward])
+    assert summary["ctr_npv"] == npv_point_forward(
+        cashflow=contract._consolidated_cashflow,
+        cashflow_years=contract.project_years,
+        discount_rate=0.1,
+        reference_year=reference_year,
+        discounting_mode=DiscountingMode.END_YEAR,
     )

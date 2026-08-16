@@ -2957,39 +2957,12 @@ class CostRecovery(BaseProject):
             numerator=ctr_net_share_sum, denominator=total_gross_revenue_sum
         )
 
-        # Prepare contractor net cashflow summary
-        # For NPV POINT FORWARD
-        if npv_mode == NPVSelection.NPV_POINT_FORWARD:
-            # Modify contractor net cashflow since the cashflow before discount rate
-            # start year is neglected
-            ref_year_arr = np.full(
-                self._consolidated_cashflow.shape, fill_value=discount_rate_start_year
-            )
-            cashflow_point_forward = np.where(
-                self.project_years >= ref_year_arr,
-                self._consolidated_cashflow,
-                0,
-            )
-            gross_revenue_point_forward = np.where(
-                self.project_years >= ref_year_arr,
-                self._consolidated_cashflow,
-                0,
-            )
-
-            # Contractor net cashflow
-            ctr_net_cashflow_sum = cashflow_point_forward.sum(dtype=float)
-            ctr_net_cashflow_over_gross_rev = self._calc_division(
-                numerator=ctr_net_cashflow_sum,
-                denominator=gross_revenue_point_forward.sum(dtype=float),
-            )
-
-        # For other NPV calculation methods
-        else:
-            # Contractor net cashflow
-            ctr_net_cashflow_sum = self._consolidated_cashflow.sum(dtype=float)
-            ctr_net_cashflow_over_gross_rev = self._calc_division(
-                numerator=ctr_net_cashflow_sum, denominator=total_gross_revenue_sum
-            )
+        # Net cash flow is a full-lifecycle project metric. Point-forward
+        # selection applies to valuation metrics, not this reported total.
+        ctr_net_cashflow_sum = self._consolidated_cashflow.sum(dtype=float)
+        ctr_net_cashflow_over_gross_rev = self._calc_division(
+            numerator=ctr_net_cashflow_sum, denominator=total_gross_revenue_sum
+        )
 
         return {
             "lifting_oil": oil_lifting_ghv_sum,
