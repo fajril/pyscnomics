@@ -623,11 +623,11 @@ class CapitalCost(GeneralCost):
                 f"is_ic_applied: {len(self.is_ic_applied)} "
             )
 
-        # Raise an exception: salvage_value is larger than the associated cost
-        if np.sum(self.salvage_value > self.cost) > 0:
+        # Raise an exception: salvage_value magnitude exceeds associated cost magnitude
+        if np.sum(np.abs(self.salvage_value) > np.abs(self.cost)) > 0:  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
             raise CapitalException(
-                f"Attribute salvage_value ({self.salvage_value}) is larger "
-                f"than the associated cost ({self.cost})."
+                f"Salvage value magnitude ({np.abs(self.salvage_value)}) exceeds "
+                f"associated cost magnitude ({np.abs(self.cost)})."
             )
 
         # Raise an error: expense year is after the end year of the project
@@ -1187,7 +1187,7 @@ class CapitalCost(GeneralCost):
             expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_combined = np.concatenate((self.cost, -other.cost))
             pis_year_combined = np.concatenate((self.pis_year, other.pis_year))
-            salvage_value_combined = np.concatenate((self.salvage_value, other.salvage_value))
+            salvage_value_combined = np.concatenate((self.salvage_value, -other.salvage_value))  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType, reportUnknownMemberType]
             useful_life_combined = np.concatenate((self.useful_life, other.useful_life))
             depreciation_factor_combined = np.concatenate(
                 (self.depreciation_factor, other.depreciation_factor)
@@ -1241,7 +1241,7 @@ class CapitalCost(GeneralCost):
                 tax_portion=self.tax_portion,
                 tax_discount=self.tax_discount,
                 pis_year=self.pis_year,
-                salvage_value=self.salvage_value,
+                salvage_value=self.salvage_value * other,  # pyright: ignore[reportUnknownMemberType]
                 useful_life=self.useful_life,
                 depreciation_factor=self.depreciation_factor,
                 is_ic_applied=self.is_ic_applied,
@@ -1281,7 +1281,7 @@ class CapitalCost(GeneralCost):
                     tax_portion=self.tax_portion,
                     tax_discount=self.tax_discount,
                     pis_year=self.pis_year,
-                    salvage_value=self.salvage_value,
+                    salvage_value=self.salvage_value / other,  # pyright: ignore[reportUnknownMemberType]
                     useful_life=self.useful_life,
                     depreciation_factor=self.depreciation_factor,
                     is_ic_applied=self.is_ic_applied,

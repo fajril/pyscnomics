@@ -6,7 +6,7 @@ in module grosssplit.py
 import numpy as np
 from datetime import date
 
-from pyscnomics.econ.selection import FluidType, CostType
+from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ.costs import CapitalCost, CostOfSales
 from pyscnomics.contracts.gross_split import GrossSplit
 
@@ -16,9 +16,7 @@ kwargs = {
     "end_date": date(year=2034, month=12, day=31),
     "oil_onstream_date": date(year=2030, month=1, day=1),
     "gas_onstream_date": date(year=2029, month=1, day=1),
-    "approval_year": None,
-    "base_split_ctr_oil": 0.43,
-    "base_split_ctr_gas": 0.48,
+    "approval_year": 2023,
     "split_ministry_disc": 0.08,
     "oil_dmo_volume_portion": 0.25,
     "oil_dmo_fee_portion": 1.0,
@@ -211,7 +209,7 @@ def test_classify_capital_cost_2():
         "oil_length": 1,
         "oil_expense_year": np.array([2023]),
         "oil_cost": np.array([0]),
-        "oil_cost_type": [CostType.PRE_ONSTREAM_COST],
+        "oil_cost_type": [None],
         "gas_length": 24,
         "gas_expense_year": np.array(
             [
@@ -225,18 +223,7 @@ def test_classify_capital_cost_2():
                 20, 20, 20, 20, 15, 10, 10, 7.5, 5, 5, 5, 5,
             ]
         ),
-        "gas_cost_type": (
-            [
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-            ]
-        ),
+        "gas_cost_type": [None] * 24,
     }
 
     # Execute testings
@@ -420,7 +407,7 @@ def test_classify_cost_of_sales_2():
         "oil_length": 1,
         "oil_expense_year": np.array([2023]),
         "oil_cost": np.array([0]),
-        "oil_cost_type": [CostType.PRE_ONSTREAM_COST],
+        "oil_cost_type": [None],
     }
 
     # Execute testings
