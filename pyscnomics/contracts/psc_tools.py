@@ -583,7 +583,7 @@ def get_dmo(
                        dmo_volume * price)
 
     # Weighted dmo fee condition if the period of dmo is ended in the middle of the year
-    if unrecovered_cost[dmo_indices] > 0 and is_dmo_end_weighted and dmo_holiday[dmo_indices] == False:
+    if unrecovered_cost[dmo_indices] > 0 and is_dmo_end_weighted and not dmo_holiday[dmo_indices]:
         dmo_fee[dmo_indices] = (
                     dmo_end_date.month / 12 * price[dmo_indices] * dmo_volume[dmo_indices] +
                     (1 - dmo_end_date.month / 12) * dmo_volume[dmo_indices] *

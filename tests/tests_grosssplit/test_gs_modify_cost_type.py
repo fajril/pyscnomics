@@ -139,11 +139,10 @@ def test_modify_cost_type_capital():
     lifting_total = tuple([lifting_mangga, lifting_apel])
     capital_total = tuple([capital_mangga, capital_apel])
 
-    gs = GrossSplit(**kwargs, lifting=lifting_total, capital_cost=capital_total)
+    _gs = GrossSplit(**kwargs, lifting=lifting_total, capital_cost=capital_total)
 
 
 
 
 def test_modify_cost_type_lbt():
     pass
-
