@@ -60,6 +60,16 @@ def get_summary(
             f"is after the project years: {contract.end_date.year}"
         )
 
+    if isinstance(contract, BaseProject):
+        return contract.get_summary(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            discount_rate=discount_rate,
+            npv_mode=npv_mode,
+            discounting_mode=discounting_mode,
+            discount_rate_start_year=reference_year,  # pyright: ignore[reportUnknownArgumentType]
+            inflation_rate=inflation_rate,
+            profitability_discounted=profitability_discounted,
+        )
+
     # Defining the same summary parameters for any contract
     # Lifting
     lifting_oil = np.sum(contract._oil_lifting.get_lifting_rate_ghv_arr(), dtype=float)
