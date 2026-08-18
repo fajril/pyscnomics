@@ -1321,6 +1321,8 @@ def get_fluidtype_converter(target: str) -> FluidType:
     attrs = {
         "Oil": FluidType.OIL,
         "Gas": FluidType.GAS,
+        "LPG propane": FluidType.GAS,
+        "LPG butane": FluidType.GAS,
         "Sulfur": FluidType.SULFUR,
         "Electricity": FluidType.ELECTRICITY,
         "CO2": FluidType.CO2,

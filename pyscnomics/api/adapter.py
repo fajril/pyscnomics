@@ -2129,14 +2129,16 @@ def get_sensitivity(data: dict, contract_type: str):
         ) = _extract_contract_components(func=get_baseproject(data=data))
 
     # Constructing the sensitivity arguments
+    sensitivity_arguments = data["sensitivity_arguments"]
     sensitivity_result = sensitivity_psc(
         contract=contract,
         contract_arguments=contract_arguments,
         summary_arguments=summary_argument,
-        min_deviation=data["sensitivity_arguments"]["min_deviation"],
-        max_deviation=data["sensitivity_arguments"]["max_deviation"],
-        base_value=data["sensitivity_arguments"]["base_value"],
-        step=data["sensitivity_arguments"]["step"],
+        min_deviation=sensitivity_arguments["min_deviation"],
+        max_deviation=sensitivity_arguments["max_deviation"],
+        base_value=sensitivity_arguments["base_value"],
+        step=sensitivity_arguments.get("step", 10),
+        increment=sensitivity_arguments.get("increment"),
         dataframe_output=False,
     )
 

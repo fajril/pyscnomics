@@ -1058,12 +1058,9 @@ def min_mean_max_retriever(
     )
 
     # Calculate statistics (min, mean, max) for LIFTING.
-    # --- LIFTING: oil and gas lifting rates ---
+    # --- LIFTING: every producer type ---
     (min_lifting, mean_lifting, max_lifting) = _get_statistics(
-        arrays_list=[
-            getattr(contract, "_oil_lifting").lifting_rate,
-            getattr(contract, "_gas_lifting").lifting_rate,
-        ]
+        arrays_list=[lft.lifting_rate for lft in contract.lifting]
     )
 
     # Calculate statistics (min, mean, max) for OIL PRICE

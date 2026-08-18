@@ -103,6 +103,9 @@ def read_fluid_type(fluid: list | str) -> list[FluidType] | FluidType:
             return FluidType.OIL
         elif fluid == 'Gas':
             return FluidType.GAS
+        elif fluid in ('LPG propane', 'LPG butane'):
+            # LPG is included in backend gas lifting aggregate.
+            return FluidType.GAS
         elif fluid == 'Sulfur':
             return FluidType.SULFUR
         elif fluid == 'Electricity':
@@ -113,6 +116,8 @@ def read_fluid_type(fluid: list | str) -> list[FluidType] | FluidType:
     else:
         fluid_mapping = {'Oil': FluidType.OIL,
                          'Gas': FluidType.GAS,
+                         'LPG propane': FluidType.GAS,
+                         'LPG butane': FluidType.GAS,
                          'Sulfur': FluidType.SULFUR,
                          'Electricity': FluidType.ELECTRICITY,
                          'CO2': FluidType.CO2}
@@ -579,5 +584,4 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
             gas_dmo_fee_portion=config['gas_dmo_fee_portion'],
             gas_dmo_holiday_duration=config['gas_dmo_holiday_duration']
         )
-
 

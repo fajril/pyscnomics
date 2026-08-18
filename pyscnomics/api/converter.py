@@ -557,12 +557,17 @@ class SensitivityBM(BaseModel):
         The number of steps to create multipliers. Default is 10.
     base_value: float | int
         The base value for the multipliers. Default is 1.0.
+    increment: float | int | None
+        Fixed spacing between consecutive multipliers. When provided, it
+        overrides ``step`` and produces a uniform increment on both sides of
+        the base value. Default is None.
     """
 
     min_deviation: float | int
     max_deviation: float | int
-    step: float | int
-    base_value: float | int
+    step: float | int = 10
+    base_value: float | int = 1.0
+    increment: float | int | None = None
 
 
 class UncertaintyBM(BaseModel):

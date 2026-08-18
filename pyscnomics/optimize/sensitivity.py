@@ -30,6 +30,7 @@ def _get_multipliers(
     max_deviation: float,
     base_value: float = 1.0,
     step: int = 10,
+    increment: float | None = None,
 ) -> np.ndarray:
     """
     Generate an array of multipliers symmetrically distributed around a base value.
@@ -55,6 +56,11 @@ def _get_multipliers(
         The number of intervals used to generate linearly spaced values
         on each side of the base value. Must be greater than zero.
         Default is ``10``.
+    increment : float or None, optional
+        Fixed spacing between consecutive multipliers. When provided, it
+        overrides ``step`` and produces a uniform increment on both sides of
+        the base value while always including ``base_value``. Must be greater
+        than zero. Default is ``None``.
 
     Returns
     -------
@@ -67,12 +73,24 @@ def _get_multipliers(
     ------
     SensitivityException
         If ``min_deviation`` or ``max_deviation`` is negative, or if ``step``
-        is less than or equal to zero.
+        is less than or equal to zero, or if ``increment`` is not greater
+        than zero.
     """
 
     # Throw exceptions for unsuitable input data
     if min_deviation < 0 or max_deviation < 0:
         raise SensitivityException("Deviations must be non negative.")
+
+    if increment is not None:
+        if increment <= 0:
+            raise SensitivityException("Increment must be greater than zero.")
+
+        n_low = round(min_deviation / increment)
+        n_high = round(max_deviation / increment)
+        lower_mults = base_value - np.arange(n_low, 0, -1) * increment
+        upper_mults = base_value + np.arange(1, n_high + 1) * increment
+
+        return np.concatenate((lower_mults, [base_value], upper_mults))
 
     if step <= 0:
         raise SensitivityException("Step must be greater than zero.")
@@ -119,13 +137,14 @@ def _prepare_adjusted_parameters_single_contract(
     adjustment_value : float
         The multiplier applied to the selected parameter. For instance, ``1.1``
         represents a +10% increase, while ``0.9`` represents a −10% decrease.
-    element : {"CAPEX", "OPEX", "OILPRICE", "GASPRICE", "OILLIFTING", "GASLIFTING"}
+    element : {"CAPEX", "OPEX", "OILPRICE", "GASPRICE", "LIFTING", "OILLIFTING", "GASLIFTING"}
         The target economic component to adjust:
 
         - ``"CAPEX"`` — Scales both capital and intangible costs.
         - ``"OPEX"`` — Scales operating costs (fixed and per-volume).
         - ``"OILPRICE"`` — Scales the oil price component in the lifting data.
         - ``"GASPRICE"`` — Scales the gas price component in the lifting data.
+        - ``"LIFTING"`` — Scales lifting rates for every producer type.
         - ``"OILLIFTING"`` — Scales the oil lifting rate component.
         - ``"GASLIFTING"`` — Scales the gas lifting rate component.
 
@@ -163,7 +182,7 @@ def _prepare_adjusted_parameters_single_contract(
     lifting_adjusted = contract.lifting
 
     # Helper function to assist lifting adjustment
-    def _adjust_lifting(fluid_type: FluidType, target_field: str):
+    def _adjust_lifting(fluid_type: FluidType | None, target_field: str):
 
         if target_field not in ["lifting_rate", "price"]:
             raise SensitivityException(
@@ -178,12 +197,12 @@ def _prepare_adjusted_parameters_single_contract(
                     end_year=lft.end_year,
                     lifting_rate=(
                         lft.lifting_rate * adjustment_value
-                        if target_field == "lifting_rate" and lft.fluid_type is fluid_type
+                        if target_field == "lifting_rate" and (fluid_type is None or lft.fluid_type is fluid_type)
                         else lft.lifting_rate
                     ),
                     price=(
                         lft.price * adjustment_value
-                        if target_field == "price" and lft.fluid_type is fluid_type
+                        if target_field == "price" and fluid_type is not None and lft.fluid_type is fluid_type
                         else lft.price
                     ),
                     prod_year=lft.prod_year,
@@ -266,6 +285,10 @@ def _prepare_adjusted_parameters_single_contract(
     # Adjustment to gas price; modify the `price` attribute of class Lifting
     elif element == "GASPRICE":
         lifting_adjusted = _adjust_lifting(fluid_type=FluidType.GAS, target_field="price")
+
+    # Adjustment to all lifting rates; modify every producer type.
+    elif element == "LIFTING":
+        lifting_adjusted = _adjust_lifting(fluid_type=None, target_field="lifting_rate")
 
     # Adjustment to oil lifting; modify the `lifting_rate` attribute of class Lifting
     elif element == "OILLIFTING":
@@ -614,6 +637,7 @@ def sensitivity_psc(
     max_deviation: float,
     base_value: float = 1.0,
     step: int = 10,
+    increment: float | None = None,
     dataframe_output: bool = True,
 ) -> dict | pd.DataFrame:
     """
@@ -637,6 +661,10 @@ def sensitivity_psc(
         Base multiplier (default 1.0).
     step : int, optional
         Number of multiplier steps (default 10).
+    increment : float or None, optional
+        Fixed spacing between consecutive multipliers. When provided, it
+        overrides ``step`` and produces a uniform increment on both sides of
+        the base value. Default is ``None``.
     dataframe_output : bool, optional
         If True, return results as pandas DataFrames.
 
@@ -654,9 +682,18 @@ def sensitivity_psc(
         max_deviation=max_deviation,
         base_value=base_value,
         step=step,
+        increment=increment,
     )
 
-    elements = ["CAPEX", "OPEX", "OILPRICE", "GASPRICE", "OILLIFTING", "GASLIFTING"]
+    elements = [
+        "CAPEX",
+        "OPEX",
+        "OILPRICE",
+        "GASPRICE",
+        "LIFTING",
+        "OILLIFTING",
+        "GASLIFTING",
+    ]
     indicators = [
         "ctr_npv",
         "ctr_irr",
