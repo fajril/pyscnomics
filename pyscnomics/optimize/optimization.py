@@ -2,7 +2,10 @@
 Configuration to undertake optimization study.
 """
 
+from typing import TypeAlias
+
 import numpy as np
+import numpy.typing as npt
 from scipy.optimize import minimize_scalar
 
 from pyscnomics.contracts.costrecovery import CostRecovery
@@ -11,6 +14,23 @@ from pyscnomics.econ.selection import OptimizationParameter, OptimizationTarget
 # from pyscnomics.tools.summary import get_summary
 
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT
+
+
+_NumericScalar: TypeAlias = (
+    np.bool_
+    | np.int8
+    | np.int16
+    | np.int32
+    | np.int64
+    | np.uint8
+    | np.uint16
+    | np.uint32
+    | np.uint64
+    | np.float16
+    | np.float32
+    | np.float64
+)
+_NumericArray: TypeAlias = npt.NDArray[_NumericScalar]
 
 
 class OptimizationException(Exception):
@@ -26,7 +46,7 @@ def adjust_contract(
     variable: OptimizationParameter,
     value: float,
     target_parameter: str,
-) -> (CostRecovery | GrossSplit, dict):
+) -> tuple[float, CostRecovery | GrossSplit]:
     """
     Adjust one optimization variable, re-run the contract, and return the updated target metric.
 
@@ -284,7 +304,7 @@ def optimize_psc_core(
             # Defining the upper and lower limit of the optimized variable
             bounds = (dict_optimization["min"][index], dict_optimization["max"][index])
 
-            def objective_run(new_value):
+            def objective_run(new_value: float) -> float:
                 """
                 A helper function to execute an updated contract
                 """
@@ -686,8 +706,8 @@ def adjust_cost_element(
 
 def adjust_useful_life_years(
     adjustment_value: float,
-    useful_life_array: np.ndarray
-) -> np.ndarray:
+    useful_life_array: _NumericArray,
+) -> npt.NDArray[np.int_]:
     """
     Adjust useful life using a depreciation acceleration factor.
 
