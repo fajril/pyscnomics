@@ -1,18 +1,27 @@
+from typing import TypedDict
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
+import numpy as np
+from numpy.typing import NDArray
 import pandas as pd
 
 
-def get_uncertainty_plot(uncertainty_outcomes: dict,
-                         plot_type: str = 'Stairway'
-                         ):
+class _UncertaintyOutcomes(TypedDict):
+    results: NDArray[np.float64]
+
+
+def get_uncertainty_plot(
+    uncertainty_outcomes: _UncertaintyOutcomes,
+    plot_type: str = 'Stairway',
+):
     """
     Function to get the uncertainty plot.
 
     Parameters
     ----------
-    uncertainty_outcomes: dict
-        The result of an uncertainty analyis in form of a dictionary.
+    uncertainty_outcomes: _UncertaintyOutcomes
+        Mapping containing a 2-D float64 NumPy array under ``results``.
     plot_type: str
         The type of the plot that will be generated. the available options is
         ['Stairway', 'Histogram']
@@ -136,6 +145,3 @@ def get_uncertainty_plot(uncertainty_outcomes: dict,
         df.hist(figsize=(18, 10))
         plt.savefig('uncertainty_plot.png')
         # plt.show()
-
-
-
