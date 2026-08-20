@@ -27,7 +27,7 @@ def adjust_contract(
     value: float,
     summary_argument: dict,
     target_parameter: str,
-) -> (Transition, dict):
+) -> tuple[float, Transition]:
     """
     The function used to adjust the variable within a psc contract object.
     This function will be used by optimize_psc().
@@ -132,7 +132,7 @@ def adjust_contract(
 
     # Get the summary of the new contract and get its value of the targeted optimization
     summary_argument["contract"] = contract
-    result_psc = get_summary(**summary_argument)[target_parameter]
+    result_psc: float = get_summary(**summary_argument)[target_parameter]
 
     return result_psc, contract
 
@@ -417,7 +417,7 @@ def optimize_psc_core(
     target_optimization_value: float,
     summary_argument: dict,
     target_parameter: OptimizationTarget = OptimizationTarget.IRR,
-) -> (list, list, float, list):
+) -> tuple[list[str], list[str | float], float | None, list[Transition]]:
     """
     The function to get contract variable(s) that resulting the desired target or
     contract's economic target.
@@ -483,24 +483,24 @@ def optimize_psc_core(
         )
 
     # Changing the parameters list[str] into list[OptimizationParameters(Enum)]
-    list_params = dict_optimization["parameter"]
+    list_params: list[OptimizationParameter] = dict_optimization["parameter"]
 
     # Defining Base Value list to contain value of optimized parameters
     # and status of the optimization
-    list_params_value = ["Base Value"] * len(list_params)
+    list_params_value: list[str | float] = ["Base Value"] * len(list_params)
 
     # Defining the empty result of optimization target, will be defined later
-    result_optimization = None
+    result_optimization: float | None = None
 
     # Defining the executed contract list
-    list_executed_contract = []
+    list_executed_contract: list[Transition] = []
 
     psc = contract
     for index, param in enumerate(list_params):
 
         # Get the maximum value of each params
         if param is OptimizationParameter.OIL_CTR_PRETAX:
-            max_value = dict_optimization["max"][index]
+            max_value: float = dict_optimization["max"][index]
         elif param is OptimizationParameter.GAS_CTR_PRETAX:
             max_value = dict_optimization["max"][index]
         elif param is OptimizationParameter.OIL_FTP_PORTION:
@@ -547,9 +547,12 @@ def optimize_psc_core(
         # Able to conduct optimization since the result is greater than the target
         if result_psc > target_optimization_value:
             # Defining the upper and lower limit of the optimized variable
-            bounds = (dict_optimization["min"][index], dict_optimization["max"][index])
+            bounds: tuple[float, float] = (
+                dict_optimization["min"][index],
+                dict_optimization["max"][index],
+            )
 
-            def objective_run(new_value):
+            def objective_run(new_value: float) -> float:
                 result_psc_obj, executed_contract = adjust_contract(
                     contract=psc,
                     contract_arguments=contract_arguments,
@@ -568,10 +571,10 @@ def optimize_psc_core(
             )
 
             # Difference value from target and optimization result
-            optimized_diff = optim_result.fun
+            optimized_diff: float = optim_result.fun
 
             # Optimized Parameter Value
-            optimized_parameter = optim_result.x
+            optimized_parameter: float = optim_result.x
 
             # Result of the objective function
             function_result = optimized_diff + target_optimization_value
@@ -615,7 +618,7 @@ def optimize_psc_core(
             list_executed_contract.append(psc)
 
     # Converting the list of enum into list of str enum value
-    list_str = [enum_value.value for enum_value in list_params]
+    list_str: list[str] = [enum_value.value for enum_value in list_params]
 
     # # Printing for debugging
     # print(list_str)
