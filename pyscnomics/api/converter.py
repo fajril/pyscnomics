@@ -6,6 +6,7 @@ from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 from pydantic import BaseModel, Field
 
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales, LBT
@@ -20,6 +21,14 @@ from pyscnomics.econ.selection import (
     SunkCostMethod,
     VariableSplit132024,
     InitialYearAmortizationIncurred,
+    DeprMethod,
+    DiscountingMode,
+    InflationAppliedTo,
+    NPVSelection,
+    OptimizationParameter,
+    OptimizationTarget,
+    OtherRevenue,
+    TaxSplitTypeCR,
 )
 from pyscnomics.tools.helper import (
     get_inflation_applied_converter,
@@ -835,7 +844,7 @@ class LBTExpendituresBM(BaseModel):
     lbt: LbtBM
 
 
-def convert_str_to_date(str_object: str | int) -> date | None:
+def convert_str_to_date(str_object: str | int | None) -> date | None:
     """
     The function to convert string or integer unix timestamp format object into
     dateformat.
@@ -862,7 +871,7 @@ def convert_str_to_date(str_object: str | int) -> date | None:
             return datetime.strptime(date_value, "%d/%m/%Y").date()
 
 
-def convert_str_to_int(str_object: str) -> int | None:
+def convert_str_to_int(str_object: str | int | None) -> int | None:
     """
     Convert a string representation of an integer into an integer type.
 
@@ -890,7 +899,9 @@ def convert_str_to_int(str_object: str) -> int | None:
         return int(str_object)
 
 
-def convert_list_to_array_float(data_list: list) -> np.ndarray:
+def convert_list_to_array_float(
+    data_list: npt.ArrayLike,
+) -> npt.NDArray[np.float64]:
     """
     The function to convert list into array of float.
 
@@ -908,8 +919,8 @@ def convert_list_to_array_float(data_list: list) -> np.ndarray:
 
 
 def convert_list_to_array_float_or_array(
-    data_input: list | float | int | str,
-) -> np.ndarray | float:
+    data_input: npt.ArrayLike,
+) -> npt.NDArray[np.float64] | float:
     """
     The function to convert list or float into float or array of float.
 
@@ -938,8 +949,8 @@ def convert_list_to_array_float_or_array(
 
 
 def convert_list_to_array_float_or_array_or_none(
-    data_list: list | float | int | str | None,
-) -> np.ndarray | float | None:
+    data_list: npt.ArrayLike | None,
+) -> npt.NDArray[np.float64] | float | None:
     """
     Function to convert list into array of float, None or array.
 
@@ -969,7 +980,7 @@ def convert_list_to_array_float_or_array_or_none(
         return np.array(data_list, dtype=float)
 
 
-def convert_list_to_array_int(data_list: list) -> np.ndarray:
+def convert_list_to_array_int(data_list: npt.ArrayLike) -> npt.NDArray[np.int_]:
     """
     The function to convert list into array of integer.
 
@@ -1785,7 +1796,7 @@ def convert_dict_to_cost_of_sales(data_raw: dict) -> tuple:
     return cos
 
 
-def convert_str_to_taxsplit(str_object: str):
+def convert_str_to_taxsplit(str_object: str) -> TaxSplitTypeCR | None:
     """
     The function to converts a string representing a tax split type to its corresponding
     enum value from the TaxSplitTypeCR class.
@@ -1810,7 +1821,7 @@ def convert_str_to_taxsplit(str_object: str):
     return get_split_type_converter(target=str_object)
 
 
-def convert_str_to_npvmode(str_object: str):
+def convert_str_to_npvmode(str_object: str) -> NPVSelection | None:
     """
     The function to converts a string representing an NPV mode to its corresponding
     enum value from the NPVSelection class.
@@ -1835,7 +1846,7 @@ def convert_str_to_npvmode(str_object: str):
     return get_npv_mode_converter(target=str_object)
 
 
-def convert_str_to_discountingmode(str_object: str):
+def convert_str_to_discountingmode(str_object: str) -> DiscountingMode | None:
     """
     The function to converts a string representing a discounting mode to its corresponding
     enum value from the DiscountingMode class.
@@ -1861,7 +1872,7 @@ def convert_str_to_discountingmode(str_object: str):
     return get_discounting_mode_converter(target=str_object)
 
 
-def convert_str_to_otherrevenue(str_object: str):
+def convert_str_to_otherrevenue(str_object: str) -> OtherRevenue | None:
     """
     The function to convert a string representation of other revenue types
     to the corresponding enum value.
@@ -1962,7 +1973,7 @@ def converter_reservoir_type_permen_2024(
 
 def converter_initial_amortization_year(
     target_str: str
-) -> InitialYearAmortizationIncurred.ONSTREAM_YEAR:
+) -> InitialYearAmortizationIncurred:
     """
     Convert a string identifier to its corresponding initial amortization
     year option.
@@ -2021,7 +2032,7 @@ def convert_str_to_taxregime(str_object: str) -> TaxRegime | None:
             return None
 
 
-def convert_str_to_ftptaxregime(str_object: str):
+def convert_str_to_ftptaxregime(str_object: str) -> FTPTaxRegime | None:
     """
     The functon to converts a string representing a tax regime to its corresponding
     enum value from the FTPTaxRegime class.
@@ -2050,7 +2061,7 @@ def convert_str_to_ftptaxregime(str_object: str):
             return attrs[key]
 
 
-def convert_str_to_depremethod(str_object: str):
+def convert_str_to_depremethod(str_object: str) -> DeprMethod | None:
     """
     The function to converts a string representing a depreciation method to its corresponding
     enum value from the DeprMethod class.
@@ -2076,7 +2087,7 @@ def convert_str_to_depremethod(str_object: str):
     return get_depreciation_method_converter(target=str_object)
 
 
-def convert_str_to_taxtype(str_object: str):
+def convert_str_to_taxtype(str_object: str) -> TaxType | None:
     """
     The function to convert a string object into tax type selection.
 
@@ -2099,7 +2110,9 @@ def convert_str_to_taxtype(str_object: str):
             return None
 
 
-def convert_str_to_inflationappliedto(str_object: str):
+def convert_str_to_inflationappliedto(
+    str_object: str,
+) -> InflationAppliedTo | None:
     """
     The function to converts a string representing the application of inflation to its
     corresponding enum value from the InflationAppliedTo class.
@@ -2124,7 +2137,7 @@ def convert_str_to_inflationappliedto(str_object: str):
     return get_inflation_applied_converter(target=str_object)
 
 
-def convert_grosssplitregime_to_enum(target: str) -> GrossSplitRegime:
+def convert_grosssplitregime_to_enum(target: str) -> GrossSplitRegime | None:
     """
     Converts a string representing the Gross Split Regime to its
     corresponding enum value from the GrossSplitRegime enum class.
@@ -2284,7 +2297,9 @@ def convert_to_skk_summary_baseproject(dict_object: dict) -> dict:
     }
 
 
-def convert_str_to_optimization_targetparameter(str_object: str):
+def convert_str_to_optimization_targetparameter(
+    str_object: str,
+) -> OptimizationTarget | None:
     """
     The function to converts a string representation of an optimization target to the corresponding
     OptimizationTarget enum value.
@@ -2313,7 +2328,9 @@ def convert_str_to_optimization_targetparameter(str_object: str):
     return get_optimization_target_converter(target=str_object)
 
 
-def convert_str_to_optimization_parameters(str_object: str):
+def convert_str_to_optimization_parameters(
+    str_object: str,
+) -> OptimizationParameter | None:
     """
     The function to converts a string representation of an optimization parameter to the corresponding
     OptimizationParameter enum value.
@@ -2360,7 +2377,7 @@ def convert_to_float(target=int):
     return float(target)
 
 
-def convert_to_method_limit(target: str):
+def convert_to_method_limit(target: str) -> LimitMethod | ValueError:
     """
     Function to convert string into LimitMethod selection.
 
@@ -2384,7 +2401,7 @@ def convert_to_method_limit(target: str):
         return ValueError("Invalid LimitMethod provided.")
 
 
-def convert_to_uncertainty_distribution(target: str):
+def convert_to_uncertainty_distribution(target: str) -> UncertaintyDistribution:
     """
     Convert a string label into the corresponding distribution enum.
 
