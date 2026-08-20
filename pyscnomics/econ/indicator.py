@@ -3,15 +3,45 @@ Handles calculations associated with the economic indicators of the project.
 """
 
 from datetime import date
+from typing import TypeAlias
+
 import numpy as np
+import numpy.typing as npt
 import pyxirr
 
 from pyscnomics.econ.selection import DiscountingMode
 
+_NumericScalar: TypeAlias = (
+    np.bool_
+    | np.int8
+    | np.int16
+    | np.int32
+    | np.int64
+    | np.uint8
+    | np.uint16
+    | np.uint32
+    | np.uint64
+    | np.float16
+    | np.float32
+    | np.float64
+)
+_NumericArray: TypeAlias = npt.NDArray[_NumericScalar]
+_IntegerScalar: TypeAlias = (
+    np.int8
+    | np.int16
+    | np.int32
+    | np.int64
+    | np.uint8
+    | np.uint16
+    | np.uint32
+    | np.uint64
+)
+_IntegerArray: TypeAlias = npt.NDArray[_IntegerScalar]
+
 
 def pot(
-    cashflow: np.ndarray,
-) -> float:
+    cashflow: _NumericArray,
+) -> npt.NDArray[np.float64]:
     """
     Calculate the payout time (POT) for a series of cashflows.
 
@@ -38,13 +68,13 @@ def pot(
       has occurred.
     """
     sum_cf = np.cumsum(cashflow)
-    idx = np.argwhere(sum_cf > 0)[0]
+    idx: npt.NDArray[np.intp] = np.argwhere(sum_cf > 0)[0]
 
     return sum_cf[idx - 1] / (sum_cf[idx] - sum_cf[idx - 1]) + idx
 
 
 def npv(
-    cashflow: np.ndarray,
+    cashflow: _NumericArray,
     disc_rate: float = 0.1,
 ) -> float:
     """
@@ -77,9 +107,9 @@ def npv(
 
 
 def xnpv(
-    cashflow: np.ndarray,
+    cashflow: _NumericArray,
     start_date: date,
-    end_date: date = None,
+    end_date: date | None = None,
     disc_rate: float = 0.1,
 ) -> float:
     """
@@ -119,7 +149,7 @@ def xnpv(
     return pyxirr.xnpv(disc_rate, dates=dates, amounts=cashflow)
 
 
-def irr(cashflow: np.ndarray) -> float:
+def irr(cashflow: _NumericArray) -> float:
     """
     Calculate the Internal Rate of Return (IRR) of a series of cashflows.
 
@@ -160,9 +190,9 @@ def irr(cashflow: np.ndarray) -> float:
 
 
 def xirr(
-    cashflow: np.ndarray,
+    cashflow: _NumericArray,
     start_date: date,
-    end_date: date = None,
+    end_date: date | None = None,
 ) -> float:
     """
     Calculate the Extended Internal Rate of Return (XIRR) of a series of cashflows.
@@ -198,9 +228,9 @@ def xirr(
 
 def _date_arange(
     start_date: date,
-    end_date: date = None,
+    end_date: date | None = None,
     arr_length: int = 0,
-) -> list:
+) -> list[date]:
     """
     Generate a list of dates within a specified date range or of a specific length.
 
@@ -248,11 +278,11 @@ def _date_arange(
 
 
 def npv_nominal_terms(
-    cashflow: np.ndarray,
-    cashflow_years: np.ndarray,
+    cashflow: _NumericArray,
+    cashflow_years: _IntegerArray,
     discount_rate: float,
     reference_year: int,
-    discounting_mode: DiscountingMode.END_YEAR,
+    discounting_mode: DiscountingMode,
 ) -> float:
     """
     A function to calculate the Net Present Value (NPV) of a series of cashflows in nominal terms.
@@ -301,12 +331,12 @@ def npv_nominal_terms(
 
 
 def npv_real_terms(
-    cashflow: np.ndarray,
-    cashflow_years: np.ndarray,
+    cashflow: _NumericArray,
+    cashflow_years: _IntegerArray,
     discount_rate: float,
     reference_year: int,
     inflation_rate: float,
-    discounting_mode: DiscountingMode.END_YEAR,
+    discounting_mode: DiscountingMode,
 ) -> float:
     """
     A function to calculate the Net Present Value (NPV) of a series of cashflows in real terms.
@@ -361,10 +391,10 @@ def npv_real_terms(
 
 
 def npv_skk_nominal_terms(
-    cashflow: np.ndarray,
-    cashflow_years: np.ndarray,
+    cashflow: _NumericArray,
+    cashflow_years: _IntegerArray,
     discount_rate: float,
-    discounting_mode: DiscountingMode.END_YEAR,
+    discounting_mode: DiscountingMode,
 ) -> float:
     """
     A function to calculate the Net Present Value (NPV) of a series of cashflows
@@ -410,11 +440,11 @@ def npv_skk_nominal_terms(
 
 
 def npv_skk_real_terms(
-    cashflow: np.ndarray,
-    cashflow_years: np.ndarray,
+    cashflow: _NumericArray,
+    cashflow_years: _IntegerArray,
     discount_rate: float,
     reference_year: int,
-    discounting_mode: DiscountingMode.END_YEAR,
+    discounting_mode: DiscountingMode,
 ) -> float:
     """
     A function to calculate the Net Present Value (NPV) of a series of cashflows
@@ -476,11 +506,11 @@ def npv_skk_real_terms(
 
 
 def npv_point_forward(
-    cashflow: np.ndarray,
-    cashflow_years: np.ndarray,
+    cashflow: _NumericArray,
+    cashflow_years: _IntegerArray,
     discount_rate: float,
     reference_year: int,
-    discounting_mode: DiscountingMode.END_YEAR,
+    discounting_mode: DiscountingMode,
 ) -> float:
     """
     Calculate the Net Present Value (NPV) of a series of cashflows using a point-forward approach.
@@ -528,7 +558,11 @@ def npv_point_forward(
     return float(np.sum(discounted_cashflow))
 
 
-def pot_psc(cashflow: np.ndarray, cashflow_years: np.ndarray, reference_year: int):
+def pot_psc(
+    cashflow: _NumericArray,
+    cashflow_years: _IntegerArray,
+    reference_year: int,
+) -> float:
     """
     Calculate Pay Out Time (POT) for a Production Sharing Contract (PSC).
 
