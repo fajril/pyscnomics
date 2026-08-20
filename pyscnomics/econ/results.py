@@ -4,10 +4,39 @@ Configure a CashFlow class to handle calculations of cashflow indicators.
 
 from dataclasses import dataclass, field
 from datetime import date
+from typing import TypeAlias
+
 import numpy as np
+import numpy.typing as npt
 
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ import indicator
+
+_NumericScalar: TypeAlias = (
+    np.int8
+    | np.int16
+    | np.int32
+    | np.int64
+    | np.uint8
+    | np.uint16
+    | np.uint32
+    | np.uint64
+    | np.float16
+    | np.float32
+    | np.float64
+)
+_NumericArray: TypeAlias = npt.NDArray[_NumericScalar]
+_IntegerScalar: TypeAlias = (
+    np.int8
+    | np.int16
+    | np.int32
+    | np.int64
+    | np.uint8
+    | np.uint16
+    | np.uint32
+    | np.uint64
+)
+_IntegerArray: TypeAlias = npt.NDArray[_IntegerScalar]
 
 
 class CashFlowException(Exception):
@@ -38,13 +67,13 @@ class CashFlow:
 
     start_date: date
     end_date: date
-    cash: np.ndarray
-    cashed_year: np.ndarray
+    cash: _NumericArray
+    cashed_year: _IntegerArray
     cash_allocation: FluidType = field(default=FluidType.ALL)
 
     # Attributes to be defined later
-    project_duration: int = field(default=None, init=False, repr=False)
-    project_years: np.ndarray = field(default=None, init=False, repr=False)
+    project_duration: int | None = field(default=None, init=False, repr=False)
+    project_years: _IntegerArray | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         # Specify project duration and project years, raise error for inappropriate start date
@@ -275,7 +304,7 @@ class CashFlow:
                 f"of CashFlow nor an integer/float."
             )
 
-    def allocate(self) -> np.ndarray:
+    def allocate(self) -> _NumericArray:
         """
         Allocates cash flows over the project duration.
 
