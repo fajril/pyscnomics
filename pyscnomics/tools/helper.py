@@ -462,7 +462,7 @@ def get_inflation_applied_converter(target: str | None) -> InflationAppliedTo | 
     return None
 
 
-def get_tax_payment_converter(target: str) -> FTPTaxRegime:
+def get_tax_payment_converter(target: str) -> FTPTaxRegime | None:
     """
     Converts a string representing a tax payment mode to its corresponding
     enum value from the TaxPaymentMode class.
@@ -497,7 +497,7 @@ def get_tax_payment_converter(target: str) -> FTPTaxRegime:
     return None
 
 
-def get_tax_regime_converter(target: str) -> FTPTaxRegime:
+def get_tax_regime_converter(target: str) -> FTPTaxRegime | None:
     """
     Converts a string representing a tax regime to its corresponding
     enum value from the FTPTaxRegime class.
@@ -531,7 +531,7 @@ def get_tax_regime_converter(target: str) -> FTPTaxRegime:
     return None
 
 
-def get_npv_mode_converter(target: str) -> NPVSelection:
+def get_npv_mode_converter(target: str) -> NPVSelection | None:
     """
     Converts a string representing an NPV mode to its corresponding
     enum value from the NPVSelection class.
@@ -568,7 +568,7 @@ def get_npv_mode_converter(target: str) -> NPVSelection:
     return None
 
 
-def get_discounting_mode_converter(target: str) -> DiscountingMode:
+def get_discounting_mode_converter(target: str) -> DiscountingMode | None:
     """
     Converts a string representing a discounting mode to its corresponding
     enum value from the DiscountingMode class.
@@ -602,7 +602,7 @@ def get_discounting_mode_converter(target: str) -> DiscountingMode:
     return None
 
 
-def get_depreciation_method_converter(target: str) -> DeprMethod:
+def get_depreciation_method_converter(target: str) -> DeprMethod | None:
     """
     Converts a string representing a depreciation method to its corresponding
     enum value from the DeprMethod class.
@@ -638,7 +638,7 @@ def get_depreciation_method_converter(target: str) -> DeprMethod:
     return None
 
 
-def get_other_revenue_converter(target: str) -> OtherRevenue:
+def get_other_revenue_converter(target: str) -> OtherRevenue | None:
     """
     Convert a string representation of other revenue types to the corresponding enum value.
 
@@ -1292,7 +1292,7 @@ def get_to_list_converter(target_param: dict) -> dict:
     return {key: target_param[key].tolist() for key in target_param.keys()}
 
 
-def get_fluidtype_converter(target: str) -> FluidType:
+def get_fluidtype_converter(target: str) -> FluidType | None:
     """
     Get the corresponding FluidType enum for a given target fluid.
 
@@ -1333,7 +1333,7 @@ def get_fluidtype_converter(target: str) -> FluidType:
     return None
 
 
-def get_boolean_converter(target: str) -> bool:
+def get_boolean_converter(target: str) -> bool | None:
     """
     Get the boolean value corresponding to the provided target.
 
@@ -1369,7 +1369,7 @@ def get_boolean_converter(target: str) -> bool:
     return None
 
 
-def get_split_type_converter(target: str) -> TaxSplitTypeCR:
+def get_split_type_converter(target: str) -> TaxSplitTypeCR | None:
     """
     Converts a string representing a tax split type to its corresponding
     enum value from the TaxSplitTypeCR class.
@@ -1499,8 +1499,8 @@ def summarizer(
     array2: np.ndarray,
     startYear1: int,
     startYear2: int,
-    endYear1: int = None,
-    endYear2: int = None,
+    endYear1: int | None = None,
+    endYear2: int | None = None,
 ) -> tuple:
     """
     Perform summation operation on two arrays, accounting for different starting years.
