@@ -7,7 +7,8 @@ import json
 import os
 import importlib.resources as pkg_resources
 from pathlib import Path
-from datetime import datetime
+from datetime import date, datetime
+from typing import Literal, TypeAlias, TypeVar, overload
 
 import numpy as np
 
@@ -18,8 +19,12 @@ from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT, CostO
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import FluidType, CostType
 
+_T = TypeVar('_T')
+_FluidName: TypeAlias = Literal['Oil', 'Gas', 'Sulfur', 'Electricity', 'CO2']
+_CostName: TypeAlias = Literal['sunk_cost', 'preonstream_cost', 'postonstream_cost']
 
-def get_json_file_names() -> list:
+
+def get_json_file_names() -> list[str]:
     """
     A function to get a list of json file in the chosen directory.
 
@@ -83,7 +88,21 @@ def read_json_file(file_name: str) -> dict:
     return json.loads(file_contents)
 
 
-def read_fluid_type(fluid: list | str) -> list[FluidType] | FluidType:
+@overload
+def read_fluid_type(fluid: _FluidName) -> FluidType: ...
+
+
+@overload
+def read_fluid_type(fluid: str) -> FluidType | None: ...
+
+
+@overload
+def read_fluid_type(fluid: list[_T]) -> list[FluidType]: ...
+
+
+def read_fluid_type(
+    fluid: str | list[object],
+) -> list[FluidType] | FluidType | None:
     """
     A function to convert the str input into FluidType Enum class.
 
@@ -111,7 +130,7 @@ def read_fluid_type(fluid: list | str) -> list[FluidType] | FluidType:
             return FluidType.CO2
 
     else:
-        fluid_mapping = {'Oil': FluidType.OIL,
+        fluid_mapping: dict[object, FluidType] = {'Oil': FluidType.OIL,
                          'Gas': FluidType.GAS,
                          'Sulfur': FluidType.SULFUR,
                          'Electricity': FluidType.ELECTRICITY,
@@ -123,7 +142,25 @@ def read_fluid_type(fluid: list | str) -> list[FluidType] | FluidType:
         return result
 
 
-def read_cost_type(cost_type: str | list) -> CostType | list[CostType]:
+@overload
+def read_cost_type(cost_type: _CostName) -> CostType: ...
+
+
+@overload
+def read_cost_type(cost_type: str) -> CostType: ...
+
+
+@overload
+def read_cost_type(cost_type: list[_T]) -> list[CostType | None]: ...
+
+
+@overload
+def read_cost_type(cost_type: object) -> CostType | list[CostType | None] | TypeError: ...
+
+
+def read_cost_type(
+    cost_type: object,
+) -> CostType | list[CostType | None] | TypeError:
     """
     Convert cost type(s) from string representation to corresponding CostType enum.
 
@@ -187,7 +224,7 @@ def read_cost_type(cost_type: str | list) -> CostType | list[CostType]:
 
     # Transformation string -> CostType(Enum) for list input
     else:
-        cost_type_mapping = {
+        cost_type_mapping: dict[object, CostType | None] = {
             "sunk_cost": CostType.SUNK_COST,
             "preonstream_cost": CostType.PRE_ONSTREAM_COST,
             "postonstream_cost": CostType.POST_ONSTREAM_COST,
@@ -196,7 +233,7 @@ def read_cost_type(cost_type: str | list) -> CostType | list[CostType]:
 
         # Replace each string inside the cost_type list into their
         # corresponding CostType(Enum) counterparts
-        result = [0] * len(cost_type)
+        result: list[CostType | None] = [None] * len(cost_type)
         for i, ct in enumerate(cost_type):
             if ct in cost_type_mapping.keys():
                 result[i] = cost_type_mapping[ct]
@@ -206,7 +243,7 @@ def read_cost_type(cost_type: str | list) -> CostType | list[CostType]:
         return result
 
 
-def assign_onstream_date(date_data: None | str) -> datetime | None:
+def assign_onstream_date(date_data: None | str) -> date | None:
     """
     A funtion to assign onstream date into datetime format.
     Parameters
@@ -457,7 +494,29 @@ def load_testing(dataset_type: str, key: str) -> dict | ValueError:
         return data_test
 
 
-def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject | CostRecovery | GrossSplit:
+@overload
+def load_data(
+    dataset_type: str,
+    contract_type: Literal['project'] = 'project',
+) -> BaseProject: ...
+
+
+@overload
+def load_data(dataset_type: str, contract_type: Literal['cost_recovery']) -> CostRecovery: ...
+
+
+@overload
+def load_data(dataset_type: str, contract_type: Literal['gross_split']) -> GrossSplit: ...
+
+
+@overload
+def load_data(dataset_type: str, contract_type: str) -> BaseProject | CostRecovery | GrossSplit | None: ...
+
+
+def load_data(
+    dataset_type: str,
+    contract_type: str = 'project',
+) -> BaseProject | CostRecovery | GrossSplit | None:
     """
     A function to load the available dataset.
 
@@ -579,5 +638,3 @@ def load_data(dataset_type: str, contract_type: str = 'project') -> BaseProject 
             gas_dmo_fee_portion=config['gas_dmo_fee_portion'],
             gas_dmo_holiday_duration=config['gas_dmo_holiday_duration']
         )
-
-
