@@ -1,10 +1,12 @@
 """
 Handles the routine to get the attributes of a contract object.
 """
-import numpy as np
-
 from datetime import date
-# from enum import Enum
+from collections.abc import Mapping
+from enum import Enum
+from typing import TypeVar
+
+import numpy as np
 
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
@@ -23,12 +25,7 @@ from pyscnomics.econ import (
 )
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import (
-    CapitalCost,
-    Intangible,
-    OPEX,
-    ASR,
-    LBT,
-    CostOfSales
+    GeneralCost,
 )
 from pyscnomics.econ.selection import (
     FluidType,
@@ -47,7 +44,14 @@ class GetAttrException(Exception):
     pass
 
 
-def _helper_convert_enum_to_str(enum_target, enum_type, enum_mapping) -> str:
+EnumType = TypeVar("EnumType", bound=Enum)
+
+
+def _helper_convert_enum_to_str(
+    enum_target: EnumType,
+    enum_type: type[EnumType],
+    enum_mapping: Mapping[EnumType, str],
+) -> str:
     """
     Convert an enum member to its corresponding string representation.
 
@@ -56,11 +60,11 @@ def _helper_convert_enum_to_str(enum_target, enum_type, enum_mapping) -> str:
 
     Parameters
     ----------
-    enum_target : Any
+    enum_target : EnumType
         The enum member to convert to string representation.
-    enum_type : type
+    enum_type : type[EnumType]
         The expected enum class type for validation.
-    enum_mapping : dict
+    enum_mapping : Mapping[EnumType, str]
         Dictionary mapping enum members to their string representations.
         Keys should be instances of `enum_type`, values should be strings.
 
@@ -858,7 +862,7 @@ def convert_enum_var_split_08_2017(
     prod_stg = VS.ProductionStage
 
     # Mapping datatype, enum, and string representation
-    mapping_dict = {
+    mapping_dict: dict[type[Enum], dict[Enum, str]] = {
         fstatus: {
             fstatus.POD_I: "POD I",
             fstatus.POD_II: "POD II",
@@ -987,7 +991,7 @@ def convert_enum_var_split_52_2017(
     prod_stg = VS.ProductionStage
 
     # Mapping datatype, enum, and string representation
-    mapping_dict = {
+    mapping_dict: dict[type[Enum], dict[Enum, str]] = {
         fstatus: {
             fstatus.POD_I: "POD I",
             fstatus.POD_II: "POD II",
@@ -1061,6 +1065,7 @@ def convert_enum_var_split_13_2024(
         VariableSplit132024.InfrastructureAvailability
         | VariableSplit132024.FieldReservesAmount
         | VariableSplit132024.FieldLocation
+        | VariableSplit132024.ReservoirType
     )
 ) -> str:
     """
@@ -1096,7 +1101,7 @@ def convert_enum_var_split_13_2024(
     rtype = VS.ReservoirType
 
     # Mapping datatype, enum, and string representation
-    mapping_dict = {
+    mapping_dict: dict[type[Enum], dict[Enum, str]] = {
         infra: {
             infra.NOT_AVAILABLE: "not_available",
             infra.PARTIALLY_AVAILABLE: "partially_available",
@@ -1130,7 +1135,7 @@ def convert_enum_var_split_13_2024(
     raise TypeError(f"Unsupported enum type: {objects.__class__.__qualname__!r}")
 
 
-def convert_object(objects):
+def convert_object(objects: object) -> object:
     """
     Convert various object types to their serializable representations.
 
@@ -1283,11 +1288,15 @@ def convert_object(objects):
         return objects
 
 
-def _prepare_args(target_arg, default, contract_arguments: dict):
+def _prepare_args(
+    target_arg: str, default: object, contract_arguments: dict[str, object]
+) -> object:
     return contract_arguments.get(target_arg, default)
 
 
-def construct_lifting_attr(lifting: tuple[Lifting]) -> dict:
+def construct_lifting_attr(
+    lifting: tuple[Lifting, ...],
+) -> dict[str, object]:
     """
     Construct a dictionary containing processed lifting attributes for each fluid type.
 
@@ -1335,15 +1344,8 @@ def construct_lifting_attr(lifting: tuple[Lifting]) -> dict:
 
 
 def construct_cost_attr(
-    cost: (
-        tuple[CapitalCost]
-        | tuple[Intangible]
-        | tuple[OPEX]
-        | tuple[ASR]
-        | tuple[LBT]
-        | tuple[CostOfSales]
-    )
-):
+    cost: tuple[GeneralCost, ...],
+) -> dict[str, object]:
     """
     Construct and process a dictionary of cost attributes from a tuple of
     cost objects.
@@ -1419,7 +1421,9 @@ def construct_cost_attr(
     return dict(zip(cost_key, costs))
 
 
-def construct_setup_attr(contract: BaseProject | CostRecovery | GrossSplit | Transition):
+def construct_setup_attr(
+    contract: BaseProject | CostRecovery | GrossSplit | Transition,
+) -> dict[str, object]:
     """
     Construct a standardized setup-attribute dictionary from a contract object.
 
@@ -1515,7 +1519,9 @@ def construct_setup_attr(contract: BaseProject | CostRecovery | GrossSplit | Tra
     }
 
 
-def construct_summary_arguments_attr(summary_arguments: dict):
+def construct_summary_arguments_attr(
+    summary_arguments: dict[str, object],
+) -> dict[str, object]:
     """
     Process summary arguments by converting all values using convert_object.
 
@@ -1547,7 +1553,7 @@ def construct_summary_arguments_attr(summary_arguments: dict):
     return summary_arguments
 
 
-def construct_costrecovery_attr(contract: CostRecovery):
+def construct_costrecovery_attr(contract: CostRecovery) -> dict[str, object]:
     """
     Extract and convert CostRecovery contract attributes to a dictionary.
 
@@ -1572,7 +1578,7 @@ def construct_costrecovery_attr(contract: CostRecovery):
         - Carry forward depreciation values
     """
 
-    cr_setup = {
+    cr_setup: dict[str, object] = {
         # FTP
         "oil_ftp_is_available": contract.oil_ftp_is_available,
         "oil_ftp_is_shared": contract.oil_ftp_is_shared,
@@ -1614,7 +1620,9 @@ def construct_costrecovery_attr(contract: CostRecovery):
     return cr_setup
 
 
-def construct_costrecovery_arguments_attr(contract_arguments: dict):
+def construct_costrecovery_arguments_attr(
+    contract_arguments: dict[str, object],
+) -> dict[str, object]:
     """
     Construct processed Cost Recovery contract arguments with default values applied.
 
@@ -1664,7 +1672,7 @@ def construct_costrecovery_arguments_attr(contract_arguments: dict):
     return cr_arguments
 
 
-def construct_grosssplit_attr(contract: GrossSplit):
+def construct_grosssplit_attr(contract: GrossSplit) -> dict[str, object]:
     """
     Construct a dictionary of processed Gross Split contract attributes.
 
@@ -1687,7 +1695,7 @@ def construct_grosssplit_attr(contract: GrossSplit):
     - Ensures type consistency by processing all values with `convert_object()`.
     """
 
-    gs_setup = {
+    gs_setup: dict[str, object] = {
         # Field and reservoir properties
         "field_status": contract.field_status,
         "field_loc": contract.field_loc,
@@ -1725,7 +1733,9 @@ def construct_grosssplit_attr(contract: GrossSplit):
     return gs_setup
 
 
-def construct_grosssplit_arguments_attr(contract_arguments: dict) -> dict:
+def construct_grosssplit_arguments_attr(
+    contract_arguments: dict[str, object],
+) -> dict[str, object]:
     """
     Construct processed Gross Split contract arguments with default values applied.
 
@@ -1775,7 +1785,9 @@ def construct_grosssplit_arguments_attr(contract_arguments: dict) -> dict:
     return gs_arguments
 
 
-def construct_baseproject_arguments_attr(contract_arguments: dict) -> dict:
+def construct_baseproject_arguments_attr(
+    contract_arguments: dict[str, object],
+) -> dict[str, object]:
     """
     Process BaseProject contract arguments with mapping and conversion.
 
@@ -1845,12 +1857,14 @@ def construct_transition_attr(contract: Transition):
     return contract_1, contract_2
 
 
-def construct_transition_arguments(contract_arguments: dict):
+def construct_transition_arguments(
+    contract_arguments: dict[str, object],
+) -> dict[str, object]:
     """
     Construct processed Transition contract arguments with default values applied
     """
 
-    trans_arguments = {
+    trans_arguments: dict[str, object] = {
         "unrec_portion": contract_arguments["unrec_portion"],
     }
 
@@ -1862,9 +1876,9 @@ def construct_transition_arguments(contract_arguments: dict):
 
 def get_contract_attributes(
     contract: BaseProject | CostRecovery | GrossSplit | Transition,
-    contract_arguments: dict,
-    summary_arguments: dict,
-) -> dict:
+    contract_arguments: dict[str, object],
+    summary_arguments: dict[str, object],
+) -> dict[str, object]:
     """
     Construct a comprehensive dictionary of contract attributes in JSON-compatible format.
 
@@ -1898,7 +1912,7 @@ def get_contract_attributes(
     """
 
     # Constructing the setup and summary arguments key
-    attr = {
+    attr: dict[str, object] = {
         "setup": construct_setup_attr(contract=contract),
         "summary_arguments": construct_summary_arguments_attr(
             summary_arguments=summary_arguments
@@ -1929,19 +1943,13 @@ def get_contract_attributes(
             contract_arguments=contract_arguments
         )
 
-    # Mapping for lifting and costs assignments
-    mapping_lifting_costs = (
-        ("lifting", construct_lifting_attr, contract.lifting),
-        ("capital", construct_cost_attr, contract.capital_cost),
-        ("intangible", construct_cost_attr, contract.intangible_cost),
-        ("opex", construct_cost_attr, contract.opex),
-        ("asr", construct_cost_attr, contract.asr_cost),
-        ("lbt", construct_cost_attr, contract.lbt_cost),
-        ("cost_of_sales", construct_cost_attr, contract.cost_of_sales),
-    )
-
     # Add `attr` members for lifting and costs
-    for (section, builder_func, source_data) in mapping_lifting_costs:
-        attr[section] = builder_func(source_data)
+    attr["lifting"] = construct_lifting_attr(contract.lifting)
+    attr["capital"] = construct_cost_attr(contract.capital_cost)
+    attr["intangible"] = construct_cost_attr(contract.intangible_cost)
+    attr["opex"] = construct_cost_attr(contract.opex)
+    attr["asr"] = construct_cost_attr(contract.asr_cost)
+    attr["lbt"] = construct_cost_attr(contract.lbt_cost)
+    attr["cost_of_sales"] = construct_cost_attr(contract.cost_of_sales)
 
     return attr
