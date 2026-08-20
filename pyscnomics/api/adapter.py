@@ -4,7 +4,7 @@ This file is utilized to be the adapter of the router into the core codes.
 
 from datetime import datetime
 import math
-from typing import Any, cast
+from typing import Any, Literal, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -61,6 +61,9 @@ from pyscnomics.tools.ltp import oil_ltp_predict, gas_ltp_predict
 from pyscnomics.tools.rpd import RPDModel
 from pyscnomics.tools.summarizer import Summary
 from pyscnomics.econ.limit import econ_limit
+
+
+_T = TypeVar("_T")
 
 
 class ContractException(Exception):
@@ -334,7 +337,27 @@ def build_baseproject_arguments(data: dict) -> dict:
     }
 
 
-def get_baseproject(data: dict, summary_result: bool = True):
+@overload
+def get_baseproject(
+    data: dict[str, _T], summary_result: Literal[True] = True
+) -> tuple[dict[str, object], BaseProject, dict[str, object], dict[str, object]]: ...
+
+
+@overload
+def get_baseproject(
+    data: dict[str, _T], summary_result: Literal[False]
+) -> tuple[None, BaseProject, dict[str, object], None]: ...
+
+
+@overload
+def get_baseproject(
+    data: dict[str, _T], summary_result: bool
+) -> tuple[dict[str, object] | None, BaseProject, dict[str, object], dict[str, object] | None]: ...
+
+
+def get_baseproject(
+    data: dict, summary_result: bool = True
+) -> tuple[dict[str, object] | None, BaseProject, dict[str, object], dict[str, object] | None]:
     """
     Build and run a BaseProject evaluation.
 
@@ -565,7 +588,27 @@ def build_costrecovery_arguments(data: dict) -> dict:
     }
 
 
-def get_costrecovery(data: dict, summary_result: bool = True):
+@overload
+def get_costrecovery(
+    data: dict[str, _T], summary_result: Literal[True] = True
+) -> tuple[dict[str, object], CostRecovery, dict[str, object], dict[str, object]]: ...
+
+
+@overload
+def get_costrecovery(
+    data: dict[str, _T], summary_result: Literal[False]
+) -> tuple[None, CostRecovery, dict[str, object], None]: ...
+
+
+@overload
+def get_costrecovery(
+    data: dict[str, _T], summary_result: bool
+) -> tuple[dict[str, object] | None, CostRecovery, dict[str, object], dict[str, object] | None]: ...
+
+
+def get_costrecovery(
+    data: dict, summary_result: bool = True
+) -> tuple[dict[str, object] | None, CostRecovery, dict[str, object], dict[str, object] | None]:
     """
     Run Cost Recovery PSC evaluation (+ optional summary).
 
@@ -813,7 +856,27 @@ def build_grosssplit_arguments(data: dict) -> dict:
     }
 
 
-def get_grosssplit(data: dict, summary_result: bool = True) -> tuple:
+@overload
+def get_grosssplit(
+    data: dict[str, _T], summary_result: Literal[True] = True
+) -> tuple[dict[str, object], GrossSplit, dict[str, object], dict[str, object]]: ...
+
+
+@overload
+def get_grosssplit(
+    data: dict[str, _T], summary_result: Literal[False]
+) -> tuple[None, GrossSplit, dict[str, object], None]: ...
+
+
+@overload
+def get_grosssplit(
+    data: dict[str, _T], summary_result: bool
+) -> tuple[dict[str, object] | None, GrossSplit, dict[str, object], dict[str, object] | None]: ...
+
+
+def get_grosssplit(
+    data: dict, summary_result: bool = True
+) -> tuple[dict[str, object] | None, GrossSplit, dict[str, object], dict[str, object] | None]:
     """
     Execute a Gross Split PSC evaluation and optionally return the summary results.
 
