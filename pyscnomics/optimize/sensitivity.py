@@ -5,6 +5,8 @@ This Code is made to detached the sensitivity module in the previous version
 which depended with the excel into fully able to be run in python.
 """
 
+from typing import Literal, TypeAlias, overload
+
 import numpy as np
 import pandas as pd
 
@@ -17,6 +19,11 @@ from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.gross_split import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX
+
+
+_SensitivityFrames: TypeAlias = dict[str, pd.DataFrame]
+_SensitivityValues: TypeAlias = dict[str, object]
+_SensitivityResult: TypeAlias = _SensitivityFrames | _SensitivityValues
 
 
 class SensitivityException(Exception):
@@ -606,6 +613,73 @@ def _adjust_contract(
         )
 
 
+@overload
+def sensitivity_psc(
+    contract: BaseProject | CostRecovery | GrossSplit | Transition,
+    contract_arguments: dict[str, object],
+    summary_arguments: dict[str, object],
+    min_deviation: float,
+    max_deviation: float,
+    base_value: float = 1.0,
+    step: int = 10,
+    dataframe_output: Literal[True] = True,
+) -> _SensitivityFrames: ...
+
+
+@overload
+def sensitivity_psc(
+    contract: BaseProject | CostRecovery | GrossSplit | Transition,
+    contract_arguments: dict[str, object],
+    summary_arguments: dict[str, object],
+    min_deviation: float,
+    max_deviation: float,
+    base_value: float,
+    step: int,
+    dataframe_output: Literal[False],
+) -> _SensitivityValues: ...
+
+
+@overload
+def sensitivity_psc(
+    contract: BaseProject | CostRecovery | GrossSplit | Transition,
+    contract_arguments: dict[str, object],
+    summary_arguments: dict[str, object],
+    min_deviation: float,
+    max_deviation: float,
+    base_value: float = 1.0,
+    step: int = 10,
+    *,
+    dataframe_output: Literal[False],
+) -> _SensitivityValues: ...
+
+
+@overload
+def sensitivity_psc(
+    contract: BaseProject | CostRecovery | GrossSplit | Transition,
+    contract_arguments: dict[str, object],
+    summary_arguments: dict[str, object],
+    min_deviation: float,
+    max_deviation: float,
+    base_value: float,
+    step: int,
+    dataframe_output: bool,
+) -> _SensitivityResult: ...
+
+
+@overload
+def sensitivity_psc(
+    contract: BaseProject | CostRecovery | GrossSplit | Transition,
+    contract_arguments: dict[str, object],
+    summary_arguments: dict[str, object],
+    min_deviation: float,
+    max_deviation: float,
+    base_value: float = 1.0,
+    step: int = 10,
+    *,
+    dataframe_output: bool,
+) -> _SensitivityResult: ...
+
+
 def sensitivity_psc(
     contract: BaseProject | CostRecovery | GrossSplit | Transition,
     contract_arguments: dict,
@@ -615,7 +689,7 @@ def sensitivity_psc(
     base_value: float = 1.0,
     step: int = 10,
     dataframe_output: bool = True,
-) -> dict | pd.DataFrame:
+) -> _SensitivityResult:
     """
     Run one-factor-at-a-time sensitivity analysis on a PSC contract.
 
