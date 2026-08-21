@@ -237,10 +237,9 @@ def test_opex_dunder_add():
         ),
         "cost_type": (
             [
-                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                None, None,
                 CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
-                CostType.SUNK_COST, CostType.POST_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST,
+                CostType.SUNK_COST, None, None,
                 CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
                 CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,

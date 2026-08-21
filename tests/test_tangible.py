@@ -4,7 +4,7 @@ A collection of unit testing for Tangible class
 
 import pytest
 import numpy as np
-from pyscnomics.econ.selection import DeprMethod, FluidType
+from pyscnomics.econ.selection import DeprMethod, FluidType, InflationAppliedTo
 from pyscnomics.econ.costs import CapitalException, CapitalCost
 
 
@@ -174,6 +174,61 @@ def test_capital_arithmetics():
     assert div2 == calc_div2
 
 
+def test_capital_arithmetic_scales_salvage_value():
+    capital = CapitalCost(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([100, 50]),
+        expense_year=np.array([2023, 2024]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
+        salvage_value=np.array([20, 10]),
+    )
+    other = CapitalCost(
+        start_year=2023,
+        end_year=2030,
+        cost=np.array([30, 20]),
+        expense_year=np.array([2025, 2026]),
+        cost_allocation=[FluidType.OIL, FluidType.OIL],
+        salvage_value=np.array([6, 4]),
+    )
+
+    positive_scalar = capital * 2
+    negative_scalar = -0.5 * capital
+    quotient = capital / 2  # pyright: ignore[reportUnknownVariableType]
+    difference = capital - other
+
+    np.testing.assert_allclose(positive_scalar.cost, np.array([200, 100]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+    np.testing.assert_allclose(positive_scalar.salvage_value, np.array([40, 20]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+    np.testing.assert_allclose(negative_scalar.cost, np.array([-50, -25]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+    np.testing.assert_allclose(negative_scalar.salvage_value, np.array([-10, -5]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+    np.testing.assert_allclose(quotient.cost, np.array([50, 25]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+    np.testing.assert_allclose(quotient.salvage_value, np.array([10, 5]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+    np.testing.assert_allclose(difference.cost, np.array([100, 50, -30, -20]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+    np.testing.assert_allclose(difference.salvage_value, np.array([20, 10, -6, -4]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+
+
+def test_capital_rejects_salvage_value_larger_than_cost_magnitude():
+    with pytest.raises(CapitalException):
+        _ = CapitalCost(
+            start_year=2023,
+            end_year=2030,
+            cost=np.array([10]),
+            expense_year=np.array([2023]),
+            cost_allocation=[FluidType.OIL],
+            salvage_value=np.array([11]),
+        )
+
+    with pytest.raises(CapitalException):
+        _ = CapitalCost(
+            start_year=2023,
+            end_year=2030,
+            cost=np.array([-10]),
+            expense_year=np.array([2023]),
+            cost_allocation=[FluidType.OIL],
+            salvage_value=np.array([-11]),
+        )
+
+
 def test_capital_expenditures():
     """A unit testing for expenditures method in Capital class"""
 
@@ -318,10 +373,14 @@ def test_capital_depreciation():
     np.testing.assert_allclose(depreDDB, calc_depreDDB)
     np.testing.assert_allclose(deprePSC, calc_deprePSC)
 
-    np.testing.assert_allclose(np.array([undepreSL]), np.array([calc_undepreSL]))
-    np.testing.assert_allclose(np.array([undepreDB]), np.array([calc_undepreDB]))
-    np.testing.assert_allclose(np.array([undepreDDB]), np.array([calc_undepreDDB]))
-    np.testing.assert_allclose(np.array([undeprePSC]), np.array([calc_undeprePSC]))
+    for calculated, expected in (  # pyright: ignore[reportUnknownVariableType]
+        (calc_undepreSL, undepreSL),
+        (calc_undepreDB, undepreDB),
+        (calc_undepreDDB, undepreDDB),
+        (calc_undeprePSC, undeprePSC),
+    ):
+        assert calculated.ndim == 1  # pyright: ignore[reportUnknownMemberType]
+        np.testing.assert_allclose(calculated.sum(), expected)  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
 
 
 def test_capital_depreciation_with_tax_and_inflation():
@@ -372,19 +431,21 @@ def test_capital_depreciation_with_tax_and_inflation():
     )
 
     depreCase1_calc, undepreCase1_calc = capital_mangga.total_depreciation_rate(
-        inflation_rate=0.05
+        inflation_rate=0.05,
+        inflation_rate_applied_to=InflationAppliedTo.CAPEX,
     )
 
     depreCase2_calc, undepreCase2_calc = capital_mangga.total_depreciation_rate(
         tax_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
         inflation_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
+        inflation_rate_applied_to=InflationAppliedTo.CAPEX,
     )
 
     # Execute testing
     np.testing.assert_allclose(depreCase1, depreCase1_calc)
-    np.testing.assert_allclose(undepreCase1, undepreCase1_calc)
+    np.testing.assert_allclose(undepreCase1, undepreCase1_calc.sum())
     np.testing.assert_allclose(depreCase2, depreCase2_calc)
-    np.testing.assert_allclose(undepreCase2, undepreCase2_calc)
+    np.testing.assert_allclose(undepreCase2, undepreCase2_calc.sum())
 
 
 def test_capital_book_value():

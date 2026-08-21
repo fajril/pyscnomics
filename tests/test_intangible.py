@@ -124,11 +124,7 @@ def test_intangible_correct_cost_type_1():
         cost_allocation=cost_allocation_1,
     )
 
-    expected = [
-        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-    ]
+    expected = [None] * len(expense_year_1)
 
     calculated = intangible_mangga.cost_type
 
@@ -147,9 +143,14 @@ def test_intangible_correct_cost_type_2():
     )
 
     expected = [
-        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST, CostType.SUNK_COST,
-        CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
-        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+        None,
+        None,
+        CostType.SUNK_COST,
+        CostType.SUNK_COST,
+        CostType.SUNK_COST,
+        CostType.SUNK_COST,
+        None,
+        None,
     ]
 
     calculated = intangible_mangga.cost_type

@@ -6,7 +6,7 @@ import pytest
 import numpy as np
 from datetime import date
 
-from pyscnomics.econ.selection import FluidType
+from pyscnomics.econ.selection import FluidType, InflationAppliedTo
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
 from pyscnomics.contracts.project import BaseProject, BaseProjectException
@@ -60,6 +60,7 @@ def test_incorrect_data_input():
         BaseProject(
             start_date=date(2032, 1, 1),
             end_date=date(2030, 12, 31),
+            approval_year=2032,
         )
 
     # Oil onstream year is after the end project year
@@ -67,6 +68,7 @@ def test_incorrect_data_input():
         BaseProject(
             start_date=date(2023, 1, 1),
             end_date=date(2030, 12, 31),
+            approval_year=2023,
             oil_onstream_date=date(2031, 1, 1),
             lifting=(lifting_mangga, lifting_apel),
         )
@@ -76,6 +78,7 @@ def test_incorrect_data_input():
         BaseProject(
             start_date=date(2023, 1, 1),
             end_date=date(2030, 12, 31),
+            approval_year=2023,
             oil_onstream_date=date(2020, 1, 1),
             lifting=(lifting_mangga, lifting_apel),
         )
@@ -85,6 +88,7 @@ def test_incorrect_data_input():
         BaseProject(
             start_date=date(2023, 1, 1),
             end_date=date(2030, 1, 1),
+            approval_year=2023,
             oil_onstream_date=date(2026, 1, 1),
             lifting=(lifting_mangga, lifting_apel),
         )
@@ -103,6 +107,7 @@ def test_base_project_lifting():
     base_case = BaseProject(
         start_date=date(2023, 1, 1),
         end_date=date(2030, 12, 31),
+        approval_year=2023,
         lifting=(
             lifting_mangga,
             lifting_apel,
@@ -168,6 +173,10 @@ def test_base_project_tangible_expenditures():
     base_case = BaseProject(
         start_date=date(2023, 1, 1),
         end_date=date(2030, 1, 1),
+        approval_year=2023,
+        oil_onstream_date=date(2023, 1, 1),
+        gas_onstream_date=date(2023, 1, 1),
+        lifting=(lifting_mangga, lifting_apel),
         capital_cost=(
             oil_mangga_tangible,
             oil_apel_tangible,
@@ -176,6 +185,8 @@ def test_base_project_tangible_expenditures():
         )
     )
 
+    base_case._get_expenditures_pre_tax()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
+    base_case._get_indirect_taxes()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
     base_case._get_expenditures_post_tax()
     results = vars(base_case)
 
@@ -193,8 +204,10 @@ def test_base_project_intangible_expenditures():
     # Expected results
     oil_case1 = np.array([100, 0, 100, 0, 100, 0, 100, 0])
     gas_case1 = np.array([0, 50, 0, 50, 0, 50, 0, 50])
-    oil_case2 = np.array([101, 0, 103, 0, 105, 0, 107, 0])
-    gas_case2 = np.array([0, 51, 0, 52, 0, 53, 0, 54])
+    oil_case2 = np.array([101, 0, 113.25, 0, 126.550625, 0, 141.009564, 0])
+    gas_case2 = np.array(
+        [0, 53.5, 0, 59.88125, 0, 66.814078125, 0, 74.355020547]
+    )
 
     # Calculated results
     intangible_mangga = Intangible(
@@ -218,20 +231,34 @@ def test_base_project_intangible_expenditures():
     case1 = BaseProject(
         start_date=date(2023, 1, 1),
         end_date=date(2030, 1, 1),
+        approval_year=2023,
+        oil_onstream_date=date(2023, 1, 1),
+        gas_onstream_date=date(2023, 1, 1),
+        lifting=(lifting_mangga, lifting_apel),
         intangible_cost=(intangible_mangga, intangible_apel),
     )
 
     case2 = BaseProject(
         start_date=date(2023, 1, 1),
         end_date=date(2030, 1, 1),
+        approval_year=2023,
+        oil_onstream_date=date(2023, 1, 1),
+        gas_onstream_date=date(2023, 1, 1),
+        lifting=(lifting_mangga, lifting_apel),
         intangible_cost=(intangible_mangga, intangible_apel),
     )
 
+    case1._get_expenditures_pre_tax()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
+    case1._get_indirect_taxes()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
     case1._get_expenditures_post_tax()
-    case2._get_expenditures_post_tax(
-        tax_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
+    case2._get_expenditures_pre_tax(  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
         inflation_rate=0.05,
+        inflation_rate_applied_to=InflationAppliedTo.CAPEX,
     )
+    case2._get_indirect_taxes(  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
+        tax_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08])
+    )
+    case2._get_expenditures_post_tax()
 
     results1 = vars(case1)
     results2 = vars(case2)
@@ -275,9 +302,15 @@ def test_base_project_opex_expenditures():
     case1 = BaseProject(
         start_date=date(2023, 1, 1),
         end_date=date(2030, 1, 1),
+        approval_year=2023,
+        oil_onstream_date=date(2023, 1, 1),
+        gas_onstream_date=date(2023, 1, 1),
+        lifting=(lifting_mangga, lifting_apel),
         opex=(opex_mangga, opex_apel),
     )
 
+    case1._get_expenditures_pre_tax()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
+    case1._get_indirect_taxes()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
     case1._get_expenditures_post_tax()
 
     results1 = vars(case1)
@@ -340,20 +373,34 @@ def test_base_project_asr_expenditures():
     case1 = BaseProject(
         start_date=date(2023, 1, 1),
         end_date=date(2030, 1, 1),
+        approval_year=2023,
+        oil_onstream_date=date(2023, 1, 1),
+        gas_onstream_date=date(2023, 1, 1),
+        lifting=(lifting_mangga, lifting_apel),
         asr_cost=(asr_mangga, asr_apel),
     )
 
     case2 = BaseProject(
         start_date=date(2023, 1, 1),
         end_date=date(2030, 1, 1),
+        approval_year=2023,
+        oil_onstream_date=date(2023, 1, 1),
+        gas_onstream_date=date(2023, 1, 1),
+        lifting=(lifting_mangga, lifting_apel),
         asr_cost=(asr_jeruk, asr_nanas),
     )
 
+    case1._get_expenditures_pre_tax()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
+    case1._get_indirect_taxes()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
     case1._get_expenditures_post_tax()
-    case2._get_expenditures_post_tax(
-        tax_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
+    case2._get_expenditures_pre_tax(  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
         inflation_rate=0.03,
+        inflation_rate_applied_to=InflationAppliedTo.CAPEX,
     )
+    case2._get_indirect_taxes(  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
+        tax_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01])
+    )
+    case2._get_expenditures_post_tax()
 
     results1 = vars(case1)
     results2 = vars(case2)

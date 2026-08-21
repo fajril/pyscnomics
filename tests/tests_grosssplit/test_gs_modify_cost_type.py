@@ -18,8 +18,6 @@ kwargs = {
     "oil_onstream_date": date(year=2030, month=1, day=1),
     "gas_onstream_date": date(year=2029, month=1, day=1),
     "approval_year": 2027,
-    "base_split_ctr_oil": 0.43,
-    "base_split_ctr_gas": 0.48,
     "split_ministry_disc": 0.08,
     "oil_dmo_volume_portion": 0.25,
     "oil_dmo_fee_portion": 1.0,
@@ -32,7 +30,7 @@ kwargs = {
 }
 
 
-def test_modify_cost_type_capital():
+def test_classifies_capital_cost_types_by_project_period():
 
     # Instance Lifting #1
     lifting_mangga = Lifting(
@@ -82,9 +80,9 @@ def test_modify_cost_type_capital():
                 CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
                 CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
                 CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.SUNK_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
             ]
         ),
         tax_portion=np.array(
@@ -123,9 +121,9 @@ def test_modify_cost_type_capital():
                 CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
                 CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
                 CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
             ]
         ),
         tax_portion=np.array(
@@ -140,10 +138,19 @@ def test_modify_cost_type_capital():
     capital_total = tuple([capital_mangga, capital_apel])
 
     gs = GrossSplit(**kwargs, lifting=lifting_total, capital_cost=capital_total)
-
-
-
-
-def test_modify_cost_type_lbt():
-    pass
-
+    for preonstream, postonstream, sunk in (
+        (
+            gs._oil_capital_preonstream,  # pyright: ignore[reportPrivateUsage]
+            gs._oil_capital_postonstream,  # pyright: ignore[reportPrivateUsage]
+            gs._oil_capital_sunk_cost,  # pyright: ignore[reportPrivateUsage]
+        ),
+        (
+            gs._gas_capital_preonstream,  # pyright: ignore[reportPrivateUsage]
+            gs._gas_capital_postonstream,  # pyright: ignore[reportPrivateUsage]
+            gs._gas_capital_sunk_cost,  # pyright: ignore[reportPrivateUsage]
+        ),
+    ):
+        assert preonstream.cost_type == [CostType.PRE_ONSTREAM_COST] * 7
+        assert postonstream.cost_type == [CostType.POST_ONSTREAM_COST] * 5
+        assert sunk.cost_type == [CostType.SUNK_COST]
+        np.testing.assert_array_equal(sunk.cost, np.array([0]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
