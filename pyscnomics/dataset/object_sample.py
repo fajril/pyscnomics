@@ -1,3 +1,5 @@
+from typing import cast
+
 import numpy as np
 
 from pyscnomics.dataset.sample import load_data
@@ -29,47 +31,38 @@ def generate_contract_sample(case: ContractSample) -> CostRecovery | GrossSplit:
     """
     if case == ContractSample.CASE_1:
         # Defining the contract object
-        psc = load_data(dataset_type='case1', contract_type='cost_recovery')
+        psc = cast(
+            CostRecovery,
+            load_data(dataset_type='case1', contract_type='cost_recovery'),
+        )
 
-        # Defining the contract arguments
-        tax_rate = 0.405
-        ftp_tax_regime = FTPTaxRegime.DIRECT_MODE
-        post_uu_22_year2001 = True
-
-        contract_arguments = {
-            'effective_tax_rate': tax_rate,
-            'ftp_tax_regime': ftp_tax_regime,
-            'post_uu_22_year2001': post_uu_22_year2001,
-        }
-
-        # Running the contract with contract arguments
-        psc.run(**contract_arguments)
-
+        psc.run(
+            effective_tax_rate=0.405,
+            ftp_tax_regime=FTPTaxRegime.DIRECT_MODE,
+            post_uu_22_year2001=True,
+        )
         return psc
 
     elif case == ContractSample.CASE_2:
         # Defining the contract object
-        psc = load_data(dataset_type='case2', contract_type='cost_recovery')
+        psc = cast(
+            CostRecovery,
+            load_data(dataset_type='case2', contract_type='cost_recovery'),
+        )
 
-        # Defining the contract arguments
-        tax_rate = 0.405
-        ftp_tax_regime = FTPTaxRegime.DIRECT_MODE
-        post_uu_22_year2001 = True
-
-        contract_arguments = {
-            'effective_tax_rate': tax_rate,
-            'ftp_tax_regime': ftp_tax_regime,
-            'post_uu_22_year2001': post_uu_22_year2001,
-        }
-
-        # Running the contract with contract arguments
-        psc.run(**contract_arguments)
-
+        psc.run(
+            effective_tax_rate=0.405,
+            ftp_tax_regime=FTPTaxRegime.DIRECT_MODE,
+            post_uu_22_year2001=True,
+        )
         return psc
 
     elif case == ContractSample.CASE_3:
         # Defining the contract object
-        psc = load_data(dataset_type='case3', contract_type='gross_split')
+        psc = cast(
+            GrossSplit,
+            load_data(dataset_type='case3', contract_type='gross_split'),
+        )
 
         # Defining the contract arguments
         tax_rate = 0.22
@@ -80,22 +73,16 @@ def generate_contract_sample(case: ContractSample) -> CostRecovery | GrossSplit:
         inflation_rate = 0.0
         inflation_rate_applied_to = None
 
-        # Defining the contract arguments
-        contract_arguments = {
-            "effective_tax_rate": tax_rate,
-            "vat_rate": vat_rate,
-            "inflation_rate": inflation_rate,
-            "inflation_rate_applied_to": inflation_rate_applied_to,
-            "regime": GrossSplitRegime.PERMEN_ESDM_12_2020,
-        }
-
-        # Running the contract with contract arguments
-        psc.run(**contract_arguments)
-
+        psc.run(
+            effective_tax_rate=tax_rate,
+            vat_rate=vat_rate,
+            inflation_rate=inflation_rate,
+            inflation_rate_applied_to=inflation_rate_applied_to,
+            regime=GrossSplitRegime.PERMEN_ESDM_12_2020,
+        )
         return psc
     else:
         raise ObjectSampleException(
             f"THE case argument {case} , "
             f"is should be one of: {[member.name for member in ContractSample]}"
         )
-

@@ -2,7 +2,27 @@
 Collection of functions to carry out some operations related to module costs.py
 """
 
+from typing import TypeAlias
+
 import numpy as np
+import numpy.typing as npt
+
+
+_NumericScalar: TypeAlias = (
+    np.bool_
+    | np.int8
+    | np.int16
+    | np.int32
+    | np.int64
+    | np.uint8
+    | np.uint16
+    | np.uint32
+    | np.uint64
+    | np.float16
+    | np.float32
+    | np.float64
+)
+_NumericArray: TypeAlias = npt.NDArray[_NumericScalar]
 
 
 class TaxInflationException(Exception):
@@ -11,7 +31,7 @@ class TaxInflationException(Exception):
     pass
 
 
-def check_input(target_func, param: np.ndarray | float | int) -> np.ndarray:
+def check_input(target_func, param: _NumericArray | float | int) -> _NumericArray:
     """
     Check and prepare input parameters for subsequent analysis.
 
@@ -64,13 +84,13 @@ def check_input(target_func, param: np.ndarray | float | int) -> np.ndarray:
 
 def get_cost_adjustment_by_tax(
     start_year: int,
-    cost: np.ndarray,
-    expense_year: np.ndarray,
-    project_years: np.ndarray,
-    tax_portion: np.ndarray,
-    tax_rate: np.ndarray | float,
+    cost: _NumericArray,
+    expense_year: _NumericArray,
+    project_years: _NumericArray,
+    tax_portion: _NumericArray,
+    tax_rate: _NumericArray | float,
     tax_discount: float,
-) -> np.ndarray:
+) -> _NumericArray:
     """
     Adjust cost based on tax scheme over the prescribed time period.
 
@@ -120,12 +140,12 @@ def get_cost_adjustment_by_tax(
 def get_cost_adjustment_by_inflation(
     start_year: int,
     end_year: int,
-    cost: np.ndarray,
-    expense_year: np.ndarray,
-    project_years: np.ndarray,
-    year_inflation: np.ndarray,
-    inflation_rate: np.ndarray | float,
-) -> np.ndarray:
+    cost: _NumericArray,
+    expense_year: _NumericArray,
+    project_years: _NumericArray,
+    year_inflation: _NumericArray | None,
+    inflation_rate: _NumericArray | float,
+) -> _NumericArray:
     """
     Adjusts costs for inflation over the project years.
 
@@ -241,15 +261,15 @@ def get_cost_adjustment_by_inflation(
 
 def apply_cost_adjustment(
     start_year: int,
-    cost: np.ndarray,
-    expense_year: np.ndarray,
-    project_years: np.ndarray,
-    tax_portion: np.ndarray,
-    tax_rate: np.ndarray | float,
+    cost: _NumericArray,
+    expense_year: _NumericArray,
+    project_years: _NumericArray,
+    tax_portion: _NumericArray,
+    tax_rate: _NumericArray | float,
     tax_discount: float,
-    inflation_rate: np.ndarray | float,
-    year_ref: np.ndarray,
-) -> np.ndarray:
+    inflation_rate: _NumericArray | float,
+    year_ref: _NumericArray,
+) -> _NumericArray:
     """
     Adjusts cost based on inflation and tax scheme over the specified time period.
 
@@ -337,13 +357,13 @@ def apply_cost_adjustment(
 
 def calc_indirect_tax(
     start_year: int,
-    cost: np.ndarray,
-    expense_year: np.ndarray,
-    project_years: np.ndarray,
-    tax_portion: np.ndarray,
-    tax_rate: np.ndarray | float,
-    tax_discount: np.ndarray,
-) -> np.ndarray:
+    cost: _NumericArray,
+    expense_year: _NumericArray,
+    project_years: _NumericArray,
+    tax_portion: _NumericArray,
+    tax_rate: _NumericArray | float,
+    tax_discount: _NumericArray | float | int,
+) -> _NumericArray:
     """
     Calculate the indirect tax on project costs.
 
@@ -402,12 +422,12 @@ def calc_indirect_tax(
 
 
 def calc_distributed_cost(
-    cost: np.ndarray,
-    expense_year: np.ndarray,
-    final_year: np.ndarray,
-    project_years: np.ndarray,
+    cost: _NumericArray,
+    expense_year: _NumericArray,
+    final_year: _NumericArray,
+    project_years: _NumericArray,
     project_duration: int,
-) -> np.ndarray:
+) -> _NumericArray:
     """
     Distribute the cost evenly over the project duration based on the expense and final years.
 

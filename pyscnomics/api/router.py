@@ -61,7 +61,7 @@ async def api_version():
 
 
 @router.post("/costrecovery")
-async def calculate_costrecovery(data: Data) -> dict:
+async def calculate_costrecovery(data: Data) -> dict[str, object]:
     """
     ## Cost Recovery
     Route to calculate a contract using Cost Recovery Scheme and get its executive summary.
@@ -85,7 +85,7 @@ async def calculate_costrecovery(data: Data) -> dict:
 
 
 @router.post("/costrecovery/detailed_summary")
-async def get_costrecovery_detailed(data: Data) -> dict:
+async def get_costrecovery_detailed(data: Data) -> dict[str, object]:
     """
     ## Cost Recovery Detailed Summary
     Route to get a contract detailed summary using Cost Recovery Scheme.
@@ -111,7 +111,7 @@ async def get_costrecovery_detailed(data: Data) -> dict:
 
 
 @router.post("/costrecovery/table")
-async def get_costrecovery_table(data: Data) -> dict:
+async def get_costrecovery_table(data: Data) -> dict[str, object]:
     """
     ## Cost Recovery Table
     Route to calculate a contract using Cost Recovery Scheme and get its cashflow table.
@@ -134,7 +134,7 @@ async def get_costrecovery_table(data: Data) -> dict:
 
 
 @router.post("/costrecovery/optimization")
-async def calculate_costrecovery_optimization(data: Data) -> dict:
+async def calculate_costrecovery_optimization(data: Data) -> dict[str, object]:
     """
     ## Cost Recovery Optimization
     Route to calculate the optimization of a contract using Cost Recovery Scheme.
@@ -159,7 +159,7 @@ async def calculate_costrecovery_optimization(data: Data) -> dict:
 
 
 @router.post("/grosssplit")
-async def calculate_grosssplit(data: Data) -> dict:
+async def calculate_grosssplit(data: Data) -> dict[str, object]:
     """
     ## Gross Split
     Route to calculate a contract using Gross Split Scheme and get its executive summary.
@@ -183,7 +183,7 @@ async def calculate_grosssplit(data: Data) -> dict:
 
 
 @router.post("/grosssplit/detailed_summary")
-async def get_grosssplit_detailed(data: Data) -> dict:
+async def get_grosssplit_detailed(data: Data) -> dict[str, object]:
     """
     ## Gross Split Detailed Summary
     Route to get a contract detailed summary using Gross Split Scheme.
@@ -207,7 +207,7 @@ async def get_grosssplit_detailed(data: Data) -> dict:
 
 
 @router.post("/grosssplit/table")
-async def get_grosssplit_table(data: Data) -> dict:
+async def get_grosssplit_table(data: Data) -> dict[str, object]:
     """
     ## Gross Split Table
     Route to calculate a contract using Gross Split Scheme and get its cashflow table.
@@ -230,7 +230,7 @@ async def get_grosssplit_table(data: Data) -> dict:
 
 
 @router.post("/grosssplit/optimization")
-async def calculate_grosssplit_optimization(data: Data) -> dict:
+async def calculate_grosssplit_optimization(data: Data) -> dict[str, object]:
     """
     ## Gross Split Optimization
     Route to calculate the optimization of a contract using Gross Split Scheme.
@@ -255,7 +255,7 @@ async def calculate_grosssplit_optimization(data: Data) -> dict:
 
 
 @router.post("/transition")
-async def calculate_transition(data: DataTransition) -> dict:
+async def calculate_transition(data: DataTransition) -> dict[str, object]:
     """
     ## Transition
     Route to calculate a contract using Transition Scheme and get its executive summary.
@@ -289,7 +289,7 @@ async def calculate_transition(data: DataTransition) -> dict:
 
 
 @router.post("/transition/detailed_summary")
-async def get_transition_detailed(data: DataTransition) -> dict:
+async def get_transition_detailed(data: DataTransition) -> dict[str, object]:
     """
     ## Transition Detailed Summary
     Route to get a contract detailed summary using Transition Scheme.
@@ -314,7 +314,7 @@ async def get_transition_detailed(data: DataTransition) -> dict:
 
 
 @router.post("/transition/table")
-async def get_transition_table(data: DataTransition) -> dict:
+async def get_transition_table(data: DataTransition) -> dict[str, object]:
     """
     ## Transition Table
     Route to calculate a contract using Transition Scheme and get its cashflow table.
@@ -346,7 +346,7 @@ async def get_transition_table(data: DataTransition) -> dict:
 
 
 @router.post("/transition/optimization")
-async def calculate_transition_optimization(data: DataTransition) -> dict:
+async def calculate_transition_optimization(data: DataTransition) -> dict[str, object]:
     """
     ## Transition Optimization
     Route to calculate the optimization of a contract using Transition Scheme.
@@ -369,7 +369,7 @@ async def calculate_transition_optimization(data: DataTransition) -> dict:
 
 
 @router.post("/baseproject")
-async def calculate_baseproject(data: Data) -> dict:
+async def calculate_baseproject(data: Data) -> dict[str, object]:
     """
     ## Base Project
     Route to calculate a contract using Base Project Scheme and get its executive summary.
@@ -390,7 +390,7 @@ async def calculate_baseproject(data: Data) -> dict:
 
 
 @router.post("/baseproject/table")
-async def get_baseproject_table(data: Data) -> dict:
+async def get_baseproject_table(data: Data) -> dict[str, object]:
     """
     ## Base Project Table
     Route to calculate a contract using Base Project Scheme and get its cashflow table.
@@ -410,7 +410,7 @@ async def get_baseproject_table(data: Data) -> dict:
 
 
 @router.post("/baseproject/detailed_summary")
-async def get_baseproject_detailed(data: Data) -> dict:
+async def get_baseproject_detailed(data: Data) -> dict[str, object]:
     """
     ## Base Project Detailed Summary
     Route to get a contract detailed summary using Base Project Scheme.
@@ -433,7 +433,7 @@ async def get_baseproject_detailed(data: Data) -> dict:
 
 
 @router.post("/ltp")
-async def calculate_ltp(data: LtpBM) -> dict:
+async def calculate_ltp(data: LtpBM) -> dict[str, object]:
     """
     ## Calculate LTP model
     Route to calculate a ltp model.
@@ -448,7 +448,7 @@ async def calculate_ltp(data: LtpBM) -> dict:
 
 
 @router.post("/rpd")
-async def calculate_rdp(data: RpdBM) -> dict:
+async def calculate_rdp(data: RpdBM) -> dict[str, object]:
     """
     ## Calculate RPD model
     Route to calculate a rdp model.
@@ -466,7 +466,7 @@ async def calculate_rdp(data: RpdBM) -> dict:
 
 
 @router.post("/grosssplit/split")
-async def get_grosssplit_split_information(data: Data) -> dict:
+async def get_grosssplit_split_information(data: Data) -> dict[str, object]:
     """
     ## The Split Information
     Route to retrieve the information of contractor split in Gross Split contract scheme.
@@ -489,7 +489,7 @@ async def get_grosssplit_split_information(data: Data) -> dict:
 
 
 @router.post("/transition/split")
-async def get_transition_split_information(data: DataTransition) -> dict:
+async def get_transition_split_information(data: DataTransition) -> dict[str, object]:
     """
     ## The Split Information
     Route to retrieve the information of contractor split in Transition contract scheme
@@ -538,7 +538,7 @@ async def calculate_economic_limit(data: EconLimit) -> int:
 
 
 @router.post("/asr_expenditures")
-async def calculate_asr_expenditures(data: ASRExpendituresBM) -> dict:
+async def calculate_asr_expenditures(data: ASRExpendituresBM) -> dict[str, object]:
     """
     ## Retrieve The Expenditures of ASR Cost
     Route to get the expenditures of ASR Cost.
@@ -547,7 +547,7 @@ async def calculate_asr_expenditures(data: ASRExpendituresBM) -> dict:
 
 
 @router.post("/lbt_expenditures")
-async def calculate_lbt_expenditures(data: LBTExpendituresBM) -> dict:
+async def calculate_lbt_expenditures(data: LBTExpendituresBM) -> dict[str, object]:
     """
     ## Retrieve The Expenditures of LBT Cost
     Route to get the expenditures of LBT Cost.
@@ -556,7 +556,7 @@ async def calculate_lbt_expenditures(data: LBTExpendituresBM) -> dict:
 
 
 @router.post("/costrecovery/sensitivity")
-async def calculate_costrecovery_sensitivity(data: Data) -> dict:
+async def calculate_costrecovery_sensitivity(data: Data) -> dict[str, object]:
     """
     ## Retrieve The Sensitivity of a cost recovery contract.
     Route to get the sensitivity of a cost recovery contract.
@@ -565,7 +565,7 @@ async def calculate_costrecovery_sensitivity(data: Data) -> dict:
 
 
 @router.post("/grosssplit/sensitivity")
-async def calculate_grosssplit_sensitivity(data: Data) -> dict:
+async def calculate_grosssplit_sensitivity(data: Data) -> dict[str, object]:
     """
     ## Retrieve The Sensitivity of a gross split contract.
     Route to get the sensitivity of a contract.
@@ -574,7 +574,7 @@ async def calculate_grosssplit_sensitivity(data: Data) -> dict:
 
 
 @router.post("/transition/sensitivity")
-async def calculate_transition_sensitivity(data: DataTransition) -> dict:
+async def calculate_transition_sensitivity(data: DataTransition) -> dict[str, object]:
     """
     ## Retrieve The Sensitivity of a gross split contract.
     Route to get the sensitivity of a contract.
@@ -583,7 +583,7 @@ async def calculate_transition_sensitivity(data: DataTransition) -> dict:
 
 
 @router.post("/baseproject/sensitivity")
-async def calculate_project_sensitivity(data: Data) -> dict:
+async def calculate_project_sensitivity(data: Data) -> dict[str, object]:
     """
     ## Retrieve The Sensitivity of a base project contract.
     Route to get the sensitivity of a contract.
@@ -592,7 +592,7 @@ async def calculate_project_sensitivity(data: Data) -> dict:
 
 
 @router.post("/costrecovery/uncertainty")
-async def calculate_costrecovery_uncertainty(data: Data) -> dict:
+async def calculate_costrecovery_uncertainty(data: Data) -> dict[str, object]:
     """
     ## Retrieve The Uncertainty of a cost recovery contract.
     Route to get the uncertainty of a cost recovery contract.
@@ -601,7 +601,7 @@ async def calculate_costrecovery_uncertainty(data: Data) -> dict:
 
 
 @router.post("/grosssplit/uncertainty")
-async def calculate_grosssplit_uncertainty(data: Data) -> dict:
+async def calculate_grosssplit_uncertainty(data: Data) -> dict[str, object]:
     """
     ## Retrieve The Uncertainty of a gross split contract.
     Route to get the uncertainty of a gross split contract.
@@ -610,7 +610,7 @@ async def calculate_grosssplit_uncertainty(data: Data) -> dict:
 
 
 @router.post("/transition/uncertainty")
-async def calculate_transition_uncertainty(data: DataTransition) -> dict:
+async def calculate_transition_uncertainty(data: DataTransition) -> dict[str, object]:
     """
     ## Retrieve The Uncertainty of a transition contract.
     Route to get the uncertainty of a transition contract.
@@ -619,7 +619,7 @@ async def calculate_transition_uncertainty(data: DataTransition) -> dict:
 
 
 @router.post("/baseproject/uncertainty")
-async def calculate_baseproject_uncertainty(data: Data) -> dict:
+async def calculate_baseproject_uncertainty(data: Data) -> dict[str, object]:
     """
     ## Retrieve The Uncertainty of a base project contract.
     Route to get the uncertainty of a base projcet contract.
@@ -683,7 +683,7 @@ async def get_transition_warnings(data: DataTransition) -> list[dict[str, object
 
 
 @router.post("/combine")
-async def calculate_combine(data: CasesRequestBM) -> dict[str, Any]:
+async def calculate_combine(data: CasesRequestBM) -> dict[str, object]:
     """
     ## Combine Cases
     Route to combine multiple contract cases into one economic result.
@@ -698,7 +698,7 @@ async def calculate_combine(data: CasesRequestBM) -> dict[str, Any]:
 
 
 @router.post("/increment")
-async def calculate_increment(data: CasesRequestBM) -> dict[str, Any]:
+async def calculate_increment(data: CasesRequestBM) -> dict[str, object]:
     """
     ## Incremental Cases
     Route to calculate the incremental result between contract cases.

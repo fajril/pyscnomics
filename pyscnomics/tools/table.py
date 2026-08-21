@@ -54,7 +54,7 @@ def _assign_attr(
 def get_non_petroleum_commodity(
     commodity: str,
     contract: CostRecovery | GrossSplit | BaseProject | Transition,
-) -> dict:
+) -> dict[str, object]:
     """
     Retrieve lifting, price, and revenue data for a non-petroleum commodity.
 
@@ -161,7 +161,7 @@ def get_table_costrecovery_oil(contract: CostRecovery) -> pd.DataFrame:
     non_depreciables = _assign_attr("_oil_non_depreciables", cr)
 
     # Specify cashflow table for OIL
-    table_oil: dict = {
+    table_oil: dict[str, object] = {
         # Basic attributes
         "years": cr.project_years,
         "lifting": _assign_attr("_oil_lifting", cr, True),
@@ -317,7 +317,7 @@ def get_table_costrecovery_gas(contract: CostRecovery) -> pd.DataFrame:
     non_depreciables = _assign_attr("_gas_non_depreciables", cr)
 
     # Specify cashflow table for GAS
-    table_gas: dict = {
+    table_gas: dict[str, object] = {
         # Basic attributes
         "years": cr.project_years,
         "lifting": _assign_attr("_gas_lifting", cr, True),
@@ -477,7 +477,7 @@ def get_table_costrecovery_consolidated(contract: CostRecovery) -> pd.DataFrame:
     non_depreciables = _assign_attr("_consolidated_non_depreciables", cr)
 
     # Specify cashflow table for CONSOLIDATED
-    table_consolidated: dict = {
+    table_consolidated: dict[str, object] = {
         # Basic attributes
         "years": cr.project_years,
         "lifting": _assign_attr("_consolidated_lifting", cr),
@@ -655,7 +655,7 @@ def get_table_grosssplit_oil(contract: GrossSplit) -> pd.DataFrame:
     non_depreciables = _assign_attr("_oil_non_depreciables", gs)
 
     # Specify cashflow table for OIL
-    table_oil: dict = {
+    table_oil: dict[str, object] = {
         # Basic attributes
         "years": gs.project_years,
         "lifting": _assign_attr("_oil_lifting", gs, True),
@@ -828,7 +828,7 @@ def get_table_grosssplit_gas(contract: GrossSplit) -> pd.DataFrame:
     non_depreciables = _assign_attr("_gas_non_depreciables", gs)
 
     # Specify cashflow table for GAS
-    table_gas: dict = {
+    table_gas: dict[str, object] = {
         # Basic attributes
         "years": gs.project_years,
         "lifting": _assign_attr("_gas_lifting", gs, True),
@@ -1002,7 +1002,7 @@ def get_table_grosssplit_consolidated(contract: GrossSplit) -> pd.DataFrame:
     non_depreciables = _assign_attr("_consolidated_non_depreciables", gs)
 
     # Specify cashflow table for CONSOLIDATED
-    table_consolidated: dict = {
+    table_consolidated: dict[str, object] = {
         # Basic attributes
         "years": gs.project_years,
         "lifting": _assign_attr("_consolidated_lifting", gs),
@@ -1177,7 +1177,7 @@ def get_table_baseproject_oil(contract: BaseProject) -> pd.DataFrame:
     }
 
     # Specify cashflow table for OIL
-    table_oil: dict = {
+    table_oil: dict[str, object] = {
         # Basic attributes
         "years": bp.project_years,
         "lifting": _assign_attr("_oil_lifting", bp, True),
@@ -1301,7 +1301,7 @@ def get_table_baseproject_gas(contract: BaseProject) -> pd.DataFrame:
     }
 
     # Specify cashflow table for GAS
-    table_gas: dict = {
+    table_gas: dict[str, object] = {
         # Basic attributes
         "years": bp.project_years,
         "lifting": _assign_attr("_gas_lifting", bp, True),
@@ -1431,7 +1431,7 @@ def get_table_baseproject_consolidated(contract: BaseProject) -> pd.DataFrame:
     }
 
     # Specify cashflow table for CONSOLIDATED
-    table_consolidated: dict = {
+    table_consolidated: dict[str, object] = {
         # Basic attributes
         "years": bp.project_years,
         "lifting": _assign_attr("_consolidated_lifting", bp),

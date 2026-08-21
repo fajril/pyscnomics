@@ -995,7 +995,7 @@ class Summary:
         ctr_npv = self.ctr_npv
 
         # Investment NPV
-        investment_npv = self.investment_npv
+        _investment_npv = self.investment_npv
 
         # Government Take NPV
         gov_take_npv = self.gov_take_npv
@@ -1015,7 +1015,7 @@ class Summary:
 
         # Government Indicator
         gov_ftp_share = np.sum(self.consolidated_gov_ftp)
-        gov_equity_share = np.sum(self.consolidated_gov_share)
+        _gov_equity_share = np.sum(self.consolidated_gov_share)
         gov_ddmo = np.sum(self.consolidated_ddmo)
         gov_tax_income = np.sum(self.consolidated_effective_tax_payment)
         gov_take = np.sum(self.consolidated_government_take)
@@ -1100,4 +1100,3 @@ class Summary:
 
     def get_cashflow_table(self):
         return self._to_dataframe()
-

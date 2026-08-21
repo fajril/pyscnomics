@@ -1,8 +1,10 @@
 import numpy as np
+from numpy.typing import NDArray
+
 from . import RPDModel
 
 
-def oil_ltp_predict(volume: float) -> np.ndarray:
+def oil_ltp_predict(volume: float) -> NDArray[np.float64]:
     """Oil forecast based on SKK Migas LTP Model
     ==============================================
     This function automatically set the RDPModel parameters with
@@ -63,7 +65,7 @@ def oil_ltp_predict(volume: float) -> np.ndarray:
     return rpd.predict(volume)
 
 
-def gas_ltp_predict(volume: float) -> np.ndarray:
+def gas_ltp_predict(volume: float) -> NDArray[np.float64]:
     """Gas forecast based on SKK Migas LTP Model
     ==============================================
     This method automatically set the class parameters with

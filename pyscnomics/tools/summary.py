@@ -1630,7 +1630,7 @@ class Summary:
         )
 
         # Contractor Investment NPV
-        investment_npv = npv_point_forward(
+        _investment_npv = npv_point_forward(
             cashflow=(
                 self.contract._oil_capital_expenditures_post_tax
                 + self.contract._gas_capital_expenditures_post_tax

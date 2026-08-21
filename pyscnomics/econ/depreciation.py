@@ -3,6 +3,7 @@ Calculate depreciation.
 """
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 
@@ -23,7 +24,7 @@ def straight_line_depreciation_rate(
     salvage_value: float,
     useful_life: int,
     depreciation_len: int = 0,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     """
     Calculate the straight-line depreciation charge for each period.
 
@@ -73,7 +74,7 @@ def straight_line_book_value(
     salvage_value: float,
     useful_life: int,
     depreciation_len: int = 0,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     """
     Calculate the book value of an asset over time using the straight-line depreciation method.
 
@@ -125,7 +126,7 @@ def declining_balance_depreciation_rate(
     useful_life: int,
     decline_factor: float = 2,
     depreciation_len: int = 0,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     """
     Calculates the declining balance depreciation schedule for an asset.
 
@@ -222,7 +223,7 @@ def declining_balance_book_value(
     useful_life: int,
     decline_factor: int = 1,
     depreciation_len: int = 0,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     """
     Calculate the net book value of a depreciated asset using the Decline Balance Method.
 
@@ -277,7 +278,7 @@ def psc_declining_balance_depreciation_rate(
     useful_life: float,
     depreciation_factor: float = 0.5,
     depreciation_len: int = 0,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     """
     Calculate the declining balance depreciation charges following
     psc declining balance method.
@@ -343,7 +344,7 @@ def psc_declining_balance_book_value(
     useful_life: float,
     depreciation_factor: float = 0.5,
     depreciation_len: int = 0,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     """
     Calculate the book value of an asset over time using declining balance depreciation method.
 
@@ -390,8 +391,8 @@ def psc_declining_balance_book_value(
 
 
 def prepare_amortization(
-    project_years: np.ndarray,
-    prod: np.ndarray,
+    project_years: npt.NDArray[np.generic],
+    prod: npt.NDArray[np.generic],
     cost: float,
     salvage_value: float,
     pis_year: int,
@@ -479,12 +480,12 @@ def prepare_amortization(
 
 
 def unit_of_production_rate(
-    project_years: np.ndarray,
-    prod: np.ndarray,
+    project_years: npt.NDArray[np.generic],
+    prod: npt.NDArray[np.generic],
     cost: float,
     salvage_value: float,
     pis_year: int,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     """
     Compute unit-of-production (UOP) amortization charges.
 
@@ -578,12 +579,12 @@ def unit_of_production_rate(
 
 
 def unit_of_production_book_value(
-    project_years: np.ndarray,
-    prod: np.ndarray,
+    project_years: npt.NDArray[np.generic],
+    prod: npt.NDArray[np.generic],
     cost: float,
     salvage_value: float,
     pis_year: int,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     """
     Compute book value under the unit-of-production method.
 

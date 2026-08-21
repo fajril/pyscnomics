@@ -2,10 +2,12 @@
 Handles summation operation on two arrays, accounting for different starting years.
 """
 
-import numpy as np
 from datetime import datetime
 from functools import wraps
-from typing import Dict
+from typing import Callable, Dict, ParamSpec, TypeAlias
+
+import numpy as np
+import numpy.typing as npt
 
 from pyscnomics.econ.selection import (
     FluidType,
@@ -21,6 +23,28 @@ from pyscnomics.econ.selection import (
     OptimizationTarget,
     OptimizationParameter,
 )
+
+
+_NumericScalar: TypeAlias = (
+    np.bool_
+    | np.int8
+    | np.int16
+    | np.int32
+    | np.int64
+    | np.uint8
+    | np.uint16
+    | np.uint32
+    | np.uint64
+    | np.float16
+    | np.float32
+    | np.float64
+)
+_NumericArray: TypeAlias = npt.NDArray[_NumericScalar]
+_P = ParamSpec("_P")
+_NumericFunction: TypeAlias = Callable[_P, _NumericArray]
+_NumericDecorator: TypeAlias = Callable[
+    [_NumericFunction[_P]], _NumericFunction[_P]
+]
 
 
 class TaxInflationException(Exception):
@@ -41,7 +65,9 @@ class SplitDataException(Exception):
     pass
 
 
-def check_input(target_func, param: np.ndarray | float | int) -> np.ndarray:
+def check_input(
+    target_func: _NumericArray, param: _NumericArray | float | int
+) -> _NumericArray:
     """
     Check and prepare input parameters for subsequent analysis.
 
@@ -90,7 +116,9 @@ def check_input(target_func, param: np.ndarray | float | int) -> np.ndarray:
     return param_arr
 
 
-def apply_inflation(inflation_rate: np.ndarray | float) -> callable:
+def apply_inflation(
+    inflation_rate: _NumericArray | float,
+) -> _NumericDecorator[_P]:
     """
     Decorator function to apply inflation/escalation to a target function's result.
 
@@ -110,9 +138,9 @@ def apply_inflation(inflation_rate: np.ndarray | float) -> callable:
     It takes inflation rate as an input argument and returns a decorated function.
     """
 
-    def _decorated(f):
+    def _decorated(f: _NumericFunction[_P]) -> _NumericFunction[_P]:
         @wraps(f)
-        def _wrapper(*args, **kwargs):
+        def _wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _NumericArray:
             exponents = np.arange(0, len(f(*args, **kwargs)), 1)
             inflation_rate_arr = check_input(
                 target_func=f(*args, **kwargs), param=inflation_rate
@@ -128,12 +156,12 @@ def apply_inflation(inflation_rate: np.ndarray | float) -> callable:
 
 def apply_vat_and_pdri(
     vat_portion: float | int,
-    vat_rate: np.ndarray | float | int,
-    vat_discount: np.ndarray | float | int,
+    vat_rate: _NumericArray | float | int,
+    vat_discount: _NumericArray | float | int,
     pdri_portion: float | int,
-    pdri_rate: np.ndarray | float | int,
-    pdri_discount: np.ndarray | float | int,
-) -> callable:
+    pdri_rate: _NumericArray | float | int,
+    pdri_discount: _NumericArray | float | int,
+) -> _NumericDecorator[_P]:
     """
     Decorator for applying VAT and PDRI multipliers to a target function's result.
 
@@ -169,9 +197,9 @@ def apply_vat_and_pdri(
     into the result of the target function.
     """
 
-    def _decorated(f):
+    def _decorated(f: _NumericFunction[_P]) -> _NumericFunction[_P]:
         @wraps(f)
-        def _wrapper(*args, **kwargs):
+        def _wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _NumericArray:
             def _get_vat():
                 vat_portion_arr = np.repeat(vat_portion, len(f(*args, **kwargs)))
                 vat_rate_arr = check_input(
@@ -208,9 +236,9 @@ def apply_vat_and_pdri(
 
 def apply_lbt(
     lbt_portion: float | int,
-    lbt_rate: np.ndarray | float | int,
-    lbt_discount: np.ndarray | float | int,
-) -> callable:
+    lbt_rate: _NumericArray | float | int,
+    lbt_discount: _NumericArray | float | int,
+) -> _NumericDecorator[_P]:
     """
     Decorator for applying LBT scheme to a target function's result.
 
@@ -234,9 +262,9 @@ def apply_lbt(
     It takes several parameters related to LBT/PBB and returns a decorated function.
     """
 
-    def _decorated(f):
+    def _decorated(f: _NumericFunction[_P]) -> _NumericFunction[_P]:
         @wraps(f)
-        def _wrapper(*args, **kwargs):
+        def _wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _NumericArray:
             lbt_portion_arr = np.repeat(lbt_portion, len(f(*args, **kwargs)))
             lbt_rate_arr = check_input(target_func=f(*args, **kwargs), param=lbt_rate)
             lbt_discount_arr = check_input(
@@ -252,9 +280,9 @@ def apply_lbt(
 
 def apply_pdrd(
     pdrd_portion: float | int,
-    pdrd_rate: np.ndarray | float | int,
-    pdrd_discount: np.ndarray | float | int,
-) -> callable:
+    pdrd_rate: _NumericArray | float | int,
+    pdrd_discount: _NumericArray | float | int,
+) -> _NumericDecorator[_P]:
     """
     Decorator for applying PDRD scheme to a target function's result.
 
@@ -278,9 +306,9 @@ def apply_pdrd(
     It takes several parameters related to PDRD and returns a decorated function.
     """
 
-    def _decorated(f):
+    def _decorated(f: _NumericFunction[_P]) -> _NumericFunction[_P]:
         @wraps(f)
-        def _wrapper(*args, **kwargs):
+        def _wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _NumericArray:
             pdrd_portion_arr = np.repeat(pdrd_portion, len(f(*args, **kwargs)))
             pdrd_rate_arr = check_input(target_func=f(*args, **kwargs), param=pdrd_rate)
             pdrd_discount_arr = check_input(
@@ -462,7 +490,7 @@ def get_inflation_applied_converter(target: str | None) -> InflationAppliedTo | 
     return None
 
 
-def get_tax_payment_converter(target: str) -> FTPTaxRegime:
+def get_tax_payment_converter(target: str) -> FTPTaxRegime | None:
     """
     Converts a string representing a tax payment mode to its corresponding
     enum value from the TaxPaymentMode class.
@@ -497,7 +525,7 @@ def get_tax_payment_converter(target: str) -> FTPTaxRegime:
     return None
 
 
-def get_tax_regime_converter(target: str) -> FTPTaxRegime:
+def get_tax_regime_converter(target: str) -> FTPTaxRegime | None:
     """
     Converts a string representing a tax regime to its corresponding
     enum value from the FTPTaxRegime class.
@@ -531,7 +559,7 @@ def get_tax_regime_converter(target: str) -> FTPTaxRegime:
     return None
 
 
-def get_npv_mode_converter(target: str) -> NPVSelection:
+def get_npv_mode_converter(target: str) -> NPVSelection | None:
     """
     Converts a string representing an NPV mode to its corresponding
     enum value from the NPVSelection class.
@@ -568,7 +596,7 @@ def get_npv_mode_converter(target: str) -> NPVSelection:
     return None
 
 
-def get_discounting_mode_converter(target: str) -> DiscountingMode:
+def get_discounting_mode_converter(target: str) -> DiscountingMode | None:
     """
     Converts a string representing a discounting mode to its corresponding
     enum value from the DiscountingMode class.
@@ -602,7 +630,7 @@ def get_discounting_mode_converter(target: str) -> DiscountingMode:
     return None
 
 
-def get_depreciation_method_converter(target: str) -> DeprMethod:
+def get_depreciation_method_converter(target: str) -> DeprMethod | None:
     """
     Converts a string representing a depreciation method to its corresponding
     enum value from the DeprMethod class.
@@ -638,7 +666,7 @@ def get_depreciation_method_converter(target: str) -> DeprMethod:
     return None
 
 
-def get_other_revenue_converter(target: str) -> OtherRevenue:
+def get_other_revenue_converter(target: str) -> OtherRevenue | None:
     """
     Convert a string representation of other revenue types to the corresponding enum value.
 
@@ -1292,7 +1320,7 @@ def get_to_list_converter(target_param: dict) -> dict:
     return {key: target_param[key].tolist() for key in target_param.keys()}
 
 
-def get_fluidtype_converter(target: str) -> FluidType:
+def get_fluidtype_converter(target: str) -> FluidType | None:
     """
     Get the corresponding FluidType enum for a given target fluid.
 
@@ -1335,7 +1363,7 @@ def get_fluidtype_converter(target: str) -> FluidType:
     return None
 
 
-def get_boolean_converter(target: str) -> bool:
+def get_boolean_converter(target: str) -> bool | None:
     """
     Get the boolean value corresponding to the provided target.
 
@@ -1371,7 +1399,7 @@ def get_boolean_converter(target: str) -> bool:
     return None
 
 
-def get_split_type_converter(target: str) -> TaxSplitTypeCR:
+def get_split_type_converter(target: str) -> TaxSplitTypeCR | None:
     """
     Converts a string representing a tax split type to its corresponding
     enum value from the TaxSplitTypeCR class.
@@ -1501,8 +1529,8 @@ def summarizer(
     array2: np.ndarray,
     startYear1: int,
     startYear2: int,
-    endYear1: int = None,
-    endYear2: int = None,
+    endYear1: int | None = None,
+    endYear2: int | None = None,
 ) -> tuple:
     """
     Perform summation operation on two arrays, accounting for different starting years.

@@ -83,9 +83,9 @@ class Cashflow:
 
     # Attributes associated with the economic indicator which will be defined later
     cashflow: np.ndarray = field(default=None, init=False, repr=False)
-    npv: float = field(default=None, init=False, repr=False)
-    irr: float = field(default=None, init=False, repr=False)
-    pot: float = field(default=None, init=False, repr=False)
+    npv: float | None = field(default=None, init=False, repr=False)
+    irr: float | None = field(default=None, init=False, repr=False)
+    pot: float | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         # Check if the contract/s has been run
