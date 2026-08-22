@@ -2,11 +2,14 @@
 A unit testing for revenue module.
 """
 
+from typing import cast
+
 import numpy as np
+import numpy.typing as npt
 import pytest
 
 from pyscnomics.econ.revenue import LiftingException, Lifting
-from pyscnomics.econ.costs import FluidType
+from pyscnomics.econ.selection import FluidType
 
 
 def test_lifting_incorrect_data_input():
@@ -18,7 +21,7 @@ def test_lifting_incorrect_data_input():
     """
 
     with pytest.raises(LiftingException):
-        Lifting(
+        _ = Lifting(
             start_year=2023,
             end_year=2027,
             lifting_rate=np.array([50, 50, 50, 50, 50, 50, 50, 50]),
@@ -28,7 +31,7 @@ def test_lifting_incorrect_data_input():
         )
 
     with pytest.raises(LiftingException):
-        Lifting(
+        _ = Lifting(
             start_year=2023,
             end_year=2030,
             lifting_rate=np.array([50, 50, 50, 50, 50, 50, 50, 50]),
@@ -38,7 +41,7 @@ def test_lifting_incorrect_data_input():
         )
 
     with pytest.raises(LiftingException):
-        Lifting(
+        _ = Lifting(
             start_year=2023,
             end_year=2030,
             lifting_rate=np.array([50, 50, 50, 50, 50, 50, 50, 50]),
@@ -102,6 +105,26 @@ def test_lifting_comparison():
     assert nanas_lifting <= jeruk_lifting
     assert mangga_lifting > nanas_lifting
     assert jeruk_lifting >= nanas_lifting
+
+
+def test_lifting_defaults_fluid_type_and_replaces_missing_values():
+    lifting_rate = np.array([100.0, np.nan])
+    lifting = Lifting(
+        start_year=2023,
+        end_year=2024,
+        lifting_rate=lifting_rate,
+        price=np.array([10.0, np.nan]),
+        prod_year=np.array([2023, 2024]),
+        fluid_type=None,
+    )
+
+    assert lifting.fluid_type == FluidType.OIL
+    np.testing.assert_allclose(lifting.lifting_rate, np.array([100.0, 0.0]))
+    np.testing.assert_allclose(lifting.price, np.array([10.0, 0.0]))
+
+    lifting_rate[0] = 200.0
+    assert lifting.lifting_rate[0] == 100.0
+    np.testing.assert_allclose(lifting / np.array([1.0 + 1.0j]), 500.0 - 500.0j)
 
 
 def test_lifting_arithmetics():
@@ -184,10 +207,10 @@ def test_prepare_lifting_rate():
     """
     # Raise an exception for an inappropriate data
     with pytest.raises(LiftingException):
-        Lifting(
+        _ = Lifting(
             start_year=2023,
             end_year=2030,
-            lifting_rate=100,
+            lifting_rate=cast(npt.NDArray[np.float64], cast(object, 100)),
             price=np.array([10, 10, 10]),
             prod_year=np.array([2024, 2025, 2026]),
             fluid_type=FluidType.OIL,
@@ -241,11 +264,11 @@ def test_prepare_price():
     """
     # Raise an exception for an inappropriate data
     with pytest.raises(LiftingException):
-        Lifting(
+        _ = Lifting(
             start_year=2023,
             end_year=2030,
             lifting_rate=np.array([100, 100, 100]),
-            price=10,
+            price=cast(npt.NDArray[np.float64], cast(object, 10)),
             prod_year=np.array([2024, 2025, 2026]),
             fluid_type=FluidType.GAS,
             ghv=np.array([1, 1, 1]),
@@ -299,12 +322,12 @@ def test_prepare_prod_year():
     """
     # Raise an exception for an inappropriate data
     with pytest.raises(LiftingException):
-        Lifting(
+        _ = Lifting(
             start_year=2023,
             end_year=2030,
             lifting_rate=np.array([100, 100, 100]),
             price=np.array([10, 10, 10]),
-            prod_year=[2024, 2025, 2026],
+            prod_year=cast(npt.NDArray[np.int64], cast(object, [2024, 2025, 2026])),
             fluid_type=FluidType.GAS,
             ghv=np.array([1, 1, 1]),
             prod_rate=np.array([200, 200, 200]),
@@ -356,14 +379,14 @@ def test_prepare_ghv():
     """
     # Raise an exception for an inappropriate data
     with pytest.raises(LiftingException):
-        Lifting(
+        _ = Lifting(
             start_year=2023,
             end_year=2030,
             lifting_rate=np.array([100, 100, 100]),
             price=np.array([10, 10, 10]),
-            prod_year=[2024, 2025, 2026],
+            prod_year=cast(npt.NDArray[np.int64], cast(object, [2024, 2025, 2026])),
             fluid_type=FluidType.GAS,
-            ghv=1,
+            ghv=cast(npt.NDArray[np.float64], cast(object, 1)),
             prod_rate=np.array([200, 200, 200]),
             prod_rate_baseline=np.array([50, 50, 50]),
         )
@@ -398,6 +421,8 @@ def test_prepare_ghv():
 
     ghv_calculated1 = lifting_apel1.ghv
     ghv_calculated2 = lifting_apel2.ghv
+    assert ghv_calculated1 is not None
+    assert ghv_calculated2 is not None
 
     # Test whether expected == calculated
     np.testing.assert_allclose(ghv_expected1, ghv_calculated1)
@@ -430,26 +455,26 @@ def test_prepare_prod_rate():
     """
     # Raise an exception for an inappropriate data
     with pytest.raises(LiftingException):
-        Lifting(
+        _ = Lifting(
             start_year=2023,
             end_year=2030,
             lifting_rate=np.array([100, 100, 100]),
             price=np.array([10, 10, 10]),
-            prod_year=[2024, 2025, 2026],
+            prod_year=cast(npt.NDArray[np.int64], cast(object, [2024, 2025, 2026])),
             fluid_type=FluidType.GAS,
             ghv=np.array([1, 1, 1]),
-            prod_rate=200,
+            prod_rate=cast(npt.NDArray[np.float64], cast(object, 200)),
             prod_rate_baseline=np.array([50, 50, 50]),
         )
 
     # Raise an exception for an inappropriate data
     with pytest.raises(LiftingException):
-        Lifting(
+        _ = Lifting(
             start_year=2023,
             end_year=2030,
             lifting_rate=np.array([100, 100, 100]),
             price=np.array([10, 10, 10]),
-            prod_year=[2024, 2025, 2026],
+            prod_year=cast(npt.NDArray[np.int64], cast(object, [2024, 2025, 2026])),
             fluid_type=FluidType.GAS,
             ghv=np.array([1, 1, 1]),
             prod_rate=np.array([50, 50, 50]),
@@ -484,6 +509,8 @@ def test_prepare_prod_rate():
 
     prod_rate_calculated1 = lifting_apel1.prod_rate
     prod_rate_calculated2 = lifting_apel2.prod_rate
+    assert prod_rate_calculated1 is not None
+    assert prod_rate_calculated2 is not None
 
     # Test whether expected == calculated
     np.testing.assert_allclose(prod_rate_expected1, prod_rate_calculated1)
@@ -515,16 +542,16 @@ def test_prepare_prod_rate_baseline():
     """
     # Raise an exception for an inappropriate data
     with pytest.raises(LiftingException):
-        Lifting(
+        _ = Lifting(
             start_year=2023,
             end_year=2030,
             lifting_rate=np.array([100, 100, 100]),
             price=np.array([10, 10, 10]),
-            prod_year=[2024, 2025, 2026],
+            prod_year=cast(npt.NDArray[np.int64], cast(object, [2024, 2025, 2026])),
             fluid_type=FluidType.GAS,
             ghv=np.array([1, 1, 1]),
             prod_rate=np.array([150, 150, 150]),
-            prod_rate_baseline=50,
+            prod_rate_baseline=cast(npt.NDArray[np.float64], cast(object, 50)),
         )
 
     # Expected results
@@ -557,6 +584,8 @@ def test_prepare_prod_rate_baseline():
 
     prod_rate_baseline_calculated1 = lifting_apel1.prod_rate_baseline
     prod_rate_baseline_calculated2 = lifting_apel2.prod_rate_baseline
+    assert prod_rate_baseline_calculated1 is not None
+    assert prod_rate_baseline_calculated2 is not None
 
     # Test whether expected == calculated
     np.testing.assert_allclose(prod_rate_baseline_expected1, prod_rate_baseline_calculated1)
